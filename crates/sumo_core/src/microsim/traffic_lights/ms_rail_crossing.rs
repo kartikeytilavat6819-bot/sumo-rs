@@ -50,7 +50,7 @@ impl MSRailCrossing {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
         let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_CROSSING, &Vec::new(), 0, delay, parameters);
         // dummy phase, used to avoid crashing in MSTrafficLightLogic::setTrafficLightSignals()
-        base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(SUMO_MAX_CONNECTIONS), "")))));
+        base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS), "")))));
         base.myDefaultCycleTime = 1;
         Self {
             base,
@@ -113,9 +113,11 @@ impl MSRailCrossing {
         let n = self.myLinks.len();
         let mk = |d: SUMOTime, s: String| Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(d, &s, ""))));
         self.myPhases.push(mk(1, (LINKSTATE_TL_GREEN_MAJOR as u8 as char).to_string().repeat(n)));
-        self.myPhases.push(mk(self.myYellowTime, (LINKSTATE_TL_YELLOW_MINOR as u8 as char).to_string().repeat(n)));
+        let yellowTime = self.myYellowTime;
+self.myPhases.push(mk(yellowTime, (LINKSTATE_TL_YELLOW_MINOR as u8 as char).to_string().repeat(n)));
         self.myPhases.push(mk(1, (LINKSTATE_TL_RED as u8 as char).to_string().repeat(n)));
-        self.myPhases.push(mk(self.myOpeningTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_string().repeat(n)));
+        let openingTime = self.myOpeningTime;
+self.myPhases.push(mk(openingTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_string().repeat(n)));
         // init phases
         self.update_current_phase();
         let now = MSNet::get_instance().get_current_time_step();

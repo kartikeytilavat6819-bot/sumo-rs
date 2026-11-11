@@ -1,0 +1,22 @@
+    Blocking waiting for file lock on build directory
+   Compiling sumo_core v0.1.0 (C:\Users\karti\sumo-rs\.claude\worktrees\agent-a862f446a19b63d41\crates\sumo_core)
+error[E0503]: cannot use `self.myYellowTime` because it was mutably borrowed
+   --> crates\sumo_core\src\microsim\traffic_lights\ms_rail_crossing.rs:116:31
+    |
+116 |         self.myPhases.push(mk(self.myYellowTime, (LINKSTATE_TL_YELLOW_MINOR as u8 as char).to_string().repeat(n)));
+    |         ----          ----    ^^^^^^^^^^^^^^^^^ use of borrowed `*self`
+    |         |             |
+    |         |             borrow later used by call
+    |         `*self` is borrowed here
+
+error[E0503]: cannot use `self.myOpeningTime` because it was mutably borrowed
+   --> crates\sumo_core\src\microsim\traffic_lights\ms_rail_crossing.rs:118:31
+    |
+118 |         self.myPhases.push(mk(self.myOpeningTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_string().repeat(n)));
+    |         ----          ----    ^^^^^^^^^^^^^^^^^^ use of borrowed `*self`
+    |         |             |
+    |         |             borrow later used by call
+    |         `*self` is borrowed here
+
+For more information about this error, try `rustc --explain E0503`.
+error: could not compile `sumo_core` (lib test) due to 2 previous errors

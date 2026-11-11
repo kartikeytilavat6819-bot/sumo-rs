@@ -1,0 +1,40 @@
+    Blocking waiting for file lock on build directory
+   Compiling sumo_core v0.1.0 (C:\Users\karti\sumo-rs\.claude\worktrees\agent-a862f446a19b63d41\crates\sumo_core)
+error[E0425]: cannot find value `SUMO_MAX_CONNECTIONS` in this scope
+   --> crates\sumo_core\src\microsim\traffic_lights\ms_rail_crossing.rs:53:103
+    |
+ 53 |         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(SUMO_MAX_CONNECTIONS), "")))));
+    |                                                                                                       ^^^^^^^^^^^^^^^^^^^^
+    |
+   ::: crates\utils\src\xml\sumo_xml_definitions_gen.rs:103:1
+    |
+103 | pub const SUMO_TAG_CONNECTIONS: SumoXMLTag = 97;
+    | ------------------------------------------ similarly named constant `SUMO_TAG_CONNECTIONS` defined here
+    |
+help: a constant with a similar name exists
+    |
+ 53 -         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(SUMO_MAX_CONNECTIONS), "")))));
+ 53 +         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(SUMO_TAG_CONNECTIONS), "")))));
+    |
+
+error[E0503]: cannot use `self.myYellowTime` because it was mutably borrowed
+   --> crates\sumo_core\src\microsim\traffic_lights\ms_rail_crossing.rs:116:31
+    |
+116 |         self.myPhases.push(mk(self.myYellowTime, (LINKSTATE_TL_YELLOW_MINOR as u8 as char).to_string().repeat(n)));
+    |         ----          ----    ^^^^^^^^^^^^^^^^^ use of borrowed `*self`
+    |         |             |
+    |         |             borrow later used by call
+    |         `*self` is borrowed here
+
+error[E0503]: cannot use `self.myOpeningTime` because it was mutably borrowed
+   --> crates\sumo_core\src\microsim\traffic_lights\ms_rail_crossing.rs:118:31
+    |
+118 |         self.myPhases.push(mk(self.myOpeningTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_string().repeat(n)));
+    |         ----          ----    ^^^^^^^^^^^^^^^^^^ use of borrowed `*self`
+    |         |             |
+    |         |             borrow later used by call
+    |         `*self` is borrowed here
+
+Some errors have detailed explanations: E0425, E0503.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `sumo_core` (lib test) due to 3 previous errors
