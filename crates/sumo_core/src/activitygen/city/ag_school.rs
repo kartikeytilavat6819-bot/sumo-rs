@@ -25,7 +25,15 @@ impl AGSchool {
     //         closing(close) {}
     #[allow(unused_variables)]
     pub fn new(capacity_: i32, pos: AGPosition, beginAge: i32, endAge: i32, open: i32, close: i32) -> Self {
-        todo!("port AGSchool::AGSchool")
+        AGSchool {
+            beginAge,
+            endAge,
+            capacity: capacity_,
+            initCapacity: capacity_,
+            location: pos,
+            opening: open,
+            closing: close,
+        }
     }
 
     /// C++: `void AGSchool::print() const` [const]
@@ -35,7 +43,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGSchool::print")
+        println!("- school:  placeNbr={} hours=[{};{}] ages=[{};{}]", self.capacity, self.opening, self.closing, self.beginAge, self.endAge);
     }
 
     /// C++: `int AGSchool::getPlaces()`
@@ -45,7 +53,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_places(&mut self) -> i32 {
-        todo!("port AGSchool::getPlaces")
+        self.capacity
     }
 
     /// C++: `bool AGSchool::addNewChild()`
@@ -59,7 +67,11 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn add_new_child(&mut self) -> bool {
-        todo!("port AGSchool::addNewChild")
+        if self.capacity > 0 {
+            self.capacity -= 1;
+            return true;
+        }
+        false
     }
 
     /// C++: `bool AGSchool::removeChild()`
@@ -73,7 +85,11 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn remove_child(&mut self) -> bool {
-        todo!("port AGSchool::removeChild")
+        if self.capacity < self.initCapacity {
+            self.capacity += 1;
+            return true;
+        }
+        false
     }
 
     /// C++: `int AGSchool::getBeginAge()`
@@ -83,7 +99,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_begin_age(&mut self) -> i32 {
-        todo!("port AGSchool::getBeginAge")
+        self.beginAge
     }
 
     /// C++: `int AGSchool::getEndAge()`
@@ -93,7 +109,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_end_age(&mut self) -> i32 {
-        todo!("port AGSchool::getEndAge")
+        self.endAge
     }
 
     /// C++: `bool AGSchool::acceptThisAge(int)`
@@ -106,7 +122,10 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn accept_this_age(&mut self, age: i32) -> bool {
-        todo!("port AGSchool::acceptThisAge")
+        if age <= self.endAge && age >= self.beginAge {
+            return true;
+        }
+        false
     }
 
     /// C++: `AGPosition AGSchool::getPosition()`
@@ -116,7 +135,8 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&mut self) -> AGPosition {
-        todo!("port AGSchool::getPosition")
+        // copy the members, as the C++ copy constructor does
+        AGPosition { street: self.location.street, position: self.location.position, pos2d: self.location.pos2d }
     }
 
     /// C++: `int AGSchool::getClosingHour()`
@@ -126,7 +146,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_closing_hour(&mut self) -> i32 {
-        todo!("port AGSchool::getClosingHour")
+        self.closing
     }
 
     /// C++: `int AGSchool::getOpeningHour()`
@@ -136,7 +156,7 @@ impl AGSchool {
     // }
     #[allow(unused_variables)]
     pub fn get_opening_hour(&mut self) -> i32 {
-        todo!("port AGSchool::getOpeningHour")
+        self.opening
     }
 
 }
