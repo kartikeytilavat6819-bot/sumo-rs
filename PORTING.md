@@ -30,6 +30,7 @@ Progress metric: share of `tests/sumo` texttest cases passing (`python tests/run
 | utils/common/StdDefs | crates/utils/src/common/std_defs.rs | |
 | utils/common/StringUtils (parsing) | crates/utils/src/common/string_utils.rs | partial |
 | utils/common/ToString (doubles) | crates/utils/src/common/to_string.rs | partial |
+| utils/geom (all files) | crates/utils/src/geom/ | PROJ projections are identity (shortcut); PositionVector operator+/- skipped: upstream C++ loops forever (iterators never advance) |
 
 ## microsim ownership design (decided before porting microsim)
 
