@@ -1,6 +1,16 @@
 //! Port of netimport/NIImporter_ArcView.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_helpers::is_readable;
+use utils::common::msg_handler::{MsgType, with_instance, write_error};
+use utils::common::string_utils::starts_with;
+use utils::tlf;
+
+/// OptionsCont lookups return Result (C++ throws ProcessError); the options used here are registered
+/// in fillOptions, so a failure is a programming error and is reported as a panic.
+fn must<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
 
 /// Importer for networks stored in ArcView-shape format
 /// C++ class `NIImporter_ArcView` (netimport/NIImporter_ArcView.h)
@@ -59,7 +69,35 @@ impl NIImporter_ArcView {
     // }
     #[allow(unused_variables)]
     pub fn load_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_ArcView::loadNetwork")
+        if !must(oc.is_set("shapefile-prefix", true)) {
+            return;
+        }
+        // check whether the correct set of entries is given
+        //  and compute all file names
+        let dbf_file = must(oc.get_string("shapefile-prefix")) + ".dbf";
+        let shp_file = must(oc.get_string("shapefile-prefix")) + ".shp";
+        let shx_file = must(oc.get_string("shapefile-prefix")) + ".shx";
+        if !starts_with(&shp_file, "/vsi") {
+            // if we are not using a virtual file system, check whether the files do exist
+            if !is_readable(&dbf_file) {
+                write_error(&format!("File not accessible: {dbf_file}"));
+            }
+            if !is_readable(&shp_file) {
+                write_error(&format!("File not accessible: {shp_file}"));
+            }
+            if !is_readable(&shx_file) {
+                write_error(&format!("File not accessible: {shx_file}"));
+            }
+        }
+        if with_instance(MsgType::Error, |h| h.was_informed()) {
+            return;
+        }
+        // load the arcview files
+        let nc = Ptr::from_mut(nb.get_node_cont());
+        let ec = Ptr::from_mut(nb.get_edge_cont());
+        let tc = Ptr::from_mut(nb.get_type_cont());
+        let mut loader = NIImporter_ArcView::new(oc, nc.m(), ec.m(), tc.m(), &shp_file, must(oc.get_bool("speed-in-kmh")));
+        loader.load();
     }
 
     /// C++: `void NIImporter_ArcView::NIImporter_ArcView(const OptionsCont &, NBNodeCont &, NBEdgeCont &, NBTypeCont &, const std::string &, bool)` [protected]
@@ -79,7 +117,17 @@ impl NIImporter_ArcView {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, nc: &mut NBNodeCont, ec: &mut NBEdgeCont, tc: &mut NBTypeCont, shp_name: &str, speedInKMH: bool) -> Self {
-        todo!("port NIImporter_ArcView::NIImporter_ArcView")
+        NIImporter_ArcView {
+            myOptions: Ptr::new(oc),
+            mySHPName: shp_name.to_string(),
+            myNameAddition: 0,
+            myNodeCont: Ptr::from_mut(nc),
+            myEdgeCont: Ptr::from_mut(ec),
+            myTypeCont: Ptr::from_mut(tc),
+            mySpeedInKMH: speedInKMH,
+            myRunningEdgeID: 0,
+            myRunningNodeID: 0,
+        }
     }
 
     /// C++: `void NIImporter_ArcView::~NIImporter_ArcView() noexcept` [protected]
@@ -87,7 +135,8 @@ impl NIImporter_ArcView {
     // NIImporter_ArcView::~NIImporter_ArcView() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIImporter_ArcView::~NIImporter_ArcView")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `void NIImporter_ArcView::load()` [protected]
@@ -369,7 +418,8 @@ impl NIImporter_ArcView {
     // }
     #[allow(unused_variables)]
     pub fn load(&mut self) {
-        todo!("port NIImporter_ArcView::load")
+        // shortcut: GDAL is not bound in this port, so only the non-GDAL branch (#else of HAVE_GDAL) is ported; add the OGR/GDAL shapefile reader when GDAL bindings exist
+        write_error(&tlf!("SUMO was compiled without GDAL support."));
     }
 
     /// C++: `void NIImporter_ArcView::NIImporter_ArcView(const NIImporter_ArcView &)` [private]
@@ -377,7 +427,7 @@ impl NIImporter_ArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_ArcView) -> Self {
-        todo!("port NIImporter_ArcView::NIImporter_ArcView")
+        panic!("NIImporter_ArcView copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `NIImporter_ArcView & NIImporter_ArcView::operator=(const NIImporter_ArcView &)` [private]
@@ -385,7 +435,7 @@ impl NIImporter_ArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_ArcView) -> &mut NIImporter_ArcView {
-        todo!("port NIImporter_ArcView::operator=")
+        panic!("NIImporter_ArcView assignment operator is invalidated (private and never defined in C++)")
     }
 
 }

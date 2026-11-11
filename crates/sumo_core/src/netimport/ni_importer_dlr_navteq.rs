@@ -1,6 +1,233 @@
 //! Port of netimport/NIImporter_DlrNavteq.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::AtomicBool;
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_message, write_warning};
+use utils::common::string_tokenizer::StringTokenizer;
+use utils::common::string_utils::{to_double, to_int, to_lower_case};
+use utils::common::sumo_vehicle_class::{SVC_PASSENGER, SVC_SHIP, SVC_UNSPECIFIED};
+use utils::common::to_string::to_string;
+use utils::importio::line_handler::LineHandler;
+use utils::importio::line_reader::LineReader;
+use utils::options::options_cont::{get_bool, get_string};
+use utils::{tlf, write_errorf, write_warningf};
+
+// C++ static members of EdgesHandler and NIImporter_DlrNavteq
+const MISSING_COLUMN: i32 = i32::MAX;
+pub const GEO_SCALE: &str = "1e-5";
+static KEEP_LENGTH: AtomicBool = AtomicBool::new(false);
+const UNDEFINED: &str = "-1";
+
+// shortcut: NBEdge's static constants are not ported as statics yet, their C++ values are copied here
+const UNSPECIFIED_WIDTH: f64 = -1.0;
+const UNSPECIFIED_OFFSET: f64 = 0.0;
+const UNSPECIFIED_FRICTION: f64 = 1.0;
+const UNSPECIFIED_SPEED: f64 = -1.0;
+const UNSPECIFIED_CONTPOS: f64 = -1.0;
+const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.0;
+const UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
+
+/// C++ `throw ProcessError(...)`: the handler and loader signatures return no Result, so the error unwinds as a panic carrying the ProcessError
+fn throw_error(e: ProcessError) -> ! {
+    std::panic::panic_any(e)
+}
+
+/// Unwraps a Result whose error the C++ code would have thrown
+fn must<T>(r: Result<T, ProcessError>) -> T {
+    match r {
+        Ok(v) => v,
+        Err(e) => throw_error(e),
+    }
+}
+
+/// `StringUtils::toInt` inside `try { } catch (NumberFormatException&) { throw ProcessError(msg) }`
+fn to_int_or_throw(s: &str, msg: String) -> i32 {
+    match to_int(s) {
+        Ok(v) => v,
+        Err(_) => throw_error(ProcessError::new(msg)),
+    }
+}
+
+/// time(&t): the current time in seconds since the epoch
+fn now_time() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
+}
+
+/// days since 1970-01-01 of the given proleptic Gregorian date
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let mp = (m + 9) % 12; // March = 0
+    let doy = (153 * mp + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146097 + doe - 719468
+}
+
+/// (year, month, day) of the given day count since 1970-01-01
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+    let z = z + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400;
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+/// The YYYY-MM-DD date of a time value (strftime "%Y-%m-%d")
+fn format_date(t: i64) -> String {
+    let (y, m, d) = civil_from_days(t.div_euclid(86400));
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
+/// mktime() of a struct tm with zero time of day; tm_year counts from 1900 and out-of-range fields are normalised
+/// shortcut: computed in UTC, C mktime() uses the local time zone and there is no time zone database in this port
+fn mktime_utc(tm_year: i64, tm_mon: i64, tm_mday: i64) -> i64 {
+    let year = 1900 + tm_year + tm_mon.div_euclid(12);
+    let month = tm_mon.rem_euclid(12) + 1;
+    (days_from_civil(year, month, 1) + tm_mday - 1) * 86400
+}
+
+/// sscanf(s, "[(%[^)]){%[^}]}]") for the construction period: (start, duration) when both fields are read
+fn scan_construction_period(s: &str) -> Option<(String, String)> {
+    let rest = s.strip_prefix("[(")?;
+    let close = rest.find(')')?;
+    let start = &rest[..close];
+    if start.is_empty() {
+        return None;
+    }
+    let rest = rest[close + 1..].strip_prefix('{')?;
+    let end = rest.find('}').unwrap_or(rest.len());
+    let duration = &rest[..end];
+    if duration.is_empty() {
+        return None;
+    }
+    Some((start.to_string(), duration.to_string()))
+}
+
+/// sscanf(s, "%i") for the leading integer of s (whitespace, sign, 0x hex and leading 0 octal); None if no number is read
+fn scanf_percent_i(s: &str) -> Option<i32> {
+    let b = s.as_bytes();
+    let mut i = 0;
+    while i < b.len() && b[i].is_ascii_whitespace() {
+        i += 1;
+    }
+    let mut neg = false;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        neg = b[i] == b'-';
+        i += 1;
+    }
+    let (radix, skip) = if i + 2 < b.len() && b[i] == b'0' && (b[i + 1] == b'x' || b[i + 1] == b'X') && (b[i + 2] as char).is_ascii_hexdigit() {
+        (16, 2)
+    } else if i < b.len() && b[i] == b'0' {
+        (8, 0)
+    } else {
+        (10, 0)
+    };
+    i += skip;
+    let start = i;
+    let mut value: i64 = 0;
+    while i < b.len() && (b[i] as char).is_digit(radix) {
+        value = value.wrapping_mul(radix as i64).wrapping_add((b[i] as char).to_digit(radix).unwrap_or(0) as i64);
+        i += 1;
+    }
+    if i == start {
+        return None;
+    }
+    let value = if neg { value.wrapping_neg() } else { value };
+    Some(value as i32)
+}
+
+/// The parts of std::istringstream used by the node parser: >> std::string, >> int and >> double
+struct LineStream<'a> {
+    rest: &'a str,
+}
+
+impl<'a> LineStream<'a> {
+    fn new(s: &'a str) -> Self {
+        LineStream { rest: s }
+    }
+
+    fn token(&mut self) -> Option<&'a str> {
+        let s = self.rest.trim_start();
+        if s.is_empty() {
+            self.rest = s;
+            return None;
+        }
+        let end = s.find(char::is_whitespace).unwrap_or(s.len());
+        self.rest = &s[end..];
+        Some(&s[..end])
+    }
+
+    fn int(&mut self) -> Option<i32> {
+        let s = self.rest.trim_start();
+        let b = s.as_bytes();
+        let mut i = 0;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        let d0 = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        if i == d0 {
+            self.rest = s;
+            return None;
+        }
+        let v = s[..i].parse::<i32>().ok()?;
+        self.rest = &s[i..];
+        Some(v)
+    }
+
+    fn double(&mut self) -> Option<f64> {
+        let s = self.rest.trim_start();
+        let b = s.as_bytes();
+        let mut i = 0;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        let int_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        let mut digits = i - int_start;
+        if i < b.len() && b[i] == b'.' {
+            let f = i + 1;
+            let mut k = f;
+            while k < b.len() && b[k].is_ascii_digit() {
+                k += 1;
+            }
+            digits += k - f;
+            if digits > 0 {
+                i = k;
+            }
+        }
+        if digits == 0 {
+            self.rest = s;
+            return None;
+        }
+        if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+            let mut k = i + 1;
+            if k < b.len() && (b[k] == b'+' || b[k] == b'-') {
+                k += 1;
+            }
+            let ds = k;
+            while k < b.len() && b[k].is_ascii_digit() {
+                k += 1;
+            }
+            if k > ds {
+                i = k;
+            }
+        }
+        let v = s[..i].parse::<f64>().ok()?;
+        self.rest = &s[i..];
+        Some(v)
+    }
+}
 
 /// C++ enum `EdgesHandler::ColumnName`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -50,7 +277,7 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(ne: &mut NBEdgeCont) -> Self {
-        todo!("port ConnectedLanesHandler::ConnectedLanesHandler")
+        NIImporter_DlrNavteq_ConnectedLanesHandler { myEdgeCont: Ptr::from_mut(ne) }
     }
 
     /// C++: `void ConnectedLanesHandler::~ConnectedLanesHandler() noexcept` [virtual]
@@ -58,7 +285,7 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
     // NIImporter_DlrNavteq::ConnectedLanesHandler::~ConnectedLanesHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ConnectedLanesHandler::~ConnectedLanesHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool ConnectedLanesHandler::report(const std::string &)` [virtual]
@@ -119,7 +346,57 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port ConnectedLanesHandler::report")
+        if result.starts_with('#') {
+            return true;
+        }
+        let mut st = StringTokenizer::with_special(result, StringTokenizer::TAB);
+        if st.size() == 1 {
+            return true; // one line with the number of data containing lines in it (also starts with a comment # since ersion 6.5)
+        }
+        assert!(st.size() >= 7);
+        let nodeID = must(st.next());
+        let vehicleType = must(st.next());
+        let fromLaneS = must(st.next());
+        let toLaneS = must(st.next());
+        let throughTraffic = must(st.next());
+        let startEdge = must(st.next());
+        let endEdge = must(st.get(st.size() - 1));
+
+        let from = self.myEdgeCont.m().retrieve(&startEdge, false);
+        if from.is_null() {
+            write_warningf!("Ignoring prohibition from unknown start edge '%'.", startEdge);
+            return true;
+        }
+        let to = self.myEdgeCont.m().retrieve(&endEdge, false);
+        if to.is_null() {
+            write_warningf!("Ignoring prohibition from unknown end edge '%'.", endEdge);
+            return true;
+        }
+        let fromLane = must(to_int(&fromLaneS)) - 1; // one based
+        if fromLane < 0 || fromLane >= from.get_num_lanes() {
+            write_warningf!("Ignoring invalid lane index '%' in connection from edge '%' with % lanes.", fromLaneS, startEdge, from.get_num_lanes());
+            return true;
+        }
+        let toLane = must(to_int(&toLaneS)) - 1; // one based
+        if toLane < 0 || toLane >= to.get_num_lanes() {
+            write_warningf!("Ignoring invalid lane index '%' in connection to edge '%' with % lanes", toLaneS, endEdge, to.get_num_lanes());
+            return true;
+        }
+        if !from.m().add_lane2_lane_connection(fromLane, to, toLane, NBEdge_Lane2LaneInfoType::USER, true, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false) {
+            if get_bool("show-errors.connections-first-try") {
+                write_warningf!("Could not set loaded connection from '%' to '%'.", from.get_lane_id(fromLane), to.get_lane_id(toLane));
+            }
+            // set as to be re-applied after network processing
+            // if this connection runs across a node cluster it may not be possible to set this
+            let warnOnly = st.size() > 7;
+            self.myEdgeCont.m().add_post_process_connection(from.get_id(), fromLane, to.get_id(), toLane, false, KeepClear::KEEPCLEAR_UNSPECIFIED,
+                UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, warnOnly,
+                SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED);
+        }
+        // ensure that connections for other lanes are guessed if not specified
+        from.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::INIT);
+        from.m().get_lane_struct(fromLane).connectionsDone = true;
+        true
     }
 
     /// C++: `void ConnectedLanesHandler::ConnectedLanesHandler(const ConnectedLanesHandler &)` [private]
@@ -127,7 +404,7 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_ConnectedLanesHandler) -> Self {
-        todo!("port ConnectedLanesHandler::ConnectedLanesHandler")
+        panic!("ConnectedLanesHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `ConnectedLanesHandler & ConnectedLanesHandler::operator=(const ConnectedLanesHandler &)` [private]
@@ -135,7 +412,7 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_ConnectedLanesHandler) -> &mut NIImporter_DlrNavteq_ConnectedLanesHandler {
-        todo!("port ConnectedLanesHandler::operator=")
+        panic!("ConnectedLanesHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -184,7 +461,17 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(nc: &mut NBNodeCont, ec: &mut NBEdgeCont, tc: &mut NBTypeCont, file: &str, geoms: &mut BTreeMap<String, PositionVector>, streetNames: &mut BTreeMap<String, String>) -> Self {
-        todo!("port EdgesHandler::EdgesHandler")
+        NIImporter_DlrNavteq_EdgesHandler {
+            myNodeCont: Ptr::from_mut(nc),
+            myEdgeCont: Ptr::from_mut(ec),
+            myTypeCont: Ptr::from_mut(tc),
+            myGeoms: Ptr::from_mut(geoms),
+            myStreetNames: Ptr::from_mut(streetNames),
+            myTryIgnoreNodePositions: false,
+            myVersion: 0.0,
+            myColumns: Vec::new(),
+            myFile: file.to_string(),
+        }
     }
 
     /// C++: `void EdgesHandler::~EdgesHandler() noexcept` [virtual]
@@ -192,7 +479,7 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // NIImporter_DlrNavteq::EdgesHandler::~EdgesHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgesHandler::~EdgesHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool EdgesHandler::report(const std::string &)` [virtual]
@@ -351,7 +638,142 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port EdgesHandler::report")
+        // parse version number from first comment line and initialize column definitions
+        if result.starts_with('#') {
+            if !self.myColumns.is_empty() {
+                return true;
+            }
+            let version = NIImporter_DlrNavteq::read_version(result, &self.myFile);
+            if version > 0.0 {
+                self.myVersion = version;
+                // init columns
+                let MC = MISSING_COLUMN;
+                if self.myVersion < 3.0 {
+                    let columns: [i32; 25] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, MC, 12, 13, 14, 15, 16, 17, 18, 19, 20, MC, MC, -21];
+                    self.myColumns = columns.to_vec();
+                } else if self.myVersion < 6.0 {
+                    let columns: [i32; 25] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, MC, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, -23];
+                    self.myColumns = columns.to_vec();
+                } else {
+                    let columns: [i32; 25] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+                    self.myColumns = columns.to_vec();
+                }
+            }
+            return true;
+        }
+        if self.myColumns.is_empty() {
+            throw_error(ProcessError::new(tlf!("Missing version string in file '%'.", self.myFile)));
+        }
+        // interpret link attributes
+        let st = StringTokenizer::with_special(result, StringTokenizer::WHITECHARS);
+        let id = self.get_column(&st, EdgesHandler_ColumnName::LINK_ID, String::new());
+        // form of way (for priority and permissions)
+        let col = self.get_column(&st, EdgesHandler_ColumnName::FORM_OF_WAY, String::new());
+        let form_of_way = to_int_or_throw(&col, tlf!("Non-numerical value for form_of_way of link '%'.", id));
+        // brunnel type (bridge/tunnel/ferry (for permissions)
+        let col = self.get_column(&st, EdgesHandler_ColumnName::BRUNNEL_TYPE, String::new());
+        let brunnel_type = to_int_or_throw(&col, tlf!("Non-numerical value for brunnel_type of link '%'.", id));
+        // priority based on street_type / frc
+        let col = self.get_column(&st, EdgesHandler_ColumnName::FUNCTIONAL_ROAD_CLASS, String::new());
+        let mut priority = -to_int_or_throw(&col, tlf!("Non-numerical value for street_type of link '%'.", id));
+        // lower priority using form_of_way
+        if form_of_way == 11 {
+            priority -= 1; // frontage road, very often with lowered curb
+        } else if form_of_way > 11 {
+            priority -= 2; // parking/service access assume lowered curb
+        }
+        // street name
+        let regional = self.get_column(&st, EdgesHandler_ColumnName::NAME_ID1_REGIONAL, String::new());
+        let local = self.get_column(&st, EdgesHandler_ColumnName::NAME_ID2_LOCAL, String::new());
+        let streetName = self.get_street_name_from_i_ds(&regional, &local);
+        // try to get the nodes
+        let fromID = self.get_column(&st, EdgesHandler_ColumnName::NODE_ID_FROM, String::new());
+        let toID = self.get_column(&st, EdgesHandler_ColumnName::NODE_ID_TO, String::new());
+        let from = self.myNodeCont.retrieve(&fromID);
+        let to = self.myNodeCont.retrieve(&toID);
+        if from.is_null() {
+            throw_error(ProcessError::new(format!("The from-node '{fromID}' of link '{id}' could not be found")));
+        }
+        if to.is_null() {
+            throw_error(ProcessError::new(format!("The to-node '{toID}' of link '{id}' could not be found")));
+        }
+        // speed
+        let col = self.get_column(&st, EdgesHandler_ColumnName::SPEED_RESTRICTION, "-1".to_string());
+        let mut speed = to_int_or_throw(&col, tlf!("Non-numerical value for the SPEED_RESTRICTION of link '%'.", id)) as f64 / 3.6;
+        if speed < 0.0 {
+            // speed category as fallback
+            let col = self.get_column(&st, EdgesHandler_ColumnName::SPEED_CATEGORY, String::new());
+            speed = NINavTeqHelper::get_speed(&id, &col);
+        }
+        // number of lanes
+        // EXTENDED_NUMBER_OF_LANES is prefered but may not be defined
+        let col = self.get_column(&st, EdgesHandler_ColumnName::EXTENDED_NUMBER_OF_LANES, "-1".to_string());
+        let mut numLanes = to_int_or_throw(&col, tlf!("Non-numerical value for the number of lanes of link '%'.", id));
+        if numLanes == -1 {
+            let col = self.get_column(&st, EdgesHandler_ColumnName::NUMBER_OF_LANES, String::new());
+            numLanes = NINavTeqHelper::get_lane_number(&id, &col, speed);
+        }
+
+        let vehicle_type = self.get_column(&st, EdgesHandler_ColumnName::VEHICLE_TYPE, String::new());
+        let form = self.get_column(&st, EdgesHandler_ColumnName::FORM_OF_WAY, String::new());
+        let navTeqTypeId = format!("{vehicle_type}_{form}");
+        // build the edge
+        let interID = self.get_column(&st, EdgesHandler_ColumnName::BETWEEN_NODE_ID, String::new());
+        let e: Ptr<NBEdge>;
+        if interID == "-1" {
+            let type_ = if self.myTypeCont.knows(&navTeqTypeId) { navTeqTypeId.clone() } else { String::new() };
+            e = Ptr::from_mut(Box::leak(Box::new(NBEdge::new(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, LaneSpreadFunction::RIGHT, &streetName))));
+        } else {
+            let mut geoms: PositionVector = self.myGeoms.m().entry(interID.clone()).or_default().clone();
+            if self.get_column(&st, EdgesHandler_ColumnName::CONNECTION, "0".to_string()) == "1" {
+                geoms = geoms.reverse();
+            }
+            geoms.insert(0, *from.get_position());
+            geoms.push(*to.get_position());
+            let origID = if get_bool("output.original-names") { id.clone() } else { String::new() };
+            let type_ = if self.myTypeCont.knows(&navTeqTypeId) { navTeqTypeId.clone() } else { String::new() };
+            e = Ptr::from_mut(Box::leak(Box::new(NBEdge::new_2(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, geoms, LaneSpreadFunction::CENTER, &streetName, &origID, false))));
+        }
+
+        //Import length or edges from input file
+        if KEEP_LENGTH.load(std::sync::atomic::Ordering::Relaxed) {
+            let col = self.get_column(&st, EdgesHandler_ColumnName::LENGTH, String::new());
+            let length = must(to_double(&col));
+            e.m().set_loaded_length(length);
+        }
+
+        // NavTeq imports can be done with a typemap (if supplied), if not, the old defaults are used
+        if self.myTypeCont.knows(&navTeqTypeId) {
+            e.m().set_permissions(self.myTypeCont.get_edge_type_permissions(&navTeqTypeId), -1);
+        } else {
+            // add vehicle type information to the edge
+            let allPermissions = self.myTypeCont.get_edge_type_permissions("");
+            let defaultPermissions = if get_bool("dlr-navteq.tolerant-permissions") { allPermissions } else { 0 };
+            if self.myVersion < 6.0 {
+                NINavTeqHelper::add_vehicle_classes(e.m(), &vehicle_type, allPermissions, defaultPermissions);
+            } else {
+                NINavTeqHelper::add_vehicle_classes_v6(e.m(), &vehicle_type, allPermissions, defaultPermissions);
+            }
+            // permission modifications based on form_of_way
+            if form_of_way == 14 {
+                // pedestrian area (fussgaengerzone)
+                // unfortunately, the veh_type string is misleading in this case
+                e.m().disallow_vehicle_class(-1, SVC_PASSENGER);
+            }
+            // permission modifications based on brunnel_type
+            if brunnel_type == 10 {
+                // ferry
+                e.m().set_permissions(SVC_SHIP, -1);
+            }
+        }
+
+        // insert the edge to the network
+        if !self.myEdgeCont.m().insert(e, false) {
+            // delete e
+            drop(unsafe { Box::from_raw(e.as_raw()) });
+            throw_error(ProcessError::new(tlf!("Could not add edge '%'.", id)));
+        }
+        true
     }
 
     /// C++: `std::string EdgesHandler::getColumn(const StringTokenizer &, ColumnName, const std::string)` [protected]
@@ -382,7 +804,29 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_column(&mut self, st: &StringTokenizer, name: EdgesHandler_ColumnName, fallback: String) -> String {
-        todo!("port EdgesHandler::getColumn")
+        assert!(!self.myColumns.is_empty());
+        let col = self.myColumns[name as usize];
+        if col == MISSING_COLUMN {
+            if fallback.is_empty() {
+                throw_error(ProcessError::new(tlf!("Missing column %.", name as i64)));
+            } else {
+                return fallback;
+            }
+        } else if col >= 0 {
+            return must(st.get(col as usize));
+        } else {
+            // negative column number implies an optional column
+            if st.size() as i64 <= -(col as i64) {
+                // the column is not present
+                if fallback.is_empty() {
+                    throw_error(ProcessError::new(tlf!("Missing optional column % without default value.", name as i64)));
+                } else {
+                    return fallback;
+                }
+            } else {
+                return must(st.get((-col) as usize));
+            }
+        }
     }
 
     /// C++: `std::string EdgesHandler::getStreetNameFromIDs(const std::string &, const std::string &) const` [const, private]
@@ -406,7 +850,20 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_street_name_from_i_ds(&self, regionalID: &str, localID: &str) -> String {
-        todo!("port EdgesHandler::getStreetNameFromIDs")
+        let names = self.myStreetNames.m();
+        let mut result = String::new();
+        let mut hadRegional = false;
+        if let Some(s) = names.get(regionalID) {
+            hadRegional = true;
+            result += s.as_str();
+        }
+        if let Some(s) = names.get(localID) {
+            if hadRegional {
+                result += " / ";
+            }
+            result += s.as_str();
+        }
+        result
     }
 
     /// C++: `void EdgesHandler::EdgesHandler(const EdgesHandler &)` [private]
@@ -414,7 +871,7 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_EdgesHandler) -> Self {
-        todo!("port EdgesHandler::EdgesHandler")
+        panic!("EdgesHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `EdgesHandler & EdgesHandler::operator=(const EdgesHandler &)` [private]
@@ -422,7 +879,7 @@ impl NIImporter_DlrNavteq_EdgesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_EdgesHandler) -> &mut NIImporter_DlrNavteq_EdgesHandler {
-        todo!("port EdgesHandler::operator=")
+        panic!("EdgesHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -531,7 +988,93 @@ impl NIImporter_DlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_DlrNavteq::loadNetwork")
+        // check whether the option is set (properly)
+        if !must(oc.is_set("dlr-navteq-prefix", true)) {
+            return;
+        }
+        let mut csTime: i64 = now_time();
+        KEEP_LENGTH.store(must(oc.get_bool("dlr-navteq.keep-length")), std::sync::atomic::Ordering::Relaxed);
+        // parse file(s)
+        let mut lr = LineReader::new();
+        // load nodes
+        let mut myGeoms: BTreeMap<String, PositionVector> = BTreeMap::new();
+        progress_begin_message("Loading nodes");
+        let mut file = must(oc.get_string("dlr-navteq-prefix")) + "_nodes_unsplitted.txt";
+        let mut handler1 = NIImporter_DlrNavteq_NodesHandler::new(nb.get_node_cont(), &file, &mut myGeoms);
+        if !lr.set_file(&file) {
+            throw_error(ProcessError::new(tlf!("The file '%' could not be opened.", file)));
+        }
+        lr.read_all(&mut handler1);
+        progress_done_message();
+
+        // load street names if given and wished
+        let mut streetNames: BTreeMap<String, String> = BTreeMap::new(); // nameID : name
+        if must(oc.get_bool("output.street-names")) {
+            file = must(oc.get_string("dlr-navteq-prefix")) + "_names.txt";
+            if lr.set_file(&file) {
+                progress_begin_message("Loading street names");
+                let mut handler4 = NIImporter_DlrNavteq_NamesHandler::new(&file, &mut streetNames);
+                lr.read_all(&mut handler4);
+                progress_done_message();
+            } else {
+                write_warningf!("Output will not contain street names because the file '%' was not found", file);
+            }
+        }
+
+        // load edges
+        progress_begin_message("Loading edges");
+        file = must(oc.get_string("dlr-navteq-prefix")) + "_links_unsplitted.txt";
+        // parse the file
+        let nc = Ptr::from_mut(nb.get_node_cont());
+        let ec = Ptr::from_mut(nb.get_edge_cont());
+        let tc = Ptr::from_mut(nb.get_type_cont());
+        let mut handler2 = NIImporter_DlrNavteq_EdgesHandler::new(nc.m(), ec.m(), tc.m(), &file, &mut myGeoms, &mut streetNames);
+        if !lr.set_file(&file) {
+            throw_error(ProcessError::new(tlf!("The file '%' could not be opened.", file)));
+        }
+        lr.read_all(&mut handler2);
+        ec.m().recheck_lane_spread();
+        progress_done_message();
+
+        // load traffic lights if given
+        file = must(oc.get_string("dlr-navteq-prefix")) + "_traffic_signals.txt";
+        if lr.set_file(&file) {
+            progress_begin_message("Loading traffic lights");
+            let mut handler3 = NIImporter_DlrNavteq_TrafficlightsHandler::new(nc.m(), nb.get_tl_logic_cont(), ec.m(), &file);
+            lr.read_all(&mut handler3);
+            progress_done_message();
+        }
+
+        // load prohibited manoeuvres if given
+        file = must(oc.get_string("dlr-navteq-prefix")) + "_prohibited_manoeuvres.txt";
+        if lr.set_file(&file) {
+            progress_begin_message("Loading prohibited manoeuvres");
+            let mut handler6 = NIImporter_DlrNavteq_ProhibitionHandler::new(ec.m(), &file, csTime);
+            lr.read_all(&mut handler6);
+            progress_done_message();
+        }
+
+        // load connected lanes if given
+        file = must(oc.get_string("dlr-navteq-prefix")) + "_connected_lanes.txt";
+        if lr.set_file(&file) {
+            progress_begin_message("Loading connected lanes");
+            let mut handler7 = NIImporter_DlrNavteq_ConnectedLanesHandler::new(ec.m());
+            lr.read_all(&mut handler7);
+            progress_done_message();
+        }
+
+        // load time restrictions if given
+        file = must(oc.get_string("dlr-navteq-prefix")) + "_links_timerestrictions.txt";
+        if lr.set_file(&file) {
+            progress_begin_message("Loading time restrictions");
+            if !oc.is_default("construction-date") {
+                csTime = NIImporter_DlrNavteq::read_date(&must(oc.get_string("construction-date")));
+            }
+            let mut handler5 = NIImporter_DlrNavteq_TimeRestrictionsHandler::new(ec.m(), nb.get_district_cont(), csTime);
+            lr.read_all(&mut handler5);
+            handler5.print_summary();
+            progress_done_message();
+        }
     }
 
     /// C++: `double NIImporter_DlrNavteq::readVersion(const std::string &, const std::string &)` [static, protected]
@@ -557,7 +1100,27 @@ impl NIImporter_DlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn read_version(line: &str, file: &str) -> f64 {
-        todo!("port NIImporter_DlrNavteq::readVersion")
+        assert!(line.starts_with('#'));
+        let marker = "extraction version: v";
+        let lowerCase = to_lower_case(line);
+        let found = match lowerCase.find(marker) {
+            Some(p) => p,
+            None => return -1.0,
+        };
+        let vStart = found + marker.len();
+        let vEnd = match line[vStart..].find(' ') {
+            Some(p) => vStart + p,
+            None => line.len(), // npos: the rest of the line
+        };
+        let sub = &line[vStart..vEnd];
+        let version = match to_double(sub) {
+            Ok(v) => v,
+            Err(_) => throw_error(ProcessError::new(format!("Non-numerical value '{sub}' for version string in file '{file}'."))),
+        };
+        if version < 0.0 {
+            throw_error(ProcessError::new(format!("Invalid version number '{}' in file '{file}'.", to_string(&version))));
+        }
+        version
     }
 
     /// C++: `int NIImporter_DlrNavteq::readPrefixedInt(const std::string &, const std::string &, int)` [static, protected]
@@ -572,7 +1135,13 @@ impl NIImporter_DlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn read_prefixed_int(s: &str, prefix: &str, fallBack: i32) -> i32 {
-        todo!("port NIImporter_DlrNavteq::readPrefixedInt")
+        let mut result = fallBack;
+        if let Some(pos) = s.find(prefix) {
+            if let Some(v) = scanf_percent_i(&s[pos + prefix.len()..]) {
+                result = v;
+            }
+        }
+        result
     }
 
     /// C++: `time_t NIImporter_DlrNavteq::readTimeRec(const std::string &, const std::string &)` [static, protected]
@@ -590,17 +1159,22 @@ impl NIImporter_DlrNavteq {
     //     timeinfo.tm_yday = 0;
     //     timeinfo.tm_isdst = 0;
     //
-    //     timeinfo.tm_year = readPrefixedInt(start, "y") + readPrefixedInt(duration, "y") - 1900;
-    //     timeinfo.tm_mon = readPrefixedInt(start, "M") + readPrefixedInt(duration, "M") - 1;
-    //     timeinfo.tm_mday = 7 * (readPrefixedInt(start, "w") + readPrefixedInt(duration, "w"));
-    //     timeinfo.tm_mday += readPrefixedInt(start, "d") + readPrefixedInt(duration, "d");
+    //     timeinfo.tm_year = NIImporter_DlrNavteq::read_prefixed_int(start, "y") + NIImporter_DlrNavteq::read_prefixed_int(duration, "y") - 1900;
+    //     timeinfo.tm_mon = NIImporter_DlrNavteq::read_prefixed_int(start, "M") + NIImporter_DlrNavteq::read_prefixed_int(duration, "M") - 1;
+    //     timeinfo.tm_mday = 7 * (NIImporter_DlrNavteq::read_prefixed_int(start, "w") + NIImporter_DlrNavteq::read_prefixed_int(duration, "w"));
+    //     timeinfo.tm_mday += NIImporter_DlrNavteq::read_prefixed_int(start, "d") + NIImporter_DlrNavteq::read_prefixed_int(duration, "d");
     //
     //     time_t result =  mktime(&timeinfo);
     //     return result;
     // }
     #[allow(unused_variables)]
-    pub fn read_time_rec(start: &str, duration: &str) -> Unmapped /* time_t */ {
-        todo!("port NIImporter_DlrNavteq::readTimeRec")
+    pub fn read_time_rec(start: &str, duration: &str) -> i64 {
+        // shortcut: C mktime() works in the local time zone, this port computes UTC (no time zone database), add the local offset when one is available
+        let year = NIImporter_DlrNavteq::read_prefixed_int(start, "y", 0) as i64 + NIImporter_DlrNavteq::read_prefixed_int(duration, "y", 0) as i64;
+        let mon = NIImporter_DlrNavteq::read_prefixed_int(start, "M", 0) as i64 + NIImporter_DlrNavteq::read_prefixed_int(duration, "M", 0) as i64;
+        let mut mday = 7 * (NIImporter_DlrNavteq::read_prefixed_int(start, "w", 0) as i64 + NIImporter_DlrNavteq::read_prefixed_int(duration, "w", 0) as i64);
+        mday += NIImporter_DlrNavteq::read_prefixed_int(start, "d", 0) as i64 + NIImporter_DlrNavteq::read_prefixed_int(duration, "d", 0) as i64;
+        mktime_utc(year - 1900, mon - 1, mday)
     }
 
     /// C++: `time_t NIImporter_DlrNavteq::readDate(const std::string &)` [static, protected]
@@ -631,8 +1205,17 @@ impl NIImporter_DlrNavteq {
     //     return now;
     // }
     #[allow(unused_variables)]
-    pub fn read_date(yyyymmdd: &str) -> Unmapped /* time_t */ {
-        todo!("port NIImporter_DlrNavteq::readDate")
+    pub fn read_date(yyyymmdd: &str) -> i64 {
+        // shortcut: C mktime() works in the local time zone, this port computes UTC (no time zone database), add the local offset when one is available
+        if yyyymmdd.len() == 10 && yyyymmdd.as_bytes()[4] == b'-' && yyyymmdd.as_bytes()[7] == b'-' {
+            if let (Some(y), Some(m), Some(d)) = (yyyymmdd.get(0..4), yyyymmdd.get(5..7), yyyymmdd.get(8..10)) {
+                if let (Ok(y), Ok(m), Ok(d)) = (to_int(y), to_int(m), to_int(d)) {
+                    return mktime_utc(y as i64 - 1900, m as i64 - 1, d as i64);
+                }
+            }
+        }
+        write_errorf!("Could not parse YYYY-MM-DD date '%'", yyyymmdd);
+        now_time()
     }
 
 }
@@ -655,7 +1238,9 @@ impl NIImporter_DlrNavteq_NamesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, streetNames: &mut BTreeMap<String, String>) -> Self {
-        todo!("port NamesHandler::NamesHandler")
+        NIImporter_DlrNavteq_NamesHandler {
+            myStreetNames: Ptr::from_mut(streetNames),
+        }
     }
 
     /// C++: `void NamesHandler::~NamesHandler() noexcept` [virtual]
@@ -663,7 +1248,7 @@ impl NIImporter_DlrNavteq_NamesHandler {
     // NIImporter_DlrNavteq::NamesHandler::~NamesHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NamesHandler::~NamesHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NamesHandler::report(const std::string &)` [virtual]
@@ -688,7 +1273,21 @@ impl NIImporter_DlrNavteq_NamesHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port NamesHandler::report")
+        if result.starts_with('#') {
+            return true;
+        }
+        let mut st = StringTokenizer::with_special(result, StringTokenizer::TAB);
+        if st.size() == 1 {
+            return true; // one line with the number of data containing lines in it (also starts with a comment # since ersion 6.5)
+        }
+        assert!(st.size() >= 2);
+        let id = must(st.next());
+        if st.size() > 2 {
+            let _permanent_id_info = must(st.next());
+        }
+        let name = must(st.next());
+        self.myStreetNames.m().insert(id, name);
+        true
     }
 
     /// C++: `void NamesHandler::NamesHandler(const NamesHandler &)` [private]
@@ -696,7 +1295,7 @@ impl NIImporter_DlrNavteq_NamesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_NamesHandler) -> Self {
-        todo!("port NamesHandler::NamesHandler")
+        panic!("NamesHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `NamesHandler & NamesHandler::operator=(const NamesHandler &)` [private]
@@ -704,7 +1303,7 @@ impl NIImporter_DlrNavteq_NamesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_NamesHandler) -> &mut NIImporter_DlrNavteq_NamesHandler {
-        todo!("port NamesHandler::operator=")
+        panic!("NamesHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -729,7 +1328,10 @@ impl NIImporter_DlrNavteq_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(nc: &mut NBNodeCont, file: &str, geoms: &mut BTreeMap<String, PositionVector>) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+        NIImporter_DlrNavteq_NodesHandler {
+            myNodeCont: Ptr::from_mut(nc),
+            myGeoms: Ptr::from_mut(geoms),
+        }
     }
 
     /// C++: `void NodesHandler::~NodesHandler() noexcept` [virtual]
@@ -737,7 +1339,7 @@ impl NIImporter_DlrNavteq_NodesHandler {
     // NIImporter_DlrNavteq::NodesHandler::~NodesHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NodesHandler::~NodesHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NodesHandler::report(const std::string &)` [virtual]
@@ -805,7 +1407,65 @@ impl NIImporter_DlrNavteq_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port NodesHandler::report")
+        if result.starts_with('#') {
+            return true;
+        }
+        let mut stream = LineStream::new(result);
+        // id
+        let id = match stream.token() {
+            Some(t) => t.to_string(),
+            None => throw_error(ProcessError::new(format!("Something is wrong with the following data line\n{result}"))),
+        };
+        // intermediate?
+        let intermediate = match stream.int() {
+            Some(v) => v,
+            None => {
+                if self.myNodeCont.size() == 0 {
+                    // be generous with extra data at beginning of file
+                    return true;
+                }
+                throw_error(ProcessError::new(tlf!("Non-numerical value for intermediate status in node %.", id)));
+            }
+        };
+        // number of geometrical information
+        let no_geoms = match stream.int() {
+            Some(v) => v,
+            None => throw_error(ProcessError::new(tlf!("Non-numerical value for number of geometries in node %.", id))),
+        };
+        // geometrical information
+        let mut geoms = PositionVector::default();
+        for _ in 0..no_geoms {
+            let x = match stream.double() {
+                Some(v) => v,
+                None => throw_error(ProcessError::new(tlf!("Non-numerical value for x-position in node %.", id))),
+            };
+            let y = match stream.double() {
+                Some(v) => v,
+                None => throw_error(ProcessError::new(tlf!("Non-numerical value for y-position in node %.", id))),
+            };
+            let mut pos = Position::new(x, y);
+            if !NBNetBuilder::transform_coordinate(&mut pos, true, Ptr::null()) {
+                throw_error(ProcessError::new(tlf!("Unable to project coordinates for node %.", id)));
+            }
+            geoms.push(pos);
+        }
+
+        if intermediate == 0 {
+            // shortcut: the C++ NBNode(id, position) overload (district = nullptr) maps to the UNKNOWN node type here
+            let n = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&id, &geoms[0], SumoXMLNodeType::UNKNOWN))));
+            if !self.myNodeCont.m().insert_2(n) {
+                // delete n
+                drop(unsafe { Box::from_raw(n.as_raw()) });
+                if get_bool("ignore-errors") {
+                    write_warningf!("Could not add node '%'.", id);
+                } else {
+                    throw_error(ProcessError::new(tlf!("Could not add node '%'.", id)));
+                }
+            }
+        } else {
+            self.myGeoms.m().insert(id, geoms);
+        }
+        true
     }
 
     /// C++: `void NodesHandler::NodesHandler(const NodesHandler &)` [private]
@@ -813,7 +1473,7 @@ impl NIImporter_DlrNavteq_NodesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_NodesHandler) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+        panic!("NodesHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `NodesHandler & NodesHandler::operator=(const NodesHandler &)` [private]
@@ -821,7 +1481,7 @@ impl NIImporter_DlrNavteq_NodesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_NodesHandler) -> &mut NIImporter_DlrNavteq_NodesHandler {
-        todo!("port NodesHandler::operator=")
+        panic!("NodesHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -834,7 +1494,7 @@ pub struct NIImporter_DlrNavteq_ProhibitionHandler {
     pub myEdgeCont: Ptr<NBEdgeCont>,
     pub myFile: String,
     pub myVersion: f64,
-    pub myConstructionTime: Unmapped /* time_t */,
+    pub myConstructionTime: i64,
 }
 
 impl NIImporter_DlrNavteq_ProhibitionHandler {
@@ -848,8 +1508,13 @@ impl NIImporter_DlrNavteq_ProhibitionHandler {
     //     myConstructionTime(constructionTime) {
     // }
     #[allow(unused_variables)]
-    pub fn new(ne: &mut NBEdgeCont, file: &str, constructionTime: Unmapped /* time_t */) -> Self {
-        todo!("port ProhibitionHandler::ProhibitionHandler")
+    pub fn new(ne: &mut NBEdgeCont, file: &str, constructionTime: i64) -> Self {
+        NIImporter_DlrNavteq_ProhibitionHandler {
+            myEdgeCont: Ptr::from_mut(ne),
+            myFile: file.to_string(),
+            myVersion: 0.0,
+            myConstructionTime: constructionTime,
+        }
     }
 
     /// C++: `void ProhibitionHandler::~ProhibitionHandler() noexcept` [virtual]
@@ -857,7 +1522,7 @@ impl NIImporter_DlrNavteq_ProhibitionHandler {
     // NIImporter_DlrNavteq::ProhibitionHandler::~ProhibitionHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ProhibitionHandler::~ProhibitionHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool ProhibitionHandler::report(const std::string &)` [virtual]
@@ -908,7 +1573,46 @@ impl NIImporter_DlrNavteq_ProhibitionHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port ProhibitionHandler::report")
+        if result.starts_with('#') {
+            if self.myVersion == 0.0 {
+                let version = NIImporter_DlrNavteq::read_version(result, &self.myFile);
+                if version > 0.0 {
+                    self.myVersion = version;
+                }
+            }
+            return true;
+        }
+        let mut st = StringTokenizer::with_special(result, StringTokenizer::TAB);
+        if st.size() == 1 {
+            return true; // one line with the number of data containing lines in it (also starts with a comment # since ersion 6.5)
+        }
+        if self.myVersion >= 6.0 {
+            assert!(st.size() >= 7);
+            let _id = must(st.next());
+            let _permanent = must(st.next());
+            let validityPeriod = must(st.next());
+            let _throughTraffic = must(st.next());
+            let _vehicleType = must(st.next());
+            if validityPeriod != UNDEFINED {
+                write_warningf!("Ignoring temporary prohibited manoeuvre (%).", validityPeriod);
+                return true;
+            }
+        }
+        let startEdge = must(st.next());
+        let endEdge = must(st.get(st.size() - 1));
+
+        let from = self.myEdgeCont.retrieve(&startEdge, false);
+        if from.is_null() {
+            write_warningf!("Ignoring prohibition from unknown start edge '%'.", startEdge);
+            return true;
+        }
+        let to = self.myEdgeCont.retrieve(&endEdge, false);
+        if to.is_null() {
+            write_warningf!("Ignoring prohibition from unknown end edge '%'.", endEdge);
+            return true;
+        }
+        from.m().remove_from_connections(to, -1, -1, true, false, false);
+        true
     }
 
     /// C++: `void ProhibitionHandler::ProhibitionHandler(const ProhibitionHandler &)` [private]
@@ -916,7 +1620,7 @@ impl NIImporter_DlrNavteq_ProhibitionHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_ProhibitionHandler) -> Self {
-        todo!("port ProhibitionHandler::ProhibitionHandler")
+        panic!("ProhibitionHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `ProhibitionHandler & ProhibitionHandler::operator=(const ProhibitionHandler &)` [private]
@@ -924,7 +1628,7 @@ impl NIImporter_DlrNavteq_ProhibitionHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_ProhibitionHandler) -> &mut NIImporter_DlrNavteq_ProhibitionHandler {
-        todo!("port ProhibitionHandler::operator=")
+        panic!("ProhibitionHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -937,9 +1641,9 @@ pub struct NIImporter_DlrNavteq_TimeRestrictionsHandler {
     pub myEdgeCont: Ptr<NBEdgeCont>,
     pub myDistrictCont: Ptr<NBDistrictCont>,
     /// The date for which to build the network (in case some edges are still under construction)
-    pub myConstructionTime: Unmapped /* time_t */,
-    pub myCS_min: Unmapped /* time_t */,
-    pub myCS_max: Unmapped /* time_t */,
+    pub myConstructionTime: i64,
+    pub myCS_min: i64,
+    pub myCS_max: i64,
     pub myConstructionEntries: i32,
     pub myNotStarted: i32,
     pub myUnderConstruction: i32,
@@ -963,8 +1667,19 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     //     myRemovedEdges(0) {
     // }
     #[allow(unused_variables)]
-    pub fn new(ec: &mut NBEdgeCont, dc: &mut NBDistrictCont, constructionTime: Unmapped /* time_t */) -> Self {
-        todo!("port TimeRestrictionsHandler::TimeRestrictionsHandler")
+    pub fn new(ec: &mut NBEdgeCont, dc: &mut NBDistrictCont, constructionTime: i64) -> Self {
+        NIImporter_DlrNavteq_TimeRestrictionsHandler {
+            myEdgeCont: Ptr::from_mut(ec),
+            myDistrictCont: Ptr::from_mut(dc),
+            myConstructionTime: constructionTime,
+            myCS_min: i64::MAX,
+            myCS_max: i64::MIN,
+            myConstructionEntries: 0,
+            myNotStarted: 0,
+            myUnderConstruction: 0,
+            myFinished: 0,
+            myRemovedEdges: 0,
+        }
     }
 
     /// C++: `void TimeRestrictionsHandler::~TimeRestrictionsHandler() noexcept` [virtual]
@@ -972,7 +1687,7 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     // NIImporter_DlrNavteq::TimeRestrictionsHandler::~TimeRestrictionsHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TimeRestrictionsHandler::~TimeRestrictionsHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool TimeRestrictionsHandler::report(const std::string &)` [virtual]
@@ -1032,7 +1747,48 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port TimeRestrictionsHandler::report")
+        if result.starts_with('#') {
+            return true;
+        }
+        let mut st = StringTokenizer::with_special(result, StringTokenizer::WHITECHARS);
+        let id = must(st.next());
+        let type_ = must(st.next());
+        let _directionOfFlow = must(st.next()); // can be ignored since unidirectional edge ids are referenced in the file
+        let _throughTraffic = must(st.next());
+        let _vehicleType = must(st.next());
+        let validityPeriod = must(st.next());
+        let warning = format!("Unrecognized TIME_REC '{validityPeriod}'");
+        if type_ == "CS" {
+            self.myConstructionEntries += 1;
+            if validityPeriod.len() > 1024 {
+                write_warning(&warning);
+            }
+            // construction
+            match scan_construction_period(&validityPeriod) {
+                Some((start, duration)) => {
+                    let tStart = NIImporter_DlrNavteq::read_time_rec(&start, "");
+                    let tEnd = NIImporter_DlrNavteq::read_time_rec(&start, &duration);
+                    self.myCS_min = std::cmp::min(self.myCS_min, tStart);
+                    self.myCS_max = std::cmp::max(self.myCS_max, tEnd);
+                    if self.myConstructionTime < tEnd {
+                        let edge = self.myEdgeCont.retrieve(&id, false);
+                        if !edge.is_null() {
+                            self.myRemovedEdges += 1;
+                            self.myEdgeCont.m().extract(self.myDistrictCont.m(), edge, true);
+                        }
+                        if self.myConstructionTime < tStart {
+                            self.myNotStarted += 1;
+                        } else {
+                            self.myUnderConstruction += 1;
+                        }
+                    } else {
+                        self.myFinished += 1;
+                    }
+                }
+                None => write_warning(&warning),
+            }
+        }
+        true
     }
 
     /// C++: `void TimeRestrictionsHandler::printSummary()`
@@ -1055,7 +1811,21 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn print_summary(&mut self) {
-        todo!("port TimeRestrictionsHandler::printSummary")
+        if self.myConstructionEntries > 0 {
+            // shortcut: strftime/localtime use the local time zone, dates are formatted in UTC here
+            let msg = format!(
+                "Parsed {} construction entries between {} and {}.\nRemoved {} edges not yet constructed at {}.\n   not yet started: {}\n   under construction: {}\n   finished: {}\n",
+                self.myConstructionEntries,
+                format_date(self.myCS_min),
+                format_date(self.myCS_max),
+                self.myRemovedEdges,
+                format_date(self.myConstructionTime),
+                self.myNotStarted,
+                self.myUnderConstruction,
+                self.myFinished,
+            );
+            write_message(&msg);
+        }
     }
 
     /// C++: `void TimeRestrictionsHandler::TimeRestrictionsHandler(const TimeRestrictionsHandler &)` [private]
@@ -1063,7 +1833,7 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_TimeRestrictionsHandler) -> Self {
-        todo!("port TimeRestrictionsHandler::TimeRestrictionsHandler")
+        panic!("TimeRestrictionsHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `TimeRestrictionsHandler & TimeRestrictionsHandler::operator=(const TimeRestrictionsHandler &)` [private]
@@ -1071,7 +1841,7 @@ impl NIImporter_DlrNavteq_TimeRestrictionsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_TimeRestrictionsHandler) -> &mut NIImporter_DlrNavteq_TimeRestrictionsHandler {
-        todo!("port TimeRestrictionsHandler::operator=")
+        panic!("TimeRestrictionsHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
@@ -1102,7 +1872,11 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont, ne: &mut NBEdgeCont, file: &str) -> Self {
-        todo!("port TrafficlightsHandler::TrafficlightsHandler")
+        NIImporter_DlrNavteq_TrafficlightsHandler {
+            myNodeCont: Ptr::from_mut(nc),
+            myTLLogicCont: Ptr::from_mut(tlc),
+            myEdgeCont: Ptr::from_mut(ne),
+        }
     }
 
     /// C++: `void TrafficlightsHandler::~TrafficlightsHandler() noexcept` [virtual]
@@ -1110,7 +1884,7 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
     // NIImporter_DlrNavteq::TrafficlightsHandler::~TrafficlightsHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TrafficlightsHandler::~TrafficlightsHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool TrafficlightsHandler::report(const std::string &)` [virtual]
@@ -1146,7 +1920,33 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
     // }
     #[allow(unused_variables)]
     pub fn report(&mut self, result: &str) -> bool {
-        todo!("port TrafficlightsHandler::report")
+        if result.starts_with('#') {
+            return true;
+        }
+        let mut st = StringTokenizer::with_special(result, StringTokenizer::WHITECHARS);
+        let edgeID = must(st.get(5));
+        let edge = self.myEdgeCont.retrieve(&edgeID, false);
+        if edge.is_null() {
+            write_warningf!("The traffic light edge '%' could not be found.", edgeID);
+        } else {
+            let node = edge.get_to_node();
+            if node.get_type() != SumoXMLNodeType::TRAFFIC_LIGHT {
+                let pos = *node.get_position();
+                node.m().reinit(&pos, SumoXMLNodeType::TRAFFIC_LIGHT, false);
+                // @note. There may be additional information somewhere in the GDF files about traffic light type ...
+                let type_ = TrafficLightTypes.get(&get_string("tls.default-type"));
+                // @note actually we could use the navteq node ID here
+                let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(node.get_id(), node, 0, type_)));
+                let tlDef = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                if !self.myTLLogicCont.m().insert(tlDef, false) {
+                    // actually, nothing should fail here
+                    // delete tlDef
+                    drop(unsafe { Box::from_raw(raw) });
+                    throw_error(ProcessError::new(tlf!("Could not allocate tls for '%'.", node.get_id())));
+                }
+            }
+        }
+        true
     }
 
     /// C++: `void TrafficlightsHandler::TrafficlightsHandler(const TrafficlightsHandler &)` [private]
@@ -1154,7 +1954,7 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_DlrNavteq_TrafficlightsHandler) -> Self {
-        todo!("port TrafficlightsHandler::TrafficlightsHandler")
+        panic!("TrafficlightsHandler copy constructor is invalidated (private and never defined in C++)")
     }
 
     /// C++: `TrafficlightsHandler & TrafficlightsHandler::operator=(const TrafficlightsHandler &)` [private]
@@ -1162,8 +1962,50 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_DlrNavteq_TrafficlightsHandler) -> &mut NIImporter_DlrNavteq_TrafficlightsHandler {
-        todo!("port TrafficlightsHandler::operator=")
+        panic!("TrafficlightsHandler assignment operator is invalidated (private and never defined in C++)")
     }
 
 }
 
+
+impl LineHandler for NIImporter_DlrNavteq_ConnectedLanesHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_ConnectedLanesHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_EdgesHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_EdgesHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_NamesHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_NamesHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_NodesHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_NodesHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_ProhibitionHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_ProhibitionHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_TimeRestrictionsHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_TimeRestrictionsHandler::report(self, result)
+    }
+}
+
+impl LineHandler for NIImporter_DlrNavteq_TrafficlightsHandler {
+    fn report(&mut self, result: &str) -> bool {
+        NIImporter_DlrNavteq_TrafficlightsHandler::report(self, result)
+    }
+}
