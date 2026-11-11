@@ -33,7 +33,8 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn new(node: &NBNode) -> Self {
-        todo!("port NBNodeShapeComputer::NBNodeShapeComputer")
+        let ext = if node.get_edges().len() > 4 && !NBNodeTypeComputer::is_railway_node(Ptr::new(node)) { 50.0 } else { 100.0 };
+        NBNodeShapeComputer { myNode: Ptr::new(node), myRadius: node.get_radius(), EXT: ext }
     }
 
     /// C++: `void NBNodeShapeComputer::~NBNodeShapeComputer() noexcept`
@@ -41,7 +42,7 @@ impl NBNodeShapeComputer {
     // NBNodeShapeComputer::~NBNodeShapeComputer() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBNodeShapeComputer::~NBNodeShapeComputer")
+        // C++ destructor body is empty
     }
 
     /// C++: `const PositionVector NBNodeShapeComputer::compute(bool)`
@@ -78,7 +79,24 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute(&mut self, forceSmall: bool) -> PositionVector {
-        todo!("port NBNodeShapeComputer::compute")
+        // DEBUG_NODE_SHAPE edge-annotation block is a debug-only #ifdef and is not ported
+        // check whether the node is a dead end node or a node where only turning is possible
+        //  in this case, we will use "computeNodeShapeSmall"
+        if self.myNode.get_edges().len() == 1 || forceSmall {
+            return self.compute_node_shape_small();
+        }
+        if self.myNode.get_edges().len() == 2 && self.myNode.get_incoming_edges().len() == 1 {
+            if self.myNode.get_incoming_edges()[0].is_turning_direction_at(self.myNode.get_outgoing_edges()[0]) {
+                return self.compute_node_shape_small();
+            }
+        }
+        let geometry_like = self.myNode.is_simple_continuation(true, true);
+        let ret = self.compute_node_shape_default(geometry_like);
+        // fail fall-back: use "computeNodeShapeSmall"
+        if ret.len() < 3 {
+            return self.compute_node_shape_small();
+        }
+        ret
     }
 
     /// C++: `double NBNodeShapeComputer::getRadius() const` [const]
@@ -88,7 +106,7 @@ impl NBNodeShapeComputer {
     //     }
     #[allow(unused_variables)]
     pub fn get_radius(&self) -> f64 {
-        todo!("port NBNodeShapeComputer::getRadius")
+        self.myRadius
     }
 
     /// C++: `const PositionVector NBNodeShapeComputer::computeNodeShapeDefault(bool)` [private]
