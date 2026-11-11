@@ -1,6 +1,14 @@
 //! Port of libsumo/MeanData.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::libsumo::helper::Helper;
+use crate::libsumo::storage_helper::StorageHelper;
+use crate::libsumo::tra_ci_defs::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::string_bijection::StringBijection;
+use utils::traci::traci_constants::*;
+use utils::xml::sumo_xml_definitions::{Attrs, SumoXMLAttr};
+use std::cell::RefCell;
 
 /// C++ class `libsumo::MeanData` (libsumo/MeanData.h)
 pub struct MeanData {
@@ -10,6 +18,18 @@ pub struct MeanData {
 //   static const int MeanData::DOMAIN_ID;
 //   static SubscriptionResults MeanData::mySubscriptionResults;
 //   static ContextSubscriptionResults MeanData::myContextSubscriptionResults;
+
+// LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA): const int MeanData::DOMAIN_ID(CMD_GET_MEANDATA_VARIABLE)
+pub const MEAN_DATA_DOMAIN_ID: i32 = CMD_GET_MEANDATA_VARIABLE;
+thread_local! {
+    static MY_SUBSCRIPTION_RESULTS: RefCell<SubscriptionResults> = RefCell::new(SubscriptionResults::new());
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: RefCell<ContextSubscriptionResults> = RefCell::new(ContextSubscriptionResults::new());
+}
+
+// shortcut: C++ throws libsumo::TraCIException; panics with the same message until TraCI error propagation is ported, upgrade when Result-based libsumo lands
+fn throw_traci(msg: String) -> ! {
+    panic!("{}", msg)
+}
 
 impl MeanData {
     /// C++: `double MeanData::getAttributeValue(const std::string &, const std::string &, const std::string &)` [static]
@@ -28,7 +48,16 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_value(meanDataID: &str, laneID: &str, attr: &str) -> f64 {
-        todo!("port MeanData::getAttributeValue")
+        if !Attrs.has_string(attr) {
+            throw_traci(format!("Unknown Meandata attribute '{}'.", attr));
+        }
+        let lane = MSLane::dictionary_2(laneID);
+        if lane.is_null() {
+            throw_traci(format!("Lane '{}' is not known", laneID));
+        }
+        let md = Self::get_mean_data(meanDataID);
+        let a = Attrs.get(attr).unwrap() as SumoXMLAttr;
+        md.get_attribute_value(lane, a, INVALID_DOUBLE_VALUE)
     }
 
     /// C++: `std::vector<std::string> MeanData::getIDs(const std::string &)` [static]
@@ -51,7 +80,20 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_i_ds(meanDataID: &str) -> Vec<String> {
-        todo!("port MeanData::getIDs")
+        let md = Self::get_mean_data(meanDataID);
+        let mut result: Vec<String> = Vec::new();
+        if md.is_edge_data() {
+            for e in md.get_edges().iter() {
+                result.push(e.get_id().to_string());
+            }
+        } else {
+            for e in md.get_edges().iter() {
+                for lane in e.get_lanes().iter() {
+                    result.push(lane.get_id().to_string());
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<double> MeanData::getAttributeValues(const std::string &, const std::string &)` [static]
@@ -78,7 +120,24 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_values(meanDataID: &str, attr: &str) -> Vec<f64> {
-        todo!("port MeanData::getAttributeValues")
+        if !Attrs.has_string(attr) {
+            throw_traci(format!("Unknown Meandata attribute '{}'.", attr));
+        }
+        let md = Self::get_mean_data(meanDataID);
+        let a = Attrs.get(attr).unwrap() as SumoXMLAttr;
+        let mut result: Vec<f64> = Vec::new();
+        if md.is_edge_data() {
+            for e in md.get_edges().iter() {
+                result.push(md.get_attribute_value(e.get_lanes()[0], a, INVALID_DOUBLE_VALUE));
+            }
+        } else {
+            for e in md.get_edges().iter() {
+                for lane in e.get_lanes().iter() {
+                    result.push(md.get_attribute_value(*lane, a, INVALID_DOUBLE_VALUE));
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> MeanData::getIDList()` [static]
@@ -93,7 +152,13 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port MeanData::getIDList")
+        let net = MSNet::get_instance();
+        let mut ids: Vec<String> = Vec::new();
+        for (key, _) in net.m().get_detector_control().get_mean_data().iter() {
+            ids.push(key.clone());
+        }
+        ids.sort();
+        ids
     }
 
     /// C++: `int MeanData::getIDCount()` [static]
@@ -103,7 +168,7 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port MeanData::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string MeanData::getParameter(const std::string &, const std::string &)` [static]
@@ -113,14 +178,14 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port MeanData::getParameter")
+        String::new()
     }
 
     /// C++: `const std::pair<std::string, std::string> MeanData::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(MeanData)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port MeanData::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void MeanData::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -131,77 +196,78 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port MeanData::setParameter")
     }
 
     /// C++: `void MeanData::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port MeanData::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_MEANDATA_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.);
     }
 
     /// C++: `void MeanData::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port MeanData::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_MEANDATA_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.);
     }
 
     /// C++: `void MeanData::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port MeanData::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_MEANDATA_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void MeanData::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port MeanData::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_MEANDATA_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults MeanData::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port MeanData::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults MeanData::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port MeanData::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults MeanData::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port MeanData::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults MeanData::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port MeanData::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void MeanData::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port MeanData::subscribeParameterWithKey")
+        // shortcut: TraCIResult is a payload-less base struct, so a TraCIString value cannot be stored in TraCIResults; upgrade with a TraCIResult enum/trait redesign in tra_ci_defs.rs
+        let _ = (objectID, key, beginTime, endTime);
+        throw_traci("MeanData::subscribeParameterWithKey: TraCIString payload not representable yet".to_string())
     }
 
     /// C++: `int MeanData::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port MeanData::domainID")
+        MEAN_DATA_DOMAIN_ID
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> MeanData::makeWrapper()` [static]
@@ -211,7 +277,8 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port MeanData::makeWrapper")
+        // shortcut: SubscriptionWrapper needs &mut access to the static result maps, which thread_local RefCells cannot lend to an Rc; upgrade with the subscription-storage redesign in helper.rs
+        throw_traci("MeanData::makeWrapper: subscription wrapper storage not ported".to_string())
     }
 
     /// C++: `bool MeanData::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -245,7 +312,34 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port MeanData::handleVariable")
+        let mut w = wrapper;
+        let ps = paramData.m();
+        match variable {
+            TRACI_ID_LIST => w.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => w.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_PARAMETER => {
+                ps.read_unsigned_byte().unwrap();
+                let key = ps.read_string().unwrap();
+                w.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                ps.read_unsigned_byte().unwrap();
+                let key = ps.read_string().unwrap();
+                w.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            VAR_MEANDATA_LANE => {
+                StorageHelper::read_compound(ps, -1, "");
+                let laneID = StorageHelper::read_typed_string(ps, "");
+                let attr = StorageHelper::read_typed_string(ps, "");
+                w.m().wrap_double(objID, variable, Self::get_attribute_value(objID, &laneID, &attr))
+            }
+            VAR_MEANDATA_IDS => w.m().wrap_string_list(objID, variable, &Self::get_i_ds(objID)),
+            VAR_MEANDATA_VALUES => {
+                let attr = StorageHelper::read_typed_string(ps, "");
+                w.m().wrap_double_list(objID, variable, &Self::get_attribute_values(objID, &attr))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSMeanData * MeanData::getMeanData(const std::string &)` [static, private]
@@ -263,7 +357,17 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_data(id: &str) -> Ptr<MSMeanData> {
-        todo!("port MeanData::getMeanData")
+        let net = MSNet::get_instance();
+        let mut n = net.m();
+        let mdMap = n.get_detector_control().get_mean_data();
+        let it = match mdMap.get(id) {
+            Some(v) if !v.is_empty() => v,
+            _ => throw_traci(format!("MeanData '{}' is not known", id)),
+        };
+        if it.len() > 1 {
+            write_warning(&format!("Found {} meanData definitions with id '{}'.", it.len(), id));
+        }
+        it[0].clone()
     }
 
     /// C++: `void MeanData::MeanData()` [private]
@@ -271,7 +375,7 @@ impl MeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MeanData::MeanData")
+        unreachable!("libsumo::MeanData has an invalidated (private, undefined) default constructor")
     }
 
 }
