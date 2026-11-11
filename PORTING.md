@@ -30,3 +30,18 @@ Progress metric: share of `tests/sumo` texttest cases passing (`python tests/run
 | utils/common/StdDefs | crates/utils/src/common/std_defs.rs | |
 | utils/common/StringUtils (parsing) | crates/utils/src/common/string_utils.rs | partial |
 | utils/common/ToString (doubles) | crates/utils/src/common/to_string.rs | partial |
+
+## microsim ownership design (decided before porting microsim)
+
+C++ microsim is a pointer graph (vehicle -> lane -> edge -> links -> lanes ...) mutated in phases.
+Rust equivalent:
+
+- `MSNet` owns flat arenas: `edges: Vec<MSEdge>`, `lanes: Vec<MSLane>`, `links: Vec<MSLink>`,
+  `junctions: Vec<..>`, `vehicles: slab of RefCell<MSVehicle>`.
+- Every C++ pointer becomes a typed index: `EdgeId(u32)`, `LaneId(u32)`, `LinkId(u32)`, `VehId(u32)`;
+  nullable pointers become `Option<_>`. Network topology is immutable after loading.
+- Per-step mutable state (vehicle state, lane vehicle lists, link approach info) lives in `RefCell`s,
+  so the simulation step can hold `&MSNet` while each phase mutates one object and reads others,
+  matching SUMO's phase structure (planMovements -> setJunctionApproaches -> executeMovements -> changeLanes).
+- `MSNet::getInstance()` becomes an explicit `&MSNet` context parameter, not a global.
+- Static config (`MSGlobals`, `OptionsCont`) stays global (read-mostly) via getter functions.
