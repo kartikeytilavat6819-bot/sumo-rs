@@ -1,0 +1,3 @@
+crates/sumo_core/src/netbuild/nb_vehicle.rs
+crates/sumo_core/src/netbuild/nbpt_line.rs
+crates/sumo_core/src/netbuild/nbpt_line_cont.rs

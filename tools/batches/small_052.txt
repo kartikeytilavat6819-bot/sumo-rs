@@ -1,0 +1,3 @@
+crates/sumo_core/src/microsim/transportables/ms_stage_tranship.rs
+crates/sumo_core/src/microsim/transportables/ms_stage_trip.rs
+crates/sumo_core/src/microsim/transportables/ms_stage_waiting.rs

@@ -1,0 +1,5 @@
+crates/sumo_core/src/microsim/devices/ms_transportable_device.rs
+crates/sumo_core/src/microsim/devices/ms_transportable_device_fcd.rs
+crates/sumo_core/src/microsim/devices/ms_transportable_device_fcd_replay.rs
+crates/sumo_core/src/microsim/devices/ms_transportable_device_routing.rs
+crates/sumo_core/src/microsim/devices/ms_vehicle_device.rs

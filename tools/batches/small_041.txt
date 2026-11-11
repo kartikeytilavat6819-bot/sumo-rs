@@ -1,0 +1,1 @@
+crates/sumo_core/src/microsim/devices/ms_device_tripinfo.rs

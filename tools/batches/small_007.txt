@@ -1,0 +1,6 @@
+crates/sumo_core/src/utils/emissions/characteristic_map.rs
+crates/sumo_core/src/utils/emissions/energy_params.rs
+crates/sumo_core/src/utils/emissions/helpers_energy.rs
+crates/sumo_core/src/utils/emissions/helpers_harmonoise.rs
+crates/sumo_core/src/utils/emissions/helpers_hbefa.rs
+crates/sumo_core/src/utils/emissions/helpers_hbefa3.rs

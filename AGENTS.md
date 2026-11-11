@@ -70,3 +70,9 @@ same output text, same floating-point results.
   2. Read ~80 lines around one `todo!()` (offset/limit), port it, Edit it, move to the next.
   3. To learn a struct's fields, grep `pub struct Name` and read just that block.
 - Commit after every ~20 methods, not only per file.
+
+### Compiling (UPDATED - overrides the MEMORY note above)
+
+- Writer agents: do NOT run cargo at all. The shared build lock makes 20 agents wait for an hour.
+  Translate carefully, commit, finish. The lead compiles at merge time and sends errors to a fixer.
+- Fixer agents (told explicitly in their prompt): use your own target dir as instructed there.
