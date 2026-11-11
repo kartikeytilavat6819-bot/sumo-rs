@@ -1,6 +1,17 @@
 //! Port of netimport/NILoader.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_message, write_warning};
+
+/// C++ `throw`: raised as a panic carrying the ProcessError until a top-level catch exists
+fn throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
+}
+
+// shortcut: C++ global deprecatedVehicleClassesSeen (utils/common/SUMOVehicleClass.cpp) is not ported; local set until it is
+thread_local! {
+    static DEPRECATED_VEHICLE_CLASSES_SEEN: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
+}
 
 /// Perfoms network import
 /// C++ class `NILoader` (netimport/NILoader.h)
@@ -16,7 +27,7 @@ impl NILoader {
     //     : myNetBuilder(nb) {}
     #[allow(unused_variables)]
     pub fn new(nb: &mut NBNetBuilder) -> Self {
-        todo!("port NILoader::NILoader")
+        NILoader { myNetBuilder: Ptr::from_mut(nb) }
     }
 
     /// C++: `void NILoader::~NILoader()`
@@ -24,7 +35,7 @@ impl NILoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NILoader::~NILoader")
+        // the C++ destructor has no body
     }
 
     /// C++: `void NILoader::load(OptionsCont &)`
@@ -111,7 +122,77 @@ impl NILoader {
     // }
     #[allow(unused_variables)]
     pub fn load(&mut self, oc: &mut OptionsCont) {
-        todo!("port NILoader::load")
+        let mut ok = true;
+        // load types first
+        let mut handler = NIXMLTypesHandler::new(self.myNetBuilder.m().get_type_cont());
+        if !throw(oc.is_set("type-files", true)) {
+            // shortcut: built-in osm/opendrive/visum typemaps (generated typemap.h from data/typemap/*.typ.xml) are not ported, so none are loaded here; upgrade by embedding those XML files and pushing them into `files`
+            let files: Vec<String> = Vec::new();
+            ok &= NITypeLoader::load(&mut handler, &files, "types", true);
+        } else {
+            ok &= NITypeLoader::load(&mut handler, throw(oc.get_string_vector("type-files")), "types", false);
+        }
+        // try to load height data so it is ready for use by other importers
+        NBHeightMapper::load_if_set(oc);
+        // try to load using different methods
+        NIImporter_SUMO::load_network(oc, self.myNetBuilder.m());
+        NIImporter_OpenStreetMap::load_network(oc, self.myNetBuilder.m());
+        NIImporter_VISUM::load_network(oc, self.myNetBuilder.m());
+        NIImporter_ArcView::load_network(oc, self.myNetBuilder.m());
+        NIImporter_Vissim::load_network(oc, self.myNetBuilder.m());
+        NIImporter_DlrNavteq::load_network(oc, self.myNetBuilder.m());
+        NIImporter_OpenDrive::load_network(oc, self.myNetBuilder.m());
+        NIImporter_MATSim::load_network(oc, self.myNetBuilder.m());
+        NIImporter_ITSUMO::load_network(oc, self.myNetBuilder.m());
+        if throw(oc.get_bool("tls.discard-loaded")) || throw(oc.get_bool("tls.discard-simple")) {
+            let simple = throw(oc.get_bool("tls.discard-simple"));
+            self.myNetBuilder.m().get_node_cont().discard_traffic_lights(self.myNetBuilder.m().get_tl_logic_cont(), simple);
+            let removed = self.myNetBuilder.m().get_tl_logic_cont().get_num_extracted();
+            if removed > 0 {
+                write_message(&format!(" Removed {removed} traffic lights before loading plain-XML"));
+            }
+        }
+        if throw(oc.get_bool("railway.signals.discard")) {
+            self.myNetBuilder.m().get_node_cont().discard_rail_signals();
+        }
+        ok &= self.load_xml(oc);
+        // check the loaded structures
+        if self.myNetBuilder.m().get_node_cont().size() == 0 {
+            std::panic::panic_any(ProcessError::new("No nodes loaded."));
+        }
+        if self.myNetBuilder.m().get_edge_cont().size() == 0 {
+            std::panic::panic_any(ProcessError::new("No edges loaded."));
+        }
+        if !self.myNetBuilder.m().get_edge_cont().check_consistency(self.myNetBuilder.m().get_node_cont()) {
+            std::panic::panic_any(ProcessError::default_msg());
+        }
+        if !ok && !throw(oc.get_bool("ignore-errors")) {
+            std::panic::panic_any(ProcessError::default_msg());
+        }
+        // configure default values that depend on other values
+        self.myNetBuilder.m().get_node_cont().apply_conditional_defaults();
+        // report loaded structures
+        write_message(" Import done:");
+        if self.myNetBuilder.m().get_district_cont().size() > 0 {
+            write_message(&format!("   {} districts loaded.", self.myNetBuilder.m().get_district_cont().size()));
+        }
+        write_message(&format!("   {} nodes loaded.", self.myNetBuilder.m().get_node_cont().size()));
+        if self.myNetBuilder.m().get_type_cont().size() > 0 {
+            write_message(&format!("   {} types loaded.", self.myNetBuilder.m().get_type_cont().size()));
+        }
+        write_message(&format!("   {} edges loaded.", self.myNetBuilder.m().get_edge_cont().size()));
+        if self.myNetBuilder.m().get_edge_cont().get_num_edge_splits() > 0 {
+            write_message(&format!("The split of edges was performed {} times.", self.myNetBuilder.m().get_edge_cont().get_num_edge_splits()));
+        }
+
+        //TODO: uncomment the following lines + adapt tests! [Gregor March '17]
+        //  if (myNetBuilder.getPTStopCont().size() > 0) {
+        //    WRITE_MESSAGEF(TL("   % pt stops loaded."), toString(myNetBuilder.getPTStopCont().size()));
+        //  }
+        if GeoConvHelper::with_processing(|g| g.using_geo_projection()) {
+            let proj = GeoConvHelper::with_processing(|g| g.get_proj_string().to_string());
+            write_message(&format!("Proj projection parameters used: '{proj}'."));
+        }
     }
 
     /// C++: `bool NILoader::loadXML(OptionsCont &)` [private]
@@ -167,7 +248,47 @@ impl NILoader {
     // }
     #[allow(unused_variables)]
     pub fn load_xml(&mut self, oc: &mut OptionsCont) -> bool {
-        todo!("port NILoader::loadXML")
+        // load nodes
+        let mut nodesHandler = NIXMLNodesHandler::new(self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_tl_logic_cont(), oc);
+        let mut ok = NITypeLoader::load(&mut nodesHandler, throw(oc.get_string_vector("node-files")), "nodes", false);
+        // load the edges
+        if ok {
+            let mut edgesHandler = NIXMLEdgesHandler::new(self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_type_cont(), self.myNetBuilder.m().get_district_cont(), self.myNetBuilder.m().get_tl_logic_cont(), oc);
+            ok = NITypeLoader::load(&mut edgesHandler, throw(oc.get_string_vector("edge-files")), "edges", false);
+        }
+        let seen = DEPRECATED_VEHICLE_CLASSES_SEEN.with(|s| s.borrow().clone());
+        if !seen.is_empty() {
+            write_warning(&format!("Deprecated vehicle class(es) '{}' in input edge files.", seen.iter().cloned().collect::<Vec<_>>().join(" ")));
+        }
+        // load the connections
+        if ok {
+            let mut connectionsHandler = NIXMLConnectionsHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_tl_logic_cont());
+            ok = NITypeLoader::load(&mut connectionsHandler, throw(oc.get_string_vector("connection-files")), "connections", false);
+        }
+        // load traffic lights (needs to come last, references loaded edges and connections)
+        if ok {
+            let mut tlHandler = NIXMLTrafficLightsHandler::new(self.myNetBuilder.m().get_tl_logic_cont(), self.myNetBuilder.m().get_edge_cont(), false);
+            ok = NITypeLoader::load(&mut tlHandler, throw(oc.get_string_vector("tllogic-files")), "traffic lights", false);
+        }
+
+        // load public transport stops (used for restricting edge removal and as input when repairing railroad topology)
+        if ok && oc.exists("ptstop-files") {
+            let mut ptHandler = NIXMLPTHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_pt_stop_cont(), self.myNetBuilder.m().get_pt_line_cont());
+            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptstop-files")), "public transport stops", false);
+        }
+
+        // load public transport lines (used as input when repairing railroad topology)
+        if ok && oc.exists("ptline-files") {
+            let mut ptHandler = NIXMLPTHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_pt_stop_cont(), self.myNetBuilder.m().get_pt_line_cont());
+            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptline-files")), "public transport lines", false);
+        }
+
+        // load shapes for output formats that embed shape data
+        if ok && oc.exists("polygon-files") {
+            let mut shapeHandler = NIXMLShapeHandler::new(self.myNetBuilder.m().get_shape_cont(), self.myNetBuilder.m().get_edge_cont());
+            ok = NITypeLoader::load(&mut shapeHandler, throw(oc.get_string_vector("polygon-files")), "polygon data", false);
+        }
+        ok
     }
 
     /// C++: `void NILoader::NILoader(const NILoader &)` [private]
@@ -175,7 +296,8 @@ impl NILoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NILoader) -> Self {
-        todo!("port NILoader::NILoader")
+        // the copy constructor is declared private and never defined in C++
+        panic!("NILoader is not copyable")
     }
 
     /// C++: `NILoader & NILoader::operator=(const NILoader &)` [private]
@@ -183,7 +305,8 @@ impl NILoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NILoader) -> &mut NILoader {
-        todo!("port NILoader::operator=")
+        // the assignment operator is declared private and never defined in C++
+        panic!("NILoader is not assignable")
     }
 
 }
