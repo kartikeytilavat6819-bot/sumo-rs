@@ -233,7 +233,7 @@ impl NBHeightMapper {
                 return triangle.get_z(geo);
             }
         }
-        write_warningf!("Could not get height data for coordinate %", geo);
+        write_warningf!("Could not get height data for coordinate %", geo.to_string_prec(g_precision()));
         0.
     }
 

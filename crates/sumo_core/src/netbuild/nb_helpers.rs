@@ -217,3 +217,41 @@ impl NBHelpers {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rel_angle_wraps_into_minus_180_180() {
+        assert_eq!(NBHelpers::rel_angle(0., 270.), -90.);
+        assert_eq!(NBHelpers::rel_angle(350., 10.), 20.);
+    }
+
+    #[test]
+    fn norm_rel_angle_maps_turnaround_to_minus_180() {
+        assert_eq!(NBHelpers::norm_rel_angle(0., 180.), -180.);
+        assert_eq!(NBHelpers::norm_rel_angle(0., 90.), 90.);
+    }
+
+    #[test]
+    fn normal_id_representation_strips_zeros_and_trailing_text() {
+        assert_eq!(NBHelpers::normal_id_representation("007"), "7");
+        assert_eq!(NBHelpers::normal_id_representation("-5x"), "-5");
+        assert_eq!(NBHelpers::normal_id_representation("abc"), "0");
+    }
+
+    #[test]
+    fn interpret_lane_id_splits_at_last_underscore() {
+        let mut edge = String::new();
+        let mut index = -1;
+        NBHelpers::interpret_lane_id("e_1_2", &mut edge, &mut index);
+        assert_eq!(edge, "e_1");
+        assert_eq!(index, 2);
+    }
+
+    #[test]
+    fn stream_tokens_gives_one_empty_name_for_empty_input() {
+        assert_eq!(stream_tokens(""), vec![""]);
+        assert_eq!(stream_tokens(" a  b "), vec!["a", "b"]);
+    }
+}
