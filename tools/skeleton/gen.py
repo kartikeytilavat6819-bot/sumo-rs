@@ -41,6 +41,10 @@ CONTAINERS = {
     "std::shared_ptr": "Rc", "std::unique_ptr": "Box", "std::array": "Vec", "std::atomic": "",
     "std::function": "Box<dyn Fn>",
 }
+OPAQUE_PORTED = {
+    "RTree": "use foreign::rtree::rtree::RTree with its 6 generic parameters",
+    "CustomizableContractionHierarchyMetric": "foreign::routingkit metric borrows the CCH (has a lifetime)",
+}
 RUST_KW = {"type", "match", "move", "ref", "fn", "loop", "mod", "use", "where", "impl", "trait", "self",
            "super", "crate", "box", "in", "as", "dyn", "gen", "async", "await", "yield", "override",
            "final", "priv", "abstract", "macro", "unsafe", "pub", "mut", "let", "struct", "enum", "Self"}
@@ -125,9 +129,16 @@ class TypeMapper:
             if name in CONTAINERS:
                 return f"{CONTAINERS[name]}<{', '.join(self.map(a) for a in args)}>"
             base = self.lookup(name)
+            if base in OPAQUE_PORTED:  # hand-ported generic whose Rust shape differs from the C++ template
+                return f"Unmapped /* {t}: {OPAQUE_PORTED[base]} */"
             if base:
-                return f"{base}<{', '.join(self.map(a) for a in args)}>"
+                mapped_args = [self.map(a) for a in args]
+                if base == "StringBijection" and any(a == "f64" or a.startswith("Vec<") for a in mapped_args):
+                    return f"Unmapped /* {t}: utils StringBijection needs Copy + Ord values; use a BTreeMap<String, _> */"
+                return f"{base}<{', '.join(mapped_args)}>"
         found = self.lookup(t)
+        if found in OPAQUE_PORTED:
+            return f"Unmapped /* {t}: {OPAQUE_PORTED[found]} */"
         if found:
             return self.wrap(found)
         bare = t.split("::")[-1]

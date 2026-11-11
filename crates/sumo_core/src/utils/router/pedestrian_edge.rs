@@ -1,0 +1,150 @@
+//! Port of utils/router/PedestrianEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use crate::prelude::*;
+
+/// the pedestrian edge type that is given to the internal router (SUMOAbstractRouter)
+/// C++ class `PedestrianEdge` (utils/router/PedestrianEdge.h)
+pub struct PedestrianEdge<E, L, N, V> {
+    /// C++ base class `IntermodalEdge<E, L, N, V>`
+    pub base: IntermodalEdge<E, L, N, V>,
+    /// the original edge
+    pub myLane: Ptr<L>,
+    /// the direction of this edge
+    pub myForward: bool,
+    /// the starting position for split edges
+    pub myStartPos: f64,
+    /// whether this edge goes against the flow of traffic
+    pub myIsOpposite: bool,
+    _p: std::marker::PhantomData<(E, L, N, V,)>,
+}
+
+impl<E, L, N, V> std::ops::Deref for PedestrianEdge<E, L, N, V> {
+    type Target = IntermodalEdge<E, L, N, V>;
+    fn deref(&self) -> &IntermodalEdge<E, L, N, V> {
+        &self.base
+    }
+}
+impl<E, L, N, V> std::ops::DerefMut for PedestrianEdge<E, L, N, V> {
+    fn deref_mut(&mut self) -> &mut IntermodalEdge<E, L, N, V> {
+        &mut self.base
+    }
+}
+
+impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
+    /// C++: `void PedestrianEdge::PedestrianEdge<E, L, N, V>(int, const E *, const L *, bool, const double)`
+    // PedestrianEdge(int numericalID, const E* edge, const L* lane, bool forward, const double pos = -1.) :
+    //         IntermodalEdge<E, L, N, V>(edge->getID() + (edge->isWalkingArea() ? "" : (forward ? "_fwd" : "_bwd")) + toString(pos), numericalID, edge, "!ped"),
+    //         myLane(lane),
+    //         myForward(forward),
+    //         myStartPos(pos >= 0 ? pos : (forward ? 0. : edge->getLength())),
+    //         myIsOpposite(false) {
+    //         if (!forward && (
+    //                     edge->getFunction() == SumoXMLEdgeFunc::NORMAL
+    //                     || edge->getFunction() == SumoXMLEdgeFunc::INTERNAL)) {
+    //             const L* sidewalk = getSidewalk<E, L>(edge);
+    //             if (sidewalk != nullptr && sidewalk->getPermissions() != SVC_PEDESTRIAN) {
+    //                 // some non-pedestrian traffic is allowed
+    //                 myIsOpposite = true;
+    //             }
+    //         }
+    //     }
+    #[allow(unused_variables)]
+    pub fn new(numericalID: i32, edge: Ptr<E>, lane: Ptr<L>, forward: bool, pos: f64) -> Self {
+        todo!("port PedestrianEdge::PedestrianEdge<E, L, N, V>")
+    }
+
+    /// C++: `bool PedestrianEdge::includeInRoute(bool) const` [const]
+    // bool includeInRoute(bool allEdges) const {
+    //         return allEdges || (!this->getEdge()->isCrossing() && !this->getEdge()->isWalkingArea() && !this->getEdge()->isInternal());
+    //     }
+    #[allow(unused_variables)]
+    pub fn include_in_route(&self, allEdges: bool) -> bool {
+        todo!("port PedestrianEdge::includeInRoute")
+    }
+
+    /// C++: `bool PedestrianEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
+    // bool prohibits(const IntermodalTrip<E, N, V>* const trip) const {
+    //         if (trip->node == 0) {
+    //             // network only includes IntermodalEdges
+    //             return false;
+    //         } else {
+    //             // limit routing to the surroundings of the specified node
+    //             return (this->getEdge()->getFromJunction() != trip->node
+    //                     && this->getEdge()->getToJunction() != trip->node);
+    //         }
+    //     }
+    #[allow(unused_variables)]
+    pub fn prohibits(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> bool {
+        todo!("port PedestrianEdge::prohibits")
+    }
+
+    /// C++: `double PedestrianEdge::getPartialLength(const IntermodalTrip<E, N, V> *const) const` [const]
+    // double getPartialLength(const IntermodalTrip<E, N, V>* const trip) const {
+    //         double length = this->getLength();
+    //         if (this->getEdge() == trip->from && !myForward && trip->departPos < myStartPos) {
+    //             length = trip->departPos - (myStartPos - this->getLength());
+    //         }
+    //         if (this->getEdge() == trip->to && myForward && trip->arrivalPos < myStartPos + this->getLength()) {
+    //             length = trip->arrivalPos - myStartPos;
+    //         }
+    //         if (this->getEdge() == trip->from && myForward && trip->departPos > myStartPos) {
+    //             length -= (trip->departPos - myStartPos);
+    //         }
+    //         if (this->getEdge() == trip->to && !myForward && trip->arrivalPos > myStartPos - this->getLength()) {
+    //             length -= (trip->arrivalPos - (myStartPos - this->getLength()));
+    //         }
+    //         // ensure that 'normal' edges always have a higher weight than connector edges
+    //         length = MAX2(length, NUMERICAL_EPS);
+    //         return length;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_partial_length(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
+        todo!("port PedestrianEdge::getPartialLength")
+    }
+
+    /// C++: `double PedestrianEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const]
+    // double getTravelTime(const IntermodalTrip<E, N, V>* const trip, double time) const {
+    //         const double length = getPartialLength(trip);
+    //         double tlsDelay = 0;
+    //         // @note pedestrian traffic lights should never have LINKSTATE_TL_REDYELLOW
+    //         if (this->getEdge()->isCrossing()) {
+    //             double timeToCrossing = (time - STEPS2TIME(trip->departTime));
+    //             if (myLane->getIncomingLinkState() == LINKSTATE_TL_RED) {
+    //                 // red traffic lights occurring later in the route may be green by the time we arrive
+    //                 tlsDelay += MAX2(double(0), TL_RED_PENALTY - timeToCrossing);
+    //             } else if (myLane->getIncomingLinkState() == LINKSTATE_TL_GREEN_MAJOR && timeToCrossing > TL_RED_PENALTY / 2) {
+    //                 // green traffic lights occurring later in the route may be red by the time we arrive
+    //                 tlsDelay += TL_RED_PENALTY;
+    //             }
+    //             tlsDelay += this->getEdge()->getTimePenalty();
+    //         }
+    // #ifdef IntermodalRouter_DEBUG_EFFORTS
+    //         std::cout << " effort for " << trip->getID() << " at " << time << " edge=" << this->getID() << " effort=" << length / trip->speed + tlsDelay << " l=" << length << " fullLength=" << this->getLength() << " s=" << trip->speed << " tlsDelay=" << tlsDelay << "\n";
+    // #endif
+    //         return length / (trip->speed * (myIsOpposite ? gWeightsWalkOppositeFactor : 1)) + tlsDelay;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
+        todo!("port PedestrianEdge::getTravelTime")
+    }
+
+    /// C++: `double PedestrianEdge::getStartPos() const` [const]
+    // double getStartPos() const {
+    //         return myStartPos;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_start_pos(&self) -> f64 {
+        todo!("port PedestrianEdge::getStartPos")
+    }
+
+    /// C++: `double PedestrianEdge::getEndPos() const` [const]
+    // double getEndPos() const {
+    //         return myForward ? myStartPos + this->getLength() : myStartPos - this->getLength();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_end_pos(&self) -> f64 {
+        todo!("port PedestrianEdge::getEndPos")
+    }
+
+}
+

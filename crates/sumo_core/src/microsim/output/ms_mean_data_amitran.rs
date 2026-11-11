@@ -1,0 +1,317 @@
+//! Port of microsim/output/MSMeanData_Amitran.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use crate::prelude::*;
+
+/// Data structure for mean (aggregated) edge/lane values
+/// C++ class `MSMeanData_Amitran::MSLaneMeanDataValues` (microsim/output/MSMeanData_Amitran.h)
+pub struct MSMeanData_Amitran_MSLaneMeanDataValues {
+    /// C++ base class `MSMeanData::MeanDataValues`
+    pub base: MSMeanData_MeanDataValues,
+    /// The number of vehicles that entered this lane within the sample interval
+    pub amount: i32,
+    /// The number of vehicles that entered this lane within the sample interval by type
+    pub typedAmount: BTreeMap<Ptr<MSVehicleType>, i32>,
+    /// The number of sampled vehicle movements by type (in s)
+    pub typedSamples: BTreeMap<Ptr<MSVehicleType>, f64>,
+    /// The sum of the distances the vehicles travelled by type
+    pub typedTravelDistance: BTreeMap<Ptr<MSVehicleType>, f64>,
+}
+
+impl std::ops::Deref for MSMeanData_Amitran_MSLaneMeanDataValues {
+    type Target = MSMeanData_MeanDataValues;
+    fn deref(&self) -> &MSMeanData_MeanDataValues {
+        &self.base
+    }
+}
+impl std::ops::DerefMut for MSMeanData_Amitran_MSLaneMeanDataValues {
+    fn deref_mut(&mut self) -> &mut MSMeanData_MeanDataValues {
+        &mut self.base
+    }
+}
+
+impl MSMeanData_Amitran_MSLaneMeanDataValues {
+    /// C++: `void MSLaneMeanDataValues::MSLaneMeanDataValues(MSLane *const, const double, const bool, const MSMeanData_Amitran *)`
+    /// Constructor
+    // MSMeanData_Amitran::MSLaneMeanDataValues::MSLaneMeanDataValues(MSLane* const lane,
+    //         const double length,
+    //         const bool doAdd,
+    //         const MSMeanData_Amitran* parent)
+    //     : MSMeanData::MeanDataValues(lane, length, doAdd, parent), amount(0) {}
+    #[allow(unused_variables)]
+    pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Amitran>) -> Self {
+        todo!("port MSLaneMeanDataValues::MSLaneMeanDataValues")
+    }
+
+    /// C++: `void MSLaneMeanDataValues::~MSLaneMeanDataValues() noexcept` [virtual]
+    /// Destructor
+    // MSMeanData_Amitran::MSLaneMeanDataValues::~MSLaneMeanDataValues() {
+    // }
+    #[allow(unused_variables)]
+    pub fn drop_(&mut self) {
+        todo!("port MSLaneMeanDataValues::~MSLaneMeanDataValues")
+    }
+
+    /// C++: `void MSLaneMeanDataValues::reset(bool)` [virtual]
+    /// Resets values so they may be used for the next interval
+    // void
+    // MSMeanData_Amitran::MSLaneMeanDataValues::reset(bool) {
+    //     amount = 0;
+    //     typedAmount.clear();
+    //     typedSamples.clear();
+    //     typedTravelDistance.clear();
+    //     resetTime = SIMSTEP;
+    // }
+    #[allow(unused_variables)]
+    pub fn reset(&mut self, afterWrite: bool) {
+        todo!("port MSLaneMeanDataValues::reset")
+    }
+
+    /// C++: `void MSLaneMeanDataValues::addTo(MSMeanData::MeanDataValues &) const` [const, virtual]
+    /// Add the values of this to the given one and store them there
+    // void
+    // MSMeanData_Amitran::MSLaneMeanDataValues::addTo(MSMeanData::MeanDataValues& val) const {
+    //     MSLaneMeanDataValues& v = (MSLaneMeanDataValues&) val;
+    //     v.amount += amount;
+    //     v.sampleSeconds += sampleSeconds;
+    //     v.travelledDistance += travelledDistance;
+    //     for (std::map<const MSVehicleType*, int>::const_iterator it = typedAmount.begin(); it != typedAmount.end(); ++it) {
+    //         v.typedAmount[it->first] += it->second;
+    //     }
+    //     for (std::map<const MSVehicleType*, double>::const_iterator it = typedSamples.begin(); it != typedSamples.end(); ++it) {
+    //         v.typedSamples[it->first] += it->second;
+    //     }
+    //     for (std::map<const MSVehicleType*, double>::const_iterator it = typedTravelDistance.begin(); it != typedTravelDistance.end(); ++it) {
+    //         v.typedTravelDistance[it->first] += it->second;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
+        todo!("port MSLaneMeanDataValues::addTo")
+    }
+
+    /// C++: `bool MSLaneMeanDataValues::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
+    /// Computes current values and adds them to their sums
+    // bool
+    // MSMeanData_Amitran::MSLaneMeanDataValues::notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notification reason, const MSLane* /* enteredLane */) {
+    //     if (myParent->vehicleApplies(veh)) {
+    //         if (getLane() == nullptr || getLane() == static_cast<MSVehicle&>(veh).getLane()) {
+    //             if (reason == MSMoveReminder::NOTIFICATION_DEPARTED || reason == MSMoveReminder::NOTIFICATION_JUNCTION) {
+    //                 ++amount;
+    //                 typedAmount[&veh.getVehicleType()]++;
+    //             }
+    //         }
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    #[allow(unused_variables)]
+    pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+        todo!("port MSLaneMeanDataValues::notifyEnter")
+    }
+
+    /// C++: `bool MSLaneMeanDataValues::isEmpty() const` [const, virtual]
+    // bool
+    // MSMeanData_Amitran::MSLaneMeanDataValues::isEmpty() const {
+    //     return sampleSeconds == 0 && amount == 0;
+    // }
+    #[allow(unused_variables)]
+    pub fn is_empty(&self) -> bool {
+        todo!("port MSLaneMeanDataValues::isEmpty")
+    }
+
+    /// C++: `void MSLaneMeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual]
+    /// Writes output values into the given stream
+    // void
+    // MSMeanData_Amitran::MSLaneMeanDataValues::write(OutputDevice& dev, const SumoXMLAttrMask& attributeMask, const SUMOTime /* period */,
+    //         const int /* numLanes */, const double /*speedLimit*/, const double defaultTravelTime, const int /* numVehicles */) const {
+    //     int averageSpeed;
+    //     if (sampleSeconds > 0) {
+    //         averageSpeed = int(100 * travelledDistance / sampleSeconds);
+    //     } else if (defaultTravelTime >= 0.) {
+    //         averageSpeed = int(100 * myLaneLength / defaultTravelTime);
+    //     } else {
+    //         averageSpeed = -1;
+    //     }
+    //     dev.writeOptionalAttr(SUMO_ATTR_AMOUNT, amount, attributeMask);
+    //     dev.writeOptionalAttr(SUMO_ATTR_AVERAGESPEED, averageSpeed, attributeMask);
+    //
+    //     if (myParent->isTyped()) {
+    //         for (std::map<const MSVehicleType*, int>::const_iterator it = typedAmount.begin(); it != typedAmount.end(); ++it) {
+    //             dev.openTag("actorConfig");
+    //             const int typedAvgSpeed = int(100 * typedTravelDistance.find(it->first)->second / typedSamples.find(it->first)->second);
+    //             dev.writeAttr(SUMO_ATTR_ID, it->first->getNumericalID());
+    //             dev.writeOptionalAttr(SUMO_ATTR_AMOUNT, it->second, attributeMask);
+    //             dev.writeOptionalAttr(SUMO_ATTR_AVERAGESPEED, typedAvgSpeed, attributeMask);
+    //             dev.closeTag();
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+        todo!("port MSLaneMeanDataValues::write")
+    }
+
+    /// C++: `void MSLaneMeanDataValues::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
+    /// Internal notification about the vehicle moves
+    // void
+    // MSMeanData_Amitran::MSLaneMeanDataValues::notifyMoveInternal(const SUMOTrafficObject& veh, const double /* frontOnLane */, const double timeOnLane, const double /*meanSpeedFrontOnLane*/, const double /*meanSpeedVehicleOnLane*/, const double /*travelledDistanceFrontOnLane*/, const double travelledDistanceVehicleOnLane, const double /* meanLengthOnLane */) {
+    //     sampleSeconds += timeOnLane;
+    //     travelledDistance += travelledDistanceVehicleOnLane;
+    //     typedSamples[&veh.getVehicleType()] += timeOnLane;
+    //     typedTravelDistance[&veh.getVehicleType()] += travelledDistanceVehicleOnLane;
+    // }
+    #[allow(unused_variables)]
+    pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, arg1: f64, timeOnLane: f64, arg3: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, arg7: f64) {
+        todo!("port MSLaneMeanDataValues::notifyMoveInternal")
+    }
+
+}
+
+/// Network state mean data collector for edges/lanes
+/// C++ class `MSMeanData_Amitran` (microsim/output/MSMeanData_Amitran.h)
+pub struct MSMeanData_Amitran {
+    /// C++ base class `MSMeanData`
+    pub base: MSMeanData,
+    /// the minimum sample seconds
+    pub myHaltSpeed: f64,
+}
+
+impl std::ops::Deref for MSMeanData_Amitran {
+    type Target = MSMeanData;
+    fn deref(&self) -> &MSMeanData {
+        &self.base
+    }
+}
+impl std::ops::DerefMut for MSMeanData_Amitran {
+    fn deref_mut(&mut self) -> &mut MSMeanData {
+        &mut self.base
+    }
+}
+
+impl MSMeanData_Amitran {
+    /// C++: `void MSMeanData_Amitran::MSMeanData_Amitran(const std::string &, const SUMOTime, const SUMOTime, const bool, const std::string &, const bool, const bool, const int, const double, const double, const double, const std::string &, const std::string &, const std::vector<MSEdge *> &, AggregateType)`
+    /// Constructor
+    // MSMeanData_Amitran::MSMeanData_Amitran(const std::string& id,
+    //                                        const SUMOTime dumpBegin,
+    //                                        const SUMOTime dumpEnd, const bool useLanes,
+    //                                        const std::string& excludeEmpty,
+    //                                        const bool withInternal,
+    //                                        const bool trackVehicles,
+    //                                        const int detectPersons,
+    //                                        const double maxTravelTime,
+    //                                        const double minSamples,
+    //                                        const double haltSpeed,
+    //                                        const std::string& vTypes,
+    //                                        const std::string& writeAttributes,
+    //                                        const std::vector<MSEdge*>& edges,
+    //                                        AggregateType aggregate) :
+    //     MSMeanData(id, dumpBegin, dumpEnd, useLanes, excludeEmpty,
+    //                withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate),
+    //     myHaltSpeed(haltSpeed) {
+    // }
+    #[allow(unused_variables)]
+    pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, haltSpeed: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
+        todo!("port MSMeanData_Amitran::MSMeanData_Amitran")
+    }
+
+    /// C++: `void MSMeanData_Amitran::~MSMeanData_Amitran() noexcept` [virtual]
+    /// Destructor
+    // MSMeanData_Amitran::~MSMeanData_Amitran() {}
+    #[allow(unused_variables)]
+    pub fn drop_(&mut self) {
+        todo!("port MSMeanData_Amitran::~MSMeanData_Amitran")
+    }
+
+    /// C++: `void MSMeanData_Amitran::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
+    /// Opens the XML-output using "netstats" as root element
+    // void
+    // MSMeanData_Amitran::writeXMLDetectorProlog(OutputDevice& dev) const {
+    //     dev.writeXMLHeader("linkData", "amitran/linkdata.xsd");
+    // }
+    #[allow(unused_variables)]
+    pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
+        todo!("port MSMeanData_Amitran::writeXMLDetectorProlog")
+    }
+
+    /// C++: `std::string MSMeanData_Amitran::getEdgeID(const MSEdge *const)` [virtual]
+    /// Return the relevant edge id
+    // std::string
+    // MSMeanData_Amitran::getEdgeID(const MSEdge* const edge) {
+    //     return toString(edge->getNumericalID());
+    // }
+    #[allow(unused_variables)]
+    pub fn get_edge_id(&mut self, edge: Ptr<MSEdge>) -> String {
+        todo!("port MSMeanData_Amitran::getEdgeID")
+    }
+
+    /// C++: `void MSMeanData_Amitran::openInterval(OutputDevice &, const SUMOTime, const SUMOTime)` [virtual]
+    /// Writes the interval opener
+    // void
+    // MSMeanData_Amitran::openInterval(OutputDevice& dev, const SUMOTime startTime, const SUMOTime stopTime) {
+    //     const int duration = int(1000 * STEPS2TIME(stopTime - startTime) + 0.5);
+    //     dev.openTag(SUMO_TAG_TIMESLICE).writeAttr(SUMO_ATTR_STARTTIME, int(1000 * STEPS2TIME(startTime) + 0.5)).writeAttr(SUMO_ATTR_DURATION, duration);
+    // }
+    #[allow(unused_variables)]
+    pub fn open_interval(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+        todo!("port MSMeanData_Amitran::openInterval")
+    }
+
+    /// C++: `void MSMeanData_Amitran::writePrefix(OutputDevice &, const MeanDataValues &, const SumoXMLTag, const std::string) const` [const, virtual]
+    /// Writes the surrounding element into the given stream
+    // void
+    // MSMeanData_Amitran::writePrefix(OutputDevice& dev, const MeanDataValues& /*values*/, const SumoXMLTag /* tag */, const std::string id) const {
+    //     dev.openTag("link").writeAttr(SUMO_ATTR_ID, id);
+    // }
+    #[allow(unused_variables)]
+    pub fn write_prefix(&self, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
+        todo!("port MSMeanData_Amitran::writePrefix")
+    }
+
+    /// C++: `std::vector<std::string> MSMeanData_Amitran::getAttributeNames() const` [const, virtual]
+    /// return all attributes that are (potentially) written by this output
+    // std::vector<std::string>
+    // MSMeanData_Amitran::getAttributeNames() const {
+    //     return std::vector<std::string> {toString(SUMO_ATTR_AMOUNT), toString(SUMO_ATTR_AVERAGESPEED)};
+    // }
+    #[allow(unused_variables)]
+    pub fn get_attribute_names(&self) -> Vec<String> {
+        todo!("port MSMeanData_Amitran::getAttributeNames")
+    }
+
+    /// C++: `MSMeanData::MeanDataValues * MSMeanData_Amitran::createValues(MSLane *const, const double, const bool) const` [const, virtual, protected]
+    /// Create an instance of MeanDataValues
+    // MSMeanData::MeanDataValues*
+    // MSMeanData_Amitran::createValues(MSLane* const lane, const double length, const bool doAdd) const {
+    //     return new MSLaneMeanDataValues(lane, length, doAdd, this);
+    // }
+    #[allow(unused_variables)]
+    pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+        todo!("port MSMeanData_Amitran::createValues")
+    }
+
+    /// C++: `void MSMeanData_Amitran::resetOnly(SUMOTime)` [protected]
+    /// Resets network value in order to allow processing of the next interval
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn reset_only(&mut self, stopTime: SUMOTime) {
+        todo!("port MSMeanData_Amitran::resetOnly")
+    }
+
+    /// C++: `void MSMeanData_Amitran::MSMeanData_Amitran(const MSMeanData_Amitran &)` [private]
+    /// Invalidated copy constructor.
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn new_2(arg0: &MSMeanData_Amitran) -> Self {
+        todo!("port MSMeanData_Amitran::MSMeanData_Amitran")
+    }
+
+    /// C++: `MSMeanData_Amitran & MSMeanData_Amitran::operator=(const MSMeanData_Amitran &)` [private]
+    /// Invalidated assignment operator.
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn assign_op(&mut self, arg0: &MSMeanData_Amitran) -> &mut MSMeanData_Amitran {
+        todo!("port MSMeanData_Amitran::operator=")
+    }
+
+}
+

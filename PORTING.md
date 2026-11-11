@@ -100,3 +100,10 @@ Intel IDEAS (github.com/IntelLabs/IDEAS), ACToR (github.com/kisp-nus/ACToR), Req
 5. Determinism hazards to port explicitly: std::sort tie order (unstable introsort), std::set/map
    ordered by pointer, unordered_map iteration order.
 6. RefCell-per-object design must be checked against lane-changing/junction code before porting it.
+
+## Skeleton (generated 2026-11-11)
+
+`crates/sumo_core` holds the generated skeleton for every non-GUI directory: 574 files, 1,429 types,
+12,875 methods with `todo!()` bodies, each preceded by its C++ source as a comment. It compiles.
+Regenerate with `wsl -e bash tools/skeleton/run.sh` (only before agents start editing; it overwrites).
+Filling bodies: follow AGENTS.md; one agent per batch of files; don't change public signatures casually.

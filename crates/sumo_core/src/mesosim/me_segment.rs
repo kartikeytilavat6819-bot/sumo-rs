@@ -1,0 +1,1707 @@
+//! Port of mesosim/MESegment.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use crate::prelude::*;
+
+/// C++ typedef `std::map<std::pair<const MSEdge *, std::vector<int>>, std::vector<std::pair<double, int>>> MESegment::SearchedMap`
+pub type MESegment_SearchedMap = BTreeMap<(Ptr<MSEdge>, Vec<i32>), Vec<(f64, i32)>>;
+
+/// A single mesoscopic segment (cell)
+/// C++ class `MESegment` (mesosim/MESegment.h)
+pub struct MESegment {
+    /// C++ base class `Named`
+    pub base: Named,
+    /// The microsim edge this segment belongs to
+    pub myEdge: Ptr<MSEdge>,
+    /// The next segment of this edge, 0 if this is the last segment of this edge
+    pub myNextSegment: Ptr<MESegment>,
+    /// The segment's length
+    pub myLength: f64,
+    /// Running number of the segment in the edge
+    pub myIndex: i32,
+    /// The time headway parameters, see the Eissfeldt thesis
+    pub myTau_ff: SUMOTime,
+    /// The time headway parameters, see the Eissfeldt thesis
+    pub myTau_fj: SUMOTime,
+    /// The time headway parameters, see the Eissfeldt thesis
+    pub myTau_jf: SUMOTime,
+    /// The time headway parameters, see the Eissfeldt thesis
+    pub myTau_jj: SUMOTime,
+    /// Whether tls penalty is enabled
+    pub myTLSPenalty: bool,
+    /// penalty for minor links
+    pub myCheckMinorPenalty: bool,
+    pub myMinorPenalty: SUMOTime,
+    /// Whether junction control is enabled
+    pub myJunctionControl: bool,
+    /// Whether overtaking is permitted on this segment
+    pub myOvertaking: bool,
+    /// Headway parameter for computing gross time headyway from net time headway, length and edge speed
+    pub myTau_length: f64,
+    /// The number of lanes represented by the queue * the length of the lane
+    pub myCapacity: f64,
+    /// The number of lanes represented by the queue * the length of the lane
+    pub myQueueCapacity: f64,
+    /// The space (in m) which needs to be occupied before the segment is considered jammed
+    pub myJamThreshold: f64,
+    /// The car queues. Vehicles are inserted in the front and removed in the back
+    pub myQueues: Vec<MESegment_Queue>,
+    /// The cached value for the number of vehicles
+    pub myNumVehicles: i32,
+    /// The follower edge to allowed que index mapping for multi queue segments
+    pub myFollowerMap: BTreeMap<Ptr<MSEdge>, i32>,
+    /// The number of route edges after myEdge to look up in myFollowerMap
+    pub myLookahead: i32,
+    /// the last headway
+    pub myLastHeadway: SUMOTime,
+    /// the mean speed on this segment. Updated at event time or on demand
+    pub myMeanSpeed: f64,
+    /// the time at which myMeanSpeed was last updated
+    pub myLastMeanSpeedUpdate: SUMOTime,
+}
+
+impl std::ops::Deref for MESegment {
+    type Target = Named;
+    fn deref(&self) -> &Named {
+        &self.base
+    }
+}
+impl std::ops::DerefMut for MESegment {
+    fn deref_mut(&mut self) -> &mut Named {
+        &mut self.base
+    }
+}
+
+// C++ static members of MESegment (port as module-level statics, see AGENTS.md):
+//   static const double MESegment::DO_NOT_PATCH_JAM_THRESHOLD;
+//   static const int MESegment::PARKING_QUEUE;
+//   static const std::string MESegment::OVERRIDE_TLS_PENALTIES;
+//   static MSEdge MESegment::myDummyParent;
+//   static MESegment MESegment::myVaporizationTarget;
+//   static SVCPermissions MESegment::myMultiModalWarnings;
+
+impl MESegment {
+    /// C++: `void MESegment::MESegment(const std::string &, const MSEdge &, MESegment *, const double, const double, const int, const bool, const MesoEdgeType &)`
+    /// constructor
+    // MESegment::MESegment(const std::string& id,
+    //                      const MSEdge& parent, MESegment* next,
+    //                      const double length, const double speed,
+    //                      const int idx,
+    //                      const bool multiQueue,
+    //                      const MesoEdgeType& edgeType):
+    //     Named(id), myEdge(parent), myNextSegment(next),
+    //     myLength(length), myIndex(idx),
+    //     myTau_length((double)TIME2STEPS(1) / MAX2(MESO_MIN_SPEED, speed)),
+    //     myNumVehicles(0),
+    //     myLastHeadway(TIME2STEPS(-1)),
+    //     myMeanSpeed(speed),
+    //     myLastMeanSpeedUpdate(SUMOTime_MIN) {
+    //
+    //     const std::vector<MSLane*>& lanes = parent.getLanes();
+    //     int usableLanes = 0;
+    //     SVCPermissions maxAllow = 0;
+    //     SVCPermissions minAllow = SVCAll;
+    //     for (MSLane* const l : lanes) {
+    //         const SVCPermissions allow = MSEdge::getMesoPermissions(l->getPermissions());
+    //         if (multiQueue) {
+    //             myQueues.push_back(Queue(allow));
+    //         }
+    //         if (allow != 0) {
+    //             usableLanes++;
+    //             maxAllow |= allow;
+    //             minAllow &= allow;
+    //         }
+    //     }
+    //     if (usableLanes == 0) {
+    //         // cars won't drive here. Give sensible tau values capacity for the ignored classes
+    //         usableLanes = 1;
+    //     }
+    //     if (multiQueue) {
+    //         // vehicles choose their queue by their next edge on the last segment and on all segments ending within the lookahead distance
+    //         const double distToEnd = parent.getLength() - (idx + 1) * length;
+    //         if (next == nullptr || distToEnd < edgeType.lookahead) {
+    //             SearchedMap searched;
+    //             for (const MSEdge* const edge : parent.getSuccessors()) {
+    //                 if (edge->isTazConnector()) {
+    //                     continue;
+    //                 }
+    //                 const std::vector<MSLane*>* const allowed = parent.allowedLanes(*edge);
+    //                 assert(allowed != nullptr);
+    //                 assert(allowed->size() > 0);
+    //                 for (MSLane* const l : *allowed) {
+    //                     std::vector<MSLane*>::const_iterator it = std::find(lanes.begin(), lanes.end(), l);
+    //                     myFollowerMap[edge] |= (1 << distance(lanes.begin(), it));
+    //                 }
+    //                 if (edgeType.lookahead > 0) {
+    //                     // follow the lanes of this edge into later edges whose turns are within the lookahead distance
+    //                     std::vector<int> reach(lanes.size(), 0);
+    //                     for (int i = 0; i < (int)lanes.size(); i++) {
+    //                         for (const MSLink* const link : lanes[i]->getLinkCont()) {
+    //                             if (&link->getLane()->getEdge() == edge) {
+    //                                 reach[i] |= 1 << link->getLane()->getIndex();
+    //                             }
+    //                         }
+    //                     }
+    //                     addDownstreamFollowers(*edge, reach, 0., edgeType.lookahead - MAX2(0., distToEnd), 1, searched);
+    //                 }
+    //             }
+    //         }
+    //         myQueueCapacity = length;
+    //     } else {
+    //         myQueues.push_back(Queue(parent.getPermissions()));
+    //         maxAllow &= ~minAllow;
+    //         if ((maxAllow & ~myMultiModalWarnings) != 0) {
+    //             WRITE_WARNINGF("Mismodelled capacity on edge '%'. Not all lanes are usable by vClass '%'. Use option --meso-lane-queue or add unused class to option --meso-ignore-lanes-by-vclass.",
+    //                            myEdge.getID(), getVehicleClassNames(maxAllow & ~myMultiModalWarnings));
+    //             myMultiModalWarnings |= maxAllow;
+    //         }
+    //     }
+    //
+    //     initSegment(edgeType, parent, length * usableLanes);
+    // }
+    #[allow(unused_variables)]
+    pub fn new(id: &str, parent: &MSEdge, next: Ptr<MESegment>, length: f64, speed: f64, idx: i32, multiQueue: bool, edgeType: &MESegment_MesoEdgeType) -> Self {
+        todo!("port MESegment::MESegment")
+    }
+
+    /// C++: `void MESegment::initSegment(const MesoEdgeType &, const MSEdge &, const double)`
+    /// set model parameters (may be updated from additional file after network loading is complete)
+    // void
+    // MESegment::initSegment(const MesoEdgeType& edgeType, const MSEdge& parent, const double capacity) {
+    //
+    //     myCapacity = capacity;
+    //     if (myQueues.size() == 1) {
+    //         const double laneScale = capacity / myLength;
+    //         myQueueCapacity = capacity;
+    //         myTau_length = (double)TIME2STEPS(1) / MAX2(MESO_MIN_SPEED, myMeanSpeed) / laneScale;
+    //         // Eissfeldt p. 90 and 151 ff.
+    //         myTau_ff = (SUMOTime)((double)edgeType.tauff / laneScale);
+    //         myTau_fj = (SUMOTime)((double)edgeType.taufj / laneScale);
+    //         myTau_jf = (SUMOTime)((double)edgeType.taujf / laneScale);
+    //         myTau_jj = (SUMOTime)((double)edgeType.taujj / laneScale);
+    //     } else {
+    //         myTau_ff = edgeType.tauff;
+    //         myTau_fj = edgeType.taufj;
+    //         myTau_jf = edgeType.taujf;
+    //         myTau_jj = edgeType.taujj;
+    //     }
+    //
+    //     myJunctionControl = myNextSegment == nullptr && (edgeType.junctionControl || MELoop::isEnteringRoundabout(parent));
+    //     myTLSPenalty = ((edgeType.tlsPenalty > 0 || edgeType.tlsFlowPenalty > 0) &&
+    //                     // only apply to the last segment of a tls-controlled edge
+    //                     myNextSegment == nullptr && (
+    //                         parent.getToJunction()->getType() == SumoXMLNodeType::TRAFFIC_LIGHT ||
+    //                         parent.getToJunction()->getType() == SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION ||
+    //                         parent.getToJunction()->getType() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED));
+    //
+    //     // only apply to the last segment of an uncontrolled edge that has at least 1 minor link
+    //     myCheckMinorPenalty = (edgeType.minorPenalty > 0 &&
+    //                            myNextSegment == nullptr &&
+    //                            parent.getToJunction()->getType() != SumoXMLNodeType::TRAFFIC_LIGHT &&
+    //                            parent.getToJunction()->getType() != SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION &&
+    //                            parent.getToJunction()->getType() != SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED &&
+    //                            parent.hasMinorLink());
+    //     myMinorPenalty = edgeType.minorPenalty;
+    //     myOvertaking = edgeType.overtaking && myCapacity > myLength;
+    //
+    //     //std::cout << getID() << " myMinorPenalty=" << myMinorPenalty << " myTLSPenalty=" << myTLSPenalty << " myJunctionControl=" << myJunctionControl << " myOvertaking=" << myOvertaking << "\n";
+    //
+    //     recomputeJamThreshold(edgeType.jamThreshold);
+    // }
+    #[allow(unused_variables)]
+    pub fn init_segment(&mut self, edgeType: &MESegment_MesoEdgeType, parent: &MSEdge, capacity: f64) {
+        todo!("port MESegment::initSegment")
+    }
+
+    /// C++: `void MESegment::addDetector(MSMoveReminder *, int)`
+    /// Adds a data collector for a detector to this segment
+    // void
+    // MESegment::addDetector(MSMoveReminder* data, int queueIndex) {
+    //     if (queueIndex == -1) {
+    //         for (Queue& q : myQueues) {
+    //             q.addDetector(data);
+    //         }
+    //     } else {
+    //         assert(queueIndex < (int)myQueues.size());
+    //         myQueues[queueIndex].addDetector(data);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_detector(&mut self, data: Ptr<MSMoveReminder>, queueIndex: i32) {
+        todo!("port MESegment::addDetector")
+    }
+
+    /// C++: `void MESegment::prepareDetectorForWriting(MSMoveReminder &, int)`
+    /// Updates data of a detector for one or all vehicle queues
+    // void
+    // MESegment::prepareDetectorForWriting(MSMoveReminder& data, int queueIndex) {
+    //     const SUMOTime currentTime = MSNet::getInstance()->getCurrentTimeStep();
+    //     if (queueIndex == -1) {
+    //         for (const Queue& q : myQueues) {
+    //             SUMOTime earliestExitTime = currentTime;
+    //             for (std::vector<MEVehicle*>::const_reverse_iterator i = q.getVehicles().rbegin(); i != q.getVehicles().rend(); ++i) {
+    //                 const SUMOTime exitTime = MAX2(earliestExitTime, (*i)->getEventTime());
+    //                 (*i)->updateDetectorForWriting(&data, currentTime, exitTime);
+    //                 earliestExitTime = exitTime + tauWithVehLength(myTau_ff, (*i)->getVehicleType().getLengthWithGap(), (*i)->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //             }
+    //         }
+    //     } else {
+    //         SUMOTime earliestExitTime = currentTime;
+    //         for (std::vector<MEVehicle*>::const_reverse_iterator i = myQueues[queueIndex].getVehicles().rbegin(); i != myQueues[queueIndex].getVehicles().rend(); ++i) {
+    //             const SUMOTime exitTime = MAX2(earliestExitTime, (*i)->getEventTime());
+    //             (*i)->updateDetectorForWriting(&data, currentTime, exitTime);
+    //             earliestExitTime = exitTime + tauWithVehLength(myTau_ff, (*i)->getVehicleType().getLengthWithGap(), (*i)->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn prepare_detector_for_writing(&mut self, data: &mut MSMoveReminder, queueIndex: i32) {
+        todo!("port MESegment::prepareDetectorForWriting")
+    }
+
+    /// C++: `SUMOTime MESegment::hasSpaceFor(const MEVehicle *const, const SUMOTime, int &, const bool) const` [const]
+    /// Returns whether the given vehicle would still fit into the segment
+    // SUMOTime
+    // MESegment::hasSpaceFor(const MEVehicle* const veh, const SUMOTime entryTime, int& qIdx, const bool init) const {
+    //     SUMOTime earliestEntry = SUMOTime_MAX;
+    //     qIdx = 0;
+    //     if (myNumVehicles == 0 && myQueues.size() == 1) {
+    //         // we have always space for at least one vehicle
+    //         if (myQueues.front().allows(veh->getVClass())) {
+    //             return entryTime;
+    //         }  else {
+    //             return earliestEntry;
+    //         }
+    //     }
+    //     const SUMOVehicleClass svc = veh->getVClass();
+    //     int minSize = std::numeric_limits<int>::max();
+    //     // the queues leading to the next edges of the vehicle's route
+    //     int usable = -1;
+    //     if (!myFollowerMap.empty()) {
+    //         // the lane chain to a later route edge may run through lanes the vehicle may not use
+    //         int permitted = -1;
+    //         if (myLookahead > 1) {
+    //             permitted = 0;
+    //             for (int i = 0; i < (int)myQueues.size(); i++) {
+    //                 if (myQueues[i].allows(svc)) {
+    //                     permitted |= 1 << i;
+    //                 }
+    //             }
+    //         }
+    //         const int offset = veh->getEdge() == &myEdge ? 1 : 2;
+    //         for (int k = 0; k < myLookahead; k++) {
+    //             const MSEdge* const succ = veh->succEdge(offset + k);
+    //             if (succ == nullptr) {
+    //                 break;
+    //             }
+    //             const auto it = myFollowerMap.find(succ);
+    //             if (it != myFollowerMap.end() && (k == 0 || (usable & it->second & permitted) != 0)) {
+    //                 usable &= it->second;
+    //             }
+    //         }
+    //     }
+    //     for (int i = 0; i < (int)myQueues.size(); i++) {
+    //         const Queue& q = myQueues[i];
+    //         const double newOccupancy = q.size() == 0 ? 0. : q.getOccupancy() + veh->getVehicleType().getLengthWithGap();
+    //         if (newOccupancy <= myQueueCapacity) { // we must ensure that occupancy remains below capacity
+    //             if ((usable & (1 << i)) != 0) {
+    //                 if (q.allows(svc) && q.size() < minSize) {
+    //                     if (init) {
+    //                         // regular insertions and initial insertions must respect different constraints:
+    //                         if (veh->getInsertionChecks() == (int)InsertionCheck::NONE || hasSpaceForInsertion(q, i, newOccupancy, entryTime)) {
+    //                             qIdx = i;
+    //                             minSize = q.size();
+    //                         }
+    //                     } else if (entryTime >= q.getEntryBlockTime()) {
+    //                         qIdx = i;
+    //                         minSize = q.size();
+    //                     } else {
+    //                         earliestEntry = MIN2(earliestEntry, q.getEntryBlockTime());
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     if (minSize == std::numeric_limits<int>::max()) {
+    //         return earliestEntry;
+    //     }
+    //     return entryTime;
+    // }
+    #[allow(unused_variables)]
+    pub fn has_space_for(&self, veh: Ptr<MEVehicle>, entryTime: SUMOTime, qIdx: &mut i32, init: bool) -> SUMOTime {
+        todo!("port MESegment::hasSpaceFor")
+    }
+
+    /// C++: `void MESegment::updateEntryBlockTime(SUMOTime)` [virtual]
+    /// update entry blockTime for all queues
+    // virtual void updateEntryBlockTime(SUMOTime /*time*/) {}
+    #[allow(unused_variables)]
+    pub fn update_entry_block_time(&mut self, arg0: SUMOTime) {
+        todo!("port MESegment::updateEntryBlockTime")
+    }
+
+    /// C++: `std::string MESegment::getQueueExtraState(int) const` [const, virtual]
+    /// model specific queue state (e.g. the gap times of meso-ltm) for saving / loading
+    // virtual std::string getQueueExtraState(int /*qIdx*/) const {
+    //         return "";
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_queue_extra_state(&self, arg0: i32) -> String {
+        todo!("port MESegment::getQueueExtraState")
+    }
+
+    /// C++: `void MESegment::loadQueueExtraState(int, const std::string &, SUMOTime)` [virtual]
+    // virtual void loadQueueExtraState(int /*qIdx*/, const std::string& /*state*/, SUMOTime /*offset*/) {}
+    #[allow(unused_variables)]
+    pub fn load_queue_extra_state(&mut self, arg0: i32, arg1: &str, arg2: SUMOTime) {
+        todo!("port MESegment::loadQueueExtraState")
+    }
+
+    /// C++: `bool MESegment::initialise(MEVehicle *, SUMOTime)`
+    /// Inserts (emits) vehicle into the segment
+    // bool
+    // MESegment::initialise(MEVehicle* veh, SUMOTime time) {
+    //     int qIdx = 0;
+    //     if (hasSpaceFor(veh, time, qIdx, true) == time) {
+    //         const bool isRail = veh->isRail();
+    //         // see MSLane::isInsertionSuccess
+    //         if (isRail && veh->getInsertionChecks() != (int)InsertionCheck::NONE
+    //                 && veh->getParameter().departProcedure != DepartDefinition::SPLIT
+    //                 && MSRailSignalControl::isSignalized(veh->getVClass())
+    //                 && isRailwayOrShared(myEdge.getPermissions())) {
+    //             const MSDriveWay* dw = MSDriveWay::getDepartureDriveway(veh);
+    //             MSEdgeVector occupied;
+    //             if (dw->foeDriveWayOccupied(false, veh, occupied) || dw->sidingDeadlock(veh)) {
+    //                 myEdge.getLanes()[0]->setParameter("insertionBlocked:" + veh->getID(), dw->getID());
+    //                 return false;
+    //             }
+    //         }
+    //         receive(veh, qIdx, time, true);
+    //         if (isRail) {
+    //             myEdge.getLanes()[0]->unsetParameter("insertionConstraint:" + veh->getID());
+    //             //unsetParameter("insertionOrder:" + veh->getID());
+    //             //unsetParameter("insertionBlocked:" + veh->getID());
+    //             //// rail_signal (not traffic_light) requires approach information for
+    //             //// switching correctly at the start of the next simulation step
+    //             //if (firstRailSignal != nullptr && firstRailSignal->getJunction()->getType() == SumoXMLNodeType::RAIL_SIGNAL) {
+    //             //    veh->registerInsertionApproach(firstRailSignal, firstRailSignalDist);
+    //             //}
+    //         }
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    #[allow(unused_variables)]
+    pub fn initialise(&mut self, veh: Ptr<MEVehicle>, time: SUMOTime) -> bool {
+        todo!("port MESegment::initialise")
+    }
+
+    /// C++: `int MESegment::getCarNumber() const` [const]
+    /// Returns the total number of cars on the segment
+    // inline int getCarNumber() const {
+    //         return myNumVehicles;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_car_number(&self) -> i32 {
+        todo!("port MESegment::getCarNumber")
+    }
+
+    /// C++: `int MESegment::numQueues() const` [const]
+    /// return the number of queues
+    // inline int numQueues() const {
+    //         return (int)myQueues.size();
+    //     }
+    #[allow(unused_variables)]
+    pub fn num_queues(&self) -> i32 {
+        todo!("port MESegment::numQueues")
+    }
+
+    /// C++: `const std::vector<MEVehicle *> & MESegment::getQueue(int) const` [const]
+    /// Returns the cars in the queue with the given index for visualization
+    // inline const std::vector<MEVehicle*>& getQueue(int index) const {
+    //         assert(index < (int)myQueues.size());
+    //         return myQueues[index].getVehicles();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_queue(&self, index: i32) -> &Vec<Ptr<MEVehicle>> {
+        todo!("port MESegment::getQueue")
+    }
+
+    /// C++: `SUMOTime MESegment::getQueueBlockTime(int) const` [const]
+    // inline SUMOTime getQueueBlockTime(int index) const {
+    //         assert(index < (int)myQueues.size());
+    //         return myQueues[index].getBlockTime();
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_queue_block_time(&self, index: i32) -> SUMOTime {
+        todo!("port MESegment::getQueueBlockTime")
+    }
+
+    /// C++: `int MESegment::getIndex() const` [const]
+    /// Returns the running index of the segment in the edge (0 is the most upstream).
+    // inline int getIndex() const {
+    //         return myIndex;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_index(&self) -> i32 {
+        todo!("port MESegment::getIndex")
+    }
+
+    /// C++: `MESegment * MESegment::getNextSegment() const` [const]
+    /// Returns the following segment on the same edge (0 if it is the last).
+    // inline MESegment* getNextSegment() const {
+    //         return myNextSegment;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_next_segment(&self) -> Ptr<MESegment> {
+        todo!("port MESegment::getNextSegment")
+    }
+
+    /// C++: `double MESegment::getLength() const` [const]
+    /// Returns the length of the segment in meters.
+    // inline double getLength() const {
+    //         return myLength;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_length(&self) -> f64 {
+        todo!("port MESegment::getLength")
+    }
+
+    /// C++: `double MESegment::getCapacity() const` [const]
+    /// Returns the sum of the lengths of all usable lanes of the segment in meters.
+    // inline double getCapacity() const {
+    //         return myCapacity;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_capacity(&self) -> f64 {
+        todo!("port MESegment::getCapacity")
+    }
+
+    /// C++: `double MESegment::getBruttoOccupancy() const` [const]
+    /// Returns the occupany of the segment (the sum of the vehicle lengths + minGaps)
+    // inline double getBruttoOccupancy() const {
+    //         double occ = 0.;
+    //         for (const Queue& q : myQueues) {
+    //             occ += q.getOccupancy();
+    //         }
+    //         return occ;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_brutto_occupancy(&self) -> f64 {
+        todo!("port MESegment::getBruttoOccupancy")
+    }
+
+    /// C++: `double MESegment::getRelativeOccupancy() const` [const]
+    /// Returns the relative occupany of the segment (percentage of road used))
+    // inline double getRelativeOccupancy() const {
+    //         return getBruttoOccupancy() / myCapacity;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_relative_occupancy(&self) -> f64 {
+        todo!("port MESegment::getRelativeOccupancy")
+    }
+
+    /// C++: `double MESegment::getRelativeJamThreshold() const` [const]
+    /// Returns the relative occupany of the segment (percentage of road used)) at which the segment is considered jammed
+    // inline double getRelativeJamThreshold() const {
+    //         return myJamThreshold / myCapacity;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_relative_jam_threshold(&self) -> f64 {
+        todo!("port MESegment::getRelativeJamThreshold")
+    }
+
+    /// C++: `double MESegment::getMeanSpeed(bool) const` [const]
+    /// Returns the average speed of vehicles on the segment in meters per second. If there is no vehicle on the segment it returns the maximum allowed speed
+    // double
+    // MESegment::getMeanSpeed(bool useCached) const {
+    //     const SUMOTime currentTime = MSNet::getInstance()->getCurrentTimeStep();
+    //     if (currentTime != myLastMeanSpeedUpdate || !useCached) {
+    //         myLastMeanSpeedUpdate = currentTime;
+    //         double v = 0;
+    //         int count = 0;
+    //         for (const Queue& q : myQueues) {
+    //             const SUMOTime tau = q.getOccupancy() < myJamThreshold ? myTau_ff : myTau_jf;
+    //             SUMOTime earliestExitTime = currentTime;
+    //             count += q.size();
+    //             for (std::vector<MEVehicle*>::const_reverse_iterator veh = q.getVehicles().rbegin(); veh != q.getVehicles().rend(); ++veh) {
+    //                 v += (*veh)->getConservativeSpeed(earliestExitTime); // earliestExitTime is updated!
+    //                 earliestExitTime += tauWithVehLength(tau, (*veh)->getVehicleType().getLengthWithGap(), (*veh)->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //             }
+    //         }
+    //         if (count == 0) {
+    //             myMeanSpeed = myEdge.getSpeedLimit();
+    //         } else {
+    //             myMeanSpeed = v / (double) count;
+    //         }
+    //     }
+    //     return myMeanSpeed;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_mean_speed(&self, useCache: bool) -> f64 {
+        todo!("port MESegment::getMeanSpeed")
+    }
+
+    /// C++: `void MESegment::resetCachedSpeeds()`
+    /// reset myLastMeanSpeedUpdate
+    // void
+    // MESegment::resetCachedSpeeds() {
+    //     myLastMeanSpeedUpdate = SUMOTime_MIN;
+    // }
+    #[allow(unused_variables)]
+    pub fn reset_cached_speeds(&mut self) {
+        todo!("port MESegment::resetCachedSpeeds")
+    }
+
+    /// C++: `double MESegment::getMeanSpeed() const` [const]
+    /// wrapper to satisfy the FunctionBinding signature
+    // inline double getMeanSpeed() const {
+    //         return getMeanSpeed(true);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_mean_speed_2(&self) -> f64 {
+        todo!("port MESegment::getMeanSpeed")
+    }
+
+    /// C++: `void MESegment::writeVehicles(OutputDevice &) const` [const]
+    // void
+    // MESegment::writeVehicles(OutputDevice& of) const {
+    //     for (const Queue& q : myQueues) {
+    //         for (const MEVehicle* const veh : q.getVehicles()) {
+    //             MSXMLRawOut::writeVehicle(of, *veh);
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn write_vehicles(&self, of: &mut OutputDevice) {
+        todo!("port MESegment::writeVehicles")
+    }
+
+    /// C++: `MEVehicle * MESegment::removeCar(MEVehicle *, SUMOTime, const MSMoveReminder::Notification)`
+    /// Removes the given car from the edge's que
+    // MEVehicle*
+    // MESegment::removeCar(MEVehicle* v, SUMOTime leaveTime, const MSMoveReminder::Notification reason) {
+    //     Queue& q = myQueues[v->getQueIndex()];
+    //     // One could be tempted to do  v->setSegment(next); here but position on lane will be invalid if next == 0
+    //     v->updateDetectors(leaveTime, v->getEventTime(), true, reason);
+    //     myNumVehicles--;
+    //     myEdge.lock();
+    //     MEVehicle* nextLeader = q.remove(v);
+    //     myEdge.invalidateMesoCache();
+    //     myEdge.unlock();
+    //     return nextLeader;
+    // }
+    #[allow(unused_variables)]
+    pub fn remove_car(&mut self, v: Ptr<MEVehicle>, leaveTime: SUMOTime, reason: MSMoveReminder_Notification) -> Ptr<MEVehicle> {
+        todo!("port MESegment::removeCar")
+    }
+
+    /// C++: `MSLink * MESegment::getLink(const MEVehicle *, bool) const` [const]
+    /// Returns the link the given car will use when passing the next junction
+    // MSLink*
+    // MESegment::getLink(const MEVehicle* veh, bool penalty) const {
+    //     if (myJunctionControl || penalty) {
+    //         const MSEdge* const nextEdge = veh->succEdge(1);
+    //         if (nextEdge == nullptr || veh->getQueIndex() == PARKING_QUEUE) {
+    //             return nullptr;
+    //         }
+    //         // try to find any link leading to our next edge, start with the lane pointed to by the que index
+    //         const MSLane* const bestLane = myEdge.getLanes()[veh->getQueIndex()];
+    //         for (MSLink* const link : bestLane->getLinkCont()) {
+    //             if (&link->getLane()->getEdge() == nextEdge) {
+    //                 return link;
+    //             }
+    //         }
+    //         // this is for the non-multique case, maybe we should use caching here !!!
+    //         for (const MSLane* const lane : myEdge.getLanes()) {
+    //             if (lane != bestLane) {
+    //                 for (MSLink* const link : lane->getLinkCont()) {
+    //                     if (&link->getLane()->getEdge() == nextEdge) {
+    //                         return link;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return nullptr;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_link(&self, veh: Ptr<MEVehicle>, tlsPenalty: bool) -> Ptr<MSLink> {
+        todo!("port MESegment::getLink")
+    }
+
+    /// C++: `bool MESegment::isOpen(const MEVehicle *) const` [const]
+    /// Returns whether the vehicle may use the next link
+    // bool
+    // MESegment::isOpen(const MEVehicle* veh) const {
+    // #ifdef DEBUG_OPENED
+    //     if (DEBUG_COND || DEBUG_COND2(veh)) {
+    //         gDebugFlag1 = true;
+    //         std::cout << SIMTIME << " opened seg=" << getID() << " veh=" << Named::getIDSecure(veh)
+    //                   << " tlsPenalty=" << myTLSPenalty;
+    //         const MSLink* link = getLink(veh);
+    //         if (link == 0) {
+    //             std::cout << " link=0";
+    //         } else {
+    //             std::cout << " prio=" << link->havePriority()
+    //                       << " override=" << limitedControlOverride(link)
+    //                       << " isOpen=" << link->opened(veh->getEventTime(), veh->getSpeed(), veh->estimateLeaveSpeed(link),
+    //                                                     veh->getVehicleType().getLengthWithGap(), veh->getImpatience(),
+    //                                                     veh->getVehicleType().getCarFollowModel().getMaxDecel(), veh->getWaitingTime(),
+    //                                                     0, nullptr, false, veh)
+    //                       << " et=" << veh->getEventTime()
+    //                       << " v=" << veh->getSpeed()
+    //                       << " vLeave=" << veh->estimateLeaveSpeed(link)
+    //                       << " impatience=" << veh->getImpatience()
+    //                       << " tWait=" << veh->getWaitingTime();
+    //         }
+    //         std::cout << "\n";
+    //         gDebugFlag1 = false;
+    //     }
+    // #endif
+    //     if (myTLSPenalty) {
+    //         // XXX should limited control take precedence over tls penalty?
+    //         return true;
+    //     }
+    //     const MSLink* link = getLink(veh);
+    //     return (link == nullptr
+    //             || link->havePriority()
+    //             || limitedControlOverride(link)
+    //             || link->opened(veh->getEventTime(), veh->getSpeed(), veh->estimateLeaveSpeed(link),
+    //                             veh->getVehicleType().getLengthWithGap(), veh->getImpatience(),
+    //                             veh->getVehicleType().getCarFollowModel().getMaxDecel(), veh->getWaitingTime(),
+    //                             0, nullptr, false, veh));
+    // }
+    #[allow(unused_variables)]
+    pub fn is_open(&self, veh: Ptr<MEVehicle>) -> bool {
+        todo!("port MESegment::isOpen")
+    }
+
+    /// C++: `void MESegment::send(MEVehicle *, MESegment *const, const int, SUMOTime, const MSMoveReminder::Notification)` [virtual]
+    /// Removes the vehicle from the segment, adapting its parameters
+    // void
+    // MESegment::send(MEVehicle* veh, MESegment* const next, const int nextQIdx, SUMOTime time, const MSMoveReminder::Notification reason) {
+    //     Queue& q = myQueues[veh->getQueIndex()];
+    //     assert(isInvalid(next) || time >= q.getBlockTime());
+    //     MSLink* const link = getLink(veh);
+    //     if (link != nullptr) {
+    //         link->removeApproaching(veh);
+    //     }
+    //     if (veh->isStopped()) {
+    //         veh->processStop();
+    //     }
+    //     MEVehicle* lc = removeCar(veh, time, reason); // new leaderCar
+    //     q.setBlockTime(time);
+    //     if (myEdge.isNormal() && myCapacity >= 22.5) {
+    //         veh->markJammed(q.getOccupancy() > myJamThreshold);
+    //     }
+    //     if (!isInvalid(next)) {
+    //         myLastHeadway = computeHeadway(q, next->myQueues[nextQIdx], next, veh);
+    //         q.setBlockTime(time + myLastHeadway);
+    //     }
+    //     if (lc != nullptr) {
+    //         lc->setEventTime(MAX2(lc->getEventTime(), q.getBlockTime()));
+    //         MSGlobals::gMesoNet->addLeaderCar(lc, getLink(lc));
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn send(&mut self, veh: Ptr<MEVehicle>, next: Ptr<MESegment>, nextQIdx: i32, time: SUMOTime, reason: MSMoveReminder_Notification) {
+        todo!("port MESegment::send")
+    }
+
+    /// C++: `void MESegment::receive(MEVehicle *, const int, SUMOTime, const bool, const bool, const bool)`
+    /// Adds the vehicle to the segment, adapting its parameters
+    // void
+    // MESegment::receive(MEVehicle* veh, const int qIdx, SUMOTime time, const bool isDepart, const bool isTeleport, const bool newEdge) {
+    //     const double speed = isDepart ? -1 : MAX2(veh->getSpeed(), MESO_MIN_SPEED); // on the previous segment
+    //     veh->setSegment(this); // for arrival checking
+    //     veh->setLastEntryTime(time);
+    //     veh->setBlockTime(SUMOTime_MAX);
+    //     if (!isDepart && (
+    //                 // arrival on entering a new edge
+    //                 (newEdge && myEdge.isNormal() && veh->moveRoutePointer())
+    //                 // arrival on entering a new segment
+    //                 || veh->hasArrived())) {
+    //         // route has ended
+    //         veh->setEventTime(time + TIME2STEPS(myLength / speed)); // for correct arrival speed
+    //         addReminders(veh);
+    //         veh->activateReminders(MSMoveReminder::NOTIFICATION_JUNCTION);
+    //         veh->updateDetectors(time, veh->getEventTime(), true,
+    //                              veh->getEdge()->isVaporizing() ? MSMoveReminder::NOTIFICATION_VAPORIZED_VAPORIZER : MSMoveReminder::NOTIFICATION_ARRIVED);
+    //         MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(veh);
+    //         return;
+    //     }
+    //     assert(veh->getEdge() == &getEdge() || getEdge().isInternal());
+    //     // route continues
+    //     Queue& q = myQueues[qIdx];
+    //     const double maxSpeedOnEdge = veh->getEdge()->getLanes()[qIdx]->getVehicleMaxSpeed(veh);
+    //     const double uspeed = MAX2(maxSpeedOnEdge, MESO_MIN_SPEED);
+    //     std::vector<MEVehicle*>& cars = q.getModifiableVehicles();
+    //     MEVehicle* newLeader = nullptr; // first vehicle in the current queue
+    //     const SUMOTime stopTime = veh->checkStop(time);
+    //     SUMOTime tleave = MAX2(stopTime + TIME2STEPS(myLength / uspeed) + getLinkPenalty(veh), q.getBlockTime());
+    //     if (veh->isStopped()) {
+    //         myEdge.addWaiting(veh);
+    //     }
+    //     if (veh->isParking()) {
+    //         // parking stops should take at least 1ms
+    //         veh->setEventTime(MAX2(stopTime, veh->getEventTime() + 1));
+    //         veh->setSegment(this, PARKING_QUEUE);
+    //         myEdge.getLanes()[0]->addParking(veh);  // TODO for GUI only
+    //     } else {
+    //         myEdge.lock();
+    //         if (cars.empty()) {
+    //             cars.push_back(veh);
+    //             newLeader = veh;
+    //         } else {
+    //             SUMOTime leaderOut = cars[0]->getEventTime();
+    //             if (!isDepart && leaderOut > tleave && overtake()) {
+    //                 if (cars.size() == 1) {
+    //                     // the overtaken car is no longer the leader and must not block foes
+    //                     MSLink* const link = getLink(cars[0]);
+    //                     if (link != nullptr) {
+    //                         link->removeApproaching(cars[0]);
+    //                     }
+    //                     MSGlobals::gMesoNet->removeLeaderCar(cars[0]);
+    //                     newLeader = veh;
+    //                 }
+    //                 cars.insert(cars.begin() + 1, veh);
+    //             } else {
+    //                 tleave = MAX2(leaderOut + tauWithVehLength(myTau_ff, cars[0]->getVehicleType().getLengthWithGap(), cars[0]->getVehicleType().getCarFollowModel().getHeadwayTime()), tleave);
+    //                 cars.insert(cars.begin(), veh);
+    //             }
+    //         }
+    //         myEdge.invalidateMesoCache();
+    //         myEdge.unlock();
+    //         myNumVehicles++;
+    //         if (!isDepart && !isTeleport) {
+    //             // departs and teleports could take place anywhere on the edge so they should not block regular flow
+    //             // the -1 facilitates interleaving of multiple streams
+    //             q.setEntryBlockTime(time + tauWithVehLength(myTau_ff, veh->getVehicleType().getLengthWithGap(), veh->getVehicleType().getCarFollowModel().getHeadwayTime()) - 1);
+    //         }
+    //         q.setOccupancy(MIN2(myQueueCapacity, q.getOccupancy() + veh->getVehicleType().getLengthWithGap()));
+    //         veh->setEventTime(tleave);
+    //         veh->setUnqueuedEventTime(tleave);
+    //         veh->setSegment(this, qIdx);
+    //     }
+    //     addReminders(veh);
+    //     if (isDepart) {
+    //         veh->onDepart();
+    //         veh->activateReminders(MSMoveReminder::NOTIFICATION_DEPARTED);
+    //     } else if (newEdge) {
+    //         veh->activateReminders(MSMoveReminder::NOTIFICATION_JUNCTION);
+    //     } else {
+    //         veh->activateReminders(MSMoveReminder::NOTIFICATION_SEGMENT);
+    //     }
+    //     if (veh->isParking()) {
+    //         MSGlobals::gMesoNet->addLeaderCar(veh, nullptr);
+    //     } else {
+    //         if (newLeader != nullptr) {
+    //             MSGlobals::gMesoNet->addLeaderCar(newLeader, getLink(newLeader));
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn receive(&mut self, veh: Ptr<MEVehicle>, qIdx: i32, time: SUMOTime, isDepart: bool, isTeleport: bool, newEdge: bool) {
+        todo!("port MESegment::receive")
+    }
+
+    /// C++: `bool MESegment::vaporizeAnyCar(SUMOTime, const MSDetectorFileOutput *)`
+    /// tries to remove any car from this segment
+    // bool
+    // MESegment::vaporizeAnyCar(SUMOTime currentTime, const MSDetectorFileOutput* filter) {
+    //     for (const Queue& q : myQueues) {
+    //         if (q.size() > 0) {
+    //             for (MEVehicle* const veh : q.getVehicles()) {
+    //                 if (filter->vehicleApplies(*veh)) {
+    //                     MSGlobals::gMesoNet->removeLeaderCar(veh);
+    //                     MSGlobals::gMesoNet->changeSegment(veh, currentTime + 1, &myVaporizationTarget, MSMoveReminder::NOTIFICATION_VAPORIZED_CALIBRATOR);
+    //                     return true;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return false;
+    // }
+    #[allow(unused_variables)]
+    pub fn vaporize_any_car(&mut self, currentTime: SUMOTime, filter: Ptr<MSDetectorFileOutput>) -> bool {
+        todo!("port MESegment::vaporizeAnyCar")
+    }
+
+    /// C++: `const MSEdge & MESegment::getEdge() const` [const]
+    /// Returns the edge this segment belongs to
+    // inline const MSEdge& getEdge() const {
+    //         return myEdge;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_edge(&self) -> &MSEdge {
+        todo!("port MESegment::getEdge")
+    }
+
+    /// C++: `void MESegment::setSpeed(double, SUMOTime, double, int)`
+    /// reset mySpeed and patch the speed of all vehicles in it. Also set/recompute myJamThreshold
+    // void
+    // MESegment::setSpeed(double newSpeed, SUMOTime currentTime, double jamThresh, int qIdx) {
+    //     recomputeJamThreshold(jamThresh);
+    //     //myTau_length = MAX2(MESO_MIN_SPEED, newSpeed) * myEdge.getLanes().size() / TIME2STEPS(1);
+    //     int i = 0;
+    //     for (const Queue& q : myQueues) {
+    //         if (q.size() != 0) {
+    //             if (qIdx == -1 || qIdx == i) {
+    //                 setSpeedForQueue(newSpeed, currentTime, q.getBlockTime(), q.getVehicles());
+    //             }
+    //         }
+    //         i++;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn set_speed(&mut self, newSpeed: f64, currentTime: SUMOTime, jamThresh: f64, qIdx: i32) {
+        todo!("port MESegment::setSpeed")
+    }
+
+    /// C++: `SUMOTime MESegment::getEventTime() const` [const]
+    /// Returns the (planned) time at which the next vehicle leaves this segment
+    // SUMOTime
+    // MESegment::getEventTime() const {
+    //     SUMOTime result = SUMOTime_MAX;
+    //     for (const Queue& q : myQueues) {
+    //         if (q.size() != 0 && q.getVehicles().back()->getEventTime() < result) {
+    //             result = q.getVehicles().back()->getEventTime();
+    //         }
+    //     }
+    //     if (result < SUMOTime_MAX) {
+    //         return result;
+    //     }
+    //     return -1;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_event_time(&self) -> SUMOTime {
+        todo!("port MESegment::getEventTime")
+    }
+
+    /// C++: `double MESegment::getEventTimeSeconds() const` [const]
+    /// Like getEventTime but returns seconds (for visualization)
+    // inline double getEventTimeSeconds() const {
+    //         return STEPS2TIME(getEventTime());
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_event_time_seconds(&self) -> f64 {
+        todo!("port MESegment::getEventTimeSeconds")
+    }
+
+    /// C++: `double MESegment::getLastHeadwaySeconds() const` [const]
+    /// get the last headway time in seconds
+    // inline double getLastHeadwaySeconds() const {
+    //         return STEPS2TIME(myLastHeadway);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_last_headway_seconds(&self) -> f64 {
+        todo!("port MESegment::getLastHeadwaySeconds")
+    }
+
+    /// C++: `SUMOTime MESegment::getLastHeadway() const` [const]
+    /// get the last headway time
+    // inline SUMOTime getLastHeadway() const {
+    //         return myLastHeadway;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_last_headway(&self) -> SUMOTime {
+        todo!("port MESegment::getLastHeadway")
+    }
+
+    /// C++: `void MESegment::setLastHeadway(SUMOTime)`
+    /// restores the last headway time (when loading state)
+    // void setLastHeadway(SUMOTime headway) {
+    //         myLastHeadway = headway;
+    //     }
+    #[allow(unused_variables)]
+    pub fn set_last_headway(&mut self, headway: SUMOTime) {
+        todo!("port MESegment::setLastHeadway")
+    }
+
+    /// C++: `double MESegment::getEntryBlockTimeSeconds() const` [const]
+    /// get the earliest entry time in seconds
+    // inline double getEntryBlockTimeSeconds() const {
+    //         SUMOTime t = SUMOTime_MAX;
+    //         for (const Queue& q : myQueues) {
+    //             t = MIN2(t, q.getEntryBlockTime());
+    //         }
+    //         return STEPS2TIME(t);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_entry_block_time_seconds(&self) -> f64 {
+        todo!("port MESegment::getEntryBlockTimeSeconds")
+    }
+
+    /// C++: `double MESegment::getWaitingSeconds() const` [const]
+    /// Get the waiting time for vehicles in all queues
+    // double
+    // MESegment::getWaitingSeconds() const {
+    //     double result = 0;
+    //     for (const Queue& q : myQueues) {
+    //         // @note: only the leader currently accumulates waitingTime but this might change in the future
+    //         for (const MEVehicle* veh : q.getVehicles()) {
+    //             result += veh->getWaitingSeconds();
+    //         }
+    //     }
+    //     return result;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_waiting_seconds(&self) -> f64 {
+        todo!("port MESegment::getWaitingSeconds")
+    }
+
+    /// C++: `void MESegment::saveState(OutputDevice &) const` [const]
+    /// Saves the state of this segment into the given stream
+    // void
+    // MESegment::saveState(OutputDevice& out) const {
+    //     bool write = false;
+    //     for (int i = 0; i < (int)myQueues.size(); i++) {
+    //         if (myQueues[i].getBlockTime() != -1 || !myQueues[i].getVehicles().empty() || getQueueExtraState(i) != "") {
+    //             write = true;
+    //             break;
+    //         }
+    //     }
+    //     if (write) {
+    //         out.openTag(SUMO_TAG_SEGMENT).writeAttr(SUMO_ATTR_ID, getID());
+    //         for (int i = 0; i < (int)myQueues.size(); i++) {
+    //             const Queue& q = myQueues[i];
+    //             out.openTag(SUMO_TAG_VIEWSETTINGS_VEHICLES);
+    //             out.writeAttr(SUMO_ATTR_TIME, toString<SUMOTime>(q.getBlockTime()));
+    //             out.writeAttr(SUMO_ATTR_BLOCKTIME, toString<SUMOTime>(q.getEntryBlockTime()));
+    //             out.writeAttr(SUMO_ATTR_VALUE, q.getVehicles());
+    //             const std::string extra = getQueueExtraState(i);
+    //             if (extra != "") {
+    //                 out.writeAttr(SUMO_ATTR_STATE, extra);
+    //             }
+    //             out.closeTag();
+    //         }
+    //         out.closeTag();
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn save_state(&self, out: &mut OutputDevice) {
+        todo!("port MESegment::saveState")
+    }
+
+    /// C++: `void MESegment::clearState()`
+    /// Remove all vehicles before quick-loading state
+    // void
+    // MESegment::clearState() {
+    //     for (Queue& q : myQueues) {
+    //         q.getModifiableVehicles().clear();
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn clear_state(&mut self) {
+        todo!("port MESegment::clearState")
+    }
+
+    /// C++: `void MESegment::loadState(const std::vector<SUMOVehicle *> &, const SUMOTime, const SUMOTime, const int)`
+    /// Loads the state of this segment with the given parameters
+    // void
+    // MESegment::loadState(const std::vector<SUMOVehicle*>& vehs, const SUMOTime blockTime, const SUMOTime entryBlockTime, const int queIdx) {
+    //     Queue& q = myQueues[queIdx];
+    //     for (SUMOVehicle* veh : vehs) {
+    //         MEVehicle* v = static_cast<MEVehicle*>(veh);
+    //         assert(v->getSegment() == this || myEdge.isInternal());
+    //         if (myEdge.isInternal()) {
+    //             v->setSegment(this, v->getQueIndex());
+    //         }
+    //         q.getModifiableVehicles().push_back(v);
+    //         myNumVehicles++;
+    //         q.setOccupancy(q.getOccupancy() + v->getVehicleType().getLengthWithGap());
+    //         addReminders(v);
+    //     }
+    //     if (q.size() != 0) {
+    //         // add the last vehicle of this queue
+    //         // !!! one question - what about the previously added vehicle? Is it stored twice?
+    //         MEVehicle* veh = q.getVehicles().back();
+    //         MSGlobals::gMesoNet->addLeaderCar(veh, getLink(veh), true);
+    //     }
+    //     q.setBlockTime(blockTime);
+    //     q.setEntryBlockTime(entryBlockTime);
+    //     q.setOccupancy(MIN2(q.getOccupancy(), myQueueCapacity));
+    // }
+    #[allow(unused_variables)]
+    pub fn load_state(&mut self, vehs: &Vec<Ptr<SUMOVehicle>>, blockTime: SUMOTime, entryBlockTime: SUMOTime, queIdx: i32) {
+        todo!("port MESegment::loadState")
+    }
+
+    /// C++: `std::vector<const MEVehicle *> MESegment::getVehicles() const` [const]
+    /// returns all vehicles (for debugging)
+    // std::vector<const MEVehicle*>
+    // MESegment::getVehicles() const {
+    //     std::vector<const MEVehicle*> result;
+    //     for (const Queue& q : myQueues) {
+    //         result.insert(result.end(), q.getVehicles().begin(), q.getVehicles().end());
+    //     }
+    //     return result;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_vehicles(&self) -> Vec<Ptr<MEVehicle>> {
+        todo!("port MESegment::getVehicles")
+    }
+
+    /// C++: `double MESegment::getFlow() const` [const]
+    /// returns flow based on headway
+    // double
+    // MESegment::getFlow() const {
+    //     return 3600 * getCarNumber() * getMeanSpeed() / myLength;
+    // }
+    #[allow(unused_variables)]
+    pub fn get_flow(&self) -> f64 {
+        todo!("port MESegment::getFlow")
+    }
+
+    /// C++: `bool MESegment::isInvalid(const MESegment *)` [static]
+    /// whether the given segment is 0 or encodes vaporization
+    // static inline bool isInvalid(const MESegment* segment) {
+    //         return segment == nullptr || segment == &myVaporizationTarget;
+    //     }
+    #[allow(unused_variables)]
+    pub fn is_invalid(segment: Ptr<MESegment>) -> bool {
+        todo!("port MESegment::isInvalid")
+    }
+
+    /// C++: `SUMOTime MESegment::getNextInsertionTime(SUMOTime) const` [const]
+    /// return a time after earliestEntry at which a vehicle may be inserted at full speed
+    // SUMOTime
+    // MESegment::getNextInsertionTime(SUMOTime earliestEntry) const {
+    //     // since we do not know which queue will be used we give a conservative estimate
+    //     SUMOTime earliestLeave = earliestEntry;
+    //     SUMOTime latestEntry = -1;
+    //     for (const Queue& q : myQueues) {
+    //         earliestLeave = MAX2(earliestLeave, q.getBlockTime());
+    //         latestEntry = MAX2(latestEntry, q.getEntryBlockTime());
+    //     }
+    //     if (myEdge.getSpeedLimit() == 0) {
+    //         return MAX2(earliestEntry, latestEntry);    // FIXME: This line is just an adhoc-fix to avoid division by zero (Leo)
+    //     } else {
+    //         return MAX3(earliestEntry, earliestLeave - TIME2STEPS(myLength / myEdge.getSpeedLimit()), latestEntry);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_next_insertion_time(&self, earliestEntry: SUMOTime) -> SUMOTime {
+        todo!("port MESegment::getNextInsertionTime")
+    }
+
+    /// C++: `int MESegment::remainingVehicleCapacity(const double) const` [const]
+    /// return the remaining physical space on this segment
+    // inline int remainingVehicleCapacity(const double vehLength) const {
+    //         int cap = 0;
+    //         for (const Queue& q : myQueues) {
+    //             if (q.getOccupancy() == 0. && myQueueCapacity < vehLength) {
+    //                 // even small segments can hold at least one vehicle
+    //                 cap += 1;
+    //             } else {
+    //                 cap += (int)((myQueueCapacity - q.getOccupancy()) / vehLength);
+    //             }
+    //         }
+    //         return cap;
+    //     }
+    #[allow(unused_variables)]
+    pub fn remaining_vehicle_capacity(&self, vehLength: f64) -> i32 {
+        todo!("port MESegment::remainingVehicleCapacity")
+    }
+
+    /// C++: `SUMOTime MESegment::getMinimumHeadwayTime() const` [const]
+    /// return the minimum headway-time with which vehicles may enter or leave this segment
+    // inline SUMOTime getMinimumHeadwayTime() const {
+    //         return myTau_ff;
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_minimum_headway_time(&self) -> SUMOTime {
+        todo!("port MESegment::getMinimumHeadwayTime")
+    }
+
+    /// C++: `void MESegment::addReminders(MEVehicle *) const` [const]
+    /// add this lanes MoveReminders to the given vehicle
+    // void
+    // MESegment::addReminders(MEVehicle* veh) const {
+    //     if (veh->getQueIndex() != PARKING_QUEUE) {
+    //         myQueues[veh->getQueIndex()].addReminders(veh);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_reminders(&self, veh: Ptr<MEVehicle>) {
+        todo!("port MESegment::addReminders")
+    }
+
+    /// C++: `SUMOTime MESegment::getLinkPenalty(const MEVehicle *) const` [const]
+    /// Returns the penalty time for passing a link (if using gMesoTLSPenalty > 0 or gMesoMinorPenalty > 0)
+    // SUMOTime
+    // MESegment::getLinkPenalty(const MEVehicle* veh) const {
+    //     const MSLink* link = getLink(veh, myTLSPenalty || myCheckMinorPenalty);
+    //     if (link != nullptr) {
+    //         SUMOTime result = 0;
+    //         if (link->isTLSControlled() && myTLSPenalty) {
+    //             result += link->getMesoTLSPenalty();
+    //         }
+    //         // minor tls links may get an additional penalty
+    //         if (!link->havePriority() &&
+    //                 // do not apply penalty on top of tLSPenalty
+    //                 !myTLSPenalty &&
+    //                 // do not apply penalty if limited control is active
+    //                 (!MSGlobals::gMesoLimitedJunctionControl || limitedControlOverride(link))) {
+    //             result += myMinorPenalty;
+    //         }
+    //         return result;
+    //     } else {
+    //         return 0;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn get_link_penalty(&self, veh: Ptr<MEVehicle>) -> SUMOTime {
+        todo!("port MESegment::getLinkPenalty")
+    }
+
+    /// C++: `void MESegment::updatePermissions()`
+    /// called when permissions change due to Rerouter or TraCI
+    // void
+    // MESegment::updatePermissions() {
+    //     if (myQueues.size() > 1) {
+    //         for (MSLane* lane : myEdge.getLanes()) {
+    //             myQueues[lane->getIndex()].setPermissions(lane->getPermissions());
+    //         }
+    //     } else {
+    //         myQueues.back().setPermissions(myEdge.getPermissions());
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn update_permissions(&mut self) {
+        todo!("port MESegment::updatePermissions")
+    }
+
+    /// C++: `void MESegment::overrideTLSPenalty()`
+    /// whether the traffic light should use normal junction control despite penalty options
+    // void overrideTLSPenalty() {
+    //         myTLSPenalty = false;
+    //     }
+    #[allow(unused_variables)]
+    pub fn override_tls_penalty(&mut self) {
+        todo!("port MESegment::overrideTLSPenalty")
+    }
+
+    /// C++: `SUMOTime MESegment::getMinTauWithVehLength(double, double) const` [const]
+    /// convert net time gap (leader back to follower front) to gross time gap (leader front to follower front)
+    // inline SUMOTime getMinTauWithVehLength(double lengthWithGap, double vehicleTau) const {
+    //         return (SUMOTime)((double)myTau_ff * vehicleTau + lengthWithGap * myTau_length);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_min_tau_with_veh_length(&self, lengthWithGap: f64, vehicleTau: f64) -> SUMOTime {
+        todo!("port MESegment::getMinTauWithVehLength")
+    }
+
+    /// C++: `SUMOTime MESegment::getTauWithVehLength(int, double, double) const` [const]
+    /// like getMinTauWithVehLength but using the jam-state dependent net time gap of the given queue (as in getMeanSpeed)
+    // inline SUMOTime getTauWithVehLength(int qIdx, double lengthWithGap, double vehicleTau) const {
+    //         assert(qIdx >= 0 && qIdx < (int)myQueues.size());
+    //         const SUMOTime tau = myQueues[qIdx].getOccupancy() < myJamThreshold ? myTau_ff : myTau_jf;
+    //         return tauWithVehLength(tau, lengthWithGap, vehicleTau);
+    //     }
+    #[allow(unused_variables)]
+    pub fn get_tau_with_veh_length(&self, qIdx: i32, lengthWithGap: f64, vehicleTau: f64) -> SUMOTime {
+        todo!("port MESegment::getTauWithVehLength")
+    }
+
+    /// C++: `bool MESegment::overtake()` [protected]
+    // bool
+    // MESegment::overtake() {
+    //     return myOvertaking && RandHelper::rand() > (getBruttoOccupancy() / myCapacity);
+    // }
+    #[allow(unused_variables)]
+    pub fn overtake(&mut self) -> bool {
+        todo!("port MESegment::overtake")
+    }
+
+    /// C++: `void MESegment::setSpeedForQueue(double, SUMOTime, SUMOTime, const std::vector<MEVehicle *> &)` [protected]
+    // void
+    // MESegment::setSpeedForQueue(double newSpeed, SUMOTime currentTime, SUMOTime blockTime, const std::vector<MEVehicle*>& vehs) {
+    //     MEVehicle* v = vehs.back();
+    //     SUMOTime oldEarliestExitTime = currentTime;
+    //     const SUMOTime oldExit = MAX2(oldEarliestExitTime, v->getEventTime());
+    //     v->updateDetectors(currentTime, oldExit, false);
+    //     oldEarliestExitTime = oldExit + tauWithVehLength(myTau_ff, v->getVehicleType().getLengthWithGap(), v->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //     SUMOTime newEvent = MAX2(newArrival(v, newSpeed, currentTime), blockTime);
+    //     if (v->getEventTime() != newEvent) {
+    //         MSGlobals::gMesoNet->removeLeaderCar(v);
+    //         v->setEventTime(newEvent);
+    //         MSGlobals::gMesoNet->addLeaderCar(v, getLink(v));
+    //     }
+    //     for (std::vector<MEVehicle*>::const_reverse_iterator i = vehs.rbegin() + 1; i != vehs.rend(); ++i) {
+    //         const SUMOTime oldExitTime = MAX2(oldEarliestExitTime, (*i)->getEventTime());
+    //         (*i)->updateDetectors(currentTime, oldExitTime, false);
+    //         const SUMOTime minTau = tauWithVehLength(myTau_ff, (*i)->getVehicleType().getLengthWithGap(), (*i)->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //         oldEarliestExitTime = oldExitTime + minTau;
+    //         newEvent = MAX2(newArrival(*i, newSpeed, currentTime), newEvent + minTau);
+    //         (*i)->setEventTime(newEvent);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn set_speed_for_queue(&mut self, newSpeed: f64, currentTime: SUMOTime, blockTime: SUMOTime, vehs: &Vec<Ptr<MEVehicle>>) {
+        todo!("port MESegment::setSpeedForQueue")
+    }
+
+    /// C++: `SUMOTime MESegment::newArrival(const MEVehicle *const, double, SUMOTime)` [protected]
+    /// compute the new arrival time when switching speed
+    // SUMOTime
+    // MESegment::newArrival(const MEVehicle* const v, double newSpeed, SUMOTime currentTime) {
+    //     // since speed is only an upper bound, pos may be too optimistic
+    //     const double pos = MIN2(myLength, STEPS2TIME(currentTime - v->getLastEntryTime()) * v->getSpeed());
+    //     // traveltime may not be 0
+    //     double tt = (myLength - pos) / MAX2(newSpeed, MESO_MIN_SPEED);
+    //     return currentTime + MAX2(TIME2STEPS(tt), SUMOTime(1));
+    // }
+    #[allow(unused_variables)]
+    pub fn new_arrival(&mut self, v: Ptr<MEVehicle>, newSpeed: f64, currentTime: SUMOTime) -> SUMOTime {
+        todo!("port MESegment::newArrival")
+    }
+
+    /// C++: `bool MESegment::hasBlockedLeader() const` [const, protected]
+    /// whether a leader in any queue is blocked
+    // bool
+    // MESegment::hasBlockedLeader() const {
+    //     for (const Queue& q : myQueues) {
+    //         if (q.size() > 0 && q.getVehicles().back()->getWaitingTime() > 0) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
+    #[allow(unused_variables)]
+    pub fn has_blocked_leader(&self) -> bool {
+        todo!("port MESegment::hasBlockedLeader")
+    }
+
+    /// C++: `void MESegment::recomputeJamThreshold(double)` [protected]
+    /// compute a value for myJamThreshold if jamThresh is negative, compute a value which allows free flow at mySpeed interpret jamThresh as the relative occupation at which jam starts
+    // void
+    // MESegment::recomputeJamThreshold(double jamThresh) {
+    //     if (jamThresh == DO_NOT_PATCH_JAM_THRESHOLD) {
+    //         return;
+    //     }
+    //     if (jamThresh < 0) {
+    //         // compute based on speed
+    //         myJamThreshold = jamThresholdForSpeed(myEdge.getSpeedLimit(), jamThresh);
+    //     } else {
+    //         // compute based on specified percentage
+    //         myJamThreshold = jamThresh * myCapacity;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn recompute_jam_threshold(&mut self, jamThresh: f64) {
+        todo!("port MESegment::recomputeJamThreshold")
+    }
+
+    /// C++: `double MESegment::jamThresholdForSpeed(double, double) const` [const, protected]
+    /// compute jam threshold for the given speed and jam-threshold option
+    // double
+    // MESegment::jamThresholdForSpeed(double speed, double jamThresh) const {
+    //     // vehicles driving freely at maximum speed should not jam
+    //     // we compute how many vehicles could possible enter the segment until the first vehicle leaves
+    //     // and multiply by the space these vehicles would occupy
+    //     // the jamThresh parameter is scale the resulting value
+    //     if (speed == 0) {
+    //         return std::numeric_limits<double>::max();  // never jam. Irrelevant at speed 0 anyway
+    //     }
+    // #ifdef DEBUG_JAMTHRESHOLD
+    //     if (true || DEBUG_COND) {
+    //         std::cout << "jamThresholdForSpeed seg=" << getID() << " speed=" << speed << " jamThresh=" << jamThresh << " ffVehs=" << std::ceil(myLength / (-jamThresh * speed * STEPS2TIME(tauWithVehLength(myTau_ff, DEFAULT_VEH_LENGTH_WITH_GAP)))) << " thresh=" << std::ceil(myLength / (-jamThresh * speed * STEPS2TIME(tauWithVehLength(myTau_ff, DEFAULT_VEH_LENGTH_WITH_GAP)))) * DEFAULT_VEH_LENGTH_WITH_GAP
+    //                   << "\n";
+    //     }
+    // #endif
+    //     return std::ceil(myLength / (-jamThresh * speed * STEPS2TIME(tauWithVehLength(myTau_ff, DEFAULT_VEH_LENGTH_WITH_GAP, 1.)))) * DEFAULT_VEH_LENGTH_WITH_GAP;
+    // }
+    #[allow(unused_variables)]
+    pub fn jam_threshold_for_speed(&self, speed: f64, jamThresh: f64) -> f64 {
+        todo!("port MESegment::jamThresholdForSpeed")
+    }
+
+    /// C++: `bool MESegment::limitedControlOverride(const MSLink *) const` [const, protected]
+    /// whether the given link may be passed because the option meso-junction-control.limited is set
+    // bool
+    // MESegment::limitedControlOverride(const MSLink* link) const {
+    //     assert(link != nullptr);
+    //     if (!MSGlobals::gMesoLimitedJunctionControl) {
+    //         return false;
+    //     }
+    //     // if the target segment of this link is not saturated junction control is disabled
+    //     const MSEdge& targetEdge = link->getLane()->getEdge();
+    //     const MESegment* target = MSGlobals::gMesoNet->getSegmentForEdge(targetEdge);
+    //     return (target->getBruttoOccupancy() * 2 < target->myJamThreshold) && !targetEdge.isRoundabout();
+    // }
+    #[allow(unused_variables)]
+    pub fn limited_control_override(&self, link: Ptr<MSLink>) -> bool {
+        todo!("port MESegment::limitedControlOverride")
+    }
+
+    /// C++: `SUMOTime MESegment::tauWithVehLength(SUMOTime, double, double) const` [const, protected]
+    /// convert net time gap (leader back to follower front) to gross time gap (leader front to follower front)
+    // inline SUMOTime tauWithVehLength(SUMOTime tau, double lengthWithGap, double vehicleTau) const {
+    //         return (SUMOTime)((double)tau * vehicleTau + lengthWithGap * myTau_length);
+    //     }
+    #[allow(unused_variables)]
+    pub fn tau_with_veh_length(&self, tau: SUMOTime, lengthWithGap: f64, vehicleTau: f64) -> SUMOTime {
+        todo!("port MESegment::tauWithVehLength")
+    }
+
+    /// C++: `SUMOTime MESegment::getTauJJ(double, double, double) const` [const, protected]
+    // SUMOTime
+    // MESegment::getTauJJ(double nextQueueSize, double nextQueueCapacity, double nextJamThreshold) const {
+    //     // compute coefficients for the jam-jam headway function
+    //     // this function models the effect that "empty space" needs to move
+    //     // backwards through the downstream segment before the upstream segment may
+    //     // send annother vehicle.
+    //     // this allows jams to clear and move upstream.
+    //     // the headway function f(x) depends on the number of vehicles in the
+    //     // downstream segment x
+    //     // f is a linear function that passes through the following fixed points:
+    //     // f(n_jam_threshold) = tau_jf_withLength (for continuity)
+    //     // f(headwayCapacity) = myTau_jj * headwayCapacity
+    //
+    //     const SUMOTime tau_jf_withLength = tauWithVehLength(myTau_jf, DEFAULT_VEH_LENGTH_WITH_GAP, 1.);
+    //     // number of vehicles that fit into the NEXT queue (could be larger than expected with DEFAULT_VEH_LENGTH_WITH_GAP!)
+    //     const double headwayCapacity = MAX2(nextQueueSize, nextQueueCapacity / DEFAULT_VEH_LENGTH_WITH_GAP);
+    //     // number of vehicles above which the NEXT queue is jammed
+    //     const double n_jam_threshold = headwayCapacity * nextJamThreshold / nextQueueCapacity;
+    //
+    //     // slope a and axis offset b for the jam-jam headway function
+    //     // solving f(x) = a * x + b
+    //     const double a = (STEPS2TIME(myTau_jj) * headwayCapacity - STEPS2TIME(tau_jf_withLength)) / (headwayCapacity - n_jam_threshold);
+    //     const double b = headwayCapacity * (STEPS2TIME(myTau_jj) - a);
+    //
+    //     // it is only well defined for nextQueueSize >= n_jam_threshold (which may not be the case for longer vehicles), so we take the MAX
+    //     return TIME2STEPS(a * MAX2(nextQueueSize, n_jam_threshold) + b);
+    // }
+    #[allow(unused_variables)]
+    pub fn get_tau_jj(&self, nextQueueSize: f64, nextQueueCapacity: f64, nextJamThreshold: f64) -> SUMOTime {
+        todo!("port MESegment::getTauJJ")
+    }
+
+    /// C++: `SUMOTime MESegment::computeHeadway(Queue &, const Queue &, const MESegment *const, const MEVehicle *) const` [const, virtual, protected]
+    /// compute current headway depending on traffic state
+    // SUMOTime
+    // MESegment::computeHeadway(Queue& /*q*/, const Queue& qNext, const MESegment* const next, const MEVehicle* veh) const {
+    //     const bool nextFree = qNext.getOccupancy() <= next->myJamThreshold;
+    //     const SUMOTime tau = (!veh->wasJammed()
+    //                           ? (nextFree ? myTau_ff : myTau_fj)
+    //                           : (nextFree ? myTau_jf : getTauJJ((double)qNext.size(), next->myQueueCapacity, next->myJamThreshold)));
+    //     assert(tau >= 0);
+    //     SUMOTime headway = tauWithVehLength(tau, veh->getVehicleType().getLengthWithGap(), veh->getVehicleType().getCarFollowModel().getHeadwayTime());
+    //     if (myTLSPenalty) {
+    //         const MSLink* const tllink = getLink(veh, true);
+    //         if (tllink != nullptr && tllink->isTLSControlled()) {
+    //             assert(tllink->getGreenFraction() > 0);
+    //             headway = (SUMOTime)((double)headway / tllink->getGreenFraction());
+    //         }
+    //     }
+    //     return headway;
+    // }
+    #[allow(unused_variables)]
+    pub fn compute_headway(&self, q: &mut MESegment_Queue, qNext: &MESegment_Queue, next: Ptr<MESegment>, veh: Ptr<MEVehicle>) -> SUMOTime {
+        todo!("port MESegment::computeHeadway")
+    }
+
+    /// C++: `bool MESegment::hasSpaceForInsertion(const Queue &, int, double, SUMOTime) const` [const, virtual, protected]
+    /// check jam-avoidance constraints during insertion
+    // bool
+    // MESegment::hasSpaceForInsertion(const Queue& q, int /*qIdx*/, double newOccupancy, SUMOTime /*entryTime*/) const {
+    //     // - regular insertions must respect entryBlockTime
+    //     // - initial insertions should not cause additional jamming
+    //     // - inserted vehicle should be able to continue at the current speed
+    //     if (q.getOccupancy() <= myJamThreshold && !hasBlockedLeader() && !myTLSPenalty) {
+    //         return newOccupancy <= myJamThreshold;
+    //     } else {
+    //         return newOccupancy <= jamThresholdForSpeed(getMeanSpeed(false), -1);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn has_space_for_insertion(&self, q: &MESegment_Queue, qIdx: i32, newOccupancy: f64, entryTime: SUMOTime) -> bool {
+        todo!("port MESegment::hasSpaceForInsertion")
+    }
+
+    /// C++: `void MESegment::addDownstreamFollowers(const MSEdge &, const std::vector<int> &, const double, const double, const int, SearchedMap &)` [protected]
+    /// add the queues leading to the successors of the given downstream edge to myFollowerMap
+    // void
+    // MESegment::addDownstreamFollowers(const MSEdge& edge, const std::vector<int>& reach, const double dist, const double lookahead, const int depth, SearchedMap& searched) {
+    //     if (dist + edge.getLength() >= lookahead) {
+    //         return;
+    //     }
+    //     // a search with the same reach that started no further away and at least as deep has added everything this one would
+    //     std::vector<std::pair<double, int> >& previous = searched[std::make_pair(&edge, reach)];
+    //     for (const std::pair<double, int>& p : previous) {
+    //         if (p.first <= dist && p.second >= depth) {
+    //             return;
+    //         }
+    //     }
+    //     previous.push_back(std::make_pair(dist, depth));
+    //     const std::vector<MSLane*>& lanes = edge.getLanes();
+    //     int usable = 0;
+    //     for (int i = 0; i < (int)reach.size(); i++) {
+    //         if (reach[i] != 0) {
+    //             usable |= 1 << i;
+    //         }
+    //     }
+    //     for (const MSEdge* const succ : edge.getSuccessors()) {
+    //         if (succ->isTazConnector()) {
+    //             continue;
+    //         }
+    //         // the queues of this segment from which succ can be reached without changing lanes
+    //         int queues = 0;
+    //         std::vector<int> succReach(reach.size(), 0);
+    //         for (int i = 0; i < (int)reach.size(); i++) {
+    //             for (int j = 0; j < (int)lanes.size(); j++) {
+    //                 if ((reach[i] & (1 << j)) != 0) {
+    //                     for (const MSLink* const link : lanes[j]->getLinkCont()) {
+    //                         if (&link->getLane()->getEdge() == succ) {
+    //                             queues |= 1 << i;
+    //                             succReach[i] |= 1 << link->getLane()->getIndex();
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         if (queues != 0) {
+    //             if (queues != usable) {
+    //                 myFollowerMap[succ] |= queues;
+    //                 myLookahead = MAX2(myLookahead, depth + 1);
+    //             }
+    //             addDownstreamFollowers(*succ, succReach, dist + edge.getLength(), lookahead, depth + 1, searched);
+    //         }
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_downstream_followers(&mut self, edge: &MSEdge, reach: &Vec<i32>, dist: f64, lookahead: f64, depth: i32, searched: &mut MESegment_SearchedMap) {
+        todo!("port MESegment::addDownstreamFollowers")
+    }
+
+    /// C++: `void MESegment::MESegment(const MESegment &)` [private]
+    /// Invalidated copy constructor.
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn new_2(arg0: &MESegment) -> Self {
+        todo!("port MESegment::MESegment")
+    }
+
+    /// C++: `MESegment & MESegment::operator=(const MESegment &)` [private]
+    /// Invalidated assignment operator.
+    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    #[allow(unused_variables)]
+    pub fn assign_op(&mut self, arg0: &MESegment) -> &mut MESegment {
+        todo!("port MESegment::operator=")
+    }
+
+    /// C++: `void MESegment::MESegment(const std::string &)` [private]
+    /// constructor for dummy segment
+    // MESegment::MESegment(const std::string& id):
+    //     Named(id),
+    //     myEdge(myDummyParent), // arbitrary edge needed to supply the needed reference
+    //     myNextSegment(nullptr), myLength(0), myIndex(0),
+    //     myTau_ff(0), myTau_fj(0), myTau_jf(0), myTau_jj(0),
+    //     myTLSPenalty(false),
+    //     myCheckMinorPenalty(false),
+    //     myMinorPenalty(0),
+    //     myJunctionControl(false),
+    //     myOvertaking(false),
+    //     myTau_length(1) {
+    // }
+    #[allow(unused_variables)]
+    pub fn new_3(id: &str) -> Self {
+        todo!("port MESegment::MESegment")
+    }
+
+}
+
+/// edge type specific meso parameters
+/// C++ class `MESegment::MesoEdgeType` (mesosim/MESegment.h)
+pub struct MESegment_MesoEdgeType {
+    pub tauff: SUMOTime,
+    pub taufj: SUMOTime,
+    pub taujf: SUMOTime,
+    pub taujj: SUMOTime,
+    pub jamThreshold: f64,
+    pub junctionControl: bool,
+    pub tlsPenalty: f64,
+    pub tlsFlowPenalty: f64,
+    pub minorPenalty: SUMOTime,
+    pub overtaking: bool,
+    pub edgeLength: f64,
+    pub lookahead: f64,
+}
+
+impl MESegment_MesoEdgeType {
+}
+
+/// C++ class `MESegment::Queue` (mesosim/MESegment.h)
+pub struct MESegment_Queue {
+    /// The vClass permissions for this queue
+    pub myPermissions: SVCPermissions,
+    pub myVehicles: Vec<Ptr<MEVehicle>>,
+    /// The occupied space (in m) in the queue
+    pub myOccupancy: f64,
+    /// The block time for vehicles who wish to enter this queue
+    pub myEntryBlockTime: SUMOTime,
+    /// The block time
+    pub myBlockTime: SUMOTime,
+    /// The data collection for all kinds of detectors
+    pub myDetectorData: Vec<Ptr<MSMoveReminder>>,
+}
+
+impl MESegment_Queue {
+    /// C++: `void Queue::Queue(const SVCPermissions)`
+    // Queue(const SVCPermissions permissions) : myPermissions(permissions) {}
+    #[allow(unused_variables)]
+    pub fn new(permissions: SVCPermissions) -> Self {
+        todo!("port Queue::Queue")
+    }
+
+    /// C++: `int Queue::size() const` [const]
+    // inline int size() const {
+    //             return (int)myVehicles.size();
+    //         }
+    #[allow(unused_variables)]
+    pub fn size(&self) -> i32 {
+        todo!("port Queue::size")
+    }
+
+    /// C++: `const std::vector<MEVehicle *> & Queue::getVehicles() const` [const]
+    // inline const std::vector<MEVehicle*>& getVehicles() const {
+    //             return myVehicles;
+    //         }
+    #[allow(unused_variables)]
+    pub fn get_vehicles(&self) -> &Vec<Ptr<MEVehicle>> {
+        todo!("port Queue::getVehicles")
+    }
+
+    /// C++: `MEVehicle * Queue::remove(MEVehicle *)`
+    // MEVehicle*
+    // MESegment::Queue::remove(MEVehicle* v) {
+    //     myOccupancy -= v->getVehicleType().getLengthWithGap();
+    //     assert(std::find(myVehicles.begin(), myVehicles.end(), v) != myVehicles.end());
+    //     if (v == myVehicles.back()) {
+    //         myVehicles.pop_back();
+    //         if (myVehicles.empty()) {
+    //             myOccupancy = 0.;
+    //         } else {
+    //             return myVehicles.back();
+    //         }
+    //     } else {
+    //         myVehicles.erase(std::find(myVehicles.begin(), myVehicles.end(), v));
+    //     }
+    //     return nullptr;
+    // }
+    #[allow(unused_variables)]
+    pub fn remove(&mut self, v: Ptr<MEVehicle>) -> Ptr<MEVehicle> {
+        todo!("port Queue::remove")
+    }
+
+    /// C++: `std::vector<MEVehicle *> & Queue::getModifiableVehicles()`
+    // inline std::vector<MEVehicle*>& getModifiableVehicles() {
+    //             return myVehicles;
+    //         }
+    #[allow(unused_variables)]
+    pub fn get_modifiable_vehicles(&mut self) -> &mut Vec<Ptr<MEVehicle>> {
+        todo!("port Queue::getModifiableVehicles")
+    }
+
+    /// C++: `double Queue::getOccupancy() const` [const]
+    // inline double getOccupancy() const {
+    //             return myOccupancy;
+    //         }
+    #[allow(unused_variables)]
+    pub fn get_occupancy(&self) -> f64 {
+        todo!("port Queue::getOccupancy")
+    }
+
+    /// C++: `void Queue::setOccupancy(const double)`
+    // inline void setOccupancy(const double occ) {
+    //             myOccupancy = occ;
+    //         }
+    #[allow(unused_variables)]
+    pub fn set_occupancy(&mut self, occ: f64) {
+        todo!("port Queue::setOccupancy")
+    }
+
+    /// C++: `bool Queue::allows(SUMOVehicleClass) const` [const]
+    // inline bool allows(SUMOVehicleClass vclass) const {
+    //             return (myPermissions & vclass) == vclass;
+    //         }
+    #[allow(unused_variables)]
+    pub fn allows(&self, vclass: SUMOVehicleClass) -> bool {
+        todo!("port Queue::allows")
+    }
+
+    /// C++: `SUMOTime Queue::getEntryBlockTime() const` [const]
+    /// return the next time at which a vehicle may enter this queue
+    // inline SUMOTime getEntryBlockTime() const {
+    //             return myEntryBlockTime;
+    //         }
+    #[allow(unused_variables)]
+    pub fn get_entry_block_time(&self) -> SUMOTime {
+        todo!("port Queue::getEntryBlockTime")
+    }
+
+    /// C++: `void Queue::setEntryBlockTime(SUMOTime)`
+    /// set the next time at which a vehicle may enter this queue
+    // inline void setEntryBlockTime(SUMOTime entryBlockTime) {
+    //             myEntryBlockTime = entryBlockTime;
+    //         }
+    #[allow(unused_variables)]
+    pub fn set_entry_block_time(&mut self, entryBlockTime: SUMOTime) {
+        todo!("port Queue::setEntryBlockTime")
+    }
+
+    /// C++: `SUMOTime Queue::getBlockTime() const` [const]
+    // inline SUMOTime getBlockTime() const {
+    //             return myBlockTime;
+    //         }
+    #[allow(unused_variables)]
+    pub fn get_block_time(&self) -> SUMOTime {
+        todo!("port Queue::getBlockTime")
+    }
+
+    /// C++: `void Queue::setBlockTime(SUMOTime)`
+    // inline void setBlockTime(SUMOTime t) {
+    //             myBlockTime = t;
+    //         }
+    #[allow(unused_variables)]
+    pub fn set_block_time(&mut self, t: SUMOTime) {
+        todo!("port Queue::setBlockTime")
+    }
+
+    /// C++: `void Queue::setPermissions(SVCPermissions)`
+    // inline void setPermissions(SVCPermissions p) {
+    //             myPermissions = p;
+    //         }
+    #[allow(unused_variables)]
+    pub fn set_permissions(&mut self, p: SVCPermissions) {
+        todo!("port Queue::setPermissions")
+    }
+
+    /// C++: `void Queue::addDetector(MSMoveReminder *)`
+    // void
+    // MESegment::Queue::addDetector(MSMoveReminder* data) {
+    //     myDetectorData.push_back(data);
+    //     for (MEVehicle* const v : myVehicles) {
+    //         v->addReminder(data);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_detector(&mut self, data: Ptr<MSMoveReminder>) {
+        todo!("port Queue::addDetector")
+    }
+
+    /// C++: `void Queue::addReminders(MEVehicle *) const` [const]
+    // void
+    // MESegment::Queue::addReminders(MEVehicle* veh) const {
+    //     for (MSMoveReminder* rem : myDetectorData) {
+    //         veh->addReminder(rem);
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn add_reminders(&self, veh: Ptr<MEVehicle>) {
+        todo!("port Queue::addReminders")
+    }
+
+}
+
