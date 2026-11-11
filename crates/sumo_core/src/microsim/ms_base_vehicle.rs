@@ -159,6 +159,8 @@ impl std::ops::DerefMut for MSBaseVehicle {
 pub const MS_BASE_VEHICLE_NOT_YET_DEPARTED: SUMOTime = SUMOTIME_MAX;
 /// C++ `VEHPARS_FORCE_REROUTE` (utils/vehicle/SUMOVehicleParameter.h), not yet ported elsewhere
 pub const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+/// C++ `MSBaseVehicle::myEmptyTransportableVector`
+pub const MS_BASE_VEHICLE_EMPTY_TRANSPORTABLE_VECTOR: &Vec<Ptr<MSTransportable>> = &Vec::new();
 /// C++ `VEHPARS_JUNCTIONMODEL_PARAMS_SET` (SUMOVehicleParameter.h)
 pub const VEHPARS_JUNCTIONMODEL_PARAMS_SET: i64 = 2 << 28;
 /// C++ `VEHPARS_CFMODEL_PARAMS_SET` (SUMOVehicleParameter.h)
@@ -2228,7 +2230,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_container_number(&self) -> i32 {
-        todo!("port MSBaseVehicle::getContainerNumber")
+        let loaded = if self.myContainerDevice.is_null() { 0 } else { self.myContainerDevice.size() };
+        loaded + self.myParameter.containerNumber
     }
 
     /// C++: `const std::vector<MSVehicleDevice *> & MSBaseVehicle::getDevices() const` [const, virtual]
@@ -2238,7 +2241,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_devices(&self) -> &Vec<Ptr<MSVehicleDevice>> {
-        todo!("port MSBaseVehicle::getDevices")
+        &self.myDevices
     }
 
     /// C++: `bool MSBaseVehicle::allowsBoarding(const MSTransportable *) const` [const, virtual]
@@ -2262,7 +2265,16 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn allows_boarding(&self, t: Ptr<MSTransportable>) -> bool {
-        todo!("port MSBaseVehicle::allowsBoarding")
+        if t.isPerson() && self.get_person_number() >= self.get_vehicle_type().get_person_capacity() {
+            return false;
+        } else if !t.isPerson() && self.get_container_number() >= self.get_vehicle_type().get_container_capacity() {
+            return false;
+        }
+        if self.isStopped() && self.myStops.front().unwrap().pars.permitted.len() > 0 && !self.myStops.front().unwrap().pars.permitted.contains(t.get_id()) {
+            return false;
+        }
+        // shortcut: MSDevice_Taxi::allowsBoarding (getDevice(typeid(MSDevice_Taxi))) is not reachable yet
+        true
     }
 
     /// C++: `void MSBaseVehicle::addTransportable(MSTransportable *)` [virtual]
@@ -2292,7 +2304,27 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSBaseVehicle::addTransportable")
+        if transportable.isPerson() {
+            if self.myPersonDevice.is_null() {
+                self.init_transportable_device(true);
+                if self.myParameter.departProcedure == DepartDefinition::TRIGGERED && self.myParameter.depart == -1 {
+                    self.myParameter.m().depart = MSNet::get_instance().get_current_time_step();
+                }
+            }
+            self.myPersonDevice.m().addTransportable(transportable);
+        } else {
+            if self.myContainerDevice.is_null() {
+                self.init_transportable_device(false);
+                if self.myParameter.departProcedure == DepartDefinition::CONTAINER_TRIGGERED && self.myParameter.depart == -1 {
+                    self.myParameter.m().depart = MSNet::get_instance().get_current_time_step();
+                }
+            }
+            self.myContainerDevice.m().addTransportable(transportable);
+        }
+        if !self.myEnergyParams.is_null() {
+            let mass = self.myEnergyParams.getTransportableMass() + transportable.get_vehicle_type().get_mass();
+            self.myEnergyParams.m().setTransportableMass(mass);
+        }
     }
 
     /// C++: `void MSBaseVehicle::initTransportableDevice(bool)`
@@ -2309,7 +2341,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_transportable_device(&mut self, isPerson: bool) {
-        todo!("port MSBaseVehicle::initTransportableDevice")
+        // shortcut: MSDevice_Transportable::buildVehicleDevices is not wired to myDevices yet, so the device stays null
+        let _ = isPerson;
     }
 
     /// C++: `void MSBaseVehicle::removeTransportable(MSTransportable *)` [virtual]
@@ -2329,7 +2362,17 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port MSBaseVehicle::removeTransportable")
+        // this might be called from the MSTransportable destructor so we cannot do a dynamic cast to determine the type
+        if !self.myPersonDevice.is_null() {
+            self.myPersonDevice.m().removeTransportable(t);
+        }
+        if !self.myContainerDevice.is_null() {
+            self.myContainerDevice.m().removeTransportable(t);
+        }
+        if !self.myEnergyParams.is_null() {
+            let mass = self.myEnergyParams.getTransportableMass() - t.get_vehicle_type().get_mass();
+            self.myEnergyParams.m().setTransportableMass(mass);
+        }
     }
 
     /// C++: `void MSBaseVehicle::removeTransportableMass(MSTransportable *)` [virtual]
@@ -2342,7 +2385,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable_mass(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port MSBaseVehicle::removeTransportableMass")
+        if !self.myEnergyParams.is_null() {
+            let mass = self.myEnergyParams.getTransportableMass() - t.get_vehicle_type().get_mass();
+            self.myEnergyParams.m().setTransportableMass(mass);
+        }
     }
 
     /// C++: `const std::vector<MSTransportable *> & MSBaseVehicle::getPersons() const` [const, virtual]
@@ -2357,7 +2403,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_persons(&self) -> &Vec<Ptr<MSTransportable>> {
-        todo!("port MSBaseVehicle::getPersons")
+        if self.myPersonDevice.is_null() {
+            MS_BASE_VEHICLE_EMPTY_TRANSPORTABLE_VECTOR
+        } else {
+            self.myPersonDevice.getTransportables()
+        }
     }
 
     /// C++: `const std::vector<MSTransportable *> & MSBaseVehicle::getContainers() const` [const, virtual]
@@ -2372,7 +2422,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_containers(&self) -> &Vec<Ptr<MSTransportable>> {
-        todo!("port MSBaseVehicle::getContainers")
+        if self.myContainerDevice.is_null() {
+            MS_BASE_VEHICLE_EMPTY_TRANSPORTABLE_VECTOR
+        } else {
+            self.myContainerDevice.getTransportables()
+        }
     }
 
     /// C++: `bool MSBaseVehicle::isLineStop(double) const` [const, virtual]
@@ -2397,7 +2451,21 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_line_stop(&self, position: f64) -> bool {
-        todo!("port MSBaseVehicle::isLineStop")
+        if self.myParameter.line.is_empty() {
+            // not a public transport line
+            return false;
+        }
+        for stop in self.myParameter.stops.iter() {
+            if stop.startPos <= position && position <= stop.endPos {
+                return true;
+            }
+        }
+        for stop in self.myRoute.get_stops().iter() {
+            if stop.startPos <= position && position <= stop.endPos {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSBaseVehicle::hasJump(const MSRouteIterator &) const` [const]
@@ -2414,8 +2482,17 @@ impl MSBaseVehicle {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn has_jump(&self, it: &MSRouteIterator) -> bool {
-        todo!("port MSBaseVehicle::hasJump")
+    /// `it` is an index into myRoute's edges (MSRouteIterator is Unmapped)
+    pub fn has_jump(&self, it: usize) -> bool {
+        // shortcut: MSStop::edge is Unmapped, so the stop's edge is taken from its lane and the
+        // early exit on a later stop (stop.edge > it) is not applied
+        let edge = self.myRoute.index_op(it as i32);
+        for stop in self.myStops.iter() {
+            if Ptr::new(stop.lane.get_edge()) == edge && stop.pars.jump >= 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSBaseVehicle::hasValidRoute(std::string &, ConstMSRoutePtr) const` [const, virtual]
@@ -2433,7 +2510,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_valid_route(&self, msg: &mut String, route: ConstMSRoutePtr) -> bool {
-        todo!("port MSBaseVehicle::hasValidRoute")
+        let checkJumps = Rc::ptr_eq(&route, &self.myRoute);
+        // the edge iterators in the stops are invalid for other routes
+        let start = if checkJumps { self.myCurrEdge } else { 0 };
+        self.has_valid_route_2(msg, start, route.size() as usize, checkJumps)
     }
 
     /// C++: `bool MSBaseVehicle::hasValidRoute(std::string &, MSRouteIterator, MSRouteIterator, bool) const` [const]
@@ -2463,8 +2543,35 @@ impl MSBaseVehicle {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn has_valid_route_2(&self, msg: &mut String, start: MSRouteIterator, last: MSRouteIterator, checkJumps: bool) -> bool {
-        todo!("port MSBaseVehicle::hasValidRoute")
+    /// `start`/`last` are indices into myRoute's edges (MSRouteIterator is Unmapped)
+    pub fn has_valid_route_2(&self, msg: &mut String, start: usize, last: usize, checkJumps: bool) -> bool {
+        let edges = self.myRoute.get_edges();
+        let vclass = self.myType.get_vehicle_class();
+        // check connectivity, first
+        let lastValid = last as i64 - 1;
+        let mut e = start;
+        // shortcut: guard against running past the edge list (C++ dereferences e + 1 unchecked)
+        while (e as i64) != lastValid && e + 1 < last {
+            let cur = edges[e];
+            let next = edges[e + 1];
+            if cur.allowed_lanes(&next, vclass, false).is_null() {
+                if !checkJumps || !self.has_jump(e) {
+                    if !self.ignore_transient_permissions() || (!next.has_transient_permissions() && !cur.has_transient_permissions()) {
+                        *msg = utils::tlf!("No connection between edge '%' and edge '%'.", cur.get_id(), edges[e + 1].get_id());
+                        return false;
+                    }
+                }
+            }
+            e += 1;
+        }
+        // check usable lanes, then
+        for e in start..last {
+            if edges[e].prohibits(Ptr::new(&self.base)) {
+                *msg = utils::tlf!("Edge '%' prohibits.", edges[e].get_id());
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool MSBaseVehicle::hasValidRouteStart(std::string &)` [virtual]
@@ -2489,7 +2596,22 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_valid_route_start(&mut self, msg: &mut String) -> bool {
-        todo!("port MSBaseVehicle::hasValidRouteStart")
+        let cur = self.get_edge();
+        if !cur.is_taz_connector() {
+            if self.myParameter.departSpeedProcedure == DepartSpeedDefinition::GIVEN && self.myParameter.departSpeed > self.myType.get_max_speed() + utils::common::std_defs::SPEED_EPS {
+                *msg = utils::tlf!("Departure speed for vehicle '%' is too high for the vehicle type '%'.", self.get_id(), self.myType.get_id());
+                self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_LANE as i32;
+                return false;
+            }
+        }
+        if self.myRoute.get_edges().len() > 0 && !cur.prohibits(Ptr::new(&self.base)) {
+            self.myRouteValidity &= !(MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i32);
+            true
+        } else {
+            *msg = utils::tlf!("Vehicle '%' is not allowed to depart on any lane of edge '%'.", self.get_id(), cur.get_id());
+            self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i32;
+            false
+        }
     }
 
     /// C++: `int MSBaseVehicle::getRouteValidity(bool, bool, std::string *)` [virtual]
@@ -2525,7 +2647,33 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_route_validity(&mut self, update: bool, silent: bool, msgReturn: Ptr<String>) -> i32 {
-        todo!("port MSBaseVehicle::getRouteValidity")
+        if !update {
+            return self.myRouteValidity;
+        }
+        // insertion check must be done in any case
+        let mut msg = String::new();
+        if !self.has_valid_route_start(&mut msg) {
+            // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
+            if !silent {
+                // vehicle will be discarded
+                utils::common::msg_handler::write_warning(&msg);
+            } else if !msgReturn.is_null() {
+                *msgReturn.m() = msg.clone();
+            }
+        }
+        if self.myRoute.get_first_edge().is_internal()
+            && (self.myRouteValidity & MSBaseVehicle_RouteValidity::ROUTE_UNCHECKED as i32) != 0
+            // we could check after the first rerouting
+            && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) == 0
+        {
+            let route = self.myRoute.clone();
+            if !self.has_valid_route(&mut msg, route) {
+                self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_INVALID as i32;
+                panic!("{}", utils::tlf!("Vehicle '%' has no valid route. %", self.get_id(), msg));
+            }
+        }
+        self.myRouteValidity &= !(MSBaseVehicle_RouteValidity::ROUTE_UNCHECKED as i32);
+        self.myRouteValidity
     }
 
     /// C++: `bool MSBaseVehicle::hasReminder(MSMoveReminder *) const` [const]
@@ -2541,7 +2689,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_reminder(&self, rem: Ptr<MSMoveReminder>) -> bool {
-        todo!("port MSBaseVehicle::hasReminder")
+        self.myMoveReminders.iter().any(|item| item.0 == rem)
     }
 
     /// C++: `void MSBaseVehicle::addReminder(MSMoveReminder *, double)`
@@ -2557,7 +2705,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_reminder(&mut self, rem: Ptr<MSMoveReminder>, pos: f64) {
-        todo!("port MSBaseVehicle::addReminder")
+        self.myMoveReminders.push((rem, pos));
     }
 
     /// C++: `void MSBaseVehicle::removeReminder(MSMoveReminder *)`
@@ -2578,7 +2726,9 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_reminder(&mut self, rem: Ptr<MSMoveReminder>) {
-        todo!("port MSBaseVehicle::removeReminder")
+        if let Some(p) = self.myMoveReminders.iter().position(|r| r.0 == rem) {
+            self.myMoveReminders.remove(p);
+        }
     }
 
     /// C++: `void MSBaseVehicle::activateReminders(const MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -2618,7 +2768,20 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn activate_reminders(&mut self, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) {
-        todo!("port MSBaseVehicle::activateReminders")
+        // notifyEnter may cause new reminders to be added so we cannot use an iterator
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let rem = self.myMoveReminders[i].0;
+            let remPos = self.myMoveReminders[i].1;
+            // skip the reminder if it is a lane reminder but not for my lane (indicated by rem->second > 0.)
+            if !rem.get_lane().is_null() && remPos > 0.0 {
+                i += 1;
+            } else if rem.notify_enter(self, reason, enteredLane) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
     }
 
     /// C++: `double MSBaseVehicle::getLength() const` [const, virtual]
@@ -2628,7 +2791,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSBaseVehicle::getLength")
+        self.myType.get_length()
     }
 
     /// C++: `bool MSBaseVehicle::isRail() const` [const, virtual]
@@ -2638,7 +2801,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_rail(&self) -> bool {
-        todo!("port MSBaseVehicle::isRail")
+        utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || utils::common::sumo_vehicle_class::is_railway(self.get_current_edge().get_permissions())
     }
 
     /// C++: `double MSBaseVehicle::getWidth() const` [const]
@@ -2648,7 +2811,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port MSBaseVehicle::getWidth")
+        self.myType.get_width()
     }
 
     /// C++: `double MSBaseVehicle::getChosenSpeedFactor() const` [const, virtual]
@@ -2658,7 +2821,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        todo!("port MSBaseVehicle::getChosenSpeedFactor")
+        self.myChosenSpeedFactor
     }
 
     /// C++: `double MSBaseVehicle::getDesiredMaxSpeed() const` [const]
@@ -2667,7 +2830,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_desired_max_speed(&self) -> f64 {
-        todo!("port MSBaseVehicle::getDesiredMaxSpeed")
+        self.myType.get_desired_max_speed() * self.myChosenSpeedFactor
     }
 
     /// C++: `void MSBaseVehicle::setChosenSpeedFactor(const double)` [virtual]
@@ -2677,7 +2840,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_chosen_speed_factor(&mut self, factor: f64) {
-        todo!("port MSBaseVehicle::setChosenSpeedFactor")
+        self.myChosenSpeedFactor = factor;
     }
 
     /// C++: `MSDevice * MSBaseVehicle::getDevice(const std::type_info &) const` [const, virtual]
@@ -2693,7 +2856,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        todo!("port MSBaseVehicle::getDevice")
+        // shortcut: typeid(*dev) == type needs a device-type key; no device matches until that is ported
+        Ptr::default()
     }
 
     /// C++: `void MSBaseVehicle::replaceVehicleType(const MSVehicleType *)` [virtual]
@@ -2728,7 +2892,15 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        todo!("port MSBaseVehicle::replaceVehicleType")
+        // shortcut: the speedFactor distribution (getSpeedFactor()) is Unmapped, so the speed factor
+        // remapping onto the new type's distribution is not applied; the chosen factor is kept
+        if self.myType.is_vehicle_specific() && type_ != self.myType {
+            // shortcut: MSNet::getVehicleControl().removeVType(myType) is not ported
+        }
+        self.myType = type_;
+        if !self.myEnergyParams.is_null() {
+            // shortcut: EnergyParams::setSecondary(type->getEmissionParameters()) is not ported
+        }
     }
 
     /// C++: `std::unique_ptr<MFXOptionalLock> MSBaseVehicle::getScopeLock()` [virtual]
@@ -2737,7 +2909,8 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_scope_lock(&mut self) -> Box<Unmapped /* MFXOptionalLock */> {
-        todo!("port MSBaseVehicle::getScopeLock")
+        // shortcut: MFXOptionalLock / MFXNoOpLock are not ported; a unit placeholder guard is returned
+        Box::new(())
     }
 
     /// C++: `MSVehicleType & MSBaseVehicle::getSingularType()`
@@ -2753,7 +2926,13 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_singular_type(&mut self) -> &mut MSVehicleType {
-        todo!("port MSBaseVehicle::getSingularType")
+        if self.myType.is_vehicle_specific() {
+            return self.myType.m();
+        }
+        let id = format!("{}@{}", self.myType.get_id(), self.get_id());
+        let type_ = self.myType.build_singular_type(&id);
+        self.replace_vehicle_type(type_);
+        type_.m()
     }
 
     /// C++: `void MSBaseVehicle::saveState(OutputDevice &)` [virtual]
@@ -2789,7 +2968,30 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSBaseVehicle::saveState")
+        // the parameters may hold the name of a vTypeDistribution but we are interested in the actual type
+        let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
+        self.myParameter.write(out, utils::options::options_cont::get_options(), SUMO_TAG_VEHICLE, &typeID);
+        out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
+        let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
+        out.write_attr(SUMO_ATTR_DISTANCE, &os);
+        if self.myParameter.arrivalPosProcedure == ArrivalPosDefinition::RANDOM {
+            out.write_attr(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &self.myArrivalPos);
+        }
+        if !self.myParameter.wasSet(VEHPARS_SPEEDFACTOR_SET) {
+            let precision = out.get_precision();
+            out.set_precision(std::cmp::max(utils::common::rand_helper::gPrecisionRandom(), precision));
+            out.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.myChosenSpeedFactor);
+            out.set_precision(precision);
+        }
+        if self.myParameter.wasSet(VEHPARS_FORCE_REROUTE) {
+            out.write_attr(SUMO_ATTR_REROUTE, &true);
+        }
+        if !self.myParameter.wasSet(VEHPARS_LINE_SET) && self.myParameter.line != "" {
+            // could be set from stop
+            out.write_attr(SUMO_ATTR_LINE, &self.myParameter.line);
+        }
+        // here starts the vehicle internal part (see loading)
+        // @note: remember to close the vehicle tag when calling this in a subclass!
     }
 
     /// C++: `bool MSBaseVehicle::handleCollisionStop(MSStop &, const double)` [virtual]
@@ -2801,7 +3003,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
-        todo!("port MSBaseVehicle::handleCollisionStop")
+        let _ = (stop, distToStop);
+        true
     }
 
     /// C++: `bool MSBaseVehicle::isStopped() const` [const, virtual]
@@ -2812,7 +3015,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_stopped(&self) -> bool {
-        todo!("port MSBaseVehicle::isStopped")
+        !self.myStops.is_empty() && self.myStops.front().unwrap().reached
     }
 
     /// C++: `bool MSBaseVehicle::isParking() const` [const, virtual]
@@ -2825,7 +3028,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_parking(&self) -> bool {
-        todo!("port MSBaseVehicle::isParking")
+        let front = self.myStops.front().unwrap();
+        self.isStopped()
+            && (front.pars.parking == ParkingType::OFFROAD)
+            && (front.parkingarea.is_null() || !front.parkingarea.parkOnRoad())
+            && (front.getSpeed() == 0.0 || self.get_speed() < utils::common::std_defs::SUMO_CONST_HALTING_SPEED)
     }
 
     /// C++: `bool MSBaseVehicle::isJumping() const` [const]
@@ -2836,7 +3043,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_jumping(&self) -> bool {
-        todo!("port MSBaseVehicle::isJumping")
+        match self.myPastStops.last() {
+            Some(last) => last.jump >= 0 && self.get_edge().get_id() == last.edge && last.ended == MSNet::get_instance().get_current_time_step(),
+            None => false,
+        }
     }
 
     /// C++: `bool MSBaseVehicle::isReversed() const` [const]
@@ -2846,7 +3056,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_reversed(&self) -> bool {
-        todo!("port MSBaseVehicle::isReversed")
+        self.myAmReversed
     }
 
     /// C++: `bool MSBaseVehicle::isStoppedTriggered() const` [const, virtual]
@@ -2857,7 +3067,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_stopped_triggered(&self) -> bool {
-        todo!("port MSBaseVehicle::isStoppedTriggered")
+        self.isStopped() && {
+            let front = self.myStops.front().unwrap();
+            front.triggered || front.containerTriggered || front.joinTriggered
+        }
     }
 
     /// C++: `bool MSBaseVehicle::isStoppedParking() const` [const, virtual]
@@ -2868,7 +3081,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_stopped_parking(&self) -> bool {
-        todo!("port MSBaseVehicle::isStoppedParking")
+        self.isStopped() && self.myStops.front().unwrap().pars.parking == ParkingType::OFFROAD
     }
 
     /// C++: `bool MSBaseVehicle::isStoppedInRange(const double, const double, bool) const` [const, virtual]
@@ -2883,7 +3096,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_stopped_in_range(&self, pos: f64, tolerance: f64, checkFuture: bool) -> bool {
-        todo!("port MSBaseVehicle::isStoppedInRange")
+        if self.isStopped() || (checkFuture && self.hasStops()) {
+            let stop = self.myStops.front().unwrap();
+            return stop.pars.startPos - tolerance <= pos && stop.pars.endPos + tolerance >= pos;
+        }
+        false
     }
 
     /// C++: `bool MSBaseVehicle::hasStops() const` [const, virtual]
@@ -2893,7 +3110,7 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn has_stops(&self) -> bool {
-        todo!("port MSBaseVehicle::hasStops")
+        !self.myStops.is_empty()
     }
 
     /// C++: `void MSBaseVehicle::cleanupParkingReservation()`
@@ -2906,7 +3123,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_parking_reservation(&mut self) {
-        todo!("port MSBaseVehicle::cleanupParkingReservation")
+        if self.hasStops() && !self.myStops.front().unwrap().parkingarea.is_null() && self.myStops.front().unwrap().parkingarea.isReservable() {
+            let me = Ptr::from_mut(&mut self.base);
+            self.myStops.front_mut().unwrap().parkingarea.m().removeSpaceReservation(me);
+        }
     }
 
     /// C++: `bool MSBaseVehicle::replaceParkingArea(MSParkingArea *, std::string &)` [virtual]
