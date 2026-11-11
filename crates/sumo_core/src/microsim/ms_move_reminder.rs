@@ -59,7 +59,13 @@ impl MSMoveReminder {
     // }
     #[allow(unused_variables)]
     pub fn new(description: &str, lane: Ptr<MSLane>, doAdd: bool) -> Self {
-        todo!("port MSMoveReminder::MSMoveReminder")
+        // shortcut: C++ registers `this` with myLane when doAdd (myLane->addMoveReminder(this)); Rust returns Self by value so callers must register the placed reminder via MSLane::add_move_reminder, upgrade when constructors can take a stable address
+        let _ = doAdd;
+        Self {
+            myLane: lane,
+            myDescription: description.to_string(),
+            myLastVehicleUpdateValues: BTreeMap::new(),
+        }
     }
 
     /// C++: `void MSMoveReminder::~MSMoveReminder() noexcept` [virtual]
@@ -67,7 +73,7 @@ impl MSMoveReminder {
     // virtual ~MSMoveReminder() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSMoveReminder::~MSMoveReminder")
+        // C++ destructor body is empty.
     }
 
     /// C++: `const MSLane * MSMoveReminder::getLane() const` [const]
@@ -77,7 +83,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSMoveReminder::getLane")
+        self.myLane
     }
 
     /// C++: `bool MSMoveReminder::notifyEnter(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -90,7 +96,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSMoveReminder::notifyEnter")
+        // UNUSED_PARAMETER(reason, veh, enteredLane)
+        true
     }
 
     /// C++: `bool MSMoveReminder::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -107,7 +114,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSMoveReminder::notifyMove")
+        // UNUSED_PARAMETER(oldPos, newPos, newSpeed, veh)
+        true
     }
 
     /// C++: `bool MSMoveReminder::notifyIdle(SUMOTrafficObject &)` [virtual]
@@ -118,7 +126,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_idle(&mut self, veh: &mut SUMOTrafficObject) -> bool {
-        todo!("port MSMoveReminder::notifyIdle")
+        // UNUSED_PARAMETER(veh)
+        true
     }
 
     /// C++: `void MSMoveReminder::notifyParking()` [virtual]
@@ -126,7 +135,7 @@ impl MSMoveReminder {
     // virtual void notifyParking() {}
     #[allow(unused_variables)]
     pub fn notify_parking(&mut self) {
-        todo!("port MSMoveReminder::notifyParking")
+        // C++ body is empty.
     }
 
     /// C++: `void MSMoveReminder::notifyStopEnded()` [virtual]
@@ -134,7 +143,7 @@ impl MSMoveReminder {
     // virtual void notifyStopEnded() {}
     #[allow(unused_variables)]
     pub fn notify_stop_ended(&mut self) {
-        todo!("port MSMoveReminder::notifyStopEnded")
+        // C++ body is empty.
     }
 
     /// C++: `bool MSMoveReminder::notifyLeave(SUMOTrafficObject &, double, Notification, const MSLane *)` [virtual]
@@ -148,7 +157,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSMoveReminder::notifyLeave")
+        // UNUSED_PARAMETER(veh, lastPos, reason, enteredLane)
+        true
     }
 
     /// C++: `bool MSMoveReminder::notifyLeaveBack(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -161,7 +171,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_leave_back(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, leftLane: Ptr<MSLane>) -> bool {
-        todo!("port MSMoveReminder::notifyLeaveBack")
+        // UNUSED_PARAMETER(veh, reason, leftLane)
+        true
     }
 
     /// C++: `bool MSMoveReminder::notifyReroute(SUMOTrafficObject &)` [virtual]
@@ -172,7 +183,8 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_reroute(&mut self, veh: &mut SUMOTrafficObject) -> bool {
-        todo!("port MSMoveReminder::notifyReroute")
+        // UNUSED_PARAMETER(veh)
+        true
     }
 
     /// C++: `void MSMoveReminder::updateDetector(SUMOTrafficObject &, double, double, SUMOTime, SUMOTime, SUMOTime, bool)`
@@ -218,7 +230,41 @@ impl MSMoveReminder {
     // }
     #[allow(unused_variables)]
     pub fn update_detector(&mut self, veh: &mut SUMOTrafficObject, entryPos: f64, leavePos: f64, entryTime: SUMOTime, currentTime: SUMOTime, leaveTime: SUMOTime, cleanUp: bool) {
-        todo!("port MSMoveReminder::updateDetector")
+        // each vehicle is tracked linearly across its segment. For each vehicle,
+        // the time and position of the previous call are maintained and only
+        // the increments are sent to notifyMoveInternal
+        let (mut entryPos, mut entryTime) = (entryPos, entryTime);
+        if entryTime > currentTime {
+            return; // calibrator may insert vehicles a tiny bit into the future; ignore those
+        }
+        let id = veh.get_numerical_id();
+        if let Some(&(previousUpdateTime, previousPos)) = self.myLastVehicleUpdateValues.get(&id) {
+            // the vehicle already has reported its values before; use these
+            // however, if this was called from prepareDetectorForWriting the time
+            // only has a resolution of DELTA_T and might be invalid
+            if previousUpdateTime <= currentTime {
+                entryTime = previousUpdateTime;
+                entryPos = previousPos;
+            }
+        }
+        assert!(entryTime <= currentTime);
+        if (entryTime < leaveTime) && (entryPos <= leavePos) {
+            let timeOnLane = steps2time(currentTime - entryTime);
+            let speed = (leavePos - entryPos) / steps2time(leaveTime - entryTime);
+            self.myLastVehicleUpdateValues.insert(id, (currentTime, entryPos + speed * timeOnLane));
+            assert!(timeOnLane >= 0.0);
+            self.notify_move_internal(veh, timeOnLane, timeOnLane, speed, speed, speed * timeOnLane, speed * timeOnLane, 0.);
+        } else {
+            // it would be natural to
+            // assert(entryTime == leaveTime);
+            // assert(entryPos == leavePos);
+            // However, in the presence of calibrators, vehicles may jump a bit
+            self.myLastVehicleUpdateValues.insert(id, (leaveTime, leavePos));
+        }
+        if cleanUp {
+            // clean up after the vehicle has left the area of this reminder
+            self.remove_from_vehicle_update_values(veh);
+        }
     }
 
     /// C++: `void MSMoveReminder::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual]
@@ -242,7 +288,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSMoveReminder::notifyMoveInternal")
+        // C++ body only consumes its parameters (UNUSED_PARAMETER); nothing to do.
     }
 
     /// C++: `void MSMoveReminder::setDescription(const std::string &)`
@@ -251,7 +297,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn set_description(&mut self, description: &str) {
-        todo!("port MSMoveReminder::setDescription")
+        self.myDescription = description.to_string();
     }
 
     /// C++: `const std::string & MSMoveReminder::getDescription() const` [const]
@@ -260,7 +306,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn get_description(&self) -> &str {
-        todo!("port MSMoveReminder::getDescription")
+        &self.myDescription
     }
 
     /// C++: `bool MSMoveReminder::isParkingRerouter() const` [const, virtual]
@@ -269,7 +315,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn is_parking_rerouter(&self) -> bool {
-        todo!("port MSMoveReminder::isParkingRerouter")
+        false
     }
 
     /// C++: `void MSMoveReminder::saveReminderState(OutputDevice &, const SUMOTrafficObject &)`
@@ -287,7 +333,13 @@ impl MSMoveReminder {
     // }
     #[allow(unused_variables)]
     pub fn save_reminder_state(&mut self, out: &mut OutputDevice, veh: &SUMOTrafficObject) {
-        todo!("port MSMoveReminder::saveReminderState")
+        if let Some(&(time, pos)) = self.myLastVehicleUpdateValues.get(&veh.get_numerical_id()) {
+            out.open_tag_id(SUMO_TAG_REMINDER);
+            out.write_attr(SUMO_ATTR_ID, self.get_description());
+            out.write_attr(SUMO_ATTR_TIME, &time);
+            out.write_attr(SUMO_ATTR_POSITION, &pos);
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSMoveReminder::loadReminderState(long long, SUMOTime, double)`
@@ -297,7 +349,7 @@ impl MSMoveReminder {
     // }
     #[allow(unused_variables)]
     pub fn load_reminder_state(&mut self, numID: i64, time: SUMOTime, pos: f64) {
-        todo!("port MSMoveReminder::loadReminderState")
+        self.myLastVehicleUpdateValues.insert(numID, (time, pos));
     }
 
     /// C++: `void MSMoveReminder::removeFromVehicleUpdateValues(SUMOTrafficObject &)` [protected]
@@ -307,14 +359,15 @@ impl MSMoveReminder {
     // }
     #[allow(unused_variables)]
     pub fn remove_from_vehicle_update_values(&mut self, veh: &mut SUMOTrafficObject) {
-        todo!("port MSMoveReminder::removeFromVehicleUpdateValues")
+        self.myLastVehicleUpdateValues.remove(&veh.get_numerical_id());
     }
 
     /// C++: `MSMoveReminder & MSMoveReminder::operator=(const MSMoveReminder &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSMoveReminder) -> &mut MSMoveReminder {
-        todo!("port MSMoveReminder::operator=")
+        // C++ assignment operator is private and only declared (avoids a compiler warning); it must not be called.
+        panic!("MSMoveReminder assignment operator is private and undefined in C++")
     }
 
 }

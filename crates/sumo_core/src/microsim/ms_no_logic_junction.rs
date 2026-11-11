@@ -31,7 +31,7 @@ impl MSNoLogicJunction {
     // MSNoLogicJunction::~MSNoLogicJunction() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSNoLogicJunction::~MSNoLogicJunction")
+        // C++ destructor body is empty; members are dropped with the struct.
     }
 
     /// C++: `void MSNoLogicJunction::MSNoLogicJunction(const std::string &, SumoXMLNodeType, const Position &, const PositionVector &, const std::string &, std::vector<MSLane *>, std::vector<MSLane *>)`
@@ -48,7 +48,11 @@ impl MSNoLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, type_: SumoXMLNodeType, position: &Position, shape: &PositionVector, name: &str, incoming: Vec<Ptr<MSLane>>, internal: Vec<Ptr<MSLane>>) -> Self {
-        todo!("port MSNoLogicJunction::MSNoLogicJunction")
+        Self {
+            base: MSJunction::new(id, type_, position, shape, name),
+            myIncomingLanes: incoming,
+            myInternalLanes: internal,
+        }
     }
 
     /// C++: `void MSNoLogicJunction::postloadInit()` [virtual]
@@ -64,7 +68,12 @@ impl MSNoLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        todo!("port MSNoLogicJunction::postloadInit")
+        // inform links where they have to report approaching vehicles to
+        for l in self.myIncomingLanes.iter() {
+            for link in l.get_link_cont().iter() {
+                link.m().set_request_information(-1, false, false, &Vec::new(), &Vec::new(), Ptr::null());
+            }
+        }
     }
 
     /// C++: `const std::vector<MSLane *> MSNoLogicJunction::getInternalLanes() const` [const, virtual]
@@ -93,7 +102,24 @@ impl MSNoLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_lanes(&self) -> Vec<Ptr<MSLane>> {
-        todo!("port MSNoLogicJunction::getInternalLanes")
+        // Besides the lanes im myInternal lanes, which are only the last parts of the connections,
+        // this collects all lanes on the junction
+        let mut allInternalLanes: Vec<Ptr<MSLane>> = Vec::new();
+        for &i in self.myInternalLanes.iter() {
+            let mut l = i;
+            while !l.is_null() {
+                allInternalLanes.push(l);
+                if l.get_incoming_lanes().is_empty() {
+                    break;
+                }
+                assert!(l.get_incoming_lanes().len() == 1);
+                l = l.get_incoming_lanes()[0].lane;
+                if !l.is_internal() {
+                    break;
+                }
+            }
+        }
+        allInternalLanes
     }
 
     /// C++: `void MSNoLogicJunction::MSNoLogicJunction(const MSNoLogicJunction &)` [private]
@@ -101,7 +127,8 @@ impl MSNoLogicJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSNoLogicJunction) -> Self {
-        todo!("port MSNoLogicJunction::MSNoLogicJunction")
+        // C++ copy constructor is private and never defined; it must not be called.
+        panic!("MSNoLogicJunction copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSNoLogicJunction & MSNoLogicJunction::operator=(const MSNoLogicJunction &)` [private]
@@ -109,7 +136,8 @@ impl MSNoLogicJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSNoLogicJunction) -> &mut MSNoLogicJunction {
-        todo!("port MSNoLogicJunction::operator=")
+        // C++ assignment operator is private and never defined; it must not be called.
+        panic!("MSNoLogicJunction assignment operator is private and undefined in C++")
     }
 
 }
