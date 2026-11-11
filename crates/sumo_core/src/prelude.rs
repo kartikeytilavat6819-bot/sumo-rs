@@ -4,6 +4,9 @@ pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, Vec
 pub use std::rc::Rc;
 /// Placeholder for a C++ type the generator could not map; replace when porting the code that uses it.
 pub type Unmapped = ();
+pub use utils::traci::traci_constants::*;
+pub use utils::common::to_string::to_hex;
+pub use utils::{write_warningf, write_errorf, write_messagef};
 pub use utils::geom::abstract_poly::AbstractPoly;
 pub use utils::xml::sumo_xml_definitions::AdditionalFileExtension;
 pub use utils::xml::sumo_xml_definitions::AggregateType;

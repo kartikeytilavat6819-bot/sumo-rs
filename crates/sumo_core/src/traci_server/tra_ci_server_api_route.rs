@@ -68,7 +68,7 @@ impl TraCIServerAPI_Route {
         match variable {
             ADD => {
                 let edges = StorageHelper::read_typed_string_list(inputStorage, "A string list is needed for adding a new route.");
-                Route::add(&id, edges);
+                Route::add(&id, &edges);
             }
             REMOVE => {
                 Route::remove(&id);

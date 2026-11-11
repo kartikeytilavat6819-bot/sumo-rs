@@ -71,7 +71,7 @@ impl TraCIServerAPI_ParkingArea {
             }
             VAR_ACCESS_BADGE => {
                 let badges = StorageHelper::read_typed_string_list(inputStorage, "A string list is needed to update the ParkingArea access badges.");
-                ParkingArea::set_accepted_badges(&id, badges);
+                ParkingArea::set_accepted_badges(&id, &badges);
             }
             _ => {}
         }

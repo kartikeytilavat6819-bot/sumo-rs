@@ -274,7 +274,7 @@ impl StorageHelper {
             base: TraCIResult::new(),
             value: Vec::new(),
         };
-        read_polygon(ret, &mut poly);
+        StorageHelper::read_polygon(ret, &mut poly);
         poly
     }
 
@@ -366,19 +366,19 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_stage(inputStorage: &mut Storage, stage: &mut TraCIStage, error: &str) {
-        stage.type_ = read_typed_int(inputStorage, error);
-        stage.vType = read_typed_string(inputStorage, error);
-        stage.line = read_typed_string(inputStorage, error);
-        stage.destStop = read_typed_string(inputStorage, error);
-        stage.edges = read_typed_string_list(inputStorage, error);
-        stage.travelTime = read_typed_double(inputStorage, error);
-        stage.cost = read_typed_double(inputStorage, error);
-        stage.length = read_typed_double(inputStorage, error);
-        stage.intended = read_typed_string(inputStorage, error);
-        stage.depart = read_typed_double(inputStorage, error);
-        stage.departPos = read_typed_double(inputStorage, error);
-        stage.arrivalPos = read_typed_double(inputStorage, error);
-        stage.description = read_typed_string(inputStorage, error);
+        stage.type_ = StorageHelper::read_typed_int(inputStorage, error);
+        stage.vType = StorageHelper::read_typed_string(inputStorage, error);
+        stage.line = StorageHelper::read_typed_string(inputStorage, error);
+        stage.destStop = StorageHelper::read_typed_string(inputStorage, error);
+        stage.edges = StorageHelper::read_typed_string_list(inputStorage, error);
+        stage.travelTime = StorageHelper::read_typed_double(inputStorage, error);
+        stage.cost = StorageHelper::read_typed_double(inputStorage, error);
+        stage.length = StorageHelper::read_typed_double(inputStorage, error);
+        stage.intended = StorageHelper::read_typed_string(inputStorage, error);
+        stage.depart = StorageHelper::read_typed_double(inputStorage, error);
+        stage.departPos = StorageHelper::read_typed_double(inputStorage, error);
+        stage.arrivalPos = StorageHelper::read_typed_double(inputStorage, error);
+        stage.description = StorageHelper::read_typed_string(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readConnection(tcpip::Storage &, libsumo::TraCIConnection &, const std::string &)` [static]
@@ -394,14 +394,14 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_connection(inputStorage: &mut Storage, connection: &mut TraCIConnection, error: &str) {
-        connection.approachedLane = read_typed_string(inputStorage, error);
-        connection.approachedInternal = read_typed_string(inputStorage, error);
-        connection.hasPrio = read_bool(inputStorage, error);
-        connection.isOpen = read_bool(inputStorage, error);
-        connection.hasFoe = read_bool(inputStorage, error);
-        connection.state = read_typed_string(inputStorage, error);
-        connection.direction = read_typed_string(inputStorage, error);
-        connection.length = read_typed_double(inputStorage, error);
+        connection.approachedLane = StorageHelper::read_typed_string(inputStorage, error);
+        connection.approachedInternal = StorageHelper::read_typed_string(inputStorage, error);
+        connection.hasPrio = StorageHelper::read_bool(inputStorage, error);
+        connection.isOpen = StorageHelper::read_bool(inputStorage, error);
+        connection.hasFoe = StorageHelper::read_bool(inputStorage, error);
+        connection.state = StorageHelper::read_typed_string(inputStorage, error);
+        connection.direction = StorageHelper::read_typed_string(inputStorage, error);
+        connection.length = StorageHelper::read_typed_double(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readVehicleDataVector(tcpip::Storage &, std::vector<libsumo::TraCIVehicleData> &, const std::string &)` [static]
@@ -419,14 +419,14 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_vehicle_data_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIVehicleData>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let vd = TraCIVehicleData {
-                id: read_typed_string(inputStorage, error),
-                length: read_typed_double(inputStorage, error),
-                entryTime: read_typed_double(inputStorage, error),
-                leaveTime: read_typed_double(inputStorage, error),
-                typeID: read_typed_string(inputStorage, error),
+                id: StorageHelper::read_typed_string(inputStorage, error),
+                length: StorageHelper::read_typed_double(inputStorage, error),
+                entryTime: StorageHelper::read_typed_double(inputStorage, error),
+                leaveTime: StorageHelper::read_typed_double(inputStorage, error),
+                typeID: StorageHelper::read_typed_string(inputStorage, error),
             };
             result.push(vd);
         }
@@ -448,17 +448,17 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_reservation(inputStorage: &mut Storage, result: &mut TraCIReservation, error: &str) {
-        read_compound(inputStorage, 10, error);
-        result.id = read_typed_string(inputStorage, error);
-        result.persons = read_typed_string_list(inputStorage, error);
-        result.group = read_typed_string(inputStorage, error);
-        result.fromEdge = read_typed_string(inputStorage, error);
-        result.toEdge = read_typed_string(inputStorage, error);
-        result.departPos = read_typed_double(inputStorage, error);
-        result.arrivalPos = read_typed_double(inputStorage, error);
-        result.depart = read_typed_double(inputStorage, error);
-        result.reservationTime = read_typed_double(inputStorage, error);
-        result.state = read_typed_int(inputStorage, error);
+        StorageHelper::read_compound(inputStorage, 10, error);
+        result.id = StorageHelper::read_typed_string(inputStorage, error);
+        result.persons = StorageHelper::read_typed_string_list(inputStorage, error);
+        result.group = StorageHelper::read_typed_string(inputStorage, error);
+        result.fromEdge = StorageHelper::read_typed_string(inputStorage, error);
+        result.toEdge = StorageHelper::read_typed_string(inputStorage, error);
+        result.departPos = StorageHelper::read_typed_double(inputStorage, error);
+        result.arrivalPos = StorageHelper::read_typed_double(inputStorage, error);
+        result.depart = StorageHelper::read_typed_double(inputStorage, error);
+        result.reservationTime = StorageHelper::read_typed_double(inputStorage, error);
+        result.state = StorageHelper::read_typed_int(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readLogic(tcpip::Storage &, libsumo::TraCILogic &, const std::string &)` [static]
@@ -490,31 +490,31 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_logic(inputStorage: &mut Storage, logic: &mut TraCILogic, error: &str) {
-        read_compound(inputStorage, 5, error);
-        logic.programID = read_typed_string(inputStorage, "");
-        logic.type_ = read_typed_int(inputStorage, "");
-        logic.currentPhaseIndex = read_typed_int(inputStorage, "");
-        let mut num_phases = read_compound(inputStorage, -1, "");
+        StorageHelper::read_compound(inputStorage, 5, error);
+        logic.programID = StorageHelper::read_typed_string(inputStorage, "");
+        logic.type_ = StorageHelper::read_typed_int(inputStorage, "");
+        logic.currentPhaseIndex = StorageHelper::read_typed_int(inputStorage, "");
+        let mut num_phases = StorageHelper::read_compound(inputStorage, -1, "");
         while num_phases > 0 {
             num_phases -= 1;
-            read_compound(inputStorage, 6, "");
+            StorageHelper::read_compound(inputStorage, 6, "");
             let mut phase = TraCIPhase::new();
-            phase.duration = read_typed_double(inputStorage, "");
-            phase.state = read_typed_string(inputStorage, "");
-            phase.minDur = read_typed_double(inputStorage, "");
-            phase.maxDur = read_typed_double(inputStorage, "");
-            let mut num_next = read_compound(inputStorage, -1, "");
+            phase.duration = StorageHelper::read_typed_double(inputStorage, "");
+            phase.state = StorageHelper::read_typed_string(inputStorage, "");
+            phase.minDur = StorageHelper::read_typed_double(inputStorage, "");
+            phase.maxDur = StorageHelper::read_typed_double(inputStorage, "");
+            let mut num_next = StorageHelper::read_compound(inputStorage, -1, "");
             while num_next > 0 {
                 num_next -= 1;
-                phase.next.push(read_typed_int(inputStorage, ""));
+                phase.next.push(StorageHelper::read_typed_int(inputStorage, ""));
             }
-            phase.name = read_typed_string(inputStorage, "");
+            phase.name = StorageHelper::read_typed_string(inputStorage, "");
             logic.phases.push(Rc::new(phase));
         }
-        let mut num_params = read_compound(inputStorage, -1, "");
+        let mut num_params = StorageHelper::read_compound(inputStorage, -1, "");
         while num_params > 0 {
             num_params -= 1;
-            let key_value = read_typed_string_list(inputStorage, "");
+            let key_value = StorageHelper::read_typed_string_list(inputStorage, "");
             logic.subParameter.insert(key_value[0].clone(), key_value[1].clone());
         }
     }
@@ -541,7 +541,7 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_constraint_vector(inputStorage: &mut Storage, result: &mut Vec<TraCISignalConstraint>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let mut c = TraCISignalConstraint {
                 signalId: String::new(),
@@ -554,15 +554,15 @@ impl StorageHelper {
                 active: false,
                 param: BTreeMap::new(),
             };
-            c.signalId = read_typed_string(inputStorage, "");
-            c.tripId = read_typed_string(inputStorage, "");
-            c.foeId = read_typed_string(inputStorage, "");
-            c.foeSignal = read_typed_string(inputStorage, "");
-            c.limit = read_typed_int(inputStorage, "");
-            c.type_ = read_typed_int(inputStorage, "");
-            c.mustWait = read_typed_byte(inputStorage, "") != 0;
-            c.active = read_typed_byte(inputStorage, "") != 0;
-            let param_items = read_typed_string_list(inputStorage, "");
+            c.signalId = StorageHelper::read_typed_string(inputStorage, "");
+            c.tripId = StorageHelper::read_typed_string(inputStorage, "");
+            c.foeId = StorageHelper::read_typed_string(inputStorage, "");
+            c.foeSignal = StorageHelper::read_typed_string(inputStorage, "");
+            c.limit = StorageHelper::read_typed_int(inputStorage, "");
+            c.type_ = StorageHelper::read_typed_int(inputStorage, "");
+            c.mustWait = StorageHelper::read_typed_byte(inputStorage, "") != 0;
+            c.active = StorageHelper::read_typed_byte(inputStorage, "") != 0;
+            let param_items = StorageHelper::read_typed_string_list(inputStorage, "");
             for j in (0..param_items.len()).step_by(2) {
                 c.param.insert(param_items[j].clone(), param_items[j + 1].clone());
             }
@@ -585,12 +585,12 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_link_vector_vector(inputStorage: &mut Storage, result: &mut Vec<Vec<TraCILink>>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let mut controlled_links: Vec<TraCILink> = Vec::new();
-            let num_links = read_typed_int(inputStorage, "");
+            let num_links = StorageHelper::read_typed_int(inputStorage, "");
             for _ in 0..num_links {
-                let link = read_typed_string_list(inputStorage, "");
+                let link = StorageHelper::read_typed_string_list(inputStorage, "");
                 controlled_links.push(TraCILink::new_2(&link[0], &link[2], &link[1]));
             }
             result.push(controlled_links);
@@ -613,15 +613,15 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_best_lanes_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIBestLanesData>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let info = TraCIBestLanesData {
-                laneID: read_typed_string(inputStorage, ""),
-                length: read_typed_double(inputStorage, ""),
-                occupation: read_typed_double(inputStorage, ""),
-                bestLaneOffset: read_typed_unsigned_byte(inputStorage, ""),
-                allowsContinuation: read_bool(inputStorage, ""),
-                continuationLanes: read_typed_string_list(inputStorage, error),
+                laneID: StorageHelper::read_typed_string(inputStorage, ""),
+                length: StorageHelper::read_typed_double(inputStorage, ""),
+                occupation: StorageHelper::read_typed_double(inputStorage, ""),
+                bestLaneOffset: StorageHelper::read_typed_unsigned_byte(inputStorage, ""),
+                allowsContinuation: StorageHelper::read_bool(inputStorage, ""),
+                continuationLanes: StorageHelper::read_typed_string_list(inputStorage, error),
             };
             result.push(info);
         }
@@ -646,18 +646,18 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_collision_vector(inputStorage: &mut Storage, result: &mut Vec<TraCICollision>, error: &str) {
-        let num_collisions = read_typed_int(inputStorage, error);
+        let num_collisions = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..num_collisions {
             let c = TraCICollision {
-                collider: read_typed_string(inputStorage, ""),
-                victim: read_typed_string(inputStorage, ""),
-                colliderType: read_typed_string(inputStorage, ""),
-                victimType: read_typed_string(inputStorage, ""),
-                colliderSpeed: read_typed_double(inputStorage, ""),
-                victimSpeed: read_typed_double(inputStorage, ""),
-                type_: read_typed_string(inputStorage, ""),
-                lane: read_typed_string(inputStorage, ""),
-                pos: read_typed_double(inputStorage, ""),
+                collider: StorageHelper::read_typed_string(inputStorage, ""),
+                victim: StorageHelper::read_typed_string(inputStorage, ""),
+                colliderType: StorageHelper::read_typed_string(inputStorage, ""),
+                victimType: StorageHelper::read_typed_string(inputStorage, ""),
+                colliderSpeed: StorageHelper::read_typed_double(inputStorage, ""),
+                victimSpeed: StorageHelper::read_typed_double(inputStorage, ""),
+                type_: StorageHelper::read_typed_string(inputStorage, ""),
+                lane: StorageHelper::read_typed_string(inputStorage, ""),
+                pos: StorageHelper::read_typed_double(inputStorage, ""),
             };
             result.push(c);
         }
@@ -682,18 +682,18 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_junction_foe_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIJunctionFoe>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let info = TraCIJunctionFoe {
-                foeId: read_typed_string(inputStorage, ""),
-                egoDist: read_typed_double(inputStorage, ""),
-                foeDist: read_typed_double(inputStorage, ""),
-                egoExitDist: read_typed_double(inputStorage, ""),
-                foeExitDist: read_typed_double(inputStorage, ""),
-                egoLane: read_typed_string(inputStorage, ""),
-                foeLane: read_typed_string(inputStorage, ""),
-                egoResponse: read_bool(inputStorage, ""),
-                foeResponse: read_bool(inputStorage, ""),
+                foeId: StorageHelper::read_typed_string(inputStorage, ""),
+                egoDist: StorageHelper::read_typed_double(inputStorage, ""),
+                foeDist: StorageHelper::read_typed_double(inputStorage, ""),
+                egoExitDist: StorageHelper::read_typed_double(inputStorage, ""),
+                foeExitDist: StorageHelper::read_typed_double(inputStorage, ""),
+                egoLane: StorageHelper::read_typed_string(inputStorage, ""),
+                foeLane: StorageHelper::read_typed_string(inputStorage, ""),
+                egoResponse: StorageHelper::read_bool(inputStorage, ""),
+                foeResponse: StorageHelper::read_bool(inputStorage, ""),
             };
             result.push(info);
         }
@@ -725,25 +725,25 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_stop_vector(inputStorage: &mut Storage, result: &mut Vec<TraCINextStopData>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let s = TraCINextStopData {
-                lane: read_typed_string(inputStorage, ""),
-                endPos: read_typed_double(inputStorage, ""),
-                stoppingPlaceID: read_typed_string(inputStorage, ""),
-                stopFlags: read_typed_int(inputStorage, ""),
-                duration: read_typed_double(inputStorage, ""),
-                until: read_typed_double(inputStorage, ""),
-                startPos: read_typed_double(inputStorage, ""),
-                intendedArrival: read_typed_double(inputStorage, ""),
-                arrival: read_typed_double(inputStorage, ""),
-                depart: read_typed_double(inputStorage, ""),
-                split: read_typed_string(inputStorage, ""),
-                join: read_typed_string(inputStorage, ""),
-                actType: read_typed_string(inputStorage, ""),
-                tripId: read_typed_string(inputStorage, ""),
-                line: read_typed_string(inputStorage, ""),
-                speed: read_typed_double(inputStorage, ""),
+                lane: StorageHelper::read_typed_string(inputStorage, ""),
+                endPos: StorageHelper::read_typed_double(inputStorage, ""),
+                stoppingPlaceID: StorageHelper::read_typed_string(inputStorage, ""),
+                stopFlags: StorageHelper::read_typed_int(inputStorage, ""),
+                duration: StorageHelper::read_typed_double(inputStorage, ""),
+                until: StorageHelper::read_typed_double(inputStorage, ""),
+                startPos: StorageHelper::read_typed_double(inputStorage, ""),
+                intendedArrival: StorageHelper::read_typed_double(inputStorage, ""),
+                arrival: StorageHelper::read_typed_double(inputStorage, ""),
+                depart: StorageHelper::read_typed_double(inputStorage, ""),
+                split: StorageHelper::read_typed_string(inputStorage, ""),
+                join: StorageHelper::read_typed_string(inputStorage, ""),
+                actType: StorageHelper::read_typed_string(inputStorage, ""),
+                tripId: StorageHelper::read_typed_string(inputStorage, ""),
+                line: StorageHelper::read_typed_string(inputStorage, ""),
+                speed: StorageHelper::read_typed_double(inputStorage, ""),
             };
             result.push(s);
         }
@@ -763,13 +763,13 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_tls_data_vector(inputStorage: &mut Storage, result: &mut Vec<TraCINextTLSData>, error: &str) {
-        let n = read_typed_int(inputStorage, error);
+        let n = StorageHelper::read_typed_int(inputStorage, error);
         for _ in 0..n {
             let tls = TraCINextTLSData {
-                id: read_typed_string(inputStorage, ""),
-                tlIndex: read_typed_int(inputStorage, ""),
-                dist: read_typed_double(inputStorage, ""),
-                state: read_typed_byte(inputStorage, "") as i8,
+                id: StorageHelper::read_typed_string(inputStorage, ""),
+                tlIndex: StorageHelper::read_typed_int(inputStorage, ""),
+                dist: StorageHelper::read_typed_double(inputStorage, ""),
+                state: StorageHelper::read_typed_byte(inputStorage, "") as i8,
             };
             result.push(tls);
         }
@@ -901,21 +901,21 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_stage(content: &mut Storage, stage: &TraCIStage) {
-        write_compound(content, 13);
+        StorageHelper::write_compound(content, 13);
         content.write_unsigned_byte(TYPE_INTEGER).unwrap();
         content.write_int(stage.type_);
-        write_typed_string(content, &stage.vType);
-        write_typed_string(content, &stage.line);
-        write_typed_string(content, &stage.destStop);
-        write_typed_string_list(content, &stage.edges);
-        write_typed_double(content, stage.travelTime);
-        write_typed_double(content, stage.cost);
-        write_typed_double(content, stage.length);
-        write_typed_string(content, &stage.intended);
-        write_typed_double(content, stage.depart);
-        write_typed_double(content, stage.departPos);
-        write_typed_double(content, stage.arrivalPos);
-        write_typed_string(content, &stage.description);
+        StorageHelper::write_typed_string(content, &stage.vType);
+        StorageHelper::write_typed_string(content, &stage.line);
+        StorageHelper::write_typed_string(content, &stage.destStop);
+        StorageHelper::write_typed_string_list(content, &stage.edges);
+        StorageHelper::write_typed_double(content, stage.travelTime);
+        StorageHelper::write_typed_double(content, stage.cost);
+        StorageHelper::write_typed_double(content, stage.length);
+        StorageHelper::write_typed_string(content, &stage.intended);
+        StorageHelper::write_typed_double(content, stage.depart);
+        StorageHelper::write_typed_double(content, stage.departPos);
+        StorageHelper::write_typed_double(content, stage.arrivalPos);
+        StorageHelper::write_typed_string(content, &stage.description);
     }
 
     /// C++: `void StorageHelper::writeConstraint(tcpip::Storage &, const libsumo::TraCISignalConstraint &)` [static]
@@ -937,20 +937,20 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_constraint(content: &mut Storage, c: &TraCISignalConstraint) {
-        write_typed_string(content, &c.signalId);
-        write_typed_string(content, &c.tripId);
-        write_typed_string(content, &c.foeId);
-        write_typed_string(content, &c.foeSignal);
-        write_typed_int(content, c.limit);
-        write_typed_int(content, c.type_);
-        write_typed_byte(content, c.mustWait as i32);
-        write_typed_byte(content, c.active as i32);
+        StorageHelper::write_typed_string(content, &c.signalId);
+        StorageHelper::write_typed_string(content, &c.tripId);
+        StorageHelper::write_typed_string(content, &c.foeId);
+        StorageHelper::write_typed_string(content, &c.foeSignal);
+        StorageHelper::write_typed_int(content, c.limit);
+        StorageHelper::write_typed_int(content, c.type_);
+        StorageHelper::write_typed_byte(content, c.mustWait as i32);
+        StorageHelper::write_typed_byte(content, c.active as i32);
         let mut param_items: Vec<String> = Vec::new();
         for (k, v) in &c.param {
             param_items.push(k.clone());
             param_items.push(v.clone());
         }
-        write_typed_string_list(content, &param_items);
+        StorageHelper::write_typed_string_list(content, &param_items);
     }
 
 }
