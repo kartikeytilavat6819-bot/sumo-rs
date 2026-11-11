@@ -20,6 +20,10 @@ pub struct NIVissimNodeCluster {
 // C++ static members of NIVissimNodeCluster (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimNodeCluster::myDict;
 //   static int NIVissimNodeCluster::myCurrentID;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimNodeCluster_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_CURRENT_ID: std::cell::Cell<i32> = const { std::cell::Cell::new(1) };
+}
 
 impl NIVissimNodeCluster {
     /// C++: `void NIVissimNodeCluster::NIVissimNodeCluster(int, int, int, const std::vector<int> &, const std::vector<int> &, bool)`
@@ -32,14 +36,23 @@ impl NIVissimNodeCluster {
     //       myNBNode(nullptr), myAmEdgeSplit(amEdgeSplitOnly) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, nodeid: i32, tlid: i32, connectors: &Vec<i32>, disturbances: &Vec<i32>, amEdgeSplitOnly: bool) -> Self {
-        todo!("port NIVissimNodeCluster::NIVissimNodeCluster")
+        Self {
+            myID: id,
+            myNodeID: nodeid,
+            myTLID: tlid,
+            myConnectors: connectors.clone(),
+            myDisturbances: disturbances.clone(),
+            myNBNode: Ptr::null(),
+            myAmEdgeSplit: amEdgeSplitOnly,
+            myPosition: Position::default(),
+        }
     }
 
     /// C++: `void NIVissimNodeCluster::~NIVissimNodeCluster()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimNodeCluster::~NIVissimNodeCluster")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `int NIVissimNodeCluster::getID() const` [const]
@@ -48,7 +61,7 @@ impl NIVissimNodeCluster {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> i32 {
-        todo!("port NIVissimNodeCluster::getID")
+        self.myID
     }
 
     /// C++: `void NIVissimNodeCluster::buildNBNode(NBNodeCont &)`
@@ -129,7 +142,7 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_nb_node(&self) -> Ptr<NBNode> {
-        todo!("port NIVissimNodeCluster::getNBNode")
+        self.myNBNode
     }
 
     /// C++: `Position NIVissimNodeCluster::getPos() const` [const]
@@ -139,7 +152,7 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_pos(&self) -> Position {
-        todo!("port NIVissimNodeCluster::getPos")
+        self.myPosition.clone()
     }
 
     /// C++: `std::string NIVissimNodeCluster::getNodeName() const` [const]
@@ -153,7 +166,11 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_node_name(&self) -> String {
-        todo!("port NIVissimNodeCluster::getNodeName")
+        if self.myTLID == -1 {
+            self.myID.to_string()
+        } else {
+            format!("{}LSA {}", self.myID, self.myTLID)
+        }
     }
 
     /// C++: `bool NIVissimNodeCluster::dictionary(int, NIVissimNodeCluster *)` [static]
@@ -169,7 +186,15 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, o: Ptr<NIVissimNodeCluster>) -> bool {
-        todo!("port NIVissimNodeCluster::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, o);
+                return true;
+            }
+            debug_assert!(false);
+            false
+        })
     }
 
     /// C++: `int NIVissimNodeCluster::dictionary(int, int, const std::vector<int> &, const std::vector<int> &, bool)` [static]
@@ -189,7 +214,19 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(nodeid: i32, tlid: i32, connectors: &Vec<i32>, disturbances: &Vec<i32>, amEdgeSplitOnly: bool) -> i32 {
-        todo!("port NIVissimNodeCluster::dictionary")
+        let mut id = nodeid;
+        if nodeid < 0 {
+            id = MY_CURRENT_ID.with(|c| {
+                let v = c.get();
+                c.set(v + 1);
+                v
+            });
+        }
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimNodeCluster::new(
+            id, nodeid, tlid, connectors, disturbances, amEdgeSplitOnly,
+        ))));
+        NIVissimNodeCluster::dictionary(id, o);
+        id
     }
 
     /// C++: `NIVissimNodeCluster * NIVissimNodeCluster::dictionary(int)` [static]
@@ -203,7 +240,7 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimNodeCluster> {
-        todo!("port NIVissimNodeCluster::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `int NIVissimNodeCluster::contSize()` [static]
@@ -213,14 +250,15 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn cont_size() -> i32 {
-        todo!("port NIVissimNodeCluster::contSize")
+        MY_DICT.with(|d| d.borrow().len() as i32)
     }
 
     /// C++: `void NIVissimNodeCluster::assignToEdges()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_to_edges() {
-        todo!("port NIVissimNodeCluster::assignToEdges")
+        // shortcut: C++ declares assignToEdges() but has no definition in SUMO; upgrade only if SUMO adds one.
+        panic!("NIVissimNodeCluster::assignToEdges is declared but not defined in SUMO")
     }
 
     /// C++: `void NIVissimNodeCluster::buildNBNodes(NBNodeCont &)` [static]
@@ -242,7 +280,7 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn dict_recheck_edge_changes() {
-        todo!("port NIVissimNodeCluster::dict_recheckEdgeChanges")
+        return;
     }
 
     /// C++: `int NIVissimNodeCluster::getFromNode(int)` [static]
@@ -347,7 +385,14 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimNodeCluster::clearDict")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, o) in d.iter() {
+                // delete (*i).second;
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+            d.clear();
+        })
     }
 
     /// C++: `void NIVissimNodeCluster::setCurrentVirtID(int)` [static]
@@ -357,7 +402,7 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn set_current_virt_id(id: i32) {
-        todo!("port NIVissimNodeCluster::setCurrentVirtID")
+        MY_CURRENT_ID.with(|c| c.set(id))
     }
 
 }

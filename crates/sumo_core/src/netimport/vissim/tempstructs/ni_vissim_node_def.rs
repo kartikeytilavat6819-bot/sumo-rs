@@ -14,6 +14,10 @@ pub struct NIVissimNodeDef {
 // C++ static members of NIVissimNodeDef (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimNodeDef::myDict;
 //   static int NIVissimNodeDef::myMaxID;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimNodeDef_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_MAX_ID: std::cell::Cell<i32> = const { std::cell::Cell::new(0) };
+}
 
 impl NIVissimNodeDef {
     /// C++: `void NIVissimNodeDef::NIVissimNodeDef(int, const std::string &)`
@@ -21,28 +25,30 @@ impl NIVissimNodeDef {
     //     : myID(id), myName(name) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str) -> Self {
-        todo!("port NIVissimNodeDef::NIVissimNodeDef")
+        Self { myID: id, myName: name.to_string() }
     }
 
     /// C++: `void NIVissimNodeDef::~NIVissimNodeDef()` [virtual]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimNodeDef::~NIVissimNodeDef")
+        // C++ destructor is implicit (virtual, empty); nothing to release.
     }
 
     /// C++: `int NIVissimNodeDef::buildNodeCluster()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_node_cluster(&mut self) -> i32 {
-        todo!("port NIVissimNodeDef::buildNodeCluster")
+        // shortcut: C++ declares buildNodeCluster() but never defines it (no body in NIVissimNodeDef.cpp), so SUMO cannot call it either; upgrade only if SUMO adds a definition.
+        panic!("NIVissimNodeDef::buildNodeCluster is declared but not defined in SUMO")
     }
 
     /// C++: `double NIVissimNodeDef::getEdgePosition(int) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge_position(&self, edgeid: i32) -> f64 {
-        todo!("port NIVissimNodeDef::getEdgePosition")
+        // shortcut: pure virtual; Rust has no virtual dispatch through NIVissimNodeDef pointers, so overrides in NIVissimNodeDef_Edges are only reached when called on the concrete type. Upgrade with an enum or trait-object owner.
+        panic!("NIVissimNodeDef::getEdgePosition is pure virtual; call it on a concrete subclass")
     }
 
     /// C++: `bool NIVissimNodeDef::dictionary(int, NIVissimNodeDef *)` [static]
@@ -61,7 +67,16 @@ impl NIVissimNodeDef {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, o: Ptr<NIVissimNodeDef>) -> bool {
-        todo!("port NIVissimNodeDef::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, o);
+                MY_MAX_ID.with(|m| m.set(if m.get() > id { m.get() } else { id }));
+                // o->computeBounding() is disabled in C++
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimNodeDef * NIVissimNodeDef::dictionary(int)` [static]
@@ -75,7 +90,7 @@ impl NIVissimNodeDef {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32) -> Ptr<NIVissimNodeDef> {
-        todo!("port NIVissimNodeDef::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimNodeDef::clearDict()` [static]
@@ -88,7 +103,8 @@ impl NIVissimNodeDef {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimNodeDef::clearDict")
+        // shortcut: C++ deletes each entry through a virtual destructor; Rust has no virtual delete for the base pointer, so entries are only forgotten (leaked). Upgrade with an owner that knows the concrete type.
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `int NIVissimNodeDef::getMaxID()` [static]
@@ -98,7 +114,7 @@ impl NIVissimNodeDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_id() -> i32 {
-        todo!("port NIVissimNodeDef::getMaxID")
+        MY_MAX_ID.with(|m| m.get())
     }
 
 }

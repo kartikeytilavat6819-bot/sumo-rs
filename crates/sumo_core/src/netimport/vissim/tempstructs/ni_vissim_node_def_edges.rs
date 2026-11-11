@@ -28,7 +28,10 @@ impl NIVissimNodeDef_Edges {
     //     : NIVissimNodeDef(id, name), myEdges(edges) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, edges: &NIVissimNodeParticipatingEdgeVector) -> Self {
-        todo!("port NIVissimNodeDef_Edges::NIVissimNodeDef_Edges")
+        Self {
+            base: NIVissimNodeDef::new(id, name),
+            myEdges: edges.clone(),
+        }
     }
 
     /// C++: `void NIVissimNodeDef_Edges::~NIVissimNodeDef_Edges() noexcept` [virtual]
@@ -40,7 +43,10 @@ impl NIVissimNodeDef_Edges {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimNodeDef_Edges::~NIVissimNodeDef_Edges")
+        // delete (*i) for each owned participating edge, then clear
+        for e in self.myEdges.drain(..) {
+            drop(unsafe { Box::from_raw(e.as_raw()) });
+        }
     }
 
     /// C++: `bool NIVissimNodeDef_Edges::dictionary(int, const std::string &, const NIVissimNodeParticipatingEdgeVector &)` [static]
@@ -56,7 +62,14 @@ impl NIVissimNodeDef_Edges {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, edges: &NIVissimNodeParticipatingEdgeVector) -> bool {
-        todo!("port NIVissimNodeDef_Edges::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimNodeDef_Edges::new(id, name, edges))));
+        if !NIVissimNodeDef::dictionary(id, Ptr::from_mut(&mut o.m().base)) {
+            // delete o;  (runs ~NIVissimNodeDef_Edges, which deletes the edges)
+            o.m().drop_();
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            return false;
+        }
+        true
     }
 
     /// C++: `double NIVissimNodeDef_Edges::getEdgePosition(int) const` [const, virtual]
@@ -72,7 +85,12 @@ impl NIVissimNodeDef_Edges {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_position(&self, edgeid: i32) -> f64 {
-        todo!("port NIVissimNodeDef_Edges::getEdgePosition")
+        for edge in self.myEdges.iter() {
+            if edge.get_id() == edgeid {
+                return (edge.get_from_pos() + edge.get_to_pos()) / 2.0;
+            }
+        }
+        -1.0
     }
 
 }
@@ -87,7 +105,7 @@ impl NIVissimNodeDef_Edges_id_matches {
     // explicit id_matches(int id) : myEdgeID(id) { }
     #[allow(unused_variables)]
     pub fn new(id: i32) -> Self {
-        todo!("port id_matches::id_matches")
+        Self { myEdgeID: id }
     }
 
     /// C++: `bool id_matches::operator()(NIVissimNodeParticipatingEdge *)`
@@ -96,7 +114,7 @@ impl NIVissimNodeDef_Edges_id_matches {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, e: Ptr<NIVissimNodeParticipatingEdge>) -> bool {
-        todo!("port id_matches::operator()")
+        e.get_id() == self.myEdgeID
     }
 
 }
@@ -111,7 +129,7 @@ impl NIVissimNodeDef_Edges_lying_within_match {
     // explicit lying_within_match(NIVissimNodeParticipatingEdge* e) : myEdge(e) { }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NIVissimNodeParticipatingEdge>) -> Self {
-        todo!("port lying_within_match::lying_within_match")
+        Self { myEdge: e }
     }
 
     /// C++: `bool lying_within_match::operator()(NIVissimExtendedEdgePoint *)`
@@ -121,7 +139,7 @@ impl NIVissimNodeDef_Edges_lying_within_match {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, e: Ptr<NIVissimExtendedEdgePoint>) -> bool {
-        todo!("port lying_within_match::operator()")
+        e.get_edge_id() == self.myEdge.get_id() && self.myEdge.position_lies_within(e.get_position())
     }
 
 }

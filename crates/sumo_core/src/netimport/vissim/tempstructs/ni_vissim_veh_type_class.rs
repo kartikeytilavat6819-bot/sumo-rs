@@ -15,6 +15,9 @@ pub struct NIVissimVehTypeClass {
 
 // C++ static members of NIVissimVehTypeClass (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimVehTypeClass::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimVehTypeClass_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimVehTypeClass {
     /// C++: `void NIVissimVehTypeClass::NIVissimVehTypeClass(int, const std::string &, const RGBColor &, std::vector<int> &)`
@@ -25,14 +28,19 @@ impl NIVissimVehTypeClass {
     //     : myID(id), myName(name), myColor(color), myTypes(types) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, color: &RGBColor, types: &mut Vec<i32>) -> Self {
-        todo!("port NIVissimVehTypeClass::NIVissimVehTypeClass")
+        Self {
+            myID: id,
+            myName: name.to_string(),
+            myColor: *color,
+            myTypes: types.clone(),
+        }
     }
 
     /// C++: `void NIVissimVehTypeClass::~NIVissimVehTypeClass()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimVehTypeClass::~NIVissimVehTypeClass")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `bool NIVissimVehTypeClass::dictionary(int, const std::string &, const RGBColor &, std::vector<int> &)` [static]
@@ -49,7 +57,13 @@ impl NIVissimVehTypeClass {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, color: &RGBColor, types: &mut Vec<i32>) -> bool {
-        todo!("port NIVissimVehTypeClass::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimVehTypeClass::new(id, name, color, types))));
+        if !NIVissimVehTypeClass::dictionary_2(id, o) {
+            // delete o;
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            return false;
+        }
+        true
     }
 
     /// C++: `bool NIVissimVehTypeClass::dictionary(int, NIVissimVehTypeClass *)` [static]
@@ -64,7 +78,14 @@ impl NIVissimVehTypeClass {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, o: Ptr<NIVissimVehTypeClass>) -> bool {
-        todo!("port NIVissimVehTypeClass::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimVehTypeClass * NIVissimVehTypeClass::dictionary(int)` [static]
@@ -78,7 +99,7 @@ impl NIVissimVehTypeClass {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(name: i32) -> Ptr<NIVissimVehTypeClass> {
-        todo!("port NIVissimVehTypeClass::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&name).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimVehTypeClass::clearDict()` [static]
@@ -91,14 +112,22 @@ impl NIVissimVehTypeClass {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimVehTypeClass::clearDict")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, o) in d.iter() {
+                // delete (*i).second;
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+            d.clear();
+        })
     }
 
     /// C++: `double NIVissimVehTypeClass::meanSpeed() const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn mean_speed(&self) -> f64 {
-        todo!("port NIVissimVehTypeClass::meanSpeed")
+        // shortcut: declared as double meanSpeed() const in NIVissimVehTypeClass.h but never defined in SUMO; upgrade only if SUMO adds a definition.
+        panic!("NIVissimVehTypeClass::meanSpeed is declared but not defined in SUMO")
     }
 
 }
