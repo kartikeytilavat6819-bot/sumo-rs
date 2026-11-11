@@ -28,7 +28,7 @@ impl MEVehicleControl {
     //     : MSVehicleControl() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MEVehicleControl::MEVehicleControl")
+        MEVehicleControl { base: MSVehicleControl::new() }
     }
 
     /// C++: `void MEVehicleControl::~MEVehicleControl() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl MEVehicleControl {
     // MEVehicleControl::~MEVehicleControl() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MEVehicleControl::~MEVehicleControl")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOVehicle * MEVehicleControl::buildVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const bool, const VehicleDefinitionSource, bool)` [virtual]
@@ -53,7 +53,14 @@ impl MEVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle(&mut self, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
-        todo!("port MEVehicleControl::buildVehicle")
+        let speedFactor = type_.compute_chosen_speed_deviation(
+            defs.speedFactor,
+            if source == MSVehicleControl_VehicleDefinitionSource::ROUTEFILE { crate::utils::vehicle::sumo_route_handler::SUMORouteHandler::get_parsing_rng() } else { Ptr::null() },
+            -1.,
+        );
+        let built: Ptr<MEVehicle> = Ptr::from_raw(Box::into_raw(Box::new(MEVehicle::new(defs, route, type_, speedFactor))));
+        self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        Ptr::from_mut(&mut built.m().base.base)
     }
 
     /// C++: `void MEVehicleControl::MEVehicleControl(const MEVehicleControl &)` [private]
@@ -61,7 +68,8 @@ impl MEVehicleControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &MEVehicleControl) -> Self {
-        todo!("port MEVehicleControl::MEVehicleControl")
+        // C++ copy constructor is private and never defined: copying is disallowed
+        panic!("MEVehicleControl is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `MEVehicleControl & MEVehicleControl::operator=(const MEVehicleControl &)` [private]
@@ -69,7 +77,8 @@ impl MEVehicleControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MEVehicleControl) -> &mut MEVehicleControl {
-        todo!("port MEVehicleControl::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("MEVehicleControl is not assignable (private operator= in C++)")
     }
 
 }
