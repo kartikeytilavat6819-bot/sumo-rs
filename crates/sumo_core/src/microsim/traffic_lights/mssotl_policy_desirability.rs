@@ -30,8 +30,11 @@ impl MSSOTLPolicyDesirability {
     //     Parameterised(parameters), myKeyPrefix(keyPrefix) {
     // }
     #[allow(unused_variables)]
-    pub fn new(keyPrefix: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLPolicyDesirability::MSSOTLPolicyDesirability")
+    pub fn new(keyPrefix: String, parameters: &ParameterisedMap) -> Self {
+        MSSOTLPolicyDesirability {
+            base: Parameterised::from_map(parameters.clone()),
+            myKeyPrefix: keyPrefix,
+        }
     }
 
     /// C++: `void MSSOTLPolicyDesirability::~MSSOTLPolicyDesirability() noexcept` [virtual]
@@ -39,30 +42,33 @@ impl MSSOTLPolicyDesirability {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLPolicyDesirability::~MSSOTLPolicyDesirability")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `double MSSOTLPolicyDesirability::computeDesirability(double, double)` [virtual, pure virtual]
     /// Calculates the desirability of the policy
     // (pure virtual: no C++ body; subclasses implement it)
+    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
     #[allow(unused_variables)]
     pub fn compute_desirability(&mut self, vehInMeasure: f64, vehOutMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicyDesirability::computeDesirability")
+        panic!("MSSOTLPolicyDesirability::computeDesirability is pure virtual; call it on a subclass")
     }
 
     /// C++: `double MSSOTLPolicyDesirability::computeDesirability(double, double, double, double)` [virtual, pure virtual]
     /// Calculates the desirability of the policy
     // (pure virtual: no C++ body; subclasses implement it)
+    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
     #[allow(unused_variables)]
     pub fn compute_desirability_2(&mut self, vehInMeasure: f64, vehOutMeasure: f64, vehInDispersionMeasure: f64, vehOutDispersionMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicyDesirability::computeDesirability")
+        panic!("MSSOTLPolicyDesirability::computeDesirability is pure virtual; call it on a subclass")
     }
 
     /// C++: `std::string MSSOTLPolicyDesirability::getMessage()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
+    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
     #[allow(unused_variables)]
     pub fn get_message(&mut self) -> String {
-        todo!("port MSSOTLPolicyDesirability::getMessage")
+        panic!("MSSOTLPolicyDesirability::getMessage is pure virtual; call it on a subclass")
     }
 
     /// C++: `void MSSOTLPolicyDesirability::setKeyPrefix(std::string)`
@@ -71,7 +77,7 @@ impl MSSOTLPolicyDesirability {
     //     }
     #[allow(unused_variables)]
     pub fn set_key_prefix(&mut self, val: String) {
-        todo!("port MSSOTLPolicyDesirability::setKeyPrefix")
+        self.myKeyPrefix = val;
     }
 
     /// C++: `std::string MSSOTLPolicyDesirability::getKeyPrefix()`
@@ -80,7 +86,7 @@ impl MSSOTLPolicyDesirability {
     //     }
     #[allow(unused_variables)]
     pub fn get_key_prefix(&mut self) -> String {
-        todo!("port MSSOTLPolicyDesirability::getKeyPrefix")
+        self.myKeyPrefix.clone()
     }
 
 }
