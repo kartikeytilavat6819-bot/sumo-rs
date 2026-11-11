@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A model of the street in the city.
 /// C++ class `AGStreet` (activitygen/city/AGStreet.h)
+#[repr(C)] // base must stay at offset 0 so a Ptr<ROEdge> can be cast back to AGStreet, as C++ static_cast does
 pub struct AGStreet {
     /// C++ base class `ROEdge`
     pub base: ROEdge,
@@ -31,7 +32,11 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
-        todo!("port AGStreet::AGStreet")
+        AGStreet {
+        base: ROEdge::new(id, from, to, index, priority, type_, routingType),
+        myPopulation: 0.,
+        myNumWorkplaces: 0.,
+    }
     }
 
     /// C++: `double AGStreet::getPopulation() const` [const]
@@ -42,7 +47,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn get_population(&self) -> f64 {
-        todo!("port AGStreet::getPopulation")
+        self.myPopulation
     }
 
     /// C++: `void AGStreet::setPopulation(const double)`
@@ -53,7 +58,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn set_population(&mut self, pop: f64) {
-        todo!("port AGStreet::setPopulation")
+        self.myPopulation = pop;
     }
 
     /// C++: `double AGStreet::getWorkplaceNumber() const` [const]
@@ -64,7 +69,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn get_workplace_number(&self) -> f64 {
-        todo!("port AGStreet::getWorkplaceNumber")
+        self.myNumWorkplaces
     }
 
     /// C++: `void AGStreet::setWorkplaceNumber(const double)`
@@ -75,7 +80,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn set_workplace_number(&mut self, work: f64) {
-        todo!("port AGStreet::setWorkplaceNumber")
+        self.myNumWorkplaces = work;
     }
 
     /// C++: `void AGStreet::print() const` [const]
@@ -86,7 +91,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGStreet::print")
+        println!("- AGStreet: Name={} Length={} pop={} work={}", self.get_id(), utils::common::to_string::f64_to_string(self.get_length()), utils::common::to_string::f64_to_string(self.myPopulation), utils::common::to_string::f64_to_string(self.myNumWorkplaces));
     }
 
     /// C++: `bool AGStreet::allows(const SUMOVehicleClass) const` [const]
@@ -97,7 +102,7 @@ impl AGStreet {
     // }
     #[allow(unused_variables)]
     pub fn allows(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port AGStreet::allows")
+        (self.get_permissions() & vclass) == vclass
     }
 
 }
@@ -128,7 +133,10 @@ impl AGStreet_Builder {
     //         }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        todo!("port Builder::buildEdge")
+        let index = self.get_next_index();
+        let street = Box::into_raw(Box::new(AGStreet::new(name, from, to, index, priority, type_, routingType)));
+        // base is the first field of AGStreet (repr(C)), so this is the C++ implicit upcast
+        Ptr::from_raw(street as *mut ROEdge)
     }
 
 }
