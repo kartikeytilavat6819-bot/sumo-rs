@@ -1,9 +1,15 @@
 //! Port of microsim/cfmodels/MSCFModel_KraussPS.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 
 /// Krauss car-following model, changing accel and speed by slope
 /// C++ class `MSCFModel_KraussPS` (microsim/cfmodels/MSCFModel_KraussPS.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_KraussPS {
     /// C++ base class `MSCFModel_Krauss`
     pub base: MSCFModel_Krauss,
@@ -29,7 +35,7 @@ impl MSCFModel_KraussPS {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_KraussPS::MSCFModel_KraussPS")
+        MSCFModel_KraussPS { base: MSCFModel_Krauss::new(vtype) }
     }
 
     /// C++: `void MSCFModel_KraussPS::~MSCFModel_KraussPS() noexcept` [virtual]
@@ -37,7 +43,7 @@ impl MSCFModel_KraussPS {
     // MSCFModel_KraussPS::~MSCFModel_KraussPS() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_KraussPS::~MSCFModel_KraussPS")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_KraussPS::maxNextSpeed(double, const MSVehicle *const) const` [const, virtual]
@@ -60,7 +66,21 @@ impl MSCFModel_KraussPS {
     // }
     #[allow(unused_variables)]
     pub fn max_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_KraussPS::maxNextSpeed")
+        let aBound = self.get_current_accel(speed);
+        let aMax = max2(0., aBound - utils::geom::geom_helper::GRAVITY * (veh.get_slope() * std::f64::consts::PI / 180.).sin());
+        // special case for bicycles where getMaxSpeed() is not a a technical but a rather an individual power limit
+        let typeMax = self.myType.get_max_speed() * (if veh.get_v_class() == SVC_BICYCLE { veh.get_chosen_speed_factor() } else { 1. });
+        // assuming drag force is proportional to the square of speed
+        let vMax = max2(
+            (aMax / self.get_max_accel()).sqrt() * typeMax,
+            // prevent emergency braking when inclination changes suddenly (momentum)
+            speed - accel2speed(self.get_max_decel()),
+        );
+        max2(
+            // prevent stalling at low speed
+            aBound / 2.,
+            min2(speed + accel2speed(aMax), vMax),
+        )
     }
 
     /// C++: `int MSCFModel_KraussPS::getModelID() const` [const, virtual]
@@ -70,7 +90,7 @@ impl MSCFModel_KraussPS {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_KraussPS::getModelID")
+        SUMO_TAG_CF_KRAUSS_PLUS_SLOPE as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_KraussPS::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -81,7 +101,8 @@ impl MSCFModel_KraussPS {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_KraussPS::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_KraussPS::new(vtype))) as *mut MSCFModel)
     }
 
 }

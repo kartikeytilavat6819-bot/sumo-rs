@@ -80,6 +80,8 @@ pub enum MSCFModel_CalcReason {
 
 /// The car-following model abstraction
 /// C++ class `MSCFModel` (microsim/cfmodels/MSCFModel.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel {
     /// The type to which this model definition belongs to
     pub myType: Ptr<MSVehicleType>,
@@ -2335,6 +2337,8 @@ impl MSCFModel {
 }
 
 /// C++ class `MSCFModel::VehicleVariables` (microsim/cfmodels/MSCFModel.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_VehicleVariables {
 }
 
@@ -2370,3 +2374,38 @@ impl MSCFModel_VehicleVariables {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn interpolated_value_extrapolates_and_interpolates() {
+        // C++ LinearApproxHelpers::getInterpolatedValue on {0:0, 10:20}
+        let map: LinearApproxMap = vec![(0., 0.), (10., 20.)];
+        assert_eq!(get_interpolated_value(&map, 5.), 10.);
+        assert_eq!(get_interpolated_value(&map, 20.), 20.); // above the last key: last value
+        assert_eq!(get_interpolated_value(&map, -1.), 0.); // below the first key: first value
+    }
+
+    #[test]
+    fn brake_gap_euler_matches_c_formula() {
+        // TS = 1 s (default DELTA_T): speedReduction = 4.5, steps = int(10/4.5) = 2
+        // SPEED2DIST(2*10 - 4.5*2*3/2) + 10*1.0 = 6.5 + 10 = 16.5
+        assert!((MSCFModel::brake_gap_euler(10., 4.5, 1.) - 16.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn arrival_helpers_match_c_formulas() {
+        // zero acceleration: dist / speed
+        assert!((MSCFModel::estimate_arrival_time(100., 10., 20., 0.) - 10.).abs() < 1e-9);
+        // accelerating from zero: avoidArrivalAccel(10, 2, 0, 4.5) = 2 * (10/2 - 0) / 2
+        assert!((MSCFModel::avoid_arrival_accel(10., 2., 0., 4.5) - 5.).abs() < 1e-9);
+    }
+
+    #[test]
+    fn passing_time_euler_inside_step() {
+        // euler: t = (5 - 0) / 10 = 0.5, clamped to [0, TS]
+        assert!((MSCFModel::passing_time(0., 5., 10., 10., 10.) - 0.5).abs() < 1e-9);
+    }
+}
