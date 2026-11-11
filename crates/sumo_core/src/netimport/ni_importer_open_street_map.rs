@@ -221,11 +221,11 @@ pub struct NIImporter_OpenStreetMap_Edge {
     /// Information whether this is an one-way road
     pub myIsOneWay: String,
     /// Information about the kind of cycleway along this road
-    pub myCyclewayType: NIImporter_OpenStreetMap_WayType,
+    pub myCyclewayType: i64,
     /// Information about the kind of busway along this road
-    pub myBuswayType: NIImporter_OpenStreetMap_WayType,
+    pub myBuswayType: i64,
     /// Information about the kind of sidwalk along this road
-    pub mySidewalkType: NIImporter_OpenStreetMap_WayType,
+    pub mySidewalkType: i64,
     /// Information about the direction(s) of railway usage
     pub myRailDirection: i32,
     /// Information about road-side parking
@@ -318,9 +318,9 @@ impl NIImporter_OpenStreetMap_Edge {
             myExtraDisallowed: 0,
             myHighWayType: String::new(),
             myIsOneWay: String::new(),
-            myCyclewayType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN,
-            myBuswayType: NIImporter_OpenStreetMap_WayType::WAY_NONE,
-            mySidewalkType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN,
+            myCyclewayType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64,
+            myBuswayType: NIImporter_OpenStreetMap_WayType::WAY_NONE as i64,
+            mySidewalkType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64,
             myRailDirection: 4, // WAY_UNKNOWN
             myParkingType: NIImporter_OpenStreetMap_ParkingType::PARKING_NONE as i32,
             myChangeForward: NIImporter_OpenStreetMap_ChangeType::CHANGE_YES as i32,
@@ -3854,7 +3854,7 @@ pub struct NIImporter_OpenStreetMap_NIOSMNode {
     /// position converted to m (using highest precision available)
     pub positionMeters: f64,
     /// Information about the direction(s) of railway usage
-    pub myRailDirection: NIImporter_OpenStreetMap_WayType,
+    pub myRailDirection: i32,
     /// the NBNode that was instantiated
     pub node: Ptr<NBNode>,
 }
