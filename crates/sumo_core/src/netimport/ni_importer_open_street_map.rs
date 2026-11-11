@@ -1,6 +1,42 @@
 //! Port of netimport/NIImporter_OpenStreetMap.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::util_exceptions::ProcessError;
+use utils::xml::sumo_sax_reader::SUMOSAXReader;
+use utils::xml::sumo_sax_handler;
+use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
+use utils::{write_errorf, write_messagef, write_warningf};
+
+/// C++ static `NBNode::FORWARD` (netbuild/NBNode.cpp); NBNode statics are not ported as consts yet.
+const NBNODE_FORWARD: i32 = 1;
+/// C++ static `NBNode::BACKWARD` (netbuild/NBNode.cpp).
+#[allow(dead_code)]
+const NBNODE_BACKWARD: i32 = -1;
+/// C++ static `NBEdge::TURN_SIGN_SHIFT_BUS` etc. (netbuild/NBEdge.h); NBEdge statics are not ported as consts yet.
+const NBEDGE_TURN_SIGN_SHIFT_BUS: i32 = 8;
+const NBEDGE_TURN_SIGN_SHIFT_TAXI: i32 = 16;
+const NBEDGE_TURN_SIGN_SHIFT_BICYCLE: i32 = 24;
+
+/// SAX reader results: a ProcessError is thrown in C++ and propagates to the caller, so panic here.
+fn sax_result(r: Result<bool, ProcessError>) -> bool {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// SysUtils::getCurrentMillis()
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
+/// PROGRESS_BEGIN_TIME_MESSAGE(msg): prints the message and returns the start time
+fn progress_begin_time_message(msg: &str) -> i64 {
+    utils::common::msg_handler::progress_begin_message(msg);
+    current_millis()
+}
+
+/// PROGRESS_TIME_MESSAGE(before)
+fn progress_time_since(before: i64) {
+    utils::common::msg_handler::progress_time_message(current_millis() - before);
+}
 
 /// C++ enum `NIImporter_OpenStreetMap::ChangeType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -2407,7 +2443,315 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn load(&mut self, oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_OpenStreetMap::load")
+        use utils::common::msg_handler::*;
+        use utils::options::options_cont as opt;
+        if !opt::is_set("osm-files") {
+            return;
+        }
+        let files = opt::get_string_vector("osm-files");
+        let mut readers: Vec<Option<SUMOSAXReader>> = Vec::new();
+
+        self.myImportLaneAccess = oc.get_bool("osm.lane-access");
+        self.myImportTurnSigns = oc.get_bool("osm.turn-lanes");
+        self.myImportSidewalks = oc.get_bool("osm.sidewalks");
+        self.myImportBikeAccess = oc.get_bool("osm.bike-access");
+        self.myImportCrossings = oc.get_bool("osm.crossings");
+        self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk");
+        self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults");
+        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block");
+        self.myPlacementSkippedNonExplicitOneWay = 0;
+        self.myPlacementSkippedAuxOppositeDirection = 0;
+
+        myAllAttributes.with(|c| c.set(opt::get_bool("osm.all-attributes")));
+        let extra = opt::get_string_vector("osm.extra-attributes");
+        myExtraAttributes.with(|s| {
+            s.borrow_mut().extend(extra.iter().cloned());
+            if s.borrow().contains("all") {
+                // import all
+                s.borrow_mut().clear();
+            }
+        });
+
+        // load nodes, first
+        let mut nodesHandler = NIImporter_OpenStreetMap_NodesHandler::new(&mut self.myOSMNodes, &mut self.myUniqueNodes, oc);
+        for file in &files {
+            if !utils::common::file_helpers::is_readable(file) {
+                write_errorf!("Could not open osm-file '%'.", file);
+                return;
+            }
+            nodesHandler.set_file_name(file);
+            nodesHandler.reset_hierarchy();
+            let before = progress_begin_time_message(&format!("Parsing nodes from osm-file '{file}'"));
+            readers.push(Some(utils::xml::xml_sub_sys::get_sax_reader(false, false)));
+            let reader = readers.last_mut().unwrap().as_mut().unwrap();
+            if !sax_result(reader.parse_first(&mut nodesHandler, file))
+                || !sax_result(reader.parse_section(&mut nodesHandler, SUMO_TAG_NODE))
+                || with_instance(MsgType::Error, |h| h.was_informed())
+            {
+                return;
+            }
+            if nodesHandler.get_duplicate_nodes() > 0 {
+                write_messagef!("Found and substituted % osm nodes.", nodesHandler.get_duplicate_nodes());
+            }
+            progress_time_since(before);
+        }
+
+        // load edges, then
+        let mut edgesHandler = NIImporter_OpenStreetMap_EdgesHandler::new(&self.myOSMNodes, &mut self.myEdges, &mut self.myPlatformShapes, nb.get_type_cont());
+        for (idx, file) in files.iter().enumerate() {
+            edgesHandler.set_file_name(file);
+            let before = progress_begin_time_message(&format!("Parsing edges from osm-file '{file}'"));
+            let reader = readers[idx].as_mut().unwrap();
+            if !sax_result(reader.parse_section(&mut edgesHandler, SUMO_TAG_WAY)) {
+                // eof already reached, no relations
+                readers[idx] = None;
+            }
+            progress_time_since(before);
+        }
+
+        /* Remove duplicate edges with the same shape and attributes */
+        if !oc.get_bool("osm.skip-duplicates-check") {
+            let mut numRemoved = 0;
+            progress_begin_message("Removing duplicate edges");
+            if self.myEdges.len() > 1 {
+                // std::set<const Edge*, CompareEdges> dupsFinder; kept sorted by the comparator
+                let cmp = NIImporter_OpenStreetMap_CompareEdges {};
+                let mut dupsFinder: Vec<Ptr<NIImporter_OpenStreetMap_Edge>> = Vec::new();
+                let keys: Vec<i64> = self.myEdges.keys().cloned().collect();
+                for key in keys {
+                    let e = self.myEdges[&key];
+                    let found = dupsFinder.binary_search_by(|x| {
+                        if cmp.call_op(*x, e) {
+                            std::cmp::Ordering::Less
+                        } else if cmp.call_op(e, *x) {
+                            std::cmp::Ordering::Greater
+                        } else {
+                            std::cmp::Ordering::Equal
+                        }
+                    });
+                    match found {
+                        Ok(_) => {
+                            numRemoved += 1;
+                            self.myEdges.remove(&key);
+                            // SAFETY: the edge was allocated with Box::into_raw and is no longer referenced by the map.
+                            drop(unsafe { Box::from_raw(e.as_raw()) });
+                        }
+                        Err(pos) => dupsFinder.insert(pos, e),
+                    }
+                }
+            }
+            if numRemoved > 0 {
+                write_messagef!("Removed % duplicate osm edges.", numRemoved);
+            }
+            progress_done_message();
+        }
+
+        /* Mark which nodes are used (by edges or traffic lights).
+         * This is necessary to detect which OpenStreetMap nodes are for
+         * geometry only */
+        let mut nodeUsage: BTreeMap<i64, i32> = BTreeMap::new();
+        // Mark which nodes are used by edges (begin and end)
+        for edgeIt in self.myEdges.values() {
+            assert!(edgeIt.myCurrentIsRoad);
+            for node in &edgeIt.myCurrentNodes {
+                *nodeUsage.entry(*node).or_insert(0) += 1;
+            }
+        }
+        // Mark which nodes are used by traffic lights or are pedestrian crossings
+        for (id, nodesIt) in &self.myOSMNodes {
+            if nodesIt.tlsControlled || nodesIt.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 || (nodesIt.pedestrianCrossing && self.myImportCrossings) {
+                // If the key is not found in the map, the value is automatically initialized with 0.
+                *nodeUsage.entry(*id).or_insert(0) += 1;
+            }
+        }
+
+        /* Instantiate edges
+         * Only those nodes in the middle of an edge which are used by more than
+         * one edge are instantiated. Other nodes are considered as geometry nodes. */
+        // The node and traffic light containers are reached through raw pointers because
+        // nb is also passed to the helpers below (C++ holds both references at once).
+        let nc: Ptr<NBNodeCont> = Ptr::from_mut(nb.get_node_cont());
+        let tlsc: Ptr<NBTrafficLightLogicCont> = Ptr::from_mut(nb.get_tl_logic_cont());
+        let edges: Vec<Ptr<NIImporter_OpenStreetMap_Edge>> = self.myEdges.values().cloned().collect();
+        for e in edges {
+            if !e.myCurrentIsRoad {
+                continue;
+            }
+            if e.myCurrentNodes.len() < 2 {
+                write_warningf!("Discarding way '%' because it has only % node(s)", e.id, e.myCurrentNodes.len());
+                continue;
+            }
+            self.extend_railway_distances(e, nb.get_type_cont());
+            // build nodes;
+            //  - the from- and to-nodes must be built in any case
+            //  - the in-between nodes are only built if more than one edge references them
+            let first = self.insert_node_checking(e.myCurrentNodes[0], nc.m(), tlsc.m());
+            let last = self.insert_node_checking(*e.myCurrentNodes.last().unwrap(), nc.m(), tlsc.m());
+            let mut currentFrom = first;
+            let mut running: i32 = 0;
+            let mut passed: Vec<i64> = Vec::new();
+            let n = e.myCurrentNodes.len();
+            for j in 0..n {
+                let node = e.myCurrentNodes[j];
+                passed.push(node);
+                if *nodeUsage.get(&node).unwrap_or(&0) > 1 && j != n - 1 && j != 0 {
+                    let currentTo = self.insert_node_checking(node, nc.m(), tlsc.m());
+                    running = self.insert_edge(e, running, currentFrom, currentTo, &passed, nb, first, last);
+                    currentFrom = currentTo;
+                    passed.clear();
+                    passed.push(node);
+                }
+            }
+            if running == 0 {
+                running = -1;
+            }
+            self.insert_edge(e, running, currentFrom, last, &passed, nb, first, last);
+        }
+        if self.myPlacementSkippedNonExplicitOneWay > 0 || self.myPlacementSkippedAuxOppositeDirection > 0 {
+            write_messagef!(
+                "Skipped applying OSM placement on % edge(s): % due to non-explicit one-way and % due to opposite-direction auxiliary edges.",
+                self.myPlacementSkippedNonExplicitOneWay + self.myPlacementSkippedAuxOppositeDirection,
+                self.myPlacementSkippedNonExplicitOneWay,
+                self.myPlacementSkippedAuxOppositeDirection
+            );
+        }
+
+        /* Collect edges which explicitly are part of a roundabout and store the edges of each
+         * detected roundabout */
+        nb.get_edge_cont().extract_roundabouts();
+
+        if self.myImportCrossings {
+            /* After edges are instantiated
+             * nodes are parsed again to add pedestrian crossings to them
+             * This is only executed if crossings are imported and not guessed */
+            let crossingWidth = opt::get_float("default.crossing-width");
+            for item in nodeUsage.keys() {
+                let osmNode = self.myOSMNodes[item];
+                if osmNode.pedestrianCrossing {
+                    let n = osmNode.node;
+                    let incomingEdges: Vec<Ptr<NBEdge>> = n.get_incoming_edges().clone();
+                    let outgoingEdges: Vec<Ptr<NBEdge>> = n.get_outgoing_edges().clone();
+                    let incomingEdgesNo = incomingEdges.len();
+                    let outgoingEdgesNo = outgoingEdges.len();
+
+                    for i in 0..incomingEdgesNo {
+                        /* Check if incoming edge has driving lanes(and sidewalks)
+                         * if not, ignore
+                         * if yes, check if there is a corresponding outgoing edge for the opposite direction
+                         *   -> if yes, check if it has driving lanes
+                         *          --> if yes, do the crossing
+                         *          --> if no, only do the crossing with the incoming edge (usually one lane roads with two sidewalks)
+                         *   -> if not, do nothing as we don't have a sidewalk in the opposite direction */
+                        let iEdge = incomingEdges[i];
+
+                        if iEdge.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false) > -1 && iEdge.get_special_lane(SVC_PEDESTRIAN) > -1 {
+                            let iEdgeId = iEdge.get_id().to_string();
+                            let m = iEdgeId.find('#').unwrap_or(iEdgeId.len());
+                            let iWayId = iEdgeId[..m].to_string();
+                            for j in 0..outgoingEdgesNo {
+                                let oEdge = outgoingEdges[j];
+                                // with at least a pedestrian lane, going in the opposite direction
+                                if oEdge.get_id().contains(iWayId.as_str())
+                                    && oEdge.get_special_lane(SVC_PEDESTRIAN) > -1
+                                    && !oEdge.get_id().starts_with(iWayId.as_str())
+                                {
+                                    let mut edgeVector = vec![iEdge];
+                                    if oEdge.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false) > -1 {
+                                        edgeVector.push(oEdge);
+                                    }
+
+                                    if !n.m().check_crossing_duplicated(edgeVector.clone()) {
+                                        n.m().add_crossing(edgeVector, crossingWidth, false, -1, -1, &PositionVector::EMPTY, false, Ptr::null());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    for i in 0..outgoingEdgesNo {
+                        // Same checks as above for loop, but for outgoing edges
+                        let oEdge = outgoingEdges[i];
+
+                        if oEdge.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false) > -1 && oEdge.get_special_lane(SVC_PEDESTRIAN) > -1 {
+                            let oEdgeId = oEdge.get_id().to_string();
+                            let m = oEdgeId.find('#').unwrap_or(oEdgeId.len());
+                            let iWayId = oEdgeId[..m].to_string();
+                            for j in 0..incomingEdgesNo {
+                                let iEdge = incomingEdges[j];
+                                if iEdge.get_id().contains(iWayId.as_str())
+                                    && iEdge.get_special_lane(SVC_PEDESTRIAN) > -1
+                                    && !iEdge.get_id().starts_with(iWayId.as_str())
+                                {
+                                    let mut edgeVector = vec![oEdge];
+                                    if iEdge.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false) > -1 {
+                                        edgeVector.push(iEdge);
+                                    }
+
+                                    if !n.m().check_crossing_duplicated(edgeVector.clone()) {
+                                        n.m().add_crossing(edgeVector, crossingWidth, false, -1, -1, &PositionVector::EMPTY, false, Ptr::null());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let layerElevation = opt::get_float("osm.layer-elevation");
+        if layerElevation > 0.0 {
+            self.reconstruct_layer_elevation(layerElevation, nb);
+        }
+
+        // revise pt stops; remove stops on deleted edges (but assign them to the
+        // opposite direction if possible
+        let ec: Ptr<NBEdgeCont> = Ptr::from_mut(nb.get_edge_cont());
+        nb.get_pt_stop_cont().cleanup_deleted(ec.m(), true);
+
+        // load relations (after edges are built since we want to apply
+        // turn-restrictions directly to NBEdges)
+        let ptStopCont: Ptr<NBPTStopCont> = Ptr::from_mut(nb.get_pt_stop_cont());
+        let ptLineCont: Ptr<NBPTLineCont> = Ptr::from_mut(nb.get_pt_line_cont());
+        let mut relationHandler = NIImporter_OpenStreetMap_RelationHandler::new(&self.myOSMNodes, &self.myEdges, ptStopCont, &self.myPlatformShapes, ptLineCont, oc);
+        for (idx, file) in files.iter().enumerate() {
+            if readers[idx].is_some() {
+                relationHandler.set_file_name(file);
+                let before = progress_begin_time_message(&format!("Parsing relations from osm-file '{file}'"));
+                let reader = readers[idx].as_mut().unwrap();
+                sax_result(reader.parse_section(&mut relationHandler, SUMO_TAG_RELATION));
+                progress_time_since(before);
+                readers[idx] = None;
+            }
+        }
+
+        // declare additional stops that are not anchored to a (road)-way or route relation
+        let mut stopNames: BTreeSet<String> = BTreeSet::new();
+        for item in nb.get_pt_stop_cont().get_stops().values() {
+            stopNames.insert(item.get_name());
+        }
+        for item in self.myOSMNodes.values() {
+            let n = *item;
+            if n.ptStopPosition && !stopNames.contains(&n.name) {
+                let mut ptPos = Position::new(n.lon, n.lat, n.ele);
+                if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
+                    write_errorf!("Unable to project coordinates for node '%'.", n.id);
+                }
+                let element = if utils::common::sumo_vehicle_class::is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
+                let ptStop = Rc::new(NBPTStop::new(
+                    element,
+                    n.id.to_string(),
+                    ptPos,
+                    String::new(),
+                    String::new(),
+                    n.ptStopLength,
+                    n.name.clone(),
+                    n.permissions,
+                    0.0,
+                    RGBColor::default(),
+                    -1.0,
+                ));
+                nb.get_pt_stop_cont().insert(ptStop, true);
+            }
+        }
     }
 
     /// C++: `NBNode * NIImporter_OpenStreetMap::insertNodeChecking(long long, NBNodeCont &, NBTrafficLightLogicCont &)` [private]
@@ -2473,7 +2817,62 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn insert_node_checking(&mut self, id: i64, nc: &mut NBNodeCont, tlsc: &mut NBTrafficLightLogicCont) -> Ptr<NBNode> {
-        todo!("port NIImporter_OpenStreetMap::insertNodeChecking")
+        let mut node = nc.retrieve(&id.to_string());
+        if node.is_null() {
+            let n = self.myOSMNodes[&id];
+            let mut pos = Position::new(n.lon, n.lat, n.ele);
+            if !NBNetBuilder::transform_coordinate(&mut pos, true, Ptr::null()) {
+                write_errorf!("Unable to project coordinates for junction '%'.", id);
+                return Ptr::null();
+            }
+            node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(&id.to_string(), &pos, SumoXMLNodeType::UNKNOWN))));
+            if !nc.insert_2(node) {
+                write_errorf!("Could not insert junction '%'.", id);
+                // SAFETY: the node was just allocated and was not inserted anywhere.
+                drop(unsafe { Box::from_raw(node.as_raw()) });
+                return Ptr::null();
+            }
+            n.m().node = node;
+            if n.railwayCrossing {
+                if n.get_parameter("crossing:barrier", "no") != "no" || n.get_parameter("crossing.light", "") == "yes" || n.tlsControlled {
+                    node.m().reinit(&pos, SumoXMLNodeType::RAIL_CROSSING, false);
+                }
+            } else if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+                node.m().reinit(&pos, SumoXMLNodeType::RAIL_SIGNAL, false);
+                if (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32) == 0 {
+                    node.m().set_parameter("virtual", "true");
+                }
+                if self.myETCS_movingBlock && (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32) != 0 {
+                    node.m().set_parameter("moving-block", "true");
+                }
+            } else if n.tlsControlled {
+                // ok, this node is a traffic light node where no other nodes
+                //  participate
+                // @note: The OSM-community has not settled on a schema for differentiating between fixed and actuated lights
+                let type_ = TrafficLightTypes
+                    .get(&utils::options::options_cont::get_string("tls.default-type"))
+                    .unwrap_or(TrafficLightType::INVALID);
+                let tlDef: &mut NBOwnTLDef = Box::leak(Box::new(NBOwnTLDef::new_2(&id.to_string(), node, 0, type_)));
+                if !tlsc.insert(Ptr::from_mut(&mut tlDef.base), false) {
+                    // actually, nothing should fail here
+                    panic!("Could not allocate tls '{id}'.");
+                }
+            }
+            if n.railwayBufferStop {
+                node.m().set_parameter("buffer_stop", "true");
+                node.m().set_fringe_type(FringeType::INNER);
+            }
+            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+                if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32 {
+                    node.m().set_parameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "forward");
+                } else if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32 {
+                    node.m().set_parameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "backward");
+                }
+            }
+            let params = n.get_parameters_map().clone();
+            node.m().update_parameters(&params);
+        }
+        node
     }
 
     /// C++: `int NIImporter_OpenStreetMap::insertEdge(Edge *, int, NBNode *, NBNode *, const std::vector<long long> &, NBNetBuilder &, const NBNode *, const NBNode *)` [private]
