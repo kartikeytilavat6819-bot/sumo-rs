@@ -28,7 +28,10 @@ impl MSDynamicShapeUpdater {
     // MSDynamicShapeUpdater(ShapeContainer& shapeContainer) : myShapeContainer(shapeContainer) {}
     #[allow(unused_variables)]
     pub fn new(shapeContainer: &mut ShapeContainer) -> Self {
-        todo!("port MSDynamicShapeUpdater::MSDynamicShapeUpdater")
+        MSDynamicShapeUpdater {
+            base: MSNet_VehicleStateListener {},
+            myShapeContainer: Ptr::from_mut(shapeContainer),
+        }
     }
 
     /// C++: `void MSDynamicShapeUpdater::vehicleStateChanged(const SUMOVehicle *const, MSNet::VehicleState, const std::string &)` [virtual]
@@ -56,7 +59,15 @@ impl MSDynamicShapeUpdater {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_state_changed(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
-        todo!("port MSDynamicShapeUpdater::vehicleStateChanged")
+        match to {
+            MSNet_VehicleState::ARRIVED => {
+                // #ifdef DEBUG_DYNAMIC_SHAPES output omitted
+                self.myShapeContainer.m().remove_trackers(vehicle.get_id().to_string());
+            }
+            // TODO: can this lead to removal without calling arrived?
+            MSNet_VehicleState::COLLISION => {}
+            _ => {}
+        }
     }
 
     /// C++: `MSDynamicShapeUpdater & MSDynamicShapeUpdater::operator=(const MSDynamicShapeUpdater &)` [private]
@@ -64,7 +75,7 @@ impl MSDynamicShapeUpdater {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSDynamicShapeUpdater) -> &mut MSDynamicShapeUpdater {
-        todo!("port MSDynamicShapeUpdater::operator=")
+        panic!("MSDynamicShapeUpdater assignment operator is invalidated")
     }
 
 }
