@@ -1,6 +1,13 @@
 //! Port of libsumo/StorageHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::traci::traci_constants::*;
+
+/// C++ `throw TraCIException(error)`
+// shortcut: panics with the message; C++ throws TraCIException, which must store its what() (base is Unmapped), upgrade when TraCIException::new is ported
+fn throw_traci(error: &str) -> ! {
+    panic!("{}", error)
+}
 
 /// C++ typedef `libsumo::StorageHelper StoHelp`
 pub type StoHelp = StorageHelper;
@@ -102,7 +109,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_int(ret: &mut Storage, error: &str) -> i32 {
-        todo!("port StorageHelper::readTypedInt")
+        if ret.read_unsigned_byte().unwrap() != TYPE_INTEGER && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_int().unwrap()
     }
 
     /// C++: `int StorageHelper::readTypedByte(tcpip::Storage &, const std::string &)` [static]
@@ -114,7 +124,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_byte(ret: &mut Storage, error: &str) -> i32 {
-        todo!("port StorageHelper::readTypedByte")
+        if ret.read_unsigned_byte().unwrap() != TYPE_BYTE && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_byte().unwrap()
     }
 
     /// C++: `int StorageHelper::readTypedUnsignedByte(tcpip::Storage &, const std::string &)` [static]
@@ -126,7 +139,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_unsigned_byte(ret: &mut Storage, error: &str) -> i32 {
-        todo!("port StorageHelper::readTypedUnsignedByte")
+        if ret.read_unsigned_byte().unwrap() != TYPE_UBYTE && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_unsigned_byte().unwrap()
     }
 
     /// C++: `double StorageHelper::readTypedDouble(tcpip::Storage &, const std::string &)` [static]
@@ -138,7 +154,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_double(ret: &mut Storage, error: &str) -> f64 {
-        todo!("port StorageHelper::readTypedDouble")
+        if ret.read_unsigned_byte().unwrap() != TYPE_DOUBLE && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_double().unwrap()
     }
 
     /// C++: `std::vector<double> StorageHelper::readTypedDoubleList(tcpip::Storage &, const std::string &)` [static]
@@ -150,7 +169,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_double_list(ret: &mut Storage, error: &str) -> Vec<f64> {
-        todo!("port StorageHelper::readTypedDoubleList")
+        if ret.read_unsigned_byte().unwrap() != TYPE_DOUBLELIST && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_double_list().unwrap()
     }
 
     /// C++: `std::string StorageHelper::readTypedString(tcpip::Storage &, const std::string &)` [static]
@@ -162,7 +184,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_string(ret: &mut Storage, error: &str) -> String {
-        todo!("port StorageHelper::readTypedString")
+        if ret.read_unsigned_byte().unwrap() != TYPE_STRING && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_string().unwrap()
     }
 
     /// C++: `std::vector<std::string> StorageHelper::readTypedStringList(tcpip::Storage &, const std::string &)` [static]
@@ -174,7 +199,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_string_list(ret: &mut Storage, error: &str) -> Vec<String> {
-        todo!("port StorageHelper::readTypedStringList")
+        if ret.read_unsigned_byte().unwrap() != TYPE_STRINGLIST && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_string_list().unwrap()
     }
 
     /// C++: `const libsumo::TraCIColor StorageHelper::readTypedColor(tcpip::Storage &, const std::string &)` [static]
@@ -191,7 +219,15 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_color(ret: &mut Storage, error: &str) -> TraCIColor {
-        todo!("port StorageHelper::readTypedColor")
+        if ret.read_unsigned_byte().unwrap() != TYPE_COLOR && !error.is_empty() {
+            throw_traci(error);
+        }
+        let mut into = TraCIColor::new();
+        into.r = ret.read_unsigned_byte().unwrap();
+        into.g = ret.read_unsigned_byte().unwrap();
+        into.b = ret.read_unsigned_byte().unwrap();
+        into.a = ret.read_unsigned_byte().unwrap();
+        into
     }
 
     /// C++: `const libsumo::TraCIPosition StorageHelper::readTypedPosition2D(tcpip::Storage &, const std::string &)` [static]
@@ -206,7 +242,18 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_position2_d(ret: &mut Storage, error: &str) -> TraCIPosition {
-        todo!("port StorageHelper::readTypedPosition2D")
+        if ret.read_unsigned_byte().unwrap() != POSITION_2D && !error.is_empty() {
+            throw_traci(error);
+        }
+        let mut p = TraCIPosition {
+            base: TraCIResult::new(),
+            x: INVALID_DOUBLE_VALUE,
+            y: INVALID_DOUBLE_VALUE,
+            z: INVALID_DOUBLE_VALUE,
+        };
+        p.x = ret.read_double().unwrap();
+        p.y = ret.read_double().unwrap();
+        p
     }
 
     /// C++: `const libsumo::TraCIPositionVector StorageHelper::readTypedPolygon(tcpip::Storage &, const std::string &)` [static]
@@ -220,7 +267,15 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_typed_polygon(ret: &mut Storage, error: &str) -> TraCIPositionVector {
-        todo!("port StorageHelper::readTypedPolygon")
+        if ret.read_unsigned_byte().unwrap() != TYPE_POLYGON && !error.is_empty() {
+            throw_traci(error);
+        }
+        let mut poly = TraCIPositionVector {
+            base: TraCIResult::new(),
+            value: Vec::new(),
+        };
+        read_polygon(ret, &mut poly);
+        poly
     }
 
     /// C++: `int StorageHelper::readCompound(tcpip::Storage &, int, const std::string &)` [static]
@@ -236,7 +291,12 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_compound(ret: &mut Storage, expectedSize: i32, error: &str) -> i32 {
-        todo!("port StorageHelper::readCompound")
+        let ty = ret.read_unsigned_byte().unwrap();
+        let size = ret.read_int().unwrap();
+        if !error.is_empty() && (ty != TYPE_COMPOUND || (expectedSize != -1 && size != expectedSize)) {
+            throw_traci(error);
+        }
+        size
     }
 
     /// C++: `void StorageHelper::readPolygon(tcpip::Storage &, libsumo::TraCIPositionVector &)` [static]
@@ -255,7 +315,22 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_polygon(ret: &mut Storage, poly: &mut TraCIPositionVector) {
-        todo!("port StorageHelper::readPolygon")
+        let mut size = ret.read_unsigned_byte().unwrap();
+        if size == 0 {
+            size = ret.read_int().unwrap();
+        }
+        for _ in 0..size {
+            let mut p = TraCIPosition {
+                base: TraCIResult::new(),
+                x: INVALID_DOUBLE_VALUE,
+                y: INVALID_DOUBLE_VALUE,
+                z: INVALID_DOUBLE_VALUE,
+            };
+            p.x = ret.read_double().unwrap();
+            p.y = ret.read_double().unwrap();
+            p.z = 0.;
+            poly.value.push(p);
+        }
     }
 
     /// C++: `bool StorageHelper::readBool(tcpip::Storage &, const std::string &)` [static]
@@ -267,7 +342,10 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_bool(ret: &mut Storage, error: &str) -> bool {
-        todo!("port StorageHelper::readBool")
+        if ret.read_unsigned_byte().unwrap() != TYPE_UBYTE && !error.is_empty() {
+            throw_traci(error);
+        }
+        ret.read_unsigned_byte().unwrap() != 0
     }
 
     /// C++: `void StorageHelper::readStage(tcpip::Storage &, libsumo::TraCIStage &, const std::string &)` [static]
@@ -288,7 +366,19 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_stage(inputStorage: &mut Storage, stage: &mut TraCIStage, error: &str) {
-        todo!("port StorageHelper::readStage")
+        stage.type_ = read_typed_int(inputStorage, error);
+        stage.vType = read_typed_string(inputStorage, error);
+        stage.line = read_typed_string(inputStorage, error);
+        stage.destStop = read_typed_string(inputStorage, error);
+        stage.edges = read_typed_string_list(inputStorage, error);
+        stage.travelTime = read_typed_double(inputStorage, error);
+        stage.cost = read_typed_double(inputStorage, error);
+        stage.length = read_typed_double(inputStorage, error);
+        stage.intended = read_typed_string(inputStorage, error);
+        stage.depart = read_typed_double(inputStorage, error);
+        stage.departPos = read_typed_double(inputStorage, error);
+        stage.arrivalPos = read_typed_double(inputStorage, error);
+        stage.description = read_typed_string(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readConnection(tcpip::Storage &, libsumo::TraCIConnection &, const std::string &)` [static]
@@ -304,7 +394,14 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_connection(inputStorage: &mut Storage, connection: &mut TraCIConnection, error: &str) {
-        todo!("port StorageHelper::readConnection")
+        connection.approachedLane = read_typed_string(inputStorage, error);
+        connection.approachedInternal = read_typed_string(inputStorage, error);
+        connection.hasPrio = read_bool(inputStorage, error);
+        connection.isOpen = read_bool(inputStorage, error);
+        connection.hasFoe = read_bool(inputStorage, error);
+        connection.state = read_typed_string(inputStorage, error);
+        connection.direction = read_typed_string(inputStorage, error);
+        connection.length = read_typed_double(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readVehicleDataVector(tcpip::Storage &, std::vector<libsumo::TraCIVehicleData> &, const std::string &)` [static]
@@ -322,7 +419,17 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_vehicle_data_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIVehicleData>, error: &str) {
-        todo!("port StorageHelper::readVehicleDataVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let vd = TraCIVehicleData {
+                id: read_typed_string(inputStorage, error),
+                length: read_typed_double(inputStorage, error),
+                entryTime: read_typed_double(inputStorage, error),
+                leaveTime: read_typed_double(inputStorage, error),
+                typeID: read_typed_string(inputStorage, error),
+            };
+            result.push(vd);
+        }
     }
 
     /// C++: `void StorageHelper::readReservation(tcpip::Storage &, libsumo::TraCIReservation &, const std::string &)` [static]
@@ -341,7 +448,17 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_reservation(inputStorage: &mut Storage, result: &mut TraCIReservation, error: &str) {
-        todo!("port StorageHelper::readReservation")
+        read_compound(inputStorage, 10, error);
+        result.id = read_typed_string(inputStorage, error);
+        result.persons = read_typed_string_list(inputStorage, error);
+        result.group = read_typed_string(inputStorage, error);
+        result.fromEdge = read_typed_string(inputStorage, error);
+        result.toEdge = read_typed_string(inputStorage, error);
+        result.departPos = read_typed_double(inputStorage, error);
+        result.arrivalPos = read_typed_double(inputStorage, error);
+        result.depart = read_typed_double(inputStorage, error);
+        result.reservationTime = read_typed_double(inputStorage, error);
+        result.state = read_typed_int(inputStorage, error);
     }
 
     /// C++: `void StorageHelper::readLogic(tcpip::Storage &, libsumo::TraCILogic &, const std::string &)` [static]
@@ -373,7 +490,33 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_logic(inputStorage: &mut Storage, logic: &mut TraCILogic, error: &str) {
-        todo!("port StorageHelper::readLogic")
+        read_compound(inputStorage, 5, error);
+        logic.programID = read_typed_string(inputStorage, "");
+        logic.type_ = read_typed_int(inputStorage, "");
+        logic.currentPhaseIndex = read_typed_int(inputStorage, "");
+        let mut num_phases = read_compound(inputStorage, -1, "");
+        while num_phases > 0 {
+            num_phases -= 1;
+            read_compound(inputStorage, 6, "");
+            let mut phase = TraCIPhase::new();
+            phase.duration = read_typed_double(inputStorage, "");
+            phase.state = read_typed_string(inputStorage, "");
+            phase.minDur = read_typed_double(inputStorage, "");
+            phase.maxDur = read_typed_double(inputStorage, "");
+            let mut num_next = read_compound(inputStorage, -1, "");
+            while num_next > 0 {
+                num_next -= 1;
+                phase.next.push(read_typed_int(inputStorage, ""));
+            }
+            phase.name = read_typed_string(inputStorage, "");
+            logic.phases.push(Rc::new(phase));
+        }
+        let mut num_params = read_compound(inputStorage, -1, "");
+        while num_params > 0 {
+            num_params -= 1;
+            let key_value = read_typed_string_list(inputStorage, "");
+            logic.subParameter.insert(key_value[0].clone(), key_value[1].clone());
+        }
     }
 
     /// C++: `void StorageHelper::readConstraintVector(tcpip::Storage &, std::vector<libsumo::TraCISignalConstraint> &, const std::string &)` [static]
@@ -398,7 +541,33 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_constraint_vector(inputStorage: &mut Storage, result: &mut Vec<TraCISignalConstraint>, error: &str) {
-        todo!("port StorageHelper::readConstraintVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let mut c = TraCISignalConstraint {
+                signalId: String::new(),
+                tripId: String::new(),
+                foeId: String::new(),
+                foeSignal: String::new(),
+                limit: 0,
+                type_: 0,
+                mustWait: false,
+                active: false,
+                param: BTreeMap::new(),
+            };
+            c.signalId = read_typed_string(inputStorage, "");
+            c.tripId = read_typed_string(inputStorage, "");
+            c.foeId = read_typed_string(inputStorage, "");
+            c.foeSignal = read_typed_string(inputStorage, "");
+            c.limit = read_typed_int(inputStorage, "");
+            c.type_ = read_typed_int(inputStorage, "");
+            c.mustWait = read_typed_byte(inputStorage, "") != 0;
+            c.active = read_typed_byte(inputStorage, "") != 0;
+            let param_items = read_typed_string_list(inputStorage, "");
+            for j in (0..param_items.len()).step_by(2) {
+                c.param.insert(param_items[j].clone(), param_items[j + 1].clone());
+            }
+            result.push(c);
+        }
     }
 
     /// C++: `void StorageHelper::readLinkVectorVector(tcpip::Storage &, std::vector<std::vector<libsumo::TraCILink>> &, const std::string &)` [static]
@@ -416,7 +585,16 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_link_vector_vector(inputStorage: &mut Storage, result: &mut Vec<Vec<TraCILink>>, error: &str) {
-        todo!("port StorageHelper::readLinkVectorVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let mut controlled_links: Vec<TraCILink> = Vec::new();
+            let num_links = read_typed_int(inputStorage, "");
+            for _ in 0..num_links {
+                let link = read_typed_string_list(inputStorage, "");
+                controlled_links.push(TraCILink::new_2(&link[0], &link[2], &link[1]));
+            }
+            result.push(controlled_links);
+        }
     }
 
     /// C++: `void StorageHelper::readBestLanesVector(tcpip::Storage &, std::vector<libsumo::TraCIBestLanesData> &, const std::string &)` [static]
@@ -435,7 +613,18 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_best_lanes_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIBestLanesData>, error: &str) {
-        todo!("port StorageHelper::readBestLanesVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let info = TraCIBestLanesData {
+                laneID: read_typed_string(inputStorage, ""),
+                length: read_typed_double(inputStorage, ""),
+                occupation: read_typed_double(inputStorage, ""),
+                bestLaneOffset: read_typed_unsigned_byte(inputStorage, ""),
+                allowsContinuation: read_bool(inputStorage, ""),
+                continuationLanes: read_typed_string_list(inputStorage, error),
+            };
+            result.push(info);
+        }
     }
 
     /// C++: `void StorageHelper::readCollisionVector(tcpip::Storage &, std::vector<libsumo::TraCICollision> &, const std::string &)` [static]
@@ -457,7 +646,21 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_collision_vector(inputStorage: &mut Storage, result: &mut Vec<TraCICollision>, error: &str) {
-        todo!("port StorageHelper::readCollisionVector")
+        let num_collisions = read_typed_int(inputStorage, error);
+        for _ in 0..num_collisions {
+            let c = TraCICollision {
+                collider: read_typed_string(inputStorage, ""),
+                victim: read_typed_string(inputStorage, ""),
+                colliderType: read_typed_string(inputStorage, ""),
+                victimType: read_typed_string(inputStorage, ""),
+                colliderSpeed: read_typed_double(inputStorage, ""),
+                victimSpeed: read_typed_double(inputStorage, ""),
+                type_: read_typed_string(inputStorage, ""),
+                lane: read_typed_string(inputStorage, ""),
+                pos: read_typed_double(inputStorage, ""),
+            };
+            result.push(c);
+        }
     }
 
     /// C++: `void StorageHelper::readJunctionFoeVector(tcpip::Storage &, std::vector<libsumo::TraCIJunctionFoe> &, const std::string &)` [static]
@@ -479,7 +682,21 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_junction_foe_vector(inputStorage: &mut Storage, result: &mut Vec<TraCIJunctionFoe>, error: &str) {
-        todo!("port StorageHelper::readJunctionFoeVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let info = TraCIJunctionFoe {
+                foeId: read_typed_string(inputStorage, ""),
+                egoDist: read_typed_double(inputStorage, ""),
+                foeDist: read_typed_double(inputStorage, ""),
+                egoExitDist: read_typed_double(inputStorage, ""),
+                foeExitDist: read_typed_double(inputStorage, ""),
+                egoLane: read_typed_string(inputStorage, ""),
+                foeLane: read_typed_string(inputStorage, ""),
+                egoResponse: read_bool(inputStorage, ""),
+                foeResponse: read_bool(inputStorage, ""),
+            };
+            result.push(info);
+        }
     }
 
     /// C++: `void StorageHelper::readStopVector(tcpip::Storage &, std::vector<libsumo::TraCINextStopData> &, const std::string &)` [static]
@@ -508,7 +725,28 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_stop_vector(inputStorage: &mut Storage, result: &mut Vec<TraCINextStopData>, error: &str) {
-        todo!("port StorageHelper::readStopVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let s = TraCINextStopData {
+                lane: read_typed_string(inputStorage, ""),
+                endPos: read_typed_double(inputStorage, ""),
+                stoppingPlaceID: read_typed_string(inputStorage, ""),
+                stopFlags: read_typed_int(inputStorage, ""),
+                duration: read_typed_double(inputStorage, ""),
+                until: read_typed_double(inputStorage, ""),
+                startPos: read_typed_double(inputStorage, ""),
+                intendedArrival: read_typed_double(inputStorage, ""),
+                arrival: read_typed_double(inputStorage, ""),
+                depart: read_typed_double(inputStorage, ""),
+                split: read_typed_string(inputStorage, ""),
+                join: read_typed_string(inputStorage, ""),
+                actType: read_typed_string(inputStorage, ""),
+                tripId: read_typed_string(inputStorage, ""),
+                line: read_typed_string(inputStorage, ""),
+                speed: read_typed_double(inputStorage, ""),
+            };
+            result.push(s);
+        }
     }
 
     /// C++: `void StorageHelper::readTLSDataVector(tcpip::Storage &, std::vector<libsumo::TraCINextTLSData> &, const std::string &)` [static]
@@ -525,7 +763,16 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn read_tls_data_vector(inputStorage: &mut Storage, result: &mut Vec<TraCINextTLSData>, error: &str) {
-        todo!("port StorageHelper::readTLSDataVector")
+        let n = read_typed_int(inputStorage, error);
+        for _ in 0..n {
+            let tls = TraCINextTLSData {
+                id: read_typed_string(inputStorage, ""),
+                tlIndex: read_typed_int(inputStorage, ""),
+                dist: read_typed_double(inputStorage, ""),
+                state: read_typed_byte(inputStorage, "") as i8,
+            };
+            result.push(tls);
+        }
     }
 
     /// C++: `void StorageHelper::writeTypedByte(tcpip::Storage &, int)` [static]
@@ -535,7 +782,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_byte(content: &mut Storage, value: i32) {
-        todo!("port StorageHelper::writeTypedByte")
+        content.write_unsigned_byte(TYPE_BYTE).unwrap();
+        content.write_byte(value).unwrap();
     }
 
     /// C++: `void StorageHelper::writeTypedUnsignedByte(tcpip::Storage &, int)` [static]
@@ -545,7 +793,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_unsigned_byte(content: &mut Storage, value: i32) {
-        todo!("port StorageHelper::writeTypedUnsignedByte")
+        content.write_unsigned_byte(TYPE_UBYTE).unwrap();
+        content.write_unsigned_byte(value).unwrap();
     }
 
     /// C++: `void StorageHelper::writeTypedInt(tcpip::Storage &, int)` [static]
@@ -555,7 +804,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_int(content: &mut Storage, value: i32) {
-        todo!("port StorageHelper::writeTypedInt")
+        content.write_unsigned_byte(TYPE_INTEGER).unwrap();
+        content.write_int(value);
     }
 
     /// C++: `void StorageHelper::writeTypedDouble(tcpip::Storage &, double)` [static]
@@ -565,7 +815,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_double(content: &mut Storage, value: f64) {
-        todo!("port StorageHelper::writeTypedDouble")
+        content.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+        content.write_double(value);
     }
 
     /// C++: `void StorageHelper::writeTypedString(tcpip::Storage &, const std::string &)` [static]
@@ -575,7 +826,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_string(content: &mut Storage, value: &str) {
-        todo!("port StorageHelper::writeTypedString")
+        content.write_unsigned_byte(TYPE_STRING).unwrap();
+        content.write_string(value);
     }
 
     /// C++: `void StorageHelper::writeTypedStringList(tcpip::Storage &, const std::vector<std::string> &)` [static]
@@ -585,7 +837,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_typed_string_list(content: &mut Storage, value: &Vec<String>) {
-        todo!("port StorageHelper::writeTypedStringList")
+        content.write_unsigned_byte(TYPE_STRINGLIST).unwrap();
+        content.write_string_list(value);
     }
 
     /// C++: `void StorageHelper::writeCompound(tcpip::Storage &, int)` [static]
@@ -595,7 +848,8 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_compound(content: &mut Storage, size: i32) {
-        todo!("port StorageHelper::writeCompound")
+        content.write_unsigned_byte(TYPE_COMPOUND).unwrap();
+        content.write_int(size);
     }
 
     /// C++: `void StorageHelper::writePolygon(tcpip::Storage &, const libsumo::TraCIPositionVector &)` [static]
@@ -614,7 +868,17 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_polygon(content: &mut Storage, shape: &TraCIPositionVector) {
-        todo!("port StorageHelper::writePolygon")
+        content.write_unsigned_byte(TYPE_POLYGON).unwrap();
+        if shape.value.len() <= 255 {
+            content.write_unsigned_byte(shape.value.len() as i32).unwrap();
+        } else {
+            content.write_unsigned_byte(0).unwrap();
+            content.write_int(shape.value.len() as i32);
+        }
+        for pos in &shape.value {
+            content.write_double(pos.x);
+            content.write_double(pos.y);
+        }
     }
 
     /// C++: `void StorageHelper::writeStage(tcpip::Storage &, const libsumo::TraCIStage &)` [static]
@@ -637,7 +901,21 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_stage(content: &mut Storage, stage: &TraCIStage) {
-        todo!("port StorageHelper::writeStage")
+        write_compound(content, 13);
+        content.write_unsigned_byte(TYPE_INTEGER).unwrap();
+        content.write_int(stage.type_);
+        write_typed_string(content, &stage.vType);
+        write_typed_string(content, &stage.line);
+        write_typed_string(content, &stage.destStop);
+        write_typed_string_list(content, &stage.edges);
+        write_typed_double(content, stage.travelTime);
+        write_typed_double(content, stage.cost);
+        write_typed_double(content, stage.length);
+        write_typed_string(content, &stage.intended);
+        write_typed_double(content, stage.depart);
+        write_typed_double(content, stage.departPos);
+        write_typed_double(content, stage.arrivalPos);
+        write_typed_string(content, &stage.description);
     }
 
     /// C++: `void StorageHelper::writeConstraint(tcpip::Storage &, const libsumo::TraCISignalConstraint &)` [static]
@@ -659,7 +937,20 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn write_constraint(content: &mut Storage, c: &TraCISignalConstraint) {
-        todo!("port StorageHelper::writeConstraint")
+        write_typed_string(content, &c.signalId);
+        write_typed_string(content, &c.tripId);
+        write_typed_string(content, &c.foeId);
+        write_typed_string(content, &c.foeSignal);
+        write_typed_int(content, c.limit);
+        write_typed_int(content, c.type_);
+        write_typed_byte(content, c.mustWait as i32);
+        write_typed_byte(content, c.active as i32);
+        let mut param_items: Vec<String> = Vec::new();
+        for (k, v) in &c.param {
+            param_items.push(k.clone());
+            param_items.push(v.clone());
+        }
+        write_typed_string_list(content, &param_items);
     }
 
 }

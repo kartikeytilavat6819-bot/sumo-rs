@@ -1,6 +1,7 @@
 //! Port of libsumo/Subscription.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::traci::traci_constants::*;
 
 /// C++ enum `libsumo::SubscriptionFilterType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -90,7 +91,25 @@ impl Subscription {
     //           filterLateralDist(-1) {}
     #[allow(unused_variables)]
     pub fn new(commandIdArg: i32, idArg: &str, variablesArg: &Vec<i32>, paramsArg: &Vec<Rc<Storage>>, beginTimeArg: SUMOTime, endTimeArg: SUMOTime, contextDomainArg: i32, rangeArg: f64) -> Self {
-        todo!("port Subscription::Subscription")
+        Subscription {
+            commandId: commandIdArg,
+            id: idArg.to_string(),
+            variables: variablesArg.clone(),
+            parameters: paramsArg.clone(),
+            beginTime: beginTimeArg,
+            endTime: endTimeArg,
+            contextDomain: contextDomainArg,
+            range: rangeArg,
+            activeFilters: SubscriptionFilterType::SUBS_FILTER_NONE as i32,
+            filterLanes: Vec::new(),
+            filterDownstreamDist: -1.,
+            filterUpstreamDist: -1.,
+            filterFoeDistToJunction: -1.,
+            filterVTypes: BTreeSet::new(),
+            filterVClasses: 0,
+            filterFieldOfVisionOpeningAngle: -1.,
+            filterLateralDist: -1.,
+        }
     }
 
     /// C++: `bool Subscription::isVehicleToVehicleContextSubscription() const` [const]
@@ -99,7 +118,7 @@ impl Subscription {
     //     }
     #[allow(unused_variables)]
     pub fn is_vehicle_to_vehicle_context_subscription(&self) -> bool {
-        todo!("port Subscription::isVehicleToVehicleContextSubscription")
+        self.commandId == CMD_SUBSCRIBE_VEHICLE_CONTEXT && self.contextDomain == CMD_GET_VEHICLE_VARIABLE
     }
 
     /// C++: `bool Subscription::isVehicleToPersonContextSubscription() const` [const]
@@ -108,7 +127,7 @@ impl Subscription {
     //     }
     #[allow(unused_variables)]
     pub fn is_vehicle_to_person_context_subscription(&self) -> bool {
-        todo!("port Subscription::isVehicleToPersonContextSubscription")
+        self.commandId == CMD_SUBSCRIBE_VEHICLE_CONTEXT && self.contextDomain == CMD_GET_PERSON_VARIABLE
     }
 
 }
@@ -123,196 +142,196 @@ impl VariableWrapper {
     // VariableWrapper(SubscriptionHandler handler = nullptr) : handle(handler) {}
     #[allow(unused_variables)]
     pub fn new(handler: VariableWrapper_SubscriptionHandler) -> Self {
-        todo!("port VariableWrapper::VariableWrapper")
+        VariableWrapper { handle: handler }
     }
 
     /// C++: `void VariableWrapper::~VariableWrapper() noexcept` [virtual]
     // virtual ~VariableWrapper() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port VariableWrapper::~VariableWrapper")
+        // C++ destructor body is empty
     }
 
     /// C++: `void VariableWrapper::setContext(const std::string *const)` [virtual]
     // virtual void setContext(const std::string* const /* refID */) {}
     #[allow(unused_variables)]
     pub fn set_context(&mut self, arg0: Ptr<String>) {
-        todo!("port VariableWrapper::setContext")
+        // C++ body is empty; the context reference is not used by this base class
     }
 
     /// C++: `void VariableWrapper::clear()` [virtual]
     // virtual void clear() {}
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port VariableWrapper::clear")
+        // C++ body is empty
     }
 
     /// C++: `bool VariableWrapper::wrapConnectionVector(const std::string &, const int, const std::vector<TraCIConnection> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIConnection>) -> bool {
-        todo!("port VariableWrapper::wrapConnectionVector")
+        panic!("pure virtual VariableWrapper::wrapConnectionVector")
     }
 
     /// C++: `bool VariableWrapper::wrapDouble(const std::string &, const int, const double)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
-        todo!("port VariableWrapper::wrapDouble")
+        panic!("pure virtual VariableWrapper::wrapDouble")
     }
 
     /// C++: `bool VariableWrapper::wrapInt(const std::string &, const int, const int)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
-        todo!("port VariableWrapper::wrapInt")
+        panic!("pure virtual VariableWrapper::wrapInt")
     }
 
     /// C++: `bool VariableWrapper::wrapString(const std::string &, const int, const std::string &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
-        todo!("port VariableWrapper::wrapString")
+        panic!("pure virtual VariableWrapper::wrapString")
     }
 
     /// C++: `bool VariableWrapper::wrapStringList(const std::string &, const int, const std::vector<std::string> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
-        todo!("port VariableWrapper::wrapStringList")
+        panic!("pure virtual VariableWrapper::wrapStringList")
     }
 
     /// C++: `bool VariableWrapper::wrapDoubleList(const std::string &, const int, const std::vector<double> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &Vec<f64>) -> bool {
-        todo!("port VariableWrapper::wrapDoubleList")
+        panic!("pure virtual VariableWrapper::wrapDoubleList")
     }
 
     /// C++: `bool VariableWrapper::wrapPosition(const std::string &, const int, const TraCIPosition &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
-        todo!("port VariableWrapper::wrapPosition")
+        panic!("pure virtual VariableWrapper::wrapPosition")
     }
 
     /// C++: `bool VariableWrapper::wrapPositionVector(const std::string &, const int, const TraCIPositionVector &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
-        todo!("port VariableWrapper::wrapPositionVector")
+        panic!("pure virtual VariableWrapper::wrapPositionVector")
     }
 
     /// C++: `bool VariableWrapper::wrapColor(const std::string &, const int, const TraCIColor &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
-        todo!("port VariableWrapper::wrapColor")
+        panic!("pure virtual VariableWrapper::wrapColor")
     }
 
     /// C++: `bool VariableWrapper::wrapStringDoublePair(const std::string &, const int, const std::pair<std::string, double> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
-        todo!("port VariableWrapper::wrapStringDoublePair")
+        panic!("pure virtual VariableWrapper::wrapStringDoublePair")
     }
 
     /// C++: `bool VariableWrapper::wrapStringDoublePairList(const std::string &, const int, const std::vector<std::pair<std::string, double>> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &Vec<(String, f64)>) -> bool {
-        todo!("port VariableWrapper::wrapStringDoublePairList")
+        panic!("pure virtual VariableWrapper::wrapStringDoublePairList")
     }
 
     /// C++: `bool VariableWrapper::wrapStringPair(const std::string &, const int, const std::pair<std::string, std::string> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
-        todo!("port VariableWrapper::wrapStringPair")
+        panic!("pure virtual VariableWrapper::wrapStringPair")
     }
 
     /// C++: `bool VariableWrapper::wrapIntPair(const std::string &, const int, const std::pair<int, int> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
-        todo!("port VariableWrapper::wrapIntPair")
+        panic!("pure virtual VariableWrapper::wrapIntPair")
     }
 
     /// C++: `bool VariableWrapper::wrapStage(const std::string &, const int, const TraCIStage &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_stage(&mut self, objID: &str, variable: i32, value: &TraCIStage) -> bool {
-        todo!("port VariableWrapper::wrapStage")
+        panic!("pure virtual VariableWrapper::wrapStage")
     }
 
     /// C++: `bool VariableWrapper::wrapReservationVector(const std::string &, const int, const std::vector<TraCIReservation> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIReservation>) -> bool {
-        todo!("port VariableWrapper::wrapReservationVector")
+        panic!("pure virtual VariableWrapper::wrapReservationVector")
     }
 
     /// C++: `bool VariableWrapper::wrapLogicVector(const std::string &, const int, const std::vector<TraCILogic> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCILogic>) -> bool {
-        todo!("port VariableWrapper::wrapLogicVector")
+        panic!("pure virtual VariableWrapper::wrapLogicVector")
     }
 
     /// C++: `bool VariableWrapper::wrapLinkVectorVector(const std::string &, const int, const std::vector<std::vector<TraCILink>> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &Vec<Vec<TraCILink>>) -> bool {
-        todo!("port VariableWrapper::wrapLinkVectorVector")
+        panic!("pure virtual VariableWrapper::wrapLinkVectorVector")
     }
 
     /// C++: `bool VariableWrapper::wrapSignalConstraintVector(const std::string &, const int, const std::vector<TraCISignalConstraint> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCISignalConstraint>) -> bool {
-        todo!("port VariableWrapper::wrapSignalConstraintVector")
+        panic!("pure virtual VariableWrapper::wrapSignalConstraintVector")
     }
 
     /// C++: `bool VariableWrapper::wrapJunctionFoeVector(const std::string &, const int, const std::vector<TraCIJunctionFoe> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIJunctionFoe>) -> bool {
-        todo!("port VariableWrapper::wrapJunctionFoeVector")
+        panic!("pure virtual VariableWrapper::wrapJunctionFoeVector")
     }
 
     /// C++: `bool VariableWrapper::wrapNextStopDataVector(const std::string &, const int, const std::vector<TraCINextStopData> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCINextStopData>) -> bool {
-        todo!("port VariableWrapper::wrapNextStopDataVector")
+        panic!("pure virtual VariableWrapper::wrapNextStopDataVector")
     }
 
     /// C++: `bool VariableWrapper::wrapVehicleDataVector(const std::string &, const int, const std::vector<TraCIVehicleData> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIVehicleData>) -> bool {
-        todo!("port VariableWrapper::wrapVehicleDataVector")
+        panic!("pure virtual VariableWrapper::wrapVehicleDataVector")
     }
 
     /// C++: `bool VariableWrapper::wrapBestLanesDataVector(const std::string &, const int, const std::vector<TraCIBestLanesData> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIBestLanesData>) -> bool {
-        todo!("port VariableWrapper::wrapBestLanesDataVector")
+        panic!("pure virtual VariableWrapper::wrapBestLanesDataVector")
     }
 
     /// C++: `bool VariableWrapper::wrapNextTLSDataVector(const std::string &, const int, const std::vector<TraCINextTLSData> &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCINextTLSData>) -> bool {
-        todo!("port VariableWrapper::wrapNextTLSDataVector")
+        panic!("pure virtual VariableWrapper::wrapNextTLSDataVector")
     }
 
     /// C++: `void VariableWrapper::empty(const std::string &)` [virtual]
     // virtual void empty(const std::string& /* objID */) {}
     #[allow(unused_variables)]
     pub fn empty(&mut self, arg0: &str) {
-        todo!("port VariableWrapper::empty")
+        // C++ body is empty
     }
 
 }
