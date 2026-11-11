@@ -44,8 +44,15 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     //         myVehicleRestriction(vehicleRestriction)
     //     { }
     #[allow(unused_variables)]
-    pub fn new(numericalID: i32, inEdge: Ptr<AccessEdge__IntermodalEdge>, outEdge: Ptr<AccessEdge__IntermodalEdge>, length: f64, modeRestriction: SVCPermissions, vehicleRestriction: SVCPermissions, traveltime: f64) -> Self {
-        todo!("port AccessEdge::AccessEdge<E, L, N, V>")
+    pub fn new(numericalID: i32, inEdge: Ptr<IntermodalEdge<E, L, N, V>>, outEdge: Ptr<IntermodalEdge<E, L, N, V>>, length: f64, modeRestriction: SVCPermissions, vehicleRestriction: SVCPermissions, traveltime: f64) -> Self {
+        let id = format!("{}:{}{}", inEdge.get_id(), outEdge.get_id(), if modeRestriction == SVC_TAXI { ":taxi" } else { "" });
+        Self {
+            base: IntermodalEdge::new(id, numericalID, outEdge.get_edge(), "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }),
+            myTraveltime: traveltime,
+            myModeRestrictions: modeRestriction,
+            myVehicleRestriction: vehicleRestriction,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void AccessEdge::AccessEdge<E, L, N, V>(int, const std::string &, const E *, const double, SVCPermissions, SVCPermissions)`
@@ -59,7 +66,13 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     //     { }
     #[allow(unused_variables)]
     pub fn new_2(numericalID: i32, id: &str, edge: Ptr<E>, length: f64, modeRestriction: SVCPermissions, vehicleRestriction: SVCPermissions) -> Self {
-        todo!("port AccessEdge::AccessEdge<E, L, N, V>")
+        Self {
+            base: IntermodalEdge::new(id.to_string(), numericalID, edge, "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }),
+            myTraveltime: -1.,
+            myModeRestrictions: modeRestriction,
+            myVehicleRestriction: vehicleRestriction,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `double AccessEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const]
@@ -68,7 +81,7 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
-        todo!("port AccessEdge::getTravelTime")
+        if self.myTraveltime > 0. { self.myTraveltime } else { self.get_length() / trip.speed }
     }
 
     /// C++: `bool AccessEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -79,7 +92,8 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        todo!("port AccessEdge::prohibits")
+        (self.myModeRestrictions != SVC_IGNORING && (trip.modeSet & self.myModeRestrictions) == 0)
+            || (self.myVehicleRestriction != SVC_IGNORING && (trip.get_v_class() & self.myVehicleRestriction) == 0)
     }
 
     /// C++: `SVCPermissions AccessEdge::getVehicleRetriction() const` [const]
@@ -88,7 +102,7 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_retriction(&self) -> SVCPermissions {
-        todo!("port AccessEdge::getVehicleRetriction")
+        self.myVehicleRestriction
     }
 
 }
