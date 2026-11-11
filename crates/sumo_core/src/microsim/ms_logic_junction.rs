@@ -34,7 +34,7 @@ impl MSLogicJunction {
     // MSLogicJunction::~MSLogicJunction() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLogicJunction::~MSLogicJunction")
+        // C++ destructor body is empty; members are dropped with the struct.
     }
 
     /// C++: `void MSLogicJunction::postloadInit()` [virtual]
@@ -69,7 +69,7 @@ impl MSLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        todo!("port MSLogicJunction::postloadInit")
+        // C++ body is entirely commented out in SUMO; nothing to do.
     }
 
     /// C++: `const std::vector<MSLane *> MSLogicJunction::getInternalLanes() const` [const, virtual]
@@ -98,7 +98,24 @@ impl MSLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_lanes(&self) -> Vec<Ptr<MSLane>> {
-        todo!("port MSLogicJunction::getInternalLanes")
+        // Besides the lanes im myInternal lanes, which are only the last parts of the connections,
+        // this collects all lanes on the junction
+        let mut allInternalLanes: Vec<Ptr<MSLane>> = Vec::new();
+        for &i in self.myInternalLanes.iter() {
+            let mut l = i;
+            while !l.is_null() {
+                allInternalLanes.push(l);
+                if l.get_incoming_lanes().is_empty() {
+                    break;
+                }
+                assert!(l.get_incoming_lanes().len() == 1);
+                l = l.get_incoming_lanes()[0].lane;
+                if !l.is_internal() {
+                    break;
+                }
+            }
+        }
+        allInternalLanes
     }
 
     /// C++: `void MSLogicJunction::MSLogicJunction(const std::string &, SumoXMLNodeType, const Position &, const PositionVector &, const std::string &, std::vector<MSLane *>, std::vector<MSLane *>)` [protected]
@@ -116,7 +133,11 @@ impl MSLogicJunction {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, type_: SumoXMLNodeType, position: &Position, shape: &PositionVector, name: &str, incoming: Vec<Ptr<MSLane>>, internal: Vec<Ptr<MSLane>>) -> Self {
-        todo!("port MSLogicJunction::MSLogicJunction")
+        Self {
+            base: MSJunction::new(id, type_, position, shape, name),
+            myIncomingLanes: incoming,
+            myInternalLanes: internal,
+        }
     }
 
     /// C++: `void MSLogicJunction::MSLogicJunction(const MSLogicJunction &)` [private]
@@ -124,7 +145,8 @@ impl MSLogicJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSLogicJunction) -> Self {
-        todo!("port MSLogicJunction::MSLogicJunction")
+        // C++ copy constructor is private and never defined; it must not be called.
+        panic!("MSLogicJunction copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSLogicJunction & MSLogicJunction::operator=(const MSLogicJunction &)` [private]
@@ -132,7 +154,8 @@ impl MSLogicJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSLogicJunction) -> &mut MSLogicJunction {
-        todo!("port MSLogicJunction::operator=")
+        // C++ assignment operator is private and never defined; it must not be called.
+        panic!("MSLogicJunction assignment operator is private and undefined in C++")
     }
 
 }
