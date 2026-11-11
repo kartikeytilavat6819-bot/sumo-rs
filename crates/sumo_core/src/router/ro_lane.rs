@@ -43,7 +43,18 @@ impl ROLane {
     //     { }
     #[allow(unused_variables)]
     pub fn new(id: &str, edge: Ptr<ROEdge>, length: f64, maxSpeed: f64, permissions: SVCPermissions, shape: &PositionVector) -> Self {
-        todo!("port ROLane::ROLane")
+        let factor = shape.length() / length;
+        ROLane {
+            base: Named::new(id),
+            myEdge: edge,
+            myLength: length,
+            myMaxSpeed: maxSpeed,
+            myPermissions: permissions,
+            myOutgoingLanes: Vec::new(),
+            myShape: shape.clone(),
+            // factor should not be 0; MAX2(NUMERICAL_EPS, factor)
+            myLengthGeometryFactor: if utils::geom::NUMERICAL_EPS > factor { utils::geom::NUMERICAL_EPS } else { factor },
+        }
     }
 
     /// C++: `void ROLane::~ROLane() noexcept` [virtual]
@@ -51,7 +62,7 @@ impl ROLane {
     // ~ROLane() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROLane::~ROLane")
+        // C++ destructor body is empty
     }
 
     /// C++: `double ROLane::getLength() const` [const]
@@ -61,7 +72,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port ROLane::getLength")
+        self.myLength
     }
 
     /// C++: `double ROLane::getSpeed() const` [const]
@@ -71,7 +82,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port ROLane::getSpeed")
+        self.myMaxSpeed
     }
 
     /// C++: `SVCPermissions ROLane::getPermissions() const` [const]
@@ -81,7 +92,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port ROLane::getPermissions")
+        self.myPermissions
     }
 
     /// C++: `void ROLane::setPermissions(SVCPermissions)`
@@ -90,7 +101,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, permissions: SVCPermissions) {
-        todo!("port ROLane::setPermissions")
+        self.myPermissions = permissions;
     }
 
     /// C++: `ROEdge & ROLane::getEdge() const` [const]
@@ -100,7 +111,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> &mut ROEdge {
-        todo!("port ROLane::getEdge")
+        self.myEdge.m()
     }
 
     /// C++: `const std::vector<std::pair<const ROLane *, const ROEdge *>> & ROLane::getOutgoingViaLanes() const` [const]
@@ -110,7 +121,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing_via_lanes(&self) -> &Vec<(Ptr<ROLane>, Ptr<ROEdge>)> {
-        todo!("port ROLane::getOutgoingViaLanes")
+        &self.myOutgoingLanes
     }
 
     /// C++: `void ROLane::addOutgoingLane(ROLane *, ROEdge *)`
@@ -119,7 +130,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn add_outgoing_lane(&mut self, lane: Ptr<ROLane>, via: Ptr<ROEdge>) {
-        todo!("port ROLane::addOutgoingLane")
+        self.myOutgoingLanes.push((lane, via));
     }
 
     /// C++: `LinkState ROLane::getIncomingLinkState() const` [const]
@@ -129,7 +140,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming_link_state(&self) -> LinkState {
-        todo!("port ROLane::getIncomingLinkState")
+        LINKSTATE_MAJOR
     }
 
     /// C++: `bool ROLane::allowsVehicleClass(SUMOVehicleClass) const` [const]
@@ -138,7 +149,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn allows_vehicle_class(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port ROLane::allowsVehicleClass")
+        (self.myPermissions & vclass) == vclass
     }
 
     /// C++: `const PositionVector & ROLane::getShape() const` [const]
@@ -147,7 +158,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port ROLane::getShape")
+        &self.myShape
     }
 
     /// C++: `double ROLane::interpolateLanePosToGeometryPos(double) const` [const]
@@ -156,7 +167,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn interpolate_lane_pos_to_geometry_pos(&self, lanePos: f64) -> f64 {
-        todo!("port ROLane::interpolateLanePosToGeometryPos")
+        lanePos * self.myLengthGeometryFactor
     }
 
     /// C++: `const Position ROLane::geometryPositionAtOffset(double, double) const` [const]
@@ -165,7 +176,7 @@ impl ROLane {
     //     }
     #[allow(unused_variables)]
     pub fn geometry_position_at_offset(&self, offset: f64, lateralOffset: f64) -> Position {
-        todo!("port ROLane::geometryPositionAtOffset")
+        self.myShape.position_at_offset(self.interpolate_lane_pos_to_geometry_pos(offset), lateralOffset)
     }
 
     /// C++: `void ROLane::ROLane(const ROLane &)` [private]
@@ -173,7 +184,8 @@ impl ROLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROLane) -> Self {
-        todo!("port ROLane::ROLane")
+        // C++ copy constructor is private and never defined: copying is disallowed
+        panic!("ROLane is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `ROLane & ROLane::operator=(const ROLane &)` [private]
@@ -181,7 +193,8 @@ impl ROLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROLane) -> &mut ROLane {
-        todo!("port ROLane::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("ROLane is not assignable (private operator= in C++)")
     }
 
 }

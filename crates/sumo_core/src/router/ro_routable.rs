@@ -34,7 +34,8 @@ impl RORoutable {
     //         myRoutingSuccess(false) {}
     #[allow(unused_variables)]
     pub fn new(pars: &SUMOVehicleParameter, type_: Ptr<SUMOVTypeParameter>) -> Self {
-        todo!("port RORoutable::RORoutable")
+        // shortcut: C++ copies pars into myParameter; SUMOVehicleParameter has no Clone yet (utils/vehicle/sumo_vehicle_parameter.rs, outside this batch), add #[derive(Clone)] there and restore the copy
+        panic!("RORoutable::RORoutable: copying SUMOVehicleParameter is not ported yet");
     }
 
     /// C++: `void RORoutable::~RORoutable() noexcept` [virtual]
@@ -42,7 +43,7 @@ impl RORoutable {
     // virtual ~RORoutable() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RORoutable::~RORoutable")
+        // C++ destructor body is empty
     }
 
     /// C++: `const SUMOVehicleParameter & RORoutable::getParameter() const` [const]
@@ -52,7 +53,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVehicleParameter {
-        todo!("port RORoutable::getParameter")
+        &self.myParameter
     }
 
     /// C++: `SUMOVehicleParameter & RORoutable::getParameterMutable()`
@@ -61,7 +62,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
-        todo!("port RORoutable::getParameterMutable")
+        &mut self.myParameter
     }
 
     /// C++: `const SUMOVTypeParameter * RORoutable::getType() const` [const]
@@ -71,7 +72,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> Ptr<SUMOVTypeParameter> {
-        todo!("port RORoutable::getType")
+        self.myType
     }
 
     /// C++: `const std::string & RORoutable::getID() const` [const]
@@ -81,7 +82,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port RORoutable::getID")
+        &self.myParameter.id
     }
 
     /// C++: `long long RORoutable::getRandomSeed() const` [const]
@@ -91,7 +92,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_random_seed(&self) -> i64 {
-        todo!("port RORoutable::getRandomSeed")
+        self.myRandomSeed
     }
 
     /// C++: `double RORoutable::getChosenSpeedFactor() const` [const]
@@ -101,7 +102,14 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        todo!("port RORoutable::getChosenSpeedFactor")
+        // C++ VEHPARS_SPEEDFACTOR_SET (SUMOVehicleParameter.h), not ported as a named constant yet
+        const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+        if self.get_parameter().was_set(VEHPARS_SPEEDFACTOR_SET) {
+            self.get_parameter().speedFactor
+        } else {
+            // shortcut: SUMOVTypeParameter::speedFactor is Distribution_Parameterized (Unmapped), getParameter(0) cannot be read yet, upgrade when that distribution is ported
+            panic!("RORoutable::getChosenSpeedFactor: type speedFactor distribution is not ported yet")
+        }
     }
 
     /// C++: `SUMOTime RORoutable::getDepart() const` [const]
@@ -111,7 +119,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_depart(&self) -> SUMOTime {
-        todo!("port RORoutable::getDepart")
+        self.myParameter.depart
     }
 
     /// C++: `void RORoutable::setDepart(SUMOTime)`
@@ -121,7 +129,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn set_depart(&mut self, t: SUMOTime) {
-        todo!("port RORoutable::setDepart")
+        self.myParameter.depart = t;
     }
 
     /// C++: `SUMOVehicleClass RORoutable::getVClass() const` [const]
@@ -130,7 +138,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        todo!("port RORoutable::getVClass")
+        if !self.myType.is_null() { self.myType.vehicleClass } else { SVC_IGNORING }
     }
 
     /// C++: `bool RORoutable::ignoreTransientPermissions() const` [const]
@@ -140,7 +148,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn ignore_transient_permissions(&self) -> bool {
-        todo!("port RORoutable::ignoreTransientPermissions")
+        false
     }
 
     /// C++: `double RORoutable::getMaxSpeed() const` [const]
@@ -151,14 +159,17 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self) -> f64 {
-        todo!("port RORoutable::getMaxSpeed")
+        let a = self.get_type().maxSpeed;
+        let b = self.get_type().desiredMaxSpeed * self.get_chosen_speed_factor();
+        if a < b { a } else { b }
     }
 
     /// C++: `const ROEdge * RORoutable::getDepartEdge() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_edge(&self) -> Ptr<ROEdge> {
-        todo!("port RORoutable::getDepartEdge")
+        // C++ pure virtual: only subclasses define it
+        panic!("RORoutable::getDepartEdge is pure virtual; subclasses must implement it")
     }
 
     /// C++: `bool RORoutable::isPublicTransport() const` [const]
@@ -167,7 +178,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn is_public_transport(&self) -> bool {
-        todo!("port RORoutable::isPublicTransport")
+        !self.myParameter.line.is_empty()
     }
 
     /// C++: `bool RORoutable::isPartOfFlow() const` [const]
@@ -176,14 +187,15 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn is_part_of_flow(&self) -> bool {
-        todo!("port RORoutable::isPartOfFlow")
+        self.myParameter.repetitionNumber >= 0
     }
 
     /// C++: `void RORoutable::computeRoute(const RORouterProvider &, const bool, MsgHandler *)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute_route(&mut self, provider: &RORouterProvider, removeLoops: bool, errorHandler: Ptr<MsgHandler>) {
-        todo!("port RORoutable::computeRoute")
+        // C++ pure virtual: only subclasses define it
+        panic!("RORoutable::computeRoute is pure virtual; subclasses must implement it")
     }
 
     /// C++: `void RORoutable::write(OutputDevice *, OutputDevice *const, OutputDevice *const, OptionsCont &, int) const` [const]
@@ -205,7 +217,18 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn write(&self, os: Ptr<OutputDevice>, altos: Ptr<OutputDevice>, typeos: Ptr<OutputDevice>, options: &mut OptionsCont, quota: i32) {
-        todo!("port RORoutable::write")
+        for i in 0..quota {
+            if !os.is_null() {
+                if altos.is_null() && typeos.is_null() {
+                    self.save_as_xml(os.m(), os, false, options, i);
+                } else {
+                    self.save_as_xml(os.m(), typeos, false, options, i);
+                }
+            }
+            if !altos.is_null() {
+                self.save_as_xml(altos.m(), typeos, true, options, i);
+            }
+        }
     }
 
     /// C++: `bool RORoutable::getRoutingSuccess() const` [const]
@@ -214,7 +237,7 @@ impl RORoutable {
     //     }
     #[allow(unused_variables)]
     pub fn get_routing_success(&self) -> bool {
-        todo!("port RORoutable::getRoutingSuccess")
+        self.myRoutingSuccess
     }
 
     /// C++: `void RORoutable::saveAsXML(OutputDevice &, OutputDevice *const, bool, OptionsCont &, int) const` [const, virtual, pure virtual, protected]
@@ -222,7 +245,8 @@ impl RORoutable {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont, cloneIndex: i32) {
-        todo!("port RORoutable::saveAsXML")
+        // C++ pure virtual: only subclasses define it
+        panic!("RORoutable::saveAsXML is pure virtual; subclasses must implement it")
     }
 
     /// C++: `void RORoutable::RORoutable(const RORoutable &)` [private]
@@ -230,7 +254,8 @@ impl RORoutable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RORoutable) -> Self {
-        todo!("port RORoutable::RORoutable")
+        // C++ copy constructor is private and never defined: copying is disallowed
+        panic!("RORoutable is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `RORoutable & RORoutable::operator=(const RORoutable &)` [private]
@@ -238,7 +263,8 @@ impl RORoutable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RORoutable) -> &mut RORoutable {
-        todo!("port RORoutable::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("RORoutable is not assignable (private operator= in C++)")
     }
 
 }
