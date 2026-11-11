@@ -49,6 +49,28 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn get_overlay_zone(zoneNumber: i32) -> i32 {
-    todo!("port getOverlayZone")
+    if zoneNumber < 400 {
+        return zoneNumber; // real "zone" numbers, no city zones
+    }
+    match zoneNumber {
+        511 => 165,
+        512 => 166,
+        513 => 167,
+        514 => 142,
+        515 => 123,
+        516 => 127,
+        518 => 145,
+        519 => 144,
+        521 => 153,
+        551 => 231,
+        552 => 232,
+        553 => 233,
+        554 => 259,
+        555 => 241,
+        556 => 255,
+        571 => 322,
+        572 => 324,
+        _ => zoneNumber,
+    }
 }
 
