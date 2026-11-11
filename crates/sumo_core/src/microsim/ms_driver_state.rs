@@ -19,6 +19,18 @@ pub struct DriverStateDefaults {
 //   static double DriverStateDefaults::freeSpeedErrorCoefficient;
 //   static double DriverStateDefaults::maximalReactionTimeFactor;
 
+// Values from MSDriverState.cpp:79-88 (never reassigned in SUMO).
+pub static DRIVER_STATE_MIN_AWARENESS: f64 = 0.1;
+pub static DRIVER_STATE_INITIAL_AWARENESS: f64 = 1.0;
+pub static DRIVER_STATE_ERROR_TIME_SCALE_COEFFICIENT: f64 = 100.0;
+pub static DRIVER_STATE_ERROR_NOISE_INTENSITY_COEFFICIENT: f64 = 0.2;
+pub static DRIVER_STATE_SPEED_DIFFERENCE_ERROR_COEFFICIENT: f64 = 0.15;
+pub static DRIVER_STATE_HEADWAY_ERROR_COEFFICIENT: f64 = 0.75;
+pub static DRIVER_STATE_FREE_SPEED_ERROR_COEFFICIENT: f64 = 0.0;
+pub static DRIVER_STATE_SPEED_DIFFERENCE_CHANGE_PERCEPTION_THRESHOLD: f64 = 0.1;
+pub static DRIVER_STATE_HEADWAY_CHANGE_PERCEPTION_THRESHOLD: f64 = 0.1;
+pub static DRIVER_STATE_MAXIMAL_REACTION_TIME_FACTOR: f64 = 1.0;
+
 impl DriverStateDefaults {
 }
 
@@ -64,6 +76,28 @@ pub struct MSSimpleDriverState {
     pub myDebugLock: bool,
 }
 
+/// SIMTIME macro: current simulation time in seconds
+fn sim_time() -> f64 {
+    steps2time(MSNet::get_instance().get_current_time_step())
+}
+
+/// C `remquo`: IEEE remainder of x/y and the low bits of the quotient (sign of x/y), glibc semantics.
+/// Exact for quotients below 2^53.
+fn remquo(x: f64, y: f64) -> (f64, i32) {
+    let t = x % y; // fmod: exact
+    let k = ((x - t) / y).round();
+    let (mut r, mut n) = (t, k);
+    if 2.0 * t.abs() > y.abs() || (2.0 * t.abs() == y.abs() && k % 2.0 != 0.0) {
+        let sx = if t < 0.0 { -1.0 } else { 1.0 };
+        r = t - sx * y.abs();
+        n = k + if (x < 0.0) != (y < 0.0) { -1.0 } else { 1.0 };
+    }
+    let q = (n.abs() as i64 % 8) as i32;
+    (r, if (x < 0.0) != (y < 0.0) { -q } else { q })
+}
+
+// shortcut: the DEBUG_AWARENESS / DEBUG_PERCEPTION_ERRORS / DEBUG_OUPROCESS trace output is
+// #ifdef-gated off in SUMO and is not ported, add it when debugging driver state.
 impl MSSimpleDriverState {
     /// C++: `void MSSimpleDriverState::MSSimpleDriverState(MSVehicle *)`
     // MSSimpleDriverState::MSSimpleDriverState(MSVehicle* veh) :
@@ -92,14 +126,39 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn new(veh: Ptr<MSVehicle>) -> Self {
-        todo!("port MSSimpleDriverState::MSSimpleDriverState")
+        let original_reaction_time = veh.get_action_step_length_secs();
+        let mut s = MSSimpleDriverState {
+            myVehicle: veh,
+            myAwareness: 1.,
+            myMinAwareness: DRIVER_STATE_MIN_AWARENESS,
+            myInitialAwareness: DRIVER_STATE_INITIAL_AWARENESS,
+            myError: OUProcess::new(0., 1., 1.),
+            myErrorTimeScaleCoefficient: DRIVER_STATE_ERROR_TIME_SCALE_COEFFICIENT,
+            myErrorNoiseIntensityCoefficient: DRIVER_STATE_ERROR_NOISE_INTENSITY_COEFFICIENT,
+            mySpeedDifferenceErrorCoefficient: DRIVER_STATE_SPEED_DIFFERENCE_ERROR_COEFFICIENT,
+            myHeadwayErrorCoefficient: DRIVER_STATE_HEADWAY_ERROR_COEFFICIENT,
+            myFreeSpeedErrorCoefficient: DRIVER_STATE_FREE_SPEED_ERROR_COEFFICIENT,
+            myHeadwayChangePerceptionThreshold: DRIVER_STATE_HEADWAY_CHANGE_PERCEPTION_THRESHOLD,
+            mySpeedDifferenceChangePerceptionThreshold: DRIVER_STATE_SPEED_DIFFERENCE_CHANGE_PERCEPTION_THRESHOLD,
+            myActionStepLength: 0.,
+            myOriginalReactionTime: original_reaction_time,
+            myMaximalReactionTime: DRIVER_STATE_MAXIMAL_REACTION_TIME_FACTOR * original_reaction_time,
+            myStepDuration: ts(),
+            myLastUpdateTime: sim_time() - ts(),
+            myAssumedGap: BTreeMap::new(),
+            myLastPerceivedSpeedDifference: BTreeMap::new(),
+            myDebugLock: false,
+        };
+        s.update_error();
+        s.update_reaction_time();
+        s
     }
 
     /// C++: `void MSSimpleDriverState::~MSSimpleDriverState() noexcept` [virtual]
     // virtual ~MSSimpleDriverState() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSimpleDriverState::~MSSimpleDriverState")
+        // C++ destructor body is empty
     }
 
     /// C++: `double MSSimpleDriverState::getMinAwareness() const` [const]
@@ -109,7 +168,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_awareness(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getMinAwareness")
+        self.myMinAwareness
     }
 
     /// C++: `double MSSimpleDriverState::getInitialAwareness() const` [const]
@@ -118,7 +177,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_initial_awareness(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getInitialAwareness")
+        self.myInitialAwareness
     }
 
     /// C++: `double MSSimpleDriverState::getErrorTimeScaleCoefficient() const` [const]
@@ -127,7 +186,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_error_time_scale_coefficient(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getErrorTimeScaleCoefficient")
+        self.myErrorTimeScaleCoefficient
     }
 
     /// C++: `double MSSimpleDriverState::getErrorNoiseIntensityCoefficient() const` [const]
@@ -136,7 +195,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_error_noise_intensity_coefficient(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getErrorNoiseIntensityCoefficient")
+        self.myErrorNoiseIntensityCoefficient
     }
 
     /// C++: `double MSSimpleDriverState::getErrorTimeScale() const` [const]
@@ -145,7 +204,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_error_time_scale(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getErrorTimeScale")
+        self.myError.get_time_scale()
     }
 
     /// C++: `double MSSimpleDriverState::getErrorNoiseIntensity() const` [const]
@@ -154,7 +213,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_error_noise_intensity(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getErrorNoiseIntensity")
+        self.myError.get_noise_intensity()
     }
 
     /// C++: `double MSSimpleDriverState::getSpeedDifferenceErrorCoefficient() const` [const]
@@ -163,7 +222,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_difference_error_coefficient(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getSpeedDifferenceErrorCoefficient")
+        self.mySpeedDifferenceErrorCoefficient
     }
 
     /// C++: `double MSSimpleDriverState::getHeadwayErrorCoefficient() const` [const]
@@ -172,7 +231,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_headway_error_coefficient(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getHeadwayErrorCoefficient")
+        self.myHeadwayErrorCoefficient
     }
 
     /// C++: `double MSSimpleDriverState::getFreeSpeedErrorCoefficient() const` [const]
@@ -181,7 +240,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_free_speed_error_coefficient(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getFreeSpeedErrorCoefficient")
+        self.myFreeSpeedErrorCoefficient
     }
 
     /// C++: `double MSSimpleDriverState::getSpeedDifferenceChangePerceptionThreshold() const` [const]
@@ -190,7 +249,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_difference_change_perception_threshold(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getSpeedDifferenceChangePerceptionThreshold")
+        self.mySpeedDifferenceChangePerceptionThreshold
     }
 
     /// C++: `double MSSimpleDriverState::getHeadwayChangePerceptionThreshold() const` [const]
@@ -199,7 +258,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_headway_change_perception_threshold(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getHeadwayChangePerceptionThreshold")
+        self.myHeadwayChangePerceptionThreshold
     }
 
     /// C++: `double MSSimpleDriverState::getAwareness() const` [const]
@@ -208,7 +267,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_awareness(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getAwareness")
+        self.myAwareness
     }
 
     /// C++: `double MSSimpleDriverState::getMaximalReactionTime() const` [const]
@@ -217,7 +276,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_maximal_reaction_time(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getMaximalReactionTime")
+        self.myMaximalReactionTime
     }
 
     /// C++: `double MSSimpleDriverState::getOriginalReactionTime() const` [const]
@@ -226,7 +285,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_reaction_time(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getOriginalReactionTime")
+        self.myOriginalReactionTime
     }
 
     /// C++: `double MSSimpleDriverState::getActionStepLength() const` [const]
@@ -235,7 +294,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_action_step_length(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getActionStepLength")
+        self.myActionStepLength
     }
 
     /// C++: `double MSSimpleDriverState::getErrorState() const` [const]
@@ -244,7 +303,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_error_state(&self) -> f64 {
-        todo!("port MSSimpleDriverState::getErrorState")
+        self.myError.get_state()
     }
 
     /// C++: `void MSSimpleDriverState::setMinAwareness(const double)`
@@ -254,7 +313,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_min_awareness(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setMinAwareness")
+        self.myMinAwareness = value;
     }
 
     /// C++: `void MSSimpleDriverState::setInitialAwareness(const double)`
@@ -263,7 +322,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_initial_awareness(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setInitialAwareness")
+        self.myInitialAwareness = value;
     }
 
     /// C++: `void MSSimpleDriverState::setErrorTimeScaleCoefficient(const double)`
@@ -272,7 +331,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_error_time_scale_coefficient(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setErrorTimeScaleCoefficient")
+        self.myErrorTimeScaleCoefficient = value;
     }
 
     /// C++: `void MSSimpleDriverState::setErrorNoiseIntensityCoefficient(const double)`
@@ -281,7 +340,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_error_noise_intensity_coefficient(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setErrorNoiseIntensityCoefficient")
+        self.myErrorNoiseIntensityCoefficient = value;
     }
 
     /// C++: `void MSSimpleDriverState::setSpeedDifferenceErrorCoefficient(const double)`
@@ -290,7 +349,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_speed_difference_error_coefficient(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setSpeedDifferenceErrorCoefficient")
+        self.mySpeedDifferenceErrorCoefficient = value;
     }
 
     /// C++: `void MSSimpleDriverState::setHeadwayErrorCoefficient(const double)`
@@ -299,7 +358,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_headway_error_coefficient(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setHeadwayErrorCoefficient")
+        self.myHeadwayErrorCoefficient = value;
     }
 
     /// C++: `void MSSimpleDriverState::setFreeSpeedErrorCoefficient(const double)`
@@ -308,7 +367,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_free_speed_error_coefficient(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setFreeSpeedErrorCoefficient")
+        self.myFreeSpeedErrorCoefficient = value;
     }
 
     /// C++: `void MSSimpleDriverState::setSpeedDifferenceChangePerceptionThreshold(const double)`
@@ -317,7 +376,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_speed_difference_change_perception_threshold(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setSpeedDifferenceChangePerceptionThreshold")
+        self.mySpeedDifferenceChangePerceptionThreshold = value;
     }
 
     /// C++: `void MSSimpleDriverState::setHeadwayChangePerceptionThreshold(const double)`
@@ -326,7 +385,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_headway_change_perception_threshold(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setHeadwayChangePerceptionThreshold")
+        self.myHeadwayChangePerceptionThreshold = value;
     }
 
     /// C++: `void MSSimpleDriverState::setMaximalReactionTime(const double)`
@@ -336,7 +395,8 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_maximal_reaction_time(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setMaximalReactionTime")
+        self.myMaximalReactionTime = value;
+        self.update_reaction_time();
     }
 
     /// C++: `void MSSimpleDriverState::setOriginalReactionTime(const double)`
@@ -346,7 +406,8 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_original_reaction_time(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setOriginalReactionTime")
+        self.myOriginalReactionTime = value;
+        self.update_reaction_time();
     }
 
     /// C++: `void MSSimpleDriverState::setAwareness(const double)`
@@ -367,7 +428,14 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn set_awareness(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setAwareness")
+        assert!(value >= 0.);
+        assert!(value <= 1.);
+        // MAX2(value, myMinAwareness)
+        self.myAwareness = if value > self.myMinAwareness { value } else { self.myMinAwareness };
+        if self.myAwareness == 1. {
+            self.myError.set_state(0.);
+        }
+        self.update_reaction_time();
     }
 
     /// C++: `void MSSimpleDriverState::setErrorState(const double)`
@@ -376,7 +444,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_error_state(&mut self, state: f64) {
-        todo!("port MSSimpleDriverState::setErrorState")
+        self.myError.set_state(state);
     }
 
     /// C++: `void MSSimpleDriverState::setErrorTimeScale(const double)`
@@ -385,7 +453,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_error_time_scale(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setErrorTimeScale")
+        self.myError.set_time_scale(value);
     }
 
     /// C++: `void MSSimpleDriverState::setErrorNoiseIntensity(const double)`
@@ -394,7 +462,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn set_error_noise_intensity(&mut self, value: f64) {
-        todo!("port MSSimpleDriverState::setErrorNoiseIntensity")
+        self.myError.set_noise_intensity(value);
     }
 
     /// C++: `void MSSimpleDriverState::update()`
@@ -422,7 +490,10 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self) {
-        todo!("port MSSimpleDriverState::update")
+        self.update_step_duration();
+        self.update_error();
+        self.update_reaction_time();
+        self.update_assumed_gaps();
     }
 
     /// C++: `void MSSimpleDriverState::updateAssumedGaps()`
@@ -445,7 +516,14 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn update_assumed_gaps(&mut self) {
-        todo!("port MSSimpleDriverState::updateAssumedGaps")
+        for (objID, gap) in self.myAssumedGap.iter_mut() {
+            // update the assumed gap with the last perceived speed difference, or assume the object is not moving
+            let assumedSpeedDiff = match self.myLastPerceivedSpeedDifference.get(objID) {
+                Some(d) => *d,
+                None => -self.myVehicle.get_speed(),
+            };
+            *gap += speed2dist(assumedSpeedDiff);
+        }
     }
 
     /// C++: `double MSSimpleDriverState::getPerceivedOwnSpeed(double)`
@@ -456,7 +534,7 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn get_perceived_own_speed(&mut self, speed: f64) -> f64 {
-        todo!("port MSSimpleDriverState::getPerceivedOwnSpeed")
+        speed + self.myFreeSpeedErrorCoefficient * self.myError.get_state() * speed.sqrt()
     }
 
     /// C++: `double MSSimpleDriverState::getPerceivedSpeedDifference(const double, const double, const void *)`
@@ -502,7 +580,19 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn get_perceived_speed_difference(&mut self, trueSpeedDifference: f64, trueGap: f64, objID: Ptr<()>) -> f64 {
-        todo!("port MSSimpleDriverState::getPerceivedSpeedDifference")
+        let perceivedSpeedDifference = trueSpeedDifference + self.mySpeedDifferenceErrorCoefficient * self.myError.get_state() * trueGap;
+        let significant = match self.myLastPerceivedSpeedDifference.get(&objID) {
+            None => true,
+            Some(&last) => (perceivedSpeedDifference - last).abs() > self.mySpeedDifferenceChangePerceptionThreshold * trueGap * (1.0 - self.myAwareness),
+        };
+        if significant {
+            // new perceived speed difference differs significantly from the previous
+            self.myLastPerceivedSpeedDifference.insert(objID, perceivedSpeedDifference);
+            perceivedSpeedDifference
+        } else {
+            // new perceived speed difference doesn't differ significantly from the previous
+            self.myLastPerceivedSpeedDifference[&objID]
+        }
     }
 
     /// C++: `double MSSimpleDriverState::getPerceivedHeadway(const double, const void *)`
@@ -548,7 +638,19 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn get_perceived_headway(&mut self, trueGap: f64, objID: Ptr<()>) -> f64 {
-        todo!("port MSSimpleDriverState::getPerceivedHeadway")
+        let perceivedGap = trueGap + self.myHeadwayErrorCoefficient * self.myError.get_state() * trueGap;
+        let significant = match self.myAssumedGap.get(&objID) {
+            None => true,
+            Some(&gap) => (perceivedGap - gap).abs() > self.myHeadwayChangePerceptionThreshold * trueGap * (1.0 - self.myAwareness),
+        };
+        if significant {
+            // new perceived gap differs significantly from the previous
+            self.myAssumedGap.insert(objID, perceivedGap);
+            perceivedGap
+        } else {
+            // new perceived gap doesn't differ significantly from the previous
+            self.myAssumedGap[&objID]
+        }
     }
 
     /// C++: `void MSSimpleDriverState::lockDebug()`
@@ -558,7 +660,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn lock_debug(&mut self) {
-        todo!("port MSSimpleDriverState::lockDebug")
+        self.myDebugLock = true;
     }
 
     /// C++: `void MSSimpleDriverState::unlockDebug()`
@@ -567,7 +669,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn unlock_debug(&mut self) {
-        todo!("port MSSimpleDriverState::unlockDebug")
+        self.myDebugLock = false;
     }
 
     /// C++: `bool MSSimpleDriverState::debugLocked() const` [const]
@@ -576,7 +678,7 @@ impl MSSimpleDriverState {
     //     }
     #[allow(unused_variables)]
     pub fn debug_locked(&self) -> bool {
-        todo!("port MSSimpleDriverState::debugLocked")
+        self.myDebugLock
     }
 
     /// C++: `void MSSimpleDriverState::updateStepDuration()` [private]
@@ -587,7 +689,8 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn update_step_duration(&mut self) {
-        todo!("port MSSimpleDriverState::updateStepDuration")
+        self.myStepDuration = sim_time() - self.myLastUpdateTime;
+        self.myLastUpdateTime = sim_time();
     }
 
     /// C++: `void MSSimpleDriverState::updateError()` [private]
@@ -603,7 +706,13 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn update_error(&mut self) {
-        todo!("port MSSimpleDriverState::updateError")
+        if self.myAwareness == 1.0 || self.myAwareness == 0.0 {
+            self.myError.set_state(0.);
+        } else {
+            self.myError.set_time_scale(self.myErrorTimeScaleCoefficient * self.myAwareness);
+            self.myError.set_noise_intensity(self.myErrorNoiseIntensityCoefficient * (1. - self.myAwareness));
+            self.myError.step(self.myStepDuration);
+        }
     }
 
     /// C++: `void MSSimpleDriverState::updateReactionTime()` [private]
@@ -622,7 +731,15 @@ impl MSSimpleDriverState {
     // }
     #[allow(unused_variables)]
     pub fn update_reaction_time(&mut self) {
-        todo!("port MSSimpleDriverState::updateReactionTime")
+        if self.myAwareness == 1.0 || self.myAwareness == 0.0 {
+            self.myActionStepLength = self.myOriginalReactionTime;
+        } else {
+            let theta = (self.myAwareness - self.myMinAwareness) / (1.0 - self.myMinAwareness);
+            self.myActionStepLength = self.myOriginalReactionTime + theta * (self.myMaximalReactionTime - self.myOriginalReactionTime);
+            // Round to multiple of simstep length
+            let (_, quotient) = remquo(self.myActionStepLength, ts());
+            self.myActionStepLength = ts() * (if quotient > 1 { quotient } else { 1 }) as f64;
+        }
     }
 
 }
@@ -641,6 +758,11 @@ pub struct OUProcess {
 // C++ static members of OUProcess (port as module-level statics, see AGENTS.md):
 //   static SumoRNG OUProcess::myRNG;
 
+thread_local! {
+    /// OUProcess::myRNG, seeded as in C++ (`SumoRNG OUProcess::myRNG("driverstate")`)
+    static OU_PROCESS_RNG: std::cell::RefCell<SumoRNG> = std::cell::RefCell::new(SumoRNG::new("driverstate"));
+}
+
 impl OUProcess {
     /// C++: `void OUProcess::OUProcess(double, double, double)`
     /// constructor
@@ -650,7 +772,11 @@ impl OUProcess {
     //       myNoiseIntensity(noiseIntensity) {}
     #[allow(unused_variables)]
     pub fn new(initialState: f64, timeScale: f64, noiseIntensity: f64) -> Self {
-        todo!("port OUProcess::OUProcess")
+        OUProcess {
+            myState: initialState,
+            myTimeScale: timeScale,
+            myNoiseIntensity: noiseIntensity,
+        }
     }
 
     /// C++: `void OUProcess::~OUProcess() noexcept`
@@ -658,7 +784,7 @@ impl OUProcess {
     // OUProcess::~OUProcess() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port OUProcess::~OUProcess")
+        // C++ destructor body is empty
     }
 
     /// C++: `void OUProcess::step(double)`
@@ -675,7 +801,8 @@ impl OUProcess {
     // }
     #[allow(unused_variables)]
     pub fn step(&mut self, dt: f64) {
-        todo!("port OUProcess::step")
+        let noise = OU_PROCESS_RNG.with(|r| r.borrow_mut().rand_norm(0., 1.));
+        self.myState = (-dt / self.myTimeScale).exp() * self.myState + self.myNoiseIntensity * (2. * dt / self.myTimeScale).sqrt() * noise;
     }
 
     /// C++: `double OUProcess::step(double, double, double, double)` [static]
@@ -687,7 +814,8 @@ impl OUProcess {
     // }
     #[allow(unused_variables)]
     pub fn step_2(state: f64, dt: f64, timeScale: f64, noiseIntensity: f64) -> f64 {
-        todo!("port OUProcess::step")
+        let noise = OU_PROCESS_RNG.with(|r| r.borrow_mut().rand_norm(0., 1.));
+        (-dt / timeScale).exp() * state + noiseIntensity * (2. * dt / timeScale).sqrt() * noise
     }
 
     /// C++: `void OUProcess::setTimeScale(double)`
@@ -697,7 +825,7 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn set_time_scale(&mut self, timeScale: f64) {
-        todo!("port OUProcess::setTimeScale")
+        self.myTimeScale = timeScale;
     }
 
     /// C++: `void OUProcess::setNoiseIntensity(double)`
@@ -707,7 +835,7 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn set_noise_intensity(&mut self, noiseIntensity: f64) {
-        todo!("port OUProcess::setNoiseIntensity")
+        self.myNoiseIntensity = noiseIntensity;
     }
 
     /// C++: `void OUProcess::setState(double)`
@@ -717,7 +845,7 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn set_state(&mut self, state: f64) {
-        todo!("port OUProcess::setState")
+        self.myState = state;
     }
 
     /// C++: `double OUProcess::getNoiseIntensity() const` [const]
@@ -726,7 +854,7 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn get_noise_intensity(&self) -> f64 {
-        todo!("port OUProcess::getNoiseIntensity")
+        self.myNoiseIntensity
     }
 
     /// C++: `double OUProcess::getTimeScale() const` [const]
@@ -735,7 +863,7 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_scale(&self) -> f64 {
-        todo!("port OUProcess::getTimeScale")
+        self.myTimeScale
     }
 
     /// C++: `double OUProcess::getState() const` [const]
@@ -746,7 +874,7 @@ impl OUProcess {
     // }
     #[allow(unused_variables)]
     pub fn get_state(&self) -> f64 {
-        todo!("port OUProcess::getState")
+        self.myState
     }
 
     /// C++: `SumoRNG * OUProcess::getRNG()` [static]
@@ -755,8 +883,33 @@ impl OUProcess {
     //     }
     #[allow(unused_variables)]
     pub fn get_rng() -> Ptr<SumoRNG> {
-        todo!("port OUProcess::getRNG")
+        Ptr::from_raw(OU_PROCESS_RNG.with(|r| r.as_ptr()))
     }
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remquo_matches_c_semantics() {
+        // 5.5 / 2 = 2.75 -> n = 3, remainder -0.5
+        assert_eq!(remquo(5.5, 2.0), (-0.5, 3));
+        // 3 / 2 = 1.5 -> ties to even: n = 2, remainder -1
+        assert_eq!(remquo(3.0, 2.0), (-1.0, 2));
+        // -5.5 / 2 = -2.75 -> n = -3, remainder 0.5
+        assert_eq!(remquo(-5.5, 2.0), (0.5, -3));
+    }
+
+    #[test]
+    fn ou_process_accessors() {
+        let mut p = OUProcess::new(0., 1., 1.);
+        p.set_state(0.5);
+        p.set_time_scale(2.0);
+        p.set_noise_intensity(0.25);
+        assert_eq!(p.get_state(), 0.5);
+        assert_eq!(p.get_time_scale(), 2.0);
+        assert_eq!(p.get_noise_intensity(), 0.25);
+    }
+}
