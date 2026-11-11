@@ -72,7 +72,7 @@ pub fn string2time(r: &str) -> Result<SUMOTime, TimeFormatException> {
         }
         return Ok(time2steps(time));
     }
-    let hrt: Vec<&str> = r.split(':').filter(|s| !s.is_empty()).collect();
+    let hrt: Vec<&str> = r.split(':').collect(); // StringTokenizer keeps empty fields
     let t = |s: &str| string2time(s);
     match hrt.len() {
         3 => Ok(3600 * t(hrt[0])? + 60 * t(hrt[1])? + t(hrt[2])?),
@@ -87,7 +87,7 @@ pub fn is_time(r: &str) -> bool {
     if !r.contains(':') {
         return string_utils::to_double(r).map_or(false, |v| v <= steps2time(SUMOTIME_MAX));
     }
-    let hrt: Vec<&str> = r.split(':').filter(|s| !s.is_empty()).collect();
+    let hrt: Vec<&str> = r.split(':').collect(); // StringTokenizer keeps empty fields
     let int = |s: &str| string_utils::to_int(s).is_ok();
     let dbl = |s: &str| string_utils::to_double(s).is_ok();
     match hrt.len() {
@@ -175,5 +175,7 @@ mod tests {
         assert_eq!(time2string_hr(12_500, false), "12.50");
         assert_eq!(time2string_hr(3_725_000, true), "01:02:05");
         assert_eq!(time2string_hr(-1500, false), "-1.50");
+        assert!(string2time("1::2").is_err()); // empty field -> EmptyData, as in C++
+        assert!(!is_time("1::2"));
     }
 }
