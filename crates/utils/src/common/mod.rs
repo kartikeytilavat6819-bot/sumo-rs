@@ -1,5 +1,14 @@
+pub mod file_helpers;
+pub mod msg_handler;
+pub mod named;
+pub mod parameterised;
 pub mod rand_helper;
+pub mod rgb_color;
 pub mod std_defs;
+pub mod string_bijection;
+pub mod string_tokenizer;
 pub mod string_utils;
+pub mod sumo_vehicle_class;
 pub mod time;
 pub mod to_string;
+pub mod util_exceptions;
