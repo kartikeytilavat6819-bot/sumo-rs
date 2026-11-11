@@ -45,3 +45,12 @@ Rust equivalent:
   matching SUMO's phase structure (planMovements -> setJunctionApproaches -> executeMovements -> changeLanes).
 - `MSNet::getInstance()` becomes an explicit `&MSNet` context parameter, not a global.
 - Static config (`MSGlobals`, `OptionsCont`) stays global (read-mostly) via getter functions.
+
+## Prior art (surveyed 2026-11-11)
+
+No faithful SUMO port in Rust exists. Useful references:
+
+- traci-rs (github.com/Fundacio-i2CAT/traci-rs, EPL-2.0): Rust TraCI client, to use as a test client for our TraCI server.
+- A/B Street (github.com/a-b-street/abstreet): mature Rust traffic sim, typed-ID arenas like our design.
+- sumo-types (crates.io): .net/.rou/.add.xml structs; maybe a cross-check for our loaders.
+- Crates: quick-xml (SAX), flate2 (gzip), rstar (R-tree), proj (needs PROJ C lib), egui / iced / slint (GUI, to replace FOX).
