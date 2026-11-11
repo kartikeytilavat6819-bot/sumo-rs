@@ -29,7 +29,7 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLCongestionPolicy::MSSOTLCongestionPolicy")
+        Self { base: MSSOTLPolicy::new("Congestion".to_string(), parameters) }
     }
 
     /// C++: `void MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(MSSOTLPolicyDesirability *)`
@@ -40,7 +40,9 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_2(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
-        todo!("port MSSOTLCongestionPolicy::MSSOTLCongestionPolicy")
+        let mut base = MSSOTLPolicy::new_2("Congestion".to_string(), desirabilityAlgorithm);
+        base.get_desirability_algorithm().m().set_key_prefix("CONGESTION".to_string());
+        Self { base }
     }
 
     /// C++: `void MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(MSSOTLPolicyDesirability *, const Parameterised::Map &)`
@@ -53,7 +55,9 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLCongestionPolicy::MSSOTLCongestionPolicy")
+        let mut base = MSSOTLPolicy::new_3("Congestion".to_string(), desirabilityAlgorithm, parameters);
+        base.get_desirability_algorithm().m().set_key_prefix("CONGESTION".to_string());
+        Self { base }
     }
 
     /// C++: `int MSSOTLCongestionPolicy::decideNextPhase(SUMOTime, const MSPhaseDefinition *, int, int, bool, bool, int)` [virtual]
@@ -80,7 +84,21 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
-        todo!("port MSSOTLCongestionPolicy::decideNextPhase")
+        if stage.is_commit() {
+            // decide which chain to activate. Gotta work on this
+            return currentPhaseIndex;
+        }
+        if stage.is_transient() {
+            // If the junction was in a transient step
+            // => go to the next step and return computeReturnTime()
+            return currentPhaseIndex + 1;
+        }
+        if stage.is_decisional() {
+            if self.can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount) {
+                return currentPhaseIndex + 1;
+            }
+        }
+        currentPhaseIndex
     }
 
     /// C++: `bool MSSOTLCongestionPolicy::canRelease(SUMOTime, bool, bool, const MSPhaseDefinition *, int)` [virtual]
@@ -90,7 +108,7 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port MSSOTLCongestionPolicy::canRelease")
+        elapsed >= stage.minDuration
     }
 
 }
