@@ -2,6 +2,10 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ #defines from microsim/cfmodels/CC_Const.h
+const FOLM_PAR_TAU: &str = "tau_s";
+const FOLM_PAR_DT: &str = "dt_s";
+
 /// This model models actuation lags using a first order lag, i.e., a first order low pass filter with a time constant tau
 /// C++ class `FirstOrderLagModel` (microsim/engine/FirstOrderLagModel.h)
 pub struct FirstOrderLagModel {
@@ -34,7 +38,8 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn compute_parameters(&mut self) {
-        todo!("port FirstOrderLagModel::computeParameters")
+        self.alpha = self.dt_s / (self.tau_s + self.dt_s);
+        self.oneMinusAlpha = 1.0 - self.alpha;
     }
 
     /// C++: `void FirstOrderLagModel::FirstOrderLagModel()`
@@ -45,14 +50,23 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port FirstOrderLagModel::FirstOrderLagModel")
+        let mut this = FirstOrderLagModel {
+            base: GenericEngineModel::new(),
+            tau_s: 0.5,
+            dt_s: 0.01,
+            alpha: 0.0,
+            oneMinusAlpha: 0.0,
+        };
+        this.className = "FirstOrderLagModel".to_string();
+        this.compute_parameters();
+        this
     }
 
     /// C++: `void FirstOrderLagModel::~FirstOrderLagModel() noexcept` [virtual]
     // FirstOrderLagModel::~FirstOrderLagModel() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FirstOrderLagModel::~FirstOrderLagModel")
+        // C++ destructor body is empty
     }
 
     /// C++: `double FirstOrderLagModel::getRealAcceleration(double, double, double, SUMOTime)` [virtual]
@@ -70,7 +84,12 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn get_real_acceleration(&mut self, speed_mps: f64, accel_mps2: f64, reqAccel_mps2: f64, timeStep: SUMOTime) -> f64 {
-        todo!("port FirstOrderLagModel::getRealAcceleration")
+        // std::min(maxAcceleration, std::max(-maxDeceleration, v)), with the same comparisons as the C++ std functions
+        let v = self.alpha * reqAccel_mps2 + self.oneMinusAlpha * accel_mps2;
+        let lo = -self.maxDeceleration_mpsps;
+        let m = if lo < v { v } else { lo };
+        let hi = self.maxAcceleration_mpsps;
+        if m < hi { m } else { hi }
     }
 
     /// C++: `void FirstOrderLagModel::loadParameters(const Parameterised::Map &)` [virtual]
@@ -82,7 +101,13 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn load_parameters(&mut self, parameters: &Unmapped /* Parameterised::Map */) {
-        todo!("port FirstOrderLagModel::loadParameters")
+        let mut tau = self.tau_s;
+        self.parse_parameter(parameters, FOLM_PAR_TAU.to_string(), &mut tau);
+        self.tau_s = tau;
+        let mut dt = self.dt_s;
+        self.parse_parameter(parameters, FOLM_PAR_DT.to_string(), &mut dt);
+        self.dt_s = dt;
+        self.compute_parameters();
     }
 
     /// C++: `void FirstOrderLagModel::setParameter(const std::string, const std::string &)` [virtual]
@@ -93,7 +118,7 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, parameter: String, value: &str) {
-        todo!("port FirstOrderLagModel::setParameter")
+        // C++ body is empty (parameters are unused)
     }
 
     /// C++: `void FirstOrderLagModel::setParameter(const std::string, double)` [virtual]
@@ -108,7 +133,13 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter_2(&mut self, parameter: String, value: f64) {
-        todo!("port FirstOrderLagModel::setParameter")
+        if parameter == FOLM_PAR_TAU {
+            self.tau_s = value;
+        }
+        if parameter == FOLM_PAR_DT {
+            self.dt_s = value;
+        }
+        self.compute_parameters();
     }
 
     /// C++: `void FirstOrderLagModel::setParameter(const std::string, int)` [virtual]
@@ -118,7 +149,7 @@ impl FirstOrderLagModel {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter_3(&mut self, parameter: String, value: i32) {
-        todo!("port FirstOrderLagModel::setParameter")
+        // C++ body is empty (parameters are unused)
     }
 
 }

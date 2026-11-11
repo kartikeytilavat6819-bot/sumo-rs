@@ -39,7 +39,13 @@ impl<T, R> FuncBinding_IntParam<T, R> {
     //         myParam(param) {}
     #[allow(unused_variables)]
     pub fn new(source: Ptr<T>, operation: SUMOAbstractRouter_Operation, param: i32) -> Self {
-        todo!("port FuncBinding_IntParam::FuncBinding_IntParam<T, R>")
+        Self {
+            base: (),
+            mySource: source,
+            myOperation: operation,
+            myParam: param,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FuncBinding_IntParam::~FuncBinding_IntParam<T, R>()`
@@ -47,7 +53,7 @@ impl<T, R> FuncBinding_IntParam<T, R> {
     // ~FuncBinding_IntParam() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FuncBinding_IntParam::~FuncBinding_IntParam<T, R>")
+        // C++ destructor body is empty
     }
 
     /// C++: `double FuncBinding_IntParam::getValue() const` [const]
@@ -56,7 +62,8 @@ impl<T, R> FuncBinding_IntParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn get_value(&self) -> f64 {
-        todo!("port FuncBinding_IntParam::getValue")
+        // shortcut: needs the pointer-to-member Operation (Unmapped) taking an int parameter, upgrade when SUMOAbstractRouter_Operation is mapped
+        panic!("FuncBinding_IntParam::getValue is not ported yet")
     }
 
     /// C++: `ValueSource<R> * FuncBinding_IntParam::copy() const` [const]
@@ -66,7 +73,8 @@ impl<T, R> FuncBinding_IntParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn copy(&self) -> Ptr<Unmapped /* ValueSource<R> */> {
-        todo!("port FuncBinding_IntParam::copy")
+        // shortcut: ValueSource<R> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("FuncBinding_IntParam::copy is not ported yet")
     }
 
     /// C++: `ValueSource<double> * FuncBinding_IntParam::makedoubleReturningCopy() const` [const]
@@ -75,7 +83,8 @@ impl<T, R> FuncBinding_IntParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn makedouble_returning_copy(&self) -> Ptr<Unmapped /* ValueSource<double> */> {
-        todo!("port FuncBinding_IntParam::makedoubleReturningCopy")
+        // shortcut: ValueSource<double> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("FuncBinding_IntParam::makedoubleReturningCopy is not ported yet")
     }
 
 }

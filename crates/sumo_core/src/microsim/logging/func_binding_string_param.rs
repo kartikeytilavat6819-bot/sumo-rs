@@ -39,7 +39,13 @@ impl<T, R> FuncBinding_StringParam<T, R> {
     //         myParam(param) {}
     #[allow(unused_variables)]
     pub fn new(source: Ptr<T>, operation: SUMOAbstractRouter_Operation, param: &i32) -> Self {
-        todo!("port FuncBinding_StringParam::FuncBinding_StringParam<T, R>")
+        Self {
+            base: (),
+            mySource: source,
+            myOperation: operation,
+            myParam: *param,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FuncBinding_StringParam::~FuncBinding_StringParam<T, R>()`
@@ -47,7 +53,7 @@ impl<T, R> FuncBinding_StringParam<T, R> {
     // ~FuncBinding_StringParam() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FuncBinding_StringParam::~FuncBinding_StringParam<T, R>")
+        // C++ destructor body is empty
     }
 
     /// C++: `R FuncBinding_StringParam::getValue() const` [const]
@@ -56,7 +62,8 @@ impl<T, R> FuncBinding_StringParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn get_value(&self) -> R {
-        todo!("port FuncBinding_StringParam::getValue")
+        // shortcut: needs the pointer-to-member Operation (Unmapped) taking a const int& parameter, upgrade when SUMOAbstractRouter_Operation is mapped
+        panic!("FuncBinding_StringParam::getValue is not ported yet")
     }
 
     /// C++: `ValueSource<R> * FuncBinding_StringParam::copy() const` [const]
@@ -66,7 +73,8 @@ impl<T, R> FuncBinding_StringParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn copy(&self) -> Ptr<Unmapped /* ValueSource<R> */> {
-        todo!("port FuncBinding_StringParam::copy")
+        // shortcut: ValueSource<R> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("FuncBinding_StringParam::copy is not ported yet")
     }
 
     /// C++: `ValueSource<double> * FuncBinding_StringParam::makedoubleReturningCopy() const` [const]
@@ -75,7 +83,8 @@ impl<T, R> FuncBinding_StringParam<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn makedouble_returning_copy(&self) -> Ptr<Unmapped /* ValueSource<double> */> {
-        todo!("port FuncBinding_StringParam::makedoubleReturningCopy")
+        // C++ throws the int 1 here
+        panic!("FuncBinding_StringParam::makedoubleReturningCopy throws 1 (C++ `throw 1`)")
     }
 
 }

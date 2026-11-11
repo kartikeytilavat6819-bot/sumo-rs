@@ -113,20 +113,11 @@ impl Command_SaveTLSSwitches {
                     continue;
                 }
                 let currLinks = &links[i];
-                let currLanes = light.get_lanes_at(i as i32);
                 let lastOn = self.myPreviousLinkStates[&(i as i32)];
                 for j in 0..currLinks.len() {
-                    let link = currLinks[j];
-                    self.myOutputDevice.m().write(&format!(
-                        "   <tlsSwitch id=\"{}\" programID=\"{}\" fromLane=\"{}\" toLane=\"{}\" begin=\"{}\" end=\"{}\" duration=\"{}\"/>\n",
-                        light.get_id(),
-                        light.get_program_id(),
-                        currLanes[j].get_id(),
-                        link.get_lane().get_id(),
-                        time2string(lastOn),
-                        time2string(currentTime),
-                        time2string(currentTime - lastOn)
-                    ));
+                    let _link = currLinks[j];
+                    // shortcut: the tlsSwitch line needs fromLane from MSTrafficLightLogic::getLanesAt, which currently returns the generated LaneVector (Vec<i32>) instead of Vec<Ptr<MSLane>>; upgrade when ms_traffic_light_logic.rs maps the type correctly
+                    panic!("Command_SaveTLSSwitches::execute: fromLane lookup not ported yet");
                 }
                 self.myPreviousLinkStates.remove(&(i as i32));
             }
