@@ -1,0 +1,8 @@
+crates/sumo_core/src/microsim/lcmodels/mslcm_lc2013_cc.rs
+crates/sumo_core/src/microsim/lcmodels/mslcm_sl2015.rs
+crates/sumo_core/src/microsim/command_route_replacement.rs
+crates/sumo_core/src/microsim/ms_base_vehicle.rs
+crates/sumo_core/src/microsim/ms_bit_set_logic.rs
+crates/sumo_core/src/microsim/ms_driver_state.rs
+crates/sumo_core/src/microsim/ms_dynamic_shape_updater.rs
+crates/sumo_core/src/microsim/ms_edge.rs

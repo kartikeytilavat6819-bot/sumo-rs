@@ -32,3 +32,21 @@ same output text, same floating-point results.
 - Commit in your worktree (don't push). Commit message: `Port <module>`, last line
   the Co-Authored-By line your harness gives you (naming the model you run on). Don't edit PORTING.md.
 - Final report (under 150 words): files ported, every `shortcut:` you left and why, commit hash, branch.
+
+## Filling the generated skeleton (crates/sumo_core)
+
+- Your batch is a list of files in `tools/batches/batch_NN.txt`. Edit ONLY those files.
+- Each `todo!("port X::y")` has the C++ body pasted as `//` comments right above it. Replace the
+  `todo!()` with a faithful translation; keep the C++ comment block above it (reviewers diff against it).
+- Types: C++ pointers are `Ptr<T>` (utils::common::ptr) — copy it freely, call methods through it,
+  use `.m()` for mutable access, `.is_null()` for null checks. `Unmapped` is a placeholder for a C++ type
+  the generator couldn't map: replace it in YOUR files with the right Rust type when you need it.
+- Calling other classes is fine even if their bodies are still `todo!()` — the signatures exist.
+- Don't change `pub` signatures unless you must; if you do, list every changed signature in your report.
+- C++ static members are listed in a comment block under each struct: port them as module-level
+  `thread_local!`/`static` items in the same file.
+- Virtual methods: implement them on the struct as generated; overriding behaviour in subclasses
+  is noted with `[virtual]` in the doc line. Keep the method on the subclass too.
+- Commit after every 2-3 files (`git add -A && git commit -m "Fill <files>"`), so progress survives if
+  you run out of budget. It's fine not to finish the whole batch — report what's left.
+- Check with `cargo check -p sumo_core` (shared target dir, see MEMORY above).

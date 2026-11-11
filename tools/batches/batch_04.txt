@@ -1,0 +1,15 @@
+crates/sumo_core/src/utils/handlers/general_handler.rs
+crates/sumo_core/src/utils/handlers/mean_data_handler.rs
+crates/sumo_core/src/utils/handlers/route_handler.rs
+crates/sumo_core/src/utils/handlers/template_handler.rs
+crates/sumo_core/src/netbuild/nb_algorithms.rs
+crates/sumo_core/src/netbuild/nb_algorithms_railway.rs
+crates/sumo_core/src/netbuild/nb_algorithms_ramps.rs
+crates/sumo_core/src/netbuild/nb_capacity2_lanes.rs
+crates/sumo_core/src/netbuild/nb_connection.rs
+crates/sumo_core/src/netbuild/nb_connection_defs.rs
+crates/sumo_core/src/netbuild/nb_cont.rs
+crates/sumo_core/src/netbuild/nb_cont_helper.rs
+crates/sumo_core/src/netbuild/nb_district.rs
+crates/sumo_core/src/netbuild/nb_district_cont.rs
+crates/sumo_core/src/netbuild/nb_edge.rs

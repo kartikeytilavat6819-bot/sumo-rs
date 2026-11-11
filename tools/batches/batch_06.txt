@@ -1,0 +1,8 @@
+crates/sumo_core/src/netbuild/nb_node_cont.rs
+crates/sumo_core/src/netbuild/nb_node_shape_computer.rs
+crates/sumo_core/src/netbuild/nb_own_tl_def.rs
+crates/sumo_core/src/netbuild/nb_parking.rs
+crates/sumo_core/src/netbuild/nb_request.rs
+crates/sumo_core/src/netbuild/nb_sign.rs
+crates/sumo_core/src/netbuild/nb_traffic_light_definition.rs
+crates/sumo_core/src/netbuild/nb_traffic_light_logic.rs
