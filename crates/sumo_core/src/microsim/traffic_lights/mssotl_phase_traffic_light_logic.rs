@@ -36,7 +36,9 @@ impl MSSOTLPhaseTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLPhaseTrafficLightLogic::MSSOTLPhaseTrafficLightLogic")
+        let base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SOTL_PHASE, phases, step, delay, parameters);
+        utils::common::msg_handler::write_message(&format!("*** Intersection {} will run using MSSOTLPhaseTrafficLightLogic ***", id));
+        Self { base }
     }
 
     /// C++: `void MSSOTLPhaseTrafficLightLogic::MSSOTLPhaseTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const Phases &, int, SUMOTime, const Parameterised::Map &, MSSOTLSensors *)`
@@ -51,7 +53,7 @@ impl MSSOTLPhaseTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */, sensors: Ptr<MSSOTLSensors>) -> Self {
-        todo!("port MSSOTLPhaseTrafficLightLogic::MSSOTLPhaseTrafficLightLogic")
+        Self { base: MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, TrafficLightType::SOTL_PHASE, phases, step, delay, parameters, sensors) }
     }
 
     /// C++: `bool MSSOTLPhaseTrafficLightLogic::canRelease()` [virtual, protected]
@@ -63,7 +65,10 @@ impl MSSOTLPhaseTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self) -> bool {
-        todo!("port MSSOTLPhaseTrafficLightLogic::canRelease")
+        if self.get_current_phase_elapsed() >= self.get_current_phase_def().minDuration {
+            return self.is_threshold_passed();
+        }
+        false
     }
 
 }

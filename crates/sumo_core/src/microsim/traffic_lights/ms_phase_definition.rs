@@ -49,6 +49,10 @@ pub struct MSPhaseDefinition {
 // C++ static members of MSPhaseDefinition (port as module-level statics, see AGENTS.md):
 //   static const SUMOTime MSPhaseDefinition::UNSPECIFIED_DURATION;
 //   static const SUMOTime MSPhaseDefinition::OVERRIDE_DURATION;
+/// C++ MSPhaseDefinition::UNSPECIFIED_DURATION
+pub const UNSPECIFIED_DURATION: SUMOTime = -1;
+/// C++ MSPhaseDefinition::OVERRIDE_DURATION = TIME2STEPS(-1)
+pub const OVERRIDE_DURATION: SUMOTime = -1000;
 
 impl MSPhaseDefinition {
     /// C++: `void MSPhaseDefinition::MSPhaseDefinition(SUMOTime, const std::string &, const std::string &)`
@@ -73,7 +77,28 @@ impl MSPhaseDefinition {
     //     {}
     #[allow(unused_variables)]
     pub fn new(_duration: SUMOTime, state: &str, _name: &str) -> Self {
-        todo!("port MSPhaseDefinition::MSPhaseDefinition")
+        Self {
+            duration: _duration,
+            lastDuration: UNSPECIFIED_DURATION,
+            minDuration: _duration,
+            maxDuration: _duration,
+            earliestEnd: UNSPECIFIED_DURATION,
+            latestEnd: UNSPECIFIED_DURATION,
+            earlyTarget: String::new(),
+            finalTarget: String::new(),
+            myLastSwitch: UNSPECIFIED_DURATION,
+            myLastEnd: UNSPECIFIED_DURATION,
+            nextPhases: Vec::new(),
+            name: _name.to_string(),
+            yellow: UNSPECIFIED_DURATION,
+            red: UNSPECIFIED_DURATION,
+            vehext: UNSPECIFIED_DURATION,
+            myTransientNotDecisional: false,
+            myCommit: false,
+            myUndefined: false,
+            myTargetLaneSet: Vec::new(),
+            myState: state.to_string(),
+        }
     }
 
     /// C++: `void MSPhaseDefinition::~MSPhaseDefinition() noexcept` [virtual]
@@ -81,7 +106,7 @@ impl MSPhaseDefinition {
     // virtual ~MSPhaseDefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPhaseDefinition::~MSPhaseDefinition")
+        // C++ destructor has an empty body; Rust drops the fields automatically.
     }
 
     /// C++: `const std::string & MSPhaseDefinition::getState() const` [const]
@@ -91,7 +116,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_state(&self) -> &str {
-        todo!("port MSPhaseDefinition::getState")
+        &self.myState
     }
 
     /// C++: `void MSPhaseDefinition::setState(const std::string &)`
@@ -100,7 +125,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_state(&mut self, _state: &str) {
-        todo!("port MSPhaseDefinition::setState")
+        self.myState = _state.to_string();
     }
 
     /// C++: `const std::vector<std::string> & MSPhaseDefinition::getTargetLaneSet() const` [const]
@@ -109,7 +134,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_target_lane_set(&self) -> &Vec<String> {
-        todo!("port MSPhaseDefinition::getTargetLaneSet")
+        &self.myTargetLaneSet
     }
 
     /// C++: `const std::vector<int> & MSPhaseDefinition::getNextPhases() const` [const]
@@ -118,7 +143,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_phases(&self) -> &Vec<i32> {
-        todo!("port MSPhaseDefinition::getNextPhases")
+        &self.nextPhases
     }
 
     /// C++: `const std::string & MSPhaseDefinition::getName() const` [const]
@@ -127,7 +152,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> &str {
-        todo!("port MSPhaseDefinition::getName")
+        &self.name
     }
 
     /// C++: `void MSPhaseDefinition::setName(const std::string &)`
@@ -136,7 +161,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_name(&mut self, _name: &str) {
-        todo!("port MSPhaseDefinition::setName")
+        self.name = _name.to_string();
     }
 
     /// C++: `bool MSPhaseDefinition::isGreenPhase() const` [const]
@@ -152,7 +177,13 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_green_phase(&self) -> bool {
-        todo!("port MSPhaseDefinition::isGreenPhase")
+        if !self.myState.contains(['g', 'G']) {
+            return false;
+        }
+        if self.myState.contains(['y', 'Y']) {
+            return false;
+        }
+        true
     }
 
     /// C++: `bool MSPhaseDefinition::isAllRedPhase() const` [const]
@@ -162,7 +193,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_all_red_phase(&self) -> bool {
-        todo!("port MSPhaseDefinition::isAllRedPhase")
+        self.myState.len() == self.myState.chars().filter(|c| *c == 'r').count()
     }
 
     /// C++: `LinkState MSPhaseDefinition::getSignalState(int) const` [const]
@@ -172,7 +203,8 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_signal_state(&self, pos: i32) -> LinkState {
-        todo!("port MSPhaseDefinition::getSignalState")
+        // C++ `char` is signed, so the cast goes through i8.
+        (self.myState.as_bytes()[pos as usize] as i8) as LinkState
     }
 
     /// C++: `bool MSPhaseDefinition::isActuated() const` [const]
@@ -181,7 +213,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_actuated(&self) -> bool {
-        todo!("port MSPhaseDefinition::isActuated")
+        self.minDuration != self.maxDuration || self.minDuration == OVERRIDE_DURATION
     }
 
     /// C++: `bool MSPhaseDefinition::operator!=(const MSPhaseDefinition &)`
@@ -191,7 +223,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn ne_op(&mut self, pd: &MSPhaseDefinition) -> bool {
-        todo!("port MSPhaseDefinition::operator!=")
+        self.myState != pd.myState || self.name != pd.name
     }
 
     /// C++: `bool MSPhaseDefinition::isUndefined() const` [const]
@@ -200,7 +232,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_undefined(&self) -> bool {
-        todo!("port MSPhaseDefinition::isUndefined")
+        self.myUndefined
     }
 
     /// C++: `bool MSPhaseDefinition::isTarget() const` [const]
@@ -209,7 +241,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_target(&self) -> bool {
-        todo!("port MSPhaseDefinition::isTarget")
+        !self.myTargetLaneSet.is_empty()
     }
 
     /// C++: `bool MSPhaseDefinition::isTransient() const` [const]
@@ -218,7 +250,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_transient(&self) -> bool {
-        todo!("port MSPhaseDefinition::isTransient")
+        self.myTransientNotDecisional
     }
 
     /// C++: `bool MSPhaseDefinition::isDecisional() const` [const]
@@ -227,7 +259,7 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_decisional(&self) -> bool {
-        todo!("port MSPhaseDefinition::isDecisional")
+        !self.myTransientNotDecisional
     }
 
     /// C++: `bool MSPhaseDefinition::isCommit() const` [const]
@@ -236,8 +268,26 @@ impl MSPhaseDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn is_commit(&self) -> bool {
-        todo!("port MSPhaseDefinition::isCommit")
+        self.myCommit
     }
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn phase_predicates() {
+        let green = MSPhaseDefinition::new(5000, "GGrr", "");
+        assert!(green.is_green_phase());
+        assert!(!green.is_all_red_phase());
+        assert_eq!(green.get_signal_state(0), LINKSTATE_TL_GREEN_MAJOR);
+        assert!(!green.is_actuated());
+        let mixed = MSPhaseDefinition::new(5000, "GyG", "");
+        assert!(!mixed.is_green_phase());
+        let red = MSPhaseDefinition::new(1000, "rrr", "");
+        assert!(red.is_all_red_phase());
+        assert!(red.is_decisional());
+    }
+}

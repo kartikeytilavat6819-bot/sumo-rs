@@ -1,0 +1,10 @@
+    Blocking waiting for file lock on build directory
+   Compiling sumo_core v0.1.0 (C:\Users\karti\sumo-rs\.claude\worktrees\agent-a862f446a19b63d41\crates\sumo_core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 17s
+     Running unittests src\lib.rs (C:/Users/karti/sumo-rs-target\debug\deps\sumo_core-d162b4b2cdf5d908.exe)
+
+running 1 test
+test microsim::traffic_lights::ms_phase_definition::tests::phase_predicates ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

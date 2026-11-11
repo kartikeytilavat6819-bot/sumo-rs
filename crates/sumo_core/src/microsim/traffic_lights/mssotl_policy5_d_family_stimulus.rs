@@ -115,7 +115,11 @@ impl MSSOTLPolicy5DFamilyStimulus {
     // }
     #[allow(unused_variables)]
     pub fn get_message(&mut self) -> String {
-        todo!("port MSSOTLPolicy5DFamilyStimulus::getMessage")
+        let mut ot = String::new();
+        for i in 0..self.family.len() {
+            ot += &format!(" gaussian {}:{}", i, self.family[i].m().get_message());
+        }
+        ot
     }
 
     /// C++: `std::vector<MSSOTLPolicy5DStimulus *> MSSOTLPolicy5DFamilyStimulus::getFamilies()`
@@ -124,7 +128,7 @@ impl MSSOTLPolicy5DFamilyStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_families(&mut self) -> Vec<Ptr<MSSOTLPolicy5DStimulus>> {
-        todo!("port MSSOTLPolicy5DFamilyStimulus::getFamilies")
+        self.family.clone()
     }
 
     /// C++: `double MSSOTLPolicy5DFamilyStimulus::computeDesirability(double, double)` [virtual]
@@ -134,7 +138,7 @@ impl MSSOTLPolicy5DFamilyStimulus {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability(&mut self, vehInMeasure: f64, vehOutMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy5DFamilyStimulus::computeDesirability")
+        self.compute_desirability_2(vehInMeasure, vehOutMeasure, 0., 0.)
     }
 
     /// C++: `double MSSOTLPolicy5DFamilyStimulus::computeDesirability(double, double, double, double)` [virtual]
@@ -169,7 +173,14 @@ impl MSSOTLPolicy5DFamilyStimulus {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability_2(&mut self, vehInMeasure: f64, vehOutMeasure: f64, vehInDispersionMeasure: f64, vehOutDispersionMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy5DFamilyStimulus::computeDesirability")
+        let mut best_stimulus = -1.;
+        for it in self.family.iter() {
+            let temp_stimulus = it.m().compute_desirability_2(vehInMeasure, vehOutMeasure, vehInDispersionMeasure, vehOutDispersionMeasure);
+            if temp_stimulus > best_stimulus {
+                best_stimulus = temp_stimulus;
+            }
+        }
+        best_stimulus
     }
 
 }

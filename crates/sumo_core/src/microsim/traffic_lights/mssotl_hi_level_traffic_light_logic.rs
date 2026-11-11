@@ -37,7 +37,11 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::MSSOTLHiLevelTrafficLightLogic")
+        Self {
+            base: MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, parameters),
+            myPolicies: Vec::new(),
+            myCurrentPolicy: Ptr::null(),
+        }
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::MSSOTLHiLevelTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const TrafficLightType, const Phases &, int, SUMOTime, const Parameterised::Map &, MSSOTLSensors *)`
@@ -54,7 +58,11 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */, sensors: Ptr<MSSOTLSensors>) -> Self {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::MSSOTLHiLevelTrafficLightLogic")
+        Self {
+            base: MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, parameters, sensors),
+            myPolicies: Vec::new(),
+            myCurrentPolicy: Ptr::null(),
+        }
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::~MSSOTLHiLevelTrafficLightLogic() noexcept` [virtual]
@@ -65,7 +73,10 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::~MSSOTLHiLevelTrafficLightLogic")
+        for policy in self.myPolicies.iter() {
+            // C++ `delete policy`: policies are owned by this logic
+            unsafe { drop(Box::from_raw((*policy).as_raw())) };
+        }
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -75,7 +86,7 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::init")
+        self.base.init(nb);
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::addPolicy(MSSOTLPolicy *)`
@@ -84,7 +95,7 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn add_policy(&mut self, policy: Ptr<MSSOTLPolicy>) {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::addPolicy")
+        self.myPolicies.push(policy);
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::activate(MSSOTLPolicy *)`
@@ -93,14 +104,15 @@ impl MSSOTLHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate(&mut self, policy: Ptr<MSSOTLPolicy>) {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::activate")
+        self.myCurrentPolicy = policy;
     }
 
     /// C++: `void MSSOTLHiLevelTrafficLightLogic::decidePolicy()` [virtual, pure virtual, protected]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn decide_policy(&mut self) {
-        todo!("port MSSOTLHiLevelTrafficLightLogic::decidePolicy")
+        // shortcut: pure virtual with no C++ body; a subclass must override it, so calling the base is a bug (as in C++)
+        panic!("pure virtual method MSSOTLHiLevelTrafficLightLogic::decidePolicy called")
     }
 
 }

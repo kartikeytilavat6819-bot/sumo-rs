@@ -32,7 +32,10 @@ impl MSSOTLPolicy3DStimulus {
     // }
     #[allow(unused_variables)]
     pub fn new(keyPrefix: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLPolicy3DStimulus::MSSOTLPolicy3DStimulus")
+        let mut base = MSSOTLPolicy5DStimulus::new(keyPrefix, parameters);
+        base.set_stim_cox_exp_dispersion_in_def_val(0.);
+        base.set_stim_cox_exp_dispersion_out_def_val(0.);
+        Self { base }
     }
 
 }
