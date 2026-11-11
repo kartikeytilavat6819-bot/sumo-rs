@@ -33,7 +33,7 @@ impl NBParking {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, edgeID: &str, name: &str) -> Self {
-        todo!("port NBParking::NBParking")
+        NBParking { base: Named::new(id), myEdgeID: edgeID.to_string(), myName: name.to_string() }
     }
 
     /// C++: `void NBParking::write(OutputDevice &, NBEdgeCont &) const` [const]
@@ -75,7 +75,40 @@ impl NBParking {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, device: &mut OutputDevice, ec: &mut NBEdgeCont) {
-        todo!("port NBParking::write")
+        let e: Ptr<NBEdge> = ec.retrieve(&self.myEdgeID, false);
+        if !e.is_null() {
+            if (e.get_permissions(-1) & SVC_PASSENGER) == 0 {
+                write_warningf!("Ignoring parking area on edge '%' due to invalid permissions.", e.get_id());
+                return;
+            }
+            // keep minimum distance of 5m to junction corners
+            let corner_distance: i32 = 5;
+            let capacity: i32 = ((e.get_final_length() - 2.0 * corner_distance as f64) / 7.5) as i32;
+            if capacity <= 0 {
+                write_warningf!("Ignoring parking area on edge '%' due to insufficient space.", e.get_id());
+                return;
+            }
+            let mut lane: i32 = 0;
+            while lane < e.get_num_lanes() {
+                if (e.get_permissions(lane) & SVC_PASSENGER) != 0 {
+                    break;
+                }
+                lane += 1;
+            }
+            device.open_tag_id(SUMO_TAG_PARKING_AREA);
+            device.write_attr(SUMO_ATTR_ID, self.get_id());
+            device.write_attr(SUMO_ATTR_LANE, &e.get_lane_id(lane));
+            device.write_attr(SUMO_ATTR_STARTPOS, &corner_distance);
+            device.write_attr(SUMO_ATTR_ENDPOS, &-corner_distance);
+            device.write_attr(SUMO_ATTR_ROADSIDE_CAPACITY, &capacity);
+            if !self.myName.is_empty() {
+                device.write_attr(SUMO_ATTR_NAME, &self.myName);
+            }
+            device.close_tag("");
+        } else {
+            write_warningf!("Could not find edge for parkingArea '%'.", self.get_id());
+        }
+        // XXX else: prevent edge merging via --geometry.remove
     }
 
     /// C++: `const std::string NBParking::getEdgeID() const` [const]
@@ -84,7 +117,7 @@ impl NBParking {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_id(&self) -> String {
-        todo!("port NBParking::getEdgeID")
+        self.myEdgeID.clone()
     }
 
 }
@@ -120,7 +153,11 @@ impl NBParkingCont {
     // }
     #[allow(unused_variables)]
     pub fn add_edges2_keep(&mut self, oc: &OptionsCont, into: &mut BTreeSet<String>) {
-        todo!("port NBParkingCont::addEdges2Keep")
+        if oc.exists("parking-output") && oc.is_set("parking-output", true).unwrap_or(false) {
+            for p in self.base.iter() {
+                into.insert(p.get_edge_id());
+            }
+        }
     }
 
 }
