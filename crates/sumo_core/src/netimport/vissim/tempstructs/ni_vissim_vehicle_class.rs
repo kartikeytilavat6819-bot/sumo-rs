@@ -13,14 +13,14 @@ impl NIVissimVehicleClass {
     //     : myVWish(vwish) {}
     #[allow(unused_variables)]
     pub fn new(vwish: i32) -> Self {
-        todo!("port NIVissimVehicleClass::NIVissimVehicleClass")
+        Self { myVWish: vwish }
     }
 
     /// C++: `void NIVissimVehicleClass::~NIVissimVehicleClass()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimVehicleClass::~NIVissimVehicleClass")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `int NIVissimVehicleClass::getSpeed() const` [const]
@@ -30,7 +30,7 @@ impl NIVissimVehicleClass {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> i32 {
-        todo!("port NIVissimVehicleClass::getSpeed")
+        self.myVWish
     }
 
 }

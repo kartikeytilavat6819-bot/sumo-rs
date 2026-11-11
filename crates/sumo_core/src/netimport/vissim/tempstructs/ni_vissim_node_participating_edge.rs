@@ -16,14 +16,14 @@ impl NIVissimNodeParticipatingEdge {
     //     : myEdgeID(edgeid), myFromPos(frompos), myToPos(topos) {}
     #[allow(unused_variables)]
     pub fn new(edgeid: i32, frompos: f64, topos: f64) -> Self {
-        todo!("port NIVissimNodeParticipatingEdge::NIVissimNodeParticipatingEdge")
+        Self { myEdgeID: edgeid, myFromPos: frompos, myToPos: topos }
     }
 
     /// C++: `void NIVissimNodeParticipatingEdge::~NIVissimNodeParticipatingEdge()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimNodeParticipatingEdge::~NIVissimNodeParticipatingEdge")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `int NIVissimNodeParticipatingEdge::getID() const` [const]
@@ -33,7 +33,7 @@ impl NIVissimNodeParticipatingEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> i32 {
-        todo!("port NIVissimNodeParticipatingEdge::getID")
+        self.myEdgeID
     }
 
     /// C++: `bool NIVissimNodeParticipatingEdge::positionLiesWithin(double) const` [const]
@@ -46,7 +46,8 @@ impl NIVissimNodeParticipatingEdge {
     // }
     #[allow(unused_variables)]
     pub fn position_lies_within(&self, pos: f64) -> bool {
-        todo!("port NIVissimNodeParticipatingEdge::positionLiesWithin")
+        (self.myFromPos < self.myToPos && self.myFromPos >= pos && self.myToPos <= pos)
+            || (self.myFromPos > self.myToPos && self.myFromPos <= pos && self.myToPos >= pos)
     }
 
     /// C++: `double NIVissimNodeParticipatingEdge::getFromPos() const` [const]
@@ -56,7 +57,7 @@ impl NIVissimNodeParticipatingEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_from_pos(&self) -> f64 {
-        todo!("port NIVissimNodeParticipatingEdge::getFromPos")
+        self.myFromPos
     }
 
     /// C++: `double NIVissimNodeParticipatingEdge::getToPos() const` [const]
@@ -66,7 +67,7 @@ impl NIVissimNodeParticipatingEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_to_pos(&self) -> f64 {
-        todo!("port NIVissimNodeParticipatingEdge::getToPos")
+        self.myToPos
     }
 
 }

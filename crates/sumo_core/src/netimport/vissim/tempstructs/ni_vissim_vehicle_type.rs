@@ -14,6 +14,9 @@ pub struct NIVissimVehicleType {
 
 // C++ static members of NIVissimVehicleType (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimVehicleType::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimVehicleType_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimVehicleType {
     /// C++: `void NIVissimVehicleType::NIVissimVehicleType(const std::string &, const std::string &, const RGBColor &)`
@@ -23,14 +26,18 @@ impl NIVissimVehicleType {
     //       myColor(color) {}
     #[allow(unused_variables)]
     pub fn new(name: &str, category: &str, color: &RGBColor) -> Self {
-        todo!("port NIVissimVehicleType::NIVissimVehicleType")
+        Self {
+            myName: name.to_string(),
+            myCategory: category.to_string(),
+            myColor: *color,
+        }
     }
 
     /// C++: `void NIVissimVehicleType::~NIVissimVehicleType()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimVehicleType::~NIVissimVehicleType")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `bool NIVissimVehicleType::dictionary(int, const std::string &, const std::string &, const RGBColor &)` [static]
@@ -46,7 +53,13 @@ impl NIVissimVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, category: &str, color: &RGBColor) -> bool {
-        todo!("port NIVissimVehicleType::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimVehicleType::new(name, category, color))));
+        if !NIVissimVehicleType::dictionary_2(id, o) {
+            // delete o;
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            return false;
+        }
+        true
     }
 
     /// C++: `bool NIVissimVehicleType::dictionary(int, NIVissimVehicleType *)` [static]
@@ -61,7 +74,14 @@ impl NIVissimVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, o: Ptr<NIVissimVehicleType>) -> bool {
-        todo!("port NIVissimVehicleType::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimVehicleType * NIVissimVehicleType::dictionary(int)` [static]
@@ -75,7 +95,7 @@ impl NIVissimVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimVehicleType> {
-        todo!("port NIVissimVehicleType::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimVehicleType::clearDict()` [static]
@@ -88,7 +108,14 @@ impl NIVissimVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimVehicleType::clearDict")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, o) in d.iter() {
+                // delete (*i).second;
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+            d.clear();
+        })
     }
 
 }

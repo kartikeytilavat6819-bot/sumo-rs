@@ -20,14 +20,19 @@ impl NIVissimExtendedEdgePoint {
     //       myAssignedVehicles(assignedVehicles) {}
     #[allow(unused_variables)]
     pub fn new(edgeid: i32, lanes: &Vec<i32>, position: f64, assignedVehicles: &Vec<i32>) -> Self {
-        todo!("port NIVissimExtendedEdgePoint::NIVissimExtendedEdgePoint")
+        Self {
+            myEdgeID: edgeid,
+            myLanes: lanes.clone(),
+            myPosition: position,
+            myAssignedVehicles: assignedVehicles.clone(),
+        }
     }
 
     /// C++: `void NIVissimExtendedEdgePoint::~NIVissimExtendedEdgePoint() noexcept`
     // NIVissimExtendedEdgePoint::~NIVissimExtendedEdgePoint() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimExtendedEdgePoint::~NIVissimExtendedEdgePoint")
+        // C++ body is empty; members are destroyed implicitly.
     }
 
     /// C++: `int NIVissimExtendedEdgePoint::getEdgeID() const` [const]
@@ -37,7 +42,7 @@ impl NIVissimExtendedEdgePoint {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(&self) -> i32 {
-        todo!("port NIVissimExtendedEdgePoint::getEdgeID")
+        self.myEdgeID
     }
 
     /// C++: `double NIVissimExtendedEdgePoint::getPosition() const` [const]
@@ -47,7 +52,7 @@ impl NIVissimExtendedEdgePoint {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> f64 {
-        todo!("port NIVissimExtendedEdgePoint::getPosition")
+        self.myPosition
     }
 
     /// C++: `Position NIVissimExtendedEdgePoint::getGeomPosition() const` [const]
@@ -58,7 +63,7 @@ impl NIVissimExtendedEdgePoint {
     // }
     #[allow(unused_variables)]
     pub fn get_geom_position(&self) -> Position {
-        todo!("port NIVissimExtendedEdgePoint::getGeomPosition")
+        NIVissimAbstractEdge::dictionary_2(self.myEdgeID).get_geom_position(self.myPosition)
     }
 
     /// C++: `const std::vector<int> & NIVissimExtendedEdgePoint::getLanes() const` [const]
@@ -68,7 +73,7 @@ impl NIVissimExtendedEdgePoint {
     // }
     #[allow(unused_variables)]
     pub fn get_lanes(&self) -> &Vec<i32> {
-        todo!("port NIVissimExtendedEdgePoint::getLanes")
+        &self.myLanes
     }
 
     /// C++: `void NIVissimExtendedEdgePoint::recheckLanes(const NBEdge *const)`
@@ -94,7 +99,17 @@ impl NIVissimExtendedEdgePoint {
     // }
     #[allow(unused_variables)]
     pub fn recheck_lanes(&mut self, edge: Ptr<NBEdge>) {
-        todo!("port NIVissimExtendedEdgePoint::recheckLanes")
+        // check whether an "all" indicator is there
+        let had_all = self.myLanes.iter().any(|&lane| lane == -1);
+        // no -> return
+        if !had_all {
+            return;
+        }
+        // patch lane indices
+        self.myLanes.clear();
+        for i in 0..edge.get_num_lanes() {
+            self.myLanes.push(i);
+        }
     }
 
 }
