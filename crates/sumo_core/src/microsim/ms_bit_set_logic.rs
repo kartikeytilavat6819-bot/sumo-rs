@@ -1,6 +1,7 @@
 //! Port of microsim/MSBitSetLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 
 /// C++ typedef `std::vector<std::bitset<N>> MSBitSetLogic::Foes`
 pub type MSBitSetLogic_Foes = Unmapped /* std::vector<std::bitset<N>> */;
@@ -17,10 +18,10 @@ pub struct MSBitSetLogic<const N: usize> {
     /// C++ base class `MSJunctionLogic`
     pub base: MSJunctionLogic,
     /// junctions logic based on std::bitset
-    pub myLogic: MSBitSetLogic_Logic,
+    pub myLogic: Vec<[bool; N]>,
     /// internal lanes logic
-    pub myInternalLinksFoes: MSBitSetLogic_Foes,
-    pub myConts: Unmapped /* std::bitset<256> */,
+    pub myInternalLinksFoes: Vec<[bool; N]>,
+    pub myConts: [bool; SUMO_MAX_CONNECTIONS],
 }
 
 impl<const N: usize> std::ops::Deref for MSBitSetLogic<N> {
@@ -43,8 +44,14 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         : MSJunctionLogic(nLinks), myLogic(logic),
     //           myInternalLinksFoes(foes), myConts(conts) {}
     #[allow(unused_variables)]
-    pub fn new(nLinks: i32, logic: &MSBitSetLogic_Logic, foes: &MSBitSetLogic_Foes, conts: Unmapped /* std::bitset<256> */) -> Self {
-        todo!("port MSBitSetLogic::MSBitSetLogic<N>")
+    pub fn new(nLinks: i32, logic: &Vec<[bool; N]>, foes: &Vec<[bool; N]>, conts: [bool; SUMO_MAX_CONNECTIONS]) -> Self {
+        // shortcut: std::bitset<N> is modelled as [bool; N] (no bit packing), upgrade if memory use matters
+        MSBitSetLogic {
+            base: MSJunctionLogic::new(nLinks),
+            myLogic: logic.clone(),
+            myInternalLinksFoes: foes.clone(),
+            myConts: conts,
+        }
     }
 
     /// C++: `const MSLogicJunction::LinkBits & MSBitSetLogic::getResponseFor(int) const` [const, virtual]
@@ -53,8 +60,8 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         return myLogic[linkIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_response_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        todo!("port MSBitSetLogic::getResponseFor")
+    pub fn get_response_for(&self, linkIndex: i32) -> &[bool; N] {
+        &self.myLogic[linkIndex as usize]
     }
 
     /// C++: `const MSLogicJunction::LinkBits & MSBitSetLogic::getFoesFor(int) const` [const, virtual]
@@ -63,8 +70,8 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         return myInternalLinksFoes[linkIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_foes_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        todo!("port MSBitSetLogic::getFoesFor")
+    pub fn get_foes_for(&self, linkIndex: i32) -> &[bool; N] {
+        &self.myInternalLinksFoes[linkIndex as usize]
     }
 
     /// C++: `bool MSBitSetLogic::getIsCont(int) const` [const, virtual]
@@ -73,7 +80,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     //     }
     #[allow(unused_variables)]
     pub fn get_is_cont(&self, linkIndex: i32) -> bool {
-        todo!("port MSBitSetLogic::getIsCont")
+        self.myConts[linkIndex as usize]
     }
 
     /// C++: `bool MSBitSetLogic::hasFoes() const` [const, virtual]
@@ -87,7 +94,12 @@ impl<const N: usize> MSBitSetLogic<N> {
     //     }
     #[allow(unused_variables)]
     pub fn has_foes(&self) -> bool {
-        todo!("port MSBitSetLogic::hasFoes")
+        for i in &self.myLogic {
+            if i.iter().any(|b| *b) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSBitSetLogic::MSBitSetLogic<N>(const MSBitSetLogic<N> &)` [private]
@@ -95,7 +107,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSBitSetLogic<N>) -> Self {
-        todo!("port MSBitSetLogic::MSBitSetLogic<N>")
+        panic!("MSBitSetLogic copy constructor is invalidated")
     }
 
     /// C++: `MSBitSetLogic<N> & MSBitSetLogic::operator=(const MSBitSetLogic<N> &)` [private]
@@ -103,8 +115,33 @@ impl<const N: usize> MSBitSetLogic<N> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSBitSetLogic<N>) -> &mut MSBitSetLogic<N> {
-        todo!("port MSBitSetLogic::operator=")
+        panic!("MSBitSetLogic assignment operator is invalidated")
     }
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn has_foes_and_is_cont() {
+        // values follow the C++ bitset semantics: any() over each row, test() on conts
+        let mut conts = [false; SUMO_MAX_CONNECTIONS];
+        conts[2] = true;
+        let mut logic = [false; 4];
+        let mut b = MSBitSetLogic::<4> {
+            base: MSJunctionLogic { myNLinks: 2 },
+            myLogic: vec![[false; 4], [false; 4]],
+            myInternalLinksFoes: vec![[false; 4], [false; 4]],
+            myConts: conts,
+        };
+        assert!(!b.has_foes());
+        assert!(b.get_is_cont(2));
+        assert!(!b.get_is_cont(1));
+        logic[3] = true;
+        b.myLogic[1] = logic;
+        assert!(b.has_foes());
+        assert!(b.get_response_for(1)[3]);
+    }
+}
