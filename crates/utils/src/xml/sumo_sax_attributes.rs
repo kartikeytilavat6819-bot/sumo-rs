@@ -34,10 +34,10 @@ fn non_empty(value: &str) -> Result<&str, ProcessError> {
     if value.is_empty() { Err(ProcessError::EmptyData) } else { Ok(value) }
 }
 fn to_int(value: &str) -> Result<i32, ProcessError> {
-    string_utils::to_int(non_empty(value)?).map_err(|e| ProcessError::number_format(&e.0))
+    string_utils::to_int(non_empty(value)?)
 }
 fn to_double(value: &str) -> Result<f64, ProcessError> {
-    string_utils::to_double(non_empty(value)?).map_err(|e| ProcessError::number_format(&e.0))
+    string_utils::to_double(non_empty(value)?)
 }
 fn to_bool(value: &str) -> Result<bool, ProcessError> {
     string_utils::to_bool(non_empty(value)?).map_err(|_| ProcessError::bool_format(&value.to_ascii_lowercase()))
@@ -64,7 +64,7 @@ impl FromAttr for i64 {
         -1
     }
     fn from_attr(value: &str) -> Result<Self, ProcessError> {
-        string_utils::to_long(non_empty(value)?).map_err(|e| ProcessError::number_format(&e.0))
+        string_utils::to_long(non_empty(value)?)
     }
 }
 impl FromAttr for f64 {
@@ -200,7 +200,7 @@ impl FromAttr for Vec<f64> {
 
 /// string2time with the C++ exception split: EmptyData vs. any other ProcessError
 fn parse_time(val: &str) -> Result<SUMOTime, ProcessError> {
-    string2time(non_empty(val)?).map_err(|e| ProcessError::Format(e.0))
+    string2time(non_empty(val)?)
 }
 
 fn local_name(qname: &str) -> &str {

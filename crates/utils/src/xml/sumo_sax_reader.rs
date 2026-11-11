@@ -179,12 +179,12 @@ impl SUMOSAXReader {
 
     fn open(system_id: &str) -> Result<XmlStream, ProcessError> {
         if !is_readable(system_id) {
-            return Err(ProcessError::IO(format!("Cannot read file '{system_id}'!")));
+            return Err(ProcessError::IOError(format!("Cannot read file '{system_id}'!")));
         }
         if std::path::Path::new(system_id).is_dir() {
-            return Err(ProcessError::IO(format!("File '{system_id}' is a directory!")));
+            return Err(ProcessError::IOError(format!("File '{system_id}' is a directory!")));
         }
-        let input = open_input(system_id).map_err(|_| ProcessError::IO(format!("Cannot read file '{system_id}'!")))?;
+        let input = open_input(system_id).map_err(|_| ProcessError::IOError(format!("Cannot read file '{system_id}'!")))?;
         Ok(XmlStream::new(input, Source::File(system_id.to_string())))
     }
 

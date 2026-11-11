@@ -83,7 +83,7 @@ fn errors() {
     let e = SUMOSAXReader::new("never").parse_string(&mut h, "<a>").unwrap_err();
     assert!(matches!(e, ProcessError::Process(_)));
     let e = SUMOSAXReader::new("never").parse(&mut h, "does/not/exist.xml").unwrap_err();
-    assert_eq!(e, ProcessError::IO("Cannot read file 'does/not/exist.xml'!".into()));
+    assert_eq!(e, ProcessError::IOError("Cannot read file 'does/not/exist.xml'!".into()));
     let e = xml_sub_sys::run_parser(&mut h, "does/not/exist.xml", false, false, false, true).unwrap();
     assert!(!e);
 }

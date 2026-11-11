@@ -36,6 +36,7 @@ global!(g_simulation, set_g_simulation, G_SIMULATION, bool, AtomicBool, false);
 global!(g_ignore_unknown_vclass, set_g_ignore_unknown_vclass, G_IGNORE_UNKNOWN_VCLASS, bool, AtomicBool, false);
 global!(g_routing_preferences, set_g_routing_preferences, G_ROUTING_PREFERENCES, bool, AtomicBool, false);
 global!(g_taxi_classes, set_g_taxi_classes, G_TAXI_CLASSES, i32, AtomicI32, 0);
+global!(g_locale_initialized, set_g_locale_initialized, G_LOCALE_INITIALIZED, bool, AtomicBool, false);
 
 pub fn truncate(x: f64, fraction_bits: i32) -> f64 {
     let s = (1i64 << fraction_bits) as f64;

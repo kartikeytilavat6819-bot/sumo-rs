@@ -1,44 +1,9 @@
 //! Minimal stand-ins for pieces of utils/common and utils/geom that xml and iodevices need.
 // shortcut: replace with utils::geom/common once merged (UtilExceptions, MsgHandler, StringTokenizer,
 // FileHelpers, StringUtils::isoTimeString/escapeXML, Position, PositionVector, Boundary)
-use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 
-/// utils/common/UtilExceptions.h; the Display text is the C++ `what()`.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ProcessError {
-    /// ProcessError(msg)
-    Process(String),
-    /// InvalidArgument(msg)
-    InvalidArgument(String),
-    /// IOError(msg)
-    IO(String),
-    /// EmptyData()
-    EmptyData,
-    /// FormatException and subclasses, holding the full what() text
-    Format(String),
-}
-
-impl fmt::Display for ProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ProcessError::Process(m) | ProcessError::InvalidArgument(m) | ProcessError::IO(m) | ProcessError::Format(m) => f.write_str(m),
-            ProcessError::EmptyData => f.write_str("Empty Data"),
-        }
-    }
-}
-impl std::error::Error for ProcessError {}
-
-impl ProcessError {
-    /// NumberFormatException(data)
-    pub fn number_format(data: &str) -> Self {
-        ProcessError::Format(format!("Invalid Number Format {data}"))
-    }
-    /// BoolFormatException(data)
-    pub fn bool_format(data: &str) -> Self {
-        ProcessError::Format(format!("Invalid Bool Format {data}"))
-    }
-}
+pub use crate::common::util_exceptions::ProcessError;
 
 static ERROR_INFORMED: AtomicBool = AtomicBool::new(false);
 

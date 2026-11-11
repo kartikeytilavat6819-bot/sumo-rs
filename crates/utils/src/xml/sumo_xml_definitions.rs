@@ -44,7 +44,7 @@ pub fn get_edge_id_from_lane(lane_id: &str) -> String {
     lane_id[..lane_id.rfind('_').unwrap_or(lane_id.len())].to_string()
 }
 
-pub fn get_index_from_lane(lane_id: &str) -> Result<i32, string_utils::NumberFormatException> {
+pub fn get_index_from_lane(lane_id: &str) -> Result<i32, crate::common::util_exceptions::ProcessError> {
     string_utils::to_int(&lane_id[lane_id.rfind('_').map_or(0, |i| i + 1)..])
 }
 

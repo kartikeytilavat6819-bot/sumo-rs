@@ -206,9 +206,9 @@ impl OutputDevice {
         let path = if full_name == "/dev/null" && cfg!(windows) { "NUL" } else { full_name };
         let file = std::fs::File::create(path).map_err(|e| {
             if full_name == "/dev/null" {
-                ProcessError::IO(format!("Could not redirect to NUL device ({}).", strerror(&e)))
+                ProcessError::IOError(format!("Could not redirect to NUL device ({}).", strerror(&e)))
             } else {
-                ProcessError::IO(format!("Could not build output file '{full_name}' ({}).", strerror(&e)))
+                ProcessError::IOError(format!("Could not build output file '{full_name}' ({}).", strerror(&e)))
             }
         })?;
         let w: Box<dyn Write> = if full_name.len() > 3 && full_name.ends_with(".gz") {
@@ -243,7 +243,7 @@ impl OutputDevice {
             Self::with_sink(0, "CERR", Sink::Cerr)
         } else if is_socket(name) {
             // shortcut: OutputDevice_Network (socket output) is not ported
-            return Err(ProcessError::IO(format!("Network output '{name}' is not supported.")));
+            return Err(ProcessError::IOError(format!("Network output '{name}' is not supported.")));
         } else {
             let mut name2 = if name == "nul" || name == "NUL" { "/dev/null".to_string() } else { name.to_string() };
             if use_prefix && oc.is_set("output-prefix") && name2 != "/dev/null" {
@@ -327,7 +327,7 @@ impl OutputDevice {
         if let Sink::File(f) = &mut self.my_stream.sink {
             drop(f.take()); // GzEncoder writes its trailer on drop
         }
-        r.map_err(|e| ProcessError::IO(e.to_string()))
+        r.map_err(|e| ProcessError::IOError(e.to_string()))
     }
 
     pub fn is_xml(&self) -> bool {

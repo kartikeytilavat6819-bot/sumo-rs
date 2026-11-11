@@ -1,6 +1,8 @@
 //! Port of utils/common/SUMOTime.{h,cpp}
 use super::std_defs::{g_human_readable_time, g_precision};
+use super::string_tokenizer::StringTokenizer;
 use super::string_utils;
+use super::util_exceptions::ProcessError;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 pub type SUMOTime = i64;
@@ -61,23 +63,21 @@ pub fn sumotime_max_period() -> SUMOTime {
     SUMOTIME_MAX - SUMOTIME_MAX % delta_t()
 }
 
-#[derive(Debug, Clone)]
-pub struct TimeFormatException(pub String);
-
-pub fn string2time(r: &str) -> Result<SUMOTime, TimeFormatException> {
+/// throws NumberFormatException (via toDouble) or TimeFormatException like the C++ code
+pub fn string2time(r: &str) -> Result<SUMOTime, ProcessError> {
     if !r.contains(':') {
-        let time = string_utils::to_double(r).map_err(|e| TimeFormatException(e.0))?;
+        let time = string_utils::to_double(r)?;
         if time > steps2time(SUMOTIME_MAX) {
-            return Err(TimeFormatException(format!("Input string '{r}' exceeds the time value range.")));
+            return Err(ProcessError::TimeFormat(format!("Input string '{r}' exceeds the time value range.")));
         }
         return Ok(time2steps(time));
     }
-    let hrt: Vec<&str> = r.split(':').collect(); // StringTokenizer keeps empty fields
+    let hrt = StringTokenizer::with_token(r, ":", false).get_vector();
     let t = |s: &str| string2time(s);
     match hrt.len() {
-        3 => Ok(3600 * t(hrt[0])? + 60 * t(hrt[1])? + t(hrt[2])?),
-        4 => Ok(24 * 3600 * t(hrt[0])? + 3600 * t(hrt[1])? + 60 * t(hrt[2])? + t(hrt[3])?),
-        _ => Err(TimeFormatException(format!(
+        3 => Ok(3600 * t(&hrt[0])? + 60 * t(&hrt[1])? + t(&hrt[2])?),
+        4 => Ok(24 * 3600 * t(&hrt[0])? + 3600 * t(&hrt[1])? + 60 * t(&hrt[2])? + t(&hrt[3])?),
+        _ => Err(ProcessError::TimeFormat(format!(
             "Input string '{r}' is not a valid time format (jj:HH:MM:SS.S)."
         ))),
     }
@@ -85,14 +85,14 @@ pub fn string2time(r: &str) -> Result<SUMOTime, TimeFormatException> {
 
 pub fn is_time(r: &str) -> bool {
     if !r.contains(':') {
-        return string_utils::to_double(r).map_or(false, |v| v <= steps2time(SUMOTIME_MAX));
+        return string_utils::is_double(r) && string_utils::to_double(r).is_ok_and(|v| v <= steps2time(SUMOTIME_MAX));
     }
-    let hrt: Vec<&str> = r.split(':').collect(); // StringTokenizer keeps empty fields
-    let int = |s: &str| string_utils::to_int(s).is_ok();
-    let dbl = |s: &str| string_utils::to_double(s).is_ok();
+    let hrt = StringTokenizer::with_token(r, ":", false).get_vector();
+    let int = |s: &str| string_utils::is_int(s);
+    let dbl = |s: &str| string_utils::is_double(s);
     match hrt.len() {
-        3 => int(hrt[0]) && int(hrt[1]) && int(hrt[2]),
-        4 => int(hrt[0]) && int(hrt[1]) && int(hrt[2]) && dbl(hrt[3]),
+        3 => int(&hrt[0]) && int(&hrt[1]) && int(&hrt[2]),
+        4 => int(&hrt[0]) && int(&hrt[1]) && int(&hrt[2]) && dbl(&hrt[3]),
         _ => false,
     }
 }
