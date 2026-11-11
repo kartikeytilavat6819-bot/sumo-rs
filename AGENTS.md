@@ -61,3 +61,12 @@ same output text, same floating-point results.
   - `Unmapped` in OTHER files: work around locally (convert, or add a `// shortcut:` and keep going).
 - Start with the files with the most `todo!()`s; work method by method; commit every 2-3 files.
 - Only stop when no `todo!()` is left in your files or you are truly out of budget.
+
+### Reading skeleton files without running out of context
+
+- Skeleton files are huge (every method carries its C++ as comments; ms_vehicle.rs is enormous).
+  NEVER Read a whole skeleton file. Instead:
+  1. `grep -n 'todo!(' <file>` to list the methods left, with line numbers.
+  2. Read ~80 lines around one `todo!()` (offset/limit), port it, Edit it, move to the next.
+  3. To learn a struct's fields, grep `pub struct Name` and read just that block.
+- Commit after every ~20 methods, not only per file.
