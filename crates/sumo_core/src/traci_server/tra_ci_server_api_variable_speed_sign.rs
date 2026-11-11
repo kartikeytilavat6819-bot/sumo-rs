@@ -51,7 +51,7 @@ impl TraCIServerAPI_VariableSpeedSign {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_VariableSpeedSign) -> Self {
-        todo!("port TraCIServerAPI_VariableSpeedSign::TraCIServerAPI_VariableSpeedSign")
+        panic!("TraCIServerAPI_VariableSpeedSign copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_VariableSpeedSign & TraCIServerAPI_VariableSpeedSign::operator=(const TraCIServerAPI_VariableSpeedSign &)` [private]
@@ -59,7 +59,7 @@ impl TraCIServerAPI_VariableSpeedSign {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_VariableSpeedSign) -> &mut TraCIServerAPI_VariableSpeedSign {
-        todo!("port TraCIServerAPI_VariableSpeedSign::operator=")
+        panic!("TraCIServerAPI_VariableSpeedSign assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

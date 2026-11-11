@@ -51,7 +51,7 @@ impl TraCIServerAPI_MultiEntryExit {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_MultiEntryExit) -> Self {
-        todo!("port TraCIServerAPI_MultiEntryExit::TraCIServerAPI_MultiEntryExit")
+        panic!("TraCIServerAPI_MultiEntryExit copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_MultiEntryExit & TraCIServerAPI_MultiEntryExit::operator=(const TraCIServerAPI_MultiEntryExit &)` [private]
@@ -59,7 +59,7 @@ impl TraCIServerAPI_MultiEntryExit {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_MultiEntryExit) -> &mut TraCIServerAPI_MultiEntryExit {
-        todo!("port TraCIServerAPI_MultiEntryExit::operator=")
+        panic!("TraCIServerAPI_MultiEntryExit assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

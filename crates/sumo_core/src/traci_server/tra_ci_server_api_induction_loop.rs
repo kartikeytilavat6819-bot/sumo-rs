@@ -48,7 +48,34 @@ impl TraCIServerAPI_InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_InductionLoop::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != VAR_PARAMETER && variable != VAR_VIRTUAL_DETECTION {
+            return server.write_error_status_cmd(
+                CMD_SET_INDUCTIONLOOP_VARIABLE,
+                &format!("Set Induction Variable: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+        // process
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        match variable {
+            VAR_VIRTUAL_DETECTION => {
+                InductionLoop::override_time_since_detection(&id, StorageHelper::read_typed_double(inputStorage, "Setting time since last detection requires a double."));
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                InductionLoop::set_parameter(&id, &name, &value);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_INDUCTIONLOOP_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_InductionLoop::TraCIServerAPI_InductionLoop(const TraCIServerAPI_InductionLoop &)` [private]
@@ -56,7 +83,7 @@ impl TraCIServerAPI_InductionLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_InductionLoop) -> Self {
-        todo!("port TraCIServerAPI_InductionLoop::TraCIServerAPI_InductionLoop")
+        panic!("TraCIServerAPI_InductionLoop copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_InductionLoop & TraCIServerAPI_InductionLoop::operator=(const TraCIServerAPI_InductionLoop &)` [private]
@@ -64,7 +91,7 @@ impl TraCIServerAPI_InductionLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_InductionLoop) -> &mut TraCIServerAPI_InductionLoop {
-        todo!("port TraCIServerAPI_InductionLoop::operator=")
+        panic!("TraCIServerAPI_InductionLoop assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

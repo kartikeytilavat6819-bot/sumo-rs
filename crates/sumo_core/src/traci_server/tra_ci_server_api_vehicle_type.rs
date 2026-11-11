@@ -268,7 +268,7 @@ impl TraCIServerAPI_VehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_VehicleType) -> Self {
-        todo!("port TraCIServerAPI_VehicleType::TraCIServerAPI_VehicleType")
+        panic!("TraCIServerAPI_VehicleType copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_VehicleType & TraCIServerAPI_VehicleType::operator=(const TraCIServerAPI_VehicleType &)` [private]
@@ -276,7 +276,7 @@ impl TraCIServerAPI_VehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_VehicleType) -> &mut TraCIServerAPI_VehicleType {
-        todo!("port TraCIServerAPI_VehicleType::operator=")
+        panic!("TraCIServerAPI_VehicleType assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

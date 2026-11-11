@@ -51,7 +51,7 @@ impl TraCIServerAPI_Rerouter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_Rerouter) -> Self {
-        todo!("port TraCIServerAPI_Rerouter::TraCIServerAPI_Rerouter")
+        panic!("TraCIServerAPI_Rerouter copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_Rerouter & TraCIServerAPI_Rerouter::operator=(const TraCIServerAPI_Rerouter &)` [private]
@@ -59,7 +59,7 @@ impl TraCIServerAPI_Rerouter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_Rerouter) -> &mut TraCIServerAPI_Rerouter {
-        todo!("port TraCIServerAPI_Rerouter::operator=")
+        panic!("TraCIServerAPI_Rerouter assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

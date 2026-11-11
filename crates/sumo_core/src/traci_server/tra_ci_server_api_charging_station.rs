@@ -68,7 +68,53 @@ impl TraCIServerAPI_ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_ChargingStation::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != VAR_PARAMETER
+            && variable != VAR_CS_POWER
+            && variable != VAR_CS_EFFICIENCY
+            && variable != VAR_CS_CHARGE_DELAY
+            && variable != VAR_CS_CHARGE_IN_TRANSIT
+            && variable != VAR_CS_TOTAL_POWER
+        {
+            return server.write_error_status_cmd(
+                CMD_SET_CHARGINGSTATION_VARIABLE,
+                &format!("Change ChargingStation State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        match variable {
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                ChargingStation::set_parameter(&id, &name, &value);
+            }
+            VAR_CS_POWER => {
+                ChargingStation::set_charging_power(&id, StorageHelper::read_typed_double(inputStorage, "Setting chargingPower requires a double."));
+            }
+            VAR_CS_EFFICIENCY => {
+                ChargingStation::set_efficiency(&id, StorageHelper::read_typed_double(inputStorage, "Setting efficiency requires a double."));
+            }
+            VAR_CS_CHARGE_DELAY => {
+                ChargingStation::set_charge_delay(&id, StorageHelper::read_typed_double(inputStorage, "Setting charge delay requires a double."));
+            }
+            VAR_CS_CHARGE_IN_TRANSIT => {
+                ChargingStation::set_charge_in_transit(&id, StorageHelper::read_typed_int(inputStorage, "Setting charge in transit requires an integer.") != 0);
+            }
+            VAR_CS_TOTAL_POWER => {
+                ChargingStation::set_total_power(&id, StorageHelper::read_typed_double(inputStorage, "Setting totalPower requires a double."));
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_CHARGINGSTATION_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_ChargingStation::TraCIServerAPI_ChargingStation(const TraCIServerAPI_ChargingStation &)` [private]
@@ -76,7 +122,7 @@ impl TraCIServerAPI_ChargingStation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_ChargingStation) -> Self {
-        todo!("port TraCIServerAPI_ChargingStation::TraCIServerAPI_ChargingStation")
+        panic!("TraCIServerAPI_ChargingStation copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_ChargingStation & TraCIServerAPI_ChargingStation::operator=(const TraCIServerAPI_ChargingStation &)` [private]
@@ -84,7 +130,7 @@ impl TraCIServerAPI_ChargingStation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_ChargingStation) -> &mut TraCIServerAPI_ChargingStation {
-        todo!("port TraCIServerAPI_ChargingStation::operator=")
+        panic!("TraCIServerAPI_ChargingStation assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

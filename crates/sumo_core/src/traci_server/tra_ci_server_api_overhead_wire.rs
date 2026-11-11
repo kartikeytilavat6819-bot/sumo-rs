@@ -51,7 +51,7 @@ impl TraCIServerAPI_OverheadWire {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_OverheadWire) -> Self {
-        todo!("port TraCIServerAPI_OverheadWire::TraCIServerAPI_OverheadWire")
+        panic!("TraCIServerAPI_OverheadWire copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_OverheadWire & TraCIServerAPI_OverheadWire::operator=(const TraCIServerAPI_OverheadWire &)` [private]
@@ -59,7 +59,7 @@ impl TraCIServerAPI_OverheadWire {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_OverheadWire) -> &mut TraCIServerAPI_OverheadWire {
-        todo!("port TraCIServerAPI_OverheadWire::operator=")
+        panic!("TraCIServerAPI_OverheadWire assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

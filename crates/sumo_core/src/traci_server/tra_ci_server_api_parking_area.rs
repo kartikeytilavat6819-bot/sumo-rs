@@ -55,7 +55,7 @@ impl TraCIServerAPI_ParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_ParkingArea) -> Self {
-        todo!("port TraCIServerAPI_ParkingArea::TraCIServerAPI_ParkingArea")
+        panic!("TraCIServerAPI_ParkingArea copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_ParkingArea & TraCIServerAPI_ParkingArea::operator=(const TraCIServerAPI_ParkingArea &)` [private]
@@ -63,7 +63,7 @@ impl TraCIServerAPI_ParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_ParkingArea) -> &mut TraCIServerAPI_ParkingArea {
-        todo!("port TraCIServerAPI_ParkingArea::operator=")
+        panic!("TraCIServerAPI_ParkingArea assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

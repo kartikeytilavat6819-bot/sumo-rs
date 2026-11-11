@@ -150,7 +150,7 @@ impl TraCIServerAPI_TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_TrafficLight) -> Self {
-        todo!("port TraCIServerAPI_TrafficLight::TraCIServerAPI_TrafficLight")
+        panic!("TraCIServerAPI_TrafficLight copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_TrafficLight & TraCIServerAPI_TrafficLight::operator=(const TraCIServerAPI_TrafficLight &)` [private]
@@ -158,7 +158,7 @@ impl TraCIServerAPI_TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_TrafficLight) -> &mut TraCIServerAPI_TrafficLight {
-        todo!("port TraCIServerAPI_TrafficLight::operator=")
+        panic!("TraCIServerAPI_TrafficLight assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

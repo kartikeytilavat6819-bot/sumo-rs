@@ -108,7 +108,7 @@ impl TraCIServerAPI_Polygon {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_Polygon) -> Self {
-        todo!("port TraCIServerAPI_Polygon::TraCIServerAPI_Polygon")
+        panic!("TraCIServerAPI_Polygon copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_Polygon & TraCIServerAPI_Polygon::operator=(const TraCIServerAPI_Polygon &)` [private]
@@ -116,7 +116,7 @@ impl TraCIServerAPI_Polygon {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_Polygon) -> &mut TraCIServerAPI_Polygon {
-        todo!("port TraCIServerAPI_Polygon::operator=")
+        panic!("TraCIServerAPI_Polygon assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

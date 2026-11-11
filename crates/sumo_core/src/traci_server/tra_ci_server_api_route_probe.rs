@@ -51,7 +51,7 @@ impl TraCIServerAPI_RouteProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_RouteProbe) -> Self {
-        todo!("port TraCIServerAPI_RouteProbe::TraCIServerAPI_RouteProbe")
+        panic!("TraCIServerAPI_RouteProbe copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_RouteProbe & TraCIServerAPI_RouteProbe::operator=(const TraCIServerAPI_RouteProbe &)` [private]
@@ -59,7 +59,7 @@ impl TraCIServerAPI_RouteProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_RouteProbe) -> &mut TraCIServerAPI_RouteProbe {
-        todo!("port TraCIServerAPI_RouteProbe::operator=")
+        panic!("TraCIServerAPI_RouteProbe assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }
