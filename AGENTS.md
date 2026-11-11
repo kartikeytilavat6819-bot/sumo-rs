@@ -50,3 +50,14 @@ same output text, same floating-point results.
 - Commit after every 2-3 files (`git add -A && git commit -m "Fill <files>"`), so progress survives if
   you run out of budget. It's fine not to finish the whole batch — report what's left.
 - Check with `cargo check -p sumo_core` (shared target dir, see MEMORY above).
+
+### Don't stop early (read this twice)
+
+- Your goal is to replace EVERY `todo!()` in your batch. Stopping with most of them left is a failed run.
+- "Depends on unported code" is NOT a reason to skip a method:
+  - Other classes' methods exist with real signatures; call them even if their bodies are `todo!()`.
+  - `Unmapped` fields/params in YOUR files: replace them with the right Rust type yourself (e.g. a
+    C++ `std::vector<NBEdge*>` typedef -> `Vec<Ptr<NBEdge>>`, `FileBucket*` -> `Ptr<FileBucket>`).
+  - `Unmapped` in OTHER files: work around locally (convert, or add a `// shortcut:` and keep going).
+- Start with the files with the most `todo!()`s; work method by method; commit every 2-3 files.
+- Only stop when no `todo!()` is left in your files or you are truly out of budget.
