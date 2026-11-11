@@ -100,7 +100,74 @@ pub enum FareToken {
 // }
 #[allow(unused_variables)]
 pub fn string_to_token(str: String) -> FareToken {
-    todo!("port stringToToken")
+        if str == "H" {
+        return FareToken::H;
+    }
+    if str == "L" {
+        return FareToken::L;
+    }
+    if str == "T1" {
+        return FareToken::T1;
+    }
+    if str == "T2" {
+        return FareToken::T2;
+    }
+    if str == "T3" {
+        return FareToken::T3;
+    }
+    if str == "1" {
+        return FareToken::T1;
+    }
+    if str == "2" {
+        return FareToken::T2;
+    }
+    if str == "3" {
+        return FareToken::T3;
+    }
+    if str == "U" {
+        return FareToken::U;
+    }
+    if str == "Z" {
+        return FareToken::Z;
+    }
+    if str == "M" {
+        return FareToken::M;
+    }
+    if str == "K" {
+        return FareToken::K;
+    }
+    if str == "KL" {
+        return FareToken::KL;
+    }
+    if str == "KH" {
+        return FareToken::KH;
+    }
+    if str == "ZU" {
+        return FareToken::ZU;
+    }
+    if str == "None" {
+        return FareToken::None;
+    }
+    if str == "Free" {
+        return FareToken::Free;
+    }
+    if str == "KHU" {
+        return FareToken::KHU;
+    }
+    if str == "KLU" {
+        return FareToken::KLU;
+    }
+    if str == "KHZ" {
+        return FareToken::KHZ;
+    }
+    if str == "KLZ" {
+        return FareToken::KLZ;
+    }
+    if str == "NOTFOUND" {
+        return FareToken::None;
+    }
+    assert!(false);
+    FareToken::None
 }
 
 /// C++: `FareToken (std::string) FareUtil::stringToToken`
@@ -176,7 +243,7 @@ pub fn string_to_token(str: String) -> FareToken {
 // }
 #[allow(unused_variables)]
 pub fn string_to_token_2(str: String) -> FareToken {
-    todo!("port stringToToken")
+    string_to_token(str)
 }
 
 /// C++: `std::string (const FareToken &) FareUtil::tokenToString`
@@ -224,7 +291,27 @@ pub fn string_to_token_2(str: String) -> FareToken {
 // }
 #[allow(unused_variables)]
 pub fn token_to_string(token: &FareToken) -> String {
-    todo!("port tokenToString")
+        match token {
+        FareToken::H => "H".to_string(),
+        FareToken::L => "L".to_string(),
+        FareToken::T1 => "T1".to_string(),
+        FareToken::T2 => "T2".to_string(),
+        FareToken::T3 => "T3".to_string(),
+        FareToken::U => "U".to_string(),
+        FareToken::Z => "Z".to_string(),
+        FareToken::M => "M".to_string(),
+        FareToken::K => "K".to_string(),
+        FareToken::KL => "KL".to_string(),
+        FareToken::KH => "KH".to_string(),
+        FareToken::ZU => "ZU".to_string(),
+        FareToken::None => "None".to_string(),
+        FareToken::Free => "Free".to_string(),
+        FareToken::KHU => "KHU".to_string(),
+        FareToken::KLU => "KLU".to_string(),
+        FareToken::KHZ => "KHZ".to_string(),
+        FareToken::KLZ => "KLZ".to_string(),
+        _ => String::new(),
+    }
 }
 
 /// C++: `std::string (const FareToken &) FareUtil::tokenToTicket`
@@ -273,6 +360,27 @@ pub fn token_to_string(token: &FareToken) -> String {
 // }
 #[allow(unused_variables)]
 pub fn token_to_ticket(token: &FareToken) -> String {
-    todo!("port tokenToTicket")
+        match token {
+        FareToken::H => "Einzelticket Halle".to_string(),
+        FareToken::L => "Einzelticket Leipzig".to_string(),
+        FareToken::T1 => "Einzelticket Stadtverkehr 1".to_string(),
+        FareToken::T2 => "Einzelticket Stadtverkehr 2".to_string(),
+        FareToken::T3 => "Einzelticket Stadtverkehr 3".to_string(),
+        FareToken::U => "Einzelticket".to_string(),
+        FareToken::Z => "Einzelticket".to_string(),
+        FareToken::M => "Einzelticket Verbundpreis".to_string(),
+        FareToken::K => "Kurzstreckenticket".to_string(),
+        FareToken::KL => "Kurzstreckenticket Leipzig".to_string(),
+        FareToken::KH => "Kurzstreckenticket Halle".to_string(),
+        FareToken::ZU => "None".to_string(),
+        FareToken::None => "None".to_string(),
+        FareToken::Free => "Free".to_string(),
+        FareToken::KHU => "Kurzstreckenticket Halle".to_string(),
+        FareToken::KLU => "Kurzstreckenticket Leipzig".to_string(),
+        FareToken::KHZ => "Kurzstreckenticket Halle".to_string(),
+        FareToken::KLZ => "Kurzstreckenticket Leipzig".to_string(),
+        FareToken::START => "forbidden START".to_string(),
+        _ => String::new(),
+    }
 }
 

@@ -32,7 +32,12 @@ impl<E, L, N, V> StopEdge<E, L, N, V> {
     //         IntermodalEdge<E, L, N, V>(id, numericalID, edge, "!stop", 0), myStartPos(startPos), myEndPos(endPos) { }
     #[allow(unused_variables)]
     pub fn new(id: String, numericalID: i32, edge: Ptr<E>, startPos: f64, endPos: f64) -> Self {
-        todo!("port StopEdge::StopEdge<E, L, N, V>")
+        StopEdge {
+            base: IntermodalEdge::new(id, numericalID, edge, "!stop", 0.0),
+            myStartPos: startPos,
+            myEndPos: endPos,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `bool StopEdge::includeInRoute(bool) const` [const]
@@ -41,7 +46,7 @@ impl<E, L, N, V> StopEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn include_in_route(&self, arg0: bool) -> bool {
-        todo!("port StopEdge::includeInRoute")
+        true
     }
 
     /// C++: `double StopEdge::getStartPos() const` [const]
@@ -50,7 +55,7 @@ impl<E, L, N, V> StopEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
-        todo!("port StopEdge::getStartPos")
+        self.myStartPos
     }
 
     /// C++: `double StopEdge::getEndPos() const` [const]
@@ -59,7 +64,7 @@ impl<E, L, N, V> StopEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
-        todo!("port StopEdge::getEndPos")
+        self.myEndPos
     }
 
 }

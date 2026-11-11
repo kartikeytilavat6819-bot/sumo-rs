@@ -13,7 +13,7 @@ impl EffortCalculator {
     // virtual ~EffortCalculator() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EffortCalculator::~EffortCalculator")
+        // empty destructor (C++ `{}`)
     }
 
     /// C++: `void EffortCalculator::init(const std::vector<std::string> &)` [virtual, pure virtual]
@@ -21,7 +21,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn init(&mut self, edges: &Vec<String>) {
-        todo!("port EffortCalculator::init")
+        panic!("pure virtual EffortCalculator::init called")
     }
 
     /// C++: `void EffortCalculator::addStop(const int, const Parameterised &)` [virtual, pure virtual]
@@ -29,7 +29,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopEdge: i32, params: &Parameterised) {
-        todo!("port EffortCalculator::addStop")
+        panic!("pure virtual EffortCalculator::addStop called")
     }
 
     /// C++: `double EffortCalculator::getEffort(const int) const` [const, virtual, pure virtual]
@@ -37,7 +37,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_effort(&self, numericalID: i32) -> f64 {
-        todo!("port EffortCalculator::getEffort")
+        panic!("pure virtual EffortCalculator::getEffort called")
     }
 
     /// C++: `void EffortCalculator::update(const int, const int, const double)` [virtual, pure virtual]
@@ -45,7 +45,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn update(&mut self, edge: i32, prev: i32, length: f64) {
-        todo!("port EffortCalculator::update")
+        panic!("pure virtual EffortCalculator::update called")
     }
 
     /// C++: `void EffortCalculator::setInitialState(const int)` [virtual, pure virtual]
@@ -53,7 +53,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_initial_state(&mut self, edge: i32) {
-        todo!("port EffortCalculator::setInitialState")
+        panic!("pure virtual EffortCalculator::setInitialState called")
     }
 
     /// C++: `std::string EffortCalculator::output(const int) const` [const, virtual, pure virtual]
@@ -61,7 +61,7 @@ impl EffortCalculator {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn output(&self, edge: i32) -> String {
-        todo!("port EffortCalculator::output")
+        panic!("pure virtual EffortCalculator::output called")
     }
 
 }

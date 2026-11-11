@@ -1,6 +1,7 @@
 //! Port of utils/router/FareModul.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::fare_zones::{fare_zone_to_rep, get_overlay_zone};
 
 /// The fare modul responsible for calculating prices
 /// C++ class `FareModul` (utils/router/FareModul.h)
@@ -499,7 +500,13 @@ impl FareState {
     //     }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port FareState::FareState")
+        FareState {
+            myFareToken: FareToken::None,
+            myCounter: ZoneCounter::new(i32::MAX as u32),
+            myTravelledDistance: f64::MAX,
+            myVisistedStops: i32::MAX,
+            myPriceDiff: 0.0,
+        }
     }
 
     /// C++: `void FareState::FareState(FareToken)`
@@ -511,7 +518,13 @@ impl FareState {
     //         myPriceDiff(0) {}
     #[allow(unused_variables)]
     pub fn new_2(token: FareToken) -> Self {
-        todo!("port FareState::FareState")
+        FareState {
+            myFareToken: token,
+            myCounter: ZoneCounter::new(0),
+            myTravelledDistance: 0.0,
+            myVisistedStops: 0,
+            myPriceDiff: 0.0,
+        }
     }
 
     /// C++: `void FareState::~FareState() noexcept`
@@ -519,7 +532,7 @@ impl FareState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FareState::~FareState")
+        // implicit destructor: nothing to release
     }
 
     /// C++: `bool FareState::isValid() const` [const]
@@ -529,7 +542,7 @@ impl FareState {
     //     }
     #[allow(unused_variables)]
     pub fn is_valid(&self) -> bool {
-        todo!("port FareState::isValid")
+        self.myFareToken != FareToken::None
     }
 
 }
@@ -565,7 +578,7 @@ impl ZoneCounter {
     //     }
     #[allow(unused_variables)]
     pub fn new(ct: u32) -> Self {
-        todo!("port ZoneCounter::ZoneCounter")
+        ZoneCounter { myCount: ct as i64 }
     }
 
     /// C++: `void ZoneCounter::addZone(int)`
@@ -583,7 +596,16 @@ impl ZoneCounter {
     //     }
     #[allow(unused_variables)]
     pub fn add_zone(&mut self, zoneNumber: i32) {
-        todo!("port ZoneCounter::addZone")
+        let zoneNumber = get_overlay_zone(zoneNumber);
+        if zoneNumber == 0 {
+            return;
+        }
+        let repNum = fare_zone_to_rep(zoneNumber);
+        // assert power of 2
+        if self.bitcount(repNum) == 0 {
+            return;
+        }
+        self.myCount = self.myCount | repNum;
     }
 
     /// C++: `int ZoneCounter::numZones() const` [const]
@@ -592,7 +614,7 @@ impl ZoneCounter {
     //     }
     #[allow(unused_variables)]
     pub fn num_zones(&self) -> i32 {
-        todo!("port ZoneCounter::numZones")
+        self.bitcount(self.myCount)
     }
 
     /// C++: `int ZoneCounter::bitcount(long long) const` [const, private]
@@ -608,8 +630,46 @@ impl ZoneCounter {
     //     }
     #[allow(unused_variables)]
     pub fn bitcount(&self, intVal: i64) -> i32 {
-        todo!("port ZoneCounter::bitcount")
+        let mut count = 0;
+        let mut counter = intVal;
+        while counter != 0 {
+            counter = counter & counter.wrapping_sub(1); // C++ signed overflow at LLONG_MIN is UB; wrap instead
+            count += 1;
+        }
+        count
     }
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn zone_counter_counts_distinct_zones() {
+        let mut c = ZoneCounter::new(0);
+        assert_eq!(c.num_zones(), 0);
+        c.add_zone(110); // rep 1
+        c.add_zone(121); // rep 2
+        c.add_zone(121); // same bit again
+        assert_eq!(c.num_zones(), 2);
+        c.add_zone(511); // overlay -> 165 -> rep 2^30
+        assert_eq!(c.num_zones(), 3);
+        c.add_zone(999); // unknown zone maps to rep 0, ignored
+        assert_eq!(c.num_zones(), 3);
+    }
+
+    #[test]
+    fn bitcount_matches_popcount() {
+        let c = ZoneCounter::new(0);
+        assert_eq!(c.bitcount(7), 3);
+        assert_eq!(c.bitcount(0), 0);
+        assert_eq!(c.bitcount(i64::MIN), 1);
+    }
+
+    #[test]
+    fn fare_state_validity() {
+        assert!(!FareState::new().is_valid());
+        assert!(FareState::new_2(FareToken::H).is_valid());
+    }
+}
