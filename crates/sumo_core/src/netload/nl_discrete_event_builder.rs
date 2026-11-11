@@ -12,8 +12,8 @@ pub enum NLDiscreteEventBuilder_ActionType {
     EV_SAVETLSPROGRAM = 3,
 }
 
-/// C++ typedef `int NLDiscreteEventBuilder::KnownActions`
-pub type NLDiscreteEventBuilder_KnownActions = i32;
+/// C++ typedef `std::map<std::string, ActionType> NLDiscreteEventBuilder::KnownActions`
+pub type NLDiscreteEventBuilder_KnownActions = BTreeMap<String, NLDiscreteEventBuilder_ActionType>;
 
 /// This class is responsible for building event-handling actions which the simulation shall execute.
 /// C++ class `NLDiscreteEventBuilder` (netload/NLDiscreteEventBuilder.h)
@@ -35,7 +35,12 @@ impl NLDiscreteEventBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet) -> Self {
-        todo!("port NLDiscreteEventBuilder::NLDiscreteEventBuilder")
+        let mut myActions = BTreeMap::new();
+        myActions.insert("SaveTLSStates".to_string(), NLDiscreteEventBuilder_ActionType::EV_SAVETLSTATE);
+        myActions.insert("SaveTLSSwitchTimes".to_string(), NLDiscreteEventBuilder_ActionType::EV_SAVETLSWITCHES);
+        myActions.insert("SaveTLSSwitchStates".to_string(), NLDiscreteEventBuilder_ActionType::EV_SAVETLSWITCHSTATES);
+        myActions.insert("SaveTLSProgram".to_string(), NLDiscreteEventBuilder_ActionType::EV_SAVETLSPROGRAM);
+        Self { myActions, myNet: Ptr::from_mut(net) }
     }
 
     /// C++: `void NLDiscreteEventBuilder::~NLDiscreteEventBuilder()`
@@ -43,7 +48,7 @@ impl NLDiscreteEventBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLDiscreteEventBuilder::~NLDiscreteEventBuilder")
+        // implicit C++ destructor: nothing to release beyond the members
     }
 
     /// C++: `void NLDiscreteEventBuilder::addAction(const SUMOSAXAttributes &, const std::string &)`
@@ -79,8 +84,25 @@ impl NLDiscreteEventBuilder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add_action(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) {
-        todo!("port NLDiscreteEventBuilder::addAction")
+    pub fn add_action(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) -> Result<(), ProcessError> {
+        let mut ok = true;
+        let type_ = attrs.get_opt::<String>(SUMO_ATTR_TYPE, "", &mut ok, String::new(), true);
+        // check whether the type was given
+        if type_ == "" || !ok {
+            return Err(ProcessError::InvalidArgument("An action's type is not given.".into()));
+        }
+        // get the numerical representation
+        let Some(&action) = self.myActions.get(&type_) else {
+            return Err(ProcessError::InvalidArgument(format!("The action type '{}' is not known.", type_)));
+        };
+        // build the action
+        match action {
+            NLDiscreteEventBuilder_ActionType::EV_SAVETLSTATE => self.build_save_tl_state_command(attrs, basePath)?,
+            NLDiscreteEventBuilder_ActionType::EV_SAVETLSWITCHES => self.build_save_tl_switches_command(attrs, basePath)?,
+            NLDiscreteEventBuilder_ActionType::EV_SAVETLSWITCHSTATES => self.build_save_tl_switch_states_command(attrs, basePath)?,
+            NLDiscreteEventBuilder_ActionType::EV_SAVETLSPROGRAM => self.build_save_tls_program_command(attrs, basePath)?,
+        }
+        Ok(())
     }
 
     /// C++: `void NLDiscreteEventBuilder::buildSaveTLStateCommand(const SUMOSAXAttributes &, const std::string &)` [private]
@@ -116,8 +138,37 @@ impl NLDiscreteEventBuilder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_save_tl_state_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) {
-        todo!("port NLDiscreteEventBuilder::buildSaveTLStateCommand")
+    pub fn build_save_tl_state_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) -> Result<(), ProcessError> {
+        let mut ok = true;
+        let dest = attrs.get_opt::<String>(SUMO_ATTR_DEST, "", &mut ok, String::new(), true);
+        let source = attrs.get_opt::<String>(SUMO_ATTR_SOURCE, "", &mut ok, String::new(), true);
+        let saveDetectors = attrs.get_opt::<bool>(SUMO_ATTR_SAVE_DETECTORS, "", &mut ok, false, true);
+        let saveConditions = attrs.get_opt::<bool>(SUMO_ATTR_SAVE_CONDITIONS, "", &mut ok, false, true);
+        // check the parameter
+        if dest == "" || !ok {
+            return Err(ProcessError::InvalidArgument("Incomplete description of an 'SaveTLSState'-action occurred.".into()));
+        }
+        if source == "" {
+            let ids = self.myNet.m().get_tls_control().get_all_tl_ids();
+            for tls in ids.iter() {
+                let logics = self.myNet.m().get_tls_control().get(tls);
+                let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+                let mut od = od.borrow_mut();
+                // C++ `new` without delete: the command is owned by the event control
+                Box::leak(Box::new(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions)));
+            }
+        } else {
+            // get the logic
+            if !self.myNet.m().get_tls_control().knows(&source) {
+                return Err(ProcessError::InvalidArgument(format!("The traffic light logic to save ({}) is not known.", source)));
+            }
+            let logics = self.myNet.m().get_tls_control().get(&source);
+            // build the action
+            let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+            let mut od = od.borrow_mut();
+            Box::leak(Box::new(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions)));
+        }
+        Ok(())
     }
 
     /// C++: `void NLDiscreteEventBuilder::buildSaveTLSwitchesCommand(const SUMOSAXAttributes &, const std::string &)` [private]
@@ -149,8 +200,34 @@ impl NLDiscreteEventBuilder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_save_tl_switches_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) {
-        todo!("port NLDiscreteEventBuilder::buildSaveTLSwitchesCommand")
+    pub fn build_save_tl_switches_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) -> Result<(), ProcessError> {
+        let mut ok = true;
+        let dest = attrs.get_opt::<String>(SUMO_ATTR_DEST, "", &mut ok, String::new(), true);
+        let source = attrs.get_opt::<String>(SUMO_ATTR_SOURCE, "", &mut ok, String::new(), true);
+        // check the parameter
+        if dest == "" || !ok {
+            return Err(ProcessError::InvalidArgument("Incomplete description of an 'SaveTLSSwitchTimes'-action occurred.".into()));
+        }
+        if source == "" {
+            let ids = self.myNet.m().get_tls_control().get_all_tl_ids();
+            for tls in ids.iter() {
+                let logics = self.myNet.m().get_tls_control().get(tls);
+                let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+                let mut od = od.borrow_mut();
+                Box::leak(Box::new(Command_SaveTLSSwitches::new(logics, &mut od)));
+            }
+        } else {
+            // get the logic
+            if !self.myNet.m().get_tls_control().knows(&source) {
+                return Err(ProcessError::InvalidArgument(format!("The traffic light logic to save ({}) is not known.", source)));
+            }
+            let logics = self.myNet.m().get_tls_control().get(&source);
+            // build the action
+            let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+            let mut od = od.borrow_mut();
+            Box::leak(Box::new(Command_SaveTLSSwitches::new(logics, &mut od)));
+        }
+        Ok(())
     }
 
     /// C++: `void NLDiscreteEventBuilder::buildSaveTLSwitchStatesCommand(const SUMOSAXAttributes &, const std::string &)` [private]
@@ -182,8 +259,34 @@ impl NLDiscreteEventBuilder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_save_tl_switch_states_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) {
-        todo!("port NLDiscreteEventBuilder::buildSaveTLSwitchStatesCommand")
+    pub fn build_save_tl_switch_states_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) -> Result<(), ProcessError> {
+        let mut ok = true;
+        let dest = attrs.get_opt::<String>(SUMO_ATTR_DEST, "", &mut ok, String::new(), true);
+        let source = attrs.get_opt::<String>(SUMO_ATTR_SOURCE, "", &mut ok, String::new(), true);
+        // check the parameter
+        if dest == "" || !ok {
+            return Err(ProcessError::InvalidArgument("Incomplete description of an 'SaveTLSSwitchStates'-action occurred.".into()));
+        }
+        if source == "" {
+            let ids = self.myNet.m().get_tls_control().get_all_tl_ids();
+            for tls in ids.iter() {
+                let logics = self.myNet.m().get_tls_control().get(tls);
+                let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+                let mut od = od.borrow_mut();
+                Box::leak(Box::new(Command_SaveTLSSwitchStates::new(logics, &mut od)));
+            }
+        } else {
+            // get the logic
+            if !self.myNet.m().get_tls_control().knows(&source) {
+                return Err(ProcessError::InvalidArgument(format!("The traffic light logic to save ({}) is not known.", source)));
+            }
+            let logics = self.myNet.m().get_tls_control().get(&source);
+            // build the action
+            let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+            let mut od = od.borrow_mut();
+            Box::leak(Box::new(Command_SaveTLSSwitchStates::new(logics, &mut od)));
+        }
+        Ok(())
     }
 
     /// C++: `void NLDiscreteEventBuilder::buildSaveTLSProgramCommand(const SUMOSAXAttributes &, const std::string &)` [private]
@@ -215,15 +318,44 @@ impl NLDiscreteEventBuilder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_save_tls_program_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) {
-        todo!("port NLDiscreteEventBuilder::buildSaveTLSProgramCommand")
+    pub fn build_save_tls_program_command(&mut self, attrs: &SUMOSAXAttributes, basePath: &str) -> Result<(), ProcessError> {
+        let mut ok = true;
+        let dest = attrs.get_opt::<String>(SUMO_ATTR_DEST, "", &mut ok, String::new(), true);
+        let source = attrs.get_opt::<String>(SUMO_ATTR_SOURCE, "", &mut ok, String::new(), true);
+        // check the parameter
+        if dest == "" || !ok {
+            return Err(ProcessError::InvalidArgument("Incomplete description of an 'SaveTLSProgram'-action occurred.".into()));
+        }
+        if source == "" {
+            let ids = self.myNet.m().get_tls_control().get_all_tl_ids();
+            for tls in ids.iter() {
+                let logics = self.myNet.m().get_tls_control().get(tls);
+                let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+                let mut od = od.borrow_mut();
+                Box::leak(Box::new(Command_SaveTLSProgram::new(logics, &mut od)));
+            }
+        } else {
+            // get the logic
+            if !self.myNet.m().get_tls_control().knows(&source) {
+                return Err(ProcessError::InvalidArgument(format!("The traffic light logic to save ({}) is not known.", source)));
+            }
+            let logics = self.myNet.m().get_tls_control().get(&source);
+            // build the action
+            let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
+            let mut od = od.borrow_mut();
+            Box::leak(Box::new(Command_SaveTLSProgram::new(logics, &mut od)));
+        }
+        Ok(())
     }
 
     /// C++: `NLDiscreteEventBuilder & NLDiscreteEventBuilder::operator=(const NLDiscreteEventBuilder &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NLDiscreteEventBuilder) -> &mut NLDiscreteEventBuilder {
-        todo!("port NLDiscreteEventBuilder::operator=")
+        // implicit C++ copy assignment: member-wise copy
+        self.myActions = arg0.myActions.clone();
+        self.myNet = arg0.myNet;
+        self
     }
 
 }
