@@ -123,7 +123,7 @@ impl MEInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MEInductLoop) -> &mut MEInductLoop {
-        todo!("port MEInductLoop::operator=")
+        panic!("MEInductLoop assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

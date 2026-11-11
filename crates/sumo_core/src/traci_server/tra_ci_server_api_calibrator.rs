@@ -56,7 +56,45 @@ impl TraCIServerAPI_Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Calibrator::processSet")
+        let mut warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != CMD_SET_FLOW && variable != VAR_PARAMETER {
+            return server.write_error_status_cmd(
+                CMD_SET_CALIBRATOR_VARIABLE,
+                &format!("Change Calibrator State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        match variable {
+            CMD_SET_FLOW => {
+                // shortcut: see above
+                StorageHelper::read_compound(inputStorage, 8, "A compound object of size 8 is needed for setting calibrator flow.");
+                let begin = StorageHelper::read_typed_double(inputStorage, "Setting flow requires the begin time as the first (double) value.");
+                let end = StorageHelper::read_typed_double(inputStorage, "Setting flow requires the end time as the second (double) value.");
+                let vehsPerHour = StorageHelper::read_typed_double(inputStorage, "Setting flow requires the number of vehicles per hour as the third (double) value.");
+                let speed = StorageHelper::read_typed_double(inputStorage, "Setting flow requires the speed as the fourth (double) value.");
+                let typeID = StorageHelper::read_typed_string(inputStorage, "Setting flow requires the type id as the fifth (string) value.");
+                let routeID = StorageHelper::read_typed_string(inputStorage, "Setting flow requires the route id as the sixth (string) value.");
+                let departLane = StorageHelper::read_typed_string(inputStorage, "Setting flow requires the departLane as the seventh (string) value.");
+                let departSpeed = StorageHelper::read_typed_string(inputStorage, "Setting flow requires the departSpeed as the eigth (string) value.");
+                Calibrator::set_flow(&id, begin, end, vehsPerHour, speed, &typeID, &routeID, &departLane, &departSpeed);
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                Calibrator::set_parameter(&id, &name, &value);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_CALIBRATOR_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_Calibrator::TraCIServerAPI_Calibrator(const TraCIServerAPI_Calibrator &)` [private]
@@ -64,7 +102,7 @@ impl TraCIServerAPI_Calibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_Calibrator) -> Self {
-        todo!("port TraCIServerAPI_Calibrator::TraCIServerAPI_Calibrator")
+        panic!("TraCIServerAPI_Calibrator copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_Calibrator & TraCIServerAPI_Calibrator::operator=(const TraCIServerAPI_Calibrator &)` [private]
@@ -72,7 +110,7 @@ impl TraCIServerAPI_Calibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_Calibrator) -> &mut TraCIServerAPI_Calibrator {
-        todo!("port TraCIServerAPI_Calibrator::operator=")
+        panic!("TraCIServerAPI_Calibrator assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

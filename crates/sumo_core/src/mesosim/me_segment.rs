@@ -1488,7 +1488,7 @@ impl MESegment {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MESegment) -> &mut MESegment {
-        todo!("port MESegment::operator=")
+        panic!("MESegment assignment operator is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `void MESegment::MESegment(const std::string &)` [private]

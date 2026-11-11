@@ -145,7 +145,7 @@ impl METypeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &METypeHandler) -> &mut METypeHandler {
-        todo!("port METypeHandler::operator=")
+        panic!("METypeHandler assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

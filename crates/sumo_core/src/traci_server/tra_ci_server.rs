@@ -2280,7 +2280,7 @@ impl TraCIServer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServer) -> &mut TraCIServer {
-        todo!("port TraCIServer::operator=")
+        panic!("TraCIServer assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

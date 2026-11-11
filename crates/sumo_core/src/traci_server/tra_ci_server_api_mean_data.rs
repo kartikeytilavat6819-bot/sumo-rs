@@ -13,7 +13,8 @@ impl TraCIServerAPI_MeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_MeanData::processSet")
+        // C++ declares processSet but has no definition in TraCIServerAPI_MeanData.cpp; a call is a link error in C++
+        panic!("TraCIServerAPI_MeanData::processSet has no C++ definition")
     }
 
     /// C++: `void TraCIServerAPI_MeanData::TraCIServerAPI_MeanData(const TraCIServerAPI_MeanData &)` [private]
@@ -21,7 +22,7 @@ impl TraCIServerAPI_MeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_MeanData) -> Self {
-        todo!("port TraCIServerAPI_MeanData::TraCIServerAPI_MeanData")
+        panic!("TraCIServerAPI_MeanData copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_MeanData & TraCIServerAPI_MeanData::operator=(const TraCIServerAPI_MeanData &)` [private]
@@ -29,7 +30,7 @@ impl TraCIServerAPI_MeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_MeanData) -> &mut TraCIServerAPI_MeanData {
-        todo!("port TraCIServerAPI_MeanData::operator=")
+        panic!("TraCIServerAPI_MeanData assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

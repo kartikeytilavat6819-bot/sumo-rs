@@ -153,7 +153,7 @@ impl TraCIServerAPI_POI {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_POI) -> Self {
-        todo!("port TraCIServerAPI_POI::TraCIServerAPI_POI")
+        panic!("TraCIServerAPI_POI copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_POI & TraCIServerAPI_POI::operator=(const TraCIServerAPI_POI &)` [private]
@@ -161,7 +161,7 @@ impl TraCIServerAPI_POI {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_POI) -> &mut TraCIServerAPI_POI {
-        todo!("port TraCIServerAPI_POI::operator=")
+        panic!("TraCIServerAPI_POI assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

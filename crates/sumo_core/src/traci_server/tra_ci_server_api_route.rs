@@ -50,7 +50,39 @@ impl TraCIServerAPI_Route {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Route::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != ADD && variable != REMOVE && variable != VAR_PARAMETER {
+            return server.write_error_status_cmd(
+                CMD_SET_ROUTE_VARIABLE,
+                &format!("Change Route State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        match variable {
+            ADD => {
+                let edges = StorageHelper::read_typed_string_list(inputStorage, "A string list is needed for adding a new route.");
+                Route::add(&id, edges);
+            }
+            REMOVE => {
+                Route::remove(&id);
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                Route::set_parameter(&id, &name, &value);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_ROUTE_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_Route::TraCIServerAPI_Route(const TraCIServerAPI_Route &)` [private]
@@ -58,7 +90,7 @@ impl TraCIServerAPI_Route {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_Route) -> Self {
-        todo!("port TraCIServerAPI_Route::TraCIServerAPI_Route")
+        panic!("TraCIServerAPI_Route copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_Route & TraCIServerAPI_Route::operator=(const TraCIServerAPI_Route &)` [private]
@@ -66,7 +98,7 @@ impl TraCIServerAPI_Route {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_Route) -> &mut TraCIServerAPI_Route {
-        todo!("port TraCIServerAPI_Route::operator=")
+        panic!("TraCIServerAPI_Route assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

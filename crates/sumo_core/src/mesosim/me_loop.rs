@@ -545,7 +545,7 @@ impl MELoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MELoop) -> &mut MELoop {
-        todo!("port MELoop::operator=")
+        panic!("MELoop assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

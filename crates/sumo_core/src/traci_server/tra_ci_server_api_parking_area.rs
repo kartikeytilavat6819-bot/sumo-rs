@@ -47,7 +47,36 @@ impl TraCIServerAPI_ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_ParkingArea::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != VAR_PARAMETER && variable != VAR_ACCESS_BADGE {
+            return server.write_error_status_cmd(
+                CMD_SET_PARKINGAREA_VARIABLE,
+                &format!("Change ParkingArea State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        match variable {
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                ParkingArea::set_parameter(&id, &name, &value);
+            }
+            VAR_ACCESS_BADGE => {
+                let badges = StorageHelper::read_typed_string_list(inputStorage, "A string list is needed to update the ParkingArea access badges.");
+                ParkingArea::set_accepted_badges(&id, badges);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_PARKINGAREA_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_ParkingArea::TraCIServerAPI_ParkingArea(const TraCIServerAPI_ParkingArea &)` [private]
@@ -55,7 +84,7 @@ impl TraCIServerAPI_ParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_ParkingArea) -> Self {
-        todo!("port TraCIServerAPI_ParkingArea::TraCIServerAPI_ParkingArea")
+        panic!("TraCIServerAPI_ParkingArea copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_ParkingArea & TraCIServerAPI_ParkingArea::operator=(const TraCIServerAPI_ParkingArea &)` [private]
@@ -63,7 +92,7 @@ impl TraCIServerAPI_ParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_ParkingArea) -> &mut TraCIServerAPI_ParkingArea {
-        todo!("port TraCIServerAPI_ParkingArea::operator=")
+        panic!("TraCIServerAPI_ParkingArea assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }

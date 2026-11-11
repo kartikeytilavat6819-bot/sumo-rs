@@ -79,7 +79,67 @@ impl TraCIServerAPI_Lane {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Lane::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != VAR_MAXSPEED
+            && variable != VAR_LENGTH
+            && variable != LANE_ALLOWED
+            && variable != LANE_DISALLOWED
+            && variable != VAR_PARAMETER
+            && variable != LANE_CHANGES
+        {
+            return server.write_error_status_cmd(
+                CMD_SET_LANE_VARIABLE,
+                &format!("Change Lane State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+        let l = MSLane::dictionary_2(&id);
+        if l.is_null() {
+            return server.write_error_status_cmd(CMD_SET_LANE_VARIABLE, &format!("Lane '{}' is not known", id), outputStorage);
+        }
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        match variable {
+            VAR_MAXSPEED => {
+                let value = StorageHelper::read_typed_double(inputStorage, "The speed must be given as a double.");
+                Lane::set_max_speed(&id, value);
+            }
+            VAR_FRICTION => {
+                let value = StorageHelper::read_typed_double(inputStorage, "The friction must be given as a double.");
+                Lane::set_friction(&id, value);
+            }
+            VAR_LENGTH => {
+                let value = StorageHelper::read_typed_double(inputStorage, "The length must be given as a double.");
+                Lane::set_length(&id, value);
+            }
+            LANE_ALLOWED => {
+                let classes = StorageHelper::read_typed_string_list(inputStorage, "Allowed vehicle classes must be given as a list of strings.");
+                Lane::set_allowed_2(&id, classes);
+            }
+            LANE_DISALLOWED => {
+                let classes = StorageHelper::read_typed_string_list(inputStorage, "Not allowed vehicle classes must be given as a list of strings.");
+                Lane::set_disallowed_2(&id, classes);
+            }
+            LANE_CHANGES => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting lane change permissions.");
+                let classes = StorageHelper::read_typed_string_list(inputStorage, "Vehicle classes allowed to change lane must be given as a list of strings.");
+                let direction = StorageHelper::read_typed_byte(inputStorage, "The lane change direction must be given as an integer.");
+                Lane::set_change_permissions(&id, classes, direction);
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                Lane::set_parameter(&id, &name, &value);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_LANE_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_Lane::TraCIServerAPI_Lane(const TraCIServerAPI_Lane &)` [private]
@@ -87,7 +147,7 @@ impl TraCIServerAPI_Lane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(s: &TraCIServerAPI_Lane) -> Self {
-        todo!("port TraCIServerAPI_Lane::TraCIServerAPI_Lane")
+        panic!("TraCIServerAPI_Lane copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `TraCIServerAPI_Lane & TraCIServerAPI_Lane::operator=(const TraCIServerAPI_Lane &)` [private]
@@ -95,7 +155,7 @@ impl TraCIServerAPI_Lane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TraCIServerAPI_Lane) -> &mut TraCIServerAPI_Lane {
-        todo!("port TraCIServerAPI_Lane::operator=")
+        panic!("TraCIServerAPI_Lane assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }
