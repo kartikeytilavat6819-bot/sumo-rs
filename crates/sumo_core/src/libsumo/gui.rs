@@ -12,7 +12,7 @@ impl GUI {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port GUI::GUI")
+        panic!("libsumo::GUI cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
