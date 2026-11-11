@@ -27,7 +27,7 @@ impl ROJTREdgeBuilder {
     // ROJTREdgeBuilder::ROJTREdgeBuilder() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ROJTREdgeBuilder::ROJTREdgeBuilder")
+        ROJTREdgeBuilder { base: ROAbstractEdgeBuilder::new() }
     }
 
     /// C++: `void ROJTREdgeBuilder::~ROJTREdgeBuilder() noexcept` [virtual]
@@ -35,7 +35,6 @@ impl ROJTREdgeBuilder {
     // ROJTREdgeBuilder::~ROJTREdgeBuilder() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROJTREdgeBuilder::~ROJTREdgeBuilder")
     }
 
     /// C++: `ROEdge * ROJTREdgeBuilder::buildEdge(const std::string &, RONode *, RONode *, const int, const std::string &, const std::string &)` [virtual]
@@ -46,7 +45,8 @@ impl ROJTREdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        todo!("port ROJTREdgeBuilder::buildEdge")
+        let edge = ROJTREdge::new(name, from, to, self.get_next_index(), priority, type_, routingType);
+        Ptr::from_raw(Box::into_raw(Box::new(edge)))
     }
 
 }
