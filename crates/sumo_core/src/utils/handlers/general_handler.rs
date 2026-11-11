@@ -5,17 +5,17 @@ use crate::prelude::*;
 /// C++ class `GeneralHandler` (utils/handlers/GeneralHandler.h)
 pub struct GeneralHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
 }
 
 impl std::ops::Deref for GeneralHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for GeneralHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -26,18 +26,15 @@ impl GeneralHandler {
     // GeneralHandler::GeneralHandler(FileBucket* fileBucket) :
     //     SUMOSAXHandler(fileBucket->getFilename()) {
     // }
-    #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        todo!("port GeneralHandler::GeneralHandler")
+    // shortcut: FileBucket is not ported yet, so the caller passes fileBucket->getFilename() directly, upgrade when FileBucket exists
+    pub fn new(file_name: &str) -> Self {
+        GeneralHandler { base: utils::xml::sumo_sax_handler::new(file_name, "") }
     }
 
     /// C++: `void GeneralHandler::~GeneralHandler() noexcept` [virtual]
     /// Destructor
     // GeneralHandler::~GeneralHandler() {}
-    #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        todo!("port GeneralHandler::~GeneralHandler")
-    }
+    pub fn drop_(&mut self) {}
 
     /// C++: `bool GeneralHandler::parse()`
     /// parse
@@ -45,26 +42,21 @@ impl GeneralHandler {
     // GeneralHandler::parse() {
     //     return XMLSubSys::runParser(*this, getFileName());
     // }
-    #[allow(unused_variables)]
     pub fn parse(&mut self) -> bool {
-        todo!("port GeneralHandler::parse")
+        let file = self.base.get_file_name().to_string();
+        // run_parser only returns Err when catch_exceptions is false, and here it is true
+        utils::xml::xml_sub_sys::run_parser(self, &file, false, false, false, true).unwrap_or(false)
     }
 
     /// C++: `void GeneralHandler::beginTag(SumoXMLTag, const SUMOSAXAttributes &)` [virtual, pure virtual, private]
     /// start element
     // (pure virtual: no C++ body; subclasses implement it)
-    #[allow(unused_variables)]
-    pub fn begin_tag(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes) {
-        todo!("port GeneralHandler::beginTag")
-    }
+    pub fn begin_tag(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes) {}
 
     /// C++: `void GeneralHandler::endTag()` [virtual, pure virtual, private]
     /// end element
     // (pure virtual: no C++ body; subclasses implement it)
-    #[allow(unused_variables)]
-    pub fn end_tag(&mut self) {
-        todo!("port GeneralHandler::endTag")
-    }
+    pub fn end_tag(&mut self) {}
 
     /// C++: `void GeneralHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, private]
     /// Called on the opening of a tag;
@@ -75,9 +67,11 @@ impl GeneralHandler {
     //     // begin tag
     //     beginTag(tag, attrs);
     // }
-    #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port GeneralHandler::myStartElement")
+        // obtain tag
+        let tag: SumoXMLTag = if element == 0 { utils::xml::sumo_xml_definitions::SUMO_TAG_ROOTFILE } else { element };
+        // begin tag
+        GeneralHandler::begin_tag(self, tag, attrs);
     }
 
     /// C++: `void GeneralHandler::myEndElement(int)` [virtual, private]
@@ -87,34 +81,22 @@ impl GeneralHandler {
     //     // end tag
     //     endTag();
     // }
-    #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port GeneralHandler::myEndElement")
+        // end tag
+        GeneralHandler::end_tag(self);
     }
-
-    /// C++: `void GeneralHandler::GeneralHandler()` [private]
-    /// invalidate default onstructor
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn new_2() -> Self {
-        todo!("port GeneralHandler::GeneralHandler")
-    }
-
-    /// C++: `void GeneralHandler::GeneralHandler(const GeneralHandler &)` [private]
-    /// invalidate copy constructor
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn new_3(s: &GeneralHandler) -> Self {
-        todo!("port GeneralHandler::GeneralHandler")
-    }
-
-    /// C++: `GeneralHandler & GeneralHandler::operator=(const GeneralHandler &)` [private]
-    /// invalidate assignment operator
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn assign_op(&mut self, s: &GeneralHandler) -> &mut GeneralHandler {
-        todo!("port GeneralHandler::operator=")
-    }
-
 }
 
+impl SaxHandler for GeneralHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        GeneralHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        GeneralHandler::my_end_element(self, element);
+        Ok(())
+    }
+}

@@ -15,16 +15,13 @@ impl NBCapacity2Lanes {
     // NBCapacity2Lanes(double divider) : myDivider(divider) { }
     #[allow(unused_variables)]
     pub fn new(divider: f64) -> Self {
-        todo!("port NBCapacity2Lanes::NBCapacity2Lanes")
+        NBCapacity2Lanes { myDivider: divider }
     }
 
     /// C++: `void NBCapacity2Lanes::~NBCapacity2Lanes() noexcept`
     /// Destructor
     // ~NBCapacity2Lanes() { }
-    #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        todo!("port NBCapacity2Lanes::~NBCapacity2Lanes")
-    }
+    pub fn drop_(&mut self) {}
 
     /// C++: `int NBCapacity2Lanes::get(double) const` [const]
     /// Returns the number of lanes computed from the given capacity
@@ -40,8 +37,17 @@ impl NBCapacity2Lanes {
     //         return (int) capacity;
     //     }
     #[allow(unused_variables)]
-    pub fn get(&self, capacity: f64) -> i32 {
-        todo!("port NBCapacity2Lanes::get")
+    pub fn get(&self, mut capacity: f64) -> i32 {
+        capacity /= self.myDivider;
+        // C++ (int) cast truncates toward zero, as Rust `as i32` does
+        if capacity > (capacity as i32) as f64 {
+            capacity += 1.0;
+        }
+        // just assure that the number of lanes is not zero
+        if capacity == 0.0 {
+            capacity = 1.0;
+        }
+        capacity as i32
     }
 
 }
