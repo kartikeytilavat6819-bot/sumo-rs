@@ -39,7 +39,12 @@ impl MSRightOfWayJunction {
     //     myLogic(logic) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, type_: SumoXMLNodeType, position: &Position, shape: &PositionVector, name: &str, incoming: Vec<Ptr<MSLane>>, internal: Vec<Ptr<MSLane>>, logic: Ptr<MSJunctionLogic>) -> Self {
-        todo!("port MSRightOfWayJunction::MSRightOfWayJunction")
+        Self {
+            base: MSLogicJunction::new(id, type_, position, shape, name, incoming, internal),
+            myLogic: logic,
+            myLinkFoeLinks: BTreeMap::new(),
+            myLinkFoeInternalLanes: BTreeMap::new(),
+        }
     }
 
     /// C++: `void MSRightOfWayJunction::~MSRightOfWayJunction() noexcept` [virtual]
@@ -49,7 +54,11 @@ impl MSRightOfWayJunction {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRightOfWayJunction::~MSRightOfWayJunction")
+        // delete myLogic (null-safe, like delete nullptr); then the base destructor runs
+        if !self.myLogic.is_null() {
+            drop(unsafe { Box::from_raw(self.myLogic.as_raw()) });
+        }
+        self.base.drop_();
     }
 
     /// C++: `void MSRightOfWayJunction::postloadInit()` [virtual]
@@ -192,7 +201,7 @@ impl MSRightOfWayJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_links(&self, srcLink: Ptr<MSLink>) -> &Vec<Ptr<MSLink>> {
-        todo!("port MSRightOfWayJunction::getFoeLinks")
+        &self.myLinkFoeLinks[&srcLink]
     }
 
     /// C++: `const std::vector<MSLane *> & MSRightOfWayJunction::getFoeInternalLanes(const MSLink *const) const` [const, virtual]
@@ -201,7 +210,7 @@ impl MSRightOfWayJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_internal_lanes(&self, srcLink: Ptr<MSLink>) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSRightOfWayJunction::getFoeInternalLanes")
+        &self.myLinkFoeInternalLanes[&srcLink]
     }
 
     /// C++: `const MSJunctionLogic * MSRightOfWayJunction::getLogic() const` [const, virtual]
@@ -210,7 +219,7 @@ impl MSRightOfWayJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic(&self) -> Ptr<MSJunctionLogic> {
-        todo!("port MSRightOfWayJunction::getLogic")
+        self.myLogic
     }
 
     /// C++: `void MSRightOfWayJunction::MSRightOfWayJunction(const MSRightOfWayJunction &)` [private]
@@ -218,15 +227,17 @@ impl MSRightOfWayJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSRightOfWayJunction) -> Self {
-        todo!("port MSRightOfWayJunction::MSRightOfWayJunction")
+        // C++ declares this copy constructor private and never defines it: unreachable in C++
+        panic!("MSRightOfWayJunction copy constructor is invalidated")
     }
 
-    /// C++: `MSRightOfWayJunction & MSRightOfWayJunction::operator=(const MSRightOfWayJunction &)` [private]
+    /// C++: `MSRightOfWayJunction &MSRightOfWayJunction::operator=(const MSRightOfWayJunction &)` [private]
     /// Invalidated assignment operator.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSRightOfWayJunction) -> &mut MSRightOfWayJunction {
-        todo!("port MSRightOfWayJunction::operator=")
+        // C++ declares this assignment operator private and never defines it: unreachable in C++
+        panic!("MSRightOfWayJunction assignment operator is invalidated")
     }
 
 }
