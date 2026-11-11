@@ -64,8 +64,16 @@ def split_top(s, sep=","):
 
 class TypeMapper:
     def __init__(self, known):
-        self.known = known  # C++ class/enum names that exist as Rust types
+        self.known = known  # {C++ name, qualified "Outer::Inner" or bare: Rust type name}
         self.unmapped = set()
+
+    def lookup(self, cpp):
+        parts = [p for p in cpp.split("::") if p not in ("", "std", "libsumo", "LIBSUMO_NAMESPACE", "PHEMlightdllV5", "RoutingKit")]
+        for i in range(len(parts)):  # longest qualified suffix first: A::B::C, B::C, C
+            key = "::".join(parts[i:])
+            if key in self.known:
+                return self.known[key]
+        return None
 
     def map(self, t, param=False, ret=False):
         t = re.sub(r"\b(struct|class|enum|typename)\s+", "", t).strip()
@@ -108,12 +116,13 @@ class TypeMapper:
                 return "Box<dyn Fn()>"
             if name in CONTAINERS:
                 return f"{CONTAINERS[name]}<{', '.join(self.map(a) for a in args)}>"
-            base = name.split("::")[-1]
-            if base in self.known:
+            base = self.lookup(name)
+            if base:
                 return f"{base}<{', '.join(self.map(a) for a in args)}>"
+        found = self.lookup(t)
+        if found:
+            return found
         bare = t.split("::")[-1]
-        if bare in self.known:
-            return bare
         if re.fullmatch(r"[A-Z]\w*", bare) and len(bare) <= 2:  # template parameter like T, E, V
             return bare
         self.unmapped.add(t)
@@ -185,8 +194,10 @@ def collect(args):
                     bodies.setdefault(json.dumps(key), src_text(ch))
                     if ch.kind in (K.FUNCTION_DECL, K.FUNCTION_TEMPLATE) and (not sem or sem.kind in (K.TRANSLATION_UNIT, K.NAMESPACE)):
                         types.setdefault("fn:" + ch.get_usr(), describe_function(ch, frel, ns))
-            elif ch.kind == K.VAR_DECL and rel and ch.semantic_parent.kind in (K.TRANSLATION_UNIT, K.NAMESPACE):
-                pass
+            elif ch.kind in (K.TYPEDEF_DECL, K.TYPE_ALIAS_DECL) and rel:
+                parent = ch.semantic_parent.spelling if ch.semantic_parent.kind in (K.CLASS_DECL, K.STRUCT_DECL, K.CLASS_TEMPLATE) else ""
+                types.setdefault("td:" + ch.get_usr(), {"kind": "typedef", "name": ch.spelling, "file": rel, "ns": ns,
+                                                         "target": ch.underlying_typedef_type.spelling, "parent": parent})
             if ch.kind in (K.CLASS_DECL, K.STRUCT_DECL, K.CLASS_TEMPLATE) and rel:
                 visit(ch, ns)  # nested classes / inline method definitions
     visit(tu.cursor)
@@ -270,7 +281,7 @@ def emit_method(m, cls, tm, bodies, cls_usr, used_names, indent="    "):
     if m["doc"]:
         out += f"{indent}/// {m['doc']}\n"
     if body:
-        out += comment_block(body, indent + "// ")
+        out += comment_block(body, indent)
     elif m["pure"]:
         out += f"{indent}// (pure virtual: no C++ body; subclasses implement it)\n"
     else:
@@ -290,7 +301,7 @@ def emit_class(cls, tm, bodies):
     if cls["doc"]:
         out += f"/// {cls['doc']}\n"
     out += f"/// C++ class `{cls['ns']}{(cls['parent'] + '::') if cls['parent'] else ''}{cls['name']}` ({cls['file']})\n"
-    out += f"pub struct {cls['name']}{gen} {{\n"
+    out += f"pub struct {cls['rust']}{gen} {{\n"
     bases = []
     for i, b in enumerate(cls["bases"]):
         bt = tm.map(b)
@@ -309,16 +320,16 @@ def emit_class(cls, tm, bodies):
     out += "}\n\n"
     if bases:
         fname, bt, _ = bases[0]
-        out += (f"impl{gen} std::ops::Deref for {cls['name']}{gen} {{\n    type Target = {bt};\n"
+        out += (f"impl{gen} std::ops::Deref for {cls['rust']}{gen} {{\n    type Target = {bt};\n"
                 f"    fn deref(&self) -> &{bt} {{\n        &self.{fname}\n    }}\n}}\n"
-                f"impl{gen} std::ops::DerefMut for {cls['name']}{gen} {{\n"
+                f"impl{gen} std::ops::DerefMut for {cls['rust']}{gen} {{\n"
                 f"    fn deref_mut(&mut self) -> &mut {bt} {{\n        &mut self.{fname}\n    }}\n}}\n\n")
     if cls["statics"]:
         out += f"// C++ static members of {cls['name']} (port as module-level statics, see AGENTS.md):\n"
         for sn, st in cls["statics"]:
             out += f"//   static {st} {cls['name']}::{sn};\n"
         out += "\n"
-    out += f"impl{gen} {cls['name']}{gen} {{\n"
+    out += f"impl{gen} {cls['rust']}{gen} {{\n"
     used = set()
     for m in cls["methods"]:
         out += emit_method(m, cls, tm, bodies, cls["usr"], used)
@@ -329,7 +340,7 @@ def emit_class(cls, tm, bodies):
 def emit_enum(e):
     out = f"/// C++ enum `{e['ns']}{(e['parent'] + '::') if e['parent'] else ''}{e['name']}`\n"
     out += "#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\n#[repr(i64)]\n"
-    out += f"pub enum {e['name']} {{\n"
+    out += f"pub enum {e['rust']} {{\n"
     seen = set()
     dupes = []
     for n, v in e["values"]:
@@ -340,7 +351,7 @@ def emit_enum(e):
         out += f"    {n} = {v},\n"
     out += "}\n"
     if dupes:
-        out += f"impl {e['name']} {{\n" + "".join(f"    pub const {n}: Self = Self::{next(m for m, w in e['values'] if w == v)};\n" for n, v in dupes) + "}\n"
+        out += f"impl {e['rust']} {{\n" + "".join(f"    pub const {n}: Self = Self::{next(m for m, w in e['values'] if w == v)};\n" for n, v in dupes) + "}\n"
     return out + "\n"
 
 
@@ -349,7 +360,7 @@ def emit_fn(f, tm, bodies):
     ret = "" if f["ret"] == "void" else " -> " + tm.map(f["ret"], ret=True).replace("&", "&'static ", 1)
     key = json.dumps(["", f["name"], f["type"]])
     body = bodies.get(key, "")
-    out = f"/// C++: `{f['type']} {f['ns']}{f['name']}`\n" + (comment_block(body, "// ") if body else "")
+    out = f"/// C++: `{f['type']} {f['ns']}{f['name']}`\n" + (comment_block(body, "") if body else "")
     return out + f"#[allow(unused_variables)]\npub fn {snake(f['name'])}({params}){ret} {{\n    todo!(\"port {f['name']}\")\n}}\n\n"
 
 
@@ -375,33 +386,74 @@ def main():
             types.setdefault(k, v)
         bodies.update({k: v for k, v in b.items() if k not in bodies})
         errors += e
-    known = set(json.load(open(os.path.join(HERE, "known_types.json")))) if os.path.exists(os.path.join(HERE, "known_types.json")) else set()
-    known |= {v["name"] for v in types.values() if v["kind"] in ("class", "enum")}
+    # Rust names: nested items become Outer_Inner; already-ported Rust types (known_types.json) win.
+    ported = json.load(open(os.path.join(HERE, "known_types.json"))) if os.path.exists(os.path.join(HERE, "known_types.json")) else {}
+    known, taken, dupes = {n: n for n in ported}, set(ported), []
+    for v in types.values():
+        if v["kind"] == "fn":
+            continue
+        rust = f"{v['parent']}_{v['name']}" if v.get("parent") else v["name"]
+        if v["name"] in ported and not v.get("parent"):
+            v["skip"] = True  # already ported by hand in utils/foreign
+            continue
+        if rust in taken:
+            dupes.append(f"{rust} ({v['file']})"); v["skip"] = True
+            continue
+        taken.add(rust)
+        v["rust"] = rust
+        known[f"{v['parent']}::{v['name']}" if v.get("parent") else v["name"]] = rust
+        if v.get("parent") and v["name"] not in known:
+            known[v["name"]] = rust  # bare use inside the outer class
     tm = TypeMapper(known)
     by_file = {}
     for v in types.values():
-        by_file.setdefault(v["file"].rsplit(".", 1)[0], []).append(v)
-    written = []
+        if not v.get("skip"):
+            by_file.setdefault(v["file"].rsplit(".", 1)[0], []).append(v)
+    written, mods = [], {}
     for base, items in sorted(by_file.items()):
-        rust_path = os.path.join(out_dir, *[snake(p) for p in base.split("/")[:-1]], snake(base.split("/")[-1]) + ".rs")
+        parts = [snake(p) for p in base.replace("-", "_").split("/")]
+        rust_path = os.path.join(out_dir, *parts[:-1], parts[-1] + ".rs")
         os.makedirs(os.path.dirname(rust_path), exist_ok=True)
         text = f"//! Port of {base}.{{h,cpp}} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.\n"
-        text += "#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, clippy::all)]\nuse crate::prelude::*;\n\n"
-        for v in sorted(items, key=lambda x: (x["kind"] != "enum", x["name"])):
+        text += "#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]\nuse crate::prelude::*;\n\n"
+        for v in sorted(items, key=lambda x: ("enum typedef class fn".split().index(x["kind"]), x["name"])):
             if v["kind"] == "enum":
                 text += emit_enum(v)
+            elif v["kind"] == "typedef":
+                text += f"/// C++ typedef `{v['target']} {(v['parent'] + '::') if v['parent'] else ''}{v['name']}`\npub type {v['rust']} = {tm.map(v['target'])};\n\n"
             elif v["kind"] == "class":
                 text += emit_class(v, tm, bodies)
             else:
                 text += emit_fn(v, tm, bodies)
         open(rust_path, "w", encoding="utf8", newline="\n").write(text)
         written.append(rust_path)
+        for i in range(len(parts)):  # register module chain
+            mods.setdefault("/".join(parts[:i]), set()).add(parts[i])
+    # mod.rs files, lib.rs and prelude
+    for parent, children in mods.items():
+        if parent == "":
+            continue
+        open(os.path.join(out_dir, *parent.split("/"), "mod.rs"), "w", encoding="utf8", newline="\n").write(
+            "".join(f"pub mod {c};\n" for c in sorted(children)))
+    lib = "//! GENERATED by tools/skeleton/gen.py: module tree of the SUMO port.\n#![allow(clippy::all)]\npub mod prelude;\n"
+    lib += "".join(f"pub mod {c};\n" for c in sorted(mods.get("", ())))
+    open(os.path.join(out_dir, "lib.rs"), "w", encoding="utf8", newline="\n").write(lib)
+    prelude = ("//! GENERATED: every ported/skeleton type, so generated modules can name each other.\n"
+               "#![allow(unused_imports, ambiguous_glob_reexports)]\n"
+               "pub use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque};\npub use std::rc::Rc;\n"
+               "/// Placeholder for a C++ type the generator could not map; replace when porting the code that uses it.\n"
+               "pub type Unmapped = ();\n")
+    prelude += "".join(f"pub use {path}::{name};\n" for name, path in sorted(ported.items()))
+    prelude += "pub use utils::common::time::*;\npub use utils::common::sumo_vehicle_class::*;\npub use utils::xml::sumo_xml_definitions::*;\n"
+    prelude += "".join(f"pub use crate::{w}::*;\n" for w in sorted(
+        os.path.relpath(p, out_dir)[:-3].replace(os.sep, "::") for p in written))
+    open(os.path.join(out_dir, "prelude.rs"), "w", encoding="utf8", newline="\n").write(prelude)
     report = {"files": len(written), "types": sum(1 for v in types.values() if v["kind"] != "fn"),
               "functions": sum(1 for v in types.values() if v["kind"] == "fn"),
-              "unmapped_types": sorted(tm.unmapped), "errors": errors[:50]}
+              "unmapped_types": sorted(tm.unmapped), "duplicate_names": dupes, "errors": errors[:50]}
     json.dump(report, open(os.path.join(HERE, "last_report.json"), "w"), indent=1)
     print(f"wrote {len(written)} files, {report['types']} types, {report['functions']} free functions, "
-          f"{len(tm.unmapped)} unmapped C++ types, {len(errors)} parse errors")
+          f"{len(tm.unmapped)} unmapped C++ types, {len(dupes)} duplicate names, {len(errors)} parse errors")
 
 
 if __name__ == "__main__":
