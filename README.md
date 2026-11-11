@@ -6,7 +6,7 @@ The goal is a faithful port: same inputs, same outputs, checked against SUMO's o
 
 ## Status
 
-See [PORTING.md](PORTING.md) for what has been ported and the current test pass rate.
+See [PORTING.md](PORTING.md) for what has been ported. Run `python tools/progress.py` for a progress bar (C++ lines ported, per module).
 
 ## Build and test
 

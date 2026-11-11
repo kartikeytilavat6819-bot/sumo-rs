@@ -1,0 +1,48 @@
+"""Print port progress: C++ lines covered by rows in PORTING.md's "Done" table.
+
+Rows whose notes say "partial" are not counted. Usage: python tools/progress.py
+"""
+import os, re
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = os.path.join(os.environ.get("SUMO_SRC", os.path.join(os.path.dirname(ROOT), "sumo-src")), "src")
+
+
+def cpp_files():
+    for d, _, fs in os.walk(SRC):
+        for f in fs:
+            if f.endswith((".cpp", ".h")):
+                p = os.path.join(d, f)
+                yield os.path.relpath(p, SRC).replace("\\", "/"), sum(1 for _ in open(p, encoding="utf8", errors="replace"))
+
+
+def done_prefixes():
+    text = open(os.path.join(ROOT, "PORTING.md"), encoding="utf8").read()
+    table = text.split("## Done", 1)[1].split("\n## ", 1)[0]
+    for row in table.splitlines():
+        cells = [c.strip() for c in row.strip().strip("|").split("|")]
+        if len(cells) < 3 or cells[0] in ("C++", "") or set(cells[0]) <= set("-"):
+            continue
+        if "partial" in cells[2].lower():
+            continue
+        yield re.sub(r"\s*\(.*\)", "", cells[0])
+
+
+def bar(frac, width=40):
+    n = round(frac * width)
+    return "[" + "#" * n + "-" * (width - n) + f"] {100 * frac:5.1f}%"
+
+
+files = dict(cpp_files())
+prefixes = list(done_prefixes())
+done = {f: n for f, n in files.items() if any(f.rsplit(".", 1)[0] == p or f.startswith(p.rstrip("/") + "/") for p in prefixes)}
+total = sum(files.values())
+print(f"Overall  {bar(sum(done.values()) / total)}  {sum(done.values()):,} / {total:,} C++ lines")
+groups = {}
+for f, n in files.items():
+    g = "/".join(f.split("/")[:2]) if f.startswith("utils/") else f.split("/")[0]
+    groups.setdefault(g, [0, 0])[1] += n
+    if f in done:
+        groups[g][0] += n
+for g, (d, t) in sorted(groups.items(), key=lambda x: -x[1][1])[:20]:
+    print(f"  {g:<22} {bar(d / t, 24)}  {d:>7,} / {t:>7,}")
