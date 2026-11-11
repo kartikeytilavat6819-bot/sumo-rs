@@ -67,6 +67,20 @@ pub enum NIImporter_OpenStreetMap_WayType {
     WAY_PREFER_BACKWARD = 16,
 }
 
+/// C++ static `NIImporter_OpenStreetMap::MAXSPEED_UNGIVEN`
+pub const MAXSPEED_UNGIVEN: f64 = -1.0;
+/// C++ static `NIImporter_OpenStreetMap::INVALID_ID`
+pub const INVALID_ID: i64 = i64::MAX;
+/// C++ static `NIImporter_OpenStreetMap::compoundTypeSeparator`
+pub const compoundTypeSeparator: &str = "|";
+
+thread_local! {
+    /// C++ static `NIImporter_OpenStreetMap::myAllAttributes`
+    pub static myAllAttributes: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// C++ static `NIImporter_OpenStreetMap::myExtraAttributes`
+    pub static myExtraAttributes: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
+}
+
 /// Functor which compares two Edges
 /// C++ class `NIImporter_OpenStreetMap::CompareEdges` (netimport/NIImporter_OpenStreetMap.cpp)
 pub struct NIImporter_OpenStreetMap_CompareEdges {
@@ -99,8 +113,29 @@ impl NIImporter_OpenStreetMap_CompareEdges {
     //         return e1->myCurrentNodes > e2->myCurrentNodes;
     //     }
     #[allow(unused_variables)]
-    pub fn call_op(&self, e1: Ptr<Edge>, e2: Ptr<Edge>) -> bool {
-        todo!("port CompareEdges::operator()")
+    pub fn call_op(&self, e1: Ptr<NIImporter_OpenStreetMap_Edge>, e2: Ptr<NIImporter_OpenStreetMap_Edge>) -> bool {
+        if e1.myHighWayType != e2.myHighWayType {
+            return e1.myHighWayType > e2.myHighWayType;
+        }
+        if e1.myNoLanes != e2.myNoLanes {
+            return e1.myNoLanes > e2.myNoLanes;
+        }
+        if e1.myNoLanesForward != e2.myNoLanesForward {
+            return e1.myNoLanesForward > e2.myNoLanesForward;
+        }
+        if e1.myMaxSpeed != e2.myMaxSpeed {
+            return e1.myMaxSpeed > e2.myMaxSpeed;
+        }
+        if e1.myIsOneWay != e2.myIsOneWay {
+            return e1.myIsOneWay > e2.myIsOneWay;
+        }
+        if e1.myPlacement != e2.myPlacement {
+            return (e1.myPlacement as i64) > (e2.myPlacement as i64);
+        }
+        if e1.myPlacementLane != e2.myPlacementLane {
+            return e1.myPlacementLane > e2.myPlacementLane;
+        }
+        e1.myCurrentNodes > e2.myCurrentNodes
     }
 
 }
@@ -117,7 +152,7 @@ impl NIImporter_OpenStreetMap_CompareNodes {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, n1: Ptr<NIImporter_OpenStreetMap_NIOSMNode>, n2: Ptr<NIImporter_OpenStreetMap_NIOSMNode>) -> bool {
-        todo!("port CompareNodes::operator()")
+        (n1.lat > n2.lat) || (n1.lat == n2.lat && n1.lon > n2.lon)
     }
 
 }
@@ -234,22 +269,61 @@ impl NIImporter_OpenStreetMap_Edge {
     //         { }
     #[allow(unused_variables)]
     pub fn new(_id: i64) -> Self {
-        todo!("port Edge::Edge")
+        NIImporter_OpenStreetMap_Edge {
+            base: Parameterised::new(),
+            id: _id,
+            streetName: String::new(),
+            ref_: String::new(),
+            myNoLanes: -1,
+            myNoLanesForward: 0,
+            myMaxSpeed: MAXSPEED_UNGIVEN,
+            myMaxSpeedBackward: MAXSPEED_UNGIVEN,
+            myExtraAllowed: 0,
+            myExtraDisallowed: 0,
+            myHighWayType: String::new(),
+            myIsOneWay: String::new(),
+            myCyclewayType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN,
+            myBuswayType: NIImporter_OpenStreetMap_WayType::WAY_NONE,
+            mySidewalkType: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN,
+            myRailDirection: 4, // WAY_UNKNOWN
+            myParkingType: NIImporter_OpenStreetMap_ParkingType::PARKING_NONE as i32,
+            myChangeForward: NIImporter_OpenStreetMap_ChangeType::CHANGE_YES as i32,
+            myChangeBackward: NIImporter_OpenStreetMap_ChangeType::CHANGE_YES as i32,
+            myDesignatedLaneForward: Vec::new(),
+            myDesignatedLaneBackward: Vec::new(),
+            myAllowedLaneForward: Vec::new(),
+            myAllowedLaneBackward: Vec::new(),
+            myDisallowedLaneForward: Vec::new(),
+            myDisallowedLaneBackward: Vec::new(),
+            myLayer: 0,
+            myCurrentNodes: Vec::new(),
+            myCurrentIsRoad: false,
+            myAmInRoundabout: false,
+            myExtraTags: BTreeMap::new(),
+            myTurnSignsForward: Vec::new(),
+            myTurnSignsBackward: Vec::new(),
+            myPlacement: NIImporter_OpenStreetMap_PlacementType::NONE,
+            myPlacementLane: -1,
+            myWidthLanesForward: Vec::new(),
+            myWidthLanesBackward: Vec::new(),
+            myWidth: -1.0,
+        }
     }
 
     /// C++: `void Edge::~Edge() noexcept` [virtual]
     // virtual ~Edge() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Edge::~Edge")
+        // Rust drops fields automatically; the C++ destructor body is empty.
     }
 
     /// C++: `Edge & Edge::operator=(const Edge &)` [private]
     /// invalidated assignment operator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn assign_op(&mut self, s: &Edge) -> &mut Edge {
-        todo!("port Edge::operator=")
+    pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_Edge) -> &mut NIImporter_OpenStreetMap_Edge {
+        // C++ declares this private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::Edge::operator= is private and undefined in C++")
     }
 
 }
@@ -258,28 +332,28 @@ impl NIImporter_OpenStreetMap_Edge {
 /// C++ class `NIImporter_OpenStreetMap::EdgesHandler` (netimport/NIImporter_OpenStreetMap.h)
 pub struct NIImporter_OpenStreetMap_EdgesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The previously parsed nodes
     pub myOSMNodes: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>>,
     /// A map of built edges
-    pub myEdgeMap: Ptr<BTreeMap<i64, Ptr<Edge>>>,
+    pub myEdgeMap: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>>,
     /// A map of built edges
-    pub myPlatformShapesMap: Ptr<BTreeMap<i64, Ptr<Edge>>>,
+    pub myPlatformShapesMap: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>>,
     /// The currently built edge
-    pub myCurrentEdge: Ptr<Edge>,
+    pub myCurrentEdge: Ptr<NIImporter_OpenStreetMap_Edge>,
     /// A map of non-numeric speed descriptions to their numeric values
     pub mySpeedMap: BTreeMap<String, f64>,
     pub myTypeCont: Ptr<NBTypeCont>,
 }
 
 impl std::ops::Deref for NIImporter_OpenStreetMap_EdgesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIImporter_OpenStreetMap_EdgesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -386,8 +460,103 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     //     mySpeedMap["UZ:motorway"] = 110. / 3.6;
     // }
     #[allow(unused_variables)]
-    pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, toFill: &mut BTreeMap<i64, Ptr<Edge>>, platformShapes: &mut BTreeMap<i64, Ptr<Edge>>, tc: &NBTypeCont) -> Self {
-        todo!("port EdgesHandler::EdgesHandler")
+    pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, toFill: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, platformShapes: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, tc: &NBTypeCont) -> Self {
+        let unlimitedSpeed = utils::options::options_cont::get_float("osm.speedlimit-none");
+        let seventy = utils::common::string_utils::parse_speed("70mph", true).unwrap();
+        let sixty = utils::common::string_utils::parse_speed("60mph", true).unwrap();
+        let mySpeedMap: BTreeMap<String, f64> = BTreeMap::from([
+            ("nan".to_string(), MAXSPEED_UNGIVEN),
+            ("sign".to_string(), MAXSPEED_UNGIVEN),
+            ("signals".to_string(), MAXSPEED_UNGIVEN),
+            ("none".to_string(), unlimitedSpeed),
+            ("no".to_string(), unlimitedSpeed),
+            ("walk".to_string(), 5. / 3.6),
+            ("AT:urban".to_string(), 50. / 3.6),
+            ("AT:rural".to_string(), 100. / 3.6),
+            ("AT:trunk".to_string(), 100. / 3.6),
+            ("AT:motorway".to_string(), 130. / 3.6),
+            ("AU:urban".to_string(), 50. / 3.6),
+            ("BE:urban".to_string(), 50. / 3.6),
+            ("BE:zone".to_string(), 30. / 3.6),
+            ("BE:motorway".to_string(), 120. / 3.6),
+            ("BE:zone30".to_string(), 30. / 3.6),
+            ("BE-VLG:rural".to_string(), 70. / 3.6),
+            ("BE-WAL:rural".to_string(), 90. / 3.6),
+            ("BE:school".to_string(), 30. / 3.6),
+            ("CZ:motorway".to_string(), 130. / 3.6),
+            ("CZ:trunk".to_string(), 110. / 3.6),
+            ("CZ:rural".to_string(), 90. / 3.6),
+            ("CZ:urban_motorway".to_string(), 80. / 3.6),
+            ("CZ:urban_trunk".to_string(), 80. / 3.6),
+            ("CZ:urban".to_string(), 50. / 3.6),
+            ("DE:motorway".to_string(), unlimitedSpeed),
+            ("DE:rural".to_string(), 100. / 3.6),
+            ("DE:urban".to_string(), 50. / 3.6),
+            ("DE:bicycle_road".to_string(), 30. / 3.6),
+            ("DK:motorway".to_string(), 130. / 3.6),
+            ("DK:rural".to_string(), 80. / 3.6),
+            ("DK:urban".to_string(), 50. / 3.6),
+            ("EE:urban".to_string(), 50. / 3.6),
+            ("EE:rural".to_string(), 90. / 3.6),
+            ("ES:urban".to_string(), 50. / 3.6),
+            ("ES:zone30".to_string(), 30. / 3.6),
+            ("FR:motorway".to_string(), 130. / 3.6),
+            ("FR:rural".to_string(), 80. / 3.6),
+            ("FR:urban".to_string(), 50. / 3.6),
+            ("FR:zone30".to_string(), 30. / 3.6),
+            ("HU:living_street".to_string(), 20. / 3.6),
+            ("HU:motorway".to_string(), 130. / 3.6),
+            ("HU:rural".to_string(), 90. / 3.6),
+            ("HU:trunk".to_string(), 110. / 3.6),
+            ("HU:urban".to_string(), 50. / 3.6),
+            ("IT:rural".to_string(), 90. / 3.6),
+            ("IT:motorway".to_string(), 130. / 3.6),
+            ("IT:urban".to_string(), 50. / 3.6),
+            ("JP:nsl".to_string(), 60. / 3.6),
+            ("JP:express".to_string(), 100. / 3.6),
+            ("LT:rural".to_string(), 90. / 3.6),
+            ("LT:urban".to_string(), 50. / 3.6),
+            ("NO:rural".to_string(), 80. / 3.6),
+            ("NO:urban".to_string(), 50. / 3.6),
+            ("ON:urban".to_string(), 50. / 3.6),
+            ("ON:rural".to_string(), 80. / 3.6),
+            ("PT:motorway".to_string(), 120. / 3.6),
+            ("PT:rural".to_string(), 90. / 3.6),
+            ("PT:trunk".to_string(), 100. / 3.6),
+            ("PT:urban".to_string(), 50. / 3.6),
+            ("RO:motorway".to_string(), 130. / 3.6),
+            ("RO:rural".to_string(), 90. / 3.6),
+            ("RO:trunk".to_string(), 100. / 3.6),
+            ("RO:urban".to_string(), 50. / 3.6),
+            ("RS:living_street".to_string(), 30. / 3.6),
+            ("RS:motorway".to_string(), 130. / 3.6),
+            ("RS:rural".to_string(), 80. / 3.6),
+            ("RS:trunk".to_string(), 100. / 3.6),
+            ("RS:urban".to_string(), 50. / 3.6),
+            ("RU:living_street".to_string(), 20. / 3.6),
+            ("RU:urban".to_string(), 60. / 3.6),
+            ("RU:rural".to_string(), 90. / 3.6),
+            ("RU:motorway".to_string(), 110. / 3.6),
+            ("GB:motorway".to_string(), seventy),
+            ("GB:nsl_dual".to_string(), seventy),
+            ("GB:nsl_single".to_string(), sixty),
+            ("UK:motorway".to_string(), seventy),
+            ("UK:nsl_dual".to_string(), seventy),
+            ("UK:nsl_single".to_string(), sixty),
+            ("UZ:living_street".to_string(), 30. / 3.6),
+            ("UZ:urban".to_string(), 70. / 3.6),
+            ("UZ:rural".to_string(), 100. / 3.6),
+            ("UZ:motorway".to_string(), 110. / 3.6),
+        ]);
+        NIImporter_OpenStreetMap_EdgesHandler {
+            base: utils::xml::sumo_sax_handler::new("osm - file", ""),
+            myOSMNodes: Ptr::new(osmNodes),
+            myEdgeMap: Ptr::from_mut(toFill),
+            myPlatformShapesMap: Ptr::from_mut(platformShapes),
+            myCurrentEdge: Ptr::null(),
+            mySpeedMap,
+            myTypeCont: Ptr::new(tc),
+        }
     }
 
     /// C++: `void EdgesHandler::~EdgesHandler() noexcept` [virtual]
@@ -395,7 +564,7 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // NIImporter_OpenStreetMap::EdgesHandler::~EdgesHandler()
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgesHandler::~EdgesHandler")
+        // C++ body is empty; Rust drops the members.
     }
 
     /// C++: `void EdgesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -895,7 +1064,540 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port EdgesHandler::myStartElement")
+        if element == SUMO_TAG_WAY {
+            let mut ok = true;
+            let id: i64 = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            let action: String = attrs.get_opt(SUMO_ATTR_ACTION, "", &mut ok, String::new(), true);
+            if action == "delete" || !ok {
+                self.myCurrentEdge = Ptr::null();
+                return;
+            }
+            self.myCurrentEdge = Ptr::from_raw(Box::into_raw(Box::new(NIImporter_OpenStreetMap_Edge::new(id))));
+        }
+        // parse "nd" (node) elements
+        if element == SUMO_TAG_ND && !self.myCurrentEdge.is_null() {
+            let mut ok = true;
+            let mut r: i64 = attrs.get(SUMO_ATTR_REF, "", &mut ok, true);
+            if ok {
+                let Some(node) = self.myOSMNodes.get(&r) else {
+                    write_warningf!("The referenced geometry information (ref='%') is not known", r);
+                    return;
+                };
+                r = node.id; // node may have been substituted
+                let ce = self.myCurrentEdge;
+                if ce.myCurrentNodes.last() != Some(&r) { // avoid consecutive duplicates
+                    ce.m().myCurrentNodes.push(r);
+                }
+            }
+        }
+        if element == SUMO_TAG_TAG && !self.myCurrentEdge.is_null() {
+            let mut ok = true;
+            let ce = self.myCurrentEdge;
+            let mut key: String = attrs.get(SUMO_ATTR_K, &ce.id.to_string(), &mut ok, false);
+            if key.len() > 6 && utils::common::string_utils::starts_with(&key, "busway:") {
+                // handle special busway keys
+                let buswaySpec = key[7..].to_string();
+                key = "busway".to_string();
+                if buswaySpec == "right" {
+                    ce.m().myBuswayType |= NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+                } else if buswaySpec == "left" {
+                    ce.m().myBuswayType |= NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                } else if buswaySpec == "both" {
+                    ce.m().myBuswayType |= NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+                } else {
+                    key = "ignore".to_string();
+                }
+            }
+            if myAllAttributes.with(|c| c.get()) && myExtraAttributes.with(|s| s.borrow().contains(&key) || s.borrow().is_empty()) {
+                let info = format!("way={}, k={}", ce.id, key);
+                let v: String = attrs.get(SUMO_ATTR_V, &info, &mut ok, false);
+                ce.m().set_parameter(&key, &v);
+            }
+            // we check whether the key is relevant (and we really need to transcode the value) to avoid hitting #1636
+            if !utils::common::string_utils::ends_with(&key, "way")
+                && !utils::common::string_utils::starts_with(&key, "lanes")
+                && key != "maxspeed" && key != "maxspeed:type"
+                && key != "zone:maxspeed"
+                && key != "maxspeed:forward" && key != "maxspeed:backward"
+                && key != "junction" && key != "name" && key != "tracks" && key != "layer"
+                && key != "route"
+                && !utils::common::string_utils::starts_with(&key, "cycleway")
+                && !utils::common::string_utils::starts_with(&key, "sidewalk")
+                && key != "ref"
+                && key != "highspeed"
+                && !utils::common::string_utils::starts_with(&key, "parking")
+                && !utils::common::string_utils::starts_with(&key, "change")
+                && !utils::common::string_utils::starts_with(&key, "vehicle:lanes")
+                && key != "postal_code"
+                && key != "railway:preferred_direction"
+                && key != "railway:bidirectional"
+                && key != "railway:track_ref"
+                && key != "usage"
+                && key != "access"
+                && key != "emergency"
+                && key != "service"
+                && key != "electrified"
+                && key != "segregated"
+                && key != "bus"
+                && key != "psv"
+                && key != "foot"
+                && key != "bicycle"
+                && key != "oneway:bicycle"
+                && key != "oneway:bus"
+                && key != "oneway:psv"
+                && key != "placement"
+                && key != "bus:lanes"
+                && key != "bus:lanes:forward"
+                && key != "bus:lanes:backward"
+                && key != "psv:lanes"
+                && key != "psv:lanes:forward"
+                && key != "psv:lanes:backward"
+                && key != "bicycle:lanes"
+                && key != "bicycle:lanes:forward"
+                && key != "bicycle:lanes:backward"
+                && !utils::common::string_utils::starts_with(&key, "width")
+                && !(utils::common::string_utils::starts_with(&key, "turn:") && key.contains(":lanes"))
+                && key != "public_transport" {
+                return;
+            }
+            let value: String = attrs.get(SUMO_ATTR_V, &ce.id.to_string(), &mut ok, false);
+
+            if key == "highway" || key == "railway" || key == "waterway" || utils::common::string_utils::starts_with(&key, "cycleway")
+                || key == "busway" || key == "route" || utils::common::string_utils::starts_with(&key, "sidewalk") || key == "highspeed"
+                || key == "aeroway" || key == "aerialway" || key == "usage" || key == "service" {
+                // build type id
+                if key != "highway" || self.myTypeCont.knows(&format!("{key}.{value}")) {
+                    ce.m().myCurrentIsRoad = true;
+                }
+                // special cycleway stuff https://wiki.openstreetmap.org/wiki/Key:cycleway
+                if key == "cycleway" {
+                    if value == "no" || value == "none" || value == "separate" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                    } else if value == "both" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+                    } else if value == "right" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+                    } else if value == "left" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    } else if value == "opposite_track" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    } else if value == "opposite_lane" {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    } else if value == "opposite" {
+                        // according to the wiki ref above, this should rather be a bidi lane, see #13438
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    }
+                }
+                if key == "cycleway:left" {
+                    if ce.myCyclewayType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                    }
+                    if value == "yes" || value == "lane" || value == "track" {
+                        ce.m().myCyclewayType |= NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    }
+                    key = "cycleway".to_string(); // for type adaption
+                }
+                if key == "cycleway:right" {
+                    if ce.myCyclewayType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                    }
+                    if value == "yes" || value == "lane" || value == "track" {
+                        ce.m().myCyclewayType |= NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+                    }
+                    key = "cycleway".to_string(); // for type adaption
+                }
+                if key == "cycleway:both" {
+                    if ce.myCyclewayType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        if value == "no" || value == "none" || value == "separate" {
+                            ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                        }
+                        if value == "yes" || value == "lane" || value == "track" {
+                            ce.m().myCyclewayType = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+                        }
+                    }
+                    key = "cycleway".to_string(); // for type adaption
+                }
+                if key == "cycleway" && value != "lane" && value != "track" && value != "opposite_track" && value != "opposite_lane" {
+                    // typemap covers only the lane and track cases
+                    return;
+                }
+                if utils::common::string_utils::starts_with(&key, "cycleway:") {
+                    // no need to extend the type id for other cycleway sub tags
+                    return;
+                }
+                // special sidewalk stuff
+                if key == "sidewalk" {
+                    if value == "no" || value == "none" || value == "separate" {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                        if value == "separate" {
+                            ce.m().myExtraDisallowed |= SVC_PEDESTRIAN;
+                        }
+                    } else if value == "both" || value == "yes" {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+                    } else if value == "right" {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+                    } else if value == "left" {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    }
+                }
+                if key == "sidewalk:left" {
+                    if ce.mySidewalkType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                    }
+                    if value == "yes" {
+                        ce.m().mySidewalkType |= NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    }
+                }
+                if key == "sidewalk:right" {
+                    if ce.mySidewalkType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                    }
+                    if value == "yes" {
+                        ce.m().mySidewalkType |= NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+                    }
+                    if value == "separate" {
+                        ce.m().myExtraDisallowed |= SVC_PEDESTRIAN;
+                    }
+                }
+                if key == "sidewalk:both" {
+                    if ce.mySidewalkType == NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64 {
+                        if value == "no" || value == "none" || value == "separate" {
+                            ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+                            if value == "separate" {
+                                ce.m().myExtraDisallowed |= SVC_PEDESTRIAN;
+                            }
+                        }
+                        if value == "yes" {
+                            ce.m().mySidewalkType = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+                        }
+                    }
+                }
+                if utils::common::string_utils::starts_with(&key, "sidewalk") {
+                    // no need to extend the type id
+                    return;
+                }
+                // special busway stuff
+                if key == "busway" {
+                    if value == "no" {
+                        return;
+                    }
+                    if value == "opposite_track" {
+                        ce.m().myBuswayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    } else if value == "opposite_lane" {
+                        ce.m().myBuswayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                    }
+                    // no need to extend the type id
+                    return;
+                }
+                let mut singleTypeID = format!("{key}.{value}");
+                if key == "highspeed" {
+                    if value == "no" {
+                        return;
+                    }
+                    singleTypeID = "railway.highspeed".to_string();
+                }
+                self.add_type(&singleTypeID);
+
+            } else if key == "bus" || key == "psv" {
+                // 'psv' includes taxi in the UK but not in germany
+                match utils::common::string_utils::to_bool(&value) {
+                    Ok(true) => {
+                        ce.m().myExtraAllowed |= SVC_BUS;
+                        self.add_type(&key);
+                    }
+                    Ok(false) => {
+                        ce.m().myExtraDisallowed |= SVC_BUS;
+                    }
+                    Err(ProcessError::BoolFormat(_)) => {
+                        ce.m().myExtraAllowed |= SVC_BUS;
+                        self.add_type(&key);
+                    }
+                    Err(e) => panic!("{e}"),
+                }
+            } else if key == "emergency" {
+                match utils::common::string_utils::to_bool(&value) {
+                    Ok(true) => {
+                        ce.m().myExtraAllowed |= SVC_AUTHORITY | SVC_EMERGENCY;
+                    }
+                    Ok(false) => {}
+                    Err(ProcessError::BoolFormat(_)) => {
+                        ce.m().myExtraAllowed |= SVC_AUTHORITY | SVC_EMERGENCY;
+                    }
+                    Err(e) => panic!("{e}"),
+                }
+            } else if key == "access" {
+                if value == "no" {
+                    ce.m().myExtraDisallowed |= !(SVC_PUBLIC_CLASSES | SVC_EMERGENCY | SVC_AUTHORITY);
+                }
+            } else if utils::common::string_utils::starts_with(&key, "width:lanes") {
+                let values = utils::common::string_tokenizer::StringTokenizer::with_token(&value, "|", false).get_vector();
+                let mut widthLanes: Vec<f64> = Vec::new();
+                let mut parsed_ok = true;
+                for width in values {
+                    let parsedWidth = if width.is_empty() { Ok(-1.0) } else { utils::common::string_utils::parse_dist(&width) };
+                    match parsedWidth {
+                        Ok(w) => widthLanes.push(w),
+                        Err(_) => {
+                            parsed_ok = false;
+                            break;
+                        }
+                    }
+                }
+                if !parsed_ok {
+                    write_warningf!("Using default lane width for edge '%' as value '%' could not be parsed.", ce.id, value);
+                } else if key == "width:lanes" || key == "width:lanes:forward" {
+                    ce.m().myWidthLanesForward = widthLanes;
+                } else if key == "width:lanes:backward" {
+                    ce.m().myWidthLanesBackward = widthLanes;
+                } else {
+                    write_warningf!("Using default lane width for edge '%' as key '%' could not be parsed.", ce.id, key);
+                }
+            } else if key == "width" {
+                match utils::common::string_utils::parse_dist(&value) {
+                    Ok(w) => ce.m().myWidth = w,
+                    Err(_) => {
+                        write_warningf!("Using default width for edge '%' as value '%' could not be parsed.", ce.id, value);
+                    }
+                }
+            } else if key == "foot" {
+                if value == "use_sidepath" || value == "no" {
+                    ce.m().myExtraDisallowed |= SVC_PEDESTRIAN;
+                } else if value == "yes" || value == "designated" || value == "permissive" {
+                    ce.m().myExtraAllowed |= SVC_PEDESTRIAN;
+                }
+            } else if key == "bicycle" {
+                if value == "use_sidepath" || value == "no" {
+                    ce.m().myExtraDisallowed |= SVC_BICYCLE;
+                } else if value == "yes" || value == "designated" || value == "permissive" {
+                    ce.m().myExtraAllowed |= SVC_BICYCLE;
+                }
+            } else if key == "oneway:bicycle" {
+                ce.m().myExtraTags.insert("oneway:bicycle".to_string(), value);
+            } else if key == "oneway:bus" || key == "oneway:psv" {
+                if value == "no" {
+                    // need to add a bus way in reversed direction of way
+                    ce.m().myBuswayType = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+                }
+            } else if key == "placement" {
+                let e = ce.m();
+                if !self.interpret_placement(&value, &mut e.myPlacement, &mut e.myPlacementLane) {
+                    write_warningf!("Ignoring unsupported placement value '%' for edge '%'.", value, ce.id);
+                }
+            } else if key == "lanes" {
+                match utils::common::string_utils::to_int(&value) {
+                    Ok(n) => ce.m().myNoLanes = n,
+                    Err(ProcessError::NumberFormat(_)) => {
+                        // might be a list of values
+                        let mut st = utils::common::string_tokenizer::StringTokenizer::with_token(&value, ";", true);
+                        let list = st.get_vector();
+                        if list.len() >= 2 {
+                            let mut minLanes = i32::MAX;
+                            let mut failed = false;
+                            for i in &list {
+                                match utils::common::string_utils::to_int(&utils::common::string_utils::prune(i)) {
+                                    Ok(numLanes) => minLanes = minLanes.min(numLanes),
+                                    Err(_) => {
+                                        failed = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if failed {
+                                write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                            } else {
+                                ce.m().myNoLanes = minLanes;
+                                write_warningf!("Using minimum lane number from list (%) for edge '%'.", value, ce.id);
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                    }
+                }
+            } else if key == "lanes:forward" {
+                match utils::common::string_utils::to_int(&value) {
+                    Ok(numLanes) => {
+                        let e = ce.m();
+                        if e.myNoLanesForward < 0 && e.myNoLanes < 0 {
+                            // fix lane count in case only lanes:forward and lanes:backward are set
+                            e.myNoLanes = numLanes - e.myNoLanesForward;
+                        }
+                        e.myNoLanesForward = numLanes;
+                    }
+                    Err(_) => {
+                        write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                    }
+                }
+            } else if key == "lanes:backward" {
+                match utils::common::string_utils::to_int(&value) {
+                    Ok(numLanes) => {
+                        let e = ce.m();
+                        if e.myNoLanesForward > 0 && e.myNoLanes < 0 {
+                            // fix lane count in case only lanes:forward and lanes:backward are set
+                            e.myNoLanes = numLanes + e.myNoLanesForward;
+                        }
+                        // denote backwards count with a negative sign
+                        e.myNoLanesForward = -numLanes;
+                    }
+                    Err(_) => {
+                        write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                    }
+                }
+            } else if ce.myMaxSpeed == MAXSPEED_UNGIVEN
+                && (key == "maxspeed" || key == "maxspeed:type" || key == "maxspeed:forward" || key == "zone:maxspeed") {
+                // both 'maxspeed' and 'maxspeed:type' may be given so we must take care not to overwrite an already seen value
+                let s = self.interpret_speed(&key, value.clone());
+                ce.m().myMaxSpeed = s;
+            } else if key == "maxspeed:backward" && ce.myMaxSpeedBackward == MAXSPEED_UNGIVEN {
+                let s = self.interpret_speed(&key, value.clone());
+                ce.m().myMaxSpeedBackward = s;
+            } else if key == "junction" {
+                if (value == "roundabout" || value == "circular") && ce.myIsOneWay.is_empty() {
+                    ce.m().myIsOneWay = "yes".to_string();
+                }
+                if value == "roundabout" {
+                    ce.m().myAmInRoundabout = true;
+                }
+            } else if key == "oneway" {
+                ce.m().myIsOneWay = value;
+            } else if key == "name" {
+                ce.m().streetName = value;
+            } else if key == "ref" {
+                ce.m().ref_ = value.clone();
+                ce.m().set_parameter("ref", &value);
+            } else if key == "layer" {
+                match utils::common::string_utils::to_int(&value) {
+                    Ok(n) => ce.m().myLayer = n,
+                    Err(_) => {
+                        write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                    }
+                }
+            } else if key == "tracks" {
+                match utils::common::string_utils::to_int(&value) {
+                    Ok(1) => {
+                        ce.m().myIsOneWay = "true".to_string();
+                    }
+                    Ok(_) => {
+                        write_warningf!("Ignoring track count % for edge '%'.", value, ce.id);
+                    }
+                    Err(_) => {
+                        write_warningf!("Value of key '%' is not numeric ('%') in edge '%'.", key, value, ce.id);
+                    }
+                }
+            } else if key == "railway:preferred_direction" {
+                if value == "both" {
+                    ce.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i32
+                        | NIImporter_OpenStreetMap_WayType::WAY_PREFER_FORWARD as i32
+                        | NIImporter_OpenStreetMap_WayType::WAY_PREFER_BACKWARD as i32;
+                } else if value == "backward" {
+                    let e = ce.m();
+                    e.myRailDirection = (e.myRailDirection
+                        | NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32
+                        | NIImporter_OpenStreetMap_WayType::WAY_PREFER_BACKWARD as i32)
+                        & !(NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i32);
+                } else if value == "forward" {
+                    let e = ce.m();
+                    e.myRailDirection = (e.myRailDirection
+                        | NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32
+                        | NIImporter_OpenStreetMap_WayType::WAY_PREFER_FORWARD as i32)
+                        & !(NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i32);
+                }
+            } else if key == "railway:bidirectional" {
+                if value == "regular" {
+                    let e = ce.m();
+                    e.myRailDirection = (e.myRailDirection | NIImporter_OpenStreetMap_WayType::WAY_BOTH as i32)
+                        & !(NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i32);
+                }
+            } else if key == "electrified" || key == "segregated" {
+                if value != "no" {
+                    ce.m().myExtraTags.insert(key.clone(), value);
+                }
+            } else if key == "railway:track_ref" {
+                ce.m().set_parameter(&key, &value);
+            } else if key == "public_transport" && value == "platform" {
+                ce.m().myExtraTags.insert("platform".to_string(), "yes".to_string());
+            } else if (key == "parking:both" || key == "parking:lane:both") && !utils::common::string_utils::starts_with(&value, "no") {
+                ce.m().myParkingType |= NIImporter_OpenStreetMap_ParkingType::PARKING_BOTH as i32;
+            } else if (key == "parking:left" || key == "parking:lane:left") && !utils::common::string_utils::starts_with(&value, "no") {
+                ce.m().myParkingType |= NIImporter_OpenStreetMap_ParkingType::PARKING_LEFT as i32;
+            } else if (key == "parking:right" || key == "parking:lane:right") && !utils::common::string_utils::starts_with(&value, "no") {
+                ce.m().myParkingType |= NIImporter_OpenStreetMap_ParkingType::PARKING_RIGHT as i32;
+            } else if key == "change" || key == "change:lanes" {
+                let c = self.interpret_change_type(&value);
+                ce.m().myChangeForward = c;
+                ce.m().myChangeBackward = c;
+            } else if key == "change:forward" || key == "change:lanes:forward" {
+                ce.m().myChangeForward = self.interpret_change_type(&value);
+            } else if key == "change:backward" || key == "change:lanes:backward" {
+                ce.m().myChangeBackward = self.interpret_change_type(&value);
+            } else if key == "vehicle:lanes" || key == "vehicle:lanes:forward" {
+                self.interpret_lane_use(&value, SVC_PASSENGER, true);
+                self.interpret_lane_use(&value, SVC_PRIVATE, true);
+            } else if key == "vehicle:lanes:backward" {
+                self.interpret_lane_use(&value, SVC_PASSENGER, false);
+                self.interpret_lane_use(&value, SVC_PRIVATE, false);
+            } else if key == "bus:lanes" || key == "bus:lanes:forward" {
+                self.interpret_lane_use(&value, SVC_BUS, true);
+            } else if key == "bus:lanes:backward" {
+                self.interpret_lane_use(&value, SVC_BUS, false);
+            } else if key == "psv:lanes" || key == "psv:lanes:forward" {
+                self.interpret_lane_use(&value, SVC_BUS, true);
+                self.interpret_lane_use(&value, SVC_TAXI, true);
+            } else if key == "psv:lanes:backward" {
+                self.interpret_lane_use(&value, SVC_BUS, false);
+                self.interpret_lane_use(&value, SVC_TAXI, false);
+            } else if key == "bicycle:lanes" || key == "bicycle:lanes:forward" {
+                self.interpret_lane_use(&value, SVC_BICYCLE, true);
+            } else if key == "bicycle:lanes:backward" {
+                self.interpret_lane_use(&value, SVC_BICYCLE, false);
+            } else if utils::common::string_utils::starts_with(&key, "turn:") && key.contains(":lanes") {
+                let mut shift: i32 = 0;
+                // use the first 8 bit to encode permitted directions for all classes
+                // and the successive 8 bit blocks for selected classes
+                if utils::common::string_utils::starts_with(&key, "turn:bus") || utils::common::string_utils::starts_with(&key, "turn:psv:") {
+                    shift = NBEDGE_TURN_SIGN_SHIFT_BUS;
+                } else if utils::common::string_utils::starts_with(&key, "turn:taxi") {
+                    shift = NBEDGE_TURN_SIGN_SHIFT_TAXI;
+                } else if utils::common::string_utils::starts_with(&key, "turn:bicycle") {
+                    shift = NBEDGE_TURN_SIGN_SHIFT_BICYCLE;
+                }
+                let values = utils::common::string_tokenizer::StringTokenizer::with_token(&value, "|", false).get_vector();
+                let mut turnCodes: Vec<i32> = Vec::new();
+                for codeList in values {
+                    let codes = utils::common::string_tokenizer::StringTokenizer::with_token(&codeList, ";", false).get_vector();
+                    let mut turnCode: i32 = 0;
+                    if codes.is_empty() {
+                        turnCode = LinkDirection::STRAIGHT as i32;
+                    }
+                    for code in &codes {
+                        if code.is_empty() || code == "none" || code == "through" {
+                            turnCode |= (LinkDirection::STRAIGHT as i32) << shift;
+                        } else if code == "left" || code == "sharp_left" {
+                            turnCode |= (LinkDirection::LEFT as i32) << shift;
+                        } else if code == "right" || code == "sharp_right" {
+                            turnCode |= (LinkDirection::RIGHT as i32) << shift;
+                        } else if code == "slight_left" {
+                            turnCode |= (LinkDirection::PARTLEFT as i32) << shift;
+                        } else if code == "slight_right" {
+                            turnCode |= (LinkDirection::PARTRIGHT as i32) << shift;
+                        } else if code == "reverse" {
+                            turnCode |= (LinkDirection::TURN as i32) << shift;
+                        } else if code == "merge_to_left" || code == "merge_to_right" {
+                            turnCode |= (LinkDirection::NODIR as i32) << shift;
+                        }
+                    }
+                    turnCodes.push(turnCode);
+                }
+                if utils::common::string_utils::ends_with(&key, "lanes") || utils::common::string_utils::ends_with(&key, "lanes:forward") {
+                    NIImporter_OpenStreetMap::merge_turn_signs(&mut ce.m().myTurnSignsForward, turnCodes);
+                } else if utils::common::string_utils::ends_with(&key, "lanes:backward") {
+                    NIImporter_OpenStreetMap::merge_turn_signs(&mut ce.m().myTurnSignsBackward, turnCodes);
+                } else if utils::common::string_utils::ends_with(&key, "lanes:both_ways") {
+                    NIImporter_OpenStreetMap::merge_turn_signs(&mut ce.m().myTurnSignsForward, turnCodes.clone());
+                    NIImporter_OpenStreetMap::merge_turn_signs(&mut ce.m().myTurnSignsBackward, turnCodes);
+                }
+            }
+        }
     }
 
     /// C++: `void EdgesHandler::myEndElement(int)` [virtual, protected]
@@ -927,7 +1629,32 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port EdgesHandler::myEndElement")
+        if element == SUMO_TAG_WAY && !self.myCurrentEdge.is_null() {
+            let ce = self.myCurrentEdge;
+            if ce.myCurrentIsRoad {
+                let id = ce.id;
+                if !self.myEdgeMap.m().contains_key(&id) {
+                    // assume we are loading multiple files, so we won't report duplicate edges
+                    self.myEdgeMap.m().insert(id, ce);
+                } else {
+                    // SAFETY: the Edge was created with Box::into_raw in my_start_element and is not shared yet.
+                    drop(unsafe { Box::from_raw(ce.as_raw()) });
+                }
+            } else if ce.myExtraTags.contains_key("platform") {
+                let id = ce.id;
+                if !self.myPlatformShapesMap.m().contains_key(&id) {
+                    // assume we are loading multiple files, so we won't report duplicate platforms
+                    self.myPlatformShapesMap.m().insert(id, ce);
+                } else {
+                    // SAFETY: as above.
+                    drop(unsafe { Box::from_raw(ce.as_raw()) });
+                }
+            } else {
+                // SAFETY: as above.
+                drop(unsafe { Box::from_raw(ce.as_raw()) });
+            }
+            self.myCurrentEdge = Ptr::null();
+        }
     }
 
     /// C++: `double EdgesHandler::interpretSpeed(const std::string &, std::string)` [protected]
@@ -955,7 +1682,25 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn interpret_speed(&mut self, key: &str, value: String) -> f64 {
-        todo!("port EdgesHandler::interpretSpeed")
+        if let Some(v) = self.mySpeedMap.get(&value) {
+            return *v;
+        }
+        // handle symbolic names of the form DE:30 / DE:zone30
+        let mut value = value;
+        if value.len() > 3 && value.as_bytes()[2] == b':' {
+            if value.as_bytes().get(3..7) == Some(b"zone".as_slice()) {
+                value = String::from_utf8_lossy(&value.as_bytes()[7..]).into_owned();
+            } else {
+                value = String::from_utf8_lossy(&value.as_bytes()[3..]).into_owned();
+            }
+        }
+        match utils::common::string_utils::parse_speed(&value, true) {
+            Ok(s) => s,
+            Err(_) => {
+                write_warning(&format!("Value of key '{}' is not numeric ('{}') in edge '{}'.", key, value, self.myCurrentEdge.id));
+                MAXSPEED_UNGIVEN
+            }
+        }
     }
 
     /// C++: `int EdgesHandler::interpretChangeType(const std::string &) const` [const, protected]
@@ -984,7 +1729,25 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn interpret_change_type(&self, value: &str) -> i32 {
-        todo!("port EdgesHandler::interpretChangeType")
+        let mut result: i32 = 0;
+        let values = utils::common::string_tokenizer::StringTokenizer::with_token(value, "|", false).get_vector();
+        for val in &values {
+            if val == "no" {
+                result += NIImporter_OpenStreetMap_ChangeType::CHANGE_NO as i32;
+            } else if val == "not_left" {
+                result += NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_LEFT as i32;
+            } else if val == "not_right" {
+                result += NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_RIGHT as i32;
+            }
+            result <<= 2;
+        }
+        // last shift was superfluous
+        result >>= 2;
+
+        if values.len() > 1 {
+            result += 2 << 29; // mark multi-value input
+        }
+        result
     }
 
     /// C++: `void EdgesHandler::interpretLaneUse(const std::string &, SUMOVehicleClass, const bool) const` [const, protected]
@@ -1014,7 +1777,31 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn interpret_lane_use(&self, value: &str, svc: SUMOVehicleClass, forward: bool) {
-        todo!("port EdgesHandler::interpretLaneUse")
+        let values = utils::common::string_tokenizer::StringTokenizer::with_token(value, "|", false).get_vector();
+        let e = self.myCurrentEdge.m();
+        let (designated, allowed, disallowed) = if forward {
+            (&mut e.myDesignatedLaneForward, &mut e.myAllowedLaneForward, &mut e.myDisallowedLaneForward)
+        } else {
+            (&mut e.myDesignatedLaneBackward, &mut e.myAllowedLaneBackward, &mut e.myDisallowedLaneBackward)
+        };
+        let n = designated.len().max(values.len());
+        designated.resize(n, false);
+        let n = allowed.len().max(values.len());
+        allowed.resize(n, SVC_IGNORING);
+        let n = disallowed.len().max(values.len());
+        disallowed.resize(n, SVC_IGNORING);
+        for (i, val) in values.iter().enumerate() {
+            if val == "yes" || val == "permissive" {
+                allowed[i] |= svc;
+            } else if val == "lane" || val == "designated" {
+                allowed[i] |= svc;
+                designated[i] = true;
+            } else if val == "no" {
+                disallowed[i] |= svc;
+            } else {
+                write_warningf!("Unknown lane use specifier '%' ignored for way '%'", val, e.id);
+            }
+        }
     }
 
     /// C++: `bool EdgesHandler::interpretPlacement(const std::string &, NIImporter_OpenStreetMap::PlacementType &, int &) const` [const, protected]
@@ -1052,7 +1839,36 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn interpret_placement(&self, value: &str, placement: &mut NIImporter_OpenStreetMap_PlacementType, laneIndex: &mut i32) -> bool {
-        todo!("port EdgesHandler::interpretPlacement")
+        *placement = NIImporter_OpenStreetMap_PlacementType::NONE;
+        *laneIndex = -1;
+        let tokens = utils::common::string_tokenizer::StringTokenizer::with_token(value, ":", false).get_vector();
+        if tokens.len() != 2 {
+            return false;
+        }
+        let where_ = utils::common::string_utils::prune(&tokens[0]);
+        if where_ == "left_of" {
+            *placement = NIImporter_OpenStreetMap_PlacementType::LEFT_OF;
+        } else if where_ == "right_of" {
+            *placement = NIImporter_OpenStreetMap_PlacementType::RIGHT_OF;
+        } else if where_ == "middle_of" {
+            *placement = NIImporter_OpenStreetMap_PlacementType::MIDDLE_OF;
+        } else {
+            return false;
+        }
+        match utils::common::string_utils::to_int(&utils::common::string_utils::prune(&tokens[1])) {
+            Ok(idx) => *laneIndex = idx,
+            Err(_) => {
+                *placement = NIImporter_OpenStreetMap_PlacementType::NONE;
+                *laneIndex = -1;
+                return false;
+            }
+        }
+        if *laneIndex <= 0 {
+            *placement = NIImporter_OpenStreetMap_PlacementType::NONE;
+            *laneIndex = -1;
+            return false;
+        }
+        true
     }
 
     /// C++: `void EdgesHandler::addType(const std::string &)` [protected]
@@ -1075,23 +1891,38 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_type(&mut self, singleTypeID: &str) {
-        todo!("port EdgesHandler::addType")
+        let e = self.myCurrentEdge.m();
+        // special case: never build compound type for highspeed rail
+        if !e.myHighWayType.is_empty() && singleTypeID != "railway.highspeed" {
+            if e.myHighWayType == "railway.highspeed" {
+                return;
+            }
+            // osm-ways may be used by more than one mode (eg railway.tram + highway.residential. this is relevant for multimodal traffic)
+            // we create a new type for this kind of situation which must then be resolved in insertEdge()
+            let mut types = utils::common::string_tokenizer::StringTokenizer::with_token(&e.myHighWayType, compoundTypeSeparator, false).get_vector();
+            types.push(singleTypeID.to_string());
+            e.myHighWayType = utils::common::to_string::join_to_string_sorting(&types, compoundTypeSeparator);
+        } else {
+            e.myHighWayType = singleTypeID.to_string();
+        }
     }
 
     /// C++: `void EdgesHandler::EdgesHandler(const EdgesHandler &)` [private]
     /// invalidated copy constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new_2(s: &NIImporter_DlrNavteq_EdgesHandler) -> Self {
-        todo!("port EdgesHandler::EdgesHandler")
+    pub fn new_2(s: &NIImporter_OpenStreetMap_EdgesHandler) -> Self {
+        // C++ declares the copy constructor private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::EdgesHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `EdgesHandler & EdgesHandler::operator=(const EdgesHandler &)` [private]
     /// invalidated assignment operator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn assign_op(&mut self, s: &NIImporter_DlrNavteq_EdgesHandler) -> &mut NIImporter_DlrNavteq_EdgesHandler {
-        todo!("port EdgesHandler::operator=")
+    pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_EdgesHandler) -> &mut NIImporter_OpenStreetMap_EdgesHandler {
+        // C++ declares the assignment operator private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::EdgesHandler::operator= is private and undefined in C++")
     }
 
 }
@@ -1113,9 +1944,9 @@ pub struct NIImporter_OpenStreetMap {
     /// the set of unique nodes used in NodesHandler, used when freeing memory
     pub myUniqueNodes: BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, // C++: std::set<NIOSMNode *, CompareNodes>
     /// the map from OSM way ids to edge objects
-    pub myEdges: BTreeMap<i64, Ptr<Edge>>,
+    pub myEdges: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>,
     /// the map from OSM way ids to platform shapes
-    pub myPlatformShapes: BTreeMap<i64, Ptr<Edge>>,
+    pub myPlatformShapes: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>,
     /// The compounds types that do not contain known types
     pub myUnusableTypes: BTreeSet<String>,
     /// The compound types that have already been mapped to other known types
@@ -1159,7 +1990,8 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn load_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_OpenStreetMap::loadNetwork")
+        let mut importer = NIImporter_OpenStreetMap::new();
+        importer.load(oc, nb);
     }
 
     /// C++: `SUMOVehicleClass NIImporter_OpenStreetMap::interpretTransportType(const std::string &, NIOSMNode *)` [static]
@@ -1200,14 +2032,63 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn interpret_transport_type(type_: &str, toSet: Ptr<NIImporter_OpenStreetMap_NIOSMNode>) -> SUMOVehicleClass {
-        todo!("port NIImporter_OpenStreetMap::interpretTransportType")
+        use utils::common::sumo_vehicle_class::*;
+        let mut result: SUMOVehicleClass = SVC_IGNORING;
+        if type_ == "train" {
+            result = SVC_RAIL;
+        } else if type_ == "subway" {
+            result = SVC_SUBWAY;
+        } else if type_ == "aerialway" {
+            result = SVC_CABLE_CAR;
+        } else if type_ == "light_rail" || type_ == "monorail" {
+            result = SVC_RAIL_URBAN;
+        } else if type_ == "share_taxi" {
+            result = SVC_TAXI;
+        } else if type_ == "minibus" {
+            result = SVC_BUS;
+        } else if type_ == "trolleybus" {
+            result = SVC_BUS;
+        } else if let Ok(v) = SUMO_VEHICLE_CLASS_STRINGS.get(type_) {
+            result = v;
+        }
+        let mut stop = String::new();
+        if result == SVC_TRAM {
+            stop = ".tram".to_string();
+        } else if result == SVC_BUS {
+            stop = ".bus".to_string();
+        } else if is_railway(result) {
+            stop = ".train".to_string();
+        }
+        if !toSet.is_null() && result != SVC_IGNORING {
+            toSet.m().permissions |= result;
+            toSet.m().ptStopLength = utils::options::options_cont::get_float(&format!("osm.stop-output.length{stop}"));
+        }
+        result
     }
 
     /// C++: `void NIImporter_OpenStreetMap::NIImporter_OpenStreetMap()` [protected]
     // NIImporter_OpenStreetMap::NIImporter_OpenStreetMap()
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NIImporter_OpenStreetMap::NIImporter_OpenStreetMap")
+        // C++ `= default`; the bool options are read in load() before use, so false is a placeholder.
+        NIImporter_OpenStreetMap {
+            myOSMNodes: BTreeMap::new(),
+            myUniqueNodes: BTreeSet::new(),
+            myEdges: BTreeMap::new(),
+            myPlatformShapes: BTreeMap::new(),
+            myUnusableTypes: BTreeSet::new(),
+            myKnownCompoundTypes: BTreeMap::new(),
+            myImportLaneAccess: false,
+            myImportSidewalks: false,
+            myOnewayDualSidewalk: false,
+            myImportBikeAccess: false,
+            myImportCrossings: false,
+            myImportTurnSigns: false,
+            myAnnotateDefaults: false,
+            myETCS_movingBlock: false,
+            myPlacementSkippedNonExplicitOneWay: 0,
+            myPlacementSkippedAuxOppositeDirection: 0,
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::~NIImporter_OpenStreetMap() noexcept` [protected]
@@ -1227,7 +2108,21 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIImporter_OpenStreetMap::~NIImporter_OpenStreetMap")
+        // delete nodes
+        for myUniqueNode in self.myUniqueNodes.iter() {
+            // SAFETY: nodes were allocated with Box::into_raw and are only freed here.
+            drop(unsafe { Box::from_raw(myUniqueNode.as_raw()) });
+        }
+        // delete edges
+        for myEdge in self.myEdges.values() {
+            // SAFETY: edges were allocated with Box::into_raw and are only freed here.
+            drop(unsafe { Box::from_raw(myEdge.as_raw()) });
+        }
+        // delete platform shapes
+        for myPlatformShape in self.myPlatformShapes.values() {
+            // SAFETY: as above.
+            drop(unsafe { Box::from_raw(myPlatformShape.as_raw()) });
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::load(const OptionsCont &, NBNetBuilder &)` [protected]
@@ -2178,7 +3073,7 @@ impl NIImporter_OpenStreetMap {
     //     return newIndex;
     // }
     #[allow(unused_variables)]
-    pub fn insert_edge(&mut self, e: Ptr<Edge>, index: i32, from: Ptr<NBNode>, to: Ptr<NBNode>, passed: &Vec<i64>, nb: &mut NBNetBuilder, first: Ptr<NBNode>, last: Ptr<NBNode>) -> i32 {
+    pub fn insert_edge(&mut self, e: Ptr<NIImporter_OpenStreetMap_Edge>, index: i32, from: Ptr<NBNode>, to: Ptr<NBNode>, passed: &Vec<i64>, nb: &mut NBNetBuilder, first: Ptr<NBNode>, last: Ptr<NBNode>) -> i32 {
         todo!("port NIImporter_OpenStreetMap::insertEdge")
     }
 
@@ -2406,7 +3301,7 @@ impl NIImporter_OpenStreetMap {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn extend_railway_distances(&mut self, e: Ptr<Edge>, tc: &mut NBTypeCont) {
+    pub fn extend_railway_distances(&mut self, e: Ptr<NIImporter_OpenStreetMap_Edge>, tc: &mut NBTypeCont) {
         todo!("port NIImporter_OpenStreetMap::extendRailwayDistances")
     }
 
@@ -2611,7 +3506,7 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
 /// C++ class `NIImporter_OpenStreetMap::NodesHandler` (netimport/NIImporter_OpenStreetMap.h)
 pub struct NIImporter_OpenStreetMap_NodesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The nodes container to fill
     pub myToFill: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>>,
     /// id of the currently parsed node
@@ -2635,13 +3530,13 @@ pub struct NIImporter_OpenStreetMap_NodesHandler {
 }
 
 impl std::ops::Deref for NIImporter_OpenStreetMap_NodesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIImporter_OpenStreetMap_NodesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -2884,13 +3779,13 @@ impl NIImporter_OpenStreetMap_NodesHandler {
 /// C++ class `NIImporter_OpenStreetMap::RelationHandler` (netimport/NIImporter_OpenStreetMap.h)
 pub struct NIImporter_OpenStreetMap_RelationHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The previously parsed nodes
     pub myOSMNodes: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>>,
     /// The previously parsed edges
-    pub myOSMEdges: Ptr<BTreeMap<i64, Ptr<Edge>>>,
+    pub myOSMEdges: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>>,
     /// The previously parsed platform shapes
-    pub myPlatformShapes: Ptr<BTreeMap<i64, Ptr<Edge>>>,
+    pub myPlatformShapes: Ptr<BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>>,
     /// The previously filled pt stop container
     pub myNBPTStopCont: Ptr<NBPTStopCont>,
     /// PT Line container to be filled
@@ -2942,13 +3837,13 @@ pub struct NIImporter_OpenStreetMap_RelationHandler {
 }
 
 impl std::ops::Deref for NIImporter_OpenStreetMap_RelationHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIImporter_OpenStreetMap_RelationHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -2972,7 +3867,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     //     resetValues();
     // }
     #[allow(unused_variables)]
-    pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, osmEdges: &BTreeMap<i64, Ptr<Edge>>, nbptStopCont: Ptr<NBPTStopCont>, platfromShapes: &BTreeMap<i64, Ptr<Edge>>, nbptLineCont: Ptr<NBPTLineCont>, oc: &OptionsCont) -> Self {
+    pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, osmEdges: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptStopCont: Ptr<NBPTStopCont>, platfromShapes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptLineCont: Ptr<NBPTLineCont>, oc: &OptionsCont) -> Self {
         todo!("port RelationHandler::RelationHandler")
     }
 
