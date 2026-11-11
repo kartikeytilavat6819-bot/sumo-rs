@@ -12,14 +12,21 @@ Progress metric: share of `tests/sumo` texttest cases passing (`python tests/run
 - Floating-point code keeps the C++ evaluation order so results stay bit-identical.
 - Anything deliberately left out is marked `// shortcut: <limit>, <when to upgrade>`.
 
-## Order of work
+## Product goal and order of work (updated 2026-11-11)
 
-1. utils (common, options, geom, xml, iodevices, vehicle) - what the simulator needs
-2. microsim + netload + sumo binary - first tests passing
-3. lane changing, junctions, TLS, detectors, outputs - widen test coverage
-4. mesosim, libsumo/TraCI
-5. netbuild/netimport/netwrite (netconvert), routers, polyconvert, od, activitygen
-6. GUI (sumo-gui, netedit) - needs a Rust GUI toolkit in place of FOX
+Goal: pick an intersection from OpenStreetMap -> build the network (with AASHTO design rules) ->
+simulate fast -> stream vehicle states to a Unity 3D front end for viewing and editing.
+Driver behaviour calibrated against VISSIM results (SUMO's Wiedemann / W99 car-following models).
+
+So, in order:
+1. utils (done except vehicle/emissions/router/handlers/shapes)
+2. netimport (OpenStreetMap importer) + netbuild + netwrite: OSM -> .net.xml
+3. microsim + netload + sumo binary; cfmodels incl. Wiedemann and W99 early (VISSIM calibration)
+4. libsumo / traci-server: the interface Unity talks to (TraCI or an FCD stream)
+5. routers (duarouter etc.), mesosim, detectors and other outputs
+6. NOT PLANNED: sumo-gui, netedit, utils/gui, utils/foxtools, osgview (~260k lines) - Unity replaces them
+New work beyond the port (not in SUMO): AASHTO geometric checks/defaults when building the network,
+VISSIM calibration tooling, Unity bridge.
 
 ## Done
 

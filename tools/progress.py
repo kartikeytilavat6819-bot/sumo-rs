@@ -33,7 +33,8 @@ def bar(frac, width=40):
     return "[" + "#" * n + "-" * (width - n) + f"] {100 * frac:5.1f}%"
 
 
-files = dict(cpp_files())
+GUI = ("netedit/", "gui/", "guisim/", "guinetload/", "mesogui/", "osgview/", "utils/gui/", "utils/foxtools/", "utils/tests/", "foreign/fontstash/", "gui-", "guisim_main")
+files = {f: n for f, n in cpp_files() if not f.startswith(GUI)}  # GUIs not planned: Unity replaces them
 prefixes = list(done_prefixes())
 done = {f: n for f, n in files.items() if any(f.rsplit(".", 1)[0] == p or f.startswith(p.rstrip("/") + "/") for p in prefixes)}
 total = sum(files.values())

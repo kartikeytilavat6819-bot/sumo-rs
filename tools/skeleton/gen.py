@@ -66,6 +66,11 @@ class TypeMapper:
     def __init__(self, known):
         self.known = known  # {C++ name, qualified "Outer::Inner" or bare: Rust type name}
         self.unmapped = set()
+        self.ctx = set()  # template parameters in scope
+        self.traits = set()  # known names that are Rust traits
+
+    def wrap(self, rust):
+        return f"dyn {rust}" if rust in self.traits else rust
 
     def lookup(self, cpp):
         parts = [p for p in cpp.split("::") if p not in ("", "std", "libsumo", "LIBSUMO_NAMESPACE", "PHEMlightdllV5", "RoutingKit")]
@@ -75,11 +80,14 @@ class TypeMapper:
                 return self.known[key]
         return None
 
-    def map(self, t, param=False, ret=False):
+    def map(self, t, param=False, ret=False, field=False):
         t = re.sub(r"\b(struct|class|enum|typename)\s+", "", t).strip()
         t = t.replace("std::__cxx11::", "std::").replace("std::__1::", "std::")
         if t.endswith("&&"):
             return self.map(t[:-2].strip(), param, ret)
+        if t.endswith("&") and field:  # reference members can't borrow: hold a pointer like C++ does
+            inner = re.sub(r"^const\s+|\s+const$", "", t[:-1].strip())
+            return "String" if inner in ("std::string", "string") else f"Ptr<{self.map(inner)}>"
         if t.endswith("&"):
             inner = t[:-1].strip()
             const = inner.startswith("const ") or inner.endswith(" const")
@@ -121,9 +129,9 @@ class TypeMapper:
                 return f"{base}<{', '.join(self.map(a) for a in args)}>"
         found = self.lookup(t)
         if found:
-            return found
+            return self.wrap(found)
         bare = t.split("::")[-1]
-        if re.fullmatch(r"[A-Z]\w*", bare) and len(bare) <= 2:  # template parameter like T, E, V
+        if bare in self.ctx:  # template parameter of the class being emitted
             return bare
         self.unmapped.add(t)
         return f"Unmapped /* {t} */"
@@ -133,6 +141,8 @@ def snake(name):
     s = re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", name)
     s = re.sub(r"(?<=[A-Z])([A-Z][a-z])", r"_\1", s)
     s = re.sub(r"\W", "_", s).lower().strip("_")
+    if s[:1].isdigit():
+        s = "n" + s
     return s + "_" if s in RUST_KW else s
 
 
@@ -226,6 +236,8 @@ def describe_class(c, rel, ns):
             info["bases"].append(ch.type.spelling)
         elif ch.kind == K.TEMPLATE_TYPE_PARAMETER:
             info["tparams"].append(ch.spelling)
+        elif ch.kind == K.TEMPLATE_NON_TYPE_PARAMETER:
+            info.setdefault("ctparams", []).append(ch.spelling)
         elif ch.kind == K.FIELD_DECL:
             info["fields"].append((ch.spelling, ch.type.spelling, ch.brief_comment or ""))
         elif ch.kind == K.VAR_DECL:
@@ -290,13 +302,25 @@ def emit_method(m, cls, tm, bodies, cls_usr, used_names, indent="    "):
     return out
 
 
+def typedef_target(tm, v):
+    tm.ctx = set()
+    mapped = tm.map(v["target"], field=True)
+    # aliases inside templates would need generics at every use site; keep them opaque for now
+    if "Unmapped" in mapped and "<" in v["target"]:
+        return f"Unmapped /* {v['target']} */"
+    return mapped
+
+
 def cls_tparams(cls):
     return cls.get("tparams", [])
 
 
 def emit_class(cls, tm, bodies):
     tp = cls_tparams(cls)
-    gen = f"<{', '.join(tp)}>" if tp else ""
+    ctp = cls.get("ctparams", [])
+    tm.ctx = set(tp + ctp)
+    gen = f"<{', '.join(tp + [f'const {c}: usize' for c in ctp])}>" if tp or ctp else ""  # declaration
+    use = f"<{', '.join(tp + ctp)}>" if tp or ctp else ""  # usage
     out = ""
     if cls["doc"]:
         out += f"/// {cls['doc']}\n"
@@ -305,7 +329,10 @@ def emit_class(cls, tm, bodies):
     bases = []
     for i, b in enumerate(cls["bases"]):
         bt = tm.map(b)
-        fname = "base" if i == 0 else f"base{i + 1}"
+        if bt.startswith("dyn "):  # ported as a Rust trait: implement it instead of embedding
+            out += f"    // C++ base class `{b}` is the Rust trait `{bt[4:]}`: add `impl {bt[4:]} for {cls['rust']}`\n"
+            continue
+        fname = "base" if not bases else f"base{len(bases) + 1}"
         bases.append((fname, bt, b))
         out += f"    /// C++ base class `{b}`\n    pub {fname}: {bt},\n"
     for fn, ft, doc in cls["fields"]:
@@ -314,22 +341,22 @@ def emit_class(cls, tm, bodies):
             note = f" // determinism: C++ {ft}"
         if doc:
             out += f"    /// {doc}\n"
-        out += f"    pub {ident(fn)}: {tm.map(ft)},{note}\n"
+        out += f"    pub {ident(fn)}: {tm.map(ft, field=True)},{note}\n"
     if tp:
         out += f"    _p: std::marker::PhantomData<({', '.join(tp)},)>,\n"
     out += "}\n\n"
     if bases:
         fname, bt, _ = bases[0]
-        out += (f"impl{gen} std::ops::Deref for {cls['rust']}{gen} {{\n    type Target = {bt};\n"
+        out += (f"impl{gen} std::ops::Deref for {cls['rust']}{use} {{\n    type Target = {bt};\n"
                 f"    fn deref(&self) -> &{bt} {{\n        &self.{fname}\n    }}\n}}\n"
-                f"impl{gen} std::ops::DerefMut for {cls['rust']}{gen} {{\n"
+                f"impl{gen} std::ops::DerefMut for {cls['rust']}{use} {{\n"
                 f"    fn deref_mut(&mut self) -> &mut {bt} {{\n        &mut self.{fname}\n    }}\n}}\n\n")
     if cls["statics"]:
         out += f"// C++ static members of {cls['name']} (port as module-level statics, see AGENTS.md):\n"
         for sn, st in cls["statics"]:
             out += f"//   static {st} {cls['name']}::{sn};\n"
         out += "\n"
-    out += f"impl{gen} {cls['rust']}{gen} {{\n"
+    out += f"impl{gen} {cls['rust']}{use} {{\n"
     used = set()
     for m in cls["methods"]:
         out += emit_method(m, cls, tm, bodies, cls["usr"], used)
@@ -355,13 +382,20 @@ def emit_enum(e):
     return out + "\n"
 
 
-def emit_fn(f, tm, bodies):
+def emit_fn(f, tm, bodies, used=None):
+    tm.ctx = set()
     params = ", ".join(f"{ident(pn) if pn else f'arg{i}'}: {tm.map(pt, param=True)}" for i, (pn, pt) in enumerate(f["params"]))
     ret = "" if f["ret"] == "void" else " -> " + tm.map(f["ret"], ret=True).replace("&", "&'static ", 1)
     key = json.dumps(["", f["name"], f["type"]])
     body = bodies.get(key, "")
     out = f"/// C++: `{f['type']} {f['ns']}{f['name']}`\n" + (comment_block(body, "") if body else "")
-    return out + f"#[allow(unused_variables)]\npub fn {snake(f['name'])}({params}){ret} {{\n    todo!(\"port {f['name']}\")\n}}\n\n"
+    name = OPS.get(f["name"], snake(f["name"]) if not f["name"].startswith("operator") else "op_" + snake(f["name"][8:]))
+    rust, n = name, 2
+    while used is not None and rust in used:
+        rust = f"{name}_{n}"; n += 1
+    if used is not None:
+        used.add(rust)
+    return out + f"#[allow(unused_variables)]\npub fn {rust}({params}){ret} {{\n    todo!(\"port {f['name']}\")\n}}\n\n"
 
 
 def main():
@@ -378,8 +412,14 @@ def main():
         for f in sorted(os.listdir(os.path.join(SRC, d))):
             if f.endswith((".cpp", ".h")):
                 files.append((os.path.join(SRC, d, f), dirs))
-    with mp.Pool(jobs) as pool:
-        results = pool.map(collect, files, chunksize=1)
+    import hashlib, pickle
+    cache = os.path.join(HERE, ".parse_cache_" + hashlib.sha1(" ".join(dirs).encode()).hexdigest()[:10] + ".pkl")
+    if os.path.exists(cache) and "--reparse" not in sys.argv:
+        results = pickle.load(open(cache, "rb"))  # C++ sources unchanged: skip the slow clang pass
+    else:
+        with mp.Pool(jobs) as pool:
+            results = pool.map(collect, files, chunksize=1)
+        pickle.dump(results, open(cache, "wb"))
     types, bodies, errors = {}, {}, []
     for t, b, e in results:
         for k, v in t.items():
@@ -388,6 +428,8 @@ def main():
         errors += e
     # Rust names: nested items become Outer_Inner; already-ported Rust types (known_types.json) win.
     ported = json.load(open(os.path.join(HERE, "known_types.json"))) if os.path.exists(os.path.join(HERE, "known_types.json")) else {}
+    traits = {n for n, p in ported.items() if p.startswith("trait:")}
+    ported = {n: p.removeprefix("trait:") for n, p in ported.items()}
     known, taken, dupes = {n: n for n in ported}, set(ported), []
     for v in types.values():
         if v["kind"] == "fn":
@@ -405,6 +447,7 @@ def main():
         if v.get("parent") and v["name"] not in known:
             known[v["name"]] = rust  # bare use inside the outer class
     tm = TypeMapper(known)
+    tm.traits = traits
     by_file = {}
     for v in types.values():
         if not v.get("skip"):
@@ -416,15 +459,16 @@ def main():
         os.makedirs(os.path.dirname(rust_path), exist_ok=True)
         text = f"//! Port of {base}.{{h,cpp}} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.\n"
         text += "#![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]\nuse crate::prelude::*;\n\n"
+        used_fns = set()
         for v in sorted(items, key=lambda x: ("enum typedef class fn".split().index(x["kind"]), x["name"])):
             if v["kind"] == "enum":
                 text += emit_enum(v)
             elif v["kind"] == "typedef":
-                text += f"/// C++ typedef `{v['target']} {(v['parent'] + '::') if v['parent'] else ''}{v['name']}`\npub type {v['rust']} = {tm.map(v['target'])};\n\n"
+                text += f"/// C++ typedef `{v['target']} {(v['parent'] + '::') if v['parent'] else ''}{v['name']}`\npub type {v['rust']} = {typedef_target(tm, v)};\n\n"
             elif v["kind"] == "class":
                 text += emit_class(v, tm, bodies)
             else:
-                text += emit_fn(v, tm, bodies)
+                text += emit_fn(v, tm, bodies, used_fns)
         open(rust_path, "w", encoding="utf8", newline="\n").write(text)
         written.append(rust_path)
         for i in range(len(parts)):  # register module chain

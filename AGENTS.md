@@ -5,6 +5,10 @@ same output text, same floating-point results.
 
 - C++ source (read-only): `C:\Users\karti\sumo-src\src`. Rust repo: the git worktree you are in.
 - Cargo: `export PATH="$HOME/.cargo/bin:$PATH"` (bash). Edition 2024 (`gen` is a reserved word).
+- MEMORY: many agents run at once on a 16 GB machine. Always build with the shared, locked target dir:
+  `export CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target CARGO_BUILD_JOBS=8` before any cargo command.
+  Cargo serializes builds on that dir, so a build may wait for others; that's expected, don't work around it.
+  Prefer `cargo check -p <crate>` while iterating; never run `cargo build --release` or the whole workspace's tests.
 - One Rust file per C++ file pair (`Foo.h` + `Foo.cpp` -> `foo.rs`, snake_case), first line
   `//! Port of <path>/Foo.{h,cpp}`. Keep the C++ order of functions so reviewers can diff side by side.
 - Use what is already ported; don't re-implement it:
