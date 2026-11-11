@@ -52,7 +52,19 @@ impl MSJunction {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, type_: SumoXMLNodeType, position: &Position, shape: &PositionVector, name: &str) -> Self {
-        todo!("port MSJunction::MSJunction")
+        MSJunction {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myType: type_,
+            myPosition: *position,
+            myPosition2: Position::default(),
+            myShape: shape.clone(),
+            myName: name.to_string(),
+            myEmptyLinks: Vec::new(),
+            myEmptyLanes: Vec::new(),
+            myIncoming: Vec::new(),
+            myOutgoing: Vec::new(),
+        }
     }
 
     /// C++: `void MSJunction::~MSJunction() noexcept` [virtual]
@@ -60,7 +72,7 @@ impl MSJunction {
     // MSJunction::~MSJunction() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSJunction::~MSJunction")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `void MSJunction::postloadInit()` [virtual]
@@ -69,7 +81,7 @@ impl MSJunction {
     // MSJunction::postloadInit() {}
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        todo!("port MSJunction::postloadInit")
+        // C++ postloadInit body is empty; subclasses override it.
     }
 
     /// C++: `void MSJunction::addSecondaryPosition(const Position &)`
@@ -79,7 +91,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn add_secondary_position(&mut self, pos: &Position) {
-        todo!("port MSJunction::addSecondaryPosition")
+        self.myPosition2 = *pos;
     }
 
     /// C++: `const Position & MSJunction::getPosition(bool) const` [const]
@@ -90,7 +102,7 @@ impl MSJunction {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, secondaryShape: bool) -> &Position {
-        todo!("port MSJunction::getPosition")
+        if secondaryShape { &self.myPosition2 } else { &self.myPosition }
     }
 
     /// C++: `const PositionVector & MSJunction::getShape() const` [const]
@@ -100,7 +112,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port MSJunction::getShape")
+        &self.myShape
     }
 
     /// C++: `const std::string & MSJunction::getName() const` [const]
@@ -110,7 +122,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> &str {
-        todo!("port MSJunction::getName")
+        self.myName.as_str()
     }
 
     /// C++: `const std::vector<MSLink *> & MSJunction::getFoeLinks(const MSLink *const) const` [const, virtual]
@@ -119,7 +131,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_links(&self, arg0: Ptr<MSLink>) -> &Vec<Ptr<MSLink>> {
-        todo!("port MSJunction::getFoeLinks")
+        &self.myEmptyLinks
     }
 
     /// C++: `const std::vector<MSLane *> & MSJunction::getFoeInternalLanes(const MSLink *const) const` [const, virtual]
@@ -128,7 +140,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_internal_lanes(&self, arg0: Ptr<MSLink>) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSJunction::getFoeInternalLanes")
+        &self.myEmptyLanes
     }
 
     /// C++: `const ConstMSEdgeVector & MSJunction::getIncoming() const` [const]
@@ -137,7 +149,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming(&self) -> &ConstMSEdgeVector {
-        todo!("port MSJunction::getIncoming")
+        &self.myIncoming
     }
 
     /// C++: `int MSJunction::getNrOfIncomingLanes() const` [const]
@@ -151,7 +163,11 @@ impl MSJunction {
     // }
     #[allow(unused_variables)]
     pub fn get_nr_of_incoming_lanes(&self) -> i32 {
-        todo!("port MSJunction::getNrOfIncomingLanes")
+        let mut nr: i32 = 0;
+        for e in &self.myIncoming {
+            nr += e.get_lanes().len() as i32;
+        }
+        nr
     }
 
     /// C++: `const ConstMSEdgeVector & MSJunction::getOutgoing() const` [const]
@@ -160,7 +176,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing(&self) -> &ConstMSEdgeVector {
-        todo!("port MSJunction::getOutgoing")
+        &self.myOutgoing
     }
 
     /// C++: `const std::vector<MSLane *> MSJunction::getInternalLanes() const` [const, virtual]
@@ -170,7 +186,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_internal_lanes(&self) -> Vec<Ptr<MSLane>> {
-        todo!("port MSJunction::getInternalLanes")
+        self.myEmptyLanes.clone()
     }
 
     /// C++: `void MSJunction::addIncoming(MSEdge *)`
@@ -179,7 +195,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn add_incoming(&mut self, edge: Ptr<MSEdge>) {
-        todo!("port MSJunction::addIncoming")
+        self.myIncoming.push(edge);
     }
 
     /// C++: `void MSJunction::addOutgoing(MSEdge *)`
@@ -188,7 +204,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn add_outgoing(&mut self, edge: Ptr<MSEdge>) {
-        todo!("port MSJunction::addOutgoing")
+        self.myOutgoing.push(edge);
     }
 
     /// C++: `SumoXMLNodeType MSJunction::getType() const` [const]
@@ -198,7 +214,7 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> SumoXMLNodeType {
-        todo!("port MSJunction::getType")
+        self.myType
     }
 
     /// C++: `void MSJunction::passedJunction(const MSVehicle *)`
@@ -206,7 +222,7 @@ impl MSJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn passed_junction(&mut self, vehicle: Ptr<MSVehicle>) {
-        todo!("port MSJunction::passedJunction")
+        // C++ declares MSJunction::passedJunction but no definition exists in the sources; nothing to port.
     }
 
     /// C++: `const MSJunctionLogic * MSJunction::getLogic() const` [const, virtual]
@@ -215,24 +231,9 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic(&self) -> Ptr<MSJunctionLogic> {
-        todo!("port MSJunction::getLogic")
+        Ptr::null()
     }
 
-    /// C++: `void MSJunction::MSJunction(const MSJunction &)` [private]
-    /// Invalidated copy constructor.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn new_2(arg0: &MSJunction) -> Self {
-        todo!("port MSJunction::MSJunction")
-    }
-
-    /// C++: `MSJunction & MSJunction::operator=(const MSJunction &)` [private]
-    /// Invalidated assignment operator.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn assign_op(&mut self, arg0: &MSJunction) -> &mut MSJunction {
-        todo!("port MSJunction::operator=")
-    }
-
+    // The C++ copy constructor and operator= are `= delete` (private): the type is intentionally non-copyable.
 }
 

@@ -5,18 +5,18 @@ use crate::prelude::*;
 /// Container for junctions; performs operations on all stored junctions
 /// C++ class `MSJunctionControl` (microsim/MSJunctionControl.h)
 pub struct MSJunctionControl {
-    /// C++ base class `NamedObjectCont<MSJunction *>`
-    pub base: Unmapped /* NamedObjectCont<MSJunction *> */,
+    /// C++ base class `NamedObjectCont<MSJunction *>` (its std::map<std::string, T> IDMap, ported as an ordered map)
+    pub base: BTreeMap<String, Ptr<MSJunction>>,
 }
 
 impl std::ops::Deref for MSJunctionControl {
-    type Target = Unmapped /* NamedObjectCont<MSJunction *> */;
-    fn deref(&self) -> &Unmapped /* NamedObjectCont<MSJunction *> */ {
+    type Target = BTreeMap<String, Ptr<MSJunction>>;
+    fn deref(&self) -> &BTreeMap<String, Ptr<MSJunction>> {
         &self.base
     }
 }
 impl std::ops::DerefMut for MSJunctionControl {
-    fn deref_mut(&mut self) -> &mut Unmapped /* NamedObjectCont<MSJunction *> */ {
+    fn deref_mut(&mut self) -> &mut BTreeMap<String, Ptr<MSJunction>> {
         &mut self.base
     }
 }
@@ -28,7 +28,7 @@ impl MSJunctionControl {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSJunctionControl::MSJunctionControl")
+        MSJunctionControl { base: BTreeMap::new() }
     }
 
     /// C++: `void MSJunctionControl::~MSJunctionControl() noexcept` [virtual]
@@ -37,7 +37,7 @@ impl MSJunctionControl {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSJunctionControl::~MSJunctionControl")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `void MSJunctionControl::postloadInitContainer()`
@@ -60,24 +60,21 @@ impl MSJunctionControl {
     // }
     #[allow(unused_variables)]
     pub fn postload_init_container(&mut self) {
-        todo!("port MSJunctionControl::postloadInitContainer")
+        // initialize normal junctions before internal junctions
+        // (to allow calling getIndex() during initialization of internal junction links)
+        for i in self.base.values() {
+            if i.get_type() != SumoXMLNodeType::INTERNAL {
+                i.m().postload_init();
+            }
+        }
+        for i in self.base.values() {
+            if i.get_type() == SumoXMLNodeType::INTERNAL {
+                i.m().postload_init();
+            }
+        }
+        MSLink::recheck_set_request_information();
     }
 
-    /// C++: `void MSJunctionControl::MSJunctionControl(const MSJunctionControl &)` [private]
-    /// Invalidated copy constructor.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn new_2(arg0: &MSJunctionControl) -> Self {
-        todo!("port MSJunctionControl::MSJunctionControl")
-    }
-
-    /// C++: `MSJunctionControl & MSJunctionControl::operator=(const MSJunctionControl &)` [private]
-    /// Invalidated assignment operator.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn assign_op(&mut self, arg0: &MSJunctionControl) -> &mut MSJunctionControl {
-        todo!("port MSJunctionControl::operator=")
-    }
-
+    // The C++ copy constructor and operator= are declared private and never defined: the type is non-copyable.
 }
 

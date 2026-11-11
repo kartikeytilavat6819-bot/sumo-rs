@@ -10,14 +10,18 @@ pub struct MSJunctionLogic {
 
 // C++ static members of MSJunctionLogic (port as module-level statics, see AGENTS.md):
 //   static MSLogicJunction::LinkBits MSJunctionLogic::myDummyFoes;
+// shortcut: MSLogicJunction::LinkBits is still Unmapped (= ()) in ms_logic_junction.rs, so the dummy
+// foe set is a unit placeholder; upgrade to an empty std::bitset<256> equivalent once that typedef is mapped.
+#[allow(non_upper_case_globals)]
+static myDummyFoes: MSLogicJunction_LinkBits = ();
 
 impl MSJunctionLogic {
     /// C++: `void MSJunctionLogic::~MSJunctionLogic()` [virtual]
     /// Destructor.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // virtual ~MSJunctionLogic() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSJunctionLogic::~MSJunctionLogic")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `const MSLogicJunction::LinkBits & MSJunctionLogic::getResponseFor(int) const` [const, virtual]
@@ -28,7 +32,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_response_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        todo!("port MSJunctionLogic::getResponseFor")
+        &myDummyFoes
     }
 
     /// C++: `const MSLogicJunction::LinkBits & MSJunctionLogic::getFoesFor(int) const` [const, virtual]
@@ -39,7 +43,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_foes_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        todo!("port MSJunctionLogic::getFoesFor")
+        &myDummyFoes
     }
 
     /// C++: `bool MSJunctionLogic::getIsCont(int) const` [const, virtual]
@@ -49,7 +53,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_is_cont(&self, linkIndex: i32) -> bool {
-        todo!("port MSJunctionLogic::getIsCont")
+        false
     }
 
     /// C++: `int MSJunctionLogic::getLogicSize() const` [const]
@@ -58,7 +62,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic_size(&self) -> i32 {
-        todo!("port MSJunctionLogic::getLogicSize")
+        self.myNLinks
     }
 
     /// C++: `bool MSJunctionLogic::hasFoes() const` [const, virtual]
@@ -67,7 +71,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn has_foes(&self) -> bool {
-        todo!("port MSJunctionLogic::hasFoes")
+        false
     }
 
     /// C++: `void MSJunctionLogic::MSJunctionLogic(int)` [protected]
@@ -76,24 +80,10 @@ impl MSJunctionLogic {
     //     myNLinks(nLinks) {}
     #[allow(unused_variables)]
     pub fn new(nLinks: i32) -> Self {
-        todo!("port MSJunctionLogic::MSJunctionLogic")
+        MSJunctionLogic { myNLinks: nLinks }
     }
 
-    /// C++: `void MSJunctionLogic::MSJunctionLogic(const MSJunctionLogic &)` [private]
-    /// Copy constructor.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn new_2(arg0: &MSJunctionLogic) -> Self {
-        todo!("port MSJunctionLogic::MSJunctionLogic")
-    }
-
-    /// C++: `MSJunctionLogic & MSJunctionLogic::operator=(const MSJunctionLogic &)` [private]
-    /// Assignment operator.
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn assign_op(&mut self, arg0: &MSJunctionLogic) -> &mut MSJunctionLogic {
-        todo!("port MSJunctionLogic::operator=")
-    }
-
+    // The C++ copy constructor and operator= are `= delete` (private), so no Rust
+    // equivalent exists: the type is intentionally non-copyable.
 }
 
