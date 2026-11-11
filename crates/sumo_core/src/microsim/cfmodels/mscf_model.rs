@@ -1,6 +1,72 @@
 //! Port of microsim/cfmodels/MSCFModel.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{INVALID_DOUBLE, SUMO_CONST_HALTING_SPEED};
+use utils::common::time::{delta_t, time2steps, accel2speed, speed2accel, accel2dist, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::geom::NUMERICAL_EPS;
+
+/// C++ `LinearApproxHelpers::LinearApproxMap` (`std::map<double, double>`), kept as a vector sorted by key.
+pub type LinearApproxMap = Vec<(f64, f64)>;
+
+/// C++ `INVALID_SPEED` macro (`299792458 + 1`), defined in MSCFModel.h
+pub const INVALID_SPEED: f64 = 299792459.0;
+
+/// C++ `EMERGENCY_DECEL_AMPLIFIER` macro, defined in MSCFModel.h
+pub const EMERGENCY_DECEL_AMPLIFIER: f64 = 1.2;
+
+/// C++ `MIN2` / `MAX2` / `MIN3` / `MAX3` templates (utils/common/StdDefs.h), same operand order
+pub(crate) fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+pub(crate) fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+pub(crate) fn min3(a: f64, b: f64, c: f64) -> f64 {
+    min2(c, if a < b { a } else { b })
+}
+pub(crate) fn max3(a: f64, b: f64, c: f64) -> f64 {
+    max2(c, if a > b { a } else { b })
+}
+
+// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty); these return the C++ defaults.
+// Upgrade to the real MSGlobals flags once ms_globals.rs is filled and MSFrame sets them.
+pub(crate) fn g_semi_implicit_euler_update() -> bool {
+    true
+}
+pub(crate) fn g_compute_lc() -> bool {
+    false
+}
+pub(crate) fn g_default_emergency_decel() -> f64 {
+    -1.
+}
+
+/// C++ implicit upcast `MSVehicle* -> SUMOTrafficObject*` (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
+pub(crate) fn traffic_object(veh: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
+    Ptr::from_mut(&mut veh.m().base.base.base)
+}
+
+// shortcut: SUMOVTypeParameter::getCFProfile still returns Unmapped (`()`), so profile data is dropped; upgrade when sumov_type_parameter.rs maps LinearApproxMap
+fn profile_from_unmapped(_p: Unmapped) -> LinearApproxMap {
+    Vec::new()
+}
+
+/// C++ `LinearApproxHelpers::getInterpolatedValue` (std::map lower_bound semantics on a sorted vector)
+pub(crate) fn get_interpolated_value(map: &LinearApproxMap, axisValue: f64) -> f64 {
+    let low = map.partition_point(|(k, _)| *k < axisValue);
+    if low == map.len() {
+        return map[map.len() - 1].1;
+    }
+    if low == 0 {
+        return map[0].1;
+    }
+    let (k1, v1) = map[low];
+    let (k0, v0) = map[low - 1];
+    let range = k1 - k0;
+    let dist = axisValue - k0;
+    let weight = dist / range;
+    (1. - weight) * v0 + weight * v1
+}
 
 /// C++ enum `MSCFModel::CalcReason`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -32,9 +98,9 @@ pub struct MSCFModel {
     /// The startup delay after halting [s]
     pub myStartupDelay: SUMOTime,
     /// The vehicle's maximum acceleration profile [m/s^2]
-    pub myMaxAccelProfile: Unmapped /* LinearApproxHelpers::LinearApproxMap */,
+    pub myMaxAccelProfile: LinearApproxMap,
     /// The vehicle's desired acceleration profile [m/s^2]
-    pub myDesAccelProfile: Unmapped /* LinearApproxHelpers::LinearApproxMap */,
+    pub myDesAccelProfile: LinearApproxMap,
 }
 
 impl MSCFModel {
@@ -55,7 +121,31 @@ impl MSCFModel {
     // { }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel::MSCFModel")
+        let p = vtype.get_parameter();
+        let vc = p.vehicleClass;
+        let myAccel = p.get_cf_param(SUMO_ATTR_ACCEL, SUMOVTypeParameter::get_default_accel(vc));
+        let myDecel = p.get_cf_param(SUMO_ATTR_DECEL, SUMOVTypeParameter::get_default_decel(vc));
+        let myEmergencyDecel = p.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(vc, myDecel, g_default_emergency_decel()));
+        let myApparentDecel = p.get_cf_param(SUMO_ATTR_APPARENTDECEL, myDecel);
+        let myCollisionMinGapFactor = p.get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 1.);
+        let myHeadwayTime = p.get_cf_param(SUMO_ATTR_TAU, 1.0);
+        let myStartupDelay = time2steps(p.get_cf_param(SUMO_ATTR_STARTUP_DELAY, 0.0));
+        let maxAccelDefault = SUMOVTypeParameter::get_default_max_accel_profile(vc, myAccel);
+        let myMaxAccelProfile = profile_from_unmapped(p.get_cf_profile(SUMO_ATTR_MAXACCEL_PROFILE, &maxAccelDefault));
+        let desAccelDefault = SUMOVTypeParameter::get_default_des_accel_profile(vc, myAccel);
+        let myDesAccelProfile = profile_from_unmapped(p.get_cf_profile(SUMO_ATTR_DESACCEL_PROFILE, &desAccelDefault));
+        MSCFModel {
+            myType: vtype,
+            myAccel,
+            myDecel,
+            myEmergencyDecel,
+            myApparentDecel,
+            myCollisionMinGapFactor,
+            myHeadwayTime,
+            myStartupDelay,
+            myMaxAccelProfile,
+            myDesAccelProfile,
+        }
     }
 
     /// C++: `void MSCFModel::~MSCFModel()` [virtual]
@@ -63,7 +153,7 @@ impl MSCFModel {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel::~MSCFModel")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -138,7 +228,19 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel::finalizeSpeed")
+        let oldV = veh.get_speed();
+        let vStop = min2(vPos, veh.m().process_next_stop(vPos));
+        let vMinEmergency = self.min_next_speed_emergency(oldV, veh);
+        let vMin = min2(self.min_next_speed(oldV, veh), max2(vPos, vMinEmergency));
+        let fric = veh.get_friction();
+        let factor = if fric == 1. { 1. } else { -0.3491 * fric * fric + 0.8922 * fric + 0.4493 };
+        let aMax = (max2(veh.get_lane().get_vehicle_max_speed(traffic_object(veh)), vPos) * factor - oldV) / veh.get_action_step_length_secs();
+        let mut vMax = min3(oldV + accel2speed(aMax), self.max_next_speed(oldV, veh), vStop);
+        vMax = max2(vMin, vMax);
+        let mut vNext = self.patch_speed_before_lc(veh, vMin, vMax);
+        vNext = veh.m().get_lane_change_model().patch_speed(vMin, vNext, vMax, self);
+        vNext = self.apply_startup_delay(veh, vMin, vNext, 0);
+        vNext
     }
 
     /// C++: `double MSCFModel::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -150,7 +252,8 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel::patchSpeedBeforeLC")
+        let _ = (veh, vMin);
+        vMax
     }
 
     /// C++: `double MSCFModel::applyStartupDelay(const MSVehicle *, const double, const double, const SUMOTime) const` [const, virtual]
@@ -175,7 +278,18 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn apply_startup_delay(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64, addTime: SUMOTime) -> f64 {
-        todo!("port MSCFModel::applyStartupDelay")
+        let _ = vMin;
+        if veh.get_time_since_startup() > 0 && veh.get_time_since_startup() - delta_t() < self.myStartupDelay + addTime {
+            let remainingDelay = self.myStartupDelay + addTime - (veh.get_time_since_startup() - delta_t());
+            if remainingDelay >= delta_t() {
+                // delay startup by at least a whole step
+                return 0.;
+            } else {
+                // reduce acceleration for fractional startup delay
+                return (delta_t() - remainingDelay) as f64 / delta_t() as f64 * vMax;
+            }
+        }
+        vMax
     }
 
     /// C++: `double MSCFModel::interpolateProfile(const double, const std::vector<std::pair<double, double>>) const` [const, virtual]
@@ -200,7 +314,20 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn interpolate_profile(&self, speed: f64, profile: Vec<(f64, f64)>) -> f64 {
-        todo!("port MSCFModel::interpolateProfile")
+        let val;
+        if speed < profile[0].0 {
+            val = profile[0].1;
+        } else if speed > profile[profile.len() - 1].0 {
+            val = profile[profile.len() - 1].1;
+        } else {
+            let mut x = 0;
+            while speed > profile[x + 1].0 {
+                x += 1;
+            }
+            let diff = (profile[x + 1].1 - profile[x].1) / (profile[x + 1].0 - profile[x].0);
+            val = profile[x].1 + diff * (speed - profile[x].0);
+        }
+        val
     }
 
     /// C++: `double MSCFModel::freeSpeed(const MSVehicle *const, double, double, double, const bool, const CalcReason) const` [const, virtual]
@@ -216,7 +343,12 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel::freeSpeed")
+        if maxSpeed < 0. {
+            // can occur for ballistic update (in context of driving at red light)
+            return maxSpeed;
+        }
+        let _ = usage;
+        Self::free_speed_2(speed, self.myDecel, seen, maxSpeed, onInsertion, veh.get_action_step_length_secs())
     }
 
     /// C++: `double MSCFModel::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual, pure virtual]
@@ -224,7 +356,8 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel::followSpeed")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSCFModel::followSpeed is pure virtual; call it on a concrete car-following model")
     }
 
     /// C++: `double MSCFModel::insertionFollowSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const) const` [const, virtual]
@@ -240,7 +373,12 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn insertion_follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel::insertionFollowSpeed")
+        if g_semi_implicit_euler_update() {
+            self.maximum_safe_follow_speed(gap2pred, speed, predSpeed, predMaxDecel, true)
+        } else {
+            // NOTE: Even for ballistic update, the current speed is irrelevant at insertion, therefore passing 0. (Leo)
+            self.maximum_safe_follow_speed(gap2pred, 0., predSpeed, predMaxDecel, true)
+        }
     }
 
     /// C++: `double MSCFModel::stopSpeed(const MSVehicle *const, const double, double, const CalcReason) const` [const]
@@ -250,7 +388,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel::stopSpeed")
+        self.stop_speed_2(veh, speed, gap, self.myDecel, usage)
     }
 
     /// C++: `double MSCFModel::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual, pure virtual]
@@ -258,7 +396,8 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn stop_speed_2(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel::stopSpeed")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSCFModel::stopSpeed is pure virtual; call it on a concrete car-following model")
     }
 
     /// C++: `double MSCFModel::insertionStopSpeed(const MSVehicle *const, double, double) const` [const, virtual]
@@ -273,7 +412,11 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn insertion_stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
-        todo!("port MSCFModel::insertionStopSpeed")
+        if g_semi_implicit_euler_update() {
+            self.stop_speed(veh, speed, gap, MSCFModel_CalcReason::FUTURE)
+        } else {
+            min2(self.maximum_safe_stop_speed(gap, self.myDecel, 0., true, 0., false), self.myType.get_max_speed())
+        }
     }
 
     /// C++: `double MSCFModel::followSpeedTransient(double, const MSVehicle *const, double, double, double, double) const` [const, virtual]
@@ -329,7 +472,41 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed_transient(&self, duration: f64, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel::followSpeedTransient")
+        // minimium distance covered by the leader if braking
+        let leaderMinDist = gap2pred + self.dist_after_time(duration, predSpeed, -predMaxDecel);
+        // if ego would not brake it could drive with speed leaderMinDist / duration
+        // due to potentential ego braking it can safely drive faster
+        if g_semi_implicit_euler_update() {
+            // number of potential braking steps
+            let a = (duration / ts() - ts()).ceil() as i32;
+            // can we brake for the whole time?
+            if self.brake_gap_2(a as f64 * self.myDecel, self.myDecel, 0.) <= leaderMinDist {
+                // braking continuously for duration
+                // distance reduction due to braking
+                let b = ts() * self.get_max_decel() * 0.5 * ((a * a - a) as f64);
+                return (b + leaderMinDist) / duration;
+            } else {
+                let mut bg = 0.;
+                let mut speed = 0.;
+                while bg < leaderMinDist {
+                    speed += accel2speed(self.myDecel);
+                    bg += speed2dist(speed);
+                }
+                speed -= dist2speed(bg - leaderMinDist);
+                return speed;
+            }
+        } else {
+            // can we brake for the whole time?
+            let fullBrakingSeconds = (leaderMinDist * 2. / self.myDecel).sqrt();
+            if fullBrakingSeconds >= duration {
+                // braking continuously for duration
+                // average speed after braking for duration is x2 = x - 0.5 * duration * myDecel
+                // x2 * duration <= leaderMinDist must hold
+                return leaderMinDist / duration + duration * self.get_max_decel() / 2.;
+            } else {
+                return fullBrakingSeconds * self.myDecel;
+            }
+        }
     }
 
     /// C++: `double MSCFModel::interactionGap(const MSVehicle *const, double) const` [const, virtual]
@@ -349,7 +526,13 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn interaction_gap(&self, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
-        todo!("port MSCFModel::interactionGap")
+        // Resolve the vsafe equation to gap. Assume predecessor has
+        // speed != 0 and that vsafe will be the current speed plus acceleration,
+        // i.e that with this gap there will be no interaction.
+        let vNext = min2(self.max_next_speed(veh.get_speed(), veh), veh.get_lane().get_vehicle_max_speed(traffic_object(veh)));
+        let gap = (vNext - vL) * ((veh.get_speed() + vL) / (2. * self.myDecel) + self.myHeadwayTime) + vL * self.myHeadwayTime;
+        // Don't allow timeHeadWay < deltaT situations.
+        max2(gap, speed2dist(vNext))
     }
 
     /// C++: `double MSCFModel::maximumLaneSpeedCF(const MSVehicle *const, double, double) const` [const, virtual]
@@ -361,7 +544,9 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn maximum_lane_speed_cf(&self, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
-        todo!("port MSCFModel::maximumLaneSpeedCF")
+        let mut result = min2(maxSpeed, maxSpeedLane);
+        self.apply_own_speed_perception_error(veh, &mut result);
+        result
     }
 
     /// C++: `int MSCFModel::getModelID() const` [const, virtual, pure virtual]
@@ -369,7 +554,8 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel::getModelID")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSCFModel::getModelID is pure virtual; call it on a concrete car-following model")
     }
 
     /// C++: `MSCFModel * MSCFModel::duplicate(const MSVehicleType *) const` [const, virtual, pure virtual]
@@ -377,7 +563,8 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel::duplicate")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSCFModel::duplicate is pure virtual; call it on a concrete car-following model")
     }
 
     /// C++: `VehicleVariables * MSCFModel::createVehicleVariables() const` [const, virtual]
@@ -387,7 +574,8 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel::createVehicleVariables")
+        // C++ returns 0 (no model-specific variables)
+        Ptr::default()
     }
 
     /// C++: `double MSCFModel::getMaxAccel() const` [const]
@@ -397,7 +585,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_accel(&self) -> f64 {
-        todo!("port MSCFModel::getMaxAccel")
+        self.myAccel
     }
 
     /// C++: `double MSCFModel::getMaxDecel() const` [const]
@@ -407,7 +595,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_decel(&self) -> f64 {
-        todo!("port MSCFModel::getMaxDecel")
+        self.myDecel
     }
 
     /// C++: `double MSCFModel::getEmergencyDecel() const` [const]
@@ -417,7 +605,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_emergency_decel(&self) -> f64 {
-        todo!("port MSCFModel::getEmergencyDecel")
+        self.myEmergencyDecel
     }
 
     /// C++: `double MSCFModel::getApparentDecel() const` [const]
@@ -427,7 +615,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_apparent_decel(&self) -> f64 {
-        todo!("port MSCFModel::getApparentDecel")
+        self.myApparentDecel
     }
 
     /// C++: `SUMOTime MSCFModel::getStartupDelay() const` [const]
@@ -437,7 +625,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_startup_delay(&self) -> SUMOTime {
-        todo!("port MSCFModel::getStartupDelay")
+        self.myStartupDelay
     }
 
     /// C++: `double MSCFModel::getCurrentAccel(const double) const` [const, virtual]
@@ -456,7 +644,15 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn get_current_accel(&self, speed: f64) -> f64 {
-        todo!("port MSCFModel::getCurrentAccel")
+        let mut result = self.myAccel;
+        if !self.myDesAccelProfile.is_empty() {
+            result = min2(result, get_interpolated_value(&self.myDesAccelProfile, speed));
+        }
+        if !self.myMaxAccelProfile.is_empty() {
+            // @todo maxAccel should interact with slope
+            result = min2(result, get_interpolated_value(&self.myMaxAccelProfile, speed));
+        }
+        result
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel::getMaxAccelProfile() const` [const]
@@ -465,8 +661,8 @@ impl MSCFModel {
     //         return myMaxAccelProfile;
     //     }
     #[allow(unused_variables)]
-    pub fn get_max_accel_profile(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel::getMaxAccelProfile")
+    pub fn get_max_accel_profile(&self) -> LinearApproxMap {
+        self.myMaxAccelProfile.clone()
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel::getDesAccelProfile() const` [const]
@@ -475,8 +671,8 @@ impl MSCFModel {
     //         return myDesAccelProfile;
     //     }
     #[allow(unused_variables)]
-    pub fn get_des_accel_profile(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel::getDesAccelProfile")
+    pub fn get_des_accel_profile(&self) -> LinearApproxMap {
+        self.myDesAccelProfile.clone()
     }
 
     /// C++: `double MSCFModel::getCollisionMinGapFactor() const` [const]
@@ -486,7 +682,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_collision_min_gap_factor(&self) -> f64 {
-        todo!("port MSCFModel::getCollisionMinGapFactor")
+        self.myCollisionMinGapFactor
     }
 
     /// C++: `double MSCFModel::getImperfection() const` [const, virtual]
@@ -496,7 +692,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_imperfection(&self) -> f64 {
-        todo!("port MSCFModel::getImperfection")
+        -1.
     }
 
     /// C++: `double MSCFModel::getHeadwayTime() const` [const, virtual]
@@ -506,7 +702,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_headway_time(&self) -> f64 {
-        todo!("port MSCFModel::getHeadwayTime")
+        self.myHeadwayTime
     }
 
     /// C++: `bool MSCFModel::startupDelayStopped() const` [const, virtual]
@@ -516,7 +712,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn startup_delay_stopped(&self) -> bool {
-        todo!("port MSCFModel::startupDelayStopped")
+        false
     }
 
     /// C++: `double MSCFModel::maxNextSpeed(double, const MSVehicle *const) const` [const, virtual]
@@ -527,7 +723,7 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn max_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel::maxNextSpeed")
+        min2(speed + accel2speed(self.get_current_accel(speed)), self.myType.get_max_speed())
     }
 
     /// C++: `double MSCFModel::maxNextSafeMin(double, const MSVehicle *const) const` [const, virtual]
@@ -537,7 +733,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn max_next_safe_min(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel::maxNextSafeMin")
+        self.max_next_speed(speed, veh)
     }
 
     /// C++: `double MSCFModel::minNextSpeed(double, const MSVehicle *const) const` [const, virtual]
@@ -553,7 +749,12 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel::minNextSpeed")
+        if g_semi_implicit_euler_update() {
+            max2(speed - accel2speed(self.myDecel), 0.)
+        } else {
+            // NOTE: ballistic update allows for negative speeds to indicate a stop within the next timestep
+            speed - accel2speed(self.myDecel)
+        }
     }
 
     /// C++: `double MSCFModel::minNextSpeedEmergency(double, const MSVehicle *const) const` [const, virtual]
@@ -569,7 +770,12 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn min_next_speed_emergency(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel::minNextSpeedEmergency")
+        if g_semi_implicit_euler_update() {
+            max2(speed - accel2speed(self.myEmergencyDecel), 0.)
+        } else {
+            // NOTE: ballistic update allows for negative speeds to indicate a stop within the next timestep
+            speed - accel2speed(self.myEmergencyDecel)
+        }
     }
 
     /// C++: `double MSCFModel::brakeGap(const double) const` [const]
@@ -579,7 +785,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn brake_gap(&self, speed: f64) -> f64 {
-        todo!("port MSCFModel::brakeGap")
+        self.brake_gap_2(speed, self.myDecel, self.myHeadwayTime)
     }
 
     /// C++: `double MSCFModel::brakeGap(const double, const double, const double) const` [const, virtual]
@@ -598,7 +804,16 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn brake_gap_2(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
-        todo!("port MSCFModel::brakeGap")
+        if g_semi_implicit_euler_update() {
+            Self::brake_gap_euler(speed, decel, headwayTime)
+        } else {
+            // ballistic
+            if speed <= 0. {
+                0.
+            } else {
+                speed * (headwayTime + 0.5 * speed / decel)
+            }
+        }
     }
 
     /// C++: `double MSCFModel::brakeGapEuler(const double, const double, const double)` [static]
@@ -612,7 +827,11 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn brake_gap_euler(speed: f64, decel: f64, headwayTime: f64) -> f64 {
-        todo!("port MSCFModel::brakeGapEuler")
+        /* one possibility to speed this up is to calculate speedReduction * steps * (steps+1) / 2
+           for small values of steps (up to 10 maybe) and store them in an array */
+        let speedReduction = accel2speed(decel);
+        let steps = (speed / speedReduction) as i32;
+        speed2dist(steps as f64 * speed - speedReduction * steps as f64 * (steps + 1) as f64 / 2.) + speed * headwayTime
     }
 
     /// C++: `double MSCFModel::freeSpeed(const double, const double, const double, const double, const bool, const double)` [static]
@@ -682,7 +901,45 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn free_speed_2(currentSpeed: f64, decel: f64, dist: f64, maxSpeed: f64, onInsertion: bool, actionStepLength: f64) -> f64 {
-        todo!("port MSCFModel::freeSpeed")
+        // XXX: (Leo) This seems to be exclusively called with decel = myDecel (max deceleration) and is not overridden
+        // by any specific CFModel. That may cause undesirable hard braking (at junctions where the vehicle
+        // changes to a road with a lower speed limit).
+        if g_semi_implicit_euler_update() {
+            // adapt speed to succeeding lane, no reaction time is involved
+            // when breaking for y steps the following distance g is covered
+            // (drive with v in the final step)
+            // g = (y^2 + y) * 0.5 * b + y * v
+            // y = ((((sqrt((b + 2.0*v)*(b + 2.0*v) + 8.0*b*g)) - b)*0.5 - v)/b)
+            let v = speed2dist(maxSpeed);
+            if dist < v {
+                return maxSpeed;
+            }
+            let b = accel2dist(decel);
+            let y = max2(0.0, ((((b + 2.0 * v) * (b + 2.0 * v) + 8.0 * b * dist).sqrt() - b) * 0.5 - v) / b);
+            let yFull = y.floor();
+            let exactGap = (yFull * yFull + yFull) * 0.5 * b + yFull * v + (if y > yFull { v } else { 0.0 });
+            let fullSpeedGain = (yFull + (if onInsertion { 1. } else { 0. })) * accel2speed(decel);
+            dist2speed(max2(0.0, dist - exactGap) / (yFull + 1.)) + fullSpeedGain + maxSpeed
+        } else {
+            // ballistic update (Leo)
+            // calculate maximum next speed vN that is adjustable to vT=targetSpeed after a distance d=dist
+            // and given a maximal deceleration b=decel, denote the current speed by v0.
+            let dt = if onInsertion { 0. } else { actionStepLength }; // handles case that vehicle is inserted just now (at the end of move)
+            let v0 = currentSpeed;
+            let vT = maxSpeed;
+            let b = decel;
+            let d = dist - NUMERICAL_EPS; // prevent returning a value > targetSpeed due to rounding errors
+            // If implied accel a leads to v0 + a*asl < vT, choose acceleration s.th. v0 + a*asl = vT
+            if 0.5 * (v0 + vT) * dt >= d {
+                // Attain vT after time asl
+                v0 + ts() * (vT - v0) / actionStepLength
+            } else {
+                let q = (dt * v0 - 2. * d) * b - vT * vT; // (q < 0 is fulfilled because of (#))
+                let p = 0.5 * b * dt;
+                let vN = -p + (p * p - q).sqrt(); // target speed at time t0+asl
+                v0 + ts() * (vN - v0) / actionStepLength
+            }
+        }
     }
 
     /// C++: `double MSCFModel::getSecureGap(const MSVehicle *const, const MSVehicle *const, const double, const double, const double) const` [const, virtual]
@@ -708,7 +965,22 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, arg1: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel::getSecureGap")
+        // The solution approach leaderBrakeGap >= followerBrakeGap is not
+        // secure when the follower can brake harder than the leader because the paths may still cross.
+        // As a workaround we use a value of leaderDecel which errs on the side of caution
+        let maxDecel = max2(self.myDecel, leaderMaxDecel);
+        let bgLeader = self.brake_gap_2(leaderSpeed, maxDecel, 0.);
+        let mut secureGap = max2(0.0, self.brake_gap_2(speed, self.myDecel, self.myHeadwayTime) - bgLeader);
+        if g_compute_lc() && veh.get_acceleration() < -NUMERICAL_EPS {
+            // vehicle can react instantly in the next step
+            // we only apply 'myHeadWayTime' to avoid sudden braking after lane change
+            // thus we can reduce the required brakeGap if the vehicle is braking anyway
+            // (but we shouldn't assume continued emergency deceleration)
+            let secureGapDecel = max2(0.0, self.brake_gap_2(speed, min2(-veh.get_acceleration(), self.myDecel), 0.) - bgLeader);
+            // the secureGapDecel doesn't leave room for lcAssertive behavior
+            secureGap = min2(secureGap, secureGapDecel / veh.m().get_lane_change_model().get_safety_factor());
+        }
+        secureGap
     }
 
     /// C++: `double MSCFModel::getSpeedAfterMaxDecel(double) const` [const, virtual]
@@ -722,7 +994,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_after_max_decel(&self, v: f64) -> f64 {
-        todo!("port MSCFModel::getSpeedAfterMaxDecel")
+        max2(0., v - accel2speed(self.myDecel))
     }
 
     /// C++: `SUMOTime MSCFModel::getMinimalArrivalTime(double, double, double) const` [const]
@@ -749,7 +1021,23 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn get_minimal_arrival_time(&self, dist: f64, currentSpeed: f64, arrivalSpeed: f64) -> SUMOTime {
-        todo!("port MSCFModel::getMinimalArrivalTime")
+        if dist <= 0. {
+            return 0;
+        }
+        // will either drive as fast as possible and decelerate as late as possible
+        // or accelerate as fast as possible and then hold that speed
+        let arrivalSpeed = max2(0.0, arrivalSpeed); // ballistic model may call this with -std::numeric_limits<double>::max()
+        let accel = if arrivalSpeed >= currentSpeed { self.get_max_accel() } else { -self.get_max_decel() };
+        let accelTime = if accel == 0. { 0. } else { (arrivalSpeed - currentSpeed) / accel };
+        let accelWay = accelTime * (arrivalSpeed + currentSpeed) * 0.5;
+        if dist >= accelWay {
+            let nonAccelWay = dist - accelWay;
+            let nonAccelSpeed = max3(currentSpeed, arrivalSpeed, SUMO_CONST_HALTING_SPEED);
+            return time2steps(accelTime + nonAccelWay / nonAccelSpeed);
+        }
+        // find time x so that
+        // x * (currentSpeed + currentSpeed + x * accel) * 0.5 = dist
+        time2steps(-(currentSpeed - (currentSpeed * currentSpeed + 2. * accel * dist).sqrt()) / accel)
     }
 
     /// C++: `double MSCFModel::estimateArrivalTime(double, double, double, double)` [static]
@@ -794,7 +1082,33 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn estimate_arrival_time(dist: f64, speed: f64, maxSpeed: f64, accel: f64) -> f64 {
-        todo!("port MSCFModel::estimateArrivalTime")
+        // Computes the time needed to travel a distance dist given an initial speed and constant acceleration.
+        if dist < NUMERICAL_EPS {
+            return 0.;
+        }
+        if (accel < 0. && -0.5 * speed * speed / accel < dist) || (accel <= 0. && speed == 0.) {
+            // distance will never be covered with these values
+            return INVALID_DOUBLE;
+        }
+        if accel.abs() < NUMERICAL_EPS {
+            return dist / speed;
+        }
+        let p = speed / accel;
+        if accel < 0. {
+            // we already know, that the distance will be covered despite breaking
+            return -p - (p * p + 2. * dist / accel).sqrt();
+        }
+        // Here, accel > 0
+        // t1 is the time to use the given acceleration
+        let t1 = (maxSpeed - speed) / accel;
+        // distance covered until t1
+        let d1 = speed * t1 + 0.5 * accel * t1 * t1;
+        if d1 >= dist {
+            // dist is covered before changing the speed
+            -p + (p * p + 2. * dist / accel).sqrt()
+        } else {
+            (-p + (p * p + 2. * d1 / accel).sqrt()) + (dist - d1) / maxSpeed
+        }
     }
 
     /// C++: `double MSCFModel::estimateArrivalTime(double, double, double, double, double, double)` [static]
@@ -831,7 +1145,23 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn estimate_arrival_time_2(dist: f64, initialSpeed: f64, arrivalSpeed: f64, maxSpeed: f64, accel: f64, decel: f64) -> f64 {
-        todo!("port MSCFModel::estimateArrivalTime")
+        if dist <= 0. {
+            return 0.;
+        }
+        // stub-assumptions (C++ asserts: accel == decel, accel > 0, initialSpeed == 0, arrivalSpeed == 0, maxSpeed > 0)
+        let accelTime = (maxSpeed - initialSpeed) / accel;
+        // "ballistic" estimate for the distance covered during acceleration phase
+        let accelDist = accelTime * (initialSpeed + 0.5 * (maxSpeed - initialSpeed));
+        let arrivalTime;
+        if accelDist >= dist * 0.5 {
+            // maximal speed will not be attained during maneuver
+            arrivalTime = 4. * (dist / accel).sqrt();
+        } else {
+            // Calculate time to move with constant, maximal lateral speed
+            let constSpeedTime = (dist - accelDist * 2.) / maxSpeed;
+            arrivalTime = accelTime + constSpeedTime;
+        }
+        arrivalTime
     }
 
     /// C++: `double MSCFModel::avoidArrivalAccel(double, double, double, double)` [static]
@@ -853,7 +1183,18 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn avoid_arrival_accel(dist: f64, time: f64, speed: f64, maxDecel: f64) -> f64 {
-        todo!("port MSCFModel::avoidArrivalAccel")
+        // Computes the acceleration needed to arrive not before the given time
+        if dist <= 0. {
+            -maxDecel
+        } else if time * speed > 2. * dist {
+            // stop before dist is necessary. We need
+            //            d = v*v/(2*a)
+            -0.5 * speed * speed / dist
+        } else {
+            // we seek the solution a of
+            //            d = v*t + a*t*t/2
+            2. * (dist / time - speed) / time
+        }
     }
 
     /// C++: `double MSCFModel::getMinimalArrivalSpeed(double, double) const` [const]
@@ -865,7 +1206,8 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn get_minimal_arrival_speed(&self, dist: f64, currentSpeed: f64) -> f64 {
-        todo!("port MSCFModel::getMinimalArrivalSpeed")
+        // ballistic update
+        self.estimate_speed_after_distance(dist - currentSpeed * self.get_headway_time(), currentSpeed, -self.get_max_decel())
     }
 
     /// C++: `double MSCFModel::getMinimalArrivalSpeedEuler(double, double) const` [const]
@@ -887,7 +1229,17 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn get_minimal_arrival_speed_euler(&self, dist: f64, currentSpeed: f64) -> f64 {
-        todo!("port MSCFModel::getMinimalArrivalSpeedEuler")
+        let arrivalSpeedBraking;
+        // Because we use a continuous formula for computing the possible slow-down
+        // we need to handle the mismatch with the discrete dynamics
+        if dist < currentSpeed {
+            arrivalSpeedBraking = INVALID_SPEED; // no time left for braking after this step
+        } else if 2. * (dist - currentSpeed * self.get_headway_time()) * -self.get_max_decel() + currentSpeed * currentSpeed >= 0. {
+            arrivalSpeedBraking = self.estimate_speed_after_distance(dist - currentSpeed * self.get_headway_time(), currentSpeed, -self.get_max_decel());
+        } else {
+            arrivalSpeedBraking = self.get_max_decel();
+        }
+        arrivalSpeedBraking
     }
 
     /// C++: `double MSCFModel::gapExtrapolation(const double, const double, double, double, double, double, const double, const double)` [static]
@@ -984,8 +1336,86 @@ impl MSCFModel {
     //     return newGap;
     // }
     #[allow(unused_variables)]
-    pub fn gap_extrapolation(duration: f64, currentGap: f64, v1: f64, v2: f64, a1: f64, a2: f64, maxV1: f64, maxV2: f64) -> f64 {
-        todo!("port MSCFModel::gapExtrapolation")
+    pub fn gap_extrapolation(duration: f64, currentGap: f64, mut v1: f64, mut v2: f64, mut a1: f64, mut a2: f64, maxV1: f64, maxV2: f64) -> f64 {
+        let mut newGap = currentGap;
+        if g_semi_implicit_euler_update() {
+            let mut steps: u32 = 1;
+            while steps as f64 * ts() <= duration {
+                v1 = min2(max2(v1 + a1, 0.), maxV1);
+                v2 = min2(max2(v2 + a2, 0.), maxV2);
+                newGap += ts() * (v1 - v2);
+                steps += 1;
+            }
+        } else {
+            // determine times t1, t2 for which vehicles can break until stop (within duration)
+            // and t3, t4 for which they reach their maximal speed on their current lanes.
+            let mut t1 = 0.;
+            let mut t2 = 0.;
+            let mut t3 = 0.;
+            let mut t4 = 0.;
+            // t1: ego veh stops
+            if a1 < 0. && v1 > 0. {
+                let leaderStopTime = -v1 / a1;
+                t1 = min2(leaderStopTime, duration);
+            } else if a1 >= 0. {
+                t1 = duration;
+            }
+            // t2: veh2 stops
+            if a2 < 0. && v2 > 0. {
+                let followerStopTime = -v2 / a2;
+                t2 = min2(followerStopTime, duration);
+            } else if a2 >= 0. {
+                t2 = duration;
+            }
+            // t3: ego veh reaches vMax
+            if a1 > 0. && v1 < maxV1 {
+                let leaderMaxSpeedTime = (maxV1 - v1) / a1;
+                t3 = min2(leaderMaxSpeedTime, duration);
+            } else if a1 <= 0. {
+                t3 = duration;
+            }
+            // t4: veh2 reaches vMax
+            if a2 > 0. && v2 < maxV2 {
+                let followerMaxSpeedTime = (maxV2 - v2) / a2;
+                t4 = min2(followerMaxSpeedTime, duration);
+            } else if a2 <= 0. {
+                t4 = duration;
+            }
+            // NOTE: this assumes that the accelerations a1 and a2 are constant over the next
+            //       followerBreakTime seconds (if no vehicle stops before or reaches vMax)
+            let mut l = vec![t1, t2, t3, t4];
+            l.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let mut tLast = 0.;
+            for &i in l.iter() {
+                if i != tLast {
+                    let dt = min2(i, duration) - tLast; // time between *i and tLast
+                    let dv = v1 - v2; // current velocity difference
+                    let da = a1 - a2; // current acceleration difference
+                    newGap += dv * dt + da * dt * dt / 2.; // update gap
+                    v1 += dt * a1;
+                    v2 += dt * a2;
+                }
+                if i == t1 || i == t3 {
+                    // ego veh reached velocity bound
+                    a1 = 0.;
+                }
+                if i == t2 || i == t4 {
+                    // veh2 reached velocity bound
+                    a2 = 0.;
+                }
+                tLast = min2(i, duration);
+                if tLast == duration {
+                    break;
+                }
+            }
+            if duration != tLast {
+                // (both vehicles have zero acceleration)
+                let dt = duration - tLast; // remaining time until duration
+                let dv = v1 - v2; // current velocity difference
+                newGap += dv * dt; // update gap
+            }
+        }
+        newGap
     }
 
     /// C++: `double MSCFModel::passingTime(const double, const double, const double, const double, const double)` [static]
@@ -1068,7 +1498,64 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn passing_time(lastPos: f64, passedPos: f64, currentPos: f64, lastSpeed: f64, currentSpeed: f64) -> f64 {
-        todo!("port MSCFModel::passingTime")
+        // Calculates the time at which the position passedPosition has been passed.
+        // In case of a ballistic update, the possibility of a stop within a time step requires more information
+        if passedPos > currentPos || passedPos < lastPos {
+            // NOTE: error is guarded to maintain original test output for euler update (Leo).
+            if !g_semi_implicit_euler_update() {
+                let ss = format!("passingTime(): given argument passedPos = {} doesn't lie within [lastPos, currentPos] = [{}, {}]\nExtrapolating...", f64_to_string_prec(passedPos, 6), f64_to_string_prec(lastPos, 6), f64_to_string_prec(currentPos, 6));
+                println!("{}", ss);
+                utils::common::msg_handler::write_error(&ss);
+            }
+            let lastCoveredDist = currentPos - lastPos;
+            let extrapolated = if passedPos > currentPos { ts() * (passedPos - lastPos) / lastCoveredDist } else { ts() * (currentPos - passedPos) / lastCoveredDist };
+            return extrapolated;
+        } else if currentSpeed < 0. {
+            utils::common::msg_handler::write_error("passingTime(): given argument 'currentSpeed' is negative. This case is not handled yet.");
+            return -1.;
+        }
+        let distanceOldToPassed = passedPos - lastPos; // assert: >=0
+        if g_semi_implicit_euler_update() {
+            // euler update (constantly moving with currentSpeed during [0,TS])
+            if currentSpeed == 0. {
+                return ts();
+            }
+            let t = distanceOldToPassed / currentSpeed;
+            min2(ts(), max2(0., t)) //rounding errors could give results out of the admissible result range
+        } else {
+            // ballistic update (constant acceleration a during [0,TS], except in case of a stop)
+            // determine acceleration
+            let a;
+            if currentSpeed > 0. {
+                // the acceleration was constant within the last time step
+                a = speed2accel(currentSpeed - lastSpeed);
+            } else {
+                // the currentSpeed is zero (the last was not because lastPos<currentPos).
+                // In general the stop has taken place within the last time step.
+                // The acceleration (a<0) is obtained from
+                // deltaPos = - lastSpeed^2/(2*a)
+                a = lastSpeed * lastSpeed / (2. * (lastPos - currentPos));
+            }
+            // determine passing time t
+            // we solve distanceOldToPassed = lastSpeed*t + a*t^2/2
+            if a.abs() < NUMERICAL_EPS {
+                // treat as constant speed within [0, TS]
+                let t = 2. * distanceOldToPassed / (lastSpeed + currentSpeed);
+                min2(ts(), max2(0., t)) //rounding errors could give results out of the admissible result range
+            } else if a > 0. {
+                // positive acceleration => only one positive solution
+                let va = lastSpeed / a;
+                let t = -va + (va * va + 2. * distanceOldToPassed / a).sqrt();
+                t
+            } else {
+                // negative acceleration => two positive solutions (pick the smaller one.)
+                let va = lastSpeed / a;
+                let t = -va - (va * va + 2. * distanceOldToPassed / a).sqrt();
+                // emergency braking at red light could give results out of the admissible result range
+                // because the dynamics are euler-like (full forward speed with instant deceleration)
+                min2(ts(), max2(0., t))
+            }
+        }
     }
 
     /// C++: `double MSCFModel::speedAfterTime(const double, const double, const double)` [static]
@@ -1100,7 +1587,26 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_after_time(t: f64, oldSpeed: f64, dist: f64) -> f64 {
-        todo!("port MSCFModel::speedAfterTime")
+        if g_semi_implicit_euler_update() {
+            // euler: constant speed within [0,TS]
+            dist2speed(dist)
+        } else {
+            // ballistic: piecewise constant acceleration in [0,TS] (may become 0 for a stop within TS)
+            // We reconstruct acceleration at time t=0. Note that the covered distance in case
+            // of a stop exactly at t=TS is TS*v0/2.
+            if dist < ts() * oldSpeed / 2. {
+                // stop must have occurred within [0,TS], use dist = -v0^2/(2a) (stopping dist),
+                // i.e., a = -v0^2/(2*dist)
+                let accel = -oldSpeed * oldSpeed / (2. * dist);
+                // The speed at time t is then
+                oldSpeed + accel * t
+            } else {
+                // no stop occurred within [0,TS], thus (from dist = v0*TS + accel*TS^2/2)
+                let accel = 2. * (dist / ts() - oldSpeed) / ts();
+                // The speed at time t is then
+                oldSpeed + accel * t
+            }
+        }
     }
 
     /// C++: `double MSCFModel::distAfterTime(double, double, double) const` [const, virtual]
@@ -1108,7 +1614,30 @@ impl MSCFModel {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dist_after_time(&self, t: f64, speed: f64, accel: f64) -> f64 {
-        todo!("port MSCFModel::distAfterTime")
+        // calculates the distance traveled after accelerating for time t
+        if accel >= 0. {
+            return (speed + 0.5 * accel * t) * t;
+        }
+        let decel = -accel;
+        if speed <= decel * t {
+            // braking to a full stop
+            return self.brake_gap_2(speed, decel, 0.);
+        }
+        if g_semi_implicit_euler_update() {
+            // @todo improve efficiency
+            let mut result = 0.;
+            let mut speed = speed;
+            let mut t = t;
+            while t > 0. {
+                speed -= accel2speed(decel);
+                result += max2(0.0, speed2dist(speed));
+                t -= ts();
+            }
+            result
+        } else {
+            let speed2 = speed - t * decel;
+            0.5 * (speed + speed2) * t
+        }
     }
 
     /// C++: `double MSCFModel::estimateSpeedAfterDistance(const double, const double, const double) const` [const]
@@ -1120,7 +1649,8 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn estimate_speed_after_distance(&self, dist: f64, v: f64, accel: f64) -> f64 {
-        todo!("port MSCFModel::estimateSpeedAfterDistance")
+        // dist=v*t + 0.5*accel*t^2, solve for t and use v1 = v + accel*t
+        min2(self.myType.get_max_speed(), max2(0., 2. * dist * accel + v * v).sqrt())
     }
 
     /// C++: `void MSCFModel::setMaxAccel(double)` [virtual]
@@ -1130,7 +1660,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_max_accel(&mut self, accel: f64) {
-        todo!("port MSCFModel::setMaxAccel")
+        self.myAccel = accel;
     }
 
     /// C++: `void MSCFModel::setMaxDecel(double)` [virtual]
@@ -1140,7 +1670,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_max_decel(&mut self, decel: f64) {
-        todo!("port MSCFModel::setMaxDecel")
+        self.myDecel = decel;
     }
 
     /// C++: `void MSCFModel::setEmergencyDecel(double)` [virtual]
@@ -1150,7 +1680,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_emergency_decel(&mut self, decel: f64) {
-        todo!("port MSCFModel::setEmergencyDecel")
+        self.myEmergencyDecel = decel;
     }
 
     /// C++: `void MSCFModel::setApparentDecel(double)` [virtual]
@@ -1160,7 +1690,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_apparent_decel(&mut self, decel: f64) {
-        todo!("port MSCFModel::setApparentDecel")
+        self.myApparentDecel = decel;
     }
 
     /// C++: `void MSCFModel::setCollisionMinGapFactor(const double)`
@@ -1170,7 +1700,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_collision_min_gap_factor(&mut self, factor: f64) {
-        todo!("port MSCFModel::setCollisionMinGapFactor")
+        self.myCollisionMinGapFactor = factor;
     }
 
     /// C++: `void MSCFModel::setMaxAccelProfile(const LinearApproxHelpers::LinearApproxMap &)` [virtual]
@@ -1179,8 +1709,8 @@ impl MSCFModel {
     //         myMaxAccelProfile = accelProfile;
     //     }
     #[allow(unused_variables)]
-    pub fn set_max_accel_profile(&mut self, accelProfile: &Unmapped /* LinearApproxHelpers::LinearApproxMap */) {
-        todo!("port MSCFModel::setMaxAccelProfile")
+    pub fn set_max_accel_profile(&mut self, accelProfile: &LinearApproxMap) {
+        self.myMaxAccelProfile = accelProfile.clone();
     }
 
     /// C++: `void MSCFModel::setDesAccelProfile(const LinearApproxHelpers::LinearApproxMap &)` [virtual]
@@ -1189,8 +1719,8 @@ impl MSCFModel {
     //         myDesAccelProfile = accelProfile;
     //     }
     #[allow(unused_variables)]
-    pub fn set_des_accel_profile(&mut self, accelProfile: &Unmapped /* LinearApproxHelpers::LinearApproxMap */) {
-        todo!("port MSCFModel::setDesAccelProfile")
+    pub fn set_des_accel_profile(&mut self, accelProfile: &LinearApproxMap) {
+        self.myDesAccelProfile = accelProfile.clone();
     }
 
     /// C++: `void MSCFModel::setImperfection(double)` [virtual]
@@ -1200,7 +1730,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_imperfection(&mut self, imperfection: f64) {
-        todo!("port MSCFModel::setImperfection")
+        let _ = imperfection;
     }
 
     /// C++: `void MSCFModel::setHeadwayTime(double)` [virtual]
@@ -1210,7 +1740,7 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_headway_time(&mut self, headwayTime: f64) {
-        todo!("port MSCFModel::setHeadwayTime")
+        self.myHeadwayTime = headwayTime;
     }
 
     /// C++: `double MSCFModel::maximumSafeFollowSpeed(double, double, double, double, bool) const` [const]
@@ -1295,7 +1825,36 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_follow_speed(&self, gap: f64, egoSpeed: f64, predSpeed: f64, predMaxDecel: f64, onInsertion: bool) -> f64 {
-        todo!("port MSCFModel::maximumSafeFollowSpeed")
+        // the speed is safe if allows the ego vehicle to come to a stop behind the leader even if
+        // the leaders starts braking hard until stopped
+        // unfortunately it is not sufficient to compare stopping distances if the follower can brake harder than the leader
+        // To make things safe, we ensure that the leaders brake distance is computed with an deceleration that is at least as high as the follower's.
+        let headway = self.myHeadwayTime;
+        let mut x;
+        if gap >= 0. || g_compute_lc() {
+            x = self.maximum_safe_stop_speed(gap + self.brake_gap_2(predSpeed, max2(self.myDecel, predMaxDecel), 0.), self.myDecel, egoSpeed, onInsertion, headway, false);
+        } else {
+            x = egoSpeed - accel2speed(self.myEmergencyDecel);
+            if g_semi_implicit_euler_update() {
+                x = max2(x, 0.);
+            }
+        }
+        if self.myDecel != self.myEmergencyDecel && !onInsertion && !g_compute_lc() {
+            let origSafeDecel = speed2accel(egoSpeed - x);
+            if origSafeDecel > self.myDecel + NUMERICAL_EPS {
+                // Braking harder than myDecel was requested -> calculate required emergency deceleration.
+                let mut safeDecel = EMERGENCY_DECEL_AMPLIFIER * self.calculate_emergency_deceleration(gap, egoSpeed, predSpeed, predMaxDecel);
+                // Don't be riskier than the usual method (myDecel <= safeDecel may occur, because a headway>0 is used above)
+                safeDecel = max2(safeDecel, self.myDecel);
+                // don't brake harder than originally planned (possible due to euler/ballistic mismatch)
+                safeDecel = min2(safeDecel, origSafeDecel);
+                x = egoSpeed - accel2speed(safeDecel);
+                if g_semi_implicit_euler_update() {
+                    x = max2(x, 0.);
+                }
+            }
+        }
+        x
     }
 
     /// C++: `double MSCFModel::calculateEmergencyDeceleration(double, double, double, double) const` [const]
@@ -1352,7 +1911,24 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn calculate_emergency_deceleration(&self, gap: f64, egoSpeed: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel::calculateEmergencyDeceleration")
+        // There are two cases:
+        // 1) Either, stopping in time is possible with a deceleration b <= predMaxDecel, then this value is returned
+        // 2) Or, b > predMaxDecel is required in this case the minimal value b allowing to stop safely under the assumption maxPredDecel=b is returned
+        if gap <= 0. {
+            return self.myEmergencyDecel;
+        }
+        // Apparent braking distance for the leader
+        let predBrakeDist = 0.5 * predSpeed * predSpeed / predMaxDecel;
+        // Required deceleration according to case 1)
+        let b1 = 0.5 * egoSpeed * egoSpeed / (gap + predBrakeDist);
+        if b1 <= predMaxDecel {
+            // Case 1) applies
+            return b1;
+        }
+        // Case 2) applies
+        // Required deceleration according to case 2)
+        let b2 = 0.5 * (egoSpeed * egoSpeed - predSpeed * predSpeed) / gap;
+        b2
     }
 
     /// C++: `double MSCFModel::maximumSafeStopSpeed(double, double, double, bool, double, bool) const` [const]
@@ -1410,7 +1986,28 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_stop_speed(&self, gap: f64, decel: f64, currentSpeed: f64, onInsertion: bool, headway: f64, relaxEmergency: bool) -> f64 {
-        todo!("port MSCFModel::maximumSafeStopSpeed")
+        let mut vsafe;
+        if g_semi_implicit_euler_update() {
+            vsafe = self.maximum_safe_stop_speed_euler(gap, decel, onInsertion, headway);
+        } else {
+            vsafe = self.maximum_safe_stop_speed_ballistic(gap, decel, currentSpeed, onInsertion, headway);
+        }
+        if relaxEmergency && self.myDecel != self.myEmergencyDecel {
+            let origSafeDecel = speed2accel(currentSpeed - vsafe);
+            if origSafeDecel > self.myDecel + NUMERICAL_EPS {
+                // emergency deceleration required
+                let mut safeDecel = EMERGENCY_DECEL_AMPLIFIER * self.calculate_emergency_deceleration(gap, currentSpeed, 0., 1.);
+                // Don't be riskier than the usual method (myDecel <= safeDecel may occur, because a headway>0 is used above)
+                safeDecel = max2(safeDecel, self.myDecel);
+                // don't brake harder than originally planned (possible due to euler/ballistic mismatch)
+                safeDecel = min2(safeDecel, origSafeDecel);
+                vsafe = currentSpeed - accel2speed(safeDecel);
+                if g_semi_implicit_euler_update() {
+                    vsafe = max2(vsafe, 0.);
+                }
+            }
+        }
+        vsafe
     }
 
     /// C++: `double MSCFModel::maximumSafeStopSpeedEuler(double, double, bool, double) const` [const]
@@ -1443,7 +2040,25 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_stop_speed_euler(&self, gap: f64, decel: f64, onInsertion: bool, headway: f64) -> f64 {
-        todo!("port MSCFModel::maximumSafeStopSpeedEuler")
+        // decrease gap slightly (to avoid passing end of lane by values of magnitude ~1e-12, when exact stop is required)
+        let g = gap - NUMERICAL_EPS;
+        if g < 0. {
+            return 0.;
+        }
+        let b = accel2speed(decel);
+        let t = if headway >= 0. { headway } else { self.myHeadwayTime };
+        let s = ts();
+        // h = the distance that would be covered if it were possible to stop
+        // exactly after gap and decelerate with b every simulation step
+        // h = 0.5 * n * (n-1) * b * s + n * b * t (solve for n)
+        let sqrtArg = (s * s) + (4.0 * ((s * (2.0 * g / b - t)) + (t * t)));
+        let n = (0.5 - ((t + (sqrtArg.sqrt() * -0.5)) / s)).floor();
+        let h = 0.5 * n * (n - 1.) * b * s + n * b * t;
+        // compute the additional speed that must be used during deceleration to fix
+        // the discrepancy between g and h
+        let r = (g - h) / (n * s + t);
+        let x = n * b + r;
+        x
     }
 
     /// C++: `double MSCFModel::maximumSafeStopSpeedBallistic(double, double, double, bool, double) const` [const]
@@ -1517,7 +2132,56 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_stop_speed_ballistic(&self, gap: f64, decel: f64, currentSpeed: f64, onInsertion: bool, headway: f64) -> f64 {
-        todo!("port MSCFModel::maximumSafeStopSpeedBallistic")
+        // decrease gap slightly (to avoid passing end of lane by values of magnitude ~1e-12, when exact stop is required)
+        let g = max2(0., gap - NUMERICAL_EPS);
+        let headway = if headway >= 0. { headway } else { self.myHeadwayTime };
+        // (Leo) Note that in contrast to the Euler update, for the ballistic update
+        // the distance covered in the coming step depends on the current velocity, in general.
+        // one exception is the situation when the vehicle is just being inserted.
+        // In that case, it will not cover any distance until the next timestep by convention.
+        // We treat the latter case first:
+        if onInsertion {
+            // The distance covered with constant insertion speed v0 until time tau is given as
+            // G1 = tau*v0
+            // The distance covered between time tau and the stopping moment at time tau+v0/b is
+            // G2 = v0^2/(2b),
+            // where b is an assumed constant deceleration (= decel)
+            // We solve g = G1 + G2 for v0:
+            let btau = decel * headway;
+            let v0 = -btau + (btau * btau + 2. * decel * g).sqrt();
+            return v0;
+        }
+        // In the usual case during the driving task, the vehicle goes by
+        // a current speed v0=v, and we seek to determine a safe acceleration a (possibly <0)
+        // such that starting to break after accelerating with a for the time tau=headway
+        // still allows us to stop in time.
+        let tau = if headway == 0. { ts() } else { headway };
+        let v0 = max2(0., currentSpeed);
+        // We first consider the case that a stop has to take place within time tau
+        // (the distance driven when decelerating from v0 to 0 in tau is v0 * tau / 2)
+        if g <= v0 * tau * 0.5 {
+            if g == 0. {
+                if v0 > 0. {
+                    // indicate to brake as hard as possible
+                    return -accel2speed(self.myEmergencyDecel);
+                } else {
+                    // stay stopped
+                    return 0.;
+                }
+            }
+            // In general we solve g = v0^2/(-2a), where the rhs is the distance
+            // covered until stop when braking with a<0
+            let a = -v0 * v0 / (2. * g);
+            return v0 + a * ts();
+        }
+        // The last case corresponds to a situation, where the vehicle may go with a positive
+        // speed v1 = v0 + tau*a after time tau. (v1 is the maximum possible speed
+        // for this and unconstrained by current speed or acceleration limits)
+        // => v1 = -b*tau/2 + sqrt( (b*tau)^2/4 + b(2g - tau*v0) )
+        let btau2 = decel * tau / 2.;
+        let v1 = -btau2 + (btau2 * btau2 + decel * (2. * g - tau * v0)).sqrt();
+        let a = (v1 - v0) / tau;
+        v0 + a * ts()
     }
 
     /// C++: `std::string MSCFModel::getParameter(const MSVehicle *, const std::string &) const` [const, virtual]
@@ -1529,7 +2193,9 @@ impl MSCFModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, veh: Ptr<MSVehicle>, key: &str) -> String {
-        todo!("port MSCFModel::getParameter")
+        // base model has no parameters
+        let _ = (veh, key);
+        String::new()
     }
 
     /// C++: `void MSCFModel::setParameter(MSVehicle *, const std::string &, const std::string &) const` [const, virtual]
@@ -1541,8 +2207,10 @@ impl MSCFModel {
     //         throw InvalidArgument("Setting parameter '" + key + "' is not supported by carFollowModel");
     //     }
     #[allow(unused_variables)]
-    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) {
-        todo!("port MSCFModel::setParameter")
+    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+        // C++ throws InvalidArgument for unknown keys
+        let _ = (veh, value);
+        Err(InvalidArgument(format!("Setting parameter '{}' is not supported by carFollowModel", key)))
     }
 
     /// C++: `void MSCFModel::applyOwnSpeedPerceptionError(const MSVehicle *const, double &) const` [const, protected]
@@ -1556,7 +2224,13 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn apply_own_speed_perception_error(&self, veh: Ptr<MSVehicle>, speed: &mut f64) {
-        todo!("port MSCFModel::applyOwnSpeedPerceptionError")
+        if !veh.has_driver_state() {
+            return;
+        }
+        // C++ getDriverState() hands out a raw pointer, Rc only gives &: mutate through the same object
+        let ds = veh.get_driver_state();
+        let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
+        *speed = ds_mut.get_perceived_own_speed(*speed);
     }
 
     /// C++: `void MSCFModel::applyHeadwayAndSpeedDifferencePerceptionErrors(const MSVehicle *const, double, double &, double &, double, const MSVehicle *const) const` [const, protected]
@@ -1597,7 +2271,18 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn apply_headway_and_speed_difference_perception_errors(&self, veh: Ptr<MSVehicle>, speed: f64, gap: &mut f64, predSpeed: &mut f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) {
-        todo!("port MSCFModel::applyHeadwayAndSpeedDifferencePerceptionErrors")
+        if !veh.has_driver_state() {
+            return;
+        }
+        // Obtain perceived gap and headway from the driver state
+        // C++ getDriverState() hands out a raw pointer, Rc only gives &: mutate through the same object
+        let ds = veh.get_driver_state();
+        let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
+        let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::from_raw(pred.as_raw() as *mut ()));
+        let perceivedSpeedDifference = ds_mut.get_perceived_speed_difference(*predSpeed - speed, *gap, Ptr::from_raw(pred.as_raw() as *mut ()));
+        // shortcut: the C++ accelError recomputation via followSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        *gap = perceivedGap;
+        *predSpeed = speed + perceivedSpeedDifference;
     }
 
     /// C++: `void MSCFModel::applyHeadwayPerceptionError(const MSVehicle *const, double, double &) const` [const, protected]
@@ -1634,7 +2319,17 @@ impl MSCFModel {
     // }
     #[allow(unused_variables)]
     pub fn apply_headway_perception_error(&self, veh: Ptr<MSVehicle>, speed: f64, gap: &mut f64) {
-        todo!("port MSCFModel::applyHeadwayPerceptionError")
+        if !veh.has_driver_state() {
+            return;
+        }
+        // @todo: Provide objectID (e.g. pointer address for the relevant object at the given distance(gap))
+        // Obtain perceived gap from driver state
+        // C++ getDriverState() hands out a raw pointer, Rc only gives &: mutate through the same object
+        let ds = veh.get_driver_state();
+        let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
+        let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::default());
+        // shortcut: the C++ accelError recomputation via stopSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        *gap = perceivedGap;
     }
 
 }
@@ -1648,7 +2343,7 @@ impl MSCFModel_VehicleVariables {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port VehicleVariables::~VehicleVariables")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `void VehicleVariables::saveState(OutputDevice &, const MSCFModel &) const` [const, virtual]
@@ -1659,7 +2354,7 @@ impl MSCFModel_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        utils::common::msg_handler::write_warning(&format!("carFollowModel of vType '{}' cannot save state", cfm.myType.get_id()));
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -1669,7 +2364,8 @@ impl MSCFModel_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+        // C++ loadState is empty for the base model
+        let _ = attrs;
     }
 
 }
