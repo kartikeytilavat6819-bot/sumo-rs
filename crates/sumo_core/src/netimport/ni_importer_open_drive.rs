@@ -180,7 +180,16 @@ impl NIImporter_OpenDrive_Connection {
     //         }
     #[allow(unused_variables)]
     pub fn get_description(&self) -> String {
-        todo!("port Connection::getDescription")
+        let cp = |c: NIImporter_OpenDrive_ContactPoint| match c {
+            NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START => "start",
+            NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END => "end",
+            _ => "unknown",
+        };
+        format!(
+            "Connection from={}_{} to={}_{} fromCP={} toCP={} all={}",
+            self.fromEdge, self.fromLane, self.toEdge, self.toLane,
+            cp(self.fromCP), cp(self.toCP), self.all
+        )
     }
 
 }
@@ -199,7 +208,7 @@ impl NIImporter_OpenDrive_LaneAttributeChange {
     // LaneAttributeChange(double speed) : speed(speed) {}
     #[allow(unused_variables)]
     pub fn new(speed: f64) -> Self {
-        todo!("port LaneAttributeChange::LaneAttributeChange")
+        Self { speed, allowed: Vec::new(), denied: Vec::new() }
     }
 
 }
@@ -214,7 +223,7 @@ impl NIImporter_OpenDrive_LaneSorter {
     // explicit LaneSorter() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port LaneSorter::LaneSorter")
+        Self {}
     }
 
     /// C++: `int LaneSorter::operator()(const OpenDriveLane &, const OpenDriveLane &) const` [const]
@@ -225,7 +234,8 @@ impl NIImporter_OpenDrive_LaneSorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, a: &NIImporter_OpenDrive_OpenDriveLane, b: &NIImporter_OpenDrive_OpenDriveLane) -> i32 {
-        todo!("port LaneSorter::operator()")
+        // sort from the reference line outwards (desceding order of sumo lane ids)
+        (a.id.abs() < b.id.abs()) as i32
     }
 
 }
