@@ -1,9 +1,15 @@
 //! Port of microsim/cfmodels/MSCFModel_Krauss.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 
 /// Krauss car-following model, with acceleration decrease and faster start
 /// C++ class `MSCFModel_Krauss` (microsim/cfmodels/MSCFModel_Krauss.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_Krauss {
     /// C++ base class `MSCFModel_KraussOrig1`
     pub base: MSCFModel_KraussOrig1,
@@ -42,7 +48,19 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_Krauss::MSCFModel_Krauss")
+        let myDawdleStep0 = time2steps(vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA_STEP, ts()));
+        let base = MSCFModel_KraussOrig1::new(vtype);
+        let mut myDawdleStep = myDawdleStep0;
+        if myDawdleStep % delta_t() != 0 {
+            let rem = myDawdleStep % delta_t();
+            if rem < delta_t() / 2 {
+                myDawdleStep += -rem;
+            } else {
+                myDawdleStep += delta_t() - rem;
+            }
+            utils::common::msg_handler::write_warning(&format!("Rounding 'sigmaStep' to {} for vType '{}'", f64_to_string_prec(steps2time(myDawdleStep), 6), base.myType.get_id()));
+        }
+        MSCFModel_Krauss { base, myDawdleStep }
     }
 
     /// C++: `void MSCFModel_Krauss::~MSCFModel_Krauss() noexcept` [virtual]
@@ -50,7 +68,7 @@ impl MSCFModel_Krauss {
     // MSCFModel_Krauss::~MSCFModel_Krauss() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_Krauss::~MSCFModel_Krauss")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_Krauss::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -88,7 +106,31 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel_Krauss::patchSpeedBeforeLC")
+        let sigma = if veh.passing_minor() {
+            veh.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_SIGMA_MINOR, self.myDawdle)
+        } else {
+            self.myDawdle
+        };
+        let vDawdle;
+        if self.myDawdleStep > delta_t() {
+            let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Krauss_VehicleVariables);
+            if MSNet::get_instance().get_current_time_step() % self.myDawdleStep == vars.updateOffset {
+                let vD = max2(vMin, self.dawdle2(vMax, sigma, veh.get_rng()));
+                let a1 = speed2accel(vMax - veh.get_speed());
+                let a2 = speed2accel(vD - vMax);
+                let accelMax = (veh.get_lane().get_vehicle_max_speed(traffic_object(veh)) - veh.get_speed()) / steps2time(self.myDawdleStep);
+                // avoid exceeding maxSpeed before the next sigmaStep
+                vars.m().accelDawdle = min2(a1, accelMax) + a2;
+                vDawdle = veh.get_speed() + accel2speed(vars.accelDawdle);
+            } else {
+                let safeAccel = speed2accel(vMax - veh.get_speed());
+                let accel = min2(safeAccel, vars.accelDawdle);
+                vDawdle = max2(vMin, min2(vMax, veh.get_speed() + accel2speed(accel)));
+            }
+        } else {
+            vDawdle = max2(vMin, self.dawdle2(vMax, sigma, veh.get_rng()));
+        }
+        vDawdle
     }
 
     /// C++: `double MSCFModel_Krauss::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -104,7 +146,12 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Krauss::stopSpeed")
+        // applyHeadwayPerceptionError may change the gap, so work on a local copy
+        let mut gap = gap2pred;
+        self.apply_headway_perception_error(veh, speed, &mut gap);
+        // do not relax insertionStopSpeed
+        let relaxEmergency = usage != MSCFModel_CalcReason::FUTURE;
+        min2(self.maximum_safe_stop_speed(gap, decel, speed, false, veh.get_action_step_length_secs(), relaxEmergency), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_Krauss::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -127,7 +174,18 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Krauss::followSpeed")
+        let mut gap = gap2pred;
+        let mut predSpeed = predSpeed;
+        self.apply_headway_and_speed_difference_perception_errors(veh, speed, &mut gap, &mut predSpeed, predMaxDecel, pred);
+        let vsafe = self.maximum_safe_follow_speed(gap, speed, predSpeed, predMaxDecel, false);
+        let vmax = self.max_next_speed(speed, veh);
+        if g_semi_implicit_euler_update() {
+            min2(vsafe, vmax)
+        } else {
+            // ballistic
+            // XXX: the euler variant can break as strong as it wishes immediately! The ballistic cannot, refs. #2575.
+            max2(min2(vsafe, vmax), self.min_next_speed_emergency(speed, Ptr::default()))
+        }
     }
 
     /// C++: `int MSCFModel_Krauss::getModelID() const` [const, virtual]
@@ -137,7 +195,7 @@ impl MSCFModel_Krauss {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_Krauss::getModelID")
+        SUMO_TAG_CF_KRAUSS as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_Krauss::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -148,7 +206,8 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_Krauss::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Krauss::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `VehicleVariables * MSCFModel_Krauss::createVehicleVariables() const` [const, virtual]
@@ -160,7 +219,12 @@ impl MSCFModel_Krauss {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_Krauss::createVehicleVariables")
+        if self.myDawdleStep > delta_t() {
+            // shortcut: allocated with Box::into_raw like C++ `new`; the owning vehicle must free it once ported
+            Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Krauss_VehicleVariables::new(self.myDawdleStep))) as *mut MSCFModel_VehicleVariables)
+        } else {
+            Ptr::default()
+        }
     }
 
     /// C++: `double MSCFModel_Krauss::dawdle2(double, double, SumoRNG *) const` [const, protected]
@@ -190,12 +254,33 @@ impl MSCFModel_Krauss {
     // }
     #[allow(unused_variables)]
     pub fn dawdle2(&self, speed: f64, sigma: f64, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port MSCFModel_Krauss::dawdle2")
+        let mut speed = speed;
+        if !g_semi_implicit_euler_update() {
+            // in case of the ballistic update, negative speeds indicate
+            // a desired stop before the completion of the next timestep.
+            // We do not allow dawdling to overwrite this indication
+            if speed < 0. {
+                return speed;
+            }
+        }
+        // generate random number out of [0,1)
+        let random = rng.m().rand();
+        // Dawdle.
+        if speed < self.myAccel {
+            // we should not prevent vehicles from driving just due to dawdling
+            //  if someone is starting, he should definitely start
+            speed -= accel2speed(sigma * speed * random);
+        } else {
+            speed -= accel2speed(sigma * self.myAccel * random);
+        }
+        max2(0., speed)
     }
 
 }
 
 /// C++ class `MSCFModel_Krauss::VehicleVariables` (microsim/cfmodels/MSCFModel_Krauss.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_Krauss_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,
@@ -222,7 +307,11 @@ impl MSCFModel_Krauss_VehicleVariables {
     //     : accelDawdle(1e6), updateOffset(SIMSTEP % dawdleStep + DELTA_T) { }
     #[allow(unused_variables)]
     pub fn new(dawdleStep: SUMOTime) -> Self {
-        todo!("port VehicleVariables::VehicleVariables")
+        MSCFModel_Krauss_VehicleVariables {
+            base: MSCFModel_VehicleVariables {},
+            accelDawdle: 1e6,
+            updateOffset: MSNet::get_instance().get_current_time_step() % dawdleStep + delta_t(),
+        }
     }
 
     /// C++: `void VehicleVariables::saveState(OutputDevice &, const MSCFModel &) const` [const, virtual]
@@ -239,7 +328,12 @@ impl MSCFModel_Krauss_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "Krauss");
+        let internals = format!("{} {}", f64_to_string_prec(self.accelDawdle, 6), self.updateOffset);
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -256,8 +350,21 @@ impl MSCFModel_Krauss_VehicleVariables {
     //     bis >> updateOffset;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "Krauss" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for Krauss", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        if let Some(v) = bis.next().and_then(|s| s.parse::<f64>().ok()) {
+            self.accelDawdle = v;
+        }
+        if let Some(v) = bis.next().and_then(|s| s.parse::<SUMOTime>().ok()) {
+            self.updateOffset = v;
+        }
+        Ok(())
     }
 
 }

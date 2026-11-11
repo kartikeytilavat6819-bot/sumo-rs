@@ -1,9 +1,15 @@
 //! Port of microsim/cfmodels/MSCFModel_KraussX.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 
 /// Krauss car-following model, changing accel and speed by slope
 /// C++ class `MSCFModel_KraussX` (microsim/cfmodels/MSCFModel_KraussX.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_KraussX {
     /// C++ base class `MSCFModel_Krauss`
     pub base: MSCFModel_Krauss,
@@ -34,7 +40,9 @@ impl MSCFModel_KraussX {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_KraussX::MSCFModel_KraussX")
+        let myTmp1 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP1, 0.0);
+        let myTmp2 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP2, 0.0);
+        MSCFModel_KraussX { base: MSCFModel_Krauss::new(vtype), myTmp1, myTmp2 }
     }
 
     /// C++: `void MSCFModel_KraussX::~MSCFModel_KraussX() noexcept` [virtual]
@@ -42,7 +50,7 @@ impl MSCFModel_KraussX {
     // MSCFModel_KraussX::~MSCFModel_KraussX() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_KraussX::~MSCFModel_KraussX")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_KraussX::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -53,7 +61,7 @@ impl MSCFModel_KraussX {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel_KraussX::patchSpeedBeforeLC")
+        self.dawdle_x(veh.get_speed(), vMin, vMax, veh.get_rng())
     }
 
     /// C++: `int MSCFModel_KraussX::getModelID() const` [const, virtual]
@@ -63,7 +71,7 @@ impl MSCFModel_KraussX {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_KraussX::getModelID")
+        SUMO_TAG_CF_KRAUSSX as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_KraussX::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -74,7 +82,8 @@ impl MSCFModel_KraussX {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_KraussX::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_KraussX::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `double MSCFModel_KraussX::dawdleX(double, double, double, SumoRNG *) const` [const, private]
@@ -109,7 +118,30 @@ impl MSCFModel_KraussX {
     // }
     #[allow(unused_variables)]
     pub fn dawdle_x(&self, vOld: f64, vMin: f64, vMax: f64, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port MSCFModel_KraussX::dawdleX")
+        let mut speed = vMax;
+        if !g_semi_implicit_euler_update() {
+            // in case of the ballistic update, negative speeds indicate
+            // a desired stop before the completion of the next timestep.
+            // We do not allow dawdling to overwrite this indication
+            if speed < 0. {
+                return speed;
+            }
+        }
+        // extra slow to start
+        if vOld < self.myAccel {
+            speed -= accel2speed(self.myTmp1 * self.myAccel);
+        }
+        let random = rng.m().rand();
+        speed -= accel2speed(self.myDawdle * self.myAccel * random);
+        // overbraking
+        if vOld > vMax {
+            speed -= accel2speed(self.myTmp2 * self.myAccel * random);
+            if g_semi_implicit_euler_update() {
+                speed = max2(0.0, speed);
+            }
+        }
+        speed = max2(vMin, speed);
+        speed
     }
 
 }

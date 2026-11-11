@@ -1,9 +1,22 @@
 //! Port of microsim/cfmodels/MSCFModel_Wiedemann.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::sumo_vehicle_class::SVC_BICYCLE;
+
+/// C++ `MSCFModel_Wiedemann::D_MAX` static (MSCFModel_Wiedemann.cpp)
+pub const D_MAX: f64 = 150.;
+const B_MIN_MULT: f64 = 0.;
+const B_MIN_ADD: f64 = -1.;
+const PRED_DECEL_MULT: f64 = 0.5;
+const PRED_DECEL_MULT_EMERGENCY: f64 = 0.55;
 
 /// The Wiedemann Model car-following model
 /// C++ class `MSCFModel_Wiedemann` (microsim/cfmodels/MSCFModel_Wiedemann.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_Wiedemann {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -52,7 +65,27 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_Wiedemann::MSCFModel_Wiedemann")
+        let p = vtype.get_parameter();
+        let mySecurity = p.get_cf_param(SUMO_ATTR_CF_WIEDEMANN_SECURITY, 0.5);
+        let myEstimation = p.get_cf_param(SUMO_ATTR_CF_WIEDEMANN_ESTIMATION, 0.5);
+        let collisionMinGapFactor = p.get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
+        let vtypeLength = vtype.get_length();
+        // Wiedemann does not drive very precise and may violate minGap on occasion
+        let mut base = MSCFModel::new(vtype);
+        base.myCollisionMinGapFactor = collisionMinGapFactor;
+        let myAX = vtypeLength + 1. + 2. * mySecurity;
+        let myCX = 25. * (1. + mySecurity + myEstimation);
+        let myMinAccel = 0.2 * base.myAccel;
+        let myMaxApproachingDecel = (base.myDecel + base.myEmergencyDecel) / 2.;
+        MSCFModel_Wiedemann {
+            base,
+            mySecurity,
+            myEstimation,
+            myAX,
+            myCX,
+            myMinAccel,
+            myMaxApproachingDecel,
+        }
     }
 
     /// C++: `void MSCFModel_Wiedemann::~MSCFModel_Wiedemann() noexcept` [virtual]
@@ -60,7 +93,7 @@ impl MSCFModel_Wiedemann {
     // MSCFModel_Wiedemann::~MSCFModel_Wiedemann() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_Wiedemann::~MSCFModel_Wiedemann")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_Wiedemann::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -74,7 +107,10 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::finalizeSpeed")
+        let vNext = self.base.finalize_speed(veh, vPos);
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Wiedemann_VehicleVariables);
+        vars.m().accelSign = if vNext > veh.get_speed() { 1. } else { -1. };
+        vNext
     }
 
     /// C++: `double MSCFModel_Wiedemann::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -85,7 +121,7 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Wiedemann::followSpeed")
+        self.v(veh, predSpeed, gap2pred, if !pred.is_null() { pred.get_acceleration() } else { 0. })
     }
 
     /// C++: `double MSCFModel_Wiedemann::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -102,7 +138,8 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Wiedemann::stopSpeed")
+        // Wiedemann does not handle approaching junctions or stops very well, so it borrows the Krauss stop logic
+        min2(self.maximum_safe_stop_speed(gap, decel, speed, false, veh.get_action_step_length_secs(), true), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_Wiedemann::interactionGap(const MSVehicle *const, double) const` [const, virtual]
@@ -114,7 +151,7 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn interaction_gap(&self, arg0: Ptr<MSVehicle>, vL: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::interactionGap")
+        D_MAX
     }
 
     /// C++: `double MSCFModel_Wiedemann::getSecureGap(const MSVehicle *const, const MSVehicle *const, const double, const double, const double) const` [const, virtual]
@@ -127,7 +164,9 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::getSecureGap")
+        let bx = (1. + 7. * self.mySecurity) * speed.sqrt();
+        let abx = self.myAX + bx - self.myType.get_length(); // abx is the brutto gap
+        max2(abx, self.base.get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel))
     }
 
     /// C++: `int MSCFModel_Wiedemann::getModelID() const` [const, virtual]
@@ -137,7 +176,7 @@ impl MSCFModel_Wiedemann {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_Wiedemann::getModelID")
+        SUMO_TAG_CF_WIEDEMANN as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_Wiedemann::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -148,7 +187,8 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_Wiedemann::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Wiedemann::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `VehicleVariables * MSCFModel_Wiedemann::createVehicleVariables() const` [const, virtual]
@@ -157,7 +197,8 @@ impl MSCFModel_Wiedemann {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_Wiedemann::createVehicleVariables")
+        // shortcut: allocated with Box::into_raw like C++ `new`; the owning vehicle must free it once ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Wiedemann_VehicleVariables::new())) as *mut MSCFModel_VehicleVariables)
     }
 
     /// C++: `double MSCFModel_Wiedemann::_v(const MSVehicle *, double, double, double) const` [const, private]
@@ -227,7 +268,54 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, predSpeed: f64, gap: f64, predAccel: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::_v")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Wiedemann_VehicleVariables);
+        let dx = gap + self.myType.get_length(); // wiedemann uses brutto gap
+        let v = veh.get_speed();
+        let vpref = veh.get_max_speed();
+        let dv = v - predSpeed;
+        // desired minimum following distance at low speed difference
+        let bx = (1. + 7. * self.mySecurity) * v.sqrt(); // Harding propose a factor of  *.8 here
+        let abx = self.myAX + bx; // Harding propose a factor of  *.8 here
+        let ex = 2. - self.myEstimation; // + RandHelper::randNorm(0.5, 0.15)
+        let sdx = self.myAX + ex * bx; // the distance at which we drift out of following
+        let sdv_root = (dx - self.myAX) / self.myCX;
+        let sdv = sdv_root * sdv_root;
+        let cldv = sdv * ex * ex;
+        let opdv = cldv * (-1. - 2. * veh.get_rng().m().rand_norm(0.5, 0.15));
+        // D_MAX is too low to brake safely when driving at speeds above 36m/s
+        let dmax = max2(D_MAX, self.brake_gap_2(v, self.myDecel, 0.));
+        // select the regime, get new acceleration, compute new speed based
+        let mut accel;
+        let mut branch = 0;
+        if dx <= abx {
+            accel = self.emergency(dv, dx, predAccel, v, gap, abx, bx);
+            branch = 1;
+        } else if dx < sdx {
+            if dv > cldv {
+                accel = self.approaching(dv, dx, abx, predAccel);
+                branch = 2;
+            } else if dv > opdv {
+                accel = self.following(vars.accelSign);
+                branch = 3;
+            } else {
+                accel = self.fullspeed(v, vpref, dx, abx);
+                branch = 4;
+            }
+        } else {
+            if dv > sdv && dx < dmax {
+                //@note other versions have an disjunction instead of conjunction
+                accel = self.approaching(dv, dx, abx, predAccel);
+                branch = 5;
+            } else {
+                accel = self.fullspeed(v, vpref, dx, abx);
+                branch = 6;
+            }
+        }
+        // since we have hard constraints on accel we may as well use them here
+        accel = max2(min2(accel, self.myAccel), -self.myEmergencyDecel);
+        let vNew = max2(0., v + accel2speed(accel)); // don't allow negative speeds
+        let _ = branch; // branch is only used for the debug output in C++
+        vNew
     }
 
     /// C++: `double MSCFModel_Wiedemann::fullspeed(double, double, double, double) const` [const, private]
@@ -245,7 +333,14 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn fullspeed(&self, v: f64, vpref: f64, dx: f64, bx: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::fullspeed")
+        // maximum acceleration is reduced with increasing speed
+        let bmax = 0.2 + 0.8 * self.myAccel * (7. - v.sqrt());
+        // if veh just drifted out of a 'following' process the acceleration is reduced
+        let mut accel = if dx <= 2. * bx { min2(self.myMinAccel, bmax * (dx - bx) / bx) } else { bmax };
+        if v > vpref {
+            accel = -accel;
+        }
+        accel
     }
 
     /// C++: `double MSCFModel_Wiedemann::following(double) const` [const, private]
@@ -255,7 +350,7 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn following(&self, sign: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::following")
+        self.myMinAccel * sign
     }
 
     /// C++: `double MSCFModel_Wiedemann::approaching(double, double, double, double) const` [const, private]
@@ -270,7 +365,11 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn approaching(&self, dv: f64, dx: f64, abx: f64, predAccel: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::approaching")
+        // there is singularity in the formula. we do the sanity check outside
+        // @note: the original model does not have a limit on maximum deceleration here.
+        // We add this to avoid cascading emergency deceleration
+        // also, the multiplier on predAccel is always 1 in the original model
+        max2(0.5 * dv * dv / (abx - dx) + predAccel * PRED_DECEL_MULT, -self.myMaxApproachingDecel)
     }
 
     /// C++: `double MSCFModel_Wiedemann::emergency(double, double, double, double, double, double, double) const` [const, private]
@@ -296,7 +395,17 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn emergency(&self, dv: f64, dx: f64, predAccel: f64, v: f64, gap: f64, abx: f64, bx: f64) -> f64 {
-        todo!("port MSCFModel_Wiedemann::emergency")
+        // wiedemann assumes that dx will always be larger than myAX (sumo may
+        // violate this assumption when crashing (-:
+        //
+        // predAccel is called b_(n-1) in the literature and it's multipleir is always 1
+        if dx > self.myAX {
+            let bmin = B_MIN_ADD + B_MIN_MULT * v;
+            let accel = 0.5 * dv * dv / (self.myAX - dx) + predAccel * PRED_DECEL_MULT_EMERGENCY + bmin * (abx - gap) / bx;
+            accel
+        } else {
+            -self.myEmergencyDecel
+        }
     }
 
     /// C++: `MSCFModel_Wiedemann & MSCFModel_Wiedemann::operator=(const MSCFModel_Wiedemann &)` [private]
@@ -304,13 +413,17 @@ impl MSCFModel_Wiedemann {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSCFModel_Wiedemann) -> &mut MSCFModel_Wiedemann {
-        todo!("port MSCFModel_Wiedemann::operator=")
+        // C++ implicit copy assignment: copy every member
+        *self = s.clone();
+        self
     }
 
 }
 
 /// @}
 /// C++ class `MSCFModel_Wiedemann::VehicleVariables` (microsim/cfmodels/MSCFModel_Wiedemann.h)
+#[repr(C)]
+#[derive(Clone)]
 pub struct MSCFModel_Wiedemann_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,
@@ -335,7 +448,10 @@ impl MSCFModel_Wiedemann_VehicleVariables {
     // VehicleVariables() : accelSign(1) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port VehicleVariables::VehicleVariables")
+        MSCFModel_Wiedemann_VehicleVariables {
+            base: MSCFModel_VehicleVariables {},
+            accelSign: 1.,
+        }
     }
 
     /// C++: `void VehicleVariables::saveState(OutputDevice &, const MSCFModel &) const` [const, virtual]
@@ -351,7 +467,12 @@ impl MSCFModel_Wiedemann_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "Wiedemann");
+        let internals = f64_to_string_prec(self.accelSign, 6);
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -367,8 +488,17 @@ impl MSCFModel_Wiedemann_VehicleVariables {
     //     bis >> accelSign;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "Wiedemann" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for Wiedemann", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        if let Some(v) = state.split_whitespace().next().and_then(|s| s.parse::<f64>().ok()) {
+            self.accelSign = v;
+        }
+        Ok(())
     }
 
 }
