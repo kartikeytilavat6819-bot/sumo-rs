@@ -115,7 +115,7 @@ impl TraCIServerAPI_Edge {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        let mut warning = String::new(); // additional description for response
+        let warning = String::new(); // additional description for response
         // variable
         let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
         if variable != VAR_EDGE_TRAVELTIME
