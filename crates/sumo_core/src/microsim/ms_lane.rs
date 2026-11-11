@@ -613,7 +613,7 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn load_rng_state(index: i32, state: &str) {
         if index >= MSLane::get_num_rn_gs() {
-            panic!("{}", ProcessError::Process(tlf!("State was saved with more than % threads. Change the number of threads or do not load RNG state", MSLane::get_num_rn_gs().to_string())));
+            panic!("{}", ProcessError::Process(utils::tlf!("State was saved with more than % threads. Change the number of threads or do not load RNG state", MSLane::get_num_rn_gs().to_string())));
         }
         MY_RNGS.with(|r| r.borrow_mut()[index as usize].load_state(state));
     }
@@ -642,7 +642,7 @@ impl MSLane {
     pub fn set_opposite(&mut self, oppositeLane: Ptr<MSLane>) {
         self.myOpposite = oppositeLane;
         if !self.myOpposite.is_null() && self.get_length() > self.myOpposite.get_length() {
-            write_warningf!("Unequal lengths of neigh lane '%' and lane '%' (% != %).", self.get_id(), self.myOpposite.get_id(), self.get_length(), self.myOpposite.get_length());
+            utils::write_warningf!("Unequal lengths of neigh lane '%' and lane '%' (% != %).", self.get_id(), self.myOpposite.get_id(), self.get_length(), self.myOpposite.get_length());
         }
     }
 
@@ -663,7 +663,7 @@ impl MSLane {
         if !self.myBidiLane.is_null() && self.get_length() > self.myBidiLane.get_length() {
             // shortcut: MSGlobals::gUsingInternalLanes is not ported yet, treated as false
             if self.is_normal() || false {
-                write_warningf!("Unequal lengths of bidi lane '%' and lane '%' (% != %).", self.get_id(), self.myBidiLane.get_id(), self.get_length(), self.myBidiLane.get_length());
+                utils::write_warningf!("Unequal lengths of bidi lane '%' and lane '%' (% != %).", self.get_id(), self.myBidiLane.get_id(), self.get_length(), self.myBidiLane.get_length());
             }
         }
     }
