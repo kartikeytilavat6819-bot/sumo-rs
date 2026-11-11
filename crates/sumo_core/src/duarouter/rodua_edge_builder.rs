@@ -28,7 +28,7 @@ impl RODUAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RODUAEdgeBuilder::RODUAEdgeBuilder")
+        RODUAEdgeBuilder { base: ROAbstractEdgeBuilder::new() }
     }
 
     /// C++: `void RODUAEdgeBuilder::~RODUAEdgeBuilder() noexcept` [virtual]
@@ -36,7 +36,6 @@ impl RODUAEdgeBuilder {
     // RODUAEdgeBuilder::~RODUAEdgeBuilder() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODUAEdgeBuilder::~RODUAEdgeBuilder")
     }
 
     /// C++: `ROEdge * RODUAEdgeBuilder::buildEdge(const std::string &, RONode *, RONode *, const int, const std::string &, const std::string &)` [virtual]
@@ -47,7 +46,7 @@ impl RODUAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        todo!("port RODUAEdgeBuilder::buildEdge")
+        Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType))))
     }
 
 }
