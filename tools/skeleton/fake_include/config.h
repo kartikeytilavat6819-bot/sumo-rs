@@ -151,7 +151,7 @@
 #else
 
     /* defined if we're using MINGW32 */
-    #cmakedefine MINGW32
+
 
     /* Windows (MinGW32) */
     #ifdef MINGW32

@@ -2,6 +2,7 @@ pub mod file_helpers;
 pub mod msg_handler;
 pub mod named;
 pub mod parameterised;
+pub mod ptr;
 pub mod rand_helper;
 pub mod rgb_color;
 pub mod std_defs;

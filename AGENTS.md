@@ -26,5 +26,5 @@ same output text, same floating-point results.
 - Add `#[cfg(test)]` unit tests for non-trivial logic, using values derived from the C++ code.
 - Before finishing: `cargo build` and `cargo test -p <crate>` must pass for the whole workspace.
 - Commit in your worktree (don't push). Commit message: `Port <module>`, last line
-  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Don't edit PORTING.md.
+  the Co-Authored-By line your harness gives you (naming the model you run on). Don't edit PORTING.md.
 - Final report (under 150 words): files ported, every `shortcut:` you left and why, commit hash, branch.
