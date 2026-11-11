@@ -23,7 +23,15 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn new(ds: Ptr<AGDataAndStatistics>, inStreet: &AGStreet) -> Self {
-        todo!("port AGWorkPosition::AGWorkPosition")
+        let wp = AGWorkPosition {
+        myStatData: ds,
+        myLocation: AGPosition::new_2(inStreet),
+        myAdult: Ptr::null(),
+        myOpeningTime: Self::generate_opening_time(&*ds),
+        myClosingTime: Self::generate_closing_time(&*ds),
+    };
+    ds.m().workPositions += 1;
+    wp
     }
 
     /// C++: `void AGWorkPosition::AGWorkPosition(AGDataAndStatistics *, const AGStreet &, double)`
@@ -37,14 +45,22 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(ds: Ptr<AGDataAndStatistics>, inStreet: &AGStreet, pos: f64) -> Self {
-        todo!("port AGWorkPosition::AGWorkPosition")
+        let wp = AGWorkPosition {
+        myStatData: ds,
+        myLocation: AGPosition::new(inStreet, pos),
+        myAdult: Ptr::null(),
+        myOpeningTime: Self::generate_opening_time(&*ds),
+        myClosingTime: Self::generate_closing_time(&*ds),
+    };
+    ds.m().workPositions += 1;
+    wp
     }
 
     /// C++: `void AGWorkPosition::~AGWorkPosition()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AGWorkPosition::~AGWorkPosition")
+        // nothing to release: all members are owned values or non-owning pointers
     }
 
     /// C++: `void AGWorkPosition::take(AGAdult *)`
@@ -59,7 +75,13 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn take(&mut self, ad: Ptr<AGAdult>) {
-        todo!("port AGWorkPosition::take")
+        if self.myAdult.is_null() {
+            self.myStatData.m().workPositions -= 1;
+            self.myAdult = ad;
+        } else {
+            // shortcut: C++ throws ProcessError here; panics until callers can take a Result, upgrade with the callers
+            panic!("{}", ProcessError::new("Work position already occupied. Cannot give it to another adult."));
+        }
     }
 
     /// C++: `void AGWorkPosition::let()`
@@ -73,7 +95,11 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn let_(&mut self) {
-        todo!("port AGWorkPosition::let")
+        if !self.myAdult.is_null() {
+            self.myStatData.m().workPositions += 1;
+            self.myAdult.m().lost_work_position();
+            self.myAdult = Ptr::null();
+        }
     }
 
     /// C++: `bool AGWorkPosition::isTaken() const` [const]
@@ -83,7 +109,7 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn is_taken(&self) -> bool {
-        todo!("port AGWorkPosition::isTaken")
+        !self.myAdult.is_null()
     }
 
     /// C++: `AGPosition AGWorkPosition::getPosition() const` [const]
@@ -93,7 +119,7 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> AGPosition {
-        todo!("port AGWorkPosition::getPosition")
+        AGPosition { street: self.myLocation.street, position: self.myLocation.position, pos2d: self.myLocation.pos2d }
     }
 
     /// C++: `int AGWorkPosition::getOpening() const` [const]
@@ -103,7 +129,7 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn get_opening(&self) -> i32 {
-        todo!("port AGWorkPosition::getOpening")
+        self.myOpeningTime
     }
 
     /// C++: `int AGWorkPosition::getClosing() const` [const]
@@ -113,7 +139,7 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn get_closing(&self) -> i32 {
-        todo!("port AGWorkPosition::getClosing")
+        self.myClosingTime
     }
 
     /// C++: `void AGWorkPosition::print() const` [const]
@@ -125,7 +151,9 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGWorkPosition::print")
+        println!("- AGWorkPosition: open={} closingTime={} taken={}", self.myOpeningTime, self.myClosingTime, self.is_taken() as i32);
+        print!("\t");
+        self.myLocation.print();
     }
 
     /// C++: `int AGWorkPosition::generateOpeningTime(const AGDataAndStatistics &)` [static, private]
@@ -146,7 +174,17 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn generate_opening_time(ds: &AGDataAndStatistics) -> i32 {
-        todo!("port AGWorkPosition::generateOpeningTime")
+        let choice = utils::common::rand_helper::rand();
+    let mut cumul = 0.0;
+
+    for (k, v) in ds.beginWorkHours.iter() {
+        cumul += v;
+        if cumul >= choice {
+            return *k;
+        }
+    }
+    println!("-- WARNING: work time distribution not complete (Sum(proportions) != 1): AUTODEFINED at 9.00am --");
+    32400
     }
 
     /// C++: `int AGWorkPosition::generateClosingTime(const AGDataAndStatistics &)` [static, private]
@@ -166,7 +204,16 @@ impl AGWorkPosition {
     // }
     #[allow(unused_variables)]
     pub fn generate_closing_time(ds: &AGDataAndStatistics) -> i32 {
-        todo!("port AGWorkPosition::generateClosingTime")
+        let choice = utils::common::rand_helper::rand();
+    let mut cumul = 0.0;
+    for (k, v) in ds.endWorkHours.iter() {
+        cumul += v;
+        if cumul >= choice {
+            return *k;
+        }
+    }
+    println!("-- WARNING: work time distribution not complete (Sum(proportions) != 1): AUTODEFINED at 5.00pm --");
+    61200
     }
 
 }
