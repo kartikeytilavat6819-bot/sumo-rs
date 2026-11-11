@@ -41,7 +41,15 @@ impl Command_SaveTLCoupledDet {
     // }
     #[allow(unused_variables)]
     pub fn new(tlls: &mut MSTLLogicControl_TLSLogicVariants, dtf: Ptr<MSDetectorFileOutput>, begin: SUMOTime, device: &mut OutputDevice) -> Self {
-        todo!("port Command_SaveTLCoupledDet::Command_SaveTLCoupledDet")
+        // shortcut: C++ calls tlls.addSwitchCommand(this); a by-value constructor has no stable address yet, so the caller must register the boxed object with tlls.add_switch_command(Ptr::from_mut(..)); upgrade when constructors return Box<Self>
+        dtf.write_xml_detector_prolog(device);
+        Self {
+            base: MSTLLogicControl_OnSwitchAction {},
+            myDevice: Ptr::from_mut(device),
+            myLogics: Ptr::from_mut(tlls),
+            myDetector: dtf,
+            myStartTime: begin,
+        }
     }
 
     /// C++: `void Command_SaveTLCoupledDet::~Command_SaveTLCoupledDet() noexcept` [virtual]
@@ -50,7 +58,7 @@ impl Command_SaveTLCoupledDet {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLCoupledDet::~Command_SaveTLCoupledDet")
+        // C++ destructor body is empty
     }
 
     /// C++: `void Command_SaveTLCoupledDet::execute()` [virtual]
@@ -65,7 +73,11 @@ impl Command_SaveTLCoupledDet {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self) {
-        todo!("port Command_SaveTLCoupledDet::execute")
+        let end = MSNet::get_instance().get_current_time_step();
+        if self.myStartTime != end {
+            self.myDetector.write_xml_output(self.myDevice.m(), self.myStartTime, end);
+            self.myStartTime = end;
+        }
     }
 
     /// C++: `void Command_SaveTLCoupledDet::Command_SaveTLCoupledDet(const Command_SaveTLCoupledDet &)` [private]
@@ -73,7 +85,7 @@ impl Command_SaveTLCoupledDet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLCoupledDet) -> Self {
-        todo!("port Command_SaveTLCoupledDet::Command_SaveTLCoupledDet")
+        panic!("Command_SaveTLCoupledDet copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLCoupledDet & Command_SaveTLCoupledDet::operator=(const Command_SaveTLCoupledDet &)` [private]
@@ -81,7 +93,7 @@ impl Command_SaveTLCoupledDet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLCoupledDet) -> &mut Command_SaveTLCoupledDet {
-        todo!("port Command_SaveTLCoupledDet::operator=")
+        panic!("Command_SaveTLCoupledDet assignment operator is private and invalidated in C++")
     }
 
 }

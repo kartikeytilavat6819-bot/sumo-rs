@@ -38,7 +38,14 @@ impl Command_SaveTLSSwitches {
     // }
     #[allow(unused_variables)]
     pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Self {
-        todo!("port Command_SaveTLSSwitches::Command_SaveTLSSwitches")
+        // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
+        od.write_xml_header("tlsSwitches", "tlsswitches_file.xsd", BTreeMap::new(), true);
+        Self {
+            base: (),
+            myOutputDevice: Ptr::from_mut(od),
+            myLogics: Ptr::new(logics),
+            myPreviousLinkStates: BTreeMap::new(),
+        }
     }
 
     /// C++: `void Command_SaveTLSSwitches::~Command_SaveTLSSwitches() noexcept` [virtual]
@@ -47,7 +54,7 @@ impl Command_SaveTLSSwitches {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLSSwitches::~Command_SaveTLSSwitches")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOTime Command_SaveTLSSwitches::execute(SUMOTime)` [virtual]
@@ -90,7 +97,41 @@ impl Command_SaveTLSSwitches {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Command_SaveTLSSwitches::execute")
+        let light = self.myLogics.get_active();
+        let links = light.get_links();
+        let state: Vec<u8> = light.get_current_phase_def().get_state().as_bytes().to_vec();
+        for i in 0..links.len() {
+            if state[i] as i32 == LINKSTATE_TL_GREEN_MAJOR || state[i] as i32 == LINKSTATE_TL_GREEN_MINOR {
+                if !self.myPreviousLinkStates.contains_key(&(i as i32)) {
+                    // was not saved before
+                    self.myPreviousLinkStates.insert(i as i32, currentTime);
+                    continue;
+                }
+            } else {
+                if !self.myPreviousLinkStates.contains_key(&(i as i32)) {
+                    // was not yet green
+                    continue;
+                }
+                let currLinks = &links[i];
+                let currLanes = light.get_lanes_at(i as i32);
+                let lastOn = self.myPreviousLinkStates[&(i as i32)];
+                for j in 0..currLinks.len() {
+                    let link = currLinks[j];
+                    self.myOutputDevice.m().write(&format!(
+                        "   <tlsSwitch id=\"{}\" programID=\"{}\" fromLane=\"{}\" toLane=\"{}\" begin=\"{}\" end=\"{}\" duration=\"{}\"/>\n",
+                        light.get_id(),
+                        light.get_program_id(),
+                        currLanes[j].get_id(),
+                        link.get_lane().get_id(),
+                        time2string(lastOn),
+                        time2string(currentTime),
+                        time2string(currentTime - lastOn)
+                    ));
+                }
+                self.myPreviousLinkStates.remove(&(i as i32));
+            }
+        }
+        delta_t()
     }
 
     /// C++: `void Command_SaveTLSSwitches::Command_SaveTLSSwitches(const Command_SaveTLSSwitches &)` [private]
@@ -98,7 +139,7 @@ impl Command_SaveTLSSwitches {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLSSwitches) -> Self {
-        todo!("port Command_SaveTLSSwitches::Command_SaveTLSSwitches")
+        panic!("Command_SaveTLSSwitches copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLSSwitches & Command_SaveTLSSwitches::operator=(const Command_SaveTLSSwitches &)` [private]
@@ -106,7 +147,7 @@ impl Command_SaveTLSSwitches {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLSSwitches) -> &mut Command_SaveTLSSwitches {
-        todo!("port Command_SaveTLSSwitches::operator=")
+        panic!("Command_SaveTLSSwitches assignment operator is private and invalidated in C++")
     }
 
 }
