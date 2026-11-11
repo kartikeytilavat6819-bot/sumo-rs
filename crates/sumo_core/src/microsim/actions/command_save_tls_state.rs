@@ -41,7 +41,14 @@ impl Command_SaveTLSState {
     // }
     #[allow(unused_variables)]
     pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice, saveDetectors: bool, saveConditions: bool) -> Self {
-        todo!("port Command_SaveTLSState::Command_SaveTLSState")
+        // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
+        Self {
+            base: (),
+            myOutputDevice: Ptr::from_mut(od),
+            myLogics: Ptr::new(logics),
+            mySaveDetectors: saveDetectors,
+            mySaveConditions: saveConditions,
+        }
     }
 
     /// C++: `void Command_SaveTLSState::~Command_SaveTLSState() noexcept` [virtual]
@@ -50,7 +57,7 @@ impl Command_SaveTLSState {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLSState::~Command_SaveTLSState")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOTime Command_SaveTLSState::execute(SUMOTime)` [virtual]
@@ -106,7 +113,40 @@ impl Command_SaveTLSState {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Command_SaveTLSState::execute")
+        let dev = self.myOutputDevice.m();
+        if !dev.wrote_header() {
+            // delay writing header to ensure tls is initialized
+            let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+            if self.mySaveDetectors {
+                let IDs: Vec<String> = self.myLogics.get_active().get_detector_states().into_keys().collect();
+                attrs.insert(SUMO_ATTR_DETECTORS, utils::common::to_string::join_to_string(&IDs, " "));
+            }
+            if self.mySaveConditions {
+                let IDs: Vec<String> = self.myLogics.get_active().get_conditions().into_keys().collect();
+                attrs.insert(SUMO_ATTR_CONDITIONS, utils::common::to_string::join_to_string(&IDs, " "));
+            }
+            dev.write_xml_header("tlsStates", "tlsstates_file.xsd", attrs, true);
+        }
+        let logic = self.myLogics.get_active();
+        dev.open_tag("tlsState");
+        dev.write_attr(SUMO_ATTR_TIME, &time2string(currentTime));
+        dev.write_attr(SUMO_ATTR_ID, logic.get_id());
+        dev.write_attr(SUMO_ATTR_PROGRAMID, logic.get_program_id());
+        dev.write_attr(SUMO_ATTR_PHASE, &logic.get_current_phase_index());
+        dev.write_attr(SUMO_ATTR_STATE, logic.get_current_phase_def().get_state());
+        if !logic.get_current_phase_def().get_name().is_empty() {
+            dev.write_attr(SUMO_ATTR_NAME, logic.get_current_phase_def().get_name());
+        }
+        if self.mySaveDetectors {
+            let states: Vec<i32> = logic.get_detector_states().values().map(|item| *item as i32).collect();
+            dev.write_attr(SUMO_ATTR_DETECTORS, &utils::common::to_string::join_to_string(&states, " "));
+        }
+        if self.mySaveConditions {
+            let states: Vec<f64> = logic.get_conditions().values().cloned().collect();
+            dev.write_attr(SUMO_ATTR_CONDITIONS, &utils::common::to_string::join_to_string(&states, " "));
+        }
+        dev.close_tag("");
+        delta_t()
     }
 
     /// C++: `void Command_SaveTLSState::Command_SaveTLSState(const Command_SaveTLSState &)` [private]
@@ -114,7 +154,7 @@ impl Command_SaveTLSState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLSState) -> Self {
-        todo!("port Command_SaveTLSState::Command_SaveTLSState")
+        panic!("Command_SaveTLSState copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLSState & Command_SaveTLSState::operator=(const Command_SaveTLSState &)` [private]
@@ -122,7 +162,7 @@ impl Command_SaveTLSState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLSState) -> &mut Command_SaveTLSState {
-        todo!("port Command_SaveTLSState::operator=")
+        panic!("Command_SaveTLSState assignment operator is private and invalidated in C++")
     }
 
 }

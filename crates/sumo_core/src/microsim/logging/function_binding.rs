@@ -41,7 +41,13 @@ impl<T, R> FunctionBinding<T, R> {
     //         myScale(scale) {}
     #[allow(unused_variables)]
     pub fn new(source: Ptr<T>, operation: SUMOAbstractRouter_Operation, scale: R) -> Self {
-        todo!("port FunctionBinding::FunctionBinding<T, R>")
+        Self {
+            base: (),
+            mySource: source,
+            myOperation: operation,
+            myScale: scale,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FunctionBinding::~FunctionBinding<T, R>()`
@@ -49,7 +55,7 @@ impl<T, R> FunctionBinding<T, R> {
     // ~FunctionBinding() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FunctionBinding::~FunctionBinding<T, R>")
+        // C++ destructor body is empty
     }
 
     /// C++: `R FunctionBinding::getValue() const` [const]
@@ -58,7 +64,8 @@ impl<T, R> FunctionBinding<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn get_value(&self) -> R {
-        todo!("port FunctionBinding::getValue")
+        // shortcut: needs the pointer-to-member Operation (Unmapped), upgrade when SUMOAbstractRouter_Operation is mapped to a Rust type
+        panic!("FunctionBinding::getValue is not ported yet")
     }
 
     /// C++: `ValueSource<R> * FunctionBinding::copy() const` [const]
@@ -67,7 +74,8 @@ impl<T, R> FunctionBinding<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn copy(&self) -> Ptr<Unmapped /* ValueSource<R> */> {
-        todo!("port FunctionBinding::copy")
+        // shortcut: ValueSource<R> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("FunctionBinding::copy is not ported yet")
     }
 
     /// C++: `ValueSource<double> * FunctionBinding::makedoubleReturningCopy() const` [const]
@@ -76,7 +84,8 @@ impl<T, R> FunctionBinding<T, R> {
     //     }
     #[allow(unused_variables)]
     pub fn makedouble_returning_copy(&self) -> Ptr<Unmapped /* ValueSource<double> */> {
-        todo!("port FunctionBinding::makedoubleReturningCopy")
+        // shortcut: ValueSource<double> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("FunctionBinding::makedoubleReturningCopy is not ported yet")
     }
 
     /// C++: `FunctionBinding<T, R> & FunctionBinding::operator=(const FunctionBinding<T, R> &)` [private]
@@ -84,7 +93,7 @@ impl<T, R> FunctionBinding<T, R> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &FunctionBinding<T, R>) -> &mut FunctionBinding<T, R> {
-        todo!("port FunctionBinding::operator=")
+        panic!("FunctionBinding assignment operator is private and invalidated in C++")
     }
 
 }
@@ -106,7 +115,11 @@ impl<T> FunctionBindingString<T> {
     //     {}
     #[allow(unused_variables)]
     pub fn new(source: Ptr<T>, operation: SUMOAbstractRouter_Operation) -> Self {
-        todo!("port FunctionBindingString::FunctionBindingString<T>")
+        Self {
+            mySource: source,
+            myOperation: operation,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FunctionBindingString::~FunctionBindingString<T>()`
@@ -114,7 +127,7 @@ impl<T> FunctionBindingString<T> {
     // ~FunctionBindingString() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FunctionBindingString::~FunctionBindingString<T>")
+        // C++ destructor body is empty
     }
 
     /// C++: `int FunctionBindingString::getValue() const` [const]
@@ -123,7 +136,8 @@ impl<T> FunctionBindingString<T> {
     //     }
     #[allow(unused_variables)]
     pub fn get_value(&self) -> i32 {
-        todo!("port FunctionBindingString::getValue")
+        // shortcut: needs the pointer-to-member Operation (Unmapped) and a std::string return type, upgrade when SUMOAbstractRouter_Operation is mapped
+        panic!("FunctionBindingString::getValue is not ported yet")
     }
 
     /// C++: `int * FunctionBindingString::copy() const` [const]
@@ -132,7 +146,8 @@ impl<T> FunctionBindingString<T> {
     //     }
     #[allow(unused_variables)]
     pub fn copy(&self) -> Ptr<i32> {
-        todo!("port FunctionBindingString::copy")
+        // shortcut: the skeleton return type Ptr<i32> is a placeholder for ValueSource<std::string>, upgrade when ValueSource is ported
+        panic!("FunctionBindingString::copy is not ported yet")
     }
 
     /// C++: `ValueSource<double> * FunctionBindingString::makedoubleReturningCopy() const` [const]
@@ -141,7 +156,7 @@ impl<T> FunctionBindingString<T> {
     //     }
     #[allow(unused_variables)]
     pub fn makedouble_returning_copy(&self) -> Ptr<Unmapped /* ValueSource<double> */> {
-        todo!("port FunctionBindingString::makedoubleReturningCopy")
+        Ptr::null()
     }
 
     /// C++: `FunctionBindingString<T> & FunctionBindingString::operator=(const FunctionBindingString<T> &)` [private]
@@ -149,7 +164,7 @@ impl<T> FunctionBindingString<T> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &FunctionBindingString<T>) -> &mut FunctionBindingString<T> {
-        todo!("port FunctionBindingString::operator=")
+        panic!("FunctionBindingString assignment operator is private and invalidated in C++")
     }
 
 }

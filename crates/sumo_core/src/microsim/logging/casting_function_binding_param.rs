@@ -42,7 +42,14 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     //     {}
     #[allow(unused_variables)]
     pub fn new(source: Ptr<T>, operation: SUMOAbstractRouter_Operation, param: P, scale: R) -> Self {
-        todo!("port CastingFunctionBinding_Param::CastingFunctionBinding_Param<T, R, O, P>")
+        Self {
+            base: (),
+            mySource: source,
+            myOperation: operation,
+            myScale: scale,
+            myParam: param,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CastingFunctionBinding_Param::~CastingFunctionBinding_Param<T, R, O, P>()`
@@ -50,7 +57,7 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     // ~CastingFunctionBinding_Param() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CastingFunctionBinding_Param::~CastingFunctionBinding_Param<T, R, O, P>")
+        // C++ destructor body is empty
     }
 
     /// C++: `R CastingFunctionBinding_Param::getValue() const` [const]
@@ -59,7 +66,8 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     //     }
     #[allow(unused_variables)]
     pub fn get_value(&self) -> R {
-        todo!("port CastingFunctionBinding_Param::getValue")
+        // shortcut: needs the pointer-to-member Operation (Unmapped) taking a param P, upgrade when SUMOAbstractRouter_Operation is mapped
+        panic!("CastingFunctionBinding_Param::getValue is not ported yet")
     }
 
     /// C++: `ValueSource<R> * CastingFunctionBinding_Param::copy() const` [const]
@@ -68,7 +76,8 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     //     }
     #[allow(unused_variables)]
     pub fn copy(&self) -> Ptr<Unmapped /* ValueSource<R> */> {
-        todo!("port CastingFunctionBinding_Param::copy")
+        // shortcut: ValueSource<R> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("CastingFunctionBinding_Param::copy is not ported yet")
     }
 
     /// C++: `ValueSource<double> * CastingFunctionBinding_Param::makedoubleReturningCopy() const` [const]
@@ -77,7 +86,8 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     //     }
     #[allow(unused_variables)]
     pub fn makedouble_returning_copy(&self) -> Ptr<Unmapped /* ValueSource<double> */> {
-        todo!("port CastingFunctionBinding_Param::makedoubleReturningCopy")
+        // shortcut: ValueSource<double> is not ported, so the heap copy cannot be typed; upgrade when ValueSource is ported
+        panic!("CastingFunctionBinding_Param::makedoubleReturningCopy is not ported yet")
     }
 
     /// C++: `CastingFunctionBinding_Param<T, R, O, P> & CastingFunctionBinding_Param::operator=(const CastingFunctionBinding_Param<T, R, O, P> &)` [private]
@@ -85,7 +95,7 @@ impl<T, R, O, P> CastingFunctionBinding_Param<T, R, O, P> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &CastingFunctionBinding_Param<T, R, O, P>) -> &mut CastingFunctionBinding_Param<T, R, O, P> {
-        todo!("port CastingFunctionBinding_Param::operator=")
+        panic!("CastingFunctionBinding_Param assignment operator is private and invalidated in C++")
     }
 
 }

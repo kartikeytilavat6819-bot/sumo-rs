@@ -42,7 +42,16 @@ impl Command_SaveTLSProgram {
     // }
     #[allow(unused_variables)]
     pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Self {
-        todo!("port Command_SaveTLSProgram::Command_SaveTLSProgram")
+        // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
+        od.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        Self {
+            base: (),
+            myOutputDevice: Ptr::from_mut(od),
+            myLogics: Ptr::new(logics),
+            myPreviousStates: Vec::new(),
+            myPreviousProgramID: String::new(),
+            myTLSID: String::new(),
+        }
     }
 
     /// C++: `void Command_SaveTLSProgram::~Command_SaveTLSProgram() noexcept` [virtual]
@@ -52,7 +61,7 @@ impl Command_SaveTLSProgram {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLSProgram::~Command_SaveTLSProgram")
+        self.write_current();
     }
 
     /// C++: `SUMOTime Command_SaveTLSProgram::execute(SUMOTime)` [virtual]
@@ -74,7 +83,19 @@ impl Command_SaveTLSProgram {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Command_SaveTLSProgram::execute")
+        let logic = self.myLogics.get_active();
+        let state = logic.get_current_phase_def().get_state().to_string();
+        let name = logic.get_current_phase_def().get_name().to_string();
+        if logic.get_program_id() != self.myPreviousProgramID {
+            self.write_current();
+            self.myPreviousProgramID = logic.get_program_id().to_string();
+            self.myTLSID = logic.get_id().to_string();
+        }
+        if self.myPreviousStates.is_empty() || self.myPreviousStates.last().unwrap().get_state() != state {
+            self.myPreviousStates.push(MSPhaseDefinition::new(0, &state, &name));
+        }
+        self.myPreviousStates.last_mut().unwrap().duration += delta_t();
+        delta_t()
     }
 
     /// C++: `void Command_SaveTLSProgram::writeCurrent()` [private]
@@ -106,7 +127,29 @@ impl Command_SaveTLSProgram {
     // }
     #[allow(unused_variables)]
     pub fn write_current(&mut self) {
-        todo!("port Command_SaveTLSProgram::writeCurrent")
+        if self.myPreviousStates.len() > 0 {
+            let dev = self.myOutputDevice.m();
+            dev.open_tag_id(SUMO_TAG_TLLOGIC);
+            dev.write_attr(SUMO_ATTR_ID, self.myTLSID.as_str());
+            dev.write_attr(SUMO_ATTR_TYPE, "static");
+            dev.write_attr(SUMO_ATTR_PROGRAMID, self.myPreviousProgramID.as_str());
+            // write the phases
+            for p in &self.myPreviousStates {
+                dev.open_tag_id(SUMO_TAG_PHASE);
+                dev.write_attr(SUMO_ATTR_DURATION, &steps2time(p.duration));
+                if p.duration < time2steps(10.0) {
+                    dev.write_padding(" ");
+                }
+                dev.write_attr(SUMO_ATTR_STATE, p.get_state());
+                if p.get_name() != "" {
+                    dev.write_attr(SUMO_ATTR_NAME, p.get_name());
+                }
+                dev.close_tag("");
+            }
+            // write params
+            dev.close_tag("");
+            self.myPreviousStates.clear();
+        }
     }
 
     /// C++: `void Command_SaveTLSProgram::Command_SaveTLSProgram(const Command_SaveTLSProgram &)` [private]
@@ -114,7 +157,7 @@ impl Command_SaveTLSProgram {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLSProgram) -> Self {
-        todo!("port Command_SaveTLSProgram::Command_SaveTLSProgram")
+        panic!("Command_SaveTLSProgram copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLSProgram & Command_SaveTLSProgram::operator=(const Command_SaveTLSProgram &)` [private]
@@ -122,7 +165,7 @@ impl Command_SaveTLSProgram {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLSProgram) -> &mut Command_SaveTLSProgram {
-        todo!("port Command_SaveTLSProgram::operator=")
+        panic!("Command_SaveTLSProgram assignment operator is private and invalidated in C++")
     }
 
 }

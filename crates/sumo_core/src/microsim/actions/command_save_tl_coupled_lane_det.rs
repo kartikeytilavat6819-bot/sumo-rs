@@ -39,7 +39,15 @@ impl Command_SaveTLCoupledLaneDet {
     // }
     #[allow(unused_variables)]
     pub fn new(tlls: &mut MSTLLogicControl_TLSLogicVariants, dtf: Ptr<MSDetectorFileOutput>, begin: SUMOTime, device: &mut OutputDevice, link: Ptr<MSLink>) -> Self {
-        todo!("port Command_SaveTLCoupledLaneDet::Command_SaveTLCoupledLaneDet")
+        // The base constructor's addSwitchCommand(this) is skipped, see the shortcut in command_save_tl_coupled_det.rs
+        let mut this = Self {
+            base: Command_SaveTLCoupledDet::new(tlls, dtf, begin, device),
+            myLink: link,
+            myLastState: LINKSTATE_TL_RED,
+            myHadOne: false,
+        };
+        this.execute();
+        this
     }
 
     /// C++: `void Command_SaveTLCoupledLaneDet::~Command_SaveTLCoupledLaneDet() noexcept` [virtual]
@@ -48,7 +56,7 @@ impl Command_SaveTLCoupledLaneDet {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLCoupledLaneDet::~Command_SaveTLCoupledLaneDet")
+        // C++ destructor body is empty
     }
 
     /// C++: `void Command_SaveTLCoupledLaneDet::execute()` [virtual]
@@ -73,7 +81,22 @@ impl Command_SaveTLCoupledLaneDet {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self) {
-        todo!("port Command_SaveTLCoupledLaneDet::execute")
+        if self.myLink.get_state() == self.myLastState && self.myHadOne {
+            return;
+        }
+        self.myHadOne = true;
+        if self.myLastState == LINKSTATE_TL_RED && self.myLink.get_state() != LINKSTATE_TL_RED {
+            let end = MSNet::get_instance().get_current_time_step();
+            if self.myStartTime != end {
+                let det = self.myDetector;
+                det.m().write_xml_output(self.myDevice.m(), self.myStartTime, end);
+                self.myStartTime = end;
+            }
+        } else if self.myLink.get_state() == LINKSTATE_TL_RED {
+            self.myDetector.reset();
+            self.myStartTime = MSNet::get_instance().get_current_time_step();
+        }
+        self.myLastState = self.myLink.get_state();
     }
 
     /// C++: `void Command_SaveTLCoupledLaneDet::Command_SaveTLCoupledLaneDet(const Command_SaveTLCoupledLaneDet &)` [private]
@@ -81,7 +104,7 @@ impl Command_SaveTLCoupledLaneDet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLCoupledLaneDet) -> Self {
-        todo!("port Command_SaveTLCoupledLaneDet::Command_SaveTLCoupledLaneDet")
+        panic!("Command_SaveTLCoupledLaneDet copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLCoupledLaneDet & Command_SaveTLCoupledLaneDet::operator=(const Command_SaveTLCoupledLaneDet &)` [private]
@@ -89,7 +112,7 @@ impl Command_SaveTLCoupledLaneDet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLCoupledLaneDet) -> &mut Command_SaveTLCoupledLaneDet {
-        todo!("port Command_SaveTLCoupledLaneDet::operator=")
+        panic!("Command_SaveTLCoupledLaneDet assignment operator is private and invalidated in C++")
     }
 
 }

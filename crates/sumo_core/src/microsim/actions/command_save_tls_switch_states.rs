@@ -40,7 +40,15 @@ impl Command_SaveTLSSwitchStates {
     // }
     #[allow(unused_variables)]
     pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Self {
-        todo!("port Command_SaveTLSSwitchStates::Command_SaveTLSSwitchStates")
+        // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
+        od.write_xml_header("tlsStates", "tlsstates_file.xsd", BTreeMap::new(), true);
+        Self {
+            base: (),
+            myOutputDevice: Ptr::from_mut(od),
+            myLogics: Ptr::new(logics),
+            myPreviousState: String::new(),
+            myPreviousProgramID: String::new(),
+        }
     }
 
     /// C++: `void Command_SaveTLSSwitchStates::~Command_SaveTLSSwitchStates() noexcept` [virtual]
@@ -49,7 +57,7 @@ impl Command_SaveTLSSwitchStates {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Command_SaveTLSSwitchStates::~Command_SaveTLSSwitchStates")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOTime Command_SaveTLSSwitchStates::execute(SUMOTime)` [virtual]
@@ -75,7 +83,24 @@ impl Command_SaveTLSSwitchStates {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Command_SaveTLSSwitchStates::execute")
+        let logic = self.myLogics.get_active();
+        let state = logic.get_current_phase_def().get_state().to_string();
+        if state != self.myPreviousState || logic.get_program_id() != self.myPreviousProgramID {
+            let dev = self.myOutputDevice.m();
+            dev.open_tag("tlsState");
+            dev.write_attr(SUMO_ATTR_TIME, &time2string(currentTime));
+            dev.write_attr(SUMO_ATTR_ID, logic.get_id());
+            dev.write_attr(SUMO_ATTR_PROGRAMID, logic.get_program_id());
+            dev.write_attr(SUMO_ATTR_PHASE, &logic.get_current_phase_index());
+            dev.write_attr(SUMO_ATTR_STATE, logic.get_current_phase_def().get_state());
+            if !logic.get_current_phase_def().get_name().is_empty() {
+                dev.write_attr(SUMO_ATTR_NAME, logic.get_current_phase_def().get_name());
+            }
+            dev.close_tag("");
+            self.myPreviousState = state;
+            self.myPreviousProgramID = logic.get_program_id().to_string();
+        }
+        delta_t()
     }
 
     /// C++: `void Command_SaveTLSSwitchStates::Command_SaveTLSSwitchStates(const Command_SaveTLSSwitchStates &)` [private]
@@ -83,7 +108,7 @@ impl Command_SaveTLSSwitchStates {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &Command_SaveTLSSwitchStates) -> Self {
-        todo!("port Command_SaveTLSSwitchStates::Command_SaveTLSSwitchStates")
+        panic!("Command_SaveTLSSwitchStates copy constructor is private and invalidated in C++")
     }
 
     /// C++: `Command_SaveTLSSwitchStates & Command_SaveTLSSwitchStates::operator=(const Command_SaveTLSSwitchStates &)` [private]
@@ -91,7 +116,7 @@ impl Command_SaveTLSSwitchStates {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &Command_SaveTLSSwitchStates) -> &mut Command_SaveTLSSwitchStates {
-        todo!("port Command_SaveTLSSwitchStates::operator=")
+        panic!("Command_SaveTLSSwitchStates assignment operator is private and invalidated in C++")
     }
 
 }
