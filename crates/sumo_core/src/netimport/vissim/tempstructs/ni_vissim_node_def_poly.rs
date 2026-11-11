@@ -29,14 +29,18 @@ impl NIVissimNodeDef_Poly {
     //       myPoly(poly) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, poly: &PositionVector) -> Self {
-        todo!("port NIVissimNodeDef_Poly::NIVissimNodeDef_Poly")
+        Self {
+            base: NIVissimNodeDef_Edges::new(id, name, &NIVissimNodeParticipatingEdgeVector::new()),
+            myPoly: poly.clone(),
+        }
     }
 
     /// C++: `void NIVissimNodeDef_Poly::~NIVissimNodeDef_Poly() noexcept` [virtual]
     // NIVissimNodeDef_Poly::~NIVissimNodeDef_Poly() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimNodeDef_Poly::~NIVissimNodeDef_Poly")
+        // C++ body is empty; the base destructor (NIVissimNodeDef_Edges) runs implicitly.
+        self.base.drop_();
     }
 
     /// C++: `bool NIVissimNodeDef_Poly::dictionary(int, const std::string &, const PositionVector &)` [static]
@@ -53,7 +57,15 @@ impl NIVissimNodeDef_Poly {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, poly: &PositionVector) -> bool {
-        todo!("port NIVissimNodeDef_Poly::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimNodeDef_Poly::new(id, name, poly))));
+        if !NIVissimNodeDef::dictionary(id, Ptr::from_mut(&mut o.m().base.base)) {
+            // delete o;  (runs the base destructors as in C++)
+            o.m().drop_();
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            debug_assert!(false);
+            return false;
+        }
+        true
     }
 
 }

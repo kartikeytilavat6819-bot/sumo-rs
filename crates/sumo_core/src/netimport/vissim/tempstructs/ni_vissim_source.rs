@@ -14,6 +14,9 @@ pub struct NIVissimSource {
 
 // C++ static members of NIVissimSource (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimSource::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimSource_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimSource {
     /// C++: `void NIVissimSource::NIVissimSource(const std::string &, const std::string &, const std::string &)`
@@ -22,14 +25,18 @@ impl NIVissimSource {
     //     : myID(id), myName(name), myEdgeID(edgeid) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, name: &str, edgeid: &str) -> Self {
-        todo!("port NIVissimSource::NIVissimSource")
+        Self {
+            myID: id.to_string(),
+            myName: name.to_string(),
+            myEdgeID: edgeid.to_string(),
+        }
     }
 
     /// C++: `void NIVissimSource::~NIVissimSource()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSource::~NIVissimSource")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `bool NIVissimSource::dictionary(const std::string &, const std::string &, const std::string &)` [static]
@@ -45,7 +52,13 @@ impl NIVissimSource {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, name: &str, edgeid: &str) -> bool {
-        todo!("port NIVissimSource::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimSource::new(id, name, edgeid))));
+        if !NIVissimSource::dictionary_2(id, o) {
+            // delete o;
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            return false;
+        }
+        true
     }
 
     /// C++: `bool NIVissimSource::dictionary(const std::string &, NIVissimSource *)` [static]
@@ -60,7 +73,14 @@ impl NIVissimSource {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: &str, o: Ptr<NIVissimSource>) -> bool {
-        todo!("port NIVissimSource::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(id) {
+                d.insert(id.to_string(), o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimSource * NIVissimSource::dictionary(const std::string &)` [static]
@@ -74,7 +94,7 @@ impl NIVissimSource {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: &str) -> Ptr<NIVissimSource> {
-        todo!("port NIVissimSource::dictionary")
+        MY_DICT.with(|d| d.borrow().get(id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimSource::clearDict()` [static]
@@ -87,7 +107,14 @@ impl NIVissimSource {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimSource::clearDict")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, o) in d.iter() {
+                // delete (*i).second;
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+            d.clear();
+        })
     }
 
 }

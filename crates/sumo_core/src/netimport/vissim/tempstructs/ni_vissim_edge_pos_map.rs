@@ -10,7 +10,7 @@ pub type NIVissimEdgePosMap_Range = (f64, f64);
 
 /// C++ class `NIVissimEdgePosMap` (netimport/vissim/tempstructs/NIVissimEdgePosMap.h)
 pub struct NIVissimEdgePosMap {
-    pub myCont: NIVissimBoundedClusterObject_ContType,
+    pub myCont: NIVissimEdgePosMap_ContType,
 }
 
 impl NIVissimEdgePosMap {
@@ -18,14 +18,14 @@ impl NIVissimEdgePosMap {
     // NIVissimEdgePosMap::NIVissimEdgePosMap() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NIVissimEdgePosMap::NIVissimEdgePosMap")
+        Self { myCont: NIVissimEdgePosMap_ContType::new() }
     }
 
     /// C++: `void NIVissimEdgePosMap::~NIVissimEdgePosMap() noexcept`
     // NIVissimEdgePosMap::~NIVissimEdgePosMap() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimEdgePosMap::~NIVissimEdgePosMap")
+        // C++ body is empty; members are destroyed implicitly.
     }
 
     /// C++: `void NIVissimEdgePosMap::add(int, double)`
@@ -35,7 +35,7 @@ impl NIVissimEdgePosMap {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, edgeid: i32, pos: f64) {
-        todo!("port NIVissimEdgePosMap::add")
+        self.add_2(edgeid, pos, pos);
     }
 
     /// C++: `void NIVissimEdgePosMap::add(int, double, double)`
@@ -62,8 +62,26 @@ impl NIVissimEdgePosMap {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add_2(&mut self, edgeid: i32, from: f64, to: f64) {
-        todo!("port NIVissimEdgePosMap::add")
+    pub fn add_2(&mut self, edgeid: i32, mut from: f64, mut to: f64) {
+        if from > to {
+            let tmp = from;
+            from = to;
+            to = tmp;
+        }
+        match self.myCont.get(&edgeid).copied() {
+            None => {
+                self.myCont.insert(edgeid, (from, to));
+            }
+            Some((pfrom, pto)) => {
+                if pfrom < from {
+                    from = pfrom;
+                }
+                if pto > to {
+                    to = pto;
+                }
+                self.myCont.insert(edgeid, (from, to));
+            }
+        }
     }
 
     /// C++: `void NIVissimEdgePosMap::join(NIVissimEdgePosMap &)`
@@ -75,7 +93,9 @@ impl NIVissimEdgePosMap {
     // }
     #[allow(unused_variables)]
     pub fn join(&mut self, with: &mut NIVissimEdgePosMap) {
-        todo!("port NIVissimEdgePosMap::join")
+        for (edgeid, range) in with.myCont.iter() {
+            self.add_2(*edgeid, range.0, range.1);
+        }
     }
 
 }

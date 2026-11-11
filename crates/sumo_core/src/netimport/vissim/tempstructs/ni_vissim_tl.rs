@@ -29,6 +29,9 @@ pub struct NIVissimTL {
 
 // C++ static members of NIVissimTL (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimTL::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimTL_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimTL {
     /// C++: `void NIVissimTL::NIVissimTL(int, const std::string &, const std::string &, SUMOTime, SUMOTime)`
@@ -41,14 +44,21 @@ impl NIVissimTL {
     // {}
     #[allow(unused_variables)]
     pub fn new(id: i32, type_: &str, name: &str, absdur: SUMOTime, offset: SUMOTime) -> Self {
-        todo!("port NIVissimTL::NIVissimTL")
+        Self {
+            myID: id,
+            myName: name.to_string(),
+            myAbsDuration: absdur,
+            myOffset: offset,
+            myCurrentGroup: Ptr::null(),
+            myType: type_.to_string(),
+        }
     }
 
     /// C++: `void NIVissimTL::~NIVissimTL()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimTL::~NIVissimTL")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `std::string NIVissimTL::getType() const` [const]
@@ -58,7 +68,7 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> String {
-        todo!("port NIVissimTL::getType")
+        self.myType.clone()
     }
 
     /// C++: `int NIVissimTL::getID() const` [const]
@@ -68,7 +78,7 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> i32 {
-        todo!("port NIVissimTL::getID")
+        self.myID
     }
 
     /// C++: `bool NIVissimTL::dictionary(int, const std::string &, const std::string &, SUMOTime, SUMOTime)` [static]
@@ -85,7 +95,13 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, type_: &str, name: &str, absdur: SUMOTime, offset: SUMOTime) -> bool {
-        todo!("port NIVissimTL::dictionary")
+        let o = Ptr::from_raw(Box::into_raw(Box::new(NIVissimTL::new(id, type_, name, absdur, offset))));
+        if !NIVissimTL::dictionary_2(id, o) {
+            // delete o;
+            drop(unsafe { Box::from_raw(o.as_raw()) });
+            return false;
+        }
+        true
     }
 
     /// C++: `bool NIVissimTL::dictionary(int, NIVissimTL *)` [static]
@@ -100,7 +116,14 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, o: Ptr<NIVissimTL>) -> bool {
-        todo!("port NIVissimTL::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimTL * NIVissimTL::dictionary(int)` [static]
@@ -114,7 +137,7 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimTL> {
-        todo!("port NIVissimTL::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimTL::clearDict()` [static]
@@ -127,7 +150,14 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimTL::clearDict")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, o) in d.iter() {
+                // delete (*i).second;
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+            d.clear();
+        })
     }
 
     /// C++: `bool NIVissimTL::dict_SetSignals(NBTrafficLightLogicCont &, NBEdgeCont &)` [static]
