@@ -32,7 +32,7 @@ impl ODDistrict {
     //     : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port ODDistrict::ODDistrict")
+        ODDistrict { base: Named::new(id), mySources: RandomDistributor::default(), mySinks: RandomDistributor::default() }
     }
 
     /// C++: `void ODDistrict::~ODDistrict() noexcept` [virtual]
@@ -40,7 +40,6 @@ impl ODDistrict {
     // ODDistrict::~ODDistrict() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ODDistrict::~ODDistrict")
     }
 
     /// C++: `void ODDistrict::addSource(const std::string &, double)`
@@ -51,7 +50,7 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn add_source(&mut self, id: &str, weight: f64) {
-        todo!("port ODDistrict::addSource")
+        self.mySources.add(id.to_string(), weight, false);
     }
 
     /// C++: `void ODDistrict::addSink(const std::string &, double)`
@@ -62,7 +61,7 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn add_sink(&mut self, id: &str, weight: f64) {
-        todo!("port ODDistrict::addSink")
+        self.mySinks.add(id.to_string(), weight, false);
     }
 
     /// C++: `std::string ODDistrict::getRandomSource() const` [const]
@@ -73,7 +72,8 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn get_random_source(&self) -> String {
-        todo!("port ODDistrict::getRandomSource")
+        // shortcut: C++ get() throws ProcessError on an empty distribution and this signature has no error channel, so it panics, upgrade by returning Result
+        self.mySources.get(None).unwrap()
     }
 
     /// C++: `std::string ODDistrict::getRandomSink() const` [const]
@@ -84,7 +84,8 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn get_random_sink(&self) -> String {
-        todo!("port ODDistrict::getRandomSink")
+        // shortcut: C++ get() throws ProcessError on an empty distribution and this signature has no error channel, so it panics, upgrade by returning Result
+        self.mySinks.get(None).unwrap()
     }
 
     /// C++: `int ODDistrict::sinkNumber() const` [const]
@@ -95,7 +96,7 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn sink_number(&self) -> i32 {
-        todo!("port ODDistrict::sinkNumber")
+        self.mySinks.get_vals().len() as i32
     }
 
     /// C++: `int ODDistrict::sourceNumber() const` [const]
@@ -106,7 +107,7 @@ impl ODDistrict {
     // }
     #[allow(unused_variables)]
     pub fn source_number(&self) -> i32 {
-        todo!("port ODDistrict::sourceNumber")
+        self.mySources.get_vals().len() as i32
     }
 
     /// C++: `void ODDistrict::ODDistrict(const ODDistrict &)` [private]
@@ -114,7 +115,8 @@ impl ODDistrict {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ODDistrict) -> Self {
-        todo!("port ODDistrict::ODDistrict")
+        // C++ declares this copy constructor private and never defines it, so no caller exists
+        panic!("ODDistrict copy constructor is private and undefined in C++")
     }
 
     /// C++: `ODDistrict & ODDistrict::operator=(const ODDistrict &)` [private]
@@ -122,7 +124,8 @@ impl ODDistrict {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &ODDistrict) -> &mut ODDistrict {
-        todo!("port ODDistrict::operator=")
+        // C++ declares this assignment operator private and never defines it, so no caller exists
+        panic!("ODDistrict::operator= is private and undefined in C++")
     }
 
 }

@@ -45,8 +45,9 @@ impl RODFEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        let edge = RODFEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType);
-        Ptr::from_raw(Box::into_raw(Box::new(edge)))
+        // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
+        let edge = Box::into_raw(Box::new(RODFEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType)));
+        Ptr::from_raw(unsafe { &raw mut (*edge).base })
     }
 
 }

@@ -46,8 +46,7 @@ impl RODUAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        let edge = ROEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType);
-        Ptr::from_raw(Box::into_raw(Box::new(edge)))
+        Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType))))
     }
 
 }
