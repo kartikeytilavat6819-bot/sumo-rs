@@ -54,6 +54,10 @@ impl std::ops::DerefMut for MSRoute {
 // C++ static members of MSRoute (port as module-level statics, see AGENTS.md):
 //   static RouteDict MSRoute::myDict;
 //   static RouteDistDict MSRoute::myDistDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<MSRoute_RouteDict> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_DIST_DICT: std::cell::RefCell<MSRoute_RouteDistDict> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl MSRoute {
     /// C++: `void MSRoute::MSRoute(const std::string &, const ConstMSEdgeVector &, const bool, const RGBColor *const, const StopParVector &, SUMOTime, int)`
@@ -76,6 +80,7 @@ impl MSRoute {
     // {}
     #[allow(unused_variables)]
     pub fn new(id: &str, edges: &ConstMSEdgeVector, isPermanent: bool, c: Ptr<RGBColor>, stops: &StopParVector, replacedTime: SUMOTime, replacedIndex: i32) -> Self {
+        // blocked: StopParVector copy needs SUMOVehicleParameter_Stop: Clone (not derived yet in utils/vehicle/sumo_vehicle_parameter.rs)
         todo!("port MSRoute::MSRoute")
     }
 
@@ -86,7 +91,10 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRoute::~MSRoute")
+        // delete myColor (null-safe, like delete nullptr)
+        if !self.myColor.is_null() {
+            drop(unsafe { Box::from_raw(self.myColor.as_raw()) });
+        }
     }
 
     /// C++: `MSRouteIterator MSRoute::begin() const` [const]
@@ -119,7 +127,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port MSRoute::size")
+        self.myEdges.len() as i32
     }
 
     /// C++: `const MSEdge * MSRoute::getLastEdge() const` [const]
@@ -131,7 +139,8 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_last_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSRoute::getLastEdge")
+        debug_assert!(!self.myEdges.is_empty());
+        *self.myEdges.last().unwrap()
     }
 
     /// C++: `const MSEdge * MSRoute::getFirstEdge() const` [const]
@@ -143,7 +152,8 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_first_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSRoute::getFirstEdge")
+        debug_assert!(!self.myEdges.is_empty());
+        *self.myEdges.first().unwrap()
     }
 
     /// C++: `void MSRoute::checkRemoval(bool) const` [const]
@@ -159,7 +169,10 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn check_removal(&self, force: bool) {
-        todo!("port MSRoute::checkRemoval")
+        // the dict owns its routes; erasing may drop the last reference, as in C++
+        if !self.myAmPermanent || force {
+            MY_DICT.with(|d| d.borrow_mut().remove(self.get_id()));
+        }
     }
 
     /// C++: `int MSRoute::writeEdgeIDs(OutputDevice &, int, int, bool, SUMOVehicleClass) const` [const]
@@ -202,7 +215,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn contains(&self, edge: Ptr<MSEdge>) -> bool {
-        todo!("port MSRoute::contains")
+        self.myEdges.contains(&edge)
     }
 
     /// C++: `bool MSRoute::containsAnyOf(const MSEdgeVector &) const` [const]
@@ -218,7 +231,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn contains_any_of(&self, edgelist: &MSEdgeVector) -> bool {
-        todo!("port MSRoute::containsAnyOf")
+        edgelist.iter().any(|e| self.contains(*e))
     }
 
     /// C++: `const MSEdge * MSRoute::operator[](int) const` [const]
@@ -228,7 +241,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn index_op(&self, index: i32) -> Ptr<MSEdge> {
-        todo!("port MSRoute::operator[]")
+        self.myEdges[index as usize]
     }
 
     /// C++: `void MSRoute::dict_saveState(OutputDevice &)` [static]
@@ -288,7 +301,8 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dict_clear_state() {
-        todo!("port MSRoute::dict_clearState")
+        MY_DIST_DICT.with(|d| d.borrow_mut().clear());
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `const ConstMSEdgeVector & MSRoute::getEdges() const` [const]
@@ -298,7 +312,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &ConstMSEdgeVector {
-        todo!("port MSRoute::getEdges")
+        &self.myEdges
     }
 
     /// C++: `double MSRoute::getDistanceBetween(double, double, const MSLane *, const MSLane *, int) const` [const]
@@ -406,7 +420,10 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_color(&self) -> &RGBColor {
-        todo!("port MSRoute::getColor")
+        if self.myColor.is_null() {
+            return &RGBColor::DEFAULT_COLOR;
+        }
+        self.myColor.get().unwrap()
     }
 
     /// C++: `SUMOTime MSRoute::getPeriod() const` [const]
@@ -416,7 +433,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_period(&self) -> SUMOTime {
-        todo!("port MSRoute::getPeriod")
+        self.myPeriod
     }
 
     /// C++: `double MSRoute::getCosts() const` [const]
@@ -426,7 +443,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_costs(&self) -> f64 {
-        todo!("port MSRoute::getCosts")
+        self.myCosts
     }
 
     /// C++: `double MSRoute::getSavings() const` [const]
@@ -436,7 +453,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_savings(&self) -> f64 {
-        todo!("port MSRoute::getSavings")
+        self.mySavings
     }
 
     /// C++: `SUMOTime MSRoute::getReplacedTime() const` [const]
@@ -446,7 +463,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_replaced_time(&self) -> SUMOTime {
-        todo!("port MSRoute::getReplacedTime")
+        self.myReplacedTime
     }
 
     /// C++: `int MSRoute::getReplacedIndex() const` [const]
@@ -456,7 +473,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_replaced_index(&self) -> i32 {
-        todo!("port MSRoute::getReplacedIndex")
+        self.myReplacedIndex
     }
 
     /// C++: `void MSRoute::setPeriod(SUMOTime)`
@@ -466,7 +483,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn set_period(&mut self, period: SUMOTime) {
-        todo!("port MSRoute::setPeriod")
+        self.myPeriod = period;
     }
 
     /// C++: `void MSRoute::setCosts(double)`
@@ -476,7 +493,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn set_costs(&mut self, costs: f64) {
-        todo!("port MSRoute::setCosts")
+        self.myCosts = costs;
     }
 
     /// C++: `void MSRoute::setSavings(double)`
@@ -486,7 +503,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn set_savings(&mut self, savings: f64) {
-        todo!("port MSRoute::setSavings")
+        self.mySavings = savings;
     }
 
     /// C++: `bool MSRoute::mustReroute() const` [const]
@@ -495,7 +512,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn must_reroute(&self) -> bool {
-        todo!("port MSRoute::mustReroute")
+        self.myReroute
     }
 
     /// C++: `void MSRoute::setReroute(bool)`
@@ -504,7 +521,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn set_reroute(&mut self, reroute: bool) {
-        todo!("port MSRoute::setReroute")
+        self.myReroute = reroute;
     }
 
     /// C++: `const StopParVector & MSRoute::getStops() const` [const]
@@ -515,7 +532,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_stops(&self) -> &StopParVector {
-        todo!("port MSRoute::getStops")
+        &self.myStops
     }
 
     /// C++: `bool MSRoute::dictionary(const std::string &, ConstMSRoutePtr)` [static]
@@ -672,7 +689,8 @@ impl MSRoute {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSRoute) -> &mut MSRoute {
-        todo!("port MSRoute::operator=")
+        // C++ declares the assignment operator private and never defines it: unreachable in C++
+        panic!("MSRoute assignment operator is invalidated")
     }
 
 }
