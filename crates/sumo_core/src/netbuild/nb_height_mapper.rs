@@ -1,9 +1,17 @@
 //! Port of netbuild/NBHeightMapper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{progress_begin_message, with_instance, write_error, write_warning, MsgType};
+use utils::common::std_defs::g_precision;
+use utils::common::util_exceptions::ProcessError;
+use utils::{write_errorf, write_warningf};
+thread_local! {
+    /// C++ `static NBHeightMapper NBHeightMapper::myInstance` (leaked once per thread, like a static)
+    static MY_INSTANCE: Ptr<NBHeightMapper> = Ptr::from_raw(Box::into_raw(Box::new(NBHeightMapper::new())));
+}
 
 /// C++ typedef `std::vector<const Triangle *> NBHeightMapper::Triangles`
-pub type NBHeightMapper_Triangles = Vec<Ptr<Triangle>>;
+pub type NBHeightMapper_Triangles = Vec<Ptr<NBHeightMapper_Triangle>>;
 
 /// Set z-values for all network positions based on data from a height map
 /// C++ class `NBHeightMapper` (netbuild/NBHeightMapper.h)
@@ -52,7 +60,26 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn load_if_set(oc: &mut OptionsCont) {
-        todo!("port NBHeightMapper::loadIfSet")
+        if oc.is_set("heightmap.geotiff", true).unwrap() {
+            // parse file(s)
+            let files = oc.get_string_vector("heightmap.geotiff").unwrap().clone();
+            for file in files.iter() {
+                progress_begin_message(&format!("Parsing from GeoTIFF '{}'", file));
+                let num_features = MY_INSTANCE.with(|p| p.m().load_tiff(file));
+                let boundary = MY_INSTANCE.with(|p| p.m().get_boundary().to_string_prec(g_precision()));
+                with_instance(MsgType::Message, |h| h.end_process_msg(&format!(" done (parsed {} features, Boundary: {}).", num_features, boundary)));
+            }
+        }
+        if oc.is_set("heightmap.shapefiles", true).unwrap() {
+            // parse file(s)
+            let files = oc.get_string_vector("heightmap.shapefiles").unwrap().clone();
+            for file in files.iter() {
+                progress_begin_message(&format!("Parsing from shape-file '{}'", file));
+                let num_features = MY_INSTANCE.with(|p| p.m().load_shape_file(file));
+                let boundary = MY_INSTANCE.with(|p| p.m().get_boundary().to_string_prec(g_precision()));
+                with_instance(MsgType::Message, |h| h.end_process_msg(&format!(" done (parsed {} features, Boundary: {}).", num_features, boundary)));
+            }
+        }
     }
 
     /// C++: `const NBHeightMapper & NBHeightMapper::get()` [static]
@@ -63,7 +90,7 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn get() -> &'static NBHeightMapper {
-        todo!("port NBHeightMapper::get")
+        MY_INSTANCE.with(|p| p.get().expect("NBHeightMapper instance is never null"))
     }
 
     /// C++: `bool NBHeightMapper::ready() const` [const]
@@ -74,7 +101,7 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn ready(&self) -> bool {
-        todo!("port NBHeightMapper::ready")
+        !self.myRasters.is_empty() || !self.myTriangles.is_empty()
     }
 
     /// C++: `const Boundary & NBHeightMapper::getBoundary()`
@@ -84,7 +111,7 @@ impl NBHeightMapper {
     //     }
     #[allow(unused_variables)]
     pub fn get_boundary(&mut self) -> &Boundary {
-        todo!("port NBHeightMapper::getBoundary")
+        &self.myBoundary
     }
 
     /// C++: `double NBHeightMapper::getZ(const Position &) const` [const]
@@ -163,7 +190,51 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn get_z(&self, geo: &Position) -> f64 {
-        todo!("port NBHeightMapper::getZ")
+        if !self.ready() {
+            write_warning("Cannot supply height since no height data was loaded");
+            return 0.;
+        }
+        for item in self.myRasters.iter() {
+            let boundary = &item.boundary;
+            let raster = item.raster;
+            let mut result = -1e6;
+            // shortcut: the HAVE_GDAL coordinate transform is skipped; rasters only come from loadTiff, which needs GDAL (not ported)
+            let x = geo.x();
+            let y = geo.y();
+            if boundary.around2d_xy(x, y) {
+                let x_size = item.xSize;
+                let norm_x = (x - boundary.xmin()) / self.mySizeOfPixel.x();
+                let norm_y = (y - boundary.ymax()) / self.mySizeOfPixel.y();
+                let at = |i: i32| unsafe { *raster.as_raw().offset(i as isize) };
+                let ix = norm_x as i32;
+                let iy = norm_y as i32;
+                let mut corners = PositionVector::new();
+                corners.0.push(Position::new3(norm_x.floor() + 0.5, norm_y.floor() + 0.5, at(iy * x_size + ix) as f64));
+                if norm_x - norm_x.floor() > 0.5 {
+                    corners.0.push(Position::new3(norm_x.floor() + 1.5, norm_y.floor() + 0.5, at(iy * x_size + ix + 1) as f64));
+                } else {
+                    corners.0.push(Position::new3(norm_x.floor() - 0.5, norm_y.floor() + 0.5, at(iy * x_size + ix - 1) as f64));
+                }
+                if norm_y - norm_y.floor() > 0.5 && (iy + 1) < item.ySize {
+                    corners.0.push(Position::new3(norm_x.floor() + 0.5, norm_y.floor() + 1.5, at((iy + 1) * x_size + ix) as f64));
+                } else {
+                    corners.0.push(Position::new3(norm_x.floor() + 0.5, norm_y.floor() - 0.5, at((iy - 1) * x_size + ix) as f64));
+                }
+                result = NBHeightMapper_Triangle::new(&corners).get_z(&Position::new(norm_x, norm_y));
+            }
+            if result > -1e5 && result < 1e5 {
+                return result;
+            }
+        }
+        // coordinates in degrees hence a small search window
+        // shortcut: C++ queries myRTree with a 1e-5 window; the RTree is not wired (triangles only come from GDAL shapefiles), so all triangles are scanned in insertion order
+        for triangle in self.myTriangles.iter() {
+            if triangle.contains(geo) {
+                return triangle.get_z(geo);
+            }
+        }
+        write_warningf!("Could not get height data for coordinate %", geo);
+        0.
     }
 
     /// C++: `void NBHeightMapper::NBHeightMapper()` [private]
@@ -173,7 +244,13 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBHeightMapper::NBHeightMapper")
+        NBHeightMapper {
+            myTriangles: Vec::new(),
+            myRTree: (), // shortcut: RTree not ported, see addTriangle
+            myRasters: Vec::new(),
+            mySizeOfPixel: Position::default(),
+            myBoundary: Boundary::default(),
+        }
     }
 
     /// C++: `void NBHeightMapper::~NBHeightMapper() noexcept` [private]
@@ -182,7 +259,7 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBHeightMapper::~NBHeightMapper")
+        self.clear_data();
     }
 
     /// C++: `void NBHeightMapper::addTriangle(PositionVector)` [private]
@@ -198,7 +275,8 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn add_triangle(&mut self, corners: PositionVector) {
-        todo!("port NBHeightMapper::addTriangle")
+        // shortcut: C++ also inserts the triangle's box into myRTree; the RTree is not wired because triangles only come from GDAL shapefiles (not ported), getZ scans myTriangles instead
+        self.myTriangles.push(Ptr::from_raw(Box::into_raw(Box::new(NBHeightMapper_Triangle::new(&corners)))));
     }
 
     /// C++: `int NBHeightMapper::loadShapeFile(const std::string &)` [private]
@@ -310,7 +388,9 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn load_shape_file(&mut self, file: &str) -> i32 {
-        todo!("port NBHeightMapper::loadShapeFile")
+        // shortcut: GDAL shapefile loading is not ported; report like a build compiled without GDAL, upgrade when a shapefile reader lands
+        write_error("Cannot load shape file since SUMO was compiled without GDAL support.");
+        0
     }
 
     /// C++: `int NBHeightMapper::loadTiff(const std::string &)` [private]
@@ -392,7 +472,9 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn load_tiff(&mut self, file: &str) -> i32 {
-        todo!("port NBHeightMapper::loadTiff")
+        // shortcut: GDAL GeoTIFF loading is not ported; report like a build compiled without GDAL, upgrade when a GeoTIFF reader lands
+        write_error("Cannot load GeoTIFF file since SUMO was compiled without GDAL support.");
+        0
     }
 
     /// C++: `void NBHeightMapper::clearData()` [private]
@@ -416,7 +498,11 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn clear_data(&mut self) {
-        todo!("port NBHeightMapper::clearData")
+        for t in self.myTriangles.drain(..) {
+            drop(unsafe { Box::from_raw(t.as_raw()) });
+        }
+        // myRasters is only filled with GDAL, so there is nothing to free here
+        self.myBoundary.reset();
     }
 
     /// C++: `void NBHeightMapper::NBHeightMapper(const NBHeightMapper &)` [private]
@@ -424,7 +510,7 @@ impl NBHeightMapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NBHeightMapper) -> Self {
-        todo!("port NBHeightMapper::NBHeightMapper")
+        unreachable!("NBHeightMapper copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NBHeightMapper & NBHeightMapper::operator=(const NBHeightMapper &)` [private]
@@ -432,7 +518,7 @@ impl NBHeightMapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NBHeightMapper) -> &mut NBHeightMapper {
-        todo!("port NBHeightMapper::operator=")
+        unreachable!("NBHeightMapper assignment operator is private and invalidated in C++")
     }
 
 }
@@ -448,14 +534,14 @@ impl NBHeightMapper_QueryResult {
     // QueryResult() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port QueryResult::QueryResult")
+        NBHeightMapper_QueryResult { triangles: Vec::new() }
     }
 
     /// C++: `void QueryResult::~QueryResult() noexcept`
     // ~QueryResult() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port QueryResult::~QueryResult")
+        // C++ destructor is empty; the Vec owns no triangles
     }
 
     /// C++: `void QueryResult::add(Triangle *) const` [const]
@@ -463,8 +549,8 @@ impl NBHeightMapper_QueryResult {
     //             triangles.push_back(triangle);
     //         }
     #[allow(unused_variables)]
-    pub fn add(&self, triangle: Ptr<Triangle>) {
-        todo!("port QueryResult::add")
+    pub fn add(&mut self, triangle: Ptr<NBHeightMapper_Triangle>) {
+        self.triangles.push(triangle);
     }
 
 }
@@ -495,14 +581,15 @@ impl NBHeightMapper_Triangle {
     // }
     #[allow(unused_variables)]
     pub fn new(corners: &PositionVector) -> Self {
-        todo!("port Triangle::Triangle")
+        debug_assert_eq!(corners.len(), 3);
+        NBHeightMapper_Triangle { myCorners: corners.clone() }
     }
 
     /// C++: `void Triangle::~Triangle() noexcept`
     // ~Triangle() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Triangle::~Triangle")
+        // C++ destructor is empty
     }
 
     /// C++: `void Triangle::addSelf(const QueryResult &) const` [const]
@@ -512,8 +599,8 @@ impl NBHeightMapper_Triangle {
     //     queryResult.triangles.push_back(this);
     // }
     #[allow(unused_variables)]
-    pub fn add_self(&self, queryResult: &NBHeightMapper_QueryResult) {
-        todo!("port Triangle::addSelf")
+    pub fn add_self(&self, query_result: &mut NBHeightMapper_QueryResult) {
+        query_result.add(Ptr::new(self));
     }
 
     /// C++: `bool Triangle::contains(const Position &) const` [const]
@@ -524,7 +611,7 @@ impl NBHeightMapper_Triangle {
     // }
     #[allow(unused_variables)]
     pub fn contains(&self, pos: &Position) -> bool {
-        todo!("port Triangle::contains")
+        self.myCorners.around(pos, 0.)
     }
 
     /// C++: `double Triangle::getZ(const Position &) const` [const]
@@ -540,7 +627,12 @@ impl NBHeightMapper_Triangle {
     // }
     #[allow(unused_variables)]
     pub fn get_z(&self, geo: &Position) -> f64 {
-        todo!("port Triangle::getZ")
+        // en.wikipedia.org/wiki/Line-plane_intersection
+        let mut p0 = *self.myCorners.front();
+        let line = Position::new3(0., 0., 1.);
+        p0.sub(geo); // p0 - l0
+        let normal = self.normal_vector();
+        p0.dot_product(&normal) / line.dot_product(&normal)
     }
 
     /// C++: `Position Triangle::normalVector() const` [const]
@@ -554,7 +646,10 @@ impl NBHeightMapper_Triangle {
     // }
     #[allow(unused_variables)]
     pub fn normal_vector(&self) -> Position {
-        todo!("port Triangle::normalVector")
+        // @todo maybe cache result to avoid multiple computations?
+        let side1 = self.myCorners[1] - self.myCorners[0];
+        let side2 = self.myCorners[2] - self.myCorners[0];
+        side1.cross_product(&side2)
     }
 
 }
