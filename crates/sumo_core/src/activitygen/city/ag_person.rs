@@ -17,7 +17,7 @@ impl AGPerson {
     // }
     #[allow(unused_variables)]
     pub fn get_age(&self) -> i32 {
-        todo!("port AGPerson::getAge")
+        self.age
     }
 
     /// C++: `bool AGPerson::decide(double) const` [const, virtual]
@@ -28,7 +28,7 @@ impl AGPerson {
     // }
     #[allow(unused_variables)]
     pub fn decide(&self, probability: f64) -> bool {
-        todo!("port AGPerson::decide")
+        utils::common::rand_helper::with_default(|r| r.rand_int(1000)) < (1000.0 * probability) as i32
     }
 
     /// C++: `void AGPerson::print() const` [const, virtual]
@@ -39,7 +39,7 @@ impl AGPerson {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGPerson::print")
+        println!("- Person: Age={}", self.age);
     }
 
     /// C++: `void AGPerson::AGPerson(int)` [protected]
@@ -47,7 +47,7 @@ impl AGPerson {
     // AGPerson::AGPerson(int age) : age(age) {}
     #[allow(unused_variables)]
     pub fn new(age: i32) -> Self {
-        todo!("port AGPerson::AGPerson")
+        AGPerson { age }
     }
 
     /// C++: `void AGPerson::~AGPerson() noexcept` [virtual, protected]
@@ -55,7 +55,7 @@ impl AGPerson {
     // AGPerson::~AGPerson() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AGPerson::~AGPerson")
+        // nothing to release: all members are owned values
     }
 
 }

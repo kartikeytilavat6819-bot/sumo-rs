@@ -30,7 +30,7 @@ impl AGAdult {
     //     : AGPerson(age), work(nullptr) {}
     #[allow(unused_variables)]
     pub fn new(age: i32) -> Self {
-        todo!("port AGAdult::AGAdult")
+        AGAdult { base: AGPerson::new(age), work: Ptr::null() }
     }
 
     /// C++: `void AGAdult::print() const` [const, virtual]
@@ -41,7 +41,8 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGAdult::print")
+        let work = if self.work.is_null() { "0".to_string() } else { format!("{:p}", self.work.as_raw()) };
+        println!("- AGAdult: Age={} Work={}", self.age, work);
     }
 
     /// C++: `bool AGAdult::isWorking() const` [const]
@@ -52,7 +53,7 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn is_working(&self) -> bool {
-        todo!("port AGAdult::isWorking")
+        !self.work.is_null()
     }
 
     /// C++: `void AGAdult::tryToWork(double, std::vector<AGWorkPosition> *)`
@@ -80,7 +81,25 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn try_to_work(&mut self, employmentRate: f64, wps: Ptr<Vec<AGWorkPosition>>) {
-        todo!("port AGAdult::tryToWork")
+        if self.decide(employmentRate) {
+            // Select the new work position before giving up the current one.
+            // This avoids that the current one is the same as the new one.
+            let newWork = Self::random_free_work_position(wps);
+
+            if !self.work.is_null() {
+                self.work.m().let_();
+            }
+            self.work = newWork;
+            let me = Ptr::from_mut(self);
+            if !self.work.is_null() {
+                self.work.m().take(me);
+            }
+        } else {
+            if !self.work.is_null() {
+                // Also sets work = 0 with the call back lostWorkPosition
+                self.work.m().let_();
+            }
+        }
     }
 
     /// C++: `void AGAdult::lostWorkPosition()`
@@ -91,7 +110,7 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn lost_work_position(&mut self) {
-        todo!("port AGAdult::lostWorkPosition")
+        self.work = Ptr::null();
     }
 
     /// C++: `void AGAdult::resignFromWorkPosition()`
@@ -104,7 +123,9 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn resign_from_work_position(&mut self) {
-        todo!("port AGAdult::resignFromWorkPosition")
+        if !self.work.is_null() {
+            self.work.m().let_();
+        }
     }
 
     /// C++: `const AGWorkPosition & AGAdult::getWorkPosition() const` [const]
@@ -118,7 +139,11 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn get_work_position(&self) -> &AGWorkPosition {
-        todo!("port AGAdult::getWorkPosition")
+        if !self.work.is_null() {
+            return &*self.work;
+        }
+        // shortcut: C++ throws ProcessError here; panics until callers can take a Result, upgrade with the callers
+        panic!("{}", ProcessError::new("AGAdult::getWorkPosition: Adult is unemployed."));
     }
 
     /// C++: `AGWorkPosition * AGAdult::randomFreeWorkPosition(std::vector<AGWorkPosition> *)` [static, private]
@@ -138,7 +163,16 @@ impl AGAdult {
     // }
     #[allow(unused_variables)]
     pub fn random_free_work_position(wps: Ptr<Vec<AGWorkPosition>>) -> Ptr<AGWorkPosition> {
-        todo!("port AGAdult::randomFreeWorkPosition")
+        let mut freePos: Vec<Ptr<AGWorkPosition>> = Vec::new();
+    for i in wps.m().iter_mut() {
+        if !i.is_taken() {
+            freePos.push(Ptr::from_mut(i));
+        }
+    }
+    if freePos.is_empty() {
+        return Ptr::null();
+    }
+    utils::common::rand_helper::with_default(|r| *r.get_random_from(&freePos))
     }
 
 }

@@ -13,7 +13,7 @@ impl AGTime {
     //         mySeconds(seconds) {}
     #[allow(unused_variables)]
     pub fn new(seconds: i32) -> Self {
-        todo!("port AGTime::AGTime")
+        AGTime { mySeconds: seconds }
     }
 
     /// C++: `void AGTime::AGTime(int, int)`
@@ -21,7 +21,9 @@ impl AGTime {
     //         mySeconds(convert(0, hour, minutes, 0)) {}
     #[allow(unused_variables)]
     pub fn new_2(hour: i32, minutes: i32) -> Self {
-        todo!("port AGTime::AGTime")
+        let mut t = AGTime { mySeconds: 0 };
+        t.convert(0, hour, minutes, 0);
+        t
     }
 
     /// C++: `void AGTime::AGTime(int, int, int)`
@@ -29,7 +31,9 @@ impl AGTime {
     //         mySeconds(convert(day, hour, min, 0)) {}
     #[allow(unused_variables)]
     pub fn new_3(day: i32, hour: i32, min: i32) -> Self {
-        todo!("port AGTime::AGTime")
+        let mut t = AGTime { mySeconds: 0 };
+        t.convert(day, hour, min, 0);
+        t
     }
 
     /// C++: `void AGTime::AGTime(int, int, int, int)`
@@ -37,7 +41,9 @@ impl AGTime {
     //         mySeconds(convert(day, hour, min, sec)) {}
     #[allow(unused_variables)]
     pub fn new_4(day: i32, hour: i32, min: i32, sec: i32) -> Self {
-        todo!("port AGTime::AGTime")
+        let mut t = AGTime { mySeconds: 0 };
+        t.convert(day, hour, min, sec);
+        t
     }
 
     /// C++: `void AGTime::AGTime(const AGTime &)`
@@ -46,7 +52,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn new_5(time: &AGTime) -> Self {
-        todo!("port AGTime::AGTime")
+        AGTime { mySeconds: time.mySeconds }
     }
 
     /// C++: `bool AGTime::operator==(const AGTime &)`
@@ -60,7 +66,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn eq_op(&mut self, time: &AGTime) -> bool {
-        todo!("port AGTime::operator==")
+        if self.mySeconds == time.mySeconds {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool AGTime::operator<(const AGTime &)`
@@ -74,7 +84,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn lt_op(&mut self, time: &AGTime) -> bool {
-        todo!("port AGTime::operator<")
+        if self.mySeconds < time.mySeconds {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool AGTime::operator<=(const AGTime &)`
@@ -88,7 +102,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn le_op(&mut self, time: &AGTime) -> bool {
-        todo!("port AGTime::operator<=")
+        if self.mySeconds <= time.mySeconds {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `void AGTime::operator+=(const AGTime &)`
@@ -98,7 +116,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_assign_op(&mut self, time: &AGTime) {
-        todo!("port AGTime::operator+=")
+        self.mySeconds += time.mySeconds;
     }
 
     /// C++: `void AGTime::operator+=(int)`
@@ -108,7 +126,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_assign_op_2(&mut self, seconds: i32) {
-        todo!("port AGTime::operator+=")
+        self.mySeconds += seconds;
     }
 
     /// C++: `void AGTime::operator-=(const AGTime &)`
@@ -118,7 +136,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn sub_assign_op(&mut self, time: &AGTime) {
-        todo!("port AGTime::operator-=")
+        self.mySeconds -= time.mySeconds;
     }
 
     /// C++: `AGTime AGTime::operator+(const AGTime &)`
@@ -129,7 +147,8 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_op(&mut self, time: &AGTime) -> AGTime {
-        todo!("port AGTime::operator+")
+        let newtime = AGTime { mySeconds: time.mySeconds + self.mySeconds };
+        newtime
     }
 
     /// C++: `int AGTime::getDay()`
@@ -140,7 +159,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_day(&mut self) -> i32 {
-        todo!("port AGTime::getDay")
+        self.mySeconds / 86400
     }
 
     /// C++: `int AGTime::getHour()`
@@ -150,7 +169,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_hour(&mut self) -> i32 {
-        todo!("port AGTime::getHour")
+        (self.mySeconds / 3600) % 24
     }
 
     /// C++: `int AGTime::getMinute()`
@@ -160,7 +179,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_minute(&mut self) -> i32 {
-        todo!("port AGTime::getMinute")
+        (self.mySeconds / 60) % 60
     }
 
     /// C++: `int AGTime::getSecond()`
@@ -170,7 +189,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_second(&mut self) -> i32 {
-        todo!("port AGTime::getSecond")
+        self.mySeconds % 60
     }
 
     /// C++: `int AGTime::getSecondsInCurrentDay()`
@@ -180,7 +199,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_seconds_in_current_day(&mut self) -> i32 {
-        todo!("port AGTime::getSecondsInCurrentDay")
+        self.mySeconds % 86400
     }
 
     /// C++: `int AGTime::getTime()`
@@ -191,7 +210,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_time(&mut self) -> i32 {
-        todo!("port AGTime::getTime")
+        self.mySeconds
     }
 
     /// C++: `void AGTime::setDay(int)`
@@ -204,7 +223,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn set_day(&mut self, d: i32) {
-        todo!("port AGTime::setDay")
+        if 0 <= d {
+            let cur = self.get_day();
+            self.mySeconds -= 86400 * cur;
+            self.mySeconds += 86400 * d;
+        }
     }
 
     /// C++: `void AGTime::setHour(int)`
@@ -217,7 +240,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn set_hour(&mut self, h: i32) {
-        todo!("port AGTime::setHour")
+        if 0 <= h && h < 24 {
+            let cur = self.get_hour();
+            self.mySeconds -= 3600 * cur;
+            self.mySeconds += 3600 * h;
+        }
     }
 
     /// C++: `void AGTime::setMinute(int)`
@@ -230,7 +257,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn set_minute(&mut self, m: i32) {
-        todo!("port AGTime::setMinute")
+        if 0 <= m && m < 60 {
+            let cur = self.get_minute();
+            self.mySeconds -= 60 * cur;
+            self.mySeconds += 60 * m;
+        }
     }
 
     /// C++: `void AGTime::setSecond(int)`
@@ -243,7 +274,11 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn set_second(&mut self, s: i32) {
-        todo!("port AGTime::setSecond")
+        if 0 <= s && s < 60 {
+            let cur = self.get_second();
+            self.mySeconds -= cur;
+            self.mySeconds += s;
+        }
     }
 
     /// C++: `void AGTime::setTime(int)`
@@ -254,7 +289,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn set_time(&mut self, sec: i32) {
-        todo!("port AGTime::setTime")
+        self.mySeconds = sec;
     }
 
     /// C++: `void AGTime::addSeconds(int)`
@@ -265,7 +300,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_seconds(&mut self, sec: i32) {
-        todo!("port AGTime::addSeconds")
+        self.mySeconds += sec;
     }
 
     /// C++: `void AGTime::addMinutes(int)`
@@ -276,7 +311,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_minutes(&mut self, min: i32) {
-        todo!("port AGTime::addMinutes")
+        self.mySeconds += 60 * min;
     }
 
     /// C++: `void AGTime::addHours(int)`
@@ -287,7 +322,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_hours(&mut self, hours: i32) {
-        todo!("port AGTime::addHours")
+        self.mySeconds += 3600 * hours;
     }
 
     /// C++: `void AGTime::addDays(int)`
@@ -298,7 +333,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn add_days(&mut self, days: i32) {
-        todo!("port AGTime::addDays")
+        self.mySeconds += 86400 * days;
     }
 
     /// C++: `int AGTime::getSecondsOf(double)`
@@ -309,7 +344,7 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn get_seconds_of(&mut self, minutes: f64) -> i32 {
-        todo!("port AGTime::getSecondsOf")
+        (60.0 * minutes) as i32
     }
 
     /// C++: `int AGTime::convert(int, int, int, int)` [private]
@@ -321,7 +356,8 @@ impl AGTime {
     // }
     #[allow(unused_variables)]
     pub fn convert(&mut self, days: i32, hours: i32, minutes: i32, seconds: i32) -> i32 {
-        todo!("port AGTime::convert")
+        self.mySeconds = seconds + 60 * (minutes + 60 * (hours + 24 * (days)));
+        self.mySeconds
     }
 
 }

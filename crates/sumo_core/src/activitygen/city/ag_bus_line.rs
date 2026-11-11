@@ -19,7 +19,15 @@ impl AGBusLine {
     //         lineNumber(lineNr) {}
     #[allow(unused_variables)]
     pub fn new(lineNr: String) -> Self {
-        todo!("port AGBusLine::AGBusLine")
+        AGBusLine {
+            stations: VecDeque::new(),
+            revStations: VecDeque::new(),
+            buses: VecDeque::new(),
+            revBuses: VecDeque::new(),
+            lineNumber: lineNr,
+            maxTripTime: 0,
+            busNbr: 0,
+        }
     }
 
     /// C++: `void AGBusLine::setMaxTripTime(int)`
@@ -29,7 +37,7 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn set_max_trip_time(&mut self, time: i32) {
-        todo!("port AGBusLine::setMaxTripTime")
+        self.maxTripTime = time;
     }
 
     /// C++: `void AGBusLine::setBusNames()`
@@ -93,7 +101,85 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn set_bus_names(&mut self) {
-        todo!("port AGBusLine::setBusNames")
+        self.busNbr = 0;
+        let mut it1: usize = 0; //iterator on buses in the first direction
+        let mut it2: usize = 0; //iterator on buses in the second direction
+
+        // buses on the road or in the parking of the corresponding end: int: the time of availability
+        let mut drivingBuses1: VecDeque<(i32, String)> = VecDeque::new();
+        let mut drivingBuses2: VecDeque<(i32, String)> = VecDeque::new();
+
+        while it1 != self.buses.len() && it2 != self.revBuses.len() {
+            if self.buses[it1].get_departure() > self.revBuses[it2].get_departure() {
+                if drivingBuses2.is_empty() {
+                    let d = self.revBuses[it2].get_departure();
+                    let n = self.create_name();
+                    drivingBuses2.push_front((d, n));
+                } else if drivingBuses2.front().unwrap().0 > self.revBuses[it2].get_departure() {
+                    let d = self.revBuses[it2].get_departure();
+                    let n = self.create_name();
+                    drivingBuses2.push_front((d, n));
+                }
+                //here the first in drivingBuses2 is available for the trip
+                let name = drivingBuses2.front().unwrap().1.clone();
+                self.revBuses[it2].set_name(name);
+                drivingBuses2.pop_front();
+                //the same bus will be available for the main direction after some time (see function getReady):
+                let dep = self.revBuses[it2].get_departure();
+                let ready = self.get_ready(dep);
+                let nm = self.revBuses[it2].get_name();
+                drivingBuses1.push_back((ready, nm));
+                it2 += 1;
+            } else {
+                if drivingBuses1.is_empty() {
+                    let d = self.buses[it1].get_departure();
+                    let n = self.create_name();
+                    drivingBuses1.push_front((d, n));
+                } else if drivingBuses1.front().unwrap().0 > self.buses[it1].get_departure() {
+                    let d = self.buses[it1].get_departure();
+                    let n = self.create_name();
+                    drivingBuses1.push_front((d, n));
+                }
+                //here the first in drivingBuses1 is available for the trip
+                let name = drivingBuses1.front().unwrap().1.clone();
+                self.buses[it1].set_name(name);
+                drivingBuses1.pop_front();
+                //the same bus will be available for the return way after some time (see function getReady):
+                let dep = self.buses[it1].get_departure();
+                let ready = self.get_ready(dep);
+                let nm = self.buses[it1].get_name();
+                drivingBuses2.push_back((ready, nm));
+                it1 += 1;
+            }
+        }
+        if it1 != self.buses.len() {
+            if drivingBuses1.is_empty() {
+                let n = self.create_name();
+                self.buses[it1].set_name(n);
+            } else if drivingBuses1.front().unwrap().0 > self.buses[it1].get_departure() {
+                let n = self.create_name();
+                self.buses[it1].set_name(n);
+            } else {
+                let name = drivingBuses1.front().unwrap().1.clone();
+                self.buses[it1].set_name(name);
+                drivingBuses1.pop_front();
+            }
+            it1 += 1;
+        }
+        if it2 != self.revBuses.len() {
+            if drivingBuses2.is_empty() {
+                let n = self.create_name();
+                self.revBuses[it2].set_name(n);
+            } else if drivingBuses2.front().unwrap().0 > self.revBuses[it2].get_departure() {
+                let n = self.create_name();
+                self.revBuses[it2].set_name(n);
+            } else {
+                let name = drivingBuses2.front().unwrap().1.clone();
+                self.revBuses[it2].set_name(name);
+                drivingBuses2.pop_front();
+            }
+            it2 += 1;
+        }
     }
 
     /// C++: `int AGBusLine::nbrBuses()`
@@ -103,7 +189,7 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn nbr_buses(&mut self) -> i32 {
-        todo!("port AGBusLine::nbrBuses")
+        self.buses.len() as i32
     }
 
     /// C++: `void AGBusLine::locateStation(AGPosition)`
@@ -113,7 +199,7 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn locate_station(&mut self, pos: AGPosition) {
-        todo!("port AGBusLine::locateStation")
+        self.stations.push_back(pos);
     }
 
     /// C++: `void AGBusLine::locateRevStation(AGPosition)`
@@ -123,7 +209,7 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn locate_rev_station(&mut self, pos: AGPosition) {
-        todo!("port AGBusLine::locateRevStation")
+        self.revStations.push_back(pos);
     }
 
     /// C++: `void AGBusLine::generateBuses(int, int, int)`
@@ -138,7 +224,12 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn generate_buses(&mut self, start: i32, stop: i32, rate: i32) {
-        todo!("port AGBusLine::generateBuses")
+        let mut t = start;
+        while t < stop {
+            self.buses.push_back(AGBus::new_2(t)); //one direction
+            self.revBuses.push_back(AGBus::new_2(t)); //return direction
+            t += rate;
+        }
     }
 
     /// C++: `void AGBusLine::printBuses()`
@@ -158,7 +249,16 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn print_buses(&mut self) {
-        todo!("port AGBusLine::printBuses")
+        println!("\n ----------- BUS LINE {} PRINTING -------------\n", self.lineNumber);
+        println!("\n -------------------------- First way ---------------------------\n");
+        for it in self.buses.iter() {
+            it.print();
+        }
+        println!("\n -------------------------- Second way --------------------------\n");
+        for it in self.revBuses.iter() {
+            it.print();
+        }
+        println!("\n ----------------------------------------------------------------\n");
     }
 
     /// C++: `std::string AGBusLine::createName()` [private]
@@ -172,7 +272,8 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn create_name(&mut self) -> String {
-        todo!("port AGBusLine::createName")
+        self.busNbr += 1; //initialized in setBusNames()
+        format!("bl{}b{}", self.lineNumber, self.busNbr)
     }
 
     /// C++: `int AGBusLine::getReady(int)` [private]
@@ -186,7 +287,10 @@ impl AGBusLine {
     // }
     #[allow(unused_variables)]
     pub fn get_ready(&mut self, time: i32) -> i32 {
-        todo!("port AGBusLine::getReady")
+        let mut current = AGTime::new(time);
+        current.add_seconds(self.maxTripTime);
+        current.add_minutes(15); // PAUSE_TIME: time (in minutes) a bus waits before going in the opposite direction
+        current.get_time()
     }
 
 }

@@ -15,7 +15,7 @@ impl AGBus {
     //         myDepartureTime(depTime) {}
     #[allow(unused_variables)]
     pub fn new(name: String, depTime: i32) -> Self {
-        todo!("port AGBus::AGBus")
+        AGBus { myName: name, myDepartureTime: depTime }
     }
 
     /// C++: `void AGBus::AGBus(int)`
@@ -23,7 +23,7 @@ impl AGBus {
     //         myDepartureTime(depTime) {}
     #[allow(unused_variables)]
     pub fn new_2(depTime: i32) -> Self {
-        todo!("port AGBus::AGBus")
+        AGBus { myName: String::new(), myDepartureTime: depTime }
     }
 
     /// C++: `void AGBus::setName(std::string)`
@@ -32,7 +32,7 @@ impl AGBus {
     // }
     #[allow(unused_variables)]
     pub fn set_name(&mut self, name: String) {
-        todo!("port AGBus::setName")
+        self.myName = name;
     }
 
     /// C++: `int AGBus::getDeparture()`
@@ -42,7 +42,7 @@ impl AGBus {
     // }
     #[allow(unused_variables)]
     pub fn get_departure(&mut self) -> i32 {
-        todo!("port AGBus::getDeparture")
+        self.myDepartureTime
     }
 
     /// C++: `std::string AGBus::getName()`
@@ -52,7 +52,7 @@ impl AGBus {
     // }
     #[allow(unused_variables)]
     pub fn get_name(&mut self) -> String {
-        todo!("port AGBus::getName")
+        self.myName.clone()
     }
 
     /// C++: `void AGBus::print() const` [const]
@@ -62,7 +62,7 @@ impl AGBus {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGBus::print")
+        println!("- Bus: name={} depTime={}", self.myName, self.myDepartureTime);
     }
 
 }

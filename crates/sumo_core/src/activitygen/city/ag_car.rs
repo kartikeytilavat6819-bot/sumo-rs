@@ -14,7 +14,7 @@ impl AGCar {
     //         idName(name) {}
     #[allow(unused_variables)]
     pub fn new(name: String) -> Self {
-        todo!("port AGCar::AGCar")
+        AGCar { idName: name, currentUser: Ptr::null() }
     }
 
     /// C++: `void AGCar::AGCar(int, int)`
@@ -22,7 +22,9 @@ impl AGCar {
     //         idName(createName(idHH, idCar)) {}
     #[allow(unused_variables)]
     pub fn new_2(idHH: i32, idCar: i32) -> Self {
-        todo!("port AGCar::AGCar")
+        let mut car = AGCar { idName: String::new(), currentUser: Ptr::null() };
+        car.idName = car.create_name(idHH, idCar);
+        car
     }
 
     /// C++: `bool AGCar::associateTo(AGAdult *)`
@@ -36,7 +38,11 @@ impl AGCar {
     // }
     #[allow(unused_variables)]
     pub fn associate_to(&mut self, pers: Ptr<AGAdult>) -> bool {
-        todo!("port AGCar::associateTo")
+        if self.currentUser.is_null() {
+            self.currentUser = pers;
+            return true;
+        }
+        false
     }
 
     /// C++: `bool AGCar::isAssociated() const` [const]
@@ -46,7 +52,7 @@ impl AGCar {
     // }
     #[allow(unused_variables)]
     pub fn is_associated(&self) -> bool {
-        todo!("port AGCar::isAssociated")
+        !self.currentUser.is_null()
     }
 
     /// C++: `std::string AGCar::getName() const` [const]
@@ -56,7 +62,7 @@ impl AGCar {
     // }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> String {
-        todo!("port AGCar::getName")
+        self.idName.clone()
     }
 
     /// C++: `std::string AGCar::createName(int, int)` [private]
@@ -68,7 +74,7 @@ impl AGCar {
     // }
     #[allow(unused_variables)]
     pub fn create_name(&mut self, idHH: i32, idCar: i32) -> String {
-        todo!("port AGCar::createName")
+        format!("h{}c{}", idHH, idCar)
     }
 
 }
