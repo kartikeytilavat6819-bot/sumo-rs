@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub type MSTrafficLightLogic_LaneVector = Vec<Ptr<MSLane>>;
 
 /// C++ typedef `std::vector<LaneVector> MSTrafficLightLogic::LaneVectorVector`
-pub type MSTrafficLightLogic_LaneVectorVector = Vec<LaneVector>;
+pub type MSTrafficLightLogic_LaneVectorVector = Vec<MSTrafficLightLogic_LaneVector>;
 
 /// C++ typedef `std::vector<MSLink *> MSTrafficLightLogic::LinkVector`
 pub type MSTrafficLightLogic_LinkVector = Vec<Ptr<MSLink>>;

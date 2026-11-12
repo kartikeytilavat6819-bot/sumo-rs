@@ -138,7 +138,8 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
         let thresholdPassed = self.is_threshold_passed();
         let pushButtonPressed = self.is_push_button_pressed();
         let stage = Ptr::new(self.get_current_phase_def());
-        let phase = copy_phase_definition(self.get_current_phase_def());
+        let mut phaseCopy = copy_phase_definition(self.get_current_phase_def());
+        let phase = Ptr::from_mut(&mut phaseCopy);
         let vehicleCount = self.count_vehicles(phase);
         let policy = self.myPolicy;
         policy.m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
@@ -165,7 +166,8 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
         let phaseMaxCTS = self.get_phase_index_with_max_cts();
         let thresholdPassed = self.is_threshold_passed();
         let pushButtonPressed = self.is_push_button_pressed();
-        let phase = copy_phase_definition(self.get_current_phase_def());
+        let mut phaseCopy = copy_phase_definition(self.get_current_phase_def());
+        let phase = Ptr::from_mut(&mut phaseCopy);
         let vehicleCount = self.count_vehicles(phase);
         let policy = self.myPolicy;
         policy.m().decide_next_phase(elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)

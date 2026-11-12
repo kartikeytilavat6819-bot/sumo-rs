@@ -758,7 +758,7 @@ impl MSSOTLTrafficLightLogic {
             equalIndexes[0]
         } else {
             // determinism: RandHelper::getRandomFrom draws from the shared RNG, same as the C++ call.
-            let index = *rand_helper::with_default(|r| *r.get_random_from(&equalIndexes));
+            let index = rand_helper::with_default(|r| *r.get_random_from(&equalIndexes));
             oss.push_str(" phases [");
             for it in &equalIndexes {
                 oss.push_str(&format!("{}, ", it));
