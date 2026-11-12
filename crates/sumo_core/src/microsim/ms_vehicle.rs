@@ -4411,7 +4411,24 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_delay(&self) -> f64 {
-        todo!("port MSVehicle::getStopDelay")
+        if self.has_stops() && self.myStops.front().unwrap().pars.until >= 0 {
+            let stop = self.myStops.front().unwrap();
+            let mut estimatedDepart: SUMOTime = MSNet::get_instance().get_current_time_step() - delta_t();
+            if stop.reached {
+                return steps2time(estimatedDepart + stop.duration - stop.pars.until);
+            }
+            if stop.pars.duration > 0 {
+                estimatedDepart += stop.pars.duration;
+            }
+            estimatedDepart += time2steps(self.estimate_time_to_next_stop().0);
+            let x = steps2time(estimatedDepart - stop.pars.until);
+            let result = if 0.0 > x { 0.0 } else { x }; // MAX2(0.0, ...)
+            return result;
+        } else {
+            // vehicles cannot drive before 'until' so stop delay can never be
+            // negative and we can use -1 to signal "undefined"
+            return -1.0;
+        }
     }
 
     /// C++: `double MSVehicle::getStopArrivalDelay() const` [const, virtual]
@@ -4432,7 +4449,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_arrival_delay(&self) -> f64 {
-        todo!("port MSVehicle::getStopArrivalDelay")
+        if self.has_stops() && self.myStops.front().unwrap().pars.arrival >= 0 {
+            let stop = self.myStops.front().unwrap();
+            if stop.reached {
+                return steps2time(stop.pars.started - stop.pars.arrival);
+            } else {
+                return steps2time(MSNet::get_instance().get_current_time_step()) + self.estimate_time_to_next_stop().0 - steps2time(stop.pars.arrival);
+            }
+        } else {
+            // vehicles can arrive earlier than planned so arrival delay can be negative
+            return utils::common::std_defs::INVALID_DOUBLE;
+        }
     }
 
     /// C++: `double MSVehicle::getAngle() const` [const, virtual]
@@ -4442,7 +4469,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port MSVehicle::getAngle")
+        self.myAngle
     }
 
     /// C++: `double MSVehicle::getCurveRadius() const` [const]
@@ -4456,7 +4483,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_curve_radius(&self) -> f64 {
-        todo!("port MSVehicle::getCurveRadius")
+        let angleDiff = self.get_angle_diff();
+        if angleDiff == 0.0 {
+            f64::MAX
+        } else {
+            speed2dist(self.get_speed()) / angleDiff.abs()
+        }
     }
 
     /// C++: `Position MSVehicle::getVelocityVector() const` [const]
@@ -4466,7 +4498,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_velocity_vector(&self) -> Position {
-        todo!("port MSVehicle::getVelocityVector")
+        Position::new(self.myAngle.cos() * self.myState.speed(), self.myAngle.sin() * self.myState.speed())
     }
 
     /// C++: `double MSVehicle::computeAngle() const` [const]
@@ -4564,7 +4596,21 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_angle(&mut self, angle: f64, straightenFurther: bool) {
-        todo!("port MSVehicle::setAngle")
+        self.myAngle = angle;
+        let mut next = self.myLane;
+        if straightenFurther && self.myFurtherLanesPosLat.len() > 0 {
+            for i in 0..self.myFurtherLanes.len() {
+                let further = self.myFurtherLanes[i];
+                let link = further.get_link_to(next);
+                if !link.is_null() {
+                    let pos = self.get_lateral_position_on_lane() - link.get_lateral_shift();
+                    self.myFurtherLanesPosLat[i] = pos;
+                    next = further;
+                } else {
+                    break;
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::setActionStepLength(double, bool)`
@@ -4586,7 +4632,18 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_action_step_length(&mut self, actionStepLength: f64, resetActionOffset: bool) {
-        todo!("port MSVehicle::setActionStepLength")
+        let actionStepLengthMillisecs: SUMOTime = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::process_action_step_length(actionStepLength);
+        let previousActionStepLength: SUMOTime = self.get_action_step_length();
+        let newActionStepLength = actionStepLengthMillisecs != previousActionStepLength;
+        if newActionStepLength {
+            self.get_singular_type().set_action_step_length(actionStepLengthMillisecs, resetActionOffset);
+            if !resetActionOffset {
+                self.update_action_offset(previousActionStepLength, actionStepLengthMillisecs);
+            }
+        }
+        if resetActionOffset {
+            self.reset_action_offset(0);
+        }
     }
 
     /// C++: `bool MSVehicle::overlap(const MSVehicle *, const MSVehicle *)` [static]
@@ -4599,7 +4656,10 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn overlap(veh1: Ptr<MSVehicle>, veh2: Ptr<MSVehicle>) -> bool {
-        todo!("port MSVehicle::overlap")
+        if veh1.myState.myPos < veh2.myState.myPos {
+            return veh2.myState.myPos - veh2.get_vehicle_type().get_length_with_gap() < veh1.myState.myPos;
+        }
+        veh1.myState.myPos - veh1.get_vehicle_type().get_length_with_gap() < veh2.myState.myPos
     }
 
     /// C++: `bool MSVehicle::congested() const` [const]
@@ -4610,7 +4670,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn congested(&self) -> bool {
-        todo!("port MSVehicle::congested")
+        self.myState.mySpeed < (60.0 / 3.6) || self.myLane.get_speed_limit() < (60.1 / 3.6)
     }
 
     /// C++: `void MSVehicle::enterLaneAtMove(MSLane *, bool)`
