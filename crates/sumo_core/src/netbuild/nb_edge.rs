@@ -3032,7 +3032,18 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn remap_connections(&mut self, incoming: &EdgeVector) {
-        todo!("port NBEdge::remapConnections")
+        let connected = self.get_connected_edges();
+        let this = Ptr::from_mut(&mut *self);
+        for inc in incoming.iter() {
+            let inc = *inc;
+            // We have to do this
+            inc.m().myStep = NBEdge_EdgeBuildingStep::EDGE2EDGES;
+            // add all connections
+            for j in connected.iter() {
+                inc.m().add_edge2_edge_connection(*j, false, SVC_UNSPECIFIED);
+            }
+            inc.m().remove_from_connections(this, -1, -1, false, false, false);
+        }
     }
 
     /// C++: `void NBEdge::removeFromConnections(NBEdge *, int, int, bool, const bool, const bool)`
@@ -3102,8 +3113,59 @@ impl NBEdge {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn remove_from_connections(&mut self, toEdge: Ptr<NBEdge>, fromLane: i32, toLane: i32, tryLater: bool, adaptToLaneRemoval: bool, keepPossibleTurns: bool) {
-        todo!("port NBEdge::removeFromConnections")
+    pub fn remove_from_connections(&mut self, toEdge: Ptr<NBEdge>, fromLane: i32, toLane: i32, mut tryLater: bool, adaptToLaneRemoval: bool, keepPossibleTurns: bool) {
+        // remove from "myConnections"
+        let fromLaneRemoved = if adaptToLaneRemoval && fromLane >= 0 { fromLane } else { -1 };
+        let toLaneRemoved = if adaptToLaneRemoval && toLane >= 0 { toLane } else { -1 };
+        let this = Ptr::from_mut(&mut *self);
+        let myTo = self.myTo;
+        let mut i = 0;
+        while i < self.myConnections.len() {
+            let c_fromLane = self.myConnections[i].fromLane;
+            let c_toEdge = self.myConnections[i].toEdge;
+            let c_toLane = self.myConnections[i].toLane;
+            if (toEdge.is_null() || c_toEdge == toEdge)
+                && (fromLane < 0 || c_fromLane == fromLane)
+                && (toLane < 0 || c_toLane == toLane)
+            {
+                if myTo.is_tl_controlled() {
+                    let tldefs = myTo.get_controlling_tls().clone();
+                    for it in tldefs.iter() {
+                        it.m().remove_connection(&NBConnection::new_2(this, c_fromLane, c_toEdge, c_toLane, -1, -1), true);
+                    }
+                }
+                self.myConnections.remove(i);
+                tryLater = false;
+            } else {
+                if fromLaneRemoved >= 0 && c_fromLane > fromLaneRemoved {
+                    if myTo.is_tl_controlled() {
+                        let tldefs = myTo.get_controlling_tls().clone();
+                        for it in tldefs.iter() {
+                            for tc in it.m().get_controlled_links_2().iter_mut() {
+                                if tc.get_to() == c_toEdge && tc.get_from_lane() == c_fromLane && tc.get_to_lane() == c_toLane {
+                                    tc.shift_lane_index(this, -1, -1);
+                                }
+                            }
+                        }
+                    }
+                    self.myConnections[i].fromLane -= 1;
+                }
+                if toLaneRemoved >= 0 && c_toLane > toLaneRemoved && (toEdge.is_null() || c_toEdge == toEdge) {
+                    self.myConnections[i].toLane -= 1;
+                }
+                i += 1;
+            }
+        }
+        // check whether it was the turn destination
+        if self.myTurnDestination == toEdge && fromLane < 0 {
+            self.myTurnDestination = Ptr::default();
+        }
+        if self.myPossibleTurnDestination == toEdge && fromLane < 0 && !keepPossibleTurns {
+            self.myPossibleTurnDestination = Ptr::default();
+        }
+        if tryLater {
+            self.myConnectionsToDelete.push(NBEdge_Connection::new(fromLane, toEdge, toLane, false));
+        }
     }
 
     /// C++: `bool NBEdge::removeFromConnections(const NBEdge::Connection &)`
@@ -3123,7 +3185,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_from_connections_2(&mut self, connectionToRemove: &NBEdge_Connection) -> bool {
-        todo!("port NBEdge::removeFromConnections")
+        // iterate over connections
+        if let Some(i) = self.myConnections.iter().position(|c| {
+            c.toEdge == connectionToRemove.toEdge && c.fromLane == connectionToRemove.fromLane && c.toLane == connectionToRemove.toLane
+        }) {
+            // remove connection
+            self.myConnections.remove(i);
+            return true;
+        }
+        false
     }
 
     /// C++: `void NBEdge::invalidateConnections(bool)`
@@ -3167,7 +3237,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn replace_in_connections(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBEdge::replaceInConnections")
+        // replace in "_connectedEdges"
+        for c in self.myConnections.iter_mut() {
+            if c.toEdge == which {
+                c.toEdge = by;
+                c.toLane += laneOff;
+            }
+        }
+        // check whether it was the turn destination
+        if self.myTurnDestination == which {
+            self.myTurnDestination = by;
+        }
     }
 
     /// C++: `void NBEdge::replaceInConnections(NBEdge *, const std::vector<NBEdge::Connection> &)`
@@ -3260,7 +3340,96 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn replace_in_connections_2(&mut self, which: Ptr<NBEdge>, origConns: &Vec<NBEdge_Connection>) {
-        todo!("port NBEdge::replaceInConnections")
+        let mut laneMap: BTreeMap<i32, i32> = BTreeMap::new();
+        let mut minLane: i32 = -1;
+        let mut maxLane: i32 = -1;
+        // get lanes used to approach the edge to remap
+        let mut wasConnected = false;
+        for c in self.myConnections.iter() {
+            if c.toEdge != which {
+                continue;
+            }
+            wasConnected = true;
+            if c.fromLane != -1 {
+                let fromLane = c.fromLane;
+                laneMap.insert(c.toLane, fromLane);
+                if minLane == -1 || minLane > fromLane {
+                    minLane = fromLane;
+                }
+                if maxLane == -1 || maxLane < fromLane {
+                    maxLane = fromLane;
+                }
+            }
+        }
+        if !wasConnected {
+            return;
+        }
+        // add new connections
+        let origTargets = self.get_successors(SVC_IGNORING).clone();
+        let this = Ptr::from_mut(&mut *self);
+        for i in origConns.iter() {
+            // determinism: laneMap is a std::map in C++ and a BTreeMap here, both iterate in key order
+            if i.toEdge == which || i.toEdge == this || origTargets.contains(&i.toEdge) {
+                // if we already have connections to the target edge, do not add new ones as they are probably from a circular replacement
+                continue;
+            }
+            if which.get_step() == NBEdge_EdgeBuildingStep::EDGE2EDGES {
+                // do not set lane-level connections
+                self.replace_in_connections(which, i.toEdge, 0);
+                continue;
+            }
+            let fromLane = i.fromLane;
+            let mut toUse: i32 = -1;
+            if !laneMap.contains_key(&fromLane) {
+                if fromLane >= 0 && fromLane <= minLane {
+                    toUse = minLane;
+                    // patch laneMap to avoid crossed-over connections
+                    for (k, v) in laneMap.iter_mut() {
+                        if *k < fromLane {
+                            *v = std::cmp::min(*v, minLane);
+                        }
+                    }
+                }
+                if fromLane >= 0 && fromLane >= maxLane {
+                    toUse = maxLane;
+                    // patch laneMap to avoid crossed-over connections
+                    for (k, v) in laneMap.iter_mut() {
+                        if *k > fromLane {
+                            *v = std::cmp::max(*v, maxLane);
+                        }
+                    }
+                }
+            } else {
+                toUse = laneMap[&fromLane];
+            }
+            if toUse == -1 {
+                toUse = 0;
+            }
+            self.set_connection(
+                toUse,
+                i.toEdge,
+                i.toLane,
+                NBEdge_Lane2LaneInfoType::COMPUTED,
+                false,
+                i.mayDefinitelyPass,
+                i.keepClear,
+                i.contPos,
+                i.visibility,
+                i.speed,
+                i.friction,
+                i.customLength,
+                &i.customShape,
+                i.uncontrolled,
+                SVC_UNSPECIFIED,
+                false,
+                "",
+                SVC_UNSPECIFIED,
+                SVC_UNSPECIFIED,
+                false,
+            );
+        }
+        // remove the remapped edge from connections
+        self.remove_from_connections(which, -1, -1, false, false, false);
     }
 
     /// C++: `void NBEdge::copyConnectionsFrom(NBEdge *)`
@@ -3272,7 +3441,8 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn copy_connections_from(&mut self, src: Ptr<NBEdge>) {
-        todo!("port NBEdge::copyConnectionsFrom")
+        self.myStep = src.myStep;
+        self.myConnections = src.myConnections.clone();
     }
 
     /// C++: `void NBEdge::shiftToLanesToEdge(NBEdge *, int)`
@@ -3288,7 +3458,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn shift_to_lanes_to_edge(&mut self, to: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBEdge::shiftToLanesToEdge")
+        // XXX could we repurpose the function replaceInConnections ?
+        for it in self.myConnections.iter_mut() {
+            if it.toEdge == to && it.toLane >= 0 {
+                it.toLane += laneOff;
+            }
+        }
     }
 
     /// C++: `bool NBEdge::isTurningDirectionAt(const NBEdge *const) const` [const]
@@ -3306,7 +3481,14 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_turning_direction_at(&self, edge: Ptr<NBEdge>) -> bool {
-        todo!("port NBEdge::isTurningDirectionAt")
+        // maybe it was already set as the turning direction
+        if edge == self.myTurnDestination {
+            return true;
+        } else if !self.myTurnDestination.is_null() {
+            // otherwise - it's not if a turning direction exists
+            return false;
+        }
+        edge == self.myPossibleTurnDestination
     }
 
     /// C++: `void NBEdge::setTurningDestination(NBEdge *, bool)`
