@@ -1,6 +1,13 @@
 //! Port of microsim/devices/MSDevice_Routing.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::{with_options, OptionsCont};
+use utils::options::option::SumoOption;
+use utils::common::msg_handler::{write_error, write_warning, write_message};
+use utils::common::time::{string2time, time2string, time2steps, steps2time, SUMOTIME_MIN};
+use utils::common::to_string::to_string;
+
+const INVALID_DOUBLE: f64 = f64::MAX;
 
 /// A device that performs vehicle rerouting based on current edge speeds
 /// C++ class `MSDevice_Routing` (microsim/devices/MSDevice_Routing.h)
