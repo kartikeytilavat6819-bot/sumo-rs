@@ -2,6 +2,44 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty). These return the values MSFrame
+// sets for default options. The mesoscopic branches (gUseMesoSim, gMesoNet) are not ported, so the
+// micro code path is always used. Upgrade when ms_globals.rs and mesosim/ are wired in.
+fn g_use_meso_sim() -> bool {
+    false
+}
+fn g_using_internal_lanes() -> bool {
+    true
+}
+// MIN2/MAX2/MIN4 from StdDefs.h
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min4(a: f64, b: f64, c: f64, d: f64) -> f64 {
+    min2(min2(a, b), min2(c, d))
+}
+// shortcut: C++ `delete` of value collectors and sub-data is not done (leaked). A base-typed Ptr cannot free
+// the subclass allocation it points into. Upgrade with owned storage per collector.
+/// C++ `new T(...)`: heap allocation owned by the simulation, referenced through Ptr.
+fn heap<T>(value: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(value)))
+}
+/// C++ implicit upcast `MeanDataValues*` from a tracker pointer (base is the first field, repr(C)).
+fn upcast_tracker(t: Ptr<MSMeanData_MeanDataValueTracker>) -> Ptr<MSMeanData_MeanDataValues> {
+    Ptr::from_mut(&mut t.m().base)
+}
+/// C++ implicit upcast `MSMoveReminder*` from `MeanDataValues*`.
+fn reminder_of(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMoveReminder> {
+    Ptr::from_mut(&mut v.m().base)
+}
+/// C++ `(MeanDataValueTracker*)values` downcast; valid because the tracker's base is its first field (repr(C)).
+fn as_tracker(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMeanData_MeanDataValueTracker> {
+    Ptr::from_raw(v.as_raw() as *mut MSMeanData_MeanDataValueTracker)
+}
+
 /// Data collector for edges/lanes
 /// C++ class `MSMeanData` (microsim/output/MSMeanData.h)
 pub struct MSMeanData {
@@ -102,8 +140,49 @@ impl MSMeanData {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, minSamples: f64, maxTravelTime: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        todo!("port MSMeanData::MSMeanData")
+    pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
+        let attrs = OutputDevice::parse_written_attributes(&StringTokenizer::new(writeAttributes).get_vector(), &format!("meandata '{}'", id), &HashMap::new());
+        let mut this = MSMeanData {
+            base: MSDetectorFileOutput::new(id, vTypes, "", detectPersons),
+            myMinSamples: minSamples,
+            myMaxTravelTime: maxTravelTime,
+            myMeasures: Vec::new(),
+            myDumpEmpty: false,
+            myAmEdgeBased: !useLanes,
+            myDumpBegin: dumpBegin,
+            myDumpEnd: dumpEnd,
+            myInitTime: SUMOTIME_MAX,
+            myLastResetTime: dumpBegin,
+            myEdges: edges.clone(),
+            myTAZ: Vec::new(),
+            myEdgeIndex: BTreeMap::new(),
+            myPrintDefaults: false,
+            myPrintModified: false,
+            myDumpInternal: withInternal && g_using_internal_lanes(),
+            myTrackVehicles: trackVehicles,
+            myWrittenAttributes: attrs,
+            myAggregate: aggregate,
+            mySubData: Ptr::null(),
+            myPendingIntervals: VecDeque::new(),
+        };
+        match utils::common::string_utils::to_bool(excludeEmpty) {
+            Ok(b) => this.myDumpEmpty = !b,
+            Err(e @ ProcessError::BoolFormat(_)) => {
+                if excludeEmpty == "default" || excludeEmpty == "defaults" {
+                    this.myPrintDefaults = true;
+                } else if excludeEmpty == "modified" {
+                    this.myDumpEmpty = false;
+                    this.myPrintDefaults = true;
+                    this.myPrintModified = true;
+                } else {
+                    // shortcut: C++ rethrows here; a constructor cannot return Err, so this panics with the same message
+                    panic!("{}", e);
+                }
+            }
+            // shortcut: C++ propagates non-bool exceptions out of the constructor; panics here instead
+            Err(e) => panic!("{}", e),
+        }
+        this
     }
 
     /// C++: `void MSMeanData::~MSMeanData() noexcept` [virtual]
@@ -118,7 +197,7 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSMeanData::~MSMeanData")
+        // shortcut: C++ deletes every value collector and mySubData here; they are leaked (see file header)
     }
 
     /// C++: `void MSMeanData::init()`
@@ -211,7 +290,59 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSMeanData::init")
+        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
+        self.myInitTime = MSNet::get_instance().get_current_time_step();
+        if self.myEdges.is_empty() {
+            // use all edges by default
+            let net = MSNet::get_instance();
+            let all_edges = net.m().get_edge_control().get_edges().clone();
+            for edge in all_edges {
+                if (self.myDumpInternal || !edge.is_internal()) && ((self.detects_persons() && self.myDumpInternal) || (!edge.is_crossing() && !edge.is_walking_area())) {
+                    self.myEdges.push(edge);
+                }
+            }
+        }
+        let mut index = 0;
+        for edge in self.myEdges.clone() {
+            self.myMeasures.push(Vec::new());
+            self.myEdgeIndex.insert(edge, index);
+            index += 1;
+            let lanes: Vec<Ptr<MSLane>> = edge.get_lanes().clone();
+            if self.myAmEdgeBased && self.myTrackVehicles {
+                let t = heap(MSMeanData_MeanDataValueTracker::new(Ptr::null(), lanes[0].get_length(), Ptr::from_mut(&mut *self)));
+                self.myMeasures.last_mut().unwrap().push(upcast_tracker(t));
+            }
+            for lane in lanes.iter().copied() {
+                if self.myTrackVehicles {
+                    if self.myAmEdgeBased {
+                        let rem = reminder_of(*self.myMeasures.last().unwrap().last().unwrap());
+                        lane.m().add_move_reminder(rem, true);
+                    } else {
+                        let t = heap(MSMeanData_MeanDataValueTracker::new(lane, lane.get_length(), Ptr::from_mut(&mut *self)));
+                        self.myMeasures.last_mut().unwrap().push(upcast_tracker(t));
+                    }
+                } else {
+                    let v = self.create_values(lane, lane.get_length(), true);
+                    self.myMeasures.last_mut().unwrap().push(v);
+                }
+            }
+        }
+        if self.myAggregate == AggregateType::TAZ {
+            for &e in MSEdge::get_all_edges().iter() {
+                if e.is_taz_connector() {
+                    self.myTAZ.push(e);
+                }
+            }
+        }
+        if !self.mySubData.is_null() {
+            let sub = self.mySubData;
+            sub.m().init();
+            for (i, valueList) in self.myMeasures.iter().enumerate() {
+                for (j, values) in valueList.iter().enumerate() {
+                    values.m().set_sub_data(sub.myMeasures[i][j]);
+                }
+            }
+        }
     }
 
     /// C++: `void MSMeanData::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual]
@@ -267,8 +398,54 @@ impl MSMeanData {
     //     dev.flush();
     // }
     #[allow(unused_variables)]
-    pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSMeanData::writeXMLOutput")
+    pub fn write_xml_output(&mut self, dev: &mut OutputDevice, mut startTime: SUMOTime, mut stopTime: SUMOTime) {
+        // check whether this dump shall be written for the current time
+        self.myLastResetTime = MSNet::get_instance().get_current_time_step();
+        let mut numReady: i32 = if self.myDumpBegin < stopTime && self.myDumpEnd - delta_t() >= startTime { 1 } else { 0 };
+        if self.myTrackVehicles && self.myDumpBegin < stopTime {
+            self.myPendingIntervals.push_back((startTime, stopTime));
+            numReady = self.myPendingIntervals.len() as i32;
+            for list in self.myMeasures.iter() {
+                for values in list.iter() {
+                    numReady = std::cmp::min(numReady, as_tracker(*values).get_num_ready());
+                    if numReady == 0 {
+                        break;
+                    }
+                }
+                if numReady == 0 {
+                    break;
+                }
+            }
+        }
+        let partialInterval = startTime < self.myInitTime;
+        if numReady == 0 || self.myTrackVehicles || partialInterval {
+            self.reset_only(stopTime);
+        }
+        if partialInterval {
+            return;
+        }
+        while numReady > 0 {
+            numReady -= 1;
+            if !self.myPendingIntervals.is_empty() {
+                let (s, e) = *self.myPendingIntervals.front().unwrap();
+                startTime = s;
+                stopTime = e;
+                self.myPendingIntervals.pop_front();
+            }
+            self.open_interval(dev, startTime, stopTime);
+            if self.myAggregate == AggregateType::YES {
+                self.write_aggregated(dev, startTime, stopTime);
+            } else if self.myAggregate == AggregateType::TAZ {
+                self.write_aggregated_taz(dev, startTime, stopTime);
+            } else {
+                for (i, measures) in self.myMeasures.clone().iter().enumerate() {
+                    let edge = self.myEdges[i];
+                    self.write_edge(dev, measures, edge, startTime, stopTime);
+                }
+            }
+            dev.close_tag("");
+        }
+        dev.flush();
     }
 
     /// C++: `void MSMeanData::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -279,7 +456,7 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSMeanData::writeXMLDetectorProlog")
+        dev.write_xml_header("meandata", "meandata_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `void MSMeanData::detectorUpdate(const SUMOTime)` [virtual]
@@ -292,7 +469,9 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        todo!("port MSMeanData::detectorUpdate")
+        if step + delta_t() == self.myDumpBegin {
+            self.init();
+        }
     }
 
     /// C++: `double MSMeanData::getMinSamples() const` [const]
@@ -301,7 +480,7 @@ impl MSMeanData {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_samples(&self) -> f64 {
-        todo!("port MSMeanData::getMinSamples")
+        self.myMinSamples
     }
 
     /// C++: `double MSMeanData::getMaxTravelTime() const` [const]
@@ -310,7 +489,7 @@ impl MSMeanData {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_travel_time(&self) -> f64 {
-        todo!("port MSMeanData::getMaxTravelTime")
+        self.myMaxTravelTime
     }
 
     /// C++: `bool MSMeanData::isEdgeData() const` [const]
@@ -319,7 +498,7 @@ impl MSMeanData {
     //     }
     #[allow(unused_variables)]
     pub fn is_edge_data(&self) -> bool {
-        todo!("port MSMeanData::isEdgeData")
+        self.myAmEdgeBased
     }
 
     /// C++: `std::vector<std::string> MSMeanData::getAttributeNames() const` [const, virtual, pure virtual]
@@ -327,7 +506,8 @@ impl MSMeanData {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
-        todo!("port MSMeanData::getAttributeNames")
+        // shortcut: pure virtual in C++ (subclasses override). Rust has no virtual dispatch here, so the base panics like a C++ pure-virtual call.
+        panic!("MSMeanData::getAttributeNames is pure virtual; the subclass must implement it")
     }
 
     /// C++: `double MSMeanData::getAttributeValue(const MSLane *, SumoXMLAttr, double) const` [const]
@@ -358,7 +538,25 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_value(&self, lane: Ptr<MSLane>, a: SumoXMLAttr, defaultValue: f64) -> f64 {
-        todo!("port MSMeanData::getAttributeValue")
+        let mut result = defaultValue;
+        let edgeValues = self.get_edge_values(Ptr::from_mut(lane.get_edge()));
+        if edgeValues.is_null() {
+            return result;
+        }
+        let edgeValues = edgeValues.get().unwrap();
+        let values: Ptr<MSMeanData_MeanDataValues>;
+        if !self.myAmEdgeBased {
+            values = edgeValues[lane.get_index() as usize];
+        } else {
+            let sumData = self.create_values_sub_data(Ptr::null(), lane.get_length(), false);
+            for meanData in edgeValues.iter() {
+                meanData.add_to(sumData.m());
+            }
+            values = sumData;
+        }
+        let period = MSNet::get_instance().get_current_time_step() - self.myLastResetTime;
+        result = values.get_attribute_value(a, period, lane.get_edge().get_num_lanes() as f64, lane.get_speed_limit());
+        result
     }
 
     /// C++: `const std::vector<MSMoveReminder *> MSMeanData::getReminders() const` [const]
@@ -373,7 +571,13 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_reminders(&self) -> Vec<Ptr<MSMoveReminder>> {
-        todo!("port MSMeanData::getReminders")
+        let mut result = Vec::new();
+        for vec in self.myMeasures.iter() {
+            for v in vec.iter() {
+                result.push(reminder_of(*v));
+            }
+        }
+        result
     }
 
     /// C++: `void MSMeanData::setSubData(MSMeanData *)`
@@ -383,7 +587,7 @@ impl MSMeanData {
     //     }
     #[allow(unused_variables)]
     pub fn set_sub_data(&mut self, subData: Ptr<MSMeanData>) {
-        todo!("port MSMeanData::setSubData")
+        self.mySubData = subData;
     }
 
     /// C++: `const MSEdgeVector & MSMeanData::getEdges() const` [const]
@@ -392,7 +596,7 @@ impl MSMeanData {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &MSEdgeVector {
-        todo!("port MSMeanData::getEdges")
+        &self.myEdges
     }
 
     /// C++: `MSMeanData::MeanDataValues * MSMeanData::createValues(MSLane *const, const double, const bool) const` [const, virtual, pure virtual, protected]
@@ -400,7 +604,8 @@ impl MSMeanData {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MSMeanData::createValues")
+        // shortcut: pure virtual in C++ (each output type creates its own MeanDataValues subclass). Panics like a pure-virtual call until virtual dispatch exists.
+        panic!("MSMeanData::createValues is pure virtual; the subclass must implement it")
     }
 
     /// C++: `void MSMeanData::resetOnly(SUMOTime)` [protected]
@@ -430,7 +635,12 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn reset_only(&mut self, stopTime: SUMOTime) {
-        todo!("port MSMeanData::resetOnly")
+        // C++ UNUSED_PARAMETER(stopTime); the mesoscopic branch is not ported (see g_use_meso_sim)
+        for i in self.myMeasures.iter() {
+            for j in i.iter() {
+                j.m().reset(false);
+            }
+        }
     }
 
     /// C++: `std::string MSMeanData::getEdgeID(const MSEdge *const)` [virtual, protected]
@@ -441,7 +651,7 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(&mut self, edge: Ptr<MSEdge>) -> String {
-        todo!("port MSMeanData::getEdgeID")
+        edge.get_id().to_string()
     }
 
     /// C++: `void MSMeanData::writeEdge(OutputDevice &, const std::vector<MeanDataValues *> &, const MSEdge *const, SUMOTime, SUMOTime)` [protected]
@@ -548,7 +758,84 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_edge(&mut self, dev: &mut OutputDevice, edgeValues: &Vec<Ptr<MSMeanData_MeanDataValues>>, edge: Ptr<MSEdge>, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSMeanData::writeEdge")
+        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
+        let skip_final_reset = MSNet::get_instance().skip_final_reset();
+        if !self.myAmEdgeBased {
+            let mut writeCheck = self.myDumpEmpty;
+            if !writeCheck {
+                for laneData in edgeValues.iter() {
+                    if !laneData.is_empty() || (self.myPrintModified && laneData.get_lane().is_speed_modified()) {
+                        writeCheck = true;
+                        break;
+                    }
+                }
+            }
+            if writeCheck {
+                dev.open_tag_id(SUMO_TAG_EDGE).write_attr(SUMO_ATTR_ID, edge.get_id());
+            }
+            for laneData in edgeValues.iter() {
+                let lane = laneData.get_lane();
+                if self.myDumpEmpty || (self.myPrintModified && lane.is_speed_modified()) || !laneData.is_empty() {
+                    let id = lane.get_id().to_string();
+                    self.write_prefix(dev, laneData, SUMO_TAG_LANE, id);
+                    let mut data = *laneData;
+                    while !data.is_null() {
+                        let defaultTravelTime = if self.myPrintDefaults { lane.get_length() / lane.get_speed_limit() } else { -1. };
+                        data.write(dev, &self.myWrittenAttributes, stopTime - startTime, 1, lane.get_speed_limit(), defaultTravelTime, -1);
+                        data = data.m().get_sub_data();
+                    }
+                    dev.close_tag("");
+                }
+                if !skip_final_reset {
+                    laneData.m().reset(true);
+                }
+            }
+            if writeCheck {
+                dev.close_tag("");
+            }
+        } else {
+            if self.myTrackVehicles {
+                let meanData = edgeValues[0];
+                if self.myDumpEmpty || !meanData.is_empty() {
+                    let id = edge.get_id().to_string();
+                    self.write_prefix(dev, &meanData, SUMO_TAG_EDGE, id);
+                    let mut data = meanData;
+                    while !data.is_null() {
+                        let defaultTravelTime = if self.myPrintDefaults { edge.get_length() / edge.get_speed_limit() } else { -1. };
+                        data.write(dev, &self.myWrittenAttributes, stopTime - startTime, edge.get_num_driving_lanes(), edge.get_speed_limit(), defaultTravelTime, -1);
+                        data = data.m().get_sub_data();
+                    }
+                    dev.close_tag("");
+                }
+                if !skip_final_reset {
+                    meanData.m().reset(true);
+                }
+            } else {
+                let sumData = self.create_values_sub_data(Ptr::null(), edge.get_length(), false);
+                let mut writeCheck = self.myDumpEmpty;
+                for laneData in edgeValues.iter() {
+                    laneData.add_to(sumData.m());
+                    if self.myPrintModified && laneData.get_lane().is_speed_modified() {
+                        writeCheck = true;
+                    }
+                    if !skip_final_reset {
+                        laneData.m().reset(false);
+                    }
+                }
+                if writeCheck || !sumData.is_empty() {
+                    let id = self.get_edge_id(edge);
+                    self.write_prefix(dev, &sumData, SUMO_TAG_EDGE, id);
+                    let mut data = sumData;
+                    while !data.is_null() {
+                        let defaultTravelTime = if self.myPrintDefaults { edge.get_length() / edge.get_speed_limit() } else { -1. };
+                        data.write(dev, &self.myWrittenAttributes, stopTime - startTime, edge.get_num_driving_lanes(), edge.get_speed_limit(), defaultTravelTime, -1);
+                        data = data.m().get_sub_data();
+                    }
+                    dev.close_tag("");
+                }
+                // C++ `delete sumData`: not freed, see file header shortcut
+            }
+        }
     }
 
     /// C++: `void MSMeanData::writeAggregated(OutputDevice &, SUMOTime, SUMOTime)` [protected]
@@ -609,7 +896,45 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_aggregated(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSMeanData::writeAggregated")
+        if self.myTrackVehicles {
+            // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
+            panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
+        }
+        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
+        let skip_final_reset = MSNet::get_instance().skip_final_reset();
+
+        let mut edgeLengthSum = 0.0;
+        let mut laneNumber: i32 = 0;
+        let mut speedSum = 0.0;
+        let mut totalTT = 0.0;
+        for edge in self.myEdges.clone() {
+            edgeLengthSum += edge.get_length();
+            laneNumber += edge.get_num_driving_lanes();
+            speedSum += edge.get_speed_limit();
+            totalTT += edge.get_length() / edge.get_speed_limit();
+        }
+        let sumData = self.create_values_sub_data(Ptr::null(), edgeLengthSum, false);
+        for edgeValues in self.myMeasures.iter() {
+            for meanData in edgeValues.iter() {
+                meanData.add_to(sumData.m());
+                if !skip_final_reset {
+                    meanData.m().reset(false);
+                }
+            }
+        }
+
+        if self.myDumpEmpty || !sumData.is_empty() {
+            self.write_prefix(dev, &sumData, SUMO_TAG_EDGE, "AGGREGATED".to_string());
+            dev.write_attr(SUMO_ATTR_NUMEDGES, &self.myEdges.len());
+            let mut data = sumData;
+            while !data.is_null() {
+                let defaultTravelTime = if self.myPrintDefaults { totalTT } else { -1. };
+                data.write(dev, &self.myWrittenAttributes, stopTime - startTime, laneNumber, speedSum / (self.myEdges.len() as f64), defaultTravelTime, -1);
+                data = data.m().get_sub_data();
+            }
+            dev.close_tag("");
+        }
+        // C++ `delete sumData`: not freed, see file header shortcut
     }
 
     /// C++: `void MSMeanData::writeAggregatedTAZ(OutputDevice &, SUMOTime, SUMOTime)` [protected]
@@ -681,7 +1006,64 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_aggregated_taz(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSMeanData::writeAggregatedTAZ")
+        if self.myTrackVehicles {
+            // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
+            panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
+        }
+        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
+        let skip_final_reset = MSNet::get_instance().skip_final_reset();
+
+        for taz in self.myTAZ.clone() {
+            let mut edgeLengthSum = 0.0;
+            let mut laneNumber: i32 = 0;
+            let mut speedSum = 0.0;
+            let mut totalTT = 0.0;
+            // determinism: std::set<const MSEdge*> iterates by address; BTreeSet over Ptr orders the same way
+            let mut connected: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
+            for edge in taz.get_successors(SVC_IGNORING).iter() {
+                connected.insert(*edge);
+            }
+            for edge in taz.get_predecessors().iter() {
+                connected.insert(*edge);
+            }
+            for edge in connected.iter() {
+                edgeLengthSum += edge.get_length();
+                laneNumber += edge.get_num_driving_lanes();
+                speedSum += edge.get_speed_limit();
+                totalTT += edge.get_length() / edge.get_speed_limit();
+            }
+            let sumData = self.create_values_sub_data(Ptr::null(), edgeLengthSum, false);
+            for i in 0..self.myEdges.len() {
+                let edge = self.myEdges[i];
+                if connected.contains(&edge) {
+                    let edgeValues = &self.myMeasures[i];
+                    for meanData in edgeValues.iter() {
+                        meanData.add_to(sumData.m());
+                    }
+                }
+            }
+            if self.myDumpEmpty || !sumData.is_empty() {
+                let id = taz.get_id().to_string();
+                self.write_prefix(dev, &sumData, SUMO_TAG_EDGE, id);
+                dev.write_attr(SUMO_ATTR_NUMEDGES, &connected.len());
+                let mut data = sumData;
+                while !data.is_null() {
+                    let defaultTravelTime = if self.myPrintDefaults { totalTT } else { -1. };
+                    data.write(dev, &self.myWrittenAttributes, stopTime - startTime, laneNumber, speedSum / (connected.len() as f64), defaultTravelTime, -1);
+                    data = data.m().get_sub_data();
+                }
+                dev.close_tag("");
+            }
+            // C++ `delete sumData`: not freed, see file header shortcut
+        }
+
+        if !skip_final_reset {
+            for edgeValues in self.myMeasures.iter() {
+                for meanData in edgeValues.iter() {
+                    meanData.m().reset(false);
+                }
+            }
+        }
     }
 
     /// C++: `void MSMeanData::openInterval(OutputDevice &, const SUMOTime, const SUMOTime)` [virtual, protected]
@@ -693,7 +1075,8 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn open_interval(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSMeanData::openInterval")
+        dev.open_tag_id(SUMO_TAG_INTERVAL).write_attr(SUMO_ATTR_BEGIN, &time2string(startTime)).write_attr(SUMO_ATTR_END, &time2string(stopTime));
+        dev.write_attr(SUMO_ATTR_ID, self.get_id());
     }
 
     /// C++: `void MSMeanData::writePrefix(OutputDevice &, const MeanDataValues &, const SumoXMLTag, const std::string) const` [const, virtual, protected]
@@ -706,14 +1089,26 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_prefix(&self, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
-        todo!("port MSMeanData::writePrefix")
+        dev.open_tag_id(tag);
+        dev.write_attr(SUMO_ATTR_ID, id.as_str());
+        dev.write_optional_attr_mask(SUMO_ATTR_SAMPLEDSECONDS, &values.get_samples(), self.myWrittenAttributes, false);
     }
 
     /// C++: `const std::vector<MeanDataValues *> * MSMeanData::getEdgeValues(const MSEdge *) const` [const, protected]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // const std::vector<MeanDataValues*>* MSMeanData::getEdgeValues(const MSEdge* edge) const {
+    //     auto it = myEdgeIndex.find(edge);
+    //     if (it != myEdgeIndex.end()) {
+    //         return &myMeasures[it->second];
+    //     } else {
+    //         return nullptr;
+    //     }
+    // }
     #[allow(unused_variables)]
     pub fn get_edge_values(&self, edge: Ptr<MSEdge>) -> Ptr<Vec<Ptr<MSMeanData_MeanDataValues>>> {
-        todo!("port MSMeanData::getEdgeValues")
+        match self.myEdgeIndex.get(&edge) {
+            Some(&idx) => Ptr::new(&self.myMeasures[idx as usize]),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `MSMeanData::MeanDataValues * MSMeanData::createValuesSubData(MSLane *const, const double, const bool) const` [const, private]
@@ -728,7 +1123,11 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn create_values_sub_data(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MSMeanData::createValuesSubData")
+        let values = self.create_values(lane, length, doAdd);
+        if !self.mySubData.is_null() {
+            values.m().set_sub_data(self.mySubData.create_values(lane, length, doAdd));
+        }
+        values
     }
 
     /// C++: `void MSMeanData::MSMeanData(const MSMeanData &)` [private]
@@ -736,7 +1135,8 @@ impl MSMeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSMeanData) -> Self {
-        todo!("port MSMeanData::MSMeanData")
+        // C++ declares the copy constructor private and never defines it: copying is an error
+        panic!("MSMeanData copy constructor is invalidated (private in C++)")
     }
 
     /// C++: `MSMeanData & MSMeanData::operator=(const MSMeanData &)` [private]
@@ -744,13 +1144,15 @@ impl MSMeanData {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSMeanData) -> &mut MSMeanData {
-        todo!("port MSMeanData::operator=")
+        // C++ declares the assignment operator private and never defines it: assignment is an error
+        panic!("MSMeanData assignment operator is invalidated (private in C++)")
     }
 
 }
 
 /// Data structure for mean (aggregated) edge/lane values for tracked vehicles
 /// C++ class `MSMeanData::MeanDataValueTracker` (microsim/output/MSMeanData.h)
+#[repr(C)] // base must stay at offset 0 for the C++ downcast in as_tracker
 pub struct MSMeanData_MeanDataValueTracker {
     /// C++ base class `MeanDataValues`
     pub base: MSMeanData_MeanDataValues,
@@ -944,6 +1346,7 @@ impl MSMeanData_MeanDataValueTracker {
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData::MeanDataValues` (microsim/output/MSMeanData.h)
+#[repr(C)] // base must stay at offset 0 for the C++ downcast in as_tracker
 pub struct MSMeanData_MeanDataValues {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,
@@ -1328,9 +1731,9 @@ impl MSMeanData_MeanDataValues {
 /// C++ class `MeanDataValueTracker::TrackerEntry` (microsim/output/MSMeanData.h)
 pub struct MeanDataValueTracker_TrackerEntry {
     /// The number of vehicles which entered in the current interval
-    pub myNumVehicleEntered: i32,
+    pub myNumVehicleEntered: std::cell::Cell<i32>, // Cell: entries are shared via Rc and mutated in place (C++ ++ on a shared pointer)
     /// The number of vehicles which left in the current interval
-    pub myNumVehicleLeft: i32,
+    pub myNumVehicleLeft: std::cell::Cell<i32>,
     /// The number of vehicles which left in the current interval
     pub myValues: Ptr<MSMeanData_MeanDataValues>,
 }
