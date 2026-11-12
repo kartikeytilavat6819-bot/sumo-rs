@@ -32,7 +32,9 @@ impl MSDispatch_RouteExtension {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        todo!("port MSDispatch_RouteExtension::MSDispatch_RouteExtension")
+        MSDispatch_RouteExtension {
+            base: MSDispatch_Greedy::new(params),
+        }
     }
 
     /// C++: `int MSDispatch_RouteExtension::dispatch(MSDevice_Taxi *, std::vector<Reservation *>::iterator &, SUMOAbstractRouter<MSEdge, SUMOVehicle> &, std::vector<Reservation *> &)` [virtual, protected]
@@ -143,8 +145,102 @@ impl MSDispatch_RouteExtension {
     //     return (int)toRemove.size();
     // }
     #[allow(unused_variables)]
-    pub fn dispatch(&mut self, taxi: Ptr<MSDevice_Taxi>, resIt: &mut Unmapped /* std::vector<Reservation *>::iterator */, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
-        todo!("port MSDispatch_RouteExtension::dispatch")
+    pub fn dispatch(&mut self, taxi: Ptr<MSDevice_Taxi>, resIt: &mut usize /* std::vector<Reservation *>::iterator, as an index */, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
+        let res: Ptr<Reservation> = reservations[*resIt];
+        let now: SUMOTime = MSNet::get_instance().get_current_time_step();
+        let isPerson = res.persons.values().next().unwrap().is_person();
+        let mut capacityLeft: i32 = self.remaining_capacity(taxi, res);
+        let mut sequence: Vec<Ptr<Reservation>> = vec![res, res];
+        let mut toRemove: Vec<Ptr<Reservation>> = vec![res];
+        let mut posSequence: MSDispatch_RouteExtension_EdgePosVector = vec![(res.from, res.fromPos), (res.to, res.toPos)];
+        let mut first: Ptr<Reservation> = *sequence.first().unwrap();
+        let mut last: Ptr<Reservation> = *sequence.last().unwrap();
+        let mut route: ConstMSEdgeVector = Vec::new();
+        router.compute_2(first.from, first.fromPos, last.to, last.toPos, taxi.myHolder, std::cmp::max(now, first.pickupTime), &mut route, false);
+        // check whether the ride can be shared
+        let mut it2: usize = *resIt + 1;
+        while it2 < reservations.len() {
+            let res2: Ptr<Reservation> = reservations[it2];
+            let isPerson2 = res2.persons.values().next().unwrap().is_person();
+            if capacityLeft < res2.persons.len() as i32 || isPerson != isPerson2 || !taxi.m().compatible_line(res2) {
+                it2 += 1;
+                continue;
+            }
+            // check whether res2 picks up or gets picked up on the way
+            let mut route2: ConstMSEdgeVector = Vec::new();
+            // TODO It may be more efficient to check first whether from and to are already in the route
+            router.compute_2(res2.from, res2.fromPos, res2.to, res2.toPos, taxi.myHolder, std::cmp::max(now, res2.pickupTime), &mut route2, false);
+            let pickup = route.iter().any(|e| *e == res2.from);
+            let dropoff = route.iter().any(|e| *e == res2.to);
+            let pickup2 = route2.iter().any(|e| *e == first.from);
+            let dropoff2 = route2.iter().any(|e| *e == last.to);
+
+            if (pickup || pickup2) && (dropoff || dropoff2) {
+                let mut resSeqIt: usize = 0;
+                let mut edgeIt: usize = 0;
+                if pickup {
+                    // new reservation gets picked up
+                    let edgeEnd: usize = posSequence.len();
+                    self.find_insertion_point(&mut resSeqIt, &mut edgeIt, &edgeEnd, &posSequence, &mut route, res2.from, res2.fromPos);
+                }
+                sequence.insert(resSeqIt, res2);
+                resSeqIt += 1;
+                posSequence.insert(edgeIt, (res2.from, res2.fromPos));
+                edgeIt += 1;
+                if dropoff {
+                    // new reservation drops off and route continues
+                    let edgeEnd: usize = posSequence.len();
+                    self.find_insertion_point(&mut resSeqIt, &mut edgeIt, &edgeEnd, &posSequence, &mut route, res2.to, res2.toPos);
+                    sequence.insert(resSeqIt, res2);
+                    posSequence.insert(edgeIt, (res2.to, res2.toPos));
+                } else {
+                    // new reservation ends last
+                    sequence.push(res2);
+                    posSequence.push((res2.to, res2.toPos));
+                }
+                toRemove.push(res2);
+                reservations.remove(it2); // it2 = reservations.erase(it2); (resIt before it2 stays valid)
+                // TODO we have more capacity if some pickup is after an earlier dropoff
+                capacityLeft -= res2.persons.len() as i32;
+                if capacityLeft == 0 {
+                    break;
+                }
+                route.clear();
+                first = *sequence.first().unwrap();
+                last = *sequence.last().unwrap();
+                // TODO this is wrong for non linear networks! should be reusing the route snippets from above
+                router.compute_2(first.from, first.fromPos, last.to, last.toPos, taxi.myHolder, std::cmp::max(now, first.pickupTime), &mut route, false);
+            } else {
+                it2 += 1;
+            }
+        }
+        if sequence.len() > 2 {
+            taxi.m().dispatch_shared(sequence.clone());
+            if !self.myOutput.is_null() {
+                let mut sharing: Vec<Ptr<MSTransportable>> = Vec::new();
+                for s in sequence.iter() {
+                    sharing.extend(s.persons.values().copied());
+                }
+                let out = self.myOutput.m();
+                out.write_xml_header("DispatchInfo_RouteExtension", "", BTreeMap::new(), true);
+                out.open_tag("dispatchShared");
+                out.write_attr("time", utils::common::time::time2string(now).as_str());
+                out.write_attr("id", taxi.myHolder.get_id());
+                let persons = res.persons.values().map(|p| p.get_id().to_string()).collect::<Vec<_>>().join(" ");
+                out.write_attr("persons", persons.as_str());
+                let sharingPersons = sharing.iter().map(|p| p.get_id().to_string()).collect::<Vec<_>>().join(" ");
+                out.write_attr("sharingPersons", sharingPersons.as_str());
+                out.write_attr("type", "routeExtension");
+                out.close_tag("");
+            }
+        } else {
+            taxi.m().dispatch(&*res);
+        }
+        for r in toRemove.iter() {
+            self.served_reservation(*r, taxi); // deleting r
+        }
+        reservations.remove(*resIt); // resIt = reservations.erase(resIt)
+        toRemove.len() as i32
     }
 
     /// C++: `void MSDispatch_RouteExtension::findInsertionPoint(std::vector<const Reservation *>::iterator &, EdgePosVector::iterator &, const EdgePosVector::iterator &, ConstMSEdgeVector &, const MSEdge *, const double) const` [const, private]
@@ -166,8 +262,19 @@ impl MSDispatch_RouteExtension {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn find_insertion_point(&self, resIt: &mut Unmapped /* std::vector<const Reservation *>::iterator */, edgeIt: &mut Unmapped /* EdgePosVector::iterator */, edgeEnd: &Unmapped /* EdgePosVector::iterator */, route: &mut ConstMSEdgeVector, newEdge: Ptr<MSEdge>, newPos: f64) {
-        todo!("port MSDispatch_RouteExtension::findInsertionPoint")
+    pub fn find_insertion_point(&self, resIt: &mut usize /* std::vector<const Reservation *>::iterator, as an index */, edgeIt: &mut usize /* EdgePosVector::iterator, as an index */, edgeEnd: &usize /* EdgePosVector::iterator, as an index */, posSequence: &MSDispatch_RouteExtension_EdgePosVector /* added: the C++ iterators point into it */, route: &mut ConstMSEdgeVector, newEdge: Ptr<MSEdge>, newPos: f64) {
+        for edge in route.iter() {
+            while *edgeIt != *edgeEnd && *edge == posSequence[*edgeIt].0 {
+                if *edge == newEdge && posSequence[*edgeIt].1 > newPos {
+                    break;
+                }
+                *resIt += 1;
+                *edgeIt += 1;
+            }
+            if *edge == newEdge {
+                break;
+            }
+        }
     }
 
 }
