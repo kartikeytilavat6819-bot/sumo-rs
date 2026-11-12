@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NBConnection` (netbuild/NBConnection.h)
+#[derive(Clone)]
 pub struct NBConnection {
     /// The from- and the to-edges
     pub myFrom: Ptr<NBEdge>,
@@ -24,6 +25,50 @@ pub struct NBConnection {
 // C++ static members of NBConnection (port as module-level statics, see AGENTS.md):
 //   static const int NBConnection::InvalidTlIndex;
 //   static const NBConnection NBConnection::InvalidConnection;
+
+// C++ `NBConnection::operator==` (NBConnection.cpp): same fields, same order.
+impl PartialEq for NBConnection {
+    fn eq(&self, c: &Self) -> bool {
+        self.myFrom == c.myFrom
+            && self.myTo == c.myTo
+            && self.myFromID == c.myFromID
+            && self.myToID == c.myToID
+            && self.myFromLane == c.myFromLane
+            && self.myToLane == c.myToLane
+            && self.myTlIndex == c.myTlIndex
+            && self.myTlIndex2 == c.myTlIndex2
+    }
+}
+impl Eq for NBConnection {}
+
+// C++ friend `operator<(const NBConnection&, const NBConnection&)` (NBConnection.cpp).
+// Ordering uses only the IDs and lanes, exactly as the C++ does.
+impl PartialOrd for NBConnection {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for NBConnection {
+    fn cmp(&self, c2: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+        if self.myFromID != c2.myFromID {
+            return self.myFromID.cmp(&c2.myFromID);
+        }
+        if self.myToID != c2.myToID {
+            return self.myToID.cmp(&c2.myToID);
+        }
+        if self.myFromLane != c2.myFromLane {
+            return self.myFromLane.cmp(&c2.myFromLane);
+        }
+        if self.myToLane < c2.myToLane {
+            Ordering::Less
+        } else if self.myToLane > c2.myToLane {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    }
+}
 
 impl NBConnection {
     /// C++: `void NBConnection::NBConnection(NBEdge *, NBEdge *)`

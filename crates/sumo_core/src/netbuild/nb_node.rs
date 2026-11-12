@@ -1,6 +1,7 @@
 //! Port of netbuild/NBNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::NUMERICAL_EPS;
 use utils::common::msg_handler::write_warning;
 use utils::common::to_string::f64_to_string;
 use utils::geom::POSITION_EPS;
@@ -7307,7 +7308,7 @@ impl NBNode {
         for e in self.myAllEdges.iter() {
             let isFrom = self_ptr == e.get_from_node();
             let pos = if isFrom { *e.get_geometry().front() } else { *e.get_geometry().back() };
-            let origID = e.get_parameter(if isFrom { "origFrom" } else { "origTo" }, "");
+            let origID = e.base2.get_parameter(if isFrom { "origFrom" } else { "origTo" }, "");
             let mut unique = true;
             for (p, id) in result.iter() {
                 if pos.almost_same_eps(p) || (origID != "" && *id == origID) {
