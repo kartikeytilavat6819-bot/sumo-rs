@@ -12,6 +12,39 @@ pub struct Vehicle {
 //   static ContextSubscriptionResults Vehicle::myContextSubscriptionResults;
 
 use utils::geom::geom_helper::navi_degree;
+use utils::common::std_defs::INVALID_DOUBLE;
+use utils::common::time::{delta_t, SUMOTIME_MAX};
+use utils::common::to_string::to_string;
+use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
+use utils::common::msg_handler::write_warning;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::traci::traci_constants::{REMOVE_ARRIVED, REMOVE_PARKING, REMOVE_TELEPORT, REMOVE_TELEPORT_ARRIVED, REMOVE_VAPORIZED};
+
+// SUMOVehicleParameter.h / SUMOVehicleParameter::Stop parametersSet bits (not exported by the ported module yet)
+const VEHPARS_COLOR_SET: i64 = 1;
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const STOP_START_SET: i32 = 1;
+const STOP_END_SET: i32 = 2;
+const STOP_DURATION_SET: i32 = 2 << 1;
+const STOP_UNTIL_SET: i32 = 2 << 2;
+const STOP_EXTENSION_SET: i32 = 2 << 3;
+const STOP_TRIGGER_SET: i32 = 2 << 4;
+const STOP_PARKING_SET: i32 = 2 << 5;
+const STOP_EXPECTED_SET: i32 = 2 << 6;
+const STOP_EXPECTED_CONTAINERS_SET: i32 = 2 << 8;
+const STOP_TRIP_ID_SET: i32 = 2 << 9;
+const STOP_LINE_SET: i32 = 2 << 10;
+const STOP_SPEED_SET: i32 = 2 << 11;
+const STOP_SPLIT_SET: i32 = 2 << 12;
+const STOP_JOIN_SET: i32 = 2 << 13;
+const STOP_ARRIVAL_SET: i32 = 2 << 14;
+const STOP_PERMITTED_SET: i32 = 2 << 15;
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
+const STOP_POSLAT_SET: i32 = 2 << 18;
+const STOP_ONDEMAND_SET: i32 = 2 << 19;
+const STOP_JUMP_SET: i32 = 2 << 20;
+const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
 // shortcut: dynamic_cast<MSVehicle*> / dynamic_cast<MEVehicle*> cannot be checked at runtime (no type tag on
 // MSBaseVehicle, MSGlobals::gUseMesoSim not ported), so every vehicle is treated as micro. A MEVehicle would be
 // misread. Upgrade when a vehicle type tag or gUseMesoSim exists. The casts also need #[repr(C)] with `base`
@@ -43,7 +76,7 @@ fn set_stop_param_error(vehID: &str, msg: String) -> ! {
 
 /// Mutable view of a vehicle's parameter block (C++ const_cast-style access used by setColor/setLine/setParameter).
 fn param_mut(p: &SUMOVehicleParameter) -> &mut SUMOVehicleParameter {
-    Ptr::new(p).m()
+    unsafe { &mut *Ptr::new(p).as_raw() }
 }
 
 impl Vehicle {
@@ -104,7 +137,7 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition::default()
+        TraCIPosition { base: TraCIResult {}, x: 0.0, y: 0.0, z: 0.0 }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
@@ -174,7 +207,10 @@ impl Vehicle {
         let veh = Helper::get_vehicle(vehID);
         let microVeh = micro_veh(veh);
         if veh.is_on_road() {
-            Named::get_id_secure(microVeh.m().get_lane_change_model().get_shadow_lane().get(), "")
+            match microVeh.m().get_lane_change_model().get_shadow_lane().get() {
+                Some(lane) => lane.get_id().to_string(),
+                None => String::new(),
+            }
         } else {
             String::new()
         }
@@ -573,7 +609,8 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn is_route_valid(vehID: &str) -> bool {
         let mut msg = String::new();
-        Helper::get_vehicle(vehID).has_valid_route(&mut msg, Ptr::default())
+        // shortcut: C++ hasValidRoute defaults to a null route, which ConstMSRoutePtr (Rc) cannot represent, upgrade when hasValidRoute takes Option
+        panic!("is_route_valid needs MSBaseVehicle::hasValidRoute with a null route, not representable yet (msg={})", msg)
     }
 
     /// C++: `std::vector<std::string> Vehicle::getRoute(const std::string &)` [static]
@@ -837,7 +874,12 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customParam: bool) -> String {
+    /// Joins a std::set<std::string> with spaces (C++ joinToString(set, " "))
+fn join_set(s: &BTreeSet<String>) -> String {
+    s.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(" ")
+}
+
+pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customParam: bool) -> String {
         let vehicle = Helper::get_vehicle(vehID);
         if nextStopIndex >= vehicle.get_stops().len() as i32 || (nextStopIndex < 0 && -nextStopIndex > vehicle.get_past_stops().len() as i32) {
             panic!("{}", format!("Could not get stop parameter for vehicle '{}' ({})", vehID,
@@ -854,7 +896,7 @@ impl Vehicle {
         }
         match param {
             "edge" => pars.edge.clone(),
-            "lane" => SUMOXMLDefinitions::get_index_from_lane(pars.lane).to_string(),
+            "lane" => SUMOXMLDefinitions::get_index_from_lane(&pars.lane).unwrap_or_else(|e| panic!("{}", e)).to_string(),
             "busStop" | "trainStop" => pars.busstop.clone(),
             "containerStop" => pars.containerstop.clone(),
             "chargingStation" => pars.chargingStation.clone(),
@@ -867,11 +909,11 @@ impl Vehicle {
             "until" => if pars.until < 0 { "-1".to_string() } else { time2string(pars.until) },
             "extension" => if pars.extension < 0 { "-1".to_string() } else { time2string(pars.extension) },
             "index" => to_string(&(nextStopIndex + vehicle.get_past_stops().len() as i32)),
-            "parking" => to_string(&pars.parking),
+            "parking" => to_string(&(pars.parking as i32)),
             "triggered" => pars.get_triggers().join(" "),
-            "expected" => pars.awaitedPersons.join(" "),
-            "expectedContainers" => pars.awaitedContainers.join(" "),
-            "permitted" => pars.permitted.join(" "),
+            "expected" => Self::join_set(&pars.awaitedPersons),
+            "expectedContainers" => Self::join_set(&pars.awaitedContainers),
+            "permitted" => Self::join_set(&pars.permitted),
             "actType" => pars.actType.clone(),
             "tripId" => pars.tripId.clone(),
             "split" => pars.split.clone(),
@@ -1449,7 +1491,7 @@ impl Vehicle {
     //     return result;
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
+    pub fn get_parameter(vehID: &str, key: &str) -> String {
         let veh = Helper::get_vehicle(vehID);
         let mut error = String::new();
         let result = veh.get_prefixed_parameter(key, &mut error);
@@ -1540,7 +1582,7 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(objectID: &str, key: &str, value: &str) {
+    pub fn set_parameter(vehID: &str, key: &str, value: &str) {
         let veh = Helper::get_vehicle(vehID);
         let microVeh = micro_veh(veh);
         if key.starts_with("device.") {
@@ -1623,7 +1665,7 @@ impl Vehicle {
     //     return Helper::getVehicle(vehID)->getChosenSpeedFactor();
     // }
     #[allow(unused_variables)]
-    pub fn get_speed_factor(typeID: &str) -> f64 {
+    pub fn get_speed_factor(vehID: &str) -> f64 {
         Helper::get_vehicle(vehID).get_chosen_speed_factor()
     }
 
@@ -1761,7 +1803,7 @@ impl Vehicle {
     /// @}
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_color(typeID: &str) -> TraCIColor {
+    pub fn get_color(vehID: &str) -> TraCIColor {
         Helper::make_tra_ci_color(&Helper::get_vehicle(vehID).get_parameter().color)
     }
 
@@ -1808,7 +1850,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(typeID: &str) -> String {
-        to_string(Helper::get_vehicle_type(typeID).get_preferred_lateral_alignment())
+        // shortcut: toString(LatAlignmentDefinition) is not ported yet, upgrade with the SUMOVTypeParameter string helpers
+        let _ = Helper::get_vehicle_type(typeID).get_preferred_lateral_alignment();
+        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
     }
 
     /// C++: `int Vehicle::getPersonCapacity(const std::string &)` [static]
@@ -1862,7 +1906,7 @@ impl Vehicle {
     //     return Helper::getVehicle(vehID)->getImpatience();
     // }
     #[allow(unused_variables)]
-    pub fn get_impatience(typeID: &str) -> f64 {
+    pub fn get_impatience(vehID: &str) -> f64 {
         Helper::get_vehicle(vehID).get_impatience()
     }
 
@@ -2045,18 +2089,18 @@ impl Vehicle {
     //             pars.posLat = StringUtils::toDouble(value);
     //             pars.parametersSet |= STOP_POSLAT_SET;
     //         } else if (param == toString(SUMO_ATTR_ARRIVAL)) {
-    //             pars.arrival = string2time(value);
+    //             pars.arrival = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_ARRIVAL_SET;
     //         } else if (param == toString(SUMO_ATTR_DURATION)) {
-    //             pars.duration = string2time(value);
+    //             pars.duration = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_DURATION_SET;
     //             // also update dynamic value
     //             stop.initPars(pars);
     //         } else if (param == toString(SUMO_ATTR_UNTIL)) {
-    //             pars.until = string2time(value);
+    //             pars.until = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_UNTIL_SET;
     //         } else if (param == toString(SUMO_ATTR_EXTENSION)) {
-    //             pars.extension = string2time(value);
+    //             pars.extension = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_EXTENSION_SET;
     //         } else if (param == toString(SUMO_ATTR_INDEX)) {
     //             throw TraCIException("Changing stop index is not supported");
@@ -2108,19 +2152,19 @@ impl Vehicle {
     //             pars.speed = speed;
     //             pars.parametersSet |= STOP_SPEED_SET;
     //         } else if (param == toString(SUMO_ATTR_STARTED)) {
-    //             pars.started = string2time(value);
+    //             pars.started = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_STARTED_SET;
     //         } else if (param == toString(SUMO_ATTR_ENDED)) {
-    //             pars.ended = string2time(value);
+    //             pars.ended = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_ENDED_SET;
     //         } else if (param == toString(SUMO_ATTR_ONDEMAND)) {
     //             pars.onDemand = StringUtils::toBool(value);
     //             pars.parametersSet |= STOP_ONDEMAND_SET;
     //         } else if (param == toString(SUMO_ATTR_JUMP)) {
-    //             pars.jump = string2time(value);
+    //             pars.jump = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_JUMP_SET;
     //         } else if (param == toString(SUMO_ATTR_JUMP_UNTIL)) {
-    //             pars.jumpUntil = string2time(value);
+    //             pars.jumpUntil = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_JUMP_UNTIL_SET;
     //         } else {
     //             throw ProcessError(TLF("Unsupported parameter '%'", param));
@@ -2168,18 +2212,19 @@ impl Vehicle {
             pars.posLat = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
             pars.parametersSet |= STOP_POSLAT_SET;
         } else if param == "arrival" {
-            pars.arrival = string2time(value);
+            pars.arrival = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_ARRIVAL_SET;
         } else if param == "duration" {
-            pars.duration = string2time(value);
+            pars.duration = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_DURATION_SET;
             // also update dynamic value
-            stop.init_pars(pars);
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
         } else if param == "until" {
-            pars.until = string2time(value);
+            pars.until = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_UNTIL_SET;
         } else if param == "extension" {
-            pars.extension = string2time(value);
+            pars.extension = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_EXTENSION_SET;
         } else if param == "index" {
             panic!("Changing stop index is not supported");
@@ -2194,17 +2239,20 @@ impl Vehicle {
             SUMOVehicleParameter::parse_stop_triggers(&tokens, false, pars);
             pars.parametersSet |= STOP_TRIGGER_SET;
             // also update dynamic value
-            stop.init_pars(pars);
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
         } else if param == "expected" {
             pars.awaitedPersons = value.split_whitespace().map(String::from).collect();
             pars.parametersSet |= STOP_EXPECTED_SET;
             // also update dynamic value
-            stop.init_pars(pars);
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
         } else if param == "expectedContainers" {
             pars.awaitedContainers = value.split_whitespace().map(String::from).collect();
             pars.parametersSet |= STOP_EXPECTED_CONTAINERS_SET;
             // also update dynamic value
-            stop.init_pars(pars);
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
         } else if param == "permitted" {
             pars.permitted = value.split_whitespace().map(String::from).collect();
             pars.parametersSet |= STOP_PERMITTED_SET;
@@ -2220,7 +2268,8 @@ impl Vehicle {
             pars.join = value.to_string();
             pars.parametersSet |= STOP_JOIN_SET;
             // also update dynamic value
-            stop.init_pars(pars);
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
         } else if param == "line" {
             pars.line = value.to_string();
             pars.parametersSet |= STOP_LINE_SET;
@@ -2232,19 +2281,19 @@ impl Vehicle {
             pars.speed = speed;
             pars.parametersSet |= STOP_SPEED_SET;
         } else if param == "started" {
-            pars.started = string2time(value);
+            pars.started = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_STARTED_SET;
         } else if param == "ended" {
-            pars.ended = string2time(value);
+            pars.ended = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_ENDED_SET;
         } else if param == "onDemand" {
-            pars.onDemand = StringUtils::to_bool(value);
+            pars.onDemand = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_ONDEMAND_SET;
         } else if param == "jump" {
-            pars.jump = string2time(value);
+            pars.jump = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_JUMP_SET;
         } else if param == "jumpUntil" {
-            pars.jumpUntil = string2time(value);
+            pars.jumpUntil = string2time(value).unwrap_or_else(|e| panic!("{}", e));
             pars.parametersSet |= STOP_JUMP_UNTIL_SET;
         } else {
             set_stop_param_error(vehID, format!("Unsupported parameter '{}'", param));
@@ -2309,7 +2358,8 @@ impl Vehicle {
         }
         if !veh.m().resume_from_stopping() {
             let sto = veh.get_next_stop();
-            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached, sto.duration, sto.edge.get_id(), sto.pars.startPos);
+            // shortcut: MSStop.edge is not typed yet (Unmapped), the stop's parameter edge is used instead
+            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached, sto.duration, sto.pars.edge, sto.pars.startPos);
             panic!("{}", format!("Failed to resume from stopping for vehicle '{}', {}", veh.get_id(), posStr));
         }
     }
@@ -2513,7 +2563,7 @@ impl Vehicle {
     // void
     // Vehicle::changeTarget(const std::string& vehID, const std::string& edgeID) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     const MSEdge* destEdge = MSEdge::dictionary(edgeID);
+    //     const MSEdge* destEdge = MSEdge::dictionary_2(edgeID);
     //     const bool onInit = isOnInit(vehID);
     //     if (destEdge == nullptr) {
     //         throw TraCIException("Destination edge '" + edgeID + "' is not known.");
@@ -2532,7 +2582,7 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn change_target(vehID: &str, edgeID: &str) {
         let veh = Helper::get_vehicle(vehID);
-        let destEdge = MSEdge::dictionary(edgeID);
+        let destEdge = MSEdge::dictionary_2(edgeID);
         let onInit = Self::is_on_init(vehID);
         if destEdge.is_null() {
             panic!("{}", format!("Destination edge '{}' is not known.", edgeID));
@@ -2571,7 +2621,7 @@ impl Vehicle {
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
         laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
-        veh.m().get_influencer().set_lane_time_line(laneTimeLine);
+        veh.m().get_influencer().set_lane_time_line(&laneTimeLine);
     }
 
     /// C++: `void Vehicle::changeLaneRelative(const std::string &, int, double)` [static]
@@ -2617,7 +2667,7 @@ impl Vehicle {
         } else {
             laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
             laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
-            veh.m().get_influencer().set_lane_time_line(laneTimeLine);
+            veh.m().get_influencer().set_lane_time_line(&laneTimeLine);
         }
     }
 
@@ -2665,7 +2715,7 @@ impl Vehicle {
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
         speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), speed));
-        veh.m().get_influencer().set_speed_time_line(speedTimeLine);
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::openGap(const std::string &, double, double, double, double, double, const std::string &)` [static]
@@ -2698,7 +2748,7 @@ impl Vehicle {
     //     veh->getInfluencer().activateGapController(originalTau, newTimeHeadway, newSpaceHeadway, duration, changeRate, maxDecel, refVeh);
     // }
     #[allow(unused_variables)]
-    pub fn open_gap(vehID: &str, newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, referenceVehID: &str) {
+    pub fn open_gap(vehID: &str, mut newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, referenceVehID: &str) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let mut refVeh: Ptr<MSVehicle> = Ptr::default();
         if referenceVehID != "" {
@@ -2770,9 +2820,9 @@ impl Vehicle {
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         if speed >= 0. {
             speedTimeLine.push((MSNet::get_instance().get_current_time_step(), speed));
-            speedTimeLine.push((SUMOTime_MAX - DELTA_T, speed));
+            speedTimeLine.push((SUMOTIME_MAX - delta_t(), speed));
         }
-        veh.m().get_influencer().set_speed_time_line(speedTimeLine);
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::setAcceleration(const std::string &, double, double)` [static]
@@ -2803,7 +2853,7 @@ impl Vehicle {
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
         speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), targetSpeed));
-        veh.m().get_influencer().set_speed_time_line(speedTimeLine);
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::setPreviousSpeed(const std::string &, double, double)` [static]
@@ -2821,7 +2871,7 @@ impl Vehicle {
     //     veh->setPreviousSpeed(prevSpeed, prevAcceleration);
     // }
     #[allow(unused_variables)]
-    pub fn set_previous_speed(vehID: &str, prevSpeed: f64, prevAcceleration: f64) {
+    pub fn set_previous_speed(vehID: &str, prevSpeed: f64, mut prevAcceleration: f64) {
         let veh = micro_veh(Helper::get_vehicle(vehID));
         if prevAcceleration == INVALID_DOUBLE_VALUE {
             prevAcceleration = f64::MIN_POSITIVE; // std::numeric_limits<double>::min()
@@ -2892,7 +2942,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_type(vehID: &str, typeID: &str) {
-        let vehicleType = MSNet::get_instance().get_vehicle_control().get_v_type(typeID);
+        let vehicleType = MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false);
         if vehicleType.is_null() {
             panic!("{}", format!("Vehicle type '{}' is not known", typeID));
         }
@@ -2919,7 +2969,7 @@ impl Vehicle {
     //     std::string msg;
     //     if (!veh->hasValidRoute(msg, r)) {
     //         WRITE_WARNINGF(TL("Invalid route replacement for vehicle '%'. %"), veh->getID(), msg);
-    //         if (MSGlobals::gCheckRoutes) {
+    //         if (false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */) {
     //             throw TraCIException("Route replacement failed for " + veh->getID());
     //         }
     //     }
@@ -2932,16 +2982,14 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn set_route_id(vehID: &str, routeID: &str) {
         let veh = Helper::get_vehicle(vehID);
-        let r = MSRoute::dictionary(routeID);
-        if r.is_null() {
-            panic!("{}", format!("The route '{}' is not known.", routeID));
-        }
+        // shortcut: MSRoute::dictionary returns a Rc (never null) so the 'not known' panic is skipped, upgrade when the dictionary returns Option
+        let r = MSRoute::dictionary_3(routeID, Ptr::null());
         if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
             write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is referenced.", routeID));
         }
         let mut msg = String::new();
-        if !veh.has_valid_route(&mut msg, r) {
-            if MSGlobals::gCheckRoutes {
+        if !veh.has_valid_route(&mut msg, r.clone()) {
+            if false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */ {
                 panic!("{}", format!("Route replacement failed for {}", veh.get_id()));
             }
         }
@@ -2994,7 +3042,7 @@ impl Vehicle {
         let mut edges: ConstMSEdgeVector = ConstMSEdgeVector::new();
         let onInit = veh.get_lane().is_null();
         // MSEdge::parseEdgesList(edgeIDs, edges, "<unknown>") throws ProcessError, rethrown as TraCIException below
-        MSEdge::parse_edges_list(edgeIDs, &mut edges, "<unknown>");
+        MSEdge::parse_edges_list_2(edgeIDs, &mut edges, "<unknown>");
         if edges.len() > 0 && edges[0].is_internal() {
             if edges.len() == 1 {
                 // avoid crashing due to lack of normal edges in route (#5390)
@@ -3002,7 +3050,7 @@ impl Vehicle {
                 edges.push(next);
             } else {
                 // avoid internal edge in final route
-                if Ptr::new(&edges[0]) == Ptr::new(veh.get_lane().get_edge()) {
+                if edges[0] == Ptr::new(veh.get_lane().get_edge()) {
                     edges.remove(0);
                 }
             }
@@ -3056,7 +3104,7 @@ impl Vehicle {
     // Vehicle::setAdaptedTraveltime(const std::string& vehID, const std::string& edgeID,
     //                               double time, double begSeconds, double endSeconds) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     MSEdge* edge = MSEdge::dictionary(edgeID);
+    //     MSEdge* edge = MSEdge::dictionary_2(edgeID);
     //     if (edge == nullptr) {
     //         throw TraCIException("Edge '" + edgeID + "' is not known.");
     //     }
@@ -3078,8 +3126,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_adapted_traveltime(vehID: &str, edgeID: &str, time: f64, begSeconds: f64, endSeconds: f64) {
-        let veh = Helper::get_vehicle(vehID);
-        let edge = MSEdge::dictionary(edgeID);
+        let mut veh = Helper::get_vehicle(vehID);
+        let edge = MSEdge::dictionary_2(edgeID);
         if edge.is_null() {
             panic!("{}", format!("Edge '{}' is not known.", edgeID));
         }
@@ -3105,7 +3153,7 @@ impl Vehicle {
     // Vehicle::setEffort(const std::string& vehID, const std::string& edgeID,
     //                    double effort, double begSeconds, double endSeconds) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     MSEdge* edge = MSEdge::dictionary(edgeID);
+    //     MSEdge* edge = MSEdge::dictionary_2(edgeID);
     //     if (edge == nullptr) {
     //         throw TraCIException("Edge '" + edgeID + "' is not known.");
     //     }
@@ -3127,8 +3175,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_effort(vehID: &str, edgeID: &str, effort: f64, begSeconds: f64, endSeconds: f64) {
-        let veh = Helper::get_vehicle(vehID);
-        let edge = MSEdge::dictionary(edgeID);
+        let mut veh = Helper::get_vehicle(vehID);
+        let edge = MSEdge::dictionary_2(edgeID);
         if edge.is_null() {
             panic!("{}", format!("Edge '{}' is not known.", edgeID));
         }
@@ -3188,7 +3236,7 @@ impl Vehicle {
     pub fn reroute_effort(vehID: &str) {
         let veh = Helper::get_vehicle(vehID);
         veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteEffort",
-                        MSNet::get_instance().get_router_effort(veh.get_rng_index()), Self::is_on_init(vehID), false, false, Ptr::default());
+                        MSNet::get_instance().get_router_effort(veh.get_rng_index(), &()), Self::is_on_init(vehID), false, false, Ptr::default());
     }
 
     /// C++: `void Vehicle::setSignals(const std::string &, int)` [static]
@@ -3231,7 +3279,7 @@ impl Vehicle {
     //         return;
     //     }
     //
-    //     MSLane* l = MSLane::dictionary(laneID);
+    //     MSLane* l = MSLane::dictionary_2(laneID);
     //     if (l == nullptr) {
     //         throw TraCIException("Unknown lane '" + laneID + "'.");
     //     }
@@ -3241,7 +3289,7 @@ impl Vehicle {
     //     }
     //     MSEdge* destinationEdge = &l->getEdge();
     //     const MSEdge* destinationRouteEdge = destinationEdge->getNormalBefore();
-    //     if (!veh->isOnRoad() && veh->getParameter().wasSet(VEHPARS_FORCE_REROUTE) && veh->getRoute().getEdges().size() == 2) {
+    //     if (!veh->isOnRoad() && veh->getParameter().was_set(VEHPARS_FORCE_REROUTE) && veh->getRoute().getEdges().size() == 2) {
     //         // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
     //         veh->reroute(MSNet::getInstance()->getCurrentTimeStep(), "traci:moveTo-tripInsertion",
     //                      veh->getRouterTT(), true);
@@ -3308,7 +3356,7 @@ impl Vehicle {
     pub fn move_to(vehID: &str, laneID: &str, pos: f64, reason: i32) {
         let vehicle = Helper::get_vehicle(vehID);
         let veh = micro_veh(vehicle);
-        let l = MSLane::dictionary(laneID);
+        let mut l = MSLane::dictionary_2(laneID);
         if l.is_null() {
             panic!("{}", format!("Unknown lane '{}'.", laneID));
         }
@@ -3318,7 +3366,7 @@ impl Vehicle {
         }
         let destinationEdge = l.get_edge();
         let destinationRouteEdge = destinationEdge.get_normal_before();
-        if !veh.is_on_road() && veh.get_parameter().wasSet(VEHPARS_FORCE_REROUTE) && veh.get_route().get_edges().len() == 2 {
+        if !veh.is_on_road() && veh.get_parameter().was_set(VEHPARS_FORCE_REROUTE) && veh.get_route().get_edges().len() == 2 {
             // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
             veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:moveTo-tripInsertion",
                             veh.get_router_tt(), true, false, false, Ptr::default());
@@ -3356,7 +3404,7 @@ impl Vehicle {
         }
         veh.m().reset_route_position(newRouteIndex, veh.get_parameter().departLaneProcedure);
         if !veh.is_on_road() {
-            MSNet::get_instance().get_insertion_control().already_departed(veh);
+            MSNet::get_instance().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
             MSVehicleTransfer::get_instance().remove(veh);
         }
         let moveReminderReason;
@@ -3367,8 +3415,8 @@ impl Vehicle {
                 moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_JUNCTION;
             } else if reason == MOVE_AUTOMATIC {
                 let newPos = l.geometry_position_at_offset(pos, 0.);
-                let dist = newPos.distance_to2_d(&oldPos);
-                if dist < SPEED2DIST(veh.get_max_speed()) {
+                let dist = newPos.distance_to2d(&oldPos);
+                if dist < (veh.get_max_speed() * (delta_t() as f64 / 1000.)) {
                     moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_JUNCTION;
                 } else {
                     moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_TELEPORT;
@@ -3379,7 +3427,7 @@ impl Vehicle {
         } else {
             moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_DEPARTED;
         }
-        l.force_vehicle_insertion(veh, pos, moveReminderReason);
+        l.force_vehicle_insertion(veh, pos, moveReminderReason, 0.);
         if veh.m().get_lane_change_model().is_opposite() {
             veh.m().get_lane_change_model().changed_to_opposite();
         }
@@ -3554,7 +3602,7 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn remove(vehID: &str, reason: i8) {
+    pub fn remove(vehID: &str, reason: i32) {
         let veh = Helper::get_vehicle(vehID);
         let n = match reason {
             REMOVE_TELEPORT => MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED,
@@ -3570,11 +3618,11 @@ impl Vehicle {
             if !veh.get_lane().is_null() {
                 microVeh.m().get_mutable_lane().remove_vehicle(microVeh, n, true);
             }
-            MSNet::get_instance().get_vehicle_control().schedule_vehicle_removal(veh.cast::<SUMOVehicle>());
+            MSNet::get_instance().get_vehicle_control().schedule_vehicle_removal(veh.cast::<SUMOVehicle>(), false);
             MSNet::get_instance().get_vehicle_control().remove_pending();
         } else {
             MSNet::get_instance().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
-            MSNet::get_instance().get_vehicle_control().delete_vehicle(veh.cast::<SUMOVehicle>(), true);
+            MSNet::get_instance().get_vehicle_control().delete_vehicle(veh.cast::<SUMOVehicle>(), true, false);
         }
     }
 
@@ -3606,7 +3654,7 @@ impl Vehicle {
         let veh = Helper::get_vehicle(vehID);
         // ensure edges exist (ProcessError from parseEdgesList is rethrown as TraCIException)
         let mut edges: ConstMSEdgeVector = ConstMSEdgeVector::new();
-        MSEdge::parse_edges_list(edgeList, &mut edges, "<via-edges>");
+        MSEdge::parse_edges_list_2(edgeList, &mut edges, "<via-edges>");
         param_mut(veh.get_parameter()).via = edgeList.clone();
     }
 
@@ -3659,7 +3707,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setLength(length);
     // }
     #[allow(unused_variables)]
-    pub fn set_length(typeID: &str, length: f64) {
+    pub fn set_length(vehID: &str, length: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_length(&length);
     }
 
@@ -3670,7 +3718,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMaxSpeed(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed(typeID: &str, speed: f64) {
+    pub fn set_max_speed(vehID: &str, speed: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_max_speed(&speed);
     }
 
@@ -3686,7 +3734,7 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_vehicle_class(typeID: &str, clazz: &str) {
+    pub fn set_vehicle_class(vehID: &str, clazz: &str) {
         let veh = Helper::get_vehicle(vehID);
         veh.m().get_singular_type().set_v_class(get_vehicle_class_id(clazz).unwrap_or_else(|e| panic!("{}", e)));
         let microVeh = micro_veh(veh);
@@ -3702,7 +3750,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->setChosenSpeedFactor(factor);
     // }
     #[allow(unused_variables)]
-    pub fn set_speed_factor(typeID: &str, factor: f64) {
+    pub fn set_speed_factor(vehID: &str, factor: f64) {
         Helper::get_vehicle(vehID).m().set_chosen_speed_factor(factor);
     }
 
@@ -3713,7 +3761,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setAccel(accel);
     // }
     #[allow(unused_variables)]
-    pub fn set_accel(typeID: &str, accel: f64) {
+    pub fn set_accel(vehID: &str, accel: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_accel(accel);
     }
 
@@ -3724,7 +3772,7 @@ impl Vehicle {
     //     VehicleType::setDecel(Helper::getVehicle(vehID)->getSingularType().getID(), decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_decel(typeID: &str, decel: f64) {
+    pub fn set_decel(vehID: &str, decel: f64) {
         let typeID = Helper::get_vehicle(vehID).m().get_singular_type().get_id().to_string();
         VehicleType::set_decel(&typeID, decel);
     }
@@ -3736,7 +3784,7 @@ impl Vehicle {
     //     VehicleType::setEmergencyDecel(Helper::getVehicle(vehID)->getSingularType().getID(), decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_emergency_decel(typeID: &str, decel: f64) {
+    pub fn set_emergency_decel(vehID: &str, decel: f64) {
         let typeID = Helper::get_vehicle(vehID).m().get_singular_type().get_id().to_string();
         VehicleType::set_emergency_decel(&typeID, decel);
     }
@@ -3748,7 +3796,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setApparentDecel(decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_apparent_decel(typeID: &str, decel: f64) {
+    pub fn set_apparent_decel(vehID: &str, decel: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_apparent_decel(decel);
     }
 
@@ -3759,7 +3807,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setImperfection(imperfection);
     // }
     #[allow(unused_variables)]
-    pub fn set_imperfection(typeID: &str, imperfection: f64) {
+    pub fn set_imperfection(vehID: &str, imperfection: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_imperfection(imperfection);
     }
 
@@ -3770,7 +3818,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setTau(tau);
     // }
     #[allow(unused_variables)]
-    pub fn set_tau(typeID: &str, tau: f64) {
+    pub fn set_tau(vehID: &str, tau: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_tau(tau);
     }
 
@@ -3781,8 +3829,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setEmissionClass(PollutantsInterface::getClassByName(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_emission_class(typeID: &str, clazz: &str) {
-        Helper::get_vehicle(vehID).m().get_singular_type().set_emission_class(PollutantsInterface::get_class_by_name(clazz, SUMOVehicleClass::SVC_IGNORING));
+    pub fn set_emission_class(vehID: &str, clazz: &str) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_emission_class(PollutantsInterface::get_class_by_name(clazz, SVC_IGNORING));
     }
 
     /// C++: `void Vehicle::setShapeClass(const std::string &, const std::string &)` [static]
@@ -3792,7 +3840,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setShape(getVehicleShapeID(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_shape_class(typeID: &str, shapeClass: &str) {
+    pub fn set_shape_class(vehID: &str, clazz: &str) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_shape(get_vehicle_shape_id(clazz).unwrap_or_else(|e| panic!("{}", e)));
     }
 
@@ -3803,7 +3851,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setWidth(width);
     // }
     #[allow(unused_variables)]
-    pub fn set_width(typeID: &str, width: f64) {
+    pub fn set_width(vehID: &str, width: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_width(&width);
     }
 
@@ -3814,7 +3862,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setHeight(height);
     // }
     #[allow(unused_variables)]
-    pub fn set_height(typeID: &str, height: f64) {
+    pub fn set_height(vehID: &str, height: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_height(&height);
     }
 
@@ -3825,7 +3873,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMass(mass);
     // }
     #[allow(unused_variables)]
-    pub fn set_mass(typeID: &str, mass: f64) {
+    pub fn set_mass(vehID: &str, mass: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_mass(mass);
     }
 
@@ -3833,7 +3881,7 @@ impl Vehicle {
     /// @}
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn set_color(typeID: &str, color: &TraCIColor) {
+    pub fn set_color(vehID: &str, col: &TraCIColor) {
         let veh = Helper::get_vehicle(vehID);
         let p = param_mut(veh.get_parameter());
         p.color.set(col.r as u8, col.g as u8, col.b as u8, col.a as u8);
@@ -3852,7 +3900,7 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap(typeID: &str, minGap: f64) {
+    pub fn set_min_gap(vehID: &str, minGap: f64) {
         let veh = Helper::get_vehicle(vehID);
         veh.m().get_singular_type().set_min_gap(&minGap);
         let microVeh = micro_veh(veh);
@@ -3873,7 +3921,7 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap_lat(typeID: &str, minGapLat: f64) {
+    pub fn set_min_gap_lat(vehID: &str, minGapLat: f64) {
         let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             Self::set_parameter(vehID, "laneChangeModel.minGapLat", &to_string(&minGapLat))
         }))
@@ -3891,7 +3939,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMaxSpeedLat(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed_lat(typeID: &str, speed: f64) {
+    pub fn set_max_speed_lat(vehID: &str, speed: f64) {
         Helper::get_vehicle(vehID).m().get_singular_type().set_max_speed_lat(&speed);
     }
 
@@ -3908,9 +3956,9 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_lateral_alignment(typeID: &str, latAlignment: &str) {
+    pub fn set_lateral_alignment(vehID: &str, latAlignment: &str) {
         let mut lao: f64 = 0.;
-        let mut lad: LatAlignmentDefinition = Default::default();
+        let mut lad: LatAlignmentDefinition = LatAlignmentDefinition::DEFAULT;
         if SUMOVTypeParameter::parse_lat_alignment(latAlignment, &mut lao, &mut lad) {
             Helper::get_vehicle(vehID).m().get_singular_type().set_preferred_lateral_alignment(&lad, lao);
         } else {
@@ -3940,13 +3988,13 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_action_step_length(typeID: &str, actionStepLength: f64, resetActionOffset: bool) {
+    pub fn set_action_step_length(vehID: &str, actionStepLength: f64, resetActionOffset: bool) {
         if actionStepLength < 0.0 {
             return;
         }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         if actionStepLength == 0. {
-            veh.m().reset_action_offset();
+            veh.m().reset_action_offset(0);
         } else {
             veh.m().set_action_step_length(actionStepLength, resetActionOffset);
         }
@@ -3964,7 +4012,7 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setBoardingDuration(TIME2STEPS(boardingDuration));
     // }
     #[allow(unused_variables)]
-    pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
+    pub fn set_boarding_duration(vehID: &str, boardingDuration: f64) {
         // shortcut: checkTimeBounds(boardingDuration) not applied (see the top-of-file shortcut); out-of-range values are not rejected
         Helper::get_vehicle(vehID).m().get_singular_type().set_boarding_duration(time2steps(boardingDuration), true);
     }
@@ -3978,7 +4026,7 @@ impl Vehicle {
     //     vehicle->getBaseInfluencer().setExtraImpatience(impatience - normalImpatience);
     // }
     #[allow(unused_variables)]
-    pub fn set_impatience(typeID: &str, impatience: f64) {
+    pub fn set_impatience(vehID: &str, impatience: f64) {
         let vehicle = Helper::get_vehicle(vehID);
         let normalImpatience = vehicle.get_impatience();
         vehicle.m().get_base_influencer().set_extra_impatience(impatience - normalImpatience);
@@ -4517,7 +4565,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_visible(veh: Ptr<SUMOVehicle>) -> bool {
-        veh.is_on_road() || veh.is_parking() || veh.was_remote_controlled(DELTA_T)
+        veh.is_on_road() || veh.is_parking() || veh.was_remote_controlled(delta_t())
     }
 
     /// C++: `bool Vehicle::isOnInit(const std::string &)` [static, private]
