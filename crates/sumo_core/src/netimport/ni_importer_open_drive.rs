@@ -377,6 +377,28 @@ fn lane_sorter_ordering(sorter: &NIImporter_OpenDrive_LaneSorter, a: &NIImporter
     }
 }
 
+/// Maps a raw SAX tag number back to its `OpenDriveXMLTag` (unknown numbers map to OPENDRIVE_TAG_NOTHING)
+fn open_drive_tag_from_i32(v: i32) -> NIImporter_OpenDrive_OpenDriveXMLTag {
+    use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+    const ALL: [T; 36] = [
+        T::OPENDRIVE_TAG_NOTHING, T::OPENDRIVE_TAG_HEADER, T::OPENDRIVE_TAG_ROAD, T::OPENDRIVE_TAG_PREDECESSOR,
+        T::OPENDRIVE_TAG_SUCCESSOR, T::OPENDRIVE_TAG_GEOMETRY, T::OPENDRIVE_TAG_LINE, T::OPENDRIVE_TAG_SPIRAL,
+        T::OPENDRIVE_TAG_ARC, T::OPENDRIVE_TAG_POLY3, T::OPENDRIVE_TAG_PARAMPOLY3, T::OPENDRIVE_TAG_LANESECTION,
+        T::OPENDRIVE_TAG_LANEOFFSET, T::OPENDRIVE_TAG_ACCESS, T::OPENDRIVE_TAG_LEFT, T::OPENDRIVE_TAG_CENTER,
+        T::OPENDRIVE_TAG_RIGHT, T::OPENDRIVE_TAG_LANE, T::OPENDRIVE_TAG_SIGNAL, T::OPENDRIVE_TAG_SIGNALREFERENCE,
+        T::OPENDRIVE_TAG_CONTROLLER, T::OPENDRIVE_TAG_CONTROL, T::OPENDRIVE_TAG_VALIDITY, T::OPENDRIVE_TAG_SEMANTICS,
+        T::OPENDRIVE_TAG_PRIORITY, T::OPENDRIVE_TAG_JUNCTION, T::OPENDRIVE_TAG_CONNECTION, T::OPENDRIVE_TAG_LANELINK,
+        T::OPENDRIVE_TAG_WIDTH, T::OPENDRIVE_TAG_SPEED, T::OPENDRIVE_TAG_ELEVATION, T::OPENDRIVE_TAG_GEOREFERENCE,
+        T::OPENDRIVE_TAG_OFFSET, T::OPENDRIVE_TAG_OBJECT, T::OPENDRIVE_TAG_REPEAT, T::OPENDRIVE_TAG_INCLUDE,
+    ];
+    ALL.into_iter().find(|t| *t as i32 == v).unwrap_or(T::OPENDRIVE_TAG_NOTHING)
+}
+
+/// C++ `myElementStack.back()` (n = 0) and `myElementStack[size() - 2]` (n = 1), or None when absent
+fn stack_back(stack: &[i32], n: usize) -> Option<i32> {
+    stack.len().checked_sub(n + 1).map(|i| stack[i])
+}
+
 /// Importer for networks stored in openDrive format
 /// C++ class `NIImporter_OpenDrive` (netimport/NIImporter_OpenDrive.h)
 #[repr(C)]
@@ -2384,9 +2406,427 @@ impl NIImporter_OpenDrive {
     //     }
     //     myElementStack.push_back(element);
     // }
+    /// C++ error propagation: `runParser` for included files may fail, so this returns `Result`
     #[allow(unused_variables)]
-    pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIImporter_OpenDrive::myStartElement")
+    pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        use NIImporter_OpenDrive_OpenDriveXMLAttr as A;
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        if self.myUseCurrentNode {
+            // skip the parent node repeated in the included file
+            self.myUseCurrentNode = false;
+            self.myElementStack.push(element);
+            return Ok(());
+        }
+        let mut ok = true;
+        match open_drive_tag_from_i32(element) {
+            T::OPENDRIVE_TAG_HEADER => {
+                let majorVersion: i32 = attrs.get(A::OPENDRIVE_ATTR_REVMAJOR as i32, "", &mut ok, true);
+                let minorVersion: i32 = attrs.get(A::OPENDRIVE_ATTR_REVMINOR as i32, "", &mut ok, true);
+                if majorVersion == 1 && minorVersion > 4 {
+                    // disable flags only used for old 1.4 standard
+                    MY_IGNORE_MISPLACED_SIGNALS.with(|c| c.set(false));
+                }
+            }
+            T::OPENDRIVE_TAG_OFFSET => {
+                let x: f64 = attrs.get(A::OPENDRIVE_ATTR_X as i32, "offset", &mut ok, true);
+                let y: f64 = attrs.get(A::OPENDRIVE_ATTR_Y as i32, "offset", &mut ok, true);
+                let z: f64 = attrs.get(A::OPENDRIVE_ATTR_Z as i32, "offset", &mut ok, true);
+                self.myOffset.set3(-x, -y, -z);
+                if GeoConvHelper::get_num_loaded() != 0 {
+                    GeoConvHelper::with_loaded(|g| g.move_converted_by(-x, -y));
+                }
+            }
+            T::OPENDRIVE_TAG_ROAD => {
+                let id: String = attrs.get(A::OPENDRIVE_ATTR_ID as i32, "", &mut ok, true);
+                let streetName: String = attrs.get_opt(A::OPENDRIVE_ATTR_NAME as i32, "", &mut ok, String::new(), false);
+                let junction: String = attrs.get(A::OPENDRIVE_ATTR_JUNCTION as i32, &id, &mut ok, true);
+                let length: f64 = attrs.get(A::OPENDRIVE_ATTR_LENGTH as i32, &id, &mut ok, true);
+                self.myCurrentEdge = NIImporter_OpenDrive_OpenDriveEdge::new(&id, &streetName, &junction, length);
+            }
+            T::OPENDRIVE_TAG_PREDECESSOR => {
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 1) == Some(T::OPENDRIVE_TAG_ROAD as i32) {
+                    let elementType: String = attrs.get(A::OPENDRIVE_ATTR_ELEMENTTYPE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let elementID: String = attrs.get(A::OPENDRIVE_ATTR_ELEMENTID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let contactPoint: String = if attrs.has_attribute(A::OPENDRIVE_ATTR_CONTACTPOINT as i32) {
+                        attrs.get(A::OPENDRIVE_ATTR_CONTACTPOINT as i32, &self.myCurrentEdge.id, &mut ok, true)
+                    } else {
+                        "end".to_string()
+                    };
+                    self.add_link(NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_PREDECESSOR, &elementType, &elementID, &contactPoint);
+                }
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 1) == Some(T::OPENDRIVE_TAG_LANE as i32) {
+                    let no: i32 = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let dir = self.myCurrentLaneDirection;
+                    let l = self.myCurrentEdge.laneSections.last_mut().unwrap().lanesByDir.entry(dir).or_default().last_mut().unwrap();
+                    l.predecessor = no;
+                }
+            }
+            T::OPENDRIVE_TAG_SUCCESSOR => {
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 1) == Some(T::OPENDRIVE_TAG_ROAD as i32) {
+                    let elementType: String = attrs.get(A::OPENDRIVE_ATTR_ELEMENTTYPE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let elementID: String = attrs.get(A::OPENDRIVE_ATTR_ELEMENTID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let contactPoint: String = if attrs.has_attribute(A::OPENDRIVE_ATTR_CONTACTPOINT as i32) {
+                        attrs.get(A::OPENDRIVE_ATTR_CONTACTPOINT as i32, &self.myCurrentEdge.id, &mut ok, true)
+                    } else {
+                        "start".to_string()
+                    };
+                    self.add_link(NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR, &elementType, &elementID, &contactPoint);
+                }
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 1) == Some(T::OPENDRIVE_TAG_LANE as i32) {
+                    let no: i32 = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let dir = self.myCurrentLaneDirection;
+                    let l = self.myCurrentEdge.laneSections.last_mut().unwrap().lanesByDir.entry(dir).or_default().last_mut().unwrap();
+                    l.successor = no;
+                }
+            }
+            T::OPENDRIVE_TAG_GEOMETRY => {
+                let length: f64 = attrs.get(A::OPENDRIVE_ATTR_LENGTH as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let x: f64 = attrs.get(A::OPENDRIVE_ATTR_X as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let y: f64 = attrs.get(A::OPENDRIVE_ATTR_Y as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let hdg: f64 = attrs.get(A::OPENDRIVE_ATTR_HDG as i32, &self.myCurrentEdge.id, &mut ok, true);
+                self.myCurrentEdge.geometries.push(NIImporter_OpenDrive_OpenDriveGeometry::new(length, s, x, y, hdg));
+            }
+            T::OPENDRIVE_TAG_ELEVATION => {
+                // <elevationGrid> not yet supported
+                if self.myCurrentJunctionID == "" {
+                    let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let a: f64 = attrs.get(A::OPENDRIVE_ATTR_A as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let b: f64 = attrs.get(A::OPENDRIVE_ATTR_B as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let c: f64 = attrs.get(A::OPENDRIVE_ATTR_C as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let d: f64 = attrs.get(A::OPENDRIVE_ATTR_D as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    self.myCurrentEdge.elevations.push(NIImporter_OpenDrive_OpenDriveElevation::new(s, a, b, c, d));
+                }
+            }
+            T::OPENDRIVE_TAG_LINE => {
+                if self.myElementStack.len() > 0 && stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_GEOMETRY as i32) {
+                    let vals: Vec<f64> = Vec::new();
+                    self.add_geometry_shape(NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_LINE, &vals)?;
+                }
+            }
+            T::OPENDRIVE_TAG_SPIRAL => {
+                let mut vals: Vec<f64> = Vec::new();
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_CURVSTART as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_CURVEND as i32, &self.myCurrentEdge.id, &mut ok, true));
+                self.add_geometry_shape(NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_SPIRAL, &vals)?;
+            }
+            T::OPENDRIVE_TAG_ARC => {
+                let mut vals: Vec<f64> = Vec::new();
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_CURVATURE as i32, &self.myCurrentEdge.id, &mut ok, true));
+                self.add_geometry_shape(NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_ARC, &vals)?;
+            }
+            T::OPENDRIVE_TAG_POLY3 => {
+                let mut vals: Vec<f64> = Vec::new();
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_A as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_B as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_C as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_D as i32, &self.myCurrentEdge.id, &mut ok, true));
+                self.add_geometry_shape(NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_POLY3, &vals)?;
+            }
+            T::OPENDRIVE_TAG_PARAMPOLY3 => {
+                let mut vals: Vec<f64> = Vec::new();
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_AU as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_BU as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_CU as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_DU as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_AV as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_BV as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_CV as i32, &self.myCurrentEdge.id, &mut ok, true));
+                vals.push(attrs.get(A::OPENDRIVE_ATTR_DV as i32, &self.myCurrentEdge.id, &mut ok, true));
+                let pRange: String = attrs.get_opt(A::OPENDRIVE_ATTR_PRANGE as i32, &self.myCurrentEdge.id, &mut ok, "normalized".to_string(), false);
+                if pRange == "normalized" {
+                    vals.push(1.0);
+                } else if pRange == "arcLength" {
+                    vals.push(-1.0);
+                } else {
+                    write_warningf!("Ignoring invalid pRange value '%' for road '%'.", pRange, self.myCurrentEdge.id);
+                    vals.push(1.0);
+                }
+                self.add_geometry_shape(NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_PARAMPOLY3, &vals)?;
+            }
+            T::OPENDRIVE_TAG_LANESECTION => {
+                let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                if self.myCurrentEdge.laneSections.len() > 0 {
+                    let last = self.myCurrentEdge.laneSections.last_mut().unwrap();
+                    last.length = s - last.s;
+                }
+                self.myCurrentEdge.laneSections.push(NIImporter_OpenDrive_OpenDriveLaneSection::new(s));
+                // possibly updated by the next laneSection
+                let edgeLength = self.myCurrentEdge.length;
+                self.myCurrentEdge.laneSections.last_mut().unwrap().length = edgeLength - s;
+            }
+            T::OPENDRIVE_TAG_LANEOFFSET => {
+                let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let a: f64 = attrs.get(A::OPENDRIVE_ATTR_A as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let b: f64 = attrs.get(A::OPENDRIVE_ATTR_B as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let c: f64 = attrs.get(A::OPENDRIVE_ATTR_C as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let d: f64 = attrs.get(A::OPENDRIVE_ATTR_D as i32, &self.myCurrentEdge.id, &mut ok, true);
+                self.myCurrentEdge.offsets.push(NIImporter_OpenDrive_OpenDriveLaneOffset::new(s, a, b, c, d));
+            }
+            T::OPENDRIVE_TAG_LEFT => {
+                self.myCurrentLaneDirection = T::OPENDRIVE_TAG_LEFT;
+            }
+            T::OPENDRIVE_TAG_CENTER => {
+                self.myCurrentLaneDirection = T::OPENDRIVE_TAG_CENTER;
+            }
+            T::OPENDRIVE_TAG_RIGHT => {
+                self.myCurrentLaneDirection = T::OPENDRIVE_TAG_RIGHT;
+            }
+            T::OPENDRIVE_TAG_LANE => {
+                let type_: String = attrs.get(A::OPENDRIVE_ATTR_TYPE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let id: i32 = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let level: String = if attrs.has_attribute(A::OPENDRIVE_ATTR_LEVEL as i32) {
+                    attrs.get(A::OPENDRIVE_ATTR_LEVEL as i32, &self.myCurrentEdge.id, &mut ok, true)
+                } else {
+                    String::new()
+                };
+                let dir = self.myCurrentLaneDirection;
+                let ls = self.myCurrentEdge.laneSections.last_mut().unwrap();
+                ls.lanesByDir.entry(dir).or_default().push(NIImporter_OpenDrive_OpenDriveLane::new(id, &level, &type_));
+            }
+            T::OPENDRIVE_TAG_SIGNAL => {
+                let id: String = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let type_: String = attrs.get(A::OPENDRIVE_ATTR_TYPE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let name: String = attrs.get_opt(A::OPENDRIVE_ATTR_NAME as i32, &self.myCurrentEdge.id, &mut ok, String::new(), false);
+                let orientation: String = attrs.get(A::OPENDRIVE_ATTR_ORIENTATION as i32, &id, &mut ok, true);
+                let orientationCode: i32 = if orientation == "-" { -1 } else if orientation == "+" { 1 } else { 0 };
+                let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let dynamic: bool = attrs.get::<String>(A::OPENDRIVE_ATTR_DYNAMIC as i32, &self.myCurrentEdge.id, &mut ok, true) != "no";
+                let signal = NIImporter_OpenDrive_OpenDriveSignal::new(&id, type_, name, orientationCode, dynamic, s);
+                self.myCurrentEdge.signals.push(signal.clone());
+                self.mySignals.insert(id, signal);
+            }
+            T::OPENDRIVE_TAG_SIGNALREFERENCE => {
+                let id: String = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let orientation: String = attrs.get(A::OPENDRIVE_ATTR_ORIENTATION as i32, &id, &mut ok, true);
+                let orientationCode: i32 = if orientation == "-" { -1 } else if orientation == "+" { 1 } else { 0 };
+                let s: f64 = attrs.get(A::OPENDRIVE_ATTR_S as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let signal = NIImporter_OpenDrive_OpenDriveSignal::new(&id, String::new(), String::new(), orientationCode, false, s);
+                self.myCurrentEdge.signals.push(signal);
+            }
+            T::OPENDRIVE_TAG_CONTROLLER => {
+                let id: String = attrs.get(A::OPENDRIVE_ATTR_ID as i32, "", &mut ok, true);
+                let name: String = attrs.get_opt(A::OPENDRIVE_ATTR_NAME as i32, "", &mut ok, String::new(), false);
+                self.myCurrentController = NIImporter_OpenDrive_OpenDriveController::new(&id, name);
+            }
+            T::OPENDRIVE_TAG_CONTROL => {
+                let signalID: String = attrs.get(A::OPENDRIVE_ATTR_SIGNALID as i32, &self.myCurrentController.id, &mut ok, true);
+                self.myCurrentController.signalIDs.push(signalID.clone());
+                if let Some(sig) = self.mySignals.get_mut(&signalID) {
+                    sig.controller = self.myCurrentController.id.clone();
+                } else {
+                    write_warningf!("Ignoring missing signal '%' in controller '%'.", signalID, self.myCurrentController.id);
+                }
+            }
+            T::OPENDRIVE_TAG_VALIDITY => {
+                let fromLane: i32 = attrs.get(A::OPENDRIVE_ATTR_FROMLANE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                let toLane: i32 = attrs.get(A::OPENDRIVE_ATTR_TOLANE as i32, &self.myCurrentEdge.id, &mut ok, true);
+                if self.myElementStack.len() >= 1 && (stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_SIGNAL as i32)
+                    || stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_SIGNALREFERENCE as i32)) {
+                    let sig = self.myCurrentEdge.signals.last_mut().unwrap();
+                    sig.minLane = fromLane;
+                    sig.maxLane = toLane;
+                }
+            }
+            T::OPENDRIVE_TAG_PRIORITY => {
+                if self.myElementStack.len() >= 2
+                    && stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_SEMANTICS as i32)
+                    && stack_back(&self.myElementStack, 1) == Some(T::OPENDRIVE_TAG_SIGNAL as i32) {
+                    let signal = self.myCurrentEdge.signals.last_mut().unwrap();
+                    let sigID = signal.id.clone();
+                    signal.priority = attrs.get(A::OPENDRIVE_ATTR_TYPE as i32, &sigID, &mut ok, true);
+                }
+            }
+            T::OPENDRIVE_TAG_JUNCTION => {
+                self.myCurrentJunctionID = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentJunctionID, &mut ok, true);
+            }
+            T::OPENDRIVE_TAG_CONNECTION => {
+                let _id: String = attrs.get(A::OPENDRIVE_ATTR_ID as i32, &self.myCurrentJunctionID, &mut ok, true);
+                self.myCurrentIncomingRoad = attrs.get(A::OPENDRIVE_ATTR_INCOMINGROAD as i32, &self.myCurrentJunctionID, &mut ok, true);
+                self.myCurrentConnectingRoad = attrs.get(A::OPENDRIVE_ATTR_CONNECTINGROAD as i32, &self.myCurrentJunctionID, &mut ok, true);
+                let cp: String = attrs.get(A::OPENDRIVE_ATTR_CONTACTPOINT as i32, &self.myCurrentJunctionID, &mut ok, true);
+                self.myCurrentContactPoint = if cp == "start" {
+                    NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START
+                } else {
+                    NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END
+                };
+                self.myConnectionWasEmpty = true;
+            }
+            T::OPENDRIVE_TAG_LANELINK => {
+                let from: i32 = attrs.get(A::OPENDRIVE_ATTR_FROM as i32, &self.myCurrentJunctionID, &mut ok, true);
+                let to: i32 = attrs.get(A::OPENDRIVE_ATTR_TO as i32, &self.myCurrentJunctionID, &mut ok, true);
+                let c = NIImporter_OpenDrive_Connection {
+                    fromEdge: self.myCurrentIncomingRoad.clone(),
+                    toEdge: self.myCurrentConnectingRoad.clone(),
+                    fromLane: from,
+                    toLane: to,
+                    fromCP: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END,
+                    toCP: self.myCurrentContactPoint,
+                    all: false,
+                    // C++ leaves origID / origLane default-initialized
+                    origID: String::new(),
+                    origLane: 0,
+                    shape: PositionVector::default(),
+                };
+                if !self.myEdges.m().contains_key(&c.fromEdge) {
+                    write_errorf!("In laneLink-element: incoming road '%' is not known.", c.fromEdge);
+                } else {
+                    let e = self.myEdges.m().get(&c.fromEdge).unwrap();
+                    e.m().connections.insert(c);
+                    self.myConnectionWasEmpty = false;
+                }
+            }
+            T::OPENDRIVE_TAG_WIDTH => {
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_LANE as i32) {
+                    let s: f64 = attrs.get(A::OPENDRIVE_ATTR_SOFFSET as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let a: f64 = attrs.get(A::OPENDRIVE_ATTR_A as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let b: f64 = attrs.get(A::OPENDRIVE_ATTR_B as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let c: f64 = attrs.get(A::OPENDRIVE_ATTR_C as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let d: f64 = attrs.get(A::OPENDRIVE_ATTR_D as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let dir = self.myCurrentLaneDirection;
+                    let l = self.myCurrentEdge.laneSections.last_mut().unwrap().lanesByDir.entry(dir).or_default().last_mut().unwrap();
+                    // MAX2(l.width, a)
+                    l.width = if l.width > a { l.width } else { a };
+                    l.widthData.push(NIImporter_OpenDrive_OpenDriveWidth::new(s, a, b, c, d));
+                }
+            }
+            T::OPENDRIVE_TAG_ACCESS => {
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_LANE as i32) {
+                    let pos: f64 = attrs.get(A::OPENDRIVE_ATTR_SOFFSET as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    // OpenDRIVE 1.4 without rule value
+                    let rule: String = attrs.get_opt(A::OPENDRIVE_ATTR_RULE as i32, "", &mut ok, "allow".to_string(), false);
+                    let vClass: String = attrs.get(A::OPENDRIVE_ATTR_RESTRICTION as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let dir = self.myCurrentLaneDirection;
+                    let attributeChanges = &mut self.myCurrentEdge.laneSections.last_mut().unwrap().lanesByDir.entry(dir).or_default().last_mut().unwrap().attributeChanges;
+                    let mut finder = NIImporter_OpenDrive_same_position_finder::new(pos);
+                    match attributeChanges.iter().position(|ps| finder.call_op(ps)) {
+                        Some(i) => {
+                            if rule == "allow" {
+                                attributeChanges[i].1.allowed.push(vClass);
+                            } else if rule == "deny" {
+                                attributeChanges[i].1.denied.push(vClass);
+                            }
+                        }
+                        None => {
+                            let mut lac = NIImporter_OpenDrive_LaneAttributeChange::new(0.0);
+                            if rule == "allow" {
+                                lac.allowed.push(vClass);
+                            } else if rule == "deny" {
+                                lac.denied.push(vClass);
+                            }
+                            attributeChanges.push((pos, lac));
+                        }
+                    }
+                }
+            }
+            T::OPENDRIVE_TAG_SPEED => {
+                if self.myElementStack.len() >= 2 && stack_back(&self.myElementStack, 0) == Some(T::OPENDRIVE_TAG_LANE as i32) {
+                    let mut speed: f64 = attrs.get(A::OPENDRIVE_ATTR_MAX as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    let pos: f64 = attrs.get(A::OPENDRIVE_ATTR_SOFFSET as i32, &self.myCurrentEdge.id, &mut ok, true);
+                    // required for xodr v1.4
+                    let unit: String = attrs.get_opt(A::OPENDRIVE_ATTR_UNIT as i32, &self.myCurrentEdge.id, &mut ok, String::new(), false);
+                    // now convert the speed to reasonable default SI [m/s]
+                    if !unit.is_empty() {
+                        // something to be done at all ?
+                        if unit == "km/h" {
+                            speed /= 3.6;
+                        }
+                        if unit == "mph" {
+                            speed *= 1.609344 / 3.6;
+                        }
+                        // IGNORING unknown units.
+                    }
+                    let dir = self.myCurrentLaneDirection;
+                    let attributeChanges = &mut self.myCurrentEdge.laneSections.last_mut().unwrap().lanesByDir.entry(dir).or_default().last_mut().unwrap().attributeChanges;
+                    let mut finder = NIImporter_OpenDrive_same_position_finder::new(pos);
+                    match attributeChanges.iter().position(|ps| finder.call_op(ps)) {
+                        Some(i) => {
+                            attributeChanges[i].1.speed = speed;
+                        }
+                        None => {
+                            attributeChanges.push((pos, NIImporter_OpenDrive_LaneAttributeChange::new(speed)));
+                        }
+                    }
+                }
+            }
+            T::OPENDRIVE_TAG_OBJECT => {
+                if !attrs.has_attribute(A::OPENDRIVE_ATTR_ID as i32) {
+                    write_warningf!("Ignoring object without id at edge '%'.", self.myCurrentEdge.id);
+                } else {
+                    let mut o = NIImporter_OpenDrive_OpenDriveObject {
+                        type_: String::new(),
+                        name: String::new(),
+                        id: String::new(),
+                        s: 0.0,
+                        t: 0.0,
+                        zOffset: 0.0,
+                        length: 0.0,
+                        width: 0.0,
+                        height: 0.0,
+                        radius: 0.0,
+                        hdg: 0.0,
+                        pitch: 0.0,
+                        roll: 0.0,
+                    };
+                    o.id = attrs.get(A::OPENDRIVE_ATTR_ID as i32, "", &mut ok, true);
+                    o.type_ = attrs.get_opt(A::OPENDRIVE_ATTR_TYPE as i32, &o.id, &mut ok, String::new(), false);
+                    o.name = attrs.get_opt(A::OPENDRIVE_ATTR_NAME as i32, &o.id, &mut ok, String::new(), false);
+                    o.s = attrs.get(A::OPENDRIVE_ATTR_S as i32, &o.id, &mut ok, true);
+                    o.t = attrs.get(A::OPENDRIVE_ATTR_T as i32, &o.id, &mut ok, true);
+                    o.width = attrs.get_opt(A::OPENDRIVE_ATTR_WIDTH as i32, &o.id, &mut ok, -1.0, true);
+                    o.length = attrs.get_opt(A::OPENDRIVE_ATTR_LENGTH as i32, &o.id, &mut ok, -1.0, true);
+                    o.radius = attrs.get_opt(A::OPENDRIVE_ATTR_RADIUS as i32, &o.id, &mut ok, -1.0, true);
+                    o.hdg = attrs.get_opt(A::OPENDRIVE_ATTR_HDG as i32, &o.id, &mut ok, 0.0, true);
+                    self.myCurrentEdge.objects.push(o);
+                }
+            }
+            T::OPENDRIVE_TAG_REPEAT => {
+                if self.myCurrentEdge.objects.is_empty() {
+                    write_errorf!("Repeat without object at edge '%'.", self.myCurrentEdge.id);
+                    ok = false;
+                } else {
+                    let mut o = self.myCurrentEdge.objects.last().unwrap().clone();
+                    let baseID = o.id.clone();
+                    let mut dist: f64 = attrs.get(A::OPENDRIVE_ATTR_DISTANCE as i32, &o.id, &mut ok, true);
+                    if dist == 0.0 {
+                        // continuous feature. Split into parts (XXX exmport as a single polygon #5235)
+                        dist = utils::options::options_cont::get_float("opendrive.curve-resolution");
+                    }
+                    self.myCurrentEdge.objects.pop();
+                    let length: f64 = attrs.get(A::OPENDRIVE_ATTR_LENGTH as i32, &o.id, &mut ok, true);
+                    o.s = attrs.get_opt(A::OPENDRIVE_ATTR_S as i32, &o.id, &mut ok, o.s, true);
+                    let wStart: f64 = attrs.get_opt(A::OPENDRIVE_ATTR_WIDTHSTART as i32, &o.id, &mut ok, o.width, true);
+                    let wEnd: f64 = attrs.get_opt(A::OPENDRIVE_ATTR_WIDTHEND as i32, &o.id, &mut ok, o.width, true);
+                    let tStart: f64 = attrs.get_opt(A::OPENDRIVE_ATTR_TSTART as i32, &o.id, &mut ok, o.t, true);
+                    let tEnd: f64 = attrs.get_opt(A::OPENDRIVE_ATTR_TEND as i32, &o.id, &mut ok, o.t, true);
+                    let mut index: i32 = 0;
+                    let mut x: f64 = 0.0;
+                    while x <= length + utils::geom::NUMERICAL_EPS {
+                        o.id = format!("{}#{}", baseID, index);
+                        index += 1;
+                        let a = x / length;
+                        o.width = wStart * (1.0 - a) + wEnd * a;
+                        o.t = tStart * (1.0 - a) + tEnd * a;
+                        self.myCurrentEdge.objects.push(o.clone());
+                        o.s += dist;
+                        x += dist;
+                    }
+                }
+            }
+            T::OPENDRIVE_TAG_INCLUDE => {
+                let mut includedFile: String = attrs.get(A::OPENDRIVE_ATTR_FILE as i32, "", &mut ok, true);
+                if !utils::common::file_helpers::is_absolute(&includedFile) {
+                    includedFile = utils::common::file_helpers::get_configuration_relative(self.get_file_name(), &includedFile);
+                }
+                progress_begin_message(&format!("Parsing included opendrive from '{}'", includedFile));
+                self.myUseCurrentNode = true;
+                utils::xml::xml_sub_sys::run_parser(self, &includedFile, false, false, false, true)?;
+                progress_done_message();
+            }
+            _ => {}
+        }
+        self.myElementStack.push(element);
+        Ok(())
     }
 
     /// C++: `void NIImporter_OpenDrive::myCharacters(int, const std::string &)` [virtual, protected]
@@ -2417,7 +2857,24 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn my_characters(&mut self, element: i32, chars: &str) {
-        todo!("port NIImporter_OpenDrive::myCharacters")
+        if open_drive_tag_from_i32(element) == NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_GEOREFERENCE {
+            let cdata = chars;
+            if let Some(i) = cdata.find("+proj") {
+                let proj = &cdata[i..];
+                if proj != "" {
+                    let mut convBoundary = Boundary::default();
+                    let mut origBoundary = Boundary::default();
+                    // XXX read values from the header
+                    convBoundary.add_pos(&Position::new(0.0, 0.0));
+                    origBoundary.add_pos(&Position::new(0.0, 0.0));
+                    // shortcut: Rust GeoConvHelper::new is infallible, so the C++ ProcessError catch (WRITE_ERRORF "Could not set projection") is unreachable
+                    GeoConvHelper::set_loaded(&GeoConvHelper::new(proj, self.myOffset, origBoundary, convBoundary, 1.0, 0.0, false, false));
+                }
+            } else {
+                write_warningf!("geoReference format '%' currently not supported", cdata.to_string());
+            }
+            self.needs_character_data(false);
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::myEndElement(int)` [virtual, protected]
@@ -2506,7 +2963,98 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIImporter_OpenDrive::myEndElement")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        self.myElementStack.pop();
+        match open_drive_tag_from_i32(element) {
+            T::OPENDRIVE_TAG_JUNCTION => {
+                self.myCurrentJunctionID = String::new();
+            }
+            T::OPENDRIVE_TAG_ROAD => {
+                // C++ `new OpenDriveEdge(myCurrentEdge)`: a heap copy owned by myEdges for the rest of the import
+                let copy = Box::new(self.myCurrentEdge.clone());
+                self.myEdges.m().insert(self.myCurrentEdge.id.clone(), Ptr::from_raw(Box::into_raw(copy)));
+            }
+            T::OPENDRIVE_TAG_CONNECTION => {
+                if self.myConnectionWasEmpty {
+                    let c = NIImporter_OpenDrive_Connection {
+                        fromEdge: self.myCurrentIncomingRoad.clone(),
+                        toEdge: self.myCurrentConnectingRoad.clone(),
+                        fromLane: 0,
+                        toLane: 0,
+                        fromCP: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END,
+                        toCP: self.myCurrentContactPoint,
+                        all: true,
+                        // C++ leaves origID / origLane default-initialized
+                        origID: String::new(),
+                        origLane: 0,
+                        shape: PositionVector::default(),
+                    };
+                    if !self.myEdges.m().contains_key(&c.fromEdge) {
+                        write_errorf!("In laneLink-element: incoming road '%' is not known.", c.fromEdge);
+                    } else {
+                        let e = self.myEdges.m().get(&c.fromEdge).unwrap();
+                        e.m().connections.insert(c);
+                    }
+                }
+            }
+            T::OPENDRIVE_TAG_CONTROLLER => {
+                // C++ std::map::insert keeps an existing entry
+                let c = self.myCurrentController.clone();
+                self.myControllers.entry(c.id.clone()).or_insert(c);
+            }
+            T::OPENDRIVE_TAG_LANESECTION => {
+                let tc = self.myTypeContainer;
+                self.myCurrentEdge.laneSections.last_mut().unwrap().build_lane_mapping(tc.m());
+            }
+            T::OPENDRIVE_TAG_SIGNAL | T::OPENDRIVE_TAG_SIGNALREFERENCE => {
+                if MY_IGNORE_MISPLACED_SIGNALS.with(|c| c.get()) {
+                    'sig: {
+                        let intType: i32 = match utils::common::string_utils::to_int(&self.myCurrentEdge.signals.last().unwrap().type_) {
+                            Ok(v) => v,
+                            // NumberFormatException / EmptyData
+                            Err(_) => break 'sig,
+                        };
+                        if intType < 1000001 || (intType > 1000013 && intType != 1000020) || intType == 1000008 {
+                            // not a traffic_light (Section 6.11)
+                            break 'sig;
+                        }
+                        let back = self.myCurrentEdge.signals.last().unwrap();
+                        let s: f64 = back.s;
+                        let minLane: i32 = back.minLane;
+                        let maxLane: i32 = back.maxLane;
+                        let orientation: i32 = back.orientation;
+                        let mut foundDrivingType = false;
+                        for ls in self.myCurrentEdge.laneSections.iter() {
+                            if ls.s <= s && ls.s + ls.length > s {
+                                if orientation < 0 {
+                                    if let Some(lanes) = ls.lanesByDir.get(&T::OPENDRIVE_TAG_LEFT) {
+                                        for l in lanes {
+                                            if (minLane < 0 && l.id >= minLane && l.id <= maxLane) && l.type_ == "driving" {
+                                                foundDrivingType = true;
+                                            }
+                                        }
+                                    }
+                                } else if orientation > 0 {
+                                    // 0 = center is never used for driving
+                                    if let Some(lanes) = ls.lanesByDir.get(&T::OPENDRIVE_TAG_RIGHT) {
+                                        for l in lanes {
+                                            if (minLane > 0 && l.id >= minLane && l.id <= maxLane) && l.type_ == "driving" {
+                                                foundDrivingType = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if !foundDrivingType {
+                            // reject signal / signal reference if not on driving lane
+                            self.myCurrentEdge.signals.pop();
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `std::map<std::string, OpenDriveSignal> & NIImporter_OpenDrive::getSignals()` [protected]
@@ -2603,7 +3151,21 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, lt: NIImporter_OpenDrive_LinkType, elementType: &str, elementID: &str, contactPoint: &str) {
-        todo!("port NIImporter_OpenDrive::addLink")
+        let mut l = NIImporter_OpenDrive_OpenDriveLink::new(lt, elementID);
+        // elementType
+        if elementType == "road" {
+            l.elementType = NIImporter_OpenDrive_ElementType::OPENDRIVE_ET_ROAD;
+        } else if elementType == "junction" {
+            l.elementType = NIImporter_OpenDrive_ElementType::OPENDRIVE_ET_JUNCTION;
+        }
+        // contact point
+        if contactPoint == "start" {
+            l.contactPoint = NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START;
+        } else if contactPoint == "end" {
+            l.contactPoint = NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END;
+        }
+        // add
+        self.myCurrentEdge.links.push(l);
     }
 
     /// C++: `void NIImporter_OpenDrive::addGeometryShape(GeometryType, const std::vector<double> &)` [private]
@@ -2622,8 +3184,19 @@ impl NIImporter_OpenDrive {
     //     last.params = vals;
     // }
     #[allow(unused_variables)]
-    pub fn add_geometry_shape(&mut self, type_: NIImporter_OpenDrive_GeometryType, vals: &Vec<f64>) {
-        todo!("port NIImporter_OpenDrive::addGeometryShape")
+    pub fn add_geometry_shape(&mut self, type_: NIImporter_OpenDrive_GeometryType, vals: &Vec<f64>) -> Result<(), ProcessError> {
+        // checks
+        if self.myCurrentEdge.geometries.len() == 0 {
+            return Err(ProcessError::new(tlf!("Mismatching parenthesis in geometry definition for road '%'", self.myCurrentEdge.id.clone())));
+        }
+        let last = self.myCurrentEdge.geometries.last_mut().unwrap();
+        if last.type_ != NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_UNKNOWN {
+            return Err(ProcessError::new(tlf!("Double geometry information for road '%'", self.myCurrentEdge.id.clone())));
+        }
+        // set
+        last.type_ = type_;
+        last.params = vals.clone();
+        Ok(())
     }
 
     /// C++: `void NIImporter_OpenDrive::setEdgeLinks2(OpenDriveEdge &, const std::map<std::string, OpenDriveEdge *> &)` [static, private]
@@ -2717,7 +3290,84 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn set_edge_links2(e: &mut NIImporter_OpenDrive_OpenDriveEdge, edges: &BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) {
-        todo!("port NIImporter_OpenDrive::setEdgeLinks2")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        // The C++ inserts into `src->connections` inside the loops; src may be `e` itself, so the
+        // connections are collected first and inserted in the same order afterwards (no reads of
+        // `connections` happen in between, so the result is identical).
+        let mut pending: Vec<NIImporter_OpenDrive_Connection> = Vec::new();
+        for l in e.links.iter() {
+            if l.elementType != NIImporter_OpenDrive_ElementType::OPENDRIVE_ET_ROAD {
+                // we assume that links to nodes are later given as connections to edges
+                continue;
+            }
+            // get the right direction of the connected edge
+            let connectedEdge: String = l.elementID.clone();
+            let laneSection = if l.linkType == NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR {
+                e.laneSections.last().unwrap()
+            } else {
+                &e.laneSections[0]
+            };
+            let laneMap = &laneSection.laneMap;
+            if let Some(lanes) = laneSection.lanesByDir.get(&T::OPENDRIVE_TAG_RIGHT) {
+                for j in lanes {
+                    if !MY_IMPORT_ALL_TYPES.with(|c| c.get()) && !laneMap.contains_key(&j.id) {
+                        continue;
+                    }
+                    let mut c = NIImporter_OpenDrive_Connection {
+                        fromEdge: e.id.clone(),
+                        toEdge: connectedEdge.clone(),
+                        fromLane: j.id,
+                        toLane: if l.linkType == NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR { j.successor } else { j.predecessor },
+                        fromCP: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END,
+                        toCP: l.contactPoint,
+                        all: false,
+                        origID: String::new(),
+                        origLane: 0,
+                        shape: PositionVector::default(),
+                    };
+                    if l.linkType != NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR {
+                        std::mem::swap(&mut c.fromEdge, &mut c.toEdge);
+                        std::mem::swap(&mut c.fromLane, &mut c.toLane);
+                        c.fromCP = c.toCP;
+                        c.toCP = NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START;
+                    }
+                    pending.push(c);
+                }
+            }
+            if let Some(lanes) = laneSection.lanesByDir.get(&T::OPENDRIVE_TAG_LEFT) {
+                for j in lanes {
+                    if !MY_IMPORT_ALL_TYPES.with(|c| c.get()) && !laneMap.contains_key(&j.id) {
+                        continue;
+                    }
+                    let mut c = NIImporter_OpenDrive_Connection {
+                        fromEdge: connectedEdge.clone(),
+                        toEdge: e.id.clone(),
+                        fromLane: if l.linkType == NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR { j.successor } else { j.predecessor },
+                        toLane: j.id,
+                        fromCP: l.contactPoint,
+                        toCP: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_END,
+                        all: false,
+                        origID: String::new(),
+                        origLane: 0,
+                        shape: PositionVector::default(),
+                    };
+                    if l.linkType != NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR {
+                        std::mem::swap(&mut c.fromEdge, &mut c.toEdge);
+                        std::mem::swap(&mut c.fromLane, &mut c.toLane);
+                        c.fromCP = c.toCP;
+                        c.toCP = NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START;
+                    }
+                    pending.push(c);
+                }
+            }
+        }
+        for c in pending {
+            if !edges.contains_key(&c.fromEdge) {
+                write_errorf!("While setting connections: incoming road '%' is not known.", c.fromEdge);
+            } else {
+                edges.get(&c.fromEdge).unwrap().m().connections.insert(c);
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::buildConnectionsToOuter(const Connection &, const std::map<std::string, OpenDriveEdge *> &, const std::map<std::string, OpenDriveEdge *> &, const NBTypeCont &, std::vector<Connection> &, std::set<Connection> &)` [static, private]
@@ -4116,6 +4766,7 @@ impl NIImporter_OpenDrive {
 
 /// Representation of a signal group
 /// C++ class `NIImporter_OpenDrive::OpenDriveController` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveController {
     pub id: String,
     pub name: String,
@@ -4145,6 +4796,7 @@ impl NIImporter_OpenDrive_OpenDriveController {
 
 /// Representation of an openDrive "link"
 /// C++ class `NIImporter_OpenDrive::OpenDriveEdge` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveEdge {
     /// The id of the edge
     pub id: String,
@@ -4255,6 +4907,7 @@ impl NIImporter_OpenDrive_OpenDriveEdge {
 
 /// Representation of an OpenDrive geometry part
 /// C++ class `NIImporter_OpenDrive::OpenDriveGeometry` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveGeometry {
     pub length: f64,
     pub s: f64,
@@ -4637,6 +5290,7 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
 
 /// Representation of an OpenDrive link
 /// C++ class `NIImporter_OpenDrive::OpenDriveLink` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveLink {
     pub linkType: NIImporter_OpenDrive_LinkType,
     pub elementID: String,
@@ -4664,6 +5318,7 @@ impl NIImporter_OpenDrive_OpenDriveLink {
 
 /// A road object (e.g. parkingSpace)
 /// C++ class `NIImporter_OpenDrive::OpenDriveObject` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveObject {
     pub type_: String,
     pub name: String,
@@ -4685,6 +5340,7 @@ impl NIImporter_OpenDrive_OpenDriveObject {
 
 /// Representation of a signal
 /// C++ class `NIImporter_OpenDrive::OpenDriveSignal` (netimport/NIImporter_OpenDrive.h)
+#[derive(Clone)]
 pub struct NIImporter_OpenDrive_OpenDriveSignal {
     pub id: String,
     pub type_: String,
@@ -4890,8 +5546,7 @@ impl SaxHandler for NIImporter_OpenDrive {
         &mut self.base
     }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
-        NIImporter_OpenDrive::my_start_element(self, element, attrs);
-        Ok(())
+        NIImporter_OpenDrive::my_start_element(self, element, attrs)
     }
     fn my_characters(&mut self, element: i32, chars: &str) -> Result<(), ProcessError> {
         NIImporter_OpenDrive::my_characters(self, element, chars);
