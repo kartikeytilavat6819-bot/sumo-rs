@@ -243,7 +243,7 @@ impl NBPTStop {
     //     device.closeTag();
     // }
     #[allow(unused_variables)]
-    pub fn write(&mut self, device: &mut OutputDevice) {
+    pub fn write(&self, device: &mut OutputDevice) {
                 device.open_tag_id(self.myTag);
         device.write_attr(SUMO_ATTR_ID, &self.myPTStopId);
         if !self.myName.is_empty() {
@@ -264,12 +264,14 @@ impl NBPTStop {
             device.write_attr(SUMO_ATTR_COLOR, &self.myColor.to_string());
         }
         if !self.myAccesses.is_empty() {
-            self.myAccesses.sort_by(|a, b| {
+            // C++ std::sort()s myAccesses in place; sorting a copy gives the same output without &mut self
+            let mut accesses = self.myAccesses.clone();
+            accesses.sort_by(|a, b| {
                 a.0.cmp(&b.0)
                     .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
                     .then(a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
             });
-            for (lane, pos, len) in &self.myAccesses {
+            for (lane, pos, len) in &accesses {
                 device.open_tag_id(SUMO_TAG_ACCESS);
                 device.write_attr(SUMO_ATTR_LANE, lane);
                 device.write_attr(SUMO_ATTR_POSITION, pos);

@@ -1,6 +1,101 @@
 //! Port of netwrite/NWWriter_XML.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::{g_precision, g_precision_geo, NETWORK_VERSION};
+use utils::common::string_utils::escape_xml;
+use utils::common::sumo_vehicle_class::{get_vehicle_class_names, num_vclasses, SVCPermissions, SUMO_VEHICLE_CLASS_MAX, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
+use utils::common::to_string::{join_to_string, mm_version_to_string};
+use utils::iodevices::output_device::OutputDeviceRef;
+use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, TrafficLightTypes};
+
+// NBNode::UNSPECIFIED_RADIUS and NBEdge::UNSPECIFIED_* (C++ static members, NBNode.cpp / NBEdge.cpp)
+const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
+const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
+const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
+
+/// C++ `OptionsCont` getters throw ProcessError; the options used here are always registered
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// OptionsCont::getOptions().getString(name)
+fn opt_str(oc: &OptionsCont, name: &str) -> String {
+    or_panic(oc.get_string(name))
+}
+
+/// OutputDevice::getDevice(name)
+fn get_device(name: &str) -> OutputDeviceRef {
+    or_panic(OutputDevice::get_device(name, true))
+}
+
+/// GeoConvHelper::getFinal() (copied; the closure form cannot be held across the writers)
+fn get_final_geo() -> GeoConvHelper {
+    GeoConvHelper::with_final(|g| g.clone())
+}
+
+/// GeoConvHelper::writeLocation(OutputDevice&)
+// shortcut: local copy until utils/geom/geo_conv_helper.rs ports writeLocation (it needs OutputDevice)
+fn write_location(into: &mut OutputDevice) {
+    let gch = get_final_geo();
+    into.open_tag_id(SUMO_TAG_LOCATION);
+    let prec = into.get_precision();
+    into.write_attr(SUMO_ATTR_NET_OFFSET, &gch.get_offset_base().to_string_prec(prec));
+    let prec = into.get_precision();
+    into.write_attr(SUMO_ATTR_CONV_BOUNDARY, &gch.get_conv_boundary().to_string_prec(prec));
+    if gch.using_geo_projection() {
+        into.set_precision(g_precision_geo());
+    }
+    let prec = into.get_precision();
+    into.write_attr(SUMO_ATTR_ORIG_BOUNDARY, &gch.get_orig_boundary().to_string_prec(prec));
+    if gch.using_geo_projection() {
+        into.set_precision(g_precision());
+    }
+    into.write_attr(SUMO_ATTR_ORIG_PROJ, &escape_xml(gch.get_proj_string(), false));
+    into.close_tag("");
+    into.lf();
+}
+
+/// writePermissions(OutputDevice&, SVCPermissions) (utils/common/SUMOVehicleClass.cpp)
+// shortcut: local copy until utils/common/sumo_vehicle_class.rs ports writePermissions/writePreferences
+fn write_permissions(into: &mut OutputDevice, permissions: SVCPermissions) {
+    if permissions == SVC_ALL || permissions == SVC_UNSPECIFIED {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
+        return;
+    }
+    if permissions == 0 {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_attr(SUMO_ATTR_DISALLOW, "all");
+        return;
+    }
+    let mut num_allowed: i64 = 0;
+    let mut mask: SVCPermissions = 1;
+    while mask <= SUMO_VEHICLE_CLASS_MAX as SVCPermissions {
+        if (mask & permissions) == mask {
+            num_allowed += 1;
+        }
+        mask <<= 1;
+    }
+    let num_vc = num_vclasses() as i64;
+    if num_allowed <= (num_vc - num_allowed) && num_allowed > 0 {
+        into.write_attr(SUMO_ATTR_ALLOW, get_vehicle_class_names(permissions, false).as_str());
+        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
+    } else {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_attr(SUMO_ATTR_DISALLOW, get_vehicle_class_names(!permissions, false).as_str());
+    }
+}
+
+/// writePreferences(OutputDevice&, SVCPermissions) (utils/common/SUMOVehicleClass.cpp)
+// shortcut: local copy until utils/common/sumo_vehicle_class.rs ports writePreferences
+fn write_preferences(into: &mut OutputDevice, preferred: SVCPermissions) {
+    into.write_optional_attr(SUMO_ATTR_PREFER, get_vehicle_class_names(preferred, false).as_str(), preferred == SVC_ALL || preferred == 0);
+}
 
 /// Exporter writing networks using XML (native input) format
 /// C++ class `NWWriter_XML` (netwrite/NWWriter_XML.h)
@@ -44,7 +139,35 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_network(oc: &OptionsCont, prefix: &str, nb: &mut NBNetBuilder) {
-        todo!("port NWWriter_XML::writeNetwork")
+        // check whether plain-output files shall be generated
+        if prefix != "" {
+            let haveTypes = nb.myTypeCont.size() > 0;
+            Self::write_nodes(oc, prefix, &mut nb.myNodeCont);
+            if haveTypes {
+                Self::write_types(prefix, &mut nb.myEdgeCont, &mut nb.myTypeCont);
+            }
+            Self::write_edges_and_connections(oc, prefix, &mut nb.myNodeCont, &mut nb.myEdgeCont);
+            Self::write_traffic_lights(prefix, &mut nb.myTLLCont, &mut nb.myEdgeCont);
+            Self::write_config(oc, prefix, haveTypes);
+        }
+        if or_panic(oc.is_set("junctions.join-output", true)) && opt_str(oc, "junctions.join-output").len() > 0 {
+            Self::write_joined_junctions(&opt_str(oc, "junctions.join-output"), &mut nb.myNodeCont);
+        }
+        if or_panic(oc.is_set("street-sign-output", true)) && opt_str(oc, "street-sign-output").len() > 0 {
+            Self::write_street_signs(oc, &mut nb.myEdgeCont);
+        }
+        if oc.exists("ptstop-output") && or_panic(oc.is_set("ptstop-output", true)) && opt_str(oc, "ptstop-output").len() > 0 {
+            Self::write_pt_stops(oc, &mut nb.myPTStopCont);
+        }
+        if oc.exists("ptline-output") && or_panic(oc.is_set("ptline-output", true)) && opt_str(oc, "ptline-output").len() > 0 {
+            Self::write_pt_lines(oc, &mut nb.myPTLineCont);
+        }
+        if oc.exists("parking-output") && or_panic(oc.is_set("parking-output", true)) && opt_str(oc, "parking-output").len() > 0 {
+            Self::write_parking_areas(oc, &mut nb.myParkingCont, &mut nb.myEdgeCont);
+        }
+        if oc.exists("taz-output") && or_panic(oc.is_set("taz-output", true)) && opt_str(oc, "taz-output").len() > 0 {
+            Self::write_districts(oc, &mut nb.myDistrictCont);
+        }
     }
 
     /// C++: `void NWWriter_XML::writeJoinedJunctions(const std::string &, NBNodeCont &)` [static]
@@ -63,7 +186,16 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_joined_junctions(filename: &str, nc: &mut NBNodeCont) {
-        todo!("port NWWriter_XML::writeJoinedJunctions")
+        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+        attrs.insert(SUMO_ATTR_VERSION, mm_version_to_string(NETWORK_VERSION));
+        let device_ref = get_device(filename);
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("nodes", "nodes_file.xsd", attrs, true);
+        for joined in nc.get_joined_clusters() {
+            assert!(!joined.is_empty());
+            device.open_tag_id(SUMO_TAG_JOIN).write_attr(SUMO_ATTR_NODES, &join_to_string(joined, " ")).close_tag("");
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeStreetSigns(const OptionsCont &, NBEdgeCont &)` [static]
@@ -83,7 +215,15 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_street_signs(oc: &OptionsCont, ec: &mut NBEdgeCont) {
-        todo!("port NWWriter_XML::writeStreetSigns")
+        let device_ref = get_device(&opt_str(oc, "street-sign-output"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for e in ec.myEdges.values() {
+            for sign in e.get_signs() {
+                sign.write_as_poi(&mut device, *e);
+            }
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeConfig(const OptionsCont &, const std::string &, bool)` [static, private]
@@ -118,7 +258,27 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_config(oc: &OptionsCont, prefix: &str, haveTypes: bool) {
-        todo!("port NWWriter_XML::writeConfig")
+        if !oc.exists("node-files") {
+            // do not write configuration for netgen
+            return;
+        }
+        let ext = opt_str(oc, "output.format");
+        let mut tmp = oc.clone_options();
+        or_panic(tmp.set("node-files", &format!("{prefix}.nod.{ext}"), false));
+        or_panic(tmp.set("edge-files", &format!("{prefix}.edg.{ext}"), false));
+        or_panic(tmp.set("connection-files", &format!("{prefix}.con.{ext}"), false));
+        or_panic(tmp.set("tllogic-files", &format!("{prefix}.tll.{ext}"), false));
+        if haveTypes {
+            or_panic(tmp.set("type-files", &format!("{prefix}.typ.{ext}"), false));
+        }
+        or_panic(tmp.set_default("sumo-net-file", ""));
+        or_panic(tmp.set_default("plain-output-prefix", ""));
+
+        let configPath = format!("{prefix}.netccfg");
+        let mut out = std::fs::File::create(&configPath).unwrap_or_else(|_| panic!("Could not save configuration to '{configPath}'"));
+        let mut os = String::new();
+        or_panic(tmp.write_configuration(&mut os, true, false, false, "", false, false, ""));
+        std::io::Write::write_all(&mut out, os.as_bytes()).unwrap_or_else(|e| panic!("{e}"));
     }
 
     /// C++: `void NWWriter_XML::writeNodes(const OptionsCont &, const std::string &, NBNodeCont &)` [static, private]
@@ -193,7 +353,70 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_nodes(oc: &OptionsCont, prefix: &str, nc: &mut NBNodeCont) {
-        todo!("port NWWriter_XML::writeNodes")
+        let ext = opt_str(oc, "output.format");
+        let gch = get_final_geo();
+        let mut useGeo = oc.exists("proj.plain-geo") && or_panic(oc.get_bool("proj.plain-geo"));
+        if useGeo && !gch.using_geo_projection() {
+            write_warning("Ignoring option \"proj.plain-geo\" because no geo-conversion has been defined");
+            useGeo = false;
+        }
+        let geoAccuracy = useGeo || gch.using_inverse_geo_projection();
+
+        let device_ref = get_device(&format!("{prefix}.nod.{ext}"));
+        let mut device = device_ref.borrow_mut();
+        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+        attrs.insert(SUMO_ATTR_VERSION, mm_version_to_string(NETWORK_VERSION));
+        device.write_xml_header("nodes", "nodes_file.xsd", attrs, true);
+
+        // write network offsets and projection to allow reconstruction of original coordinates
+        if !useGeo {
+            write_location(&mut device);
+        }
+
+        // write nodes
+        let tlsDefaultType = or_panic(TrafficLightTypes.get(&opt_str(oc, "tls.default-type")));
+        for n in nc.myNodes.values() {
+            device.open_tag_id(SUMO_TAG_NODE);
+            device.write_attr(SUMO_ATTR_ID, n.get_id());
+            // write position
+            let mut pos: Position = n.get_position().clone();
+            if useGeo {
+                gch.cartesian2geo(&mut pos);
+            }
+            if geoAccuracy {
+                device.set_precision(g_precision_geo());
+            }
+            NWFrame::write_position_long(&pos, &mut device);
+            if geoAccuracy {
+                device.set_precision(g_precision());
+            }
+
+            device.write_attr(SUMO_ATTR_TYPE, &n.get_type());
+            // std::set is already sorted, so the output is stable
+            let mut tlsIDs: BTreeSet<String> = BTreeSet::new();
+            let mut controlledInnerEdges: BTreeSet<String> = BTreeSet::new();
+            let mut tlType = String::new();
+            for tl in n.get_controlling_tls() {
+                tlsIDs.insert(tl.get_id().to_string());
+                controlledInnerEdges.extend(tl.get_controlled_inner_edges());
+                if tl.get_type() != tlsDefaultType {
+                    tlType = TrafficLightTypes.get_string(tl.get_type()).to_string();
+                }
+            }
+            device.write_optional_attr(SUMO_ATTR_TLID, &join_to_string(&tlsIDs, " "), tlsIDs.is_empty());
+            device.write_optional_attr(SUMO_ATTR_TLTYPE, &tlType, tlType == "");
+            device.write_optional_attr(SUMO_ATTR_CONTROLLED_INNER, &join_to_string(&controlledInnerEdges, " "), controlledInnerEdges.is_empty());
+            NWWriter_SUMO::write_shape(&mut device, &gch, n.get_shape().clone(), SUMO_ATTR_SHAPE, useGeo, geoAccuracy, n.has_custom_shape());
+            device.write_optional_attr(SUMO_ATTR_RADIUS, &n.get_radius(), n.get_radius() == NBNODE_UNSPECIFIED_RADIUS);
+            device.write_optional_attr::<bool>(SUMO_ATTR_KEEP_CLEAR, &n.get_keep_clear(), n.get_keep_clear());
+            device.write_optional_attr(SUMO_ATTR_RIGHT_OF_WAY, &n.get_right_of_way(), n.get_right_of_way() == RightOfWay::DEFAULT);
+            device.write_optional_attr(SUMO_ATTR_FRINGE, &n.get_fringe_type(), n.get_fringe_type() == FringeType::DEFAULT);
+            device.write_optional_attr(SUMO_ATTR_ROUNDABOUT, &n.get_roundabout_type(), n.get_roundabout_type() == RoundaboutType::DEFAULT);
+            device.write_optional_attr(SUMO_ATTR_NAME, &escape_xml(n.get_name(), false), n.get_name() == "");
+            n.base2.write_params(&mut device);
+            device.close_tag("");
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeTypes(const std::string &, NBEdgeCont &, NBTypeCont &)` [static, private]
@@ -211,7 +434,15 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_types(prefix: &str, ec: &mut NBEdgeCont, tc: &mut NBTypeCont) {
-        todo!("port NWWriter_XML::writeTypes")
+        let ext = utils::options::options_cont::get_string("output.format");
+        let device_ref = get_device(&format!("{prefix}.typ.{ext}"));
+        let mut device = device_ref.borrow_mut();
+        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+        attrs.insert(SUMO_ATTR_VERSION, mm_version_to_string(NETWORK_VERSION));
+        device.write_xml_header("types", "types_file.xsd", attrs, true);
+        let usedTypes = ec.get_used_types();
+        tc.write_edge_types(&mut device, &usedTypes);
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeEdgesAndConnections(const OptionsCont &, const std::string &, NBNodeCont &, NBEdgeCont &)` [static, private]
@@ -377,7 +608,182 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_edges_and_connections(oc: &OptionsCont, prefix: &str, nc: &mut NBNodeCont, ec: &mut NBEdgeCont) {
-        todo!("port NWWriter_XML::writeEdgesAndConnections")
+        let ext = opt_str(oc, "output.format");
+        let gch = get_final_geo();
+        let mut useGeo = oc.exists("proj.plain-geo") && or_panic(oc.get_bool("proj.plain-geo"));
+        let geoAccuracy = useGeo || gch.using_inverse_geo_projection();
+        let dlrNavteq = oc.exists("dlr-navteq.plain") && or_panic(oc.get_bool("dlr-navteq.plain"));
+
+        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+        attrs.insert(SUMO_ATTR_VERSION, mm_version_to_string(NETWORK_VERSION));
+        let edevice_ref = get_device(&format!("{prefix}.edg.{ext}"));
+        let mut edevice = edevice_ref.borrow_mut();
+        edevice.write_xml_header("edges", "edges_file.xsd", attrs.clone(), true);
+        let cdevice_ref = get_device(&format!("{prefix}.con.{ext}"));
+        let mut cdevice = cdevice_ref.borrow_mut();
+        cdevice.write_xml_header("connections", "connections_file.xsd", attrs, true);
+        let writeNames = or_panic(oc.get_bool("output.street-names"));
+        let writeLanes = or_panic(oc.get_bool("plain-output.lanes"));
+
+        // write network offsets and projection to allow reconstruction of original coordinates at least for geo-referenced networks
+        if !useGeo && gch.using_geo_projection() {
+            write_location(&mut edevice);
+        }
+        let defaultSpread = or_panic(LaneSpreadFunctions.get(&opt_str(oc, "default.spreadtype")));
+        for e_ref in ec.myEdges.values() {
+            // write the edge itself to the edges-files
+            let e: Ptr<NBEdge> = *e_ref;
+            edevice.open_tag_id(SUMO_TAG_EDGE);
+            edevice.write_attr(SUMO_ATTR_ID, e.get_id());
+            edevice.write_attr(SUMO_ATTR_FROM, e.get_from_node().get_id());
+            edevice.write_attr(SUMO_ATTR_TO, e.get_to_node().get_id());
+            edevice.write_optional_attr(SUMO_ATTR_NAME, &escape_xml(e.get_street_name(), false), !writeNames || e.get_street_name() == "");
+            edevice.write_attr(SUMO_ATTR_PRIORITY, &e.get_priority());
+            // write the type if given
+            edevice.write_optional_attr(SUMO_ATTR_TYPE, e.get_type_id(), e.get_type_id() == "");
+            edevice.write_optional_attr(SUMO_ATTR_ROUTINGTYPE, e.get_routing_type(), e.get_routing_type() == "");
+            edevice.write_attr(SUMO_ATTR_NUMLANES, &e.get_num_lanes());
+            edevice.write_optional_attr(SUMO_ATTR_SPEED, &e.get_speed(), e.has_lane_specific_speed());
+            edevice.write_optional_attr(SUMO_ATTR_FRICTION, &e.get_friction(), e.get_friction() == NBEDGE_UNSPECIFIED_FRICTION || e.has_lane_specific_friction());
+            // write non-default geometry
+            NWWriter_SUMO::write_shape(&mut edevice, &gch, e.get_geometry().clone(), SUMO_ATTR_SHAPE, useGeo, geoAccuracy, !e.has_default_geometry());
+            // write the spread type if not default ("right")
+            edevice.write_optional_attr(SUMO_ATTR_SPREADTYPE, &e.get_lane_spread_function(), e.get_lane_spread_function() == defaultSpread);
+            // write the length if it was specified
+            edevice.write_optional_attr(SUMO_ATTR_LENGTH, &e.get_loaded_length(), !e.has_loaded_length());
+            // some attributes can be set by edge default or per lane. Write as default if possible (efficiency)
+            edevice.write_optional_attr(SUMO_ATTR_WIDTH, &e.get_lane_width(), e.get_lane_width() == NBEDGE_UNSPECIFIED_WIDTH || e.has_lane_specific_width());
+            edevice.write_optional_attr(SUMO_ATTR_ENDOFFSET, &e.get_end_offset(), e.get_end_offset() == NBEDGE_UNSPECIFIED_OFFSET || e.has_lane_specific_end_offset());
+            // SVC_UNSPECIFIED is here a shortcut for do not write
+            write_permissions(&mut edevice, if e.has_lane_specific_permissions() { SVC_UNSPECIFIED } else { e.get_permissions(0) });
+            if !e.has_lane_specific_stop_offsets() && e.get_edge_stop_offset().is_defined() {
+                NWWriter_SUMO::write_stop_offsets(&mut edevice, e.get_edge_stop_offset());
+            }
+            edevice.write_optional_attr(SUMO_ATTR_DISTANCE, &e.get_distance(), e.get_distance() == 0.0);
+            let bidi = e.get_bidi_edge();
+            let bidi_id = if bidi.is_null() { String::new() } else { bidi.get_id().to_string() };
+            edevice.write_optional_attr(SUMO_ATTR_BIDI, &bidi_id, bidi.is_null());
+            if dlrNavteq {
+                NWWriter_DlrNavteq::write_edge_attrs(&mut edevice, e);
+            }
+            if e.needs_lane_specific_output() || writeLanes {
+                let mut idx: i32 = 0;
+                for lane in e.get_lanes() {
+                    edevice.open_tag_id(SUMO_TAG_LANE);
+                    edevice.write_attr(SUMO_ATTR_INDEX, &idx);
+                    idx += 1;
+                    write_permissions(&mut edevice, if e.has_lane_specific_permissions() || writeLanes { lane.permissions } else { SVC_UNSPECIFIED });
+                    write_preferences(&mut edevice, lane.preferred);
+                    edevice.write_optional_attr(SUMO_ATTR_WIDTH, &lane.width, lane.width == NBEDGE_UNSPECIFIED_WIDTH || !(e.has_lane_specific_width() || writeLanes));
+                    edevice.write_optional_attr(SUMO_ATTR_ENDOFFSET, &lane.endOffset, lane.endOffset == NBEDGE_UNSPECIFIED_OFFSET || !(e.has_lane_specific_end_offset() || writeLanes));
+                    edevice.write_optional_attr(SUMO_ATTR_SPEED, &lane.speed, !(e.has_lane_specific_speed() || writeLanes));
+                    edevice.write_optional_attr(SUMO_ATTR_ACCELERATION, &lane.accelRamp, !lane.accelRamp);
+                    let laneShape = if lane.customShape.len() > 0 { lane.customShape.clone() } else { lane.shape.clone() };
+                    NWWriter_SUMO::write_shape(&mut edevice, &gch, laneShape, SUMO_ATTR_SHAPE, useGeo, geoAccuracy, lane.customShape.len() > 0 || writeLanes);
+                    edevice.write_optional_attr(SUMO_ATTR_TYPE, &lane.type_, lane.type_ == "");
+                    let changeLeft = lane.changeLeft != SVC_ALL && lane.changeLeft != SVC_UNSPECIFIED && lane.changeLeft != SVC_IGNORING;
+                    edevice.write_optional_attr(SUMO_ATTR_CHANGE_LEFT, &get_vehicle_class_names(lane.changeLeft, false), !changeLeft);
+                    let changeRight = lane.changeRight != SVC_ALL && lane.changeRight != SVC_UNSPECIFIED && lane.changeRight != SVC_IGNORING;
+                    edevice.write_optional_attr(SUMO_ATTR_CHANGE_RIGHT, &get_vehicle_class_names(lane.changeRight, false), !changeRight);
+                    if lane.oppositeID != "" {
+                        edevice.open_tag_id(SUMO_TAG_NEIGH);
+                        edevice.write_attr(SUMO_ATTR_LANE, lane.oppositeID.as_str());
+                        edevice.close_tag("");
+                    }
+                    lane.base.write_params(&mut edevice);
+                    NWWriter_SUMO::write_stop_offsets(&mut edevice, &lane.laneStopOffset);
+                    edevice.close_tag("");
+                }
+            }
+            e.base2.write_params(&mut edevice);
+            edevice.close_tag("");
+            // write this edge's connections to the connections-files
+            let connections = e.get_connections();
+            if connections.is_empty() {
+                // if there are no connections and this appears to be customized, preserve the information
+                let numOutgoing = e.get_to_node().get_outgoing_edges().len() as i32;
+                if numOutgoing > 0 {
+                    let inPerm = e.get_permissions(-1);
+                    let mut outPerm: SVCPermissions = 0;
+                    for out in e.get_to_node().get_outgoing_edges() {
+                        outPerm |= out.get_permissions(-1);
+                    }
+                    if (inPerm & outPerm) != 0 && (inPerm & outPerm) != SVC_PEDESTRIAN {
+                        cdevice.open_tag_id(SUMO_TAG_CONNECTION);
+                        cdevice.write_attr(SUMO_ATTR_FROM, e.get_id());
+                        cdevice.close_tag("");
+                        cdevice.lf();
+                    }
+                }
+            } else {
+                for c in connections {
+                    NWWriter_SUMO::write_connection(
+                        &mut cdevice,
+                        &e,
+                        c,
+                        false,
+                        if dlrNavteq { NWWriter_SUMO_ConnectionStyle::PLAIN_NAVTEQ } else { NWWriter_SUMO_ConnectionStyle::PLAIN },
+                        useGeo,
+                        geoAccuracy,
+                    );
+                }
+                cdevice.lf();
+            }
+        }
+        // write roundabout information to the edges-files
+        let roundabouts = ec.get_roundabouts();
+        if roundabouts.len() > 0 {
+            edevice.lf();
+            NWWriter_SUMO::write_roundabouts(&mut edevice, &roundabouts, ec);
+        }
+
+        // write loaded prohibitions to the connections-file
+        for n in nc.myNodes.values() {
+            NWWriter_SUMO::write_prohibitions(&mut cdevice, n.m().get_prohibitions(), ec);
+        }
+        // write pedestrian crossings to the connections-file
+        for n in nc.myNodes.values() {
+            for c in n.get_crossings() {
+                cdevice.open_tag_id(SUMO_TAG_CROSSING);
+                cdevice.write_attr(SUMO_ATTR_NODE, n.get_id());
+                // determinism: C++ Crossing::edges is a vector of edge IDs, written in order
+                let edgeIDs: Vec<String> = c.edges.iter().map(|e| e.get_id().to_string()).collect();
+                cdevice.write_attr(SUMO_ATTR_EDGES, &join_to_string(&edgeIDs, " "));
+                cdevice.write_attr(SUMO_ATTR_PRIORITY, &c.priority);
+                cdevice.write_optional_attr(SUMO_ATTR_WIDTH, &c.customWidth, c.customWidth == NBEDGE_UNSPECIFIED_WIDTH);
+                cdevice.write_optional_attr(SUMO_ATTR_TLLINKINDEX, &c.customTLIndex, c.customTLIndex == -1);
+                cdevice.write_optional_attr(SUMO_ATTR_TLLINKINDEX2, &c.customTLIndex2, c.customTLIndex2 == -1);
+                NWWriter_SUMO::write_shape(&mut cdevice, &gch, c.customShape.clone(), SUMO_ATTR_SHAPE, useGeo, geoAccuracy, c.customShape.len() != 0);
+                NWWriter_SUMO::write_shape(&mut cdevice, &gch, c.outlineShape.clone(), SUMO_ATTR_OUTLINESHAPE, useGeo, geoAccuracy, c.outlineShape.len() != 0);
+                c.base.write_params(&mut cdevice);
+                cdevice.close_tag("");
+            }
+        }
+        // write custom walkingarea shapes to the connections file
+        for (nodeID, n) in nc.myNodes.iter() {
+            for wacs in n.get_walking_area_custom_shapes() {
+                cdevice.open_tag_id(SUMO_TAG_WALKINGAREA);
+                cdevice.write_attr(SUMO_ATTR_NODE, nodeID.as_str());
+                // determinism: C++ std::set<const NBEdge*, ComparatorIdLess> is ordered by edge ID, not by pointer
+                let mut edgeIDs: Vec<String> = wacs.edges.iter().map(|e| e.get_id().to_string()).collect();
+                edgeIDs.sort();
+                cdevice.write_attr(SUMO_ATTR_EDGES, &join_to_string(&edgeIDs, " "));
+                NWWriter_SUMO::write_shape(&mut cdevice, &gch, wacs.shape.clone(), SUMO_ATTR_SHAPE, useGeo, geoAccuracy, wacs.shape.len() != 0);
+                cdevice.write_optional_attr(SUMO_ATTR_WIDTH, &wacs.width, wacs.width == NBEDGE_UNSPECIFIED_WIDTH);
+                cdevice.close_tag("");
+            }
+        }
+
+        or_panic(edevice.close());
+        or_panic(cdevice.close());
+
+        if dlrNavteq {
+            let cdevice2_ref = get_device(&format!("{prefix}.cpr.{ext}"));
+            let mut cdevice2 = cdevice2_ref.borrow_mut();
+            cdevice2.write_xml_header("connections", "connections_file.xsd", BTreeMap::new(), true);
+            NWWriter_DlrNavteq::write_prohibited_manoeuvres_attrs(&mut cdevice2, nc);
+            or_panic(cdevice2.close());
+        }
     }
 
     /// C++: `void NWWriter_XML::writeTrafficLights(const std::string &, NBTrafficLightLogicCont &, NBEdgeCont &)` [static, private]
@@ -408,7 +814,29 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_traffic_lights(prefix: &str, tc: &mut NBTrafficLightLogicCont, ec: &mut NBEdgeCont) {
-        todo!("port NWWriter_XML::writeTrafficLights")
+        let ext = utils::options::options_cont::get_string("output.format");
+        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+        attrs.insert(SUMO_ATTR_VERSION, mm_version_to_string(NETWORK_VERSION));
+        let device_ref = get_device(&format!("{prefix}.tll.{ext}"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("tlLogics", "tllogic_file.xsd", attrs, true);
+        let dlrNavteq = utils::options::options_cont::with_options(|oc| oc.exists("dlr-navteq.plain") && or_panic(oc.get_bool("dlr-navteq.plain")));
+        NWWriter_SUMO::write_traffic_lights(
+            &mut device,
+            tc,
+            if dlrNavteq { NWWriter_SUMO_ConnectionStyle::PLAIN_NAVTEQ } else { NWWriter_SUMO_ConnectionStyle::PLAIN },
+        );
+        // we also need to remember the associations between tlLogics and connections
+        // since the information in con.xml is insufficient
+        for e in ec.myEdges.values() {
+            // write this edge's tl-controlled connections
+            for c in e.get_connections() {
+                if c.tlID != "" {
+                    NWWriter_SUMO::write_connection(&mut device, e, c, false, NWWriter_SUMO_ConnectionStyle::TLL, false, false);
+                }
+            }
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writePTStops(const OptionsCont &, NBPTStopCont &)` [static, private]
@@ -424,7 +852,13 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_pt_stops(oc: &OptionsCont, ec: &mut NBPTStopCont) {
-        todo!("port NWWriter_XML::writePTStops")
+        let device_ref = get_device(&opt_str(oc, "ptstop-output"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for stop in ec.get_stops().values() {
+            stop.write(&mut device);
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writePTLines(const OptionsCont &, NBPTLineCont &)` [static, private]
@@ -438,7 +872,13 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_pt_lines(cont: &OptionsCont, lc: &mut NBPTLineCont) {
-        todo!("port NWWriter_XML::writePTLines")
+        let device_ref = get_device(&opt_str(cont, "ptline-output"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("ptLines", "ptlines_file.xsd", BTreeMap::new(), true);
+        for item in lc.get_lines().values() {
+            item.m().write(&mut device);
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeParkingAreas(const OptionsCont &, NBParkingCont &, NBEdgeCont &)` [static, private]
@@ -453,7 +893,13 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_parking_areas(cont: &OptionsCont, pc: &mut NBParkingCont, ec: &mut NBEdgeCont) {
-        todo!("port NWWriter_XML::writeParkingAreas")
+        let device_ref = get_device(&opt_str(cont, "parking-output"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for p in pc.iter() {
+            p.write(&mut device, ec);
+        }
+        or_panic(device.close());
     }
 
     /// C++: `void NWWriter_XML::writeDistricts(const OptionsCont &, NBDistrictCont &)` [static, private]
@@ -468,7 +914,12 @@ impl NWWriter_XML {
     // }
     #[allow(unused_variables)]
     pub fn write_districts(oc: &OptionsCont, dc: &mut NBDistrictCont) {
-        todo!("port NWWriter_XML::writeDistricts")
+        let device_ref = get_device(&opt_str(oc, "taz-output"));
+        let mut device = device_ref.borrow_mut();
+        device.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for d in dc.myDistricts.values() {
+            NWWriter_SUMO::write_district(&mut device, d);
+        }
     }
 
 }
