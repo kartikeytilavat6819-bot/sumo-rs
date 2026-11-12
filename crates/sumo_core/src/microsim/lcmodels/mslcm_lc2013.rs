@@ -5,6 +5,33 @@ use crate::prelude::*;
 /// C++ typedef `std::pair<double, int> MSLCM_LC2013::Info`
 pub type MSLCM_LC2013_Info = (f64, i32);
 
+// C++ `#define` constants from MSLCM_LC2013.cpp (debug flags are compiled out)
+const LOOK_FORWARD: f64 = 10.;
+const JAM_FACTOR: f64 = 1.;
+const LCA_RIGHT_IMPATIENCE: f64 = -1.;
+const CUT_IN_LEFT_SPEED_THRESHOLD: f64 = 27.;
+const LOOK_AHEAD_MIN_SPEED: f64 = 0.0;
+const LOOK_AHEAD_SPEED_MEMORY: f64 = 0.9;
+const HELP_DECEL_FACTOR: f64 = 1.0;
+const HELP_OVERTAKE: f64 = 10.0 / 3.6;
+const MIN_FALLBEHIND: f64 = 7.0 / 3.6;
+const RELGAIN_NORMALIZATION_MIN_SPEED: f64 = 10.0;
+const URGENCY: f64 = 2.0;
+const OPPOSITE_URGENCY: f64 = 5.0;
+const KEEP_RIGHT_TIME: f64 = 5.0;
+const KEEP_RIGHT_HEADWAY: f64 = 2.0;
+const MAX_ONRAMP_LENGTH: f64 = 200.;
+const TURN_LANE_DIST: f64 = 200.0;
+const LC_RESOLUTION_SPEED_LAT: f64 = 0.5;
+const REACT_TO_STOPPED_DISTANCE: f64 = 100.;
+const BLOCKER_IS_BLOCKED_TIME_THRESHOLD: f64 = 5.;
+const HYST_PRECISION: f64 = 10000000.;
+
+// shortcut-free helper: C++ `toString(SumoXMLAttr)` (attribute name)
+fn attr_name(a: SumoXMLAttr) -> &'static str {
+    utils::xml::sumo_xml_definitions::Attrs.get_string(a)
+}
+
 /// A lane change model developed by D. Krajzewicz, J. Erdmann et al. between 2004 and 2013
 /// C++ class `MSLCM_LC2013` (microsim/lcmodels/MSLCM_LC2013.h)
 #[repr(C)]
@@ -91,7 +118,53 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
-        todo!("port MSLCM_LC2013::MSLCM_LC2013")
+        let base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::LC2013);
+        let vt = v.get_vehicle_type();
+        let p = vt.get_parameter();
+        let myStrategicParam = p.get_lc_param(SUMO_ATTR_LCA_STRATEGIC_PARAM, 1.);
+        let myCooperativeParam = p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_PARAM, 1.);
+        let mySpeedGainParam = p.get_lc_param(SUMO_ATTR_LCA_SPEEDGAIN_PARAM, 1.);
+        let myKeepRightParam = p.get_lc_param(SUMO_ATTR_LCA_KEEPRIGHT_PARAM, 1.);
+        let myOppositeParam = p.get_lc_param(SUMO_ATTR_LCA_OPPOSITE_PARAM, 1.);
+        let myLookaheadLeft = p.get_lc_param(SUMO_ATTR_LCA_LOOKAHEADLEFT, 2.0);
+        let mySpeedGainRight = p.get_lc_param(SUMO_ATTR_LCA_SPEEDGAINRIGHT, 0.1);
+        let mySpeedGainLookahead = p.get_lc_param(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD, 0.);
+        let mySpeedGainRemainTime = p.get_lc_param(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME, 20.);
+        let mySpeedGainUrgency = p.get_lc_param(SUMO_ATTR_LCA_SPEEDGAIN_URGENCY, 50.);
+        let myRoundaboutBonus = p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_ROUNDABOUT, myCooperativeParam);
+        let myCooperativeSpeed = p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_SPEED, myCooperativeParam);
+        let myKeepRightAcceptanceTime = p.get_lc_param(SUMO_ATTR_LCA_KEEPRIGHT_ACCEPTANCE_TIME, -1.);
+        let myOvertakeDeltaSpeedFactor = p.get_lc_param(SUMO_ATTR_LCA_OVERTAKE_DELTASPEED_FACTOR, 0.);
+        let myExperimentalParam1 = p.get_lc_param(SUMO_ATTR_LCA_EXPERIMENTAL1, 0.);
+        let mut ret = MSLCM_LC2013 {
+            base,
+            mySpeedGainProbabilityLeft: 0,
+            mySpeedGainProbabilityRight: 0,
+            myKeepRightProbability: 0,
+            myLeadingBlockerLength: 0.,
+            myLeftSpace: 0.,
+            myLookAheadSpeed: LOOK_AHEAD_MIN_SPEED,
+            myDontBrake: false,
+            myStrategicParam,
+            myCooperativeParam,
+            mySpeedGainParam,
+            myKeepRightParam,
+            myOppositeParam,
+            myLookaheadLeft,
+            mySpeedGainRight,
+            mySpeedGainLookahead,
+            mySpeedGainRemainTime,
+            mySpeedGainUrgency,
+            myRoundaboutBonus,
+            myCooperativeSpeed,
+            myKeepRightAcceptanceTime,
+            myOvertakeDeltaSpeedFactor,
+            myExperimentalParam1,
+            myChangeProbThresholdRight: 0,
+            myChangeProbThresholdLeft: 0,
+        };
+        ret.init_derived_parameters();
+        ret
     }
 
     /// C++: `void MSLCM_LC2013::~MSLCM_LC2013() noexcept` [virtual]
@@ -100,7 +173,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLCM_LC2013::~MSLCM_LC2013")
+        self.changed();
     }
 
     /// C++: `LaneChangeModel MSLCM_LC2013::getModelID() const` [const, virtual]
@@ -110,7 +183,7 @@ impl MSLCM_LC2013 {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        todo!("port MSLCM_LC2013::getModelID")
+        LaneChangeModel::LC2013
     }
 
     /// C++: `void MSLCM_LC2013::initDerivedParameters()`
@@ -127,7 +200,13 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn init_derived_parameters(&mut self) {
-        todo!("port MSLCM_LC2013::initDerivedParameters")
+        if self.mySpeedGainParam <= 0. {
+            self.myChangeProbThresholdRight = i64::MAX;
+            self.myChangeProbThresholdLeft = i64::MAX;
+        } else {
+            self.myChangeProbThresholdRight = ((0.2 / self.mySpeedGainRight) / self.mySpeedGainParam * HYST_PRECISION) as i64;
+            self.myChangeProbThresholdLeft = (0.2 / self.mySpeedGainParam * HYST_PRECISION) as i64;
+        }
     }
 
     /// C++: `bool MSLCM_LC2013::debugVehicle() const` [const, virtual]
@@ -137,7 +216,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn debug_vehicle(&self) -> bool {
-        todo!("port MSLCM_LC2013::debugVehicle")
+        self.myVehicle.is_selected()
     }
 
     /// C++: `int MSLCM_LC2013::wantsChange(int, MSAbstractLaneChangeModel::MSLCMessager &, int, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const MSLane &, const std::vector<MSVehicle::LaneQ> &, MSVehicle **, MSVehicle **)` [virtual]
@@ -182,7 +261,8 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn wants_change(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
-        todo!("port MSLCM_LC2013::wantsChange")
+        let result = self.wants_change_2(laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, *lastBlocked, *firstBlocked);
+        result
     }
 
     /// C++: `void * MSLCM_LC2013::inform(void *, MSVehicle *)` [virtual]
@@ -208,7 +288,12 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn inform(&mut self, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
-        todo!("port MSLCM_LC2013::inform")
+        let pinfo = unsafe { Box::from_raw(info.as_raw() as *mut MSLCM_LC2013_Info) };
+        debug_assert!(pinfo.0 >= 0. || !MSGlobals::semi_implicit_euler_update());
+        self.add_lc_speed_advice(pinfo.0, LCA_CHANGE_TO_HELP);
+        self.myOwnState |= pinfo.1;
+        // C++ `(void*) true`
+        Ptr::from_raw(1usize as *mut ())
     }
 
     /// C++: `double MSLCM_LC2013::patchSpeed(const double, const double, const double, const MSCFModel &)` [virtual]
@@ -246,7 +331,9 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed(&mut self, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
-        todo!("port MSLCM_LC2013::patchSpeed")
+        // negative min speed may be passed when using ballistic updated
+        let newSpeed = self.patch_speed_2(max2(min, 0.0), wanted, max, cfModel);
+        newSpeed
     }
 
     /// C++: `void MSLCM_LC2013::changed()` [virtual]
@@ -269,7 +356,20 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn changed(&mut self) {
-        todo!("port MSLCM_LC2013::changed")
+        self.myOwnState = 0;
+        self.mySpeedGainProbabilityLeft = 0;
+        self.mySpeedGainProbabilityRight = 0;
+        self.myKeepRightProbability = 0;
+        if self.myVehicle.get_best_lane_offset() == 0 {
+            // if we are not yet on our best lane there might still be unseen blockers
+            // (during patchSpeed)
+            self.myLeadingBlockerLength = 0.;
+            self.myLeftSpace = 0.;
+        }
+        self.myLookAheadSpeed = LOOK_AHEAD_MIN_SPEED;
+        self.myLCAccelerationAdvices.clear();
+        self.myDontBrake = false;
+        self.myLeadingBlockerLength = 0.;
     }
 
     /// C++: `void MSLCM_LC2013::resetState()` [virtual]
@@ -287,7 +387,15 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn reset_state(&mut self) {
-        todo!("port MSLCM_LC2013::resetState")
+        self.myOwnState = 0;
+        self.mySpeedGainProbabilityLeft = 0;
+        self.mySpeedGainProbabilityRight = 0;
+        self.myKeepRightProbability = 0;
+        self.myLeadingBlockerLength = 0.;
+        self.myLeftSpace = 0.;
+        self.myLookAheadSpeed = LOOK_AHEAD_MIN_SPEED;
+        self.myLCAccelerationAdvices.clear();
+        self.myDontBrake = false;
     }
 
     /// C++: `double MSLCM_LC2013::getSafetyFactor() const` [const, virtual]
@@ -297,7 +405,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn get_safety_factor(&self) -> f64 {
-        todo!("port MSLCM_LC2013::getSafetyFactor")
+        1. / self.myAssertive
     }
 
     /// C++: `double MSLCM_LC2013::getOppositeSafetyFactor() const` [const, virtual]
@@ -307,7 +415,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_safety_factor(&self) -> f64 {
-        todo!("port MSLCM_LC2013::getOppositeSafetyFactor")
+        if self.myOppositeParam <= 0. { f64::MAX } else { 1. / self.myOppositeParam }
     }
 
     /// C++: `void MSLCM_LC2013::prepareStep()` [virtual]
@@ -351,7 +459,41 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        todo!("port MSLCM_LC2013::prepareStep")
+        self.base.prepare_step();
+        // keep information about strategic change direction
+        if !self.is_changing_lanes() {
+            self.myOwnState = if (self.myOwnState & LCA_STRATEGIC) != 0 { self.myOwnState & LCA_WANTS_LANECHANGE } else { 0 };
+        }
+        self.myLeadingBlockerLength = 0.;
+        self.myLeftSpace = 0.;
+        self.myLCAccelerationAdvices.clear();
+        self.myDontBrake = false;
+        // truncate to work around numerical instability between different builds
+        if self.mySigma > 0. && !self.is_changing_lanes() {
+            // disturb lateral position directly
+            let maxDist = speed2dist(self.myVehicle.get_vehicle_type().get_max_speed_lat());
+            let oldPosLat = self.myVehicle.get_lateral_position_on_lane();
+            let overlap = self.myVehicle.get_lateral_overlap();
+            let mut scaledDelta: f64;
+            if overlap > 0. {
+                // return to within lane boundary
+                scaledDelta = min2(overlap, maxDist);
+                if self.myVehicle.get_lateral_position_on_lane() > 0. {
+                    scaledDelta *= -1.;
+                }
+            } else {
+                // random drift
+                let mut deltaPosLat = OUProcess::step_2(oldPosLat,
+                    self.myVehicle.get_action_step_length_secs(),
+                    max2(utils::geom::NUMERICAL_EPS, (1. - self.mySigma) * 100.), self.mySigma) - oldPosLat;
+                deltaPosLat = max2(min2(deltaPosLat, maxDist), -maxDist);
+                scaledDelta = deltaPosLat * self.myVehicle.get_speed() / self.myVehicle.get_lane().get_speed_limit();
+            }
+            self.myVehicle.set_lateral_position_on_lane(oldPosLat + scaledDelta);
+            self.set_speed_lat(dist2speed(scaledDelta));
+        } else {
+            self.reset_speed_lat();
+        }
     }
 
     /// C++: `std::string MSLCM_LC2013::getParameter(const std::string &) const` [const, virtual]
@@ -419,7 +561,66 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSLCM_LC2013::getParameter")
+        // integer-valued internals: C++ long long / long long stays integral
+        if key == "speedGainRP" {
+            return (self.mySpeedGainProbabilityRight / self.myChangeProbThresholdRight).to_string();
+        } else if key == "speedGainLP" {
+            return (self.mySpeedGainProbabilityLeft / self.myChangeProbThresholdLeft).to_string();
+        }
+        let v: f64 = if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM) {
+            self.myStrategicParam
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_PARAM) {
+            self.myCooperativeParam
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_PARAM) {
+            self.mySpeedGainParam
+        } else if key == attr_name(SUMO_ATTR_LCA_KEEPRIGHT_PARAM) {
+            self.myKeepRightParam
+        } else if key == attr_name(SUMO_ATTR_LCA_OPPOSITE_PARAM) {
+            self.myOppositeParam
+        } else if key == attr_name(SUMO_ATTR_LCA_LOOKAHEADLEFT) {
+            self.myLookaheadLeft
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAINRIGHT) {
+            self.mySpeedGainRight
+        } else if key == attr_name(SUMO_ATTR_LCA_ASSERTIVE) {
+            self.myAssertive
+        } else if key == attr_name(SUMO_ATTR_LCA_OVERTAKE_RIGHT) {
+            self.myOvertakeRightParam
+        } else if key == attr_name(SUMO_ATTR_LCA_SIGMA) {
+            self.mySigma
+        } else if key == attr_name(SUMO_ATTR_LCA_KEEPRIGHT_ACCEPTANCE_TIME) {
+            self.myKeepRightAcceptanceTime
+        } else if key == attr_name(SUMO_ATTR_LCA_OVERTAKE_DELTASPEED_FACTOR) {
+            self.myOvertakeDeltaSpeedFactor
+        } else if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_LOOKAHEAD) {
+            self.myStrategicLookahead
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD) {
+            self.mySpeedGainLookahead
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME) {
+            self.mySpeedGainRemainTime
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_ROUNDABOUT) {
+            self.myRoundaboutBonus
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_SPEED) {
+            self.myCooperativeSpeed
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXSPEEDLATSTANDING) {
+            self.myMaxSpeedLatStanding
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXSPEEDLATFACTOR) {
+            self.myMaxSpeedLatFactor
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXDISTLATSTANDING) {
+            self.myMaxDistLatStanding
+        } else if key == "speedGainProbabilityRight" {
+            self.mySpeedGainProbabilityRight as f64 / HYST_PRECISION
+        } else if key == "speedGainProbabilityLeft" {
+            self.mySpeedGainProbabilityLeft as f64 / HYST_PRECISION
+        } else if key == "keepRightProbability" {
+            -self.myKeepRightProbability as f64 / HYST_PRECISION
+        } else if key == "lookAheadSpeed" {
+            self.myLookAheadSpeed
+        } else if key == "keepRightP" {
+            self.myKeepRightProbability as f64 * self.myKeepRightParam / -(self.myChangeProbThresholdRight as f64)
+        } else {
+            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel))));
+        };
+        utils::common::to_string::to_string(&v)
     }
 
     /// C++: `void MSLCM_LC2013::setParameter(const std::string &, const std::string &)` [virtual]
@@ -488,7 +689,63 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSLCM_LC2013::setParameter")
+        let doubleValue = match utils::common::string_utils::to_double(value) {
+            Ok(v) => v,
+            Err(_) => panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel)))),
+        };
+        if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM) {
+            self.myStrategicParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_PARAM) {
+            self.myCooperativeParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_PARAM) {
+            self.mySpeedGainParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_KEEPRIGHT_PARAM) {
+            self.myKeepRightParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_OPPOSITE_PARAM) {
+            self.myOppositeParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_LOOKAHEADLEFT) {
+            self.myLookaheadLeft = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAINRIGHT) {
+            self.mySpeedGainRight = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_ASSERTIVE) {
+            self.myAssertive = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_OVERTAKE_RIGHT) {
+            self.myOvertakeRightParam = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_SIGMA) {
+            self.mySigma = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_KEEPRIGHT_ACCEPTANCE_TIME) {
+            self.myKeepRightAcceptanceTime = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_OVERTAKE_DELTASPEED_FACTOR) {
+            self.myOvertakeDeltaSpeedFactor = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_LOOKAHEAD) {
+            self.myStrategicLookahead = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD) {
+            self.mySpeedGainLookahead = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME) {
+            self.mySpeedGainRemainTime = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_ROUNDABOUT) {
+            self.myRoundaboutBonus = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_COOPERATIVE_SPEED) {
+            self.myCooperativeSpeed = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXSPEEDLATSTANDING) {
+            self.myMaxSpeedLatStanding = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXSPEEDLATFACTOR) {
+            self.myMaxSpeedLatFactor = doubleValue;
+        } else if key == attr_name(SUMO_ATTR_LCA_MAXDISTLATSTANDING) {
+            self.myMaxDistLatStanding = doubleValue;
+        // access to internal state
+        } else if key == "speedGainProbabilityRight" {
+            self.mySpeedGainProbabilityRight = (doubleValue * HYST_PRECISION) as i64;
+        } else if key == "speedGainProbabilityLeft" {
+            self.mySpeedGainProbabilityLeft = (doubleValue * HYST_PRECISION) as i64;
+        } else if key == "keepRightProbability" {
+            self.myKeepRightProbability = (-doubleValue * HYST_PRECISION) as i64;
+        } else if key == "lookAheadSpeed" {
+            self.myLookAheadSpeed = doubleValue;
+        } else {
+            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel))));
+        }
+        self.init_derived_parameters();
     }
 
     /// C++: `double MSLCM_LC2013::computeSpeedLat(double, double &, bool) const` [const, virtual]
@@ -512,7 +769,15 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
-        todo!("port MSLCM_LC2013::computeSpeedLat")
+        let mut result = self.base.compute_speed_lat(latDist, maneuverDist, urgent);
+        if self.myLeftSpace > utils::geom::POSITION_EPS || !urgent {
+            let mut speedBound = self.myMaxSpeedLatStanding + self.myMaxSpeedLatFactor * self.myVehicle.get_speed();
+            if self.is_changing_lanes() {
+                speedBound = max2(LC_RESOLUTION_SPEED_LAT, speedBound);
+            }
+            result = max2(-speedBound, min2(speedBound, result));
+        }
+        result
     }
 
     /// C++: `void MSLCM_LC2013::saveState(OutputDevice &) const` [const, virtual]
@@ -530,7 +795,15 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSLCM_LC2013::saveState")
+        self.base.save_state(out);
+        let lcState: Vec<i64> = vec![
+            self.mySpeedGainProbabilityLeft,
+            self.mySpeedGainProbabilityRight,
+            self.myKeepRightProbability,
+            (self.myLookAheadSpeed * HYST_PRECISION) as i64,
+            self.myDontBrake as i64,
+        ];
+        out.write_attr(SUMO_ATTR_LCSTATE2, &lcState);
     }
 
     /// C++: `void MSLCM_LC2013::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -551,7 +824,18 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSLCM_LC2013::loadState")
+        self.base.load_state(attrs);
+        if attrs.has_attribute(SUMO_ATTR_LCSTATE2) {
+            let s = attrs.get_string(SUMO_ATTR_LCSTATE2);
+            // C++ `bis >> ...` reads whitespace-separated integers in order
+            let mut toks = s.split_whitespace().map(|t| t.parse::<i64>().unwrap_or(0));
+            self.mySpeedGainProbabilityLeft = toks.next().unwrap_or(0);
+            self.mySpeedGainProbabilityRight = toks.next().unwrap_or(0);
+            self.myKeepRightProbability = toks.next().unwrap_or(0);
+            let laSpeed = toks.next().unwrap_or(0);
+            self.myLookAheadSpeed = laSpeed as f64 / HYST_PRECISION;
+            self.myDontBrake = toks.next().unwrap_or(0) != 0;
+        }
     }
 
     /// C++: `double MSLCM_LC2013::_patchSpeed(double, const double, double, const MSCFModel &)` [protected]
