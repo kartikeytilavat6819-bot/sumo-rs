@@ -48,14 +48,30 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //         myEfforts(nullptr) { }
     #[allow(unused_variables)]
     pub fn new(id: String, numericalID: i32, edge: Ptr<E>, line: &str, length: f64) -> Self {
-        todo!("port IntermodalEdge::IntermodalEdge<E, L, N, V>")
+        let my_length = if edge.is_null() || length >= 0. {
+            if 0.0 > length { 0.0 } else { length }
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getLength")
+        };
+        Self {
+            base: Named::new(&id),
+            myFollowingEdges: Vec::new(),
+            myFollowingViaEdges: Vec::new(),
+            myNumericalID: numericalID,
+            myEdge: edge,
+            myLine: line.to_string(),
+            myLength: my_length,
+            myEfforts: Ptr::null(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void IntermodalEdge::~IntermodalEdge<E, L, N, V>()` [virtual]
     // virtual ~IntermodalEdge() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port IntermodalEdge::~IntermodalEdge<E, L, N, V>")
+        // C++ destructor body is empty; nothing to release
     }
 
     /// C++: `bool IntermodalEdge::includeInRoute(bool) const` [const, virtual]
@@ -64,7 +80,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn include_in_route(&self, arg0: bool) -> bool {
-        todo!("port IntermodalEdge::includeInRoute")
+        false
     }
 
     /// C++: `const std::string & IntermodalEdge::getLine() const` [const]
@@ -73,7 +89,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_line(&self) -> &str {
-        todo!("port IntermodalEdge::getLine")
+        self.myLine.as_str()
     }
 
     /// C++: `const E * IntermodalEdge::getEdge() const` [const]
@@ -82,7 +98,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<E> {
-        todo!("port IntermodalEdge::getEdge")
+        self.myEdge
     }
 
     /// C++: `int IntermodalEdge::getNumericalID() const` [const]
@@ -91,7 +107,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port IntermodalEdge::getNumericalID")
+        self.myNumericalID
     }
 
     /// C++: `void IntermodalEdge::addSuccessor(IntermodalEdge<E, L, N, V> *const, IntermodalEdge<E, L, N, V> *const)`
@@ -101,7 +117,8 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<IntermodalEdge<E, L, N, V>>, via: Ptr<IntermodalEdge<E, L, N, V>>) {
-        todo!("port IntermodalEdge::addSuccessor")
+        self.myFollowingEdges.push(s);
+        self.myFollowingViaEdges.push((s, via));
     }
 
     /// C++: `void IntermodalEdge::transferSuccessors(IntermodalEdge<E, L, N, V> *)`
@@ -113,7 +130,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn transfer_successors(&mut self, to: Ptr<IntermodalEdge<E, L, N, V>>) {
-        todo!("port IntermodalEdge::transferSuccessors")
+        let to = to.m();
+        to.myFollowingEdges = self.myFollowingEdges.clone();
+        to.myFollowingViaEdges = self.myFollowingViaEdges.clone();
+        self.myFollowingEdges.clear();
+        self.myFollowingViaEdges.clear();
     }
 
     /// C++: `bool IntermodalEdge::removeSuccessor(const IntermodalEdge<E, L, N, V> *const)`
@@ -135,7 +156,15 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn remove_successor(&mut self, edge: Ptr<IntermodalEdge<E, L, N, V>>) -> bool {
-        todo!("port IntermodalEdge::removeSuccessor")
+        match self.myFollowingEdges.iter().position(|e| *e == edge) {
+            Some(i) => {
+                self.myFollowingEdges.remove(i);
+            }
+            None => return false,
+        }
+        // determinism: the via list is filtered in place, keeping the C++ erase order
+        self.myFollowingViaEdges.retain(|p| p.0 != edge);
+        true
     }
 
     /// C++: `const std::vector<IntermodalEdge<E, L, N, V> *> & IntermodalEdge::getSuccessors(SUMOVehicleClass) const` [const, virtual]
@@ -146,7 +175,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &Vec<Ptr<IntermodalEdge<E, L, N, V>>> {
-        todo!("port IntermodalEdge::getSuccessors")
+        &self.myFollowingEdges
     }
 
     /// C++: `const std::vector<std::pair<const IntermodalEdge<E, L, N, V> *, const IntermodalEdge<E, L, N, V> *>> & IntermodalEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -158,7 +187,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)> {
-        todo!("port IntermodalEdge::getViaSuccessors")
+        &self.myFollowingViaEdges
     }
 
     /// C++: `bool IntermodalEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const, virtual]
@@ -167,7 +196,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        todo!("port IntermodalEdge::prohibits")
+        false
     }
 
     /// C++: `bool IntermodalEdge::restricts(const IntermodalTrip<E, N, V> *const) const` [const, virtual]
@@ -176,7 +205,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        todo!("port IntermodalEdge::restricts")
+        false
     }
 
     /// C++: `double IntermodalEdge::getPartialLength(const IntermodalTrip<E, N, V> *const) const` [const, virtual]
@@ -185,7 +214,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_partial_length(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
-        todo!("port IntermodalEdge::getPartialLength")
+        self.myLength
     }
 
     /// C++: `double IntermodalEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const, virtual]
@@ -194,7 +223,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
-        todo!("port IntermodalEdge::getTravelTime")
+        0.
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeAggregated(const IntermodalTrip<E, N, V> *const, double) const` [const, virtual]
@@ -203,7 +232,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port IntermodalEdge::getTravelTimeAggregated")
+        self.get_travel_time(trip, time)
     }
 
     /// C++: `double IntermodalEdge::getIntended(const double, std::string &) const` [const, virtual]
@@ -213,7 +242,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_intended(&self, arg0: f64, arg1: &mut String) -> f64 {
-        todo!("port IntermodalEdge::getIntended")
+        0.
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeStatic(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const, double)` [static]
@@ -222,7 +251,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<IntermodalEdge<E, L, N, V>>, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port IntermodalEdge::getTravelTimeStatic")
+        if edge.is_null() {
+            0.
+        } else {
+            edge.get_travel_time(trip, time) * Self::get_routing_factor(edge, trip)
+        }
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeStaticRandomized(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const, double)` [static]
@@ -231,7 +264,15 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_randomized(edge: Ptr<IntermodalEdge<E, L, N, V>>, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port IntermodalEdge::getTravelTimeStaticRandomized")
+        if edge.is_null() {
+            0.
+        } else {
+            // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
+            let factor = utils::options::options_cont::get_float("weights.random-factor");
+            edge.get_travel_time(trip, time)
+                * utils::common::rand_helper::with_default(|r| r.rand_range(1., factor))
+                * Self::get_routing_factor(edge, trip)
+        }
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeAggregated(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const, double)` [static]
@@ -240,7 +281,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated_2(edge: Ptr<IntermodalEdge<E, L, N, V>>, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port IntermodalEdge::getTravelTimeAggregated")
+        if edge.is_null() {
+            0.
+        } else {
+            edge.get_travel_time_aggregated(trip, time) * Self::get_routing_factor(edge, trip)
+        }
     }
 
     /// C++: `double IntermodalEdge::getRoutingFactor(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const)` [static]
@@ -249,7 +294,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_routing_factor(edge: Ptr<IntermodalEdge<E, L, N, V>>, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
-        todo!("port IntermodalEdge::getRoutingFactor")
+        if !utils::common::std_defs::g_routing_preferences() || edge.is_null() || edge.myEdge.is_null() || trip.is_null() {
+            1.
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getPreference is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getPreference")
+        }
     }
 
     /// C++: `double IntermodalEdge::getEffort(const IntermodalTrip<E, N, V> *const, double) const` [const, virtual]
@@ -258,7 +308,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_effort(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
-        todo!("port IntermodalEdge::getEffort")
+        0.
     }
 
     /// C++: `double IntermodalEdge::getEffortStatic(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const, double)` [static]
@@ -267,7 +317,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_effort_static(edge: Ptr<IntermodalEdge<E, L, N, V>>, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port IntermodalEdge::getEffortStatic")
+        if edge.is_null() || !edge.has_effort() {
+            0.
+        } else {
+            edge.get_effort(trip, time)
+        }
     }
 
     /// C++: `double IntermodalEdge::getLength() const` [const]
@@ -277,7 +331,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port IntermodalEdge::getLength")
+        self.myLength
     }
 
     /// C++: `void IntermodalEdge::setLength(const double)`
@@ -287,7 +341,8 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_length(&mut self, length: f64) {
-        todo!("port IntermodalEdge::setLength")
+        assert!(length >= 0.);
+        self.myLength = length;
     }
 
     /// C++: `bool IntermodalEdge::isInternal() const` [const]
@@ -296,7 +351,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port IntermodalEdge::isInternal")
+        if self.myEdge.is_null() {
+            false
+        } else {
+            // shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+        }
     }
 
     /// C++: `bool IntermodalEdge::hasEffort() const` [const, virtual]
@@ -305,7 +365,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn has_effort(&self) -> bool {
-        todo!("port IntermodalEdge::hasEffort")
+        !self.myEfforts.is_null()
     }
 
     /// C++: `double IntermodalEdge::getStartPos() const` [const, virtual]
@@ -314,7 +374,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
-        todo!("port IntermodalEdge::getStartPos")
+        0.
     }
 
     /// C++: `double IntermodalEdge::getEndPos() const` [const, virtual]
@@ -323,7 +383,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
-        todo!("port IntermodalEdge::getEndPos")
+        self.myLength
     }
 
     /// C++: `double IntermodalEdge::getSpeedLimit() const` [const]
@@ -332,7 +392,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_limit(&self) -> f64 {
-        todo!("port IntermodalEdge::getSpeedLimit")
+        if self.myEdge.is_null() {
+            200. / 3.6
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getSpeedLimit is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getSpeedLimit")
+        }
     }
 
     /// C++: `double IntermodalEdge::getLengthGeometryFactor() const` [const]
@@ -341,7 +406,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor(&self) -> f64 {
-        todo!("port IntermodalEdge::getLengthGeometryFactor")
+        if self.myEdge.is_null() {
+            1.
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor")
+        }
     }
 
     /// C++: `double IntermodalEdge::getDistanceTo(const IntermodalEdge<E, L, N, V> *) const` [const]
@@ -350,7 +420,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance_to(&self, other: Ptr<IntermodalEdge<E, L, N, V>>) -> f64 {
-        todo!("port IntermodalEdge::getDistanceTo")
+        if self.myEdge.is_null() || other.myEdge.is_null() || self.myEdge == other.myEdge {
+            0.
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getDistanceTo is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getDistanceTo")
+        }
     }
 
     /// C++: `double IntermodalEdge::getMinimumTravelTime(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -359,7 +434,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_minimum_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
-        todo!("port IntermodalEdge::getMinimumTravelTime")
+        self.myLength / trip.get_max_speed()
     }
 
     /// C++: `IntermodalEdge<E, L, N, V> * IntermodalEdge::getBidiEdge() const` [const]
@@ -369,7 +444,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalEdge::getBidiEdge")
+        Ptr::null()
     }
 
     /// C++: `void IntermodalEdge::IntermodalEdge<E, L, N, V>(const IntermodalEdge<E, L, N, V> &)` [private]
@@ -377,7 +452,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &IntermodalEdge<E, L, N, V>) -> Self {
-        todo!("port IntermodalEdge::IntermodalEdge<E, L, N, V>")
+        panic!("IntermodalEdge copy constructor is private and invalidated in C++")
     }
 
     /// C++: `IntermodalEdge<E, L, N, V> & IntermodalEdge::operator=(const IntermodalEdge<E, L, N, V> &)` [private]
@@ -385,7 +460,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &IntermodalEdge<E, L, N, V>) -> &mut IntermodalEdge<E, L, N, V> {
-        todo!("port IntermodalEdge::operator=")
+        panic!("IntermodalEdge assignment operator is private and invalidated in C++")
     }
 
 }
@@ -424,7 +499,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
 //     return nullptr;
 // }
 #[allow(unused_variables)]
-pub fn get_sidewalk() -> Ptr<Unmapped /* L */> {
-    todo!("port getSidewalk")
+pub fn get_sidewalk<E, L>(edge: Ptr<E>, svc: SUMOVehicleClass) -> Ptr<L> {
+    if edge.is_null() {
+        return Ptr::null();
+    }
+    // shortcut: needs router trait bounds (lead), E::getLanes, L::getPermissions and L::allowsVehicleClass are not callable on generic E, L
+    panic!("shortcut: needs router trait bounds (lead), E::getLanes / L::getPermissions")
 }
 
