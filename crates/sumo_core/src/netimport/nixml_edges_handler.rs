@@ -1,6 +1,7 @@
 //! Port of netimport/NIXMLEdgesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::tlf;
 use utils::common::msg_handler::{write_error, write_message, write_warning};
 use utils::common::std_defs::{INVALID_DOUBLE, NETWORK_VERSION};
 use utils::common::string_utils::to_int;
@@ -495,7 +496,7 @@ impl NIXMLEdgesHandler {
     pub fn try_get_lane_spread(&mut self, attrs: &SUMOSAXAttributes) -> LaneSpreadFunction {
         let mut ok = true;
         let mut result = self.myLanesSpread;
-        let mut lsfS = LaneSpreadFunctions.get_string(result).unwrap_or_else(|e| panic!("{e}")).to_string();
+        let mut lsfS = LaneSpreadFunctions.get_string(result).to_string();
         lsfS = attrs.get_opt::<String>(SUMO_ATTR_SPREADTYPE, &self.myCurrentID, &mut ok, lsfS, true);
         if LaneSpreadFunctions.has_string(&lsfS) {
             result = LaneSpreadFunctions.get(&lsfS).unwrap_or_else(|e| panic!("{e}"));

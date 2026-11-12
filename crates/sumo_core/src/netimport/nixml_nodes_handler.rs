@@ -1,6 +1,7 @@
 //! Port of netimport/NIXMLNodesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::tlf;
 use utils::common::msg_handler::{write_error, write_warning};
 
 /// Importer for network nodes stored in XML
@@ -637,7 +638,7 @@ impl NIXMLNodesHandler {
         if currentNode.is_tl_controlled() {
             let oldDef: Ptr<NBTrafficLightDefinition> = *currentNode.get_controlling_tls().iter().next().unwrap();
             oldTlID = oldDef.base.get_id().to_string();
-            oldTypeS = TrafficLightTypes.get_string(oldDef.get_type()).unwrap_or_else(|e| panic!("{e}")).to_string();
+            oldTypeS = TrafficLightTypes.get_string(oldDef.get_type()).to_string();
         }
         let mut tlID = attrs.get_opt::<String>(SUMO_ATTR_TLID, "", &mut ok, oldTlID.clone(), true);
         let typeS = attrs.get_opt::<String>(SUMO_ATTR_TLTYPE, "", &mut ok, oldTypeS.clone(), true);
@@ -667,7 +668,7 @@ impl NIXMLNodesHandler {
                 tlDefs.insert(def);
                 def.m().add_node(currentNode);
                 if def.get_type() != type_ && attrs.has_attribute(SUMO_ATTR_TLTYPE) {
-                    write_warning(&tlf!("Changing traffic light type '%' to '%' for tl '%'.", TrafficLightTypes.get_string(def.get_type()).unwrap_or_else(|e| panic!("{e}")), typeS, tlID));
+                    write_warning(&tlf!("Changing traffic light type '%' to '%' for tl '%'.", TrafficLightTypes.get_string(def.get_type()), typeS, tlID));
                     def.m().set_type(type_);
                     // shortcut: C++ dynamic_cast<NBLoadedSUMOTLDef*> (guessMinMaxDuration) and dynamic_cast<NBOwnTLDef*> (setLayout) need a runtime type tag NBTrafficLightDefinition lacks, so these two steps are skipped, upgrade when the TL definition carries its kind
                 }
