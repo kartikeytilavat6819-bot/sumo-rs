@@ -16,7 +16,11 @@ impl GenericEngineModel {
     // GenericEngineModel() : maxAcceleration_mpsps(1.5), maxDeceleration_mpsps(7) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port GenericEngineModel::GenericEngineModel")
+        Self {
+            className: String::new(),
+            maxAcceleration_mpsps: 1.5,
+            maxDeceleration_mpsps: 7.0,
+        }
     }
 
     /// C++: `void GenericEngineModel::~GenericEngineModel() noexcept` [virtual]
@@ -24,7 +28,7 @@ impl GenericEngineModel {
     // virtual ~GenericEngineModel() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port GenericEngineModel::~GenericEngineModel")
+        // C++ destructor body is empty: nothing to release.
     }
 
     /// C++: `double GenericEngineModel::getRealAcceleration(double, double, double, SUMOTime)` [virtual, pure virtual]
@@ -32,7 +36,7 @@ impl GenericEngineModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_real_acceleration(&mut self, speed_mps: f64, accel_mps2: f64, reqAccel_mps2: f64, timeStep: SUMOTime) -> f64 {
-        todo!("port GenericEngineModel::getRealAcceleration")
+        panic!("GenericEngineModel::getRealAcceleration is pure virtual; subclasses must override it")
     }
 
     /// C++: `void GenericEngineModel::setParameter(const std::string, const std::string &)` [virtual, pure virtual]
@@ -40,21 +44,21 @@ impl GenericEngineModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, parameter: String, value: &str) {
-        todo!("port GenericEngineModel::setParameter")
+        panic!("GenericEngineModel::setParameter is pure virtual; subclasses must override it")
     }
 
     /// C++: `void GenericEngineModel::setParameter(const std::string, double)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_parameter_2(&mut self, parameter: String, value: f64) {
-        todo!("port GenericEngineModel::setParameter")
+        panic!("GenericEngineModel::setParameter is pure virtual; subclasses must override it")
     }
 
     /// C++: `void GenericEngineModel::setParameter(const std::string, int)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_parameter_3(&mut self, parameter: String, value: i32) {
-        todo!("port GenericEngineModel::setParameter")
+        panic!("GenericEngineModel::setParameter is pure virtual; subclasses must override it")
     }
 
     /// C++: `void GenericEngineModel::setMaximumAcceleration(double)`
@@ -64,7 +68,7 @@ impl GenericEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn set_maximum_acceleration(&mut self, maxAcc: f64) {
-        todo!("port GenericEngineModel::setMaximumAcceleration")
+        self.maxAcceleration_mpsps = maxAcc;
     }
 
     /// C++: `void GenericEngineModel::setMaximumDeceleration(double)`
@@ -74,7 +78,7 @@ impl GenericEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn set_maximum_deceleration(&mut self, maxDec: f64) {
-        todo!("port GenericEngineModel::setMaximumDeceleration")
+        self.maxDeceleration_mpsps = maxDec;
     }
 
     /// C++: `void GenericEngineModel::printParameterError(std::string, std::string)` [protected]
@@ -84,7 +88,7 @@ impl GenericEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn print_parameter_error(&mut self, parameter: String, value: String) {
-        todo!("port GenericEngineModel::printParameterError")
+        eprintln!("{}: invalid value {} for parameter {}", self.className, value, parameter);
     }
 
     /// C++: `void GenericEngineModel::parseParameter(const Parameterised::Map &, std::string, double &)` [protected]
@@ -100,8 +104,13 @@ impl GenericEngineModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_parameter(&mut self, parameters: &Unmapped /* Parameterised::Map */, parameter: String, value: &mut f64) {
-        todo!("port GenericEngineModel::parseParameter")
+    pub fn parse_parameter(&mut self, parameters: &ParameterisedMap, parameter: String, value: &mut f64) {
+        if let Some(par) = parameters.get(&parameter) {
+            match utils::common::string_utils::to_double(par) {
+                Ok(v) => *value = v,
+                Err(_) => self.print_parameter_error(parameter.clone(), par.clone()),
+            }
+        }
     }
 
     /// C++: `void GenericEngineModel::parseParameter(const Parameterised::Map &, std::string, int &)` [protected]
@@ -116,8 +125,13 @@ impl GenericEngineModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_parameter_2(&mut self, parameters: &Unmapped /* Parameterised::Map */, parameter: String, value: &mut i32) {
-        todo!("port GenericEngineModel::parseParameter")
+    pub fn parse_parameter_2(&mut self, parameters: &ParameterisedMap, parameter: String, value: &mut i32) {
+        if let Some(par) = parameters.get(&parameter) {
+            match utils::common::string_utils::to_int(par) {
+                Ok(v) => *value = v,
+                Err(_) => self.print_parameter_error(parameter.clone(), par.clone()),
+            }
+        }
     }
 
     /// C++: `void GenericEngineModel::parseParameter(const Parameterised::Map &, std::string, std::string &)` [protected]
@@ -128,8 +142,10 @@ impl GenericEngineModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_parameter_3(&mut self, parameters: &Unmapped /* Parameterised::Map */, parameter: String, value: &mut String) {
-        todo!("port GenericEngineModel::parseParameter")
+    pub fn parse_parameter_3(&mut self, parameters: &ParameterisedMap, parameter: String, value: &mut String) {
+        if let Some(par) = parameters.get(&parameter) {
+            *value = par.clone();
+        }
     }
 
 }

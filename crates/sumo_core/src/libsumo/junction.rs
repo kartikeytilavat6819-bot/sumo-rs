@@ -1,6 +1,7 @@
 //! Port of libsumo/Junction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::traci::traci_constants::*;
 
 /// C++ class `libsumo::Junction` (libsumo/Junction.h)
 pub struct Junction {
@@ -10,6 +11,13 @@ pub struct Junction {
 //   static const int Junction::DOMAIN_ID;
 //   static SubscriptionResults Junction::mySubscriptionResults;
 //   static ContextSubscriptionResults Junction::myContextSubscriptionResults;
+
+thread_local! {
+    /// C++ static `Junction::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Junction::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
 //   static NamedRTree * Junction::myTree;
 
 impl Junction {
@@ -17,14 +25,14 @@ impl Junction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_position(junctionID: &str, includeZ: bool) -> TraCIPosition {
-        todo!("port Junction::getPosition")
+        Helper::make_tra_ci_position(Self::get_junction(junctionID).get_position(false), includeZ)
     }
 
     /// C++: `libsumo::TraCIPositionVector Junction::getShape(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_shape(junctionID: &str) -> TraCIPositionVector {
-        todo!("port Junction::getShape")
+        Helper::make_tra_ci_position_vector(Self::get_junction(junctionID).get_shape())
     }
 
     /// C++: `const std::vector<std::string> Junction::getIncomingEdges(const std::string &)` [static]
@@ -38,7 +46,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_edges(junctionID: &str) -> Vec<String> {
-        todo!("port Junction::getIncomingEdges")
+        let mut result: Vec<String> = Vec::new();
+        for edge in Self::get_junction(junctionID).get_incoming() {
+            result.push(edge.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `const std::vector<std::string> Junction::getOutgoingEdges(const std::string &)` [static]
@@ -52,7 +64,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_outgoing_edges(junctionID: &str) -> Vec<String> {
-        todo!("port Junction::getOutgoingEdges")
+        let mut result: Vec<String> = Vec::new();
+        for edge in Self::get_junction(junctionID).get_outgoing() {
+            result.push(edge.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> Junction::getIDList()` [static]
@@ -64,7 +80,8 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Junction::getIDList")
+        // shortcut: MSNet junction control has no insertIDs yet (MSJunctionControl is a skeleton), upgrade when MSJunctionControl is ported
+        panic!("shortcut: Junction::getIDList needs MSJunctionControl::insertIDs")
     }
 
     /// C++: `int Junction::getIDCount()` [static]
@@ -74,7 +91,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Junction::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Junction::getParameter(const std::string &, const std::string &)` [static]
@@ -84,14 +101,14 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Junction::getParameter")
+        Self::get_junction(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Junction::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Junction)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Junction::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Junction::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -101,77 +118,78 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Junction::setParameter")
+        Self::get_junction(objectID).base2.set_parameter(key, value);
     }
 
     /// C++: `void Junction::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Junction::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_JUNCTION_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Junction::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Junction::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_JUNCTION_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Junction::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Junction::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_JUNCTION_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Junction::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Junction::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_JUNCTION_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Junction::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Junction::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Junction::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Junction::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Junction::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Junction::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Junction::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Junction::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Junction::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Junction::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Junction::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Junction::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Junction::domainID")
+        CMD_GET_JUNCTION_VARIABLE
     }
 
     /// C++: `void Junction::storeShape(const std::string &, PositionVector &)` [static]
@@ -182,7 +200,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port Junction::storeShape")
+        shape.push(Self::get_junction(id).get_position(false).clone());
     }
 
     /// C++: `NamedRTree * Junction::getTree()` [static]
@@ -202,7 +220,8 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        todo!("port Junction::getTree")
+        // shortcut: NamedRTree is not ported yet, upgrade when the R-tree type is mapped
+        panic!("shortcut: Junction::getTree needs NamedRTree (unmapped)")
     }
 
     /// C++: `void Junction::cleanup()` [static]
@@ -213,7 +232,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port Junction::cleanup")
+        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete yet
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Junction::makeWrapper()` [static]
@@ -223,7 +242,8 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Junction::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Junction::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Junction::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -255,7 +275,27 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Junction::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_POSITION | VAR_POSITION3D => wrapper.m().wrap_position(objID, variable, &Self::get_position(objID, variable == VAR_POSITION3D)),
+            VAR_SHAPE => wrapper.m().wrap_position_vector(objID, variable, &Self::get_shape(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            INCOMING_EDGES => wrapper.m().wrap_string_list(objID, variable, &Self::get_incoming_edges(objID)),
+            OUTGOING_EDGES => wrapper.m().wrap_string_list(objID, variable, &Self::get_outgoing_edges(objID)),
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSJunction * Junction::getJunction(const std::string &)` [static, private]
@@ -269,7 +309,8 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_junction(id: &str) -> Ptr<MSJunction> {
-        todo!("port Junction::getJunction")
+        // shortcut: MSJunctionControl::get is not mapped yet, and C++ throws TraCIException for unknown ids (here it panics), upgrade when MSJunctionControl is ported
+        panic!("shortcut: Junction '{id}' lookup needs MSJunctionControl::get")
     }
 
     /// C++: `void Junction::Junction()` [private]
@@ -277,7 +318,7 @@ impl Junction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Junction::Junction")
+        panic!("libsumo::Junction cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

@@ -1,9 +1,11 @@
 //! Port of microsim/output/MSMeanData_Emissions.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, g_precision_emissions};
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Emissions::MSLaneMeanDataValues` (microsim/output/MSMeanData_Emissions.h)
+#[repr(C)] // base must be field 0 for the C++ downcast in addTo
 pub struct MSMeanData_Emissions_MSLaneMeanDataValues {
     /// C++ base class `MSMeanData::MeanDataValues`
     pub base: MSMeanData_MeanDataValues,
@@ -33,7 +35,10 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     //       myEmissions() {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Emissions>) -> Self {
-        todo!("port MSLaneMeanDataValues::MSLaneMeanDataValues")
+        MSMeanData_Emissions_MSLaneMeanDataValues {
+            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base)),
+            myEmissions: PollutantsInterface_Emissions::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        }
     }
 
     /// C++: `void MSLaneMeanDataValues::~MSLaneMeanDataValues() noexcept` [virtual]
@@ -42,7 +47,7 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneMeanDataValues::~MSLaneMeanDataValues")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSLaneMeanDataValues::reset(bool)` [virtual]
@@ -56,7 +61,10 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self, afterWrite: bool) {
-        todo!("port MSLaneMeanDataValues::reset")
+        self.sampleSeconds = 0.0;
+        self.travelledDistance = 0.0;
+        self.myEmissions = PollutantsInterface_Emissions::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        self.resetTime = MSNet::get_instance().get_current_time_step();
     }
 
     /// C++: `void MSLaneMeanDataValues::addTo(MSMeanData::MeanDataValues &) const` [const, virtual]
@@ -70,7 +78,11 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        todo!("port MSLaneMeanDataValues::addTo")
+        // C++ downcast; `base` is the first field (repr(C))
+        let v = unsafe { &mut *(val as *mut MSMeanData_MeanDataValues as *mut MSMeanData_Emissions_MSLaneMeanDataValues) };
+        v.sampleSeconds += self.sampleSeconds;
+        v.travelledDistance += self.travelledDistance;
+        v.myEmissions.add_scaled(&self.myEmissions, 1.0);
     }
 
     /// C++: `void MSLaneMeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual]
@@ -140,7 +152,75 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        todo!("port MSLaneMeanDataValues::write")
+        let normFactor = 3600.0 / steps2time(period) / self.myLaneLength;
+        let mask = *attributeMask;
+        dev.set_precision(g_precision_emissions());
+        dev.write_optional_attr_mask(SUMO_ATTR_CO_ABS, &self.myEmissions.CO, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_CO2_ABS, &self.myEmissions.CO2, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_HC_ABS, &self.myEmissions.HC, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_PMX_ABS, &self.myEmissions.PMx, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_NOX_ABS, &self.myEmissions.NOx, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_FUEL_ABS, &self.myEmissions.fuel, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY_ABS, &self.myEmissions.electricity, mask, false);
+        if attributeMask.none() {
+            dev.write_padding("\n           ");
+        }
+        dev.write_optional_attr_mask(SUMO_ATTR_CO_NORMED, &(normFactor * self.myEmissions.CO), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_CO2_NORMED, &(normFactor * self.myEmissions.CO2), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_HC_NORMED, &(normFactor * self.myEmissions.HC), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_PMX_NORMED, &(normFactor * self.myEmissions.PMx), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_NOX_NORMED, &(normFactor * self.myEmissions.NOx), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_FUEL_NORMED, &(normFactor * self.myEmissions.fuel), mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY_NORMED, &(normFactor * self.myEmissions.electricity), mask, false);
+
+        if self.sampleSeconds > self.myParent.get_min_samples() {
+            let mut vehFactor = self.myParent.get_max_travel_time() / self.sampleSeconds;
+            let mut traveltime = self.myParent.get_max_travel_time();
+            if self.travelledDistance > 0.0 {
+                // MIN2(a, b) as std::min: (b < a) ? b : a
+                let q1 = self.myLaneLength / self.travelledDistance;
+                vehFactor = if q1 < vehFactor { q1 } else { vehFactor };
+                let q2 = self.myLaneLength * self.sampleSeconds / self.travelledDistance;
+                traveltime = if q2 < traveltime { q2 } else { traveltime };
+            }
+            if attributeMask.none() {
+                dev.write_padding("\n           ");
+            }
+            dev.set_precision(g_precision());
+            dev.write_optional_attr_mask(SUMO_ATTR_TRAVELTIME, &traveltime, mask, false);
+            dev.set_precision(g_precision_emissions());
+            dev.write_optional_attr_mask(SUMO_ATTR_CO_PERVEH, &(vehFactor * self.myEmissions.CO), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_CO2_PERVEH, &(vehFactor * self.myEmissions.CO2), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_HC_PERVEH, &(vehFactor * self.myEmissions.HC), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_PMX_PERVEH, &(vehFactor * self.myEmissions.PMx), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_NOX_PERVEH, &(vehFactor * self.myEmissions.NOx), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_FUEL_PERVEH, &(vehFactor * self.myEmissions.fuel), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY_PERVEH, &(vehFactor * self.myEmissions.electricity), mask, false);
+        } else if defaultTravelTime >= 0.0 {
+            let t = MSNet::get_instance().get_vehicle_control().get_v_type(DEFAULT_VTYPE_ID, Ptr::null(), false);
+            // std::min(myLaneLength / defaultTravelTime, t->getMaxSpeed())
+            let q = self.myLaneLength / defaultTravelTime;
+            let m = t.get_max_speed();
+            let speed = if m < q { m } else { q };
+
+            if attributeMask.none() {
+                dev.write_padding("\n           ");
+            }
+            dev.set_precision(g_precision());
+            dev.write_optional_attr_mask(SUMO_ATTR_TRAVELTIME, &defaultTravelTime, mask, false);
+            dev.set_precision(g_precision_emissions());
+            let accel = t.get_car_follow_model().get_max_accel();
+            let params = t.get_emission_parameters();
+            let class = t.get_emission_class();
+            dev.write_optional_attr_mask(SUMO_ATTR_CO_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::CO, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_CO2_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::CO2, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_HC_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::HC, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_PMX_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::PM_X, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_NOX_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::NO_X, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_FUEL_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::FUEL, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY_PERVEH, &PollutantsInterface::compute_default(class, PollutantsInterface_EmissionType::ELEC, speed, accel, 0.0, defaultTravelTime, params), mask, false);
+        }
+        dev.set_precision(g_precision());
     }
 
     /// C++: `void MSLaneMeanDataValues::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -162,7 +242,17 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, arg1: f64, timeOnLane: f64, arg3: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, arg7: f64) {
-        todo!("port MSLaneMeanDataValues::notifyMoveInternal")
+        if !self.myParent.is_null() && !self.myParent.vehicle_applies(veh) {
+            return;
+        }
+        if veh.is_vehicle() {
+            // shortcut: static_cast<const SUMOVehicle&>(veh) needs a SUMOTrafficObject downcast (not ported); uses the vehicle type's energy parameters, upgrade when that downcast exists
+            self.sampleSeconds += arg1;
+            self.travelledDistance += travelledDistanceFrontOnLane;
+            let a = veh.get_acceleration();
+            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), arg3, a, veh.get_slope(), veh.get_vehicle_type().get_emission_parameters());
+            self.myEmissions.add_scaled(&e, arg1);
+        }
     }
 
     /// C++: `bool MSLaneMeanDataValues::notifyIdle(SUMOTrafficObject &)` [virtual, protected]
@@ -178,7 +268,12 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_idle(&mut self, veh: &mut SUMOTrafficObject) -> bool {
-        todo!("port MSLaneMeanDataValues::notifyIdle")
+        if veh.is_vehicle() {
+            // shortcut: static_cast<const SUMOVehicle&>(veh) needs a SUMOTrafficObject downcast (not ported); uses the vehicle type's energy parameters, upgrade when that downcast exists
+            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), 0.0, 0.0, 0.0, veh.get_vehicle_type().get_emission_parameters());
+            self.myEmissions.add_scaled(&e, ts());
+        }
+        true
     }
 
 }
@@ -222,7 +317,8 @@ impl MSMeanData_Emissions {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, minSamples: f64, maxTravelTime: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        todo!("port MSMeanData_Emissions::MSMeanData_Emissions")
+        let base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, 0, minSamples, maxTravelTime, vTypes, writeAttributes, edges, aggregate);
+        Self { base }
     }
 
     /// C++: `void MSMeanData_Emissions::~MSMeanData_Emissions() noexcept` [virtual]
@@ -230,7 +326,7 @@ impl MSMeanData_Emissions {
     // MSMeanData_Emissions::~MSMeanData_Emissions() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSMeanData_Emissions::~MSMeanData_Emissions")
+        // C++ destructor body is empty
     }
 
     /// C++: `std::vector<std::string> MSMeanData_Emissions::getAttributeNames() const` [const, virtual]
@@ -263,7 +359,14 @@ impl MSMeanData_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
-        todo!("port MSMeanData_Emissions::getAttributeNames")
+        [
+            SUMO_ATTR_CO_ABS, SUMO_ATTR_CO2_ABS, SUMO_ATTR_HC_ABS, SUMO_ATTR_PMX_ABS, SUMO_ATTR_NOX_ABS, SUMO_ATTR_FUEL_ABS, SUMO_ATTR_ELECTRICITY_ABS,
+            SUMO_ATTR_CO_NORMED, SUMO_ATTR_CO2_NORMED, SUMO_ATTR_HC_NORMED, SUMO_ATTR_PMX_NORMED, SUMO_ATTR_NOX_NORMED, SUMO_ATTR_FUEL_NORMED, SUMO_ATTR_ELECTRICITY_NORMED,
+            SUMO_ATTR_CO_PERVEH, SUMO_ATTR_CO2_PERVEH, SUMO_ATTR_HC_PERVEH, SUMO_ATTR_PMX_PERVEH, SUMO_ATTR_NOX_PERVEH, SUMO_ATTR_FUEL_PERVEH, SUMO_ATTR_ELECTRICITY_PERVEH,
+        ]
+        .iter()
+        .map(|a| utils::xml::sumo_xml_definitions::Attrs.get_string(*a).to_string())
+        .collect()
     }
 
     /// C++: `bool MSMeanData_Emissions::supports(const SumoXMLAttrMask &)` [static]
@@ -295,7 +398,13 @@ impl MSMeanData_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn supports(attributeMask: &SumoXMLAttrMask) -> bool {
-        todo!("port MSMeanData_Emissions::supports")
+        [
+            SUMO_ATTR_CO_ABS, SUMO_ATTR_CO2_ABS, SUMO_ATTR_HC_ABS, SUMO_ATTR_PMX_ABS, SUMO_ATTR_NOX_ABS, SUMO_ATTR_FUEL_ABS, SUMO_ATTR_ELECTRICITY_ABS,
+            SUMO_ATTR_CO_NORMED, SUMO_ATTR_CO2_NORMED, SUMO_ATTR_HC_NORMED, SUMO_ATTR_PMX_NORMED, SUMO_ATTR_NOX_NORMED, SUMO_ATTR_FUEL_NORMED, SUMO_ATTR_ELECTRICITY_NORMED,
+            SUMO_ATTR_CO_PERVEH, SUMO_ATTR_CO2_PERVEH, SUMO_ATTR_HC_PERVEH, SUMO_ATTR_PMX_PERVEH, SUMO_ATTR_NOX_PERVEH, SUMO_ATTR_FUEL_PERVEH, SUMO_ATTR_ELECTRICITY_PERVEH,
+        ]
+        .iter()
+        .any(|a| attributeMask.test(*a))
     }
 
     /// C++: `MSMeanData::MeanDataValues * MSMeanData_Emissions::createValues(MSLane *const, const double, const bool) const` [const, virtual, protected]
@@ -306,7 +415,9 @@ impl MSMeanData_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MSMeanData_Emissions::createValues")
+        // shortcut: the values are leaked (C++ deletes them in ~MSMeanData), upgrade when myMeasures owns its values
+        let values = Box::leak(Box::new(MSMeanData_Emissions_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))));
+        Ptr::from_mut(&mut values.base)
     }
 
     /// C++: `void MSMeanData_Emissions::MSMeanData_Emissions(const MSMeanData_Emissions &)` [private]
@@ -314,7 +425,8 @@ impl MSMeanData_Emissions {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSMeanData_Emissions) -> Self {
-        todo!("port MSMeanData_Emissions::MSMeanData_Emissions")
+        // C++ copy constructor is private and invalidated (never called)
+        panic!("MSMeanData_Emissions copy constructor is invalidated");
     }
 
     /// C++: `MSMeanData_Emissions & MSMeanData_Emissions::operator=(const MSMeanData_Emissions &)` [private]
@@ -322,7 +434,8 @@ impl MSMeanData_Emissions {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSMeanData_Emissions) -> &mut MSMeanData_Emissions {
-        todo!("port MSMeanData_Emissions::operator=")
+        // C++ assignment operator is private and invalidated (never called)
+        panic!("MSMeanData_Emissions assignment operator is invalidated");
     }
 
 }

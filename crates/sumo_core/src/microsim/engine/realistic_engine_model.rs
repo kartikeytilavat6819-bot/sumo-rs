@@ -1,6 +1,7 @@
 //! Port of microsim/engine/RealisticEngineModel.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::xml::xml_sub_sys::run_parser;
 
 /// This class implements a detailed engine and braking model which takes into account engine characteristics, gear ratios, external forces due to air drag, etc. This class uses a particular notation for variables to take into account both name and unit, to avoid confusion and mistakes. We write the name in camel case, then an underscore, then the unit of measure. For example, engine force in newton (kg * m / s^2) we use
 /// C++ class `RealisticEngineModel` (microsim/engine/RealisticEngineModel.h)
@@ -27,6 +28,35 @@ impl std::ops::DerefMut for RealisticEngineModel {
     }
 }
 
+const GRAVITY_MPS2: f64 = 9.81; // EngineParameters.h #define
+const HP_TO_W: f64 = 745.699872; // EngineParameters.h #define
+const TAU_MAX: f64 = 0.5; // EngineParameters.h #define
+const ENGINE_PAR_VEHICLE: &str = "vehicle"; // CC_Const.h
+const ENGINE_PAR_XMLFILE: &str = "xmlFile"; // CC_Const.h
+const ENGINE_PAR_DT: &str = "dt_s"; // CC_Const.h
+
+/// C++ `ep.gearRatios[i]` (gearRatios is a raw double array)
+fn gear_ratio(ep: &EngineParameters, i: i32) -> f64 {
+    // SAFETY: gearRatios points at nGears values, as in C++
+    unsafe { *ep.gearRatios.as_raw().add(i as usize) }
+}
+
+/// C++ std::min(a, b): returns (b < a) ? b : a
+fn cpp_min(a: f64, b: f64) -> f64 {
+    if b < a { b } else { a }
+}
+
+/// C++ std::max(a, b): returns (a < b) ? b : a
+fn cpp_max(a: f64, b: f64) -> f64 {
+    if a < b { b } else { a }
+}
+
+/// shortcut: EngineParameters_PolynomialEngineModelRpmToHp.x is Unmapped (double[9]) in engine_parameters.rs, read m.x[i] once that field is typed as [f64; 9]
+fn poly_x(m: &EngineParameters_PolynomialEngineModelRpmToHp, i: i32) -> f64 {
+    let _ = (m, i);
+    panic!("shortcut: engine polynomial coefficients are not ported yet (EngineParameters x is unmapped)")
+}
+
 impl RealisticEngineModel {
     /// C++: `double RealisticEngineModel::rpmToSpeed_mps(double, double, double, double)` [protected]
     /// Given engine rotation in rpm, tracting wheels diameter, differential ratio, and gear ratio, computes vehicle speed in mps
@@ -36,7 +66,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rpm_to_speed_mps(&mut self, rpm: f64, wheelDiameter_m: f64, differentialRatio: f64, gearRatio: f64) -> f64 {
-        todo!("port RealisticEngineModel::rpmToSpeed_mps")
+        rpm * wheelDiameter_m * utils::geom::geom_helper::M_PI / (differentialRatio * gearRatio * 60.0)
     }
 
     /// C++: `double RealisticEngineModel::rpmToSpeed_mps(double)` [protected]
@@ -46,7 +76,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rpm_to_speed_mps_2(&mut self, rpm: f64) -> f64 {
-        todo!("port RealisticEngineModel::rpmToSpeed_mps")
+        self.ep.__rpmToSpeedCoefficient * rpm / gear_ratio(&self.ep, self.currentGear)
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToRpm(double, double, double, double)` [protected]
@@ -57,7 +87,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_rpm(&mut self, speed_mps: f64, wheelDiameter_m: f64, differentialRatio: f64, gearRatio: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToRpm")
+        speed_mps * differentialRatio * gearRatio * 60.0 / (wheelDiameter_m * utils::geom::geom_helper::M_PI)
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToRpm(double)` [protected]
@@ -67,7 +97,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_rpm_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToRpm")
+        self.ep.__speedToRpmCoefficient * speed_mps * gear_ratio(&self.ep, self.currentGear)
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToRpm(double, double)` [protected]
@@ -77,7 +107,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_rpm_3(&mut self, speed_mps: f64, gearRatio: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToRpm")
+        self.ep.__speedToRpmCoefficient * speed_mps * gearRatio
     }
 
     /// C++: `double RealisticEngineModel::rpmToPower_hp(double, const struct EngineParameters::PolynomialEngineModelRpmToHp *)` [protected]
@@ -91,7 +121,11 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rpm_to_power_hp(&mut self, rpm: f64, engineMapping: Ptr<EngineParameters_PolynomialEngineModelRpmToHp>) -> f64 {
-        todo!("port RealisticEngineModel::rpmToPower_hp")
+        let mut sum = poly_x(&engineMapping, 0);
+        for i in 1..engineMapping.degree {
+            sum += poly_x(&engineMapping, i) + rpm.powf(i as f64);
+        }
+        sum
     }
 
     /// C++: `double RealisticEngineModel::rpmToPower_hp(double)` [protected]
@@ -108,7 +142,15 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rpm_to_power_hp_2(&mut self, rpm: f64) -> f64 {
-        todo!("port RealisticEngineModel::rpmToPower_hp")
+        let mut rpm = rpm;
+        if rpm >= self.ep.maxRpm {
+            rpm = self.ep.maxRpm;
+        }
+        let mut sum = poly_x(&self.ep.engineMapping, 0);
+        for i in 1..self.ep.engineMapping.degree {
+            sum += poly_x(&self.ep.engineMapping, i) * rpm.powf(i as f64);
+        }
+        sum
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToPower_hp(double, const struct EngineParameters::PolynomialEngineModelRpmToHp *, double, double, double)` [protected]
@@ -122,7 +164,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_power_hp(&mut self, speed_mps: f64, engineMapping: Ptr<EngineParameters_PolynomialEngineModelRpmToHp>, wheelDiameter_m: f64, differentialRatio: f64, gearRatio: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToPower_hp")
+        let rpm = self.speed_mps_to_rpm(speed_mps, wheelDiameter_m, differentialRatio, gearRatio);
+        self.rpm_to_power_hp(rpm, engineMapping)
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToPower_hp(double)` [protected]
@@ -132,7 +175,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_power_hp_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToPower_hp")
+        let rpm = self.speed_mps_to_rpm_2(speed_mps);
+        self.rpm_to_power_hp_2(rpm)
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToThrust_N(double, const struct EngineParameters::PolynomialEngineModelRpmToHp *, double, double, double, double)` [protected]
@@ -146,7 +190,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_thrust_n(&mut self, speed_mps: f64, engineMapping: Ptr<EngineParameters_PolynomialEngineModelRpmToHp>, wheelDiameter_m: f64, differentialRatio: f64, gearRatio: f64, engineEfficiency: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToThrust_N")
+        let power_hp = self.speed_mps_to_power_hp(speed_mps, engineMapping, wheelDiameter_m, differentialRatio, gearRatio);
+        engineEfficiency * power_hp * HP_TO_W / speed_mps
     }
 
     /// C++: `double RealisticEngineModel::speed_mpsToThrust_N(double)` [protected]
@@ -157,7 +202,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn speed_mps_to_thrust_n_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::speed_mpsToThrust_N")
+        let power_hp = self.speed_mps_to_power_hp_2(speed_mps);
+        self.ep.__speedToThrustCoefficient * power_hp / speed_mps
     }
 
     /// C++: `double RealisticEngineModel::airDrag_N(double, double, double, double)` [protected]
@@ -167,7 +213,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn air_drag_n(&mut self, speed_mps: f64, cAir: f64, a_m2: f64, rho_kgpm3: f64) -> f64 {
-        todo!("port RealisticEngineModel::airDrag_N")
+        0.5 * cAir * a_m2 * rho_kgpm3 * speed_mps * speed_mps
     }
 
     /// C++: `double RealisticEngineModel::airDrag_N(double)` [protected]
@@ -177,7 +223,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn air_drag_n_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::airDrag_N")
+        self.ep.__airFrictionCoefficient * speed_mps * speed_mps
     }
 
     /// C++: `double RealisticEngineModel::rollingResistance_N(double, double, double, double)` [protected]
@@ -187,7 +233,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rolling_resistance_n(&mut self, speed_mps: f64, mass_kg: f64, cr1: f64, cr2: f64) -> f64 {
-        todo!("port RealisticEngineModel::rollingResistance_N")
+        mass_kg * GRAVITY_MPS2 * (cr1 + cr2 * speed_mps * speed_mps)
     }
 
     /// C++: `double RealisticEngineModel::rollingResistance_N(double)` [protected]
@@ -197,7 +243,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn rolling_resistance_n_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::rollingResistance_N")
+        self.ep.__cr1 + self.ep.__cr2 * speed_mps * speed_mps
     }
 
     /// C++: `double RealisticEngineModel::gravityForce_N(double, double)` [protected]
@@ -207,7 +253,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn gravity_force_n(&mut self, mass_kg: f64, slope: f64) -> f64 {
-        todo!("port RealisticEngineModel::gravityForce_N")
+        mass_kg * GRAVITY_MPS2 * (slope / 180.0 * utils::geom::geom_helper::M_PI).sin()
     }
 
     /// C++: `double RealisticEngineModel::gravityForce_N()` [protected]
@@ -217,7 +263,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn gravity_force_n_2(&mut self) -> f64 {
-        todo!("port RealisticEngineModel::gravityForce_N")
+        self.ep.__gravity
     }
 
     /// C++: `double RealisticEngineModel::opposingForce_N(double, double, double, double, double, double, double, double)` [protected]
@@ -231,7 +277,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn opposing_force_n(&mut self, speed_mps: f64, mass_kg: f64, slope: f64, cAir: f64, a_m2: f64, rho_kgpm3: f64, cr1: f64, cr2: f64) -> f64 {
-        todo!("port RealisticEngineModel::opposingForce_N")
+        self.air_drag_n(speed_mps, cAir, a_m2, rho_kgpm3) + self.rolling_resistance_n(speed_mps, mass_kg, cr1, cr2) + self.gravity_force_n(mass_kg, slope)
     }
 
     /// C++: `double RealisticEngineModel::opposingForce_N(double)` [protected]
@@ -241,7 +287,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn opposing_force_n_2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::opposingForce_N")
+        self.air_drag_n_2(speed_mps) + self.rolling_resistance_n_2(speed_mps) + self.gravity_force_n_2()
     }
 
     /// C++: `double RealisticEngineModel::maxNoSlipAcceleration_mps2(double, double)` [protected]
@@ -251,7 +297,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn max_no_slip_acceleration_mps2(&mut self, slope: f64, frictionCoefficient: f64) -> f64 {
-        todo!("port RealisticEngineModel::maxNoSlipAcceleration_mps2")
+        frictionCoefficient * GRAVITY_MPS2 * (slope / 180.0 * utils::geom::geom_helper::M_PI).cos()
     }
 
     /// C++: `double RealisticEngineModel::maxNoSlipAcceleration_mps2()` [protected]
@@ -261,7 +307,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn max_no_slip_acceleration_mps2_2(&mut self) -> f64 {
-        todo!("port RealisticEngineModel::maxNoSlipAcceleration_mps2")
+        self.ep.__maxNoSlipAcceleration
     }
 
     /// C++: `double RealisticEngineModel::thrust_NToAcceleration_mps2(double)` [protected]
@@ -271,7 +317,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn thrust_n_to_acceleration_mps2(&mut self, thrust_N: f64) -> f64 {
-        todo!("port RealisticEngineModel::thrust_NToAcceleration_mps2")
+        thrust_N / self.ep.__maxAccelerationCoefficient
     }
 
     /// C++: `int RealisticEngineModel::performGearShifting(double, double)` [protected]
@@ -292,7 +338,18 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn perform_gear_shifting(&mut self, speed_mps: f64, acceleration_mps2: f64) -> i32 {
-        todo!("port RealisticEngineModel::performGearShifting")
+        let mut newGear: i32 = 0;
+        let delta = if acceleration_mps2 >= 0.0 { self.ep.shiftingRule.deltaRpm } else { -self.ep.shiftingRule.deltaRpm };
+        while newGear < self.ep.nGears - 1 {
+            let rpm = self.speed_mps_to_rpm_3(speed_mps, gear_ratio(&self.ep, newGear));
+            if rpm >= self.ep.shiftingRule.rpm + delta {
+                newGear += 1;
+            } else {
+                break;
+            }
+        }
+        self.currentGear = newGear;
+        self.currentGear
     }
 
     /// C++: `double RealisticEngineModel::getEngineTimeConstant_s(double)` [protected]
@@ -314,7 +371,15 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn get_engine_time_constant_s(&mut self, rpm: f64) -> f64 {
-        todo!("port RealisticEngineModel::getEngineTimeConstant_s")
+        if rpm <= 0.0 {
+            TAU_MAX
+        } else if self.ep.fixedTauBurn {
+            //in this case, tau_burn is fixed and is within __engineTauDe_s
+            cpp_min(TAU_MAX, self.ep.__engineTau2 / rpm + self.ep.__engineTauDe_s)
+        } else {
+            //in this case, tau_burn is dynamic and is within __engineTau1
+            cpp_min(TAU_MAX, self.ep.__engineTau1 / rpm + self.ep.tauEx_s)
+        }
     }
 
     /// C++: `double RealisticEngineModel::maxEngineAcceleration_mps2(double)` [protected]
@@ -324,7 +389,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn max_engine_acceleration_mps2(&mut self, speed_mps: f64) -> f64 {
-        todo!("port RealisticEngineModel::maxEngineAcceleration_mps2")
+        let thrust = self.speed_mps_to_thrust_n_2(speed_mps);
+        thrust / self.ep.__maxAccelerationCoefficient
     }
 
     /// C++: `double RealisticEngineModel::getRealBrakingAcceleration(double, double, double, SUMOTime)` [protected]
@@ -343,7 +409,16 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn get_real_braking_acceleration(&mut self, speed_mps: f64, accel_mps2: f64, reqAccel_mps2: f64, t: SUMOTime) -> f64 {
-        todo!("port RealisticEngineModel::getRealBrakingAcceleration")
+        let _ = t; // UNUSED_PARAMETER(t)
+        //compute which part of the deceleration is currently done by frictions
+        let opposing = self.opposing_force_n_2(speed_mps);
+        let frictionDeceleration = self.thrust_n_to_acceleration_mps2(opposing);
+        //the maximum deceleration is what the vehicle can do given the tyres plus the friction forces (friction can make the vehicle brake stronger)
+        let maxDeceleration = -self.max_no_slip_acceleration_mps2_2() - frictionDeceleration;
+        //compute the new brakes deceleration
+        let newBrakesAccel_mps2 = self.ep.__brakesAlpha * reqAccel_mps2 + self.ep.__brakesOneMinusAlpha * accel_mps2;
+        //keep actual deceleration within physical limits (considering that wind force can help us slowing down)
+        cpp_max(maxDeceleration, newBrakesAccel_mps2)
     }
 
     /// C++: `void RealisticEngineModel::RealisticEngineModel()`
@@ -355,14 +430,27 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RealisticEngineModel::RealisticEngineModel")
+        let mut m = RealisticEngineModel {
+            base: GenericEngineModel::new(),
+            ep: EngineParameters::new(),
+            currentGear: 0, // C++ leaves this uninitialised
+            minSpeed_mps: 0.0,
+            dt_s: 0.0,
+            xmlFile: String::new(),
+            vehicleType: String::new(),
+        };
+        m.base.className = "RealisticEngineModel".to_string();
+        m.dt_s = 0.01;
+        m.xmlFile = "vehicles.xml".to_string();
+        m.minSpeed_mps = m.rpm_to_speed_mps(m.ep.minRpm, m.ep.wheelDiameter_m, m.ep.differentialRatio, gear_ratio(&m.ep, 0));
+        m
     }
 
     /// C++: `void RealisticEngineModel::~RealisticEngineModel() noexcept` [virtual]
     // RealisticEngineModel::~RealisticEngineModel() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RealisticEngineModel::~RealisticEngineModel")
+        // C++ destructor body is empty: nothing to release.
     }
 
     /// C++: `double RealisticEngineModel::getRealAcceleration(double, double, double, SUMOTime)` [virtual]
@@ -395,7 +483,32 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn get_real_acceleration(&mut self, speed_mps: f64, accel_mps2: f64, reqAccel_mps2: f64, timeStep: SUMOTime) -> f64 {
-        todo!("port RealisticEngineModel::getRealAcceleration")
+        //perform gear shifting, if needed
+        self.perform_gear_shifting(speed_mps, accel_mps2);
+        //since we consider no clutch (clutch always engaged), 0 speed would mean 0 rpm, and thus
+        //0 available power. thus, the car could never start from a complete stop. so we assume
+        //a minimum speed of 1 m/s to compute engine power
+        let correctedSpeed = cpp_max(speed_mps, self.minSpeed_mps);
+        let realAccel_mps2: f64 = if reqAccel_mps2 >= 0.0 {
+            //the system wants to accelerate
+            //compute what is the maximum acceleration that can be delivered by the engine
+            let engineAccel = self.max_engine_acceleration_mps2(correctedSpeed);
+            //the maximum acceleration is given by the maximum acceleration the engine can provide minus friction forces
+            let opposing = self.opposing_force_n_2(speed_mps);
+            let maxAccel = engineAccel - self.thrust_n_to_acceleration_mps2(opposing);
+            //now we need to computed delayed acceleration due to actuation lag
+            let rpm = self.speed_mps_to_rpm_2(correctedSpeed);
+            let tau = self.get_engine_time_constant_s(rpm);
+            let alpha = self.ep.dt / (tau + self.ep.dt);
+            //use standard first order lag with time constant depending on engine rpm
+            let mut accel = alpha * reqAccel_mps2 + (1.0 - alpha) * accel_mps2;
+            //limit the actual acceleration by considering friction forces and the maximum acceleration considering tyres
+            accel = cpp_min(cpp_min(accel, maxAccel), self.max_no_slip_acceleration_mps2_2());
+            accel
+        } else {
+            self.get_real_braking_acceleration(speed_mps, accel_mps2, reqAccel_mps2, timeStep)
+        };
+        realAccel_mps2
     }
 
     /// C++: `void RealisticEngineModel::loadParameters()`
@@ -413,8 +526,18 @@ impl RealisticEngineModel {
     //     minSpeed_mps = rpmToSpeed_mps(ep.minRpm, ep.wheelDiameter_m, ep.differentialRatio, ep.gearRatios[0]);
     // }
     #[allow(unused_variables)]
-    pub fn load_parameters(&mut self) {
-        todo!("port RealisticEngineModel::loadParameters")
+    pub fn load_parameters(&mut self) -> Result<(), ProcessError> {
+        let mut engineHandler = VehicleEngineHandler::new(&self.vehicleType);
+        if !run_parser(&mut engineHandler, &self.xmlFile, false, false, false, true)? {
+            return Err(ProcessError::default_msg());
+        }
+        //copy loaded parameters into our engine parameters
+        self.ep.assign_op(engineHandler.get_engine_parameters());
+        self.ep.dt = self.dt_s;
+        self.ep.compute_coefficients();
+        //compute "minimum speed" to be used when computing maximum acceleration at speeds close to 0
+        self.minSpeed_mps = self.rpm_to_speed_mps(self.ep.minRpm, self.ep.wheelDiameter_m, self.ep.differentialRatio, gear_ratio(&self.ep, 0));
+        Ok(())
     }
 
     /// C++: `void RealisticEngineModel::setParameter(const std::string, const std::string &)` [virtual]
@@ -431,8 +554,17 @@ impl RealisticEngineModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, parameter: String, value: &str) {
-        todo!("port RealisticEngineModel::setParameter")
+    pub fn set_parameter(&mut self, parameter: String, value: &str) -> Result<(), ProcessError> {
+        if parameter == ENGINE_PAR_XMLFILE {
+            self.xmlFile = value.to_string();
+        }
+        if parameter == ENGINE_PAR_VEHICLE {
+            self.vehicleType = value.to_string();
+            if self.xmlFile != "" {
+                self.load_parameters()?;
+            }
+        }
+        Ok(())
     }
 
     /// C++: `void RealisticEngineModel::setParameter(const std::string, double)` [virtual]
@@ -443,7 +575,9 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter_2(&mut self, parameter: String, value: f64) {
-        todo!("port RealisticEngineModel::setParameter")
+        if parameter == ENGINE_PAR_DT {
+            self.dt_s = value;
+        }
     }
 
     /// C++: `void RealisticEngineModel::setParameter(const std::string, int)` [virtual]
@@ -453,7 +587,7 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter_3(&mut self, parameter: String, value: i32) {
-        todo!("port RealisticEngineModel::setParameter")
+        // UNUSED_PARAMETER(parameter); UNUSED_PARAMETER(value); (C++ body is empty)
     }
 
     /// C++: `void RealisticEngineModel::getEngineData(double, int &, double &)`
@@ -464,7 +598,8 @@ impl RealisticEngineModel {
     // }
     #[allow(unused_variables)]
     pub fn get_engine_data(&mut self, speed_mps: f64, gear: &mut i32, rpm: &mut f64) {
-        todo!("port RealisticEngineModel::getEngineData")
+        *gear = self.currentGear;
+        *rpm = self.speed_mps_to_rpm_2(speed_mps);
     }
 
 }

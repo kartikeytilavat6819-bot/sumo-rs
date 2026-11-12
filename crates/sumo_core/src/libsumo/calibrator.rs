@@ -1,6 +1,7 @@
 //! Port of libsumo/Calibrator.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::traci::traci_constants::*;
 
 /// C++ class `libsumo::Calibrator` (libsumo/Calibrator.h)
 pub struct Calibrator {
@@ -11,6 +12,13 @@ pub struct Calibrator {
 //   static SubscriptionResults Calibrator::mySubscriptionResults;
 //   static ContextSubscriptionResults Calibrator::myContextSubscriptionResults;
 
+thread_local! {
+    /// C++ static `Calibrator::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Calibrator::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 impl Calibrator {
     /// C++: `std::string Calibrator::getEdgeID(const std::string &)` [static]
     // std::string
@@ -19,7 +27,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(calibratorID: &str) -> String {
-        todo!("port Calibrator::getEdgeID")
+        Self::get_calibrator(calibratorID).get_edge().get_id().to_string()
     }
 
     /// C++: `std::string Calibrator::getLaneID(const std::string &)` [static]
@@ -34,7 +42,12 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(calibratorID: &str) -> String {
-        todo!("port Calibrator::getLaneID")
+        let lane = Self::get_calibrator(calibratorID).get_lane();
+        if lane.is_null() {
+            String::new()
+        } else {
+            lane.get_id().to_string()
+        }
     }
 
     /// C++: `double Calibrator::getVehsPerHour(const std::string &)` [static]
@@ -44,7 +57,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_vehs_per_hour(calibratorID: &str) -> f64 {
-        todo!("port Calibrator::getVehsPerHour")
+        Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).q
     }
 
     /// C++: `double Calibrator::getSpeed(const std::string &)` [static]
@@ -54,7 +67,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(calibratorID: &str) -> f64 {
-        todo!("port Calibrator::getSpeed")
+        Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).v
     }
 
     /// C++: `std::string Calibrator::getTypeID(const std::string &)` [static]
@@ -64,7 +77,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_type_id(calibratorID: &str) -> String {
-        todo!("port Calibrator::getTypeID")
+        Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).vehicleParameter.vtypeid.clone()
     }
 
     /// C++: `double Calibrator::getBegin(const std::string &)` [static]
@@ -74,7 +87,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_begin(calibratorID: &str) -> f64 {
-        todo!("port Calibrator::getBegin")
+        steps2time(Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).begin)
     }
 
     /// C++: `double Calibrator::getEnd(const std::string &)` [static]
@@ -84,7 +97,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_end(calibratorID: &str) -> f64 {
-        todo!("port Calibrator::getEnd")
+        steps2time(Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).end)
     }
 
     /// C++: `std::string Calibrator::getRouteID(const std::string &)` [static]
@@ -94,7 +107,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_route_id(calibratorID: &str) -> String {
-        todo!("port Calibrator::getRouteID")
+        Helper::get_calibrator_state(Self::get_calibrator(calibratorID)).vehicleParameter.routeid.clone()
     }
 
     /// C++: `std::string Calibrator::getRouteProbeID(const std::string &)` [static]
@@ -109,7 +122,12 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_route_probe_id(calibratorID: &str) -> String {
-        todo!("port Calibrator::getRouteProbeID")
+        let rp = Self::get_calibrator(calibratorID).get_route_probe();
+        if rp.is_null() {
+            String::new()
+        } else {
+            rp.get_id().to_string()
+        }
     }
 
     /// C++: `std::vector<std::string> Calibrator::getVTypes(const std::string &)` [static]
@@ -123,7 +141,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_v_types(calibratorID: &str) -> Vec<String> {
-        todo!("port Calibrator::getVTypes")
+        // shortcut: MSCalibrator::getVehicleTypes is not mapped in ms_calibrator.rs, upgrade when it is
+        panic!("shortcut: Calibrator::getVTypes needs MSCalibrator::getVehicleTypes")
     }
 
     /// C++: `int Calibrator::getPassed(const std::string &)` [static]
@@ -133,7 +152,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_passed(calibratorID: &str) -> i32 {
-        todo!("port Calibrator::getPassed")
+        Self::get_calibrator(calibratorID).passed()
     }
 
     /// C++: `int Calibrator::getInserted(const std::string &)` [static]
@@ -143,7 +162,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_inserted(calibratorID: &str) -> i32 {
-        todo!("port Calibrator::getInserted")
+        Self::get_calibrator(calibratorID).get_inserted()
     }
 
     /// C++: `int Calibrator::getRemoved(const std::string &)` [static]
@@ -153,7 +172,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_removed(calibratorID: &str) -> i32 {
-        todo!("port Calibrator::getRemoved")
+        Self::get_calibrator(calibratorID).get_removed()
     }
 
     /// C++: `std::vector<std::string> Calibrator::getIDList()` [static]
@@ -168,7 +187,12 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Calibrator::getIDList")
+        MSNet::get_instance(); // just to check that we actually have a network
+        let mut ids: Vec<String> = Vec::new();
+        for (key, _) in MSCalibrator::get_instances() {
+            ids.push(key.clone());
+        }
+        ids
     }
 
     /// C++: `int Calibrator::getIDCount()` [static]
@@ -178,7 +202,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Calibrator::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Calibrator::getParameter(const std::string &, const std::string &)` [static]
@@ -189,14 +213,15 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Calibrator::getParameter")
+        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
+        panic!("shortcut: Calibrator::getParameter needs the Parameterised base of MSCalibrator")
     }
 
     /// C++: `const std::pair<std::string, std::string> Calibrator::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Calibrator)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Calibrator::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Calibrator::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -207,77 +232,79 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Calibrator::setParameter")
+        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
+        panic!("shortcut: Calibrator::setParameter needs the Parameterised base of MSCalibrator")
     }
 
     /// C++: `void Calibrator::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Calibrator::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_CALIBRATOR_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Calibrator::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Calibrator::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_CALIBRATOR_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Calibrator::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Calibrator::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_CALIBRATOR_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Calibrator::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Calibrator::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_CALIBRATOR_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Calibrator::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Calibrator::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Calibrator::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Calibrator::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Calibrator::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Calibrator::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Calibrator::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Calibrator::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Calibrator::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Calibrator::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Calibrator::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Calibrator::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Calibrator::domainID")
+        CMD_GET_CALIBRATOR_VARIABLE
     }
 
     /// C++: `void Calibrator::setFlow(const std::string &, double, double, double, double, const std::string &, const std::string &, const std::string &, const std::string &)` [static]
@@ -304,7 +331,21 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn set_flow(calibratorID: &str, begin: f64, end: f64, vehsPerHour: f64, speed: f64, typeID: &str, routeID: &str, departLane: &str, departSpeed: &str) {
-        todo!("port Calibrator::setFlow")
+        // shortcut: C++ throws TraCIException for an unknown type or bad depart lane/speed (here it panics), upgrade when libsumo functions return Result
+        let mut error = String::new();
+        let mut vehicleParams = SUMOVehicleParameter::new();
+        vehicleParams.vtypeid = typeID.to_string();
+        vehicleParams.routeid = routeID.to_string();
+        if MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false).is_null() {
+            panic!("shortcut: Vehicle type '{typeID}' is not known (C++ TraCIException)");
+        }
+        if !SUMOVehicleParameter::parse_depart_lane(departLane, "calibrator", calibratorID, &mut vehicleParams.departLane, &mut vehicleParams.departLaneProcedure, &mut error) {
+            panic!("shortcut: {error} (C++ TraCIException)");
+        }
+        if !SUMOVehicleParameter::parse_depart_speed(departSpeed, "calibrator", calibratorID, &mut vehicleParams.departSpeed, &mut vehicleParams.departSpeedProcedure, &mut error) {
+            panic!("shortcut: {error} (C++ TraCIException)");
+        }
+        Self::get_calibrator(calibratorID).set_flow(time2steps(begin), time2steps(end), vehsPerHour, speed, vehicleParams);
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Calibrator::makeWrapper()` [static]
@@ -314,7 +355,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Calibrator::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Calibrator::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Calibrator::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -363,7 +405,36 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Calibrator::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_ROAD_ID => wrapper.m().wrap_string(objID, variable, &Self::get_edge_id(objID)),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_VEHSPERHOUR => wrapper.m().wrap_double(objID, variable, Self::get_vehs_per_hour(objID)),
+            VAR_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_speed(objID)),
+            VAR_TYPE => wrapper.m().wrap_string(objID, variable, &Self::get_type_id(objID)),
+            VAR_BEGIN => wrapper.m().wrap_double(objID, variable, Self::get_begin(objID)),
+            VAR_END => wrapper.m().wrap_double(objID, variable, Self::get_end(objID)),
+            VAR_ROUTE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_route_id(objID)),
+            VAR_ROUTE_PROBE => wrapper.m().wrap_string(objID, variable, &Self::get_route_probe_id(objID)),
+            VAR_VTYPES => wrapper.m().wrap_string_list(objID, variable, &Self::get_v_types(objID)),
+            VAR_PASSED => wrapper.m().wrap_int(objID, variable, Self::get_passed(objID)),
+            VAR_INSERTED => wrapper.m().wrap_int(objID, variable, Self::get_inserted(objID)),
+            VAR_REMOVED => wrapper.m().wrap_int(objID, variable, Self::get_removed(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSCalibrator * Calibrator::getCalibrator(const std::string &)` [static]
@@ -378,7 +449,11 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_calibrator(id: &str) -> Ptr<MSCalibrator> {
-        todo!("port Calibrator::getCalibrator")
+        // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
+        match MSCalibrator::get_instances().get(id) {
+            Some(c) => *c,
+            None => panic!("shortcut: Calibrator '{id}' is not known (C++ TraCIException)"),
+        }
     }
 
     /// C++: `void Calibrator::Calibrator()` [private]
@@ -386,7 +461,7 @@ impl Calibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Calibrator::Calibrator")
+        panic!("libsumo::Calibrator cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
