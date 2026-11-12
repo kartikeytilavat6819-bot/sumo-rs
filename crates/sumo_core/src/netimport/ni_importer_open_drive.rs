@@ -3619,15 +3619,18 @@ impl NIImporter_OpenDrive {
                         cn.fromCP = c.fromCP;
                         cn.all = c.all; // @todo "all" is a hack trying to avoid the "from is zero" problem;
                         if MY_IMPORT_INTERNAL_SHAPES.with(|v| v.get()) {
-                            // shortcut: C++ PositionVector::operator+ never advances its iterators (infinite loop);
-                            // the intended pairwise sum is used here, revisit if upstream fixes operator+
+                            // determinism: C++ `geom + c.shape` (PositionVector::operator+) never advances its
+                            // iterators: i1 stays at begin(), and pv.add(Position) offsets the still-empty pv
+                            // (no-op). So real SUMO spins forever for non-empty input and returns an empty
+                            // vector for empty input. Replicated literally, hang included.
                             let innerGeom = innerEdge.m().geom.clone();
                             if innerGeom.length() != c.shape.length() {
                                 write_error("Trying to add PositionVectors of different lengths.");
                             }
                             let mut sum = PositionVector::default();
-                            for (p1, p2) in innerGeom.iter().zip(c.shape.iter()) {
-                                sum.push((*p1) + (*p2));
+                            let i1: usize = 0;
+                            while i1 != innerGeom.len() {
+                                sum.add(&(*innerGeom.at(0) + *c.shape.at(0)));
                             }
                             cn.shape = sum;
                         }
