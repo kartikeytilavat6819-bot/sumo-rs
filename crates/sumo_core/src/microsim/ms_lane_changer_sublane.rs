@@ -45,7 +45,24 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn new(lanes: Ptr<Vec<Ptr<MSLane>>>, allowChanging: bool) -> Self {
-        todo!("port MSLaneChangerSublane::MSLaneChangerSublane")
+        let mut me = MSLaneChangerSublane {
+            base: MSLaneChanger::new(lanes, allowChanging),
+            myCheckedChangeOpposite: false,
+        };
+        // initialize siblings
+        if me.myChanger[0].lane.is_internal() {
+            let n = me.myChanger.len();
+            for ce in 0..n {
+                for ce2 in 0..n {
+                    if ce != ce2 && me.myChanger[ce].lane.get_incoming_lanes()[0].lane == me.myChanger[ce2].lane.get_incoming_lanes()[0].lane {
+                        //std::cout << "addSibling lane=" << ce->lane->getID() << " offset=" << ce2->lane->getIndex() - ce->lane->getIndex() << "\n";
+                        let offset = me.myChanger[ce2].lane.get_index() - me.myChanger[ce].lane.get_index();
+                        me.myChanger[ce].siblings.push(offset);
+                    }
+                }
+            }
+        }
+        me
     }
 
     /// C++: `void MSLaneChangerSublane::~MSLaneChangerSublane() noexcept` [virtual]
@@ -53,7 +70,7 @@ impl MSLaneChangerSublane {
     // MSLaneChangerSublane::~MSLaneChangerSublane() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneChangerSublane::~MSLaneChangerSublane")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSLaneChangerSublane::change()` [virtual, protected]
@@ -207,7 +224,103 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn change(&mut self) -> bool {
-        todo!("port MSLaneChangerSublane::change")
+        self.myCandi = self.find_candidate();
+        let vehicle = self.veh(self.myCandi);
+        vehicle.m().get_lane_change_model().clear_neighbors();
+
+        if vehicle.m().get_lane_change_model().already_changed() || vehicle.is_stopped_on_lane() {
+            self.register_unchanged(vehicle);
+            if vehicle.is_stopped_on_lane() {
+                let c = self.myCandi;
+                self.myChanger[c].lastStopped = vehicle;
+            }
+            return false;
+        }
+
+        if !vehicle.is_active() {
+            self.check_tra_ci_commands(vehicle);
+            let mut from = self.myCandi;
+            let changed = self.continue_change_sublane(vehicle, &mut from);
+            self.myCandi = from;
+            if !changed {
+                self.register_unchanged(vehicle);
+            }
+            return changed;
+        }
+
+        vehicle.m().update_best_lanes(false, Ptr::null()); // needed?
+        let isOpposite = vehicle.get_lane_change_model_2().is_opposite();
+        if !isOpposite {
+            for i in 0..self.myChanger.len() {
+                let dens = self.myChanger[i].dens;
+                vehicle.m().adapt_best_lanes_occupation(i as i32, dens);
+            }
+        }
+
+        for ce in 0..self.myChanger.len() {
+            let leaders = self.get_leaders(&ce, vehicle);
+            self.myChanger[ce].aheadNext = leaders;
+        }
+
+        let mut sublaneIndex: i32 = 0;
+        for ce in 0..self.myChanger.len() {
+            let laneIdx = self.myChanger[ce].lane.get_index();
+            vehicle.m().get_lane_change_model().update_expected_sublane_speeds(&self.myChanger[ce].aheadNext, sublaneIndex, laneIdx);
+            let sibs = self.myChanger[ce].siblings.clone();
+            for offset in sibs {
+                let ceSib = (ce as i32 + offset) as usize;
+                if self.myChanger[ceSib].lane.allows_vehicle_class(vehicle.get_v_class()) {
+                    let sibLaneIdx = self.myChanger[ceSib].lane.get_index();
+                    vehicle.m().get_lane_change_model().update_expected_sublane_speeds(&self.myChanger[ceSib].aheadNext, sublaneIndex, sibLaneIdx);
+                }
+            }
+            sublaneIndex += self.myChanger[ce].ahead.num_sublanes();
+        }
+
+        let stopOpposite = MSLaneChanger::has_opposite_stop(vehicle);
+        let traciState = vehicle.m().influence_change_decision(0);
+        let traciRequestOpposite = !self.may_change(1) && (traciState & LCA_LEFT) != 0;
+        if self.myChangeToOpposite
+            && ((!self.may_change(-1) && !self.may_change(1)) || vehicle.get_v_class() == SVC_EMERGENCY || traciRequestOpposite || stopOpposite || isOpposite)
+        {
+            let leaders = &self.myChanger[self.myCandi].aheadNext;
+            if leaders.has_vehicles() || isOpposite || stopOpposite || traciRequestOpposite {
+                let leader = MSLaneChangerSublane::find_closest_leader(leaders, vehicle);
+                self.myCheckedChangeOpposite = false;
+                let lastStopped = self.myChanger[self.myCandi].lastStopped;
+                if (!leader.0.is_null() || isOpposite || stopOpposite || traciRequestOpposite) && self.change_opposite(vehicle, leader, lastStopped) {
+                    return true;
+                } else if self.myCheckedChangeOpposite {
+                    self.register_unchanged(vehicle);
+                    return false;
+                }
+            }
+        }
+
+        let alternatives: LaneChangeAction = (if self.may_change(-1) { LCA_RIGHT } else { LCA_NONE }) | (if self.may_change(1) { LCA_LEFT } else { LCA_NONE });
+        let right = self.check_change_helper(vehicle, -1, alternatives);
+        let mut left = self.check_change_helper(vehicle, 1, alternatives);
+        let current = self.check_change_helper(vehicle, 0, alternatives);
+        let inner = vehicle.m().get_lane_change_model().decide_direction(sd_copy(&right), sd_copy(&left));
+        let decision = vehicle.m().get_lane_change_model().decide_direction(sd_copy(&current), inner);
+        // shortcut: C++ debugVehicle() output is not ported
+        vehicle.m().get_lane_change_model().set_own_state(decision.state);
+        if (decision.state & LCA_WANTS_LANECHANGE) != 0 && (decision.state & LCA_BLOCKED) == 0 {
+            let mut from = self.myCandi;
+            let changed = self.start_change_sublane(vehicle, &mut from, decision.latDist, decision.maneuverDist);
+            self.myCandi = from;
+            if !changed {
+                self.register_unchanged(vehicle);
+            }
+            return changed;
+        }
+
+        self.abort_lc_maneuver(vehicle);
+        self.register_unchanged(vehicle);
+        if (right.state & LCA_URGENT) != 0 && (left.state & LCA_URGENT) != 0 {
+            left.state = 0;
+        }
+        false
     }
 
     /// C++: `void MSLaneChangerSublane::initChanger()` [virtual, protected]
@@ -226,7 +339,11 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn init_changer(&mut self) {
-        todo!("port MSLaneChangerSublane::initChanger")
+        MSLaneChanger::init_changer(&mut self.base);
+        for ce in self.myChanger.iter_mut() {
+            ce.ahead = ce.lane.get_partial_beyond();
+            ce.outsideBounds.clear();
+        }
     }
 
     /// C++: `void MSLaneChangerSublane::updateChanger(bool)` [virtual, protected]
@@ -257,7 +374,22 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn update_changer(&mut self, vehHasChanged: bool) {
-        todo!("port MSLaneChangerSublane::updateChanger")
+        MSLaneChanger::update_changer(&mut self.base, vehHasChanged);
+        if !vehHasChanged {
+            let c = self.myCandi;
+            let lead = self.myChanger[c].lead;
+            if lead.get_left_side_on_lane() < 0.0 || lead.get_right_side_on_lane() > self.myChanger[c].lane.get_width() {
+                self.myChanger[c].outsideBounds.push(lead);
+            } else {
+                self.myChanger[c].ahead.add_leader(lead, false, 0.0);
+            }
+            let shadowLane = lead.get_lane_change_model_2().get_shadow_lane();
+            if !shadowLane.is_null() && (shadowLane.get_edge() as *const MSEdge) == (lead.get_lane().get_edge() as *const MSEdge) {
+                let latOffset = lead.get_lane().get_right_side_on_edge() - shadowLane.get_right_side_on_edge();
+                let idx = shadowLane.get_index() as usize;
+                self.myChanger[idx].ahead.add_leader(lead, false, latOffset);
+            }
+        }
     }
 
     /// C++: `int MSLaneChangerSublane::checkChangeSublane(int, LaneChangeAction, const std::vector<MSVehicle::LaneQ> &, double &, double &) const` [const, protected]
@@ -523,7 +655,15 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn continue_change_sublane(&mut self, vehicle: Ptr<MSVehicle>, from: &mut MSLaneChanger_ChangerIt) -> bool {
-        todo!("port MSLaneChangerSublane::continueChangeSublane")
+        let mut remLatDist = vehicle.m().get_lane_change_model().get_maneuver_dist();
+        if remLatDist == 0.0 {
+            return false;
+        }
+        let urgent = (vehicle.m().get_lane_change_model().get_own_state() & LCA_URGENT) != 0;
+        let speedLat = vehicle.m().get_lane_change_model().compute_speed_lat(remLatDist, &mut remLatDist, urgent);
+        let nextLatDist = speed2dist(speedLat);
+        let changed = self.start_change_sublane(vehicle, from, nextLatDist, remLatDist);
+        changed
     }
 
     /// C++: `bool MSLaneChangerSublane::startChangeSublane(MSVehicle *, ChangerIt &, double, double)` [protected]
@@ -1020,3 +1160,8 @@ impl MSLaneChangerSublane {
 
 }
 
+
+/// Field-wise copy of MSAbstractLaneChangeModel::StateAndDist (C++ passes it by value; the Rust struct is not Clone)
+fn sd_copy(s: &MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
+    MSAbstractLaneChangeModel_StateAndDist::new(s.state, s.latDist, s.maneuverDist, s.dir)
+}
