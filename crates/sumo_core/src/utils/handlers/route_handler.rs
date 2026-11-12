@@ -1,6 +1,138 @@
 //! Port of utils/handlers/RouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::handlers::common_handler::{attr_str, tag_str};
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::INVALID_DOUBLE;
+
+// shortcut: NamespaceIDs is not ported (utils/xml/mod.rs); lists copied from NamespaceIDs.cpp without the GNE_* netedit tags, upgrade when NamespaceIDs lands
+const NS_ROUTES: [SumoXMLTag; 2] = [SUMO_TAG_ROUTE, SUMO_TAG_ROUTE_DISTRIBUTION];
+const NS_VEHICLES: [SumoXMLTag; 3] = [SUMO_TAG_TRIP, SUMO_TAG_FLOW, SUMO_TAG_VEHICLE];
+const NS_PERSONS: [SumoXMLTag; 2] = [SUMO_TAG_PERSON, SUMO_TAG_PERSONFLOW];
+const NS_CONTAINERS: [SumoXMLTag; 2] = [SUMO_TAG_CONTAINER, SUMO_TAG_CONTAINERFLOW];
+
+// SUMOVehicleParameter.h Stop::parametersSet flags (C++ macros)
+const STOP_START_SET: i32 = 1;
+const STOP_END_SET: i32 = 2;
+const STOP_DURATION_SET: i32 = 2 << 1;
+const STOP_UNTIL_SET: i32 = 2 << 2;
+const STOP_EXTENSION_SET: i32 = 2 << 3;
+const STOP_TRIGGER_SET: i32 = 2 << 4;
+const STOP_PARKING_SET: i32 = 2 << 5;
+const STOP_EXPECTED_SET: i32 = 2 << 6;
+const STOP_CONTAINER_TRIGGER_SET: i32 = 2 << 7;
+const STOP_EXPECTED_CONTAINERS_SET: i32 = 2 << 8;
+const STOP_TRIP_ID_SET: i32 = 2 << 9;
+const STOP_LINE_SET: i32 = 2 << 10;
+const STOP_SPEED_SET: i32 = 2 << 11;
+const STOP_SPLIT_SET: i32 = 2 << 12;
+const STOP_JOIN_SET: i32 = 2 << 13;
+const STOP_ARRIVAL_SET: i32 = 2 << 14;
+const STOP_PERMITTED_SET: i32 = 2 << 15;
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
+const STOP_POSLAT_SET: i32 = 2 << 18;
+const STOP_ONDEMAND_SET: i32 = 2 << 19;
+const STOP_JUMP_SET: i32 = 2 << 20;
+const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
+const STOP_INDEX_END: i32 = -1;
+const STOP_INDEX_FIT: i32 = -2;
+
+/// C++ `throw` of a ProcessError: aborts parsing like the uncaught C++ exception
+fn throw_error(e: ProcessError) -> ! {
+    panic!("{}", e)
+}
+
+/// unwrap a CommonXMLStructure getter; the C++ getters throw when the attribute is missing
+fn or_throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| throw_error(e))
+}
+
+fn str_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> String {
+    or_throw(obj.get_string_attribute(attr)).clone()
+}
+fn int_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> i32 {
+    or_throw(obj.get_int_attribute(attr))
+}
+fn double_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> f64 {
+    or_throw(obj.get_double_attribute(attr))
+}
+fn time_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> SUMOTime {
+    or_throw(obj.get_time_attribute(attr))
+}
+fn color_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> RGBColor {
+    *or_throw(obj.get_color_attribute(attr))
+}
+fn str_list_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> Vec<String> {
+    or_throw(obj.get_string_list_attribute(attr)).clone()
+}
+fn double_list_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> Vec<f64> {
+    or_throw(obj.get_double_list_attribute(attr)).clone()
+}
+/// C++ `getVehicleParameter()` (SUMOVehicleParameter&) of a SumoBaseObject
+fn vehicle_parameter_of(obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> &'static SUMOVehicleParameter {
+    or_throw(obj.get().unwrap().get_vehicle_parameter()).downcast_ref::<SUMOVehicleParameter>().expect("SumoBaseObject does not hold a SUMOVehicleParameter")
+}
+/// C++ `getVehicleTypeParameter()` (SUMOVTypeParameter&) of a SumoBaseObject
+fn vehicle_type_parameter_of(obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> &'static SUMOVTypeParameter {
+    or_throw(obj.get().unwrap().get_vehicle_type_parameter()).downcast_ref::<SUMOVTypeParameter>().expect("SumoBaseObject does not hold a SUMOVTypeParameter")
+}
+/// C++ `SUMOVehicleParameter::Stop stop;` (default member values of utils/vehicle/SUMOVehicleParameter.h)
+// shortcut: Stop has no Default impl yet (libsumo/helper.rs and ro_net_handler.rs build it the same way), move this into sumo_vehicle_parameter.rs
+fn new_stop() -> SUMOVehicleParameter_Stop {
+    SUMOVehicleParameter_Stop {
+        base: Parameterised::new(),
+        edge: String::new(),
+        lane: String::new(),
+        busstop: String::new(),
+        containerstop: String::new(),
+        parkingarea: String::new(),
+        chargingStation: String::new(),
+        overheadWireSegment: String::new(),
+        startPos: 0.,
+        endPos: 0.,
+        arrival: -1,
+        duration: -1,
+        durationDist: (),
+        until: -1,
+        extension: -1,
+        waitUntil: -1,
+        triggered: false,
+        containerTriggered: false,
+        joinTriggered: false,
+        parking: ParkingType::ONROAD,
+        awaitedPersons: BTreeSet::new(),
+        permitted: BTreeSet::new(),
+        awaitedContainers: BTreeSet::new(),
+        friendlyPos: false,
+        actType: String::new(),
+        tripId: String::new(),
+        line: String::new(),
+        split: String::new(),
+        join: String::new(),
+        speed: 0.,
+        posLat: INVALID_DOUBLE,
+        onDemand: false,
+        priority: -1.,
+        jump: -1,
+        jumpUntil: -1,
+        started: -1,
+        ended: -1,
+        accessPos: Vec::new(),
+        index: 0,
+        routeIndex: 0,
+        parametersSet: 0,
+        collision: false,
+        breakDown: false,
+    }
+}
+
+/// C++ `new`-allocated parameter that the caller `delete`s after the copy went into the XML structure:
+/// the Box takes over the allocation, so dropping it later is the C++ `delete`
+fn take_parameter<T>(p: Ptr<T>) -> Box<T> {
+    // SAFETY: the SUMOVehicleParserHelper parse functions hand out Box::leak/Box::into_raw allocations and nothing else owns them
+    unsafe { Box::from_raw(p.as_raw()) }
+}
 
 /// C++ class `RouteHandler` (utils/handlers/RouteHandler.h)
 pub struct RouteHandler {
@@ -37,7 +169,12 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>, hardFail: bool) -> Self {
-        todo!("port RouteHandler::RouteHandler")
+        Self {
+            base: CommonHandler::new(fileBucket),
+            myHardFail: hardFail,
+            myFlowBeginDefault: or_throw(string2time(&utils::options::options_cont::get_string("begin"))),
+            myFlowEndDefault: or_throw(string2time(&utils::options::options_cont::get_string("end"))),
+        }
     }
 
     /// C++: `void RouteHandler::~RouteHandler() noexcept` [virtual]
@@ -45,7 +182,7 @@ impl RouteHandler {
     // RouteHandler::~RouteHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RouteHandler::~RouteHandler")
+        // C++ destructor has an empty body
     }
 
     /// C++: `bool RouteHandler::beginParseAttributes(SumoXMLTag, const SUMOSAXAttributes &)`
@@ -164,7 +301,110 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn begin_parse_attributes(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port RouteHandler::beginParseAttributes")
+        // open SUMOBaseOBject
+        self.myCommonXMLStructure.open_sumo_base_object();
+        // check tag
+        // shortcut: C++ try/catch(InvalidArgument) around the switch is not reproduced: attribute getters here return Result and or_throw panics instead, upgrade when InvalidArgument is raised by the port
+        match tag {
+            // vTypes
+            SUMO_TAG_VTYPE => {
+                // continue depeding if we're parsing a vType or a reference
+                if self.myCommonXMLStructure.get_sumo_base_object_root().get_tag() == SUMO_TAG_VTYPE_DISTRIBUTION && attrs.has_attribute(SUMO_ATTR_REFID) {
+                    self.parse_v_type_ref(attrs);
+                } else {
+                    self.parse_v_type(attrs);
+                }
+            }
+            SUMO_TAG_VTYPE_DISTRIBUTION => {
+                self.parse_v_type_distribution(attrs);
+            }
+            // routes
+            SUMO_TAG_ROUTE => {
+                // continue depeding if we're parsing a basic route, an embedded route, or a distribution ref
+                let parentTag = self.myCommonXMLStructure.get_sumo_base_object_root().get_tag();
+                // this is temporal, until #16476
+                if parentTag != SUMO_TAG_ERROR {
+                    if parentTag == SUMO_TAG_VEHICLE || parentTag == SUMO_TAG_FLOW {
+                        self.parse_route_embedded(attrs);
+                    } else if parentTag == SUMO_TAG_ROUTE_DISTRIBUTION && attrs.has_attribute(SUMO_ATTR_REFID) {
+                        self.parse_route_ref(attrs);
+                    } else {
+                        self.parse_route(attrs);
+                    }
+                }
+            }
+            SUMO_TAG_ROUTE_DISTRIBUTION => {
+                self.parse_route_distribution(attrs);
+            }
+            // vehicles
+            SUMO_TAG_TRIP => {
+                self.parse_trip(attrs);
+            }
+            SUMO_TAG_VEHICLE => {
+                self.parse_vehicle(attrs);
+            }
+            // flows
+            SUMO_TAG_FLOW => {
+                self.parse_flow(attrs);
+            }
+            // stop
+            SUMO_TAG_STOP => {
+                self.parse_stop(attrs);
+            }
+            // persons
+            SUMO_TAG_PERSON => {
+                self.parse_person(attrs);
+            }
+            SUMO_TAG_PERSONFLOW => {
+                self.parse_person_flow(attrs);
+            }
+            // person plans
+            SUMO_TAG_PERSONTRIP => {
+                self.parse_person_trip(attrs);
+            }
+            SUMO_TAG_RIDE => {
+                self.parse_ride(attrs);
+            }
+            SUMO_TAG_WALK => {
+                self.parse_walk(attrs);
+            }
+            // container
+            SUMO_TAG_CONTAINER => {
+                self.parse_container(attrs);
+            }
+            SUMO_TAG_CONTAINERFLOW => {
+                self.parse_container_flow(attrs);
+            }
+            // container plans
+            SUMO_TAG_TRANSPORT => {
+                self.parse_transport(attrs);
+            }
+            SUMO_TAG_TRANSHIP => {
+                self.parse_tranship(attrs);
+            }
+            // parameters
+            SUMO_TAG_PARAM => {
+                self.parse_parameters(attrs);
+            }
+            // other
+            SUMO_TAG_INTERVAL => {
+                self.parse_interval(attrs);
+            }
+            _ => {
+                // get vehicle type Base object
+                let vTypeObject = self.myCommonXMLStructure.get_current_sumo_base_object().get_parent_sumo_base_object();
+                // parse embedded car following model information
+                if !vTypeObject.is_null() && vTypeObject.get_tag() == SUMO_TAG_VTYPE {
+                    // nested CFM attributes
+                    return self.parse_nested_cfm(tag, attrs, vTypeObject);
+                } else {
+                    // tag cannot be parsed in routeHandler
+                    self.myCommonXMLStructure.abort_sumo_base_object();
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// C++: `void RouteHandler::endParseAttributes()`
@@ -227,7 +467,43 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn end_parse_attributes(&mut self) {
-        todo!("port RouteHandler::endParseAttributes")
+        // get last inserted object
+        let obj = self.myCommonXMLStructure.get_current_sumo_base_object();
+        // check tag
+        if !obj.is_null() {
+            // close SUMOBaseOBject
+            self.myCommonXMLStructure.close_sumo_base_object();
+            // shortcut: C++ `delete obj` after each parseSumoBaseObject is not reproduced: close_sumo_base_object keeps the closed root allocated, so the object lives until the structure is cleared
+            match obj.get_tag() {
+                SUMO_TAG_ROUTE => {
+                    // special case, because embedded and distribution routes are created within other elements
+                    if obj.get_parent_sumo_base_object().is_null() {
+                        // parse object and all their childrens
+                        self.parse_sumo_base_object(obj);
+                    }
+                }
+                SUMO_TAG_ROUTE_DISTRIBUTION => {
+                    // parse object and all their childrens
+                    self.parse_sumo_base_object(obj);
+                }
+                SUMO_TAG_VTYPE_DISTRIBUTION => {
+                    // parse object and all their childrens
+                    self.parse_sumo_base_object(obj);
+                }
+                SUMO_TAG_VTYPE => {
+                    // special case, because embedded and distribution routes are created within other elements
+                    if obj.get_parent_sumo_base_object().is_null() {
+                        // parse object and all their childrens
+                        self.parse_sumo_base_object(obj);
+                    }
+                }
+                SUMO_TAG_TRIP | SUMO_TAG_VEHICLE | SUMO_TAG_FLOW | SUMO_TAG_PERSON | SUMO_TAG_PERSONFLOW | SUMO_TAG_CONTAINER | SUMO_TAG_CONTAINERFLOW => {
+                    // parse object and all their childrens
+                    self.parse_sumo_base_object(obj);
+                }
+                _ => {}
+            }
+        }
     }
 
     /// C++: `void RouteHandler::parseSumoBaseObject(CommonXMLStructure::SumoBaseObject *)`
@@ -504,216 +780,445 @@ impl RouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_sumo_base_object(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) {
-        todo!("port RouteHandler::parseSumoBaseObject")
+    pub fn parse_sumo_base_object(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) {
+        // check if loading was aborted
+        if !self.myAbortLoading {
+            // switch tag
+            match obj.get_tag() {
+                // vTypes
+                SUMO_TAG_VTYPE => {
+                    // check if parse vType or Ref
+                    if obj.has_string_attribute(SUMO_ATTR_REFID) {
+                        if self.build_v_type_ref(obj, &str_attr(obj, SUMO_ATTR_REFID), double_attr(obj, SUMO_ATTR_PROB)) {
+                            obj.m().mark_as_created();
+                        }
+                    } else if self.build_v_type(obj, vehicle_type_parameter_of(obj)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_VTYPE_DISTRIBUTION => {
+                    if self.build_v_type_distribution(obj, &str_attr(obj, SUMO_ATTR_ID), int_attr(obj, SUMO_ATTR_DETERMINISTIC)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                // route
+                SUMO_TAG_ROUTE => {
+                    // embedded routes are created in build<Vehicle/Flow>EmbeddedRoute
+                    if obj.has_string_attribute(SUMO_ATTR_REFID) {
+                        if self.build_route_ref(obj, &str_attr(obj, SUMO_ATTR_REFID), double_attr(obj, SUMO_ATTR_PROB)) {
+                            obj.m().mark_as_created();
+                        }
+                    } else if obj.has_string_attribute(SUMO_ATTR_ID) {
+                        if self.build_route(
+                            obj,
+                            &str_attr(obj, SUMO_ATTR_ID),
+                            obj.get_vclass(),
+                            &str_list_attr(obj, SUMO_ATTR_EDGES),
+                            &color_attr(obj, SUMO_ATTR_COLOR),
+                            int_attr(obj, SUMO_ATTR_REPEAT),
+                            time_attr(obj, SUMO_ATTR_CYCLETIME),
+                            double_attr(obj, SUMO_ATTR_PROB),
+                            obj.get_parameters(),
+                        ) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                SUMO_TAG_ROUTE_DISTRIBUTION => {
+                    if self.build_route_distribution(obj, &str_attr(obj, SUMO_ATTR_ID)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                // vehicles
+                SUMO_TAG_TRIP => {
+                    if self.check_vehicle_parents(obj) {
+                        if self.is_over_from_to_edges(obj) {
+                            // build trip with from-to edges
+                            let from = if obj.has_string_attribute(SUMO_ATTR_FROM) { str_attr(obj, SUMO_ATTR_FROM) } else { String::new() };
+                            let to = if obj.has_string_attribute(SUMO_ATTR_TO) { str_attr(obj, SUMO_ATTR_TO) } else { String::new() };
+                            if self.build_trip(obj, vehicle_parameter_of(obj), &from, &to) {
+                                obj.m().mark_as_created();
+                            }
+                        } else if self.is_over_from_to_junctions(obj) {
+                            // build trip with from-to junctions
+                            if self.build_trip_junctions(obj, vehicle_parameter_of(obj), &str_attr(obj, SUMO_ATTR_FROM_JUNCTION), &str_attr(obj, SUMO_ATTR_TO_JUNCTION)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else if self.is_over_from_to_ta_zs(obj) {
+                            // build trip with from-to TAZs
+                            if self.build_trip_ta_zs(obj, vehicle_parameter_of(obj), &str_attr(obj, SUMO_ATTR_FROM_TAZ), &str_attr(obj, SUMO_ATTR_TO_TAZ)) {
+                                obj.m().mark_as_created();
+                            }
+                        }
+                    }
+                }
+                SUMO_TAG_VEHICLE => {
+                    if self.check_vehicle_parents(obj) {
+                        if obj.has_string_attribute(SUMO_ATTR_ROUTE) {
+                            // build vehicle over route
+                            if self.build_vehicle_over_route(obj, vehicle_parameter_of(obj)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else {
+                            let embeddedRoute = self.get_embedded_route(obj);
+                            if !embeddedRoute.is_null() {
+                                // build vehicle with embedded route
+                                if self.build_vehicle_embedded_route(
+                                    obj,
+                                    vehicle_parameter_of(obj),
+                                    &str_list_attr(embeddedRoute, SUMO_ATTR_EDGES),
+                                    &color_attr(embeddedRoute, SUMO_ATTR_COLOR),
+                                    int_attr(embeddedRoute, SUMO_ATTR_REPEAT),
+                                    time_attr(embeddedRoute, SUMO_ATTR_CYCLETIME),
+                                    embeddedRoute.get_parameters(),
+                                ) {
+                                    obj.m().mark_as_created();
+                                }
+                            }
+                        }
+                    }
+                }
+                // flows
+                SUMO_TAG_FLOW => {
+                    if self.check_vehicle_parents(obj) {
+                        if obj.has_string_attribute(SUMO_ATTR_ROUTE) {
+                            // build flow over route
+                            if self.build_flow_over_route(obj, vehicle_parameter_of(obj)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else if self.is_over_from_to_edges(obj) {
+                            // build flow with from-to edges
+                            if self.build_flow(obj, vehicle_parameter_of(obj), &str_attr(obj, SUMO_ATTR_FROM), &str_attr(obj, SUMO_ATTR_TO)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else if self.is_over_from_to_junctions(obj) {
+                            // build flow with from-to junctions
+                            if self.build_flow_junctions(obj, vehicle_parameter_of(obj), &str_attr(obj, SUMO_ATTR_FROM_JUNCTION), &str_attr(obj, SUMO_ATTR_TO_JUNCTION)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else if self.is_over_from_to_ta_zs(obj) {
+                            // build flow with from-to TAZs
+                            if self.build_flow_ta_zs(obj, vehicle_parameter_of(obj), &str_attr(obj, SUMO_ATTR_FROM_TAZ), &str_attr(obj, SUMO_ATTR_TO_TAZ)) {
+                                obj.m().mark_as_created();
+                            }
+                        } else {
+                            let embeddedRoute = self.get_embedded_route(obj);
+                            if !embeddedRoute.is_null() {
+                                // build flow with embedded route
+                                if self.build_flow_embedded_route(
+                                    obj,
+                                    vehicle_parameter_of(obj),
+                                    &str_list_attr(embeddedRoute, SUMO_ATTR_EDGES),
+                                    &color_attr(embeddedRoute, SUMO_ATTR_COLOR),
+                                    int_attr(embeddedRoute, SUMO_ATTR_REPEAT),
+                                    time_attr(embeddedRoute, SUMO_ATTR_CYCLETIME),
+                                    embeddedRoute.get_parameters(),
+                                ) {
+                                    obj.m().mark_as_created();
+                                }
+                            }
+                        }
+                    }
+                }
+                // persons
+                SUMO_TAG_PERSON => {
+                    if self.build_person(obj, vehicle_parameter_of(obj)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_PERSONFLOW => {
+                    if self.build_person_flow(obj, vehicle_parameter_of(obj)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                // person plans
+                SUMO_TAG_PERSONTRIP => {
+                    if self.check_person_plan_parents(obj) {
+                        if self.build_person_trip(
+                            obj,
+                            obj.get_plan_parameters(),
+                            double_attr(obj, SUMO_ATTR_ARRIVALPOS),
+                            &str_list_attr(obj, SUMO_ATTR_VTYPES),
+                            &str_list_attr(obj, SUMO_ATTR_MODES),
+                            &str_list_attr(obj, SUMO_ATTR_LINES),
+                            double_attr(obj, SUMO_ATTR_WALKFACTOR),
+                            &str_attr(obj, SUMO_ATTR_GROUP),
+                        ) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                SUMO_TAG_RIDE => {
+                    if self.check_person_plan_parents(obj) {
+                        if self.build_ride(obj, obj.get_plan_parameters(), double_attr(obj, SUMO_ATTR_ARRIVALPOS), &str_list_attr(obj, SUMO_ATTR_LINES), &str_attr(obj, SUMO_ATTR_GROUP)) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                SUMO_TAG_WALK => {
+                    if self.check_person_plan_parents(obj) {
+                        if self.build_walk(obj, obj.get_plan_parameters(), double_attr(obj, SUMO_ATTR_ARRIVALPOS), double_attr(obj, SUMO_ATTR_SPEED), time_attr(obj, SUMO_ATTR_DURATION)) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                // container
+                SUMO_TAG_CONTAINER => {
+                    if self.build_container(obj, vehicle_parameter_of(obj)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_CONTAINERFLOW => {
+                    if self.build_container_flow(obj, vehicle_parameter_of(obj)) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                // container plans
+                SUMO_TAG_TRANSPORT => {
+                    if self.check_container_plan_parents(obj) {
+                        if self.build_transport(obj, obj.get_plan_parameters(), double_attr(obj, SUMO_ATTR_ARRIVALPOS), &str_list_attr(obj, SUMO_ATTR_LINES), &str_attr(obj, SUMO_ATTR_GROUP)) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                SUMO_TAG_TRANSHIP => {
+                    if self.check_container_plan_parents(obj) {
+                        if self.build_tranship(
+                            obj,
+                            obj.get_plan_parameters(),
+                            double_attr(obj, SUMO_ATTR_ARRIVALPOS),
+                            double_attr(obj, SUMO_ATTR_DEPARTPOS),
+                            double_attr(obj, SUMO_ATTR_SPEED),
+                            time_attr(obj, SUMO_ATTR_DURATION),
+                        ) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                // stops
+                SUMO_TAG_STOP => {
+                    if self.check_stop_parents(obj) {
+                        if self.build_stop(obj, obj.get_plan_parameters(), or_throw(obj.get_stop_parameter()).downcast_ref::<SUMOVehicleParameter_Stop>().expect("SumoBaseObject does not hold a Stop")) {
+                            obj.m().mark_as_created();
+                        }
+                    }
+                }
+                _ => {}
+            }
+            // now iterate over childrens
+            for child in obj.get_sumo_base_object_children() {
+                // call this function recursively
+                self.parse_sumo_base_object(Ptr::from_box(child));
+            }
+        }
     }
 
     /// C++: `bool RouteHandler::buildVType(const CommonXMLStructure::SumoBaseObject *, const SUMOVTypeParameter &)` [virtual, pure virtual]
     /// build vType
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_v_type(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vTypeParameter: &SUMOVTypeParameter) -> bool {
-        todo!("port RouteHandler::buildVType")
+    pub fn build_v_type(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vTypeParameter: &SUMOVTypeParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildVType")
     }
 
     /// C++: `bool RouteHandler::buildVTypeRef(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
     /// build vType ref
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_v_type_ref(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vTypeID: &str, probability: f64) -> bool {
-        todo!("port RouteHandler::buildVTypeRef")
+    pub fn build_v_type_ref(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vTypeID: &str, probability: f64) -> bool {
+        panic!("pure virtual RouteHandler::buildVTypeRef")
     }
 
     /// C++: `bool RouteHandler::buildVTypeDistribution(const CommonXMLStructure::SumoBaseObject *, const std::string &, const int)` [virtual, pure virtual]
     /// build vType distribution
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_v_type_distribution(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, deterministic: i32) -> bool {
-        todo!("port RouteHandler::buildVTypeDistribution")
+    pub fn build_v_type_distribution(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, id: &str, deterministic: i32) -> bool {
+        panic!("pure virtual RouteHandler::buildVTypeDistribution")
     }
 
     /// C++: `bool RouteHandler::buildRoute(const CommonXMLStructure::SumoBaseObject *, const std::string &, SUMOVehicleClass, const std::vector<std::string> &, const RGBColor &, const int, const SUMOTime, const double, const Parameterised::Map &)` [virtual, pure virtual]
     /// build route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_route(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, vClass: SUMOVehicleClass, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, probability: f64, routeParameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port RouteHandler::buildRoute")
+    pub fn build_route(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, id: &str, vClass: SUMOVehicleClass, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, probability: f64, routeParameters: &ParameterisedMap) -> bool {
+        panic!("pure virtual RouteHandler::buildRoute")
     }
 
     /// C++: `bool RouteHandler::buildRouteRef(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
     /// build route ref
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_route_ref(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, routeID: &str, probability: f64) -> bool {
-        todo!("port RouteHandler::buildRouteRef")
+    pub fn build_route_ref(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, routeID: &str, probability: f64) -> bool {
+        panic!("pure virtual RouteHandler::buildRouteRef")
     }
 
     /// C++: `bool RouteHandler::buildRouteDistribution(const CommonXMLStructure::SumoBaseObject *, const std::string &)` [virtual, pure virtual]
     /// build route distribution
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_route_distribution(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str) -> bool {
-        todo!("port RouteHandler::buildRouteDistribution")
+    pub fn build_route_distribution(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, id: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildRouteDistribution")
     }
 
     /// C++: `bool RouteHandler::buildVehicleOverRoute(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build a vehicle over an existent route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_vehicle_over_route(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildVehicleOverRoute")
+    pub fn build_vehicle_over_route(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildVehicleOverRoute")
     }
 
     /// C++: `bool RouteHandler::buildVehicleEmbeddedRoute(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::vector<std::string> &, const RGBColor &, const int, const SUMOTime, const Parameterised::Map &)` [virtual, pure virtual]
     /// build a vehicle with an embedded route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_vehicle_embedded_route(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, routeParameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port RouteHandler::buildVehicleEmbeddedRoute")
+    pub fn build_vehicle_embedded_route(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, routeParameters: &ParameterisedMap) -> bool {
+        panic!("pure virtual RouteHandler::buildVehicleEmbeddedRoute")
     }
 
     /// C++: `bool RouteHandler::buildFlowOverRoute(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build a flow over an existent route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_flow_over_route(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildFlowOverRoute")
+    pub fn build_flow_over_route(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildFlowOverRoute")
     }
 
     /// C++: `bool RouteHandler::buildFlowEmbeddedRoute(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::vector<std::string> &, const RGBColor &, const int, const SUMOTime, const Parameterised::Map &)` [virtual, pure virtual]
     /// build a flow with an embedded route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_flow_embedded_route(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, routeParameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port RouteHandler::buildFlowEmbeddedRoute")
+    pub fn build_flow_embedded_route(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, edgeIDs: &Vec<String>, color: &RGBColor, repeat: i32, cycleTime: SUMOTime, routeParameters: &ParameterisedMap) -> bool {
+        panic!("pure virtual RouteHandler::buildFlowEmbeddedRoute")
     }
 
     /// C++: `bool RouteHandler::buildTrip(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build trip (from-to edges)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_trip(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromEdgeID: &str, toEdgeID: &str) -> bool {
-        todo!("port RouteHandler::buildTrip")
+    pub fn build_trip(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromEdgeID: &str, toEdgeID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildTrip")
     }
 
     /// C++: `bool RouteHandler::buildTripJunctions(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build trip (from-to junctions)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_trip_junctions(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromJunctionID: &str, toJunctionID: &str) -> bool {
-        todo!("port RouteHandler::buildTripJunctions")
+    pub fn build_trip_junctions(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromJunctionID: &str, toJunctionID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildTripJunctions")
     }
 
     /// C++: `bool RouteHandler::buildTripTAZs(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build trip (from-to TAZs)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_trip_ta_zs(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromTazID: &str, toTazID: &str) -> bool {
-        todo!("port RouteHandler::buildTripTAZs")
+    pub fn build_trip_ta_zs(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromTazID: &str, toTazID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildTripTAZs")
     }
 
     /// C++: `bool RouteHandler::buildFlow(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build flow (from-to edges)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_flow(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromEdgeID: &str, toEdgeID: &str) -> bool {
-        todo!("port RouteHandler::buildFlow")
+    pub fn build_flow(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromEdgeID: &str, toEdgeID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildFlow")
     }
 
     /// C++: `bool RouteHandler::buildFlowJunctions(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build flow (from-to junctions)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_flow_junctions(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromJunctionID: &str, toJunctionID: &str) -> bool {
-        todo!("port RouteHandler::buildFlowJunctions")
+    pub fn build_flow_junctions(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromJunctionID: &str, toJunctionID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildFlowJunctions")
     }
 
     /// C++: `bool RouteHandler::buildFlowTAZs(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &, const std::string &, const std::string &)` [virtual, pure virtual]
     /// build flow (from-to TAZs)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_flow_ta_zs(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameters: &SUMOVehicleParameter, fromTAZID: &str, toTAZID: &str) -> bool {
-        todo!("port RouteHandler::buildFlowTAZs")
+    pub fn build_flow_ta_zs(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, vehicleParameters: &SUMOVehicleParameter, fromTAZID: &str, toTAZID: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildFlowTAZs")
     }
 
     /// C++: `bool RouteHandler::buildPerson(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build person
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_person(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, personParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildPerson")
+    pub fn build_person(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, personParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildPerson")
     }
 
     /// C++: `bool RouteHandler::buildPersonFlow(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build person flow
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_person_flow(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, personFlowParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildPersonFlow")
+    pub fn build_person_flow(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, personFlowParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildPersonFlow")
     }
 
     /// C++: `bool RouteHandler::buildPersonTrip(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const double, const std::vector<std::string> &, const std::vector<std::string> &, const std::vector<std::string> &, const double, const std::string &)` [virtual, pure virtual]
     /// build person trip
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_person_trip(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, arrivalPos: f64, types: &Vec<String>, modes: &Vec<String>, lines: &Vec<String>, walkFactor: f64, group: &str) -> bool {
-        todo!("port RouteHandler::buildPersonTrip")
+    pub fn build_person_trip(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, arrivalPos: f64, types: &Vec<String>, modes: &Vec<String>, lines: &Vec<String>, walkFactor: f64, group: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildPersonTrip")
     }
 
     /// C++: `bool RouteHandler::buildWalk(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const double, const double, const SUMOTime)` [virtual, pure virtual]
     /// build walk
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_walk(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, arrivalPos: f64, speed: f64, duration: SUMOTime) -> bool {
-        todo!("port RouteHandler::buildWalk")
+    pub fn build_walk(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, arrivalPos: f64, speed: f64, duration: SUMOTime) -> bool {
+        panic!("pure virtual RouteHandler::buildWalk")
     }
 
     /// C++: `bool RouteHandler::buildRide(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const double, const std::vector<std::string> &, const std::string &)` [virtual, pure virtual]
     /// build ride
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_ride(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, arrivalPos: f64, lines: &Vec<String>, group: &str) -> bool {
-        todo!("port RouteHandler::buildRide")
+    pub fn build_ride(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, arrivalPos: f64, lines: &Vec<String>, group: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildRide")
     }
 
     /// C++: `bool RouteHandler::buildContainer(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build container
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_container(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, containerParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildContainer")
+    pub fn build_container(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, containerParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildContainer")
     }
 
     /// C++: `bool RouteHandler::buildContainerFlow(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
     /// build container flow
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_container_flow(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, containerFlowParameters: &SUMOVehicleParameter) -> bool {
-        todo!("port RouteHandler::buildContainerFlow")
+    pub fn build_container_flow(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, containerFlowParameters: &SUMOVehicleParameter) -> bool {
+        panic!("pure virtual RouteHandler::buildContainerFlow")
     }
 
     /// C++: `bool RouteHandler::buildTransport(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const double, const std::vector<std::string> &, const std::string &)` [virtual, pure virtual]
     /// build transport
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_transport(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, arrivalPos: f64, lines: &Vec<String>, group: &str) -> bool {
-        todo!("port RouteHandler::buildTransport")
+    pub fn build_transport(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, arrivalPos: f64, lines: &Vec<String>, group: &str) -> bool {
+        panic!("pure virtual RouteHandler::buildTransport")
     }
 
     /// C++: `bool RouteHandler::buildTranship(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const double, const double, const double, const SUMOTime)` [virtual, pure virtual]
     /// build tranship
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_tranship(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, arrivalPosition: f64, departPosition: f64, speed: f64, duration: SUMOTime) -> bool {
-        todo!("port RouteHandler::buildTranship")
+    pub fn build_tranship(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, arrivalPosition: f64, departPosition: f64, speed: f64, duration: SUMOTime) -> bool {
+        panic!("pure virtual RouteHandler::buildTranship")
     }
 
     /// C++: `bool RouteHandler::buildStop(const CommonXMLStructure::SumoBaseObject *, const CommonXMLStructure::PlanParameters &, const SUMOVehicleParameter::Stop &)` [virtual, pure virtual]
     /// build stop
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_stop(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, planParameters: &Unmapped /* CommonXMLStructure::PlanParameters */, stopParameters: &SUMOVehicleParameter_Stop) -> bool {
-        todo!("port RouteHandler::buildStop")
+    pub fn build_stop(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, planParameters: &CommonXMLStructure_PlanParameters, stopParameters: &SUMOVehicleParameter_Stop) -> bool {
+        panic!("pure virtual RouteHandler::buildStop")
     }
 
     /// C++: `void RouteHandler::parseVType(const SUMOSAXAttributes &)` [private]
@@ -1480,7 +1985,7 @@ impl RouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_nested_cfm(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes, vTypeObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn parse_nested_cfm(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes, vTypeObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port RouteHandler::parseNestedCFM")
     }
 
@@ -1697,7 +2202,7 @@ impl RouteHandler {
     //     return sumoBaseObject->hasStringAttribute(SUMO_ATTR_FROM) && sumoBaseObject->hasStringAttribute(SUMO_ATTR_TO);
     // }
     #[allow(unused_variables)]
-    pub fn is_over_from_to_edges(&self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn is_over_from_to_edges(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port RouteHandler::isOverFromToEdges")
     }
 
@@ -1708,7 +2213,7 @@ impl RouteHandler {
     //     return sumoBaseObject->hasStringAttribute(SUMO_ATTR_FROM_JUNCTION) && sumoBaseObject->hasStringAttribute(SUMO_ATTR_TO_JUNCTION);
     // }
     #[allow(unused_variables)]
-    pub fn is_over_from_to_junctions(&self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn is_over_from_to_junctions(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port RouteHandler::isOverFromToJunctions")
     }
 
@@ -1719,7 +2224,7 @@ impl RouteHandler {
     //     return sumoBaseObject->hasStringAttribute(SUMO_ATTR_FROM_TAZ) && sumoBaseObject->hasStringAttribute(SUMO_ATTR_TO_TAZ);
     // }
     #[allow(unused_variables)]
-    pub fn is_over_from_to_ta_zs(&self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn is_over_from_to_ta_zs(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port RouteHandler::isOverFromToTAZs")
     }
 
