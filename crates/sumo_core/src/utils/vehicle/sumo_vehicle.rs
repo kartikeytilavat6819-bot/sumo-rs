@@ -31,7 +31,7 @@ impl SUMOVehicle {
     // SUMOVehicle(const std::string& id) : SUMOTrafficObject(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port SUMOVehicle::SUMOVehicle")
+        SUMOVehicle { base: SUMOTrafficObject::new(id) }
     }
 
     /// C++: `void SUMOVehicle::~SUMOVehicle() noexcept` [virtual]
@@ -39,7 +39,7 @@ impl SUMOVehicle {
     // virtual ~SUMOVehicle() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SUMOVehicle::~SUMOVehicle")
+        // C++ destructor body is empty
     }
 
     /// C++: `double SUMOVehicle::getLateralPositionOnLane() const` [const, virtual, pure virtual]

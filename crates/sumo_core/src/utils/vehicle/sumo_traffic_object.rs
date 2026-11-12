@@ -1,6 +1,7 @@
 //! Port of utils/vehicle/SUMOTrafficObject.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::tlf;
 
 /// C++ typedef `std::shared_ptr<const MSRoute> ConstMSRoutePtr`
 pub type ConstMSRoutePtr = Rc<MSRoute>;
@@ -34,7 +35,7 @@ impl SUMOTrafficObject {
     // SUMOTrafficObject(const std::string& id) : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port SUMOTrafficObject::SUMOTrafficObject")
+        SUMOTrafficObject { base: Named::new(id) }
     }
 
     /// C++: `void SUMOTrafficObject::~SUMOTrafficObject() noexcept` [virtual]
@@ -42,7 +43,7 @@ impl SUMOTrafficObject {
     // virtual ~SUMOTrafficObject() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SUMOTrafficObject::~SUMOTrafficObject")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool SUMOTrafficObject::isVehicle() const` [const, virtual]
@@ -52,7 +53,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_vehicle(&self) -> bool {
-        todo!("port SUMOTrafficObject::isVehicle")
+        false
     }
 
     /// C++: `bool SUMOTrafficObject::isPerson() const` [const, virtual]
@@ -62,7 +63,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_person(&self) -> bool {
-        todo!("port SUMOTrafficObject::isPerson")
+        false
     }
 
     /// C++: `bool SUMOTrafficObject::isContainer() const` [const, virtual]
@@ -72,7 +73,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_container(&self) -> bool {
-        todo!("port SUMOTrafficObject::isContainer")
+        false
     }
 
     /// C++: `NumericalID SUMOTrafficObject::getNumericalID() const` [const, virtual, pure virtual]
@@ -249,7 +250,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn ignore_transient_permissions(&self) -> bool {
-        todo!("port SUMOTrafficObject::ignoreTransientPermissions")
+        false
     }
 
     /// C++: `int SUMOTrafficObject::getRoutingMode() const` [const, virtual, pure virtual]
@@ -398,7 +399,23 @@ impl SUMOTrafficObject {
     // }
     #[allow(unused_variables)]
     pub fn get_string_param(&self, paramName: &str, required: bool, deflt: &str) -> String {
-        todo!("port SUMOTrafficObject::getStringParam")
+        if self.get_parameter().has_parameter(paramName) {
+            return self.get_parameter().get_parameter(paramName, "");
+        } else if self.get_v_type_parameter().has_parameter(paramName) {
+            return self.get_v_type_parameter().get_parameter(paramName, "");
+        }
+        if utils::options::options_cont::exists(paramName) && utils::options::options_cont::is_set(paramName) {
+            return utils::options::options_cont::with_options(|oc| oc.get_value_string(paramName)).unwrap_or_else(|e| panic!("{e}"));
+        }
+        if required {
+            let type_ = if self.is_vehicle() { "vehicle" } else if self.is_person() { "person" } else { "container" };
+            // C++ throws ProcessError here; the signature has no Result, so panic with the same text
+            panic!("{}", tlf!("Missing parameter '%' for % '%'.", paramName, type_, self.get_id()));
+        }
+        if utils::options::options_cont::exists(paramName) {
+            return utils::options::options_cont::with_options(|oc| oc.get_value_string(paramName)).unwrap_or_else(|e| panic!("{e}"));
+        }
+        deflt.to_string()
     }
 
     /// C++: `double SUMOTrafficObject::getFloatParam(const std::string &, const bool, const double, bool) const` [const]
@@ -430,7 +447,33 @@ impl SUMOTrafficObject {
     // }
     #[allow(unused_variables)]
     pub fn get_float_param(&self, paramName: &str, required: bool, deflt: f64, checkDist: bool) -> f64 {
-        todo!("port SUMOTrafficObject::getFloatParam")
+        let val = self.get_string_param(paramName, required, &utils::common::to_string::f64_to_string_prec(deflt, 16));
+        if !checkDist {
+            return match utils::common::string_utils::to_double(&val) {
+                Ok(v) => v,
+                Err(e) if e.is_format() => {
+                    let type_ = if self.is_vehicle() { "vehicle" } else if self.is_person() { "person" } else { "container" };
+                    write_errorf!("Invalid float value '%' for parameter '%' in % '%' (%).", val, paramName, type_, self.get_id(), e.to_string());
+                    deflt
+                }
+                Err(e) => panic!("{e}"),
+            };
+        }
+        let parsed = DistributionParameterized::from_description(&val).and_then(|dist| {
+            let error = dist.is_valid();
+            if !error.is_empty() {
+                return Err(ProcessError::new(error));
+            }
+            dist.sample(None)
+        });
+        match parsed {
+            Ok(v) => v,
+            Err(e) => {
+                let type_ = if self.is_vehicle() { "vehicle" } else if self.is_person() { "person" } else { "container" };
+                write_errorf!("Invalid distribution / float value '%' for parameter '%' in % '%' (%).", val, paramName, type_, self.get_id(), e.to_string());
+                deflt
+            }
+        }
     }
 
     /// C++: `bool SUMOTrafficObject::getBoolParam(const std::string &, const bool, const bool) const` [const]
@@ -448,7 +491,15 @@ impl SUMOTrafficObject {
     // }
     #[allow(unused_variables)]
     pub fn get_bool_param(&self, paramName: &str, required: bool, deflt: bool) -> bool {
-        todo!("port SUMOTrafficObject::getBoolParam")
+        let val = self.get_string_param(paramName, required, &utils::common::to_string::to_string(&deflt));
+        match utils::common::string_utils::to_bool(&val) {
+            Ok(v) => v,
+            Err(_) => {
+                let type_ = if self.is_vehicle() { "vehicle" } else if self.is_person() { "person" } else { "container" };
+                write_errorf!("Invalid boolean value '%' for parameter '%' in % '%'.", val, paramName, type_, self.get_id());
+                deflt
+            }
+        }
     }
 
     /// C++: `SUMOTime SUMOTrafficObject::getTimeParam(const std::string &, const bool, const SUMOTime) const` [const]
@@ -466,7 +517,15 @@ impl SUMOTrafficObject {
     // }
     #[allow(unused_variables)]
     pub fn get_time_param(&self, paramName: &str, required: bool, deflt: SUMOTime) -> SUMOTime {
-        todo!("port SUMOTrafficObject::getTimeParam")
+        let val = self.get_string_param(paramName, required, &utils::common::time::time2string(deflt));
+        match utils::common::time::string2time(&val) {
+            Ok(v) => v,
+            Err(_) => {
+                let type_ = if self.is_vehicle() { "vehicle" } else if self.is_person() { "person" } else { "container" };
+                write_errorf!("Invalid time value '%' for parameter '%' in % '%'.", val, paramName, type_, self.get_id());
+                deflt
+            }
+        }
     }
 
     /// C++: `std::string SUMOTrafficObject::getCategory() const` [const]
@@ -483,7 +542,13 @@ impl SUMOTrafficObject {
     // }
     #[allow(unused_variables)]
     pub fn get_category(&self) -> String {
-        todo!("port SUMOTrafficObject::getCategory")
+        if self.is_person() {
+            "Person".to_string()
+        } else if self.is_container() {
+            "Container".to_string()
+        } else {
+            "Vehicle".to_string()
+        }
     }
 
 }
