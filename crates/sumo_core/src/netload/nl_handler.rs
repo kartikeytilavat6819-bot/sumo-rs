@@ -148,6 +148,12 @@ impl std::ops::DerefMut for NLHandler {
 }
 
 impl NLHandler {
+    /// C++ `SUMOSAXHandler::getFileName()` (inherited through `SUMORouteHandler`)
+    // shortcut: SUMOSAXHandler base is Unmapped and NLHandler does not implement SaxHandler, so the file name is unreachable, upgrade when SUMORouteHandler.base is ported
+    pub fn get_file_name(&self) -> &str {
+        panic!("SUMOSAXHandler::getFileName not ported");
+    }
+
     /// C++: `void NLHandler::NLHandler(const std::string &, MSNet &, NLDetectorBuilder &, NLTriggerBuilder &, NLEdgeControlBuilder &, NLJunctionControlBuilder &)`
     /// Constructor
     // NLHandler::NLHandler(const std::string& file, MSNet& net,
@@ -345,7 +351,8 @@ impl NLHandler {
         let limit = attrs.get_opt::<i32>(SUMO_ATTR_LIMIT, "", &mut ok, foes.len() as i32, true);
         let active = attrs.get_opt::<bool>(SUMO_ATTR_ACTIVE, "", &mut ok, true, true);
 
-        let tlsControl = MSNet::get_instance().m().get_tls_control();
+        let net = MSNet::get_instance();
+        let tlsControl = net.m().get_tls_control();
         if !tlsControl.knows(&signalID) {
             throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
         }
@@ -749,7 +756,8 @@ impl NLHandler {
             SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
                 let mut ok = true;
                 let signalID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
-                let tls = MSNet::get_instance().m().get_tls_control();
+                let net = MSNet::get_instance();
+                let tls = net.m().get_tls_control();
                 if !tls.knows(&signalID) {
                     throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
                 }
@@ -2189,7 +2197,7 @@ impl NLHandler {
     //     const int index = attrs.get<int>(SUMO_ATTR_INDEX, id.c_str(), ok);
     //     const bool isRampAccel = attrs.getOpt<bool>(SUMO_ATTR_ACCELERATION, id.c_str(), ok, false);
     //     const std::string type = attrs.getOpt<std::string>(SUMO_ATTR_TYPE, id.c_str(), ok, "");
-    //     if (shape.size() < 2 && myEdgeControlBuilder.getCurrentEdgeFunction() != SumoXMLEdgeFunc::WALKINGAREA) {
+    //     if (shape.len() < 2 && myEdgeControlBuilder.getCurrentEdgeFunction() != SumoXMLEdgeFunc::WALKINGAREA) {
     //         WRITE_ERRORF(TL("Shape of lane '%' is broken.\n Can not build according edge."), id);
     //         myCurrentIsBroken = true;
     //         return;
@@ -2261,7 +2269,7 @@ impl NLHandler {
         let index = attrs.get::<i32>(SUMO_ATTR_INDEX, &id, &mut ok, true);
         let isRampAccel = attrs.get_opt::<bool>(SUMO_ATTR_ACCELERATION, &id, &mut ok, false, true);
         let type_ = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut ok, String::new(), true);
-        if shape.size() < 2 && self.myEdgeControlBuilder.m().get_current_edge_function() != SumoXMLEdgeFunc::WALKINGAREA {
+        if shape.len() < 2 && self.myEdgeControlBuilder.m().get_current_edge_function() != SumoXMLEdgeFunc::WALKINGAREA {
             write_error(&format!("Shape of lane '{}' is broken.\n Can not build according edge.", id));
             self.myCurrentIsBroken = true;
             return;
@@ -2447,8 +2455,8 @@ impl NLHandler {
                 if !self.myHaveWarnedAboutInvalidTLType {
                     write_warning(&format!(
                         "Traffic light type '{}' cannot be used in mesoscopic simulation. Using '{}' as fallback.",
-                        TrafficLightTypes.get_string(type_).unwrap_or_default(),
-                        TrafficLightTypes.get_string(TrafficLightType::STATIC).unwrap_or_default()
+                        TrafficLightTypes.get_string(type_),
+                        TrafficLightTypes.get_string(TrafficLightType::STATIC)
                     ));
                     self.myHaveWarnedAboutInvalidTLType = true;
                 }
@@ -2759,7 +2767,7 @@ impl NLHandler {
         if attrs.has_attribute(SUMO_ATTR_SHAPE) {
             // inner junctions have no shape
             shape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, PositionVector::default(), true);
-            if shape.size() > 2 {
+            if shape.len() > 2 {
                 shape.close_polygon();
             }
         }
@@ -3410,7 +3418,7 @@ impl NLHandler {
             if attrs.has_attribute(SUMO_ATTR_SHAPE) {
                 let shape = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, true);
                 let fill = attrs.get_opt::<bool>(SUMO_ATTR_FILL, &id, &mut ok, false, true);
-                if shape.size() != 0 {
+                if shape.len() != 0 {
                     if !self.myNet.m().get_shape_container().add_polygon(&id, "taz", &color, 0.0, 0.0, "", &shape, false, fill, 1.0, false, &name) {
                         write_warning(&format!("Skipping visualization of taz '{}', polygon already exists.", id));
                     } else {
