@@ -1,11 +1,12 @@
 //! Port of utils/common/Parameterised.{h,cpp}
-// shortcut: writeParams(OutputDevice&) is not ported, add it with utils/iodevices
 use super::msg_handler::write_warning;
 use super::string_tokenizer::StringTokenizer;
 use super::string_utils;
 use super::util_exceptions::ProcessError;
 use crate::write_warningf;
 use std::collections::BTreeMap;
+use crate::iodevices::output_device::OutputDevice;
+use crate::xml::sumo_xml_definitions::{SUMO_ATTR_KEY, SUMO_ATTR_VALUE, SUMO_TAG_PARAM};
 
 pub type ParameterisedMap = BTreeMap<String, String>;
 
@@ -83,6 +84,16 @@ impl Parameterised {
 
     pub fn clear_parameter(&mut self) {
         self.map.clear();
+    }
+
+    /// writeParams(OutputDevice&): one <param key= value=/> per entry
+    pub fn write_params(&self, device: &mut OutputDevice) {
+        for (k, v) in &self.map {
+            device.open_tag_id(SUMO_TAG_PARAM);
+            device.write_attr_escaped(SUMO_ATTR_KEY, k, true);
+            device.write_attr_escaped(SUMO_ATTR_VALUE, v, true);
+            device.close_tag("");
+        }
     }
 
     pub fn get_parameters_map(&self) -> &ParameterisedMap {
