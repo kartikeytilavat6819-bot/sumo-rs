@@ -1,9 +1,40 @@
-//! Port of microsim/output/MSMeanData_Net.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/output/MSMeanData_Net.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::INVALID_DOUBLE;
+use utils::geom::NUMERICAL_EPS;
+
+/// C++ MAX2 (StdDefs.h): (a) > (b) ? (a) : (b)
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+/// C++ MIN2 (StdDefs.h): (a) < (b) ? (a) : (b)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+/// C++ macro `SIMSTEP`: MSNet::getInstance()->getCurrentTimeStep()
+fn sim_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+/// C++ `static_cast<MSVehicle&>(veh).getLane()` for a vehicle (callers check isVehicle() first)
+fn sumo_vehicle_lane(veh: &SUMOTrafficObject) -> Ptr<MSLane> {
+    Ptr::new(veh).cast::<MSVehicle>().get_lane()
+}
+/// C++ virtual `SUMOTrafficObject::getLane()`: dispatched by hand on the object kind
+// shortcut: containers are not dispatched (null lane), upgrade when containers reach meandata
+fn traffic_object_lane(veh: &SUMOTrafficObject) -> Ptr<MSLane> {
+    if veh.is_vehicle() {
+        Ptr::new(veh).cast::<MSVehicle>().get_lane()
+    } else if veh.is_person() {
+        Ptr::new(veh).cast::<MSTransportable>().get_lane()
+    } else {
+        Ptr::null()
+    }
+}
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Net::MSLaneMeanDataValues` (microsim/output/MSMeanData_Net.h)
+#[repr(C)]
 pub struct MSMeanData_Net_MSLaneMeanDataValues {
     /// C++ base class `MSMeanData::MeanDataValues`
     pub base: MSMeanData_MeanDataValues,
@@ -70,7 +101,25 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     //       myParent(parent) {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Net>) -> Self {
-        todo!("port MSLaneMeanDataValues::MSLaneMeanDataValues")
+        Self {
+            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, parent.cast::<MSMeanData>()),
+            nVehDeparted: 0,
+            nVehArrived: 0,
+            nVehEntered: 0,
+            nVehLeft: 0,
+            nVehVaporized: 0,
+            nVehTeleported: 0,
+            waitSeconds: 0.0,
+            timeLoss: 0.0,
+            nVehLaneChangeFrom: 0,
+            nVehLaneChangeTo: 0,
+            frontSampleSeconds: 0.0,
+            frontTravelledDistance: 0.0,
+            vehLengthSum: 0.0,
+            occupationSum: 0.0,
+            minimalVehicleLength: INVALID_DOUBLE,
+            myParent: parent,
+        }
     }
 
     /// C++: `void MSLaneMeanDataValues::~MSLaneMeanDataValues() noexcept` [virtual]
@@ -79,7 +128,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneMeanDataValues::~MSLaneMeanDataValues")
+        // C++ destructor body is empty.
     }
 
     /// C++: `void MSLaneMeanDataValues::reset(bool)` [virtual]
@@ -107,7 +156,25 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self, afterWrite: bool) {
-        todo!("port MSLaneMeanDataValues::reset")
+        let _ = afterWrite;
+        self.nVehDeparted = 0;
+        self.nVehArrived = 0;
+        self.nVehEntered = 0;
+        self.nVehLeft = 0;
+        self.nVehVaporized = 0;
+        self.nVehTeleported = 0;
+        self.nVehLaneChangeFrom = 0;
+        self.nVehLaneChangeTo = 0;
+        self.sampleSeconds = 0.0;
+        self.travelledDistance = 0.0;
+        self.waitSeconds = 0.0;
+        self.timeLoss = 0.0;
+        self.frontSampleSeconds = 0.0;
+        self.frontTravelledDistance = 0.0;
+        self.vehLengthSum = 0.0;
+        self.occupationSum = 0.0;
+        self.minimalVehicleLength = INVALID_DOUBLE;
+        self.resetTime = sim_step();
     }
 
     /// C++: `void MSLaneMeanDataValues::addTo(MSMeanData::MeanDataValues &) const` [const, virtual]
@@ -142,7 +209,33 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        todo!("port MSLaneMeanDataValues::addTo")
+        let v: Ptr<MSMeanData_Net_MSLaneMeanDataValues> = Ptr::from_mut(val).cast::<MSMeanData_Net_MSLaneMeanDataValues>();
+        let v = v.m();
+        v.nVehDeparted += self.nVehDeparted;
+        v.nVehArrived += self.nVehArrived;
+        v.nVehEntered += self.nVehEntered;
+        v.nVehLeft += self.nVehLeft;
+        v.nVehVaporized += self.nVehVaporized;
+        v.nVehTeleported += self.nVehTeleported;
+        v.nVehLaneChangeFrom += self.nVehLaneChangeFrom;
+        v.nVehLaneChangeTo += self.nVehLaneChangeTo;
+        v.sampleSeconds += self.sampleSeconds;
+        v.travelledDistance += self.travelledDistance;
+        v.waitSeconds += self.waitSeconds;
+        v.timeLoss += self.timeLoss;
+        v.frontSampleSeconds += self.frontSampleSeconds;
+        v.frontTravelledDistance += self.frontTravelledDistance;
+        v.vehLengthSum += self.vehLengthSum;
+        v.occupationSum += self.occupationSum;
+        if v.minimalVehicleLength == INVALID_DOUBLE {
+            v.minimalVehicleLength = self.minimalVehicleLength;
+        } else {
+            v.minimalVehicleLength = min2(self.minimalVehicleLength, v.minimalVehicleLength);
+        }
+        if !self.mySubData.is_null() {
+            // shortcut: C++ dispatches mySubData->addTo() virtually; MeanDataValues::add_to has no dispatch and panics, upgrade when sub-data types are known
+            self.mySubData.add_to(val.get_sub_data().m());
+        }
     }
 
     /// C++: `bool MSLaneMeanDataValues::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -181,7 +274,33 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSLaneMeanDataValues::notifyLeave")
+        if (self.myParent.is_null() || self.myParent.vehicle_applies(veh))
+            && (self.get_lane().is_null() || !veh.is_vehicle() || self.get_lane() == sumo_vehicle_lane(veh))
+        {
+            if MSGlobals::use_meso_sim() {
+                self.remove_from_vehicle_update_values(veh);
+            }
+            if reason == MSMoveReminder_Notification::NOTIFICATION_ARRIVED {
+                self.nVehArrived += 1;
+            } else if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+                self.nVehLaneChangeFrom += 1;
+            } else if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
+                if reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION && reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED {
+                    // if the entered this edge via teleport, we do not want to count it
+                    self.nVehLeft += 1;
+                }
+                if reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED {
+                    self.nVehTeleported += 1;
+                } else if reason >= MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR {
+                    self.nVehVaporized += 1;
+                }
+            }
+        }
+        if MSGlobals::use_meso_sim() || !veh.is_vehicle() {
+            // only microsim vehicles keep the reminder until their back has fully left the edge/lane
+            return false;
+        }
+        reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
     }
 
     /// C++: `bool MSLaneMeanDataValues::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -213,7 +332,19 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSLaneMeanDataValues::notifyEnter")
+        if self.myParent.is_null() || self.myParent.vehicle_applies(veh) {
+            if self.get_lane().is_null() || !veh.is_vehicle() || self.get_lane() == sumo_vehicle_lane(veh) {
+                if reason == MSMoveReminder_Notification::NOTIFICATION_DEPARTED {
+                    self.nVehDeparted += 1;
+                } else if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+                    self.nVehLaneChangeTo += 1;
+                } else if reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT && (self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT) {
+                    self.nVehEntered += 1;
+                }
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSLaneMeanDataValues::isEmpty() const` [const, virtual]
@@ -224,7 +355,8 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MSLaneMeanDataValues::isEmpty")
+        self.sampleSeconds == 0. && self.nVehDeparted == 0 && self.nVehArrived == 0 && self.nVehEntered == 0
+            && self.nVehLeft == 0 && self.nVehVaporized == 0 && self.nVehTeleported == 0 && self.nVehLaneChangeFrom == 0 && self.nVehLaneChangeTo == 0
     }
 
     /// C++: `void MSLaneMeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual]
@@ -338,7 +470,101 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        todo!("port MSLaneMeanDataValues::write")
+        let mask = *attributeMask;
+        let mut density = self.frontSampleSeconds / steps2time(period) * 1000. / self.myLaneLength;
+        let mut overlapDensity = self.sampleSeconds / steps2time(period) * 1000. / self.myLaneLength;
+        if MSGlobals::lateral_resolution() < 0. {
+            // avoid exceeding upper bound
+            density = min2(density, 1000. * numLanes as f64 / max2(self.minimalVehicleLength, NUMERICAL_EPS));
+            overlapDensity = min2(overlapDensity, 1000. * numLanes as f64 / max2(self.minimalVehicleLength, NUMERICAL_EPS));
+        }
+        let laneDensity = density / numLanes as f64;
+        let occupancy = self.get_occupancy(period, numLanes);
+
+        if self.myParent.is_null() {
+            let speed = if self.sampleSeconds == 0. { 0. } else { self.travelledDistance / self.sampleSeconds };
+            let frontSpeed = if self.frontSampleSeconds == 0. { 0. } else { self.frontTravelledDistance / self.frontSampleSeconds };
+            dev.write_optional_attr_mask(SUMO_ATTR_DENSITY, &density, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_LANEDENSITY, &laneDensity, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_OCCUPANCY, &occupancy, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_WAITINGTIME, &self.waitSeconds, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_TIMELOSS, &self.timeLoss, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_SPEED, &speed, mask, self.sampleSeconds == 0.);
+            let speedRel = if speedLimit == 0. || self.sampleSeconds == 0. { 0. } else { self.travelledDistance / self.sampleSeconds / speedLimit };
+            dev.write_optional_attr_mask(SUMO_ATTR_SPEEDREL, &speedRel, mask, self.sampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_DEPARTED, &self.nVehDeparted, mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_ARRIVED, &self.nVehArrived, mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_ENTERED, &self.nVehEntered, mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_LEFT, &self.nVehLeft, mask, false);
+            dev.write_optional_attr_mask(SUMO_ATTR_VAPORIZED, &self.nVehVaporized, mask, self.nVehVaporized == 0);
+            dev.write_optional_attr_mask(SUMO_ATTR_TELEPORTED, &self.nVehTeleported, mask, self.nVehTeleported == 0);
+            let flow = density * frontSpeed * 3.6;
+            dev.write_optional_attr_mask(SUMO_ATTR_FLOW, &flow, mask, self.frontSampleSeconds == 0.);
+            dev.write_optional_attr_mask(SUMO_ATTR_DISTANCE, &self.frontTravelledDistance, mask, false);
+            dev.close_tag("");
+            return;
+        }
+        let haveSamples = self.sampleSeconds > self.myParent.myMinSamples;
+        let haveFrontSamples = self.frontSampleSeconds > self.myParent.myMinSamples;
+        let haveSamplesOrDefault = haveSamples || defaultTravelTime >= 0.;
+        let mut haveTravelTime = haveSamplesOrDefault;
+        let mut traveltime = self.myParent.myMaxTravelTime;
+        if haveSamples {
+            if numVehicles > 0 {
+                traveltime = self.sampleSeconds / numVehicles as f64;
+            } else {
+                traveltime = self.myParent.myMaxTravelTime;
+                if self.frontTravelledDistance > NUMERICAL_EPS {
+                    traveltime = min2(traveltime, self.myLaneLength * self.frontSampleSeconds / self.frontTravelledDistance);
+                } else if defaultTravelTime >= 0. {
+                    traveltime = defaultTravelTime;
+                } else {
+                    haveTravelTime = false;
+                }
+            }
+        } else if defaultTravelTime >= 0. {
+            traveltime = defaultTravelTime;
+        }
+        dev.write_optional_attr_mask(SUMO_ATTR_TRAVELTIME, &traveltime, mask, !haveTravelTime);
+        let mut overlapTraveltime = self.myParent.myMaxTravelTime;
+        if self.travelledDistance > 0. {
+            // one vehicle has to drive lane length + vehicle length before it has left the lane
+            // thus we need to scale with an extended length, approximated by lane length + average vehicle length
+            overlapTraveltime = min2(overlapTraveltime, (self.myLaneLength + self.vehLengthSum / self.sampleSeconds) * self.sampleSeconds / self.travelledDistance);
+        }
+        dev.write_optional_attr_mask(SUMO_ATTR_OVERLAPTRAVELTIME, &overlapTraveltime, mask, !haveSamples || numVehicles > 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_DENSITY, &density, mask, !haveSamples || numVehicles > 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_OVERLAPDENSITY, &overlapDensity, mask, self.sampleSeconds == 0.);
+        dev.write_optional_attr_mask(SUMO_ATTR_LANEDENSITY, &laneDensity, mask, !haveSamples || numVehicles > 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_OCCUPANCY, &occupancy, mask, !haveSamples || numVehicles > 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_WAITINGTIME, &self.waitSeconds, mask, !haveSamples);
+        dev.write_optional_attr_mask(SUMO_ATTR_TIMELOSS, &self.timeLoss, mask, !haveSamples);
+        let mut speed = 0.;
+        let mut frontSpeed = 0.;
+        if haveSamples {
+            speed = self.travelledDistance / self.sampleSeconds;
+        } else if defaultTravelTime > 0. {
+            speed = self.myLaneLength / defaultTravelTime;
+        }
+        if haveFrontSamples {
+            frontSpeed = self.frontTravelledDistance / self.frontSampleSeconds;
+        } else if defaultTravelTime > 0. {
+            frontSpeed = self.myLaneLength / defaultTravelTime;
+        }
+        dev.write_optional_attr_mask(SUMO_ATTR_SPEED, &speed, mask, !haveSamplesOrDefault);
+        let speedRel = if speedLimit == 0. { 0. } else { speed / speedLimit };
+        dev.write_optional_attr_mask(SUMO_ATTR_SPEEDREL, &speedRel, mask, !haveSamplesOrDefault);
+        dev.write_optional_attr_mask(SUMO_ATTR_DEPARTED, &self.nVehDeparted, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_ARRIVED, &self.nVehArrived, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_ENTERED, &self.nVehEntered, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_LEFT, &self.nVehLeft, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_LANECHANGEDFROM, &self.nVehLaneChangeFrom, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_LANECHANGEDTO, &self.nVehLaneChangeTo, mask, false);
+        dev.write_optional_attr_mask(SUMO_ATTR_VAPORIZED, &self.nVehVaporized, mask, self.nVehVaporized == 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_TELEPORTED, &self.nVehTeleported, mask, self.nVehTeleported == 0);
+        let flow = density * frontSpeed * 3.6;
+        dev.write_optional_attr_mask(SUMO_ATTR_FLOW, &flow, mask, !haveSamples || numVehicles == 0);
+        dev.write_optional_attr_mask(SUMO_ATTR_DISTANCE, &self.frontTravelledDistance, mask, false);
     }
 
     /// C++: `double MSLaneMeanDataValues::getAttributeValue(SumoXMLAttr, const SUMOTime, const double, const double) const` [const, virtual]
@@ -397,7 +623,35 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_value(&self, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
-        todo!("port MSLaneMeanDataValues::getAttributeValue")
+        match a {
+            SUMO_ATTR_DENSITY => min2(self.frontSampleSeconds / steps2time(period) * 1000. / self.myLaneLength, 1000. * numLanes / max2(self.minimalVehicleLength, NUMERICAL_EPS)),
+            SUMO_ATTR_LANEDENSITY => {
+                let density = min2(self.frontSampleSeconds / steps2time(period) * 1000. / self.myLaneLength, 1000. * numLanes / max2(self.minimalVehicleLength, NUMERICAL_EPS));
+                density / numLanes
+            }
+            SUMO_ATTR_OVERLAPDENSITY => {
+                let overlapDensity = min2(self.sampleSeconds / steps2time(period) * 1000. / self.myLaneLength, 1000. * numLanes / max2(self.minimalVehicleLength, NUMERICAL_EPS));
+                overlapDensity / numLanes
+            }
+            SUMO_ATTR_OCCUPANCY => self.occupationSum / steps2time(period) / self.myLaneLength / numLanes * 1000.,
+            SUMO_ATTR_WAITINGTIME => self.waitSeconds,
+            SUMO_ATTR_TIMELOSS => self.timeLoss,
+            SUMO_ATTR_SPEED => self.travelledDistance / self.sampleSeconds,
+            SUMO_ATTR_SPEEDREL => if speedLimit == 0. { 0. } else { self.travelledDistance / self.sampleSeconds / speedLimit },
+            SUMO_ATTR_DEPARTED => self.nVehDeparted as f64,
+            SUMO_ATTR_ARRIVED => self.nVehArrived as f64,
+            SUMO_ATTR_ENTERED => self.nVehEntered as f64,
+            SUMO_ATTR_LEFT => self.nVehLeft as f64,
+            SUMO_ATTR_VAPORIZED => self.nVehVaporized as f64,
+            SUMO_ATTR_TELEPORTED => self.nVehTeleported as f64,
+            SUMO_ATTR_FLOW => {
+                let density = min2(self.frontSampleSeconds / steps2time(period) * 1000. / self.myLaneLength, 1000. * numLanes / max2(self.minimalVehicleLength, NUMERICAL_EPS));
+                let speed = self.frontTravelledDistance / self.frontSampleSeconds;
+                density * speed * 3.6
+            }
+            SUMO_ATTR_DISTANCE => self.frontTravelledDistance,
+            _ => 0.,
+        }
     }
 
     /// C++: `double MSLaneMeanDataValues::getOccupancy(SUMOTime, int) const` [const]
@@ -407,7 +661,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy(&self, period: SUMOTime, numLanes: i32) -> f64 {
-        todo!("port MSLaneMeanDataValues::getOccupancy")
+        self.occupationSum / steps2time(period) / self.myLaneLength / numLanes as f64 * 100.
     }
 
     /// C++: `void MSLaneMeanDataValues::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -474,13 +728,56 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, arg3: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSLaneMeanDataValues::notifyMoveInternal")
+        if !self.myParent.is_null() && !self.myParent.vehicle_applies(veh) {
+            return;
+        }
+        self.sampleSeconds += timeOnLane;
+        self.travelledDistance += travelledDistanceVehicleOnLane;
+        self.vehLengthSum += veh.get_vehicle_type().get_length() * timeOnLane;
+        if MSGlobals::use_meso_sim() {
+            // For the mesosim case no information on whether the vehicle was occupying
+            // the lane with its whole length is available. We assume the whole length
+            // Therefore this increment is taken out with more information on the vehicle movement.
+            self.occupationSum += veh.get_vehicle_type().get_length() * timeOnLane;
+        } else {
+            // for the microsim case more elaborate calculation of the average length on the lane,
+            // is taken out in notifyMove(), refs #153
+            self.occupationSum += meanLengthOnLane * ts();
+        }
+        if !veh.is_stopped() {
+            if !self.myParent.is_null() && (meanSpeedVehicleOnLane < self.myParent.myHaltSpeed
+                || (self.myParent.myHaltSpeedRel > 0. && meanSpeedVehicleOnLane / veh.get_current_edge().get_speed_limit_2(veh.get_v_class()) < self.myParent.myHaltSpeedRel))
+            {
+                self.waitSeconds += timeOnLane;
+            } else if MSGlobals::use_meso_sim() {
+                self.waitSeconds += steps2time(veh.get_waiting_time(false));
+            }
+            let vlane = traffic_object_lane(veh);
+            let vmax = if vlane.is_null() {
+                veh.get_edge().get_vehicle_max_speed(Ptr::new(veh))
+            } else {
+                vlane.get_vehicle_max_speed(Ptr::new(veh))
+            };
+            if vmax > 0. {
+                self.timeLoss += timeOnLane * max2(0.0, vmax - meanSpeedVehicleOnLane) / vmax;
+            }
+        }
+        self.frontSampleSeconds += frontOnLane;
+        self.frontTravelledDistance += travelledDistanceFrontOnLane;
+        let lengthWithGap = veh.get_vehicle_type().get_length_with_gap();
+        if self.minimalVehicleLength == INVALID_DOUBLE {
+            self.minimalVehicleLength = lengthWithGap;
+        } else {
+            self.minimalVehicleLength = min2(self.minimalVehicleLength, lengthWithGap);
+        }
+        let _ = arg3;
     }
 
 }
 
 /// Network state mean data collector for edges/lanes
 /// C++ class `MSMeanData_Net` (microsim/output/MSMeanData_Net.h)
+#[repr(C)]
 pub struct MSMeanData_Net {
     /// C++ base class `MSMeanData`
     pub base: MSMeanData,
@@ -527,7 +824,11 @@ impl MSMeanData_Net {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, haltSpeed: f64, haltSpeedRel: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        todo!("port MSMeanData_Net::MSMeanData_Net")
+        Self {
+            base: MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate),
+            myHaltSpeed: haltSpeed,
+            myHaltSpeedRel: haltSpeedRel,
+        }
     }
 
     /// C++: `void MSMeanData_Net::~MSMeanData_Net() noexcept` [virtual]
@@ -535,7 +836,7 @@ impl MSMeanData_Net {
     // MSMeanData_Net::~MSMeanData_Net() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSMeanData_Net::~MSMeanData_Net")
+        // C++ destructor body is empty.
     }
 
     /// C++: `std::vector<std::string> MSMeanData_Net::getAttributeNames() const` [const, virtual]
@@ -565,7 +866,14 @@ impl MSMeanData_Net {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
-        todo!("port MSMeanData_Net::getAttributeNames")
+        let attrs = [
+            SUMO_ATTR_DENSITY, SUMO_ATTR_LANEDENSITY, SUMO_ATTR_OVERLAPDENSITY, SUMO_ATTR_OCCUPANCY,
+            SUMO_ATTR_WAITINGTIME, SUMO_ATTR_TIMELOSS, SUMO_ATTR_SPEED, SUMO_ATTR_SPEEDREL,
+            SUMO_ATTR_DEPARTED, SUMO_ATTR_ARRIVED, SUMO_ATTR_ENTERED, SUMO_ATTR_LEFT,
+            SUMO_ATTR_LANECHANGEDFROM, SUMO_ATTR_LANECHANGEDTO, SUMO_ATTR_VAPORIZED, SUMO_ATTR_TELEPORTED,
+            SUMO_ATTR_FLOW, SUMO_ATTR_DISTANCE,
+        ];
+        attrs.iter().map(|a| utils::xml::sumo_xml_definitions::Attrs.get_string(*a).to_string()).collect()
     }
 
     /// C++: `bool MSMeanData_Net::supports(const SumoXMLAttrMask &)` [static]
@@ -594,7 +902,24 @@ impl MSMeanData_Net {
     // }
     #[allow(unused_variables)]
     pub fn supports(attributeMask: &SumoXMLAttrMask) -> bool {
-        todo!("port MSMeanData_Net::supports")
+        attributeMask.test(SUMO_ATTR_DENSITY)
+            || attributeMask.test(SUMO_ATTR_LANEDENSITY)
+            || attributeMask.test(SUMO_ATTR_OVERLAPDENSITY)
+            || attributeMask.test(SUMO_ATTR_OCCUPANCY)
+            || attributeMask.test(SUMO_ATTR_WAITINGTIME)
+            || attributeMask.test(SUMO_ATTR_TIMELOSS)
+            || attributeMask.test(SUMO_ATTR_SPEED)
+            || attributeMask.test(SUMO_ATTR_SPEEDREL)
+            || attributeMask.test(SUMO_ATTR_DEPARTED)
+            || attributeMask.test(SUMO_ATTR_ARRIVED)
+            || attributeMask.test(SUMO_ATTR_ENTERED)
+            || attributeMask.test(SUMO_ATTR_LEFT)
+            || attributeMask.test(SUMO_ATTR_LANECHANGEDFROM)
+            || attributeMask.test(SUMO_ATTR_LANECHANGEDTO)
+            || attributeMask.test(SUMO_ATTR_VAPORIZED)
+            || attributeMask.test(SUMO_ATTR_TELEPORTED)
+            || attributeMask.test(SUMO_ATTR_FLOW)
+            || attributeMask.test(SUMO_ATTR_DISTANCE)
     }
 
     /// C++: `MSMeanData::MeanDataValues * MSMeanData_Net::createValues(MSLane *const, const double, const bool) const` [const, virtual, protected]
@@ -605,7 +930,7 @@ impl MSMeanData_Net {
     // }
     #[allow(unused_variables)]
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MSMeanData_Net::createValues")
+        Ptr::from_raw(Box::into_raw(Box::new(MSMeanData_Net_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))))).cast::<MSMeanData_MeanDataValues>()
     }
 
     /// C++: `void MSMeanData_Net::resetOnly(SUMOTime)` [protected]
@@ -613,7 +938,8 @@ impl MSMeanData_Net {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn reset_only(&mut self, stopTime: SUMOTime) {
-        todo!("port MSMeanData_Net::resetOnly")
+        // C++ MSMeanData_Net does not override resetOnly; the inherited MSMeanData::resetOnly applies
+        self.base.reset_only(stopTime);
     }
 
     /// C++: `void MSMeanData_Net::MSMeanData_Net(const MSMeanData_Net &)` [private]
@@ -621,7 +947,7 @@ impl MSMeanData_Net {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSMeanData_Net) -> Self {
-        todo!("port MSMeanData_Net::MSMeanData_Net")
+        panic!("MSMeanData_Net copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSMeanData_Net & MSMeanData_Net::operator=(const MSMeanData_Net &)` [private]
@@ -629,7 +955,7 @@ impl MSMeanData_Net {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSMeanData_Net) -> &mut MSMeanData_Net {
-        todo!("port MSMeanData_Net::operator=")
+        panic!("MSMeanData_Net assignment operator is private and invalidated in C++")
     }
 
 }
