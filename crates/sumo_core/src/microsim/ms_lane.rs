@@ -3221,7 +3221,168 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn execute_movements(&mut self, t: SUMOTime) {
-        todo!("port MSLane::executeMovements")
+        // multithreading: there are concurrent writes to myNeedsCollisionCheck but all of them should set it to true
+        self.myNeedsCollisionCheck = true;
+        let bidi = self.get_bidi_lane();
+        if !bidi.is_null() && bidi.get_vehicle_number() == 0 {
+            MSNet::get_instance().m().get_edge_control().check_collision_for_inactive(bidi);
+        }
+        // removes `veh` from the network-wide bookkeeping: the same call the C++ makes as
+        // `MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(veh)` (checkDuplicate defaults to false)
+        let sched = |v: Ptr<MSVehicle>| {
+            MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(Ptr::from_mut(&mut v.m().base.base), false);
+        };
+        let mut firstNotStopped: Option<Ptr<MSVehicle>> = None;
+        // iterate over vehicles in reverse so that move reminders will be called in the correct order.
+        // `b` is the forward index one past the element `*i` refers to (C++ reverse_iterator base()).
+        let mut b = self.myVehicles.len();
+        while b > 0 {
+            let veh = self.myVehicles[b - 1];
+            // length is needed later when the vehicle may not exist anymore
+            let length = veh.get_vehicle_type().get_length_with_gap();
+            let nettoLength = veh.get_vehicle_type().get_length();
+            let moved = veh.m().execute_move();
+            let target = veh.get_mutable_lane();
+            // true when C++ falls through to the length bookkeeping and erase; false for the `continue` branches
+            let removed: bool = if veh.has_arrived() {
+                // vehicle has reached its arrival position
+                veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_ARRIVED);
+                sched(veh);
+                true
+            } else if !target.is_null() && moved {
+                if target.get_edge().is_vaporizing() {
+                    // vehicle has reached a vaporizing edge
+                    veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_VAPORIZER);
+                    sched(veh);
+                } else {
+                    // vehicle has entered a new lane (leaveLane and workOnMoveReminders were already called in MSVehicle::executeMove)
+                    target.m().myVehBuffer.push(veh);
+                    MSNet::get_instance().m().get_edge_control().needs_vehicle_integration(target);
+                    if MSGlobals::sublane() && !veh.get_lane_change_model_2().get_shadow_lane().is_null() {
+                        // trigger sorting of partial vehicles as their order may have changed (lane might not be active and only contain partial vehicles)
+                        MSNet::get_instance().m().get_edge_control().needs_vehicle_integration(veh.get_lane_change_model_2().get_shadow_lane());
+                    }
+                }
+                true
+            } else if veh.is_parking() {
+                // vehicle started to park
+                MSVehicleTransfer::get_instance().m().add(t, veh);
+                self.myParkingVehicles.insert(Ptr::from_mut(&mut veh.m().base));
+                true
+            } else if veh.broke_down() {
+                veh.m().resume_from_stopping();
+                utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' after breaking down, lane='{}', time={}.", veh.get_id(), veh.get_lane().get_id(), utils::common::time::time2string(t)));
+                veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_BREAKDOWN);
+                sched(veh);
+                true
+            } else if veh.is_jumping() {
+                // vehicle jumps to next route edge
+                MSVehicleTransfer::get_instance().m().add(t, veh);
+                true
+            } else if veh.get_position_on_lane() > self.get_length() {
+                // for any reasons the vehicle is beyond its lane...
+                // this should never happen because it is handled in MSVehicle::executeMove
+                debug_assert!(false);
+                utils::common::msg_handler::write_warning(&format!("Teleporting vehicle '{}'; beyond end of lane, target lane='{}', time={}.", veh.get_id(), self.get_id(), utils::common::time::time2string(t)));
+                MSNet::get_instance().m().get_vehicle_control().count_collision(true);
+                MSVehicleTransfer::get_instance().m().add(t, veh);
+                true
+            } else if veh.collision_stop_time() == 0 {
+                veh.m().resume_from_stopping();
+                if MSLane::get_collision_action() == MSLane_CollisionAction::COLLISION_ACTION_REMOVE {
+                    utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' after earlier collision, lane='{}', time={}.", veh.get_id(), veh.get_lane().get_id(), utils::common::time::time2string(t)));
+                    veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION);
+                    sched(veh);
+                    true
+                } else if MSLane::get_collision_action() == MSLane_CollisionAction::COLLISION_ACTION_TELEPORT {
+                    utils::common::msg_handler::write_warning(&format!("Teleporting vehicle '{}' after earlier collision, lane='{}', time={}.", veh.get_id(), veh.get_lane().get_id(), utils::common::time::time2string(t)));
+                    MSVehicleTransfer::get_instance().m().add(t, veh);
+                    true
+                } else {
+                    if firstNotStopped.is_none() && !veh.is_stopped() && veh.get_lane() == Ptr::new(self) {
+                        firstNotStopped = Some(veh);
+                    }
+                    false
+                }
+            } else {
+                if firstNotStopped.is_none() && !veh.is_stopped() && veh.get_lane() == Ptr::new(self) {
+                    firstNotStopped = Some(veh);
+                }
+                false
+            };
+            if removed {
+                self.myBruttoVehicleLengthSumToRemove += length;
+                self.myNettoVehicleLengthSumToRemove += nettoLength;
+                self.myVehicles.remove(b - 1);
+            }
+            b -= 1;
+        }
+        if let Some(fns) = firstNotStopped {
+            let ttt = fns.get_vehicle_type().get_parameter().get_time_to_teleport(MSGlobals::time_to_gridlock());
+            let tttb = fns.get_vehicle_type().get_parameter().get_time_to_teleport_bidi(MSGlobals::time_to_teleport_bidi());
+            if ttt > 0 || MSGlobals::time_to_gridlock_highways() > 0 || MSGlobals::time_to_teleport_disconnected() >= 0 || tttb > 0 || MSGlobals::time_to_teleport_rs_deadlock() > 0 {
+                let wrongLane = !self.appropriate(fns);
+                let disconnected = MSGlobals::time_to_teleport_disconnected() >= 0
+                    && !fns.succ_edge(1).is_null()
+                    && fns.get_edge().allowed_lanes(&*fns.succ_edge(1), fns.get_v_class(), false).is_null();
+                // shortcut: MSDevice_Taxi is not ported, so every vehicle is treated as having no taxi device (C++ `getDevice(typeid(MSDevice_Taxi)) == nullptr` is true);
+                // taxis that are not on their last edge would be wrongly teleported. Upgrade when MSDevice_Taxi is ported.
+                let r1 = ttt > 0 && fns.get_waiting_time(false) > ttt && !disconnected;
+                let r2 = !r1 && MSGlobals::time_to_gridlock_highways() > 0
+                    && fns.get_waiting_time(false) > MSGlobals::time_to_gridlock_highways()
+                    && self.get_speed_limit() > MSGlobals::gridlock_highways_speed() && wrongLane
+                    && !disconnected;
+                let r3 = disconnected && fns.get_waiting_time(false) > MSGlobals::time_to_teleport_disconnected();
+                let r4 = !r1 && !r2 && !r3 && tttb > 0
+                    && fns.get_waiting_time(false) > tttb && !self.get_bidi_lane().is_null() && !disconnected;
+                let r5 = MSGlobals::time_to_teleport_rs_deadlock() > 0 && MSRailSignalControl::has_instance() && !r1 && !r2 && !r3 && !r4
+                    && fns.get_waiting_time(false) > MSGlobals::time_to_teleport_rs_deadlock()
+                    && MSRailSignalControl::get_instance().have_deadlock(Ptr::from_mut(&mut fns.m().base.base));
+                if r1 || r2 || r3 || r4 || r5 {
+                    let link = MSLane::succ_link_sec(&fns.base.base, 1, self, fns.get_best_lanes_continuation());
+                    let minorLink = !wrongLane && link != self.myLinks.len() && !self.myLinks[link].have_priority();
+                    let mut reason: String = (if wrongLane { " (wrong lane" } else if minorLink { " (yield" } else { " (jam" }).to_string();
+                    self.myBruttoVehicleLengthSumToRemove += fns.get_vehicle_type().get_length_with_gap();
+                    self.myNettoVehicleLengthSumToRemove += fns.get_vehicle_type().get_length();
+                    if self.myVehicles.last() == Some(&fns) {
+                        self.myVehicles.pop();
+                    } else {
+                        if let Some(pos) = self.myVehicles.iter().position(|v| *v == fns) {
+                            self.myVehicles.remove(pos);
+                        }
+                        reason = " (blocked".to_string();
+                    }
+                    utils::common::msg_handler::write_warning(&format!(
+                        "Teleporting vehicle '{}'; waited too long{}{}{}{}{}), lane='{}', time={}.",
+                        fns.get_id(),
+                        reason,
+                        if r2 { ", highway" } else { "" },
+                        if r3 { ", disconnected" } else { "" },
+                        if r4 { ", bidi" } else { "" },
+                        if r5 { ", railSignal" } else { "" },
+                        self.get_id(),
+                        utils::common::time::time2string(t)
+                    ));
+                    if wrongLane {
+                        MSNet::get_instance().m().get_vehicle_control().register_teleport_wrong_lane();
+                    } else if minorLink {
+                        MSNet::get_instance().m().get_vehicle_control().register_teleport_yield();
+                    } else {
+                        MSNet::get_instance().m().get_vehicle_control().register_teleport_jam();
+                    }
+                    if MSGlobals::remove_gridlocked() {
+                        fns.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED);
+                        sched(fns);
+                    } else {
+                        MSVehicleTransfer::get_instance().m().add(t, fns);
+                    }
+                }
+            }
+        }
+        if MSGlobals::sublane() {
+            // trigger sorting of vehicles as their order may have changed
+            MSNet::get_instance().m().get_edge_control().needs_vehicle_integration(Ptr::new(self));
+        }
     }
 
     /// C++: `void MSLane::integrateNewVehicles()` [virtual]
