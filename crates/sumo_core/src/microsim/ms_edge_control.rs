@@ -1,6 +1,12 @@
 //! Port of microsim/MSEdgeControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont;
+
+/// C++ MIN2(a, b) = a < b ? a : b
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
 
 /// C++ typedef `std::vector<LaneUsage> MSEdgeControl::LaneUsageVector`
 pub type MSEdgeControl_LaneUsageVector = Vec<MSEdgeControl_LaneUsage>;
@@ -19,6 +25,13 @@ pub struct MSEdgeControl_LaneUsage {
 impl MSEdgeControl_LaneUsage {
 }
 
+/// C++ `StopWatch<std::chrono::nanoseconds>` (utils/common/StopWatch.h), history container only
+// shortcut: timing calibration and statistics output are only used under PARALLEL_STOPWATCH (compiled out in the default build), upgrade if profiling output is needed
+#[derive(Default)]
+pub struct MSEdgeControl_StopWatch {
+    pub history: Vec<i64>,
+}
+
 /// Stores edges and lanes, performs moving of vehicle
 /// C++ class `MSEdgeControl` (microsim/MSEdgeControl.h)
 pub struct MSEdgeControl {
@@ -29,15 +42,15 @@ pub struct MSEdgeControl {
     /// The list of active (not empty) lanes
     pub myActiveLanes: VecDeque<Ptr<MSLane>>,
     /// A storage for lanes which shall be integrated because vehicles have moved onto them
-    pub myWithVehicles2Integrate: Unmapped /* MFXSynchQue<MSLane *, std::vector<MSLane *>> */,
+    pub myWithVehicles2Integrate: Vec<Ptr<MSLane>>, // C++: MFXSynchQue<MSLane *, std::vector<MSLane *>>
     /// Lanes which changed the state without informing the control
-    pub myChangedStateLanes: BTreeSet<Ptr<MSLane>>, // C++: std::set<MSLane *, ComparatorNumericalIdLess>
+    pub myChangedStateLanes: BTreeMap<i32, Ptr<MSLane>>, // C++: std::set<MSLane *, ComparatorNumericalIdLess>, keyed by numerical id
     /// The list of active (not empty) lanes
     pub myLastLaneChange: Vec<SUMOTime>,
     /// Additional lanes for which collision checking must be performed
-    pub myInactiveCheckCollisions: Unmapped /* MFXSynchSet<MSLane *, std::set<MSLane *, ComparatorNumericalIdLess>> */, // C++: MFXSynchSet<MSLane *, std::set<MSLane *, ComparatorNumericalIdLess>>
+    pub myInactiveCheckCollisions: BTreeMap<i32, Ptr<MSLane>>, // C++: MFXSynchSet<MSLane *, std::set<MSLane *, ComparatorNumericalIdLess>>, keyed by numerical id
     pub myMinLengthGeometryFactor: f64,
-    pub myStopWatch: Vec<Unmapped /* StopWatch<std::chrono::nanoseconds> */>,
+    pub myStopWatch: Vec<MSEdgeControl_StopWatch>,
 }
 
 impl MSEdgeControl {
@@ -86,7 +99,43 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn new(edges: &Vec<Ptr<MSEdge>>) -> Self {
-        todo!("port MSEdgeControl::MSEdgeControl")
+        // shortcut: worker thread pool (THREAD_POOL / HAVE_FOX) is not ported, all lane work runs serially, upgrade when ThreadPool lands
+        let mut myLanes: MSEdgeControl_LaneUsageVector = (0..MSLane::dict_size())
+            .map(|_| MSEdgeControl_LaneUsage { lane: Ptr::null(), amActive: false, haveNeighbors: false })
+            .collect();
+        let mut myMinLengthGeometryFactor: f64 = 1.;
+        let mut myLastLaneChange: Vec<SUMOTime> = vec![0; edges.len()];
+        // build the usage definitions for lanes
+        for edge in edges.iter() {
+            let lanes = edge.get_lanes();
+            if !edge.has_lane_changer() {
+                let pos = lanes[0].get_numerical_id() as usize;
+                myLanes[pos].lane = lanes[0];
+                myLanes[pos].amActive = false;
+                myLanes[pos].haveNeighbors = false;
+                myMinLengthGeometryFactor = min2(edge.get_length_geometry_factor(), myMinLengthGeometryFactor);
+            } else {
+                for l in lanes.iter() {
+                    let pos = l.get_numerical_id() as usize;
+                    myLanes[pos].lane = *l;
+                    myLanes[pos].amActive = false;
+                    myLanes[pos].haveNeighbors = true;
+                    myMinLengthGeometryFactor = min2(l.get_length_geometry_factor_2(), myMinLengthGeometryFactor);
+                }
+                myLastLaneChange[edge.get_numerical_id() as usize] = -1;
+            }
+        }
+        MSEdgeControl {
+            myEdges: edges.clone(),
+            myLanes,
+            myActiveLanes: VecDeque::new(),
+            myWithVehicles2Integrate: Vec::new(),
+            myChangedStateLanes: BTreeMap::new(),
+            myLastLaneChange,
+            myInactiveCheckCollisions: BTreeMap::new(),
+            myMinLengthGeometryFactor,
+            myStopWatch: (0..3).map(|_| MSEdgeControl_StopWatch::default()).collect(),
+        }
     }
 
     /// C++: `void MSEdgeControl::~MSEdgeControl()`
@@ -94,7 +143,7 @@ impl MSEdgeControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSEdgeControl::~MSEdgeControl")
+        // shortcut: thread pool is not ported (work runs serially), so there are no workers to clear; PARALLEL_STOPWATCH output is compiled out in the default build
     }
 
     /// C++: `void MSEdgeControl::patchActiveLanes()`
@@ -118,7 +167,21 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn patch_active_lanes(&mut self) {
-        todo!("port MSEdgeControl::patchActiveLanes")
+        let changed: Vec<Ptr<MSLane>> = self.myChangedStateLanes.values().copied().collect();
+        for lane in changed {
+            let lu = &mut self.myLanes[lane.get_numerical_id() as usize];
+            // if the lane was inactive but is now...
+            if !lu.amActive && lane.get_vehicle_number() > 0 {
+                // ... add to active lanes and mark as such
+                if lu.haveNeighbors {
+                    self.myActiveLanes.push_front(lane);
+                } else {
+                    self.myActiveLanes.push_back(lane);
+                }
+                lu.amActive = true;
+            }
+        }
+        self.myChangedStateLanes.clear();
     }
 
     /// C++: `void MSEdgeControl::planMovements(SUMOTime)`
@@ -175,7 +238,19 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn plan_movements(&mut self, t: SUMOTime) {
-        todo!("port MSEdgeControl::planMovements")
+        // shortcut: multi-threaded planning (gNumSimThreads > 1) is not ported, lanes are planned serially, upgrade when ThreadPool lands
+        let mut i = 0;
+        while i < self.myActiveLanes.len() {
+            let lane = self.myActiveLanes[i];
+            let vehNum = lane.get_vehicle_number();
+            if vehNum == 0 {
+                self.myLanes[lane.get_numerical_id() as usize].amActive = false;
+                self.myActiveLanes.remove(i);
+            } else {
+                lane.m().plan_movements(t);
+                i += 1;
+            }
+        }
     }
 
     /// C++: `void MSEdgeControl::setJunctionApproaches()`
@@ -188,7 +263,9 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn set_junction_approaches(&mut self) {
-        todo!("port MSEdgeControl::setJunctionApproaches")
+        for lane in self.myActiveLanes.iter() {
+            lane.set_junction_approaches();
+        }
     }
 
     /// C++: `void MSEdgeControl::executeMovements(SUMOTime)`
@@ -268,7 +345,45 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn execute_movements(&mut self, t: SUMOTime) {
-        todo!("port MSEdgeControl::executeMovements")
+        let wasActive: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
+        self.myWithVehicles2Integrate.clear();
+        // shortcut: multi-threaded execution (gNumSimThreads > 1) is not ported, lanes execute serially, upgrade when ThreadPool lands
+        let mut i = 0;
+        while i < self.myActiveLanes.len() {
+            let lane = self.myActiveLanes[i];
+            if lane.get_vehicle_number() > 0 {
+                lane.m().execute_movements(t);
+            }
+            if lane.get_vehicle_number() == 0 {
+                self.myLanes[lane.get_numerical_id() as usize].amActive = false;
+                self.myActiveLanes.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        for lane in wasActive {
+            lane.m().update_length_sum();
+        }
+        // arrived vehicles should not influence lane changing
+        MSNet::get_instance().m().get_vehicle_control().remove_pending();
+        // determinism: lane ids are unique, so the id sort has no ties
+        self.myWithVehicles2Integrate.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+        let toIntegrate = self.myWithVehicles2Integrate.clone();
+        for lane in toIntegrate {
+            let wasInactive = lane.get_vehicle_number() == 0;
+            lane.m().integrate_new_vehicles();
+            if wasInactive && lane.get_vehicle_number() > 0 {
+                let lu = &mut self.myLanes[lane.get_numerical_id() as usize];
+                if !lu.amActive {
+                    if lu.haveNeighbors {
+                        self.myActiveLanes.push_front(lane);
+                    } else {
+                        self.myActiveLanes.push_back(lane);
+                    }
+                    lu.amActive = true;
+                }
+            }
+        }
     }
 
     /// C++: `void MSEdgeControl::needsVehicleIntegration(MSLane *const)`
@@ -277,7 +392,7 @@ impl MSEdgeControl {
     //     }
     #[allow(unused_variables)]
     pub fn needs_vehicle_integration(&mut self, l: Ptr<MSLane>) {
-        todo!("port MSEdgeControl::needsVehicleIntegration")
+        self.myWithVehicles2Integrate.push(l);
     }
 
     /// C++: `void MSEdgeControl::changeLanes(const SUMOTime)`
@@ -350,7 +465,36 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn change_lanes(&mut self, t: SUMOTime) {
-        todo!("port MSEdgeControl::changeLanes")
+        let mut toAdd: Vec<Ptr<MSLane>> = Vec::new();
+        // shortcut: MSGlobals::gComputeLC is not ported (ms_globals.rs has no statics), the flag is never set, upgrade when MSGlobals statics land
+        // shortcut: multi-threaded lane changing (gNumSimThreads > 1) is not ported, edges change lanes serially, upgrade when ThreadPool lands
+        let lateralResolution = options_cont::get_float("lateral-resolution"); // MSGlobals::gLateralResolution
+        let active: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
+        for l in active {
+            if self.myLanes[l.get_numerical_id() as usize].haveNeighbors {
+                let edge = l.get_edge();
+                let eid = edge.get_numerical_id() as usize;
+                if self.myLastLaneChange[eid] != t {
+                    self.myLastLaneChange[eid] = t;
+                    edge.change_lanes(t);
+                    for lane in edge.get_lanes().clone() {
+                        let lu = &mut self.myLanes[lane.get_numerical_id() as usize];
+                        if lane.get_vehicle_number() > 0 && !lu.amActive {
+                            toAdd.push(lane);
+                            lu.amActive = true;
+                        }
+                        if lateralResolution > 0. {
+                            lane.m().sort_maneuver_reservations();
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        for lane in toAdd {
+            self.myActiveLanes.push_front(lane);
+        }
     }
 
     /// C++: `void MSEdgeControl::detectCollisions(SUMOTime, const std::string &)`
@@ -373,7 +517,20 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn detect_collisions(&mut self, timestep: SUMOTime, stage: &str) {
-        todo!("port MSEdgeControl::detectCollisions")
+        // Detections is made by the edge's lanes, therefore hand over.
+        let active: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
+        for lane in active {
+            if lane.needs_collision_check() {
+                lane.m().detect_collisions(timestep, stage);
+            }
+        }
+        if !self.myInactiveCheckCollisions.is_empty() {
+            let inactive: Vec<Ptr<MSLane>> = self.myInactiveCheckCollisions.values().copied().collect();
+            for lane in inactive {
+                lane.m().detect_collisions(timestep, stage);
+            }
+            self.myInactiveCheckCollisions.clear();
+        }
     }
 
     /// C++: `const MSEdgeVector & MSEdgeControl::getEdges() const` [const]
@@ -383,7 +540,7 @@ impl MSEdgeControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &MSEdgeVector {
-        todo!("port MSEdgeControl::getEdges")
+        &self.myEdges
     }
 
     /// C++: `void MSEdgeControl::gotActive(MSLane *)`
@@ -394,7 +551,7 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn got_active(&mut self, l: Ptr<MSLane>) {
-        todo!("port MSEdgeControl::gotActive")
+        self.myChangedStateLanes.insert(l.get_numerical_id(), l);
     }
 
     /// C++: `void MSEdgeControl::checkCollisionForInactive(MSLane *)`
@@ -405,7 +562,7 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn check_collision_for_inactive(&mut self, l: Ptr<MSLane>) {
-        todo!("port MSEdgeControl::checkCollisionForInactive")
+        self.myInactiveCheckCollisions.insert(l.get_numerical_id(), l);
     }
 
     /// C++: `void MSEdgeControl::setAdditionalRestrictions()`
@@ -422,7 +579,13 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn set_additional_restrictions(&mut self) {
-        todo!("port MSEdgeControl::setAdditionalRestrictions")
+        for e in self.myEdges.iter() {
+            e.m().infer_edge_type();
+            let lanes = e.get_lanes();
+            for j in lanes.iter() {
+                j.m().init_restrictions();
+            }
+        }
     }
 
     /// C++: `void MSEdgeControl::buildMesoSegments()`
@@ -438,7 +601,7 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn build_meso_segments(&mut self) {
-        todo!("port MSEdgeControl::buildMesoSegments")
+        // shortcut: MSGlobals::gMesoNet (MELoop::buildSegmentsFor) is not ported, meso segments are not built, upgrade when mesosim lands
     }
 
     /// C++: `void MSEdgeControl::saveState(OutputDevice &)`
@@ -451,7 +614,10 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSEdgeControl::saveState")
+        out.open_tag_id(SUMO_TAG_EDGECONTROL);
+        let ids: Vec<String> = self.myActiveLanes.iter().map(|l| l.get_id().to_string()).collect();
+        out.write_attr(SUMO_ATTR_LANES, &ids);
+        out.close_tag("");
     }
 
     /// C++: `void MSEdgeControl::setActiveLanes(std::list<MSLane *>)`
@@ -465,7 +631,10 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn set_active_lanes(&mut self, lanes: VecDeque<Ptr<MSLane>>) {
-        todo!("port MSEdgeControl::setActiveLanes")
+        self.myActiveLanes = lanes;
+        for lane in self.myActiveLanes.iter() {
+            self.myLanes[lane.get_numerical_id() as usize].amActive = true;
+        }
     }
 
     /// C++: `void MSEdgeControl::MSEdgeControl(const MSEdgeControl &)` [private]
@@ -473,7 +642,7 @@ impl MSEdgeControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSEdgeControl) -> Self {
-        todo!("port MSEdgeControl::MSEdgeControl")
+        panic!("MSEdgeControl copy constructor is invalidated")
     }
 
     /// C++: `MSEdgeControl & MSEdgeControl::operator=(const MSEdgeControl &)` [private]
@@ -481,7 +650,7 @@ impl MSEdgeControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSEdgeControl) -> &mut MSEdgeControl {
-        todo!("port MSEdgeControl::operator=")
+        panic!("MSEdgeControl assignment operator is invalidated")
     }
 
 }
