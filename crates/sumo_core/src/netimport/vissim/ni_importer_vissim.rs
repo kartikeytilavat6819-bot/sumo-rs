@@ -1809,7 +1809,7 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     : myVissimParent(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port VissimSingleTypeParser::VissimSingleTypeParser")
+        Self { myVissimParent: Ptr::from_mut(parent) }
     }
 
     /// C++: `void VissimSingleTypeParser::~VissimSingleTypeParser()` [virtual]
@@ -1817,7 +1817,7 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port VissimSingleTypeParser::~VissimSingleTypeParser")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool VissimSingleTypeParser::parse(std::istream &)` [virtual, pure virtual]
@@ -2047,7 +2047,7 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_Vissim_VissimSingleTypeParser) -> &mut NIImporter_Vissim_VissimSingleTypeParser {
-        todo!("port VissimSingleTypeParser::operator=")
+        panic!("VissimSingleTypeParser assignment operator is private and invalidated in C++")
     }
 
 }
