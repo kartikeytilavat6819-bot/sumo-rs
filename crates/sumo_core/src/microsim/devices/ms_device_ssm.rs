@@ -11,6 +11,8 @@ use utils::common::file_helpers::check_for_relativity;
 use utils::common::util_exceptions::ProcessError;
 use utils::options::options_cont::{get_bool, get_float, get_string, is_default, is_set};
 use MSDevice_SSM_SSMParameterWarning::*;
+use MSDevice_SSM_EncounterType::*;
+use utils::tlf;
 
 /// C++ `#define DEFAULT_EXTRA_TIME 5.` (MSDevice_SSM.cpp)
 const DEFAULT_EXTRA_TIME: f64 = 5.;
