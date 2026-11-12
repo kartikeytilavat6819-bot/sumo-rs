@@ -3660,7 +3660,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn needs_lane_specific_output(&self) -> bool {
-        todo!("port NBEdge::needsLaneSpecificOutput")
+        self.has_lane_specific_permissions()
+            || self.has_lane_specific_speed()
+            || self.has_lane_specific_width()
+            || self.has_lane_specific_type()
+            || self.has_lane_specific_end_offset()
+            || self.has_lane_specific_stop_offsets()
+            || self.has_accel_lane()
+            || self.has_custom_lane_shape()
+            || self.has_lane_params()
+            || self.prohibits_changing()
+            || (!self.myLanes.is_empty() && self.myLanes.last().unwrap().oppositeID != "")
     }
 
     /// C++: `bool NBEdge::hasPermissions() const` [const]
@@ -3676,7 +3686,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_permissions(&self) -> bool {
-        todo!("port NBEdge::hasPermissions")
+        for i in self.myLanes.iter() {
+            if i.permissions != SVC_ALL {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificPermissions() const` [const]
@@ -3695,7 +3710,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_permissions(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificPermissions")
+        let mut i = self.myLanes.iter();
+        let firstLanePermissions = match i.next() {
+            Some(l) => l.permissions,
+            None => return false,
+        };
+        for l in i {
+            if l.permissions != firstLanePermissions {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificSpeed() const` [const]
@@ -3711,7 +3736,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_speed(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificSpeed")
+        for i in self.myLanes.iter() {
+            if i.speed != self.get_speed() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificFriction() const` [const]
@@ -3727,7 +3757,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_friction(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificFriction")
+        for i in self.myLanes.iter() {
+            if i.friction != self.myLanes[0].friction {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificWidth() const` [const]
@@ -3743,7 +3778,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_width(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificWidth")
+        for i in self.myLanes.iter() {
+            if i.width != self.myLanes[0].width {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificType() const` [const]
@@ -3759,7 +3799,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_type(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificType")
+        for i in self.myLanes.iter() {
+            if i.type_ != self.myLanes[0].type_ {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificEndOffset() const` [const]
@@ -3775,7 +3820,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_end_offset(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificEndOffset")
+        for i in self.myLanes.iter() {
+            if i.endOffset != self.myLanes[0].endOffset {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneSpecificStopOffsets() const` [const]
@@ -3793,7 +3843,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_specific_stop_offsets(&self) -> bool {
-        todo!("port NBEdge::hasLaneSpecificStopOffsets")
+        for lane in self.myLanes.iter() {
+            if lane.laneStopOffset.is_defined() && (self.myEdgeStopOffset.is_defined() || self.myEdgeStopOffset != lane.laneStopOffset) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasAccelLane() const` [const]
@@ -3809,7 +3864,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_accel_lane(&self) -> bool {
-        todo!("port NBEdge::hasAccelLane")
+        for i in self.myLanes.iter() {
+            if i.accelRamp {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasCustomLaneShape() const` [const]
@@ -3825,7 +3885,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_custom_lane_shape(&self) -> bool {
-        todo!("port NBEdge::hasCustomLaneShape")
+        for i in self.myLanes.iter() {
+            if i.customShape.size() > 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::hasLaneParams() const` [const]
@@ -3841,7 +3906,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_lane_params(&self) -> bool {
-        todo!("port NBEdge::hasLaneParams")
+        for i in self.myLanes.iter() {
+            if i.get_parameters_map().len() > 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::prohibitsChanging() const` [const]
@@ -3857,7 +3927,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn prohibits_changing(&self) -> bool {
-        todo!("port NBEdge::prohibitsChanging")
+        for lane in self.myLanes.iter() {
+            if lane.changeLeft != SVC_ALL || lane.changeRight != SVC_ALL {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBEdge::computeEdge2Edges(bool)`
