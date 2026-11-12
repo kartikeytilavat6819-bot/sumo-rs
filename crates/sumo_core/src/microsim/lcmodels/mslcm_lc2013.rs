@@ -37,6 +37,33 @@ fn new_info(info: MSLCM_LC2013_Info) -> Ptr<()> {
     Ptr::from_raw(Box::into_raw(Box::new(info)) as *mut ())
 }
 
+/// C++ `MSVehicle::LaneQ()` default-constructed value
+fn lane_q_default() -> MSVehicle_LaneQ {
+    MSVehicle_LaneQ {
+        lane: Ptr::null(),
+        length: 0.,
+        currentLength: 0.,
+        occupation: 0.,
+        nextOccupation: 0.,
+        bestLaneOffset: 0,
+        allowsContinuation: false,
+        bestContinuations: Vec::new(),
+    }
+}
+/// C++ copy of a `MSVehicle::LaneQ` (the struct is not Clone in the port)
+fn lane_q_copy(q: &MSVehicle_LaneQ) -> MSVehicle_LaneQ {
+    MSVehicle_LaneQ {
+        lane: q.lane,
+        length: q.length,
+        currentLength: q.currentLength,
+        occupation: q.occupation,
+        nextOccupation: q.nextOccupation,
+        bestLaneOffset: q.bestLaneOffset,
+        allowsContinuation: q.allowsContinuation,
+        bestContinuations: q.bestContinuations.clone(),
+    }
+}
+
 /// C++ `toString(SumoXMLAttr)`: the attribute name
 fn attr_name(a: SumoXMLAttr) -> &'static str {
     utils::xml::sumo_xml_definitions::Attrs.get_string(a)
@@ -1972,7 +1999,465 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn wants_change_2(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<MSVehicle>, firstBlocked: Ptr<MSVehicle>) -> i32 {
-        todo!("port MSLCM_LC2013::_wantsChange")
+        let currentTime: SUMOTime = MSNet::get_instance().get_current_time_step();
+        // compute bestLaneOffset
+        let mut curr = lane_q_default();
+        let mut neigh = lane_q_default();
+        let mut best = lane_q_default();
+        let mut bestLaneOffset: i32 = 0;
+        // currentDist is the distance that the vehicle can go on its route without having to
+        // change lanes from the current lane. neighDist as currentDist for the considered target lane (i.e., neigh)
+        let mut currentDist: f64 = 0.;
+        let mut neighDist: f64 = 0.;
+        let mut currIdx: usize = 0;
+        let checkOpposite = !std::ptr::eq(neighLane.get_edge() as *const MSEdge, self.myVehicle.get_lane().get_edge() as *const MSEdge);
+        let mut prebLane: Ptr<MSLane> = self.myVehicle.get_lane();
+        if prebLane.get_edge().is_internal() {
+            // internal edges are not kept inside the bestLanes structure
+            if self.is_opposite() {
+                prebLane = prebLane.get_normal_predecessor_lane();
+            } else {
+                prebLane = prebLane.get_link_cont()[0].get_lane();
+            }
+        }
+        // special case: vehicle considers changing to the opposite direction edge
+        let prebOffset = laneOffset;
+        for p in 0..(preb.len() as i32) {
+            if preb[p as usize].lane == prebLane && p + laneOffset >= 0 {
+                curr = lane_q_copy(&preb[p as usize]);
+                neigh = lane_q_copy(&preb[(p + prebOffset) as usize]);
+                currentDist = curr.length;
+                neighDist = neigh.length;
+                bestLaneOffset = curr.bestLaneOffset;
+                if bestLaneOffset == 0 && preb[(p + prebOffset) as usize].bestLaneOffset == 0 && !checkOpposite {
+                    bestLaneOffset = prebOffset;
+                }
+                best = lane_q_copy(&preb[(p + bestLaneOffset) as usize]);
+                currIdx = p as usize;
+                break;
+            }
+        }
+
+        // direction specific constants
+        let right = laneOffset == -1;
+        let posOnLane = self.get_forward_pos();
+        let mut driveToNextStop = -f64::MAX;
+        if self.myVehicle.next_stop_dist() < f64::MAX
+            && std::ptr::eq(self.myVehicle.get_next_stop().lane.get_edge() as *const MSEdge, self.myVehicle.get_lane().get_edge() as *const MSEdge) {
+            // vehicle can always drive up to stop distance
+            // @note: nextStopDist was compute before the vehicle moved
+            driveToNextStop = self.myVehicle.next_stop_dist();
+            let stopPos = posOnLane + self.myVehicle.next_stop_dist() - self.myVehicle.get_last_step_dist();
+            currentDist = max2(currentDist, stopPos);
+            neighDist = max2(neighDist, stopPos);
+        }
+        let lca = if right { LCA_RIGHT } else { LCA_LEFT };
+        let myLca = if right { LCA_MRIGHT } else { LCA_MLEFT };
+        let lcaCounter = if right { LCA_LEFT } else { LCA_RIGHT };
+        let mut changeToBest = (right && bestLaneOffset < 0) || (!right && bestLaneOffset > 0);
+        // keep information about being a leader/follower
+        let mut ret: i32 = self.myOwnState & (0xffff0000u32 as i32);
+        let mut req: i32 = 0; // the request to change or stay
+
+        ret = self.slow_down_for_blocked(lastBlocked, ret);
+        if lastBlocked != firstBlocked {
+            ret = self.slow_down_for_blocked(firstBlocked, ret);
+        }
+
+        // we do not want the lookahead distance to change all the time so we let it decay slowly
+        // (in contrast, growth is applied instantaneously)
+        if self.myVehicle.get_speed() > self.myLookAheadSpeed {
+            self.myLookAheadSpeed = self.myVehicle.get_speed();
+        } else {
+            // memory decay factor for this action step
+            let memoryFactor = 1. - (1. - LOOK_AHEAD_SPEED_MEMORY) * self.myVehicle.get_action_step_length_secs();
+            debug_assert!(memoryFactor > 0.);
+            self.myLookAheadSpeed = max2(LOOK_AHEAD_MIN_SPEED,
+                memoryFactor * self.myLookAheadSpeed + (1. - memoryFactor) * self.myVehicle.get_speed());
+        }
+        let mut laDist = self.myLookAheadSpeed * LOOK_FORWARD * self.myStrategicParam * (if right { 1. } else { self.myLookaheadLeft });
+        laDist += self.myVehicle.get_vehicle_type().get_length_with_gap() * 2.;
+        let hasStoppedLeader = !leader.0.is_null() && leader.0.is_stopped() && leader.1 < (currentDist - posOnLane);
+        let hasBidiLeader = !self.myVehicle.get_lane().get_bidi_lane().is_null() && MSLCHelper::is_bidi_leader(leader.0, &curr.bestContinuations);
+        let hasBidiNeighLeader = !neighLane.get_bidi_lane().is_null() && MSLCHelper::is_bidi_leader(neighLead.0, &neigh.bestContinuations);
+        let hasJunctionLeader = !leader.0.is_null() && leader.0 == neighLead.0;
+
+        if bestLaneOffset == 0 && hasBidiLeader {
+            // getting out of the way is enough to clear the blockage
+            laDist = 0.;
+        } else if bestLaneOffset == 0 && hasStoppedLeader {
+            // react to a stopped leader on the current lane
+            // The value of laDist is doubled below for the check whether the lc-maneuver can be taken out
+            // on the remaining distance (because the vehicle has to change back and forth). Therefore multiply with 0.5.
+            laDist = 0.5 * (self.myVehicle.get_vehicle_type().get_length_with_gap()
+                + leader.0.get_vehicle_type().get_length_with_gap()
+                + leader.1);
+        } else if bestLaneOffset == laneOffset && !neighLead.0.is_null() && (neighLead.0.is_stopped() || hasBidiNeighLeader) && neighLead.1 < (currentDist - posOnLane) {
+            // react to a stopped leader on the target lane (if it is the bestLane)
+            if self.is_opposite() {
+                // always allow changing back
+                laDist = self.myVehicle.get_vehicle_type().get_length_with_gap()
+                    + neighLead.0.get_vehicle_type().get_length_with_gap()
+                    + neighLead.1;
+            } else if !hasStoppedLeader &&
+                ((neighLead.1 + self.myVehicle.get_vehicle_type().get_length_with_gap() + neighLead.0.get_vehicle_type().get_length_with_gap()) < (currentDist - posOnLane)
+                    || hasBidiNeighLeader) {
+                // do not change to the target lane until passing the stopped vehicle
+                // (unless the vehicle blocks our intended stopping position, then we have to wait anyway)
+                changeToBest = false;
+            }
+        }
+        if self.myStrategicParam < 0. {
+            laDist = -1e3; // never perform strategic change
+        }
+
+        // Next we assign to roundabout edges a larger distance than to normal edges
+        // in order to decrease sense of lc urgency and induce higher usage of inner roundabout lanes.
+        let roundaboutBonus = MSLCHelper::get_roundabout_dist_bonus(&*self.myVehicle, self.myRoundaboutBonus, &curr, &neigh, &best);
+        currentDist += roundaboutBonus;
+        neighDist += roundaboutBonus;
+
+        let usableDist = max2(currentDist - posOnLane - best.occupation * JAM_FACTOR, driveToNextStop);
+        let maxJam = max2(preb[(currIdx as i32 + prebOffset) as usize].occupation, preb[currIdx].occupation);
+        let vMax = self.myVehicle.get_lane().get_vehicle_max_speed(traffic_object_of(self.myVehicle));
+        let neighVMax = neighLane.get_vehicle_max_speed(traffic_object_of(self.myVehicle));
+        // upper bound which will be restricted successively
+        let mut thisLaneVSafe = vMax;
+        let checkOverTakeRight = self.avoid_overtake_right(neighLead.0, true);
+
+        let mut neighLeftPlace = max2(0.0, neighDist - posOnLane - maxJam);
+        if !neighLead.0.is_null() && neighLead.0.is_stopped() {
+            neighLeftPlace = min2(neighLeftPlace, neighLead.1);
+        }
+
+        let mut changeLeftToAvoidOvertakeRight = false;
+        if changeToBest && bestLaneOffset == curr.bestLaneOffset
+            && self.current_dist_disallows(usableDist, bestLaneOffset, laDist) {
+            /// @brief we urgently need to change lanes to follow our route
+            ret = ret | lca | LCA_STRATEGIC | LCA_URGENT;
+        } else {
+            // VARIANT_20 (noOvertakeRight)
+            if !neighLead.0.is_null() && checkOverTakeRight && !right {
+                // check for slower leader on the left. we should not overtake but
+                // rather move left ourselves (unless congested)
+                let nv = neighLead.0;
+                let mut deltaV = 0.;
+                let mut vSafe = 0.;
+                if self.can_overtake_right(nv, neighLead.1, vMax - neighLane.get_vehicle_max_speed(traffic_object_of(nv)), HELP_OVERTAKE, &mut vSafe, &mut deltaV) {
+                    if self.mySpeedGainProbabilityLeft < self.myChangeProbThresholdLeft {
+                        vSafe = max2(vSafe, nv.get_speed());
+                    }
+                    thisLaneVSafe = min2(thisLaneVSafe, vSafe);
+                    self.add_lc_speed_advice(vSafe, myLca);
+                    // only generate impulse for overtaking left shortly before braking would be necessary
+                    let deltaGapFuture = deltaV * 8.;
+                    let vSafeFuture = self.myVehicle.get_car_follow_model().follow_speed(
+                        self.myVehicle, self.myVehicle.get_speed(), neighLead.1 - deltaGapFuture, nv.get_speed(), nv.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT);
+                    if vSafeFuture < vSafe {
+                        let relativeGain = deltaV / max2(vMax, RELGAIN_NORMALIZATION_MIN_SPEED);
+                        self.mySpeedGainProbabilityLeft += (self.myVehicle.get_action_step_length_secs() * relativeGain * HYST_PRECISION) as i64;
+                        changeLeftToAvoidOvertakeRight = true;
+                    }
+                }
+            }
+            let currFreeUntilNeighEnd = leader.0.is_null() || neighDist - posOnLane <= leader.1;
+            let overtakeDist = if leader.0.is_null() || hasBidiLeader { -1. } else {
+                leader.1 + self.myVehicle.get_vehicle_type().get_length() + leader.0.get_vehicle_type().get_length_with_gap() };
+            let overtakeDist2 = if neighLead.0.is_null() || !neighLead.0.is_stopped() { -1. } else {
+                neighLead.1 + self.myVehicle.get_vehicle_type().get_length() + neighLead.0.get_vehicle_type().get_length_with_gap() };
+            if !leader.0.is_null() && (leader.0.is_stopped() || hasBidiLeader) && leader.1 < REACT_TO_STOPPED_DISTANCE
+                // current destination leaves enough space to overtake the leader
+                && min2(neighDist, currentDist) - posOnLane > overtakeDist
+                // maybe do not overtake on the right at high speed
+                && (!checkOverTakeRight || !right)
+                && self.myStrategicParam >= 0.
+                && (neighLead.0.is_null() || !neighLead.0.is_stopped()
+                    // neighboring stopped vehicle leaves enough space to overtake leader
+                    || neighLead.1 > overtakeDist
+                    // if we cannot pass neighLead before reaching leader we must find another free lane
+                    || (overtakeDist2 > leader.1 && self.has_free_lane(laneOffset, neighLead))) {
+                // avoid becoming stuck behind a stopped leader
+                currentDist = self.myVehicle.get_position_on_lane() + leader.1;
+                ret = ret | lca | LCA_STRATEGIC | LCA_URGENT;
+            } else if !changeToBest && self.current_dist_disallows(neighLeftPlace, bestLaneOffset.abs() + 2, laDist) && !hasBidiLeader {
+                // the opposite lane-changing direction should be done than the one examined herein
+                // this rule prevents the vehicle from moving in opposite direction of the best lane
+                //  unless the way till the end where the vehicle has to be on the best lane
+                //  is long enough
+                ret = ret | LCA_STAY | LCA_STRATEGIC;
+            } else if bestLaneOffset == 0 && (neighLeftPlace * 2. < laDist) {
+                // the current lane is the best and a lane-changing would cause a situation
+                //  of which we assume we will not be able to return to the lane we have to be on.
+                ret = ret | LCA_STAY | LCA_STRATEGIC;
+            } else if bestLaneOffset == 0
+                && (leader.0.is_null() || !leader.0.is_stopped())
+                && !hasBidiLeader
+                && neigh.bestContinuations.last().unwrap().get_link_cont().len() != 0
+                && roundaboutBonus == 0.
+                && !checkOpposite
+                && ((self.myStrategicParam >= 0. && neighDist < TURN_LANE_DIST)
+                    // lane changing cannot possibly help
+                    || (self.myStrategicParam < 0. && currFreeUntilNeighEnd))
+            {
+                // VARIANT_21 (stayOnBest)
+                // we do not want to leave the best lane for a lane which leads elsewhere
+                // unless our leader is stopped or we are approaching a roundabout
+                ret = ret | LCA_STAY | LCA_STRATEGIC;
+            }
+        }
+        // check for overriding TraCI requests
+        // store state before canceling
+        *self.get_canceled_state(laneOffset) |= ret | blocked;
+        ret = self.myVehicle.m().influence_change_decision(ret);
+        if (ret & lcaCounter) != 0 {
+            // we are not interested in traci requests for the opposite direction here
+            ret &= !(LCA_TRACI | lcaCounter | LCA_URGENT);
+        }
+
+        if (ret & LCA_STAY) != 0 {
+            // remove TraCI flags because it should not be included in "state-without-traci"
+            ret = *self.get_canceled_state(laneOffset);
+            return ret;
+        }
+        if (ret & LCA_URGENT) != 0 {
+            // prepare urgent lane change maneuver
+            // save the left space
+            self.myLeftSpace = currentDist - posOnLane;
+            if changeToBest && bestLaneOffset.abs() > 1 && self.myVehicle.get_num_remaining_edges() > 1 {
+                // there might be a vehicle which needs to counter-lane-change one lane further and we cannot see it yet
+                self.myLeadingBlockerLength = max2(self.get_extra_reservation(bestLaneOffset, neighDist - currentDist), self.myLeadingBlockerLength);
+            }
+
+            // letting vehicles merge in at the end of the lane in case of counter-lane change, step#1
+            //   if there is a leader and he wants to change to the opposite direction
+            let canContinue = curr.bestContinuations.len() > 1;
+            let mut canReserve = MSLCHelper::update_blocker_length(&*self.myVehicle, neighLead.0, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+            if firstBlocked != neighLead.0 {
+                canReserve &= MSLCHelper::update_blocker_length(&*self.myVehicle, firstBlocked, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+            }
+            if !canReserve && !self.is_opposite() {
+                // we have a low-priority relief connection
+                self.myDontBrake = canContinue;
+            }
+
+            let remainingLanes = max2(1., bestLaneOffset.abs() as f64);
+            let urgency = if self.is_opposite() { OPPOSITE_URGENCY } else { URGENCY };
+            let remainingSeconds = if (ret & LCA_TRACI) == 0 {
+                max2(ts() / 1000., self.myLeftSpace / max2(self.myLookAheadSpeed, utils::geom::NUMERICAL_EPS) / remainingLanes / urgency)
+            } else {
+                self.myVehicle.m().get_influencer().change_request_remaining_seconds(currentTime)
+            };
+            if !hasBidiNeighLeader && !hasJunctionLeader {
+                let plannedSpeed = self.inform_leader(msgPass, blocked, myLca, neighLead, remainingSeconds);
+                // NOTE: for the  ballistic update case negative speeds may indicate a stop request,
+                //       while informLeader returns -1 in that case. Refs. #2577
+                if plannedSpeed >= 0. || (!MSGlobals::semi_implicit_euler_update() && plannedSpeed != -1.) {
+                    // maybe we need to deal with a blocking follower
+                    let hasBidiNeighFollower = !neighLane.get_bidi_lane().is_null() && MSLCHelper::is_bidi_follower(self.myVehicle, neighFollow.0);
+                    if !hasBidiNeighFollower {
+                        self.inform_follower(msgPass, blocked, myLca, neighFollow, remainingSeconds, plannedSpeed);
+                    }
+                }
+            }
+
+            // remove TraCI flags because it should not be included in "state-without-traci"
+            ret = *self.get_canceled_state(laneOffset);
+            return ret;
+        }
+
+        // we wish to anticipate future speeds. This is difficult when the leading
+        // vehicles are still accelerating so we resort to comparing speeds for the near future (1s) in this case
+        let acceleratingLeader = (!neighLead.0.is_null() && neighLead.0.get_acceleration() > 0.)
+            || (!leader.0.is_null() && leader.0.get_acceleration() > 0.);
+        let mut neighLaneVSafe = min2(neighVMax, self.anticipate_follow_speed(neighLead, neighDist, neighVMax, acceleratingLeader));
+        thisLaneVSafe = min2(thisLaneVSafe, self.anticipate_follow_speed(leader, currentDist, vMax, acceleratingLeader));
+
+        // a high inconvenience prevents cooperative changes and the following things are inconvenient:
+        // - a desire to change in the opposite direction for speedGain
+        // - low anticipated speed on the neighboring lane
+        // - high occupancy on the neighboring lane while in a roundabout
+        let mut inconvenience: f64 = if laneOffset < 0 {
+            self.mySpeedGainProbabilityLeft as f64 / self.myChangeProbThresholdRight as f64
+        } else {
+            self.mySpeedGainProbabilityRight as f64 / self.myChangeProbThresholdLeft as f64
+        };
+
+        let relSpeedDiff = if thisLaneVSafe == 0. { 0. } else { (thisLaneVSafe - neighLaneVSafe) / max2(thisLaneVSafe, neighLaneVSafe) };
+        inconvenience = max2(relSpeedDiff, inconvenience);
+        inconvenience = min2(1.0, inconvenience);
+
+        let speedGainInconvenient = inconvenience > self.myCooperativeParam;
+        let neighOccupancyInconvenient = neigh.lane.get_brutto_occupancy() > curr.lane.get_brutto_occupancy();
+
+        // VARIANT_15
+        if roundaboutBonus > 0. {
+            // try to use the inner lanes of a roundabout to increase throughput
+            // unless we are approaching the exit
+            if lca == LCA_LEFT {
+                // if inconvenience is not too high, request collaborative change (currently only for ballistic update)
+                if MSGlobals::semi_implicit_euler_update() || !neighOccupancyInconvenient {
+                    req = ret | lca | LCA_COOPERATIVE;
+                }
+            } else {
+                // if inconvenience is not too high, request collaborative change (currently only for ballistic update)
+                if MSGlobals::semi_implicit_euler_update() || neighOccupancyInconvenient {
+                    req = ret | LCA_STAY | LCA_COOPERATIVE;
+                }
+            }
+            if !self.cancel_request(req, laneOffset) {
+                return ret | req;
+            }
+        }
+
+        // let's also regard the case where the vehicle is driving on a highway...
+        //  in this case, we do not want to get to the dead-end of an on-ramp
+        if right {
+            if bestLaneOffset == 0 && self.myVehicle.get_lane().get_speed_limit() > 80. / 3.6 && self.myLookAheadSpeed > SUMO_const_haltingSpeed {
+                req = ret | LCA_STAY | LCA_STRATEGIC;
+                if !self.cancel_request(req, laneOffset) {
+                    return ret | req;
+                }
+            }
+        }
+
+        // -------- make place on current lane if blocking follower
+        if self.am_blocking_follower_plus_nb()
+            && !speedGainInconvenient
+            && ((self.myOwnState & myLca) != 0) // VARIANT_6 : counterNoHelp
+            && (changeToBest || self.current_dist_allows(neighDist, bestLaneOffset.abs() + 1, laDist)) {
+            // VARIANT_2 (nbWhenChangingToHelp)
+            req = ret | lca | LCA_COOPERATIVE | LCA_URGENT;
+            if !self.cancel_request(req, laneOffset) {
+                if (blocked & LCA_BLOCKED_BY_LEFT_FOLLOWER) != 0 && !right && self.mySpeedGainProbabilityLeft > (self.mySpeedGainUrgency * HYST_PRECISION) as i64 {
+                    let nv = neighFollow.0;
+                    let hasBidiNeighFollower = !neighLane.get_bidi_lane().is_null() && MSLCHelper::is_bidi_follower(self.myVehicle, nv);
+                    if !nv.is_null() && !hasBidiNeighFollower && !MSLCHelper::unwilling_to_help(&*self.myVehicle, self.myVehicle.get_speed(), &*nv) {
+                        let helpSpeed = max2(nv.get_car_follow_model().min_next_speed(nv.get_speed(), nv), self.myVehicle.get_speed() - 1.);
+                        msgPass.inform_neigh_follower(new_info((helpSpeed, myLca | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                    }
+                }
+                return ret | req;
+            }
+        }
+
+        if neighLane.get_edge().get_persons().len() > 0 {
+            // react to pedestrians
+            self.adapt_speed_to_pedestrians(self.myVehicle.get_lane(), &mut thisLaneVSafe);
+            self.adapt_speed_to_pedestrians(Ptr::new(neighLane), &mut neighLaneVSafe);
+        }
+
+        let relativeGain = (neighLaneVSafe - thisLaneVSafe) / max2(neighLaneVSafe, RELGAIN_NORMALIZATION_MIN_SPEED);
+
+        if right {
+            // ONLY FOR CHANGING TO THE RIGHT
+            if thisLaneVSafe - 5. / 3.6 > neighLaneVSafe {
+                // ok, the current lane is faster than the right one...
+                self.mySpeedGainProbabilityRight = (self.mySpeedGainProbabilityRight as f64 * 0.5f64.powf(self.myVehicle.get_action_step_length_secs())) as i64;
+            } else {
+                // ok, the current lane is not (much) faster than the right one
+                self.mySpeedGainProbabilityRight += (self.myVehicle.get_action_step_length_secs() * relativeGain * HYST_PRECISION) as i64;
+
+                // honor the obligation to keep right (Rechtsfahrgebot)
+                let roadSpeedFactor = vMax / self.myVehicle.get_lane().get_speed_limit(); // differs from speedFactor if vMax < speedLimit
+                let mut acceptanceTime: f64;
+                if self.myKeepRightAcceptanceTime == -1. {
+                    // legacy behavior: scale acceptance time with current speed and
+                    // use old hard-coded constant
+                    acceptanceTime = 7. * roadSpeedFactor * max2(1.0, self.myVehicle.get_speed());
+                } else {
+                    acceptanceTime = self.myKeepRightAcceptanceTime * roadSpeedFactor;
+                    if !follower.0.is_null() && follower.1 < 2. * follower.0.get_car_follow_model().brake_gap(follower.0.get_speed()) {
+                        // reduce acceptanceTime if the follower vehicle is faster or wants to drive faster
+                        if follower.0.get_speed() >= self.myVehicle.get_speed() {
+                            acceptanceTime *= max2(1.0, self.myVehicle.get_speed()) / max2(1.0, follower.0.get_speed());
+                            let fRSF = follower.0.get_lane().get_vehicle_max_speed(traffic_object_of(follower.0)) / follower.0.get_lane().get_speed_limit();
+                            if fRSF > roadSpeedFactor {
+                                acceptanceTime /= fRSF;
+                            }
+                        }
+                    }
+                }
+                let mut fullSpeedGap = max2(0., neighDist - self.myVehicle.get_car_follow_model().brake_gap(vMax));
+                let mut fullSpeedDrivingSeconds = min2(acceptanceTime, fullSpeedGap / vMax);
+                if !neighLead.0.is_null() && neighLead.0.get_speed() < vMax {
+                    fullSpeedGap = max2(0., min2(fullSpeedGap,
+                        neighLead.1 - self.myVehicle.get_car_follow_model().get_secure_gap(self.myVehicle, neighLead.0,
+                            vMax, neighLead.0.get_speed(), neighLead.0.get_car_follow_model().get_max_decel())));
+                    fullSpeedDrivingSeconds = min2(fullSpeedDrivingSeconds, fullSpeedGap / (vMax - neighLead.0.get_speed()));
+                }
+                // stay on the current lane if we cannot overtake a slow leader on the right
+                if checkOverTakeRight && !leader.0.is_null()
+                    && leader.0.get_lane().get_vehicle_max_speed(traffic_object_of(leader.0)) < vMax {
+                    fullSpeedGap = min2(fullSpeedGap, leader.1);
+                    fullSpeedDrivingSeconds = min2(fullSpeedDrivingSeconds, fullSpeedGap / (vMax - leader.0.get_speed()));
+                }
+
+                let deltaProb = if self.myChangeProbThresholdRight == i64::MAX { 0. } else {
+                    self.myChangeProbThresholdRight as f64 * (fullSpeedDrivingSeconds / acceptanceTime) / KEEP_RIGHT_TIME };
+                self.myKeepRightProbability -= (self.myVehicle.get_action_step_length_secs() * deltaProb) as i64;
+
+                if ((self.myKeepRightProbability as f64 * self.myKeepRightParam) as i64) < -self.myChangeProbThresholdRight {
+                    req = ret | lca | LCA_KEEPRIGHT;
+                    if !self.cancel_request(req, laneOffset) {
+                        return ret | req;
+                    }
+                }
+            }
+
+            if self.mySpeedGainProbabilityRight > self.myChangeProbThresholdRight
+                && neighDist / max2(0.1, self.myVehicle.get_speed()) > self.mySpeedGainRemainTime {
+                req = ret | lca | LCA_SPEEDGAIN;
+                if self.mySpeedGainProbabilityRight > (self.mySpeedGainUrgency * HYST_PRECISION) as i64 {
+                    req |= LCA_URGENT;
+                }
+                if !self.cancel_request(req, laneOffset) {
+                    return ret | req;
+                }
+            }
+        } else {
+            // ONLY FOR CHANGING TO THE LEFT
+            if thisLaneVSafe > neighLaneVSafe {
+                // this lane is better
+                self.mySpeedGainProbabilityLeft = (self.mySpeedGainProbabilityLeft as f64 * 0.5f64.powf(self.myVehicle.get_action_step_length_secs())) as i64;
+            } else if thisLaneVSafe == neighLaneVSafe {
+                self.mySpeedGainProbabilityLeft = (self.mySpeedGainProbabilityLeft as f64 * 0.8f64.powf(self.myVehicle.get_action_step_length_secs())) as i64;
+            } else {
+                self.mySpeedGainProbabilityLeft += (self.myVehicle.get_action_step_length_secs() * relativeGain * HYST_PRECISION) as i64;
+            }
+
+            if self.mySpeedGainProbabilityLeft > self.myChangeProbThresholdLeft
+                && (relativeGain > utils::geom::NUMERICAL_EPS || changeLeftToAvoidOvertakeRight)
+                && neighDist / max2(0.1, self.myVehicle.get_speed()) > self.mySpeedGainRemainTime {
+                req = ret | lca | LCA_SPEEDGAIN;
+                if self.mySpeedGainProbabilityLeft > (self.mySpeedGainUrgency * HYST_PRECISION) as i64 {
+                    req |= LCA_URGENT;
+                }
+                if !self.cancel_request(req, laneOffset) {
+                    if (req & LCA_URGENT) != 0 && (blocked & LCA_BLOCKED_BY_LEFT_FOLLOWER) != 0 {
+                        let nv = neighFollow.0;
+                        let hasBidiNeighFollower = !neighLane.get_bidi_lane().is_null() && MSLCHelper::is_bidi_follower(self.myVehicle, nv);
+                        if !nv.is_null() && !hasBidiNeighFollower && !MSLCHelper::unwilling_to_help(&*self.myVehicle, self.myVehicle.get_speed(), &*nv) {
+                            let helpSpeed = max2(nv.get_car_follow_model().min_next_speed(nv.get_speed(), nv), self.myVehicle.get_speed() - 1.);
+                            msgPass.inform_neigh_follower(new_info((helpSpeed, myLca | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                        }
+                    }
+                    return ret | req;
+                }
+            }
+        }
+        // --------
+        if changeToBest && bestLaneOffset == curr.bestLaneOffset
+            && self.myStrategicParam >= 0.
+            && relativeGain >= 0.
+            && (if right { self.mySpeedGainProbabilityRight } else { self.mySpeedGainProbabilityLeft }) > 0 {
+            // change towards the correct lane, speedwise it does not hurt
+            req = ret | lca | LCA_STRATEGIC;
+            if !self.cancel_request(req, laneOffset) {
+                return ret | req;
+            }
+        }
+
+        ret
     }
 
     /// C++: `double MSLCM_LC2013::informLeader(MSAbstractLaneChangeModel::MSLCMessager &, int, int, const std::pair<MSVehicle *, double> &, double)` [protected]
