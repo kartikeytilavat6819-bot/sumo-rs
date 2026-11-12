@@ -3886,7 +3886,7 @@ impl NBEdge {
     #[allow(unused_variables)]
     pub fn has_custom_lane_shape(&self) -> bool {
         for i in self.myLanes.iter() {
-            if i.customShape.size() > 0 {
+            if i.customShape.len() > 0 {
                 return true;
             }
         }
