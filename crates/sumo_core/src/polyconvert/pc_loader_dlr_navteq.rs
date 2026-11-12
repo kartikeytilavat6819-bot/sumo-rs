@@ -22,7 +22,12 @@ impl PCLoaderDlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_if_set(oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderDlrNavteq::loadIfSet")
+        if or_panic(oc.is_set("dlr-navteq-poly-files", true)) {
+            Self::load_poly_files(oc, toFill, tm);
+        }
+        if or_panic(oc.is_set("dlr-navteq-poi-files", true)) {
+            Self::load_poi_files(oc, toFill, tm);
+        }
     }
 
     /// C++: `void PCLoaderDlrNavteq::loadPOIFiles(OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static, protected]
@@ -42,7 +47,15 @@ impl PCLoaderDlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_poi_files(oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderDlrNavteq::loadPOIFiles")
+        let files: Vec<String> = or_panic(oc.get_string_vector("dlr-navteq-poi-files")).clone();
+        for file in files.iter() {
+            if !utils::common::file_helpers::is_readable(file) {
+                panic!("{}", utils::tlf!("Could not open dlr-navteq-poi-file '%'.", file));
+            }
+            utils::common::msg_handler::progress_begin_message(&format!("Parsing pois from dlr-navteq-poi-file '{}'", file));
+            Self::load_poi_file(file, oc, toFill, tm);
+            utils::common::msg_handler::progress_done_message();
+        }
     }
 
     /// C++: `void PCLoaderDlrNavteq::loadPolyFiles(OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static, protected]
@@ -62,7 +75,15 @@ impl PCLoaderDlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_poly_files(oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderDlrNavteq::loadPolyFiles")
+        let files: Vec<String> = or_panic(oc.get_string_vector("dlr-navteq-poly-files")).clone();
+        for file in files.iter() {
+            if !utils::common::file_helpers::is_readable(file) {
+                panic!("{}", utils::tlf!("Could not open dlr-navteq-poly-file '%'.", file));
+            }
+            utils::common::msg_handler::progress_begin_message(&format!("Parsing pois from dlr-navteq-poly-file '{}'", file));
+            Self::load_poly_file(file, oc, toFill, tm);
+            utils::common::msg_handler::progress_done_message();
+        }
     }
 
     /// C++: `void PCLoaderDlrNavteq::loadPOIFile(const std::string &, OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static, protected]
@@ -141,7 +162,70 @@ impl PCLoaderDlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_poi_file(file: &str, oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderDlrNavteq::loadPOIFile")
+        // get the defaults
+        let c: RGBColor = or_panic(RGBColor::parse_color(&or_panic(oc.get_string("color"))));
+        // parse
+        let mut l: i32 = 0;
+        let mut lr = utils::importio::line_reader::LineReader::with_file(file);
+        while lr.has_more() {
+            let line: String = lr.read_line();
+            l += 1;
+            // skip invalid/empty lines
+            if line.len() == 0 || line.contains('#') {
+                continue;
+            }
+            if utils::common::string_utils::prune(&line) == "" {
+                continue;
+            }
+            // parse the poi
+            // attributes of the poi (std::istringstream emulated by a cursor)
+            let mut cur: usize = 0;
+            let (mut name, ok1) = getline_delim(&line, &mut cur, '\t');
+            let (_skip, ok2) = getline_delim(&line, &mut cur, '\t');
+            let (mut ty, ok3) = getline_delim(&line, &mut cur, '\t');
+            let (_desc, ok4) = getline_delim(&line, &mut cur, '\t');
+            if !(ok1 && ok2 && ok3 && ok4) {
+                panic!("Invalid dlr-navteq-poi in line {}:\n{}", l, line);
+            }
+            let Some(x) = extract_double(&line, &mut cur) else {
+                panic!("{}", utils::tlf!("Invalid x coordinate for POI '%'.", name));
+            };
+            let Some(y) = extract_double(&line, &mut cur) else {
+                panic!("{}", utils::tlf!("Invalid y coordinate for POI '%'.", name));
+            };
+            let mut pos = Position::new(x, y);
+            // check the poi
+            if name == "" {
+                panic!("The name of a POI is missing.");
+            }
+            if !GeoConvHelper::with_processing(|g| g.x2cartesian(&mut pos, true)) {
+                panic!("{}", utils::tlf!("Unable to project coordinates for POI '%'.", name));
+            }
+
+            // patch the values
+            let mut discard: bool = or_panic(oc.get_bool("discard"));
+            let mut icon: String = or_panic(oc.get_string("icon"));
+            let mut layer: f64 = or_panic(oc.get_float("layer"));
+            let mut color: RGBColor;
+            if tm.has(&ty) {
+                let def = tm.get(&ty);
+                name = def.prefix.clone() + &name;
+                ty = def.id.clone();
+                color = def.color;
+                discard = def.discard;
+                icon = def.icon.clone();
+                layer = def.layer;
+            } else {
+                name = or_panic(oc.get_string("prefix")) + &name;
+                ty = or_panic(oc.get_string("type"));
+                color = c;
+            }
+            if !discard {
+                let poi: Ptr<PointOfInterest> = Ptr::from_raw(Box::into_raw(Box::new(PointOfInterest::new(&name, &ty, &color, &pos, false, "", 0.0, false, 0.0, &icon, layer, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_WIDTH, DEFAULT_IMG_HEIGHT, DEFAULT_NAME, &BTreeMap::new()))));
+                let keep = or_panic(oc.is_in_string_vector("prune.keep-list", &name));
+                toFill.add_2(poi, keep);
+            }
+        }
     }
 
     /// C++: `void PCLoaderDlrNavteq::loadPolyFile(const std::string &, OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static, protected]
@@ -234,8 +318,153 @@ impl PCLoaderDlrNavteq {
     // }
     #[allow(unused_variables)]
     pub fn load_poly_file(file: &str, oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderDlrNavteq::loadPolyFile")
+        // get the defaults
+        let c: RGBColor = or_panic(RGBColor::parse_color(&or_panic(oc.get_string("color"))));
+        // attributes of the poly
+        // parse
+        let mut lr = utils::importio::line_reader::LineReader::with_file(file);
+        while lr.has_more() {
+            let line: String = lr.read_line();
+            // skip invalid/empty lines
+            if line.len() == 0 || line.contains('#') {
+                continue;
+            }
+            if utils::common::string_utils::prune(&line) == "" {
+                continue;
+            }
+            // parse the poi
+            let mut st = utils::common::string_tokenizer::StringTokenizer::with_token(&line, "\t", false);
+            let values: Vec<String> = st.get_vector();
+            if values.len() < 6 || values.len() % 2 != 0 {
+                panic!("{}", utils::tlf!("Invalid dlr-navteq-polygon - line: '%'.", line));
+            }
+            let id: String = values[0].clone();
+            let _ort: String = values[1].clone();
+            let mut ty: String = values[2].clone();
+            let mut name: String = values[3].clone();
+            let mut vec = PositionVector::new();
+            let mut index: usize = 4;
+            // now collect the positions
+            while values.len() > index {
+                let xpos: String = values[index].clone();
+                let ypos: String = values[index + 1].clone();
+                index += 2;
+                let x: f64 = or_panic(utils::common::string_utils::to_double(&xpos));
+                let y: f64 = or_panic(utils::common::string_utils::to_double(&ypos));
+                let mut pos = Position::new(x, y);
+                if !GeoConvHelper::with_processing(|g| g.x2cartesian(&mut pos, true)) {
+                    utils::common::msg_handler::write_warning(&utils::tlf!("Unable to project coordinates for polygon '%'.", id));
+                }
+                vec.push(pos);
+            }
+
+            name = utils::common::string_utils::convert_umlaute(&name);
+            if name == "noname" || toFill.base.get_polygons().contains_key(&name) {
+                name = name.clone() + "#" + &utils::common::to_string::to_string(&toFill.get_enum_id_for(&name));
+            }
+
+            // check the polygon
+            if vec.len() == 0 {
+                utils::common::msg_handler::write_warning(&utils::tlf!("The polygon '%' is empty.", id));
+                continue;
+            }
+            if id == "" {
+                utils::common::msg_handler::write_warning("The name of a polygon is missing; it will be discarded.");
+                continue;
+            }
+
+            // patch the values
+            let mut fill: bool = vec.front() == vec.back();
+            let mut discard: bool = or_panic(oc.get_bool("discard"));
+            let mut icon: String = or_panic(oc.get_string("icon"));
+            let mut layer: f64 = or_panic(oc.get_float("layer"));
+            let mut color: RGBColor;
+            if tm.has(&ty) {
+                let def = tm.get(&ty);
+                name = def.prefix.clone() + &name;
+                ty = def.id.clone();
+                color = def.color;
+                fill = fill && def.allowFill != PCTypeMap_Filltype::NOFILL;
+                discard = def.discard;
+                icon = def.icon.clone();
+                layer = def.layer;
+            } else {
+                name = or_panic(oc.get_string("prefix")) + &name;
+                ty = or_panic(oc.get_string("type"));
+                color = c;
+            }
+            if !discard {
+                let poly: Ptr<SUMOPolygon> = Ptr::from_raw(Box::into_raw(Box::new(SUMOPolygon::new(&name, &ty, &color, &vec, false, fill, 1.0, layer, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_NAME, DEFAULT_HEIGHT, &BTreeMap::new()))));
+                toFill.add(poly, false);
+            }
+            vec.clear();
+        }
     }
 
+}
+
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// std::getline(stream, s, delim) on a string cursor; the flag is false when nothing could be extracted (failbit)
+fn getline_delim(s: &str, cur: &mut usize, delim: char) -> (String, bool) {
+    if *cur >= s.len() {
+        return (String::new(), false);
+    }
+    let rest = &s[*cur..];
+    match rest.find(delim) {
+        Some(i) => {
+            *cur += i + delim.len_utf8();
+            (rest[..i].to_string(), true)
+        }
+        None => {
+            *cur = s.len();
+            (rest.to_string(), true)
+        }
+    }
+}
+
+/// `stream >> double` on a string cursor: skips whitespace, then reads sign, digits, fraction and exponent
+fn extract_double(s: &str, cur: &mut usize) -> Option<f64> {
+    let b = s.as_bytes();
+    let mut i = *cur;
+    while i < b.len() && matches!(b[i], b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r') {
+        i += 1;
+    }
+    let start = i;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        i += 1;
+    }
+    let mut digits = 0;
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+        digits += 1;
+    }
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+            digits += 1;
+        }
+    }
+    if digits == 0 {
+        return None;
+    }
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        i += 1;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        let exp_start = i;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+        if i == exp_start {
+            return None;
+        }
+    }
+    *cur = i;
+    s[start..i].parse::<f64>().ok()
 }
 
