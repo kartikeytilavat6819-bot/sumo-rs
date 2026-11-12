@@ -118,7 +118,71 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Routing::insertOptions")
+        insert_default_assignment_options("rerouting", "Routing", oc, false);
+
+        oc.do_register("device.rerouting.period", SumoOption::string_typed("0", "TIME"));
+        oc.add_synonyme("device.rerouting.period", "device.routing.period", true);
+        oc.add_description("device.rerouting.period", "Routing", "The period with which the vehicle shall be rerouted");
+
+        oc.do_register("device.rerouting.pre-period", SumoOption::string_typed("60", "TIME"));
+        oc.add_synonyme("device.rerouting.pre-period", "device.routing.pre-period", true);
+        oc.add_description("device.rerouting.pre-period", "Routing", "The rerouting period before depart");
+
+        oc.do_register("device.rerouting.adaptation-weight", SumoOption::float(0.0));
+        oc.add_synonyme("device.rerouting.adaptation-weight", "device.routing.adaptation-weight", true);
+        oc.add_description("device.rerouting.adaptation-weight", "Routing", "The weight of prior edge weights for exponential moving average");
+
+        oc.do_register("device.rerouting.adaptation-steps", SumoOption::integer(180));
+        oc.add_synonyme("device.rerouting.adaptation-steps", "device.routing.adaptation-steps", true);
+        oc.add_description("device.rerouting.adaptation-steps", "Routing", "The number of steps for moving average weight of prior edge weights");
+
+        oc.do_register("device.rerouting.adaptation-interval", SumoOption::string_typed("1", "TIME"));
+        oc.add_synonyme("device.rerouting.adaptation-interval", "device.routing.adaptation-interval", true);
+        oc.add_description("device.rerouting.adaptation-interval", "Routing", "The interval for updating the edge weights");
+
+        oc.do_register("device.rerouting.cch-update-threshold.factor", SumoOption::float(1.0));
+        oc.add_description("device.rerouting.cch-update-threshold.factor", "Routing", "Only propagate an arc weight into the CCH metric if it changed by more than the given factor");
+
+        oc.do_register("device.rerouting.cch-update-threshold.constant", SumoOption::string_typed("0", "TIME"));
+        oc.add_description("device.rerouting.cch-update-threshold.constant", "Routing", "Only propagate an arc weight into the CCH metric if it changed by more than the given TIME");
+        oc.do_register("device.rerouting.cch-ensemble", SumoOption::integer(1));
+        oc.add_description("device.rerouting.cch-ensemble", "Routing", "Keep this many frozen weights.random-factor realizations (CCH metrics) per vehicle type and assign vehicles to them by a stable id hash");
+
+        oc.do_register("device.rerouting.threshold.factor", SumoOption::float(1.0));
+        oc.add_description("device.rerouting.threshold.factor", "Routing", "Only reroute if the new route is faster than the current route by the given factor");
+
+        oc.do_register("device.rerouting.threshold.constant", SumoOption::string_typed("0", "TIME"));
+        oc.add_description("device.rerouting.threshold.constant", "Routing", "Only reroute if the new route is faster than the current route by the given TIME");
+
+        oc.do_register("device.rerouting.invalidation", SumoOption::bool(false));
+        oc.add_description("device.rerouting.invalidation", "Routing", "Only perform a periodic reroute when the current route's remaining cost has drifted beyond the threshold (cheap re-scoring gate before the full reroute)");
+
+        oc.do_register("device.rerouting.with-taz", SumoOption::bool(false));
+        oc.add_synonyme("device.rerouting.with-taz", "device.routing.with-taz", true);
+        oc.add_synonyme("device.rerouting.with-taz", "with-taz", false);
+        oc.add_description("device.rerouting.with-taz", "Routing", "Use zones (districts) as routing start- and endpoints");
+
+        oc.do_register("device.rerouting.mode", SumoOption::string_with("0"));
+        oc.add_description("device.rerouting.mode", "Routing", "Set routing flags (8 ignores temporary blockages)");
+
+        oc.do_register("device.rerouting.init-with-loaded-weights", SumoOption::bool(false));
+        oc.add_description("device.rerouting.init-with-loaded-weights", "Routing", "Use weight files given with option --weight-files for initializing edge weights");
+
+        oc.do_register("device.rerouting.threads", SumoOption::integer(0));
+        oc.add_synonyme("device.rerouting.threads", "routing-threads", false);
+        oc.add_description("device.rerouting.threads", "Routing", "The number of parallel execution threads used for rerouting");
+
+        oc.do_register("device.rerouting.synchronize", SumoOption::bool(false));
+        oc.add_description("device.rerouting.synchronize", "Routing", "Let rerouting happen at the same time for all vehicles");
+
+        oc.do_register("device.rerouting.railsignal", SumoOption::bool(false));
+        oc.add_description("device.rerouting.railsignal", "Routing", "Allow rerouting triggered by rail signals.");
+
+        oc.do_register("device.rerouting.bike-speeds", SumoOption::bool(false));
+        oc.add_description("device.rerouting.bike-speeds", "Routing", "Compute separate average speeds for bicycles");
+
+        oc.do_register("device.rerouting.output", SumoOption::file_name());
+        oc.add_description("device.rerouting.output", "Routing", "Save adapting weights to FILE");
     }
 
     /// C++: `bool MSDevice_Routing::checkOptions(OptionsCont &)` [static]
@@ -156,7 +220,28 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        todo!("port MSDevice_Routing::checkOptions")
+        let mut ok = true;
+        if !oc.is_default("device.rerouting.adaptation-steps") && !oc.is_default("device.rerouting.adaptation-weight") {
+            write_error("Only one of the options 'device.rerouting.adaptation-steps' or 'device.rerouting.adaptation-weight' may be given.");
+            ok = false;
+        }
+        if oc.get_float("weights.random-factor").unwrap() < 1. {
+            write_error("weights.random-factor cannot be less than 1");
+            ok = false;
+        }
+        if string2time(&oc.get_string("device.rerouting.adaptation-interval").unwrap()).unwrap() < 0 {
+            write_error("Negative value for device.rerouting.adaptation-interval!");
+            ok = false;
+        }
+        if oc.get_float("device.rerouting.adaptation-weight").unwrap() < 0. || oc.get_float("device.rerouting.adaptation-weight").unwrap() > 1. {
+            write_error("The value for device.rerouting.adaptation-weight must be between 0 and 1!");
+            ok = false;
+        }
+        // shortcut: the "not HAVE_FOX" thread-count error is omitted, this port is always built with threads, upgrade if a non-threaded build is needed
+        if oc.get_int("threads").unwrap() > 1 && oc.get_int("device.rerouting.threads").unwrap() > 1 && oc.get_int("threads").unwrap() != oc.get_int("device.rerouting.threads").unwrap() {
+            write_warning("Adapting number of routing threads to number of simulation threads.");
+        }
+        ok
     }
 
     /// C++: `void MSDevice_Routing::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -182,7 +267,25 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_Routing::buildVehicleDevices")
+        let equip = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "rerouting", v, false, false));
+        if v.get_parameter().was_set(VEHPARS_FORCE_REROUTE) || equip {
+            // route computation is enabled
+            // for implicitly equipped vehicles (trips, flows), option probability
+            // can still be used to disable periodic rerouting after insertion for
+            // parts of the fleet
+            let probability = with_options(|oc| oc.get_float("device.rerouting.probability").unwrap());
+            let probability_is_default = with_options(|oc| oc.is_default("device.rerouting.probability"));
+            let period: SUMOTime = if equip || (probability_is_default && v.get_float_param("device.rerouting.probability", false, INVALID_DOUBLE, true) == probability) {
+                v.get_time_param("device.rerouting.period", false, SUMOTIME_MIN)
+            } else {
+                0
+            };
+            let prePeriod: SUMOTime = std::cmp::max(0, v.get_time_param("device.rerouting.pre-period", false, SUMOTIME_MIN));
+            MSRoutingEngine::init_weight_update(-1);
+            // build the device
+            let id = format!("routing_{}", v.get_id());
+            into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_Routing::new(v, &id, period, prePeriod))) as *mut MSVehicleDevice));
+        }
     }
 
     /// C++: `void MSDevice_Routing::~MSDevice_Routing() noexcept` [virtual]
@@ -195,7 +298,10 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Routing::~MSDevice_Routing")
+        // make the rerouting command invalid if there is one
+        if !self.myRerouteCommand.is_null() {
+            // shortcut: Command/WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+        }
     }
 
     /// C++: `bool MSDevice_Routing::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -229,7 +335,19 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Routing::notifyEnter")
+        if reason == MSMoveReminder_Notification::NOTIFICATION_DEPARTED {
+            let now = MSNet::get_instance().m().get_current_time_step();
+            if self.myRerouteCommand.is_null() && self.myPreInsertionPeriod > 0 && self.myHolder.m().get_depart_delay() > self.myPreInsertionPeriod {
+                // pre-insertion rerouting was disabled. Reroute from the departure edge if insertion was delayed
+                // this is happening in the run thread (not inbeginOfTimestepEvents) so we cannot safely use the threadPool
+                let router = MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default());
+                self.myHolder.m().reroute(now, "device.rerouting", router, true, MSRoutingEngine::with_taz(), false, Ptr::default());
+            }
+            // build repetition trigger if routing shall be done more often
+            self.rebuild_reroute_command(now + self.myPeriod);
+        }
+        // shortcut: MSGlobals::gWeightsSeparateTurns is not ported and is treated as 0, so junction travel-time recording is skipped; upgrade when MSGlobals is ported
+        false
     }
 
     /// C++: `void MSDevice_Routing::notifyStopEnded()` [virtual]
@@ -243,7 +361,10 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn notify_stop_ended(&mut self) {
-        todo!("port MSDevice_Routing::notifyStopEnded")
+        if self.myRerouteAfterStop {
+            self.reroute(MSNet::get_instance().m().get_current_time_step(), false);
+            self.myRerouteAfterStop = false;
+        }
     }
 
     /// C++: `const std::string MSDevice_Routing::deviceName() const` [const, virtual]
@@ -253,7 +374,7 @@ impl MSDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Routing::deviceName")
+        "rerouting".to_string()
     }
 
     /// C++: `void MSDevice_Routing::saveState(OutputDevice &) const` [const, virtual]
@@ -270,7 +391,11 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDevice_Routing::saveState")
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, &self.base.get_id());
+        let internals = vec![format!("{}", self.myPeriod), format!("{}", self.myLastRouting)];
+        out.write_attr(SUMO_ATTR_STATE, &internals.join(" "));
+        out.close_tag("");
     }
 
     /// C++: `void MSDevice_Routing::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -303,7 +428,26 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSDevice_Routing::loadState")
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        // istringstream >> SUMOTime: whitespace-separated integers, 0 on failed extraction
+        let mut tokens = state.split_whitespace();
+        self.myPeriod = tokens.next().and_then(|s| s.parse::<SUMOTime>().ok()).unwrap_or(0);
+        self.myLastRouting = tokens.next().and_then(|s| s.parse::<SUMOTime>().ok()).unwrap_or(0);
+        let now = MSNet::get_instance().m().get_current_time_step();
+        if self.myHolder.m().has_departed() {
+            let mut offset = self.myPeriod;
+            if self.myPeriod > 0 {
+                offset = (now - self.myHolder.m().get_departure()) % self.myPeriod;
+                if offset != 0 {
+                    offset = self.myPeriod - offset;
+                }
+            }
+            self.rebuild_reroute_command(now + offset);
+        } else if !self.myRerouteCommand.is_null() && self.myLastRouting >= 0 {
+            // the pre-insertion reroute scheduled by the constructor already happened before saving
+            // shortcut: Command deschedule and re-creation are skipped (no Command type), so the repeated pre-insertion event is not re-scheduled; upgrade when Command exists
+            self.myRerouteCommand = Ptr::default();
+        }
     }
 
     /// C++: `void MSDevice_Routing::reroute(const SUMOTime, const bool)`
@@ -344,7 +488,15 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, currentTime: SUMOTime, onInit: bool) {
-        todo!("port MSDevice_Routing::reroute")
+        let holder = self.myHolder.m();
+        MSRoutingEngine::init_edge_weights(holder.get_v_class(), -1, -1);
+        //check whether the weights did change since the last reroute
+        if self.myLastRouting > MSRoutingEngine::get_last_adaptation() || !self.myActive {
+            return;
+        }
+        // shortcut: the invalidation gate (recomputeCosts over the remaining route) is skipped because MSRouteIterator and ConstMSEdgeVector are unmapped; it is off by default (device.rerouting.invalidation=false); upgrade when route iterators are ported
+        self.myLastRouting = currentTime;
+        MSRoutingEngine::reroute(holder, currentTime, "device.rerouting", onInit, false, &Default::default());
     }
 
     /// C++: `void MSDevice_Routing::skipRouting(const SUMOTime)`
@@ -354,7 +506,7 @@ impl MSDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn skip_routing(&mut self, currentTime: SUMOTime) {
-        todo!("port MSDevice_Routing::skipRouting")
+        self.mySkipRouting = currentTime;
     }
 
     /// C++: `SUMOTime MSDevice_Routing::getPeriod() const` [const]
@@ -363,7 +515,7 @@ impl MSDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn get_period(&self) -> SUMOTime {
-        todo!("port MSDevice_Routing::getPeriod")
+        self.myPeriod
     }
 
     /// C++: `bool MSDevice_Routing::mayRerouteRailSignal() const` [const]
@@ -373,7 +525,7 @@ impl MSDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn may_reroute_rail_signal(&self) -> bool {
-        todo!("port MSDevice_Routing::mayRerouteRailSignal")
+        self.myRerouteRailSignal
     }
 
     /// C++: `std::string MSDevice_Routing::getParameter(const std::string &) const` [const, virtual]
@@ -394,7 +546,18 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Routing::getParameter")
+        if let Some(edgeID) = key.strip_prefix("edge:") {
+            let edge = MSEdge::dictionary(edgeID);
+            if edge.is_null() {
+                // C++ throws InvalidArgument
+                panic!("{}", format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.deviceName()));
+            }
+            return to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.));
+        } else if key == "period" {
+            return time2string(self.myPeriod);
+        }
+        // C++ throws InvalidArgument
+        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
     }
 
     /// C++: `void MSDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -424,7 +587,25 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_Routing::setParameter")
+        let doubleValue: f64 = match value.parse::<f64>() {
+            Ok(v) => v,
+            // C++ throws InvalidArgument on NumberFormatException
+            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.deviceName())),
+        };
+        if let Some(edgeID) = key.strip_prefix("edge:") {
+            let edge = MSEdge::dictionary(edgeID);
+            if edge.is_null() {
+                panic!("{}", format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.deviceName()));
+            }
+            MSRoutingEngine::set_edge_travel_time(edge, doubleValue);
+        } else if key == "period" {
+            self.myPeriod = time2steps(doubleValue);
+            // re-schedule routing command
+            let now = MSNet::get_instance().m().get_current_time_step();
+            self.rebuild_reroute_command(now + self.myPeriod);
+        } else {
+            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
+        }
     }
 
     /// C++: `void MSDevice_Routing::setActive(bool)`
@@ -433,7 +614,7 @@ impl MSDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn set_active(&mut self, active: bool) {
-        todo!("port MSDevice_Routing::setActive")
+        self.myActive = active;
     }
 
     /// C++: `bool MSDevice_Routing::sufficientSaving(double, double)`
@@ -447,7 +628,10 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn sufficient_saving(&mut self, oldCost: f64, newCost: f64) -> bool {
-        todo!("port MSDevice_Routing::sufficientSaving")
+        if newCost == 0. {
+            return true;
+        }
+        (oldCost / newCost > self.myThresholdFactor) && (oldCost - newCost > self.myThresholdTime)
     }
 
     /// C++: `void MSDevice_Routing::MSDevice_Routing(SUMOVehicle &, const std::string &, SUMOTime, SUMOTime)` [private]
@@ -478,7 +662,26 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, period: SUMOTime, preInsertionPeriod: SUMOTime) -> Self {
-        todo!("port MSDevice_Routing::MSDevice_Routing")
+        let base = MSVehicleDevice::new(holder, id);
+        let dev = MSDevice_Routing {
+            base,
+            myPeriod: period,
+            myPreInsertionPeriod: preInsertionPeriod,
+            myLastRouting: -1,
+            mySkipRouting: -1,
+            myRerouteCommand: Ptr::default(),
+            myRerouteRailSignal: holder.get_bool_param("device.rerouting.railsignal", true, false),
+            myLastLaneEntryTime: -1,
+            myRerouteAfterStop: false,
+            myThresholdFactor: holder.get_float_param("device.rerouting.threshold.factor", true, 1., true),
+            myThresholdTime: steps2time(holder.get_time_param("device.rerouting.threshold.constant", true, 0)),
+            myActive: true,
+            myInvalidation: with_options(|oc| oc.get_bool("device.rerouting.invalidation").unwrap()),
+            myLastRouteCost: -1.,
+        };
+        // we do always a pre insertion reroute for trips to fill the best lanes of the vehicle with somehow meaningful values (especially for deaprtLane="best")
+        // shortcut: the pre-insertion WrappingCommand and its insertion-event schedule are not ported, so myRerouteCommand stays null; upgrade when Command and MSEventControl take commands
+        dev
     }
 
     /// C++: `SUMOTime MSDevice_Routing::preInsertionReroute(const SUMOTime)` [private]
@@ -520,7 +723,35 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn pre_insertion_reroute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSDevice_Routing::preInsertionReroute")
+        if self.mySkipRouting == currentTime {
+            return utils::common::time::delta_t();
+        }
+        if self.myPreInsertionPeriod == 0 {
+            // the event will deschedule and destroy itself so it does not need to be stored
+            self.myRerouteCommand = Ptr::default();
+        }
+        let holder = self.myHolder.m();
+        let source = holder.get_route().get_first_edge();
+        let dest = holder.get_route().get_last_edge();
+        if source.is_taz_connector() && dest.is_taz_connector() {
+            let cached = MSRoutingEngine::get_cached_route(&(source, dest));
+            if !cached.is_null() && cached.size() > 2 {
+                holder.replace_route(cached, "device.rerouting", true, 0, true, true, Ptr::default());
+                return self.myPreInsertionPeriod;
+            }
+        }
+        // C++ try/catch resets myRerouteCommand on ProcessError and rethrows; a panic here unwinds the same way
+        let mut msg = String::new();
+        if holder.has_valid_route_start(&mut msg) {
+            self.reroute(currentTime, true);
+        }
+        // avoid repeated pre-insertion rerouting when the departure edge is fix and
+        // the departure lane does not depend on the route
+        if self.myPreInsertionPeriod > 0 && !source.is_taz_connector() && holder.get_parameter().departLaneProcedure != DepartLaneDefinition::BEST_FREE {
+            self.myRerouteCommand = Ptr::default();
+            return 0;
+        }
+        self.myPreInsertionPeriod
     }
 
     /// C++: `SUMOTime MSDevice_Routing::wrappedRerouteCommandExecute(SUMOTime)` [private]
@@ -536,7 +767,12 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn wrapped_reroute_command_execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSDevice_Routing::wrappedRerouteCommandExecute")
+        if self.myHolder.m().is_stopped() {
+            self.myRerouteAfterStop = true;
+        } else {
+            self.reroute(currentTime, false);
+        }
+        self.myPeriod
     }
 
     /// C++: `void MSDevice_Routing::rebuildRerouteCommand(SUMOTime)` [private]
@@ -559,7 +795,18 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn rebuild_reroute_command(&mut self, start: SUMOTime) {
-        todo!("port MSDevice_Routing::rebuildRerouteCommand")
+        let mut start = start;
+        if !self.myRerouteCommand.is_null() {
+            // shortcut: Command deschedule not ported (no Command type)
+            self.myRerouteCommand = Ptr::default();
+        }
+        if self.myPeriod > 0 {
+            // shortcut: WrappingCommand (periodic reroute event) and its begin-of-timestep schedule are not ported, so no reroute event is created; upgrade when Command exists
+            if with_options(|oc| oc.get_bool("device.rerouting.synchronize").unwrap()) {
+                start -= start % self.myPeriod;
+            }
+            // determinism: the event priority (numerical holder id) is applied when the event is scheduled
+        }
     }
 
     /// C++: `void MSDevice_Routing::MSDevice_Routing(const MSDevice_Routing &)` [private]
@@ -567,7 +814,8 @@ impl MSDevice_Routing {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Routing) -> Self {
-        todo!("port MSDevice_Routing::MSDevice_Routing")
+        // C++ copy constructor is private and invalidated, so it can never be called
+        panic!("MSDevice_Routing copy constructor is invalid (private in C++)")
     }
 
     /// C++: `MSDevice_Routing & MSDevice_Routing::operator=(const MSDevice_Routing &)` [private]
@@ -575,7 +823,8 @@ impl MSDevice_Routing {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Routing) -> &mut MSDevice_Routing {
-        todo!("port MSDevice_Routing::operator=")
+        // C++ assignment operator is private and invalidated, so it can never be called
+        panic!("MSDevice_Routing::operator= is invalid (private in C++)")
     }
 
 }
