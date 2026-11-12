@@ -1240,7 +1240,19 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_v_type(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseVType")
+        // parse vehicleType
+        // shortcut: myFileBucket->getFilename() is unavailable (FileBucket is not ported), the file name passed to beginVTypeParsing is empty
+        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, "", Ptr::null());
+        if !vehicleTypeParameter.is_null() {
+            let id = vehicleTypeParameter.id.clone();
+            // set tag
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            cur.m().set_tag(SUMO_TAG_VTYPE);
+            // add all attributes
+            cur.m().set_vehicle_type_parameter(take_parameter(vehicleTypeParameter), &id);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseVTypeRef(const SUMOSAXAttributes &)` [private]
@@ -1264,7 +1276,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_v_type_ref(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseVTypeRef")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // special case for ID
+        let refId = attrs.get::<String>(SUMO_ATTR_REFID, "", &mut parsedOk, true);
+        let probability = attrs.get_opt::<f64>(SUMO_ATTR_PROB, &refId, &mut parsedOk, INVALID_DOUBLE, true);
+        let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+        if parsedOk {
+            // set tag
+            cur.m().set_tag(SUMO_TAG_VTYPE);
+            // add all attributes
+            cur.m().add_string_attribute(SUMO_ATTR_REFID, &refId);
+            cur.m().add_double_attribute(SUMO_ATTR_PROB, probability);
+        } else {
+            cur.m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseVTypeDistribution(const SUMOSAXAttributes &)` [private]
@@ -1306,7 +1332,38 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_v_type_distribution(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseVTypeDistribution")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
+        // optional attributes
+        let deterministic = attrs.get_opt::<i32>(SUMO_ATTR_DETERMINISTIC, &id, &mut parsedOk, -1, true);
+        let mut vTypes = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VTYPES, &id, &mut parsedOk, Vec::new(), true);
+        let mut probabilities = attrs.get_opt::<Vec<f64>>(SUMO_ATTR_PROBS, &id, &mut parsedOk, Vec::new(), true);
+        // adjust sizes and probabilities
+        self.adjust_types_and_probabilities(&mut vTypes, &mut probabilities);
+        // continue if all was parsed ok
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_VTYPE_DISTRIBUTION);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_ID, &id);
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_int_attribute(SUMO_ATTR_DETERMINISTIC, deterministic);
+            // add references
+            for i in 0..vTypes.len() {
+                // open SUMOBaseOBject
+                self.myCommonXMLStructure.open_sumo_base_object();
+                // set tag
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_VTYPE);
+                // add all attributes
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_REFID, &vTypes[i]);
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().add_double_attribute(SUMO_ATTR_PROB, probabilities[i]);
+                // close SUMOBaseOBject
+                self.myCommonXMLStructure.close_sumo_base_object();
+            }
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseRoute(const SUMOSAXAttributes &)` [private]
@@ -1348,7 +1405,39 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_route(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseRoute")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
+        let edges = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, &id, &mut parsedOk, true);
+        // optional attributes
+        let vClass = SUMOVehicleParserHelper::parse_vehicle_class(attrs, &id);
+        let color = attrs.get_opt::<RGBColor>(SUMO_ATTR_COLOR, &id, &mut parsedOk, RGBColor::INVISIBLE, true);
+        let repeat = attrs.get_opt::<i32>(SUMO_ATTR_REPEAT, &id, &mut parsedOk, 0, true);
+        let cycleTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_CYCLETIME, &id, &mut parsedOk, 0, true);
+        let probability = attrs.get_opt::<f64>(SUMO_ATTR_PROB, &id, &mut parsedOk, 1.0, true);
+        // check attributes
+        if !self.check_negative_3(SUMO_TAG_ROUTE, &id, SUMO_ATTR_CYCLETIME, cycleTime, true) {
+            parsedOk = false;
+        }
+        if !self.check_negative(SUMO_TAG_ROUTE, &id, SUMO_ATTR_REPEAT, repeat, true) {
+            parsedOk = false;
+        }
+        if parsedOk {
+            // set tag
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            cur.m().set_tag(SUMO_TAG_ROUTE);
+            // add all attributes
+            cur.m().add_string_attribute(SUMO_ATTR_ID, &id);
+            cur.m().set_vclass(vClass);
+            cur.m().add_string_list_attribute(SUMO_ATTR_EDGES, &edges);
+            cur.m().add_color_attribute(SUMO_ATTR_COLOR, &color);
+            cur.m().add_int_attribute(SUMO_ATTR_REPEAT, repeat);
+            cur.m().add_time_attribute(SUMO_ATTR_CYCLETIME, cycleTime);
+            cur.m().add_double_attribute(SUMO_ATTR_PROB, probability);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseRouteRef(const SUMOSAXAttributes &)` [private]
@@ -1372,7 +1461,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_route_ref(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseRouteRef")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // special case for ID
+        let refId = attrs.get::<String>(SUMO_ATTR_REFID, "", &mut parsedOk, true);
+        let probability = attrs.get_opt::<f64>(SUMO_ATTR_PROB, &refId, &mut parsedOk, INVALID_DOUBLE, true);
+        let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+        if parsedOk {
+            // set tag
+            cur.m().set_tag(SUMO_TAG_ROUTE);
+            // add all attributes
+            cur.m().add_string_attribute(SUMO_ATTR_REFID, &refId);
+            cur.m().add_double_attribute(SUMO_ATTR_PROB, probability);
+        } else {
+            cur.m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseRouteEmbedded(const SUMOSAXAttributes &)` [private]
@@ -1417,7 +1520,42 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_route_embedded(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseRouteEmbedded")
+        // first check if this is an embedded route
+        if attrs.has_attribute(SUMO_ATTR_ID) {
+            self.write_error("an embedded route cannot have their own ID");
+        } else {
+            // declare Ok Flag
+            let mut parsedOk = true;
+            // special case for ID
+            let vehicleID = vehicle_parameter_of(self.myCommonXMLStructure.get_current_sumo_base_object().get_parent_sumo_base_object()).id.clone();
+            // needed attributes
+            let edges = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, &vehicleID, &mut parsedOk, true);
+            // optional attributes
+            let vClass = SUMOVehicleParserHelper::parse_vehicle_class(attrs, &vehicleID);
+            let color = attrs.get_opt::<RGBColor>(SUMO_ATTR_COLOR, &vehicleID, &mut parsedOk, RGBColor::INVISIBLE, true);
+            let repeat = attrs.get_opt::<i32>(SUMO_ATTR_REPEAT, &vehicleID, &mut parsedOk, 0, true);
+            let cycleTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_CYCLETIME, &vehicleID, &mut parsedOk, 0, true);
+            // check attributes
+            if !self.check_negative_3(SUMO_TAG_ROUTE, &vehicleID, SUMO_ATTR_CYCLETIME, cycleTime, true) {
+                parsedOk = false;
+            }
+            if !self.check_negative(SUMO_TAG_ROUTE, &vehicleID, SUMO_ATTR_REPEAT, repeat, true) {
+                parsedOk = false;
+            }
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            if parsedOk {
+                // set tag
+                cur.m().set_tag(SUMO_TAG_ROUTE);
+                // add all attributes
+                cur.m().set_vclass(vClass);
+                cur.m().add_string_list_attribute(SUMO_ATTR_EDGES, &edges);
+                cur.m().add_color_attribute(SUMO_ATTR_COLOR, &color);
+                cur.m().add_int_attribute(SUMO_ATTR_REPEAT, repeat);
+                cur.m().add_time_attribute(SUMO_ATTR_CYCLETIME, cycleTime);
+            } else {
+                cur.m().set_tag(SUMO_TAG_ERROR);
+            }
+        }
     }
 
     /// C++: `void RouteHandler::parseRouteDistribution(const SUMOSAXAttributes &)` [private]
@@ -1457,7 +1595,36 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_route_distribution(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseRouteDistribution")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
+        // optional attributes
+        let mut routes = attrs.get_opt::<Vec<String>>(SUMO_ATTR_ROUTES, &id, &mut parsedOk, Vec::new(), true);
+        let mut probabilities = attrs.get_opt::<Vec<f64>>(SUMO_ATTR_PROBS, &id, &mut parsedOk, Vec::new(), true);
+        // adjust sizes and probabilities
+        self.adjust_types_and_probabilities(&mut routes, &mut probabilities);
+        // continue if all was parsed ok
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ROUTE_DISTRIBUTION);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_ID, &id);
+            // add references
+            for i in 0..routes.len() {
+                // open SUMOBaseOBject
+                self.myCommonXMLStructure.open_sumo_base_object();
+                // set tag
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ROUTE);
+                // add all attributes
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_REFID, &routes[i]);
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().add_double_attribute(SUMO_ATTR_PROB, probabilities[i]);
+                // close SUMOBaseOBject
+                self.myCommonXMLStructure.close_sumo_base_object();
+            }
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseTrip(const SUMOSAXAttributes &)` [private]
@@ -1533,7 +1700,77 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_trip(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseTrip")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // parse vehicle
+        let tripParameter = SUMOVehicleParserHelper::parse_vehicle_attributes(SUMO_TAG_TRIP, attrs, self.myHardFail, false, false, false);
+        if !tripParameter.is_null() {
+            // C++ copies tripParameter into the XML structure and deletes it: the Box takes it over
+            let tripParameter = take_parameter(tripParameter);
+            let tripId = tripParameter.id.clone();
+            let tripRouteId = tripParameter.routeid.clone();
+            // check from/to edge/junction
+            if (attrs.has_attribute(SUMO_ATTR_FROM) as i32 + attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION) as i32 + attrs.has_attribute(SUMO_ATTR_FROM_TAZ) as i32) > 1 {
+                self.write_error("Attributes 'from', 'fromJunction' and 'fromTaz' cannot be defined together");
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+            } else if (attrs.has_attribute(SUMO_ATTR_TO) as i32 + attrs.has_attribute(SUMO_ATTR_TO_JUNCTION) as i32 + attrs.has_attribute(SUMO_ATTR_TO_TAZ) as i32) > 1 {
+                self.write_error("Attributes 'to', 'toJunction' and 'toTaz' cannot be defined together");
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+            } else if attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION) && attrs.has_attribute(SUMO_ATTR_TO_JUNCTION) {
+                // from-to attributes
+                let fromJunction = attrs.get::<String>(SUMO_ATTR_FROM_JUNCTION, &tripId, &mut parsedOk, true);
+                let toJunction = attrs.get::<String>(SUMO_ATTR_TO_JUNCTION, &tripId, &mut parsedOk, true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_TRIP);
+                    // set vehicle parameters
+                    cur.m().set_vehicle_parameter(tripParameter, &tripId, &tripRouteId);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM_JUNCTION, &fromJunction);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO_JUNCTION, &toJunction);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else if attrs.has_attribute(SUMO_ATTR_FROM_TAZ) && attrs.has_attribute(SUMO_ATTR_TO_TAZ) {
+                // from-to attributes
+                let fromTaz = attrs.get::<String>(SUMO_ATTR_FROM_TAZ, &tripId, &mut parsedOk, true);
+                let toTaz = attrs.get::<String>(SUMO_ATTR_TO_TAZ, &tripId, &mut parsedOk, true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_TRIP);
+                    // set vehicle parameters
+                    cur.m().set_vehicle_parameter(tripParameter, &tripId, &tripRouteId);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM_TAZ, &fromTaz);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO_TAZ, &toTaz);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else {
+                // from-to attributes
+                let from = attrs.get_opt::<String>(SUMO_ATTR_FROM, &tripId, &mut parsedOk, String::new(), true);
+                let to = attrs.get_opt::<String>(SUMO_ATTR_TO, &tripId, &mut parsedOk, String::new(), true);
+                // optional attributes
+                let via = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VIA, &tripId, &mut parsedOk, Vec::new(), true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_TRIP);
+                    // set vehicle parameters
+                    cur.m().set_vehicle_parameter(tripParameter, &tripId, &tripRouteId);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM, &from);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO, &to);
+                    cur.m().add_string_list_attribute(SUMO_ATTR_VIA, &via);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            }
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseVehicle(const SUMOSAXAttributes &)` [private]
@@ -1555,7 +1792,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_vehicle(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseVehicle")
+        // first parse vehicle
+        let vehicleParameter = SUMOVehicleParserHelper::parse_vehicle_attributes(SUMO_TAG_VEHICLE, attrs, self.myHardFail, false, false, false);
+        if !vehicleParameter.is_null() {
+            // C++ copies vehicleParameter into the XML structure and deletes it: the Box takes it over
+            let vehicleParameter = take_parameter(vehicleParameter);
+            let id = vehicleParameter.id.clone();
+            let routeid = vehicleParameter.routeid.clone();
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_VEHICLE);
+            // set vehicle parameters
+            cur.m().set_vehicle_parameter(vehicleParameter, &id, &routeid);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseFlow(const SUMOSAXAttributes &)` [private]
@@ -1641,7 +1892,88 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseFlow")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // first parse flow
+        let flowParameter = SUMOVehicleParserHelper::parse_flow_attributes(SUMO_TAG_FLOW, attrs, self.myHardFail, true, self.myFlowBeginDefault, self.myFlowEndDefault, false);
+        if !flowParameter.is_null() {
+            // C++ copies flowParameter into the XML structure and deletes it: the Box takes it over
+            let flowParameter = take_parameter(flowParameter);
+            let flowId = flowParameter.id.clone();
+            let flowRouteId = flowParameter.routeid.clone();
+            // set vehicle parameters
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_vehicle_parameter(flowParameter, &flowId, &flowRouteId);
+            // check from/to edge/junction
+            if (attrs.has_attribute(SUMO_ATTR_FROM) as i32 + attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION) as i32 + attrs.has_attribute(SUMO_ATTR_FROM_TAZ) as i32) > 1 {
+                self.write_error("Attributes 'from', 'fromJunction' and 'fromTaz' cannot be defined together");
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+            } else if (attrs.has_attribute(SUMO_ATTR_TO) as i32 + attrs.has_attribute(SUMO_ATTR_TO_JUNCTION) as i32 + attrs.has_attribute(SUMO_ATTR_TO_TAZ) as i32) > 1 {
+                self.write_error("Attributes 'to', 'toJunction' and 'toTaz' cannot be defined together");
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+            } else if attrs.has_attribute(SUMO_ATTR_FROM) && attrs.has_attribute(SUMO_ATTR_TO) {
+                // from-to attributes
+                let from = attrs.get::<String>(SUMO_ATTR_FROM, &flowId, &mut parsedOk, true);
+                let to = attrs.get::<String>(SUMO_ATTR_TO, &flowId, &mut parsedOk, true);
+                // optional attributes
+                let via = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VIA, &flowId, &mut parsedOk, Vec::new(), true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_FLOW);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM, &from);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO, &to);
+                    cur.m().add_string_list_attribute(SUMO_ATTR_VIA, &via);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else if attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION) && attrs.has_attribute(SUMO_ATTR_TO_JUNCTION) {
+                // from-to attributes
+                let fromJunction = attrs.get::<String>(SUMO_ATTR_FROM_JUNCTION, &flowId, &mut parsedOk, true);
+                let toJunction = attrs.get::<String>(SUMO_ATTR_TO_JUNCTION, &flowId, &mut parsedOk, true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_FLOW);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM_JUNCTION, &fromJunction);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO_JUNCTION, &toJunction);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else if attrs.has_attribute(SUMO_ATTR_FROM_TAZ) && attrs.has_attribute(SUMO_ATTR_TO_TAZ) {
+                // from-to attributes
+                let fromTaz = attrs.get::<String>(SUMO_ATTR_FROM_TAZ, &flowId, &mut parsedOk, true);
+                let toTaz = attrs.get::<String>(SUMO_ATTR_TO_TAZ, &flowId, &mut parsedOk, true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_FLOW);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_FROM_TAZ, &fromTaz);
+                    cur.m().add_string_attribute(SUMO_ATTR_TO_TAZ, &toTaz);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else if attrs.has_attribute(SUMO_ATTR_ROUTE) {
+                // from-to attributes
+                let route = attrs.get::<String>(SUMO_ATTR_ROUTE, &flowId, &mut parsedOk, true);
+                let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+                if parsedOk {
+                    // set tag
+                    cur.m().set_tag(SUMO_TAG_FLOW);
+                    // add other attributes
+                    cur.m().add_string_attribute(SUMO_ATTR_ROUTE, &route);
+                } else {
+                    cur.m().set_tag(SUMO_TAG_ERROR);
+                }
+            } else {
+                // set tag
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_FLOW);
+            }
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseStop(const SUMOSAXAttributes &)` [private]
@@ -1675,7 +2007,31 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_stop(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseStop")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // declare stop
+        let mut stop = new_stop();
+        // plan parameters
+        let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+        // get parents
+        let mut stopParents: Vec<SumoXMLTag> = Vec::new();
+        stopParents.extend_from_slice(&NS_ROUTES);
+        stopParents.extend_from_slice(&NS_VEHICLES);
+        stopParents.extend_from_slice(&NS_PERSONS);
+        stopParents.extend_from_slice(&NS_CONTAINERS);
+        //  check parents
+        self.check_parsed_parent(SUMO_TAG_STOP, &stopParents, &mut parsedOk);
+        // parse stop
+        if parsedOk && self.parse_stop_parameters(&mut stop, attrs) {
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_STOP);
+            // add stop attributes
+            cur.m().set_plan_parameters(&planParameters);
+            cur.m().set_stop_parameter(Box::new(stop.clone()), &stop.edge, &stop.lane, &stop.busstop, &stop.containerstop, &stop.parkingarea, &stop.chargingStation);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parsePerson(const SUMOSAXAttributes &)` [private]
@@ -1697,7 +2053,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_person(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parsePerson")
+        // first parse vehicle
+        let personParameter = SUMOVehicleParserHelper::parse_vehicle_attributes(SUMO_TAG_PERSON, attrs, self.myHardFail, false, false, false);
+        if !personParameter.is_null() {
+            // C++ copies personParameter into the XML structure and deletes it: the Box takes it over
+            let personParameter = take_parameter(personParameter);
+            let id = personParameter.id.clone();
+            let routeid = personParameter.routeid.clone();
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_PERSON);
+            // set vehicle parameter
+            cur.m().set_vehicle_parameter(personParameter, &id, &routeid);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parsePersonFlow(const SUMOSAXAttributes &)` [private]
@@ -1719,7 +2089,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_person_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parsePersonFlow")
+        // first parse flow
+        let personFlowParameter = SUMOVehicleParserHelper::parse_flow_attributes(SUMO_TAG_PERSONFLOW, attrs, self.myHardFail, true, self.myFlowBeginDefault, self.myFlowEndDefault, false);
+        if !personFlowParameter.is_null() {
+            // C++ copies personFlowParameter into the XML structure and deletes it: the Box takes it over
+            let personFlowParameter = take_parameter(personFlowParameter);
+            let id = personFlowParameter.id.clone();
+            let routeid = personFlowParameter.routeid.clone();
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_PERSONFLOW);
+            // set vehicle parameter
+            cur.m().set_vehicle_parameter(personFlowParameter, &id, &routeid);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parsePersonTrip(const SUMOSAXAttributes &)` [private]
@@ -1766,7 +2150,44 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_person_trip(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parsePersonTrip")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // plan parameters
+        let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+        // optional attributes
+        let via = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VIA, "", &mut parsedOk, Vec::new(), true);
+        let vTypes = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VTYPES, "", &mut parsedOk, Vec::new(), true);
+        let lines = attrs.get_opt::<Vec<String>>(SUMO_ATTR_LINES, "", &mut parsedOk, Vec::new(), true);
+        let mut modes = attrs.get_opt::<Vec<String>>(SUMO_ATTR_MODES, "", &mut parsedOk, Vec::new(), true);
+        let departPos = attrs.get_opt::<f64>(SUMO_ATTR_DEPARTPOS, "", &mut parsedOk, -1., true);
+        let arrivalPos = attrs.get_opt::<f64>(SUMO_ATTR_ARRIVALPOS, "", &mut parsedOk, -1., true);
+        let walkFactor = attrs.get_opt::<f64>(SUMO_ATTR_WALKFACTOR, "", &mut parsedOk, 0., true);
+        let group = attrs.get_opt::<String>(SUMO_ATTR_GROUP, "", &mut parsedOk, String::new(), true);
+        // check modes
+        let mut dummyModeSet: SVCPermissions = 0;
+        let mut dummyError = String::new();
+        if !SUMOVehicleParameter::parse_person_modes(&modes.join(" "), &tag_str(SUMO_TAG_PERSONTRIP), "", &mut dummyModeSet, &mut dummyError) {
+            write_warning(&dummyError);
+            modes.clear();
+        }
+        // check parents
+        self.check_parsed_parent(SUMO_TAG_PERSONTRIP, &NS_PERSONS.to_vec(), &mut parsedOk);
+        let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+        if parsedOk {
+            // set tag
+            cur.m().set_tag(SUMO_TAG_PERSONTRIP);
+            // add all attributes
+            cur.m().set_plan_parameters(&planParameters);
+            cur.m().add_string_list_attribute(SUMO_ATTR_VTYPES, &vTypes);
+            cur.m().add_string_list_attribute(SUMO_ATTR_MODES, &modes);
+            cur.m().add_string_list_attribute(SUMO_ATTR_LINES, &lines);
+            cur.m().add_double_attribute(SUMO_ATTR_DEPARTPOS, departPos);
+            cur.m().add_double_attribute(SUMO_ATTR_ARRIVALPOS, arrivalPos);
+            cur.m().add_double_attribute(SUMO_ATTR_WALKFACTOR, walkFactor);
+            cur.m().add_string_attribute(SUMO_ATTR_GROUP, &group);
+        } else {
+            cur.m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseWalk(const SUMOSAXAttributes &)` [private]
@@ -1804,7 +2225,35 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_walk(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseWalk")
+        if attrs.has_attribute(SUMO_ATTR_SPEED) && attrs.has_attribute(SUMO_ATTR_DURATION) {
+            self.write_error("Speed and duration attributes cannot be defined together in walks");
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        } else {
+            // declare Ok Flag
+            let mut parsedOk = true;
+            // plan parameters
+            let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+            // optional attributes
+            let departPos = attrs.get_opt::<f64>(SUMO_ATTR_DEPARTPOS, "", &mut parsedOk, -1., true);
+            let arrivalPos = attrs.get_opt::<f64>(SUMO_ATTR_ARRIVALPOS, "", &mut parsedOk, -1., true);
+            let speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut parsedOk, 1.39, true);
+            let duration = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_DURATION, "", &mut parsedOk, 0, true);
+            // check parents
+            self.check_parsed_parent(SUMO_TAG_WALK, &NS_PERSONS.to_vec(), &mut parsedOk);
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            if parsedOk {
+                // set tag
+                cur.m().set_tag(SUMO_TAG_WALK);
+                // add all attributes
+                cur.m().set_plan_parameters(&planParameters);
+                cur.m().add_double_attribute(SUMO_ATTR_DEPARTPOS, departPos);
+                cur.m().add_double_attribute(SUMO_ATTR_ARRIVALPOS, arrivalPos);
+                cur.m().add_double_attribute(SUMO_ATTR_SPEED, speed);
+                cur.m().add_time_attribute(SUMO_ATTR_DURATION, duration);
+            } else {
+                cur.m().set_tag(SUMO_TAG_ERROR);
+            }
+        }
     }
 
     /// C++: `void RouteHandler::parseRide(const SUMOSAXAttributes &)` [private]
@@ -1835,7 +2284,28 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_ride(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseRide")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // plan parameters
+        let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+        // optional attributes
+        let lines = attrs.get_opt::<Vec<String>>(SUMO_ATTR_LINES, "", &mut parsedOk, Vec::new(), true);
+        let arrivalPos = attrs.get_opt::<f64>(SUMO_ATTR_ARRIVALPOS, "", &mut parsedOk, -1., true);
+        let group = attrs.get_opt::<String>(SUMO_ATTR_GROUP, "", &mut parsedOk, String::new(), true);
+        // check parents
+        self.check_parsed_parent(SUMO_TAG_RIDE, &NS_PERSONS.to_vec(), &mut parsedOk);
+        let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+        if parsedOk {
+            // set tag
+            cur.m().set_tag(SUMO_TAG_RIDE);
+            // add all attributes
+            cur.m().set_plan_parameters(&planParameters);
+            cur.m().add_string_list_attribute(SUMO_ATTR_LINES, &lines);
+            cur.m().add_double_attribute(SUMO_ATTR_ARRIVALPOS, arrivalPos);
+            cur.m().add_string_attribute(SUMO_ATTR_GROUP, &group);
+        } else {
+            cur.m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseContainer(const SUMOSAXAttributes &)` [private]
@@ -1857,7 +2327,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_container(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseContainer")
+        // first parse container
+        let containerParameter = SUMOVehicleParserHelper::parse_vehicle_attributes(SUMO_TAG_CONTAINER, attrs, self.myHardFail, false, false, false);
+        if !containerParameter.is_null() {
+            // C++ copies containerParameter into the XML structure and deletes it: the Box takes it over
+            let containerParameter = take_parameter(containerParameter);
+            let id = containerParameter.id.clone();
+            let routeid = containerParameter.routeid.clone();
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_CONTAINER);
+            // set vehicle parameter
+            cur.m().set_vehicle_parameter(containerParameter, &id, &routeid);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseContainerFlow(const SUMOSAXAttributes &)` [private]
@@ -1879,7 +2363,21 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_container_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseContainerFlow")
+        // first parse flow
+        let containerFlowParameter = SUMOVehicleParserHelper::parse_flow_attributes(SUMO_TAG_CONTAINERFLOW, attrs, self.myHardFail, true, self.myFlowBeginDefault, self.myFlowEndDefault, false);
+        if !containerFlowParameter.is_null() {
+            // C++ copies containerFlowParameter into the XML structure and deletes it: the Box takes it over
+            let containerFlowParameter = take_parameter(containerFlowParameter);
+            let id = containerFlowParameter.id.clone();
+            let routeid = containerFlowParameter.routeid.clone();
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            // set tag
+            cur.m().set_tag(SUMO_TAG_CONTAINERFLOW);
+            // set vehicle parameter
+            cur.m().set_vehicle_parameter(containerFlowParameter, &id, &routeid);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseTransport(const SUMOSAXAttributes &)` [private]
@@ -1910,7 +2408,28 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_transport(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseTransport")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // plan parameters
+        let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+        // optional attributes
+        let lines = attrs.get_opt::<Vec<String>>(SUMO_ATTR_LINES, "", &mut parsedOk, Vec::new(), true);
+        let arrivalPos = attrs.get_opt::<f64>(SUMO_ATTR_ARRIVALPOS, "", &mut parsedOk, -1., true);
+        let group = attrs.get_opt::<String>(SUMO_ATTR_GROUP, "", &mut parsedOk, String::new(), true);
+        // check parents
+        self.check_parsed_parent(SUMO_TAG_TRANSPORT, &NS_CONTAINERS.to_vec(), &mut parsedOk);
+        let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+        if parsedOk {
+            // set tag
+            cur.m().set_tag(SUMO_TAG_TRANSPORT);
+            // add all attributes
+            cur.m().set_plan_parameters(&planParameters);
+            cur.m().add_string_list_attribute(SUMO_ATTR_LINES, &lines);
+            cur.m().add_double_attribute(SUMO_ATTR_ARRIVALPOS, arrivalPos);
+            cur.m().add_string_attribute(SUMO_ATTR_GROUP, &group);
+        } else {
+            cur.m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void RouteHandler::parseTranship(const SUMOSAXAttributes &)` [private]
@@ -1948,7 +2467,35 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_tranship(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseTranship")
+        if attrs.has_attribute(SUMO_ATTR_SPEED) && attrs.has_attribute(SUMO_ATTR_DURATION) {
+            self.write_error("Speed and duration attributes cannot be defined together in tranships");
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        } else {
+            // declare Ok Flag
+            let mut parsedOk = true;
+            // plan parameters
+            let planParameters = or_throw(CommonXMLStructure_PlanParameters::from_attributes(self.myCommonXMLStructure.get_current_sumo_base_object(), attrs, &mut parsedOk));
+            // optional attributes
+            let arrivalPos = attrs.get_opt::<f64>(SUMO_ATTR_ARRIVALPOS, "", &mut parsedOk, -1., true);
+            let departPos = attrs.get_opt::<f64>(SUMO_ATTR_DEPARTPOS, "", &mut parsedOk, -1., true);
+            let speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut parsedOk, 1.39, true);
+            let duration = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_DURATION, "", &mut parsedOk, 0, true);
+            // check parents
+            self.check_parsed_parent(SUMO_TAG_TRANSHIP, &NS_CONTAINERS.to_vec(), &mut parsedOk);
+            let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
+            if parsedOk {
+                // set tag
+                cur.m().set_tag(SUMO_TAG_TRANSHIP);
+                // add all attributes
+                cur.m().set_plan_parameters(&planParameters);
+                cur.m().add_double_attribute(SUMO_ATTR_ARRIVALPOS, arrivalPos);
+                cur.m().add_double_attribute(SUMO_ATTR_DEPARTPOS, departPos);
+                cur.m().add_double_attribute(SUMO_ATTR_SPEED, speed);
+                cur.m().add_time_attribute(SUMO_ATTR_DURATION, duration);
+            } else {
+                cur.m().set_tag(SUMO_TAG_ERROR);
+            }
+        }
     }
 
     /// C++: `void RouteHandler::parseInterval(const SUMOSAXAttributes &)` [private]
@@ -1963,7 +2510,11 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_interval(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RouteHandler::parseInterval")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // just parse begin and end default
+        self.myFlowBeginDefault = attrs.get_sumo_time_reporting(SUMO_ATTR_BEGIN, "", &mut parsedOk, true);
+        self.myFlowEndDefault = attrs.get_sumo_time_reporting(SUMO_ATTR_END, "", &mut parsedOk, true);
     }
 
     /// C++: `bool RouteHandler::parseNestedCFM(const SumoXMLTag, const SUMOSAXAttributes &, CommonXMLStructure::SumoBaseObject *)` [private]
@@ -1986,7 +2537,19 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_nested_cfm(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes, vTypeObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port RouteHandler::parseNestedCFM")
+        // write warning info
+        write_warningf!("Defining car-following parameters in a nested element is deprecated in vType '%', use attributes instead!", str_attr(vTypeObject, SUMO_ATTR_ID));
+        // get vType to modify it
+        // shortcut: C++ edits a copy of the vType and stores it back on success; SUMOVTypeParameter is not Clone, so the stored vType is edited in place (a failed parse leaves partial values)
+        let vType = Ptr::new(vehicle_type_parameter_of(vTypeObject));
+        // parse nested CFM attributes
+        if SUMOVehicleParserHelper::parse_cfm_params(vType, tag, attrs, true) {
+            return true;
+        } else if self.myHardFail {
+            throw_error(ProcessError::new("Invalid parsing embedded VType"));
+        } else {
+            return self.write_error("Invalid parsing embedded VType");
+        }
     }
 
     /// C++: `bool RouteHandler::parseStopParameters(SUMOVehicleParameter::Stop &, const SUMOSAXAttributes &)` [private]
@@ -2192,7 +2755,205 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_stop_parameters(&mut self, stop: &mut SUMOVehicleParameter_Stop, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port RouteHandler::parseStopParameters")
+        // check stop parameters
+        if attrs.has_attribute(SUMO_ATTR_ARRIVAL) {
+            stop.parametersSet |= STOP_ARRIVAL_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_DURATION) {
+            stop.parametersSet |= STOP_DURATION_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_UNTIL) {
+            stop.parametersSet |= STOP_UNTIL_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_STARTED) {
+            stop.parametersSet |= STOP_STARTED_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_ENDED) {
+            stop.parametersSet |= STOP_ENDED_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_EXTENSION) {
+            stop.parametersSet |= STOP_EXTENSION_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_ENDPOS) {
+            stop.parametersSet |= STOP_END_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_STARTPOS) {
+            stop.parametersSet |= STOP_START_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_POSITION_LAT) {
+            stop.parametersSet |= STOP_POSLAT_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_TRIGGERED) {
+            stop.parametersSet |= STOP_TRIGGER_SET;
+        }
+        // legacy attribute
+        if attrs.has_attribute(SUMO_ATTR_CONTAINER_TRIGGERED) {
+            if attrs.has_attribute(SUMO_ATTR_SPEED) {
+                write_warningf!("Attributes '%' and '%' cannot be loaded simultaneously. Ignoring '%'", attr_str(SUMO_ATTR_SPEED), attr_str(SUMO_ATTR_CONTAINER_TRIGGERED), attr_str(SUMO_ATTR_CONTAINER_TRIGGERED));
+            } else {
+                stop.parametersSet |= STOP_TRIGGER_SET;
+            }
+        }
+        if attrs.has_attribute(SUMO_ATTR_PARKING) {
+            stop.parametersSet |= STOP_PARKING_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_EXPECTED) {
+            stop.parametersSet |= STOP_EXPECTED_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_PERMITTED) {
+            stop.parametersSet |= STOP_PERMITTED_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_EXPECTED_CONTAINERS) {
+            stop.parametersSet |= STOP_EXPECTED_CONTAINERS_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_TRIP_ID) {
+            stop.parametersSet |= STOP_TRIP_ID_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_SPLIT) {
+            stop.parametersSet |= STOP_SPLIT_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_JOIN) {
+            stop.parametersSet |= STOP_JOIN_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_LINE) {
+            stop.parametersSet |= STOP_LINE_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_SPEED) {
+            stop.parametersSet |= STOP_SPEED_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_ONDEMAND) {
+            stop.parametersSet |= STOP_ONDEMAND_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_JUMP) {
+            stop.parametersSet |= STOP_JUMP_SET;
+        }
+        if attrs.has_attribute(SUMO_ATTR_JUMP_UNTIL) {
+            stop.parametersSet |= STOP_JUMP_UNTIL_SET;
+        }
+        // get parameters
+        let mut ok = true;
+        // edge/lane
+        stop.edge = attrs.get_opt::<String>(SUMO_ATTR_EDGE, "", &mut ok, String::new(), true);
+        stop.lane = attrs.get_opt::<String>(SUMO_ATTR_LANE, "", &mut ok, stop.busstop.clone(), true);
+        // check errors
+        if !stop.edge.is_empty() && !stop.lane.is_empty() {
+            return self.write_error("A stop must be defined either with an edge or with an lane, not both");
+        }
+        // stopping places
+        stop.busstop = attrs.get_opt::<String>(SUMO_ATTR_BUS_STOP, "", &mut ok, String::new(), true);
+        if stop.busstop.is_empty() {
+            stop.busstop = attrs.get_opt::<String>(SUMO_ATTR_TRAIN_STOP, "", &mut ok, stop.busstop.clone(), true);
+        }
+        stop.chargingStation = attrs.get_opt::<String>(SUMO_ATTR_CHARGING_STATION, "", &mut ok, String::new(), true);
+        stop.overheadWireSegment = attrs.get_opt::<String>(SUMO_ATTR_OVERHEAD_WIRE_SEGMENT, "", &mut ok, String::new(), true);
+        stop.containerstop = attrs.get_opt::<String>(SUMO_ATTR_CONTAINER_STOP, "", &mut ok, String::new(), true);
+        stop.parkingarea = attrs.get_opt::<String>(SUMO_ATTR_PARKING_AREA, "", &mut ok, String::new(), true);
+        //check stopping places
+        let numStoppingPlaces = (!stop.busstop.is_empty()) as i32
+            + (!stop.chargingStation.is_empty()) as i32
+            + (!stop.overheadWireSegment.is_empty()) as i32
+            + (!stop.containerstop.is_empty()) as i32
+            + (!stop.parkingarea.is_empty()) as i32;
+        if numStoppingPlaces > 1 {
+            return self.write_error("A stop must be defined only in a StoppingPlace");
+        } else if numStoppingPlaces == 0 && stop.edge.is_empty() && stop.lane.is_empty() {
+            return self.write_error("A stop must be defined in an edge, a lane, or in a StoppingPlace");
+        }
+        // declare error suffix
+        let mut errorSuffix = String::new();
+        if stop.busstop != "" {
+            errorSuffix = format!(" at '{}'{}", stop.busstop, errorSuffix);
+        } else if stop.chargingStation != "" {
+            errorSuffix = format!(" at '{}'{}", stop.chargingStation, errorSuffix);
+        } else if stop.overheadWireSegment != "" {
+            errorSuffix = format!(" at '{}'{}", stop.overheadWireSegment, errorSuffix);
+        } else if stop.containerstop != "" {
+            errorSuffix = format!(" at '{}'{}", stop.containerstop, errorSuffix);
+        } else if stop.parkingarea != "" {
+            errorSuffix = format!(" at '{}'{}", stop.parkingarea, errorSuffix);
+        } else if stop.edge != "" {
+            errorSuffix = format!(" at '{}'{}", stop.edge, errorSuffix);
+        } else {
+            errorSuffix = format!(" on lane '{}'{}", stop.lane, errorSuffix);
+        }
+        // speed for counting as stopped
+        stop.speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut ok, 0., true);
+        if stop.speed < 0. {
+            return self.write_error(&format!("Speed cannot be negative for stop{}", errorSuffix));
+        }
+        // get the standing duration
+        let expectTrigger = !attrs.has_attribute(SUMO_ATTR_DURATION) && !attrs.has_attribute(SUMO_ATTR_UNTIL) && !attrs.has_attribute(SUMO_ATTR_SPEED);
+        let mut triggers = attrs.get_opt::<Vec<String>>(SUMO_ATTR_TRIGGERED, "", &mut ok, Vec::new(), true);
+        // legacy
+        if attrs.get_opt::<bool>(SUMO_ATTR_CONTAINER_TRIGGERED, "", &mut ok, false, true) && !attrs.has_attribute(SUMO_ATTR_SPEED) {
+            triggers.push(tag_str(SUMO_TAG_CONTAINER));
+        }
+        SUMOVehicleParameter::parse_stop_triggers(&triggers, expectTrigger, stop);
+        stop.startPos = attrs.get_opt::<f64>(SUMO_ATTR_STARTPOS, "", &mut ok, 0., true);
+        stop.endPos = attrs.get_opt::<f64>(SUMO_ATTR_ENDPOS, "", &mut ok, 0., true);
+        stop.friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, "", &mut ok, false, true);
+        stop.arrival = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_ARRIVAL, "", &mut ok, -1, true);
+        stop.duration = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_DURATION, "", &mut ok, -1, true);
+        stop.until = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_UNTIL, "", &mut ok, -1, true);
+        if !expectTrigger && (!ok || (stop.duration < 0 && stop.until < 0 && stop.speed == 0.)) {
+            return self.write_error(&format!("Invalid duration or end time is given for a stop{}", errorSuffix));
+        }
+        stop.extension = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_EXTENSION, "", &mut ok, -1, true);
+        let defaultParking = stop.triggered || stop.containerTriggered || stop.parkingarea != "";
+        stop.parking = attrs.get_opt::<ParkingType>(SUMO_ATTR_PARKING, "", &mut ok, if defaultParking { ParkingType::OFFROAD } else { ParkingType::ONROAD }, true);
+        if stop.parkingarea != "" && stop.parking == ParkingType::ONROAD {
+            write_warning(&format!("Stop at parkingarea overrides attribute 'parking' for stop{}", errorSuffix));
+            stop.parking = ParkingType::OFFROAD;
+        }
+        if !ok {
+            return self.write_error(&format!("Invalid bool for 'triggered', 'containerTriggered' or 'parking' for stop{}", errorSuffix));
+        }
+        // expected persons
+        let expected = attrs.get_opt::<Vec<String>>(SUMO_ATTR_EXPECTED, "", &mut ok, Vec::new(), true);
+        stop.awaitedPersons.extend(expected);
+        if !stop.awaitedPersons.is_empty() && (stop.parametersSet & STOP_TRIGGER_SET) == 0 {
+            stop.triggered = true;
+            if (stop.parametersSet & STOP_PARKING_SET) == 0 {
+                stop.parking = ParkingType::OFFROAD;
+            }
+        }
+        // permitted transportables
+        let permitted = attrs.get_opt::<Vec<String>>(SUMO_ATTR_PERMITTED, "", &mut ok, Vec::new(), true);
+        stop.permitted.extend(permitted);
+        // expected containers
+        let expectedContainers = attrs.get_opt::<Vec<String>>(SUMO_ATTR_EXPECTED_CONTAINERS, "", &mut ok, Vec::new(), true);
+        stop.awaitedContainers.extend(expectedContainers);
+        if !stop.awaitedContainers.is_empty() && (stop.parametersSet & STOP_CONTAINER_TRIGGER_SET) == 0 {
+            stop.containerTriggered = true;
+            if (stop.parametersSet & STOP_PARKING_SET) == 0 {
+                stop.parking = ParkingType::OFFROAD;
+            }
+        }
+        // public transport trip id
+        stop.tripId = attrs.get_opt::<String>(SUMO_ATTR_TRIP_ID, "", &mut ok, String::new(), true);
+        stop.split = attrs.get_opt::<String>(SUMO_ATTR_SPLIT, "", &mut ok, String::new(), true);
+        stop.join = attrs.get_opt::<String>(SUMO_ATTR_JOIN, "", &mut ok, String::new(), true);
+        stop.line = attrs.get_opt::<String>(SUMO_ATTR_LINE, "", &mut ok, String::new(), true);
+        // index
+        let idx = attrs.get_opt::<String>(SUMO_ATTR_INDEX, "", &mut ok, "end".to_string(), true);
+        if idx == "end" {
+            stop.index = STOP_INDEX_END;
+        } else if idx == "fit" {
+            stop.index = STOP_INDEX_FIT;
+        } else {
+            stop.index = attrs.get::<i32>(SUMO_ATTR_INDEX, "", &mut ok, true);
+            if !ok || stop.index < 0 {
+                return self.write_error(&format!("Invalid 'index' for stop{}", errorSuffix));
+            }
+        }
+        stop.started = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_STARTED, "", &mut ok, -1, true);
+        stop.ended = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_ENDED, "", &mut ok, -1, true);
+        stop.posLat = attrs.get_opt::<f64>(SUMO_ATTR_POSITION_LAT, "", &mut ok, INVALID_DOUBLE, true);
+        stop.actType = attrs.get_opt::<String>(SUMO_ATTR_ACTTYPE, "", &mut ok, String::new(), true);
+        stop.onDemand = attrs.get_opt::<bool>(SUMO_ATTR_ONDEMAND, "", &mut ok, false, true);
+        stop.jump = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_JUMP, "", &mut ok, -1, true);
+        stop.jumpUntil = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_JUMP_UNTIL, "", &mut ok, -1, true);
+        true
     }
 
     /// C++: `bool RouteHandler::isOverFromToEdges(const CommonXMLStructure::SumoBaseObject *) const` [const, private]
@@ -2203,7 +2964,7 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_over_from_to_edges(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port RouteHandler::isOverFromToEdges")
+        sumoBaseObject.has_string_attribute(SUMO_ATTR_FROM) && sumoBaseObject.has_string_attribute(SUMO_ATTR_TO)
     }
 
     /// C++: `bool RouteHandler::isOverFromToJunctions(const CommonXMLStructure::SumoBaseObject *) const` [const, private]
@@ -2214,7 +2975,7 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_over_from_to_junctions(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port RouteHandler::isOverFromToJunctions")
+        sumoBaseObject.has_string_attribute(SUMO_ATTR_FROM_JUNCTION) && sumoBaseObject.has_string_attribute(SUMO_ATTR_TO_JUNCTION)
     }
 
     /// C++: `bool RouteHandler::isOverFromToTAZs(const CommonXMLStructure::SumoBaseObject *) const` [const, private]
@@ -2225,7 +2986,7 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_over_from_to_ta_zs(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port RouteHandler::isOverFromToTAZs")
+        sumoBaseObject.has_string_attribute(SUMO_ATTR_FROM_TAZ) && sumoBaseObject.has_string_attribute(SUMO_ATTR_TO_TAZ)
     }
 
     /// C++: `void RouteHandler::adjustTypesAndProbabilities(std::vector<std::string> &, std::vector<double> &)` [private]
@@ -2243,7 +3004,14 @@ impl RouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn adjust_types_and_probabilities(&mut self, vTypes: &mut Vec<String>, probabilities: &mut Vec<f64>) {
-        todo!("port RouteHandler::adjustTypesAndProbabilities")
+        // add more probabilities
+        while probabilities.len() < vTypes.len() {
+            probabilities.push(INVALID_DOUBLE);
+        }
+        // reduce number of probabilities
+        while vTypes.len() < probabilities.len() {
+            probabilities.pop();
+        }
     }
 
     /// C++: `void RouteHandler::RouteHandler()` [private]
@@ -2251,7 +3019,7 @@ impl RouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port RouteHandler::RouteHandler")
+        panic!("C++ RouteHandler::RouteHandler() is private and undefined, it must not be called")
     }
 
     /// C++: `void RouteHandler::RouteHandler(const RouteHandler &)` [private]
@@ -2259,7 +3027,7 @@ impl RouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &RouteHandler) -> Self {
-        todo!("port RouteHandler::RouteHandler")
+        panic!("C++ RouteHandler copy constructor is private and undefined, it must not be called")
     }
 
     /// C++: `RouteHandler & RouteHandler::operator=(const RouteHandler &)` [private]
@@ -2267,7 +3035,7 @@ impl RouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &RouteHandler) -> &mut RouteHandler {
-        todo!("port RouteHandler::operator=")
+        panic!("C++ RouteHandler::operator= is private and undefined, it must not be called")
     }
 
 }
