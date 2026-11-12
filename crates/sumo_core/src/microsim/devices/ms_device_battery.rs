@@ -1,6 +1,9 @@
 //! Port of microsim/devices/MSDevice_Battery.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::to_string;
+use utils::common::string_utils::to_double;
+use utils::options::options_cont::{get_bool, with_options};
 
 /// Battery device for electric vehicles
 /// C++ class `MSDevice_Battery` (microsim/devices/MSDevice_Battery.h)
@@ -33,7 +36,7 @@ pub struct MSDevice_Battery {
     /// Parameter, total vehicle energy regeneration
     pub myTotalRegenerated: f64,
     /// Charge curve data points storage
-    pub myChargeCurve: Unmapped /* LinearApproxHelpers::LinearApproxMap */,
+    pub myChargeCurve: LinearApproxMap,
     /// Parameter, Pointer to current charging station in which vehicle is placed (by default is NULL)
     pub myActChargingStation: Ptr<MSChargingStation>,
     /// Parameter, Pointer to charging station neighbouring with myActChargingStation in which vehicle was placed previously (by default is NULL), i.e. auxiliar pointer for disabling charging vehicle from previous (not current) ChargingStation (if there is no gap between two different chargingStations)
@@ -62,6 +65,93 @@ impl std::ops::DerefMut for MSDevice_Battery {
     }
 }
 
+/// C++ `MIN2` macro
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `toString(SumoXMLAttr)`: the XML name of the attribute
+fn attr_str(attr: SumoXMLAttr) -> String {
+    utils::xml::sumo_xml_definitions::Attrs.get_string(attr).to_string()
+}
+
+/// C++ `DEFAULT_MAX_CAPACITY` (MSDevice_Battery.cpp)
+const DEFAULT_MAX_CAPACITY: f64 = 35000.;
+/// C++ `DEFAULT_CHARGE_RATIO` (MSDevice_Battery.cpp)
+const DEFAULT_CHARGE_RATIO: f64 = 0.5;
+/// C++ `VTYPEPARS_EMISSIONCLASS_SET` bit (private in ms_vehicle_type.rs, same value)
+const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
+
+/// C++ `istringstream >> double`; shortcut: failbit state after a bad token is not modelled
+fn read_stream_f64(bis: &mut std::str::SplitWhitespace, target: &mut f64) {
+    if let Some(t) = bis.next() {
+        *target = t.parse::<f64>().unwrap_or(0.);
+    }
+}
+
+/// C++ `istringstream >> SUMOTime`; shortcut: failbit state after a bad token is not modelled
+fn read_stream_i64(bis: &mut std::str::SplitWhitespace, target: &mut i64) {
+    if let Some(t) = bis.next() {
+        *target = t.parse::<i64>().unwrap_or(0);
+    }
+}
+
+/// C++ `istringstream >> int`; shortcut: failbit state after a bad token is not modelled
+fn read_stream_i32(bis: &mut std::str::SplitWhitespace, target: &mut i32) {
+    if let Some(t) = bis.next() {
+        *target = t.parse::<i32>().unwrap_or(0);
+    }
+}
+
+/// C++ `istringstream >> bool` (written by toString as 1/0); shortcut: failbit state after a bad token is not modelled
+fn read_stream_bool(bis: &mut std::str::SplitWhitespace, target: &mut bool) {
+    if let Some(t) = bis.next() {
+        *target = t.parse::<i32>().map(|v| v != 0).unwrap_or(false);
+    }
+}
+
+/// C++ `LinearApproxHelpers::getValueTable`
+fn get_value_table(dataString: &str) -> Vec<f64> {
+    let mut result = Vec::new();
+    if !dataString.is_empty() {
+        let mut st = StringTokenizer::new(dataString);
+        while st.has_next() {
+            let value = st.next().unwrap_or_else(|e| panic!("{}", e));
+            result.push(to_double(&value).unwrap_or_else(|e| panic!("{}", e)));
+        }
+    }
+    result
+}
+
+/// C++ `LinearApproxHelpers::setPoints` (std::map::insert: an existing key is kept)
+fn set_points(map: &mut LinearApproxMap, axisString: &str, heightString: &str) {
+    let axisData = get_value_table(axisString);
+    let heightData = get_value_table(heightString);
+    if heightData.len() > 0 && heightData.len() != axisData.len() {
+        panic!("{}", ProcessError::new(format!("Mismatching data rows of {} axis and {} height values.", axisData.len(), heightData.len())));
+    } else {
+        for (a, h) in axisData.iter().zip(heightData.iter()) {
+            if let Err(pos) = map.binary_search_by(|(k, _)| k.partial_cmp(a).unwrap()) {
+                map.insert(pos, (*a, *h));
+            }
+        }
+    }
+}
+
+/// C++ `LinearApproxHelpers::getMaximumValue`
+fn get_maximum_value(map: &LinearApproxMap) -> f64 {
+    if map.is_empty() {
+        panic!("{}", ProcessError::new("Cannot determine the maximum value from an empty map."));
+    }
+    let mut maxValue = f64::MIN_POSITIVE; // std::numeric_limits<double>::min()
+    for item in map.iter() {
+        if item.1 > maxValue {
+            maxValue = item.1;
+        }
+    }
+    maxValue
+}
+
 impl MSDevice_Battery {
     /// C++: `void MSDevice_Battery::insertOptions(OptionsCont &)` [static]
     /// Inserts MSDevice_Example-options
@@ -74,7 +164,10 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Battery::insertOptions")
+        MSDevice::insert_default_assignment_options("battery", "Battery", oc, false);
+        // custom options
+        oc.do_register("device.battery.track-fuel", SumoOption::bool(false));
+        oc.add_description("device.battery.track-fuel", "Battery", "Track fuel consumption for non-electric vehicles");
     }
 
     /// C++: `void MSDevice_Battery::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &, MSDevice_StationFinder *)` [static]
@@ -107,7 +200,33 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>, sf: Ptr<MSDevice_StationFinder>) {
-        todo!("port MSDevice_Battery::buildVehicleDevices")
+        // Check if vehicle should get a battery
+        let equipped = !sf.is_null() || with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "battery", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            // obtain parameter values
+            let maximumBatteryCapacity = MSDevice_Battery::read_parameter_value(v, &SUMO_ATTR_MAXIMUMBATTERYCAPACITY, "battery.capacity", DEFAULT_MAX_CAPACITY);
+            let actualBatteryCapacity = MSDevice_Battery::read_parameter_value(v, &SUMO_ATTR_ACTUALBATTERYCAPACITY, "battery.chargeLevel", maximumBatteryCapacity * DEFAULT_CHARGE_RATIO);
+            let stoppingThreshold = MSDevice_Battery::read_parameter_value(v, &SUMO_ATTR_STOPPINGTHRESHOLD, "battery.stoppingThreshold", 0.1);
+            let maximumChargeRate = MSDevice_Battery::read_parameter_value(v, &SUMO_ATTR_MAXIMUMCHARGERATE, "battery.maximumChargeRate", 150000.);
+            let chargeLevelTable = v.get_string_param("device.battery.chargeLevelTable", false, "");
+            let chargeCurveTable = v.get_string_param("device.battery.chargeCurveTable", false, "");
+
+            // battery constructor
+            let id = format!("battery_{}", v.get_id());
+            // shortcut: the device is leaked like the C++ new, so the vehicle's device list keeps a stable pointer; upgrade when MSVehicle owns its devices as Box
+            let device: &mut MSDevice_Battery = Box::leak(Box::new(MSDevice_Battery::new(v, &id, actualBatteryCapacity, maximumBatteryCapacity, stoppingThreshold, maximumChargeRate, &chargeLevelTable, &chargeCurveTable)));
+
+            // Add device to vehicle
+            into.push(Ptr::from_mut(&mut device.base));
+
+            if !sf.is_null() {
+                sf.m().set_battery(Ptr::from_mut(device));
+            }
+            // ensure that parameters are initialized
+            let _ = Ptr::from_mut(v).cast::<MSBaseVehicle>().m().get_emission_parameters();
+        }
     }
 
     /// C++: `void MSDevice_Battery::~MSDevice_Battery() noexcept` [virtual]
@@ -116,7 +235,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Battery::~MSDevice_Battery")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSDevice_Battery::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -130,7 +249,11 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, tObject: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Battery::notifyMove")
+        if !tObject.is_vehicle() {
+            return false;
+        }
+        self.notify_move_internal(&*tObject, 0., ts(), 0., newSpeed, 0., 0., 0.);
+        true
     }
 
     /// C++: `const std::string MSDevice_Battery::deviceName() const` [const, virtual]
@@ -140,7 +263,7 @@ impl MSDevice_Battery {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Battery::deviceName")
+        "battery".to_string()
     }
 
     /// C++: `void MSDevice_Battery::saveState(OutputDevice &) const` [const, virtual]
@@ -168,7 +291,24 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDevice_Battery::saveState")
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.get_id());
+        let mut internals: Vec<String> = Vec::new();
+        internals.push(to_string(&self.myActualBatteryCapacity));
+        internals.push(to_string(&self.myLastAngle));
+        internals.push(to_string(&self.myChargingStopped));
+        internals.push(to_string(&self.myChargingInTransit));
+        internals.push(to_string(&self.myChargingStartTime));
+        internals.push(to_string(&self.myTotalConsumption));
+        internals.push(to_string(&self.myTotalRegenerated));
+        internals.push(to_string(&self.myEnergyCharged));
+        internals.push(to_string(&self.myVehicleStopped));
+        internals.push(self.get_charging_station_id());
+        let prevChargingID = if self.myPreviousNeighbouringChargingStation.is_null() { "NULL".to_string() } else { self.myPreviousNeighbouringChargingStation.get_id().to_string() };
+        internals.push(prevChargingID);
+        internals.push(to_string(&self.myMaximumChargeRate));
+        out.write_attr(SUMO_ATTR_STATE, &to_string(&internals));
+        out.close_tag("");
     }
 
     /// C++: `void MSDevice_Battery::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -199,7 +339,27 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSDevice_Battery::loadState")
+        // shortcut: C++ istringstream failbit semantics are not modelled (a malformed token is read as 0 or false); state strings are always written by saveState, upgrade if hand-written states must be rejected
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        read_stream_f64(&mut bis, &mut self.myActualBatteryCapacity);
+        read_stream_f64(&mut bis, &mut self.myLastAngle);
+        read_stream_bool(&mut bis, &mut self.myChargingStopped);
+        read_stream_bool(&mut bis, &mut self.myChargingInTransit);
+        read_stream_i64(&mut bis, &mut self.myChargingStartTime);
+        read_stream_f64(&mut bis, &mut self.myTotalConsumption);
+        read_stream_f64(&mut bis, &mut self.myTotalRegenerated);
+        read_stream_f64(&mut bis, &mut self.myEnergyCharged);
+        read_stream_i32(&mut bis, &mut self.myVehicleStopped);
+        let chargingID = bis.next().unwrap_or("").to_string();
+        if chargingID != "NULL" {
+            self.myActChargingStation = MSNet::get_instance().get_stopping_place(&chargingID, SUMO_TAG_CHARGING_STATION).cast::<MSChargingStation>();
+        }
+        let prevChargingID = bis.next().unwrap_or("").to_string();
+        if prevChargingID != "NULL" {
+            self.myPreviousNeighbouringChargingStation = MSNet::get_instance().get_stopping_place(&prevChargingID, SUMO_TAG_CHARGING_STATION).cast::<MSChargingStation>();
+        }
+        read_stream_f64(&mut bis, &mut self.myMaximumChargeRate);
     }
 
     /// C++: `std::string MSDevice_Battery::getParameter(const std::string &) const` [const, virtual]
@@ -232,7 +392,30 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Battery::getParameter")
+        // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
+        if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
+            to_string(&self.get_actual_battery_capacity())
+        } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
+            to_string(&self.get_consum())
+        } else if key == "chargePower" {
+            to_string(&(self.get_energy_charged() * 3600.))
+        } else if key == "usedAverage" {
+            to_string(&(self.get_total_consumption() * 3600. / steps2time(MSNet::get_instance().get_current_time_step() - self.get_holder().get_departure())))
+        } else if key == attr_str(SUMO_ATTR_TOTALENERGYCONSUMED) {
+            to_string(&self.get_total_consumption())
+        } else if key == attr_str(SUMO_ATTR_TOTALENERGYREGENERATED) {
+            to_string(&self.get_total_regenerated())
+        } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
+            to_string(&self.get_energy_charged())
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) || key == "capacity" {
+            to_string(&self.get_maximum_battery_capacity())
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
+            to_string(&self.get_maximum_charge_rate())
+        } else if key == attr_str(SUMO_ATTR_CHARGINGSTATIONID) {
+            self.get_charging_station_id()
+        } else {
+            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        }
     }
 
     /// C++: `void MSDevice_Battery::setParameter(const std::string &, const std::string &)` [virtual]
@@ -257,7 +440,19 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_Battery::setParameter")
+        let doubleValue = match to_double(value) {
+            Ok(d) => d,
+            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+        };
+        if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
+            self.set_actual_battery_capacity(doubleValue);
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) || key == "capacity" {
+            self.set_maximum_battery_capacity(doubleValue);
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
+            self.set_maximum_charge_rate(doubleValue);
+        } else {
+            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+        }
     }
 
     /// C++: `void MSDevice_Battery::notifyParking()` [virtual]
@@ -270,7 +465,13 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn notify_parking(&mut self) {
-        todo!("port MSDevice_Battery::notifyParking")
+        // @note: only charing is performed but no energy is consumed
+        let holder = self.myHolder;
+        let hv = holder.m();
+        let pos = hv.get_position_on_lane();
+        let spd = hv.get_speed();
+        self.notify_move(&mut hv.base, pos, pos, spd);
+        self.myConsum = 0.;
     }
 
     /// C++: `void MSDevice_Battery::generateOutput(OutputDevice *) const` [const, virtual]
@@ -288,7 +489,15 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_Battery::generateOutput")
+        if !tripinfoOut.is_null() {
+            let out = tripinfoOut.m();
+            out.open_tag("battery");
+            out.write_attr("depleted", &to_string(&self.myDepletedCount));
+            out.write_attr("actualBatteryCapacity", &to_string(&self.myActualBatteryCapacity));
+            out.write_attr("totalEnergyConsumed", &to_string(&self.myTotalConsumption));
+            out.write_attr("totalEnergyRegenerated", &to_string(&self.myTotalRegenerated));
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSDevice_Battery::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -432,7 +641,131 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, tObject: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSDevice_Battery::notifyMoveInternal")
+        // C++ static_cast<const SUMOVehicle&>(tObject); MSBaseVehicle embeds SUMOVehicle as its first field
+        let veh: Ptr<MSBaseVehicle> = Ptr::new(tObject).cast::<SUMOVehicle>().cast::<MSBaseVehicle>();
+        // Start vehicleStoppedTimer if the vehicle is stopped. In other case reset timer
+        if meanSpeedVehicleOnLane < self.myStoppingThreshold {
+            // Increase vehicle stopped timer
+            self.increase_vehicle_stopped_timer();
+        } else {
+            // Reset vehicle Stopped
+            self.reset_vehicle_stopped_timer();
+        }
+
+        // Update Energy from the battery
+        let params = self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters();
+        if self.get_maximum_battery_capacity() != 0. {
+            if !self.myTrackFuel && !veh.get_vehicle_type().get_parameter().was_set(VTYPEPARS_EMISSIONCLASS_SET) {
+                // no explicit emission class, we fall back to the energy model; a warning has been issued on creation
+                self.myConsum = PollutantsInterface::get_energy_helper().compute(0, PollutantsInterface_EmissionType::ELEC, meanSpeedVehicleOnLane, veh.get_acceleration(), veh.get_slope(), params) * timeOnLane;
+            } else {
+                self.myConsum = PollutantsInterface::compute(veh.get_vehicle_type().get_emission_class(),
+                    if self.myTrackFuel { PollutantsInterface_EmissionType::FUEL } else { PollutantsInterface_EmissionType::ELEC },
+                    meanSpeedVehicleOnLane, veh.get_acceleration(), veh.get_slope(), params) * timeOnLane;
+            }
+            if veh.is_parking() {
+                // recuperation from last braking step is ok but further consumption should cease
+                self.myConsum = min2(self.myConsum, 0.0);
+            }
+
+            // saturate between 0 and myMaximumBatteryCapacity [Wh]
+            if self.myConsum > self.get_actual_battery_capacity() && self.get_actual_battery_capacity() > 0. && self.get_maximum_battery_capacity() > 0. {
+                self.myDepletedCount += 1;
+                if self.myDepletedCount == 1 {
+                    write_warningf!("Battery of vehicle '%' is depleted, time=%.", veh.get_id(), time2string(MSNet::get_instance().get_current_time_step()));
+                }
+            }
+
+            // Energy lost/gained from vehicle movement (via vehicle energy model) [Wh]
+            self.set_actual_battery_capacity(self.get_actual_battery_capacity() - self.myConsum);
+
+            // Track total energy consumption and regeneration
+            if self.myConsum > 0.0 {
+                self.myTotalConsumption += self.myConsum;
+            } else {
+                self.myTotalRegenerated -= self.myConsum;
+            }
+
+            self.myLastAngle = veh.get_angle();
+        }
+
+        // Check if vehicle has under their position one charge Station
+        let chargingStationID = MSNet::get_instance().get_stopping_place_id(veh.get_lane(), veh.get_position_on_lane(), SUMO_TAG_CHARGING_STATION);
+
+        // If vehicle is over a charging station
+        if chargingStationID != "" {
+            // if the vehicle is almost stopped, or charge in transit is enabled, then charge vehicle
+            let cs: Ptr<MSChargingStation> = MSNet::get_instance().get_stopping_place(&chargingStationID, SUMO_TAG_CHARGING_STATION).cast::<MSChargingStation>();
+            let pa: Ptr<MSParkingArea> = cs.get_parking_area();
+            if ((meanSpeedVehicleOnLane < self.myStoppingThreshold) || cs.get_charge_in_transit()) && (pa.is_null() || veh.is_parking()) && cs.get_charge_type() == self.myChargeType {
+                // Set Flags Stopped/intransit to
+                if meanSpeedVehicleOnLane < self.myStoppingThreshold {
+                    // vehicle ist almost stopped, then is charging stopped
+                    self.myChargingStopped = true;
+                    // therefore isn't charging in transit
+                    self.myChargingInTransit = false;
+                } else {
+                    // vehicle is moving, and the Charging station allow charge in transit
+                    self.myChargingStopped = false;
+                    // Therefore charge in transit
+                    self.myChargingInTransit = true;
+                }
+
+                // get pointer to charging station
+                self.myActChargingStation = cs;
+
+                // Only update charging start time if vehicle allow charge in transit, or in other case
+                // if the vehicle not allow charge in transit but it's stopped.
+                if self.myActChargingStation.get_charge_in_transit() || (meanSpeedVehicleOnLane < self.myStoppingThreshold) {
+                    // Update Charging start time
+                    self.increase_charging_start_time();
+                }
+
+                // time it takes the vehicle at the station < charging station time delay?
+                if self.get_charging_start_time() > self.myActChargingStation.get_charge_delay() {
+                    // Enable charging vehicle
+                    self.myActChargingStation.m().set_charging_vehicle(true);
+
+                    // Calulate energy charged
+                    self.myEnergyCharged = min2(min2(self.myActChargingStation.get_charging_power(self.myTrackFuel) * self.myActChargingStation.get_efficency(), self.get_maximum_charge_rate() * (if self.myTrackFuel { 1. } else { 1. / 3600. })) * timeOnLane, self.get_maximum_battery_capacity() - self.get_actual_battery_capacity());
+
+                    // Update Battery charge
+                    self.set_actual_battery_capacity(self.get_actual_battery_capacity() + self.myEnergyCharged);
+                }
+                // add charge value for output to myActChargingStation
+                let me: Ptr<MSDevice_Battery> = Ptr::from_mut(self);
+                self.myActChargingStation.m().add_charge_value_for_output(self.myEnergyCharged, me);
+            }
+            // else disable charging vehicle
+            else {
+                cs.m().set_charging_vehicle(false);
+            }
+            // disable charging vehicle from previous (not current) ChargingStation (reason: if there is no gap between two different chargingStations = the vehicle switches from used charging station to other one in a single timestap)
+            if !self.myPreviousNeighbouringChargingStation.is_null() && self.myPreviousNeighbouringChargingStation != cs {
+                self.myPreviousNeighbouringChargingStation.m().set_charging_vehicle(false);
+            }
+            self.myPreviousNeighbouringChargingStation = cs;
+        }
+        // In other case, vehicle will be not charged
+        else {
+            // Disable flags
+            self.myChargingInTransit = false;
+            self.myChargingStopped = false;
+
+            // Disable charging vehicle
+            if !self.myActChargingStation.is_null() {
+                self.myActChargingStation.m().set_charging_vehicle(false);
+            }
+
+            // Set charging station pointer to NULL
+            self.myActChargingStation = Ptr::default();
+
+            // Set energy charged to 0
+            self.myEnergyCharged = 0.;
+
+            // Reset timer
+            self.reset_charging_start_time();
+        }
     }
 
     /// C++: `void MSDevice_Battery::MSDevice_Battery(SUMOVehicle &, const std::string &, const double, const double, const double, const double, const std::string &, const std::string &)` [private]
@@ -500,7 +833,67 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, actualBatteryCapacity: f64, maximumBatteryCapacity: f64, stoppingThreshold: f64, maximumChargeRate: f64, chargeLevelTable: &str, chargeCurveTable: &str) -> Self {
-        todo!("port MSDevice_Battery::MSDevice_Battery")
+        let mut s = MSDevice_Battery {
+            base: MSVehicleDevice::new(holder, id),
+            myActualBatteryCapacity: 0.,          // [actualBatteryCapacity <= maximumBatteryCapacity]
+            myMaximumBatteryCapacity: 0.,         // [maximumBatteryCapacity >= 0]
+            myStoppingThreshold: 0.,              // [stoppingThreshold >= 0]
+            myMaximumChargeRate: 0.,
+            myChargeLimit: -1.,
+            myLastAngle: f64::INFINITY,
+            myChargingStopped: false,             // Initially vehicle don't charge stopped
+            myChargingInTransit: false,           // Initially vehicle don't charge in transit
+            myChargingStartTime: 0,               // Initially charging start time (must be if the vehicle was launched at the charging station)
+            myConsum: 0.,                         // Initially the vehicle is stopped and therefore the consum is zero.
+            myTotalConsumption: 0.0,
+            myTotalRegenerated: 0.0,
+            myChargeCurve: Vec::new(),
+            myActChargingStation: Ptr::default(),                  // Initially the vehicle isn't over a Charging Station
+            myPreviousNeighbouringChargingStation: Ptr::default(), // Initially the vehicle wasn't over a Charging Station
+            myEnergyCharged: 0.,                  // Initially the energy charged is zero
+            myVehicleStopped: 0,
+            myDepletedCount: 0,
+            myTrackFuel: false,
+            myChargeType: MSChargingStation_ChargeType::CHARGETYPE_NORMAL,
+        };
+        // Initially the vehicle is stopped and the corresponding variable is 0
+
+        if maximumBatteryCapacity < 0. {
+            write_warningf!("Battery builder: Vehicle '%' doesn't have a valid value for parameter % (%).", s.base.base2.get_id(), attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY), to_string(&maximumBatteryCapacity));
+        } else {
+            s.myMaximumBatteryCapacity = maximumBatteryCapacity;
+        }
+
+        if actualBatteryCapacity > maximumBatteryCapacity {
+            write_warningf!("Battery builder: Vehicle '%' has a % (%) greater than its % (%). A max battery capacity value will be assigned.",
+                s.base.base2.get_id(), attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY), to_string(&actualBatteryCapacity), attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY), to_string(&maximumBatteryCapacity));
+            s.myActualBatteryCapacity = s.myMaximumBatteryCapacity;
+        } else {
+            s.myActualBatteryCapacity = actualBatteryCapacity;
+        }
+
+        if stoppingThreshold < 0. {
+            write_warningf!("Battery builder: Vehicle '%' doesn't have a valid value for parameter % (%).", s.base.base2.get_id(), attr_str(SUMO_ATTR_STOPPINGTHRESHOLD), to_string(&stoppingThreshold));
+        } else {
+            s.myStoppingThreshold = stoppingThreshold;
+        }
+
+        s.myTrackFuel = PollutantsInterface::get_fuel(holder.get_vehicle_type().get_emission_class()) != "Electricity" && get_bool("device.battery.track-fuel");
+        if !s.myTrackFuel && !holder.get_vehicle_type().get_parameter().was_set(VTYPEPARS_EMISSIONCLASS_SET) {
+            write_warningf!("The battery device is active for vehicle '%' but no emission class is set. Please consider setting an explicit emission class or battery outputs might be inconsistent with emission outputs!",
+                holder.get_id());
+        }
+        s.myChargeType = if s.myTrackFuel { MSChargingStation_ChargeType::CHARGETYPE_FUEL } else { MSChargingStation_ChargeType::CHARGETYPE_NORMAL };
+
+        if maximumChargeRate < 0. {
+            write_warningf!("Battery builder: Vehicle '%' doesn't have a valid value for parameter % (%).", s.base.base2.get_id(), attr_str(SUMO_ATTR_MAXIMUMCHARGERATE), to_string(&maximumChargeRate));
+        } else if !chargeLevelTable.is_empty() && !chargeCurveTable.is_empty() {
+            set_points(&mut s.myChargeCurve, chargeLevelTable, chargeCurveTable);
+            s.myMaximumChargeRate = get_maximum_value(&s.myChargeCurve);
+        } else {
+            s.myMaximumChargeRate = maximumChargeRate;
+        }
+        s
     }
 
     /// C++: `double MSDevice_Battery::getActualBatteryCapacity() const` [const]
@@ -511,7 +904,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_actual_battery_capacity(&self) -> f64 {
-        todo!("port MSDevice_Battery::getActualBatteryCapacity")
+        self.myActualBatteryCapacity
     }
 
     /// C++: `double MSDevice_Battery::getMaximumBatteryCapacity() const` [const]
@@ -522,7 +915,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_maximum_battery_capacity(&self) -> f64 {
-        todo!("port MSDevice_Battery::getMaximumBatteryCapacity")
+        self.myMaximumBatteryCapacity
     }
 
     /// C++: `double MSDevice_Battery::getMaximumPower() const` [const]
@@ -530,7 +923,8 @@ impl MSDevice_Battery {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_maximum_power(&self) -> f64 {
-        todo!("port MSDevice_Battery::getMaximumPower")
+        // C++ declares getMaximumPower() in MSDevice_Battery.h but never defines it, so no caller can link against it
+        panic!("MSDevice_Battery::getMaximumPower is declared in C++ but has no definition")
     }
 
     /// C++: `bool MSDevice_Battery::isChargingStopped() const` [const]
@@ -541,7 +935,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn is_charging_stopped(&self) -> bool {
-        todo!("port MSDevice_Battery::isChargingStopped")
+        self.myChargingStopped
     }
 
     /// C++: `bool MSDevice_Battery::isChargingInTransit() const` [const]
@@ -552,7 +946,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn is_charging_in_transit(&self) -> bool {
-        todo!("port MSDevice_Battery::isChargingInTransit")
+        self.myChargingInTransit
     }
 
     /// C++: `SUMOTime MSDevice_Battery::getChargingStartTime() const` [const]
@@ -563,7 +957,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_charging_start_time(&self) -> SUMOTime {
-        todo!("port MSDevice_Battery::getChargingStartTime")
+        self.myChargingStartTime
     }
 
     /// C++: `SUMOTime MSDevice_Battery::estimateChargingDuration(const double, const double) const` [const]
@@ -577,7 +971,10 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn estimate_charging_duration(&self, toCharge: f64, csPower: f64) -> SUMOTime {
-        todo!("port MSDevice_Battery::estimateChargingDuration")
+        //if (!myChargeCurve.empty()) {
+        //    // TODO: integrate charge curve
+        //}
+        time2steps(toCharge / min2(csPower, self.myMaximumChargeRate))
     }
 
     /// C++: `double MSDevice_Battery::getConsum() const` [const]
@@ -588,7 +985,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_consum(&self) -> f64 {
-        todo!("port MSDevice_Battery::getConsum")
+        self.myConsum
     }
 
     /// C++: `double MSDevice_Battery::getTotalConsumption() const` [const]
@@ -599,7 +996,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_total_consumption(&self) -> f64 {
-        todo!("port MSDevice_Battery::getTotalConsumption")
+        self.myTotalConsumption
     }
 
     /// C++: `double MSDevice_Battery::getTotalRegenerated() const` [const]
@@ -610,7 +1007,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_total_regenerated(&self) -> f64 {
-        todo!("port MSDevice_Battery::getTotalRegenerated")
+        self.myTotalRegenerated
     }
 
     /// C++: `std::string MSDevice_Battery::getChargingStationID() const` [const]
@@ -625,7 +1022,11 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_charging_station_id(&self) -> String {
-        todo!("port MSDevice_Battery::getChargingStationID")
+        if !self.myActChargingStation.is_null() {
+            self.myActChargingStation.get_id().to_string()
+        } else {
+            "NULL".to_string()
+        }
     }
 
     /// C++: `MSChargingStation * MSDevice_Battery::getChargingStation() const` [const]
@@ -634,7 +1035,7 @@ impl MSDevice_Battery {
     //     }
     #[allow(unused_variables)]
     pub fn get_charging_station(&self) -> Ptr<MSChargingStation> {
-        todo!("port MSDevice_Battery::getChargingStation")
+        self.myActChargingStation
     }
 
     /// C++: `double MSDevice_Battery::getEnergyCharged() const` [const]
@@ -645,7 +1046,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_energy_charged(&self) -> f64 {
-        todo!("port MSDevice_Battery::getEnergyCharged")
+        self.myEnergyCharged
     }
 
     /// C++: `int MSDevice_Battery::getVehicleStopped() const` [const]
@@ -656,7 +1057,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_stopped(&self) -> i32 {
-        todo!("port MSDevice_Battery::getVehicleStopped")
+        self.myVehicleStopped
     }
 
     /// C++: `double MSDevice_Battery::getStoppingThreshold() const` [const]
@@ -667,7 +1068,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_threshold(&self) -> f64 {
-        todo!("port MSDevice_Battery::getStoppingThreshold")
+        self.myStoppingThreshold
     }
 
     /// C++: `double MSDevice_Battery::getMaximumChargeRate() const` [const]
@@ -679,7 +1080,12 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn get_maximum_charge_rate(&self) -> f64 {
-        todo!("port MSDevice_Battery::getMaximumChargeRate")
+        let baseVal = if self.myChargeCurve.is_empty() {
+            self.myMaximumChargeRate
+        } else {
+            crate::microsim::cfmodels::mscf_model::get_interpolated_value(&self.myChargeCurve, self.myActualBatteryCapacity / self.myMaximumBatteryCapacity)
+        };
+        if self.myChargeLimit < 0. { baseVal } else { min2(self.myChargeLimit, baseVal) }
     }
 
     /// C++: `bool MSDevice_Battery::tracksFuel() const` [const]
@@ -690,7 +1096,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn tracks_fuel(&self) -> bool {
-        todo!("port MSDevice_Battery::tracksFuel")
+        self.myTrackFuel
     }
 
     /// C++: `MSChargingStation::ChargeType MSDevice_Battery::getChargeType() const` [const]
@@ -700,8 +1106,8 @@ impl MSDevice_Battery {
     //     return myChargeType;
     // }
     #[allow(unused_variables)]
-    pub fn get_charge_type(&self) -> ChargeType {
-        todo!("port MSDevice_Battery::getChargeType")
+    pub fn get_charge_type(&self) -> MSChargingStation_ChargeType {
+        self.myChargeType
     }
 
     /// C++: `void MSDevice_Battery::setActualBatteryCapacity(const double)`
@@ -718,7 +1124,13 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_actual_battery_capacity(&mut self, actualBatteryCapacity: f64) {
-        todo!("port MSDevice_Battery::setActualBatteryCapacity")
+        if actualBatteryCapacity < 0. {
+            self.myActualBatteryCapacity = 0.;
+        } else if actualBatteryCapacity > self.myMaximumBatteryCapacity {
+            self.myActualBatteryCapacity = self.myMaximumBatteryCapacity;
+        } else {
+            self.myActualBatteryCapacity = actualBatteryCapacity;
+        }
     }
 
     /// C++: `void MSDevice_Battery::setMaximumBatteryCapacity(const double)`
@@ -733,7 +1145,11 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_maximum_battery_capacity(&mut self, maximumBatteryCapacity: f64) {
-        todo!("port MSDevice_Battery::setMaximumBatteryCapacity")
+        if self.myMaximumBatteryCapacity < 0. {
+            write_warningf!("Trying to set into the battery device of vehicle '%' an invalid % (%).", self.base.base2.get_id(), attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY), to_string(&maximumBatteryCapacity));
+        } else {
+            self.myMaximumBatteryCapacity = maximumBatteryCapacity;
+        }
     }
 
     /// C++: `void MSDevice_Battery::setStoppingThreshold(const double)`
@@ -748,7 +1164,11 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_stopping_threshold(&mut self, stoppingThreshold: f64) {
-        todo!("port MSDevice_Battery::setStoppingThreshold")
+        if stoppingThreshold < 0. {
+            write_warningf!("Trying to set into the battery device of vehicle '%' an invalid % (%).", self.base.base2.get_id(), attr_str(SUMO_ATTR_STOPPINGTHRESHOLD), to_string(&stoppingThreshold));
+        } else {
+            self.myStoppingThreshold = stoppingThreshold;
+        }
     }
 
     /// C++: `void MSDevice_Battery::setMaximumChargeRate(const double)`
@@ -763,7 +1183,11 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_maximum_charge_rate(&mut self, chargeRate: f64) {
-        todo!("port MSDevice_Battery::setMaximumChargeRate")
+        if chargeRate < 0. {
+            write_warningf!("Trying to set into the battery device of vehicle '%' an invalid % (%).", self.base.base2.get_id(), attr_str(SUMO_ATTR_MAXIMUMCHARGERATE), to_string(&chargeRate));
+        } else {
+            self.myMaximumChargeRate = chargeRate;
+        }
     }
 
     /// C++: `void MSDevice_Battery::setChargeLimit(const double)`
@@ -774,7 +1198,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_charge_limit(&mut self, limit: f64) {
-        todo!("port MSDevice_Battery::setChargeLimit")
+        self.myChargeLimit = limit;
     }
 
     /// C++: `void MSDevice_Battery::resetChargingStartTime()`
@@ -785,7 +1209,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn reset_charging_start_time(&mut self) {
-        todo!("port MSDevice_Battery::resetChargingStartTime")
+        self.myChargingStartTime = 0;
     }
 
     /// C++: `void MSDevice_Battery::increaseChargingStartTime()`
@@ -796,7 +1220,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn increase_charging_start_time(&mut self) {
-        todo!("port MSDevice_Battery::increaseChargingStartTime")
+        self.myChargingStartTime += delta_t();
     }
 
     /// C++: `void MSDevice_Battery::resetVehicleStoppedTimer()`
@@ -807,7 +1231,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn reset_vehicle_stopped_timer(&mut self) {
-        todo!("port MSDevice_Battery::resetVehicleStoppedTimer")
+        self.myVehicleStopped = 0;
     }
 
     /// C++: `void MSDevice_Battery::increaseVehicleStoppedTimer()`
@@ -818,7 +1242,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn increase_vehicle_stopped_timer(&mut self) {
-        todo!("port MSDevice_Battery::increaseVehicleStoppedTimer")
+        self.myVehicleStopped += 1;
     }
 
     /// C++: `void MSDevice_Battery::setEnergyCharged(const double)`
@@ -829,7 +1253,7 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn set_energy_charged(&mut self, energyCharged: f64) {
-        todo!("port MSDevice_Battery::setEnergyCharged")
+        self.myEnergyCharged = energyCharged;
     }
 
     /// C++: `double MSDevice_Battery::readParameterValue(SUMOVehicle &, const SumoXMLAttr &, const std::string &, double)` [static, protected]
@@ -849,7 +1273,16 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn read_parameter_value(v: &mut SUMOVehicle, attr: &SumoXMLAttr, paramName: &str, defaultVal: f64) -> f64 {
-        todo!("port MSDevice_Battery::readParameterValue")
+        let oldParam = attr_str(*attr);
+        let typeParams = v.get_vehicle_type().get_parameter();
+        if v.get_parameter().has_parameter(&oldParam) || typeParams.has_parameter(&oldParam) {
+            write_warningf!("Battery device in vehicle '%' still uses old parameter '%'. Please update to 'device.%'.", v.get_id(), oldParam, paramName);
+            if v.get_parameter().get_parameter(&oldParam, "-") == "-" {
+                return typeParams.get_double(&oldParam, defaultVal);
+            }
+            return to_double(&v.get_parameter().get_parameter(&oldParam, "0")).unwrap_or_else(|e| panic!("{}", e));
+        }
+        v.get_float_param(&format!("device.{}", paramName), false, defaultVal, true)
     }
 
     /// C++: `void MSDevice_Battery::MSDevice_Battery(const MSDevice_Battery &)` [private]
@@ -857,7 +1290,7 @@ impl MSDevice_Battery {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Battery) -> Self {
-        todo!("port MSDevice_Battery::MSDevice_Battery")
+        panic!("MSDevice_Battery copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice_Battery & MSDevice_Battery::operator=(const MSDevice_Battery &)` [private]
@@ -865,7 +1298,8 @@ impl MSDevice_Battery {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Battery) -> &mut MSDevice_Battery {
-        todo!("port MSDevice_Battery::operator=")
+        // C++ declares the assignment operator private and never defines it, so it cannot be called
+        panic!("MSDevice_Battery assignment operator is private and undefined in C++")
     }
 
 }
