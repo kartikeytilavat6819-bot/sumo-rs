@@ -2,6 +2,19 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ std::string::operator[] semantics for reads past the end: '\0'
+fn byte_at(s: &[u8], i: usize) -> u8 {
+    s.get(i).copied().unwrap_or(0)
+}
+fn link_state_at(s: &[u8], i: i32) -> LinkState {
+    if i < 0 { 0 } else { byte_at(s, i as usize) as LinkState }
+}
+// logic->addStep(duration, state, minDur, maxDur, earliestEnd, latestEnd) (6-argument C++ overload)
+fn add_step_6(logic: Ptr<NBTrafficLightLogic>, duration: SUMOTime, state: &str, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime) {
+    let u = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+    logic.m().add_step_2(duration, state, minDur, maxDur, earliestEnd, latestEnd, u, u, u, "", &Vec::new(), -1);
+}
+
 /// A traffic light logics which must be computed (only nodes/edges are given)
 /// C++ class `NBOwnTLDef` (netbuild/NBOwnTLDef.h)
 pub struct NBOwnTLDef {
@@ -40,7 +53,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new(id, junctions, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -53,7 +70,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new_2(id, junction, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, SUMOTime, TrafficLightType)`
@@ -66,7 +87,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new_3(id, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::~NBOwnTLDef() noexcept` [virtual]
@@ -74,7 +99,7 @@ impl NBOwnTLDef {
     // NBOwnTLDef::~NBOwnTLDef() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBOwnTLDef::~NBOwnTLDef")
+        // C++ destructor body is empty; members are released by Rust drop glue
     }
 
     /// C++: `void NBOwnTLDef::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)` [virtual]
@@ -84,7 +109,7 @@ impl NBOwnTLDef {
     //                          const EdgeVector& /*outgoing*/) {}
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBOwnTLDef::remapRemoved")
+        // C++ body is empty (the base definition's behaviour applies, which is also empty for NBOwnTLDef)
     }
 
     /// C++: `void NBOwnTLDef::setTLControllingInformation() const` [const, virtual]
@@ -101,7 +126,12 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        todo!("port NBOwnTLDef::setTLControllingInformation")
+        // set the information about the link's positions within the tl into the
+        //  edges the links are starting at, respectively
+        for conn in self.myControlledLinks.iter() {
+            let edge = conn.get_from();
+            edge.m().set_controlling_tl_information(conn, self.get_id());
+        }
     }
 
     /// C++: `void NBOwnTLDef::setSinglePhase()`
@@ -111,7 +141,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_single_phase(&mut self) {
-        todo!("port NBOwnTLDef::setSinglePhase")
+        self.myHaveSinglePhase = true;
     }
 
     /// C++: `void NBOwnTLDef::addGreenWithin(NBTrafficLightLogic *, const EdgeVector &, EdgeVector &)` [static]
@@ -139,7 +169,24 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_green_within(logic: Ptr<NBTrafficLightLogic>, fromEdges: &EdgeVector, toProc: &mut EdgeVector) {
-        todo!("port NBOwnTLDef::addGreenWithin")
+        let mut foundGreen: Vec<bool> = vec![false; fromEdges.len()];
+        for phase in logic.get_phases().iter() {
+            let state = phase.state.as_bytes();
+            for j in 0..fromEdges.len() {
+                let ls = link_state_at(state, j as i32);
+                if ls == LINKSTATE_TL_GREEN_MAJOR || ls == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j] = true;
+                }
+            }
+        }
+        for j in 0..foundGreen.len() {
+            if !foundGreen[j] {
+                let e = fromEdges[j];
+                if !toProc.contains(&e) {
+                    toProc.push(e);
+                }
+            }
+        }
     }
 
     /// C++: `void NBOwnTLDef::addPedestrianScramble(NBTrafficLightLogic *, int, SUMOTime, SUMOTime, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -197,7 +244,50 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_pedestrian_scramble(logic: Ptr<NBTrafficLightLogic>, totalNumLinks: i32, greenTime: SUMOTime, yellowTime: SUMOTime, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) {
-        todo!("port NBOwnTLDef::addPedestrianScramble")
+        let brakingTime = yellowTime;
+        // check both indices for each crossing (they may have green in different phases)
+        let mut foundGreen: Vec<bool> = vec![false; crossings.len() * 2];
+        let phaseStates: Vec<String> = logic.get_phases().iter().map(|p| p.state.clone()).collect();
+        for i in 0..phaseStates.len() {
+            let state = phaseStates[i].as_bytes();
+            let mut j: usize = 0;
+            for cross in crossings.iter() {
+                let ls = link_state_at(state, cross.tlLinkIndex);
+                let ls2 = if cross.tlLinkIndex2 >= 0 { link_state_at(state, cross.tlLinkIndex2) } else { ls };
+                if ls == LINKSTATE_TL_GREEN_MAJOR || ls == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j] = true;
+                }
+                if ls2 == LINKSTATE_TL_GREEN_MAJOR || ls2 == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j + crossings.len()] = true;
+                }
+                j += 1;
+            }
+        }
+        for j in 0..foundGreen.len() {
+            if !foundGreen[j] {
+                // add a phase where all pedestrians may walk, (preceded by a yellow phase and followed by a clearing phase)
+                if phaseStates.len() > 0 {
+                    let mut needYellowPhase = false;
+                    let mut state: Vec<u8> = phaseStates.last().unwrap().clone().into_bytes();
+                    for i1 in 0..fromEdges.len() {
+                        if i1 < state.len() && (state[i1] == b'G' || state[i1] == b'g') {
+                            state[i1] = b'y';
+                            needYellowPhase = true;
+                        }
+                    }
+                    let state = String::from_utf8(state).unwrap();
+                    // add yellow step
+                    if needYellowPhase && brakingTime > 0 {
+                        logic.m().add_step(brakingTime, &state, &Vec::new(), "", -1);
+                    }
+                }
+                let pedClearingTime = time2steps(utils::options::options_cont::get_int("tls.crossing-clearance.time") as f64);
+                let scrambleTime = time2steps(utils::options::options_cont::get_int("tls.scramble.time") as f64);
+                let u = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+                Self::add_pedestrian_phases(logic, scrambleTime + pedClearingTime, u, u, u, u, "r".repeat(totalNumLinks.max(0) as usize), crossings, fromEdges, toEdges);
+                break;
+            }
+        }
     }
 
     /// C++: `std::string NBOwnTLDef::addPedestrianPhases(NBTrafficLightLogic *, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, std::string, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -255,7 +345,46 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_pedestrian_phases(logic: Ptr<NBTrafficLightLogic>, greenTime: SUMOTime, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime, state: String, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::addPedestrianPhases")
+        // compute based on length of the crossing if not set by the user
+        let pedClearingTime = time2steps(utils::options::options_cont::get_int("tls.crossing-clearance.time") as f64);
+        // compute if not set by user: must be able to reach the middle of the second "Richtungsfahrbahn"
+        let minPedTime = time2steps(utils::options::options_cont::get_int("tls.crossing-min.time") as f64);
+        let orig = state.clone();
+        let mut state = Self::patch_state_for_crossings(&state, crossings, fromEdges, toEdges);
+        if orig == state {
+            // add step
+            add_step_6(logic, greenTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+        } else {
+            let pedTime = greenTime - pedClearingTime;
+            if pedTime >= minPedTime {
+                // ensure clearing time for pedestrians
+                let isSimpleActuatedCrossing = logic.get_type() == TrafficLightType::ACTUATED
+                    && minDur == NBTrafficLightDefinition_UNSPECIFIED_DURATION && logic.get_phases().len() == 2;
+                if isSimpleActuatedCrossing {
+                    // permit green phase to extend when there are no pedestrians
+                    logic.m().set_phase_next(0, &vec![0, 1]);
+                }
+                add_step_6(logic, pedTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+                let mut bytes: Vec<u8> = state.into_bytes();
+                for cross in crossings.iter() {
+                    if cross.tlLinkIndex >= fromEdges.len() as i32 || fromEdges[cross.tlLinkIndex as usize].is_null() {
+                        bytes[cross.tlLinkIndex as usize] = b'r';
+                    }
+                    if cross.tlLinkIndex2 >= 0
+                        && (cross.tlLinkIndex2 >= fromEdges.len() as i32 || fromEdges[cross.tlLinkIndex2 as usize].is_null())
+                    {
+                        bytes[cross.tlLinkIndex2 as usize] = b'r';
+                    }
+                }
+                state = String::from_utf8(bytes).unwrap();
+                logic.m().add_step(pedClearingTime, &state, &Vec::new(), "", -1);
+            } else {
+                state = orig;
+                // not safe for pedestrians.
+                add_step_6(logic, greenTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+            }
+        }
+        state
     }
 
     /// C++: `std::string NBOwnTLDef::patchStateForCrossings(const std::string &, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -322,7 +451,69 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn patch_state_for_crossings(state: &str, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::patchStateForCrossings")
+        let sb = state.as_bytes();
+        let mut result: Vec<u8> = sb.to_vec();
+        for cross in crossings.iter() {
+            let mut isForbidden = false;
+            let mut i2: usize = 0;
+            while i2 < fromEdges.len() && !isForbidden {
+                // only check connections at this crossings node
+                if !fromEdges[i2].is_null() && !toEdges[i2].is_null() && fromEdges[i2].get_to_node() == cross.node {
+                    for edge in cross.edges.iter() {
+                        let i2dir = cross.node.get_direction(fromEdges[i2], toEdges[i2], false);
+                        if byte_at(sb, i2) != b'r' && byte_at(sb, i2) != b's'
+                            && (*edge == fromEdges[i2]
+                                || (*edge == toEdges[i2]
+                                    && (i2dir == LinkDirection::STRAIGHT || i2dir == LinkDirection::PARTLEFT || i2dir == LinkDirection::PARTRIGHT)))
+                        {
+                            isForbidden = true;
+                            break;
+                        }
+                    }
+                }
+                i2 += 1;
+            }
+            let i1 = cross.tlLinkIndex;
+            assert!(i1 >= 0 && (i1 as usize) < result.len());
+            let newState: u8 = if isForbidden { b'r' } else { b'G' };
+            if (i1 as usize) < toEdges.len() && !toEdges[i1 as usize].is_null() && (result[i1 as usize] != newState || !isForbidden) {
+                if cross.tlID != NBTrafficLightDefinition_DummyID {
+                    write_warningf!("Custom crossing linkIndex % conflicts with vehicular connections at tlLogic '%'", i1, cross.tlID);
+                }
+            } else {
+                result[i1 as usize] = newState;
+            }
+            if cross.tlLinkIndex2 >= 0 {
+                let i2 = cross.tlLinkIndex2;
+                if (i2 as usize) < toEdges.len() && !toEdges[i2 as usize].is_null() && (result[i2 as usize] != newState || !isForbidden) {
+                    if cross.tlID != NBTrafficLightDefinition_DummyID {
+                        write_warningf!("Custom crossing linkIndex2 % conflicts with vehicular connections at tlLogic '%'", i2, cross.tlID);
+                    }
+                } else {
+                    result[i2 as usize] = newState;
+                }
+            }
+        }
+
+        // correct behaviour for roads that are in conflict with a pedestrian crossing
+        assert!(fromEdges.len() <= result.len());
+        for i1 in 0..fromEdges.len() {
+            if result[i1] == b'G' {
+                for cross in crossings.iter() {
+                    let i2 = cross.tlLinkIndex;
+                    let i3 = cross.tlLinkIndex2;
+                    if !fromEdges[i1].is_null() && !toEdges[i1].is_null() && fromEdges[i1].get_to_node() == cross.node {
+                        if (byte_at(&result, i2 as usize) == b'G' || (i3 >= 0 && byte_at(&result, i3 as usize) == b'G'))
+                            && cross.node.must_brake_for_crossing(fromEdges[i1], toEdges[i1], cross)
+                        {
+                            result[i1] = b'g';
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        String::from_utf8(result).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::patchNEMAStateForCrossings(const std::string &, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &, const NBEdge *, NBEdge *)` [static]
@@ -401,7 +592,81 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn patch_nema_state_for_crossings(state: &str, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector, greenEdge: Ptr<NBEdge>, otherChosen: Ptr<NBEdge>) -> String {
-        todo!("port NBOwnTLDef::patchNEMAStateForCrossings")
+        let sb = state.as_bytes();
+        let mut result: Vec<u8> = sb.to_vec();
+        let pos: i32 = state.len() as i32 - crossings.len() as i32; // number of controlled vehicle links
+        let toNode = greenEdge.get_to_node();
+        // iterators over the node's edges are modelled as indices (len() stands for end())
+        let all: EdgeVector = toNode.get_edges().clone();
+        let len = all.len();
+        let start = all.iter().position(|e| *e == greenEdge).unwrap_or(len);
+
+        // permit crossings over edges between the current green edge and it's straight continuation
+        let mut endEdge: Ptr<NBEdge> = Ptr::default();
+        for i in 0..state.len() {
+            if byte_at(sb, i) == b'G' && i < fromEdges.len() && i < toEdges.len() && fromEdges[i] == greenEdge
+                && toNode.get_direction(greenEdge, toEdges[i], false) == LinkDirection::STRAIGHT
+            {
+                // straight edge found
+                endEdge = toEdges[i];
+                break;
+            }
+        }
+        if endEdge.is_null() {
+            endEdge = otherChosen;
+        }
+        if endEdge.is_null() {
+            // try to find the reverse edge of the green edge
+            let mut itCW = start;
+            // NBContHelper::nextCW
+            itCW += 1;
+            if itCW == len {
+                itCW = 0;
+            }
+            if itCW < len && all[itCW].get_from_node() == toNode {
+                endEdge = all[itCW];
+            }
+        }
+        if endEdge.is_null() {
+            // at least prevent an infinite loop
+            endEdge = greenEdge;
+        }
+
+        let mut end = all.iter().position(|e| *e == endEdge).unwrap_or(len);
+        if end == len {
+            // at least prevent an infinite loop
+            end = start;
+        }
+        // NBContHelper::nextCCW(all, it) on index it
+        let next_ccw = |it: usize| -> usize { if it == 0 { len.wrapping_sub(1) } else { it - 1 } };
+        let mut it = next_ccw(start);
+        while it != end {
+            for ic in 0..crossings.len() {
+                let i1 = (pos + ic as i32) as usize;
+                let cross = &crossings[ic];
+                for crossed in cross.edges.iter() {
+                    if *crossed == all[it] {
+                        result[i1] = b'G';
+                        break;
+                    }
+                }
+            }
+            it = next_ccw(it);
+        }
+        // correct behaviour for roads that are in conflict with a pedestrian crossing
+        for i1 in 0..(pos.max(0) as usize) {
+            if result[i1] == b'G' {
+                for ic in 0..crossings.len() {
+                    let crossing = &crossings[ic];
+                    let i2 = (pos + ic as i32) as usize;
+                    if byte_at(&result, i2) == b'G' && crossing.node.must_brake_for_crossing(fromEdges[i1], toEdges[i1], crossing) {
+                        result[i1] = b'g';
+                        break;
+                    }
+                }
+            }
+        }
+        String::from_utf8(result).unwrap()
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::computeLogicAndConts(int, bool)`
