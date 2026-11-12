@@ -1,6 +1,78 @@
 //! Port of microsim/MSNet.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_routing_preferences, set_g_routing_preferences};
+use utils::common::time::{delta_t, elapsed_ms2string, steps2time, string2time, time2string};
+use utils::common::to_string::f64_to_string_default;
+use utils::geom::POSITION_EPS;
+use utils::common::sumo_vehicle_class::SVC_BICYCLE;
+use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
+use utils::common::msg_handler::write_message;
+
+thread_local! {
+    static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
+    static EMPTY_NAMED_STOPPING_PLACES: &'static BTreeMap<String, Ptr<MSStoppingPlace>> = Box::leak(Box::new(BTreeMap::new()));
+    static EMPTY_STOPPING_PLACE_VECTOR: &'static Vec<Ptr<MSStoppingPlace>> = Box::leak(Box::new(Vec::new()));
+}
+
+// C++ static const std::string members of MSNet
+const STAGE_EVENTS: &str = "events";
+const STAGE_MOVEMENTS: &str = "move";
+const STAGE_LANECHANGE: &str = "laneChange";
+const STAGE_INSERTIONS: &str = "insertion";
+const STAGE_REMOTECONTROL: &str = "remoteControl";
+// C++ libsumo ROUTING_MODE_AGGREGATED_CUSTOM (TraCIConstants.h), not in utils::traci yet
+const ROUTING_MODE_AGGREGATED_CUSTOM: i32 = 0x04;
+
+/// C++ `new` for a Ptr target that the net owns (freed with delete_ptr)
+fn leak_ptr<T>(v: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(v)))
+}
+
+/// C++ `delete p`; deleting null is a no-op
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) }
+    }
+}
+
+// shortcut: SysUtils::getCurrentMillis is not ported yet, uses the system clock
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
+fn opt_time(name: &str) -> SUMOTime {
+    string2time(&get_string(name)).unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn oc_string(oc: &OptionsCont, name: &str) -> String {
+    oc.get_string(name).unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn oc_time(oc: &OptionsCont, name: &str) -> SUMOTime {
+    string2time(&oc_string(oc, name)).unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn device_by_option(name: &str) -> OutputDeviceRef {
+    OutputDevice::get_device_by_option(name).unwrap_or_else(|e| panic!("{e}"))
+}
+
+// shortcut: MSGlobals is not ported yet; these read the options that MSFrame::setMSGlobals copies into it
+fn g_use_meso_sim() -> bool {
+    get_bool("mesosim")
+}
+fn g_check_4_accidents() -> bool {
+    !get_bool("ignore-accidents")
+}
+fn g_using_internal_lanes() -> bool {
+    !get_bool("no-internal-links")
+}
+fn g_weights_separate_turns() -> f64 {
+    get_float("weights.separate-turns")
+}
+// shortcut: MSGlobals::gClearState is not ported yet, the flag is not kept
+fn set_g_clear_state(_v: bool) {}
+
 
 /// C++ enum `MSNet::SimulationState`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -167,7 +239,7 @@ pub struct MSNet {
     /// end of loaded edgeData
     pub myEdgeDataEndTime: SUMOTime,
     /// Dictionary of bus / container stops
-    pub myStoppingPlaces: BTreeMap<SumoXMLTag, Unmapped /* NamedObjectCont<MSStoppingPlace *> */>,
+    pub myStoppingPlaces: BTreeMap<SumoXMLTag, BTreeMap<String, Ptr<MSStoppingPlace>>>, // C++: NamedObjectCont<MSStoppingPlace *>
     /// dictionary of named stopping places
     pub myNamedStoppingPlaces: BTreeMap<SumoXMLTag, BTreeMap<String, Vec<Ptr<MSStoppingPlace>>>>, // C++: std::map<SumoXMLTag, std::map<std::string, std::vector<MSStoppingPlace *>>>
     /// Dictionary of traction substations
@@ -187,7 +259,7 @@ pub struct MSNet {
     /// An RTree structure holding lane IDs
     pub myLanesRTree: (bool, Unmapped /* NamedRTree */),
     /// Updater for dynamic shapes that are tracking traffic objects (ensures removal of shape dynamics when the objects are removed)
-    pub myDynamicShapeUpdater: Box<MSDynamicShapeUpdater>,
+    pub myDynamicShapeUpdater: Option<Box<MSDynamicShapeUpdater>>, // C++: unique_ptr, null until makeDynamicShapeUpdater
 }
 
 impl std::ops::Deref for MSNet {
@@ -224,7 +296,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_instance() -> Ptr<MSNet> {
-        todo!("port MSNet::getInstance")
+        let p = MY_INSTANCE.with(|c| c.get());
+        if p.is_null() {
+            panic!("A network was not yet constructed.");
+        }
+        p
     }
 
     /// C++: `bool MSNet::isGUINet() const` [const, virtual]
@@ -234,7 +310,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn is_gui_net(&self) -> bool {
-        todo!("port MSNet::isGUINet")
+        false
     }
 
     /// C++: `void MSNet::initStatic()` [static]
@@ -246,7 +322,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn init_static() {
-        todo!("port MSNet::initStatic")
+        set_g_routing_preferences(false);
+        MSDriveWay::init();
     }
 
     /// C++: `void MSNet::cleanupStatic()` [static]
@@ -259,7 +336,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_static() {
-        todo!("port MSNet::cleanupStatic")
+        if !g_use_meso_sim() {
+            MSVehicle_Influencer::cleanup();
+        }
     }
 
     /// C++: `bool MSNet::hasInstance()` [static]
@@ -269,7 +348,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_instance() -> bool {
-        todo!("port MSNet::hasInstance")
+        MY_INSTANCE.with(|c| !c.get().is_null())
     }
 
     /// C++: `void MSNet::MSNet(MSVehicleControl *, MSEventControl *, MSEventControl *, MSEventControl *, ShapeContainer *)`
@@ -324,8 +403,82 @@ impl MSNet {
     //     initStatic();
     // }
     #[allow(unused_variables)]
-    pub fn new(vc: Ptr<MSVehicleControl>, beginOfTimestepEvents: Ptr<MSEventControl>, endOfTimestepEvents: Ptr<MSEventControl>, insertionEvents: Ptr<MSEventControl>, shapeCont: Ptr<ShapeContainer>) -> Self {
-        todo!("port MSNet::MSNet")
+    pub fn new(vc: Ptr<MSVehicleControl>, beginOfTimestepEvents: Ptr<MSEventControl>, endOfTimestepEvents: Ptr<MSEventControl>, insertionEvents: Ptr<MSEventControl>, shapeCont: Ptr<ShapeContainer>) -> Box<Self> {
+        if MY_INSTANCE.with(|c| !c.get().is_null()) {
+            panic!("A network was already constructed.");
+        }
+        let step = opt_time("begin");
+        let max_depart_delay = opt_time("max-depart-delay");
+        let random_depart_offset = opt_time("random-depart-offset");
+        if g_use_meso_sim() {
+            // shortcut: MSGlobals::gMesoNet (MELoop) is not wired into MSNet yet, mesoscopic runs are refused
+            panic!("mesoscopic simulation is not wired into MSNet yet");
+        }
+        let mut net = Box::new(MSNet {
+            base: Parameterised::new(),
+            myRouteLoaders: Ptr::null(),
+            myStep: step,
+            myStateLoaderTime: step - 1,
+            myStepCompletionMissing: false,
+            myMaxTeleports: get_int("max-num-teleports"),
+            myAmInterrupted: false,
+            myVehicleControl: vc,
+            myPersonControl: Ptr::null(),
+            myContainerControl: Ptr::null(),
+            myEdges: Ptr::null(),
+            myJunctions: Ptr::null(),
+            myLogics: Ptr::null(),
+            myInserter: leak_ptr(MSInsertionControl::new(vc.m(), max_depart_delay, get_bool("eager-insert"), get_int("max-num-vehicles"), random_depart_offset)),
+            myDetectorControl: leak_ptr(MSDetectorControl::new()),
+            myBeginOfTimestepEvents: beginOfTimestepEvents,
+            myEndOfTimestepEvents: endOfTimestepEvents,
+            myInsertionEvents: insertionEvents,
+            myShapeContainer: if shapeCont.is_null() { leak_ptr(ShapeContainer::new()) } else { shapeCont },
+            myEdgeWeights: Ptr::null(),
+            myLogExecutionTime: !get_bool("no-duration-log"),
+            myLogStepNumber: !get_bool("no-step-log"),
+            myLogStepPeriod: get_int("step-log.period"),
+            myTraCIStepDuration: 0,
+            mySimStepDuration: 0,
+            mySimBeginMillis: 0,
+            myTraCIMillis: 0,
+            myVehiclesMoved: 0,
+            myPersonsMoved: 0,
+            myStateDumpTimes: Vec::new(),
+            myStateDumpFiles: Vec::new(),
+            myPeriodicStateFiles: Vec::new(),
+            myStateDumpPeriod: 0,
+            myStateDumpPrefix: String::new(),
+            myStateDumpSuffix: String::new(),
+            myHavePermissions: false,
+            myRestrictions: BTreeMap::new(),
+            myVClassPreferences: BTreeMap::new(),
+            myVTypePreferences: BTreeMap::new(),
+            myMesoEdgeTypes: BTreeMap::new(),
+            myHasInternalLinks: false,
+            myJunctionHigherSpeeds: false,
+            myHasElevation: false,
+            myHasPedestrianNetwork: false,
+            myHasBidiEdges: false,
+            myVersion: (), // shortcut: MMVersion is not ported yet, stored as the unit placeholder
+            myEdgeDataEndTime: -1,
+            myStoppingPlaces: BTreeMap::new(),
+            myNamedStoppingPlaces: BTreeMap::new(),
+            myTractionSubstations: Vec::new(),
+            myVehicleStateListeners: Vec::new(),
+            myTransportableStateListeners: Vec::new(),
+            myCollisions: BTreeMap::new(),
+            myWarnedOnce: BTreeMap::new(),
+            myRouterTT: BTreeMap::new(),
+            myRouterEffort: BTreeMap::new(),
+            myPedestrianRouter: BTreeMap::new(),
+            myIntermodalRouter: BTreeMap::new(),
+            myLanesRTree: (false, ()), // shortcut: NamedRTree is not ported yet
+            myDynamicShapeUpdater: None,
+        });
+        MY_INSTANCE.with(|c| c.set(Ptr::from_box(&net)));
+        MSNet::init_static();
+        net
     }
 
     /// C++: `void MSNet::~MSNet() noexcept` [virtual]
@@ -396,7 +549,51 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSNet::~MSNet")
+        MSNet::cleanup_static();
+        // delete controls
+        delete_ptr(self.myJunctions);
+        delete_ptr(self.myDetectorControl);
+        // delete mean data
+        delete_ptr(self.myEdges);
+        delete_ptr(self.myInserter);
+        self.myInserter = Ptr::null();
+        delete_ptr(self.myLogics);
+        delete_ptr(self.myRouteLoaders);
+        if !self.myPersonControl.is_null() {
+            delete_ptr(self.myPersonControl);
+            self.myPersonControl = Ptr::null();
+        }
+        if !self.myContainerControl.is_null() {
+            delete_ptr(self.myContainerControl);
+            self.myContainerControl = Ptr::null();
+        }
+        MSRoutingEngine::cleanup_cch();
+        delete_ptr(self.myVehicleControl);
+        delete_ptr(self.myShapeContainer);
+        self.myShapeContainer = Ptr::null();
+        delete_ptr(self.myBeginOfTimestepEvents);
+        self.myBeginOfTimestepEvents = Ptr::null();
+        delete_ptr(self.myEndOfTimestepEvents);
+        self.myEndOfTimestepEvents = Ptr::null();
+        delete_ptr(self.myInsertionEvents);
+        self.myInsertionEvents = Ptr::null();
+        delete_ptr(self.myEdgeWeights);
+        for (_, router) in std::mem::take(&mut self.myRouterTT) {
+            delete_ptr(router);
+        }
+        for (_, router) in std::mem::take(&mut self.myRouterEffort) {
+            delete_ptr(router);
+        }
+        for (_, router) in std::mem::take(&mut self.myPedestrianRouter) {
+            delete_ptr(router);
+        }
+        self.reset_intermodal_router();
+        // shortcut: NamedRTree (myLanesRTree.second.RemoveAll()) is not ported yet
+        for sub in std::mem::take(&mut self.myTractionSubstations) {
+            delete_ptr(sub);
+        }
+        MSNet::clear_all();
+        MY_INSTANCE.with(|c| c.set(Ptr::null()));
     }
 
     /// C++: `void MSNet::closeBuilding(const OptionsCont &, MSEdgeControl *, MSJunctionControl *, SUMORouteLoaderControl *, MSTLLogicControl *, std::vector<SUMOTime>, std::vector<std::string>, bool, bool, const MMVersion &)`
@@ -404,7 +601,29 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn close_building(&mut self, oc: &OptionsCont, edges: Ptr<MSEdgeControl>, junctions: Ptr<MSJunctionControl>, routeLoaders: Ptr<SUMORouteLoaderControl>, tlc: Ptr<MSTLLogicControl>, stateDumpTimes: Vec<SUMOTime>, stateDumpFiles: Vec<String>, hasInternalLinks: bool, junctionHigherSpeeds: bool, version: &Unmapped /* MMVersion */) {
-        todo!("port MSNet::closeBuilding")
+        self.myEdges = edges;
+        self.myJunctions = junctions;
+        self.myRouteLoaders = routeLoaders;
+        self.myLogics = tlc;
+        // save the time the network state shall be saved at
+        self.myStateDumpTimes = stateDumpTimes;
+        self.myStateDumpFiles = stateDumpFiles;
+        self.myStateDumpPeriod = oc_time(oc, "save-state.period");
+        self.myStateDumpPrefix = oc_string(oc, "save-state.prefix");
+        self.myStateDumpSuffix = oc_string(oc, "save-state.suffix");
+
+        // initialise performance computation
+        self.mySimBeginMillis = current_millis();
+        self.myTraCIMillis = 0;
+        self.myHasInternalLinks = hasInternalLinks;
+        self.myJunctionHigherSpeeds = junctionHigherSpeeds;
+        self.myHasElevation = self.check_elevation();
+        self.myHasPedestrianNetwork = self.check_walkingarea();
+        self.myHasBidiEdges = self.check_bidi_edges();
+        self.myVersion = *version;
+        if (!g_using_internal_lanes() || !self.myHasInternalLinks) && g_weights_separate_turns() > 0.0 {
+            panic!("Option weights.separate-turns is only supported when simulating with internal lanes");
+        }
     }
 
     /// C++: `bool MSNet::hasPermissions() const` [const]
@@ -414,7 +633,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_permissions(&self) -> bool {
-        todo!("port MSNet::hasPermissions")
+        self.myHavePermissions
     }
 
     /// C++: `void MSNet::setPermissionsFound()`
@@ -424,7 +643,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn set_permissions_found(&mut self) {
-        todo!("port MSNet::setPermissionsFound")
+        self.myHavePermissions = true;
     }
 
     /// C++: `void MSNet::addRestriction(const std::string &, const SUMOVehicleClass, const double)`
@@ -435,7 +654,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_restriction(&mut self, id: &str, svc: SUMOVehicleClass, speed: f64) {
-        todo!("port MSNet::addRestriction")
+        self.myRestrictions.entry(id.to_string()).or_default().insert(svc, speed);
     }
 
     /// C++: `const std::map<SUMOVehicleClass, double> * MSNet::getRestrictions(const std::string &) const` [const]
@@ -443,7 +662,10 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_restrictions(&self, id: &str) -> Ptr<BTreeMap<SUMOVehicleClass, f64>> {
-        todo!("port MSNet::getRestrictions")
+        match self.myRestrictions.get(id) {
+            Some(m) => Ptr::new(m),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `double MSNet::getPreference(const std::string &, const SUMOVTypeParameter &) const` [const]
@@ -478,7 +700,25 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_preference(&self, routingType: &str, pars: &SUMOVTypeParameter) -> f64 {
-        todo!("port MSNet::getPreference")
+        if g_routing_preferences() {
+            if let Some(m) = self.myVTypePreferences.get(&pars.id) {
+                if let Some(v) = m.get(routingType) {
+                    return *v;
+                }
+            }
+            if let Some(m) = self.myVClassPreferences.get(&pars.vehicleClass) {
+                if let Some(v) = m.get(routingType) {
+                    return *v;
+                }
+            }
+            // fallback to generel preferences
+            if let Some(m) = self.myVTypePreferences.get("") {
+                if let Some(v) = m.get(routingType) {
+                    return *v;
+                }
+            }
+        }
+        1.0
     }
 
     /// C++: `void MSNet::addPreference(const std::string &, SUMOVehicleClass, double)`
@@ -490,7 +730,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_preference(&mut self, routingType: &str, svc: SUMOVehicleClass, prio: f64) {
-        todo!("port MSNet::addPreference")
+        self.myVClassPreferences.entry(svc).or_default().insert(routingType.to_string(), prio);
+        set_g_routing_preferences(true);
     }
 
     /// C++: `void MSNet::addPreference(const std::string &, std::string, double)`
@@ -502,7 +743,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_preference_2(&mut self, routingType: &str, vType: String, prio: f64) {
-        todo!("port MSNet::addPreference")
+        self.myVTypePreferences.entry(vType).or_default().insert(routingType.to_string(), prio);
+        set_g_routing_preferences(true);
     }
 
     /// C++: `void MSNet::addMesoType(const std::string &, const MESegment::MesoEdgeType &)`
@@ -513,7 +755,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_meso_type(&mut self, typeID: &str, edgeType: &MESegment_MesoEdgeType) {
-        todo!("port MSNet::addMesoType")
+        self.myMesoEdgeTypes.insert(typeID.to_string(), *edgeType);
     }
 
     /// C++: `const MESegment::MesoEdgeType & MSNet::getMesoType(const std::string &)`
@@ -542,7 +784,25 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_meso_type(&mut self, typeID: &str) -> &MESegment_MesoEdgeType {
-        todo!("port MSNet::getMesoType")
+        if !self.myMesoEdgeTypes.contains_key(typeID) {
+            // init defaults
+            let edgeType = MESegment_MesoEdgeType {
+                tauff: opt_time("meso-tauff"),
+                taufj: opt_time("meso-taufj"),
+                taujf: opt_time("meso-taujf"),
+                taujj: opt_time("meso-taujj"),
+                jamThreshold: get_float("meso-jam-threshold"),
+                junctionControl: get_bool("meso-junction-control"),
+                tlsPenalty: get_float("meso-tls-penalty"),
+                tlsFlowPenalty: get_float("meso-tls-flow-penalty"),
+                minorPenalty: opt_time("meso-minor-penalty"),
+                overtaking: get_bool("meso-overtaking"),
+                edgeLength: get_float("meso-edgelength"),
+                lookahead: get_float("meso-lookahead"),
+            };
+            self.myMesoEdgeTypes.insert(typeID.to_string(), edgeType);
+        }
+        &self.myMesoEdgeTypes[typeID]
     }
 
     /// C++: `void MSNet::clearAll()` [static]
@@ -578,7 +838,24 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn clear_all() {
-        todo!("port MSNet::clearAll")
+        // clear container
+        MSEdge::clear();
+        MSLane::clear();
+        MSRoute::clear();
+        // shortcut: MSVehicleTransfer::getInstance() deletion and the trigger instance deletions (LaneSpeedTrigger, TriggeredRerouter) are not wired yet
+        MSDevice::cleanup_all();
+        MSCalibrator::cleanup();
+        MSDevice_SSM::cleanup();
+        MSDevice_ToC::cleanup();
+        MSRailSignalConstraint::cleanup();
+        MSRailSignalControl::cleanup();
+        MSDriveWay::cleanup();
+        let t = TraCIServer::get_instance();
+        if !t.is_null() {
+            t.m().cleanup();
+        }
+        Helper::cleanup();
+        OutputDevice::close_all(true);
     }
 
     /// C++: `bool MSNet::hasFlow(const std::string &) const` [const]
@@ -590,7 +867,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn has_flow(&self, id: &str) -> bool {
-        todo!("port MSNet::hasFlow")
+        // inserter is deleted at the end of the simulation
+        !self.myInserter.is_null() && self.myInserter.has_flow(id)
     }
 
     /// C++: `SimulationState MSNet::simulate(SUMOTime, SUMOTime)`
@@ -598,7 +876,39 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn simulate(&mut self, start: SUMOTime, stop: SUMOTime) -> MSNet_SimulationState {
-        todo!("port MSNet::simulate")
+        // shortcut: VERSION_STRING is not ported yet, the version is reported as 'unknown'
+        write_messagef!("Simulation version % started with time: %.", "unknown", time2string(start));
+        // the simulation loop
+        let mut state = MSNet_SimulationState::SIMSTATE_RUNNING;
+        // state loading may have changed the start time so we need to reinit it
+        self.myStep = start;
+        let mut numSteps: i32 = 0;
+        let mut doStepLog = false;
+        while state == MSNet_SimulationState::SIMSTATE_RUNNING {
+            doStepLog = self.myLogStepNumber && (numSteps % self.myLogStepPeriod == 0);
+            if doStepLog {
+                self.pre_sim_step_output();
+            }
+            self.simulation_step(false);
+            if doStepLog {
+                self.post_sim_step_output();
+            }
+            state = self.adapt_to_state(self.simulation_state(stop), false);
+            numSteps += 1;
+        }
+        if self.myLogStepNumber && !doStepLog {
+            // ensure some output on the last step
+            self.pre_sim_step_output();
+            self.post_sim_step_output();
+        }
+        // exit simulation loop
+        if self.myLogStepNumber {
+            // start new line for final verbose output
+            print!("\n");
+        }
+        let reason = MSNet::get_state_message(state);
+        self.close_simulation(start, &reason);
+        state
     }
 
     /// C++: `void MSNet::simulationStep(const bool)`
@@ -752,7 +1062,118 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn simulation_step(&mut self, onlyMove: bool) {
-        todo!("port MSNet::simulationStep")
+        if self.myStepCompletionMissing {
+            self.post_move_step();
+            self.myStepCompletionMissing = false;
+            return;
+        }
+        let t = TraCIServer::get_instance();
+        let mut lastTraCICmd = 0;
+        if !t.is_null() {
+            if self.myLogExecutionTime {
+                self.myTraCIStepDuration = current_millis();
+            }
+            lastTraCICmd = t.m().process_commands(self.myStep, false);
+            if self.myLogExecutionTime {
+                self.myTraCIStepDuration = current_millis() - self.myTraCIStepDuration;
+            }
+            // shortcut: TraCI load arguments (TraCIServer::getLoadArgs) are not ported, so a load request does not end the step early
+            if TraCIServer::was_closed() {
+                return;
+            }
+        }
+        // execute beginOfTimestepEvents
+        if self.myLogExecutionTime {
+            self.mySimStepDuration = current_millis();
+        }
+        // simulation state output
+        if let Some(dist) = self.myStateDumpTimes.iter().position(|&s| s == self.myStep) {
+            MSStateHandler::save_state(&self.myStateDumpFiles[dist], self.myStep, true);
+        }
+        if self.myStateDumpPeriod > 0 && self.myStep % self.myStateDumpPeriod == 0 {
+            let timeStamp = time2string(self.myStep).replace(':', "-");
+            let filename = format!("{}_{}{}", self.myStateDumpPrefix, timeStamp, self.myStateDumpSuffix);
+            MSStateHandler::save_state(&filename, self.myStep, true);
+            self.myPeriodicStateFiles.push(filename);
+            let keep = get_int("save-state.period.keep");
+            if keep > 0 && self.myPeriodicStateFiles.len() as i32 > keep {
+                let _ = std::fs::remove_file(&self.myPeriodicStateFiles[0]);
+                self.myPeriodicStateFiles.remove(0);
+            }
+        }
+        self.myBeginOfTimestepEvents.m().execute(self.myStep);
+        if MSRailSignalControl::has_instance() {
+            MSRailSignalControl::get_instance().update_signals(self.myStep);
+        }
+        // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) is not ported yet
+        if g_check_4_accidents() && !g_use_meso_sim() {
+            self.myEdges.m().detect_collisions(self.myStep, STAGE_EVENTS);
+        }
+        // check whether the tls programs need to be switched
+        self.myLogics.m().check2_switch(self.myStep);
+
+        if g_use_meso_sim() {
+            panic!("mesoscopic simulation is not wired into MSNet yet");
+        } else {
+            // assure all lanes with vehicles are 'active'
+            self.myEdges.m().patch_active_lanes();
+            // compute safe velocities for all vehicles for the next few lanes
+            // also register ApproachingVehicleInformation for all links
+            self.myEdges.m().plan_movements(self.myStep);
+            // register junction approaches based on planned velocities as basis for right-of-way decision
+            self.myEdges.m().set_junction_approaches();
+            // decide right-of-way and execute movements
+            self.myEdges.m().execute_movements(self.myStep);
+            if g_check_4_accidents() {
+                self.myEdges.m().detect_collisions(self.myStep, STAGE_MOVEMENTS);
+            }
+            // vehicles may change lanes
+            self.myEdges.m().change_lanes(self.myStep);
+            if g_check_4_accidents() {
+                self.myEdges.m().detect_collisions(self.myStep, STAGE_LANECHANGE);
+            }
+        }
+        // flush arrived meso vehicles and micro vehicles that were removed due to collision
+        self.myVehicleControl.m().remove_pending();
+        self.load_routes();
+
+        // persons
+        let net = Ptr::from_mut(self);
+        if !self.myPersonControl.is_null() && self.myPersonControl.has_transportables() {
+            self.myPersonControl.m().check_waiting(net, self.myStep);
+        }
+        // containers
+        if !self.myContainerControl.is_null() && self.myContainerControl.has_transportables() {
+            self.myContainerControl.m().check_waiting(net, self.myStep);
+        }
+        // shortcut: processPendingRouting() of person/container controls (HAVE_FOX) is not ported yet
+        if MSRailSignalControl::has_instance() {
+            MSRailSignalControl::get_instance().reset_wait_relations();
+            // preserve waitRelation from insertion for the next step
+        }
+        // insert vehicles
+        self.myInserter.m().determine_candidates(self.myStep);
+        self.myInsertionEvents.m().execute(self.myStep);
+        self.myInserter.m().emit_vehicles(self.myStep);
+        if g_check_4_accidents() && !g_use_meso_sim() {
+            self.myEdges.m().detect_collisions(self.myStep, STAGE_INSERTIONS);
+        }
+        MSVehicleTransfer::get_instance().m().check_insertions(self.myStep);
+
+        // execute endOfTimestepEvents
+        self.myEndOfTimestepEvents.m().execute(self.myStep);
+
+        if self.myLogExecutionTime {
+            self.myTraCIStepDuration -= current_millis();
+        }
+        if onlyMove {
+            self.myStepCompletionMissing = true;
+            return;
+        }
+        if !t.is_null() && lastTraCICmd == CMD_EXECUTEMOVE {
+            t.m().process_commands(self.myStep, true);
+        }
+        self.post_move_step();
     }
 
     /// C++: `void MSNet::loadRoutes()`
@@ -763,7 +1184,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn load_routes(&mut self) {
-        todo!("port MSNet::loadRoutes")
+        self.myRouteLoaders.m().load_next(self.myStep);
     }
 
     /// C++: `const std::string MSNet::generateStatistics(const SUMOTime, const long)`
@@ -868,7 +1289,119 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn generate_statistics(&mut self, start: SUMOTime, now: i64) -> String {
-        todo!("port MSNet::generateStatistics")
+        let mut msg = String::new();
+        if self.myLogExecutionTime {
+            let duration = now - self.mySimBeginMillis;
+            // print performance notice
+            msg.push_str(&format!("Performance:\n Duration: {}\n", elapsed_ms2string(duration)));
+            if duration != 0 {
+                if !TraCIServer::get_instance().is_null() {
+                    msg.push_str(&format!(" TraCI-Duration: {}\n", elapsed_ms2string(self.myTraCIMillis)));
+                }
+                msg.push_str(&format!(" Real time factor: {}\n", f64_to_string_default(steps2time(self.myStep - start) * 1000.0 / duration as f64)));
+                msg.push_str(&format!(" UPS: {:.6}\n", self.myVehiclesMoved as f64 / (duration as f64 / 1000.0)));
+                if self.myPersonsMoved > 0 {
+                    msg.push_str(&format!(" UPS-Persons: {:.6}\n", self.myPersonsMoved as f64 / (duration as f64 / 1000.0)));
+                }
+            }
+            // print vehicle statistics
+            let vc = self.myVehicleControl.m();
+            let vehDiscardNotice = if vc.get_loaded_vehicle_no() != vc.get_departed_vehicle_no() {
+                format!(" (Loaded: {})", vc.get_loaded_vehicle_no())
+            } else {
+                String::new()
+            };
+            msg.push_str(&format!(
+                "Vehicles:\n Inserted: {}{}\n Running: {}\n Waiting: {}\n",
+                vc.get_departed_vehicle_no(),
+                vehDiscardNotice,
+                vc.get_running_vehicle_no(),
+                self.myInserter.get_waiting_vehicle_no()
+            ));
+            if vc.get_teleport_count() > 0 || vc.get_collision_count() > 0 {
+                // print optional teleport statistics
+                let mut reasons: Vec<String> = Vec::new();
+                if vc.get_collision_count() > 0 {
+                    reasons.push(format!("Collisions: {}", vc.get_collision_count()));
+                }
+                if vc.get_teleports_jam() > 0 {
+                    reasons.push(format!("Jam: {}", vc.get_teleports_jam()));
+                }
+                if vc.get_teleports_yield() > 0 {
+                    reasons.push(format!("Yield: {}", vc.get_teleports_yield()));
+                }
+                if vc.get_teleports_wrong_lane() > 0 {
+                    reasons.push(format!("Wrong Lane: {}", vc.get_teleports_wrong_lane()));
+                }
+                msg.push_str(&format!(" Teleports: {} ({})\n", vc.get_teleport_count(), reasons.join(", ")));
+            }
+            if vc.get_emergency_stops() > 0 {
+                msg.push_str(&format!(" Emergency Stops: {}\n", vc.get_emergency_stops()));
+            }
+            if vc.get_emergency_braking_count() > 0 {
+                msg.push_str(&format!(" Emergency Braking: {}\n", vc.get_emergency_braking_count()));
+            }
+            if !self.myPersonControl.is_null() && self.myPersonControl.get_loaded_number() > 0 {
+                let pc = self.myPersonControl;
+                let discardNotice = if pc.get_loaded_number() != pc.get_departed_number() {
+                    format!(" (Loaded: {})", pc.get_loaded_number())
+                } else {
+                    String::new()
+                };
+                msg.push_str(&format!(
+                    "Persons:\n Inserted: {}{}\n Running: {}\n",
+                    pc.get_departed_number(),
+                    discardNotice,
+                    pc.get_running_number()
+                ));
+                if pc.get_jammed_number() > 0 {
+                    msg.push_str(&format!(" Jammed: {}\n", pc.get_jammed_number()));
+                }
+                if pc.get_teleport_count() > 0 {
+                    let mut reasons: Vec<String> = Vec::new();
+                    if pc.get_teleports_abort_wait() > 0 {
+                        reasons.push(format!("Abort Wait: {}", pc.get_teleports_abort_wait()));
+                    }
+                    if pc.get_teleports_wrong_dest() > 0 {
+                        reasons.push(format!("Wrong Dest: {}", pc.get_teleports_wrong_dest()));
+                    }
+                    msg.push_str(&format!(" Teleports: {} ({})\n", pc.get_teleport_count(), reasons.join(", ")));
+                }
+            }
+            if !self.myContainerControl.is_null() && self.myContainerControl.get_loaded_number() > 0 {
+                let cc = self.myContainerControl;
+                let discardNotice = if cc.get_loaded_number() != cc.get_departed_number() {
+                    format!(" (Loaded: {})", cc.get_loaded_number())
+                } else {
+                    String::new()
+                };
+                msg.push_str(&format!(
+                    "Containers:\n Inserted: {}{}\n Running: {}\n",
+                    cc.get_departed_number(),
+                    discardNotice,
+                    cc.get_running_number()
+                ));
+                if cc.get_jammed_number() > 0 {
+                    msg.push_str(&format!(" Jammed: {}\n", cc.get_jammed_number()));
+                }
+                if cc.get_teleport_count() > 0 {
+                    let mut reasons: Vec<String> = Vec::new();
+                    if cc.get_teleports_abort_wait() > 0 {
+                        reasons.push(format!("Abort Wait: {}", cc.get_teleports_abort_wait()));
+                    }
+                    if cc.get_teleports_wrong_dest() > 0 {
+                        reasons.push(format!("Wrong Dest: {}", cc.get_teleports_wrong_dest()));
+                    }
+                    msg.push_str(&format!(" Teleports: {} ({})\n", cc.get_teleport_count(), reasons.join(", ")));
+                }
+            }
+        }
+        if get_bool("duration-log.statistics") {
+            msg.push_str(&MSDevice_Tripinfo::print_statistics());
+        }
+        // C++ erases the last character (the trailing newline)
+        msg.pop();
+        msg
     }
 
     /// C++: `void MSNet::writeCollisions() const` [const]
@@ -902,7 +1435,31 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_collisions(&self) {
-        todo!("port MSNet::writeCollisions")
+        let od = device_by_option("collision-output");
+        let mut od = od.borrow_mut();
+        for (collider, items) in self.myCollisions.iter() {
+            for c in items.iter() {
+                if c.time != self.get_current_time_step() {
+                    continue;
+                }
+                od.open_tag("collision");
+                od.write_attr("time", &time2string(self.get_current_time_step()));
+                od.write_attr("type", &c.type_);
+                od.write_attr("lane", &c.lane.get_id().to_string());
+                od.write_attr("pos", &c.pos);
+                od.write_attr("collider", collider);
+                od.write_attr("victim", &c.victim);
+                od.write_attr("colliderType", &c.colliderType);
+                od.write_attr("victimType", &c.victimType);
+                od.write_attr("colliderSpeed", &c.colliderSpeed);
+                od.write_attr("victimSpeed", &c.victimSpeed);
+                od.write_attr("colliderFront", &c.colliderFront.to_string());
+                od.write_attr("colliderBack", &c.colliderBack.to_string());
+                od.write_attr("victimFront", &c.victimFront.to_string());
+                od.write_attr("victimBack", &c.victimBack.to_string());
+                od.close_tag("");
+            }
+        }
     }
 
     /// C++: `void MSNet::writeStatistics(const SUMOTime, const long) const` [const]
@@ -956,7 +1513,52 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_statistics(&self, start: SUMOTime, now: i64) {
-        todo!("port MSNet::writeStatistics")
+        let duration = now - self.mySimBeginMillis;
+        let od = device_by_option("statistic-output");
+        let mut od = od.borrow_mut();
+        od.open_tag("performance");
+        od.write_attr("clockBegin", &time2string(self.mySimBeginMillis));
+        od.write_attr("clockEnd", &time2string(now));
+        od.write_attr("clockDuration", &time2string(duration));
+        od.write_attr("traciDuration", &time2string(self.myTraCIMillis));
+        od.write_attr("realTimeFactor", &(if duration != 0 { (self.myStep - start) as f64 / duration as f64 } else { -1.0 }));
+        od.write_attr("vehicleUpdatesPerSecond", &(if duration != 0 { self.myVehiclesMoved as f64 / (duration as f64 / 1000.0) } else { -1.0 }));
+        od.write_attr("personUpdatesPerSecond", &(if duration != 0 { self.myPersonsMoved as f64 / (duration as f64 / 1000.0) } else { -1.0 }));
+        od.write_attr("begin", &time2string(start));
+        od.write_attr("end", &time2string(self.myStep));
+        od.write_attr("duration", &time2string(self.myStep - start));
+        od.close_tag("");
+        let vc = self.myVehicleControl.m();
+        od.open_tag("vehicles");
+        od.write_attr("loaded", &vc.get_loaded_vehicle_no());
+        od.write_attr("inserted", &vc.get_departed_vehicle_no());
+        od.write_attr("running", &vc.get_running_vehicle_no());
+        od.write_attr("waiting", &self.myInserter.get_waiting_vehicle_no());
+        od.close_tag("");
+        od.open_tag("teleports");
+        od.write_attr("total", &vc.get_teleport_count());
+        od.write_attr("jam", &vc.get_teleports_jam());
+        od.write_attr("yield", &vc.get_teleports_yield());
+        od.write_attr("wrongLane", &vc.get_teleports_wrong_lane());
+        od.close_tag("");
+        od.open_tag("safety");
+        od.write_attr("collisions", &vc.get_collision_count());
+        od.write_attr("emergencyStops", &vc.get_emergency_stops());
+        od.write_attr("emergencyBraking", &vc.get_emergency_braking_count());
+        od.close_tag("");
+        od.open_tag("persons");
+        od.write_attr("loaded", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_loaded_number() } else { 0 }));
+        od.write_attr("running", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_running_number() } else { 0 }));
+        od.write_attr("jammed", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_jammed_number() } else { 0 }));
+        od.close_tag("");
+        od.open_tag("personTeleports");
+        od.write_attr("total", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_teleport_count() } else { 0 }));
+        od.write_attr("abortWait", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_teleports_abort_wait() } else { 0 }));
+        od.write_attr("wrongDest", &(if !self.myPersonControl.is_null() { self.myPersonControl.get_teleports_wrong_dest() } else { 0 }));
+        od.close_tag("");
+        if is_set("tripinfo-output") || get_bool("duration-log.statistics") {
+            MSDevice_Tripinfo::write_statistics(&mut od);
+        }
     }
 
     /// C++: `void MSNet::writeSummaryOutput(bool)`
@@ -1029,7 +1631,73 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_summary_output(&mut self, finalStep: bool) {
-        todo!("port MSNet::writeSummaryOutput")
+        // summary output
+        let hasOutput = is_set("summary-output");
+        let hasPersonOutput = is_set("person-summary-output");
+        if hasOutput || hasPersonOutput {
+            let period = opt_time("summary-output.period");
+            let begin = opt_time("begin");
+            if (period > 0 && (self.myStep - begin) % period != 0 && !finalStep)
+                // it's the final step but we already wrote output
+                || (finalStep && (period <= 0 || (self.myStep - begin) % period == 0))
+            {
+                return;
+            }
+        }
+        if hasOutput {
+            let od = device_by_option("summary-output");
+            let mut od = od.borrow_mut();
+            let vc = self.myVehicleControl.m();
+            let departedVehiclesNumber = vc.get_departed_vehicle_no();
+            let meanWaitingTime = if departedVehiclesNumber != 0 { vc.get_total_departure_delay() / departedVehiclesNumber as f64 } else { -1.0 };
+            let endedVehicleNumber = vc.get_ended_vehicle_no();
+            let meanTravelTime = if endedVehicleNumber != 0 { vc.get_total_travel_time() / endedVehicleNumber as f64 } else { -1.0 };
+            od.open_tag("step");
+            od.write_attr("time", &time2string(self.myStep));
+            od.write_attr("loaded", &vc.get_loaded_vehicle_no());
+            od.write_attr("inserted", &vc.get_departed_vehicle_no());
+            od.write_attr("running", &vc.get_running_vehicle_no());
+            od.write_attr("waiting", &self.myInserter.get_waiting_vehicle_no());
+            od.write_attr("ended", &vc.get_ended_vehicle_no());
+            od.write_attr("arrived", &vc.get_arrived_vehicle_no());
+            od.write_attr("collisions", &vc.get_collision_count());
+            od.write_attr("teleports", &vc.get_teleport_count());
+            od.write_attr("halting", &vc.get_halting_vehicle_no());
+            od.write_attr("stopped", &vc.get_stopped_vehicles_count());
+            od.write_attr("meanWaitingTime", &meanWaitingTime);
+            od.write_attr("meanTravelTime", &meanTravelTime);
+            let meanSpeed = vc.get_vehicle_mean_speeds();
+            od.write_attr("meanSpeed", &meanSpeed.0);
+            od.write_attr("meanSpeedRelative", &meanSpeed.1);
+            od.write_attr("discarded", &vc.get_discarded_vehicle_no());
+            if self.myLogExecutionTime {
+                od.write_attr("duration", &self.mySimStepDuration);
+            }
+            od.close_tag("");
+        }
+        if hasPersonOutput {
+            let od = device_by_option("person-summary-output");
+            let mut od = od.borrow_mut();
+            let step_time = time2string(self.myStep);
+            let pc = self.get_person_control();
+            od.open_tag("step");
+            od.write_attr("time", &step_time);
+            od.write_attr("loaded", &pc.get_loaded_number());
+            od.write_attr("inserted", &pc.get_departed_number());
+            od.write_attr("walking", &pc.get_moving_number());
+            od.write_attr("waitingForRide", &pc.get_waiting_for_vehicle_number());
+            od.write_attr("riding", &pc.get_riding_number());
+            od.write_attr("stopping", &pc.get_waiting_until_number());
+            od.write_attr("jammed", &pc.get_jammed_number());
+            od.write_attr("ended", &pc.get_ended_number());
+            od.write_attr("arrived", &pc.get_arrived_number());
+            od.write_attr("teleports", &pc.get_teleport_count());
+            od.write_attr("discarded", &pc.get_discarded_number());
+            if self.myLogExecutionTime {
+                od.write_attr("duration", &self.mySimStepDuration);
+            }
+            od.close_tag("");
+        }
     }
 
     /// C++: `void MSNet::closeSimulation(SUMOTime, const std::string &)`
@@ -1078,7 +1746,46 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn close_simulation(&mut self, start: SUMOTime, reason: &str) {
-        todo!("port MSNet::closeSimulation")
+        // report the end when wished
+        write_messagef!("Simulation ended at time: %.", time2string(self.get_current_time_step()));
+        if reason != "" {
+            write_message(&format!("Reason: {}", reason));
+        }
+        self.myDetectorControl.m().close(self.myStep);
+        if is_set("queue-output") {
+            // shortcut: MSQueueExport::finish is not ported yet
+        }
+        if is_set("stop-output.write-unfinished") && get_bool("stop-output.write-unfinished") {
+            // shortcut: MSStopOut::generateOutputForUnfinished is not ported yet
+        }
+        MSDevice_Vehroutes::write_pending_output(get_bool("vehroute-output.write-unfinished"));
+        if get_bool("tripinfo-output.write-unfinished") {
+            MSDevice_Tripinfo::generate_output_for_unfinished();
+        }
+        if is_set("chargingstations-output") {
+            if !get_bool("chargingstations-output.aggregated") {
+                self.write_charging_station_output();
+            } else if get_bool("chargingstations-output.aggregated.write-unfinished") {
+                // shortcut: MSChargingStationExport::write(..., true) is not ported yet
+            }
+        }
+        if is_set("overheadwiresegments-output") {
+            self.write_overhead_wire_segment_output();
+        }
+        if is_set("substations-output") {
+            self.write_substation_output();
+        }
+        self.write_rail_signal_blocks();
+        let now = current_millis();
+        if self.myLogExecutionTime || get_bool("duration-log.statistics") {
+            let msg = self.generate_statistics(start, now);
+            write_message(&msg);
+        }
+        if is_set("statistic-output") {
+            self.write_statistics(start, now);
+        }
+        // maybe write a final line of output if reporting is periodic
+        self.write_summary_output(true);
     }
 
     /// C++: `SimulationState MSNet::simulationState(SUMOTime) const` [const]
@@ -1086,7 +1793,30 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn simulation_state(&self, stopTime: SUMOTime) -> MSNet_SimulationState {
-        todo!("port MSNet::simulationState")
+        if TraCIServer::was_closed() {
+            return MSNet_SimulationState::SIMSTATE_CONNECTION_CLOSED;
+        }
+        // shortcut: TraCI load arguments are not ported, so SIMSTATE_LOADING is never reported
+        if (stopTime < 0 || self.myStep > stopTime) && TraCIServer::get_instance().is_null() && (stopTime > 0 || self.myStep > self.myEdgeDataEndTime) {
+            if self.myVehicleControl.get_active_vehicle_count() == 0
+                && self.myInserter.get_pending_flow_count() == 0
+                && (self.myPersonControl.is_null() || !self.myPersonControl.has_non_waiting())
+                && (self.myContainerControl.is_null() || !self.myContainerControl.has_non_waiting())
+                && !MSDevice_Taxi::has_servable_reservations()
+            {
+                return MSNet_SimulationState::SIMSTATE_NO_FURTHER_VEHICLES;
+            }
+        }
+        if stopTime >= 0 && self.myStep >= stopTime {
+            return MSNet_SimulationState::SIMSTATE_END_STEP_REACHED;
+        }
+        if self.myMaxTeleports >= 0 && self.myVehicleControl.get_teleport_count() > self.myMaxTeleports {
+            return MSNet_SimulationState::SIMSTATE_TOO_MANY_TELEPORTS;
+        }
+        if self.myAmInterrupted {
+            return MSNet_SimulationState::SIMSTATE_INTERRUPTED;
+        }
+        MSNet_SimulationState::SIMSTATE_RUNNING
     }
 
     /// C++: `SimulationState MSNet::adaptToState(const SimulationState, const bool) const` [const]
@@ -1094,7 +1824,21 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn adapt_to_state(&self, state: MSNet_SimulationState, isLibsumo: bool) -> MSNet_SimulationState {
-        todo!("port MSNet::adaptToState")
+        if state == MSNet_SimulationState::SIMSTATE_LOADING {
+            // shortcut: OptionsIO::setArgs with the TraCI load arguments is not ported yet
+        } else if state != MSNet_SimulationState::SIMSTATE_RUNNING && ((!TraCIServer::get_instance().is_null() && !TraCIServer::was_closed()) || isLibsumo) {
+            // overrides SIMSTATE_END_STEP_REACHED, e.g. (TraCI / Libsumo ignore SUMO's --end option)
+            return MSNet_SimulationState::SIMSTATE_RUNNING;
+        } else if state == MSNet_SimulationState::SIMSTATE_NO_FURTHER_VEHICLES {
+            if !self.myPersonControl.is_null() {
+                self.myPersonControl.m().abort_any_waiting_for_vehicle();
+            }
+            if !self.myContainerControl.is_null() {
+                self.myContainerControl.m().abort_any_waiting_for_vehicle();
+            }
+            self.myVehicleControl.m().abort_waiting();
+        }
+        state
     }
 
     /// C++: `std::string MSNet::getStateMessage(SimulationState)` [static]
@@ -1102,7 +1846,18 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_state_message(state: MSNet_SimulationState) -> String {
-        todo!("port MSNet::getStateMessage")
+        match state {
+            MSNet_SimulationState::SIMSTATE_RUNNING => String::new(),
+            MSNet_SimulationState::SIMSTATE_END_STEP_REACHED => "The final simulation step has been reached.".to_string(),
+            MSNet_SimulationState::SIMSTATE_NO_FURTHER_VEHICLES => "All vehicles have left the simulation.".to_string(),
+            MSNet_SimulationState::SIMSTATE_CONNECTION_CLOSED => "TraCI requested termination.".to_string(),
+            MSNet_SimulationState::SIMSTATE_ERROR_IN_SIM => "An error occurred (see log).".to_string(),
+            MSNet_SimulationState::SIMSTATE_INTERRUPTED => "Interrupted.".to_string(),
+            MSNet_SimulationState::SIMSTATE_TOO_MANY_TELEPORTS => "Too many teleports.".to_string(),
+            MSNet_SimulationState::SIMSTATE_LOADING => "TraCI issued load command.".to_string(),
+            #[allow(unreachable_patterns)]
+            _ => "Unknown reason.".to_string(),
+        }
     }
 
     /// C++: `SUMOTime MSNet::getCurrentTimeStep() const` [const]
@@ -1112,7 +1867,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_time_step(&self) -> SUMOTime {
-        todo!("port MSNet::getCurrentTimeStep")
+        self.myStep
     }
 
     /// C++: `void MSNet::setCurrentTimeStep(const SUMOTime)`
@@ -1122,7 +1877,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn set_current_time_step(&mut self, step: SUMOTime) {
-        todo!("port MSNet::setCurrentTimeStep")
+        self.myStep = step;
     }
 
     /// C++: `void MSNet::clearState(const SUMOTime, bool)`
@@ -1186,7 +1941,50 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime, quickReload: bool) {
-        todo!("port MSNet::clearState")
+        set_g_clear_state(true);
+        if g_use_meso_sim() {
+            panic!("mesoscopic simulation is not wired into MSNet yet");
+        } else {
+            for edge in MSEdge::get_all_edges().iter() {
+                for lane in edge.get_lanes().iter() {
+                    lane.m().get_vehicles_secure();
+                    lane.m().clear_state();
+                    lane.m().release_vehicles();
+                }
+                edge.m().clear_state();
+            }
+        }
+        self.myInserter.m().clear_state();
+        // detectors may still reference persons/vehicles
+        self.myDetectorControl.m().update_detectors(self.myStep);
+        self.myDetectorControl.m().write_output(self.myStep, true);
+        self.myDetectorControl.m().clear_state(step);
+
+        if !self.myPersonControl.is_null() {
+            self.myPersonControl.m().clear_state();
+        }
+        if !self.myContainerControl.is_null() {
+            self.myContainerControl.m().clear_state();
+        }
+        // delete vtypes after transportables have removed their types
+        self.myVehicleControl.m().clear_state(true);
+        MSVehicleTransfer::get_instance().m().clear_state();
+        self.myLogics.m().clear_state(step, quickReload);
+        // delete all routes after vehicles and detector output is done
+        MSRoute::dict_clear_state();
+        for (_, places) in self.myStoppingPlaces.iter() {
+            for (_, stop) in places.iter() {
+                stop.m().clear_state();
+            }
+        }
+        self.myShapeContainer.m().clear_state();
+        self.myBeginOfTimestepEvents.m().clear_state(self.myStep, step);
+        self.myEndOfTimestepEvents.m().clear_state(self.myStep, step);
+        self.myInsertionEvents.m().clear_state(self.myStep, step);
+        MSRailSignalControl::clear_state();
+        MSDriveWay::clear_state();
+        self.myStep = step;
+        set_g_clear_state(false);
     }
 
     /// C++: `SUMOTime MSNet::getLoaderTime() const` [const]
@@ -1196,7 +1994,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_loader_time(&self) -> SUMOTime {
-        todo!("port MSNet::getLoaderTime")
+        self.myRouteLoaders.get_current_load_time()
     }
 
     /// C++: `void MSNet::setLoaderTime(SUMOTime)`
@@ -1207,7 +2005,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn set_loader_time(&mut self, time: SUMOTime) {
-        todo!("port MSNet::setLoaderTime")
+        self.myRouteLoaders.m().set_current_load_time(time);
+        self.myStateLoaderTime = self.myStateLoaderTime.max(time);
     }
 
     /// C++: `SUMOTime MSNet::getStateLoaderTime() const` [const]
@@ -1217,7 +2016,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_state_loader_time(&self) -> SUMOTime {
-        todo!("port MSNet::getStateLoaderTime")
+        self.myStateLoaderTime
     }
 
     /// C++: `void MSNet::writeOutput()`
@@ -1369,7 +2168,36 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_output(&mut self) {
-        todo!("port MSNet::writeOutput")
+        // update detector values
+        self.myDetectorControl.m().update_detectors(self.myStep);
+
+        // shortcut: the netstate, fcd, emission, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        self.write_summary_output(false);
+
+        // write detector values
+        self.myDetectorControl.m().write_output(self.myStep + delta_t(), false);
+
+        // write link states
+        if is_set("link-output") {
+            let od = device_by_option("link-output");
+            let mut od = od.borrow_mut();
+            od.open_tag("timestep");
+            od.write_attr("id", &steps2time(self.myStep));
+            for edge in self.myEdges.get_edges().iter() {
+                for lane in edge.get_lanes().iter() {
+                    for link in lane.get_link_cont().iter() {
+                        link.write_approaching(&mut od, lane.get_id().to_string());
+                    }
+                }
+            }
+            od.close_tag("");
+        }
+
+        // shortcut: SSM and ToC device outputs are not ported yet (their get_instances() accessors are not usable)
+
+        if is_set("collision-output") {
+            self.write_collisions();
+        }
     }
 
     /// C++: `bool MSNet::logSimulationDuration() const` [const]
@@ -1380,7 +2208,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn log_simulation_duration(&self) -> bool {
-        todo!("port MSNet::logSimulationDuration")
+        self.myLogExecutionTime
     }
 
     /// C++: `void MSNet::preSimStepOutput() const` [const]
@@ -1391,7 +2219,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn pre_sim_step_output(&self) {
-        todo!("port MSNet::preSimStepOutput")
+        print!("Step #{}", time2string(self.myStep));
     }
 
     /// C++: `void MSNet::postSimStepOutput() const` [const]
@@ -1426,7 +2254,28 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn post_sim_step_output(&self) {
-        todo!("port MSNet::postSimStepOutput")
+        if self.myLogExecutionTime {
+            let mut oss = String::new();
+            if self.mySimStepDuration != 0 {
+                let durationSec = self.mySimStepDuration as f64 / 1000.0;
+                oss.push_str(&format!(" ({}ms ~= {:.6}*RT, ~{:.6}", self.mySimStepDuration, steps2time(delta_t()) / durationSec,
+                    self.myVehicleControl.get_running_vehicle_no() as f64 / durationSec));
+            } else {
+                oss.push_str(" (0ms ?*RT. ?");
+            }
+            oss.push_str("UPS, ");
+            if !TraCIServer::get_instance().is_null() {
+                oss.push_str(&format!("TraCI: {}ms, ", self.myTraCIStepDuration));
+            }
+            oss.push_str(&format!("vehicles TOT {} ACT {} BUF {})                                              ",
+                self.myVehicleControl.get_departed_vehicle_no(),
+                self.myVehicleControl.get_running_vehicle_no(),
+                self.myInserter.get_waiting_vehicle_no()));
+            let prev = format!("Step #{}", time2string(self.myStep - delta_t()));
+            let cut = (90usize).saturating_sub(prev.len()).min(oss.len());
+            print!("{}", &oss[..cut]);
+        }
+        print!("\r");
     }
 
     /// C++: `MSVehicleControl & MSNet::getVehicleControl()`
@@ -1436,7 +2285,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_control(&mut self) -> &mut MSVehicleControl {
-        todo!("port MSNet::getVehicleControl")
+        self.myVehicleControl.m()
     }
 
     /// C++: `MSTransportableControl & MSNet::getPersonControl()` [virtual]
@@ -1450,7 +2299,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_person_control(&mut self) -> &mut MSTransportableControl {
-        todo!("port MSNet::getPersonControl")
+        if self.myPersonControl.is_null() {
+            self.myPersonControl = leak_ptr(MSTransportableControl::new(true));
+        }
+        self.myPersonControl.m()
     }
 
     /// C++: `bool MSNet::hasPersons() const` [const]
@@ -1460,7 +2312,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_persons(&self) -> bool {
-        todo!("port MSNet::hasPersons")
+        !self.myPersonControl.is_null()
     }
 
     /// C++: `MSTransportableControl & MSNet::getContainerControl()` [virtual]
@@ -1474,7 +2326,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_container_control(&mut self) -> &mut MSTransportableControl {
-        todo!("port MSNet::getContainerControl")
+        if self.myContainerControl.is_null() {
+            self.myContainerControl = leak_ptr(MSTransportableControl::new(false));
+        }
+        self.myContainerControl.m()
     }
 
     /// C++: `bool MSNet::hasContainers() const` [const]
@@ -1484,7 +2339,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_containers(&self) -> bool {
-        todo!("port MSNet::hasContainers")
+        !self.myContainerControl.is_null()
     }
 
     /// C++: `MSEdgeControl & MSNet::getEdgeControl()`
@@ -1494,7 +2349,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_control(&mut self) -> &mut MSEdgeControl {
-        todo!("port MSNet::getEdgeControl")
+        self.myEdges.m()
     }
 
     /// C++: `MSInsertionControl & MSNet::getInsertionControl()`
@@ -1504,7 +2359,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_insertion_control(&mut self) -> &mut MSInsertionControl {
-        todo!("port MSNet::getInsertionControl")
+        self.myInserter.m()
     }
 
     /// C++: `MSDetectorControl & MSNet::getDetectorControl()`
@@ -1514,7 +2369,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_detector_control(&mut self) -> &mut MSDetectorControl {
-        todo!("port MSNet::getDetectorControl")
+        self.myDetectorControl.m()
     }
 
     /// C++: `MSTLLogicControl & MSNet::getTLSControl()`
@@ -1524,7 +2379,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_tls_control(&mut self) -> &mut MSTLLogicControl {
-        todo!("port MSNet::getTLSControl")
+        self.myLogics.m()
     }
 
     /// C++: `MSJunctionControl & MSNet::getJunctionControl()`
@@ -1534,7 +2389,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_junction_control(&mut self) -> &mut MSJunctionControl {
-        todo!("port MSNet::getJunctionControl")
+        self.myJunctions.m()
     }
 
     /// C++: `MSEventControl * MSNet::getBeginOfTimestepEvents()`
@@ -1544,7 +2399,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_begin_of_timestep_events(&mut self) -> Ptr<MSEventControl> {
-        todo!("port MSNet::getBeginOfTimestepEvents")
+        self.myBeginOfTimestepEvents
     }
 
     /// C++: `MSEventControl * MSNet::getEndOfTimestepEvents()`
@@ -1554,7 +2409,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_of_timestep_events(&mut self) -> Ptr<MSEventControl> {
-        todo!("port MSNet::getEndOfTimestepEvents")
+        self.myEndOfTimestepEvents
     }
 
     /// C++: `MSEventControl * MSNet::getInsertionEvents()`
@@ -1564,7 +2419,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_insertion_events(&mut self) -> Ptr<MSEventControl> {
-        todo!("port MSNet::getInsertionEvents")
+        self.myInsertionEvents
     }
 
     /// C++: `ShapeContainer & MSNet::getShapeContainer()`
@@ -1574,7 +2429,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape_container(&mut self) -> &mut ShapeContainer {
-        todo!("port MSNet::getShapeContainer")
+        self.myShapeContainer.m()
     }
 
     /// C++: `MSDynamicShapeUpdater * MSNet::getDynamicShapeUpdater()`
@@ -1584,7 +2439,10 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_dynamic_shape_updater(&mut self) -> Ptr<MSDynamicShapeUpdater> {
-        todo!("port MSNet::getDynamicShapeUpdater")
+        match &self.myDynamicShapeUpdater {
+            Some(u) => Ptr::from_box(u),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `MSDynamicShapeUpdater * MSNet::makeDynamicShapeUpdater()`
@@ -1596,7 +2454,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn make_dynamic_shape_updater(&mut self) -> Ptr<MSDynamicShapeUpdater> {
-        todo!("port MSNet::makeDynamicShapeUpdater")
+        let sc = self.myShapeContainer;
+        self.myDynamicShapeUpdater = Some(Box::new(MSDynamicShapeUpdater::new(sc.m())));
+        Ptr::from_box(self.myDynamicShapeUpdater.as_ref().unwrap())
     }
 
     /// C++: `MSEdgeWeightsStorage & MSNet::getWeightsStorage()`
@@ -1610,7 +2470,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_weights_storage(&mut self) -> &mut MSEdgeWeightsStorage {
-        todo!("port MSNet::getWeightsStorage")
+        if self.myEdgeWeights.is_null() {
+            self.myEdgeWeights = leak_ptr(MSEdgeWeightsStorage::new());
+        }
+        self.myEdgeWeights.m()
     }
 
     /// C++: `bool MSNet::addStoppingPlace(SumoXMLTag, MSStoppingPlace *)`
@@ -1628,7 +2491,17 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_stopping_place(&mut self, category: SumoXMLTag, stop: Ptr<MSStoppingPlace>) -> bool {
-        todo!("port MSNet::addStoppingPlace")
+        let category = if category == SUMO_TAG_TRAIN_STOP { SUMO_TAG_BUS_STOP } else { category };
+        let places = self.myStoppingPlaces.entry(category).or_default();
+        let id = stop.get_id().to_string();
+        let isNew = !places.contains_key(&id);
+        if isNew {
+            places.insert(id, stop);
+        }
+        if isNew && stop.get_my_name() != "" {
+            self.myNamedStoppingPlaces.entry(category).or_default().entry(stop.get_my_name().to_string()).or_default().push(stop);
+        }
+        isNew
     }
 
     /// C++: `bool MSNet::addTractionSubstation(MSTractionSubstation *)`
@@ -1643,7 +2516,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_traction_substation(&mut self, substation: Ptr<MSTractionSubstation>) -> bool {
-        todo!("port MSNet::addTractionSubstation")
+        if !self.myTractionSubstations.contains(&substation) {
+            self.myTractionSubstations.push(substation);
+            return true;
+        }
+        false
     }
 
     /// C++: `MSStoppingPlace * MSNet::getStoppingPlace(const std::string &, const SumoXMLTag) const` [const]
@@ -1657,7 +2534,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place(&self, id: &str, category: SumoXMLTag) -> Ptr<MSStoppingPlace> {
-        todo!("port MSNet::getStoppingPlace")
+        match self.myStoppingPlaces.get(&category) {
+            Some(places) => places.get(id).copied().unwrap_or(Ptr::null()),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `MSStoppingPlace * MSNet::getStoppingPlace(const std::string &) const` [const]
@@ -1674,7 +2554,13 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place_2(&self, id: &str) -> Ptr<MSStoppingPlace> {
-        todo!("port MSNet::getStoppingPlace")
+        for category in [SUMO_TAG_BUS_STOP, SUMO_TAG_PARKING_AREA, SUMO_TAG_CONTAINER_STOP, SUMO_TAG_CHARGING_STATION, SUMO_TAG_OVERHEAD_WIRE_SEGMENT] {
+            let result = self.get_stopping_place(id, category);
+            if !result.is_null() {
+                return result;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `std::string MSNet::getStoppingPlaceID(const MSLane *, const double, const SumoXMLTag) const` [const]
@@ -1693,14 +2579,27 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place_id(&self, lane: Ptr<MSLane>, pos: f64, category: SumoXMLTag) -> String {
-        todo!("port MSNet::getStoppingPlaceID")
+        if let Some(places) = self.myStoppingPlaces.get(&category) {
+            for (_, stop) in places.iter() {
+                if Ptr::new(stop.get_lane()) == lane && stop.get_begin_lane_position() - POSITION_EPS <= pos && stop.get_end_lane_position() + POSITION_EPS >= pos {
+                    return stop.get_id().to_string();
+                }
+            }
+        }
+        String::new()
     }
 
     /// C++: `const std::vector<MSStoppingPlace *> & MSNet::getStoppingPlaceAlternatives(const std::string &, SumoXMLTag) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stopping_place_alternatives(&self, name: &str, category: SumoXMLTag) -> &Vec<Ptr<MSStoppingPlace>> {
-        todo!("port MSNet::getStoppingPlaceAlternatives")
+        let category = if category == SUMO_TAG_TRAIN_STOP { SUMO_TAG_BUS_STOP } else { category };
+        if let Some(named) = self.myNamedStoppingPlaces.get(&category) {
+            if let Some(v) = named.get(name) {
+                return v;
+            }
+        }
+        EMPTY_STOPPING_PLACE_VECTOR.with(|e| *e)
     }
 
     /// C++: `const NamedObjectCont<MSStoppingPlace *> & MSNet::getStoppingPlaces(SumoXMLTag) const` [const]
@@ -1715,8 +2614,11 @@ impl MSNet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_stopping_places(&self, category: SumoXMLTag) -> &Unmapped /* NamedObjectCont<MSStoppingPlace *> */ {
-        todo!("port MSNet::getStoppingPlaces")
+    pub fn get_stopping_places(&self, category: SumoXMLTag) -> &BTreeMap<String, Ptr<MSStoppingPlace>> {
+        match self.myStoppingPlaces.get(&category) {
+            Some(places) => places,
+            None => EMPTY_NAMED_STOPPING_PLACES.with(|e| *e),
+        }
     }
 
     /// C++: `void MSNet::writeChargingStationOutput() const` [const]
@@ -1732,7 +2634,14 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_charging_station_output(&self) {
-        todo!("port MSNet::writeChargingStationOutput")
+        if let Some(places) = self.myStoppingPlaces.get(&SUMO_TAG_CHARGING_STATION) {
+            let output = device_by_option("chargingstations-output");
+            let mut output = output.borrow_mut();
+            for (_, stop) in places.iter() {
+                // shortcut: MSChargingStation::writeChargingStationOutput is not ported yet, the static_cast is not safe until it is
+                let _ = (stop, &mut output);
+            }
+        }
     }
 
     /// C++: `void MSNet::writeRailSignalBlocks() const` [const]
@@ -1762,7 +2671,18 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_rail_signal_blocks(&self) {
-        todo!("port MSNet::writeRailSignalBlocks")
+        if is_set("railsignal-block-output") {
+            let output = device_by_option("railsignal-block-output");
+            let mut output = output.borrow_mut();
+            // shortcut: MSRailSignal::writeBlocks (dynamic_cast of each logic) is not ported yet
+            MSDriveWay::write_depature_blocks(&mut output, false);
+        }
+        if is_set("railsignal-vehicle-output") {
+            let output = device_by_option("railsignal-vehicle-output");
+            let mut output = output.borrow_mut();
+            // shortcut: MSRailSignal::writeBlocks (dynamic_cast of each logic) is not ported yet
+            MSDriveWay::write_depature_blocks(&mut output, true);
+        }
     }
 
     /// C++: `void MSNet::createTLWrapper(MSTrafficLightLogic *)` [virtual]
@@ -1770,7 +2690,7 @@ impl MSNet {
     // virtual void createTLWrapper(MSTrafficLightLogic*) {}
     #[allow(unused_variables)]
     pub fn create_tl_wrapper(&mut self, arg0: Ptr<MSTrafficLightLogic>) {
-        todo!("port MSNet::createTLWrapper")
+        // virtual hook without behaviour in the base class (GUINet overrides it)
     }
 
     /// C++: `void MSNet::writeOverheadWireSegmentOutput() const` [const]
@@ -1786,7 +2706,14 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_overhead_wire_segment_output(&self) {
-        todo!("port MSNet::writeOverheadWireSegmentOutput")
+        if let Some(places) = self.myStoppingPlaces.get(&SUMO_TAG_OVERHEAD_WIRE_SEGMENT) {
+            let output = device_by_option("overheadwiresegments-output");
+            let mut output = output.borrow_mut();
+            for (_, stop) in places.iter() {
+                // shortcut: MSOverheadWire::writeOverheadWireSegmentOutput is not ported yet
+                let _ = (stop, &mut output);
+            }
+        }
     }
 
     /// C++: `void MSNet::writeSubstationOutput() const` [const]
@@ -1803,7 +2730,15 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn write_substation_output(&self) {
-        todo!("port MSNet::writeSubstationOutput")
+        if !self.myTractionSubstations.is_empty() {
+            let output = device_by_option("substations-output");
+            let mut output = output.borrow_mut();
+            output.set_precision(get_int("substations-output.precision"));
+            for sub in self.myTractionSubstations.iter() {
+                // shortcut: MSTractionSubstation::writeTractionSubstationOutput is not ported yet
+                let _ = (sub, &mut output);
+            }
+        }
     }
 
     /// C++: `bool MSNet::isSelected(const MSTrafficLightLogic *) const` [const, virtual]
@@ -1813,7 +2748,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn is_selected(&self, arg0: Ptr<MSTrafficLightLogic>) -> bool {
-        todo!("port MSNet::isSelected")
+        false
     }
 
     /// C++: `void MSNet::updateGUI() const` [const, virtual]
@@ -1821,7 +2756,7 @@ impl MSNet {
     // virtual void updateGUI() const { }
     #[allow(unused_variables)]
     pub fn update_gui(&self) {
-        todo!("port MSNet::updateGUI")
+        // virtual hook without behaviour in the base class (GUINet overrides it)
     }
 
     /// C++: `SUMOTime MSNet::loadState(const std::string &, const bool)`
@@ -1849,7 +2784,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, fileName: &str, catchExceptions: bool) -> SUMOTime {
-        todo!("port MSNet::loadState")
+        panic!("shortcut: MSNet::loadState needs MSStateHandler, which is not ported yet ({})", fileName);
     }
 
     /// C++: `void MSNet::quickReload()`
@@ -1877,7 +2812,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn quick_reload(&mut self) {
-        todo!("port MSNet::quickReload")
+        let oc_begin = opt_time("begin");
+        self.clear_state(oc_begin, true);
+        // shortcut: NLBuilder::initRandomness and the additional-files reload are not ported yet
+        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        self.update_gui();
     }
 
     /// C++: `void MSNet::addVehicleStateListener(VehicleStateListener *)`
@@ -1890,7 +2829,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle_state_listener(&mut self, listener: Ptr<MSNet_VehicleStateListener>) {
-        todo!("port MSNet::addVehicleStateListener")
+        if !self.myVehicleStateListeners.contains(&listener) {
+            self.myVehicleStateListeners.push(listener);
+        }
     }
 
     /// C++: `void MSNet::removeVehicleStateListener(VehicleStateListener *)`
@@ -1904,7 +2845,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn remove_vehicle_state_listener(&mut self, listener: Ptr<MSNet_VehicleStateListener>) {
-        todo!("port MSNet::removeVehicleStateListener")
+        if let Some(i) = self.myVehicleStateListeners.iter().position(|l| *l == listener) {
+            self.myVehicleStateListeners.remove(i);
+        }
     }
 
     /// C++: `void MSNet::informVehicleStateListener(const SUMOVehicle *const, VehicleState, const std::string &)`
@@ -1920,7 +2863,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn inform_vehicle_state_listener(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
-        todo!("port MSNet::informVehicleStateListener")
+        // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
+        for listener in self.myVehicleStateListeners.iter() {
+            listener.m().vehicle_state_changed(vehicle, to, info);
+        }
     }
 
     /// C++: `void MSNet::addTransportableStateListener(TransportableStateListener *)`
@@ -1933,7 +2879,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable_state_listener(&mut self, listener: Ptr<MSNet_TransportableStateListener>) {
-        todo!("port MSNet::addTransportableStateListener")
+        if !self.myTransportableStateListeners.contains(&listener) {
+            self.myTransportableStateListeners.push(listener);
+        }
     }
 
     /// C++: `void MSNet::removeTransportableStateListener(TransportableStateListener *)`
@@ -1947,7 +2895,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable_state_listener(&mut self, listener: Ptr<MSNet_TransportableStateListener>) {
-        todo!("port MSNet::removeTransportableStateListener")
+        if let Some(i) = self.myTransportableStateListeners.iter().position(|l| *l == listener) {
+            self.myTransportableStateListeners.remove(i);
+        }
     }
 
     /// C++: `void MSNet::informTransportableStateListener(const MSTransportable *const, TransportableState, const std::string &)`
@@ -1963,7 +2913,10 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn inform_transportable_state_listener(&mut self, transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
-        todo!("port MSNet::informTransportableStateListener")
+        // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
+        for listener in self.myTransportableStateListeners.iter() {
+            listener.m().transportable_state_changed(transportable, to, info);
+        }
     }
 
     /// C++: `bool MSNet::registerCollision(const SUMOTrafficObject *, const SUMOTrafficObject *, const std::string &, const MSLane *, double)`
@@ -2012,7 +2965,42 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn register_collision(&mut self, collider: Ptr<SUMOTrafficObject>, victim: Ptr<SUMOTrafficObject>, collisionType: &str, lane: Ptr<MSLane>, pos: f64) -> bool {
-        todo!("port MSNet::registerCollision")
+        if let Some(items) = self.myCollisions.get_mut(collider.get_id()) {
+            for old in items.iter_mut() {
+                if old.victim == victim.get_id() {
+                    // collision from previous step continues
+                    old.continuationTime = self.myStep;
+                    return false;
+                }
+            }
+        } else if let Some(items) = self.myCollisions.get_mut(victim.get_id()) {
+            // maybe the roles have been reversed
+            for old in items.iter_mut() {
+                if old.victim == collider.get_id() {
+                    // collision from previous step continues (keep the old roles)
+                    old.continuationTime = self.myStep;
+                    return false;
+                }
+            }
+        }
+        let c = MSNet_Collision {
+            victim: victim.get_id().to_string(),
+            colliderType: collider.get_vehicle_type().get_id().to_string(),
+            victimType: victim.get_vehicle_type().get_id().to_string(),
+            colliderSpeed: collider.get_speed(),
+            victimSpeed: victim.get_speed(),
+            colliderFront: collider.get_position(0.0),
+            victimFront: victim.get_position(0.0),
+            colliderBack: collider.get_position(-collider.get_vehicle_type().get_length()),
+            victimBack: victim.get_position(-victim.get_vehicle_type().get_length()),
+            type_: collisionType.to_string(),
+            lane,
+            pos,
+            time: self.myStep,
+            continuationTime: self.myStep,
+        };
+        self.myCollisions.entry(collider.get_id().to_string()).or_default().push(c);
+        true
     }
 
     /// C++: `const CollisionMap & MSNet::getCollisions() const` [const]
@@ -2021,7 +3009,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_collisions(&self) -> &MSNet_CollisionMap {
-        todo!("port MSNet::getCollisions")
+        &self.myCollisions
     }
 
     /// C++: `double MSNet::getTravelTime(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -2055,7 +3043,30 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
-        todo!("port MSNet::getTravelTime")
+        let mut value = 0.0;
+        let veh = v.cast::<MSVehicle>();
+        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+            return value;
+        }
+        if MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
+            return value;
+        }
+        if !v.is_null() {
+            if (veh.get_routing_mode() & ROUTING_MODE_AGGREGATED_CUSTOM) != 0 {
+                return MSRoutingEngine::get_effort_extra(e, v, t);
+            } else if (veh.get_routing_mode() & ROUTING_MODE_AGGREGATED) != 0 {
+                if MSRoutingEngine::has_bike_speeds() && v.get_v_class() == SVC_BICYCLE {
+                    return MSRoutingEngine::get_effort_bike(e, v, t);
+                } else {
+                    return MSRoutingEngine::get_effort(e, v, t);
+                }
+            } else if MSRoutingEngine::have_extras() {
+                let mut tt = e.get_minimum_travel_time(v);
+                MSRoutingEngine::apply_extras(e, v, MSNet::get_instance().get_current_time_step(), &mut tt);
+                return tt;
+            }
+        }
+        e.get_minimum_travel_time(v)
     }
 
     /// C++: `double MSNet::getEffort(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -2074,7 +3085,15 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
-        todo!("port MSNet::getEffort")
+        let mut value = 0.0;
+        let veh = v.cast::<MSVehicle>();
+        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+            return value;
+        }
+        if MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
+            return value;
+        }
+        0.0
     }
 
     /// C++: `MSVehicleRouter & MSNet::getRouterTT(int, const Prohibitions &) const` [const]
@@ -2109,7 +3128,16 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        todo!("port MSNet::getRouterTT")
+        // shortcut: DijkstraRouter/AStarRouter/CCHRouter cannot be created yet (SUMOAbstractRouter_Operation and the lookup tables are Unmapped), so a router is only returned if one was already created
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
+        match me.myRouterTT.get(&rngIndex).copied() {
+            Some(router) => {
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
+            None => panic!("shortcut: routing algorithm routers for TraCI/triggers are not creatable yet"),
+        }
     }
 
     /// C++: `MSVehicleRouter & MSNet::getRouterEffort(int, const Prohibitions &) const` [const]
@@ -2126,7 +3154,16 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        todo!("port MSNet::getRouterEffort")
+        // shortcut: DijkstraRouter cannot be created yet (SUMOAbstractRouter_Operation is Unmapped), so a router is only returned if one was already created
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
+        match me.myRouterEffort.get(&rngIndex).copied() {
+            Some(router) => {
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
+            None => panic!("shortcut: effort router is not creatable yet"),
+        }
     }
 
     /// C++: `MSPedestrianRouter & MSNet::getPedestrianRouter(int, const Prohibitions &) const` [const]
@@ -2142,8 +3179,17 @@ impl MSNet {
     //     return *myPedestrianRouter[rngIndex];
     // }
     #[allow(unused_variables)]
-    pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSPedestrianRouter {
-        todo!("port MSNet::getPedestrianRouter")
+    pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
+        // shortcut: PedestrianRouter::new is not ported yet, so a router is only returned if one was already created
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
+        match me.myPedestrianRouter.get(&rngIndex).copied() {
+            Some(router) => {
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
+            None => panic!("shortcut: pedestrian router is not creatable yet"),
+        }
     }
 
     /// C++: `MSTransportableRouter & MSNet::getIntermodalRouter(int, const int, const Prohibitions &) const` [const]
@@ -2169,7 +3215,17 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
-        todo!("port MSNet::getIntermodalRouter")
+        // shortcut: IntermodalRouter::new (routing callback and effort calculator are Unmapped), so a router is only returned if one was already created
+        let key = rngIndex * get_int("thread-rngs") + routingMode;
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
+        match me.myIntermodalRouter.get(&key).copied() {
+            Some(router) => {
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
+            None => panic!("shortcut: intermodal router is not creatable yet"),
+        }
     }
 
     /// C++: `void MSNet::resetIntermodalRouter() const` [const]
@@ -2183,7 +3239,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn reset_intermodal_router(&self) {
-        todo!("port MSNet::resetIntermodalRouter")
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
+        for (_, router) in std::mem::take(&mut me.myIntermodalRouter) {
+            delete_ptr(router);
+        }
     }
 
     /// C++: `void MSNet::adaptIntermodalRouter(MSTransportableRouter &)` [static]
@@ -2223,7 +3283,9 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn adapt_intermodal_router(router: &mut MSTransportableRouter) {
-        todo!("port MSNet::adaptIntermodalRouter")
+        // shortcut: the access/stop registration for the intermodal router needs MSTransportableRouter's network API, which is not ported yet
+        let _ = router;
+        let _ = MSNet::get_instance();
     }
 
     /// C++: `bool MSNet::hasInternalLinks() const` [const]
@@ -2233,7 +3295,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_internal_links(&self) -> bool {
-        todo!("port MSNet::hasInternalLinks")
+        self.myHasInternalLinks
     }
 
     /// C++: `bool MSNet::hasJunctionHigherSpeeds() const` [const]
@@ -2243,7 +3305,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_junction_higher_speeds(&self) -> bool {
-        todo!("port MSNet::hasJunctionHigherSpeeds")
+        self.myJunctionHigherSpeeds
     }
 
     /// C++: `bool MSNet::hasElevation() const` [const]
@@ -2253,7 +3315,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_elevation(&self) -> bool {
-        todo!("port MSNet::hasElevation")
+        self.myHasElevation
     }
 
     /// C++: `bool MSNet::hasPedestrianNetwork() const` [const]
@@ -2264,7 +3326,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_pedestrian_network(&self) -> bool {
-        todo!("port MSNet::hasPedestrianNetwork")
+        self.myHasPedestrianNetwork
     }
 
     /// C++: `bool MSNet::hasBidiEdges() const` [const]
@@ -2274,7 +3336,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn has_bidi_edges(&self) -> bool {
-        todo!("port MSNet::hasBidiEdges")
+        self.myHasBidiEdges
     }
 
     /// C++: `MMVersion MSNet::getNetworkVersion() const` [const]
@@ -2284,7 +3346,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_network_version(&self) -> Unmapped /* MMVersion */ {
-        todo!("port MSNet::getNetworkVersion")
+        self.myVersion
     }
 
     /// C++: `bool MSNet::warnOnce(const std::string &)`
@@ -2299,7 +3361,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn warn_once(&mut self, typeAndID: &str) -> bool {
-        todo!("port MSNet::warnOnce")
+        if !self.myWarnedOnce.contains_key(typeAndID) {
+            self.myWarnedOnce.insert(typeAndID.to_string(), true);
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSNet::interrupt()`
@@ -2308,7 +3374,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn interrupt(&mut self) {
-        todo!("port MSNet::interrupt")
+        self.myAmInterrupted = true;
     }
 
     /// C++: `bool MSNet::isInterrupted() const` [const]
@@ -2317,7 +3383,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn is_interrupted(&self) -> bool {
-        todo!("port MSNet::isInterrupted")
+        self.myAmInterrupted
     }
 
     /// C++: `bool MSNet::skipFinalReset() const` [const, virtual]
@@ -2327,7 +3393,7 @@ impl MSNet {
     //     }
     #[allow(unused_variables)]
     pub fn skip_final_reset(&self) -> bool {
-        todo!("port MSNet::skipFinalReset")
+        false
     }
 
     /// C++: `void MSNet::lockPendingEmits() const` [const, virtual]
@@ -2335,7 +3401,7 @@ impl MSNet {
     // virtual void lockPendingEmits() const {}
     #[allow(unused_variables)]
     pub fn lock_pending_emits(&self) {
-        todo!("port MSNet::lockPendingEmits")
+        // virtual hook without behaviour in the base class (GUI nets override it)
     }
 
     /// C++: `void MSNet::unlockPendingEmits() const` [const, virtual]
@@ -2343,7 +3409,7 @@ impl MSNet {
     // virtual void unlockPendingEmits() const {}
     #[allow(unused_variables)]
     pub fn unlock_pending_emits(&self) {
-        todo!("port MSNet::unlockPendingEmits")
+        // virtual hook without behaviour in the base class (GUI nets override it)
     }
 
     /// C++: `MSMapMatcher * MSNet::getMapMatcher() const` [const]
@@ -2358,7 +3424,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_map_matcher(&self) -> Ptr<MSMapMatcher> {
-        todo!("port MSNet::getMapMatcher")
+        // shortcut: MSMapMatcher is Unmapped and the route loader's route handler is not ported yet
+        Ptr::null()
     }
 
     /// C++: `MSTractionSubstation * MSNet::findTractionSubstation(const std::string &)`
@@ -2374,7 +3441,12 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn find_traction_substation(&mut self, substationId: &str) -> Ptr<MSTractionSubstation> {
-        todo!("port MSNet::findTractionSubstation")
+        for sub in self.myTractionSubstations.iter() {
+            if sub.get_id() == substationId {
+                return *sub;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `bool MSNet::checkElevation()` [protected]
@@ -2393,7 +3465,14 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn check_elevation(&mut self) -> bool {
-        todo!("port MSNet::checkElevation")
+        for e in self.myEdges.get_edges().iter() {
+            for lane in e.get_lanes().iter() {
+                if lane.get_shape_2().has_elevation() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool MSNet::checkWalkingarea()` [protected]
@@ -2409,7 +3488,12 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn check_walkingarea(&mut self) -> bool {
-        todo!("port MSNet::checkWalkingarea")
+        for e in self.myEdges.get_edges().iter() {
+            if e.get_function() == SumoXMLEdgeFunc::WALKINGAREA {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSNet::checkBidiEdges()` [protected]
@@ -2425,7 +3509,12 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn check_bidi_edges(&mut self) -> bool {
-        todo!("port MSNet::checkBidiEdges")
+        for e in self.myEdges.get_edges().iter() {
+            if !e.get_bidi_edge().is_null() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSNet::removeOutdatedCollisions()` [protected]
@@ -2449,7 +3538,11 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn remove_outdated_collisions(&mut self) {
-        todo!("port MSNet::removeOutdatedCollisions")
+        let step = self.myStep;
+        self.myCollisions.retain(|_, items| {
+            items.retain(|c| c.continuationTime == step);
+            !items.is_empty()
+        });
     }
 
     /// C++: `void MSNet::postMoveStep()` [protected]
@@ -2483,7 +3576,29 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn post_move_step(&mut self) {
-        todo!("port MSNet::postMoveStep")
+        let numControlled = crate::libsumo::helper::Helper::post_process_remote_control();
+        if numControlled > 0 && g_check_4_accidents() {
+            self.myEdges.m().detect_collisions(self.myStep, STAGE_REMOTECONTROL);
+        }
+        if self.myLogExecutionTime {
+            self.myTraCIStepDuration += current_millis();
+            self.myTraCIMillis += self.myTraCIStepDuration;
+        }
+        if g_check_4_accidents() && !g_use_meso_sim() {
+            // collisions from the previous step were kept to avoid duplicate
+            // warnings. we must remove them now to ensure correct output.
+            self.remove_outdated_collisions();
+        }
+        // update and write (if needed) detector values
+        self.mySimStepDuration = current_millis() - self.mySimStepDuration;
+        self.write_output();
+        if self.myLogExecutionTime {
+            self.myVehiclesMoved += self.myVehicleControl.get_running_vehicle_no() as i64;
+            if !self.myPersonControl.is_null() {
+                self.myPersonsMoved += self.myPersonControl.get_running_number() as i64;
+            }
+        }
+        self.myStep += delta_t();
     }
 
     /// C++: `void MSNet::MSNet(const MSNet &)` [private]
@@ -2491,7 +3606,8 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSNet) -> Self {
-        todo!("port MSNet::MSNet")
+        // shortcut: copy construction of a network is not allowed in C++ either (MSNet(const MSNet&) is private)
+        panic!("MSNet cannot be copy-constructed");
     }
 
     /// C++: `MSNet & MSNet::operator=(const MSNet &)` [private]
@@ -2499,7 +3615,8 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSNet) -> &mut MSNet {
-        todo!("port MSNet::operator=")
+        // shortcut: assignment of a network is not allowed in C++ either (operator= is private)
+        panic!("MSNet cannot be assigned");
     }
 
 }
@@ -2515,7 +3632,7 @@ impl MSNet_TransportableStateListener {
     // TransportableStateListener() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TransportableStateListener::TransportableStateListener")
+        MSNet_TransportableStateListener {}
     }
 
     /// C++: `void TransportableStateListener::~TransportableStateListener() noexcept` [virtual]
@@ -2523,7 +3640,7 @@ impl MSNet_TransportableStateListener {
     // virtual ~TransportableStateListener() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TransportableStateListener::~TransportableStateListener")
+        // the interface has no state to release
     }
 
     /// C++: `void TransportableStateListener::transportableStateChanged(const MSTransportable *const, TransportableState, const std::string &)` [virtual, pure virtual]
@@ -2531,7 +3648,7 @@ impl MSNet_TransportableStateListener {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn transportable_state_changed(&mut self, transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
-        todo!("port TransportableStateListener::transportableStateChanged")
+        // pure virtual in C++: concrete listeners override this, the interface has no behaviour
     }
 
 }
@@ -2547,7 +3664,7 @@ impl MSNet_VehicleStateListener {
     // VehicleStateListener() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port VehicleStateListener::VehicleStateListener")
+        MSNet_VehicleStateListener {}
     }
 
     /// C++: `void VehicleStateListener::~VehicleStateListener() noexcept` [virtual]
@@ -2555,7 +3672,7 @@ impl MSNet_VehicleStateListener {
     // virtual ~VehicleStateListener() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port VehicleStateListener::~VehicleStateListener")
+        // the interface has no state to release
     }
 
     /// C++: `void VehicleStateListener::vehicleStateChanged(const SUMOVehicle *const, VehicleState, const std::string &)` [virtual, pure virtual]
@@ -2563,7 +3680,7 @@ impl MSNet_VehicleStateListener {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn vehicle_state_changed(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
-        todo!("port VehicleStateListener::vehicleStateChanged")
+        // pure virtual in C++: concrete listeners override this, the interface has no behaviour
     }
 
 }
