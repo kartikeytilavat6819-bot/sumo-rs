@@ -1,6 +1,7 @@
 //! Port of utils/handlers/RouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::xml::common_xml_structure::{CommonXMLStructure_PlanParameters, CommonXMLStructure_SumoBaseObject};
 use crate::utils::handlers::common_handler::{attr_str, tag_str};
 use utils::common::msg_handler::write_warning;
 use utils::common::std_defs::INVALID_DOUBLE;
@@ -1250,7 +1251,7 @@ impl RouteHandler {
             let cur = self.myCommonXMLStructure.get_current_sumo_base_object();
             cur.m().set_tag(SUMO_TAG_VTYPE);
             // add all attributes
-            cur.m().set_vehicle_type_parameter(take_parameter(vehicleTypeParameter), &id);
+            cur.m().set_vehicle_type_parameter(take_parameter::<SUMOVTypeParameter>(vehicleTypeParameter), &id);
         } else {
             self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
         }
