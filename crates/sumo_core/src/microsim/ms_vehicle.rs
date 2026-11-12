@@ -15,6 +15,12 @@ fn max2(a: f64, b: f64) -> f64 {
 // shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
 
+/// C++ implicit upcast MSVehicle& -> SUMOTrafficObject& (MSVehicle derives from SUMOVehicle, which derives from SUMOTrafficObject)
+#[allow(dead_code)]
+fn as_traffic_object(v: &mut MSVehicle) -> &mut SUMOTrafficObject {
+    unsafe { &mut *(v as *mut MSVehicle as *mut SUMOTrafficObject) }
+}
+
 #[allow(dead_code)]
 fn semi_implicit_euler_update() -> bool {
     false
@@ -2248,7 +2254,19 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
-        todo!("port MSVehicle::replaceRoute")
+        if self.base.replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn) {
+            // update best lanes (after stops were added)
+            self.myLastBestLanesEdge = Ptr::null();
+            self.myLastBestLanesInternalLane = Ptr::null();
+            let startLane = if onInit { self.get_edge().get_lanes()[0] } else { Ptr::null() };
+            self.update_best_lanes(true, startLane);
+            assert!(!removeStops || self.have_valid_stop_edges(false));
+            if self.myStops.len() == 0 {
+                self.myStopDist = f64::MAX;
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSVehicle::workOnMoveReminders(double, double, double)`
@@ -2285,7 +2303,28 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn work_on_move_reminders(&mut self, oldPos: f64, newPos: f64, newSpeed: f64) {
-        todo!("port MSVehicle::workOnMoveReminders")
+        // This erasure-idiom works for all stl-sequence-containers
+        // See Meyers: Effective STL, Item 9
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let (rem, relPos) = self.myMoveReminders[i];
+            // XXX: calling notifyMove with newSpeed seems not the best choice. For the ballistic update, the average speed is calculated and used
+            //      although a higher order quadrature-formula might be more adequate.
+            //      For the euler case (where the speed is considered constant for each time step) it is conceivable that
+            //      the current calculations may lead to systematic errors for large time steps (compared to reality). Refs. #2579
+            if !rem.m().notify_move(as_traffic_object(self), oldPos + relPos, newPos + relPos, max2(0.0, newSpeed)) {
+                self.myMoveReminders.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        if !self.myEnergyParams.is_null() {
+            let stopDuration = if self.is_stopped() { self.get_next_stop().duration } else { -1 };
+            let parking = self.is_parking();
+            let waitingTime = self.get_waiting_time(false);
+            let angleDiff = self.get_angle_diff();
+            self.myEnergyParams.m().set_dynamic_values(stopDuration, parking, waitingTime, angleDiff);
+        }
     }
 
     /// C++: `void MSVehicle::workOnIdleReminders()`
@@ -2306,7 +2345,19 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn work_on_idle_reminders(&mut self) {
-        todo!("port MSVehicle::workOnIdleReminders")
+        self.update_waiting_time(0.); // cf issue 2233
+
+        // vehicle move reminders
+        let reminders = self.myMoveReminders.clone();
+        for rem in reminders.iter() {
+            rem.0.m().notify_idle(as_traffic_object(self));
+        }
+
+        // lane move reminders - for aggregated values
+        let laneReminders = self.get_lane().get_move_reminders().clone();
+        for rem in laneReminders.iter() {
+            rem.m().notify_idle(as_traffic_object(self));
+        }
     }
 
     /// C++: `bool MSVehicle::checkActionStep(const SUMOTime)`
@@ -2321,7 +2372,11 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_action_step(&mut self, t: SUMOTime) -> bool {
-        todo!("port MSVehicle::checkActionStep")
+        self.myActionStep = self.is_action_step(t);
+        if self.myActionStep {
+            self.myLastActionTime = t;
+        }
+        self.myActionStep
     }
 
     /// C++: `void MSVehicle::resetActionOffset(const SUMOTime)`
@@ -2332,7 +2387,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn reset_action_offset(&mut self, timeUntilNextAction: SUMOTime) {
-        todo!("port MSVehicle::resetActionOffset")
+        self.myLastActionTime = MSNet::get_instance().get_current_time_step() + timeUntilNextAction;
     }
 
     /// C++: `void MSVehicle::updateActionOffset(const SUMOTime, const SUMOTime)`
@@ -2355,7 +2410,19 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_action_offset(&mut self, oldActionStepLength: SUMOTime, newActionStepLength: SUMOTime) {
-        todo!("port MSVehicle::updateActionOffset")
+        let now = MSNet::get_instance().get_current_time_step();
+        let mut timeSinceLastAction = now - self.myLastActionTime;
+        if timeSinceLastAction == 0 {
+            // Action was scheduled now, may be delayed be new action step length
+            timeSinceLastAction = oldActionStepLength;
+        }
+        if timeSinceLastAction >= newActionStepLength {
+            // Action point required in this step
+            self.myLastActionTime = now;
+        } else {
+            let timeUntilNextAction = newActionStepLength - timeSinceLastAction;
+            self.reset_action_offset(timeUntilNextAction);
+        }
     }
 
     /// C++: `void MSVehicle::planMove(const SUMOTime, const MSLeaderInfo &, const double)`
@@ -2884,7 +2951,24 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_delta_pos(&self, accel: f64) -> f64 {
-        todo!("port MSVehicle::getDeltaPos")
+        let vNext = self.myState.mySpeed + accel2speed(accel);
+        if semi_implicit_euler_update() {
+            // apply implicit Euler positional update
+            speed2dist(max2(vNext, 0.))
+        } else {
+            // apply ballistic update
+            if vNext >= 0.0 {
+                // assume constant acceleration during this time step
+                speed2dist(self.myState.mySpeed + 0.5 * accel2speed(accel))
+            } else {
+                // negative vNext indicates a stop within the middle of time step
+                // The corresponding stop time is s = mySpeed/deceleration \in [0,dt], and the
+                // covered distance is therefore deltaPos = mySpeed*s - 0.5*deceleration*s^2.
+                // Here, deceleration = (myState.mySpeed - vNext)/dt is the constant deceleration
+                // until the vehicle stops.
+                -speed2dist(0.5 * self.myState.mySpeed * self.myState.mySpeed / accel2speed(accel))
+            }
+        }
     }
 
     /// C++: `double MSVehicle::getPositionOnLane() const` [const, virtual]
@@ -2894,7 +2978,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_position_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getPositionOnLane")
+        self.myState.myPos
     }
 
     /// C++: `double MSVehicle::getLastStepDist() const` [const]
@@ -2904,7 +2988,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_step_dist(&self) -> f64 {
-        todo!("port MSVehicle::getLastStepDist")
+        self.myState.last_covered_dist()
     }
 
     /// C++: `double MSVehicle::getPositionOnLane(const MSLane *) const` [const]
@@ -2915,7 +2999,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getPositionOnLane")
+        self.get_back_position_on_lane_3(lane, true) + self.myType.get_length()
     }
 
     /// C++: `double MSVehicle::getBackPositionOnLane(const MSLane *) const` [const, virtual]
@@ -2925,7 +3009,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getBackPositionOnLane")
+        self.get_back_position_on_lane_3(lane, false)
     }
 
     /// C++: `double MSVehicle::getBackPositionOnLane() const` [const]
@@ -2935,7 +3019,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane_2(&self) -> f64 {
-        todo!("port MSVehicle::getBackPositionOnLane")
+        self.get_back_position_on_lane_3(self.myLane, false)
     }
 
     /// C++: `double MSVehicle::getLateralPositionOnLane() const` [const, virtual]
@@ -2945,7 +3029,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lateral_position_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getLateralPositionOnLane")
+        self.myState.myPosLat
     }
 
     /// C++: `void MSVehicle::setLateralPositionOnLane(double)`
@@ -2954,7 +3038,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_lateral_position_on_lane(&mut self, posLat: f64) {
-        todo!("port MSVehicle::setLateralPositionOnLane")
+        self.myState.myPosLat = posLat;
     }
 
     /// C++: `void MSVehicle::invalidateCachedPosition()`
@@ -2963,7 +3047,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_cached_position(&mut self) {
-        todo!("port MSVehicle::invalidateCachedPosition")
+        self.myCachedPosition = Position::INVALID;
     }
 
     /// C++: `double MSVehicle::getRightSideOnLane() const` [const]
@@ -2974,7 +3058,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_right_side_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getRightSideOnLane")
+        self.myState.myPosLat + 0.5 * self.myLane.get_width() - 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::getLeftSideOnLane() const` [const]
@@ -2985,7 +3069,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_left_side_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getLeftSideOnLane")
+        self.myState.myPosLat + 0.5 * self.myLane.get_width() + 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::getRightSideOnLane(const MSLane *) const` [const]
@@ -2996,7 +3080,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_right_side_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getRightSideOnLane")
+        self.myState.myPosLat + 0.5 * lane.get_width() - 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::getLeftSideOnLane(const MSLane *) const` [const]
@@ -3007,7 +3091,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_left_side_on_lane_2(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getLeftSideOnLane")
+        self.myState.myPosLat + 0.5 * lane.get_width() + 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::lateralDistanceToLane(const int) const` [const]
