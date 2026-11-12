@@ -7,6 +7,11 @@ use utils::geom::geom_helper::{deg2rad, GRAVITY};
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::to_string::f64_to_string_prec;
 
+// C++ VTYPEPARS_*_SET flags (utils/vehicle/SUMOVTypeParameter.h)
+const VTYPEPARS_LENGTH_SET: i64 = 1;
+const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
+const VTYPEPARS_MASS_SET: i64 = 1i64 << 32;
+
 /// C++ class `MSCFModel_Rail` (microsim/cfmodels/MSCFModel_Rail.h)
 #[repr(C)]
 pub struct MSCFModel_Rail {
@@ -370,7 +375,7 @@ impl MSCFModel_Rail {
         let totalRes = res + gr + cr; //kN
 
         let trac = self.myTrainParams.get_traction(speed); // kN
-        let a;
+        let mut a;
         if speed < targetSpeed {
             a = (trac - totalRes) / self.get_rot_weight(veh); //kN/t == N/kg
         } else {

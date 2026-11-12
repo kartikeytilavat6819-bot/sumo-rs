@@ -349,7 +349,7 @@ impl MSCFModel_CC {
             }
             self.v(veh, gap2pred, speed, speed + relSpeed)
         } else {
-            self.myHumanDriver.stop_speed(veh, speed, gap2pred, decel, usage)
+            self.myHumanDriver.stop_speed_2(veh, speed, gap2pred, decel, usage)
         }
     }
 
@@ -623,7 +623,99 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, veh: Ptr<MSVehicle>, key: &str) -> String {
-        todo!("port MSCFModel_CC::getParameter")
+        // vehicle variables used to set the parameter
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let mut buf = ParBuffer::new();
+        if key == PAR_SPEED_AND_ACCELERATION {
+            let velocity = veh.get_velocity_vector();
+            buf.shl_op(veh.get_speed()).shl_op(veh.get_acceleration()).shl_op(vars.controllerAcceleration)
+                .shl_op(veh.get_position(0.).x()).shl_op(veh.get_position(0.).y())
+                .shl_op(steps2time(MSNet::get_instance().get_current_time_step()))
+                .shl_op(velocity.x()).shl_op(velocity.y()).shl_op(veh.get_angle());
+            return buf.str();
+        }
+        if key == PAR_CRASHED {
+            return if vars.crashed { "1" } else { "0" }.to_string();
+        }
+        if key == PAR_RADAR_DATA {
+            let mut distance = 0.;
+            let mut relSpeed = 0.;
+            self.get_radar_measurements(veh, &mut distance, &mut relSpeed);
+            buf.shl_op(distance).shl_op(relSpeed);
+            return buf.str();
+        }
+        if key == PAR_LANES_COUNT {
+            buf.shl_op(veh.get_lane().get_edge().get_lanes().len());
+            return buf.str();
+        }
+        if key == PAR_DISTANCE_TO_END {
+            // route of the vehicle
+            let route = veh.get_route_ptr();
+            // last lane of the route of this vehicle
+            let lastLane = route.get_edges().last().unwrap().get_lanes()[0];
+            // distance to trip end
+            buf.shl_op(route.get_distance_between(veh.get_position_on_lane(), lastLane.get_length(), veh.get_lane(), lastLane, 0));
+            return buf.str();
+        }
+        if key == PAR_DISTANCE_FROM_BEGIN {
+            // route of the vehicle
+            let route = veh.get_route_ptr();
+            // first lane of the route of this vehicle
+            let firstLane = route.get_edges().first().unwrap().get_lanes()[0];
+            // distance to trip start
+            buf.shl_op(route.get_distance_between(0., veh.get_position_on_lane(), firstLane, veh.get_lane(), 0));
+            return buf.str();
+        }
+        if key == PAR_CC_DESIRED_SPEED {
+            buf.shl_op(vars.ccDesiredSpeed);
+            return buf.str();
+        }
+        if key == PAR_ACTIVE_CONTROLLER {
+            buf.shl_op(vars.activeController as i32);
+            return buf.str();
+        }
+        if key == PAR_ACC_HEADWAY_TIME {
+            buf.shl_op(vars.accHeadwayTime);
+            return buf.str();
+        }
+        if key == PAR_ACC_ACCELERATION {
+            buf.shl_op(self.get_acc_acceleration(veh));
+            return buf.str();
+        }
+        if key == PAR_CACC_SPACING {
+            buf.shl_op(vars.caccSpacing);
+            return buf.str();
+        }
+        if key.starts_with(CC_PAR_VEHICLE_DATA) {
+            let mut inBuf = ParBuffer::new_2(key.to_string());
+            let mut index: i32 = 0;
+            inBuf.op_(&mut index);
+            let vehicle = if index >= vars.nCars || index < 0 {
+                // shortcut: C++ leaves the other fields uninitialized here, they are zeroed
+                VEHICLE_DATA { index: -1, ..Default::default() }
+            } else {
+                vars.vehicles[index as usize]
+            };
+            buf.shl_op(vehicle.index).shl_op(vehicle.speed).shl_op(vehicle.acceleration)
+                .shl_op(vehicle.positionX).shl_op(vehicle.positionY).shl_op(vehicle.time)
+                .shl_op(vehicle.length).shl_op(vehicle.u).shl_op(vehicle.speedX)
+                .shl_op(vehicle.speedY).shl_op(vehicle.angle);
+            return buf.str();
+        }
+        if key == PAR_ENGINE_DATA {
+            // shortcut: C++ dynamic_cast<RealisticEngineModel*>; the engine is created together with engineModel, so the model id stands in for the type check
+            let (gear, rpm) = if vars.engineModel == CC_ENGINE_MODEL_REALISTIC {
+                let mut gear = 0;
+                let mut rpm = 0.;
+                vars.engine.cast::<RealisticEngineModel>().m().get_engine_data(veh.get_speed(), &mut gear, &mut rpm);
+                (gear, rpm)
+            } else {
+                (-1, 0.)
+            };
+            buf.shl_op(gear + 1).shl_op(rpm);
+            return buf.str();
+        }
+        String::new()
     }
 
     /// C++: `void MSCFModel_CC::setParameter(MSVehicle *, const std::string &, const std::string &) const` [const, virtual]
@@ -922,8 +1014,301 @@ impl MSCFModel_CC {
     //
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) {
-        todo!("port MSCFModel_CC::setParameter")
+    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+        // vehicle variables used to set the parameter
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let mut buf = ParBuffer::new_2(value.to_string());
+        // C++ catches NumberFormatException and rethrows InvalidArgument with this text
+        let invalid_value = || InvalidArgument(format!("Invalid value '{}' for parameter '{}' for vehicle '{}'", value, key, veh.get_id()));
+        let to_i = |s: &str| utils::common::string_utils::to_int(s).map_err(|_| invalid_value());
+        let to_d = |s: &str| utils::common::string_utils::to_double(s).map_err(|_| invalid_value());
+        // shortcut: C++ throws libsumo::TraCIException in the cases below, mapped to InvalidArgument with the same message
+        if key == PAR_LEADER_SPEED_AND_ACCELERATION {
+            let (mut x, mut y, mut vx, mut vy) = (0., 0., 0., 0.);
+            buf.op_(&mut vars.m().leaderSpeed).op_(&mut vars.m().leaderAcceleration).op_(&mut x).op_(&mut y)
+                .op_(&mut vars.m().leaderDataReadTime).op_(&mut vars.m().leaderControllerAcceleration)
+                .op_(&mut vx).op_(&mut vy).op_(&mut vars.m().leaderAngle);
+            vars.m().leaderPosition = Position::new(x, y);
+            vars.m().leaderVelocity = Position::new(vx, vy);
+            vars.m().leaderInitialized = true;
+            if vars.frontInitialized {
+                vars.m().caccInitialized = true;
+            }
+            return Ok(());
+        }
+        if key == PAR_PRECEDING_SPEED_AND_ACCELERATION {
+            let (mut x, mut y, mut vx, mut vy) = (0., 0., 0., 0.);
+            buf.op_(&mut vars.m().frontSpeed).op_(&mut vars.m().frontAcceleration).op_(&mut x).op_(&mut y)
+                .op_(&mut vars.m().frontDataReadTime).op_(&mut vars.m().frontControllerAcceleration)
+                .op_(&mut vx).op_(&mut vy).op_(&mut vars.m().frontAngle);
+            vars.m().frontPosition = Position::new(x, y);
+            vars.m().frontVelocity = Position::new(vx, vy);
+            vars.m().frontInitialized = true;
+            if vars.leaderInitialized {
+                vars.m().caccInitialized = true;
+            }
+            return Ok(());
+        }
+        if key == CC_PAR_VEHICLE_DATA {
+            let mut vehicle = VEHICLE_DATA::default();
+            buf.op_(&mut vehicle.index).op_(&mut vehicle.speed).op_(&mut vehicle.acceleration)
+                .op_(&mut vehicle.positionX).op_(&mut vehicle.positionY).op_(&mut vehicle.time)
+                .op_(&mut vehicle.length).op_(&mut vehicle.u).op_(&mut vehicle.speedX)
+                .op_(&mut vehicle.speedY).op_(&mut vehicle.angle);
+            // if the index is larger than the number of cars, simply ignore the data
+            // shortcut: C++ only rejects -1, other negative indices write out of bounds there; they are ignored here
+            if vehicle.index >= vars.nCars || vehicle.index < 0 {
+                return Ok(());
+            }
+            let idx = vehicle.index as usize;
+            vars.m().vehicles[idx] = vehicle;
+            if !vars.initialized[idx] && vehicle.index != vars.position {
+                vars.m().nInitialized += 1;
+            }
+            vars.m().initialized[idx] = true;
+            return Ok(());
+        }
+        if key == PAR_LEADER_FAKE_DATA {
+            buf.op_(&mut vars.m().fakeData.leaderSpeed).op_(&mut vars.m().fakeData.leaderAcceleration)
+                .op_(&mut vars.m().fakeData.leaderControllerAcceleration);
+            if buf.last_empty() {
+                vars.m().useControllerAcceleration = false;
+            }
+            return Ok(());
+        }
+        if key == PAR_FRONT_FAKE_DATA {
+            buf.op_(&mut vars.m().fakeData.frontSpeed).op_(&mut vars.m().fakeData.frontAcceleration)
+                .op_(&mut vars.m().fakeData.frontDistance).op_(&mut vars.m().fakeData.frontControllerAcceleration);
+            if buf.last_empty() {
+                vars.m().useControllerAcceleration = false;
+            }
+            return Ok(());
+        }
+        if key == CC_PAR_VEHICLE_POSITION {
+            vars.m().position = to_i(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_PLATOON_SIZE {
+            vars.m().nCars = to_i(value)?;
+            // given that we have a static matrix, check that we're not
+            // setting a number of cars larger than the size of that matrix
+            if vars.nCars > MAX_N_CARS {
+                vars.m().nCars = MAX_N_CARS;
+                utils::common::msg_handler::write_warning(&format!(
+                    "MSCFModel_CC: setting a number of cars of {} out of a maximum of {}. The CONSENSUS controller will not work properly if chosen. If you are using a different controller you can ignore this warning",
+                    vars.nCars, MAX_N_CARS
+                ));
+            }
+            return Ok(());
+        }
+        if key == PAR_ADD_MEMBER {
+            let mut id = String::new();
+            let mut position: i32 = 0;
+            buf.op_(&mut id).op_(&mut position);
+            vars.m().members.insert(position, id.clone());
+            let vehicle = self.find_vehicle(id.clone());
+            if vehicle.is_null() {
+                return Err(InvalidArgument(format!("Adding {} as member but {} does not exists", id, id)));
+            }
+            // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, MSCFModel has no runtime type id in this port
+            self.set_leader(vehicle, veh, veh.get_id().to_string());
+            vars.m().isLeader = true;
+            return Ok(());
+        }
+        if key == PAR_REMOVE_MEMBER {
+            let found = vars.members.iter().find(|(_, member)| member.as_str() == value).map(|(k, _)| *k);
+            if let Some(k) = found {
+                let vehicle = self.find_vehicle(value.to_string());
+                if vehicle.is_null() {
+                    return Err(InvalidArgument(format!("Removing {} from members but {} does not exist", value, value)));
+                }
+                // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, see PAR_ADD_MEMBER
+                self.set_leader(vehicle, Ptr::null(), String::new());
+                vars.m().members.remove(&k);
+            }
+            return Ok(());
+        }
+        if key == PAR_ENABLE_AUTO_LANE_CHANGE {
+            vars.m().autoLaneChange = to_i(value)? == 1;
+            // if the user enables automatic lane changing, any request for a fixed lane is deleted
+            if vars.autoLaneChange {
+                vars.m().platoonFixedLane = -1;
+            }
+            return Ok(());
+        }
+        if key == PAR_PLATOON_FIXED_LANE {
+            vars.m().platoonFixedLane = to_i(value)?;
+            // asking a leader to change the lane for the whole platoon automatically disables auto lane change
+            if vars.platoonFixedLane >= 0 {
+                vars.m().autoLaneChange = false;
+            }
+            return Ok(());
+        }
+        if key == CC_PAR_CACC_XI {
+            vars.m().caccXi = to_d(value)?;
+            self.recompute_parameters(veh);
+            return Ok(());
+        }
+        if key == CC_PAR_CACC_OMEGA_N {
+            vars.m().caccOmegaN = to_d(value)?;
+            self.recompute_parameters(veh);
+            return Ok(());
+        }
+        if key == CC_PAR_CACC_C1 {
+            vars.m().caccC1 = to_d(value)?;
+            self.recompute_parameters(veh);
+            return Ok(());
+        }
+        if key == CC_PAR_ENGINE_TAU {
+            vars.m().engineTau = to_d(value)?;
+            vars.engine.m().set_parameter_2(FOLM_PAR_TAU.to_string(), vars.engineTau);
+            self.recompute_parameters(veh);
+            vars.engine.m().set_parameter_2(FOLM_PAR_TAU.to_string(), vars.engineTau);
+            return Ok(());
+        }
+        if key == CC_PAR_UMIN {
+            vars.m().uMin = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_UMAX {
+            vars.m().uMax = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_PLOEG_H {
+            vars.m().ploegH = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_PLOEG_KP {
+            vars.m().ploegKp = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_PLOEG_KD {
+            vars.m().ploegKd = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_FLATBED_KA {
+            vars.m().flatbedKa = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_FLATBED_KV {
+            vars.m().flatbedKv = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_FLATBED_KP {
+            vars.m().flatbedKp = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_FLATBED_H {
+            vars.m().flatbedH = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_FLATBED_D {
+            vars.m().flatbedD = to_d(value)?;
+            return Ok(());
+        }
+        if key == CC_PAR_VEHICLE_ENGINE_MODEL {
+            // shortcut: C++ deletes the previous engine; it is leaked here because Ptr<GenericEngineModel> does not know its concrete type
+            let engineModel = to_i(value)?;
+            if engineModel == CC_ENGINE_MODEL_REALISTIC {
+                let mut engine = RealisticEngineModel::new();
+                engine.set_parameter_2(ENGINE_PAR_DT.to_string(), ts());
+                veh.m().get_influencer().set_speed_mode(0);
+                vars.m().engine = Ptr::from_raw(Box::into_raw(Box::new(engine)) as *mut GenericEngineModel);
+                vars.m().engineModel = CC_ENGINE_MODEL_REALISTIC;
+            } else {
+                // CC_ENGINE_MODEL_FOLM and the default case
+                let mut engine = FirstOrderLagModel::new();
+                engine.set_parameter_2(FOLM_PAR_DT.to_string(), ts());
+                engine.set_parameter_2(FOLM_PAR_TAU.to_string(), vars.engineTau);
+                vars.m().engine = Ptr::from_raw(Box::into_raw(Box::new(engine)) as *mut GenericEngineModel);
+                vars.m().engineModel = CC_ENGINE_MODEL_FOLM;
+            }
+            vars.engine.m().set_maximum_acceleration(self.myAccel);
+            vars.engine.m().set_maximum_deceleration(self.myDecel);
+            return Ok(());
+        }
+        if key == CC_PAR_VEHICLE_MODEL {
+            vars.engine.m().set_parameter(ENGINE_PAR_VEHICLE.to_string(), value);
+            return Ok(());
+        }
+        if key == CC_PAR_VEHICLES_FILE {
+            vars.engine.m().set_parameter(ENGINE_PAR_XMLFILE.to_string(), value);
+            return Ok(());
+        }
+        if key == PAR_CACC_SPACING {
+            vars.m().caccSpacing = to_d(value)?;
+            return Ok(());
+        }
+        if key == PAR_FIXED_ACCELERATION {
+            buf.op_(&mut vars.m().useFixedAcceleration).op_(&mut vars.m().fixedAcceleration);
+            return Ok(());
+        }
+        if key == PAR_CC_DESIRED_SPEED {
+            vars.m().ccDesiredSpeed = to_d(value)?;
+            return Ok(());
+        }
+        if key == PAR_ACTIVE_CONTROLLER {
+            // shortcut: C++ casts any int to the enum; only the seven known controllers exist here, other values keep the current one
+            let controller = match to_i(value)? {
+                0 => Some(ACTIVE_CONTROLLER::DRIVER),
+                1 => Some(ACTIVE_CONTROLLER::ACC),
+                2 => Some(ACTIVE_CONTROLLER::CACC),
+                3 => Some(ACTIVE_CONTROLLER::FAKED_CACC),
+                4 => Some(ACTIVE_CONTROLLER::PLOEG),
+                5 => Some(ACTIVE_CONTROLLER::CONSENSUS),
+                6 => Some(ACTIVE_CONTROLLER::FLATBED),
+                _ => None,
+            };
+            if let Some(controller) = controller {
+                vars.m().activeController = controller;
+            }
+            return Ok(());
+        }
+        if key == PAR_ACC_HEADWAY_TIME {
+            vars.m().accHeadwayTime = to_d(value)?;
+            return Ok(());
+        }
+        if key == PAR_USE_CONTROLLER_ACCELERATION {
+            vars.m().useControllerAcceleration = to_i(value)? != 0;
+            return Ok(());
+        }
+        if key == PAR_USE_AUTO_FEEDING {
+            let mut af: i32 = 0;
+            let mut leaderId = String::new();
+            let mut frontId = String::new();
+            buf.op_(&mut af);
+            vars.m().autoFeed = af == 1;
+            if vars.autoFeed {
+                vars.m().usePrediction = false;
+                buf.op_(&mut leaderId);
+                if buf.last_empty() {
+                    return Err(InvalidArgument("Trying to enable auto feeding without providing leader vehicle id".to_string()));
+                }
+                vars.m().leaderVehicleId = leaderId.clone();
+                vars.m().leaderVehicle = self.find_vehicle(leaderId.clone());
+                if vars.leaderVehicle.is_null() {
+                    return Err(InvalidArgument(format!("Vehicle '{}' is not known", leaderId)));
+                }
+                buf.op_(&mut frontId);
+                if buf.last_empty() {
+                    return Err(InvalidArgument("Trying to enable auto feeding without providing front vehicle id".to_string()));
+                }
+                vars.m().frontVehicleId = frontId.clone();
+                vars.m().frontVehicle = self.find_vehicle(frontId.clone());
+                if vars.frontVehicle.is_null() {
+                    return Err(InvalidArgument(format!("Vehicle '{}' is not known", frontId)));
+                }
+                vars.m().leaderInitialized = true;
+                vars.m().frontInitialized = true;
+                vars.m().caccInitialized = true;
+            }
+            return Ok(());
+        }
+        if key == PAR_USE_PREDICTION {
+            vars.m().usePrediction = to_i(value)? == 1;
+            return Ok(());
+        }
+        Ok(())
     }
 
     /// C++: `void MSCFModel_CC::getVehicleInformation(const MSVehicle *, double &, double &, double &, Position &, double &) const` [const]
@@ -943,7 +1328,7 @@ impl MSCFModel_CC {
         *speed = veh.get_speed();
         *acceleration = veh.get_acceleration();
         *controllerAcceleration = vars.controllerAcceleration;
-        *position = veh.get_position();
+        *position = veh.get_position(0.);
         *time = utils::common::time::steps2time(MSNet::get_instance().get_current_time_step());
     }
 
@@ -1564,7 +1949,142 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, gap2pred: f64, egoSpeed: f64, predSpeed: f64) -> f64 {
-        todo!("port MSCFModel_CC::_v")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let mut predSpeed = predSpeed;
+
+        // acceleration computed by the controller
+        let mut controllerAcceleration = vars.fixedAcceleration;
+        // acceleration computed by the Cruise Control
+        let mut ccAcceleration = 0.;
+        // acceleration computed by the Adaptive Cruise Control
+        let mut accAcceleration = 0.;
+        // acceleration computed by the Cooperative Adaptive Cruise Control
+        let mut caccAcceleration = 0.;
+        // variables needed by CACC
+        let mut predAcceleration = 0.;
+        let mut leaderAcceleration = 0.;
+        let mut leaderSpeed = 0.;
+        // dummy variables used for auto feeding
+        let mut pos = Position::new(0., 0.);
+        let mut time = 0.;
+        let currentTime = steps2time(MSNet::get_instance().get_current_time_step() + delta_t());
+
+        if vars.crashed {
+            return 0.;
+        }
+        if vars.autoFeed {
+            if self.find_vehicle(vars.leaderVehicleId.clone()).is_null() || self.find_vehicle(vars.frontVehicleId.clone()).is_null() {
+                // either the leader or the front vehicle have left the simulation. Disable auto feed
+                vars.m().autoFeed = false;
+                vars.m().leaderVehicle = Ptr::null();
+                vars.m().frontVehicle = Ptr::null();
+            }
+        }
+        if vars.activeController == ACTIVE_CONTROLLER::DRIVER || vars.useFixedAcceleration == 0 {
+            match vars.activeController {
+                ACTIVE_CONTROLLER::ACC => {
+                    ccAcceleration = self.cc(veh, egoSpeed, vars.ccDesiredSpeed);
+                    accAcceleration = self.acc(veh, egoSpeed, predSpeed, gap2pred, vars.accHeadwayTime);
+                    if gap2pred > 250. || ccAcceleration < accAcceleration {
+                        controllerAcceleration = ccAcceleration;
+                    } else {
+                        controllerAcceleration = accAcceleration;
+                    }
+                }
+                ACTIVE_CONTROLLER::CACC => {
+                    if vars.autoFeed {
+                        self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().leaderSpeed, &mut vars.m().leaderAcceleration, &mut vars.m().leaderControllerAcceleration, &mut pos, &mut time);
+                        self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
+                    }
+                    if vars.useControllerAcceleration {
+                        predAcceleration = vars.frontControllerAcceleration;
+                        leaderAcceleration = vars.leaderControllerAcceleration;
+                    } else {
+                        predAcceleration = vars.frontAcceleration;
+                        leaderAcceleration = vars.leaderAcceleration;
+                    }
+                    // overwrite pred speed using data obtained through wireless communication
+                    predSpeed = vars.frontSpeed;
+                    leaderSpeed = vars.leaderSpeed;
+                    if vars.usePrediction {
+                        predSpeed += (currentTime - vars.frontDataReadTime) * vars.frontAcceleration;
+                        leaderSpeed += (currentTime - vars.leaderDataReadTime) * vars.leaderAcceleration;
+                    }
+                    if vars.caccInitialized {
+                        controllerAcceleration = self.cacc(veh, egoSpeed, predSpeed, predAcceleration, gap2pred, leaderSpeed, leaderAcceleration, vars.caccSpacing);
+                    } else {
+                        // do not let CACC take decisions until at least one packet has been received
+                        controllerAcceleration = 0.;
+                    }
+                }
+                ACTIVE_CONTROLLER::FAKED_CACC => {
+                    if vars.autoFeed {
+                        self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().fakeData.leaderSpeed, &mut vars.m().fakeData.leaderAcceleration, &mut vars.m().fakeData.leaderControllerAcceleration, &mut pos, &mut time);
+                        self.get_vehicle_information(vars.frontVehicle, &mut vars.m().fakeData.frontSpeed, &mut vars.m().fakeData.frontAcceleration, &mut vars.m().fakeData.frontControllerAcceleration, &mut pos, &mut time);
+                        vars.m().fakeData.frontDistance = pos.distance_to2d(&veh.get_position(0.));
+                    }
+                    if vars.useControllerAcceleration {
+                        predAcceleration = vars.fakeData.frontControllerAcceleration;
+                        leaderAcceleration = vars.fakeData.leaderControllerAcceleration;
+                    } else {
+                        predAcceleration = vars.fakeData.frontAcceleration;
+                        leaderAcceleration = vars.fakeData.leaderAcceleration;
+                    }
+                    ccAcceleration = self.cc(veh, egoSpeed, vars.ccDesiredSpeed);
+                    caccAcceleration = self.cacc(veh, egoSpeed, vars.fakeData.frontSpeed, predAcceleration, vars.fakeData.frontDistance, vars.fakeData.leaderSpeed, leaderAcceleration, vars.caccSpacing);
+                    // faked CACC can be used to get closer to a platoon for joining
+                    // using the minimum acceleration ensures that we do not exceed
+                    // the CC desired speed
+                    // std::min(a, b) is (b < a) ? b : a
+                    controllerAcceleration = if caccAcceleration < ccAcceleration { caccAcceleration } else { ccAcceleration };
+                }
+                ACTIVE_CONTROLLER::PLOEG => {
+                    if vars.autoFeed {
+                        self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
+                    }
+                    if vars.useControllerAcceleration {
+                        predAcceleration = vars.frontControllerAcceleration;
+                    } else {
+                        predAcceleration = vars.frontAcceleration;
+                    }
+                    // check if we received at least one packet
+                    if vars.frontInitialized {
+                        // ploeg's controller computes \dot{u}_i, so we need to sum such value to the previously computed u_i
+                        controllerAcceleration = vars.controllerAcceleration + self.ploeg(veh, egoSpeed, predSpeed, predAcceleration, gap2pred);
+                    } else {
+                        controllerAcceleration = 0.;
+                    }
+                }
+                ACTIVE_CONTROLLER::CONSENSUS => {
+                    controllerAcceleration = self.consensus(veh, egoSpeed, veh.get_position(0.), currentTime);
+                }
+                ACTIVE_CONTROLLER::FLATBED => {
+                    if vars.autoFeed {
+                        self.get_vehicle_information(vars.leaderVehicle, &mut vars.m().leaderSpeed, &mut vars.m().leaderAcceleration, &mut vars.m().leaderControllerAcceleration, &mut pos, &mut time);
+                        self.get_vehicle_information(vars.frontVehicle, &mut vars.m().frontSpeed, &mut vars.m().frontAcceleration, &mut vars.m().frontControllerAcceleration, &mut pos, &mut time);
+                    }
+                    // overwrite pred speed using data obtained through wireless communication
+                    predSpeed = vars.frontSpeed;
+                    leaderSpeed = vars.leaderSpeed;
+                    if vars.usePrediction {
+                        predSpeed += (currentTime - vars.frontDataReadTime) * vars.frontAcceleration;
+                        leaderSpeed += (currentTime - vars.leaderDataReadTime) * vars.leaderAcceleration;
+                    }
+                    if vars.caccInitialized {
+                        controllerAcceleration = self.flatbed(veh, veh.get_acceleration(), egoSpeed, predSpeed, gap2pred, leaderSpeed);
+                    } else {
+                        // do not let CACC take decisions until at least one packet has been received
+                        controllerAcceleration = 0.;
+                    }
+                }
+                ACTIVE_CONTROLLER::DRIVER => {
+                    eprint!("Switching to normal driver behavior still not implemented in MSCFModel_CC\n");
+                    debug_assert!(false);
+                }
+            }
+        }
+        let speed = max2(0., egoSpeed + accel2speed(controllerAcceleration));
+        speed
     }
 
     /// C++: `double MSCFModel_CC::_cc(const MSVehicle *, double, double) const` [const, private]
@@ -1730,7 +2250,75 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn consensus(&self, veh: Ptr<MSVehicle>, egoSpeed: f64, egoPosition: Position, time: f64) -> f64 {
-        todo!("port MSCFModel_CC::_consensus")
+        // TODO: this controller, by using real GPS coordinates, does only work
+        // when vehicles are traveling west-to-east on a straight line, basically
+        // on the X axis. This needs to be fixed to consider direction as well
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let index = vars.position;
+        let nCars = vars.nCars;
+        let vehicles: Ptr<VEHICLE_DATA> = Ptr::from_raw(vars.m().vehicles.as_mut_ptr());
+
+        // control input
+        let mut u_i = 0.;
+        // actual distance term
+        let mut actualDistance = 0.;
+        // desired distance term
+        let mut desiredDistance = 0.;
+        // speed error term
+        let mut speedError = 0.;
+        // degree of agent i
+        let mut d_i = 0.;
+
+        // compensate my position: compute prediction of what will be my position at time of actuation
+        let mut egoPosition = egoPosition;
+        let egoVelocity = veh.get_velocity_vector();
+        egoPosition.set(egoPosition.x() + egoVelocity.x() * steps2time(delta_t()),
+                        egoPosition.y() + egoVelocity.y() * steps2time(delta_t()));
+        vars.m().vehicles[index as usize].speed = egoSpeed;
+        vars.m().vehicles[index as usize].positionX = egoPosition.x();
+        vars.m().vehicles[index as usize].positionY = egoPosition.y();
+
+        // check that data from all vehicles have been received. the control
+        // law might actually need a subset of all the data, but d_i_j needs
+        // the lengths of all vehicles. uninitialized values might cause problems
+        if vars.nInitialized != vars.nCars - 1 {
+            return 0.;
+        }
+
+        // compute speed error.
+        speedError = -vars.b[index as usize] * (egoSpeed - vars.vehicles[0].speed);
+
+        // compute desired distance term
+        for j in 0..nCars {
+            if j == index {
+                continue;
+            }
+            d_i += vars.L[index as usize][j as usize] as f64;
+            desiredDistance -= vars.K[index as usize][j as usize] * (vars.L[index as usize][j as usize] as f64) * self.d_i_j(vehicles, vars.h, index, j);
+        }
+        desiredDistance = desiredDistance / d_i;
+
+        // compute actual distance term
+        for j in 0..nCars {
+            if j == index {
+                continue;
+            }
+            // distance error for consensus with GPS equipped
+            let mut otherPosition = Position::new(0., 0.);
+            let dt = time - vars.vehicles[j as usize].time;
+            // predict the position of the other vehicle
+            otherPosition.setx(vars.vehicles[j as usize].positionX + dt * vars.vehicles[j as usize].speedX);
+            otherPosition.sety(vars.vehicles[j as usize].positionY + dt * vars.vehicles[j as usize].speedY);
+            let distance = egoPosition.distance_to2d(&otherPosition) * (sgn(j - index) as f64);
+            actualDistance -= vars.K[index as usize][j as usize] * (vars.L[index as usize][j as usize] as f64) * distance;
+        }
+
+        actualDistance = actualDistance / d_i;
+
+        // original paper formula
+        u_i = (speedError + desiredDistance + actualDistance) / 1000.;
+
+        u_i
     }
 
     /// C++: `double MSCFModel_CC::d_i_j(const struct Plexe::VEHICLE_DATA *, const double *, int, int) const` [const, private]
@@ -1806,3 +2394,7 @@ impl MSCFModel_CC {
 
 }
 
+/// C++ `sgn` macro from MSCFModel_CC.cpp: `((x > 0) - (x < 0))`
+fn sgn(x: i32) -> i32 {
+    (x > 0) as i32 - (x < 0) as i32
+}
