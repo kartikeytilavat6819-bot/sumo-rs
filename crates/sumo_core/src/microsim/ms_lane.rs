@@ -6950,7 +6950,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getOpposite")
+        self.myOpposite
     }
 
     /// C++: `MSLane * MSLane::getParallelOpposite() const` [const]
@@ -6961,7 +6961,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_parallel_opposite(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getParallelOpposite")
+        self.myEdge.get_lanes().last().unwrap().get_opposite()
     }
 
     /// C++: `double MSLane::getOppositePos(double) const` [const]
@@ -6972,7 +6972,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_pos(&self, pos: f64) -> f64 {
-        todo!("port MSLane::getOppositePos")
+        let v = self.myLength - pos;
+        if 0.0 > v { 0.0 } else { v }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getOppositeLeader(const MSVehicle *, double, bool, MinorLinkMode) const` [const]
@@ -7091,7 +7092,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_parking(&mut self, veh: Ptr<MSBaseVehicle>) {
-        todo!("port MSLane::addParking")
+        self.myParkingVehicles.insert(veh);
     }
 
     /// C++: `void MSLane::removeParking(MSBaseVehicle *)` [virtual]
@@ -7102,7 +7103,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn remove_parking(&mut self, veh: Ptr<MSBaseVehicle>) {
-        todo!("port MSLane::removeParking")
+        self.myParkingVehicles.remove(&veh);
     }
 
     /// C++: `const std::set<const MSBaseVehicle *> & MSLane::getParkingVehicles() const` [const]
@@ -7112,7 +7113,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_parking_vehicles(&self) -> &BTreeSet<Ptr<MSBaseVehicle>> {
-        todo!("port MSLane::getParkingVehicles")
+        &self.myParkingVehicles
     }
 
     /// C++: `bool MSLane::isSelected() const` [const, virtual]
@@ -7122,7 +7123,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn is_selected(&self) -> bool {
-        todo!("port MSLane::isSelected")
+        false
     }
 
     /// C++: `MSLane * MSLane::getBidiLane() const` [const]
@@ -7133,7 +7134,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_bidi_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getBidiLane")
+        self.myBidiLane
     }
 
     /// C++: `bool MSLane::mustCheckJunctionCollisions() const` [const]
