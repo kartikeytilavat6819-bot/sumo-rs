@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSMeanData_Emissions.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, g_precision_emissions};
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Emissions::MSLaneMeanDataValues` (microsim/output/MSMeanData_Emissions.h)
@@ -364,7 +365,7 @@ impl MSMeanData_Emissions {
             SUMO_ATTR_CO_PERVEH, SUMO_ATTR_CO2_PERVEH, SUMO_ATTR_HC_PERVEH, SUMO_ATTR_PMX_PERVEH, SUMO_ATTR_NOX_PERVEH, SUMO_ATTR_FUEL_PERVEH, SUMO_ATTR_ELECTRICITY_PERVEH,
         ]
         .iter()
-        .map(|a| utils::xml::sumo_xml_definitions_gen::Attrs.get_string(*a).to_string())
+        .map(|a| utils::xml::sumo_xml_definitions::Attrs.get_string(*a).to_string())
         .collect()
     }
 

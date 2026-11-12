@@ -338,8 +338,8 @@ impl MSMeanData_Amitran {
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
         vec![
-            utils::xml::sumo_xml_definitions_gen::Attrs.get_string(SUMO_ATTR_AMOUNT).to_string(),
-            utils::xml::sumo_xml_definitions_gen::Attrs.get_string(SUMO_ATTR_AVERAGESPEED).to_string(),
+            utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_AMOUNT).to_string(),
+            utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_AVERAGESPEED).to_string(),
         ]
     }
 

@@ -241,7 +241,7 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
-        vec![utils::xml::sumo_xml_definitions_gen::Attrs.get_string(SUMO_ATTR_NOISE).to_string()]
+        vec![utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_NOISE).to_string()]
     }
 
     /// C++: `bool MSMeanData_Harmonoise::supports(const SumoXMLAttrMask &)` [static]
