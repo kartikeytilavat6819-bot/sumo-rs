@@ -5909,7 +5909,64 @@ impl NIImporter_OpenDrive_OpenDriveLane {
     // }
     #[allow(unused_variables)]
     pub fn compute_permission(&self, tc: &NBTypeCont, allowed: &Vec<String>, denied: &Vec<String>) -> SVCPermissions {
-        todo!("port OpenDriveLane::computePermission")
+        let mut perms: SVCPermissions = tc.get_edge_type_permissions(&self.type_);
+        if allowed.len() > 0 && denied.len() > 0 {
+            write_warning("Will discard access settings as both denied and allowed classes have been specified.");
+        } else if allowed.len() > 0 {
+            perms = SVC_IGNORING;
+            for allow in allowed.iter() {
+                match allow.as_str() {
+                    "simulator" => {
+                        perms = SVC_IGNORING;
+                        break;
+                    }
+                    "autonomousTraffic" | "autonomous traffic" | "throughTraffic" => {
+                        perms = tc.get_edge_type_permissions(&self.type_);
+                        break;
+                    }
+                    "pedestrian" => perms |= SVC_PEDESTRIAN,
+                    "passengerCar" => perms |= SVC_PASSENGER,
+                    "bus" => perms |= SVC_BUS,
+                    "delivery" => perms |= SVC_DELIVERY,
+                    "emergency" => perms |= SVC_EMERGENCY,
+                    "taxi" => perms |= SVC_TAXI,
+                    "bicycle" => perms |= SVC_BICYCLE,
+                    "motorcycle" => perms |= SVC_MOTORCYCLE,
+                    "truck" | "trucks" => {
+                        perms |= SVC_TRUCK;
+                        perms |= SVC_TRAILER;
+                    }
+                    _ => {}
+                }
+            }
+        } else if denied.len() > 0 {
+            for deny in denied.iter() {
+                match deny.as_str() {
+                    "none" => {
+                        perms = tc.get_edge_type_permissions(&self.type_);
+                        break;
+                    }
+                    "autonomousTraffic" | "autonomous traffic" | "throughTraffic" => {
+                        perms = SVC_IGNORING;
+                        break;
+                    }
+                    "pedestrian" => perms &= !SVC_PEDESTRIAN,
+                    "passengerCar" => perms &= !SVC_PASSENGER,
+                    "bus" => perms &= !SVC_BUS,
+                    "delivery" => perms &= !SVC_DELIVERY,
+                    "emergency" => perms &= !SVC_EMERGENCY,
+                    "taxi" => perms &= !SVC_TAXI,
+                    "bicycle" => perms &= !SVC_BICYCLE,
+                    "motorcycle" => perms &= !SVC_MOTORCYCLE,
+                    "truck" | "trucks" => {
+                        perms &= !SVC_TRUCK;
+                        perms &= !SVC_TRAILER;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        perms
     }
 
 }
@@ -6017,7 +6074,55 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn build_lane_mapping(&mut self, tc: &NBTypeCont) {
-        todo!("port OpenDriveLaneSection::buildLaneMapping")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        self.discardedInnerWidthRight = 0.0;
+        let mut sumoLane: i32 = 0;
+        let mut singleType = true;
+        let mut types: Vec<String> = Vec::new();
+        let dirLanesR = self.lanesByDir.get(&T::OPENDRIVE_TAG_RIGHT).cloned().unwrap_or_default();
+        for i in dirLanesR.iter().rev() {
+            if MY_IMPORT_ALL_TYPES.with(|v| v.get()) || (tc.knows(&i.type_) && !tc.get_edge_type_shall_be_discarded(&i.type_)) {
+                self.discardedInnerWidthRight = 0.0;
+                self.laneMap.insert(i.id, sumoLane);
+                sumoLane += 1;
+                types.push(i.type_.clone());
+                if types[0] != *types.last().unwrap() {
+                    singleType = false;
+                }
+            } else {
+                self.discardedInnerWidthRight += i.width;
+            }
+        }
+        self.discardedInnerWidthLeft = 0.0;
+        self.rightLaneNumber = sumoLane;
+        self.rightType = if sumoLane > 0 {
+            if singleType { types[0].clone() } else { types.join("|") }
+        } else {
+            String::new()
+        };
+        sumoLane = 0;
+        singleType = true;
+        types.clear();
+        let dirLanesL = self.lanesByDir.get(&T::OPENDRIVE_TAG_LEFT).cloned().unwrap_or_default();
+        for i in dirLanesL.iter() {
+            if MY_IMPORT_ALL_TYPES.with(|v| v.get()) || (tc.knows(&i.type_) && !tc.get_edge_type_shall_be_discarded(&i.type_)) {
+                self.discardedInnerWidthLeft = 0.0;
+                self.laneMap.insert(i.id, sumoLane);
+                sumoLane += 1;
+                types.push(i.type_.clone());
+                if types[0] != *types.last().unwrap() {
+                    singleType = false;
+                }
+            } else {
+                self.discardedInnerWidthLeft += i.width;
+            }
+        }
+        self.leftLaneNumber = sumoLane;
+        self.leftType = if sumoLane > 0 {
+            if singleType { types[0].clone() } else { types.join("|") }
+        } else {
+            String::new()
+        };
     }
 
     /// C++: `std::map<int, int> OpenDriveLaneSection::getInnerConnections(OpenDriveXMLTag, const OpenDriveLaneSection &)`
@@ -6061,7 +6166,35 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn get_inner_connections(&mut self, dir: NIImporter_OpenDrive_OpenDriveXMLTag, prev: &NIImporter_OpenDrive_OpenDriveLaneSection) -> BTreeMap<i32, i32> {
-        todo!("port OpenDriveLaneSection::getInnerConnections")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut ret: BTreeMap<i32, i32> = BTreeMap::new();
+        let dirLanes = self.lanesByDir.get(&dir).cloned().unwrap_or_default();
+        for i in dirLanes.iter().rev() {
+            let mut to: i32 = match self.laneMap.get(&i.id) {
+                Some(v) => *v,
+                None => {
+                    // the current lane is not available in SUMO
+                    continue;
+                }
+            };
+            let mut from: i32 = UNSET_CONNECTION;
+            if i.predecessor != UNSET_CONNECTION {
+                from = i.predecessor;
+            }
+            if from != UNSET_CONNECTION {
+                match prev.laneMap.get(&from) {
+                    Some(v) => from = *v,
+                    None => from = UNSET_CONNECTION,
+                }
+            }
+            if from != UNSET_CONNECTION && to != UNSET_CONNECTION {
+                if dir == T::OPENDRIVE_TAG_LEFT {
+                    std::mem::swap(&mut from, &mut to);
+                }
+                ret.insert(from, to);
+            }
+        }
+        ret
     }
 
     /// C++: `bool OpenDriveLaneSection::buildAttributeChanges(const NBTypeCont &, std::vector<OpenDriveLaneSection> &)`
@@ -6136,14 +6269,109 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn build_attribute_changes(&mut self, tc: &NBTypeCont, newSections: &mut Vec<NIImporter_OpenDrive_OpenDriveLaneSection>) -> bool {
-        todo!("port OpenDriveLaneSection::buildAttributeChanges")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        // sorted-set insert, equivalent to std::set<double>::insert
+        fn set_insert(v: &mut Vec<f64>, x: f64) {
+            if let Err(pos) = v.binary_search_by(|p| p.partial_cmp(&x).unwrap()) {
+                v.insert(pos, x);
+            }
+        }
+        let mut attributeChangePositions: Vec<f64> = Vec::new();
+        // collect speed change and access restriction positions and apply initial values to the begin
+        for k in self.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default().iter_mut() {
+            for l in k.attributeChanges.iter() {
+                set_insert(&mut attributeChangePositions, l.0);
+                if l.0 == 0.0 {
+                    let perm = k.compute_permission(tc, &l.1.allowed, &l.1.denied);
+                    k.speed = l.1.speed;
+                    k.permission = perm;
+                }
+            }
+        }
+        for k in self.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default().iter_mut() {
+            for l in k.attributeChanges.iter() {
+                set_insert(&mut attributeChangePositions, l.0);
+                if l.0 == 0.0 {
+                    let perm = k.compute_permission(tc, &l.1.allowed, &l.1.denied);
+                    k.speed = l.1.speed;
+                    k.permission = perm;
+                }
+            }
+        }
+
+        // do nothing if there is none
+        if attributeChangePositions.len() == 0 {
+            return false;
+        }
+
+        if attributeChangePositions[0] > 0.0 {
+            set_insert(&mut attributeChangePositions, 0.0);
+        }
+
+        for (idx, pos) in attributeChangePositions.iter().enumerate() {
+            if idx == 0 {
+                newSections.push(self.clone());
+            } else {
+                let built = self.build_lane_section(tc, *pos);
+                newSections.push(built);
+            }
+        }
+        // propagate speeds and access restrictions
+        for i in 0..newSections.len() {
+            let (before, after) = newSections.split_at_mut(i);
+            let cur = &mut after[0];
+            let keys: Vec<T> = cur.lanesByDir.keys().cloned().collect();
+            for key in keys {
+                let n = cur.lanesByDir[&key].len();
+                for j in 0..n {
+                    let l = &mut cur.lanesByDir.get_mut(&key).unwrap()[j];
+                    if l.speed == 0.0 {
+                        if i > 0 {
+                            l.speed = before[i - 1].lanesByDir.entry(key).or_default()[j].speed;
+                        } else {
+                            let _ = tc.get_edge_type_speed(&l.type_);
+                        }
+                    }
+                    if l.permission == 0 {
+                        if i > 0 {
+                            let (prevPerm, prevType) = {
+                                let prevLane = &before[i - 1].lanesByDir.entry(key).or_default()[j];
+                                (prevLane.permission, prevLane.type_.clone())
+                            };
+                            l.permission = prevPerm;
+                            l.type_ = prevType;
+                        } else {
+                            let _ = tc.get_edge_type_permissions(&l.type_);
+                        }
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `OpenDriveLaneSection OpenDriveLaneSection::buildLaneSection(const NBTypeCont &, double)`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_lane_section(&mut self, tc: &NBTypeCont, startPos: f64) -> NIImporter_OpenDrive_OpenDriveLaneSection {
-        todo!("port OpenDriveLaneSection::buildLaneSection")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut ret: NIImporter_OpenDrive_OpenDriveLaneSection = self.clone();
+        ret.s += startPos;
+        for dir in [T::OPENDRIVE_TAG_RIGHT, T::OPENDRIVE_TAG_LEFT] {
+            for l in ret.lanesByDir.entry(dir).or_default().iter_mut() {
+                l.speed = 0.0;
+                l.permission = 0;
+                let mut finder = NIImporter_OpenDrive_same_position_finder::new(startPos);
+                if let Some(idx) = l.attributeChanges.iter().position(|ps| finder.call_op(ps)) {
+                    let ac = &l.attributeChanges[idx].1;
+                    let permission = l.compute_permission(tc, &ac.allowed, &ac.denied);
+                    let speed = ac.speed;
+                    l.speed = speed;
+                    l.permission = permission;
+                }
+            }
+        }
+        ret
     }
 
 }
