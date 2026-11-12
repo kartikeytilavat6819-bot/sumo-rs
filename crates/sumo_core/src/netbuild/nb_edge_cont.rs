@@ -1,6 +1,29 @@
 //! Port of netbuild/NBEdgeCont.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{INVALID_DOUBLE, SUMO_CONST_HALF_LANE_WIDTH, SUMO_CONST_LANE_WIDTH};
+use utils::geom::POSITION_EPS;
+use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
+use utils::common::sumo_vehicle_class::SVC_UNSPECIFIED;
+use super::nb_cont::KeepClear;
+
+// C++ NBEdge::UNSPECIFIED_* defaults (NBEdge.cpp)
+const UNSPECIFIED_SPEED: f64 = -1.;
+const UNSPECIFIED_FRICTION: f64 = 1.;
+const UNSPECIFIED_CONTPOS: f64 = -1.;
+const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
+// shortcut: C++ uses NBEdge::myDefaultConnectionLength (static, settable); the static is not ported yet, so the unspecified default -1 is used
+const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+
+/// C++ `addLane2LaneConnection(from, dest, toLane, type, mayUseSameDestination)` with the header defaults filled in
+fn add_lane2_lane_connection_validated(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayUseSameDestination: bool) -> bool {
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, mayUseSameDestination, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+}
+
+/// C++ `addLane2LaneConnection(from, dest, toLane, COMPUTED)` with the header defaults filled in
+fn add_lane2_lane_connection_computed(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32) -> bool {
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+}
 
 /// C++ typedef `std::map<std::string, NBEdge *> NBEdgeCont::EdgeCont`
 pub type NBEdgeCont_EdgeCont = BTreeMap<String, Ptr<NBEdge>>;
@@ -795,8 +818,155 @@ impl NBEdgeCont {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn process_splits(&mut self, e: Ptr<NBEdge>, splits: Vec<NBEdgeCont_Split>, nc: &mut NBNodeCont, dc: &mut NBDistrictCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NBEdgeCont::processSplits")
+    pub fn process_splits(&mut self, mut e: Ptr<NBEdge>, mut splits: Vec<NBEdgeCont_Split>, nc: &mut NBNodeCont, dc: &mut NBDistrictCont, tlc: &mut NBTrafficLightLogicCont) {
+        if splits.is_empty() {
+            return;
+        }
+        let origID = e.get_id().to_string();
+        // determinism: C++ std::sort is unstable (introsort); Rust sort_by is stable, equal pos values may be ordered differently
+        splits.sort_by(|a, b| a.pos.partial_cmp(&b.pos).unwrap_or(std::cmp::Ordering::Equal));
+        let mut maxNumLanes = e.get_num_lanes();
+        // compute the node positions and sort the lanes
+        for split in splits.iter_mut() {
+            split.lanes.sort();
+            maxNumLanes = maxNumLanes.max(split.lanes.len() as i32);
+        }
+        // split the edge
+        let mut currLanes: Vec<i32> = Vec::new();
+        for l in 0..e.get_num_lanes() {
+            currLanes.push(l);
+        }
+        if e.get_num_lanes() != splits.last().unwrap().lanes.len() as i32 {
+            // invalidate traffic light definitions loaded from a SUMO network
+            e.get_to_node().m().invalidate_tls(tlc, true, true);
+            // if the number of lanes changes the connections should be
+            // recomputed
+            e.m().invalidate_connections(true);
+        }
+
+        let mut firstID = String::new();
+        let mut seen: f64 = 0.0;
+        for exp in splits.iter() {
+            assert!(!exp.lanes.is_empty());
+            if exp.pos > 0.0 && e.get_loaded_length() + seen > exp.pos && exp.pos > seen {
+                nc.insert_2(exp.node);
+                nc.mark_as_split(exp.node);
+                //  split the edge
+                let idBefore = if exp.idBefore == "" { e.get_id().to_string() } else { exp.idBefore.clone() };
+                let idAfter = if exp.idAfter == "" { exp.nameID.clone() } else { exp.idAfter.clone() };
+                if firstID == "" {
+                    firstID = idBefore.clone();
+                }
+                let ok = self.split_at_3(dc, e, exp.pos - seen, exp.node, &idBefore, &idAfter, e.get_num_lanes(), exp.lanes.len() as i32, exp.speed, 1.0, 0);
+                if !ok {
+                    utils::common::msg_handler::write_warning(&format!("Error on parsing a split (edge '{}').", origID));
+                    return;
+                }
+                seen = exp.pos;
+                let newLanes = exp.lanes.clone();
+                let pe = self.retrieve(&idBefore, false);
+                let ne = self.retrieve(&idAfter, false);
+                // reconnect lanes
+                pe.m().invalidate_connections(true);
+                //  new on right
+                let rightMostP = currLanes[0];
+                let rightMostN = newLanes[0];
+                for l in 0..(rightMostP - rightMostN) {
+                    add_lane2_lane_connection_validated(pe, 0, ne, l, true);
+                }
+                //  new on left
+                let leftMostP = *currLanes.last().unwrap();
+                let leftMostN = *newLanes.last().unwrap();
+                for l in 0..(leftMostN - leftMostP) {
+                    add_lane2_lane_connection_validated(pe, pe.get_num_lanes() - 1, ne, leftMostN - l - rightMostN, true);
+                }
+                //  all other connected
+                for l in 0..maxNumLanes {
+                    if !currLanes.contains(&l) {
+                        continue;
+                    }
+                    if !newLanes.contains(&l) {
+                        continue;
+                    }
+                    add_lane2_lane_connection_validated(pe, l - rightMostP, ne, l - rightMostN, true);
+                }
+                //  if there are edges at this node which are not connected
+                //  we can assume that this split was attached to an
+                //  existing node. Reset all connections to let the default
+                //  algorithm recompute them
+                if exp.node.get_incoming_edges().len() > 1 || exp.node.get_outgoing_edges().len() > 1 || exp.node.get_type() == SumoXMLNodeType::ZIPPER {
+                    for inc in exp.node.get_incoming_edges().clone() {
+                        inc.m().invalidate_connections(true);
+                    }
+                }
+                // move to next
+                e = ne;
+                currLanes = newLanes;
+            } else if exp.pos == 0.0 {
+                let laneCountDiff = e.get_num_lanes() - exp.lanes.len() as i32;
+                if laneCountDiff < 0 {
+                    e.m().inc_lane_no(-laneCountDiff);
+                } else {
+                    e.m().dec_lane_no(laneCountDiff);
+                }
+                currLanes = exp.lanes.clone();
+                // invalidate traffic light definition loaded from a SUMO network
+                // XXX it would be preferable to reconstruct the phase definitions heuristically
+                e.get_from_node().m().invalidate_tls(tlc, true, true);
+                if exp.speed != -1.0 {
+                    e.m().set_speed(-1, exp.speed);
+                }
+            } else {
+                utils::common::msg_handler::write_warning(&format!("Split at '{}' lies beyond the edge's length (edge '{}').", utils::common::to_string::to_string(&exp.pos), origID));
+            }
+        }
+        // patch lane offsets
+        e = self.retrieve(&firstID, false);
+        if !e.is_null() {
+            if splits.first().unwrap().pos != 0.0 {
+                // add a dummy split at the beginning to ensure correct offset
+                let mut start = NBEdgeCont_Split {
+                    lanes: Vec::new(),
+                    pos: 0.0,
+                    speed: INVALID_DOUBLE,
+                    friction: INVALID_DOUBLE,
+                    node: Ptr::null(),
+                    idBefore: String::new(),
+                    idAfter: String::new(),
+                    nameID: String::new(),
+                    offset: splits[0].offset,
+                    offsetFactor: splits[0].offsetFactor,
+                };
+                for lane in 0..e.get_num_lanes() {
+                    start.lanes.push(lane);
+                }
+                splits.insert(0, start);
+            }
+            for split in splits.iter() {
+                let maxLeft = *split.lanes.last().unwrap();
+                let mut offset = split.offset;
+                if maxLeft < maxNumLanes {
+                    if e.get_lane_spread_function() == LaneSpreadFunction::RIGHT {
+                        offset += split.offsetFactor as f64 * SUMO_CONST_LANE_WIDTH * (maxNumLanes - 1 - maxLeft) as f64;
+                    } else {
+                        offset += split.offsetFactor as f64 * SUMO_CONST_HALF_LANE_WIDTH * (maxNumLanes - 1 - maxLeft) as f64;
+                    }
+                }
+                let maxRight = *split.lanes.first().unwrap();
+                if maxRight > 0 && e.get_lane_spread_function() == LaneSpreadFunction::CENTER {
+                    offset -= split.offsetFactor as f64 * SUMO_CONST_HALF_LANE_WIDTH * maxRight as f64;
+                }
+                //std::cout << " processSplits " << origID << " splitOffset=" << (*i).offset << " offset=" << offset << "\n";
+                if offset != 0.0 {
+                    let mut g = e.get_geometry().clone();
+                    g.move2side(offset, 100.0);
+                    e.m().set_geometry(&g, false);
+                }
+                if e.get_to_node().get_outgoing_edges().len() != 0 {
+                    e = e.get_to_node().get_outgoing_edges()[0];
+                }
+            }
+        }
     }
 
     /// C++: `bool NBEdgeCont::splitAt(NBDistrictCont &, NBEdge *, NBNode *)`
@@ -808,7 +978,10 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn split_at(&mut self, dc: &mut NBDistrictCont, edge: Ptr<NBEdge>, node: Ptr<NBNode>) -> bool {
-        todo!("port NBEdgeCont::splitAt")
+        let n = edge.get_num_lanes();
+        let first = format!("{}[0]", edge.get_id());
+        let second = format!("{}[1]", edge.get_id());
+        self.split_at_2(dc, edge, node, &first, &second, n, n, -1.0, UNSPECIFIED_FRICTION, 0)
     }
 
     /// C++: `bool NBEdgeCont::splitAt(NBDistrictCont &, NBEdge *, NBNode *, const std::string &, const std::string &, int, int, const double, const double, const int)`
@@ -835,7 +1008,14 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn split_at_2(&mut self, dc: &mut NBDistrictCont, edge: Ptr<NBEdge>, node: Ptr<NBNode>, firstEdgeName: &str, secondEdgeName: &str, noLanesFirstEdge: i32, noLanesSecondEdge: i32, speed: f64, friction: f64, changedLeft: i32) -> bool {
-        todo!("port NBEdgeCont::splitAt")
+        let mut pos = edge.get_geometry().nearest_offset_to_point2d(node.get_position(), true);
+        if pos <= 0.0 {
+            pos = utils::geom::geom_helper::nearest_offset_on_line_to_point2d(edge.myFrom.get_position(), edge.myTo.get_position(), node.get_position(), true);
+        }
+        if pos <= 0.0 || pos + POSITION_EPS > edge.get_geometry().length() {
+            return false;
+        }
+        self.split_at_3(dc, edge, pos, node, firstEdgeName, secondEdgeName, noLanesFirstEdge, noLanesSecondEdge, speed, friction, changedLeft)
     }
 
     /// C++: `bool NBEdgeCont::splitAt(NBDistrictCont &, NBEdge *, double, NBNode *, const std::string &, const std::string &, int, int, const double, const double, const int)`
@@ -950,7 +1130,110 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn split_at_3(&mut self, dc: &mut NBDistrictCont, edge: Ptr<NBEdge>, edgepos: f64, node: Ptr<NBNode>, firstEdgeName: &str, secondEdgeName: &str, noLanesFirstEdge: i32, noLanesSecondEdge: i32, speed: f64, friction: f64, changedLeft: i32) -> bool {
-        todo!("port NBEdgeCont::splitAt")
+        if firstEdgeName != edge.get_id() && self.myEdges.contains_key(firstEdgeName) {
+            utils::common::msg_handler::write_error(&format!("Could not insert edge '{}' before split of edge '{}'.", firstEdgeName, edge.get_id()));
+            return false;
+        }
+        if secondEdgeName == firstEdgeName || (secondEdgeName != edge.get_id() && self.myEdges.contains_key(secondEdgeName)) {
+            utils::common::msg_handler::write_error(&format!("Could not insert edge '{}' after split of edge '{}'.", secondEdgeName, edge.get_id()));
+            return false;
+        }
+        // there must be at least some overlap between first and second edge
+        assert!(changedLeft > -noLanesFirstEdge);
+        assert!(changedLeft < noLanesSecondEdge);
+
+        // build the new edges' geometries
+        let mut geomPos = edgepos;
+        if edge.has_loaded_length() {
+            geomPos = edge.get_geometry().nearest_offset_to_point2d(node.get_position(), true);
+            if geomPos <= 0.0 {
+                geomPos = edgepos * edge.get_geometry().length() / edge.get_loaded_length();
+            }
+        }
+        let (mut geoms_first, mut geoms_second) = edge.get_geometry().split_at(geomPos, false).expect("PositionVector::splitAt");
+        // reduce inaccuracies and preserve bidi
+        if geoms_first.back().almost_same(node.get_position(), POSITION_EPS) || edge.is_bidi() {
+            *geoms_first.back_mut() = node.get_position().clone();
+            *geoms_second.at_mut(0) = node.get_position().clone();
+        }
+        // build and insert the edges
+        let one = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_3(firstEdgeName, edge.myFrom, node, edge, &geoms_first, noLanesFirstEdge))));
+        let two = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_3(secondEdgeName, node, edge.myTo, edge, &geoms_second, noLanesSecondEdge))));
+        if utils::options::options_cont::get_bool("output.original-names") {
+            let origID = edge.get_lane_struct_2(0).base.get_parameter(SUMO_PARAM_ORIGID, edge.get_id());
+            if firstEdgeName != origID {
+                one.m().set_orig_id(origID.clone(), false, -1);
+            }
+            if secondEdgeName != origID {
+                two.m().set_orig_id(origID.clone(), false, -1);
+            }
+        }
+        two.m().copy_connections_from(edge);
+        if speed != -1. {
+            two.m().set_speed(-1, speed);
+        }
+        if friction != -1. {
+            two.m().set_friction(-1, friction);
+        }
+        if edge.get_distance() != 0.0 {
+            one.m().set_distance(edge.get_distance());
+            two.m().set_distance(one.get_distance() + edgepos);
+        }
+        if edge.has_loaded_length() {
+            one.m().set_loaded_length(edgepos);
+            two.m().set_loaded_length(edge.get_loaded_length() - edgepos);
+        }
+        // replace information about this edge within the nodes
+        edge.myFrom.m().replace_outgoing(edge, one, 0);
+        edge.myTo.m().replace_incoming(edge, two, 0);
+        // patch tls
+        for tld in edge.myFrom.get_controlling_tls().clone() {
+            tld.m().replace_removed(edge, -1, one, -1, false);
+        }
+        for tld in edge.myTo.get_controlling_tls().clone() {
+            tld.m().replace_removed(edge, -1, two, -1, true);
+        }
+        // the edge is now occuring twice in both nodes...
+        //  clean up
+        edge.myFrom.m().remove_double_edges();
+        edge.myTo.m().remove_double_edges();
+        // add connections from the first to the second edge
+        // there will be as many connections as there are lanes on the second edge
+        // by default lanes will be added / discontinued on the right side
+        // (appropriate for highway on-/off-ramps)
+        let offset = one.get_num_lanes() - two.get_num_lanes() + changedLeft;
+        for i2 in 0..two.get_num_lanes() {
+            let i1 = (i2 + offset).max(0).min(one.get_num_lanes());
+            if !add_lane2_lane_connection_computed(one, i1, two, i2) {
+                panic!("{}", utils::common::util_exceptions::ProcessError::new("Could not set connection!"));
+            }
+        }
+        if self.myRemoveEdgesAfterLoading {
+            if self.myEdges2Keep.contains(edge.get_id()) {
+                self.myEdges2Keep.insert(one.get_id().to_string());
+                self.myEdges2Keep.insert(two.get_id().to_string());
+            }
+            if self.myEdges2Remove.contains(edge.get_id()) {
+                self.myEdges2Remove.insert(one.get_id().to_string());
+                self.myEdges2Remove.insert(two.get_id().to_string());
+            }
+        }
+        // erase the splitted edge
+        // patchRoundabouts does not use member state, so the sets are taken out to avoid a double &mut borrow of self
+        let mut roundabouts = std::mem::take(&mut self.myRoundabouts);
+        self.patch_roundabouts(edge, one, two, &mut roundabouts);
+        self.myRoundabouts = roundabouts;
+        let mut guessedRoundabouts = std::mem::take(&mut self.myGuessedRoundabouts);
+        self.patch_roundabouts(edge, one, two, &mut guessedRoundabouts);
+        self.myGuessedRoundabouts = guessedRoundabouts;
+        let oldID = edge.get_id().to_string();
+        self.extract(dc, edge, true);
+        self.insert(one, true); // duplicate id check happened earlier
+        self.insert(two, true); // duplicate id check happened earlier
+        self.myEdgesSplit.insert(edge, (one, two));
+        self.myWasSplit.insert(one);
+        self.myWasSplit.insert(two);
+        true
     }
 
     /// C++: `std::string NBEdgeCont::createUnusedID(const std::string &, const std::string &)`
@@ -3172,7 +3455,7 @@ impl NBEdgeCont_split_sorter {
     // explicit split_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port split_sorter::split_sorter")
+        Self {}
     }
 
     /// C++: `int split_sorter::operator()(const Split &, const Split &) const` [const]
@@ -3182,7 +3465,7 @@ impl NBEdgeCont_split_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: &NBEdgeCont_Split, e2: &NBEdgeCont_Split) -> i32 {
-        todo!("port split_sorter::operator()")
+        (e1.pos < e2.pos) as i32
     }
 
 }
