@@ -200,6 +200,38 @@ impl NIImporter_OpenStreetMap_CompareEdges {
 pub struct NIImporter_OpenStreetMap_CompareNodes {
 }
 
+/// A node pointer ordered by CompareNodes, so a BTreeSet behaves like C++ `std::set<NIOSMNode *, CompareNodes>`
+/// (find/insert match on coordinates, not on pointer value).
+#[derive(Clone, Copy)]
+pub struct NIImporter_OpenStreetMap_NodeByCoord(pub Ptr<NIImporter_OpenStreetMap_NIOSMNode>);
+
+impl PartialEq for NIImporter_OpenStreetMap_NodeByCoord {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == std::cmp::Ordering::Equal
+    }
+}
+
+impl Eq for NIImporter_OpenStreetMap_NodeByCoord {}
+
+impl PartialOrd for NIImporter_OpenStreetMap_NodeByCoord {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NIImporter_OpenStreetMap_NodeByCoord {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let cmp = NIImporter_OpenStreetMap_CompareNodes {};
+        if cmp.call_op(self.0, other.0) {
+            std::cmp::Ordering::Less
+        } else if cmp.call_op(other.0, self.0) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    }
+}
+
 impl NIImporter_OpenStreetMap_CompareNodes {
     /// C++: `bool CompareNodes::operator()(const NIOSMNode *, const NIOSMNode *) const` [const]
     // bool operator()(const NIOSMNode* n1, const NIOSMNode* n2) const {
@@ -1997,7 +2029,7 @@ pub struct NIImporter_OpenStreetMap {
     /// the map from OSM node ids to actual nodes
     pub myOSMNodes: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>,
     /// the set of unique nodes used in NodesHandler, used when freeing memory
-    pub myUniqueNodes: BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, // C++: std::set<NIOSMNode *, CompareNodes>
+    pub myUniqueNodes: BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>, // C++: std::set<NIOSMNode *, CompareNodes>
     /// the map from OSM way ids to edge objects
     pub myEdges: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>,
     /// the map from OSM way ids to platform shapes
@@ -2166,7 +2198,7 @@ impl NIImporter_OpenStreetMap {
         // delete nodes
         for myUniqueNode in self.myUniqueNodes.iter() {
             // SAFETY: nodes were allocated with Box::into_raw and are only freed here.
-            drop(unsafe { Box::from_raw(myUniqueNode.as_raw()) });
+            drop(unsafe { Box::from_raw(myUniqueNode.0.as_raw()) });
         }
         // delete edges
         for myEdge in self.myEdges.values() {
@@ -4326,7 +4358,7 @@ pub struct NIImporter_OpenStreetMap_NodesHandler {
     /// The current hierarchy level
     pub myHierarchyLevel: i32,
     /// the set of unique nodes (used for duplicate detection/substitution)
-    pub myUniqueNodes: Ptr<BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>>, // C++: std::set<NIOSMNode *, CompareNodes> &
+    pub myUniqueNodes: Ptr<BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>>, // C++: std::set<NIOSMNode *, CompareNodes> &
     /// whether elevation data should be imported
     pub myImportElevation: bool,
     /// custom requirements for rail signal tagging
@@ -4376,8 +4408,33 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(toFill: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, uniqueNodes: &mut BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, cont: &OptionsCont) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+    pub fn new(toFill: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, uniqueNodes: &mut BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>, cont: &OptionsCont) -> Self {
+        let mut myRailSignalRules: StringVector = Vec::new();
+        // init rail signal rules
+        for kv in cont.get_string_vector("osm.railsignals").unwrap_or_else(|e| panic!("{e}")) {
+            if kv == "DEFAULT" {
+                myRailSignalRules.push("railway:signal:main=".to_string());
+                myRailSignalRules.push("railway:signal:combined=".to_string());
+            } else if kv == "ALL" {
+                myRailSignalRules.push("railway=signal".to_string());
+            } else {
+                myRailSignalRules.push(format!("railway:signal:{kv}"));
+            }
+        }
+        NIImporter_OpenStreetMap_NodesHandler {
+            base: utils::xml::sumo_sax_handler::new("osm - file", ""),
+            myToFill: Ptr::from_mut(toFill),
+            myLastNodeID: String::new(),
+            myCurrentNode: Ptr::null(),
+            myIsStation: false,
+            myRailwayRef: String::new(),
+            myHierarchyLevel: 0,
+            myUniqueNodes: Ptr::from_mut(uniqueNodes),
+            myImportElevation: cont.get_bool("osm.elevation").unwrap_or_else(|e| panic!("{e}")),
+            myRailSignalRules,
+            myDuplicateNodes: 0,
+            myOptionsCont: Ptr::new(cont),
+        }
     }
 
     /// C++: `void NodesHandler::~NodesHandler() noexcept` [virtual]
@@ -4385,7 +4442,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // NIImporter_OpenStreetMap::NodesHandler::~NodesHandler()
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NodesHandler::~NodesHandler")
+        // C++ body is defaulted; Rust drops the members.
     }
 
     /// C++: `int NodesHandler::getDuplicateNodes() const` [const]
@@ -4394,7 +4451,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //         }
     #[allow(unused_variables)]
     pub fn get_duplicate_nodes(&self) -> i32 {
-        todo!("port NodesHandler::getDuplicateNodes")
+        self.myDuplicateNodes
     }
 
     /// C++: `void NodesHandler::resetHierarchy()`
@@ -4403,7 +4460,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //         }
     #[allow(unused_variables)]
     pub fn reset_hierarchy(&mut self) {
-        todo!("port NodesHandler::resetHierarchy")
+        self.myHierarchyLevel = 0;
     }
 
     /// C++: `void NodesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -4543,7 +4600,140 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NodesHandler::myStartElement")
+        self.myHierarchyLevel += 1;
+        if element == SUMO_TAG_NODE {
+            let mut ok = true;
+            self.myLastNodeID = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            if self.myHierarchyLevel != 2 {
+                utils::common::msg_handler::write_error(&format!("Node element on wrong XML hierarchy level (id='{}', level='{}').", self.myLastNodeID, self.myHierarchyLevel));
+                return;
+            }
+            let action: String = attrs.get_opt(SUMO_ATTR_ACTION, &self.myLastNodeID, &mut ok, String::new(), true);
+            if action == "delete" || !ok {
+                return;
+            }
+            // we do not use attrs.get here to save some time on parsing
+            let id: i64 = match utils::common::string_utils::to_long(&self.myLastNodeID) {
+                Ok(v) => v,
+                Err(_) => {
+                    utils::common::msg_handler::write_error("Attribute 'id' in the definition of a node is not of type long long int.");
+                    return;
+                }
+            };
+            self.myCurrentNode = Ptr::null();
+            if !self.myToFill.contains_key(&id) {
+                // assume we are loading multiple files, so we won't report duplicate nodes
+                let tlon: f64 = attrs.get(SUMO_ATTR_LON, &self.myLastNodeID, &mut ok, true);
+                let tlat: f64 = attrs.get(SUMO_ATTR_LAT, &self.myLastNodeID, &mut ok, true);
+                if !ok {
+                    return;
+                }
+                let mut current: Ptr<NIImporter_OpenStreetMap_NIOSMNode> = Ptr::from_raw(Box::into_raw(Box::new(NIImporter_OpenStreetMap_NIOSMNode::new(id, tlon, tlat))));
+                self.myCurrentNode = current;
+                let key = NIImporter_OpenStreetMap_NodeByCoord(current);
+                let uniqueNodes = self.myUniqueNodes.m();
+                if let Some(similarNode) = uniqueNodes.get(&key).copied() {
+                    // SAFETY: the freshly allocated node was never inserted anywhere, so it is freed here.
+                    drop(unsafe { Box::from_raw(current.as_raw()) });
+                    current = similarNode.0;
+                    self.myCurrentNode = current;
+                    self.myDuplicateNodes += 1;
+                } else {
+                    uniqueNodes.insert(key);
+                }
+                self.myToFill.m().insert(id, current);
+            }
+        }
+        if element == SUMO_TAG_TAG && !self.myCurrentNode.is_null() {
+            if self.myHierarchyLevel != 3 {
+                utils::common::msg_handler::write_error("Tag element on wrong XML hierarchy level.");
+                return;
+            }
+            let mut ok = true;
+            let node = self.myCurrentNode;
+            let key: String = attrs.get(SUMO_ATTR_K, &self.myLastNodeID, &mut ok, false);
+            // we check whether the key is relevant (and we really need to transcode the value) to avoid hitting #1636
+            if key == "highway" || key == "ele" || key == "crossing" || key == "railway" || key == "public_transport"
+                || key == "name" || key == "train" || key == "bus" || key == "tram" || key == "light_rail" || key == "subway" || key == "station" || key == "noexit"
+                || key == "crossing:barrier"
+                || key == "crossing:light"
+                || key == "railway:ref"
+                || starts_with(&key, "railway:signal")
+                || starts_with(&key, "railway:position")
+            {
+                let value: String = attrs.get(SUMO_ATTR_V, &self.myLastNodeID, &mut ok, false);
+                if key == "highway" && value.contains("traffic_signal") {
+                    node.m().tlsControlled = true;
+                } else if key == "crossing" && value.contains("traffic_signals") {
+                    node.m().tlsControlled = true;
+                } else if key == "highway" && value.contains("crossing") {
+                    node.m().pedestrianCrossing = true;
+                } else if (key == "noexit" && value == "yes") || (key == "railway" && value == "buffer_stop") {
+                    node.m().railwayBufferStop = true;
+                } else if key == "railway" && value.contains("crossing") {
+                    node.m().railwayCrossing = true;
+                } else if key == "crossing:barrier" {
+                    node.m().set_parameter("crossing:barrier", &value);
+                } else if key == "crossing:light" {
+                    node.m().set_parameter("crossing:light", &value);
+                } else if key == "railway:signal:direction" {
+                    if value == "both" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i32;
+                    } else if value == "backward" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32;
+                    } else if value == "forward" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32;
+                    }
+                } else if starts_with(&key, "railway:signal") || (key == "railway" && value == "signal") {
+                    let kv = format!("{key}={value}");
+                    let kglob = format!("{key}=");
+                    if key == "railway:signal:train_protection" && value == "DE-ESO:ne14" {
+                        node.m().railwaySignal |= NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32;
+                    } else if node.railwaySignal == NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+                        if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
+                            node.m().railwaySignal = NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32;
+                        }
+                    }
+                } else if starts_with(&key, "railway:position") && value.len() > node.position.len() {
+                    // use the entry with the highest precision (more digits)
+                    node.m().position = value;
+                } else if (key == "public_transport" && value == "stop_position") || (key == "highway" && value == "bus_stop") {
+                    node.m().ptStopPosition = true;
+                    if node.ptStopLength == 0.0 {
+                        // default length
+                        node.m().ptStopLength = self.myOptionsCont.get_float("osm.stop-output.length").unwrap_or_else(|e| panic!("{e}"));
+                    }
+                } else if key == "name" {
+                    node.m().name = value;
+                } else if self.myImportElevation && key == "ele" {
+                    match utils::common::string_utils::parse_dist(&value) {
+                        Ok(elevation) => {
+                            if elevation.is_nan() {
+                                write_warningf!("Value of key '%' is invalid ('%') in node '%'.", key, value, self.myLastNodeID);
+                            } else {
+                                node.m().ele = elevation;
+                            }
+                        }
+                        Err(_) => {
+                            write_warningf!("Value of key '%' is not numeric ('%') in node '%'.", key, value, self.myLastNodeID);
+                        }
+                    }
+                } else if key == "station" {
+                    NIImporter_OpenStreetMap::interpret_transport_type(&value, node);
+                    self.myIsStation = true;
+                } else if key == "railway:ref" {
+                    self.myRailwayRef = value;
+                } else {
+                    // v="yes"
+                    NIImporter_OpenStreetMap::interpret_transport_type(&key, node);
+                }
+            }
+            if myAllAttributes.with(|c| c.get()) && myExtraAttributes.with(|s| s.borrow().contains(&key) || s.borrow().is_empty()) {
+                let info = format!("node={}, k={}", node.id, key);
+                let v: String = attrs.get(SUMO_ATTR_V, &info, &mut ok, false);
+                node.m().set_parameter(&key, &v);
+            }
+        }
     }
 
     /// C++: `void NodesHandler::myEndElement(int)` [virtual, protected]
@@ -4562,23 +4752,33 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NodesHandler::myEndElement")
+        if element == SUMO_TAG_NODE && self.myHierarchyLevel == 2 {
+            if self.myIsStation && self.myRailwayRef != "" {
+                self.myCurrentNode.m().set_parameter("railway:ref", &self.myRailwayRef);
+            }
+            self.myCurrentNode = Ptr::null();
+            self.myIsStation = false;
+            self.myRailwayRef = String::new();
+        }
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NodesHandler::NodesHandler(const NodesHandler &)` [private]
     /// invalidated copy constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new_2(s: &NIImporter_DlrNavteq_NodesHandler) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+    pub fn new_2(s: &NIImporter_OpenStreetMap_NodesHandler) -> Self {
+        // C++ declares the copy constructor private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NodesHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `NodesHandler & NodesHandler::operator=(const NodesHandler &)` [private]
     /// invalidated assignment operator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn assign_op(&mut self, s: &NIImporter_DlrNavteq_NodesHandler) -> &mut NIImporter_DlrNavteq_NodesHandler {
-        todo!("port NodesHandler::operator=")
+    pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_NodesHandler) -> &mut NIImporter_OpenStreetMap_NodesHandler {
+        // C++ declares the assignment operator private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NodesHandler::operator= is private and undefined in C++")
     }
 
 }
