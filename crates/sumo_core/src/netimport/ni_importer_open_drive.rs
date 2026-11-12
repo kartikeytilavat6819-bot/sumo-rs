@@ -1,7 +1,7 @@
 //! Port of netimport/NIImporter_OpenDrive.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_warning};
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_error, write_warning};
 use utils::tlf;
 use utils::xml::generic_sax_handler::SaxHandler;
 
@@ -3595,7 +3595,181 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn build_connections_to_outer(c: &NIImporter_OpenDrive_Connection, innerEdges: &BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>, edges: &BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>, tc: &NBTypeCont, into: &mut Vec<NIImporter_OpenDrive_Connection>, seen: &mut BTreeSet<NIImporter_OpenDrive_Connection>) {
-        todo!("port NIImporter_OpenDrive::buildConnectionsToOuter")
+        use NIImporter_OpenDrive_ContactPoint as CP;
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let dest: Ptr<NIImporter_OpenDrive_OpenDriveEdge> = *innerEdges.get(&c.toEdge).unwrap();
+        if dest.is_null() {
+            // !!! should not, look in all?
+            return;
+        }
+        seen.insert(c.clone());
+        // C++ iterates dest->connections live; that set is not modified while this runs, so a snapshot is equivalent
+        let destConnections: Vec<NIImporter_OpenDrive_Connection> = dest.m().connections.iter().cloned().collect();
+        for destCon in destConnections.iter() {
+            let innerEdgesIt = innerEdges.get(&destCon.toEdge);
+            if let Some(innerEdge) = innerEdgesIt {
+                let mut t: Vec<NIImporter_OpenDrive_Connection> = Vec::new();
+                if !seen.contains(destCon) {
+                    Self::build_connections_to_outer(destCon, innerEdges, edges, tc, &mut t, seen);
+                    for j in t.iter() {
+                        // @todo this section is unverified
+                        let mut cn = j.clone();
+                        cn.fromEdge = c.fromEdge.clone();
+                        cn.fromLane = c.fromLane;
+                        cn.fromCP = c.fromCP;
+                        cn.all = c.all; // @todo "all" is a hack trying to avoid the "from is zero" problem;
+                        if MY_IMPORT_INTERNAL_SHAPES.with(|v| v.get()) {
+                            // shortcut: C++ PositionVector::operator+ never advances its iterators (infinite loop);
+                            // the intended pairwise sum is used here, revisit if upstream fixes operator+
+                            let innerGeom = innerEdge.m().geom.clone();
+                            if innerGeom.length() != c.shape.length() {
+                                write_error("Trying to add PositionVectors of different lengths.");
+                            }
+                            let mut sum = PositionVector::default();
+                            for (p1, p2) in innerGeom.iter().zip(c.shape.iter()) {
+                                sum.push((*p1) + (*p2));
+                            }
+                            cn.shape = sum;
+                        }
+                        into.push(cn);
+                    }
+                } else {
+                    write_warning(&format!(
+                        "Circular connections in junction including roads '{}' and '{}', loop size {}",
+                        c.fromEdge, c.toEdge, seen.len()
+                    ));
+                }
+            } else {
+                let mut in_ = c.toLane;
+                let mut out = destCon.fromLane;
+                if c.toCP == CP::OPENDRIVE_CP_END {
+                    // inner edge runs in reverse direction
+                    std::mem::swap(&mut in_, &mut out);
+                }
+                if Self::lane_sections_connected(dest, in_, out) {
+                    let mut cn = destCon.clone();
+                    cn.fromEdge = c.fromEdge.clone();
+                    cn.fromLane = c.fromLane;
+                    cn.fromCP = c.fromCP;
+                    cn.all = c.all;
+                    cn.origID = c.toEdge.clone();
+                    cn.origLane = c.toLane;
+                    if MY_IMPORT_INTERNAL_SHAPES.with(|v| v.get()) {
+                        cn.shape = dest.m().geom.clone();
+                        // determine which lane of dest belongs to this connection
+                        let mut referenceLane: i32 = 0;
+                        let mut offsetFactor: i32 = 1;
+                        let lanesDir: T;
+                        if c.toCP == CP::OPENDRIVE_CP_END {
+                            offsetFactor = -1;
+                            lanesDir = T::OPENDRIVE_TAG_LEFT;
+                            let lanes = dest.m().laneSections[0].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in lanes.iter() {
+                                if destLane.successor == c.fromLane {
+                                    referenceLane = destLane.id;
+                                    break;
+                                }
+                            }
+                        } else {
+                            lanesDir = T::OPENDRIVE_TAG_RIGHT;
+                            let lanes = dest.m().laneSections[0].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in lanes.iter() {
+                                if destLane.predecessor == c.fromLane {
+                                    referenceLane = destLane.id;
+                                    break;
+                                }
+                            }
+                        }
+                        // compute offsets
+                        let mut offsets: Vec<f64> = vec![0.0; dest.m().geom.len()];
+                        if dest.m().laneOffsets.len() > 0 {
+                            offsets = dest.m().laneOffsets.clone();
+                        }
+                        let mut s: f64 = 0.0;
+                        let mut iShape: usize = 0;
+                        for laneSectionIndex in 0..dest.m().laneSections.len() {
+                            let nextS = if laneSectionIndex + 1 < dest.m().laneSections.len() {
+                                dest.m().laneSections[laneSectionIndex + 1].s
+                            } else {
+                                f64::MAX
+                            };
+                            let sStart = s; // distance offset a the start of the current lane section
+                            let mut finalS = s; // final distance value after processing this segment
+                            let mut finalI = iShape;
+                            let destLanes: Vec<NIImporter_OpenDrive_OpenDriveLane> = dest.m().laneSections[laneSectionIndex].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in destLanes.iter() {
+                                // each lane of the current segment repeats the same section of shape points and distance offsets
+                                let mut sectionS: f64 = 0.0;
+                                let mut i: usize = iShape; // shape index at the start of the current lane section
+                                s = sStart;
+                                if destLane.id.abs() <= referenceLane.abs() || destLane.id.abs() == c.toLane.abs() {
+                                    let multiplier: f64 = (offsetFactor as f64) * (if destLane.id == referenceLane { 0.5 } else { 1.0 });
+                                    let mut widthDataIndex: usize = 0;
+                                    while s < nextS && i < cn.shape.len() {
+                                        if i > 0 {
+                                            let dist = cn.shape[i - 1].distance_to2d(&cn.shape[i]);
+                                            s += dist;
+                                            sectionS += dist;
+                                        }
+                                        while widthDataIndex + 1 < destLane.widthData.len()
+                                            && sectionS >= destLane.widthData[widthDataIndex + 1].s
+                                        {
+                                            widthDataIndex += 1;
+                                        }
+                                        let mut width: f64 = tc.get_edge_type_width(&destLane.type_);
+                                        if destLane.widthData.len() > 0 {
+                                            width = destLane.widthData[widthDataIndex].compute_at(sectionS);
+                                        } else {
+                                            // use first width of the target lane
+                                            let outerToEdge = edges.get(&cn.toEdge).unwrap().m();
+                                            let toLaneSection = if cn.toCP == CP::OPENDRIVE_CP_END {
+                                                outerToEdge.laneSections.first_mut().unwrap()
+                                            } else {
+                                                outerToEdge.laneSections.last_mut().unwrap()
+                                            };
+                                            let laneDir = if cn.toLane < 0 { T::OPENDRIVE_TAG_RIGHT } else { T::OPENDRIVE_TAG_LEFT };
+                                            // lookup only (C++ break on first match, no effect besides the map entry)
+                                            let _ = toLaneSection.lanesByDir.entry(laneDir).or_default().iter().any(|outerToLane| {
+                                                outerToLane.id == cn.toLane && outerToLane.width > 0.0
+                                            });
+                                        }
+                                        offsets[i] += width * multiplier;
+                                        i += 1;
+                                    }
+                                    finalS = s;
+                                    finalI = i;
+                                } else if finalS == s {
+                                    // update finalS without changing offsets
+                                    while s < nextS && i < cn.shape.len() {
+                                        if i > 0 {
+                                            let dist = cn.shape[i - 1].distance_to2d(&cn.shape[i]);
+                                            s += dist;
+                                            finalS += dist;
+                                        }
+                                        i += 1;
+                                    }
+                                    finalI = i;
+                                }
+                            }
+                            // advance values for the next lane section
+                            iShape = finalI;
+                            s = finalS;
+                        }
+                        if cn.shape.move2side_custom(&offsets, 100.0).is_err() {
+                            write_warning(&format!(
+                                "Could not import internal lane shape from edge '{}' to edge '{}",
+                                c.fromEdge, c.toEdge
+                            ));
+                            cn.shape.clear();
+                        }
+                        if cn.toCP == CP::OPENDRIVE_CP_END {
+                            cn.shape = cn.shape.reverse();
+                        }
+                    }
+                    into.push(cn);
+                }
+            }
+        }
     }
 
     /// C++: `bool NIImporter_OpenDrive::laneSectionsConnected(OpenDriveEdge *, int, int)` [static, private]
@@ -3798,7 +3972,38 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_spiral(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromSpiral")
+        let mut ret = PositionVector::default();
+        let curveStart = g.params[0];
+        let curveEnd = g.params[1];
+        // C++ try block: odrSpiral does not throw (no throw in the C++ source), so the
+        // std::runtime_error catch below is unreachable and is not ported as a separate path.
+        let cDot = (curveEnd - curveStart) / g.length;
+        if cDot == 0.0 || g.length == 0.0 {
+            write_warningf!("Could not compute spiral geometry for edge '%' (cDot=% length=%).", e.id.clone(), cDot, g.length);
+            ret.push(Position::new(g.x, g.y));
+            return ret;
+        }
+        let sStart = curveStart / cDot;
+        let sEnd = curveEnd / cDot;
+        let (_, _, tStart) = foreign::eulerspiral::odr_spiral::odr_spiral(sStart, cDot);
+        let mut s = sStart;
+        while s <= sEnd {
+            let (x, y, _) = foreign::eulerspiral::odr_spiral::odr_spiral(s, cDot);
+            ret.push(Position::new(x, y));
+            s += resolution;
+        }
+        if s != sEnd {
+            let (x, y, _) = foreign::eulerspiral::odr_spiral::odr_spiral(sEnd, cDot);
+            ret.push(Position::new(x, y));
+        }
+        // shift start to coordinate origin
+        let neg = *ret.front() * -1.0;
+        ret.add(&neg);
+        // rotate
+        ret.rotate2d(g.hdg - tStart);
+        // shift to geometry start
+        ret.add_xyz(g.x, g.y, 0.0);
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromArc(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3844,7 +4049,45 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_arc(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromArc")
+        let mut ret = PositionVector::default();
+        let mut centerX = g.x;
+        let mut centerY = g.y;
+        // left: positive value
+        let curvature = g.params[0];
+        let radius = 1.0 / curvature;
+        // center point
+        Self::calculate_curve_center(Ptr::from_mut(&mut centerX), Ptr::from_mut(&mut centerY), radius, g.hdg);
+        let mut endX = g.x;
+        let mut endY = g.y;
+        let mut startX = g.x;
+        let mut startY = g.y;
+        let mut geo_posS = g.s;
+        let mut geo_posE = g.s;
+        let mut end = false;
+        loop {
+            geo_posE += resolution;
+            if geo_posE - g.s > g.length {
+                geo_posE = g.s + g.length;
+            }
+            if geo_posE - g.s > g.length {
+                geo_posE = g.s + g.length;
+            }
+            Self::calc_point_on_curve(Ptr::from_mut(&mut endX), Ptr::from_mut(&mut endY), centerX, centerY, radius, geo_posE - geo_posS);
+            ret.push(Position::new(startX, startY));
+
+            startX = endX;
+            startY = endY;
+            geo_posS = geo_posE;
+
+            if geo_posE - (g.s + g.length) < 0.001 && geo_posE - (g.s + g.length) > -0.001 {
+                end = true;
+            }
+            if end {
+                break;
+            }
+        }
+        ret.push(Position::new(startX, startY));
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromPoly(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3865,7 +4108,19 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_poly(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromPoly")
+        let s = g.hdg.sin();
+        let c = g.hdg.cos();
+        let mut ret = PositionVector::default();
+        let mut off: f64 = 0.0;
+        while off < g.length + 2.0 {
+            let x = off;
+            let y = g.params[0] + g.params[1] * off + g.params[2] * off.powf(2.0) + g.params[3] * off.powf(3.0);
+            let xnew = x * c - y * s;
+            let ynew = x * s + y * c;
+            ret.push(Position::new(g.x + xnew, g.y + ynew));
+            off += resolution;
+        }
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromParamPoly(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3888,7 +4143,21 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_param_poly(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromParamPoly")
+        let s = g.hdg.sin();
+        let c = g.hdg.cos();
+        let pMax = if g.params[8] <= 0.0 { g.length } else { g.params[8] };
+        let pStep = pMax / (g.length / resolution).ceil();
+        let mut ret = PositionVector::default();
+        let mut p: f64 = 0.0;
+        while p <= pMax + pStep {
+            let x = g.params[0] + g.params[1] * p + g.params[2] * p.powf(2.0) + g.params[3] * p.powf(3.0);
+            let y = g.params[4] + g.params[5] * p + g.params[6] * p.powf(2.0) + g.params[7] * p.powf(3.0);
+            let xnew = x * c - y * s;
+            let ynew = x * s + y * c;
+            ret.push(Position::new(g.x + xnew, g.y + ynew));
+            p += pStep;
+        }
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `Position NIImporter_OpenDrive::calculateStraightEndPoint(double, double, const Position &)` [static, protected]
@@ -3904,7 +4173,13 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calculate_straight_end_point(hdg: f64, length: f64, start: &Position) -> Position {
-        todo!("port NIImporter_OpenDrive::calculateStraightEndPoint")
+        let normx: f64 = 1.0;
+        let normy: f64 = 0.0;
+        let x2 = normx * hdg.cos() - normy * hdg.sin();
+        let y2 = normx * hdg.sin() + normy * hdg.cos();
+        let normx = x2 * length;
+        let normy = y2 * length;
+        Position::new(start.x() + normx, start.y() + normy)
     }
 
     /// C++: `void NIImporter_OpenDrive::calculateCurveCenter(double *, double *, double, double)` [static, protected]
@@ -3936,7 +4211,29 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calculate_curve_center(ad_x: Ptr<f64>, ad_y: Ptr<f64>, ad_radius: f64, ad_hdg: f64) {
-        todo!("port NIImporter_OpenDrive::calculateCurveCenter")
+        let mut normX: f64 = 1.0;
+        let mut normY: f64 = 0.0;
+        let mut tmpX: f64;
+        let turn: f64;
+        if ad_radius > 0.0 {
+            turn = -1.0;
+        } else {
+            turn = 1.0;
+        }
+
+        tmpX = normX;
+        normX = normX * ad_hdg.cos() + normY * ad_hdg.sin();
+        normY = tmpX * ad_hdg.sin() + normY * ad_hdg.cos();
+
+        tmpX = normX;
+        normX = turn * normY;
+        normY = -turn * tmpX;
+
+        normX = ad_radius.abs() * normX;
+        normY = ad_radius.abs() * normY;
+
+        *ad_x.m() += normX;
+        *ad_y.m() += normY;
     }
 
     /// C++: `void NIImporter_OpenDrive::calcPointOnCurve(double *, double *, double, double, double, double)` [static, protected]
@@ -3962,7 +4259,22 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calc_point_on_curve(ad_x: Ptr<f64>, ad_y: Ptr<f64>, ad_centerX: f64, ad_centerY: f64, ad_r: f64, ad_length: f64) {
-        todo!("port NIImporter_OpenDrive::calcPointOnCurve")
+        let rotAngle = ad_length / ad_r.abs();
+        let mut vx = *ad_x.m() - ad_centerX;
+        let mut vy = *ad_y.m() - ad_centerY;
+        let tmpx: f64;
+
+        let turn: f64;
+        if ad_r > 0.0 {
+            turn = -1.0; //left
+        } else {
+            turn = 1.0; //right
+        }
+        tmpx = vx;
+        vx = vx * rotAngle.cos() + turn * vy * rotAngle.sin();
+        vy = -1.0 * turn * tmpx * rotAngle.sin() + vy * rotAngle.cos();
+        *ad_x.m() = vx + ad_centerX;
+        *ad_y.m() = vy + ad_centerY;
     }
 
     /// C++: `void NIImporter_OpenDrive::computeShapes(std::map<std::string, OpenDriveEdge *> &)` [static, protected]
