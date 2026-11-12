@@ -111,7 +111,7 @@ impl MSDevice_Vehroutes {
     /// Build devices for the given vehicle, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut i32, maxRoutes: i32) -> Ptr<MSDevice_Vehroutes> {
+    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>, maxRoutes: i32) -> Ptr<MSDevice_Vehroutes> {
         todo!("port MSDevice_Vehroutes::buildVehicleDevices")
     }
 

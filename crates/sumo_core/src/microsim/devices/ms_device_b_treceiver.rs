@@ -447,7 +447,7 @@ impl MSTransportableDevice_BTreceiver {
     /// Build devices for the given vehicle, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn build_devices(t: &mut MSTransportable, into: &mut i32) {
+    pub fn build_devices(t: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
         todo!("port MSTransportableDevice_BTreceiver::buildDevices")
     }
 
@@ -548,7 +548,7 @@ impl MSVehicleDevice_BTreceiver {
     /// Build devices for the given vehicle, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut i32) {
+    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
         todo!("port MSVehicleDevice_BTreceiver::buildVehicleDevices")
     }
 
