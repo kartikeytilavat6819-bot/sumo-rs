@@ -1505,7 +1505,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_SSM::notifyEnter")
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_SSM::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1527,7 +1527,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_SSM::notifyLeave")
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_SSM::deviceName() const` [const, virtual]
@@ -1537,7 +1537,7 @@ impl MSDevice_SSM {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_SSM::deviceName")
+        "ssm".to_string()
     }
 
     /// C++: `void MSDevice_SSM::generateOutput(OutputDevice *) const` [const, virtual]
@@ -1550,7 +1550,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_SSM::generateOutput")
+        // C++ body is only comments (closeTag on myOutputFile is disabled upstream): nothing to do.
     }
 
     /// C++: `void MSDevice_SSM::MSDevice_SSM(SUMOVehicle &, const std::string &, std::string, int, bool, double, double, bool, bool, bool, int)` [private]
