@@ -4384,7 +4384,82 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn compute_shapes(edges: &mut BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) {
-        todo!("port NIImporter_OpenDrive::computeShapes")
+        use NIImporter_OpenDrive_GeometryType as GT;
+        let res = utils::options::options_cont::get_float("opendrive.curve-resolution");
+        for (_, ePtr) in edges.iter() {
+            let e = ePtr.m();
+            let mut prevType = GT::OPENDRIVE_GT_UNKNOWN;
+            let lineRes = if Self::has_non_linear_elevation(e) { res } else { -1.0 };
+            let mut last = Position::default();
+            let mut index: i32 = 0;
+            let geometries = e.geometries.clone();
+            for g in geometries.iter() {
+                let mut geom = PositionVector::default();
+                match g.type_ {
+                    GT::OPENDRIVE_GT_UNKNOWN => {}
+                    GT::OPENDRIVE_GT_LINE => geom = Self::geom_from_line(e, g, lineRes),
+                    GT::OPENDRIVE_GT_SPIRAL => geom = Self::geom_from_spiral(e, g, res),
+                    GT::OPENDRIVE_GT_ARC => geom = Self::geom_from_arc(e, g, res),
+                    GT::OPENDRIVE_GT_POLY3 => geom = Self::geom_from_poly(e, g, res),
+                    GT::OPENDRIVE_GT_PARAMPOLY3 => geom = Self::geom_from_param_poly(e, g, res),
+                    _ => {}
+                }
+                if e.geom.len() > 0 && prevType == GT::OPENDRIVE_GT_LINE {
+                    // remove redundant end point of the previous geometry segment
+                    // (the start point of the current segment should have the same value)
+                    // this avoids geometry errors due to imprecision
+                    if !e.geom.back().almost_same(geom.front(), utils::geom::POSITION_EPS) {
+                        write_warningf!("Mismatched geometry for edge '%' between geometry segments % and %.", e.id.clone(), index - 1, index);
+                    }
+                    e.geom.pop();
+                }
+                for k in geom.iter() {
+                    last = *k;
+                    e.geom.push_back_no_double_pos(k);
+                }
+                prevType = g.type_;
+                index += 1;
+            }
+            if e.geom.len() == 1 && *e.geom.front() != last {
+                // avoid length-1 geometry due to almostSame check
+                e.geom.push(last);
+            }
+            if utils::options::options_cont::exists("geometry.min-dist") && !utils::options::options_cont::is_default("geometry.min-dist") {
+                // simplify geometry for both directions consistently but ensure
+                // that start and end angles are preserved
+                if e.geom.len() > 4 {
+                    let minDist = utils::options::options_cont::get_float("geometry.min-dist");
+                    e.geom.remove_double_points(minDist, true, 1, 1, true);
+                }
+            }
+            if !NBNetBuilder::transform_coordinates(&mut e.geom, true, Ptr::null()) {
+                write_errorf!("Unable to project coordinates for edge '%'.", e.id.clone());
+            }
+            // add z-data
+            let mut k: usize = 0;
+            let mut pos: f64 = 0.0;
+            if !utils::options::options_cont::get_bool("flatten") {
+                let n = e.elevations.len();
+                for (jdx, el) in e.elevations.iter().enumerate() {
+                    let sNext = if jdx + 1 == n { f64::MAX } else { e.elevations[jdx + 1].s };
+                    while k < e.geom.len() && pos < sNext {
+                        let z = el.compute_at(pos);
+                        e.geom[k].add_xyz(0.0, 0.0, z);
+                        k += 1;
+                        if k < e.geom.len() {
+                            // XXX pos underestimates the actual position since the
+                            // actual geometry between k-1 and k could be curved
+                            pos += e.geom[k - 1].distance_to2d(&e.geom[k]);
+                        }
+                    }
+                }
+            }
+            e.geom = e.geom.simplified2(false, utils::geom::NUMERICAL_EPS);
+            // add laneoffset
+            if e.offsets.len() > 0 {
+                e.laneOffsets = Self::discretize_offsets(&mut e.geom, &e.offsets, &e.id);
+            }
+        }
     }
 
     /// C++: `bool NIImporter_OpenDrive::hasNonLinearElevation(const OpenDriveEdge &)` [static, protected]
@@ -4402,7 +4477,15 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn has_non_linear_elevation(e: &NIImporter_OpenDrive_OpenDriveEdge) -> bool {
-        todo!("port NIImporter_OpenDrive::hasNonLinearElevation")
+        if e.elevations.len() > 1 {
+            return true;
+        }
+        for el in e.elevations.iter() {
+            if el.c != 0.0 || el.d != 0.0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `std::vector<double> NIImporter_OpenDrive::discretizeOffsets(PositionVector &, const std::vector<OpenDriveLaneOffset> &, const std::string &)` [static, protected]
@@ -4444,14 +4527,81 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn discretize_offsets(geom: &mut PositionVector, offsets: &Vec<NIImporter_OpenDrive_OpenDriveLaneOffset>, id: &str) -> Vec<f64> {
-        todo!("port NIImporter_OpenDrive::discretizeOffsets")
+        let mut laneOffsets: Vec<f64> = Vec::new();
+        // make sure there are intermediate points for each offset-section
+        for el in offsets.iter() {
+            // check whether we need to insert a new point at dist
+            let pS = geom.position_at_offset2d(el.s, 0.0, false);
+            let iS = geom.index_of_closest(&pS, false);
+            // prevent close spacing to reduce impact of rounding errors in z-axis
+            if pS.distance_to2d(&geom[iS as usize]) > utils::geom::POSITION_EPS {
+                geom.insert_at_closest(&pS, false);
+            }
+        }
+        // XXX add further points for sections with non-constant offset
+        // shift each point orthogonally by the specified offset
+        let mut kk: usize = 0;
+        let mut ppos: f64 = 0.0;
+        let n = offsets.len();
+        for (jdx, el) in offsets.iter().enumerate() {
+            let sNext = if jdx + 1 == n { f64::MAX } else { offsets[jdx + 1].s };
+            while kk < geom.len() && ppos < sNext {
+                let offset = el.compute_at(ppos);
+                laneOffsets.push(if offset.abs() > utils::geom::POSITION_EPS { -offset } else { 0.0 });
+                kk += 1;
+                if kk < geom.len() {
+                    // XXX pos understimates the actual position since the
+                    // actual geometry between k-1 and k could be curved
+                    ppos += geom[kk - 1].distance_to2d(&geom[kk]);
+                }
+            }
+        }
+        let _ = id;
+        laneOffsets
     }
 
     /// C++: `void NIImporter_OpenDrive::addOffsets(bool, PositionVector &, const std::vector<OpenDriveLaneOffset> &, const std::string &, std::vector<double> &)` [static, protected]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_offsets(left: bool, geom: &mut PositionVector, offsets: &Vec<NIImporter_OpenDrive_OpenDriveLaneOffset>, id: &str, result: &mut Vec<f64>) {
-        todo!("port NIImporter_OpenDrive::addOffsets")
+        // make sure there are intermediate points for each offset-section
+        for el in offsets.iter() {
+            // check whether we need to insert a new point at dist
+            let pS = geom.position_at_offset2d(el.s, 0.0, false);
+            let iS = geom.index_of_closest(&pS, false);
+            // prevent close spacing to reduce impact of rounding errors in z-axis
+            if pS.distance_to2d(&geom[iS as usize]) > utils::geom::POSITION_EPS {
+                let at = geom.insert_at_closest(&pS, false);
+                let mut interpolatedOffset: f64 = 0.0;
+                if at == 0 {
+                    interpolatedOffset = result[0];
+                } else if at == geom.len() as i32 - 1 {
+                    interpolatedOffset = *result.last().unwrap();
+                } else {
+                    interpolatedOffset = (result[at as usize - 1] + result[at as usize]) / 2.0;
+                }
+                result.insert(at as usize, interpolatedOffset);
+            }
+        }
+        // shift each point orthogonally by the specified offset
+        let mut kk: usize = 0;
+        let mut ppos: f64 = 0.0;
+        let sign: i32 = if left { -1 } else { 1 };
+        let n = offsets.len();
+        for (jdx, el) in offsets.iter().enumerate() {
+            let sNext = if jdx + 1 == n { f64::MAX } else { offsets[jdx + 1].s };
+            while kk < geom.len() && ppos < sNext {
+                let offset = el.compute_at(ppos);
+                result[kk] += if offset.abs() > utils::geom::POSITION_EPS { (sign as f64) * offset } else { 0.0 };
+                kk += 1;
+                if kk < geom.len() {
+                    // XXX pos understimates the actual position since the
+                    // actual geometry between k-1 and k could be curved
+                    ppos += geom[kk - 1].distance_to2d(&geom[kk]);
+                }
+            }
+        }
+        let _ = id;
     }
 
     /// C++: `void NIImporter_OpenDrive::revisitLaneSections(const NBTypeCont &, std::map<std::string, OpenDriveEdge *> &)` [static, protected]
