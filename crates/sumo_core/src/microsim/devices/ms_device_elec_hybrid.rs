@@ -1,6 +1,10 @@
 //! Port of microsim/devices/MSDevice_ElecHybrid.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::to_string::to_string;
+use utils::common::string_utils::to_double;
+use utils::options::options_cont::with_options;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_ElecHybrid` (microsim/devices/MSDevice_ElecHybrid.h)
@@ -43,9 +47,14 @@ pub struct MSDevice_ElecHybrid {
     /// Parameter, Pointer to the act overhead wire segment in previous step (by default is nullptr), i.e. auxiliar pointer for disabling charging vehicle from previous (not current) overherad wire segment
     pub myPreviousOverheadWireSegment: Ptr<MSOverheadWire>,
     pub myDistance: f64,
-    pub veh_elem: Ptr<Element>,
-    pub veh_pos_tail_elem: Ptr<Element>,
-    pub pos_veh_node: Ptr<Node>,
+    /// index of the vehicle's current source element in myCircuit (C++ Element*)
+    pub veh_elem: Option<ElemIdx>,
+    /// index of the vehicle's tail resistor element in myCircuit (C++ Element*)
+    pub veh_pos_tail_elem: Option<ElemIdx>,
+    /// index of the vehicle's positive node in myCircuit (C++ Node*)
+    pub pos_veh_node: Option<NodeIdx>,
+    /// circuit that holds veh_elem, veh_pos_tail_elem and pos_veh_node (C++ reached them through pointers)
+    pub myCircuit: Ptr<Circuit>,
 }
 
 impl std::ops::Deref for MSDevice_ElecHybrid {
@@ -60,6 +69,39 @@ impl std::ops::DerefMut for MSDevice_ElecHybrid {
     }
 }
 
+/// C++ `WATTHR2WATT` macro (MSOverheadWire.h)
+fn watthr2watt(x: f64) -> f64 {
+    x * 3600.0 / ts()
+}
+
+/// C++ `WATT2WATTHR` macro (MSOverheadWire.h)
+fn watt2watthr(x: f64) -> f64 {
+    x * ts() / 3600.0
+}
+
+/// C++ `MIN2` macro
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `MAX2` macro
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ `WIRE_RESISTIVITY` (MSOverheadWire.cpp)
+const WIRE_RESISTIVITY: f64 = 2.0 * 0.000113;
+
+/// C++ `std::to_string(double)` ("%f")
+fn std_to_string(v: f64) -> String {
+    format!("{:.6}", v)
+}
+
+/// C++ `toString(SumoXMLAttr)`: the XML name of the attribute
+fn attr_str(attr: SumoXMLAttr) -> String {
+    utils::xml::sumo_xml_definitions::Attrs.get_string(attr).to_string()
+}
+
 impl MSDevice_ElecHybrid {
     /// C++: `void MSDevice_ElecHybrid::insertOptions(OptionsCont &)` [static]
     /// Inserts MSDevice_ElecHybrid-options
@@ -70,7 +112,8 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_ElecHybrid::insertOptions")
+        oc.add_option_sub_topic("ElecHybrid Device");
+        MSDevice::insert_default_assignment_options("elechybrid", "ElecHybrid Device", oc, false);
     }
 
     /// C++: `void MSDevice_ElecHybrid::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -147,7 +190,74 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_ElecHybrid::buildVehicleDevices")
+        // Check if vehicle should get an 'elecHybrid' device.
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "elechybrid", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            // Yes, build the device.
+            // Fetch the battery capacity (if present) from the vehicle descriptor.
+            let typeParams = v.get_vehicle_type().get_parameter();
+            let vehicleParams = v.get_parameter();
+            let mut actualBatteryCapacity = 0.0;
+            /* The actual battery capacity can be a parameter of the vehicle or its vehicle type.
+               The vehicle parameter takes precedence over the type parameter. */
+            let mut attrName = attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY);
+            if vehicleParams.has_parameter(&attrName) {
+                let abc = vehicleParams.get_parameter(&attrName, "-1");
+                match to_double(&abc) {
+                    Ok(d) => actualBatteryCapacity = d,
+                    Err(_) => write_warning(&format!("Invalid value '{}'for vehicle parameter '{}'. Using the default of {}", abc, attrName, std_to_string(actualBatteryCapacity))),
+                }
+            } else {
+                if typeParams.has_parameter(&attrName) {
+                    let abc = typeParams.get_parameter(&attrName, "-1");
+                    match to_double(&abc) {
+                        Ok(d) => {
+                            actualBatteryCapacity = d;
+                            write_warning(&format!("Vehicle '{}' does not provide vehicle parameter '{}'. Using the vehicle type value of {}", v.get_id(), attrName, std_to_string(actualBatteryCapacity)));
+                        }
+                        Err(_) => write_warning(&format!("Invalid value '{}'for vehicle type parameter '{}'. Using the default of {}", abc, attrName, std_to_string(actualBatteryCapacity))),
+                    }
+                } else {
+                    write_warning(&format!("Vehicle '{}' does not provide vehicle or vehicle type parameter '{}'. Using the default of {}", v.get_id(), attrName, std_to_string(actualBatteryCapacity)));
+                }
+            }
+
+            // obtain maximumBatteryCapacity
+            let mut maximumBatteryCapacity = 0.0;
+            attrName = attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY);
+            if typeParams.has_parameter(&attrName) {
+                let mbc = typeParams.get_parameter(&attrName, "-1");
+                match to_double(&mbc) {
+                    Ok(d) => maximumBatteryCapacity = d,
+                    Err(_) => write_warningf!("Invalid value '%'for vType parameter '%'", mbc, attrName),
+                }
+            } else {
+                write_warning(&format!("Vehicle '{}' is missing the vType parameter '{}'. Using the default of {}", v.get_id(), attrName, std_to_string(maximumBatteryCapacity)));
+            }
+
+            // obtain overheadWireChargingPower
+            let mut overheadWireChargingPower = 0.0;
+            attrName = attr_str(SUMO_ATTR_OVERHEADWIRECHARGINGPOWER);
+            if typeParams.has_parameter(&attrName) {
+                let ocp = typeParams.get_parameter(&attrName, "-1");
+                match to_double(&ocp) {
+                    Ok(d) => overheadWireChargingPower = d,
+                    Err(_) => write_warningf!("Invalid value '%'for vType parameter '%'", ocp, attrName),
+                }
+            } else {
+                write_warning(&format!("Vehicle '{}' is missing the vType parameter '{}'. Using the default of {}", v.get_id(), attrName, std_to_string(overheadWireChargingPower)));
+            }
+
+            // elecHybrid constructor
+            let id = format!("elecHybrid_{}", v.get_id());
+            // shortcut: the device is leaked like the C++ new, so the vehicle's device list keeps a stable pointer; upgrade when MSVehicle owns its devices as Box
+            let device: &mut MSDevice_ElecHybrid = Box::leak(Box::new(MSDevice_ElecHybrid::new(v, &id, actualBatteryCapacity, maximumBatteryCapacity, overheadWireChargingPower)));
+
+            // Add device to vehicle
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_ElecHybrid::~MSDevice_ElecHybrid() noexcept` [virtual]
@@ -156,7 +266,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_ElecHybrid::~MSDevice_ElecHybrid")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSDevice_ElecHybrid::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -532,7 +642,331 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, tObject: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_ElecHybrid::notifyMove")
+        if !tObject.is_vehicle() {
+            return false;
+        }
+        let vp = Ptr::from_mut(tObject).cast::<SUMOVehicle>();
+        let veh = vp.m();
+        // Do not compute the current consumption here anymore:
+        // myConsum is (non-systematically, we agree) set in MSVehicle so that the vehicle `vNext` value can
+        // be influenced by the maximum traction power of the vehicle.
+        debug_assert!(!self.myConsum.is_nan());
+
+        // is battery pack discharged (from previous timestep)
+        if self.myActualBatteryCapacity < self.mySOCMin * self.myMaximumBatteryCapacity {
+            self.myBatteryDischargedLogic = true;
+        } else {
+            self.myBatteryDischargedLogic = false;
+        }
+
+        /* If battery is discharged we will force the vehicle to slowly come to
+           a halt (freewheel motion). It could still happen that some energy will
+           be recovered in later steps due to regenerative braking. */
+        if self.is_battery_discharged() {
+            let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+            let oldSpeed = veh.get_speed();
+            let accel = self.acceleration(veh, 0., oldSpeed);  // or use veh.getAcceleration() method???
+            let nextSpeed = max2(0., veh.get_speed() + accel * ts());
+            speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
+            speedTimeLine.push((MSNet::get_instance().get_current_time_step() + delta_t(), nextSpeed));
+
+            vp.cast::<MSVehicle>().m().get_influencer().set_speed_time_line(&speedTimeLine);
+        }
+
+        /* Check if there is an overhead wire either over the lane where the vehicle is or over a
+           neighboring lanes. This check has to be performed at every simulation step as the
+           overhead wires for trolleybuses will typically end at a bus stop that is located somewhere
+           in the middle of the lane. */
+        let mut overheadWireSegmentID = MSNet::get_instance().get_stopping_place_id(veh.get_lane(), veh.get_position_on_lane(), SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+
+        //check overhead line on the left neighboring lane
+        if overheadWireSegmentID == "" && !veh.get_edge().left_lane(veh.get_lane()).is_null() {
+            overheadWireSegmentID = MSNet::get_instance().get_stopping_place_id(veh.get_edge().left_lane(veh.get_lane()), veh.get_position_on_lane(), SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        }
+        //check overhead line on the right neighboring lane
+        if overheadWireSegmentID == "" && !veh.get_edge().right_lane(veh.get_lane()).is_null() {
+            overheadWireSegmentID = MSNet::get_instance().get_stopping_place_id(veh.get_edge().right_lane(veh.get_lane()), veh.get_position_on_lane(), SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        }
+
+        /* Store the amount of power that could not be recuperated. */
+        let mut energyWasted = 0.0;
+        /* If vehicle has access to an overhead wire (including the installation on neighboring lanes) */
+        if overheadWireSegmentID != "" {
+            /* Update the actual overhead wire segment of this device */
+            self.myActOverheadWireSegment = MSNet::get_instance().get_stopping_place(&overheadWireSegmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>();
+            /* Store the traction substation of the actual overhead wire segment */
+            let actualSubstation: Ptr<MSTractionSubstation> = self.myActOverheadWireSegment.get_traction_substation();
+
+            /* Disable charging from previous (not the actual) overhead wire segment.
+               REASON:
+               If there is no gap between two different overhead wire segments that are
+               places on the same lane, the vehicle switches from the one segment to another
+               in one timestep. */
+            if self.myPreviousOverheadWireSegment != self.myActOverheadWireSegment {
+                if !self.myPreviousOverheadWireSegment.is_null() {
+                    /* Remove the vehicle from the list of vehicles powered by the previous segment. */
+                    self.myPreviousOverheadWireSegment.m().erase_vehicle(veh);
+                    let ts_ = self.myPreviousOverheadWireSegment.get_traction_substation();
+                    if !ts_.is_null() {
+                        ts_.m().decrease_elec_hybrid_count();
+                        ts_.m().erase_vehicle(Ptr::from_mut(self));
+                    }
+                }
+                /* Add the vehicle reference to the current segment. */
+                self.myActOverheadWireSegment.m().add_vehicle(veh);
+                if !actualSubstation.is_null() {
+                    actualSubstation.m().increase_elec_hybrid_count();
+                    actualSubstation.m().add_vehicle(Ptr::from_mut(self));
+                }
+            }
+
+            /* Do we simulate the behaviour of the overhead wire electric circuit? */
+            if overhead_wire_solver() {
+                /* Circuit update due to vehicle movement:
+                   Delete vehicle resistor element, vehicle resistor nodes and vehicle resistor
+                   tails in the circuit used in the previous timestep. */
+                self.delete_vehicle_from_circuit(veh);
+
+                /* Add the vehicle to the circuit in case that there is a substation that provides
+                   power to it. */
+                if !actualSubstation.is_null() {
+                    /* Add a resistor (current source in the future?) representing trolleybus
+                       vehicle to the circuit.
+                       pos/neg_veh_node elements
+                        [0] .... vehicle_resistor
+                        [1] .... leading resistor
+                        [2] .... tail resistor pos/neg_tail_vehID
+                    */
+
+                    // pos_veh_node and veh_elem should be NULL
+                    if self.pos_veh_node.is_some() || self.veh_elem.is_some() {
+                        write_warning("pos_veh_node or neg_veh_node or veh_elem is not NULL (and they should be at the beginning of adding elecHybrid to the circuit)");
+                    }
+
+                    // create pos and veh_elem
+                    let owc: Ptr<Circuit> = self.myActOverheadWireSegment.get_circuit();
+                    self.myCircuit = owc;
+                    let pos_veh_node = owc.m().add_node(&format!("pos_{}", veh.get_id())).unwrap();
+                    self.pos_veh_node = Some(pos_veh_node);
+                    // adding current source element representing elecHybrid vehicle. The value of current is computed from wantedPower later by circuit solver. Thus NAN is used as an initial value.
+                    let neg_ground = owc.get_node("negNode_ground").unwrap();
+                    let ve = owc.m().add_element(&format!("currentSrc{}", veh.get_id()), f64::NAN, pos_veh_node, neg_ground, ElementType::CurrentSource).unwrap();
+                    self.veh_elem = Some(ve);
+
+                    // Connect vehicle to an existing overhead wire segment = add elecHybridVehicle to the myActOverheadWireSegment circuit
+                    // Find pos resistor element of the actual overhead line section and their end nodes
+                    let mut element_pos = owc.get_element(&format!("pos_{}", self.myActOverheadWireSegment.get_id())).unwrap();
+                    let mut node_pos = owc.element(element_pos).n_node().unwrap();
+                    let mut resistance = owc.element(element_pos).resistance();
+
+                    /* Find the correct position of the vehicle at the overhead line.
+                       We start the while loop at the end of the actual overhead line section and go against the direction of vehicle movement.
+                       The decision rule is based on the resistance value:
+                         * from the vehicle position to the end of lane,
+                         * sum of resistance of elements (going from the end of overhead line section in the contrary direction).
+
+                       The original solution runs into problems when a vehicle is going on a neighboring lane and the two lanes have different lengths:
+                       while (resistance < (veh.getLane()->getLength() - veh.getPositionOnLane())*WIRE_RESISTIVITY) {
+                       Improvement: take the relative distance of the vehicle to the end of its lane and map it to the segment's lane length. (This works also in case that the segment's lane and the vehicle's lane are identical.)
+                    */
+                    let relativePosOnSegment = self.myActOverheadWireSegment.get_lane().get_length() * (1. - (veh.get_position_on_lane() / veh.get_lane().get_length()));
+
+                    while resistance < relativePosOnSegment * WIRE_RESISTIVITY {
+                        node_pos = owc.element(element_pos).p_node().unwrap();
+                        element_pos = owc.node(node_pos).elements()[2];
+                        resistance += owc.element(element_pos).resistance();
+                        if !owc.element(element_pos).name().starts_with("pos_tail_") {
+                            write_warning("splitting element is not 'pos_tail_XXX'");
+                        }
+                    }
+
+                    node_pos = owc.element(element_pos).p_node().unwrap();
+                    //resistance of vehicle tail nodes
+                    resistance -= relativePosOnSegment * WIRE_RESISTIVITY;
+
+                    /* dividing element_pos
+                       before:   |node_pos|---------------------------------------------|element_pos|----
+                       after:    |node_pos|----|veh_pos_tail_elem|----|pos_veh_node|----|element_pos|----
+                    */
+                    owc.m().element_mut(element_pos).set_pos_node(pos_veh_node);
+                    owc.m().node_mut(node_pos).erase_element(element_pos);
+                    owc.m().node_mut(pos_veh_node).add_element(element_pos);
+
+                    let vpt = owc.m().add_element(&format!("pos_tail_{}", veh.get_id()), resistance, node_pos, pos_veh_node, ElementType::Resistor).unwrap();
+                    self.veh_pos_tail_elem = Some(vpt);
+
+                    if owc.element(element_pos).resistance() - resistance < 0. {
+                        write_warningf!("The resistivity of overhead wire segment connected to vehicle % is < 0. Set to 1e-6.", veh.get_id());
+                    }
+
+                    let newResistance = owc.element(element_pos).resistance() - resistance;
+                    owc.m().element_mut(element_pos).set_resistance(newResistance);
+
+
+                    // Set the power requirement to the consumption + charging power.
+                    // Note that according to PMDP data, the charging power seems to be the same in both situations,
+                    // ignoring the potential benefits of using a higher charging power when the vehicle is moving.
+                    if self.myActualBatteryCapacity < self.mySOCMax * self.myMaximumBatteryCapacity {
+                        owc.m().element_mut(ve).set_power_wanted(watthr2watt(self.myConsum) + self.myOverheadWireChargingPower);
+                    } else {
+                        owc.m().element_mut(ve).set_power_wanted(watthr2watt(self.myConsum));
+                    }
+
+                    // No recuperation to overheadwire (only to the batterypack)
+                    if !overhead_wire_recuperation() && owc.element(ve).power_wanted() < 0.0 {
+                        // the value of energyWasted is properly computed and updated after solving circuit by the solver
+                        // energyWasted = 0;
+                        owc.m().element_mut(ve).set_power_wanted(0.0);
+                    }
+
+                    // The numerical solver that computes the circuit state needs initial values of electric currents and
+                    // voltages from which it will start the iterative solving process. We prefer to reuse the "old" values
+                    // as it is likely that the new values will not be far away from the old ones. The safety limits of
+                    // 10 and 1500 Volts that are used below are chosen fairly arbitrarily to keep the initial values within
+                    // reasonable limits.
+                    let mut voltage = self.myCircuitVoltage;
+                    if voltage < 10.0 || voltage > 1500.0 || voltage.is_nan() {
+                        voltage = actualSubstation.get_substation_voltage();
+                    }
+                    // Initial value of the electric current flowing into the vehicle that will be used by the solver
+                    let current = -(owc.element(ve).power_wanted() / voltage);
+                    owc.m().element_mut(ve).set_current(current);
+
+                    // Set the device as charging the battery by default
+                    self.myCharging = true;
+
+                    // And register the call to solver at the end of the simulation step
+                    actualSubstation.m().add_solving_circuit_to_end_of_timestep_events();
+                } else {
+                    /*
+                        No substation on this wire ...
+                    */
+                    // Energy flowing to/from the battery pack [Wh] has to completely cover vehicle consumption.
+                    self.myEnergyCharged = -self.myConsum;
+                    // Update Battery charge
+                    self.myActualBatteryCapacity += self.myEnergyCharged;
+                    // No substation is connected to this segment and the charging output is therefore zero.
+                    let me = Ptr::from_mut(self); self.myActOverheadWireSegment.m().add_charge_value_for_output(0., me, false);
+                }
+            } else {
+                /*
+                    Faster approximation without circuit solving at every simulation step.
+                */
+
+                // First check that there is a traction substation connected to the overhead wire
+                let mut voltage = 0.0;
+                if !actualSubstation.is_null() {
+                    voltage = actualSubstation.get_substation_voltage();
+                }
+
+                // At this point the voltage can be (a) NAN if the substation voltage was not specified,
+                // (b) 0 if no substation powers the current segment or if someone put its power to zero,
+                // (c) >0 if the substation can provide energy to the circuit.
+                if voltage > 0.0 {
+                    // There is a power source connected to this segment.
+                    // Set the simplified power requirement to the consumption + charging power.
+                    let mut powerWanted = watthr2watt(self.myConsum);
+                    if self.myActualBatteryCapacity < self.mySOCMax * self.myMaximumBatteryCapacity {
+                        // Additional `myOverheadWireChargingPower` due to charging of battery pack
+                        powerWanted += self.myOverheadWireChargingPower;
+                    }
+
+                    // No recuperation to overhead wire (only to the battery pack)
+                    if !overhead_wire_recuperation() && powerWanted < 0.0 {
+                        // the value of energyWasted is properly computed and updated below
+                        powerWanted = 0.0;
+                    }
+
+                    // Set the actual current and voltage of the global circuit
+                    self.myCircuitCurrent = powerWanted / voltage;
+                    self.myCircuitVoltage = voltage;
+
+                    // Calculate energy charged
+                    let energyIn = watt2watthr(powerWanted);
+
+                    // Calculate energy flowing to/from the battery in this step [Wh]
+                    self.myEnergyCharged = self.compute_charged_energy(energyIn);
+
+                    // Update the energy that has been stored in the battery pack and return the real energy charged in this step
+                    // considering SOC limits of the battery pack.
+                    let realEnergyCharged = self.store_energy_to_battery(self.myEnergyCharged);
+                    // Set energy wasted
+                    energyWasted = self.myEnergyCharged - realEnergyCharged;
+
+                    // Add the energy provided by the overhead wire segment to the output of the segment
+                    let me = Ptr::from_mut(self); self.myActOverheadWireSegment.m().add_charge_value_for_output(energyIn, me, true);
+                } else {
+                    /*
+                        Overhead wire without a connected substation
+                    */
+                    // Energy for the powertrain is provided by the battery pack
+                    self.myEnergyCharged = -self.myConsum;
+                    // Update battery charge
+                    self.myActualBatteryCapacity += self.myEnergyCharged;
+                    // No energy was provided by the overhead wire segment
+                    let me = Ptr::from_mut(self); self.myActOverheadWireSegment.m().add_charge_value_for_output(0.0, me, true);
+                }
+            }
+            assert!(!self.myActOverheadWireSegment.is_null());
+            self.myPreviousOverheadWireSegment = self.myActOverheadWireSegment;
+        } else {
+            /*
+                No overhead wires, no charging.
+            */
+
+            // Disable charing flag
+            self.myCharging = false;
+
+            // Invalidate the circuit voltage and current
+            self.myCircuitCurrent = f64::NAN;
+            self.myCircuitVoltage = f64::NAN;
+
+            // Additional bookkeeping in case that the circuit solver is used
+            if overhead_wire_solver() {
+                /*
+                    Delete vehicle resistor element, vehicle resistor nodes and vehicle resistor tails
+                    in the previous circuit (i.e. the circuit used in the previous timestep)
+                */
+                self.delete_vehicle_from_circuit(veh);
+            }
+
+            // Vehicle is not under an overhead wire
+            self.myActOverheadWireSegment = Ptr::default();
+
+            // Remove the vehicle from overhead wire if it was under it in the previous step.
+            // This has to be called after deleteVehicleFromCircuit() as the file uses myPreviousOverheadWire.
+            if !self.myPreviousOverheadWireSegment.is_null() {
+                self.myPreviousOverheadWireSegment.m().erase_vehicle(veh);
+                let ts_ = self.myPreviousOverheadWireSegment.get_traction_substation();
+                if !ts_.is_null() {
+                    ts_.m().decrease_elec_hybrid_count();
+                    ts_.m().erase_vehicle(Ptr::from_mut(self));
+                }
+                self.myPreviousOverheadWireSegment = Ptr::default();
+            }
+
+            // Energy for the powertrain is provided by the battery pack
+            self.myEnergyCharged = -self.myConsum;
+            // Update battery charge
+            self.myActualBatteryCapacity += self.myEnergyCharged;
+        }
+
+        // Update the statistical values
+        if self.myMaxBatteryCharge.is_nan() || self.myMaxBatteryCharge < self.myActualBatteryCapacity {
+            self.myMaxBatteryCharge = self.myActualBatteryCapacity;
+        }
+        if self.myMinBatteryCharge.is_nan() || self.myMinBatteryCharge > self.myActualBatteryCapacity {
+            self.myMinBatteryCharge = self.myActualBatteryCapacity;
+        }
+
+        if self.myConsum > 0.0 {
+            self.myTotalEnergyConsumed += self.myConsum;
+        } else {
+            self.myTotalEnergyRegenerated -= self.myConsum;
+        }
+        self.myTotalEnergyWasted += energyWasted;
+
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_ElecHybrid::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -554,7 +988,10 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, tObject: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_ElecHybrid::notifyEnter")
+        if !tObject.is_vehicle() {
+            return false;
+        }
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_ElecHybrid::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -612,7 +1049,32 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, tObject: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_ElecHybrid::notifyLeave")
+        if !tObject.is_vehicle() {
+            return false;
+        }
+        let vp = Ptr::from_mut(tObject).cast::<SUMOVehicle>();
+        let veh = vp.m();
+
+        // The MSMoveReminders are sorted so that we can do `<`. See also BTreceiver and BTsender devices...
+        if reason < MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            return true;
+        }
+
+        if overhead_wire_solver() {
+            // ------- *** ------- delete vehicle resistor element, vehicle resistor nodes and vehicle resistor tails in the previous circuit (circuit used in the previous timestep)------- *** -------
+            self.delete_vehicle_from_circuit(veh);
+        }
+        // disable charging vehicle from overhead wire and segment and traction station
+        if !self.myPreviousOverheadWireSegment.is_null() {
+            self.myPreviousOverheadWireSegment.m().erase_vehicle(veh);
+            let prevSubstation = self.myPreviousOverheadWireSegment.get_traction_substation();
+            if !prevSubstation.is_null() {
+                prevSubstation.m().decrease_elec_hybrid_count();
+                prevSubstation.m().erase_vehicle(Ptr::from_mut(self));
+            }
+            self.myPreviousOverheadWireSegment = Ptr::default();
+        }
+        true
     }
 
     /// C++: `void MSDevice_ElecHybrid::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual]
@@ -638,7 +1100,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, tObject: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSDevice_ElecHybrid::notifyMoveInternal")
+        // C++ body is empty: every parameter is unused
     }
 
     /// C++: `const std::string MSDevice_ElecHybrid::deviceName() const` [const, virtual]
@@ -648,7 +1110,7 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_ElecHybrid::deviceName")
+        "elecHybrid".to_string()
     }
 
     /// C++: `std::string MSDevice_ElecHybrid::getParameter(const std::string &) const` [const, virtual]
@@ -676,7 +1138,26 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_ElecHybrid::getParameter")
+        // RICE_TODO: full traci support
+        if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
+            to_string(&self.myActualBatteryCapacity)
+        } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
+            to_string(&self.myConsum)
+        } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
+            to_string(&self.myEnergyCharged)
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) {
+            to_string(&self.myMaximumBatteryCapacity)
+        } else if key == attr_str(SUMO_ATTR_OVERHEADWIREID) {
+            self.get_overhead_wire_segment_id()
+        } else if key == attr_str(SUMO_ATTR_SUBSTATIONID) {
+            self.get_traction_substation_id()
+        } else if key == attr_str(SUMO_ATTR_VEHICLEMASS) {
+            write_warning("Getting the vehicle mass via parameters is deprecated, please use getMass for the vehicle or its type.");
+            to_string(&self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_MASS))
+        } else {
+            // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
+            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        }
     }
 
     /// C++: `void MSDevice_ElecHybrid::setParameter(const std::string &, const std::string &)` [virtual]
@@ -701,7 +1182,19 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_ElecHybrid::setParameter")
+        let doubleValue = match to_double(value) {
+            Ok(d) => d,
+            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+        };
+        if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
+            self.myActualBatteryCapacity = doubleValue;
+        } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) {
+            self.myMaximumBatteryCapacity = doubleValue;
+        } else if key == attr_str(SUMO_ATTR_OVERHEADWIRECHARGINGPOWER) {
+            self.myOverheadWireChargingPower = doubleValue;
+        } else {
+            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+        }
     }
 
     /// C++: `void MSDevice_ElecHybrid::generateOutput(OutputDevice *) const` [const, virtual]
@@ -721,7 +1214,17 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_ElecHybrid::generateOutput")
+        if !tripinfoOut.is_null() {
+            // Write the summary elecHybrid information into tripinfo output
+            let out = tripinfoOut.m();
+            out.open_tag("elechybrid");
+            out.write_attr("maxBatteryCharge", &self.myMaxBatteryCharge);
+            out.write_attr("minBatteryCharge", &self.myMinBatteryCharge);
+            out.write_attr("totalEnergyConsumed", &self.myTotalEnergyConsumed);
+            out.write_attr("totalEnergyRegenerated", &self.myTotalEnergyRegenerated);
+            out.write_attr("totalEnergyWasted", &self.myTotalEnergyWasted);
+            out.close_tag("");
+        }
     }
 
     /// C++: `double MSDevice_ElecHybrid::getActualBatteryCapacity() const` [const]
@@ -732,7 +1235,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_actual_battery_capacity(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getActualBatteryCapacity")
+        self.myActualBatteryCapacity
     }
 
     /// C++: `double MSDevice_ElecHybrid::getMaximumBatteryCapacity() const` [const]
@@ -743,7 +1246,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_maximum_battery_capacity(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getMaximumBatteryCapacity")
+        self.myMaximumBatteryCapacity
     }
 
     /// C++: `std::string MSDevice_ElecHybrid::getOverheadWireSegmentID() const` [const]
@@ -758,7 +1261,11 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_overhead_wire_segment_id(&self) -> String {
-        todo!("port MSDevice_ElecHybrid::getOverheadWireSegmentID")
+        if !self.myActOverheadWireSegment.is_null() {
+            self.myActOverheadWireSegment.get_id().to_string()
+        } else {
+            String::new()
+        }
     }
 
     /// C++: `std::string MSDevice_ElecHybrid::getTractionSubstationID() const` [const]
@@ -775,7 +1282,13 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_traction_substation_id(&self) -> String {
-        todo!("port MSDevice_ElecHybrid::getTractionSubstationID")
+        if !self.myActOverheadWireSegment.is_null() {
+            let ts_ = self.myActOverheadWireSegment.get_traction_substation();
+            if !ts_.is_null() {
+                return ts_.get_id().to_string();
+            }
+        }
+        String::new()
     }
 
     /// C++: `double MSDevice_ElecHybrid::getEnergyCharged() const` [const]
@@ -786,7 +1299,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_energy_charged(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getEnergyCharged")
+        self.myEnergyCharged
     }
 
     /// C++: `void MSDevice_ElecHybrid::setEnergyCharged(double)`
@@ -796,7 +1309,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_energy_charged(&mut self, energyCharged: f64) {
-        todo!("port MSDevice_ElecHybrid::setEnergyCharged")
+        self.myEnergyCharged = energyCharged;
     }
 
     /// C++: `double MSDevice_ElecHybrid::getCircuitAlpha() const` [const]
@@ -816,7 +1329,13 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_circuit_alpha(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getCircuitAlpha")
+        if !self.myActOverheadWireSegment.is_null() && overhead_wire_solver() {
+            let owc = self.myActOverheadWireSegment.get_circuit();
+            if !owc.is_null() {
+                return owc.get_alpha_best();
+            }
+        }
+        f64::NAN
     }
 
     /// C++: `double MSDevice_ElecHybrid::getPowerWanted() const` [const]
@@ -829,7 +1348,10 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_power_wanted(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getPowerWanted")
+        if let Some(ve) = self.veh_elem {
+            return self.myCircuit.element(ve).power_wanted();
+        }
+        f64::NAN
     }
 
     /// C++: `double MSDevice_ElecHybrid::getCurrentFromOverheadWire() const` [const]
@@ -840,7 +1362,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_current_from_overhead_wire(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getCurrentFromOverheadWire")
+        self.myCircuitCurrent
     }
 
     /// C++: `void MSDevice_ElecHybrid::setCurrentFromOverheadWire(double)`
@@ -850,7 +1372,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_current_from_overhead_wire(&mut self, current: f64) {
-        todo!("port MSDevice_ElecHybrid::setCurrentFromOverheadWire")
+        self.myCircuitCurrent = current;
     }
 
     /// C++: `double MSDevice_ElecHybrid::getVoltageOfOverheadWire() const` [const]
@@ -861,7 +1383,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_voltage_of_overhead_wire(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getVoltageOfOverheadWire")
+        self.myCircuitVoltage
     }
 
     /// C++: `void MSDevice_ElecHybrid::setVoltageOfOverheadWire(double)`
@@ -871,7 +1393,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_voltage_of_overhead_wire(&mut self, voltage: f64) {
-        todo!("port MSDevice_ElecHybrid::setVoltageOfOverheadWire")
+        self.myCircuitVoltage = voltage;
     }
 
     /// C++: `double MSDevice_ElecHybrid::getConsum() const` [const]
@@ -882,7 +1404,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn get_consum(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getConsum")
+        self.myConsum
     }
 
     /// C++: `double MSDevice_ElecHybrid::getDistance() const` [const]
@@ -891,7 +1413,7 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        todo!("port MSDevice_ElecHybrid::getDistance")
+        self.myDistance
     }
 
     /// C++: `bool MSDevice_ElecHybrid::isBatteryDischarged() const` [const]
@@ -902,7 +1424,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn is_battery_discharged(&self) -> bool {
-        todo!("port MSDevice_ElecHybrid::isBatteryDischarged")
+        self.myBatteryDischargedLogic
     }
 
     /// C++: `void MSDevice_ElecHybrid::setActualBatteryCapacity(const double)`
@@ -921,7 +1443,15 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_actual_battery_capacity(&mut self, actualBatteryCapacity: f64) {
-        todo!("port MSDevice_ElecHybrid::setActualBatteryCapacity")
+        // Use the SOC limits to cap the actual battery capacity
+        if actualBatteryCapacity < self.mySOCMin * self.myMaximumBatteryCapacity {
+            //WRITE_WARNINGF(TL("The Battery of vehicle '%' has been exhausted."), getID());
+            self.myActualBatteryCapacity = min2(self.mySOCMin * self.myMaximumBatteryCapacity, self.myActualBatteryCapacity);
+        } else if actualBatteryCapacity > self.mySOCMax * self.myMaximumBatteryCapacity {
+            self.myActualBatteryCapacity = max2(self.mySOCMax * self.myMaximumBatteryCapacity, self.myActualBatteryCapacity);
+        } else {
+            self.myActualBatteryCapacity = actualBatteryCapacity;
+        }
     }
 
     /// C++: `double MSDevice_ElecHybrid::storeEnergyToBattery(const double)`
@@ -938,7 +1468,13 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn store_energy_to_battery(&mut self, energy: f64) -> f64 {
-        todo!("port MSDevice_ElecHybrid::storeEnergyToBattery")
+        // Original energy state of the battery pack
+        let previousEnergyInBattery = self.myActualBatteryCapacity;
+        // Push as much energy as the battery pack can accomodate.
+        // The battery has SOC limits that will prevent it from being overcharged, hence some energy may remain "free".
+        self.set_actual_battery_capacity(self.myActualBatteryCapacity + energy);
+        // The "free" energy that still remains and has to be stored elsewhere or burned on resistors is the difference.
+        self.myActualBatteryCapacity - previousEnergyInBattery
     }
 
     /// C++: `void MSDevice_ElecHybrid::updateTotalEnergyWasted(const double)`
@@ -949,7 +1485,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn update_total_energy_wasted(&mut self, energyWasted: f64) {
-        todo!("port MSDevice_ElecHybrid::updateTotalEnergyWasted")
+        self.myTotalEnergyWasted += energyWasted;
     }
 
     /// C++: `void MSDevice_ElecHybrid::setConsum(const double)`
@@ -959,7 +1495,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn set_consum(&mut self, consumption: f64) {
-        todo!("port MSDevice_ElecHybrid::setConsum")
+        self.myConsum = consumption;
     }
 
     /// C++: `double MSDevice_ElecHybrid::acceleration(SUMOVehicle &, double, double)`
@@ -969,7 +1505,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn acceleration(&mut self, veh: &mut SUMOVehicle, power: f64, oldSpeed: f64) -> f64 {
-        todo!("port MSDevice_ElecHybrid::acceleration")
+        PollutantsInterface::get_energy_helper().acceleration(0, PollutantsInterface_EmissionType::ELEC, oldSpeed, power, veh.get_slope(), self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters())
     }
 
     /// C++: `double MSDevice_ElecHybrid::consumption(SUMOVehicle &, double, double)`
@@ -980,7 +1516,7 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn consumption(&mut self, veh: &mut SUMOVehicle, a: f64, newSpeed: f64) -> f64 {
-        todo!("port MSDevice_ElecHybrid::consumption")
+        PollutantsInterface::get_energy_helper().compute(0, PollutantsInterface_EmissionType::ELEC, newSpeed, a, veh.get_slope(), self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters()) * ts()
     }
 
     /// C++: `double MSDevice_ElecHybrid::computeChargedEnergy(double)`
@@ -1013,7 +1549,30 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn compute_charged_energy(&mut self, energyIn: f64) -> f64 {
-        todo!("port MSDevice_ElecHybrid::computeChargedEnergy")
+        let mut energyCharged = energyIn - self.myConsum;
+        /*
+        Apply recuperation or propulsion efficiency if necessary
+            1. if (energyIn > 0.0 && energyCharged > 0 && it->getConsum() >= 0) = > recuper eff for energyCharged
+            2. if (energyIn > 0.0 && energyCharged > 0 && it->getConsum() < 0)  => recuper eff only for energyIn
+            3. if (energyIn < 0.0 && it->getConsum() > 0) => 1/propulsion eff only for energyIn
+            4. if (energyIn < 0.0 && energyCharged < 0 && it->getConsum() < 0) => 1/propulsion eff only for energyCharged
+        */
+        if energyIn > 0.0 && energyCharged > 0.0 {
+            // the vehicle is charging battery from overhead wire
+            if self.myConsum >= 0. {
+                energyCharged *= self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_RECUPERATIONEFFICIENCY);
+            } else {
+                energyCharged = self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_RECUPERATIONEFFICIENCY) * energyIn - self.myConsum;
+            }
+        } else if energyIn < 0.0 && energyCharged < 0.0 {
+            // the vehicle is recuperating energy into the overhead wire and discharging batterypack at the same time
+            if self.myConsum >= 0. {
+                energyCharged *= energyIn / self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_PROPULSIONEFFICIENCY) - self.myConsum;
+            } else {
+                energyCharged /= self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_PROPULSIONEFFICIENCY);
+            }
+        }
+        energyCharged
     }
 
     /// C++: `MSOverheadWire * MSDevice_ElecHybrid::getActOverheadWireSegment()`
@@ -1022,7 +1581,7 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn get_act_overhead_wire_segment(&mut self) -> Ptr<MSOverheadWire> {
-        todo!("port MSDevice_ElecHybrid::getActOverheadWireSegment")
+        self.myActOverheadWireSegment
     }
 
     /// C++: `Element * MSDevice_ElecHybrid::getVehElem()`
@@ -1031,7 +1590,12 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn get_veh_elem(&mut self) -> Ptr<Element> {
-        todo!("port MSDevice_ElecHybrid::getVehElem")
+        // shortcut: C++ returns the Element pointer; the port returns a pointer into the circuit's element arena, valid until the arena grows, upgrade when circuits hand out stable handles
+        if let Some(ve) = self.veh_elem {
+            Ptr::from_mut(self.myCircuit.m().element_mut(ve))
+        } else {
+            Ptr::default()
+        }
     }
 
     /// C++: `void MSDevice_ElecHybrid::MSDevice_ElecHybrid(SUMOVehicle &, const std::string &, const double, const double, const double)` [private]
@@ -1083,7 +1647,55 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, actualBatteryCapacity: f64, maximumBatteryCapacity: f64, overheadWireChargingPower: f64) -> Self {
-        todo!("port MSDevice_ElecHybrid::MSDevice_ElecHybrid")
+        let mut s = MSDevice_ElecHybrid {
+            base: MSVehicleDevice::new(holder, id),
+            myActualBatteryCapacity: 0.,            // [actualBatteryCapacity <= maximumBatteryCapacity]
+            myMaximumBatteryCapacity: 0.,           // [maximumBatteryCapacity >= 0]
+            myOverheadWireChargingPower: 0.,
+            myEmissionDevice: Ptr::default(),
+            myConsum: 0.,
+            myBatteryDischargedLogic: false,
+            myCharging: false,                      // Initially vehicle don't charge
+            myEnergyCharged: 0.,                    // Initially the energy charged is zero
+            myCircuitCurrent: f64::NAN,             // Initially the current is unknown
+            myCircuitVoltage: f64::NAN,             // Initially the voltage is unknown as well
+            myMaxBatteryCharge: f64::NAN,           // Initial maximum of the battery energy during the simulation is unknown
+            myMinBatteryCharge: f64::NAN,           // Initial minimum of the battery energy during the simulation is unknown
+            myTotalEnergyConsumed: 0.,              // No energy spent yet
+            myTotalEnergyRegenerated: 0.,           // No energy regenerated
+            myTotalEnergyWasted: 0.,                // No energy wasted on resistors
+            // RICE_TODO: make these two parameters user configurable
+            mySOCMin: 0.005,                        // Minimum SOC of the battery
+            mySOCMax: 0.980,                        // Maximum SOC of the battery
+            myActOverheadWireSegment: Ptr::default(),         // Initially the vehicle isn't under any overhead wire segment
+            myPreviousOverheadWireSegment: Ptr::default(),    // Initially the vehicle wasn't under any overhead wire segment
+            myDistance: 0.,
+            veh_elem: None,
+            veh_pos_tail_elem: None,
+            pos_veh_node: None,
+            myCircuit: Ptr::default(),
+        };
+
+        if maximumBatteryCapacity < 0. {
+            write_warningf!("ElecHybrid builder: Vehicle '%' doesn't have a valid value for parameter % (%).", s.base.base2.get_id(), attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY), to_string(&maximumBatteryCapacity));
+        } else {
+            s.myMaximumBatteryCapacity = maximumBatteryCapacity;
+        }
+
+        if actualBatteryCapacity > maximumBatteryCapacity {
+            write_warning(&format!("ElecHybrid builder: Vehicle '{}' has a {} ({}) greater than it's {} ({}). A max battery capacity value will be asigned",
+                s.base.base2.get_id(), attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY), to_string(&actualBatteryCapacity), attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY), to_string(&maximumBatteryCapacity)));
+            s.myActualBatteryCapacity = s.myMaximumBatteryCapacity;
+        } else {
+            s.myActualBatteryCapacity = actualBatteryCapacity;
+        }
+
+        if overheadWireChargingPower < 0. {
+            write_warningf!("ElecHybrid builder: Vehicle '%' doesn't have a valid value for parameter % (%).", s.base.base2.get_id(), attr_str(SUMO_ATTR_OVERHEADWIRECHARGINGPOWER), to_string(&overheadWireChargingPower));
+        } else {
+            s.myOverheadWireChargingPower = overheadWireChargingPower;
+        }
+        s
     }
 
     /// C++: `void MSDevice_ElecHybrid::deleteVehicleFromCircuit(SUMOVehicle &)` [protected]
@@ -1153,7 +1765,67 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn delete_vehicle_from_circuit(&mut self, veh: &mut SUMOVehicle) {
-        todo!("port MSDevice_ElecHybrid::deleteVehicleFromCircuit")
+        if !self.myPreviousOverheadWireSegment.is_null() {
+            if !self.myPreviousOverheadWireSegment.get_traction_substation().is_null() {
+                //check if all pointers to vehicle elements and nodes are not nullptr
+                if self.veh_elem.is_none() || self.veh_pos_tail_elem.is_none() || self.pos_veh_node.is_none() {
+                    write_errorf!("During deleting vehicle '%' from circuit some init previous Nodes or Elements was not assigned.", veh.get_id());
+                }
+                let circuit: Ptr<Circuit> = self.myPreviousOverheadWireSegment.get_circuit();
+                let pos = self.pos_veh_node.unwrap();
+                let ve = self.veh_elem.unwrap();
+                let vpt = self.veh_pos_tail_elem.unwrap();
+                //check if pos_veh_node has 3 elements - they should be: veh_elem, veh_pos_tail_elem and an overhead line resistor element "ahead" of vehicle.
+                if circuit.node(pos).elements().len() != 3 {
+                    write_errorf!("During deleting vehicle '%' from circuit the size of element-vector of pNode or nNode was not 3. It should be 3 by Jakub's opinion.", veh.get_id());
+                }
+                //delete vehicle resistor element "veh_elem" in the previous circuit,
+                circuit.m().node_mut(pos).erase_element(ve);
+                circuit.m().erase_element(ve);
+                self.veh_elem = None;
+
+                //erasing of tail elements (the element connected to the veh_node is after then only the ahead overhead line resistor element)
+                circuit.m().node_mut(pos).erase_element(vpt);
+
+                if circuit.node(pos).elements().len() != 1 {
+                    write_errorf!("During deleting vehicle '%' from circuit the size of element-vector of pNode or nNode was not 1. It should be 1 by Jakub's opinion.", veh.get_id());
+                }
+
+                // add the resistance value of veh_tail element to the resistance value of the ahead overhead line element
+                let aux = circuit.node(pos).elements()[0];
+                let newResistance = circuit.element(aux).resistance() + circuit.element(vpt).resistance();
+                circuit.m().element_mut(aux).set_resistance(newResistance);
+                //set PosNode of the ahead overhead line element to the posNode value of tail element
+                let tailPosNode = circuit.element(vpt).p_node().unwrap();
+                circuit.m().element_mut(aux).set_pos_node(tailPosNode);
+                //set node = 3 operations
+                let auxPosNode = circuit.element(aux).p_node().unwrap();
+                circuit.m().node_mut(auxPosNode).erase_element(aux);
+                circuit.m().node_mut(tailPosNode).add_element(aux);
+
+                // erase tail element from its PosNode
+                circuit.m().node_mut(tailPosNode).erase_element(vpt);
+                // delete veh_pos_tail_elem
+                circuit.m().erase_element(vpt);
+                self.veh_pos_tail_elem = None;
+
+                //erase pos_veh_node
+                circuit.m().erase_node(pos);
+                //modify id of other elements (the id of erasing element should be the greatest)
+                let lastId = circuit.get_last_id() - 1;
+                if circuit.node(pos).id() != lastId {
+                    if let Some(node_last) = circuit.get_node_by_id(lastId) {
+                        circuit.m().node_mut(node_last).set_id(circuit.node(pos).id());
+                    } else if let Some(elem_last) = circuit.get_voltage_source(lastId) {
+                        circuit.m().element_mut(elem_last).set_id(circuit.node(pos).id());
+                    } else {
+                        utils::common::msg_handler::write_error("The element or node with the last Id was not found in the circuit!");
+                    }
+                }
+                circuit.m().decrease_last_id();
+                self.pos_veh_node = None;
+            }
+        }
     }
 
     /// C++: `void MSDevice_ElecHybrid::MSDevice_ElecHybrid(const MSDevice_ElecHybrid &)` [private]
@@ -1161,7 +1833,7 @@ impl MSDevice_ElecHybrid {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_ElecHybrid) -> Self {
-        todo!("port MSDevice_ElecHybrid::MSDevice_ElecHybrid")
+        panic!("MSDevice_ElecHybrid copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice_ElecHybrid & MSDevice_ElecHybrid::operator=(const MSDevice_ElecHybrid &)` [private]
@@ -1169,7 +1841,8 @@ impl MSDevice_ElecHybrid {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_ElecHybrid) -> &mut MSDevice_ElecHybrid {
-        todo!("port MSDevice_ElecHybrid::operator=")
+        // C++ declares the assignment operator private and never defines it, so it cannot be called
+        panic!("MSDevice_ElecHybrid assignment operator is private and undefined in C++")
     }
 
 }
