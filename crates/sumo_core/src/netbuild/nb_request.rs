@@ -8,9 +8,8 @@ thread_local! {
     static NBREQUEST_MY_NOT_BUILD: std::cell::Cell<i32> = std::cell::Cell::new(0);
 }
 
-// shortcut: NBEdge::getConnections()/getConnectionsFromLane()/getConnection() are typed with CHBuilder_Connection in nb_edge.rs but C++ returns NBEdge::Connection; all connection access in this file goes through these helpers, upgrade: change nb_edge.rs accessors to NBEdge_Connection and drop the clone
-fn all_connections(e: Ptr<NBEdge>) -> Vec<NBEdge_Connection> {
-    e.get_connections().clone()
+fn all_connections(e: Ptr<NBEdge>) -> &'static Vec<NBEdge_Connection> {
+    e.get().unwrap().get_connections()
 }
 fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
     e.get_connections_from_lane(lane, Ptr::default(), -1)
@@ -903,7 +902,7 @@ impl NBRequest {
         shape.append(&con.viaShape, 2.0);
         let mut otherShape: PositionVector = prohibitorCon.shape.clone();
         otherShape.append(&prohibitorCon.viaShape, 2.0);
-        if shape.size() == 0 || otherShape.size() == 0 {
+        if shape.0.len() == 0 || otherShape.0.len() == 0 {
             // no internal lanes built
             return false;
         }
@@ -1413,7 +1412,7 @@ impl NBRequest {
     //     return pos;
     // }
     #[allow(unused_variables)]
-    pub fn compute_lane_response(&mut self, from: Ptr<NBEdge>, lane: i32, pos: i32, checkLaneFoes: bool) -> i32 {
+    pub fn compute_lane_response(&mut self, from: Ptr<NBEdge>, lane: i32, mut pos: i32, checkLaneFoes: bool) -> i32 {
         for c in connections_from_lane(from, lane) {
             pos += 1;
             let foes = self.get_foes_string(from, &c, checkLaneFoes);
@@ -1458,7 +1457,7 @@ impl NBRequest {
     //     return pos;
     // }
     #[allow(unused_variables)]
-    pub fn compute_crossing_response(&mut self, crossing: &NBNode_Crossing, pos: i32) -> i32 {
+    pub fn compute_crossing_response(&mut self, crossing: &NBNode_Crossing, mut pos: i32) -> i32 {
         let n = self.myJunction.get_crossings().len();
         let mut foes: String = "0".repeat(n);
         let mut response: String = "0".repeat(n);

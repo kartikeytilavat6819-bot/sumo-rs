@@ -2,9 +2,8 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-// shortcut: NBEdge::getConnections()/getConnectionsFromLane() are typed Vec<CHBuilder_Connection> in nb_edge.rs but C++ returns NBEdge::Connection (toEdge/toLane/vmax/length); all connection access in this file goes through these two helpers, upgrade: change nb_edge.rs accessors to Vec<NBEdge_Connection> and drop the clone
-fn all_connections(e: Ptr<NBEdge>) -> Vec<NBEdge_Connection> {
-    e.get_connections().clone()
+fn all_connections(e: Ptr<NBEdge>) -> &'static Vec<NBEdge_Connection> {
+    e.get().unwrap().get_connections()
 }
 fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
     e.get_connections_from_lane(lane, Ptr::default(), -1)
@@ -1352,7 +1351,7 @@ impl NBOwnTLDef {
                     fromLanes.push(i2);
                     toLanes.push(approached.toLane);
                     toEdges.push(approached.toEdge);
-                    if approached.vmax < NUMERICAL_EPS
+                    if approached.vmax < utils::geom::NUMERICAL_EPS
                         || (fromEdge.get_permissions(-1) & SVC_PASSENGER) == 0
                         || (approached.toEdge.get_permissions(-1) & SVC_PASSENGER) == 0
                     {
