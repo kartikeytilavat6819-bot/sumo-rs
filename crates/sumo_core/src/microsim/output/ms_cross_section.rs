@@ -26,7 +26,7 @@ impl MSCrossSection {
     // MSCrossSection(MSLane* lane, double pos) : myLane(lane), myPosition(pos) {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, pos: f64) -> Self {
-        todo!("port MSCrossSection::MSCrossSection")
+        MSCrossSection { myLane: lane, myPosition: pos }
     }
 
 }

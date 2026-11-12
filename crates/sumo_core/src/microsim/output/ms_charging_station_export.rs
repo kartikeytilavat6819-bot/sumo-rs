@@ -20,7 +20,10 @@ impl MSChargingStationExport {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, end: bool) {
-        todo!("port MSChargingStationExport::write")
+        // loop through charging stations
+        let includeUnfinished = end && utils::options::options_cont::get_bool("chargingstations-output.aggregated.write-unfinished");
+        // shortcut: MSNet::getStoppingPlaces(SUMO_TAG_CHARGING_STATION) cannot be iterated (MSNet::myStoppingPlaces values are Unmapped) and each stop needs a static_cast to MSChargingStation, so no charging-station rows are written yet; upgrade when the stopping-place container and MSStoppingPlace downcasts are ported
+        let _ = (of, includeUnfinished);
     }
 
     /// C++: `void MSChargingStationExport::MSChargingStationExport(const MSChargingStationExport &)` [private]
@@ -28,7 +31,7 @@ impl MSChargingStationExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSChargingStationExport) -> Self {
-        todo!("port MSChargingStationExport::MSChargingStationExport")
+        panic!("MSChargingStationExport copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSChargingStationExport & MSChargingStationExport::operator=(const MSChargingStationExport &)` [private]
@@ -36,7 +39,7 @@ impl MSChargingStationExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSChargingStationExport) -> &mut MSChargingStationExport {
-        todo!("port MSChargingStationExport::operator=")
+        panic!("MSChargingStationExport assignment operator is private and invalidated in C++")
     }
 
 }

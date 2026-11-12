@@ -86,7 +86,12 @@ impl MSBatteryExport {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, timestep: SUMOTime, precision: i32) {
-        todo!("port MSBatteryExport::write")
+        of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, utils::common::time::time2string(timestep).as_str());
+        of.set_precision(precision);
+
+        // shortcut: the vehicle rows need static_cast<const MSVehicle*> on each loaded vehicle and getDevice(typeid(MSDevice_Battery)), and neither has a Rust equivalent yet (no downcast, type-keyed getDevice unported), so only the timestep frame is written; upgrade when both exist
+
+        of.close_tag("");
     }
 
     /// C++: `void MSBatteryExport::MSBatteryExport(const MSBatteryExport &)` [private]
@@ -94,7 +99,7 @@ impl MSBatteryExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSBatteryExport) -> Self {
-        todo!("port MSBatteryExport::MSBatteryExport")
+        panic!("MSBatteryExport copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSBatteryExport & MSBatteryExport::operator=(const MSBatteryExport &)` [private]
@@ -102,7 +107,7 @@ impl MSBatteryExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSBatteryExport) -> &mut MSBatteryExport {
-        todo!("port MSBatteryExport::operator=")
+        panic!("MSBatteryExport assignment operator is private and invalidated in C++")
     }
 
 }
