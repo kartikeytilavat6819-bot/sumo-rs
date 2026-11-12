@@ -926,7 +926,7 @@ impl NBPTLineCont {
         let mut prevWayMinusEdges: Vec<Ptr<NBEdge>> = Vec::new();
         let mut currentWayEdges: Vec<Ptr<NBEdge>> = Vec::new();
         let mut currentWayMinusEdges: Vec<Ptr<NBEdge>> = Vec::new();
-        let waysIds: Vec<String> = pTLine.get_ways().clone();
+        let waysIds: Vec<String> = myPTLine.get_ways().clone();
         for (wIdx, way) in waysIds.iter().enumerate() {
             let mut foundForward = 0usize;
             if !cont.retrieve(way, false).is_null() {
@@ -960,7 +960,7 @@ impl NBPTLineCont {
                 }
             }
             let mut fakeMinus = false;
-            if foundReverse == 0 && foundForward > 0 && is_railway(pTLine.get_v_class()) {
+            if foundReverse == 0 && foundForward > 0 && is_railway(myPTLine.get_v_class()) {
                 // rail tracks may be used in both directions and are often not tagged as such.
                 // This can be repaired later with option --railway.topology.repair
                 let reversed: Vec<Ptr<NBEdge>> = currentWayEdges.iter().rev().take(foundForward).copied().collect();
@@ -1046,7 +1046,7 @@ impl NBPTLineCont {
         if edges.is_empty() && !currentWayMinusEdges.is_empty() {
             edges = currentWayMinusEdges.clone();
         }
-        pTLine.m().set_edges(&edges);
+        myPTLine.m().set_edges(&edges);
     }
 
     /// C++: `double NBPTLineCont::getCost(const NBEdgeCont &, SUMOAbstractRouter<NBRouterEdge, NBVehicle> &, const std::shared_ptr<NBPTStop>, const std::shared_ptr<NBPTStop>, const NBVehicle *)` [static, private]
