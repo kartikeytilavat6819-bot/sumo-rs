@@ -1,6 +1,9 @@
 //! Port of activitygen/AGActivityGenHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use utils::xml::generic_sax_handler::GenericSAXHandler;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::xml::sumo_xml_definitions::Tags;
+use utils::xml::sumo_xml_definitions::{ATTRS, TAGS};
 use crate::prelude::*;
 
 /// C++ class `AGActivityGenHandler` (activitygen/AGActivityGenHandler.h)
@@ -41,7 +44,15 @@ impl AGActivityGenHandler {
     //       myCity(city), net(net) {}
     #[allow(unused_variables)]
     pub fn new(city: &mut AGCity, net: Ptr<RONet>) -> Self {
-        todo!("port AGActivityGenHandler::AGActivityGenHandler")
+        AGActivityGenHandler {
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "sumo-stat", ""),
+            myCity: Ptr::from_mut(city),
+            myCurrentObject: String::new(),
+            currentBusLine: Ptr::default(),
+            isRevStation: false,
+            net,
+            myProcess: false,
+        }
     }
 
     /// C++: `void AGActivityGenHandler::~AGActivityGenHandler() noexcept` [virtual]
@@ -49,7 +60,7 @@ impl AGActivityGenHandler {
     // AGActivityGenHandler::~AGActivityGenHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AGActivityGenHandler::~AGActivityGenHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `void AGActivityGenHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -121,7 +132,27 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::myStartElement")
+        match element {
+            AGEN_TAG_GENERAL => self.parse_general_city_info(attrs),
+            AGEN_TAG_STREET => self.parse_streets(attrs),
+            AGEN_TAG_WORKHOURS => self.parse_work_hours(),
+            AGEN_TAG_OPENING => self.parse_opening_hour(attrs),
+            AGEN_TAG_CLOSING => self.parse_closing_hour(attrs),
+            AGEN_TAG_SCHOOLS => self.parse_schools(),
+            AGEN_TAG_SCHOOL => self.parse_school(attrs),
+            AGEN_TAG_BUSSTATION => self.parse_bus_station(attrs),
+            AGEN_TAG_BUSLINE => self.parse_bus_line(attrs),
+            AGEN_TAG_STATIONS => self.parse_stations(),
+            AGEN_TAG_REV_STATIONS => self.parse_rev_stations(),
+            AGEN_TAG_STATION => self.parse_station(attrs),
+            AGEN_TAG_FREQUENCY => self.parse_frequency(attrs),
+            AGEN_TAG_POPULATION => self.parse_population(),
+            // AGEN_TAG_CHILD_ACOMP (parseChildrenAccompaniment) is commented out upstream
+            AGEN_TAG_BRACKET => self.parse_bracket(attrs),
+            AGEN_TAG_PARAM => self.parse_parameters(attrs),
+            AGEN_TAG_ENTRANCE => self.parse_city_gates(attrs),
+            _ => {}
+        }
     }
 
     /// C++: `void AGActivityGenHandler::parseGeneralCityInfo(const SUMOSAXAttributes &)` [protected]
@@ -149,7 +180,18 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_general_city_info(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseGeneralCityInfo")
+        let sd = self.myCity.m().statData;
+        let mut ok = true;
+        sd.m().inhabitants = fail(AGEN_TAG_GENERAL, attrs.get_int(AGEN_ATTR_INHABITANTS));
+        sd.m().households = fail(AGEN_TAG_GENERAL, attrs.get_int(AGEN_ATTR_HOUSEHOLDS));
+        sd.m().limitAgeChildren = attrs.get_opt::<i32>(AGEN_ATTR_CHILDREN, "", &mut ok, 18, true);
+        sd.m().limitAgeRetirement = attrs.get_opt::<i32>(AGEN_ATTR_RETIREMENT, "", &mut ok, 63, true);
+        sd.m().carRate = attrs.get_opt::<f64>(AGEN_ATTR_CARS, "", &mut ok, 0.58, true);
+        sd.m().unemployement = attrs.get_opt::<f64>(AGEN_ATTR_UNEMPLOYEMENT, "", &mut ok, 0.06, true);
+        sd.m().laborDemand = attrs.get_opt::<f64>(AGEN_ATTR_LABORDEMAND, "", &mut ok, 1.05, true);
+        sd.m().maxFootDistance = attrs.get_opt::<f64>(AGEN_ATTR_MAX_FOOT_DIST, "", &mut ok, 300.0, true);
+        sd.m().incomingTraffic = attrs.get_opt::<i32>(AGEN_ATTR_IN_TRAFFIC, "", &mut ok, 0, true);
+        sd.m().outgoingTraffic = attrs.get_opt::<i32>(AGEN_ATTR_OUT_TRAFFIC, "", &mut ok, 0, true);
     }
 
     /// C++: `void AGActivityGenHandler::parseParameters(const SUMOSAXAttributes &)` [protected]
@@ -172,7 +214,13 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_parameters(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseParameters")
+        let sd = self.myCity.m().statData;
+        let mut ok = true;
+        sd.m().carPreference = attrs.get_opt::<f64>(AGEN_ATTR_CARPREF, "", &mut ok, 0.0, true);
+        sd.m().speedTimePerKm = attrs.get_opt::<f64>(AGEN_ATTR_CITYSPEED, "", &mut ok, 360.0, true);
+        sd.m().freeTimeActivityRate = attrs.get_opt::<f64>(AGEN_ATTR_FREETIMERATE, "", &mut ok, 0.15, true);
+        sd.m().uniformRandomTrafficRate = attrs.get_opt::<f64>(AGEN_ATTR_UNI_RAND_TRAFFIC, "", &mut ok, 0.0, true);
+        sd.m().departureVariation = attrs.get_opt::<f64>(AGEN_ATTR_DEP_VARIATION, "", &mut ok, 0.0, true);
     }
 
     /// C++: `void AGActivityGenHandler::parseStreets(const SUMOSAXAttributes &)` [protected]
@@ -215,7 +263,34 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_streets(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseStreets")
+        let mut pop = 0.0;
+        let mut work = 0.0;
+
+        let eid = attrs.get_string(SUMO_ATTR_EDGE);
+        if attrs.has_attribute(AGEN_ATTR_POPULATION) {
+            pop = fail(AGEN_TAG_STREET, attrs.get_float(AGEN_ATTR_POPULATION));
+            if pop.is_nan() {
+                pop = 0.0;
+                write_warning(&format!("Invalid {} value of edge {} is treated as zero.", attr_name(AGEN_ATTR_POPULATION), eid));
+            }
+        }
+        if attrs.has_attribute(AGEN_ATTR_OUT_WORKPOSITION) {
+            work = fail(AGEN_TAG_STREET, attrs.get_float(AGEN_ATTR_OUT_WORKPOSITION));
+            if work.is_nan() {
+                work = 0.0;
+                write_warning(&format!("Invalid {} value of edge {} is treated as zero.", attr_name(AGEN_ATTR_OUT_WORKPOSITION), eid));
+            }
+        }
+        // shortcut: dynamic_cast<AGStreet*> is an unchecked cast here; the AG builder only creates AGStreet edges in this net
+        let street = self.net.get_edge(&eid).cast::<AGStreet>();
+        if street.is_null() {
+            write_error(&format!("Edge '{}' is not known.", eid));
+            return;
+        }
+        let len = street.get_length();
+        street.m().set_population(pop * len);
+        street.m().set_workplace_number(work * len);
+        self.myCity.m().streets.push(street);
     }
 
     /// C++: `void AGActivityGenHandler::parseCityGates(const SUMOSAXAttributes &)` [protected]
@@ -239,7 +314,17 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_city_gates(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseCityGates")
+        let edge = attrs.get_string(SUMO_ATTR_EDGE);
+        let positionOnEdge = fail(AGEN_TAG_ENTRANCE, attrs.get_float(SUMO_ATTR_POSITION));
+        // shortcut: AGCity::getStreet's ProcessError is raised directly, not re-wrapped with the element-name message
+        let city = self.myCity.m();
+        let posi = AGPosition::new(city.get_street(&edge), positionOnEdge);
+        let key = city.cityGates.len() as i32;
+        let incoming = fail(AGEN_TAG_ENTRANCE, attrs.get_float(AGEN_ATTR_INCOMING));
+        city.statData.m().incoming.insert(key, incoming);
+        let outgoing = fail(AGEN_TAG_ENTRANCE, attrs.get_float(AGEN_ATTR_OUTGOING));
+        city.statData.m().outgoing.insert(key, outgoing);
+        city.cityGates.push(posi);
     }
 
     /// C++: `void AGActivityGenHandler::parseWorkHours()` [protected]
@@ -250,7 +335,7 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_work_hours(&mut self) {
-        todo!("port AGActivityGenHandler::parseWorkHours")
+        self.myCurrentObject = "workHours".to_string();
     }
 
     /// C++: `void AGActivityGenHandler::parseOpeningHour(const SUMOSAXAttributes &)` [protected]
@@ -270,7 +355,11 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_opening_hour(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseOpeningHour")
+        if self.myCurrentObject == "workHours" {
+            let hour = fail(AGEN_TAG_OPENING, attrs.get_int(AGEN_ATTR_HOUR));
+            let prop = fail(AGEN_TAG_OPENING, attrs.get_float(AGEN_ATTR_PROP));
+            self.myCity.m().statData.m().beginWorkHours.insert(hour, prop);
+        }
     }
 
     /// C++: `void AGActivityGenHandler::parseClosingHour(const SUMOSAXAttributes &)` [protected]
@@ -290,7 +379,11 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_closing_hour(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseClosingHour")
+        if self.myCurrentObject == "workHours" {
+            let hour = fail(AGEN_TAG_CLOSING, attrs.get_int(AGEN_ATTR_HOUR));
+            let prop = fail(AGEN_TAG_CLOSING, attrs.get_float(AGEN_ATTR_PROP));
+            self.myCity.m().statData.m().endWorkHours.insert(hour, prop);
+        }
     }
 
     /// C++: `void AGActivityGenHandler::parseSchools()` [protected]
@@ -301,7 +394,7 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_schools(&mut self) {
-        todo!("port AGActivityGenHandler::parseSchools")
+        self.myCurrentObject = "schools".to_string();
     }
 
     /// C++: `void AGActivityGenHandler::parseSchool(const SUMOSAXAttributes &)` [protected]
@@ -332,7 +425,24 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_school(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseSchool")
+        let edge = match attrs.get_string_opt(SUMO_ATTR_EDGE) {
+            Some(e) => e,
+            None => parse_error(AGEN_TAG_SCHOOL, "Cannot parse edge attribute"),
+        };
+        let positionOnEdge = if attrs.has_attribute(SUMO_ATTR_POSITION) {
+            fail(AGEN_TAG_SCHOOL, attrs.get_float(SUMO_ATTR_POSITION))
+        } else {
+            0.
+        };
+        let city = self.myCity.m();
+        let posi = AGPosition::new(city.get_street(&edge), positionOnEdge);
+        let beginAge = fail(AGEN_TAG_SCHOOL, attrs.get_int(AGEN_ATTR_BEGINAGE));
+        let endAge = fail(AGEN_TAG_SCHOOL, attrs.get_int(AGEN_ATTR_ENDAGE));
+        let capacity = fail(AGEN_TAG_SCHOOL, attrs.get_int(AGEN_ATTR_CAPACITY));
+        let openingHour = fail(AGEN_TAG_SCHOOL, attrs.get_int(AGEN_ATTR_OPENING));
+        let closingHour = fail(AGEN_TAG_SCHOOL, attrs.get_int(AGEN_ATTR_CLOSING));
+        let sch = AGSchool::new(capacity, posi, beginAge, endAge, openingHour, closingHour);
+        city.schools.push_back(sch);
     }
 
     /// C++: `void AGActivityGenHandler::parseBusStation(const SUMOSAXAttributes &)` [protected]
@@ -359,7 +469,20 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_bus_station(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseBusStation")
+        let edge = match attrs.get_string_opt(SUMO_ATTR_EDGE) {
+            Some(e) => e,
+            None => parse_error(AGEN_TAG_BUSSTATION, "Cannot parse edge attribute"),
+        };
+        let positionOnEdge = if attrs.has_attribute(SUMO_ATTR_POSITION) {
+            fail(AGEN_TAG_BUSSTATION, attrs.get_float(SUMO_ATTR_POSITION))
+        } else {
+            0.
+        };
+        let id = fail(AGEN_TAG_BUSSTATION, attrs.get_int(SUMO_ATTR_ID));
+        let city = self.myCity.m();
+        let posi = AGPosition::new(city.get_street(&edge), positionOnEdge);
+        // std::map::insert keeps an existing entry for the same id
+        city.statData.m().busStations.entry(id).or_insert(posi);
     }
 
     /// C++: `void AGActivityGenHandler::parseBusLine(const SUMOSAXAttributes &)` [protected]
@@ -381,7 +504,13 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_bus_line(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseBusLine")
+        self.myCurrentObject = "busLine".to_string();
+        let mut busL = AGBusLine::new(attrs.get_string(SUMO_ATTR_ID));
+        busL.set_max_trip_time(fail(AGEN_TAG_BUSLINE, attrs.get_int(AGEN_ATTR_MAX_TRIP_DURATION)));
+        let city = self.myCity.m();
+        city.busLines.push_front(busL);
+        // shortcut: C++ std::list keeps node addresses; VecDeque may move elements on the next push_front, but currentBusLine is re-set before any further use
+        self.currentBusLine = Ptr::from_mut(city.busLines.front_mut().unwrap());
     }
 
     /// C++: `void AGActivityGenHandler::parseStations()` [protected]
@@ -391,7 +520,7 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_stations(&mut self) {
-        todo!("port AGActivityGenHandler::parseStations")
+        self.isRevStation = false;
     }
 
     /// C++: `void AGActivityGenHandler::parseRevStations()` [protected]
@@ -401,7 +530,7 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_rev_stations(&mut self) {
-        todo!("port AGActivityGenHandler::parseRevStations")
+        self.isRevStation = true;
     }
 
     /// C++: `void AGActivityGenHandler::parseStation(const SUMOSAXAttributes &)` [protected]
@@ -435,7 +564,24 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_station(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseStation")
+        if self.myCurrentObject != "busLine" {
+            return;
+        }
+        let mut ok = true;
+        let refID = attrs.get::<i32>(SUMO_ATTR_REFID, &self.myCurrentObject.clone(), &mut ok, true);
+        if !ok {
+            parse_error(AGEN_TAG_STATION, "Process Error");
+        }
+        let sd = self.myCity.m().statData;
+        if !sd.m().busStations.contains_key(&refID) {
+            parse_error(AGEN_TAG_STATION, &format!("Unknown bus station '{}'.", refID));
+        }
+        let pos = sd.m().busStations[&refID];
+        if !self.isRevStation {
+            self.currentBusLine.m().locate_station(pos);
+        } else {
+            self.currentBusLine.m().locate_rev_station(pos);
+        }
     }
 
     /// C++: `void AGActivityGenHandler::parseFrequency(const SUMOSAXAttributes &)` [protected]
@@ -460,7 +606,13 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_frequency(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseFrequency")
+        if self.myCurrentObject != "busLine" {
+            return;
+        }
+        let beginB = fail(AGEN_TAG_FREQUENCY, attrs.get_int(SUMO_ATTR_BEGIN));
+        let endB = fail(AGEN_TAG_FREQUENCY, attrs.get_int(SUMO_ATTR_END));
+        let rateB = fail(AGEN_TAG_FREQUENCY, attrs.get_int(AGEN_ATTR_RATE));
+        self.currentBusLine.m().generate_buses(beginB, endB, rateB);
     }
 
     /// C++: `void AGActivityGenHandler::parsePopulation()` [protected]
@@ -471,7 +623,7 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_population(&mut self) {
-        todo!("port AGActivityGenHandler::parsePopulation")
+        self.myCurrentObject = "population".to_string();
     }
 
     /// C++: `void AGActivityGenHandler::parseBracket(const SUMOSAXAttributes &)` [protected]
@@ -515,7 +667,31 @@ impl AGActivityGenHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_bracket(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port AGActivityGenHandler::parseBracket")
+        let beginAge = fail(AGEN_TAG_BRACKET, attrs.get_int(AGEN_ATTR_BEGINAGE)); //included in the bracket
+        let endAge = fail(AGEN_TAG_BRACKET, attrs.get_int(AGEN_ATTR_ENDAGE)); //NOT included in the bracket
+        let mut overlapping = false;
+        let sd = self.myCity.m().statData;
+        // evaluate age
+        if beginAge < endAge {
+            for (&first, &second) in sd.m().ageSpan.iter() {
+                if !(beginAge >= second || endAge <= first) {
+                    overlapping = true;
+                }
+            }
+            if !overlapping {
+                sd.m().ageSpan.insert(beginAge, endAge);
+                if self.myCurrentObject == "population" {
+                    let nbr = fail(AGEN_TAG_BRACKET, attrs.get_int(AGEN_ATTR_PEOPLENBR));
+                    sd.m().population.insert(endAge, nbr as f64);
+                }
+            } else {
+                write_error(&format!("Error while parsing the element {}: begin and end age of the population is overlapping", Tags.get_string(AGEN_TAG_BRACKET)));
+                parse_error(AGEN_TAG_BRACKET, "Process Error");
+            }
+        } else {
+            write_error(&format!("Error while parsing the element {}: begin and end age of the population are not properly set", Tags.get_string(AGEN_TAG_BRACKET)));
+            parse_error(AGEN_TAG_BRACKET, "Process Error");
+        }
     }
 
     /// C++: `void AGActivityGenHandler::AGActivityGenHandler(const AGActivityGenHandler &)` [private]
@@ -536,3 +712,21 @@ impl AGActivityGenHandler {
 
 }
 
+/// C++ catch-block pattern: WRITE_ERROR("Error while parsing the element <tag>: <msg>"); throw ProcessError();
+fn parse_error(tag: i32, msg: &str) -> ! {
+    write_error(&format!("Error while parsing the element {}: {}", Tags.get_string(tag), msg));
+    panic!("{}", ProcessError::new("Process Error"));
+}
+
+/// Unwraps a SAX attribute read; a failure takes the same path as a C++ throw inside the try block.
+fn fail<T>(tag: i32, r: Result<T, ProcessError>) -> T {
+    match r {
+        Ok(v) => v,
+        Err(e) => parse_error(tag, &e.to_string()),
+    }
+}
+
+/// Attribute name as SUMOXMLDefinitions::Attrs.getString() prints it.
+fn attr_name(attr: i32) -> String {
+    utils::xml::sumo_xml_definitions::Attrs.get_string(attr).to_string()
+}
