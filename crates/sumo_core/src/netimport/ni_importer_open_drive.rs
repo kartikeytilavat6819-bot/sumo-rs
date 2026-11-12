@@ -5024,7 +5024,64 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn split_min_widths(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>, tc: &NBTypeCont, minDist: f64) {
-        todo!("port NIImporter_OpenDrive::splitMinWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut newSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+        let nSections = e.m().laneSections.len();
+        for j in 0..nSections {
+            let mut splitPositions: Vec<f64> = Vec::new();
+            let sectionEnd = if j + 1 == nSections { e.m().length } else { e.m().laneSections[j + 1].s };
+            let section = j as i32;
+            let sec = &mut e.m().laneSections[j];
+            if sec.rightLaneNumber > 0 {
+                let sOrig = sec.sOrig;
+                let lanes = sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default();
+                Self::find_width_split(tc, lanes, section, sOrig, sectionEnd, &mut splitPositions);
+            }
+            if sec.leftLaneNumber > 0 {
+                let sOrig = sec.sOrig;
+                let lanes = sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default();
+                Self::find_width_split(tc, lanes, section, sOrig, sectionEnd, &mut splitPositions);
+            }
+            newSections.push(sec.clone());
+            splitPositions.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            // filter out tiny splits
+            let mut prevSplit: f64 = sec.s;
+            let mut it: usize = 0;
+            while it < splitPositions.len() {
+                if splitPositions[it] - prevSplit < minDist || sectionEnd - splitPositions[it] < minDist {
+                    // avoid tiny (or duplicate) splits
+                    splitPositions.remove(it);
+                } else if splitPositions[it] < sec.s {
+                    // avoid splits for another section
+                    splitPositions.remove(it);
+                } else {
+                    prevSplit = splitPositions[it];
+                    it += 1;
+                }
+            }
+
+            if splitPositions.len() > 0 {
+                let sOrig = sec.sOrig;
+                Self::recompute_widths(newSections.last_mut().unwrap(), sOrig, splitPositions[0], sOrig, sectionEnd);
+                for it in 0..splitPositions.len() {
+                    let mut secNew = sec.clone();
+                    secNew.s = splitPositions[it];
+                    let secNewS = secNew.s;
+                    newSections.push(secNew);
+                    if newSections.last().unwrap().rightLaneNumber > 0 {
+                        let lanes = newSections.last_mut().unwrap().lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default();
+                        Self::set_straight_connections(lanes);
+                    }
+                    if newSections.last().unwrap().leftLaneNumber > 0 {
+                        let lanes = newSections.last_mut().unwrap().lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default();
+                        Self::set_straight_connections(lanes);
+                    }
+                    let end = if it + 1 == splitPositions.len() { sectionEnd } else { splitPositions[it + 1] };
+                    Self::recompute_widths(newSections.last_mut().unwrap(), secNewS, end, sOrig, sectionEnd);
+                }
+            }
+        }
+        e.m().laneSections = newSections;
     }
 
     /// C++: `void NIImporter_OpenDrive::findWidthSplit(const NBTypeCont &, std::vector<OpenDriveLane> &, int, double, double, std::vector<double> &)` [static, protected]
@@ -5121,7 +5178,45 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn find_width_split(tc: &NBTypeCont, lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, section: i32, sectionStart: f64, sectionEnd: f64, splitPositions: &mut Vec<f64>) {
-        todo!("port NIImporter_OpenDrive::findWidthSplit")
+        let myMinWidth: f64 = MY_MIN_WIDTH.with(|v| v.get());
+        for l in lanes.iter() {
+            let permissions: SVCPermissions = tc.get_edge_type_permissions(&l.type_) & !SVC_VULNERABLE;
+            if l.widthData.len() > 0 && tc.knows(&l.type_) && !tc.get_edge_type_shall_be_discarded(&l.type_) && permissions != 0 {
+                let mut sPrev: f64 = l.widthData[0].s;
+                let mut wPrev: f64 = l.widthData[0].compute_at(sPrev);
+                for (idx, it_w) in l.widthData.iter().enumerate() {
+                    let sEnd: f64 = if idx + 1 < l.widthData.len() { l.widthData[idx + 1].s } else { sectionEnd - sectionStart };
+                    let w: f64 = it_w.compute_at(sEnd);
+                    let changeDist: f64 = (myMinWidth - wPrev).abs();
+                    if (wPrev < myMinWidth && w > myMinWidth) || (wPrev > myMinWidth && w < myMinWidth) {
+                        let mut splitPos: f64 = sPrev + (sEnd - sPrev) / (w - wPrev).abs() * changeDist;
+                        let mut wSplit: f64 = it_w.compute_at(splitPos);
+                        // ensure that the thin part is actually thin enough
+                        while wSplit > myMinWidth {
+                            if wPrev < myMinWidth {
+                                // getting wider
+                                splitPos -= utils::geom::POSITION_EPS;
+                                if splitPos < sPrev {
+                                    splitPos = sPrev;
+                                    break;
+                                }
+                            } else {
+                                // getting thinner
+                                splitPos += utils::geom::POSITION_EPS;
+                                if splitPos > sEnd {
+                                    splitPos = sEnd;
+                                    break;
+                                }
+                            }
+                            wSplit = it_w.compute_at(splitPos);
+                        }
+                        splitPositions.push(sectionStart + splitPos);
+                    }
+                    wPrev = w;
+                    sPrev = sEnd;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::sanitizeWidths(OpenDriveEdge *)` [static, protected]
@@ -5146,7 +5241,17 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn sanitize_widths(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) {
-        todo!("port NIImporter_OpenDrive::sanitizeWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        for sec in e.m().laneSections.iter_mut() {
+            // filter widths within the current section (#5888).
+            // @note, Short laneSections could also be worth filtering alltogether
+            if sec.rightLaneNumber > 0 {
+                Self::sanitize_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default(), sec.length);
+            }
+            if sec.leftLaneNumber > 0 {
+                Self::sanitize_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default(), sec.length);
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::sanitizeWidths(std::vector<OpenDriveLane> &, double)` [static, protected]
@@ -5178,7 +5283,26 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn sanitize_widths_2(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, length: f64) {
-        todo!("port NIImporter_OpenDrive::sanitizeWidths")
+        for l in lanes.iter_mut() {
+            if l.widthData.len() > 0 {
+                let wd = &l.widthData;
+                let threshold: f64 = utils::geom::POSITION_EPS;
+                let mut maxNoShort: f64 = -f64::MAX;
+                let mut seen: f64 = 0.0;
+                for i in 0..wd.len() {
+                    let wdLength: f64 = if i < wd.len() - 1 { wd[i + 1].s - wd[i].s } else { length - seen };
+                    seen += wdLength;
+                    if wdLength > threshold {
+                        // MAX2(maxNoShort, wd[i].a)
+                        let a = wd[i].a;
+                        maxNoShort = if maxNoShort > a { maxNoShort } else { a };
+                    }
+                }
+                if maxNoShort > 0.0 {
+                    l.width = maxNoShort;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setStraightConnections(std::vector<OpenDriveLane> &)` [static, protected]
@@ -5190,7 +5314,9 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn set_straight_connections(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>) {
-        todo!("port NIImporter_OpenDrive::setStraightConnections")
+        for k in lanes.iter_mut() {
+            k.predecessor = k.id;
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::recomputeWidths(OpenDriveLaneSection &, double, double, double, double)` [static, protected]
