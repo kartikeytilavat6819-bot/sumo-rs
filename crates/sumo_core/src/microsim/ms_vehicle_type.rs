@@ -1349,7 +1349,7 @@ impl MSVehicleType {
         // the unique_ptr ensures the type is deleted if an exception occurs
         let vtype: Ptr<MSVehicleType> = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(from))));
         let decel = from.get_cf_param(SUMO_ATTR_DECEL, SUMOVTypeParameter::get_default_decel(from.vehicleClass));
-        let emergencyDecel = from.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(from.vehicleClass, decel, g_default_emergency_decel()));
+        let emergencyDecel = from.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(from.vehicleClass, decel, crate::microsim::cfmodels::mscf_model::g_default_emergency_decel()));
         // by default decel and apparentDecel are identical
         let apparentDecel = from.get_cf_param(SUMO_ATTR_APPARENTDECEL, decel);
 
@@ -1450,7 +1450,7 @@ impl MSVehicleType {
         }
         if !MSNet::get_instance().m().get_vehicle_control().add_v_type(vtype) {
             let singular = if persistent { "".to_string() } else { "singular ".to_string() };
-            panic!("{}", ProcessError::new(tlf!("could not add %type %", singular, vtype.get_id())));
+            panic!("{}", ProcessError::new(utils::tlf!("could not add %type %", singular, vtype.get_id())));
         }
         vtype
     }

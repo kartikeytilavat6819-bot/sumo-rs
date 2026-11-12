@@ -11,6 +11,11 @@ use utils::options::options_cont::{get_float, get_string, is_set};
 // VTYPEPARS_VEHICLECLASS_SET bit from utils/vehicle/SUMOVTypeParameter.h (not exported by the ported module yet)
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
+// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
+fn g_use_meso_sim() -> bool {
+    false
+}
+
 /// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
 // shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
 fn as_base(v: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
