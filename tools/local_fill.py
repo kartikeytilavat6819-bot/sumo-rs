@@ -145,7 +145,11 @@ def main():
     ap.add_argument("--max-lines", type=int, default=15)
     ap.add_argument("--exclude", default="")
     ap.add_argument("--limit-files", type=int, default=0)
+    ap.add_argument("--state", default="", help="file listing already-processed files (skipped, appended to)")
     a = ap.parse_args()
+    done = set()
+    if a.state and os.path.exists(a.state):
+        done = {l.strip() for l in open(a.state, encoding="utf8") if l.strip()}
     wt = os.path.abspath(a.worktree)
     model = MODEL or server_model()
     excl = {e.strip() for e in a.exclude.split(",") if e.strip()}
@@ -154,7 +158,7 @@ def main():
         for f in fs:
             if f.endswith(".rs"):
                 rel = os.path.relpath(os.path.join(d, f), wt).replace("\\", "/")
-                if os.path.basename(rel) not in excl and 'todo!("port ' in open(os.path.join(d, f), encoding="utf8").read():
+                if os.path.basename(rel) not in excl and rel not in done and 'todo!("port ' in open(os.path.join(d, f), encoding="utf8").read():
                     files.append(rel)
     files.sort()
     if a.limit_files:
@@ -167,6 +171,9 @@ def main():
             subprocess.run(["git", "add", rel], cwd=wt)
             subprocess.run(["git", "commit", "-qm", f"Local model fill: {n} methods in {os.path.basename(rel)}"], cwd=wt)
         print(f"{rel}: {n} methods kept (total {total})", flush=True)
+        if a.state:
+            open(a.state, "a", encoding="utf8").write(rel + "\n")
+    print(f"REMAINING_FILES={1 if files else 0}", flush=True)
 
 
 if __name__ == "__main__":
