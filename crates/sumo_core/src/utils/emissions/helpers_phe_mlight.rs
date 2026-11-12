@@ -2,6 +2,13 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+use foreign::phemlight::constants as pc4;
+
+/// C++ `HelpersPHEMlight::PHEMLIGHT_BASE` (3 << 16)
+pub const PHEMLIGHT_BASE: i32 = 3 << 16;
+/// C++ `SECONDS_PER_HOUR` (utils/emissions/PHEMConstants.h)
+pub const SECONDS_PER_HOUR: f64 = 3600.;
+
 /// Helper methods for PHEMlight-based emission computation
 /// C++ class `HelpersPHEMlight` (utils/emissions/HelpersPHEMlight.h)
 pub struct HelpersPHEMlight {
@@ -38,7 +45,13 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port HelpersPHEMlight::HelpersPHEMlight")
+        Self {
+            base: PollutantsInterface_Helper::new("PHEMlight".to_string(), PHEMLIGHT_BASE, -1),
+            myIndex: PHEMLIGHT_BASE,
+            myCEPHandler: CEPHandler::new(),
+            myHelper: Helpers::default(),
+            myCEPs: BTreeMap::new(),
+        }
     }
 
     /// C++: `void HelpersPHEMlight::~HelpersPHEMlight() noexcept` [virtual]
@@ -50,7 +63,8 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port HelpersPHEMlight::~HelpersPHEMlight")
+        // shortcut: the CEP objects are owned by myCEPHandler in this port, so the C++ delete loop only clears the index map, upgrade if CEPs move out of the handler
+        self.myCEPs.clear();
     }
 
     /// C++: `void HelpersPHEMlight::HelpersPHEMlight(std::string, const int, const int)` [protected]
@@ -59,7 +73,14 @@ impl HelpersPHEMlight {
     //         : PollutantsInterface::Helper(name, baseIndex, defaultClass) {}
     #[allow(unused_variables)]
     pub fn new_2(name: String, baseIndex: i32, defaultClass: i32) -> Self {
-        todo!("port HelpersPHEMlight::HelpersPHEMlight")
+        Self {
+            base: PollutantsInterface_Helper::new(name, baseIndex, defaultClass),
+            // C++ leaves myIndex uninitialized in this constructor; subclasses set it
+            myIndex: baseIndex,
+            myCEPHandler: CEPHandler::new(),
+            myHelper: Helpers::default(),
+            myCEPs: BTreeMap::new(),
+        }
     }
 
     /// C++: `SUMOEmissionClass HelpersPHEMlight::getClassByName(const std::string &, const SUMOVehicleClass)` [virtual]
@@ -113,7 +134,50 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_class_by_name(&mut self, eClass: &str, vc: SUMOVehicleClass) -> SUMOEmissionClass {
-        todo!("port HelpersPHEMlight::getClassByName")
+        if eClass == "unknown" && !self.myEmissionClassStrings.has_string("unknown") {
+            let alias = self.get_class_by_name("PC_G_EU4", vc);
+            self.myEmissionClassStrings.add_alias("unknown", alias);
+        }
+        if eClass == "default" && !self.myEmissionClassStrings.has_string("default") {
+            let alias = self.get_class_by_name("PC_G_EU4", vc);
+            self.myEmissionClassStrings.add_alias("default", alias);
+        }
+        if self.myEmissionClassStrings.has_string(eClass) {
+            return self.myEmissionClassStrings.get(eClass).unwrap();
+        }
+        if eClass.len() < 6 {
+            panic!("Unknown emission class '{}'.", eClass);
+        }
+        let mut index = self.myIndex;
+        self.myIndex += 1;
+        let typ = &eClass.as_bytes()[..3];
+        if matches!(typ, b"HDV" | b"LB_" | b"RB_" | b"LSZ") || eClass.contains("LKW") {
+            index |= HEAVY_BIT;
+        }
+        self.myEmissionClassStrings.insert(eClass, index, true).unwrap();
+        // the INTERNAL_PHEM handler lookup is not compiled in regular builds, so the PHEMlight CEP is always loaded here
+        self.myVolumetricFuel = utils::options::options_cont::get_bool("emissions.volumetric-fuel");
+        let mut phemPath: Vec<String> = Vec::new();
+        phemPath.push(format!("{}/", utils::options::options_cont::get_string("phemlight-path")));
+        if let Ok(p) = std::env::var("PHEMLIGHT_PATH") {
+            phemPath.push(format!("{}/", p));
+        }
+        if let Ok(s) = std::env::var("SUMO_HOME") {
+            phemPath.push(format!("{}/data/emissions/PHEMlight/", s));
+        }
+        self.myHelper.set_comment_prefix("c");
+        self.myHelper.set_phem_data_v("V4");
+        self.myHelper.setclass(eClass);
+        if !self.myCEPHandler.get_cep(&phemPath, &mut self.myHelper) {
+            self.myEmissionClassStrings.remove(eClass, index);
+            self.myIndex -= 1;
+            panic!("File for PHEM emission class {} not found.\n{}", eClass, self.myHelper.get_err_msg());
+        }
+        let gClass = self.myHelper.get_g_class().to_string();
+        let cep = Ptr::new(self.myCEPHandler.get_ceps().get(&gClass).unwrap());
+        self.myCEPs.insert(index, cep);
+        self.myEmissionClassStrings.add_alias(&utils::common::string_utils::to_lower_case(eClass), index);
+        index
     }
 
     /// C++: `SUMOEmissionClass HelpersPHEMlight::getClass(const SUMOEmissionClass, const std::string &, const std::string &, const std::string &, const double) const` [const, virtual]
@@ -181,7 +245,64 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_class(&self, base: SUMOEmissionClass, vClass: &str, fuel: &str, eClass: &str, weight: f64) -> SUMOEmissionClass {
-        todo!("port HelpersPHEMlight::getClass")
+        let mut eClassOffset = "0".to_string();
+        if eClass.len() == 5 && eClass.starts_with("Euro") {
+            if (b'0'..=b'6').contains(&eClass.as_bytes()[4]) {
+                eClassOffset = eClass[4..5].to_string();
+            }
+        }
+        let mut desc = String::new();
+        if vClass == "Passenger" {
+            desc = "PKW_".to_string();
+            if fuel == "Gasoline" {
+                desc += "G_";
+            } else if fuel == "Diesel" {
+                desc += "D_";
+            } else if fuel == "HybridGasoline" {
+                desc = format!("H_{}G_", desc);
+            } else if fuel == "HybridDiesel" {
+                desc = format!("H_{}G_", desc);
+            }
+            desc += &format!("EU{}", eClassOffset);
+        } else if vClass == "Moped" {
+            desc = format!("KKR_G_EU{}", eClassOffset);
+        } else if vClass == "Motorcycle" {
+            desc = format!("MR_G_EU{}", eClassOffset);
+            if fuel == "Gasoline2S" {
+                desc += "_2T";
+            } else {
+                desc += "_4T";
+            }
+        } else if vClass == "Delivery" {
+            desc = "LNF_".to_string();
+            if fuel == "Gasoline" {
+                desc += "G_";
+            } else if fuel == "Diesel" {
+                desc += "D_";
+            }
+            desc += &format!("EU{}_I", eClassOffset);
+            if weight > 1305. {
+                desc += "I";
+                if weight > 1760. {
+                    desc += "I";
+                }
+            }
+        } else if vClass == "UrbanBus" {
+            desc = format!("LB_D_EU{}", eClassOffset);
+        } else if vClass == "Coach" {
+            desc = format!("RB_D_EU{}", eClassOffset);
+        } else if vClass == "Truck" {
+            desc = format!("Solo_LKW_D_EU{}_I", eClassOffset);
+            if weight > 1305. {
+                desc += "I";
+            }
+        } else if vClass == "Trailer" {
+            desc = format!("LSZ_D_EU{}", eClassOffset);
+        }
+        if self.myEmissionClassStrings.has_string(&desc) {
+            return self.myEmissionClassStrings.get(&desc).unwrap();
+        }
+        base
     }
 
     /// C++: `std::string HelpersPHEMlight::getAmitranVehicleClass(const SUMOEmissionClass) const` [const, virtual]
@@ -208,7 +329,24 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_amitran_vehicle_class(&self, c: SUMOEmissionClass) -> String {
-        todo!("port HelpersPHEMlight::getAmitranVehicleClass")
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
+        if name.contains("KKR_") {
+            "Moped".to_string()
+        } else if name.contains("RB_") {
+            "Coach".to_string()
+        } else if name.contains("LB_") {
+            "UrbanBus".to_string()
+        } else if name.contains("LNF_") {
+            "Delivery".to_string()
+        } else if name.contains("LSZ_") {
+            "Trailer".to_string()
+        } else if name.contains("MR_") {
+            "Motorcycle".to_string()
+        } else if name.contains("LKW_") {
+            "Truck".to_string()
+        } else {
+            "Passenger".to_string()
+        }
     }
 
     /// C++: `std::string HelpersPHEMlight::getFuel(const SUMOEmissionClass) const` [const, virtual]
@@ -227,7 +365,15 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel(&self, c: SUMOEmissionClass) -> String {
-        todo!("port HelpersPHEMlight::getFuel")
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
+        let mut fuel = "Gasoline".to_string();
+        if name.contains("_D_") {
+            fuel = "Diesel".to_string();
+        }
+        if name.contains("H_") {
+            fuel = format!("Hybrid{}", fuel);
+        }
+        fuel
     }
 
     /// C++: `int HelpersPHEMlight::getEuroClass(const SUMOEmissionClass) const` [const, virtual]
@@ -252,7 +398,22 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_euro_class(&self, c: SUMOEmissionClass) -> i32 {
-        todo!("port HelpersPHEMlight::getEuroClass")
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
+        if name.contains("_EU1") {
+            1
+        } else if name.contains("_EU2") {
+            2
+        } else if name.contains("_EU3") {
+            3
+        } else if name.contains("_EU4") {
+            4
+        } else if name.contains("_EU5") {
+            5
+        } else if name.contains("_EU6") {
+            6
+        } else {
+            0
+        }
     }
 
     /// C++: `double HelpersPHEMlight::getWeight(const SUMOEmissionClass) const` [const, virtual]
@@ -280,7 +441,24 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_weight(&self, c: SUMOEmissionClass) -> f64 {
-        todo!("port HelpersPHEMlight::getWeight")
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
+        if name.contains("LNF_") {
+            if name.contains("_III") {
+                return 2630.;
+            } else if name.contains("_II") {
+                return 1532.;
+            } else if name.contains("_I") {
+                return 652.;
+            }
+        }
+        if name.contains("Solo_LKW_") {
+            if name.contains("_II") {
+                return 8398.;
+            } else if name.contains("_I") {
+                return 18702.;
+            }
+        }
+        -1.
     }
 
     /// C++: `double HelpersPHEMlight::compute(const SUMOEmissionClass, const PollutantsInterface::EmissionType, const double, const double, const double, const EnergyParams *) const` [const, virtual]
@@ -356,7 +534,71 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn compute(&self, c: SUMOEmissionClass, e: PollutantsInterface_EmissionType, v: f64, a: f64, slope: f64, param: Ptr<EnergyParams>) -> f64 {
-        todo!("port HelpersPHEMlight::compute")
+        if !param.is_null() && param.m().is_engine_off() {
+            return 0.;
+        }
+        let corrSpeed = if 0.0 > v { 0.0 } else { v }; // MAX2(0.0, v)
+        let mut power = 0.;
+        // the INTERNAL_PHEM PHEMCEP lookup is not compiled in regular builds, so oldCep is always null here
+        let oldCep: Ptr<PHEMCEP> = Ptr::null();
+        let currCep: Ptr<CEP> = self.myCEPs.get(&c).copied().unwrap_or(Ptr::null());
+        if !currCep.is_null() {
+            let corrAcc = self.get_modified_accel(c, corrSpeed, a, slope, param);
+            if currCep.m().get_fuel_type() != pc4::STR_BEV && corrAcc < currCep.m().get_decel_coast(corrSpeed, corrAcc, slope) && corrSpeed > pc4::ZERO_SPEED_ACCURACY {
+                // the IDLE_SPEED fix above is now directly in the decel coast calculation.
+                return 0.;
+            }
+            power = currCep.m().calc_power(corrSpeed, corrAcc, slope);
+        }
+        let fuelType: String = if !oldCep.is_null() {
+            oldCep.m().get_vehicle_fuel_type().to_string()
+        } else {
+            currCep.m().get_fuel_type().to_string()
+        };
+        match e {
+            PollutantsInterface_EmissionType::CO => {
+                self.get_emission(oldCep, currCep, "CO", power, corrSpeed) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::CO2 => {
+                if !oldCep.is_null() {
+                    return self.get_emission(oldCep, currCep, "FC", power, corrSpeed) * 3.15 / SECONDS_PER_HOUR * 1000.;
+                }
+                let fc = self.get_emission(Ptr::null(), currCep, "FC", power, corrSpeed);
+                let co = self.get_emission(Ptr::null(), currCep, "CO", power, corrSpeed);
+                let hc = self.get_emission(Ptr::null(), currCep, "HC", power, corrSpeed);
+                currCep.m().get_co2_emission(fc, co, hc, Ptr::new(&self.myHelper).m()) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::HC => {
+                self.get_emission(oldCep, currCep, "HC", power, corrSpeed) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::NO_X => {
+                self.get_emission(oldCep, currCep, "NOx", power, corrSpeed) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::PM_X => {
+                self.get_emission(oldCep, currCep, "PM", power, corrSpeed) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::FUEL => {
+                if self.myVolumetricFuel && fuelType == pc4::STR_DIESEL {
+                    // divide by average diesel density of 836 g/l
+                    return self.get_emission(oldCep, currCep, "FC", power, corrSpeed) / 836. / SECONDS_PER_HOUR * 1000.;
+                }
+                if self.myVolumetricFuel && fuelType == pc4::STR_GASOLINE {
+                    // divide by average gasoline density of 742 g/l
+                    return self.get_emission(oldCep, currCep, "FC", power, corrSpeed) / 742. / SECONDS_PER_HOUR * 1000.;
+                }
+                if fuelType == pc4::STR_BEV {
+                    return 0.;
+                }
+                // still in mg even if myVolumetricFuel is set!
+                self.get_emission(oldCep, currCep, "FC", power, corrSpeed) / SECONDS_PER_HOUR * 1000.
+            }
+            PollutantsInterface_EmissionType::ELEC => {
+                if fuelType == pc4::STR_BEV {
+                    return self.get_emission(oldCep, currCep, "FC", power, corrSpeed) / SECONDS_PER_HOUR * 1000.;
+                }
+                0.
+            }
+        }
     }
 
     /// C++: `double HelpersPHEMlight::getModifiedAccel(const SUMOEmissionClass, const double, const double, const double, const EnergyParams *) const` [const, virtual]
@@ -371,7 +613,14 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_modified_accel(&self, c: SUMOEmissionClass, v: f64, a: f64, slope: f64, param: Ptr<EnergyParams>) -> f64 {
-        todo!("port HelpersPHEMlight::getModifiedAccel")
+        if let Some(currCep) = self.myCEPs.get(&c).copied() {
+            if v == 0.0 {
+                return 0.0;
+            }
+            let m = currCep.m().get_max_accel(v, slope);
+            return if a < m { a } else { m }; // MIN2(a, currCep->GetMaxAccel(v, slope))
+        }
+        a
     }
 
     /// C++: `double HelpersPHEMlight::getCoastingDecel(const SUMOEmissionClass, const double, const double, const double, const EnergyParams *) const` [const, virtual]
@@ -382,7 +631,10 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_coasting_decel(&self, c: SUMOEmissionClass, v: f64, a: f64, slope: f64, param: Ptr<EnergyParams>) -> f64 {
-        todo!("port HelpersPHEMlight::getCoastingDecel")
+        match self.myCEPs.get(&c) {
+            None => 0.,
+            Some(cep) => cep.m().get_decel_coast(v, a, slope),
+        }
     }
 
     /// C++: `double HelpersPHEMlight::getEmission(const PHEMCEP *, PHEMlightdll::CEP *, const std::string &, const double, const double) const` [const, private]
@@ -396,7 +648,10 @@ impl HelpersPHEMlight {
     // }
     #[allow(unused_variables)]
     pub fn get_emission(&self, oldCep: Ptr<PHEMCEP>, currCep: Ptr<CEP>, e: &str, p: f64, v: f64) -> f64 {
-        todo!("port HelpersPHEMlight::getEmission")
+        if !oldCep.is_null() {
+            return oldCep.m().get_emission(e, p, v, false);
+        }
+        currCep.m().get_emission(e, p, v, Ptr::new(&self.myHelper).m())
     }
 
 }
