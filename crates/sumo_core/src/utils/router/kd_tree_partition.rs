@@ -1,15 +1,21 @@
 //! Port of utils/router/KDTreePartition.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+/// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) };
+    }
+}
+// C++ function-local `static int cellCounter`
+static mut CELL_COUNTER: i32 = 0;
 
 /// C++ enum `Axis`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i64)]
 pub enum Axis {
     X = 0,
-}
-impl Axis {
-    pub const Y: Self = Self::X;
+    Y = 1,
 }
 
 /// Represents an element of the node partition (i.e. a node set)
@@ -449,7 +455,16 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Cell::~Cell")
+        let left = self.myLeftOrLowerSubcell;
+        if !left.is_null() {
+            left.m().drop_();
+            delete_ptr(left);
+        }
+        let right = self.myRightOrUpperSubcell;
+        if !right.is_null() {
+            right.m().drop_();
+            delete_ptr(right);
+        }
     }
 
     /// C++: `Axis Cell::getAxis() const` [const]
@@ -459,7 +474,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_axis(&self) -> Axis {
-        todo!("port Cell::getAxis")
+        self.myAxis
     }
 
     /// C++: `int * Cell::edgeSet(const V *const) const` [const]
@@ -577,7 +592,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_number(&self) -> i32 {
-        todo!("port Cell::getNumber")
+        self.myNumber
     }
 
     /// C++: `int Cell::getLevel() const` [const]
@@ -586,7 +601,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_level(&self) -> i32 {
-        todo!("port Cell::getLevel")
+        self.myLevel
     }
 
     /// C++: `int Cell::getNumberOfCells() const` [const]
@@ -596,7 +611,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_number_of_cells(&self) -> i32 {
-        todo!("port Cell::getNumberOfCells")
+        *Self::cell_counter()
     }
 
     /// C++: `int * Cell::nodes() const` [const]
@@ -620,7 +635,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_boundary_from_nodes(&self) -> &i32 {
-        todo!("port Cell::getBoundaryFromNodes")
+        &self.myBoundaryFromNodes
     }
 
     /// C++: `const int & Cell::getIncomingBoundaryEdges() const` [const]
@@ -630,7 +645,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_incoming_boundary_edges(&self) -> &i32 {
-        todo!("port Cell::getIncomingBoundaryEdges")
+        &self.myIncomingBoundaryEdges
     }
 
     /// C++: `const int & Cell::getOutgoingBoundaryEdges() const` [const]
@@ -640,7 +655,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_outgoing_boundary_edges(&self) -> &i32 {
-        todo!("port Cell::getOutgoingBoundaryEdges")
+        &self.myOutgoingBoundaryEdges
     }
 
     /// C++: `const Cell * Cell::getLeftOrLowerSubcell() const` [const]
@@ -650,7 +665,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_left_or_lower_subcell(&self) -> Ptr<KDTreePartition_Cell> {
-        todo!("port Cell::getLeftOrLowerSubcell")
+        self.myLeftOrLowerSubcell
     }
 
     /// C++: `const Cell * Cell::getRightOrUpperSubcell() const` [const]
@@ -660,7 +675,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_right_or_upper_subcell(&self) -> Ptr<KDTreePartition_Cell> {
-        todo!("port Cell::getRightOrUpperSubcell")
+        self.myRightOrUpperSubcell
     }
 
     /// C++: `const Cell * Cell::getSupercell() const` [const]
@@ -670,7 +685,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_supercell(&self) -> Ptr<KDTreePartition_Cell> {
-        todo!("port Cell::getSupercell")
+        self.mySupercell
     }
 
     /// C++: `double Cell::getMinX() const` [const]
@@ -680,7 +695,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_min_x(&self) -> f64 {
-        todo!("port Cell::getMinX")
+        self.myMinX
     }
 
     /// C++: `double Cell::getMaxX() const` [const]
@@ -690,7 +705,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_max_x(&self) -> f64 {
-        todo!("port Cell::getMaxX")
+        self.myMaxX
     }
 
     /// C++: `double Cell::getMinY() const` [const]
@@ -700,7 +715,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_min_y(&self) -> f64 {
-        todo!("port Cell::getMinY")
+        self.myMinY
     }
 
     /// C++: `double Cell::getMaxY() const` [const]
@@ -710,7 +725,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_max_y(&self) -> f64 {
-        todo!("port Cell::getMaxY")
+        self.myMaxY
     }
 
     /// C++: `bool Cell::contains(const N *) const` [const]
@@ -799,7 +814,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn is_left_or_lower_cell(&self) -> bool {
-        todo!("port Cell::isLeftOrLowerCell")
+        self.myIsLeftOrLowerCell
     }
 
     /// C++: `double Cell::getMedianCoordinate() const` [const]
@@ -809,7 +824,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn get_median_coordinate(&self) -> f64 {
-        todo!("port Cell::getMedianCoordinate")
+        self.myMedianCoordinate
     }
 
     /// C++: `size_t Cell::partition()` [private]
@@ -876,7 +891,8 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn cell_counter() -> &'static mut i32 {
-        todo!("port Cell::cellCounter")
+        // shortcut: the C++ function-local static is ported as the module-level CELL_COUNTER
+        unsafe { &mut *std::ptr::addr_of_mut!(CELL_COUNTER) }
     }
 
     /// C++: `bool Cell::isProhibited(const E *const, const V *const) const` [const, private]
@@ -1086,7 +1102,11 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port KDTreePartition::~KDTreePartition<E, N, V>")
+        let root = self.myRoot;
+        if !root.is_null() {
+            root.m().drop_();
+            delete_ptr(root);
+        }
     }
 
     /// C++: `void KDTreePartition::init(const V *const)`
@@ -1188,7 +1208,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_root(&self) -> Ptr<KDTreePartition_Cell> {
-        todo!("port KDTreePartition::getRoot")
+        self.myRoot
     }
 
     /// C++: `const int & KDTreePartition::getCells()`
@@ -1250,7 +1270,11 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn flip(axis: Axis) -> Axis {
-        todo!("port KDTreePartition::flip")
+        if axis == Axis::X {
+            Axis::Y
+        } else {
+            Axis::X
+        }
     }
 
     /// C++: `int KDTreePartition::numberOfArcFlags() const` [const]
@@ -1260,7 +1284,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn number_of_arc_flags(&self) -> i32 {
-        todo!("port KDTreePartition::numberOfArcFlags")
+        2 * (self.myNumberOfLevels - 1)
     }
 
     /// C++: `int KDTreePartition::getNumberOfLevels() const` [const]
@@ -1269,7 +1293,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_number_of_levels(&self) -> i32 {
-        todo!("port KDTreePartition::getNumberOfLevels")
+        self.myNumberOfLevels
     }
 
     /// C++: `size_t KDTreePartition::numberOfCells() const` [const]
@@ -1279,7 +1303,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn number_of_cells(&self) -> usize {
-        todo!("port KDTreePartition::numberOfCells")
+        (2f64.powi(self.myNumberOfLevels).round() as i64 - 1) as usize
     }
 
     /// C++: `size_t KDTreePartition::numberOfRegions() const` [const]
@@ -1289,7 +1313,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn number_of_regions(&self) -> usize {
-        todo!("port KDTreePartition::numberOfRegions")
+        2f64.powi(self.myNumberOfLevels - 1).round() as usize
     }
 
     /// C++: `bool KDTreePartition::isClean()`
@@ -1299,7 +1323,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_clean(&mut self) -> bool {
-        todo!("port KDTreePartition::isClean")
+        self.myAmClean
     }
 
     /// C++: `const Cell * KDTreePartition::searchNode(const N *) const` [const]
