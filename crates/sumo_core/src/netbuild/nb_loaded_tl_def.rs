@@ -1,6 +1,7 @@
 //! Port of netbuild/NBLoadedTLDef.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
 
 /// C++ typedef `std::map<std::string, SignalGroup *> NBLoadedTLDef::SignalGroupCont`
 pub type NBLoadedTLDef_SignalGroupCont = BTreeMap<String, Ptr<NBLoadedTLDef_SignalGroup>>;
@@ -497,15 +498,18 @@ impl NBLoadedTLDef {
     #[allow(unused_variables)]
     pub fn collect_nodes(&mut self) {
         self.myControlledNodes.clear();
+        // local buffer: pushing into self while iterating mySignalGroups through self is a borrow conflict
+        let mut controlled = Vec::new();
         for &group in self.mySignalGroups.values() {
             let linkNo = group.get_link_no();
             for j in 0..linkNo {
                 let conn = group.get_connection(j);
                 let edge = conn.get_from();
                 let node = edge.get_to_node();
-                self.myControlledNodes.push(node);
+                controlled.push(node);
             }
         }
+        self.myControlledNodes.extend(controlled);
         // determinism: C++ std::sort is unstable; node IDs are unique so ties do not occur
         self.myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     }

@@ -186,7 +186,7 @@ impl MSQueueExport {
         for &edge in ec.get_edges() {
             if MSGlobals::use_meso_sim() {
                 let mut segment_offset = 0.0_f64;
-                let mut segment = MSGlobals::meso_net().get_segment_for_edge(&*edge, 0.0);
+                let mut segment = meso_net().get_segment_for_edge(&*edge, 0.0);
                 while !segment.is_null() {
                     for q_idx in 0..segment.num_queues() {
                         MSQueueExport::write_meso_queue(of, &*edge, &*segment, q_idx, segment_offset, threshold, ensureOpen);

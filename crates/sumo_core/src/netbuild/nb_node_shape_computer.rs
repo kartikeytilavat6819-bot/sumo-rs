@@ -1,6 +1,7 @@
 //! Port of netbuild/NBNodeShapeComputer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
 use utils::options::options_cont::{exists, get_bool, get_float, get_int, is_set};

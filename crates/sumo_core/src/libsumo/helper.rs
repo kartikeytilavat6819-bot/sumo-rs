@@ -403,7 +403,7 @@ impl Helper {
     // }
     #[allow(unused_variables)]
     pub fn make_tra_ci_position_vector(positionVector: &PositionVector) -> TraCIPositionVector {
-        let mut tp = TraCIPositionVector { base: TraCIResult {}, value: Vec::new() };
+        let mut tp = TraCIPositionVector { base: TraCIResult::new(), value: Vec::new() };
         for i in 0..positionVector.len() {
             tp.value.push(Helper::make_tra_ci_position(&positionVector[i], false));
         }
@@ -422,7 +422,7 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn make_tra_ci_position(position: &Position, includeZ: bool) -> TraCIPosition {
         TraCIPosition {
-            base: TraCIResult {},
+            base: TraCIResult::new(),
             x: position.x(),
             y: position.y(),
             z: if includeZ { position.z() } else { INVALID_DOUBLE_VALUE },
@@ -476,7 +476,7 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn make_tra_ci_color(color: &RGBColor) -> TraCIColor {
         TraCIColor {
-            base: TraCIResult {},
+            base: TraCIResult::new(),
             r: color.red() as i32,
             g: color.green() as i32,
             b: color.blue() as i32,
@@ -3502,7 +3502,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIConnection>) -> bool {
-        let sl = TraCIConnectionVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIConnectionVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3515,7 +3515,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIDouble { base: TraCIResult {}, value }));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIDouble { base: TraCIResult::new(), value }));
         true
     }
 
@@ -3539,7 +3539,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIString { base: TraCIResult {}, value: value.to_string() }));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIString { base: TraCIResult::new(), value: value.to_string() }));
         true
     }
 
@@ -3553,7 +3553,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
-        let sl = TraCIStringList { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIStringList { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3568,7 +3568,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &Vec<f64>) -> bool {
-        let sl = TraCIDoubleList { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIDoubleList { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3581,7 +3581,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIPosition { base: TraCIResult {}, x: value.x, y: value.y, z: value.z }));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIPosition { base: TraCIResult::new(), x: value.x, y: value.y, z: value.z }));
         true
     }
 
@@ -3593,7 +3593,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIPositionVector { base: TraCIResult {}, value: value.value.clone() }));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIPositionVector { base: TraCIResult::new(), value: value.value.clone() }));
         true
     }
 
@@ -3605,7 +3605,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIColor { base: TraCIResult {}, r: value.r, g: value.g, b: value.b, a: value.a }));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIColor { base: TraCIResult::new(), r: value.r, g: value.g, b: value.b, a: value.a }));
         true
     }
 
@@ -3631,7 +3631,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &Vec<(String, f64)>) -> bool {
-        let sl = TraCIStringDoublePairList { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIStringDoublePairList { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3647,7 +3647,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
-        let sl = TraCIStringList { base: TraCIResult {}, value: vec![value.0.clone(), value.1.clone()] };
+        let sl = TraCIStringList { base: TraCIResult::new(), value: vec![value.0.clone(), value.1.clone()] };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3663,7 +3663,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
-        let sl = TraCIIntList { base: TraCIResult {}, value: vec![value.0, value.1] };
+        let sl = TraCIIntList { base: TraCIResult::new(), value: vec![value.0, value.1] };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3684,7 +3684,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIReservation>) -> bool {
-        let sl = TraCIReservationVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIReservationVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3693,7 +3693,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCILogic>) -> bool {
-        let sl = TraCILogicVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCILogicVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3702,7 +3702,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &Vec<Vec<TraCILink>>) -> bool {
-        let sl = TraCILinkVectorVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCILinkVectorVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3711,7 +3711,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCISignalConstraint>) -> bool {
-        let sl = TraCISignalConstraintVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCISignalConstraintVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3720,7 +3720,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIJunctionFoe>) -> bool {
-        let sl = TraCIJunctionFoeVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIJunctionFoeVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3729,7 +3729,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCINextStopData>) -> bool {
-        let sl = TraCINextStopDataVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCINextStopDataVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3738,7 +3738,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIVehicleData>) -> bool {
-        let sl = TraCIVehicleDataVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIVehicleDataVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3747,7 +3747,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCIBestLanesData>) -> bool {
-        let sl = TraCIBestLanesDataVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCIBestLanesDataVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }
@@ -3756,7 +3756,7 @@ impl Helper_SubscriptionWrapper {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &Vec<TraCINextTLSData>) -> bool {
-        let sl = TraCINextTLSDataVectorWrapped { base: TraCIResult {}, value: value.clone() };
+        let sl = TraCINextTLSDataVectorWrapped { base: TraCIResult::new(), value: value.clone() };
         self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(sl));
         true
     }

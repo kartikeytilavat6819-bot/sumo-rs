@@ -137,7 +137,7 @@ impl Vehicle {
         if Self::is_visible(veh.cast::<SUMOVehicle>()) {
             return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
         }
-        TraCIPosition { base: TraCIResult {}, x: 0.0, y: 0.0, z: 0.0 }
+        TraCIPosition { base: TraCIResult::new(), x: 0.0, y: 0.0, z: 0.0 }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
