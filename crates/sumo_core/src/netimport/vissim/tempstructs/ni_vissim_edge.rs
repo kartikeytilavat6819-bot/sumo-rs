@@ -1,6 +1,8 @@
 //! Port of netimport/vissim/tempstructs/NIVissimEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::geom_helper;
+use utils::tlf;
 
 /// C++ typedef `std::vector<NIVissimConnectionCluster *> NIVissimEdge::ConnectionClusters`
 pub type NIVissimEdge_ConnectionClusters = Vec<Ptr<NIVissimConnectionCluster>>;
@@ -574,7 +576,76 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn build_connection_clusters() {
-        todo!("port NIVissimEdge::buildConnectionClusters")
+        const MAX_CLUSTER_DISTANCE: f64 = 10.0;
+        // build clusters for all edges made up from not previously assigne
+        //  connections
+        for (edgeid, edge) in dict_snapshot() {
+            // get all connectors using this edge
+            let mut connectors: Vec<i32> = edge.myIncomingConnections.clone();
+            connectors.extend(edge.myOutgoingConnections.iter().copied());
+            if connectors.is_empty() {
+                continue;
+            }
+            // sort the connectors by the place on the edge
+            // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may be ordered differently
+            let sorter = NIVissimEdge_connection_position_sorter::new(edgeid);
+            connectors.sort_by(|a, b| {
+                if sorter.call_op(*a, *b) != 0 {
+                    std::cmp::Ordering::Less
+                } else if sorter.call_op(*b, *a) != 0 {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+            // try to cluster the connections participating within the current edge
+            let mut currentCluster: Vec<i32> = Vec::new();
+            let mut j: usize = 0;
+            let n = connectors.len();
+            let c0 = NIVissimConnection::dictionary_2(connectors[0]);
+            let mut outgoing = c0.get_from_edge_id() == edgeid;
+            let mut position = if outgoing { c0.get_from_position() } else { c0.get_to_position() };
+
+            // skip connections already in a cluster
+            // !!! (?)
+            while j < n && NIVissimConnection::dictionary_2(connectors[j]).base2.has_node_cluster() {
+                j += 1;
+            }
+            if j == n {
+                continue;
+            }
+            currentCluster.push(connectors[j]);
+            loop {
+                if j + 1 < n && !NIVissimConnection::dictionary_2(connectors[j]).base2.has_node_cluster() {
+                    let cn = NIVissimConnection::dictionary_2(connectors[j + 1]);
+                    let n_outgoing = cn.get_from_edge_id() == edgeid;
+                    let n_position = if n_outgoing { cn.get_from_position() } else { cn.get_to_position() };
+                    if n_outgoing == outgoing && (n_position - position).abs() < MAX_CLUSTER_DISTANCE {
+                        // ok, in same cluster as prior
+                        currentCluster.push(connectors[j + 1]);
+                    } else {
+                        // start new cluster
+                        remove_double_ints(&mut currentCluster);
+                        let cc = NIVissimConnectionCluster::new(&currentCluster, -1, edgeid);
+                        edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(Box::new(cc))));
+                        currentCluster.clear();
+                        currentCluster.push(connectors[j + 1]);
+                    }
+                    outgoing = n_outgoing;
+                    position = n_position;
+                }
+                j += 1;
+                if j == n {
+                    break;
+                }
+            }
+            // add last connection
+            if !currentCluster.is_empty() {
+                remove_double_ints(&mut currentCluster);
+                let cc = NIVissimConnectionCluster::new(&currentCluster, -1, edgeid);
+                edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(Box::new(cc))));
+            }
+        }
     }
 
     /// C++: `void NIVissimEdge::dict_buildNBEdges(NBDistrictCont &, NBNodeCont &, NBEdgeCont &, double)` [static]
@@ -589,7 +660,9 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dict_build_nb_edges(dc: &mut NBDistrictCont, nc: &mut NBNodeCont, ec: &mut NBEdgeCont, offset: f64) {
-        todo!("port NIVissimEdge::dict_buildNBEdges")
+        for (_, edge) in dict_snapshot() {
+            edge.m().build_nb_edge(dc, nc, ec, offset);
+        }
     }
 
     /// C++: `void NIVissimEdge::dict_propagateSpeeds()` [static]
@@ -617,7 +690,20 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dict_propagate_speeds() {
-        todo!("port NIVissimEdge::dict_propagateSpeeds")
+        for (_, edge) in dict_snapshot() {
+            edge.m().set_district_speed();
+        }
+        for (_, edge) in dict_snapshot() {
+            edge.m().propagate_speed(-1.0, Vec::new());
+        }
+        for _ in 0..3 {
+            for (_, edge) in dict_snapshot() {
+                edge.m().propagate_own();
+            }
+            for (_, edge) in dict_snapshot() {
+                edge.m().check_unconnected_lane_speeds();
+            }
+        }
     }
 
     /// C++: `void NIVissimEdge::dict_checkEdges2Join()` [static]
@@ -674,7 +760,52 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dict_check_edges2_join() {
-        todo!("port NIVissimEdge::dict_checkEdges2Join")
+        let entries = dict_snapshot();
+        // go through the edges
+        for i1 in 0..entries.len() {
+            // retrieve needed values from the first edge
+            let e1 = entries[i1].1;
+            let g1_angle = e1.get_geometry().begin_end_angle();
+            let g1_back = *e1.get_geometry().back();
+            // check all other edges
+            for &(_, e2) in entries[i1 + 1..].iter() {
+                // retrieve needed values from the second edge
+                let g2_angle = e2.get_geometry().begin_end_angle();
+                let g2_back = *e2.get_geometry().back();
+                // get the connection description
+                let mut c = e1.m().get_connection_to(e2);
+                if c.is_null() {
+                    c = e2.m().get_connection_to(e1);
+                }
+                // the edge must not be a direct contiuation of the other
+                if !c.is_null()
+                    && ((c.get_from_edge_id() == e1.get_id() && (c.get_from_position() - e1.get_geometry().length()).abs() < 5.0)
+                        || (c.get_from_edge_id() == e2.get_id() && (c.get_from_position() - e2.get_geometry().length()).abs() < 5.0))
+                {
+                    continue;
+                }
+                // only parallel edges which do end at the same node
+                //  should be joined
+                // check for parallelity
+                //  !!! the usage of an explicit value is not very fine
+                if geom_helper::angle_diff(g1_angle, g2_angle).abs() > geom_helper::deg2rad(2.0) {
+                    // continue if the lines are not parallel
+                    continue;
+                }
+
+                // check whether the same node is approached
+                //  (the distance between the ends should not be too large)
+                //  !!! the usage of an explicit value is not very fine
+                if g1_back.distance_to(&g2_back) > 10.0 {
+                    // continue if the lines do not end at the same length
+                    continue;
+                }
+                // ok, seem to be different lanes for the same edge
+                //  mark as possibly joined later
+                e1.m().add_to_treat_as_same(e2);
+                e2.m().add_to_treat_as_same(e1);
+            }
+        }
     }
 
     /// C++: `void NIVissimEdge::reportUnsetSpeeds()` [static]
@@ -696,7 +827,13 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn report_unset_speeds() {
-        todo!("port NIVissimEdge::reportUnsetSpeeds")
+        let lanes = MY_LANES_WITH_MISSING_SPEEDS.with(|v| v.borrow().clone());
+        if lanes.is_empty() {
+            return;
+        }
+        let mut str = String::from("The following lanes have no explicit speed information:\n  ");
+        str.push_str(&lanes.join(", "));
+        utils::common::msg_handler::write_warning(&str);
     }
 
     /// C++: `void NIVissimEdge::buildNBEdge(NBDistrictCont &, NBNodeCont &, NBEdgeCont &, double)` [private]
@@ -805,7 +942,122 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn build_nb_edge(&mut self, dc: &mut NBDistrictCont, nc: &mut NBNodeCont, ec: &mut NBEdgeCont, sameNodesOffset: f64) {
-        todo!("port NIVissimEdge::buildNBEdge")
+        // build the edge
+        let mut fromInf: (Ptr<NIVissimConnectionCluster>, Ptr<NBNode>) = (Ptr::null(), Ptr::null());
+        let mut toInf: (Ptr<NIVissimConnectionCluster>, Ptr<NBNode>) = (Ptr::null(), Ptr::null());
+        let mut fromNode: Ptr<NBNode> = Ptr::null();
+        let mut toNode: Ptr<NBNode> = Ptr::null();
+        let pos_sorter = NIVissimEdge_connection_cluster_position_sorter::new(self.myID);
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may be ordered differently
+        self.myConnectionClusters.sort_by(cmp_by_less(|a, b| pos_sorter.call_op(a, b)));
+        self.myDistrictConnections.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let mut tmpClusters: NIVissimEdge_ConnectionClusters = self.myConnectionClusters.clone();
+        if !tmpClusters.is_empty() {
+            tmpClusters.sort_by(cmp_by_less(|a, b| pos_sorter.call_op(a, b)));
+            // get or build the from-node
+            //  A node may have to be build when the edge starts or ends at
+            //  a parking place or something like this
+            fromInf = self.get_from_node(nc, &mut tmpClusters);
+            fromNode = fromInf.1;
+            // get or build the to-node
+            //if(tmpClusters.size()>0) {
+            toInf = self.get_to_node(nc, &mut tmpClusters);
+            toNode = toInf.1;
+            if !fromInf.0.is_null() && !toNode.is_null() && fromInf.0.around(toNode.get_position(), 0.0) {
+                write_warningf!("Will not build edge '%'.", self.myID);
+                self.myAmWithinJunction = true;
+                return;
+            }
+            //}
+            // if both nodes are the same, resolve the problem otherwise
+            if fromNode == toNode {
+                let tmp = self.resolve_same_node(nc, sameNodesOffset, fromNode, toNode);
+                if fromNode != tmp.0 {
+                    fromInf.0 = Ptr::null();
+                }
+                if toNode != tmp.1 {
+                    toInf.0 = Ptr::null();
+                }
+                fromNode = tmp.0;
+                toNode = tmp.1;
+            }
+        }
+
+        //
+        if fromNode.is_null() {
+            fromInf.0 = Ptr::null();
+            let pos = *self.myGeom.at(0);
+            fromNode = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-SourceNode", self.myID), &pos, SumoXMLNodeType::NOJUNCTION))));
+            if !nc.insert_2(fromNode) {
+                panic!("{}", ProcessError::new(tlf!("Could not insert node '%' to nodes container.", fromNode.base.get_id())));
+            }
+        }
+        if toNode.is_null() {
+            toInf.0 = Ptr::null();
+            let pos = *self.myGeom.at(-1);
+            toNode = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-DestinationNode", self.myID), &pos, SumoXMLNodeType::NOJUNCTION))));
+            if !nc.insert_2(toNode) {
+                panic!("{}", ProcessError::new(tlf!("Could not insert node '%' to nodes container.", toNode.base.get_id())));
+            }
+        }
+
+        // build the edge
+        let mut avgSpeed: f64 = 0.0;
+        for i in 0..self.myNoLanes {
+            if (self.myLaneSpeeds.len() as i32) <= i || self.myLaneSpeeds[i as usize] == -1.0 {
+                MY_LANES_WITH_MISSING_SPEEDS.with(|v| v.borrow_mut().push(format!("{}_{}", self.myID, i)));
+                avgSpeed += utils::options::options_cont::get_float("vissim.default-speed");
+            } else {
+                avgSpeed += self.myLaneSpeeds[i as usize];
+            }
+        }
+        avgSpeed /= self.myLaneSpeeds.len() as f64;
+        avgSpeed *= utils::options::options_cont::get_float("vissim.speed-norm");
+
+        if fromNode == toNode {
+            write_warningf!("Could not build edge '%'; would connect same node.", self.myID);
+            return;
+        }
+
+        let mut buildEdge: Ptr<NBEdge> = Ptr::from_mut(Box::leak(NBEdge::new_2(
+            &self.myID.to_string(),
+            fromNode,
+            toNode,
+            self.myType.clone(),
+            avgSpeed / 3.6,
+            crate::netbuild::nb_edge::UNSPECIFIED_FRICTION,
+            self.myNoLanes,
+            -1,
+            crate::netbuild::nb_edge::UNSPECIFIED_WIDTH,
+            crate::netbuild::nb_edge::UNSPECIFIED_OFFSET,
+            self.myGeom.clone(),
+            LaneSpreadFunction::CENTER,
+            &self.myName,
+            "",
+            true,
+        )));
+        for i in 0..self.myNoLanes {
+            buildEdge.m().set_lane_width(i, self.myLaneWidths[i as usize]);
+            if (self.myLaneSpeeds.len() as i32) <= i || self.myLaneSpeeds[i as usize] == -1.0 {
+                buildEdge.m().set_speed(i, utils::options::options_cont::get_float("vissim.default-speed") / 3.6);
+            } else {
+                buildEdge.m().set_speed(i, self.myLaneSpeeds[i as usize] / 3.6);
+            }
+        }
+        ec.insert(buildEdge, false);
+        // check whether the edge contains any other clusters
+        if !tmpClusters.is_empty() {
+            let mut cont = true;
+            let mut j: usize = 0;
+            while cont && j < tmpClusters.len() {
+                // split the edge at the previously build node
+                let nextID = format!("{}[1]", buildEdge.get_id());
+                cont = ec.split_at(dc, buildEdge, tmpClusters[j].get_nb_node());
+                // !!! what to do if the edge could not be split?
+                buildEdge = ec.retrieve(&nextID, false);
+                j += 1;
+            }
+        }
     }
 
     /// C++: `std::pair<NIVissimConnectionCluster *, NBNode *> NIVissimEdge::getFromNode(NBNodeCont &, ConnectionClusters &)` [private]
@@ -846,7 +1098,36 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_from_node(&mut self, nc: &mut NBNodeCont, clusters: &mut NIVissimEdge_ConnectionClusters) -> (Ptr<NIVissimConnectionCluster>, Ptr<NBNode>) {
-        todo!("port NIVissimEdge::getFromNode")
+        // changed MAX_DISTANCE from 10 to 3.5, because 3.5 is the default lane width in VISSIM
+        const MAX_DISTANCE: f64 = 3.5;
+        assert!(clusters.len() >= 1);
+        let beg = *self.myGeom.front();
+        let c = clusters[0];
+        // check whether the edge starts within a already build node
+        if c.around(&beg, MAX_DISTANCE) {
+            clusters.remove(0);
+            return (c, c.get_nb_node());
+        }
+        // check for a parking place at the begin
+        if !self.myDistrictConnections.is_empty() {
+            let pos = self.myDistrictConnections[0];
+            if pos < 10.0 {
+                let node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-begin", self.myID), &beg, SumoXMLNodeType::NOJUNCTION))));
+                if !nc.insert_2(node) {
+                    std::panic::panic_any(1i32);
+                }
+                while !self.myDistrictConnections.is_empty() && self.myDistrictConnections[0] < 10.0 {
+                    self.myDistrictConnections.remove(0);
+                }
+                return (Ptr::null(), node);
+            }
+        }
+        // build a new node for the edge's begin otherwise
+        let node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-begin", self.myID), &beg, SumoXMLNodeType::NOJUNCTION))));
+        if !nc.insert_2(node) {
+            std::panic::panic_any(1i32);
+        }
+        (Ptr::null(), node)
     }
 
     /// C++: `std::pair<NIVissimConnectionCluster *, NBNode *> NIVissimEdge::getToNode(NBNodeCont &, ConnectionClusters &)` [private]
@@ -898,7 +1179,37 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_to_node(&mut self, nc: &mut NBNodeCont, clusters: &mut NIVissimEdge_ConnectionClusters) -> (Ptr<NIVissimConnectionCluster>, Ptr<NBNode>) {
-        todo!("port NIVissimEdge::getToNode")
+        let end = *self.myGeom.back();
+        if !clusters.is_empty() {
+            const MAX_DISTANCE: f64 = 10.0;
+            let c = clusters[clusters.len() - 1];
+            // check whether the edge ends within a already build node
+            if c.around(&end, MAX_DISTANCE) {
+                clusters.pop();
+                return (c, c.get_nb_node());
+            }
+        }
+        // check for a parking place at the end
+        if !self.myDistrictConnections.is_empty() {
+            let pos = self.myDistrictConnections[self.myDistrictConnections.len() - 1];
+            if pos > self.myGeom.length() - 10.0 {
+                let node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-end", self.myID), &end, SumoXMLNodeType::NOJUNCTION))));
+                if !nc.insert_2(node) {
+                    std::panic::panic_any(1i32);
+                }
+                while !self.myDistrictConnections.is_empty() && self.myDistrictConnections[self.myDistrictConnections.len() - 1] < self.myGeom.length() - 10.0 {
+                    self.myDistrictConnections.pop();
+                }
+                return (Ptr::null(), node);
+            }
+        }
+
+        // build a new node for the edge's end otherwise
+        let node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-end", self.myID), &end, SumoXMLNodeType::NOJUNCTION))));
+        if !nc.insert_2(node) {
+            std::panic::panic_any(1i32);
+        }
+        (Ptr::null(), node)
     }
 
     /// C++: `std::pair<NBNode *, NBNode *> NIVissimEdge::resolveSameNode(NBNodeCont &, double, NBNode *, NBNode *)` [private]
@@ -983,7 +1294,73 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn resolve_same_node(&mut self, nc: &mut NBNodeCont, offset: f64, prevFrom: Ptr<NBNode>, prevTo: Ptr<NBNode>) -> (Ptr<NBNode>, Ptr<NBNode>) {
-        todo!("port NIVissimEdge::resolveSameNode")
+        // check whether the edge is connected to a district
+        //  use it if so
+        let d = NIVissimDistrictConnection::dict_find_for_edge(self.myID);
+        if !d.is_null() {
+            let pos = d.geom_position();
+            let position = d.get_position();
+            // the district is at the begin of the edge
+            if self.myGeom.length() - position > position {
+                let nid = format!("ParkingPlace{}", d.get_id());
+                let mut node = nc.retrieve(&nid);
+                if node.is_null() {
+                    node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&nid, &pos, SumoXMLNodeType::NOJUNCTION))));
+                    if !nc.insert_2(node) {
+                        std::panic::panic_any(1i32);
+                    }
+                }
+                return (node, prevTo);
+            }
+            // the district is at the end of the edge
+            else {
+                let nid = format!("ParkingPlace{}", d.get_id());
+                let mut node = nc.retrieve(&nid);
+                if node.is_null() {
+                    node = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&nid, &pos, SumoXMLNodeType::NOJUNCTION))));
+                    if !nc.insert_2(node) {
+                        std::panic::panic_any(1i32);
+                    }
+                }
+                assert!(!node.is_null());
+                return (prevFrom, node);
+            }
+        }
+        // otherwise, check whether the edge is some kind of
+        //  a dead end...
+        // check which end is nearer to the node centre
+        if self.myConnectionClusters.len() == 1 {
+            let node = prevFrom; // it is the same as getToNode()
+
+            let c = self.myConnectionClusters[0];
+            let front = *self.myGeom.front();
+            let back = *self.myGeom.back();
+            // no end node given
+            if c.around(&front, offset) && !c.around(&back, offset) {
+                let end = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-End", self.myID), &back, SumoXMLNodeType::NOJUNCTION))));
+                if !nc.insert_2(end) {
+                    std::panic::panic_any(1i32);
+                }
+                return (node, end);
+            }
+
+            // no begin node given
+            if !c.around(&front, offset) && c.around(&back, offset) {
+                let beg = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&format!("{}-Begin", self.myID), &front, SumoXMLNodeType::NOJUNCTION))));
+                if !nc.insert_2(beg) {
+                    std::panic::panic_any(1i32);
+                }
+                return (beg, node);
+            }
+
+            // self-loop edge - both points lie within the same cluster
+            if c.around(&front, 0.0) && c.around(&back, 0.0) {
+                return (node, node);
+            }
+        }
+        // what to do in other cases?
+        //  It simply is a self-looping edge....
+        (prevFrom, prevTo)
     }
 
     /// C++: `std::vector<NIVissimConnection *> NIVissimEdge::getOutgoingConnected(int) const` [const, private]
@@ -1004,7 +1381,18 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_outgoing_connected(&self, lane: i32) -> Vec<Ptr<NIVissimConnection>> {
-        todo!("port NIVissimEdge::getOutgoingConnected")
+        let mut ret = Vec::new();
+        for &id in self.myOutgoingConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(id);
+            let lanes = c.get_from_lanes();
+            if lanes.contains(&lane) {
+                let e = Self::dictionary_3(c.get_to_edge_id());
+                if !e.is_null() {
+                    ret.push(c);
+                }
+            }
+        }
+        ret
     }
 
     /// C++: `void NIVissimEdge::propagateSpeed(double, std::vector<int>)` [private]
@@ -1049,8 +1437,44 @@ impl NIVissimEdge {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn propagate_speed(&mut self, speed: f64, forLanes: Vec<i32>) {
-        todo!("port NIVissimEdge::propagateSpeed")
+    pub fn propagate_speed(&mut self, mut speed: f64, mut forLanes: Vec<i32>) {
+        // if no lane is given, all set be set
+        if forLanes.is_empty() {
+            for i in 0..self.myNoLanes {
+                forLanes.push(i);
+            }
+        }
+        // for the case of a first call
+        // go through the lanes
+        for &lane in forLanes.iter() {
+            // check whether a speed was set before
+            if self.myLaneSpeeds[lane as usize] != -1.0 {
+                // do not reset it from incoming
+                continue;
+            }
+            // check whether the lane has a new speed to set
+            if (self.myPatchedSpeeds.len() as i32) > lane && self.myPatchedSpeeds[lane as usize] != -1 {
+                // use it
+                let patched = self.myPatchedSpeeds[lane as usize];
+                speed = self.get_real_speed(patched);
+            }
+            // check whether a speed is given
+            if speed == -1.0 {
+                // do nothing if not
+                continue;
+            }
+            // set the lane's speed to the given
+            self.myLaneSpeeds[lane as usize] = speed;
+            // propagate the speed further
+            // get the list of connected edges
+            let connected = self.get_outgoing_connected(lane);
+            // go through the list
+            for c in connected {
+                let e = Self::dictionary_3(c.get_to_edge_id());
+                // propagate
+                e.m().propagate_speed(speed, c.get_to_lanes().clone());
+            }
+        }
     }
 
     /// C++: `void NIVissimEdge::setDistrictSpeed()` [private]
@@ -1085,7 +1509,30 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_district_speed(&mut self) {
-        todo!("port NIVissimEdge::setDistrictSpeed")
+        if !self.myDistrictConnections.is_empty() {
+            let pos = self.myDistrictConnections[0];
+            if pos < self.get_length() - pos {
+                let d = NIVissimDistrictConnection::dict_find_for_edge(self.myID);
+                if !d.is_null() {
+                    let speed = d.get_mean_speed();
+                    if speed == -1.0 {
+                        return;
+                    }
+                    for i in 0..self.myNoLanes {
+                        self.myLaneSpeeds[i as usize] = speed;
+                        // propagate the speed further
+                        // get the list of connected edges
+                        let connected = self.get_outgoing_connected(i);
+                        // go through the list
+                        for c in connected {
+                            let e = Self::dictionary_3(c.get_to_edge_id());
+                            // propagate
+                            e.m().propagate_speed(speed, c.get_to_lanes().clone());
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `double NIVissimEdge::getRealSpeed(int)` [private]
@@ -1106,7 +1553,19 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_real_speed(&mut self, distNo: i32) -> f64 {
-        todo!("port NIVissimEdge::getRealSpeed")
+        let id = distNo.to_string();
+        let dist = match utils::distribution::distribution_cont::dictionary_get("speed", &id) {
+            Some(d) => d,
+            None => {
+                write_warningf!("The referenced speed distribution '%' is not known.", id);
+                return -1.0;
+            }
+        };
+        let speed = dist.get_max();
+        if speed < 0.0 || speed > 1000.0 {
+            write_warningf!("What about distribution '%'", distNo);
+        }
+        speed
     }
 
     /// C++: `void NIVissimEdge::checkUnconnectedLaneSpeeds()` [private]
@@ -1147,7 +1606,36 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn check_unconnected_lane_speeds(&mut self) {
-        todo!("port NIVissimEdge::checkUnconnectedLaneSpeeds")
+        let n = self.myLaneSpeeds.len() as i32;
+        for i in 0..n {
+            if self.myLaneSpeeds[i as usize] == -1.0 {
+                let mut speed: f64 = -1.0;
+                let j1 = i - 1; // !!! recheck - j1 may become negative?
+                let mut j2 = i;
+                while j2 != n && self.myLaneSpeeds[j2 as usize] == -1.0 {
+                    j2 += 1;
+                }
+                if j1 < 0 {
+                    if j2 < n {
+                        speed = self.myLaneSpeeds[j2 as usize];
+                    }
+                } else if j2 >= n {
+                    speed = self.myLaneSpeeds[j1 as usize];
+                } else {
+                    speed = (self.myLaneSpeeds[j1 as usize] + self.myLaneSpeeds[j2 as usize]) / 2.0;
+                }
+                if speed == -1.0 {
+                    continue;
+                }
+                self.myLaneSpeeds[i as usize] = speed;
+                let connected = self.get_outgoing_connected(i);
+                for c in connected {
+                    let e = Self::dictionary_3(c.get_to_edge_id());
+                    // propagate
+                    e.m().propagate_speed(speed, c.get_to_lanes().clone());
+                }
+            }
+        }
     }
 
     /// C++: `void NIVissimEdge::propagateOwn()` [private]
@@ -1208,6 +1696,35 @@ impl NIVissimEdge {
         todo!("port NIVissimEdge::remapOneOfNodes")
     }
 
+}
+
+/// Turns a C++ `int operator()(a, b)` comparator (nonzero means a < b) into a sort ordering for std::sort's semantics
+fn cmp_by_less<T: Copy>(less: impl Fn(T, T) -> i32) -> impl Fn(&T, &T) -> std::cmp::Ordering {
+    move |a, b| {
+        if less(*a, *b) != 0 {
+            std::cmp::Ordering::Less
+        } else if less(*b, *a) != 0 {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    }
+}
+
+/// Snapshot of the dictionary in key order (C++ iterates myDict in std::map order)
+fn dict_snapshot() -> Vec<(i32, Ptr<NIVissimEdge>)> {
+    MY_DICT.with(|d| d.borrow().iter().map(|(k, v)| (*k, *v)).collect())
+}
+
+/// C++ `VectorHelper<int>::removeDouble`: erases every later duplicate, keeping first occurrences in order
+fn remove_double_ints(v: &mut Vec<i32>) {
+    let mut out: Vec<i32> = Vec::with_capacity(v.len());
+    for &x in v.iter() {
+        if !out.contains(&x) {
+            out.push(x);
+        }
+    }
+    *v = out;
 }
 
 /// Sorts connection clusters the edge participates in by their position along the given edge
