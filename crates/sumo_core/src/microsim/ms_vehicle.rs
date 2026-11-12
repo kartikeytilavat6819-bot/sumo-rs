@@ -9282,6 +9282,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_link_approaches(&mut self, vSafe: &mut f64, vSafeMin: &mut f64, vSafeMinDist: &mut f64) {
+        let TS = ts();
         // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
         let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
         let this: Ptr<MSVehicle> = Ptr::from_mut(self);
@@ -9396,7 +9397,7 @@ impl MSVehicle {
                         self.myHaveStoppedFor = link;
                     }
                 } else if ls == LINKSTATE_ZIPPER {
-                    *vSafeZipper = min2(*vSafeZipper, link.get_zipper_speed(this, dDistance, dVLinkPass, dArrivalTime, Ptr::from_mut(&mut collectFoes)));
+                    vSafeZipper = min2(vSafeZipper, link.get_zipper_speed(this, dDistance, dVLinkPass, dArrivalTime, Ptr::from_mut(&mut collectFoes)));
                 } else if !canBrake
                     // always brake hard for traffic lights (since an emergency stop is necessary anyway)
                     && link.get_tl_logic().is_null()
@@ -9911,7 +9912,7 @@ impl MSVehicle {
             self.myWaitingTime = 0;
             self.myWaitingTimeCollector.pass_time(delta_t(), false);
             if self.has_influencer() {
-                self.get_influencer().get_base_influencer().set_extra_impatience(0.0);
+                self.get_influencer().set_extra_impatience(0.0);
             }
         }
     }
@@ -9931,6 +9932,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_time_loss(&mut self, vNext: f64) {
+        let TS = ts();
         // update time loss (depends on the updated edge)
         if !self.is_stopped() {
             // some cfModels (i.e. EIDM may drive faster than predicted by maxNextSpeed)
@@ -11663,8 +11665,8 @@ impl MSVehicle {
         let mut hadNonInternal = false;
         // the distance already "seen"; in the following always up to the end of the current "lane"
         let mut seen = if opposite { self.myState.myPos } else { self.myLane.get_length() - self.myState.myPos };
-        nextTurn.0 = seen;
-        nextTurn.1 = Ptr::null();
+        myNextTurn.0 = seen;
+        myNextTurn.1 = Ptr::null();
         let mut encounteredTurn = crate::microsim::ms_globals::lateral_resolution() <= 0.0; // next turn is only needed for sublane
         let mut seenNonInternal = 0.0;
         let mut seenInternal = if self.myLane.is_internal() { seen } else { 0.0 };
@@ -11969,8 +11971,8 @@ impl MSVehicle {
             if !encounteredTurn && !lane.is_link_end(&mut link) && lane.get_link_cont().len() > 1 {
                 let linkDir = lane.get_link_cont()[link].get_direction();
                 if linkDir != LinkDirection::STRAIGHT && linkDir != LinkDirection::NODIR {
-                    nextTurn.0 = seen;
-                    nextTurn.1 = lane.get_link_cont()[link];
+                    myNextTurn.0 = seen;
+                    myNextTurn.1 = lane.get_link_cont()[link];
                     encounteredTurn = true;
                 }
             }
@@ -12201,6 +12203,7 @@ impl MSVehicle {
                     Ptr::null(),
                     false,
                     me.cast::<SUMOTrafficObject>(),
+                    -1.0,
                 );
                 if !wasOpened {
                     slowedDownForMinor = true;
@@ -12911,6 +12914,7 @@ impl MSVehicle {
             }
             *v = min2(*v, vsafeLeader);
             *vLinkPass = min2(*vLinkPass, vsafeLeader);
+        }
     }
 
     /// C++: `void MSVehicle::adaptToOncomingLeader(const std::pair<const MSVehicle *, double>, DriveProcessItem *const, double &, double &) const` [const]
