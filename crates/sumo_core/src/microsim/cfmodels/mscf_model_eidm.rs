@@ -54,6 +54,17 @@ impl std::ops::DerefMut for MSCFModel_EIDM {
     }
 }
 
+/// C++ `veh->getDevice(typeid(MSDevice_GLOSA))`, null when the vehicle has no GLOSA device.
+/// determinism: the type_info match is approximated by the "glosa_" id prefix that MSDevice_GLOSA::buildVehicleDevices gives its device
+fn glosa_device(veh: &Ptr<MSVehicle>) -> Ptr<MSDevice_GLOSA> {
+    for dev in veh.get_devices().iter() {
+        if MSDevice::get_device_name(dev.get_id()) == "glosa" {
+            return dev.cast::<MSDevice_GLOSA>();
+        }
+    }
+    Ptr::default()
+}
+
 impl MSCFModel_EIDM {
     /// C++: `void MSCFModel_EIDM::MSCFModel_EIDM(const MSVehicleType *)`
     /// Constructor
@@ -865,8 +876,11 @@ impl MSCFModel_EIDM {
 
         let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
 
-        // shortcut: the C++ GLOSA speed-advice override of `seen` (veh->getDevice(typeid(MSDevice_GLOSA))) is not ported, because get_device takes an Unmapped type_info; upgrade when device lookup by type is ported
         let mut seen = seen;
+        let glosa = glosa_device(&veh);
+        if !glosa.is_null() && glosa.is_speed_advice_active() && maxSpeed < speed {
+            seen = speed * (1. - (vars.v0_old - vars.v0_int) / (vars.v0_old - maxSpeed)) * self.myTpreview;
+        }
 
         let vSafe;
         if onInsertion {
@@ -2129,8 +2143,8 @@ impl MSCFModel_EIDM {
         let mut link = MSLane::succ_link_sec(&*veh, view, &*lane, bestLaneConts);
         let mut seen = lane.get_length() - veh.get_position_on_lane();
         let mut v0 = lane.get_vehicle_max_speed(traffic_object(veh)); // current desired lane speed
-        // shortcut: the C++ GLOSA device lookup (veh->getDevice(typeid(MSDevice_GLOSA))) is not ported (get_device takes an Unmapped type_info), so speed advice is treated as inactive; upgrade when device lookup by type is ported
-        let activeGLOSA = false;
+        let glosa = glosa_device(&veh);
+        let activeGLOSA = !glosa.is_null() && glosa.is_speed_advice_active();
 
         // @ToDo: nextTurn is only defined in sublane-model calculation?!
         // When driving on the last lane/link, the vehicle shouldn't adapt to the lane after anymore.
@@ -2178,8 +2192,11 @@ impl MSCFModel_EIDM {
                     // @ToDo: Vehicle now decelerates to new Speedlimit before reaching new edge (not /2 anymore)!
                     // @ToDo: v0 for changing speed limits when seen < oldV*myTpreview, not seen < oldV*myTpreview/2 anymore!!!
                     if v0 > lane.get_vehicle_max_speed(traffic_object(veh)) {
-                        // activeGLOSA is always false in this port (see shortcut above), so only the non-GLOSA branch is reachable
-                        v0 = lane.get_vehicle_max_speed(traffic_object(veh));
+                        if !activeGLOSA {
+                            v0 = lane.get_vehicle_max_speed(traffic_object(veh));
+                        } else {
+                            v0 = min2(v0, glosa.get_original_speed_factor() * lane.get_speed_limit());
+                        }
                     }
                     seen += lane.get_length();
                     link = MSLane::succ_link_sec(&*veh, view, &*lane, bestLaneConts);

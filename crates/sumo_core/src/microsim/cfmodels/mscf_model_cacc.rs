@@ -55,8 +55,7 @@ fn vehicle_mode_name(mode: MSCFModel_CACC_VehicleMode) -> &'static str {
 
 /// C++ `const_cast<SUMOVehicleParameter&>(veh->getParameter()).setParameter("caccVehicleMode", name)`
 fn set_cacc_vehicle_mode(veh: Ptr<MSVehicle>, mode_name: &str) {
-    // shortcut: SUMOVehicleParameter has no setParameter port yet, so the "caccVehicleMode" parameter is not written; upgrade when sumo_vehicle_parameter.rs ports setParameter
-    let _ = (veh, mode_name);
+    veh.myParameter.m().set_parameter("caccVehicleMode", mode_name);
 }
 
 /// C++ enum `MSCFModel_CACC::CommunicationsOverrideMode`
