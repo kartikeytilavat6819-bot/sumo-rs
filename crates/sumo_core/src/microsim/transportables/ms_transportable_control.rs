@@ -1,24 +1,45 @@
-//! Port of microsim/transportables/MSTransportableControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/transportables/MSTransportableControl.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_globals::stop_tolerance;
+use utils::common::msg_handler::write_warning;
+use utils::common::time::{delta_t, string2time};
+use utils::options::options_cont::{get_bool, get_int, get_string, is_set, with_options};
 
-/// C++ typedef `int MSTransportableControl::TransportableVector`
-pub type MSTransportableControl_TransportableVector = i32;
+/// Heap-allocates a transportable or model and hands out a raw pointer, like C++ `new`.
+fn leak_ptr<T>(v: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(v)))
+}
 
-/// C++ typedef `int MSTransportableControl::constVehIt`
-pub type MSTransportableControl_constVehIt = i32;
+/// C++ `MSTransportableControl::TransportableVector`: `std::vector<MSTransportable*>`
+pub type MSTransportableControl_TransportableVector = Vec<Ptr<MSTransportable>>;
+
+/// Key of myWaiting4Vehicle: C++ orders edges by `ComparatorNumericalIdLess`, so the key is
+/// (numerical id, edge); ids are unique, so iteration matches the C++ map.
+// determinism: ordering by numerical id as in C++ ComparatorNumericalIdLess
+fn edge_key(edge: Ptr<MSEdge>) -> (i32, Ptr<MSEdge>) {
+    (edge.get_numerical_id(), edge)
+}
+
+/// C++ `SIMSTEP`
+fn simstep() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+
+/// C++ typedef `std::map<std::string, MSTransportable*>::const_iterator MSTransportableControl::constVehIt`
+pub type MSTransportableControl_constVehIt = Unmapped /* btree_map::Iter over myTransportables; no begin/end pair in the port yet */;
 
 /// The class is used to handle transportables (persons and containers) who are not using a transportation system but are walking or waiting. This includes waiting for the arrival or departure time / the time the waiting is over.
 /// C++ class `MSTransportableControl` (microsim/transportables/MSTransportableControl.h)
 pub struct MSTransportableControl {
     /// all currently created transportables by id
-    pub myTransportables: i32,
+    pub myTransportables: BTreeMap<String, Ptr<MSTransportable>>,
     /// Transportables waiting for departure
-    pub myWaiting4Departure: i32,
+    pub myWaiting4Departure: BTreeMap<SUMOTime, MSTransportableControl_TransportableVector>,
     /// the lists of walking / stopping transportables
-    pub myWaitingUntil: i32,
+    pub myWaitingUntil: BTreeMap<SUMOTime, MSTransportableControl_TransportableVector>,
     /// the lists of waiting transportables
-    pub myWaiting4Vehicle: i32,
+    pub myWaiting4Vehicle: BTreeMap<(i32, Ptr<MSEdge>), MSTransportableControl_TransportableVector>,
     /// The number of build transportables
     pub myLoadedNumber: i32,
     /// The number of discarded transportables
@@ -107,7 +128,62 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn new(isPerson: bool) -> Self {
-        todo!("port MSTransportableControl::MSTransportableControl")
+        let net = MSNet::get_instance();
+        let nonInteracting: Ptr<MSPModel> = leak_ptr(with_options(|oc| MSPModel_NonInteracting::new(oc, net))).cast::<MSPModel>();
+        let mut movementModel = nonInteracting;
+        if isPerson {
+            let model = get_string("pedestrian.model");
+            // shortcut: C++ compiles the jupedsim branches only with HAVE_JUPEDSIM_GRPC / HAVE_JUPEDSIM_LEGACY; the port has no such build flags, so they are always on, upgrade when build flags are ported
+            if model == "striping" {
+                movementModel = leak_ptr(with_options(|oc| MSPModel_Striping::new(oc, net))).cast::<MSPModel>();
+            } else if model == "jupedsim" {
+                movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim::new(oc, net))).cast::<MSPModel>();
+            } else if model == "jupedsim_legacy" {
+                movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim_legacy::new(oc, net))).cast::<MSPModel>();
+            } else if model != "nonInteracting" {
+                // C++ deletes myNonInteractingModel here before throwing; the port does not own models yet
+                panic!("{}", ProcessError::new(utils::tlf!("Unknown pedestrian model '%'", model)));
+            }
+        }
+        let mut s = MSTransportableControl {
+            myTransportables: BTreeMap::new(),
+            myWaiting4Departure: BTreeMap::new(),
+            myWaitingUntil: BTreeMap::new(),
+            myWaiting4Vehicle: BTreeMap::new(),
+            myLoadedNumber: 0,
+            myDiscardedNumber: 0,
+            myRunningNumber: 0,
+            myJammedNumber: 0,
+            myWaitingForDepartureNumber: 0,
+            myWaitingForVehicleNumber: 0,
+            myWaitingUntilNumber: 0,
+            myAccessNumber: 0,
+            myEndedNumber: 0,
+            myArrivedNumber: 0,
+            myTeleportsAbortWait: 0,
+            myTeleportsWrongDest: 0,
+            myHaveNewWaiting: false,
+            myMaxTransportableNumber: 0,
+            myMovementModel: movementModel,
+            myNonInteractingModel: nonInteracting,
+            myRouteInfos: MSDevice_Vehroutes_SortedRouteInfo::new(),
+            myAbortWaitingTimeout: 0,
+        };
+        if is_set("vehroute-output") {
+            let od = OutputDevice::get_device_by_option("vehroute-output").unwrap();
+            s.myRouteInfos.routeOut = Ptr::from_raw(od.as_ptr());
+        }
+        if is_set("personroute-output") {
+            OutputDevice::create_device_by_option("personroute-output", "routes", "routes_file.xsd", -1).unwrap();
+            let od = OutputDevice::get_device_by_option("personroute-output").unwrap();
+            s.myRouteInfos.routeOut = Ptr::from_raw(od.as_ptr());
+        }
+        if is_set("personinfo-output") {
+            OutputDevice::create_device_by_option("personinfo-output", "tripinfos", "tripinfo_file.xsd", -1).unwrap();
+        }
+        s.myAbortWaitingTimeout = string2time(&get_string("time-to-teleport.ride")).unwrap_or_else(|e| panic!("{}", e));
+        s.myMaxTransportableNumber = if isPerson { get_int("max-num-persons") } else { -1 };
+        s
     }
 
     /// C++: `void MSTransportableControl::~MSTransportableControl()` [virtual]
@@ -115,7 +191,8 @@ impl MSTransportableControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableControl::~MSTransportableControl")
+        self.clear_state();
+        // shortcut: C++ deletes myMovementModel and myNonInteractingModel here; the port does not own model objects yet, so they are leaked, upgrade with model ownership
     }
 
     /// C++: `bool MSTransportableControl::add(MSTransportable *)`
@@ -135,7 +212,20 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>) -> bool {
-        todo!("port MSTransportableControl::add")
+        let (id, depart) = {
+            let param = transportable.get_parameter();
+            (param.id.clone(), param.depart)
+        };
+        if !self.myTransportables.contains_key(&id) {
+            self.myTransportables.insert(id, transportable);
+            let step = if depart % delta_t() == 0 { depart } else { (depart / delta_t() + 1) * delta_t() };
+            self.myWaiting4Departure.entry(step).or_default().push(transportable);
+            self.myLoadedNumber += 1;
+            self.myWaitingForDepartureNumber += 1;
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `MSTransportable * MSTransportableControl::get(const std::string &) const` [const]
@@ -150,7 +240,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn get(&self, id: &str) -> Ptr<MSTransportable> {
-        todo!("port MSTransportableControl::get")
+        self.myTransportables.get(id).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `void MSTransportableControl::erase(MSTransportable *)` [virtual]
@@ -197,7 +287,43 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn erase(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::erase")
+        if is_set("personinfo-output") {
+            let dev = OutputDevice::get_device_by_option("personinfo-output").unwrap();
+            transportable.trip_info_output(&mut dev.borrow_mut());
+        } else if is_set("tripinfo-output") {
+            let dev = OutputDevice::get_device_by_option("tripinfo-output").unwrap();
+            transportable.trip_info_output(&mut dev.borrow_mut());
+        } else if get_bool("duration-log.statistics") {
+            // collecting statistics is a sideffect
+            let mut dev = OutputDevice::new_string(0);
+            transportable.trip_info_output(&mut dev);
+        }
+        if is_set("vehroute-output") || is_set("personroute-output") {
+            if transportable.has_arrived() || get_bool("vehroute-output.write-unfinished") {
+                // @todo: adapt this if we ever introduce person-device.vehroute
+                if transportable.get_bool_param("has.vehroute.person-device", false, true) {
+                    if get_bool("vehroute-output.sorted") {
+                        let departure = if get_bool("vehroute-output.intended-depart") { transportable.get_parameter().depart } else { transportable.get_departure() };
+                        let mut od = OutputDevice::new_string(1);
+                        transportable.route_output(&mut od, get_bool("vehroute-output.route-length"));
+                        MSDevice_Vehroutes::write_sorted_output(Ptr::from_mut(&mut self.myRouteInfos), departure, transportable.get_numerical_id(), &od.get_string());
+                    } else {
+                        transportable.route_output(self.myRouteInfos.routeOut.m(), get_bool("vehroute-output.route-length"));
+                    }
+                }
+            }
+        }
+        let id = transportable.get_id().to_string();
+        if let Some(stored) = self.myTransportables.get(&id).copied() {
+            if stored.has_departed() {
+                self.myRunningNumber -= 1;
+            }
+            self.myEndedNumber += 1;
+            let state = if transportable.is_person() { MSNet_TransportableState::PERSON_ARRIVED } else { MSNet_TransportableState::CONTAINER_ARRIVED };
+            MSNet::get_instance().m().inform_transportable_state_listener(transportable, state, "");
+            self.myTransportables.remove(&id);
+            // shortcut: C++ `delete i->second` is skipped; MSTransportable subclasses have no virtual drop in the port, so the object is leaked, upgrade with transportable ownership
+        }
     }
 
     /// C++: `void MSTransportableControl::eraseAll()`
@@ -212,7 +338,11 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn erase_all(&mut self) {
-        todo!("port MSTransportableControl::eraseAll")
+        // avoid taxi device having dangling references to erased customers
+        MSDevice_Taxi::all_customers_erased();
+        while let Some(t) = self.myTransportables.values().next().copied() {
+            self.erase(t);
+        }
     }
 
     /// C++: `void MSTransportableControl::setWaitEnd(SUMOTime, MSTransportable *)`
@@ -220,7 +350,13 @@ impl MSTransportableControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_wait_end(&mut self, time: SUMOTime, transportable: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::setWaitEnd")
+        let step = if time % delta_t() == 0 { time } else { (time / delta_t() + 1) * delta_t() };
+        // avoid double registration
+        let transportables = self.myWaitingUntil.entry(step).or_default();
+        if !transportables.contains(&transportable) {
+            transportables.push(transportable);
+            self.myWaitingUntilNumber += 1;
+        }
     }
 
     /// C++: `void MSTransportableControl::checkWaiting(MSNet *, const SUMOTime)`
@@ -280,7 +416,59 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn check_waiting(&mut self, net: Ptr<MSNet>, time: SUMOTime) {
-        todo!("port MSTransportableControl::checkWaiting")
+        self.myHaveNewWaiting = false;
+        while self.myWaiting4Departure.contains_key(&time) {
+            // we cannot use an iterator here because there might be additions to the vector while proceeding; index i mirrors the C++ iterator
+            let mut i: usize = 0;
+            loop {
+                let t = match self.myWaiting4Departure.get(&time).and_then(|v| v.get(i)) {
+                    Some(t) => *t,
+                    None => break,
+                };
+                if self.myMaxTransportableNumber > 0 && self.myRunningNumber >= self.myMaxTransportableNumber {
+                    let rest: Vec<Ptr<MSTransportable>> = self.myWaiting4Departure.get_mut(&time).unwrap().drain(i..).collect();
+                    self.myWaiting4Departure.entry(time + delta_t()).or_default().splice(0..0, rest);
+                    break;
+                } else if self.myMaxTransportableNumber == 0 {
+                    self.erase(t);
+                    self.myWaiting4Departure.get_mut(&time).unwrap().remove(i);
+                    continue;
+                }
+                self.myWaiting4Departure.get_mut(&time).unwrap().remove(i);
+                self.myWaitingForDepartureNumber -= 1;
+                let isPerson = t.is_person();
+                t.m().set_departed(time);
+                if t.m().proceed(net, time, false) {
+                    self.myRunningNumber += 1;
+                    net.m().inform_transportable_state_listener(
+                        t,
+                        if isPerson { MSNet_TransportableState::PERSON_DEPARTED } else { MSNet_TransportableState::CONTAINER_DEPARTED },
+                        "",
+                    );
+                    if get_bool("vehroute-output.sorted") {
+                        let departure = if get_bool("vehroute-output.intended-depart") { t.get_parameter().depart } else { time };
+                        if is_set("personroute-output") {
+                            *self.myRouteInfos.departureCounts.entry(departure).or_insert(0) += 1;
+                        } else {
+                            MSDevice_Vehroutes::register_transportable_depart(departure);
+                        }
+                    }
+                } else {
+                    self.erase(t);
+                }
+            }
+            self.myWaiting4Departure.remove(&time);
+        }
+        while self.myWaitingUntil.contains_key(&time) {
+            // make a copy because 0-duration stops might modify the vector
+            let transportables = self.myWaitingUntil.remove(&time).unwrap();
+            for t in transportables {
+                self.myWaitingUntilNumber -= 1;
+                if !t.m().proceed(net, time, false) {
+                    self.erase(t);
+                }
+            }
+        }
     }
 
     /// C++: `void MSTransportableControl::addWaiting(const MSEdge *, MSTransportable *)`
@@ -288,7 +476,12 @@ impl MSTransportableControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_waiting(&mut self, edge: Ptr<MSEdge>, person: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::addWaiting")
+        self.myWaiting4Vehicle.entry(edge_key(edge)).or_default().push(person);
+        self.myWaitingForVehicleNumber += 1;
+        self.myHaveNewWaiting = true;
+        if self.myAbortWaitingTimeout >= 0 {
+            person.m().set_abort_waiting(self.myAbortWaitingTimeout);
+        }
     }
 
     /// C++: `void MSTransportableControl::forceDeparture()`
@@ -299,7 +492,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn force_departure(&mut self) {
-        todo!("port MSTransportableControl::forceDeparture")
+        self.myRunningNumber += 1;
     }
 
     /// C++: `bool MSTransportableControl::hasAnyWaiting(const MSEdge *, SUMOVehicle *) const` [const]
@@ -320,7 +513,17 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn has_any_waiting(&self, edge: Ptr<MSEdge>, vehicle: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSTransportableControl::hasAnyWaiting")
+        if let Some(waiting) = self.myWaiting4Vehicle.get(&edge_key(edge)) {
+            for t in waiting {
+                if t.is_waiting_for(vehicle)
+                    && vehicle.allows_boarding(*t)
+                    && vehicle.is_stopped_in_range(t.get_edge_pos(), crate::microsim::ms_globals::stop_tolerance(), true)
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool MSTransportableControl::loadAnyWaiting(const MSEdge *, SUMOVehicle *, SUMOTime &, SUMOTime &, MSTransportable *const)`
@@ -377,7 +580,57 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn load_any_waiting(&mut self, edge: Ptr<MSEdge>, vehicle: Ptr<SUMOVehicle>, timeToLoadNext: &mut SUMOTime, stopDuration: &mut SUMOTime, force: Ptr<MSTransportable>) -> bool {
-        todo!("port MSTransportableControl::loadAnyWaiting")
+        let mut ret = false;
+        let key = edge_key(edge);
+        if let Some(transportables) = self.myWaiting4Vehicle.get_mut(&key) {
+            let currentTime = simstep();
+            let mut i: usize = 0;
+            while i < transportables.len() {
+                let t = transportables[i];
+                if t.is_waiting_for(vehicle)
+                    && (t == force
+                        || (vehicle.allows_boarding(t)
+                            && *timeToLoadNext - delta_t() <= currentTime
+                            && vehicle.is_stopped_in_range(t.get_edge_pos(), crate::microsim::ms_globals::stop_tolerance(), false)))
+                {
+                    edge.remove_transportable(t);
+                    vehicle.add_transportable(t);
+                    if self.myAbortWaitingTimeout >= 0 {
+                        t.m().set_abort_waiting(-1);
+                    }
+                    if *timeToLoadNext >= 0 {
+                        // meso does not have loading times
+                        let loadingDuration: SUMOTime = ((vehicle.get_vehicle_type().get_loading_duration(t.is_person()) as f64) * t.get_vehicle_type().get_boarding_factor()) as SUMOTime;
+                        // update the time point at which the next transportable can be loaded on the vehicle
+                        if *timeToLoadNext > currentTime - delta_t() {
+                            *timeToLoadNext += loadingDuration;
+                        } else {
+                            *timeToLoadNext = currentTime + loadingDuration;
+                        }
+                    }
+                    t.get_current_stage().cast::<MSStageDriving>().m().set_vehicle(vehicle);
+                    let origin = t.get_current_stage().get_origin_stop();
+                    if !origin.is_null() {
+                        origin.m().remove_transportable(t);
+                    }
+                    transportables.remove(i);
+                    self.myWaitingForVehicleNumber -= 1;
+                    ret = true;
+                } else {
+                    i += 1;
+                }
+            }
+            let empty = transportables.is_empty();
+            if empty {
+                self.myWaiting4Vehicle.remove(&key);
+            }
+            // if the time a transportable needs to get loaded on the vehicle extends the duration of the stop of the vehicle extend
+            // the duration by setting it to the loading duration of the transportable
+            if ret && *timeToLoadNext >= 0 {
+                *stopDuration = std::cmp::max(*stopDuration, *timeToLoadNext - currentTime);
+            }
+        }
+        ret
     }
 
     /// C++: `bool MSTransportableControl::hasTransportables() const` [const]
@@ -388,7 +641,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn has_transportables(&self) -> bool {
-        todo!("port MSTransportableControl::hasTransportables")
+        !self.myTransportables.is_empty()
     }
 
     /// C++: `bool MSTransportableControl::hasNonWaiting() const` [const]
@@ -399,7 +652,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn has_non_waiting(&self) -> bool {
-        todo!("port MSTransportableControl::hasNonWaiting")
+        !self.myWaiting4Departure.is_empty() || self.get_moving_number() > 0 || self.myWaitingUntilNumber > 0 || self.myHaveNewWaiting
     }
 
     /// C++: `int MSTransportableControl::getActiveCount()`
@@ -410,7 +663,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn get_active_count(&mut self) -> i32 {
-        todo!("port MSTransportableControl::getActiveCount")
+        self.myWaiting4Departure.len() as i32 + self.myRunningNumber - self.myWaitingForVehicleNumber
     }
 
     /// C++: `void MSTransportableControl::abortAnyWaitingForVehicle()`
@@ -435,7 +688,23 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn abort_any_waiting_for_vehicle(&mut self) {
-        todo!("port MSTransportableControl::abortAnyWaitingForVehicle")
+        // erase() does not touch myWaiting4Vehicle, so the map is taken out up front, as the C++ loop only clears it at the end
+        let waiting = std::mem::take(&mut self.myWaiting4Vehicle);
+        for ((_, edge), list) in waiting {
+            for p in list {
+                edge.remove_transportable(p);
+                let stage = p.get_current_stage();
+                // shortcut: C++ dynamic_cast<MSStageDriving*> is an unchecked cast here; only MSStageDriving leaves transportables waiting for a vehicle
+                let waitDescription = if stage.is_null() { "waiting".to_string() } else { stage.cast::<MSStageDriving>().get_waiting_description() };
+                write_warning(&format!("{} '{}' aborted {}.", p.m().get_object_type(), p.get_id(), waitDescription));
+                if self.myAbortWaitingTimeout >= 0 {
+                    p.m().set_abort_waiting(-1);
+                }
+                self.erase(p);
+            }
+        }
+        self.myWaiting4Vehicle.clear();
+        self.myWaitingForVehicleNumber = 0;
     }
 
     /// C++: `void MSTransportableControl::abortWaitingForVehicle(MSTransportable *)`
@@ -458,7 +727,16 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn abort_waiting_for_vehicle(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::abortWaitingForVehicle")
+        let edge = t.get_edge();
+        if let Some(waiting) = self.myWaiting4Vehicle.get_mut(&edge_key(edge)) {
+            if let Some(pos) = waiting.iter().position(|x| *x == t) {
+                if self.myAbortWaitingTimeout >= 0 {
+                    waiting[pos].m().set_abort_waiting(-1);
+                }
+                waiting.remove(pos);
+                self.myWaitingForVehicleNumber -= 1;
+            }
+        }
     }
 
     /// C++: `void MSTransportableControl::abortWaiting(MSTransportable *)`
@@ -482,7 +760,16 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn abort_waiting(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::abortWaiting")
+        for ts in self.myWaiting4Departure.values_mut() {
+            if let Some(pos) = ts.iter().position(|x| *x == t) {
+                ts.remove(pos);
+            }
+        }
+        for ts in self.myWaitingUntil.values_mut() {
+            if let Some(pos) = ts.iter().position(|x| *x == t) {
+                ts.remove(pos);
+            }
+        }
     }
 
     /// C++: `MSTransportable * MSTransportableControl::buildPerson(const SUMOVehicleParameter *, MSVehicleType *, MSTransportable::MSTransportablePlan *, SumoRNG *) const` [const, virtual]
@@ -495,7 +782,8 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn build_person(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, rng: Ptr<SumoRNG>) -> Ptr<MSTransportable> {
-        todo!("port MSTransportableControl::buildPerson")
+        let speedFactor = vtype.compute_chosen_speed_deviation(pars.speedFactor, rng, -1.0);
+        leak_ptr(MSPerson::new(pars, vtype, plan, speedFactor)).cast::<MSTransportable>()
     }
 
     /// C++: `MSTransportable * MSTransportableControl::buildContainer(const SUMOVehicleParameter *, MSVehicleType *, MSTransportable::MSTransportablePlan *) const` [const, virtual]
@@ -506,7 +794,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn build_container(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>) -> Ptr<MSTransportable> {
-        todo!("port MSTransportableControl::buildContainer")
+        leak_ptr(MSTransportable::new(pars, vtype, plan, false))
     }
 
     /// C++: `constVehIt MSTransportableControl::loadedBegin() const` [const]
@@ -515,8 +803,8 @@ impl MSTransportableControl {
     //         return myTransportables.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_begin(&self) -> MSVehicleControl_constVehIt {
-        todo!("port MSTransportableControl::loadedBegin")
+    pub fn loaded_begin(&self) -> MSTransportableControl_constVehIt {
+        panic!("shortcut: MSTransportableControl::loadedBegin needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
     }
 
     /// C++: `constVehIt MSTransportableControl::loadedEnd() const` [const]
@@ -525,8 +813,8 @@ impl MSTransportableControl {
     //         return myTransportables.end();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_end(&self) -> MSVehicleControl_constVehIt {
-        todo!("port MSTransportableControl::loadedEnd")
+    pub fn loaded_end(&self) -> MSTransportableControl_constVehIt {
+        panic!("shortcut: MSTransportableControl::loadedEnd needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
     }
 
     /// C++: `int MSTransportableControl::size() const` [const]
@@ -536,7 +824,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port MSTransportableControl::size")
+        self.myTransportables.len() as i32
     }
 
     /// C++: `void MSTransportableControl::registerJammed()`
@@ -546,7 +834,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_jammed(&mut self) {
-        todo!("port MSTransportableControl::registerJammed")
+        self.myJammedNumber += 1;
     }
 
     /// C++: `void MSTransportableControl::registerTeleportAbortWait()`
@@ -556,7 +844,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_teleport_abort_wait(&mut self) {
-        todo!("port MSTransportableControl::registerTeleportAbortWait")
+        self.myTeleportsAbortWait += 1;
     }
 
     /// C++: `void MSTransportableControl::registerTeleportWrongDest()`
@@ -566,7 +854,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_teleport_wrong_dest(&mut self) {
-        todo!("port MSTransportableControl::registerTeleportWrongDest")
+        self.myTeleportsWrongDest += 1;
     }
 
     /// C++: `void MSTransportableControl::fixLoadCount(const MSTransportable *)`
@@ -589,7 +877,18 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn fix_load_count(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSTransportableControl::fixLoadCount")
+        self.myLoadedNumber -= 1;
+        if transportable.has_departed() {
+            let depart = transportable.get_parameter().depart;
+            let step = if depart % delta_t() == 0 { depart } else { (depart / delta_t() + 1) * delta_t() };
+            let waiting = self.myWaiting4Departure.entry(step).or_default();
+            if let Some(pos) = waiting.iter().position(|x| *x == transportable) {
+                waiting.remove(pos);
+                if waiting.is_empty() {
+                    self.myWaiting4Departure.remove(&step);
+                }
+            }
+        }
     }
 
     /// C++: `int MSTransportableControl::getLoadedNumber() const` [const]
@@ -599,7 +898,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_loaded_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getLoadedNumber")
+        self.myLoadedNumber
     }
 
     /// C++: `int MSTransportableControl::getDepartedNumber() const` [const]
@@ -609,7 +908,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn get_departed_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getDepartedNumber")
+        self.myLoadedNumber - self.myWaitingForDepartureNumber - self.myDiscardedNumber
     }
 
     /// C++: `int MSTransportableControl::getRunningNumber() const` [const]
@@ -619,7 +918,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_running_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getRunningNumber")
+        self.myRunningNumber
     }
 
     /// C++: `int MSTransportableControl::getJammedNumber() const` [const]
@@ -629,7 +928,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_jammed_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getJammedNumber")
+        self.myJammedNumber
     }
 
     /// C++: `int MSTransportableControl::getWaitingForVehicleNumber() const` [const]
@@ -639,7 +938,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_for_vehicle_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getWaitingForVehicleNumber")
+        self.myWaitingForVehicleNumber
     }
 
     /// C++: `int MSTransportableControl::getWaitingUntilNumber() const` [const]
@@ -649,7 +948,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_until_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getWaitingUntilNumber")
+        self.myWaitingUntilNumber
     }
 
     /// C++: `int MSTransportableControl::getMovingNumber() const` [const]
@@ -660,7 +959,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn get_moving_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getMovingNumber")
+        self.myMovementModel.m().get_active_number() + self.myAccessNumber
     }
 
     /// C++: `int MSTransportableControl::getRidingNumber() const` [const]
@@ -671,7 +970,7 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn get_riding_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getRidingNumber")
+        self.myRunningNumber - self.myWaitingUntilNumber - self.myWaitingForVehicleNumber - self.get_moving_number()
     }
 
     /// C++: `int MSTransportableControl::getEndedNumber() const` [const]
@@ -681,7 +980,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_ended_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getEndedNumber")
+        self.myEndedNumber
     }
 
     /// C++: `int MSTransportableControl::getArrivedNumber() const` [const]
@@ -691,7 +990,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrived_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getArrivedNumber")
+        self.myArrivedNumber
     }
 
     /// C++: `int MSTransportableControl::getDiscardedNumber() const` [const]
@@ -701,7 +1000,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_discarded_number(&self) -> i32 {
-        todo!("port MSTransportableControl::getDiscardedNumber")
+        self.myDiscardedNumber
     }
 
     /// C++: `int MSTransportableControl::getTeleportsAbortWait() const` [const]
@@ -711,7 +1010,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_abort_wait(&self) -> i32 {
-        todo!("port MSTransportableControl::getTeleportsAbortWait")
+        self.myTeleportsAbortWait
     }
 
     /// C++: `int MSTransportableControl::getTeleportsWrongDest() const` [const]
@@ -721,7 +1020,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_wrong_dest(&self) -> i32 {
-        todo!("port MSTransportableControl::getTeleportsWrongDest")
+        self.myTeleportsWrongDest
     }
 
     /// C++: `int MSTransportableControl::getTeleportCount() const` [const]
@@ -731,7 +1030,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleport_count(&self) -> i32 {
-        todo!("port MSTransportableControl::getTeleportCount")
+        self.myTeleportsAbortWait + self.myTeleportsWrongDest
     }
 
     /// C++: `MSPModel * MSTransportableControl::getMovementModel()`
@@ -741,7 +1040,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_movement_model(&mut self) -> Ptr<MSPModel> {
-        todo!("port MSTransportableControl::getMovementModel")
+        self.myMovementModel
     }
 
     /// C++: `MSPModel * MSTransportableControl::getNonInteractingModel()`
@@ -751,7 +1050,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_non_interacting_model(&mut self) -> Ptr<MSPModel> {
-        todo!("port MSTransportableControl::getNonInteractingModel")
+        self.myNonInteractingModel
     }
 
     /// C++: `void MSTransportableControl::addArrived()`
@@ -760,7 +1059,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn add_arrived(&mut self) {
-        todo!("port MSTransportableControl::addArrived")
+        self.myArrivedNumber += 1;
     }
 
     /// C++: `void MSTransportableControl::addDiscarded()`
@@ -770,7 +1069,8 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn add_discarded(&mut self) {
-        todo!("port MSTransportableControl::addDiscarded")
+        self.myLoadedNumber += 1;
+        self.myDiscardedNumber += 1;
     }
 
     /// C++: `void MSTransportableControl::startedAccess()`
@@ -779,7 +1079,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn started_access(&mut self) {
-        todo!("port MSTransportableControl::startedAccess")
+        self.myAccessNumber += 1;
     }
 
     /// C++: `void MSTransportableControl::endedAccess()`
@@ -788,7 +1088,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn ended_access(&mut self) {
-        todo!("port MSTransportableControl::endedAccess")
+        self.myAccessNumber -= 1;
     }
 
     /// C++: `void MSTransportableControl::saveState(OutputDevice &)`
@@ -805,7 +1105,15 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSTransportableControl::saveState")
+        let mut oss = format!(
+            "{} {} {} {} {} {}",
+            self.myRunningNumber, self.myLoadedNumber, self.myEndedNumber, self.myWaitingForDepartureNumber, self.myArrivedNumber, self.myDiscardedNumber
+        );
+        oss.push_str(&format!(" {} {} {}", self.myJammedNumber, self.myWaitingForVehicleNumber, self.myHaveNewWaiting as i32));
+        out.write_attr(SUMO_ATTR_STATE, oss.as_str());
+        for t in self.myTransportables.values() {
+            t.m().save_state(out);
+        }
     }
 
     /// C++: `void MSTransportableControl::loadState(const std::string &)`
@@ -818,7 +1126,27 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, state: &str) {
-        todo!("port MSTransportableControl::loadState")
+        let vals: Vec<&str> = state.split_whitespace().collect();
+        // C++ stream extraction: stop at the first value that does not parse, leaving the rest unchanged
+        let mut fields: [&mut i32; 8] = [
+            &mut self.myRunningNumber,
+            &mut self.myLoadedNumber,
+            &mut self.myEndedNumber,
+            &mut self.myWaitingForDepartureNumber,
+            &mut self.myArrivedNumber,
+            &mut self.myDiscardedNumber,
+            &mut self.myJammedNumber,
+            &mut self.myWaitingForVehicleNumber,
+        ];
+        for (idx, f) in fields.iter_mut().enumerate() {
+            match vals.get(idx).and_then(|s| s.parse::<i32>().ok()) {
+                Some(v) => **f = v,
+                None => return,
+            }
+        }
+        if let Some(v) = vals.get(8).and_then(|s| s.parse::<i32>().ok()) {
+            self.myHaveNewWaiting = v != 0;
+        }
     }
 
     /// C++: `void MSTransportableControl::clearState()`
@@ -849,7 +1177,25 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSTransportableControl::clearState")
+        // shortcut: C++ deletes the transportables here; the port has no owning Box for them yet, so they are leaked, upgrade with transportable ownership
+        self.myTransportables.clear();
+        self.myWaiting4Vehicle.clear();
+        self.myWaiting4Departure.clear();
+        self.myWaitingUntil.clear();
+        self.myLoadedNumber = 0;
+        self.myDiscardedNumber = 0;
+        self.myRunningNumber = 0;
+        self.myJammedNumber = 0;
+        self.myWaitingForDepartureNumber = 0;
+        self.myWaitingForVehicleNumber = 0;
+        self.myWaitingUntilNumber = 0;
+        self.myEndedNumber = 0;
+        self.myArrivedNumber = 0;
+        self.myHaveNewWaiting = false;
+        if self.myMovementModel != self.myNonInteractingModel {
+            self.myMovementModel.m().clear_state();
+        }
+        self.myNonInteractingModel.m().clear_state();
     }
 
     /// C++: `const MSDevice_Vehroutes::SortedRouteInfo & MSTransportableControl::getRouteInfo()`
@@ -858,7 +1204,7 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_route_info(&mut self) -> &MSDevice_Vehroutes_SortedRouteInfo {
-        todo!("port MSTransportableControl::getRouteInfo")
+        &self.myRouteInfos
     }
 
     /// C++: `MSTransportableControl & MSTransportableControl::operator=(const MSTransportableControl &)` [private]
@@ -866,7 +1212,7 @@ impl MSTransportableControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &MSTransportableControl) -> &mut MSTransportableControl {
-        todo!("port MSTransportableControl::operator=")
+        panic!("MSTransportableControl copy assignment is invalidated in C++ (declared private and deleted)")
     }
 
 }
