@@ -34,7 +34,11 @@ impl MSTransportableDevice {
     //     }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str) -> Self {
-        todo!("port MSTransportableDevice::MSTransportableDevice")
+        MSTransportableDevice {
+            base: MSDevice::new(id),
+            base2: MSMoveReminder::new(id, Ptr::default(), true),
+            myHolder: Ptr::from_mut(holder),
+        }
     }
 
     /// C++: `void MSTransportableDevice::~MSTransportableDevice() noexcept` [virtual]
@@ -42,7 +46,7 @@ impl MSTransportableDevice {
     // virtual ~MSTransportableDevice() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableDevice::~MSTransportableDevice")
+        // virtual destructor body is empty
     }
 
     /// C++: `MSTransportable & MSTransportableDevice::getHolder() const` [const]
@@ -52,7 +56,7 @@ impl MSTransportableDevice {
     //     }
     #[allow(unused_variables)]
     pub fn get_holder(&self) -> &mut MSTransportable {
-        todo!("port MSTransportableDevice::getHolder")
+        self.myHolder.m()
     }
 
     /// C++: `void MSTransportableDevice::MSTransportableDevice(const MSTransportableDevice &)` [private]

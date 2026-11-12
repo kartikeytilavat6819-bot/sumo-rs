@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDispatch_Greedy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::SUMOTIME_MAX;
 
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
 /// C++ class `MSDispatch_Greedy` (microsim/devices/MSDispatch_Greedy.h)
@@ -37,7 +38,16 @@ impl MSDispatch_Greedy {
     //     { }
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        todo!("port MSDispatch_Greedy::MSDispatch_Greedy")
+        let base = MSDispatch::new(params);
+        let myMaximumWaitingTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("maxWaitingTime", "300")).unwrap() as f64);
+        let myRecheckTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckTime", "120")).unwrap() as f64);
+        let myRecheckSafety = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckSafety", "3600")).unwrap() as f64);
+        MSDispatch_Greedy {
+            base,
+            myMaximumWaitingTime,
+            myRecheckTime,
+            myRecheckSafety,
+        }
     }
 
     /// C++: `void MSDispatch_Greedy::computeDispatch(SUMOTime, const std::vector<MSDevice_Taxi *> &)` [virtual]
@@ -136,7 +146,107 @@ impl MSDispatch_Greedy {
     // }
     #[allow(unused_variables)]
     pub fn compute_dispatch(&mut self, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
-        todo!("port MSDispatch_Greedy::computeDispatch")
+        let mut numDispatched: i32 = 0;
+        let mut numPostponed: i32 = 0;
+        // find available vehicles
+        // determinism: C++ std::set with ComparatorNumericalVehicleIdLess; keyed by the holder's numerical id so iteration order matches
+        let mut available: BTreeMap<SUMOTrafficObject_NumericalID, Ptr<MSDevice_Taxi>> = BTreeMap::new();
+        for taxi in fleet.iter() {
+            if taxi.m().is_empty() {
+                available.entry(taxi.myHolder.get_numerical_id()).or_insert(*taxi);
+            }
+        }
+        // greedy assign closest vehicle in reservation order
+        let router = Ptr::from_mut(self.get_router());
+        let mut reservations: Vec<Ptr<Reservation>> = self.get_reservations();
+        // determinism: C++ std::sort is unstable; Rust sort_by is stable, so ties may be ordered differently
+        let sorter = MSDispatch_time_sorter::new();
+        reservations.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        let mut it: usize = 0;
+        while it < reservations.len() {
+            if available.len() == 0 {
+                break;
+            }
+            let res = reservations[it];
+            if res.recheck > now {
+                it += 1;
+                numPostponed += 1;
+                continue;
+            }
+            //Position pos = res.from->getLanes().front()->geometryPositionAtOffset(res.fromPos);
+            let mut closest: Ptr<MSDevice_Taxi> = Ptr::default();
+            let mut closestTime: SUMOTime = SUMOTIME_MAX;
+            let mut tooEarly = false;
+            let mut unreachable = false;
+            let mut unreachableDest = false;
+            for &taxi in available.values() {
+                if self.remaining_capacity(taxi, res) < 0 || !taxi.m().compatible_line(res) {
+                    continue;
+                }
+                let travelTime = MSDispatch::compute_pickup_time(now, taxi, &*res, router.m());
+                let destConnected = self.is_reachable(now, taxi, &*res, router.m());
+                if travelTime < closestTime && destConnected {
+                    closestTime = travelTime;
+                    closest = taxi;
+                    let taxiWait = res.pickupTime - (now + closestTime);
+                    if taxiWait > self.myMaximumWaitingTime {
+                        // no need to service this customer now
+                        tooEarly = true;
+                        res.m().recheck += std::cmp::max(now + self.myRecheckTime, res.pickupTime - closestTime - self.myRecheckSafety);
+                        break;
+                    }
+                } else if travelTime == SUMOTIME_MAX {
+                    unreachable = true;
+                } else if !destConnected {
+                    unreachableDest = true;
+                }
+            }
+            if tooEarly || closest.is_null() {
+                // too early or all taxis are too small
+                let resWait = now - res.pickupTime;
+                if (unreachable || unreachableDest) && resWait > self.myKeepUnreachableResTime {
+                    reservations.remove(it);
+                    let persons = res.persons.values().map(|p| p.get_id().to_string()).collect::<Vec<_>>().join(" ");
+                    if unreachable {
+                        write_warningf!(
+                            "Aborting reservation for customers '%' from '%' after waiting time % because no taxi can reach the pickup location, time=%.",
+                            persons,
+                            res.from.get_id(),
+                            utils::common::time::time2string(resWait),
+                            utils::common::time::time2string(MSNet::get_instance().get_current_time_step())
+                        );
+                    } else {
+                        write_warningf!(
+                            "Aborting reservation for customers '%' to '%' after waiting time % because no taxi can reach the dropoff location, time=%.",
+                            persons,
+                            res.from.get_id(),
+                            utils::common::time::time2string(resWait),
+                            utils::common::time::time2string(MSNet::get_instance().get_current_time_step())
+                        );
+                    }
+                    let persons: Vec<Ptr<MSTransportable>> = res.persons.values().copied().collect();
+                    for p in persons {
+                        let _ = self.remove_reservation(p, res.from, res.fromPos, res.to, res.toPos, res.group.clone());
+                    }
+                } else {
+                    it += 1;
+                    numPostponed += 1;
+                }
+            } else {
+                numDispatched += self.dispatch(closest, &mut it, router.m(), &mut reservations);
+                available.remove(&closest.myHolder.get_numerical_id());
+            }
+        }
+        // check if any taxis are able to service the remaining requests
+        self.myHasServableReservations = reservations.len() > 0 && (available.len() < fleet.len() || numPostponed > 0 || numDispatched > 0);
     }
 
     /// C++: `int MSDispatch_Greedy::dispatch(MSDevice_Taxi *, std::vector<Reservation *>::iterator &, SUMOAbstractRouter<MSEdge, SUMOVehicle> &, std::vector<Reservation *> &)` [virtual, protected]
@@ -154,8 +264,12 @@ impl MSDispatch_Greedy {
     //     return 1;
     // }
     #[allow(unused_variables)]
-    pub fn dispatch(&mut self, taxi: Ptr<MSDevice_Taxi>, resIt: &mut Unmapped /* std::vector<Reservation *>::iterator */, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
-        todo!("port MSDispatch_Greedy::dispatch")
+    pub fn dispatch(&mut self, taxi: Ptr<MSDevice_Taxi>, resIt: &mut usize /* std::vector<Reservation *>::iterator, as an index */, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, reservations: &mut Vec<Ptr<Reservation>>) -> i32 {
+        let res = reservations[*resIt];
+        taxi.m().dispatch(&*res);
+        self.served_reservation(res, taxi);
+        reservations.remove(*resIt); // resIt = reservations.erase(resIt)
+        1
     }
 
     /// C++: `MSDispatch_Greedy & MSDispatch_Greedy::operator=(const MSDispatch_Greedy &)` [private]
@@ -195,7 +309,9 @@ impl MSDispatch_GreedyClosest {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        todo!("port MSDispatch_GreedyClosest::MSDispatch_GreedyClosest")
+        MSDispatch_GreedyClosest {
+            base: MSDispatch_Greedy::new(params),
+        }
     }
 
     /// C++: `void MSDispatch_GreedyClosest::computeDispatch(SUMOTime, const std::vector<MSDevice_Taxi *> &)` [virtual]
@@ -280,7 +396,65 @@ impl MSDispatch_GreedyClosest {
     // }
     #[allow(unused_variables)]
     pub fn compute_dispatch(&mut self, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
-        todo!("port MSDispatch_GreedyClosest::computeDispatch")
+        let mut havePostponed = false;
+        let mut numDispatched: i32 = 0;
+        // find available vehicles
+        // determinism: C++ std::set with ComparatorNumericalVehicleIdLess; keyed by the holder's numerical id so iteration order matches
+        let mut available: BTreeMap<SUMOTrafficObject_NumericalID, Ptr<MSDevice_Taxi>> = BTreeMap::new();
+        for taxi in fleet.iter() {
+            if taxi.m().is_empty() {
+                available.entry(taxi.myHolder.get_numerical_id()).or_insert(*taxi);
+            }
+        }
+        // greedy assign closest vehicle
+        let router = Ptr::from_mut(self.get_router());
+        let mut activeReservations: Vec<Ptr<Reservation>> = Vec::new();
+        for res in self.get_reservations() {
+            if res.recheck <= now {
+                activeReservations.push(res);
+            }
+        }
+        while available.len() > 0 && activeReservations.len() > 0 {
+            let mut closest: Ptr<Reservation> = Ptr::default();
+            let mut closestTaxi: Ptr<MSDevice_Taxi> = Ptr::default();
+            let mut closestTime: SUMOTime = SUMOTIME_MAX;
+            for &res in activeReservations.iter() {
+                let mut recheck: SUMOTime = SUMOTIME_MAX;
+                for &taxi in available.values() {
+                    if self.remaining_capacity(taxi, res) < 0 || !taxi.m().compatible_line(res) {
+                        continue;
+                    }
+                    let travelTime = MSDispatch::compute_pickup_time(now, taxi, &*res, router.m());
+                    let taxiWait = res.pickupTime - (now + travelTime);
+                    if travelTime < closestTime {
+                        if taxiWait < self.myMaximumWaitingTime {
+                            closestTime = travelTime;
+                            closest = res;
+                            closestTaxi = taxi;
+                        } else {
+                            recheck = std::cmp::min(recheck, std::cmp::max(now + self.myRecheckTime, res.pickupTime - closestTime - self.myRecheckSafety));
+                        }
+                    }
+                }
+                /*
+                if (closestTaxi == nullptr) {
+                    // all taxis would arrive to early. postpone recheck
+                    res.recheck = recheck;
+                }
+                */
+            }
+            if !closestTaxi.is_null() {
+                let mut closeIt: usize = activeReservations.iter().position(|r| *r == closest).expect("closest reservation is in activeReservations");
+                numDispatched += self.dispatch(closestTaxi, &mut closeIt, router.m(), &mut activeReservations);
+                available.remove(&closestTaxi.myHolder.get_numerical_id());
+            } else {
+                // all current reservations are too early or too big
+                havePostponed = true;
+                break;
+            }
+        }
+        // check if any taxis are able to service the remaining requests
+        self.myHasServableReservations = self.get_reservations().len() > 0 && (available.len() < fleet.len() || havePostponed || numDispatched > 0);
     }
 
 }
