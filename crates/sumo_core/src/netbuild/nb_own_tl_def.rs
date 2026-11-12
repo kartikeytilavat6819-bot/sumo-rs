@@ -2,6 +2,39 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: NBEdge::getConnections()/getConnectionsFromLane() are typed Vec<CHBuilder_Connection> in nb_edge.rs but C++ returns NBEdge::Connection (toEdge/toLane/vmax/length); all connection access in this file goes through these two helpers, upgrade: change nb_edge.rs accessors to Vec<NBEdge_Connection> and drop the clone
+fn all_connections(e: Ptr<NBEdge>) -> Vec<NBEdge_Connection> {
+    e.get_connections().clone()
+}
+fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
+    e.get_connections_from_lane(lane, Ptr::default(), -1)
+}
+// C++ std::string::operator[] semantics for reads past the end: '\0'
+fn byte_at(s: &[u8], i: usize) -> u8 {
+    s.get(i).copied().unwrap_or(0)
+}
+fn link_state_at(s: &[u8], i: i32) -> LinkState {
+    if i < 0 { 0 } else { byte_at(s, i as usize) as LinkState }
+}
+// C++ static const NBOwnTLDef::MIN_SPEED_CROSSING_TIME
+const NBOwnTLDef_MIN_SPEED_CROSSING_TIME: f64 = 25.0 / 3.6;
+// C++ #define MIN_GREEN_TIME 5 (netbuild/NBOwnTLDef.cpp)
+const MIN_GREEN_TIME: i32 = 5;
+// std::string::operator[] write helper (state strings are ASCII, positions are in range)
+fn sset(s: &mut String, i: usize, c: u8) {
+    let mut b = std::mem::take(s).into_bytes();
+    b[i] = c;
+    *s = String::from_utf8(b).unwrap();
+}
+fn sget(s: &str, i: usize) -> u8 {
+    byte_at(s.as_bytes(), i)
+}
+// logic->addStep(duration, state, minDur, maxDur, earliestEnd, latestEnd) (6-argument C++ overload)
+fn add_step_6(logic: Ptr<NBTrafficLightLogic>, duration: SUMOTime, state: &str, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime) {
+    let u = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+    logic.m().add_step_2(duration, state, minDur, maxDur, earliestEnd, latestEnd, u, u, u, "", &Vec::new(), -1);
+}
+
 /// A traffic light logics which must be computed (only nodes/edges are given)
 /// C++ class `NBOwnTLDef` (netbuild/NBOwnTLDef.h)
 pub struct NBOwnTLDef {
@@ -40,7 +73,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new(id, junctions, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -53,7 +90,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new_2(id, junction, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, SUMOTime, TrafficLightType)`
@@ -66,7 +107,11 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBOwnTLDef::NBOwnTLDef")
+        Self {
+            base: NBTrafficLightDefinition::new_3(id, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
+            myHaveSinglePhase: false,
+            myLayout: TrafficLightLayout::DEFAULT,
+        }
     }
 
     /// C++: `void NBOwnTLDef::~NBOwnTLDef() noexcept` [virtual]
@@ -74,7 +119,7 @@ impl NBOwnTLDef {
     // NBOwnTLDef::~NBOwnTLDef() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBOwnTLDef::~NBOwnTLDef")
+        // C++ destructor body is empty; members are released by Rust drop glue
     }
 
     /// C++: `void NBOwnTLDef::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)` [virtual]
@@ -84,7 +129,7 @@ impl NBOwnTLDef {
     //                          const EdgeVector& /*outgoing*/) {}
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBOwnTLDef::remapRemoved")
+        // C++ body is empty (the base definition's behaviour applies, which is also empty for NBOwnTLDef)
     }
 
     /// C++: `void NBOwnTLDef::setTLControllingInformation() const` [const, virtual]
@@ -101,7 +146,12 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        todo!("port NBOwnTLDef::setTLControllingInformation")
+        // set the information about the link's positions within the tl into the
+        //  edges the links are starting at, respectively
+        for conn in self.myControlledLinks.iter() {
+            let edge = conn.get_from();
+            edge.m().set_controlling_tl_information(conn, self.get_id());
+        }
     }
 
     /// C++: `void NBOwnTLDef::setSinglePhase()`
@@ -111,7 +161,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_single_phase(&mut self) {
-        todo!("port NBOwnTLDef::setSinglePhase")
+        self.myHaveSinglePhase = true;
     }
 
     /// C++: `void NBOwnTLDef::addGreenWithin(NBTrafficLightLogic *, const EdgeVector &, EdgeVector &)` [static]
@@ -139,7 +189,24 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_green_within(logic: Ptr<NBTrafficLightLogic>, fromEdges: &EdgeVector, toProc: &mut EdgeVector) {
-        todo!("port NBOwnTLDef::addGreenWithin")
+        let mut foundGreen: Vec<bool> = vec![false; fromEdges.len()];
+        for phase in logic.get_phases().iter() {
+            let state = phase.state.as_bytes();
+            for j in 0..fromEdges.len() {
+                let ls = link_state_at(state, j as i32);
+                if ls == LINKSTATE_TL_GREEN_MAJOR || ls == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j] = true;
+                }
+            }
+        }
+        for j in 0..foundGreen.len() {
+            if !foundGreen[j] {
+                let e = fromEdges[j];
+                if !toProc.contains(&e) {
+                    toProc.push(e);
+                }
+            }
+        }
     }
 
     /// C++: `void NBOwnTLDef::addPedestrianScramble(NBTrafficLightLogic *, int, SUMOTime, SUMOTime, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -197,7 +264,50 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_pedestrian_scramble(logic: Ptr<NBTrafficLightLogic>, totalNumLinks: i32, greenTime: SUMOTime, yellowTime: SUMOTime, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) {
-        todo!("port NBOwnTLDef::addPedestrianScramble")
+        let brakingTime = yellowTime;
+        // check both indices for each crossing (they may have green in different phases)
+        let mut foundGreen: Vec<bool> = vec![false; crossings.len() * 2];
+        let phaseStates: Vec<String> = logic.get_phases().iter().map(|p| p.state.clone()).collect();
+        for i in 0..phaseStates.len() {
+            let state = phaseStates[i].as_bytes();
+            let mut j: usize = 0;
+            for cross in crossings.iter() {
+                let ls = link_state_at(state, cross.tlLinkIndex);
+                let ls2 = if cross.tlLinkIndex2 >= 0 { link_state_at(state, cross.tlLinkIndex2) } else { ls };
+                if ls == LINKSTATE_TL_GREEN_MAJOR || ls == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j] = true;
+                }
+                if ls2 == LINKSTATE_TL_GREEN_MAJOR || ls2 == LINKSTATE_TL_GREEN_MINOR {
+                    foundGreen[j + crossings.len()] = true;
+                }
+                j += 1;
+            }
+        }
+        for j in 0..foundGreen.len() {
+            if !foundGreen[j] {
+                // add a phase where all pedestrians may walk, (preceded by a yellow phase and followed by a clearing phase)
+                if phaseStates.len() > 0 {
+                    let mut needYellowPhase = false;
+                    let mut state: Vec<u8> = phaseStates.last().unwrap().clone().into_bytes();
+                    for i1 in 0..fromEdges.len() {
+                        if i1 < state.len() && (state[i1] == b'G' || state[i1] == b'g') {
+                            state[i1] = b'y';
+                            needYellowPhase = true;
+                        }
+                    }
+                    let state = String::from_utf8(state).unwrap();
+                    // add yellow step
+                    if needYellowPhase && brakingTime > 0 {
+                        logic.m().add_step(brakingTime, &state, &Vec::new(), "", -1);
+                    }
+                }
+                let pedClearingTime = time2steps(utils::options::options_cont::get_int("tls.crossing-clearance.time") as f64);
+                let scrambleTime = time2steps(utils::options::options_cont::get_int("tls.scramble.time") as f64);
+                let u = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+                Self::add_pedestrian_phases(logic, scrambleTime + pedClearingTime, u, u, u, u, "r".repeat(totalNumLinks.max(0) as usize), crossings, fromEdges, toEdges);
+                break;
+            }
+        }
     }
 
     /// C++: `std::string NBOwnTLDef::addPedestrianPhases(NBTrafficLightLogic *, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, std::string, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -255,7 +365,46 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_pedestrian_phases(logic: Ptr<NBTrafficLightLogic>, greenTime: SUMOTime, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime, state: String, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::addPedestrianPhases")
+        // compute based on length of the crossing if not set by the user
+        let pedClearingTime = time2steps(utils::options::options_cont::get_int("tls.crossing-clearance.time") as f64);
+        // compute if not set by user: must be able to reach the middle of the second "Richtungsfahrbahn"
+        let minPedTime = time2steps(utils::options::options_cont::get_int("tls.crossing-min.time") as f64);
+        let orig = state.clone();
+        let mut state = Self::patch_state_for_crossings(&state, crossings, fromEdges, toEdges);
+        if orig == state {
+            // add step
+            add_step_6(logic, greenTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+        } else {
+            let pedTime = greenTime - pedClearingTime;
+            if pedTime >= minPedTime {
+                // ensure clearing time for pedestrians
+                let isSimpleActuatedCrossing = logic.get_type() == TrafficLightType::ACTUATED
+                    && minDur == NBTrafficLightDefinition_UNSPECIFIED_DURATION && logic.get_phases().len() == 2;
+                if isSimpleActuatedCrossing {
+                    // permit green phase to extend when there are no pedestrians
+                    logic.m().set_phase_next(0, &vec![0, 1]);
+                }
+                add_step_6(logic, pedTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+                let mut bytes: Vec<u8> = state.into_bytes();
+                for cross in crossings.iter() {
+                    if cross.tlLinkIndex >= fromEdges.len() as i32 || fromEdges[cross.tlLinkIndex as usize].is_null() {
+                        bytes[cross.tlLinkIndex as usize] = b'r';
+                    }
+                    if cross.tlLinkIndex2 >= 0
+                        && (cross.tlLinkIndex2 >= fromEdges.len() as i32 || fromEdges[cross.tlLinkIndex2 as usize].is_null())
+                    {
+                        bytes[cross.tlLinkIndex2 as usize] = b'r';
+                    }
+                }
+                state = String::from_utf8(bytes).unwrap();
+                logic.m().add_step(pedClearingTime, &state, &Vec::new(), "", -1);
+            } else {
+                state = orig;
+                // not safe for pedestrians.
+                add_step_6(logic, greenTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+            }
+        }
+        state
     }
 
     /// C++: `std::string NBOwnTLDef::patchStateForCrossings(const std::string &, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &)` [static]
@@ -322,7 +471,69 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn patch_state_for_crossings(state: &str, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::patchStateForCrossings")
+        let sb = state.as_bytes();
+        let mut result: Vec<u8> = sb.to_vec();
+        for cross in crossings.iter() {
+            let mut isForbidden = false;
+            let mut i2: usize = 0;
+            while i2 < fromEdges.len() && !isForbidden {
+                // only check connections at this crossings node
+                if !fromEdges[i2].is_null() && !toEdges[i2].is_null() && fromEdges[i2].get_to_node() == cross.node {
+                    for edge in cross.edges.iter() {
+                        let i2dir = cross.node.get_direction(fromEdges[i2], toEdges[i2], false);
+                        if byte_at(sb, i2) != b'r' && byte_at(sb, i2) != b's'
+                            && (*edge == fromEdges[i2]
+                                || (*edge == toEdges[i2]
+                                    && (i2dir == LinkDirection::STRAIGHT || i2dir == LinkDirection::PARTLEFT || i2dir == LinkDirection::PARTRIGHT)))
+                        {
+                            isForbidden = true;
+                            break;
+                        }
+                    }
+                }
+                i2 += 1;
+            }
+            let i1 = cross.tlLinkIndex;
+            assert!(i1 >= 0 && (i1 as usize) < result.len());
+            let newState: u8 = if isForbidden { b'r' } else { b'G' };
+            if (i1 as usize) < toEdges.len() && !toEdges[i1 as usize].is_null() && (result[i1 as usize] != newState || !isForbidden) {
+                if cross.tlID != NBTrafficLightDefinition_DummyID {
+                    write_warningf!("Custom crossing linkIndex % conflicts with vehicular connections at tlLogic '%'", i1, cross.tlID);
+                }
+            } else {
+                result[i1 as usize] = newState;
+            }
+            if cross.tlLinkIndex2 >= 0 {
+                let i2 = cross.tlLinkIndex2;
+                if (i2 as usize) < toEdges.len() && !toEdges[i2 as usize].is_null() && (result[i2 as usize] != newState || !isForbidden) {
+                    if cross.tlID != NBTrafficLightDefinition_DummyID {
+                        write_warningf!("Custom crossing linkIndex2 % conflicts with vehicular connections at tlLogic '%'", i2, cross.tlID);
+                    }
+                } else {
+                    result[i2 as usize] = newState;
+                }
+            }
+        }
+
+        // correct behaviour for roads that are in conflict with a pedestrian crossing
+        assert!(fromEdges.len() <= result.len());
+        for i1 in 0..fromEdges.len() {
+            if result[i1] == b'G' {
+                for cross in crossings.iter() {
+                    let i2 = cross.tlLinkIndex;
+                    let i3 = cross.tlLinkIndex2;
+                    if !fromEdges[i1].is_null() && !toEdges[i1].is_null() && fromEdges[i1].get_to_node() == cross.node {
+                        if (byte_at(&result, i2 as usize) == b'G' || (i3 >= 0 && byte_at(&result, i3 as usize) == b'G'))
+                            && cross.node.must_brake_for_crossing(fromEdges[i1], toEdges[i1], cross)
+                        {
+                            result[i1] = b'g';
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        String::from_utf8(result).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::patchNEMAStateForCrossings(const std::string &, const std::vector<NBNode::Crossing *> &, const EdgeVector &, const EdgeVector &, const NBEdge *, NBEdge *)` [static]
@@ -401,7 +612,81 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn patch_nema_state_for_crossings(state: &str, crossings: &Vec<Ptr<NBNode_Crossing>>, fromEdges: &EdgeVector, toEdges: &EdgeVector, greenEdge: Ptr<NBEdge>, otherChosen: Ptr<NBEdge>) -> String {
-        todo!("port NBOwnTLDef::patchNEMAStateForCrossings")
+        let sb = state.as_bytes();
+        let mut result: Vec<u8> = sb.to_vec();
+        let pos: i32 = state.len() as i32 - crossings.len() as i32; // number of controlled vehicle links
+        let toNode = greenEdge.get_to_node();
+        // iterators over the node's edges are modelled as indices (len() stands for end())
+        let all: EdgeVector = toNode.get_edges().clone();
+        let len = all.len();
+        let start = all.iter().position(|e| *e == greenEdge).unwrap_or(len);
+
+        // permit crossings over edges between the current green edge and it's straight continuation
+        let mut endEdge: Ptr<NBEdge> = Ptr::default();
+        for i in 0..state.len() {
+            if byte_at(sb, i) == b'G' && i < fromEdges.len() && i < toEdges.len() && fromEdges[i] == greenEdge
+                && toNode.get_direction(greenEdge, toEdges[i], false) == LinkDirection::STRAIGHT
+            {
+                // straight edge found
+                endEdge = toEdges[i];
+                break;
+            }
+        }
+        if endEdge.is_null() {
+            endEdge = otherChosen;
+        }
+        if endEdge.is_null() {
+            // try to find the reverse edge of the green edge
+            let mut itCW = start;
+            // NBContHelper::nextCW
+            itCW += 1;
+            if itCW == len {
+                itCW = 0;
+            }
+            if itCW < len && all[itCW].get_from_node() == toNode {
+                endEdge = all[itCW];
+            }
+        }
+        if endEdge.is_null() {
+            // at least prevent an infinite loop
+            endEdge = greenEdge;
+        }
+
+        let mut end = all.iter().position(|e| *e == endEdge).unwrap_or(len);
+        if end == len {
+            // at least prevent an infinite loop
+            end = start;
+        }
+        // NBContHelper::nextCCW(all, it) on index it
+        let next_ccw = |it: usize| -> usize { if it == 0 { len.wrapping_sub(1) } else { it - 1 } };
+        let mut it = next_ccw(start);
+        while it != end {
+            for ic in 0..crossings.len() {
+                let i1 = (pos + ic as i32) as usize;
+                let cross = &crossings[ic];
+                for crossed in cross.edges.iter() {
+                    if *crossed == all[it] {
+                        result[i1] = b'G';
+                        break;
+                    }
+                }
+            }
+            it = next_ccw(it);
+        }
+        // correct behaviour for roads that are in conflict with a pedestrian crossing
+        for i1 in 0..(pos.max(0) as usize) {
+            if result[i1] == b'G' {
+                for ic in 0..crossings.len() {
+                    let crossing = &crossings[ic];
+                    let i2 = (pos + ic as i32) as usize;
+                    if byte_at(&result, i2) == b'G' && crossing.node.must_brake_for_crossing(fromEdges[i1], toEdges[i1], crossing) {
+                        result[i1] = b'g';
+                        break;
+                    }
+                }
+            }
+        }
+        String::from_utf8(result).unwrap()
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::computeLogicAndConts(int, bool)`
@@ -1002,7 +1287,562 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic_and_conts(&mut self, brakingTimeSeconds: i32, onlyConts: bool) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBOwnTLDef::computeLogicAndConts")
+        if self.myControlledNodes.len() == 1 {
+            // otherwise, use values from previous call to initNeedsContRelation
+            self.myNeedsContRelation.clear();
+        }
+        self.myExtraConflicts.clear();
+        let isNEMA = self.myType == TrafficLightType::NEMA;
+        let brakingTime: SUMOTime = time2steps(brakingTimeSeconds as f64);
+        let leftTurnTime: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.left-green.time") as f64);
+        let minMinDur: SUMOTime = if self.myType == TrafficLightType::STATIC {
+            NBTrafficLightDefinition_UNSPECIFIED_DURATION
+        } else {
+            time2steps(utils::options::options_cont::get_int("tls.min-dur") as f64)
+        };
+        let maxDur: SUMOTime = if self.myType == TrafficLightType::STATIC {
+            NBTrafficLightDefinition_UNSPECIFIED_DURATION
+        } else {
+            time2steps(utils::options::options_cont::get_int("tls.max-dur") as f64)
+        };
+        let U = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+        let earliestEnd: SUMOTime = U;
+        let latestEnd: SUMOTime = U;
+        let greenTime: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.green.time") as f64);
+        let mut allRedTime: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.allred.time") as f64);
+        let minorLeftSpeedThreshold: f64 = utils::options::options_cont::get_float("tls.minor-left.max-speed");
+        let noMixed: bool = utils::options::options_cont::get_bool("tls.no-mixed");
+        // left-turn phases do not work well for joined tls, so we build incoming instead
+        if self.myLayout == TrafficLightLayout::DEFAULT {
+            // @note this prevents updating after loading plain-xml into netedit computing tls and then changing the default layout
+            self.myLayout = TrafficLightLayouts.get(&utils::options::options_cont::get_string("tls.layout")).unwrap();
+        }
+        // corridorLike() resets crossing indices so should be called first
+        let groupOpposites = self.myLayout == TrafficLightLayout::OPPOSITES && (self.myControlledNodes.len() <= 2 || self.corridor_like());
+
+        // things collect for NEMA phase building
+        let mut chosenList: Vec<(Ptr<NBEdge>, Ptr<NBEdge>)> = Vec::new();
+        let mut straightStates: Vec<String> = Vec::new();
+        let mut leftStates: Vec<String> = Vec::new();
+
+        // build complete lists first
+        let incoming: EdgeVector = self.get_incoming_edges().clone();
+        let mut fromEdges: EdgeVector = Vec::new();
+        let mut toEdges: EdgeVector = Vec::new();
+        let mut isTurnaround: Vec<bool> = Vec::new();
+        let mut hasTurnLane: Vec<bool> = Vec::new();
+        let mut fromLanes: Vec<i32> = Vec::new();
+        let mut toLanes: Vec<i32> = Vec::new();
+        let mut crossingTime: Vec<SUMOTime> = Vec::new();
+        let mut totalNumLinks: i32 = 0;
+        for &fromEdge in incoming.iter() {
+            let numLanes = fromEdge.get_num_lanes();
+            let edgeHasStraight = self.has_straight_connection(fromEdge);
+            for i2 in 0..numLanes {
+                let mut hasLeft = false;
+                let mut hasPartLeft = false;
+                let mut hasStraight = false;
+                let mut hasRight = false;
+                let mut hasTurnaround = false;
+                for approached in connections_from_lane(fromEdge, i2) {
+                    if !fromEdge.may_be_tls_controlled(i2, approached.toEdge, approached.toLane) {
+                        continue;
+                    }
+                    fromEdges.push(fromEdge);
+                    fromLanes.push(i2);
+                    toLanes.push(approached.toLane);
+                    toEdges.push(approached.toEdge);
+                    if approached.vmax < NUMERICAL_EPS
+                        || (fromEdge.get_permissions(-1) & SVC_PASSENGER) == 0
+                        || (approached.toEdge.get_permissions(-1) & SVC_PASSENGER) == 0
+                    {
+                        crossingTime.push(0);
+                    } else {
+                        // shortcut: NBEdge::Connection::length is read through base2 (NBRouterEdge::getLength), which is still a todo in nb_edge.rs, upgrade: fill NBRouterEdge::get_length for connections
+                        crossingTime.push(time2steps(
+                            (approached.base2.get_length() + approached.viaLength) / approached.vmax.max(NBOwnTLDef_MIN_SPEED_CROSSING_TIME),
+                        ));
+                    }
+                    if !approached.toEdge.is_null() {
+                        isTurnaround.push(fromEdge.is_turning_direction_at(approached.toEdge));
+                    } else {
+                        isTurnaround.push(true);
+                    }
+                    let dir = fromEdge.get_to_node().get_direction(fromEdge, approached.toEdge, false);
+                    if dir == LinkDirection::STRAIGHT {
+                        hasStraight = true;
+                    } else if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+                        hasRight = true;
+                    } else if dir == LinkDirection::LEFT {
+                        hasLeft = true;
+                    } else if dir == LinkDirection::PARTLEFT {
+                        hasPartLeft = true;
+                    } else if dir == LinkDirection::TURN {
+                        hasTurnaround = true;
+                    }
+                    totalNumLinks += 1;
+                }
+                for approached in connections_from_lane(fromEdge, i2) {
+                    if !fromEdge.may_be_tls_controlled(i2, approached.toEdge, approached.toLane) {
+                        continue;
+                    }
+                    hasTurnLane.push(
+                        (hasLeft && !hasPartLeft && !hasStraight && !hasRight)
+                            || (hasPartLeft && !hasLeft && !hasStraight && !hasRight)
+                            || (hasPartLeft && hasLeft && edgeHasStraight && !hasRight)
+                            || (!hasLeft && !hasPartLeft && !hasTurnaround && hasRight),
+                    );
+                }
+            }
+        }
+        // collect crossings
+        let mut crossings: Vec<Ptr<NBNode_Crossing>> = Vec::new();
+        for node in self.myControlledNodes.clone() {
+            let c = node.get_crossings();
+            let _ = node.m().set_crossing_tl_indices(self.get_id(), totalNumLinks, onlyConts);
+            totalNumLinks = totalNumLinks.max(self.max_crossing_index(node) + 1);
+            crossings.extend(c);
+        }
+
+        let mut logicBox: Option<Box<NBTrafficLightLogic>> = Some(Box::new(NBTrafficLightLogic::new(
+            self.get_id(),
+            self.get_program_id(),
+            totalNumLinks,
+            self.myOffset,
+            self.myType,
+        )));
+        let mut logic: Ptr<NBTrafficLightLogic> = Ptr::from_mut(&mut **logicBox.as_mut().unwrap());
+        let mut toProc: EdgeVector = Self::get_connected_outer_edges(&incoming);
+
+        // build all phases
+        let mut greenPhases: Vec<i32> = Vec::new(); // indices of green phases
+        let mut hadGreenMajor: Vec<bool> = vec![false; totalNumLinks.max(0) as usize];
+        while toProc.len() > 0 {
+            let mut groupTram = false;
+            let mut groupOther = false;
+            let mut chosen: (Ptr<NBEdge>, Ptr<NBEdge>);
+            // determinism: std::set<const NBEdge*> is ordered by address, BTreeSet is ordered by Ptr Ord
+            let mut chosenSet: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+            if groupOpposites {
+                if incoming.len() == 2 {
+                    // if there are only 2 incoming edges we need to decide whether they are a crossing or a "continuation"
+                    let angle = NBHelpers::rel_angle(
+                        incoming[0].get_angle_at_node(incoming[0].get_to_node()),
+                        incoming[1].get_angle_at_node(incoming[1].get_to_node()),
+                    )
+                    .abs();
+                    // angle would be 180 for straight opposing incoming edges
+                    if angle < 135.0 {
+                        chosen = (toProc[0], Ptr::default());
+                        toProc.remove(0);
+                    } else {
+                        chosen = self.get_best_pair(&mut toProc);
+                    }
+                } else {
+                    chosen = self.get_best_pair(&mut toProc);
+                    if chosen.1.is_null() && chosen.0.get_permissions(-1) == SVC_TRAM {
+                        groupTram = true;
+                        toProc.retain(|e| e.get_permissions(-1) != SVC_TRAM);
+                    }
+                }
+            } else {
+                let chosenEdge = toProc[0];
+                chosen = (chosenEdge, Ptr::default());
+                toProc.remove(0);
+                let perms = chosenEdge.get_permissions(-1);
+                if perms == SVC_TRAM {
+                    groupTram = true;
+                } else if (perms & !(SVC_PEDESTRIAN | SVC_BICYCLE | SVC_DELIVERY)) == 0 {
+                    if utils::options::options_cont::get_bool("tls.ignore-internal-junction-jam") {
+                        groupOther = true;
+                    }
+                }
+                if groupTram || groupOther {
+                    toProc.retain(|e| e.get_permissions(-1) != perms);
+                }
+            }
+            let mut pos: i32 = 0;
+            let mut state: String = "r".repeat(totalNumLinks.max(0) as usize);
+            chosenList.push(chosen);
+            chosenSet.insert(chosen.0);
+            if !chosen.1.is_null() {
+                chosenSet.insert(chosen.1);
+            }
+            // parallel bike edges are never passenger edges, so inserting them while iterating a snapshot changes nothing
+            let snapshot: Vec<Ptr<NBEdge>> = chosenSet.iter().cloned().collect();
+            for e in snapshot {
+                if (e.get_permissions(-1) & SVC_PASSENGER) != 0 {
+                    let mut parallelBikeEdges: EdgeVector = Vec::new();
+                    for &cand in toProc.iter() {
+                        if (cand.get_permissions(-1) & !SVC_PEDESTRIAN) == SVC_BICYCLE {
+                            let angle = NBHelpers::rel_angle(e.get_angle_at_node(e.get_to_node()), cand.get_angle_at_node(cand.get_to_node())).abs();
+                            if angle < 30.0 {
+                                parallelBikeEdges.push(cand);
+                            }
+                        }
+                    }
+                    for be in parallelBikeEdges {
+                        chosenSet.insert(be);
+                        if let Some(p) = toProc.iter().position(|x| *x == be) {
+                            toProc.remove(p);
+                        }
+                    }
+                }
+            }
+            let mut maxSpeed: f64 = 0.0;
+            let mut haveGreen = false;
+            for &fromEdge in incoming.iter() {
+                let inChosen = chosenSet.contains(&fromEdge);
+                let numLanes = fromEdge.get_num_lanes();
+                for i2 in 0..numLanes {
+                    for approached in connections_from_lane(fromEdge, i2) {
+                        if !fromEdge.may_be_tls_controlled(i2, approached.toEdge, approached.toLane) {
+                            continue;
+                        }
+                        if inChosen {
+                            sset(&mut state, pos as usize, b'G');
+                            haveGreen = true;
+                            maxSpeed = maxSpeed.max(fromEdge.get_speed());
+                        } else {
+                            sset(&mut state, pos as usize, b'r');
+                        }
+                        pos += 1;
+                    }
+                }
+            }
+            if !haveGreen {
+                continue;
+            }
+            if !isNEMA {
+                state = self.allow_compatible(state, &fromEdges, &toEdges, &fromLanes, &toLanes);
+                if groupTram {
+                    state = self.allow_by_v_class(state, &fromEdges, &toEdges, SVC_TRAM);
+                } else if groupOther {
+                    state = self.allow_by_v_class(state, &fromEdges, &toEdges, SVC_PEDESTRIAN | SVC_BICYCLE | SVC_DELIVERY);
+                }
+                if groupOpposites || chosen.0.get_to_node().get_type() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED {
+                    state = self.allow_unrelated(state, &fromEdges, &toEdges, &isTurnaround, &crossings);
+                }
+            }
+            let mut haveForbiddenLeftMover = false;
+            let mut rightTurnConflicts: Vec<bool> = vec![false; pos as usize];
+            let mut mergeConflicts: Vec<bool> = vec![false; pos as usize];
+            state = self.correct_conflicting(
+                state,
+                &fromEdges,
+                &toEdges,
+                &isTurnaround,
+                &fromLanes,
+                &toLanes,
+                &hadGreenMajor,
+                &mut haveForbiddenLeftMover,
+                &mut rightTurnConflicts,
+                &mut mergeConflicts,
+            );
+            for i1 in 0..pos as usize {
+                if sget(&state, i1) == b'G' {
+                    hadGreenMajor[i1] = true;
+                }
+            }
+            let mut leftGreen: Vec<bool> = vec![false; pos as usize];
+            let mut foundLeftTurnLane = false;
+            for i1 in 0..pos as usize {
+                if sget(&state, i1) == b'g' && !rightTurnConflicts[i1] && !mergeConflicts[i1] && hasTurnLane[i1] {
+                    foundLeftTurnLane = true;
+                }
+            }
+            let buildLeftGreenPhase = haveForbiddenLeftMover
+                && !self.myHaveSinglePhase
+                && leftTurnTime > 0
+                && foundLeftTurnLane
+                && groupOpposites
+                && !groupTram
+                && !groupOther;
+            for i1 in 0..pos as usize {
+                if sget(&state, i1) == b'g'
+                    && !rightTurnConflicts[i1]
+                    && !mergeConflicts[i1]
+                    && (!isTurnaround[i1] || (i1 > 0 && leftGreen[i1 - 1]))
+                {
+                    leftGreen[i1] = true;
+                    if fromEdges[i1].get_speed() > minorLeftSpeedThreshold {
+                        if buildLeftGreenPhase {
+                            sset(&mut state, i1, b'r');
+                        } else if !isTurnaround[i1] {
+                            write_warningf!(
+                                "Minor green from edge '%' to edge '%' exceeds %m/s. Maybe a left-turn lane is missing.",
+                                fromEdges[i1].get_id(),
+                                toEdges[i1].get_id(),
+                                minorLeftSpeedThreshold
+                            );
+                        }
+                    }
+                }
+            }
+            straightStates.push(state.clone());
+            // backup state before pedestrian modifications
+            let vehicleState: String = state.clone();
+            greenPhases.push(logic.get_phases().len() as i32);
+            let minDurBySpeed = maxSpeed * 3.6 / 6.0 - 3.3;
+            let mut minDur: SUMOTime = minMinDur.max(time2steps((minDurBySpeed + 0.5).floor()));
+            if chosen.0.get_permissions(-1) == SVC_TRAM && (chosen.1.is_null() || chosen.1.get_permissions(-1) == SVC_TRAM) {
+                let mut tramExclusive = true;
+                for i1 in 0..fromEdges.len() {
+                    if sget(&state, i1) == b'G' {
+                        let linkPerm = fromEdges[i1].get_permissions(-1) & toEdges[i1].get_permissions(-1);
+                        if linkPerm != SVC_TRAM {
+                            tramExclusive = false;
+                            break;
+                        }
+                    }
+                }
+                if tramExclusive {
+                    minDur = time2steps(1.0);
+                }
+            }
+            state = Self::add_pedestrian_phases(logic, greenTime, minDur, maxDur, earliestEnd, latestEnd, state, &crossings, &fromEdges, &toEdges);
+            let stateLen = state.len();
+            for i1 in pos as usize..stateLen {
+                sset(&mut state, i1, b'r');
+            }
+            if brakingTime > 0 {
+                let mut maxCross: SUMOTime = 0;
+                for i1 in 0..pos as usize {
+                    let s = sget(&state, i1);
+                    if s != b'G' && s != b'g' {
+                        continue;
+                    }
+                    let vs = sget(&vehicleState, i1);
+                    if (vs >= b'a' && vs <= b'z') && buildLeftGreenPhase && !rightTurnConflicts[i1] && !mergeConflicts[i1] && leftGreen[i1] {
+                        continue;
+                    }
+                    sset(&mut state, i1, b'y');
+                    maxCross = maxCross.max(crossingTime[i1]);
+                }
+                logic.m().add_step(brakingTime, &state, &Vec::new(), "", -1);
+                if !buildLeftGreenPhase {
+                    if self.myLayout == TrafficLightLayout::ALTERNATE_ONEWAY {
+                        allRedTime = self.compute_escape_time(&state, &fromEdges, &toEdges);
+                    }
+                    self.build_all_red_state(allRedTime + 0i64.max(maxCross - brakingTime - allRedTime), logic, &state);
+                }
+            }
+            if buildLeftGreenPhase {
+                for i1 in 0..pos as usize {
+                    let s = sget(&state, i1);
+                    if s == b'Y' || s == b'y' {
+                        sset(&mut state, i1, b'r');
+                        continue;
+                    }
+                    if leftGreen[i1] {
+                        sset(&mut state, i1, b'G');
+                    }
+                }
+                leftStates.push(state.clone());
+                state = self.allow_compatible(state, &fromEdges, &toEdges, &fromLanes, &toLanes);
+                state = self.correct_conflicting(
+                    state,
+                    &fromEdges,
+                    &toEdges,
+                    &isTurnaround,
+                    &fromLanes,
+                    &toLanes,
+                    &hadGreenMajor,
+                    &mut haveForbiddenLeftMover,
+                    &mut rightTurnConflicts,
+                    &mut mergeConflicts,
+                );
+                let mut buildMixedGreenPhase = false;
+                let mut mixedGreen: Vec<bool> = vec![false; pos as usize];
+                let oldState = state.clone();
+                if noMixed {
+                    state = self.correct_mixed(state, &fromEdges, &fromLanes, &mut buildMixedGreenPhase, &mut mixedGreen);
+                }
+                if state != oldState {
+                    for i1 in 0..pos as usize {
+                        if mixedGreen[i1] {
+                            // patch previous yellow and allred phase
+                            let mut yellowIndex: i32 = logic.get_phases().len() as i32 - 1;
+                            if allRedTime > 0 {
+                                logic.m().set_phase_state(yellowIndex, i1 as i32, LINKSTATE_TL_RED);
+                                yellowIndex -= 1;
+                            }
+                            if brakingTime > 0 {
+                                logic.m().set_phase_state(yellowIndex, i1 as i32, LINKSTATE_TL_YELLOW_MINOR);
+                            }
+                        }
+                    }
+                    state = self.allow_compatible(state, &fromEdges, &toEdges, &fromLanes, &toLanes);
+                }
+
+                // add step
+                add_step_6(logic, leftTurnTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+
+                // build left yellow
+                if brakingTime > 0 {
+                    let mut maxCross: SUMOTime = 0;
+                    for i1 in 0..pos as usize {
+                        if sget(&state, i1) != b'G' && sget(&state, i1) != b'g' {
+                            continue;
+                        }
+                        sset(&mut state, i1, b'y');
+                        maxCross = maxCross.max(crossingTime[i1]);
+                    }
+                    logic.m().add_step(brakingTime, &state, &Vec::new(), "", -1);
+                    self.build_all_red_state(allRedTime + 0i64.max(maxCross - brakingTime - allRedTime), logic, &state);
+                }
+                if buildMixedGreenPhase {
+                    for i1 in 0..pos as usize {
+                        let s = sget(&state, i1);
+                        if s == b'Y' || s == b'y' {
+                            sset(&mut state, i1, b'r');
+                            continue;
+                        }
+                        if mixedGreen[i1] {
+                            sset(&mut state, i1, b'G');
+                        }
+                    }
+                    state = self.allow_compatible(state, &fromEdges, &toEdges, &fromLanes, &toLanes);
+                    state = self.correct_conflicting(
+                        state,
+                        &fromEdges,
+                        &toEdges,
+                        &isTurnaround,
+                        &fromLanes,
+                        &toLanes,
+                        &hadGreenMajor,
+                        &mut haveForbiddenLeftMover,
+                        &mut rightTurnConflicts,
+                        &mut mergeConflicts,
+                    );
+                    add_step_6(logic, leftTurnTime, &state, minDur, maxDur, earliestEnd, latestEnd);
+                    if brakingTime > 0 {
+                        let mut maxCross: SUMOTime = 0;
+                        for i1 in 0..pos as usize {
+                            if sget(&state, i1) != b'G' && sget(&state, i1) != b'g' {
+                                continue;
+                            }
+                            sset(&mut state, i1, b'y');
+                            maxCross = maxCross.max(crossingTime[i1]);
+                        }
+                        logic.m().add_step(brakingTime, &state, &Vec::new(), "", -1);
+                        self.build_all_red_state(allRedTime + 0i64.max(maxCross - brakingTime - allRedTime), logic, &state);
+                    }
+                }
+            } else if isNEMA {
+                let last = straightStates.len() - 1;
+                let mut s: String = straightStates[last].clone();
+                let mut leftState: String = s.clone();
+                for ii in 0..pos as usize {
+                    if sget(&s, ii) != b'r' {
+                        let fromEdge = fromEdges[ii];
+                        let toEdge = toEdges[ii];
+                        let dir = fromEdge.get_to_node().get_direction(fromEdge, toEdge, false);
+                        if hasTurnLane[ii] && (dir == LinkDirection::LEFT || dir == LinkDirection::TURN) {
+                            sset(&mut s, ii, b'r');
+                            sset(&mut leftState, ii, b'G');
+                        } else {
+                            sset(&mut leftState, ii, b'r');
+                        }
+                    }
+                }
+                straightStates[last] = s;
+                leftStates.push(leftState);
+            }
+            if self.myEdgesWithin.len() > 0 && !isNEMA && toProc.len() == 0 && !onlyConts {
+                Self::add_green_within(logic, &fromEdges, &mut toProc);
+            }
+        }
+        if crossings.len() > 0 {
+            Self::add_pedestrian_scramble(logic, totalNumLinks, time2steps(10.0), brakingTime, &crossings, &fromEdges, &toEdges);
+        }
+        if logic.get_phases().len() == 2 && brakingTime > 0 && utils::options::options_cont::get_int("tls.red.time") > 0 {
+            let redTime = time2steps(utils::options::options_cont::get_int("tls.red.time") as f64);
+            logic.m().add_step(redTime, &"r".repeat(totalNumLinks.max(0) as usize), &Vec::new(), "", -1);
+        }
+        if self.myLayout == TrafficLightLayout::ALTERNATE_ONEWAY {
+            self.deactivate_inside_edges(logic, &fromEdges);
+        }
+        if isNEMA {
+            let nemaLogic = self.build_nema_phases(&fromEdges, &toEdges, &crossings, &chosenList, &straightStates, &leftStates);
+            if nemaLogic.is_null() {
+                write_warningf!(
+                    "Generating NEMA phases is not supported for traffic light '%' with % incoming edges. Using tlType 'actuated' as fallback",
+                    self.get_id(),
+                    incoming.len()
+                );
+                logic.m().set_type(TrafficLightType::ACTUATED);
+                self.set_type(TrafficLightType::ACTUATED);
+            } else {
+                // delete logic
+                logicBox = None;
+                logic = nemaLogic;
+            }
+        }
+        let mut totalDuration: SUMOTime = logic.get_duration();
+        if (utils::options::options_cont::is_default("tls.green.time") || !utils::options::options_cont::is_default("tls.cycle.time")) && !isNEMA {
+            let cycleTime = time2steps(utils::options::options_cont::get_int("tls.cycle.time") as f64);
+            let mut minGreenDuration: SUMOTime = SUMOTime::MAX;
+            for &it in greenPhases.iter() {
+                let dur = logic.get_phases()[it as usize].duration;
+                minGreenDuration = minGreenDuration.min(dur);
+            }
+            let nGreen = greenPhases.len() as i32;
+            let patchSeconds = (steps2time(cycleTime - totalDuration) / (nGreen as f64)) as i32;
+            let patchSecondsRest = (steps2time(cycleTime - totalDuration) as i32) - patchSeconds * nGreen;
+            if steps2time(minGreenDuration) + (patchSeconds as f64) < MIN_GREEN_TIME as f64
+                || steps2time(minGreenDuration) + (patchSeconds as f64) + (patchSecondsRest as f64) < MIN_GREEN_TIME as f64
+                || greenPhases.len() == 0
+            {
+                if self.get_id() != NBTrafficLightDefinition_DummyID {
+                    write_warningf!("The traffic light '%' cannot be adapted to a cycle time of %.", self.get_id(), time2string(cycleTime));
+                }
+            } else {
+                for &it in greenPhases.iter() {
+                    let d = logic.get_phases()[it as usize].duration;
+                    logic.m().set_phase_duration(it, d + time2steps(patchSeconds as f64));
+                }
+                if greenPhases.len() > 0 {
+                    let f = greenPhases[0];
+                    let d = logic.get_phases()[f as usize].duration;
+                    logic.m().set_phase_duration(f, d + time2steps(patchSecondsRest as f64));
+                }
+                totalDuration = logic.get_duration();
+            }
+        }
+        let phaseCount = logic.get_phases().len() as i32;
+        let stateSize = logic.m().get_num_links();
+        for i in 0..phaseCount {
+            let currState: String = logic.get_phases()[i as usize].state.clone();
+            let prevIndex = if i == 0 { phaseCount - 1 } else { i - 1 };
+            let prevState: String = logic.get_phases()[prevIndex as usize].state.clone();
+            let nextState: String = logic.get_phases()[((i + 1) % phaseCount) as usize].state.clone();
+            for i1 in 0..stateSize {
+                let c = sget(&currState, i1 as usize);
+                let p = sget(&prevState, i1 as usize);
+                let n = sget(&nextState, i1 as usize);
+                if c == b'y' && (n == p || n == b'G') && (p == b'g' || p == b'G') {
+                    logic.m().set_phase_state(i, i1, p as LinkState);
+                }
+            }
+        }
+        self.myExtraConflictsReady = true;
+        if self.myControlledNodes.len() == 1 {
+            self.myNeedsContRelationReady = true;
+        }
+        if totalDuration > 0 {
+            if totalDuration > 3 * (greenTime + 2 * brakingTime + leftTurnTime) && !isNEMA && self.get_id() != NBTrafficLightDefinition_DummyID {
+                write_warningf!("The traffic light '%' has a high cycle time of %.", self.get_id(), time2string(totalDuration));
+            }
+            logic.m().close_building(true);
+            match logicBox.take() {
+                Some(b) => Ptr::from_raw(Box::into_raw(b)),
+                None => logic,
+            }
+        } else {
+            // delete logic
+            Ptr::default()
+        }
     }
 
     /// C++: `void NBOwnTLDef::initNeedsContRelation() const` [const, virtual]
@@ -1035,7 +1875,23 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        todo!("port NBOwnTLDef::initNeedsContRelation")
+        if !self.myNeedsContRelationReady {
+            if self.myControlledNodes.len() > 0 {
+                // we use a dummy node just to maintain const-correctness
+                Ptr::new(self).m().myNeedsContRelation.clear();
+                for n in self.myControlledNodes.clone() {
+                    // shortcut: C++ registers the dummy with node n via its constructor; the port's constructor does not, upgrade: construct the definition boxed/in place
+                    let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
+                    dummy.set_participants_information();
+                    let tllDummy = dummy.compute_logic_and_conts(0, true);
+                    let _ = tllDummy; // C++: delete tllDummy
+                    let rel = dummy.myNeedsContRelation.clone();
+                    Ptr::new(self).m().myNeedsContRelation.extend(rel);
+                    n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+                }
+            }
+            Ptr::new(self).m().myNeedsContRelationReady = true;
+        }
     }
 
     /// C++: `void NBOwnTLDef::buildAllRedState(SUMOTime, NBTrafficLightLogic *, const std::string &)`
@@ -1054,7 +1910,17 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn build_all_red_state(&mut self, allRedTime: SUMOTime, logic: Ptr<NBTrafficLightLogic>, state: &str) {
-        todo!("port NBOwnTLDef::buildAllRedState")
+        if allRedTime > 0 {
+            // build all-red phase
+            let mut allRedState: Vec<u8> = state.as_bytes().to_vec();
+            for i in 0..state.len() {
+                if allRedState[i] == b'Y' || allRedState[i] == b'y' {
+                    allRedState[i] = b'r';
+                }
+            }
+            let allRedState = String::from_utf8(allRedState).unwrap();
+            logic.m().add_step(time2steps(steps2time(allRedTime).ceil()), &allRedState, &Vec::new(), "", -1);
+        }
     }
 
     /// C++: `int NBOwnTLDef::getMaxIndex()` [virtual]
@@ -1071,7 +1937,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        todo!("port NBOwnTLDef::getMaxIndex")
+        self.set_participants_information();
+        let logic = utils::options::options_cont::with_options(|oc| self.compute(oc));
+        if !logic.is_null() {
+            logic.m().get_num_links() - 1
+        } else {
+            -1
+        }
     }
 
     /// C++: `void NBOwnTLDef::setLayout(TrafficLightLayout)`
@@ -1081,7 +1953,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_layout(&mut self, layout: TrafficLightLayout) {
-        todo!("port NBOwnTLDef::setLayout")
+        self.myLayout = layout;
     }
 
     /// C++: `TrafficLightLayout NBOwnTLDef::getLayout() const` [const, virtual]
@@ -1090,7 +1962,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn get_layout(&self) -> TrafficLightLayout {
-        todo!("port NBOwnTLDef::getLayout")
+        self.myLayout
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::myCompute(int)` [virtual, protected]
@@ -1107,7 +1979,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTimeSeconds: i32) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBOwnTLDef::myCompute")
+        if self.myControlledNodes.len() > 1 {
+            // call this first so that the following call to computeLogicAndConts resets linkIndices
+            self.init_needs_cont_relation();
+            // reset insideTLS info
+            self.collect_edges();
+        }
+        self.compute_logic_and_conts(brakingTimeSeconds, false)
     }
 
     /// C++: `void NBOwnTLDef::collectLinks()` [virtual, protected]
@@ -1119,7 +1997,10 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBOwnTLDef::collectLinks")
+        self.myControlledLinks.clear();
+        let mut links: NBConnectionVector = Vec::new();
+        self.collect_all_links(&mut links);
+        self.myControlledLinks = links;
     }
 
     /// C++: `void NBOwnTLDef::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual, protected]
@@ -1129,7 +2010,7 @@ impl NBOwnTLDef {
     //                            NBEdge* /*by*/, int /*byLane*/, bool /*incoming*/) {}
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBOwnTLDef::replaceRemoved")
+        // C++ body is empty
     }
 
     /// C++: `bool NBOwnTLDef::corridorLike() const` [const, protected]
@@ -1168,7 +2049,29 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn corridor_like(&self) -> bool {
-        todo!("port NBOwnTLDef::corridorLike")
+        if self.get_id() == NBTrafficLightDefinition_DummyID {
+            // avoid infinite recursion
+            return true;
+        }
+        // setParticipantsInformation resets myAmInTLS so we need to make a copy
+        let edgeInsideTLS: Vec<bool> = self.myIncomingEdges.iter().map(|e| e.is_inside_tls()).collect();
+        assert!(self.myControlledNodes.len() >= 2);
+        let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
+        dummy.set_participants_information();
+        let tllDummy = dummy.compute_logic_and_conts(0, true);
+        let mut greenPhases = 0;
+        for phase in tllDummy.get_phases().iter() {
+            if phase.state.chars().any(|c| c == 'g' || c == 'G') {
+                greenPhases += 1;
+            }
+        }
+        for controlledNode in self.myControlledNodes.iter() {
+            controlledNode.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+        }
+        for (i, e) in self.myIncomingEdges.iter().enumerate() {
+            e.m().set_inside_tls(edgeInsideTLS[i]);
+        }
+        greenPhases <= 2
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::buildNemaPhases(const EdgeVector &, const EdgeVector &, const std::vector<NBNode::Crossing *> &, const std::vector<std::pair<NBEdge *, NBEdge *>> &, const std::vector<std::string> &, const std::vector<std::string> &)` [protected]
@@ -1257,7 +2160,84 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn build_nema_phases(&mut self, fromEdges: &EdgeVector, toEdges: &EdgeVector, crossings: &Vec<Ptr<NBNode_Crossing>>, chosenList: &Vec<(Ptr<NBEdge>, Ptr<NBEdge>)>, straightStates: &Vec<String>, leftStates: &Vec<String>) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBOwnTLDef::buildNemaPhases")
+        if chosenList.len() != 2 {
+            return Ptr::default();
+        }
+        let dur = time2steps(utils::options::options_cont::get_int("tls.cycle.time") as f64);
+        let vehExt = time2steps(utils::options::options_cont::get_int("tls.nema.vehExt") as f64);
+        let yellow = time2steps(utils::options::options_cont::get_int("tls.nema.yellow") as f64);
+        let red = time2steps(utils::options::options_cont::get_int("tls.nema.red") as f64);
+        let minMinDur = time2steps(utils::options::options_cont::get_int("tls.min-dur") as f64);
+        let maxDur = time2steps(utils::options::options_cont::get_int("tls.max-dur") as f64);
+        let earliestEnd = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+        let latestEnd = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+        let U = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
+
+        let totalNumLinks = straightStates[0].len() as i32;
+        // the logic is returned to the caller on success; on failure it is dropped (C++ delete)
+        let mut logicBox: Box<NBTrafficLightLogic> = Box::new(NBTrafficLightLogic::new(self.get_id(), self.get_program_id(), totalNumLinks, self.myOffset, self.myType));
+        let logic: Ptr<NBTrafficLightLogic> = Ptr::from_mut(&mut *logicBox);
+        let mut ring1: Vec<i32> = vec![1, 2, 3, 4];
+        let mut ring2: Vec<i32> = vec![5, 6, 7, 8];
+        let mut barrier1: Vec<i32> = vec![4, 8];
+        let mut barrier2: Vec<i32> = vec![2, 6];
+        let mut phaseNameLeft: i32 = 1;
+        let none: Vec<i32> = Vec::new();
+        for i in 0..chosenList.len() {
+            let e1 = chosenList[i].0;
+            assert!(!e1.is_null());
+            let e2 = chosenList[i].1;
+            if i < leftStates.len() {
+                let left1 = self.filter_state(leftStates[i].clone(), fromEdges, e1);
+                if left1 != "" {
+                    logic.m().add_step_2(dur, &left1, minMinDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, &phaseNameLeft.to_string(), &none, -1);
+                }
+            }
+            if !e2.is_null() {
+                let mut straight2 = self.filter_state(straightStates[i].clone(), fromEdges, e2);
+                straight2 = Self::patch_nema_state_for_crossings(&straight2, crossings, fromEdges, toEdges, e2, e1);
+
+                logic.m().add_step_2(dur, &straight2, minMinDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, &(phaseNameLeft + 1).to_string(), &none, -1);
+                if i < leftStates.len() {
+                    let left2 = self.filter_state(leftStates[i].clone(), fromEdges, e2);
+                    if left2 != "" {
+                        logic.m().add_step_2(dur, &left2, minMinDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, &(phaseNameLeft + 4).to_string(), &none, -1);
+                    }
+                }
+            }
+            let mut straight1 = self.filter_state(straightStates[i].clone(), fromEdges, e1);
+            if straight1 == "" {
+                return Ptr::default();
+            }
+            straight1 = Self::patch_nema_state_for_crossings(&straight1, crossings, fromEdges, toEdges, e1, e2);
+            logic.m().add_step_2(dur, &straight1, minMinDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, &(phaseNameLeft + 5).to_string(), &none, -1);
+            phaseNameLeft += 2;
+        }
+        let mut names: BTreeMap<i32, i32> = BTreeMap::new(); // nema phase name -> sumo phase index
+        for i in 0..logic.get_phases().len() {
+            let nm = utils::common::string_utils::to_int(&logic.get_phases()[i].name).unwrap();
+            names.insert(nm, i as i32);
+        }
+
+        self.filter_missing_names(&mut ring1, &names, false, 0);
+        self.filter_missing_names(&mut ring2, &names, false, 0);
+        self.filter_missing_names(&mut barrier1, &names, true, 8);
+        self.filter_missing_names(&mut barrier2, &names, true, 6);
+        if ring1[0] == 0 && ring1[1] == 0 {
+            ring1[1] = 6;
+        }
+        if ring1[2] == 0 && ring1[3] == 0 {
+            ring1[3] = 8;
+        }
+        self.fix_duration_sum(logic, &names, ring1[0], ring1[1], ring2[0], ring2[1]);
+        self.fix_duration_sum(logic, &names, ring1[2], ring1[3], ring2[2], ring2[3]);
+
+        let join = |v: &Vec<i32>| v.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
+        logic.m().base2.set_parameter("ring1", &join(&ring1));
+        logic.m().base2.set_parameter("ring2", &join(&ring2));
+        logic.m().base2.set_parameter("barrierPhases", &join(&barrier1));
+        logic.m().base2.set_parameter("barrier2Phases", &join(&barrier2));
+        Ptr::from_raw(Box::into_raw(logicBox))
     }
 
     /// C++: `std::string NBOwnTLDef::filterState(std::string, const EdgeVector &, const NBEdge *)` [protected]
@@ -1280,7 +2260,20 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn filter_state(&mut self, state: String, fromEdges: &EdgeVector, e: Ptr<NBEdge>) -> String {
-        todo!("port NBOwnTLDef::filterState")
+        let mut st: Vec<u8> = state.into_bytes();
+        let mut haveGreen = false;
+        for j in 0..fromEdges.len() {
+            if fromEdges[j] != e {
+                st[j] = b'r';
+            } else if st[j] != b'r' {
+                haveGreen = true;
+            }
+        }
+        if haveGreen {
+            String::from_utf8(st).unwrap()
+        } else {
+            String::new()
+        }
     }
 
     /// C++: `void NBOwnTLDef::filterMissingNames(std::vector<int> &, const std::map<int, int> &, bool, int)` [protected]
@@ -1303,7 +2296,19 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn filter_missing_names(&mut self, vec: &mut Vec<i32>, names: &BTreeMap<i32, i32>, isBarrier: bool, barrierDefault: i32) {
-        todo!("port NBOwnTLDef::filterMissingNames")
+        for i in 0..vec.len() {
+            if !names.contains_key(&vec[i]) {
+                if isBarrier {
+                    if names.contains_key(&(vec[i] - 1)) {
+                        vec[i] = vec[i] - 1;
+                    } else {
+                        vec[i] = barrierDefault;
+                    }
+                } else {
+                    vec[i] = 0;
+                }
+            }
+        }
     }
 
     /// C++: `void NBOwnTLDef::fixDurationSum(NBTrafficLightLogic *, const std::map<int, int> &, int, int, int, int)` [protected]
@@ -1339,7 +2344,31 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn fix_duration_sum(&mut self, logic: Ptr<NBTrafficLightLogic>, names: &BTreeMap<i32, i32>, ring1a: i32, ring1b: i32, ring2a: i32, ring2b: i32) {
-        todo!("port NBOwnTLDef::fixDurationSum")
+        let mut ring1existing: BTreeSet<i32> = BTreeSet::new();
+        let mut ring2existing: BTreeSet<i32> = BTreeSet::new();
+        if names.contains_key(&ring1a) {
+            ring1existing.insert(ring1a);
+        }
+        if names.contains_key(&ring1b) {
+            ring1existing.insert(ring1b);
+        }
+        if names.contains_key(&ring2a) {
+            ring2existing.insert(ring2a);
+        }
+        if names.contains_key(&ring2b) {
+            ring2existing.insert(ring2b);
+        }
+        if ring1existing.len() > 0 && ring2existing.len() > 0 && ring1existing.len() != ring2existing.len() {
+            // sumo phase index
+            let pI: i32 = if ring1existing.len() < ring2existing.len() {
+                names[ring1existing.iter().next().unwrap()]
+            } else {
+                names[ring2existing.iter().next().unwrap()]
+            };
+            let p = &logic.get_phases()[pI as usize];
+            let newMaxDur: SUMOTime = 2 * p.maxDur + p.yellow + p.red;
+            logic.m().set_phase_max_duration(pI, newMaxDur);
+        }
     }
 
     /// C++: `double NBOwnTLDef::getDirectionalWeight(LinkDirection)` [protected]
@@ -1361,7 +2390,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_directional_weight(&mut self, dir: LinkDirection) -> f64 {
-        todo!("port NBOwnTLDef::getDirectionalWeight")
+        const HEIGH_WEIGHT: f64 = 2.0;
+        const LOW_WEIGHT: f64 = 0.5;
+        match dir {
+            LinkDirection::STRAIGHT | LinkDirection::PARTLEFT | LinkDirection::PARTRIGHT => HEIGH_WEIGHT,
+            LinkDirection::LEFT | LinkDirection::RIGHT => LOW_WEIGHT,
+            _ => 0.0,
+        }
     }
 
     /// C++: `int NBOwnTLDef::getToPrio(const NBEdge *const)` [protected]
@@ -1372,7 +2407,7 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_to_prio(&mut self, e: Ptr<NBEdge>) -> i32 {
-        todo!("port NBOwnTLDef::getToPrio")
+        e.get_junction_priority(e.get_to_node())
     }
 
     /// C++: `double NBOwnTLDef::computeUnblockedWeightedStreamNumber(const NBEdge *const, const NBEdge *const)` [protected]
@@ -1448,7 +2483,66 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn compute_unblocked_weighted_stream_number(&mut self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> f64 {
-        todo!("port NBOwnTLDef::computeUnblockedWeightedStreamNumber")
+        let mut val: f64 = 0.0;
+        for e1l in 0..e1.get_num_lanes() {
+            let approached1 = connections_from_lane(e1, e1l);
+            for e2l in 0..e2.get_num_lanes() {
+                let approached2 = connections_from_lane(e2, e2l);
+                for e1c in approached1.iter() {
+                    if e1.get_turn_destination(false) == e1c.toEdge {
+                        continue;
+                    }
+                    for e2c in approached2.iter() {
+                        if e2.get_turn_destination(false) == e2c.toEdge {
+                            continue;
+                        }
+                        let sign: f64 = if self.forbids(e1, e1c.toEdge, e2, e2c.toEdge, true, false)
+                            || self.forbids(e2, e2c.toEdge, e1, e1c.toEdge, true, false)
+                        {
+                            -1.0
+                        } else {
+                            1.0
+                        };
+                        let mut w1: f64;
+                        let mut w2: f64;
+                        let prio1 = e1.get_junction_priority(e1.get_to_node());
+                        let prio2 = e2.get_junction_priority(e2.get_to_node());
+                        if prio1 == prio2 {
+                            w1 = self.get_directional_weight(e1.get_to_node().get_direction(e1, e1c.toEdge, false));
+                            w2 = self.get_directional_weight(e2.get_to_node().get_direction(e2, e2c.toEdge, false));
+                        } else {
+                            if prio1 > prio2 {
+                                w1 = 2.0;
+                                w2 = 0.5;
+                            } else {
+                                w1 = 0.5;
+                                w2 = 2.0;
+                            }
+                            if sign == -1.0 {
+                                // extra penalty if edges with different junction priority are in conflict
+                                w1 *= 2.0;
+                                w2 *= 2.0;
+                            }
+                        }
+                        if utils::common::sumo_vehicle_class::is_railway(e1.get_permissions(-1))
+                            != utils::common::sumo_vehicle_class::is_railway(e2.get_permissions(-1))
+                        {
+                            w1 *= 0.1;
+                            w2 *= 0.1;
+                        }
+                        if (e1.get_permissions(-1) & SVC_PASSENGER) == 0 {
+                            w1 *= 0.1;
+                        }
+                        if (e2.get_permissions(-1) & SVC_PASSENGER) == 0 {
+                            w2 *= 0.1;
+                        }
+                        val += sign * w1;
+                        val += sign * w2;
+                    }
+                }
+            }
+        }
+        val
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NBOwnTLDef::getBestCombination(const EdgeVector &)` [protected]
@@ -1492,7 +2586,42 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_best_combination(&mut self, edges: &EdgeVector) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NBOwnTLDef::getBestCombination")
+        let mut bestPair: (Ptr<NBEdge>, Ptr<NBEdge>) = (Ptr::default(), Ptr::default());
+        let mut bestValue: f64 = -f64::MAX;
+        for i in 0..edges.len() {
+            for j in (i + 1)..edges.len() {
+                let value = self.compute_unblocked_weighted_stream_number(edges[i], edges[j]);
+                if value > bestValue {
+                    bestValue = value;
+                    bestPair = (edges[i], edges[j]);
+                } else if value == bestValue {
+                    let ca = utils::geom::geom_helper::get_min_angle_diff(
+                        edges[i].get_angle_at_node(edges[i].get_to_node()),
+                        edges[j].get_angle_at_node(edges[j].get_to_node()),
+                    );
+                    let oa = utils::geom::geom_helper::get_min_angle_diff(
+                        bestPair.0.get_angle_at_node(bestPair.0.get_to_node()),
+                        bestPair.1.get_angle_at_node(bestPair.1.get_to_node()),
+                    );
+                    if (oa - ca).abs() < utils::geom::NUMERICAL_EPS {
+                        // break ties by id
+                        if bestPair.0.get_id() < edges[i].get_id() {
+                            bestPair = (edges[i], edges[j]);
+                        }
+                    } else if oa < ca {
+                        bestPair = (edges[i], edges[j]);
+                    }
+                }
+            }
+        }
+        if bestValue < 0.0 || (bestValue == 0.0 && !self.has_straight_connection(bestPair.0) && !self.has_straight_connection(bestPair.1)) {
+            // do not group edges
+            if bestPair.0.get_priority() < bestPair.1.get_priority() {
+                bestPair = (bestPair.1, bestPair.0);
+            }
+            bestPair.1 = Ptr::default();
+        }
+        bestPair
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NBOwnTLDef::getBestPair(EdgeVector &)` [protected]
@@ -1534,7 +2663,47 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_best_pair(&mut self, incoming: &mut EdgeVector) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NBOwnTLDef::getBestPair")
+        if incoming.len() == 1 {
+            // only one there - return the one
+            let ret = (incoming[0], Ptr::default());
+            incoming.clear();
+            return ret;
+        }
+        // determine the best combination
+        //  by priority, first
+        let mut used: EdgeVector = Vec::new();
+        let sorter = NBOwnTLDef_edge_by_incoming_priority_sorter {};
+        incoming.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        used.push(incoming[0]); // the first will definitely be used
+        // get the ones with the same priority
+        let prio = self.get_to_prio(used[0]);
+        let mut i = 1;
+        while i < incoming.len() && prio == self.get_to_prio(incoming[i]) {
+            used.push(incoming[i]);
+            i += 1;
+        }
+        //  if there only lower priorised, use these, too
+        if used.len() < 2 {
+            used = incoming.clone();
+        }
+        let ret = self.get_best_combination(&used);
+        if let Some(p) = incoming.iter().position(|e| *e == ret.0) {
+            incoming.remove(p);
+        }
+        if !ret.1.is_null() {
+            if let Some(p) = incoming.iter().position(|e| *e == ret.1) {
+                incoming.remove(p);
+            }
+        }
+        ret
     }
 
     /// C++: `bool NBOwnTLDef::hasCrossing(const NBEdge *, const NBEdge *, const std::vector<NBNode::Crossing *> &)` [static, protected]
@@ -1558,7 +2727,18 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn has_crossing(from: Ptr<NBEdge>, to: Ptr<NBEdge>, crossings: &Vec<Ptr<NBNode_Crossing>>) -> bool {
-        todo!("port NBOwnTLDef::hasCrossing")
+        assert!(!to.is_null());
+        for cross in crossings.iter() {
+            // only check connections at this crossings node
+            if to.get_from_node() == cross.node {
+                for edge in cross.edges.iter() {
+                    if *edge == from || *edge == to {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `EdgeVector NBOwnTLDef::getConnectedOuterEdges(const EdgeVector &)` [static, protected]
@@ -1577,7 +2757,9 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_connected_outer_edges(incoming: &EdgeVector) -> EdgeVector {
-        todo!("port NBOwnTLDef::getConnectedOuterEdges")
+        let mut result: EdgeVector = incoming.clone();
+        result.retain(|e| !(e.get_connections().len() == 0 || e.is_inside_tls()));
+        result
     }
 
     /// C++: `std::string NBOwnTLDef::allowCompatible(std::string, const EdgeVector &, const EdgeVector &, const std::vector<int> &, const std::vector<int> &)` [protected]
@@ -1609,7 +2791,12 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_compatible(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, fromLanes: &Vec<i32>, toLanes: &Vec<i32>) -> String {
-        todo!("port NBOwnTLDef::allowCompatible")
+        let mut state = self.allow_single_edge(state, fromEdges);
+        if self.myControlledNodes.len() > 1 {
+            state = self.allow_followers(state, fromEdges, toEdges);
+            state = self.allow_predecessors(state, fromEdges, toEdges, fromLanes, toLanes);
+        }
+        state
     }
 
     /// C++: `std::string NBOwnTLDef::allowSingleEdge(std::string, const EdgeVector &)` [protected]
@@ -1638,7 +2825,27 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_single_edge(&mut self, state: String, fromEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::allowSingleEdge")
+        // if only one edge has green, ensure sure that all connections from that edge are green
+        let mut st: Vec<u8> = state.into_bytes();
+        let size = fromEdges.len();
+        let mut greenEdge: Ptr<NBEdge> = Ptr::default();
+        for i1 in 0..size {
+            if st[i1] == b'G' {
+                if greenEdge.is_null() {
+                    greenEdge = fromEdges[i1];
+                } else if greenEdge != fromEdges[i1] {
+                    return String::from_utf8(st).unwrap();
+                }
+            }
+        }
+        if !greenEdge.is_null() {
+            for i1 in 0..size {
+                if fromEdges[i1] == greenEdge {
+                    st[i1] = b'G';
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowFollowers(std::string, const EdgeVector &, const EdgeVector &)` [protected]
@@ -1672,7 +2879,33 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_followers(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::allowFollowers")
+        // check continuation within joined traffic lights
+        let mut st: Vec<u8> = state.into_bytes();
+        let mut check = true;
+        while check {
+            check = false;
+            for i1 in 0..fromEdges.len() {
+                if st[i1] == b'G' {
+                    continue;
+                }
+                let cur = String::from_utf8(st.clone()).unwrap();
+                if self.forbidden(&cur, i1 as i32, fromEdges, toEdges, true) {
+                    continue;
+                }
+                let mut followsChosen = false;
+                for i2 in 0..fromEdges.len() {
+                    if st[i2] == b'G' && fromEdges[i1] == toEdges[i2] {
+                        followsChosen = true;
+                        break;
+                    }
+                }
+                if followsChosen {
+                    st[i1] = b'G';
+                    check = true;
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowPredecessors(std::string, const EdgeVector &, const EdgeVector &, const std::vector<int> &, const std::vector<int> &)` [protected]
@@ -1709,7 +2942,34 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_predecessors(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, fromLanes: &Vec<i32>, toLanes: &Vec<i32>) -> String {
-        todo!("port NBOwnTLDef::allowPredecessors")
+        // also allow predecessors of chosen edges if the lanes match and there is no conflict
+        // (must be done after the followers are done because followers are less specific)
+        let mut st: Vec<u8> = state.into_bytes();
+        let mut check = true;
+        while check {
+            check = false;
+            for i1 in 0..fromEdges.len() {
+                if st[i1] == b'G' {
+                    continue;
+                }
+                let cur = String::from_utf8(st.clone()).unwrap();
+                if self.forbidden(&cur, i1 as i32, fromEdges, toEdges, false) {
+                    continue;
+                }
+                let mut preceedsChosen = false;
+                for i2 in 0..fromEdges.len() {
+                    if st[i2] == b'G' && fromEdges[i2] == toEdges[i1] && fromLanes[i2] == toLanes[i1] {
+                        preceedsChosen = true;
+                        break;
+                    }
+                }
+                if preceedsChosen {
+                    st[i1] = b'G';
+                    check = true;
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowUnrelated(std::string, const EdgeVector &, const EdgeVector &, const std::vector<bool> &, const std::vector<NBNode::Crossing *> &)` [protected]
@@ -1737,7 +2997,27 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_unrelated(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, isTurnaround: &Vec<bool>, crossings: &Vec<Ptr<NBNode_Crossing>>) -> String {
-        todo!("port NBOwnTLDef::allowUnrelated")
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            if st[i1] == b'G' {
+                continue;
+            }
+            let mut isForbidden = false;
+            for i2 in 0..fromEdges.len() {
+                if st[i2] == b'G'
+                    && !isTurnaround[i2]
+                    && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
+                        || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
+                {
+                    isForbidden = true;
+                    break;
+                }
+            }
+            if !isForbidden && !Self::has_crossing(fromEdges[i1], toEdges[i1], crossings) {
+                st[i1] = b'G';
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowByVClass(std::string, const EdgeVector &, const EdgeVector &, SVCPermissions)` [protected]
@@ -1753,7 +3033,14 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_by_v_class(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, perm: SVCPermissions) -> String {
-        todo!("port NBOwnTLDef::allowByVClass")
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            let linkPerm: SVCPermissions = fromEdges[i1].get_permissions(-1) & toEdges[i1].get_permissions(-1);
+            if (linkPerm & !perm) == 0 {
+                st[i1] = b'G';
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `bool NBOwnTLDef::forbidden(const std::string &, int, const EdgeVector &, const EdgeVector &, bool)` [protected]
@@ -1773,7 +3060,19 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn forbidden(&mut self, state: &str, index: i32, fromEdges: &EdgeVector, toEdges: &EdgeVector, allowCont: bool) -> bool {
-        todo!("port NBOwnTLDef::forbidden")
+        let sb = state.as_bytes();
+        let idx = index as usize;
+        for i2 in 0..fromEdges.len() {
+            if byte_at(sb, i2) == b'G' && self.foes(fromEdges[i2], toEdges[i2], fromEdges[idx], toEdges[idx]) {
+                if !allowCont
+                    || (!self.needs_cont(fromEdges[i2], toEdges[i2], fromEdges[idx], toEdges[idx])
+                        && !self.needs_cont(fromEdges[idx], toEdges[idx], fromEdges[i2], toEdges[i2]))
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `std::string NBOwnTLDef::correctConflicting(std::string, const EdgeVector &, const EdgeVector &, const std::vector<bool> &, const std::vector<int> &, const std::vector<int> &, const std::vector<bool> &, bool &, std::vector<bool> &, std::vector<bool> &)` [protected]
@@ -1854,7 +3153,70 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn correct_conflicting(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, isTurnaround: &Vec<bool>, fromLanes: &Vec<i32>, toLanes: &Vec<i32>, hadGreenMajor: &Vec<bool>, haveForbiddenLeftMover: &mut bool, rightTurnConflicts: &mut Vec<bool>, mergeConflicts: &mut Vec<bool>) -> String {
-        todo!("port NBOwnTLDef::correctConflicting")
+        let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            if st[i1] == b'G' {
+                for i2 in 0..fromEdges.len() {
+                    if st[i2] == b'G' || st[i2] == b'g' {
+                        if NBNode::right_turn_conflict(fromEdges[i1], toEdges[i1], fromLanes[i1], fromEdges[i2], toEdges[i2], fromLanes[i2]) {
+                            rightTurnConflicts[i1] = true;
+                        }
+                        if self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, controlledWithin) || rightTurnConflicts[i1] {
+                            st[i1] = b'g';
+                            if self.myControlledNodes.len() == 1 {
+                                self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2]));
+                            }
+                            if !isTurnaround[i1] && !hadGreenMajor[i1] && !rightTurnConflicts[i1] {
+                                *haveForbiddenLeftMover = true;
+                            }
+                        } else if fromEdges[i1] == fromEdges[i2]
+                            && fromLanes[i1] != fromLanes[i2]
+                            && toEdges[i1] == toEdges[i2]
+                            && toLanes[i1] == toLanes[i2]
+                            && fromEdges[i1].get_to_node().merge_conflict_yields(fromEdges[i1], fromLanes[i1], fromLanes[i2], toEdges[i1], toLanes[i1])
+                        {
+                            mergeConflicts[i1] = true;
+                            st[i1] = b'g';
+                        }
+                    }
+                }
+            }
+            if st[i1] == b'r' {
+                if fromEdges[i1].get_to_node().get_type() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
+                    && fromEdges[i1].get_to_node().get_direction(fromEdges[i1], toEdges[i1], false) == LinkDirection::RIGHT
+                {
+                    st[i1] = b's';
+                    // do not allow right-on-red when in conflict with exclusive left-turn phase
+                    for i2 in 0..fromEdges.len() {
+                        if st[i2] == b'G'
+                            && !isTurnaround[i2]
+                            && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
+                                || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
+                        {
+                            let foeDir = fromEdges[i2].get_to_node().get_direction(fromEdges[i2], toEdges[i2], false);
+                            if foeDir == LinkDirection::LEFT || foeDir == LinkDirection::PARTLEFT {
+                                st[i1] = b'r';
+                                break;
+                            }
+                        }
+                    }
+                    if st[i1] == b's' {
+                        // handle right-on-red conflicts
+                        for i2 in 0..fromEdges.len() {
+                            if st[i2] == b'G'
+                                && !isTurnaround[i2]
+                                && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
+                                    || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
+                            {
+                                self.myExtraConflicts.insert((i1 as i32, i2 as i32));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::correctMixed(std::string, const EdgeVector &, const std::vector<int> &, bool &, std::vector<bool> &)` [protected]
@@ -1882,7 +3244,21 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn correct_mixed(&mut self, state: String, fromEdges: &EdgeVector, fromLanes: &Vec<i32>, buildMixedGreenPhase: &mut bool, mixedGreen: &mut Vec<bool>) -> String {
-        todo!("port NBOwnTLDef::correctMixed")
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            if st[i1] == b'G' || st[i1] == b'g' {
+                for i2 in 0..fromEdges.len() {
+                    if i1 != i2 && fromEdges[i1] == fromEdges[i2] && fromLanes[i1] == fromLanes[i2] && st[i2] != b'G' && st[i2] != b'g' {
+                        st[i1] = st[i2];
+                        mixedGreen[i1] = true;
+                        if fromEdges[i1].get_num_lanes_that_allow(SVC_PASSENGER, true) > 1 {
+                            *buildMixedGreenPhase = true;
+                        }
+                    }
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `int NBOwnTLDef::maxCrossingIndex(const NBNode *) const` [const, protected]
@@ -1898,7 +3274,12 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn max_crossing_index(&self, node: Ptr<NBNode>) -> i32 {
-        todo!("port NBOwnTLDef::maxCrossingIndex")
+        let mut result: i32 = 0;
+        for crossing in node.get_crossings().iter() {
+            result = result.max(crossing.tlLinkIndex);
+            result = result.max(crossing.tlLinkIndex2);
+        }
+        result
     }
 
     /// C++: `void NBOwnTLDef::fixSuperfluousYellow(NBTrafficLightLogic *) const` [const, protected]
@@ -1924,7 +3305,23 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn fix_superfluous_yellow(&self, logic: Ptr<NBTrafficLightLogic>) {
-        todo!("port NBOwnTLDef::fixSuperfluousYellow")
+        // assume that yellow states last at most one phase
+        let n = logic.m().get_num_links();
+        let p = logic.get_phases().len() as i32;
+        for i1 in 0..n {
+            let mut prev = link_state_at(logic.get_phases().last().unwrap().state.as_bytes(), i1);
+            for i2 in 0..p {
+                let cur = link_state_at(logic.get_phases()[i2 as usize].state.as_bytes(), i1);
+                let next = link_state_at(logic.get_phases()[((i2 + 1) % p) as usize].state.as_bytes(), i1);
+                if cur == LINKSTATE_TL_YELLOW_MINOR
+                    && (prev == LINKSTATE_TL_GREEN_MAJOR || prev == LINKSTATE_TL_YELLOW_MINOR)
+                    && next == LINKSTATE_TL_GREEN_MAJOR
+                {
+                    logic.m().set_phase_state(i2, i1, prev);
+                }
+                prev = cur;
+            }
+        }
     }
 
     /// C++: `void NBOwnTLDef::deactivateAlwaysGreen(NBTrafficLightLogic *) const` [const, protected]
@@ -1952,7 +3349,24 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_always_green(&self, logic: Ptr<NBTrafficLightLogic>) {
-        todo!("port NBOwnTLDef::deactivateAlwaysGreen")
+        let n = logic.m().get_num_links();
+        let mut alwaysGreen: Vec<bool> = vec![true; n.max(0) as usize];
+        for i1 in 0..n {
+            for phase in logic.get_phases().iter() {
+                if byte_at(phase.state.as_bytes(), i1 as usize) != b'G' {
+                    alwaysGreen[i1 as usize] = false;
+                    break;
+                }
+            }
+        }
+        let p = logic.get_phases().len() as i32;
+        for i1 in 0..n {
+            if alwaysGreen[i1 as usize] {
+                for i2 in 0..p {
+                    logic.m().set_phase_state(i2, i1, LINKSTATE_TL_OFF_NOSIGNAL);
+                }
+            }
+        }
     }
 
     /// C++: `void NBOwnTLDef::deactivateInsideEdges(NBTrafficLightLogic *, const EdgeVector &) const` [const, protected]
@@ -1971,7 +3385,15 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_inside_edges(&self, logic: Ptr<NBTrafficLightLogic>, fromEdges: &EdgeVector) {
-        todo!("port NBOwnTLDef::deactivateInsideEdges")
+        let n = fromEdges.len() as i32;
+        let p = logic.get_phases().len() as i32;
+        for i1 in 0..n {
+            if fromEdges[i1 as usize].is_inside_tls() {
+                for i2 in 0..p {
+                    logic.m().set_phase_state(i2, i1, LINKSTATE_TL_OFF_NOSIGNAL);
+                }
+            }
+        }
     }
 
     /// C++: `SUMOTime NBOwnTLDef::computeEscapeTime(const std::string &, const EdgeVector &, const EdgeVector &) const` [const, protected]
@@ -1996,7 +3418,24 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn compute_escape_time(&self, state: &str, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> SUMOTime {
-        todo!("port NBOwnTLDef::computeEscapeTime")
+        let sb = state.as_bytes();
+        let n = fromEdges.len();
+        let mut maxTime: f64 = 0.0;
+        for i1 in 0..n {
+            if byte_at(sb, i1) == b'y' && !fromEdges[i1].is_inside_tls() {
+                for i2 in 0..n {
+                    if fromEdges[i2].is_inside_tls() {
+                        let gapSpeed = (toEdges[i1].get_speed() + fromEdges[i2].get_speed()) / 2.0;
+                        let time = fromEdges[i1].get_geometry().back().distance_to2d(fromEdges[i2].get_geometry().back()) / gapSpeed;
+                        if maxTime < time {
+                            maxTime = time;
+                        }
+                    }
+                }
+            }
+        }
+        // give some slack
+        time2steps((maxTime * 1.2 + 5.0).floor())
     }
 
     /// C++: `bool NBOwnTLDef::hasStraightConnection(const NBEdge *)` [protected]
@@ -2013,7 +3452,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn has_straight_connection(&mut self, fromEdge: Ptr<NBEdge>) -> bool {
-        todo!("port NBOwnTLDef::hasStraightConnection")
+        for c in all_connections(fromEdge) {
+            let dir = fromEdge.get_to_node().get_direction(fromEdge, c.toEdge, false);
+            if dir == LinkDirection::STRAIGHT {
+                return true;
+            }
+        }
+        false
     }
 
 }
@@ -2034,7 +3479,10 @@ impl NBOwnTLDef_edge_by_incoming_priority_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_incoming_priority_sorter::operator()")
+        if e1.get_junction_priority(e1.get_to_node()) != e2.get_junction_priority(e2.get_to_node()) {
+            return (e1.get_junction_priority(e1.get_to_node()) > e2.get_junction_priority(e2.get_to_node())) as i32;
+        }
+        (e1.get_id() > e2.get_id()) as i32
     }
 
 }

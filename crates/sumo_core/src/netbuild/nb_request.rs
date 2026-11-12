@@ -2,6 +2,33 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+thread_local! {
+    // C++ static members NBRequest::myGoodBuilds / myNotBuild
+    static NBREQUEST_MY_GOOD_BUILDS: std::cell::Cell<i32> = std::cell::Cell::new(0);
+    static NBREQUEST_MY_NOT_BUILD: std::cell::Cell<i32> = std::cell::Cell::new(0);
+}
+
+// shortcut: NBEdge::getConnections()/getConnectionsFromLane()/getConnection() are typed with CHBuilder_Connection in nb_edge.rs but C++ returns NBEdge::Connection; all connection access in this file goes through these helpers, upgrade: change nb_edge.rs accessors to NBEdge_Connection and drop the clone
+fn all_connections(e: Ptr<NBEdge>) -> Vec<NBEdge_Connection> {
+    e.get_connections().clone()
+}
+fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
+    e.get_connections_from_lane(lane, Ptr::default(), -1)
+}
+fn edge_connection(e: Ptr<NBEdge>, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> NBEdge_Connection {
+    NBEdge_Connection::new(fromLane, to, toLane, false)
+}
+// shortcut: C++ Edge::getNumLanes-based vectors are copied into leaked boxes so the Ptr-typed fields outlive the call, upgrade: store the vectors by value
+fn leak_vec<T>(v: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(v)))
+}
+fn next_cw(n: usize, i: usize) -> usize {
+    if i + 1 == n { 0 } else { i + 1 }
+}
+fn next_ccw(n: usize, i: usize) -> usize {
+    if i == 0 { n - 1 } else { i - 1 }
+}
+
 /// C++ typedef `std::vector<LinkInfoCont> NBRequest::CombinationsCont`
 pub type NBRequest_CombinationsCont = Vec<NBRequest_LinkInfoCont>;
 
@@ -121,7 +148,87 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn new(ec: &NBEdgeCont, junction: Ptr<NBNode>, all: &EdgeVector, incoming: &EdgeVector, outgoing: &EdgeVector, loadedProhibits: &NBConnectionProhibits) -> Self {
-        todo!("port NBRequest::NBRequest")
+        let mut r = NBRequest {
+            myJunction: junction,
+            myAll: leak_vec(all.clone()),
+            myIncoming: leak_vec(incoming.clone()),
+            myOutgoing: leak_vec(outgoing.clone()),
+            myForbids: Vec::new(),
+            myDone: Vec::new(),
+            myFoes: Vec::new(),
+            myResponse: Vec::new(),
+            myHaveVia: Vec::new(),
+        };
+        // const int variations = numLinks();
+        let variations = r.num_links();
+        let nv = variations as usize;
+        // build maps with information which forbidding connection were computed and what's in there
+        r.myForbids = (0..nv).map(|_| vec![false; nv]).collect();
+        r.myDone = (0..nv).map(|_| vec![false; nv]).collect();
+        // insert loaded prohibits
+        for (prohibited0, prohibiting) in loadedProhibits.iter() {
+            let mut prohibited = NBConnection::new_4(prohibited0);
+            let mut ok1 = prohibited.check(ec);
+            if !r.myIncoming.contains(&prohibited.get_from()) {
+                ok1 = false;
+            }
+            if !r.myOutgoing.contains(&prohibited.get_to()) {
+                ok1 = false;
+            }
+            let mut idx1: i32 = 0;
+            if ok1 {
+                idx1 = r.get_index(prohibited.get_from(), prohibited.get_to());
+                if idx1 < 0 {
+                    ok1 = false;
+                }
+            }
+            for k in prohibiting.iter() {
+                let mut sprohibiting = NBConnection::new_4(k);
+                let mut ok2 = sprohibiting.check(ec);
+                if !r.myIncoming.contains(&sprohibiting.get_from()) {
+                    ok2 = false;
+                }
+                if !r.myOutgoing.contains(&sprohibiting.get_to()) {
+                    ok2 = false;
+                }
+                if ok1 && ok2 {
+                    let idx2 = r.get_index(sprohibiting.get_from(), sprohibiting.get_to());
+                    if idx2 < 0 {
+                        ok2 = false;
+                    } else {
+                        r.myForbids[idx2 as usize][idx1 as usize] = true;
+                        r.myDone[idx2 as usize][idx1 as usize] = true;
+                        r.myDone[idx1 as usize][idx2 as usize] = true;
+                        NBREQUEST_MY_GOOD_BUILDS.with(|c| c.set(c.get() + 1));
+                    }
+                } else {
+                    let name = |e: Ptr<NBEdge>| if e.is_null() { "UNKNOWN".to_string() } else { e.get_id().to_string() };
+                    let pfID = name(prohibited.get_from());
+                    let ptID = name(prohibited.get_to());
+                    let bfID = name(sprohibiting.get_from());
+                    let btID = name(sprohibiting.get_to());
+                    utils::common::msg_handler::write_warning(&format!("could not prohibit {}->{} by {}->{}", pfID, ptID, bfID, btID));
+                    NBREQUEST_MY_NOT_BUILD.with(|c| c.set(c.get() + 1));
+                }
+            }
+        }
+        // ok, check whether someone has prohibited two links vice versa
+        //  (this happens also in some Vissim-networks, when edges are joined)
+        for s1 in 0..nv {
+            for s2 in (s1 + 1)..nv {
+                // not set, yet
+                if !r.myDone[s1][s2] {
+                    continue;
+                }
+                // check whether both prohibit vice versa
+                if r.myForbids[s1][s2] && r.myForbids[s2][s1] {
+                    // mark unset - let our algorithm fix it later
+                    r.myDone[s1][s2] = false;
+                    r.myDone[s2][s1] = false;
+                }
+            }
+        }
+        r
     }
 
     /// C++: `void NBRequest::~NBRequest()`
@@ -129,7 +236,7 @@ impl NBRequest {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBRequest::~NBRequest")
+        // C++ destructor body is empty; members are released by Rust drop glue
     }
 
     /// C++: `void NBRequest::buildBitfieldLogic()`
@@ -150,7 +257,18 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn build_bitfield_logic(&mut self) {
-        todo!("port NBRequest::buildBitfieldLogic")
+        let incoming = self.myIncoming.to_vec();
+        let outgoing = self.myOutgoing.to_vec();
+        for i in incoming.iter() {
+            for j in outgoing.iter() {
+                self.compute_right_outgoing_link_crossings(*i, *j);
+                self.compute_left_outgoing_link_crossings(*i, *j);
+            }
+        }
+        // reset signalised/non-signalised dependencies
+        self.reset_signalised();
+        // reset foes it the number of lanes matches (or exceeds) the number of incoming connections
+        self.reset_cooperating();
     }
 
     /// C++: `std::pair<int, int> NBRequest::getSizes() const` [const]
@@ -173,7 +291,19 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_sizes(&self) -> (i32, i32) {
-        todo!("port NBRequest::getSizes")
+        let mut numLanes: i32 = 0;
+        let mut numLinks: i32 = 0;
+        for e in self.myIncoming.iter() {
+            let numLanesEdge = e.get_num_lanes();
+            for j in 0..numLanesEdge {
+                let numConnections = connections_from_lane(*e, j).len() as i32;
+                numLinks += numConnections;
+                if numConnections > 0 {
+                    numLanes += 1;
+                }
+            }
+        }
+        (numLanes, numLinks)
     }
 
     /// C++: `bool NBRequest::mustBrake(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const) const` [const]
@@ -188,7 +318,10 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn must_brake(&self, possProhibitorFrom: Ptr<NBEdge>, possProhibitorTo: Ptr<NBEdge>, possProhibitedFrom: Ptr<NBEdge>, possProhibitedTo: Ptr<NBEdge>) -> bool {
-        todo!("port NBRequest::mustBrake")
+        // get the indices
+        let idx1 = self.get_index(possProhibitorFrom, possProhibitorTo);
+        let idx2 = self.get_index(possProhibitedFrom, possProhibitedTo);
+        self.myForbids[idx2 as usize][idx1 as usize]
     }
 
     /// C++: `bool NBRequest::mustBrake(const NBEdge *const, const NBEdge *const, int, int, bool) const` [const]
@@ -272,7 +405,77 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn must_brake_2(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, fromLane: i32, toLane: i32, includePedCrossings: bool) -> bool {
-        todo!("port NBRequest::mustBrake")
+        let con = NBEdge_Connection::new(fromLane, to, toLane, false);
+        let linkIndex = self.myJunction.get_connection_index(from, &con);
+        if linkIndex >= 0 && (self.myResponse.len() as i32) > linkIndex {
+            let mut response: String = self.get_response(linkIndex).to_string();
+            if !includePedCrossings {
+                let n = response.len() - self.myJunction.get_crossings().len();
+                response.truncate(n);
+            }
+            if !response.contains('1') {
+                return false;
+            } else if !self.myJunction.is_tl_controlled() {
+                return true;
+            }
+            // if the link must respond it could also be due to a tlsConflict. This
+            // must not carry over the off-state response so we continue with
+            // the regular check
+        }
+        // get the indices
+        let idx2 = self.get_index(from, to);
+        if idx2 == -1 {
+            return false;
+        }
+        let nl = self.num_links();
+        // go through all (existing) connections;
+        //  check whether any of these forbids the one to determine
+        for idx1 in 0..nl {
+            if self.myDone[idx1 as usize][idx2 as usize] && self.myForbids[idx1 as usize][idx2 as usize] {
+                return true;
+            }
+        }
+        // maybe we need to brake for a pedestrian crossing
+        if includePedCrossings {
+            let crossings = self.myJunction.get_crossings();
+            for c in crossings.iter().rev() {
+                if Self::must_brake_for_crossing(self.myJunction, from, to, c) {
+                    return true;
+                }
+            }
+        }
+        // maybe we need to brake due to a right-turn conflict with straight-going bicycles
+        let queryCon = edge_connection(from, fromLane, to, toLane);
+        let dir = self.myJunction.get_direction(from, to, false);
+        if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+            for fromCon in all_connections(from) {
+                if self.right_turn_conflict(from, &queryCon, from, &fromCon) {
+                    return true;
+                }
+            }
+        }
+        // maybe we need to brake due to a merge conflict
+        let zipper = self.myJunction.get_type() == SumoXMLNodeType::ZIPPER;
+        for i in self.myIncoming.to_vec().iter().rev() {
+            let noLanes = i.get_num_lanes();
+            for j in (0..noLanes).rev() {
+                let connected = connections_from_lane(*i, j);
+                for k in (0..connected.len()).rev() {
+                    if *i == from && fromLane != j && self.merge_conflict(from, &queryCon, *i, &connected[k], zipper) {
+                        return true;
+                    }
+                }
+            }
+        }
+        // maybe we need to brake due to a zipper conflict
+        if zipper {
+            for idx1 in 0..nl {
+                if self.myDone[idx1 as usize][idx2 as usize] && self.myForbids[idx2 as usize][idx1 as usize] {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBRequest::mustBrakeForCrossing(const NBNode *, const NBEdge *const, const NBEdge *const, const NBNode::Crossing &)` [static]
@@ -293,7 +496,17 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn must_brake_for_crossing(node: Ptr<NBNode>, from: Ptr<NBEdge>, to: Ptr<NBEdge>, crossing: &NBNode_Crossing) -> bool {
-        todo!("port NBRequest::mustBrakeForCrossing")
+        let dir = node.get_direction(from, to, false);
+        let mustYield = dir == LinkDirection::LEFT || dir == LinkDirection::RIGHT;
+        if crossing.priority || mustYield {
+            for e in crossing.edges.iter() {
+                // left and right turns must yield to unprioritized crossings only on their destination edge
+                if (*e == from && crossing.priority) || *e == to {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBRequest::foes(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const) const` [const]
@@ -317,7 +530,17 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn foes(&self, from1: Ptr<NBEdge>, to1: Ptr<NBEdge>, from2: Ptr<NBEdge>, to2: Ptr<NBEdge>) -> bool {
-        todo!("port NBRequest::foes")
+        // unconnected edges do not forbid other edges
+        if to1.is_null() || to2.is_null() {
+            return false;
+        }
+        // get the indices
+        let idx1 = self.get_index(from1, to1);
+        let idx2 = self.get_index(from2, to2);
+        if idx1 < 0 || idx2 < 0 {
+            return false; // sure? (The connection does not exist within this junction)
+        }
+        self.myForbids[idx1 as usize][idx2 as usize] || self.myForbids[idx2 as usize][idx1 as usize]
     }
 
     /// C++: `bool NBRequest::forbids(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const, bool) const` [const]
@@ -354,7 +577,29 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn forbids(&self, possProhibitorFrom: Ptr<NBEdge>, possProhibitorTo: Ptr<NBEdge>, possProhibitedFrom: Ptr<NBEdge>, possProhibitedTo: Ptr<NBEdge>, regardNonSignalisedLowerPriority: bool) -> bool {
-        todo!("port NBRequest::forbids")
+        // unconnected edges do not forbid other edges
+        if possProhibitorTo.is_null() || possProhibitedTo.is_null() {
+            return false;
+        }
+        // get the indices
+        let possProhibitorIdx = self.get_index(possProhibitorFrom, possProhibitorTo);
+        let possProhibitedIdx = self.get_index(possProhibitedFrom, possProhibitedTo);
+        if possProhibitorIdx < 0 || possProhibitedIdx < 0 {
+            return false; // sure? (The connection does not exist within this junction)
+        }
+        // check simple right-of-way-rules
+        if !regardNonSignalisedLowerPriority {
+            return self.myForbids[possProhibitorIdx as usize][possProhibitedIdx as usize];
+        }
+        // if its not forbidden, report
+        if !self.myForbids[possProhibitorIdx as usize][possProhibitedIdx as usize] {
+            return false;
+        }
+        // do not forbid a signalised stream by a non-signalised
+        if !possProhibitorFrom.has_signalised_connection_to(possProhibitorTo) {
+            return false;
+        }
+        true
     }
 
     /// C++: `void NBRequest::computeLogic(const bool)`
@@ -381,7 +626,22 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic(&mut self, checkLaneFoes: bool) {
-        todo!("port NBRequest::computeLogic")
+        self.myResponse.clear();
+        self.myFoes.clear();
+        self.myHaveVia.clear();
+        let mut pos: i32 = 0;
+        // normal connections
+        for i in self.myIncoming.to_vec() {
+            let noLanes = i.get_num_lanes();
+            for k in 0..noLanes {
+                pos = self.compute_lane_response(i, k, pos, checkLaneFoes || self.myJunction.get_type() == SumoXMLNodeType::ZIPPER);
+            }
+        }
+        // crossings
+        let crossings = self.myJunction.get_crossings();
+        for c in crossings.iter() {
+            pos = self.compute_crossing_response(c, pos);
+        }
     }
 
     /// C++: `void NBRequest::writeLogic(OutputDevice &) const` [const]
@@ -407,7 +667,23 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn write_logic(&self, into: &mut OutputDevice) {
-        todo!("port NBRequest::writeLogic")
+        let numLinks = self.myResponse.len();
+        assert!(self.myFoes.len() == numLinks);
+        assert!(self.myHaveVia.len() == numLinks);
+        let padding = numLinks > 10;
+        for i in 0..numLinks {
+            into.open_tag("request");
+            into.write_attr(SUMO_ATTR_INDEX, &(i as i32));
+            if padding && i < 10 {
+                into.write_padding(" ");
+            }
+            into.write_attr(SUMO_ATTR_RESPONSE, self.myResponse[i].as_str());
+            into.write_attr(SUMO_ATTR_FOES, self.myFoes[i].as_str());
+            if !utils::options::options_cont::get_bool("no-internal-links") {
+                into.write_attr(SUMO_ATTR_CONT, &self.myHaveVia[i]);
+            }
+            into.close_tag("");
+        }
     }
 
     /// C++: `const std::string & NBRequest::getFoes(int) const` [const]
@@ -419,7 +695,9 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_foes(&self, linkIndex: i32) -> &str {
-        todo!("port NBRequest::getFoes")
+        assert!(linkIndex >= 0);
+        assert!((linkIndex as usize) < self.myFoes.len());
+        self.myFoes[linkIndex as usize].as_str()
     }
 
     /// C++: `const std::string & NBRequest::getResponse(int) const` [const]
@@ -431,7 +709,9 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_response(&self, linkIndex: i32) -> &str {
-        todo!("port NBRequest::getResponse")
+        assert!(linkIndex >= 0);
+        assert!((linkIndex as usize) < self.myResponse.len());
+        self.myResponse[linkIndex as usize].as_str()
     }
 
     /// C++: `void NBRequest::reportWarnings()` [static]
@@ -445,7 +725,12 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn report_warnings() {
-        todo!("port NBRequest::reportWarnings")
+        // check if any errors occurred on build the link prohibitions
+        let notBuild = NBREQUEST_MY_NOT_BUILD.with(|c| c.get());
+        let goodBuilds = NBREQUEST_MY_GOOD_BUILDS.with(|c| c.get());
+        if notBuild != 0 {
+            utils::common::msg_handler::write_warning(&format!("{} of {} prohibitions were not build.", notBuild, notBuild + goodBuilds));
+        }
     }
 
     /// C++: `bool NBRequest::rightTurnConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &) const` [const]
@@ -463,7 +748,11 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn right_turn_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection) -> bool {
-        todo!("port NBRequest::rightTurnConflict")
+        !con.mayDefinitelyPass
+            && (NBNode::right_turn_conflict(from, con.toEdge, con.fromLane, prohibitorFrom, prohibitorCon.toEdge, prohibitorCon.fromLane)
+                // reverse conflicht (override)
+                || (prohibitorCon.mayDefinitelyPass
+                    && NBNode::right_turn_conflict(prohibitorFrom, prohibitorCon.toEdge, prohibitorCon.fromLane, from, con.toEdge, con.fromLane)))
     }
 
     /// C++: `bool NBRequest::mergeConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -516,7 +805,44 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn merge_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBRequest::mergeConflict")
+        if from == prohibitorFrom
+            && con.toEdge == prohibitorCon.toEdge
+            && ((con.toLane == prohibitorCon.toLane && con.fromLane != prohibitorCon.fromLane && !self.myJunction.is_constant_width_transition())
+                // this is actually a crossing rather than a merger
+                || (con.fromLane > prohibitorCon.fromLane && con.toLane < prohibitorCon.toLane)
+                || (con.fromLane < prohibitorCon.fromLane && con.toLane > prohibitorCon.toLane))
+        {
+            if foes {
+                return true;
+            }
+            if prohibitorCon.mayDefinitelyPass {
+                return true;
+            }
+            if con.mayDefinitelyPass {
+                return false;
+            }
+            let bike = from.get_permissions(con.fromLane) == SVC_BICYCLE;
+            let prohibitorBike = prohibitorFrom.get_permissions(prohibitorCon.fromLane) == SVC_BICYCLE;
+            if self.myOutgoing.len() == 1 {
+                // at on-ramp like situations, right lane should yield
+                bike || (con.fromLane < prohibitorCon.fromLane && !prohibitorBike)
+            } else {
+                // priority depends on direction:
+                // for right turns the rightmost lane gets priority
+                // otherwise the left lane
+                let dir = self.myJunction.get_direction(from, con.toEdge, false);
+                if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+                    con.fromLane > prohibitorCon.fromLane
+                } else if self.myIncoming.len() == 1 {
+                    // at off-ramp like situations, right lane should pass unless it's a bicycle lane
+                    bike || (con.fromLane > prohibitorCon.fromLane && !prohibitorBike)
+                } else {
+                    con.fromLane < prohibitorCon.fromLane
+                }
+            }
+        } else {
+            false
+        }
     }
 
     /// C++: `bool NBRequest::oppositeLeftTurnConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -557,7 +883,36 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn opposite_left_turn_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBRequest::oppositeLeftTurnConflict")
+        let mut dir = self.myJunction.get_direction(from, con.toEdge, false);
+        // XXX lefthand issue (solve via #4256)
+        if dir != LinkDirection::LEFT && dir != LinkDirection::PARTLEFT {
+            return false;
+        }
+        dir = self.myJunction.get_direction(prohibitorFrom, prohibitorCon.toEdge, false);
+        if dir != LinkDirection::LEFT && dir != LinkDirection::PARTLEFT {
+            return false;
+        }
+        if from == prohibitorFrom || self.foes(from, con.toEdge, prohibitorFrom, prohibitorCon.toEdge) {
+            // not an opposite pair
+            return false;
+        }
+
+        let width1 = (from.get_lane_width_2(con.fromLane) / 2.0).min(utils::options::options_cont::get_float("internal-junctions.vehicle-width") as f64 / 2.0);
+        let width2 = prohibitorCon.toEdge.get_lane_width_2(prohibitorCon.toLane) / 2.0;
+        let mut shape: PositionVector = con.shape.clone();
+        shape.append(&con.viaShape, 2.0);
+        let mut otherShape: PositionVector = prohibitorCon.shape.clone();
+        otherShape.append(&prohibitorCon.viaShape, 2.0);
+        if shape.size() == 0 || otherShape.size() == 0 {
+            // no internal lanes built
+            return false;
+        }
+        let minDV = NBEdge::first_intersection(&shape, &otherShape, width1, width2, "", false);
+        if minDV < shape.length() - utils::geom::POSITION_EPS && minDV > utils::geom::POSITION_EPS {
+            // break symmetry using edge id
+            return foes || from.get_id() < prohibitorFrom.get_id();
+        }
+        false
     }
 
     /// C++: `bool NBRequest::indirectLeftTurnConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -580,7 +935,18 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn indirect_left_turn_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBRequest::indirectLeftTurnConflict")
+        if from == prohibitorFrom {
+            if con.toEdge == prohibitorCon.toEdge {
+                return false;
+            } else if con.indirectLeft {
+                let dir = self.myJunction.get_direction(prohibitorFrom, prohibitorCon.toEdge, false);
+                return dir == LinkDirection::STRAIGHT;
+            } else if foes && prohibitorCon.indirectLeft {
+                let dir = self.myJunction.get_direction(from, con.toEdge, false);
+                return dir == LinkDirection::STRAIGHT;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBRequest::bidiConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -618,7 +984,39 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn bidi_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBRequest::bidiConflict")
+        if from == prohibitorFrom {
+            return false;
+        }
+        if utils::common::sumo_vehicle_class::is_railway(from.get_permissions(-1)) {
+            // railways manage right-of-way via signals
+            return false;
+        }
+        if (foes && (from.get_bidi_edge() == prohibitorCon.toEdge)) || prohibitorFrom.get_bidi_edge() == con.toEdge {
+            let fromBidi = from.get_lane_shape(con.fromLane).reverse().almost_same(
+                prohibitorCon.toEdge.get_lane_shape(prohibitorCon.toLane),
+                utils::geom::POSITION_EPS,
+            );
+            let prohibitorFromBidi = prohibitorFrom.get_lane_shape(prohibitorCon.fromLane).reverse().almost_same(
+                con.toEdge.get_lane_shape(con.toLane),
+                utils::geom::POSITION_EPS,
+            );
+            if !foes && fromBidi && prohibitorFromBidi {
+                // do not create a symmetrical conflict
+                return false;
+            }
+            if prohibitorFromBidi
+                && prohibitorFrom.get_lane_shape(prohibitorCon.fromLane).reverse().almost_same(
+                    prohibitorCon.toEdge.get_lane_shape(prohibitorCon.toLane),
+                    utils::geom::POSITION_EPS,
+                )
+            {
+                // prohibitor has a bidi-turnaround
+                return false;
+            }
+
+            return fromBidi || prohibitorFromBidi;
+        }
+        false
     }
 
     /// C++: `bool NBRequest::hasConflict() const` [const]
@@ -634,7 +1032,12 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict(&self) -> bool {
-        todo!("port NBRequest::hasConflict")
+        for i in 0..self.myFoes.len() {
+            if self.has_conflict_at_link(i as i32) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBRequest::hasConflictAtLink(int) const` [const]
@@ -645,7 +1048,7 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict_at_link(&self, linkIndex: i32) -> bool {
-        todo!("port NBRequest::hasConflictAtLink")
+        self.myFoes[linkIndex as usize].contains('1')
     }
 
     /// C++: `void NBRequest::setBlocking(NBEdge *, NBEdge *, NBEdge *, NBEdge *)` [private]
@@ -857,7 +1260,141 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn set_blocking(&mut self, from1: Ptr<NBEdge>, to1: Ptr<NBEdge>, from2: Ptr<NBEdge>, to2: Ptr<NBEdge>) {
-        todo!("port NBRequest::setBlocking")
+        // check whether one of the links has a dead end
+        if to1.is_null() || to2.is_null() {
+            return;
+        }
+        // get the indices of both links
+        let idx1 = self.get_index(from1, to1);
+        let idx2 = self.get_index(from2, to2);
+        if idx1 < 0 || idx2 < 0 {
+            return; // !!! error output? did not happend, yet
+        }
+        let (i1, i2) = (idx1 as usize, idx2 as usize);
+        // check whether the link crossing has already been checked
+        if self.myDone[i1][i2] {
+            return;
+        }
+        // mark the crossings as done
+        self.myDone[i1][i2] = true;
+        self.myDone[i2][i1] = true;
+        // special case all-way stop
+        if self.myJunction.get_type() == SumoXMLNodeType::ALLWAY_STOP {
+            // all ways forbid each other. Conflict resolution happens via arrival time
+            self.myForbids[i1][i2] = true;
+            self.myForbids[i2][i1] = true;
+            return;
+        }
+        // check if one of the links is a turn; this link is always not priorised
+        //  true for right-before-left and priority
+        if from1.is_turning_direction_at(to1) {
+            self.myForbids[i2][i1] = true;
+            return;
+        }
+        if from2.is_turning_direction_at(to2) {
+            self.myForbids[i1][i2] = true;
+            return;
+        }
+        // if  there are no connections, there are no prohibitions
+        if from1.is_connected_to(to1, false) {
+            if !from2.is_connected_to(to2, false) {
+                self.myForbids[i1][i2] = true;
+                self.myForbids[i2][i1] = false;
+                return;
+            }
+        } else {
+            if !from2.is_connected_to(to2, false) {
+                self.myForbids[i1][i2] = false;
+                self.myForbids[i2][i1] = false;
+                return;
+            } else {
+                self.myForbids[i1][i2] = false;
+                self.myForbids[i2][i1] = true;
+                return;
+            }
+        }
+        // check the priorities if required by node type
+        let typeEqual = self.myJunction.get_type() == SumoXMLNodeType::RIGHT_BEFORE_LEFT || self.myJunction.get_type() == SumoXMLNodeType::LEFT_BEFORE_RIGHT;
+        if !typeEqual {
+            let from1p = from1.get_junction_priority(self.myJunction);
+            let from2p = from2.get_junction_priority(self.myJunction);
+            // check if one of the connections is higher priorised when incoming into
+            //  the junction, the connection road will yield
+            if from1p > from2p {
+                self.myForbids[i1][i2] = true;
+                return;
+            }
+            if from2p > from1p {
+                self.myForbids[i2][i1] = true;
+                return;
+            }
+        }
+        // straight connections prohibit turning connections if the priorities are equal
+        // (unless the junction is a bent priority junction)
+        let ld1 = self.myJunction.get_direction(from1, to1, false);
+        let ld2 = self.myJunction.get_direction(from2, to2, false);
+        if !typeEqual && !self.myJunction.is_bent_priority() {
+            if ld1 == LinkDirection::STRAIGHT {
+                if ld2 != LinkDirection::STRAIGHT {
+                    self.myForbids[i1][i2] = true;
+                    self.myForbids[i2][i1] = false;
+                    return;
+                }
+            } else if ld2 == LinkDirection::STRAIGHT {
+                self.myForbids[i1][i2] = false;
+                self.myForbids[i2][i1] = true;
+                return;
+            }
+        }
+
+        // compute the yielding due to the right-before-left rule
+        // (or left-before-right rule)
+        // get the position of the incoming lanes in the junction-wheel
+        let all: EdgeVector = self.myAll.to_vec();
+        let n = all.len();
+        let mut c1 = all.iter().position(|e| *e == from1).unwrap_or(0);
+        c1 = next_cw(n, c1);
+        // go through next edges clockwise...
+        while all[c1] != from1 && all[c1] != from2 {
+            if all[c1] == to2 {
+                // if we encounter to2 the second one prohibits the first
+                if self.myJunction.get_type() == SumoXMLNodeType::LEFT_BEFORE_RIGHT
+                    && (ld1 != LinkDirection::LEFT
+                        || ld2 == LinkDirection::LEFT
+                        || (from1.get_turn_destination(true) != to2
+                            && (ld2 != LinkDirection::RIGHT
+                                || (NBHelpers::rel_angle(from1.get_angle_at_node(self.myJunction), from2.get_angle_at_node(self.myJunction))).abs() < 150.0)))
+                {
+                    self.myForbids[i1][i2] = true;
+                } else {
+                    self.myForbids[i2][i1] = true;
+                }
+                return;
+            }
+            c1 = next_cw(n, c1);
+        }
+        // get the position of the incoming lanes in the junction-wheel
+        let mut c2 = all.iter().position(|e| *e == from2).unwrap_or(0);
+        c2 = next_cw(n, c2);
+        // go through next edges clockwise...
+        while all[c2] != from2 && all[c2] != from1 {
+            if all[c2] == to1 {
+                // if we encounter to1 the second one prohibits the first
+                if self.myJunction.get_type() == SumoXMLNodeType::LEFT_BEFORE_RIGHT
+                    && (ld2 != LinkDirection::LEFT
+                        || ld1 == LinkDirection::LEFT
+                        || (from2.get_turn_destination(true) != to1
+                            && (ld1 != LinkDirection::RIGHT
+                                || (NBHelpers::rel_angle(from1.get_angle_at_node(self.myJunction), from2.get_angle_at_node(self.myJunction))).abs() < 150.0)))
+                {
+                    self.myForbids[i2][i1] = true;
+                } else {
+                    self.myForbids[i1][i2] = true;
+                }
+                return;
+            }
+            c2 = next_cw(n, c2);
+        }
     }
 
     /// C++: `int NBRequest::computeLaneResponse(NBEdge *, int, int, const bool)` [private]
@@ -877,7 +1414,15 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn compute_lane_response(&mut self, from: Ptr<NBEdge>, lane: i32, pos: i32, checkLaneFoes: bool) -> i32 {
-        todo!("port NBRequest::computeLaneResponse")
+        for c in connections_from_lane(from, lane) {
+            pos += 1;
+            let foes = self.get_foes_string(from, &c, checkLaneFoes);
+            let response = self.get_response_string(from, &c, checkLaneFoes);
+            self.myFoes.push(foes);
+            self.myResponse.push(response);
+            self.myHaveVia.push(c.haveVia);
+        }
+        pos
     }
 
     /// C++: `int NBRequest::computeCrossingResponse(const NBNode::Crossing &, int)` [private]
@@ -914,7 +1459,32 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn compute_crossing_response(&mut self, crossing: &NBNode_Crossing, pos: i32) -> i32 {
-        todo!("port NBRequest::computeCrossingResponse")
+        let n = self.myJunction.get_crossings().len();
+        let mut foes: String = "0".repeat(n);
+        let mut response: String = "0".repeat(n);
+        // conflicts with normal connections
+        for from in self.myIncoming.to_vec().into_iter().rev() {
+            for j in (0..from.get_num_lanes()).rev() {
+                let connected = connections_from_lane(from, j);
+                for k in (0..connected.len()).rev() {
+                    let to = connected[k].toEdge;
+                    let mut foe = false;
+                    for e in crossing.edges.iter() {
+                        if *e == from || *e == to {
+                            foe = true;
+                            break;
+                        }
+                    }
+                    foes.push(if foe { '1' } else { '0' });
+                    response.push(if Self::must_brake_for_crossing(self.myJunction, from, to, crossing) || !foe { '0' } else { '1' });
+                }
+            }
+        }
+        pos += 1;
+        self.myResponse.push(response);
+        self.myFoes.push(foes);
+        self.myHaveVia.push(false);
+        pos
     }
 
     /// C++: `std::string NBRequest::getResponseString(const NBEdge *const, const NBEdge::Connection &, const bool) const` [const, private]
@@ -1019,7 +1589,62 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_response_string(&self, from: Ptr<NBEdge>, c: &NBEdge_Connection, checkLaneFoes: bool) -> String {
-        todo!("port NBRequest::getResponseString")
+        let to = c.toEdge;
+        let fromLane = c.fromLane;
+        let toLane = c.toLane;
+        let mut idx: i32 = 0;
+        if !to.is_null() {
+            idx = self.get_index(from, to);
+        }
+        let mut result = String::new();
+        let zipper = self.myJunction.get_type() == SumoXMLNodeType::ZIPPER;
+        // crossings
+        let crossings = self.myJunction.get_crossings();
+        for cr in crossings.iter().rev() {
+            result.push(if Self::must_brake_for_crossing(self.myJunction, from, to, cr) { '1' } else { '0' });
+        }
+        // normal connections
+        for i in self.myIncoming.to_vec().into_iter().rev() {
+            let noLanes = i.get_num_lanes();
+            for j in (0..noLanes).rev() {
+                let connected = connections_from_lane(i, j);
+                for k in (0..connected.len()).rev() {
+                    let ck = &connected[k];
+                    if c.mayDefinitelyPass {
+                        result.push('0');
+                    } else if i == from && fromLane == j {
+                        // do not prohibit a connection by others from same lane
+                        // except for indirect turns
+                        if self.indirect_left_turn_conflict(from, c, i, ck, false) {
+                            result.push('1');
+                        } else {
+                            result.push('0');
+                        }
+                    } else {
+                        let idx2 = self.get_index(i, ck.toEdge);
+                        // check whether the connection is prohibited by another one
+                        let hasLaneConflict = !(checkLaneFoes
+                            || self.check_lane_foes_by_class(c, i, ck)
+                            || self.check_lane_foes_by_cooperation(from, c, i, ck))
+                            || self.lane_conflict(from, to, toLane, i, ck.toEdge, ck.toLane);
+                        let (a, b) = (idx2 as usize, idx as usize);
+                        let cond = ((self.myForbids[a][b] || (zipper && self.myForbids[b][a])) && hasLaneConflict && !self.bidi_conflict(i, ck, from, c, false))
+                            || self.right_turn_conflict(from, c, i, ck)
+                            || self.merge_conflict(from, c, i, ck, zipper)
+                            || self.opposite_left_turn_conflict(from, c, i, ck, zipper)
+                            || self.indirect_left_turn_conflict(from, c, i, ck, zipper)
+                            || self.bidi_conflict(from, c, i, ck, false)
+                            // the extra conflict could be specific to another connection within the same signal group
+                            || (self.myJunction.extra_conflict(c.tlLinkIndex, ck.tlLinkIndex) && (self.myForbids[a][b] || self.myForbids[b][a]))
+                            || (self.myJunction.tls_stranded_conflict(from, c, i, ck)
+                                && self.lane_conflict(from, to, toLane, i, ck.toEdge, ck.toLane)
+                                && !utils::options::options_cont::get_bool("tls.ignore-internal-junction-jam"));
+                        result.push(if cond { '1' } else { '0' });
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::string NBRequest::getFoesString(NBEdge *, const NBEdge::Connection &, const bool) const` [const, private]
@@ -1072,7 +1697,46 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_foes_string(&self, from: Ptr<NBEdge>, c: &NBEdge_Connection, checkLaneFoes: bool) -> String {
-        todo!("port NBRequest::getFoesString")
+        let lefthand = utils::options::options_cont::get_bool("lefthand");
+        let mut result = String::new();
+        // crossings
+        let crossings = self.myJunction.get_crossings();
+        for cr in crossings.iter().rev() {
+            let mut foes = false;
+            for e in cr.edges.iter() {
+                if *e == from || *e == c.toEdge {
+                    foes = true;
+                    break;
+                }
+            }
+            result.push(if foes { '1' } else { '0' });
+        }
+        // normal connections
+        for i in self.myIncoming.to_vec().into_iter().rev() {
+            for j in (0..i.get_num_lanes()).rev() {
+                let connected = connections_from_lane(i, j);
+                for k in (0..connected.len()).rev() {
+                    let ck = &connected[k];
+                    let hasLaneConflict = !(checkLaneFoes
+                        || self.check_lane_foes_by_class(c, i, ck)
+                        || self.check_lane_foes_by_cooperation(from, c, i, ck))
+                        || self.lane_conflict(from, c.toEdge, c.toLane, i, ck.toEdge, ck.toLane);
+                    if (self.foes(from, c.toEdge, i, ck.toEdge) && hasLaneConflict)
+                        || self.right_turn_conflict(from, c, i, ck)
+                        || self.myJunction.turn_foes(from, c.toEdge, c.fromLane, i, ck.toEdge, ck.fromLane, lefthand)
+                        || self.merge_conflict(from, c, i, ck, true)
+                        || self.opposite_left_turn_conflict(from, c, i, ck, true)
+                        || self.indirect_left_turn_conflict(from, c, i, ck, true)
+                        || self.bidi_conflict(from, c, i, ck, true)
+                    {
+                        result.push('1');
+                    } else {
+                        result.push('0');
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `int NBRequest::getIndex(const NBEdge *const, const NBEdge *const) const` [const, private]
@@ -1089,7 +1753,12 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn get_index(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) -> i32 {
-        todo!("port NBRequest::getIndex")
+        let fp = self.myIncoming.iter().position(|e| *e == from);
+        let tp = self.myOutgoing.iter().position(|e| *e == to);
+        match (fp, tp) {
+            (Some(f), Some(t)) => (f * self.myOutgoing.len() + t) as i32,
+            _ => -1,
+        }
     }
 
     /// C++: `int NBRequest::distanceCounterClockwise(NBEdge *, NBEdge *)` [private]
@@ -1109,7 +1778,21 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn distance_counter_clockwise(&mut self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) -> i32 {
-        todo!("port NBRequest::distanceCounterClockwise")
+        let all: EdgeVector = self.myAll.to_vec();
+        let n = all.len();
+        let mut p = all.iter().position(|e| *e == from).unwrap_or(0);
+        let mut ret: i32 = 0;
+        loop {
+            ret += 1;
+            if p == 0 {
+                p = n;
+            }
+            p -= 1;
+            if all[p] == to {
+                break;
+            }
+        }
+        ret
     }
 
     /// C++: `void NBRequest::computeRightOutgoingLinkCrossings(NBEdge *, NBEdge *)` [private]
@@ -1132,7 +1815,21 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn compute_right_outgoing_link_crossings(&mut self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) {
-        todo!("port NBRequest::computeRightOutgoingLinkCrossings")
+        let all: EdgeVector = self.myAll.to_vec();
+        let n = all.len();
+        let mut pfrom = all.iter().position(|e| *e == from).unwrap_or(0);
+        while all[pfrom] != to {
+            pfrom = next_ccw(n, pfrom);
+            if all[pfrom].get_to_node() == self.myJunction {
+                let mut pto = all.iter().position(|e| *e == to).unwrap_or(0);
+                while all[pto] != from {
+                    if !(all[pto].get_to_node() == self.myJunction) {
+                        self.set_blocking(from, to, all[pfrom], all[pto]);
+                    }
+                    pto = next_ccw(n, pto);
+                }
+            }
+        }
     }
 
     /// C++: `void NBRequest::computeLeftOutgoingLinkCrossings(NBEdge *, NBEdge *)` [private]
@@ -1155,7 +1852,21 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn compute_left_outgoing_link_crossings(&mut self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) {
-        todo!("port NBRequest::computeLeftOutgoingLinkCrossings")
+        let all: EdgeVector = self.myAll.to_vec();
+        let n = all.len();
+        let mut pfrom = all.iter().position(|e| *e == from).unwrap_or(0);
+        while all[pfrom] != to {
+            pfrom = next_cw(n, pfrom);
+            if all[pfrom].get_to_node() == self.myJunction {
+                let mut pto = all.iter().position(|e| *e == to).unwrap_or(0);
+                while all[pto] != from {
+                    if !(all[pto].get_to_node() == self.myJunction) {
+                        self.set_blocking(from, to, all[pfrom], all[pto]);
+                    }
+                    pto = next_cw(n, pto);
+                }
+            }
+        }
     }
 
     /// C++: `void NBRequest::resetSignalised()` [private]
@@ -1235,7 +1946,56 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn reset_signalised(&mut self) {
-        todo!("port NBRequest::resetSignalised")
+        // go through possible prohibitions
+        let incoming = self.myIncoming.to_vec();
+        for &i11 in incoming.iter() {
+            for j1 in 0..i11.get_num_lanes() {
+                let el1 = connections_from_lane(i11, j1);
+                for i12 in el1.iter() {
+                    let idx1 = self.get_index(i11, i12.toEdge);
+                    if idx1 < 0 {
+                        continue;
+                    }
+                    // go through possibly prohibited
+                    for &i21 in incoming.iter() {
+                        for j2 in 0..i21.get_num_lanes() {
+                            let el2 = connections_from_lane(i21, j2);
+                            for i22 in el2.iter() {
+                                let idx2 = self.get_index(i21, i22.toEdge);
+                                if idx2 < 0 {
+                                    continue;
+                                }
+                                let (a, b) = (idx1 as usize, idx2 as usize);
+                                // same incoming connections do not prohibit each other
+                                if i11 == i21 {
+                                    self.myForbids[a][b] = false;
+                                    self.myForbids[b][a] = false;
+                                    continue;
+                                }
+                                // check other
+                                // if both are non-signalised or both are signalised
+                                if (i12.tlID.is_empty() && i22.tlID.is_empty()) || (!i12.tlID.is_empty() && !i22.tlID.is_empty()) {
+                                    // do nothing
+                                    continue;
+                                }
+                                // supposing, we don not have to brake if we are no foes
+                                if !self.foes(i11, i12.toEdge, i21, i22.toEdge) {
+                                    continue;
+                                }
+                                // otherwise: the non-signalised must break
+                                if !i12.tlID.is_empty() {
+                                    self.myForbids[a][b] = true;
+                                    self.myForbids[b][a] = false;
+                                } else {
+                                    self.myForbids[a][b] = false;
+                                    self.myForbids[b][a] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NBRequest::resetCooperating()` [private]
@@ -1277,7 +2037,35 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn reset_cooperating(&mut self) {
-        todo!("port NBRequest::resetCooperating")
+        // map from edge to number of incoming connections (determinism: std::map is ordered by pointer, BTreeMap by Ptr Ord)
+        let mut incomingCount: BTreeMap<Ptr<NBEdge>, i32> = BTreeMap::new();
+        // map from edge to indices of approached lanes
+        let mut approachedLanes: BTreeMap<Ptr<NBEdge>, BTreeSet<i32>> = BTreeMap::new();
+        // map from edge to list of incoming edges
+        let mut incomingEdges: BTreeMap<Ptr<NBEdge>, Vec<Ptr<NBEdge>>> = BTreeMap::new();
+        for e in self.myIncoming.to_vec() {
+            for con in all_connections(e) {
+                *incomingCount.entry(con.toEdge).or_insert(0) += 1;
+                approachedLanes.entry(con.toEdge).or_default().insert(con.toLane);
+                incomingEdges.entry(con.toEdge).or_default().push(e);
+            }
+        }
+        let counts: Vec<(Ptr<NBEdge>, i32)> = incomingCount.iter().map(|(k, v)| (*k, *v)).collect();
+        for (to, cnt) in counts {
+            // we cannot test against to->getNumLanes() since not all lanes may be used
+            let approached = approachedLanes.get(&to).map_or(0, |s| s.len()) as i32;
+            if approached >= cnt {
+                let incoming = incomingEdges.get(&to).cloned().unwrap_or_default();
+                // make these connections mutually unconflicting
+                for &e1 in incoming.iter() {
+                    for &e2 in incoming.iter() {
+                        let a = self.get_index(e1, to) as usize;
+                        let b = self.get_index(e2, to) as usize;
+                        self.myForbids[a][b] = false;
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool NBRequest::checkLaneFoesByClass(const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &) const` [const, private]
@@ -1297,7 +2085,15 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn check_lane_foes_by_class(&self, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection) -> bool {
-        todo!("port NBRequest::checkLaneFoesByClass")
+        if con.toEdge != prohibitorCon.toEdge {
+            return false;
+        }
+        let svc = con.toEdge.get_permissions(con.toLane);
+        let svc2 = prohibitorFrom.get_permissions(prohibitorCon.fromLane) & prohibitorCon.toEdge.get_permissions(prohibitorCon.toLane);
+        // check for lane level conflict if the only common classes are bicycles or pedestrians
+        ((svc & svc2 & !(SVC_BICYCLE | SVC_PEDESTRIAN)) == 0)
+            // or if the connection is to a dedicated lane whereas the prohibitor is a "general" lane
+            || (((svc & SVC_PASSENGER) == 0) && ((svc2 & SVC_PASSENGER) != 0))
     }
 
     /// C++: `bool NBRequest::checkLaneFoesByCooperation(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &) const` [const, private]
@@ -1329,7 +2125,24 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn check_lane_foes_by_cooperation(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection) -> bool {
-        todo!("port NBRequest::checkLaneFoesByCooperation")
+        if con.toEdge != prohibitorCon.toEdge {
+            return false;
+        }
+        // if from and prohibitorFrom target distinct lanes for all their
+        // connections to the common target edge, cooperation is possible
+        // (and should always happen unless the connections cross for some byzantine reason)
+        let mut fromTargetLanes: BTreeSet<i32> = BTreeSet::new();
+        for c in all_connections(from) {
+            if c.toEdge == con.toEdge {
+                fromTargetLanes.insert(c.toLane);
+            }
+        }
+        for c in all_connections(prohibitorFrom) {
+            if c.toEdge == con.toEdge && fromTargetLanes.contains(&c.toLane) {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool NBRequest::laneConflict(const NBEdge *, const NBEdge *, int, const NBEdge *, const NBEdge *, int) const` [const, private]
@@ -1356,7 +2169,26 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn lane_conflict(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, toLane: i32, prohibitorFrom: Ptr<NBEdge>, prohibitorTo: Ptr<NBEdge>, prohibitorToLane: i32) -> bool {
-        todo!("port NBRequest::laneConflict")
+        if to != prohibitorTo {
+            return true;
+        }
+        // since we know that the edge2edge connections are in conflict, the only
+        // situation in which the lane2lane connections can be conflict-free is, if
+        // they target the same edge but do not cross each other
+        let mut angle = NBHelpers::rel_angle(from.get_angle_at_node(from.get_to_node()), to.get_angle_at_node(to.get_from_node()));
+        if angle == 180.0 {
+            angle = -180.0; // turnarounds are left turns
+        }
+        let prohibitorAngle = NBHelpers::rel_angle(
+            prohibitorFrom.get_angle_at_node(prohibitorFrom.get_to_node()),
+            to.get_angle_at_node(to.get_from_node()),
+        );
+        let rightOfProhibitor = prohibitorFrom.is_turning_direction_at(to) || (angle > prohibitorAngle && !from.is_turning_direction_at(to));
+        if rightOfProhibitor {
+            toLane >= prohibitorToLane
+        } else {
+            toLane <= prohibitorToLane
+        }
     }
 
     /// C++: `int NBRequest::numLinks() const` [const, private]
@@ -1367,7 +2199,7 @@ impl NBRequest {
     // }
     #[allow(unused_variables)]
     pub fn num_links(&self) -> i32 {
-        todo!("port NBRequest::numLinks")
+        (self.myIncoming.len() * self.myOutgoing.len() + self.myJunction.get_crossings().len()) as i32
     }
 
     /// C++: `NBRequest & NBRequest::operator=(const NBRequest &)` [private]
@@ -1375,7 +2207,17 @@ impl NBRequest {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBRequest) -> &mut NBRequest {
-        todo!("port NBRequest::operator=")
+        // implicit (member-wise) copy assignment
+        self.myJunction = s.myJunction;
+        self.myAll = s.myAll;
+        self.myIncoming = s.myIncoming;
+        self.myOutgoing = s.myOutgoing;
+        self.myForbids = s.myForbids.clone();
+        self.myDone = s.myDone.clone();
+        self.myFoes = s.myFoes.clone();
+        self.myResponse = s.myResponse.clone();
+        self.myHaveVia = s.myHaveVia.clone();
+        self
     }
 
 }
@@ -1400,6 +2242,18 @@ impl NBRequest {
 // }
 #[allow(unused_variables)]
 pub fn shl_op(os: &mut Unmapped /* std::ostream */, r: &NBRequest) -> &'static mut Unmapped /* std::ostream */ {
-    todo!("port operator<<")
+    // shortcut: std::ostream is Unmapped, so the matrix text is built but not written to os, upgrade: map std::ostream to a writer type
+        let mut text = String::new();
+        let variations = r.num_links();
+        for i in 0..variations {
+            text.push_str(&format!("{} ", i));
+            for j in 0..variations {
+                text.push(if r.myForbids[i as usize][j as usize] { '1' } else { '0' });
+            }
+            text.push('\n');
+        }
+        text.push('\n');
+        let _ = text;
+        unsafe { &mut *(os as *mut Unmapped) }
 }
 
