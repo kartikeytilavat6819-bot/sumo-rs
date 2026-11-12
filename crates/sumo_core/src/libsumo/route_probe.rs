@@ -1,5 +1,6 @@
 //! Port of libsumo/RouteProbe.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+// shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 
 /// C++ class `libsumo::RouteProbe` (libsumo/RouteProbe.h)
@@ -10,6 +11,13 @@ pub struct RouteProbe {
 //   static const int RouteProbe::DOMAIN_ID;
 //   static SubscriptionResults RouteProbe::mySubscriptionResults;
 //   static ContextSubscriptionResults RouteProbe::myContextSubscriptionResults;
+thread_local! {
+    /// C++ static `RouteProbe::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `RouteProbe::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 
 impl RouteProbe {
     /// C++: `std::string RouteProbe::getEdgeID(const std::string &)` [static]
@@ -20,7 +28,7 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(probeID: &str) -> String {
-        todo!("port RouteProbe::getEdgeID")
+        Self::get_route_probe(probeID).m().get_edge().get_id().to_string()
     }
 
     /// C++: `std::string RouteProbe::sampleLastRouteID(const std::string &)` [static]
@@ -35,7 +43,10 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn sample_last_route_id(probeID: &str) -> String {
-        todo!("port RouteProbe::sampleLastRouteID")
+        let rp = Self::get_route_probe(probeID);
+        let route = rp.sample_route(true);
+        // shortcut: MSRouteProbe::sampleRoute returns Rc<MSRoute>, which cannot be nullptr, so the "did not collect any routes yet" throw is skipped; upgrade when sampleRoute returns Option
+        route.base.get_id().to_string()
     }
 
     /// C++: `std::string RouteProbe::sampleCurrentRouteID(const std::string &)` [static]
@@ -50,7 +61,10 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn sample_current_route_id(probeID: &str) -> String {
-        todo!("port RouteProbe::sampleCurrentRouteID")
+        let rp = Self::get_route_probe(probeID);
+        let route = rp.sample_route(false);
+        // shortcut: MSRouteProbe::sampleRoute returns Rc<MSRoute>, which cannot be nullptr, so the "did not collect any routes yet" throw is skipped; upgrade when sampleRoute returns Option
+        route.base.get_id().to_string()
     }
 
     /// C++: `std::vector<std::string> RouteProbe::getIDList()` [static]
@@ -62,7 +76,11 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port RouteProbe::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ROUTEPROBE).keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int RouteProbe::getIDCount()` [static]
@@ -72,7 +90,7 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port RouteProbe::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string RouteProbe::getParameter(const std::string &, const std::string &)` [static]
@@ -82,14 +100,14 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port RouteProbe::getParameter")
+        String::new()
     }
 
     /// C++: `const std::pair<std::string, std::string> RouteProbe::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(RouteProbe)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port RouteProbe::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void RouteProbe::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -100,77 +118,78 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port RouteProbe::setParameter")
+        // the C++ body is commented out upstream: route probes have no settable parameters
     }
 
     /// C++: `void RouteProbe::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port RouteProbe::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTEPROBE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void RouteProbe::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port RouteProbe::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTEPROBE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void RouteProbe::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port RouteProbe::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTEPROBE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void RouteProbe::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port RouteProbe::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTEPROBE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults RouteProbe::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port RouteProbe::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults RouteProbe::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port RouteProbe::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults RouteProbe::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port RouteProbe::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults RouteProbe::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port RouteProbe::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void RouteProbe::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(RouteProbe, ROUTEPROBE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port RouteProbe::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: RouteProbe::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int RouteProbe::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port RouteProbe::domainID")
+        CMD_GET_ROUTEPROBE_VARIABLE
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> RouteProbe::makeWrapper()` [static]
@@ -180,7 +199,8 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port RouteProbe::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: RouteProbe::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool RouteProbe::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -209,7 +229,26 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port RouteProbe::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_ROAD_ID => wrapper.m().wrap_string(objID, variable, &Self::get_edge_id(objID)),
+            VAR_SAMPLE_LAST => wrapper.m().wrap_string(objID, variable, &Self::sample_last_route_id(objID)),
+            VAR_SAMPLE_CURRENT => wrapper.m().wrap_string(objID, variable, &Self::sample_current_route_id(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSRouteProbe * RouteProbe::getRouteProbe(const std::string &)` [static, private]
@@ -223,7 +262,12 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_route_probe(id: &str) -> Ptr<MSRouteProbe> {
-        todo!("port RouteProbe::getRouteProbe")
+        // shortcut: C++ dynamic_cast is replaced by a cast, valid because only ROUTEPROBE-typed detectors are looked up; MSRouteProbe needs #[repr(C)] (base first), upgrade when ms_route_probe.rs adds it
+        let rp = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ROUTEPROBE).get(id).copied().unwrap_or(Ptr::null()).cast::<MSRouteProbe>();
+        if rp.is_null() {
+            panic!("{}", format!("Lane area detector '{}' is not known", id));
+        }
+        rp
     }
 
     /// C++: `void RouteProbe::RouteProbe()` [private]
@@ -231,7 +275,7 @@ impl RouteProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RouteProbe::RouteProbe")
+        panic!("libsumo::RouteProbe cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

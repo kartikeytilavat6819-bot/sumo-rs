@@ -1,5 +1,6 @@
 //! Port of libsumo/Polygon.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+// shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 
 /// C++ class `libsumo::Polygon` (libsumo/Polygon.h)
@@ -11,6 +12,13 @@ pub struct Polygon {
 //   static SubscriptionResults Polygon::mySubscriptionResults;
 //   static ContextSubscriptionResults Polygon::myContextSubscriptionResults;
 //   static NamedRTree * Polygon::myTree;
+thread_local! {
+    /// C++ static `Polygon::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Polygon::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 
 impl Polygon {
     /// C++: `std::string Polygon::getType(const std::string &)` [static]
@@ -20,21 +28,21 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_type(polygonID: &str) -> String {
-        todo!("port Polygon::getType")
+        Self::get_polygon(polygonID).get_shape_type().to_string()
     }
 
     /// C++: `libsumo::TraCIPositionVector Polygon::getShape(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_shape(polygonID: &str) -> TraCIPositionVector {
-        todo!("port Polygon::getShape")
+        Helper::make_tra_ci_position_vector(Self::get_polygon(polygonID).get_shape())
     }
 
     /// C++: `libsumo::TraCIColor Polygon::getColor(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_color(polygonID: &str) -> TraCIColor {
-        todo!("port Polygon::getColor")
+        Helper::make_tra_ci_color(Self::get_polygon(polygonID).get_shape_color())
     }
 
     /// C++: `bool Polygon::getFilled(const std::string &)` [static]
@@ -44,7 +52,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_filled(polygonID: &str) -> bool {
-        todo!("port Polygon::getFilled")
+        Self::get_polygon(polygonID).get_fill()
     }
 
     /// C++: `double Polygon::getLineWidth(const std::string &)` [static]
@@ -54,7 +62,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_line_width(polygonID: &str) -> f64 {
-        todo!("port Polygon::getLineWidth")
+        Self::get_polygon(polygonID).get_line_width()
     }
 
     /// C++: `double Polygon::getHeight(const std::string &)` [static]
@@ -64,7 +72,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_height(polygonID: &str) -> f64 {
-        todo!("port Polygon::getHeight")
+        Self::get_polygon(polygonID).get_height()
     }
 
     /// C++: `std::vector<std::string> Polygon::getIDList()` [static]
@@ -76,7 +84,11 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Polygon::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_shape_container().get_polygons().keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int Polygon::getIDCount()` [static]
@@ -86,7 +98,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Polygon::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Polygon::getParameter(const std::string &, const std::string &)` [static]
@@ -96,14 +108,14 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Polygon::getParameter")
+        Self::get_polygon(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Polygon::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Polygon)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Polygon::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Polygon::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -114,77 +126,78 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Polygon::setParameter")
+        Self::get_polygon(objectID).base2.set_parameter(key, value);
     }
 
     /// C++: `void Polygon::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Polygon::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_POLYGON_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Polygon::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Polygon::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_POLYGON_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Polygon::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Polygon::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_POLYGON_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Polygon::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Polygon::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_POLYGON_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Polygon::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Polygon::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Polygon::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Polygon::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Polygon::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Polygon::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Polygon::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Polygon::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Polygon::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Polygon::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Polygon::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Polygon::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Polygon::domainID")
+        CMD_GET_POLYGON_VARIABLE
     }
 
     /// C++: `void Polygon::setType(const std::string &, const std::string &)` [static]
@@ -194,28 +207,35 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn set_type(polygonID: &str, polygonType: &str) {
-        todo!("port Polygon::setType")
+        Self::get_polygon(polygonID).set_shape_type(polygonType);
     }
 
     /// C++: `void Polygon::setShape(const std::string &, const libsumo::TraCIPositionVector &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_shape(polygonID: &str, shape: &TraCIPositionVector) {
-        todo!("port Polygon::setShape")
+        let position_vector = Helper::make_position_vector(shape);
+        Self::get_polygon(polygonID); // just to check whether it exists
+        MSNet::get_instance().m().get_shape_container().reshape_polygon(polygonID, &position_vector);
     }
 
     /// C++: `void Polygon::setColor(const std::string &, const libsumo::TraCIColor &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_color(polygonID: &str, color: &TraCIColor) {
-        todo!("port Polygon::setColor")
+        Self::get_polygon(polygonID).set_shape_color(&Helper::make_rgb_color(color));
     }
 
     /// C++: `void Polygon::add(const std::string &, const libsumo::TraCIPositionVector &, const libsumo::TraCIColor &, bool, const std::string &, int, double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add(polygonID: &str, shape: &TraCIPositionVector, color: &TraCIColor, fill: bool, polygonType: &str, layer: i32, lineWidth: f64) {
-        todo!("port Polygon::add")
+        let p_shape = Helper::make_position_vector(shape);
+        let col = Helper::make_rgb_color(color);
+        if !MSNet::get_instance().m().get_shape_container().add_polygon(polygonID, polygonType, &col, layer as f64, crate::utils::shapes::shape::DEFAULT_ANGLE, crate::utils::shapes::shape::DEFAULT_IMG_FILE, &p_shape, false, fill, lineWidth, false, "") {
+            panic!("{}", format!("Could not add polygon '{}'", polygonID));
+        }
+        // shortcut: polygon tree insert skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
     }
 
     /// C++: `void Polygon::addDynamics(const std::string &, const std::string &, const std::vector<double> &, const std::vector<double> &, bool, bool)` [static]
@@ -264,7 +284,43 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn add_dynamics(polygonID: &str, trackedObjectID: &str, timeSpan: &Vec<f64>, alphaSpan: &Vec<f64>, looped: bool, rotate: bool) {
-        todo!("port Polygon::addDynamics")
+        if timeSpan.is_empty() {
+            if trackedObjectID == "" {
+                panic!("{}", format!("Could not add polygon dynamics for polygon '{}': dynamics underspecified (either a tracked object ID or a time span have to be provided).", polygonID));
+            }
+            if looped {
+                panic!("{}", format!("Could not add polygon dynamics for polygon '{}': looped==true requires time line of positive length.", polygonID));
+            }
+        }
+        if timeSpan.len() == 1 {
+            panic!("{}", format!("Could not add polygon dynamics for polygon '{}': time span cannot have length one.", polygonID));
+        } else if !timeSpan.is_empty() && timeSpan[0] != 0.0 {
+            panic!("{}", format!("Could not add polygon dynamics for polygon '{}': first element of time span must be zero.", polygonID));
+        }
+        if timeSpan.len() != alphaSpan.len() && !alphaSpan.is_empty() {
+            panic!("{}", format!("Could not add polygon dynamics for polygon '{}': alpha span must have length zero or equal to time span length.", polygonID));
+        }
+        if timeSpan.len() >= 2 {
+            for i in 1..timeSpan.len() {
+                if timeSpan[i - 1] > timeSpan[i] {
+                    panic!("{}", format!("Could not add polygon dynamics for polygon '{}': entries of time span must be ordered ascendingly.", polygonID));
+                }
+            }
+        }
+        let obj = Self::get_traffic_object(trackedObjectID);
+        let sim_time = steps2time(MSNet::get_instance().m().get_current_time_step());
+        let pd = MSNet::get_instance().m().get_shape_container().add_polygon_dynamics(sim_time, polygonID.to_string(), obj, timeSpan, alphaSpan, looped, rotate);
+        if pd.is_null() {
+            panic!("{}", format!("Could not add polygon dynamics for polygon '{}': polygon doesn't exist.", polygonID));
+        }
+        // Ensure existence of a DynamicShapeUpdater
+        if MSNet::get_instance().m().get_dynamic_shape_updater().is_null() {
+            // shortcut: relies on MSDynamicShapeUpdater having its VehicleStateListener base first (repr(C)), upgrade when the updater layout is checked
+            let listener = MSNet::get_instance().m().make_dynamic_shape_updater().cast::<MSNet_VehicleStateListener>();
+            MSNet::get_instance().m().add_vehicle_state_listener(listener);
+        }
+        // shortcut: the regular polygon update command (ParametrisedWrappingCommand) is unmapped, so it cannot be scheduled yet, upgrade with the command port
+        panic!("shortcut: Polygon::addDynamics cannot schedule the polygon update command (ParametrisedWrappingCommand unmapped)")
     }
 
     /// C++: `void Polygon::remove(const std::string &, int)` [static]
@@ -287,7 +343,10 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn remove(polygonID: &str, layer: i32) {
-        todo!("port Polygon::remove")
+        // shortcut: polygon tree removal skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
+        if !MSNet::get_instance().m().get_shape_container().remove_polygon(polygonID, true) {
+            panic!("{}", format!("Could not remove polygon '{}'", polygonID));
+        }
     }
 
     /// C++: `void Polygon::setFilled(std::string, bool)` [static]
@@ -297,7 +356,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn set_filled(polygonID: String, filled: bool) {
-        todo!("port Polygon::setFilled")
+        Self::get_polygon(&polygonID).set_fill(filled);
     }
 
     /// C++: `void Polygon::setLineWidth(std::string, double)` [static]
@@ -307,7 +366,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn set_line_width(polygonID: String, lineWidth: f64) {
-        todo!("port Polygon::setLineWidth")
+        Self::get_polygon(&polygonID).set_line_width(lineWidth);
     }
 
     /// C++: `void Polygon::setHeight(std::string, double)` [static]
@@ -317,14 +376,15 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn set_height(polygonID: String, height: f64) {
-        todo!("port Polygon::setHeight")
+        Self::get_polygon(&polygonID).set_height(height);
     }
 
     /// C++: `void Polygon::addHighlightPolygon(const std::string &, const int, const std::string &, const libsumo::TraCIPositionVector &, const libsumo::TraCIColor &, bool, const std::string &, int, double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_highlight_polygon(objectID: &str, type_: i32, polygonID: &str, shape: &TraCIPositionVector, color: &TraCIColor, fill: bool, polygonType: &str, layer: i32, lineWidth: f64) {
-        todo!("port Polygon::addHighlightPolygon")
+        Self::add(polygonID, shape, color, fill, polygonType, layer, lineWidth);
+        MSNet::get_instance().m().get_shape_container().register_highlight(objectID, type_, polygonID);
     }
 
     /// C++: `NamedRTree * Polygon::getTree()` [static]
@@ -345,7 +405,8 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        todo!("port Polygon::getTree")
+        // shortcut: NamedRTree is unmapped (Unmapped), so the polygon R-tree cannot be built yet, upgrade when NamedRTree is ported
+        panic!("shortcut: Polygon::getTree needs NamedRTree (unmapped)")
     }
 
     /// C++: `void Polygon::cleanup()` [static]
@@ -356,7 +417,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port Polygon::cleanup")
+        // shortcut: myTree is never set while getTree is a shortcut, so there is nothing to delete yet, upgrade with getTree
     }
 
     /// C++: `void Polygon::storeShape(const std::string &, PositionVector &)` [static]
@@ -367,7 +428,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port Polygon::storeShape")
+        *shape = Self::get_polygon(id).get_shape().clone();
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Polygon::makeWrapper()` [static]
@@ -377,7 +438,8 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Polygon::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Polygon::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Polygon::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -412,7 +474,29 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Polygon::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_TYPE => wrapper.m().wrap_string(objID, variable, &Self::get_type(objID)),
+            VAR_COLOR => wrapper.m().wrap_color(objID, variable, &Self::get_color(objID)),
+            VAR_FILL => wrapper.m().wrap_int(objID, variable, Self::get_filled(objID) as i32),
+            VAR_WIDTH => wrapper.m().wrap_double(objID, variable, Self::get_line_width(objID)),
+            VAR_HEIGHT => wrapper.m().wrap_double(objID, variable, Self::get_height(objID)),
+            VAR_SHAPE => wrapper.m().wrap_position_vector(objID, variable, &Self::get_shape(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `bool Polygon::exists(std::string)` [static]
@@ -424,7 +508,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn exists(polyID: String) -> bool {
-        todo!("port Polygon::exists")
+        MSNet::get_instance().m().get_shape_container().get_polygons().get(&polyID).is_some()
     }
 
     /// C++: `SUMOPolygon * Polygon::getPolygon(const std::string &)` [static, private]
@@ -438,7 +522,11 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_polygon(id: &str) -> Ptr<SUMOPolygon> {
-        todo!("port Polygon::getPolygon")
+        let p = MSNet::get_instance().m().get_shape_container().get_polygons().get(id).copied().unwrap_or(Ptr::null());
+        if p.is_null() {
+            panic!("{}", format!("Polygon '{}' is not known", id));
+        }
+        p
     }
 
     /// C++: `SUMOTrafficObject * Polygon::getTrafficObject(const std::string &)` [static, private]
@@ -463,7 +551,21 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn get_traffic_object(id: &str) -> Ptr<SUMOTrafficObject> {
-        todo!("port Polygon::getTrafficObject")
+        if id == "" {
+            return Ptr::null();
+        }
+        let net = MSNet::get_instance();
+        // First try to find a vehicle with the given id
+        let sumo_vehicle = net.m().get_vehicle_control().get_vehicle(id);
+        if !sumo_vehicle.is_null() {
+            // shortcut: static_cast to the SUMOTrafficObject base; SUMOVehicle is not repr(C) yet, upgrade when sumo_vehicle.rs adds it
+            return sumo_vehicle.cast::<SUMOTrafficObject>();
+        }
+        let transportable = net.m().get_person_control().get(id);
+        if !transportable.is_null() {
+            return transportable.cast::<SUMOTrafficObject>();
+        }
+        panic!("{}", format!("Traffic object '{}' is not known", id))
     }
 
     /// C++: `void Polygon::Polygon()` [private]
@@ -471,7 +573,7 @@ impl Polygon {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Polygon::Polygon")
+        panic!("libsumo::Polygon cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

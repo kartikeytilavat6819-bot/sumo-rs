@@ -1,5 +1,6 @@
 //! Port of libsumo/Rerouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+// shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 
 /// C++ class `libsumo::Rerouter` (libsumo/Rerouter.h)
@@ -10,6 +11,13 @@ pub struct Rerouter {
 //   static const int Rerouter::DOMAIN_ID;
 //   static SubscriptionResults Rerouter::mySubscriptionResults;
 //   static ContextSubscriptionResults Rerouter::myContextSubscriptionResults;
+thread_local! {
+    /// C++ static `Rerouter::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Rerouter::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 
 impl Rerouter {
     /// C++: `std::vector<std::string> Rerouter::getIDList()` [static]
@@ -24,7 +32,12 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Rerouter::getIDList")
+        MSNet::get_instance(); // just to check that we actually have a network
+        let mut ids: Vec<String> = Vec::new();
+        for (id, _) in MSTriggeredRerouter::get_instances() {
+            ids.push(id);
+        }
+        ids
     }
 
     /// C++: `int Rerouter::getIDCount()` [static]
@@ -34,7 +47,7 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Rerouter::getIDCount")
+        MSTriggeredRerouter::get_instances().len() as i32
     }
 
     /// C++: `std::string Rerouter::getParameter(const std::string &, const std::string &)` [static]
@@ -44,14 +57,14 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Rerouter::getParameter")
+        String::new()
     }
 
     /// C++: `const std::pair<std::string, std::string> Rerouter::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Rerouter)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Rerouter::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Rerouter::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -62,77 +75,78 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Rerouter::setParameter")
+        // the C++ body is commented out upstream: rerouters have no settable parameters through libsumo
     }
 
     /// C++: `void Rerouter::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Rerouter::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_REROUTER_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Rerouter::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Rerouter::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_REROUTER_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Rerouter::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Rerouter::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_REROUTER_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Rerouter::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Rerouter::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_REROUTER_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Rerouter::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Rerouter::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Rerouter::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Rerouter::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Rerouter::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Rerouter::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Rerouter::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Rerouter::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Rerouter::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Rerouter, REROUTER)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Rerouter::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Rerouter::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Rerouter::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Rerouter::domainID")
+        CMD_GET_REROUTER_VARIABLE
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Rerouter::makeWrapper()` [static]
@@ -142,7 +156,8 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Rerouter::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Rerouter::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Rerouter::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -165,7 +180,23 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Rerouter::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSTriggeredRerouter * Rerouter::getRerouter(const std::string &)` [static, private]
@@ -179,7 +210,12 @@ impl Rerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_rerouter(id: &str) -> Ptr<MSTriggeredRerouter> {
-        todo!("port Rerouter::getRerouter")
+        // C++ always throws here: the lookup is a stub that never finds a rerouter
+        let s: Ptr<MSTriggeredRerouter> = Ptr::null();
+        if s.is_null() {
+            panic!("{}", format!("Rerouter '{}' is not known", id));
+        }
+        s
     }
 
     /// C++: `void Rerouter::Rerouter()` [private]
@@ -187,7 +223,7 @@ impl Rerouter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Rerouter::Rerouter")
+        panic!("libsumo::Rerouter cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
