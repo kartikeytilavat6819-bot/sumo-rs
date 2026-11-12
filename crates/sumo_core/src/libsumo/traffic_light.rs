@@ -1,6 +1,9 @@
 //! Port of libsumo/TrafficLight.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::starts_with;
+use utils::common::time::{steps2time, time2steps};
+// shortcut: C++ `throw TraCIException(msg)` is mapped to `panic!("{}", msg)` (unwinds where C++ throws), upgrade when libsumo has a typed TraCI error that callers can catch
 
 /// C++ class `libsumo::TrafficLight` (libsumo/TrafficLight.h)
 pub struct TrafficLight {
@@ -11,6 +14,13 @@ pub struct TrafficLight {
 //   static SubscriptionResults TrafficLight::mySubscriptionResults;
 //   static ContextSubscriptionResults TrafficLight::myContextSubscriptionResults;
 
+thread_local! {
+    /// C++ static `TrafficLight::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `TrafficLight::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 impl TrafficLight {
     /// C++: `std::string TrafficLight::getRedYellowGreenState(const std::string &)` [static]
     // std::string
@@ -19,14 +29,24 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_red_yellow_green_state(tlsID: &str) -> String {
-        todo!("port TrafficLight::getRedYellowGreenState")
+        Helper::get_tls(tlsID).get_active().get_current_phase_def().get_state().to_string()
     }
 
     /// C++: `std::vector<libsumo::TraCILogic> TrafficLight::getAllProgramLogics(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_all_program_logics(tlsID: &str) -> Vec<TraCILogic> {
-        todo!("port TrafficLight::getAllProgramLogics")
+        let mut result: Vec<TraCILogic> = Vec::new();
+        let logics = Helper::get_tls(tlsID).get_all_logics();
+        for logic in logics {
+            let mut l = TraCILogic::new_2(logic.get_program_id(), logic.get_logic_type() as i32, logic.get_current_phase_index(), &Vec::new());
+            l.subParameter = logic.base2.get_parameters_map().clone();
+            for phase in logic.get_phases().iter() {
+                l.phases.push(Rc::new(TraCIPhase::new_2(steps2time(phase.duration), phase.get_state(), steps2time(phase.minDuration), steps2time(phase.maxDuration), phase.get_next_phases(), phase.get_name(), "")));
+            }
+            result.push(l);
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getControlledJunctions(const std::string &)` [static]
@@ -43,7 +63,15 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_controlled_junctions(tlsID: &str) -> Vec<String> {
-        todo!("port TrafficLight::getControlledJunctions")
+        let mut junctionIDs: BTreeSet<String> = BTreeSet::new();
+        let active = Helper::get_tls(tlsID).get_active();
+        let links = active.get_links();
+        for llinks in links.iter() {
+            for l in llinks.iter() {
+                junctionIDs.insert(l.get_junction().get_id().to_string());
+            }
+        }
+        junctionIDs.into_iter().collect()
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getControlledLanes(const std::string &)` [static]
@@ -60,14 +88,40 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_controlled_lanes(tlsID: &str) -> Vec<String> {
-        todo!("port TrafficLight::getControlledLanes")
+        let mut laneIDs: Vec<String> = Vec::new();
+        let active = Helper::get_tls(tlsID).get_active();
+        for llanes in active.get_lane_vectors().iter() {
+            for l in llanes.iter() {
+                laneIDs.push(l.get_id().to_string());
+            }
+        }
+        laneIDs
     }
 
     /// C++: `std::vector<std::vector<libsumo::TraCILink>> TrafficLight::getControlledLinks(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_controlled_links(tlsID: &str) -> Vec<Vec<TraCILink>> {
-        todo!("port TrafficLight::getControlledLinks")
+        let mut result: Vec<Vec<TraCILink>> = Vec::new();
+        let active = Helper::get_tls(tlsID).get_active();
+        let lanes = active.get_lane_vectors();
+        let links = active.get_links();
+        for i in 0..lanes.len() {
+            let mut subList: Vec<TraCILink> = Vec::new();
+            let llanes = &lanes[i];
+            let llinks = &links[i];
+            // number of links controlled by this signal (signal i)
+            for j in 0..llanes.len() {
+                let link = llinks[j];
+                // approached non-internal lane (if any)
+                let to = if !link.get_lane().is_null() { link.get_lane().get_id().to_string() } else { String::new() };
+                // approached "via", internal lane (if any)
+                let via = if !link.get_via_lane().is_null() { link.get_via_lane().get_id().to_string() } else { String::new() };
+                subList.push(TraCILink::new_2(llanes[j].get_id(), &via, &to));
+            }
+            result.push(subList);
+        }
+        result
     }
 
     /// C++: `std::string TrafficLight::getProgram(const std::string &)` [static]
@@ -77,7 +131,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_program(tlsID: &str) -> String {
-        todo!("port TrafficLight::getProgram")
+        Helper::get_tls(tlsID).get_active().get_program_id().to_string()
     }
 
     /// C++: `int TrafficLight::getPhase(const std::string &)` [static]
@@ -87,7 +141,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_phase(tlsID: &str) -> i32 {
-        todo!("port TrafficLight::getPhase")
+        Helper::get_tls(tlsID).get_active().get_current_phase_index()
     }
 
     /// C++: `std::string TrafficLight::getPhaseName(const std::string &)` [static]
@@ -97,7 +151,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_name(tlsID: &str) -> String {
-        todo!("port TrafficLight::getPhaseName")
+        Helper::get_tls(tlsID).get_active().get_current_phase_def().get_name().to_string()
     }
 
     /// C++: `double TrafficLight::getPhaseDuration(const std::string &)` [static]
@@ -107,7 +161,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_duration(tlsID: &str) -> f64 {
-        todo!("port TrafficLight::getPhaseDuration")
+        steps2time(Helper::get_tls(tlsID).get_active().get_current_phase_def().duration)
     }
 
     /// C++: `double TrafficLight::getNextSwitch(const std::string &)` [static]
@@ -117,7 +171,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_next_switch(tlsID: &str) -> f64 {
-        todo!("port TrafficLight::getNextSwitch")
+        steps2time(Helper::get_tls(tlsID).get_active().get_next_switch_time())
     }
 
     /// C++: `double TrafficLight::getSpentDuration(const std::string &)` [static]
@@ -127,7 +181,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_spent_duration(tlsID: &str) -> f64 {
-        todo!("port TrafficLight::getSpentDuration")
+        steps2time(Helper::get_tls(tlsID).get_active().get_spent_duration(-1))
     }
 
     /// C++: `int TrafficLight::getServedPersonCount(const std::string &, int)` [static]
@@ -174,7 +228,47 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_served_person_count(tlsID: &str, index: i32) -> i32 {
-        todo!("port TrafficLight::getServedPersonCount")
+        let active = Helper::get_tls(tlsID).get_active();
+        if index < 0 || active.get_phase_number() <= index {
+            panic!("{}", format!("The phase index {} is not in the allowed range [0,{}].", index, active.get_phase_number() - 1));
+        }
+        // find all crossings which have a green light in that phase
+        let mut result: i32 = 0;
+
+        let state: String = active.get_phases()[index as usize].get_state().to_string();
+        for i in 0..state.len() {
+            if state.as_bytes()[i] as i32 == LINKSTATE_TL_GREEN_MAJOR {
+                for link in active.get_links_at(i as i32).iter() {
+                    let link = *link;
+                    if link.get_lane().is_crossing() {
+                        // walking forwards across
+                        let laneBefore = link.get_lane_before();
+                        for person in laneBefore.get_edge().get_persons().iter() {
+                            if person.cast::<MSPerson>().get_next_edge() == link.get_lane().get_edge().get_id() {
+                                result += 1;
+                            }
+                        }
+                        // walking backwards across
+                        let lane = link.get_lane();
+                        let walkingAreaAcross = lane.get_link_cont().first().unwrap().get_lane();
+                        for person in walkingAreaAcross.get_edge().get_persons().iter() {
+                            if person.cast::<MSPerson>().get_next_edge() == link.get_lane().get_edge().get_id() {
+                                result += 1;
+                            }
+                        }
+                    } else if link.get_lane_before().is_crossing() {
+                        // walking backwards across (in case both sides are separately controlled)
+                        let lane = link.get_lane();
+                        for person in lane.get_edge().get_persons().iter() {
+                            if person.cast::<MSPerson>().get_next_edge() == link.get_lane_before().get_edge().get_id() {
+                                result += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getBlockingVehicles(const std::string &, int)` [static]
@@ -194,7 +288,16 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_blocking_vehicles(tlsID: &str, linkIndex: i32) -> Vec<String> {
-        todo!("port TrafficLight::getBlockingVehicles")
+        let mut result: Vec<String> = Vec::new();
+        // for railsignals we cannot use the "online" program
+        let active = Helper::get_tls(tlsID).get_default();
+        if linkIndex < 0 || linkIndex >= active.get_num_links() {
+            panic!("{}", format!("The link index {} is not in the allowed range [0,{}].", linkIndex, active.get_num_links() - 1));
+        }
+        for veh in active.m().get_blocking_vehicles(linkIndex).iter() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getRivalVehicles(const std::string &, int)` [static]
@@ -213,7 +316,15 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_rival_vehicles(tlsID: &str, linkIndex: i32) -> Vec<String> {
-        todo!("port TrafficLight::getRivalVehicles")
+        let mut result: Vec<String> = Vec::new();
+        let active = Helper::get_tls(tlsID).get_default();
+        if linkIndex < 0 || linkIndex >= active.get_num_links() {
+            panic!("{}", format!("The link index {} is not in the allowed range [0,{}].", linkIndex, active.get_num_links() - 1));
+        }
+        for veh in active.m().get_rival_vehicles(linkIndex).iter() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getPriorityVehicles(const std::string &, int)` [static]
@@ -232,21 +343,31 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_priority_vehicles(tlsID: &str, linkIndex: i32) -> Vec<String> {
-        todo!("port TrafficLight::getPriorityVehicles")
+        let mut result: Vec<String> = Vec::new();
+        let active = Helper::get_tls(tlsID).get_default();
+        if linkIndex < 0 || linkIndex >= active.get_num_links() {
+            panic!("{}", format!("The link index {} is not in the allowed range [0,{}].", linkIndex, active.get_num_links() - 1));
+        }
+        for veh in active.m().get_priority_vehicles(linkIndex).iter() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::getConstraints(const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_constraints(tlsID: &str, tripId: &str) -> Vec<TraCISignalConstraint> {
-        todo!("port TrafficLight::getConstraints")
+        // shortcut: needs dynamic_cast to MSRailSignal and MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on those structs in microsim/traffic_lights, upgrade when they are added
+        panic!("shortcut: TrafficLight::getConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::getConstraintsByFoe(const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_constraints_by_foe(foeSignal: &str, foeId: &str) -> Vec<TraCISignalConstraint> {
-        todo!("port TrafficLight::getConstraintsByFoe")
+        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on those structs in microsim/traffic_lights, upgrade when they are added
+        panic!("shortcut: TrafficLight::getConstraintsByFoe needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getIDList()` [static]
@@ -256,7 +377,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port TrafficLight::getIDList")
+        MSNet::get_instance().m().get_tls_control().get_all_tl_ids()
     }
 
     /// C++: `int TrafficLight::getIDCount()` [static]
@@ -266,7 +387,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port TrafficLight::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string TrafficLight::getParameter(const std::string &, const std::string &)` [static]
@@ -280,14 +401,18 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port TrafficLight::getParameter")
+        let tll = Helper::get_tls(objectID).get_active();
+        if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
+            panic!("{}", format!("'{}' is not a NEMA controller", objectID));
+        }
+        tll.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> TrafficLight::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(TrafficLight)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port TrafficLight::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void TrafficLight::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -301,77 +426,82 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port TrafficLight::setParameter")
+        let tll = Helper::get_tls(objectID).get_active();
+        if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
+            panic!("{}", format!("'{}' is not a NEMA controller", objectID));
+        }
+        tll.m().base2.set_parameter(key, value);
     }
 
     /// C++: `void TrafficLight::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port TrafficLight::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_TL_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void TrafficLight::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port TrafficLight::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_TL_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void TrafficLight::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port TrafficLight::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_TL_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void TrafficLight::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port TrafficLight::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_TL_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults TrafficLight::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port TrafficLight::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults TrafficLight::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port TrafficLight::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults TrafficLight::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port TrafficLight::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults TrafficLight::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port TrafficLight::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void TrafficLight::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port TrafficLight::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: TrafficLight::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int TrafficLight::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port TrafficLight::domainID")
+        CMD_GET_TL_VARIABLE
     }
 
     /// C++: `void TrafficLight::setRedYellowGreenState(const std::string &, const std::string &)` [static]
@@ -381,7 +511,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_red_yellow_green_state(tlsID: &str, state: &str) {
-        todo!("port TrafficLight::setRedYellowGreenState")
+        Helper::get_tls(tlsID).set_state_instantiating_online(MSNet::get_instance().m().get_tls_control(), state);
     }
 
     /// C++: `void TrafficLight::setPhase(const std::string &, const int)` [static]
@@ -398,7 +528,13 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_phase(tlsID: &str, index: i32) {
-        todo!("port TrafficLight::setPhase")
+        let active = Helper::get_tls(tlsID).get_active();
+        if index < 0 || active.get_phase_number() <= index {
+            panic!("{}", format!("The phase index {} is not in the allowed range [0,{}].", index, active.get_phase_number() - 1));
+        }
+        let cTime = MSNet::get_instance().get_current_time_step();
+        let duration = active.get_phase(index).duration;
+        active.m().change_step_and_duration(MSNet::get_instance().m().get_tls_control(), cTime, index, duration);
     }
 
     /// C++: `void TrafficLight::setPhaseName(const std::string &, const std::string &)` [static]
@@ -409,7 +545,10 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_name(tlsID: &str, name: &str) {
-        todo!("port TrafficLight::setPhaseName")
+        let active = Helper::get_tls(tlsID).get_active();
+        // const_cast of the current phase: the phases are Ptr-owned, so mutate through the Ptr
+        let step = active.get_current_phase_index() as usize;
+        active.get_phases()[step].m().set_name(name);
     }
 
     /// C++: `void TrafficLight::setProgram(const std::string &, const std::string &)` [static]
@@ -423,7 +562,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_program(tlsID: &str, programID: &str) {
-        todo!("port TrafficLight::setProgram")
+        // a ProcessError from switchTo already carries the message the C++ catch rethrows as TraCIException
+        Helper::get_tls(tlsID).switch_to(MSNet::get_instance().m().get_tls_control(), programID);
     }
 
     /// C++: `void TrafficLight::setPhaseDuration(const std::string &, const double)` [static]
@@ -435,14 +575,21 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_duration(tlsID: &str, phaseDuration: f64) {
-        todo!("port TrafficLight::setPhaseDuration")
+        let active = Helper::get_tls(tlsID).get_active();
+        let cTime = MSNet::get_instance().get_current_time_step();
+        active.m().change_step_and_duration(MSNet::get_instance().m().get_tls_control(), cTime, -1, time2steps(phaseDuration));
     }
 
     /// C++: `void TrafficLight::setProgramLogic(const std::string &, const libsumo::TraCILogic &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_program_logic(tlsID: &str, logic: &TraCILogic) {
-        todo!("port TrafficLight::setProgramLogic")
+        // make sure index and phaseNo are consistent
+        if logic.currentPhaseIndex >= logic.phases.len() as i32 {
+            panic!("{}", "set program: parameter index must be less than parameter phase number.");
+        }
+        // shortcut: creating the MSActuatedTrafficLightLogic / NEMALogic / MSDelayBasedTrafficLightLogic / MSSimpleTrafficLightLogic instances needs the Parameterised::Map argument (Unmapped in ms_traffic_light_logic.rs) and the else branch needs a static_cast to MSSimpleTrafficLightLogic, upgrade when both are typed
+        panic!("shortcut: TrafficLight::setProgramLogic needs typed Parameterised::Map logic constructors and MSSimpleTrafficLightLogic cast")
     }
 
     /// C++: `void TrafficLight::addConstraint(const std::string &, const std::string &, const std::string &, const std::string &, const int, const int)` [static]
@@ -463,14 +610,16 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn add_constraint(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str, type_: i32, limit: i32) {
-        todo!("port TrafficLight::addConstraint")
+        // shortcut: needs dynamic_cast of the default logic to MSRailSignal and of the foe logic, which needs #[repr(C)] on MSRailSignal, upgrade when added
+        panic!("shortcut: TrafficLight::addConstraint needs dynamic_cast to MSRailSignal")
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::swapConstraints(const std::string &, const std::string &, const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn swap_constraints(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str) -> Vec<TraCISignalConstraint> {
-        todo!("port TrafficLight::swapConstraints")
+        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor and findConstraintsDeadLocks, upgrade when the rail signal structs are repr(C)
+        panic!("shortcut: TrafficLight::swapConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `void TrafficLight::removeConstraints(const std::string &, const std::string &, const std::string &, const std::string &)` [static]
@@ -501,7 +650,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn remove_constraints(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str) {
-        todo!("port TrafficLight::removeConstraints")
+        // shortcut: needs dynamic_cast to MSRailSignal and MSRailSignalConstraint_Predecessor, upgrade when the rail signal structs are repr(C)
+        panic!("shortcut: TrafficLight::removeConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `void TrafficLight::updateConstraints(const std::string &, std::string)` [static]
@@ -590,7 +740,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn update_constraints(vehID: &str, tripId: String) {
-        todo!("port TrafficLight::updateConstraints")
+        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor and the vehicle route/stop iteration, upgrade when those are repr(C)
+        panic!("shortcut: TrafficLight::updateConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `std::vector<libsumo::TraCILogic> TrafficLight::getCompleteRedYellowGreenDefinition(const std::string &)` [static]
@@ -599,7 +750,7 @@ impl TrafficLight {
     //     }
     #[allow(unused_variables)]
     pub fn get_complete_red_yellow_green_definition(tlsID: &str) -> Vec<TraCILogic> {
-        todo!("port TrafficLight::getCompleteRedYellowGreenDefinition")
+        Self::get_all_program_logics(tlsID)
     }
 
     /// C++: `void TrafficLight::setCompleteRedYellowGreenDefinition(const std::string &, const libsumo::TraCILogic &)` [static]
@@ -608,7 +759,7 @@ impl TrafficLight {
     //     }
     #[allow(unused_variables)]
     pub fn set_complete_red_yellow_green_definition(tlsID: &str, logic: &TraCILogic) {
-        todo!("port TrafficLight::setCompleteRedYellowGreenDefinition")
+        Self::set_program_logic(tlsID, logic);
     }
 
     /// C++: `void TrafficLight::setNemaSplits(const std::string &, const std::vector<double> &)` [static]
@@ -618,7 +769,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_nema_splits(tlsID: &str, splits: &Vec<f64>) {
-        todo!("port TrafficLight::setNemaSplits")
+        Self::set_parameter(tlsID, "NEMA.splits", &utils::common::to_string::to_string(splits));
     }
 
     /// C++: `void TrafficLight::setNemaMaxGreens(const std::string &, const std::vector<double> &)` [static]
@@ -628,7 +779,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_nema_max_greens(tlsID: &str, maxGreens: &Vec<f64>) {
-        todo!("port TrafficLight::setNemaMaxGreens")
+        Self::set_parameter(tlsID, "NEMA.maxGreens", &utils::common::to_string::to_string(maxGreens));
     }
 
     /// C++: `void TrafficLight::setNemaCycleLength(const std::string &, double)` [static]
@@ -638,7 +789,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_nema_cycle_length(tlsID: &str, cycleLength: f64) {
-        todo!("port TrafficLight::setNemaCycleLength")
+        Self::set_parameter(tlsID, "NEMA.cycleLength", &utils::common::to_string::to_string(&cycleLength));
     }
 
     /// C++: `void TrafficLight::setNemaOffset(const std::string &, double)` [static]
@@ -648,7 +799,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn set_nema_offset(tlsID: &str, offset: f64) {
-        todo!("port TrafficLight::setNemaOffset")
+        Self::set_parameter(tlsID, "NEMA.offset", &utils::common::to_string::to_string(&offset));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> TrafficLight::makeWrapper()` [static]
@@ -658,7 +809,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port TrafficLight::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: TrafficLight::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool TrafficLight::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -713,7 +865,54 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port TrafficLight::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            TL_RED_YELLOW_GREEN_STATE => wrapper.m().wrap_string(objID, variable, &Self::get_red_yellow_green_state(objID)),
+            TL_COMPLETE_DEFINITION_RYG => wrapper.m().wrap_logic_vector(objID, variable, &Self::get_all_program_logics(objID)),
+            TL_CONTROLLED_LANES => wrapper.m().wrap_string_list(objID, variable, &Self::get_controlled_lanes(objID)),
+            TL_CONTROLLED_LINKS => wrapper.m().wrap_link_vector_vector(objID, variable, &Self::get_controlled_links(objID)),
+            TL_CURRENT_PHASE => wrapper.m().wrap_int(objID, variable, Self::get_phase(objID)),
+            VAR_NAME => wrapper.m().wrap_string(objID, variable, &Self::get_phase_name(objID)),
+            TL_CURRENT_PROGRAM => wrapper.m().wrap_string(objID, variable, &Self::get_program(objID)),
+            TL_PHASE_DURATION => wrapper.m().wrap_double(objID, variable, Self::get_phase_duration(objID)),
+            TL_NEXT_SWITCH => wrapper.m().wrap_double(objID, variable, Self::get_next_switch(objID)),
+            TL_SPENT_DURATION => wrapper.m().wrap_double(objID, variable, Self::get_spent_duration(objID)),
+            VAR_PERSON_NUMBER => {
+                let n = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_int(objID, variable, Self::get_served_person_count(objID, n))
+            }
+            TL_BLOCKING_VEHICLES => {
+                let n = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_blocking_vehicles(objID, n))
+            }
+            TL_RIVAL_VEHICLES => {
+                let n = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_rival_vehicles(objID, n))
+            }
+            TL_PRIORITY_VEHICLES => {
+                let n = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_priority_vehicles(objID, n))
+            }
+            TL_CONSTRAINT => {
+                let s = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_signal_constraint_vector(objID, variable, &Self::get_constraints(objID, &s))
+            }
+            TL_CONSTRAINT_BYFOE => {
+                let s = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_signal_constraint_vector(objID, variable, &Self::get_constraints_by_foe(objID, &s))
+            }
+            TL_CONTROLLED_JUNCTIONS => wrapper.m().wrap_string_list(objID, variable, &Self::get_controlled_junctions(objID)),
+            VAR_PARAMETER => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `libsumo::TraCISignalConstraint TrafficLight::buildConstraint(const std::string &, const std::string &, MSRailSignalConstraint *)` [static, private]
@@ -739,7 +938,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn build_constraint(tlsID: &str, tripId: &str, constraint: Ptr<MSRailSignalConstraint>) -> TraCISignalConstraint {
-        todo!("port TrafficLight::buildConstraint")
+        // shortcut: needs dynamic_cast to MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on it in microsim/traffic_lights, upgrade when added
+        panic!("shortcut: TrafficLight::buildConstraint needs dynamic_cast to MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::findConstraintsDeadLocks(const std::string &, const std::string &, const std::string &, const std::string &)` [static, private]
@@ -747,7 +947,8 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_constraints_dead_locks(foeId: &str, tripId: &str, foeSignal: &str, tlsID: &str) -> Vec<TraCISignalConstraint> {
-        todo!("port TrafficLight::findConstraintsDeadLocks")
+        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor (see buildConstraint), upgrade when the rail signal structs are repr(C)
+        panic!("shortcut: TrafficLight::findConstraintsDeadLocks needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
     }
 
     /// C++: `SUMOVehicle * TrafficLight::getVehicleByTripId(const std::string)` [static, private]
@@ -764,7 +965,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_by_trip_id(tripOrVehID: String) -> Ptr<SUMOVehicle> {
-        todo!("port TrafficLight::getVehicleByTripId")
+        // shortcut: needs iteration over MSVehicleControl loaded vehicles, whose loadedVehBegin/loadedVehEnd are still unported in ms_vehicle_control.rs, upgrade when those are ported
+        panic!("shortcut: TrafficLight::getVehicleByTripId needs MSVehicleControl::loadedVehBegin/End")
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getFutureTripIds(const std::string)` [static, private]
@@ -787,7 +989,8 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_future_trip_ids(vehID: String) -> Vec<String> {
-        todo!("port TrafficLight::getFutureTripIds")
+        // shortcut: needs dynamic_cast SUMOVehicle -> MSBaseVehicle, which needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
+        panic!("shortcut: TrafficLight::getFutureTripIds needs dynamic_cast to MSBaseVehicle")
     }
 
     /// C++: `void TrafficLight::swapParameters(MSRailSignalConstraint *)` [static, private]
@@ -800,7 +1003,10 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn swap_parameters(c: Ptr<MSRailSignalConstraint>) {
-        todo!("port TrafficLight::swapParameters")
+        // swap parameters that were assigned by generateRailSignalConstraints.py
+        for keys in Self::get_swap_params(c.get_type() as i32) {
+            Self::swap_parameters_2(c, &keys.0, &keys.1);
+        }
     }
 
     /// C++: `void TrafficLight::swapParameters(MSRailSignalConstraint *, const std::string &, const std::string &)` [static, private]
@@ -821,7 +1027,18 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn swap_parameters_2(c: Ptr<MSRailSignalConstraint>, key1: &str, key2: &str) {
-        todo!("port TrafficLight::swapParameters")
+        let value1 = c.get_parameter(key1, "");
+        let value2 = c.get_parameter(key2, "");
+        if value1 != "" {
+            c.m().base.set_parameter(key2, &value1);
+        } else {
+            c.m().base.unset_parameter(key2);
+        }
+        if value2 != "" {
+            c.m().base.set_parameter(key1, &value2);
+        } else {
+            c.m().base.unset_parameter(key1);
+        }
     }
 
     /// C++: `void TrafficLight::swapParameters(TraCISignalConstraint &)` [static, private]
@@ -834,7 +1051,10 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn swap_parameters_3(c: &mut TraCISignalConstraint) {
-        todo!("port TrafficLight::swapParameters")
+        // swap parameters that were assigned by generateRailSignalConstraints.py
+        for keys in Self::get_swap_params(c.type_) {
+            Self::swap_parameters_4(c, &keys.0, &keys.1);
+        }
     }
 
     /// C++: `void TrafficLight::swapParameters(TraCISignalConstraint &, const std::string &, const std::string &)` [static, private]
@@ -857,7 +1077,18 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn swap_parameters_4(c: &mut TraCISignalConstraint, key1: &str, key2: &str) {
-        todo!("port TrafficLight::swapParameters")
+        let value1 = c.param.get(key1).cloned().unwrap_or_default();
+        let value2 = c.param.get(key2).cloned().unwrap_or_default();
+        if value1 != "" {
+            c.param.insert(key2.to_string(), value1);
+        } else {
+            c.param.remove(key2);
+        }
+        if value2 != "" {
+            c.param.insert(key1.to_string(), value2);
+        } else {
+            c.param.remove(key1);
+        }
     }
 
     /// C++: `std::vector<std::pair<std::string, std::string>> TrafficLight::getSwapParams(int)` [static, private]
@@ -879,7 +1110,16 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_swap_params(constraintType: i32) -> Vec<(String, String)> {
-        todo!("port TrafficLight::getSwapParams")
+        let mut result: Vec<(String, String)> = vec![
+            ("vehID".to_string(), "foeID".to_string()),
+            ("line".to_string(), "foeLine".to_string()),
+            ("arrival".to_string(), "foeArrival".to_string()),
+        ];
+        if constraintType == MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR as i32 {
+            let special = [("busStop", "busStop2"), ("priorStop", "priorStop2"), ("stopArrival", "foeStopArrival")];
+            result.extend(special.iter().map(|(a, b)| (a.to_string(), b.to_string())));
+        }
+        result
     }
 
     /// C++: `void TrafficLight::TrafficLight()` [private]
@@ -887,7 +1127,7 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TrafficLight::TrafficLight")
+        panic!("libsumo::TrafficLight cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
