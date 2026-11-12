@@ -9,7 +9,7 @@ use utils::common::time::{delta_t, steps2time, time2steps, time2string};
 use utils::common::to_string::{f64_to_string_default, f64_to_string_prec, to_string};
 use utils::iodevices::output_device::AttrName;
 use utils::options::options_cont::{get_bool, is_set, with_options};
-use utils::xml::sumo_xml_definitions_gen::{
+use utils::xml::sumo_xml_definitions::{
     SUMO_ATTR_ARRIVALLANE, SUMO_ATTR_ARRIVALPOS, SUMO_ATTR_ARRIVALPOS_LAT, SUMO_ATTR_ARRIVALSPEED,
     SUMO_ATTR_ARRIVALTIME, SUMO_ATTR_COUNT, SUMO_ATTR_DURATION, SUMO_ATTR_ID, SUMO_ATTR_NUMBER,
     SUMO_ATTR_SPEED, SUMO_ATTR_STATE, SUMO_ATTR_STOPTIME, SUMO_ATTR_TIMELOSS, SUMO_ATTR_WAITINGCOUNT,
@@ -336,12 +336,12 @@ impl MSDevice_Tripinfo {
                 if !tripinfoOut.is_null() {
                     for dev in d.myHolder.get_devices().iter() {
                         // typeid(*dev) comparison: the device names are unique per class
-                        let name = dev.device_name();
+                        let name = dev.base2.device_name();
                         if name == "tripinfo" || name == "vehroutes" {
                             // tripinfo is special and vehroute has its own write-unfinished option
                             continue;
                         }
-                        dev.generate_output(tripinfoOut);
+                        dev.base2.generate_output(tripinfoOut);
                     }
                     tripinfoOut.m().close_tag("");
                 }
@@ -366,7 +366,7 @@ impl MSDevice_Tripinfo {
     // }
     #[allow(unused_variables)]
     pub fn add_pedestrian_data(walkLength: f64, walkDuration: SUMOTime, walkTimeLoss: SUMOTime) {
-        let s = st().m();
+        let sp = st(); let s = sp.m();
         s.myWalkCount += 1;
         s.myTotalWalkRouteLength += walkLength;
         s.myTotalWalkDuration += walkDuration;
@@ -403,7 +403,7 @@ impl MSDevice_Tripinfo {
     #[allow(unused_variables)]
     pub fn add_ride_transport_data(isPerson: bool, distance: f64, duration: SUMOTime, vClass: SUMOVehicleClass, line: &str, waitingTime: SUMOTime) {
         let index: usize = if isPerson { 0 } else { 1 };
-        let s = st().m();
+        let sp = st(); let s = sp.m();
         s.myRideCount[index] += 1;
         if duration > 0 {
             s.myTotalRideWaitingTime[index] += waitingTime;
@@ -1014,7 +1014,7 @@ impl MSDevice_Tripinfo {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        let s = st().m();
+        let sp = st(); let s = sp.m();
         s.myVehicleCount = 0;
         s.myTotalRouteLength = 0.0;
         s.myTotalSpeed = 0.0;
@@ -1360,7 +1360,7 @@ impl MSDevice_Tripinfo {
             let drivingDuration = duration - self.myStoppingTime;
             let speed = if drivingDuration > 0 { routeLength / steps2time(drivingDuration) } else { 0.0 };
             if self.myHolder.get_v_class() == SVC_BICYCLE {
-                let s = st().m();
+                let sp = st(); let s = sp.m();
                 s.myBikeCount += 1;
                 s.myTotalBikeRouteLength += routeLength;
                 s.myTotalBikeSpeed += speed;
@@ -1369,7 +1369,7 @@ impl MSDevice_Tripinfo {
                 s.myTotalBikeTimeLoss += timeLoss;
                 s.myTotalBikeDepartDelay += self.myHolder.get_depart_delay();
             } else {
-                let s = st().m();
+                let sp = st(); let s = sp.m();
                 s.myVehicleCount += 1;
                 s.myTotalRouteLength += routeLength;
                 s.myTotalSpeed += speed;
@@ -1417,7 +1417,7 @@ impl MSDevice_Tripinfo {
         os.write_attr(SUMO_ATTR_TIMELOSS, &time2string(timeLoss));
         os.write_attr("rerouteNo", &self.myHolder.get_number_reroutes());
         // C++ toString(vector of devices): the device ids separated by spaces
-        let devices: Vec<String> = self.myHolder.get_devices().iter().map(|d| d.get_id().to_string()).collect();
+        let devices: Vec<String> = self.myHolder.get_devices().iter().map(|d| d.base2.get_id().to_string()).collect();
         os.write_attr("devices", &devices.join(" "));
         os.write_attr("vType", self.myHolder.get_vehicle_type().get_id());
         os.write_attr("speedFactor", &self.myHolder.get_chosen_speed_factor());
@@ -1472,7 +1472,7 @@ impl MSDevice_Tripinfo {
     pub fn save_state(&self, out: &mut OutputDevice) {
         // always write device id to replicate stochastic assignment
         out.open_tag_id(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, self.get_id());
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.get_id());
         if self.myHolder.has_departed() {
             let mut internals = String::new();
             // the depart lane is empty if the device was added when loading state

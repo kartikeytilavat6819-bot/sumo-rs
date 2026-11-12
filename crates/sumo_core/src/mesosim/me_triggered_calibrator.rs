@@ -239,7 +239,8 @@ impl METriggeredCalibrator {
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
         // get current simulation values (valid for the last simulation second)
-        self.mySegment.m().prepare_detector_for_writing(&mut self.myEdgeMeanData.base.base, -1);
+        let seg = self.mySegment;
+        seg.m().prepare_detector_for_writing(&mut self.myEdgeMeanData.base.base, -1);
 
         // check whether an adaptation value exists
         if self.is_current_state_active(currentTime) {
@@ -277,7 +278,8 @@ impl METriggeredCalibrator {
                 write_warningf!("Clearing jam at calibrator '%' at time=%.", self.base3.get_id(), utils::common::time::time2string(currentTime));
             }
             // remove one vehicle currently on the segment
-            if self.mySegment.m().vaporize_any_car(currentTime, Ptr::from_mut(&mut self.base3)) {
+            let seg = self.mySegment;
+            if seg.m().vaporize_any_car(currentTime, Ptr::from_mut(&mut self.base3)) {
                 self.myClearedInJam += 1;
             } else {
                 if !self.myHaveWarnedAboutClearingJam {
@@ -305,7 +307,8 @@ impl METriggeredCalibrator {
                 let relaxedInsertion = (utils::common::time::steps2time(self.myIntervals[idx].end - currentTime) / 3.).floor() as i32;
                 let insertionSlack = std::cmp::max(0, adaptedNum + relaxedInsertion - totalWishedNum);
                 // increase number of vehicles
-                let vc = MSNet::get_instance().m().get_vehicle_control();
+                let net = MSNet::get_instance();
+                let vc = net.m().get_vehicle_control();
                 while wishedNum > adaptedNum + insertionSlack && self.remaining_vehicle_capacity() > self.maximum_inflow() {
                     let pars = self.myIntervals[idx].vehicleParameter;
                     let mut route: Option<ConstMSRoutePtr> = if !self.myProbe.is_null() { self.myProbe.sample_route(true) } else { None };
@@ -378,7 +381,8 @@ impl METriggeredCalibrator {
             }
             // we only remove vehicles once we really have to
             while totalWishedNum < adaptedNum {
-                if !self.mySegment.m().vaporize_any_car(currentTime, Ptr::from_mut(&mut self.base3)) {
+                let seg = self.mySegment;
+                if !seg.m().vaporize_any_car(currentTime, Ptr::from_mut(&mut self.base3)) {
                     // @bug: short edges may be jumped in a single step, giving us no chance to remove a vehicle
                     break;
                 }

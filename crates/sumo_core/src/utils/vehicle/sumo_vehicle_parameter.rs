@@ -9,7 +9,7 @@ use utils::common::string_utils::{adjust_decimal_value, prune_zeros, to_bool, to
 use utils::common::time::{string2time, steps2time, time2steps, time2string};
 use utils::common::to_string::{f64_to_string_prec, to_string};
 use utils::iodevices::output_device::AttrName;
-use utils::xml::sumo_xml_definitions_gen::{
+use utils::xml::sumo_xml_definitions::{
     InsertionCheck, InsertionChecks, ParkingType, Tags, GNE_TAG_FLOW_ROUTE, GNE_TAG_FLOW_WITHROUTE,
     SUMO_ATTR_ACTTYPE, SUMO_ATTR_ARRIVAL, SUMO_ATTR_ARRIVALEDGE, SUMO_ATTR_ARRIVALLANE, SUMO_ATTR_ARRIVALPOS,
     SUMO_ATTR_ARRIVALPOS_LAT, SUMO_ATTR_ARRIVALSPEED, SUMO_ATTR_BEGIN, SUMO_ATTR_BUS_STOP, SUMO_ATTR_CHARGING_STATION,
@@ -2114,9 +2114,9 @@ impl SUMOVehicleParameter {
             InsertionChecks.get_string(InsertionCheck::ALL).to_string()
         } else {
             let mut insertionChecksStrs: Vec<String> = Vec::new();
-            let insertionCheckValues = InsertionChecks.get_values();
+            let insertionCheckValuesList = InsertionChecks.get_values();
             // iterate over values
-            for insertionCheckValue in insertionCheckValues {
+            for insertionCheckValue in insertionCheckValuesList {
                 if insertionCheckValue != InsertionCheck::ALL && (self.insertionChecks & insertionCheckValue as i32) != 0 {
                     insertionChecksStrs.push(InsertionChecks.get_string(insertionCheckValue).to_string());
                 }
