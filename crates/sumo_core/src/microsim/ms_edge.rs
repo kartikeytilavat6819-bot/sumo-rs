@@ -156,6 +156,29 @@ fn sort_by_sorter(less: impl Fn(Ptr<MSTransportable>, Ptr<MSTransportable>) -> i
 //   static DepartLaneDefinition MSEdge::myDefaultDepartLaneDefinition;
 //   static int MSEdge::myDefaultDepartLane;
 
+// C++ static members of MSEdge, ported as module-level statics (zero-initialised like C++ statics).
+// Accessed only through the helper fns below, which keep the C++ `T&` return shape.
+static mut MY_DICT: MSEdge_DictType = BTreeMap::new();
+// shortcut: C++ myHashDict is an unordered_map; a BTreeMap is used since it is only queried by key
+static mut MY_HASH_DICT: BTreeMap<String, Ptr<MSEdge>> = BTreeMap::new();
+static mut MY_EDGES: MSEdgeVector = Vec::new();
+static mut MY_MESO_IGNORED_V_CLASSES: SVCPermissions = 0;
+static mut MY_DEFAULT_DEPART_LANE_DEFINITION: DepartLaneDefinition = DepartLaneDefinition::DEFAULT;
+static mut MY_DEFAULT_DEPART_LANE: i32 = 0;
+
+fn my_dict() -> &'static mut MSEdge_DictType {
+    unsafe { &mut *std::ptr::addr_of_mut!(MY_DICT) }
+}
+fn my_hash_dict() -> &'static mut BTreeMap<String, Ptr<MSEdge>> {
+    unsafe { &mut *std::ptr::addr_of_mut!(MY_HASH_DICT) }
+}
+fn my_edges() -> &'static mut MSEdgeVector {
+    unsafe { &mut *std::ptr::addr_of_mut!(MY_EDGES) }
+}
+fn my_meso_ignored_v_classes() -> SVCPermissions {
+    unsafe { *std::ptr::addr_of!(MY_MESO_IGNORED_V_CLASSES) }
+}
+
 impl MSEdge {
     /// C++: `void MSEdge::MSEdge(const std::string &, int, const SumoXMLEdgeFunc, const std::string &, const std::string &, const std::string &, int, double)`
     /// Constructor.
@@ -1981,7 +2004,30 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_free_lane(&self, allowed: Ptr<Vec<Ptr<MSLane>>>, vclass: SUMOVehicleClass, departPos: f64) -> Ptr<MSLane> {
-        todo!("port MSEdge::getFreeLane")
+        let allowed = if allowed.is_null() { self.allowed_lanes_2(vclass) } else { allowed };
+        let mut res: Ptr<MSLane> = Ptr::null();
+        if let Some(list) = allowed.get() {
+            let mut largestGap = 0.;
+            let mut resByGap: Ptr<MSLane> = Ptr::null();
+            let mut leastOccupancy = f64::MAX;
+            for lane in list.iter() {
+                let occupancy = lane.get_brutto_occupancy();
+                if occupancy < leastOccupancy {
+                    res = *lane;
+                    leastOccupancy = occupancy;
+                }
+                let last = lane.get_last_full_vehicle();
+                let lastGap = (if !last.is_null() { last.get_position_on_lane() } else { self.myLength }) - departPos;
+                if lastGap > largestGap {
+                    largestGap = lastGap;
+                    resByGap = *lane;
+                }
+            }
+            if !resByGap.is_null() {
+                res = resByGap;
+            }
+        }
+        res
     }
 
     /// C++: `MSLane * MSEdge::getProbableLane(const std::vector<MSLane *> *, const SUMOVehicleClass, double, double) const` [const]
@@ -2024,7 +2070,36 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_probable_lane(&self, allowed: Ptr<Vec<Ptr<MSLane>>>, vclass: SUMOVehicleClass, departPos: f64, maxSpeed: f64) -> Ptr<MSLane> {
-        todo!("port MSEdge::getProbableLane")
+        let allowed = if allowed.is_null() { self.allowed_lanes_2(vclass) } else { allowed };
+        let mut res: Ptr<MSLane> = Ptr::null();
+        if let Some(list) = allowed.get() {
+            let mut largestGap = 0.;
+            let mut largestSpeed = 0.;
+            let mut resByGap: Ptr<MSLane> = Ptr::null();
+            let mut leastOccupancy = f64::MAX;
+            for lane in list.iter() {
+                let occupancy = lane.get_brutto_occupancy();
+                if occupancy < leastOccupancy {
+                    res = *lane;
+                    leastOccupancy = occupancy;
+                }
+                let last = lane.get_last_full_vehicle();
+                let lastGap = (if !last.is_null() { last.get_position_on_lane() } else { self.myLength }) - departPos;
+                // never insert to the left of a vehicle with a larger speedFactor
+                if lastGap > largestGap && maxSpeed >= largestSpeed {
+                    largestGap = lastGap;
+                    resByGap = *lane;
+                }
+                if !last.is_null() {
+                    let v = self.get_vehicle_max_speed(Ptr::from_mut(&mut last.m().base.base.base));
+                    largestSpeed = if largestSpeed > v { largestSpeed } else { v }; // MAX2
+                }
+            }
+            if !resByGap.is_null() {
+                res = resByGap;
+            }
+        }
+        res
     }
 
     /// C++: `MSLane * MSEdge::getDepartLane(MSVehicle &) const` [const]
@@ -3326,7 +3401,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_default_depart_lane_definition() -> &'static mut DepartLaneDefinition {
-        todo!("port MSEdge::getDefaultDepartLaneDefinition")
+        unsafe { &mut *std::ptr::addr_of_mut!(MY_DEFAULT_DEPART_LANE_DEFINITION) }
     }
 
     /// C++: `int & MSEdge::getDefaultDepartLane()` [static]
@@ -3335,7 +3410,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_default_depart_lane() -> &'static mut i32 {
-        todo!("port MSEdge::getDefaultDepartLane")
+        unsafe { &mut *std::ptr::addr_of_mut!(MY_DEFAULT_DEPART_LANE) }
     }
 
     /// C++: `bool MSEdge::dictionary(const std::string &, MSEdge *)` [static]
@@ -3357,7 +3432,20 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, edge: Ptr<MSEdge>) -> bool {
-        todo!("port MSEdge::dictionary")
+        let dict = my_dict();
+        if !dict.contains_key(id) {
+            // id not in myDict
+            dict.insert(id.to_string(), edge);
+            my_hash_dict().insert(id.to_string(), edge);
+            let numericalID = edge.get_numerical_id();
+            let edges = my_edges();
+            while numericalID >= edges.len() as i32 {
+                edges.push(Ptr::null());
+            }
+            edges[numericalID as usize] = edge;
+            return true;
+        }
+        false
     }
 
     /// C++: `MSEdge * MSEdge::dictionary(const std::string_view &)` [static]
@@ -3372,7 +3460,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: &str) -> Ptr<MSEdge> {
-        todo!("port MSEdge::dictionary")
+        my_hash_dict().get(id).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `MSEdge * MSEdge::dictionaryHint(const std::string &, const int)` [static]
@@ -3390,7 +3478,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_hint(id: &str, startIdx: i32) -> Ptr<MSEdge> {
-        todo!("port MSEdge::dictionaryHint")
+        // this method is mainly useful when parsing connections from the net.xml which are sorted by "from" id
+        let edges = my_edges();
+        let idx = startIdx as usize;
+        if startIdx >= 0 && idx < edges.len() && !edges[idx].is_null() && edges[idx].get_id() == id {
+            return edges[idx];
+        }
+        if startIdx >= 0 && idx + 1 < edges.len() && !edges[idx + 1].is_null() && edges[idx + 1].get_id() == id {
+            return edges[idx + 1];
+        }
+        MSEdge::dictionary_2(id)
     }
 
     /// C++: `const MSEdgeVector & MSEdge::getAllEdges()` [static]
@@ -3401,7 +3498,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_all_edges() -> &'static MSEdgeVector {
-        todo!("port MSEdge::getAllEdges")
+        my_edges()
     }
 
     /// C++: `void MSEdge::clear()` [static]
@@ -3418,7 +3515,10 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn clear() {
-        todo!("port MSEdge::clear")
+        // shortcut: C++ deletes the edges here; MSEdge object ownership is not modelled, so the owner must drop them
+        my_hash_dict().clear();
+        my_dict().clear();
+        my_edges().clear();
     }
 
     /// C++: `void MSEdge::insertIDs(std::vector<std::string> &)` [static]
@@ -3431,7 +3531,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn insert_i_ds(into: &mut Vec<String>) {
-        todo!("port MSEdge::insertIDs")
+        for key in my_dict().keys() {
+            into.push(key.clone());
+        }
     }
 
     /// C++: `SVCPermissions MSEdge::getMesoPermissions(SVCPermissions, SVCPermissions)` [static]
@@ -3442,7 +3544,8 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_meso_permissions(p: SVCPermissions, ignoreIgnored: SVCPermissions) -> SVCPermissions {
-        todo!("port MSEdge::getMesoPermissions")
+        let ignored = my_meso_ignored_v_classes() & !ignoreIgnored;
+        if (p | ignored) == ignored { 0 } else { p }
     }
 
     /// C++: `void MSEdge::setMesoIgnoredVClasses(SVCPermissions)` [static]
@@ -3451,7 +3554,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_meso_ignored_v_classes(ignored: SVCPermissions) {
-        todo!("port MSEdge::setMesoIgnoredVClasses")
+        unsafe { *std::ptr::addr_of_mut!(MY_MESO_IGNORED_V_CLASSES) = ignored };
     }
 
     /// C++: `void MSEdge::parseEdgesList(const std::string &, ConstMSEdgeVector &, const std::string &)` [static]
@@ -3468,7 +3571,14 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn parse_edges_list(desc: &str, into: &mut ConstMSEdgeVector, rid: &str) {
-        todo!("port MSEdge::parseEdgesList")
+        for id in desc.split_whitespace() {
+            let edge = MSEdge::dictionary_2(id);
+            if edge.is_null() {
+                // shortcut: C++ throws ProcessError here; the Rust signature has no Result, so this panics with the same text
+                panic!("{}", ProcessError::Process(format!("The edge '{}' within the route {} is not known.\n The route can not be build.", id, rid)));
+            }
+            into.push(edge);
+        }
     }
 
     /// C++: `void MSEdge::parseEdgesList(const std::vector<std::string> &, ConstMSEdgeVector &, const std::string &)` [static]
@@ -3488,7 +3598,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn parse_edges_list_2(desc: &Vec<String>, into: &mut ConstMSEdgeVector, rid: &str) {
-        todo!("port MSEdge::parseEdgesList")
+        for id in desc.iter() {
+            let edge = MSEdge::dictionary_2(id);
+            // check whether the edge exists
+            if edge.is_null() {
+                // shortcut: C++ throws ProcessError here; the Rust signature has no Result, so this panics with the same text
+                panic!("{}", ProcessError::Process(format!("The edge '{}' within the route {} is not known.\n The route can not be build.", id, rid)));
+            }
+            into.push(edge);
+        }
     }
 
     /// C++: `ReversedEdge<MSEdge, SUMOVehicle> * MSEdge::getReversedRoutingEdge() const` [const]
@@ -3501,7 +3619,11 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_reversed_routing_edge(&self) -> Ptr<ReversedEdge<MSEdge, SUMOVehicle>> {
-        todo!("port MSEdge::getReversedRoutingEdge")
+        let me = Ptr::new(self).m();
+        if me.myReversedRoutingEdge.is_null() {
+            me.myReversedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self)))));
+        }
+        me.myReversedRoutingEdge
     }
 
     /// C++: `RailEdge<MSEdge, SUMOVehicle> * MSEdge::getRailwayRoutingEdge() const` [const]
@@ -3513,7 +3635,11 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
-        todo!("port MSEdge::getRailwayRoutingEdge")
+        let me = Ptr::new(self).m();
+        if me.myRailwayRoutingEdge.is_null() {
+            me.myRailwayRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self)))));
+        }
+        me.myRailwayRoutingEdge
     }
 
     /// C++: `const std::map<const MEVehicle *, std::pair<double, int>> & MSEdge::getMesoPositions() const` [const]
@@ -3572,7 +3698,8 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_meso_positions(&self) -> &BTreeMap<Ptr<MEVehicle>, (f64, i32)> {
-        todo!("port MSEdge::getMesoPositions")
+        // shortcut: meso segment vehicle positions (MESegment walk) not ported; returns the cache as it stands, which is what C++ returns when no meso segments exist
+        &self.myCachedMesoPos
     }
 
     /// C++: `void MSEdge::invalidateMesoCache() const` [const]
@@ -3581,7 +3708,8 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_meso_cache(&self) {
-        todo!("port MSEdge::invalidateMesoCache")
+        // C++ field is mutable; the invalidation is const
+        Ptr::new(self).m().myLastCacheUpdate = -1;
     }
 
     /// C++: `double MSEdge::getDepartPosBound(const MSVehicle &, bool) const` [const, protected]
@@ -3642,7 +3770,8 @@ impl MSEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSEdge) -> Self {
-        todo!("port MSEdge::MSEdge")
+        // C++ copy constructor is private and invalidated (MSEdge is never copied)
+        panic!("MSEdge copy constructor is invalidated in C++")
     }
 
     /// C++: `MSEdge & MSEdge::operator=(const MSEdge &)` [private]
@@ -3650,7 +3779,8 @@ impl MSEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSEdge) -> &mut MSEdge {
-        todo!("port MSEdge::operator=")
+        // C++ assignment operator is private and invalidated (MSEdge is never assigned)
+        panic!("MSEdge assignment operator is invalidated in C++")
     }
 
     /// C++: `void MSEdge::setBidiLanes()` [private]
