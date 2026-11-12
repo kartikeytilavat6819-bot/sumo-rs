@@ -7,6 +7,7 @@ use foreign::phemlight::v5::cep_handler::CEPHandler as V5CEPHandler;
 use foreign::phemlight::v5::correction::Correction as V5Correction;
 use foreign::phemlight::v5::helpers::Helpers as V5Helpers;
 use foreign::phemlight::v5::constants as pc5;
+use foreign::phemlight::v5::constants::{STR_BEV, STR_DIESEL, STR_GASOLINE, STR_HYBRID};
 
 /// C++ `HelpersPHEMlight5::PHEMLIGHT5_BASE` (6 << 16)
 pub const PHEMLIGHT5_BASE: i32 = 6 << 16;

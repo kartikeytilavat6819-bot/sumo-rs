@@ -1,6 +1,7 @@
 //! Port of utils/emissions/HelpersMMPEVEM.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::geom_helper::deg2rad;
 
 /// C++ `HelpersMMPEVEM::MMPEVEM_BASE` (5 << 16)
 pub const MMPEVEM_BASE: i32 = 5 << 16;
@@ -114,7 +115,7 @@ impl HelpersMMPEVEM {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn compute(&self, arg0: SUMOEmissionClass, e: PollutantsInterface_EmissionType, v: f64, a: f64, slope: f64, ptr_energyParams: Ptr<EnergyParams>) -> f64 {
+    pub fn compute(&self, c: SUMOEmissionClass, e: PollutantsInterface_EmissionType, v: f64, a: f64, slope: f64, ptr_energyParams: Ptr<EnergyParams>) -> f64 {
         if e != PollutantsInterface_EmissionType::ELEC {
             return 0.0;
         }
