@@ -999,7 +999,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLBuilder) -> Self {
-        todo!("port NLBuilder::NLBuilder")
+        panic!("NLBuilder copy constructor is private and undefined in C++, it must not be used")
     }
 
     /// C++: `NLBuilder & NLBuilder::operator=(const NLBuilder &)` [private]
@@ -1007,7 +1007,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLBuilder) -> &mut NLBuilder {
-        todo!("port NLBuilder::operator=")
+        panic!("NLBuilder assignment is private and undefined in C++, it must not be used")
     }
 
 }

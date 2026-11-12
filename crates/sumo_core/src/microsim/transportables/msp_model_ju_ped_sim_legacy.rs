@@ -55,7 +55,7 @@ impl MSPModel_JuPedSim_legacy_Event {
     //             : myModel(model) { }
     #[allow(unused_variables)]
     pub fn new(model: Ptr<MSPModel_JuPedSim_legacy>) -> Self {
-        todo!("port Event::Event")
+        Self { base: (), myModel: model }
     }
 
     /// C++: `SUMOTime Event::execute(SUMOTime)` [virtual]
@@ -64,7 +64,7 @@ impl MSPModel_JuPedSim_legacy_Event {
     //         }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Event::execute")
+        self.myModel.m().execute(currentTime)
     }
 
 }
@@ -714,7 +714,7 @@ impl MSPModel_JuPedSim_legacy {
     //     }
     #[allow(unused_variables)]
     pub fn using_shortcuts(&mut self) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::usingShortcuts")
+        self.myHaveAdditionalWalkableAreas
     }
 
     /// C++: `bool MSPModel_JuPedSim_legacy::usingDoors()` [virtual]
@@ -724,7 +724,7 @@ impl MSPModel_JuPedSim_legacy {
     //     }
     #[allow(unused_variables)]
     pub fn using_doors(&mut self) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::usingDoors")
+        true
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::registerArrived(const int)`
