@@ -1,5 +1,6 @@
 //! Port of microsim/trigger/MSTriggeredRerouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 use std::cell::RefCell;
 use crate::utils::router::intermodal_router::IntermodalRouter_TripItem;
@@ -39,7 +40,7 @@ pub struct MSTriggeredRerouter {
     /// C++ base class `MSMoveReminder`
     pub base2: MSMoveReminder,
     /// C++ base class `SUMOSAXHandler`
-    pub base3: Unmapped /* SUMOSAXHandler */,
+    pub base3: GenericSAXHandler,
     /// C++ base class `MSStoppingPlaceRerouter`
     pub base4: MSStoppingPlaceRerouter,
     /// edges where vehicles are notified
@@ -133,7 +134,7 @@ impl MSTriggeredRerouter {
         let mut this = MSTriggeredRerouter {
             base: Named::new(id),
             base2: MSMoveReminder::new(id, Ptr::default(), true),
-            base3: (),
+            base3: utils::xml::sumo_sax_handler::new("", ""), // C++ default-constructs SUMOSAXHandler
             base4: MSStoppingPlaceRerouter::new("parking".to_string(), false, Default::default(), Default::default()),
             myEdges: edges.clone(),
             myIntervals: Vec::new(),

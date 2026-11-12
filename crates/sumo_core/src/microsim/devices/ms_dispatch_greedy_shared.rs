@@ -34,7 +34,7 @@ impl MSDispatch_GreedyShared {
     //         myRelativeLossThreshold(StringUtils::toDouble(getParameter("relLossThreshold", "0.2")))
     //     {}
     #[allow(unused_variables)]
-    pub fn new(params: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
         todo!("port MSDispatch_GreedyShared::MSDispatch_GreedyShared")
     }
 

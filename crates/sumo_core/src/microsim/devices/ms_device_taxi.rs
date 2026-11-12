@@ -1769,18 +1769,17 @@ impl MSDevice_Taxi {
         let algo = utils::options::options_cont::get_string("device.taxi.dispatch-algorithm");
         let mut params = Parameterised::new();
         params.set_parameters_str(&utils::options::options_cont::get_string("device.taxi.dispatch-algorithm.params"), ":", ",");
-        // shortcut: dispatch constructors take Parameterised::Map as Unmapped (&()), so the parsed params are not forwarded yet; upgrade with the Parameterised port
         let pm = params.get_parameters_map();
         let dispatcher: Ptr<MSDispatch> = if algo == "greedy" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_Greedy::new(&())))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_Greedy::new(pm)))).cast::<MSDispatch>()
         } else if algo == "greedyClosest" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyClosest::new(&())))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyClosest::new(pm)))).cast::<MSDispatch>()
         } else if algo == "greedyShared" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyShared::new(&())))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyShared::new(pm)))).cast::<MSDispatch>()
         } else if algo == "routeExtension" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_RouteExtension::new(&())))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_RouteExtension::new(pm)))).cast::<MSDispatch>()
         } else if algo == "traci" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_TraCI::new(&())))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_TraCI::new(pm)))).cast::<MSDispatch>()
         } else {
             panic!("{}", ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
         };

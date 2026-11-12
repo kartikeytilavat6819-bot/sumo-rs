@@ -1,5 +1,6 @@
 //! Port of dfrouter/RODFDetectorHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 
 /// SAX2-Handler for loading DFROUTER-detector definitions
@@ -7,7 +8,7 @@ use crate::prelude::*;
 #[repr(C)]
 pub struct RODFDetectorHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// the net
     pub myNet: Ptr<RODFNet>,
     /// whether to ignore errors on parsing
@@ -17,13 +18,13 @@ pub struct RODFDetectorHandler {
 }
 
 impl std::ops::Deref for RODFDetectorHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for RODFDetectorHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }

@@ -16,7 +16,7 @@ pub type PCLoaderOSM_RelationsMap = BTreeMap<i64, Ptr<PCLoaderOSM_PCOSMRelation>
 #[repr(C)]
 pub struct PCLoaderOSM_EdgesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// Whether all attributes shall be stored
     pub myWithAttributes: bool,
     /// The handler to report errors to (will be the WarningsHandler if --ignore-errors was set)
@@ -36,13 +36,13 @@ pub struct PCLoaderOSM_EdgesHandler {
 }
 
 impl std::ops::Deref for PCLoaderOSM_EdgesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for PCLoaderOSM_EdgesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -180,7 +180,7 @@ impl PCLoaderOSM_EdgesHandler {
 #[repr(C)]
 pub struct PCLoaderOSM_NodesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// Whether all attributes shall be stored
     pub myWithAttributes: bool,
     /// The handler to report errors to (will be the WarningsHandler if --ignore-errors was set)
@@ -194,13 +194,13 @@ pub struct PCLoaderOSM_NodesHandler {
 }
 
 impl std::ops::Deref for PCLoaderOSM_NodesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for PCLoaderOSM_NodesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -313,17 +313,17 @@ impl PCLoaderOSM_NodesHandler {
 #[repr(C)]
 pub struct PCLoaderOSM {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
 }
 
 impl std::ops::Deref for PCLoaderOSM {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for PCLoaderOSM {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -830,7 +830,7 @@ impl PCLoaderOSM_PCOSMRelation {
 #[repr(C)]
 pub struct PCLoaderOSM_RelationsHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// additional ways which are reference by relations
     pub myAdditionalWays: Ptr<PCLoaderOSM_RelationsMap>,
     /// the loaded relations
@@ -852,13 +852,13 @@ pub struct PCLoaderOSM_RelationsHandler {
 }
 
 impl std::ops::Deref for PCLoaderOSM_RelationsHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for PCLoaderOSM_RelationsHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }

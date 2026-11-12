@@ -10,7 +10,7 @@ use super::shape::{gch_using_geo_projection, gch_x2cartesian, DEFAULT_ANGLE, DEF
 #[repr(C)]
 pub struct ShapeHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */, // shortcut: SUMOSAXHandler not ported yet, placeholder base
+    pub base: GenericSAXHandler, // shortcut: SUMOSAXHandler not ported yet, placeholder base
     /// reference to shape container in which all Shares are being added
     pub myShapeContainer: Ptr<ShapeContainer>,
     /// The prefix to use
@@ -30,13 +30,13 @@ pub struct ShapeHandler {
 }
 
 impl std::ops::Deref for ShapeHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for ShapeHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -58,7 +58,7 @@ impl ShapeHandler {
     #[allow(unused_variables)]
     pub fn new(file: &str, sc: &mut ShapeContainer, geoConvHelper: Ptr<GeoConvHelper>) -> Self {
         ShapeHandler {
-            base: (),
+            base: utils::xml::sumo_sax_handler::new(file, ""),
             myShapeContainer: Ptr::from_mut(sc),
             myPrefix: String::new(),
             myDefaultColor: RGBColor::RED,

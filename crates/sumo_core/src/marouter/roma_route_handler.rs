@@ -1,5 +1,6 @@
 //! Port of marouter/ROMARouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 
 /// Parser and container for routes during their loading
@@ -7,7 +8,7 @@ use crate::prelude::*;
 #[repr(C)]
 pub struct ROMARouteHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The matrix to fill
     pub myMatrix: Ptr<ODMatrix>,
     /// The keys for reading taz
@@ -23,13 +24,13 @@ pub struct ROMARouteHandler {
 }
 
 impl std::ops::Deref for ROMARouteHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for ROMARouteHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
