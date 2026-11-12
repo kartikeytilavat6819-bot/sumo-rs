@@ -35,11 +35,11 @@ pub struct ROEdge {
     /// whether the edge is a source or a sink
     pub myAmSource: bool,
     /// Container storing passing time varying over time for the edge
-    pub myTravelTimes: Unmapped /* ValueTimeLine<double> */,
+    pub myTravelTimes: ValueTimeLine,
     /// Information whether the time line shall be used instead of the length value
     pub myUsingTTTimeLine: bool,
     /// Container storing passing time varying over time for the edge
-    pub myEfforts: Unmapped /* ValueTimeLine<double> */,
+    pub myEfforts: ValueTimeLine,
     /// Information whether the time line shall be used instead of the length value
     pub myUsingETimeLine: bool,
     /// List of edges that may be approached from this edge
@@ -97,6 +97,158 @@ impl std::ops::DerefMut for ROEdge {
 //   static double ROEdge::myMinEdgePriority;
 //   static double ROEdge::myEdgePriorityRange;
 
+/// C++ `ValueTimeLine<double>` (utils/common/ValueTimeLine.h): non-overlapping time ranges with values
+// shortcut: the generic utils/common ValueTimeLine<T> is not ported; this f64 copy lives here (its only user is ROEdge) until that port lands, then switch to it
+#[derive(Default, Clone)]
+pub struct ValueTimeLine {
+    myValues: BTreeMap<ValueTimeLineKey, (bool, f64)>,
+}
+
+/// Key ordering of std::map<double, ...> (times are finite)
+#[derive(Clone, Copy, PartialEq)]
+struct ValueTimeLineKey(f64);
+impl Eq for ValueTimeLineKey {}
+impl PartialOrd for ValueTimeLineKey {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for ValueTimeLineKey {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.partial_cmp(&other.0).unwrap_or(std::cmp::Ordering::Equal)
+    }
+}
+
+impl ValueTimeLine {
+    /// the first entry with key > t (std::map::upper_bound)
+    fn entry_gt(&self, t: f64) -> Option<(&ValueTimeLineKey, &(bool, f64))> {
+        self.myValues.range((std::ops::Bound::Excluded(ValueTimeLineKey(t)), std::ops::Bound::Unbounded)).next()
+    }
+    /// the last entry with key <= t (std::prev(std::map::upper_bound))
+    fn entry_le(&self, t: f64) -> Option<(&ValueTimeLineKey, &(bool, f64))> {
+        self.myValues.range(..=ValueTimeLineKey(t)).next_back()
+    }
+    /// the last entry with key < t (std::prev(std::map::lower_bound))
+    fn entry_lt(&self, t: f64) -> Option<(&ValueTimeLineKey, &(bool, f64))> {
+        self.myValues.range(..ValueTimeLineKey(t)).next_back()
+    }
+    /// erases the entries strictly between begin and end
+    fn erase_between(&mut self, begin: f64, end: f64) {
+        self.myValues.retain(|k, _| !(k.0 > begin && k.0 < end));
+    }
+
+    /// C++: `void ValueTimeLine<T>::add(double, double, T)`
+    pub fn add(&mut self, begin: f64, end: f64, value: f64) {
+        // inserting strictly before the first or after the last interval (includes empty case)
+        if self.entry_gt(begin).is_none() || self.entry_le(end).is_none() {
+            self.myValues.insert(ValueTimeLineKey(begin), (true, value));
+            self.myValues.insert(ValueTimeLineKey(end), (false, value));
+            return;
+        }
+        // our end already has a value
+        if self.myValues.contains_key(&ValueTimeLineKey(end)) {
+            self.erase_between(begin, end);
+            self.myValues.insert(ValueTimeLineKey(begin), (true, value));
+            return;
+        }
+        // we have at least one entry strictly before our end
+        let oldEndValue = *self.entry_lt(end).expect("ValueTimeLine::add: entry before end").1;
+        self.erase_between(begin, end);
+        self.myValues.insert(ValueTimeLineKey(begin), (true, value));
+        self.myValues.insert(ValueTimeLineKey(end), oldEndValue);
+    }
+
+    /// C++: `T ValueTimeLine<T>::getValue(double) const`
+    pub fn get_value(&self, time: f64) -> f64 {
+        self.entry_le(time).expect("ValueTimeLine::getValue: no value set").1 .1
+    }
+
+    /// C++: `bool ValueTimeLine<T>::describesTime(double) const`
+    pub fn describes_time(&self, time: f64) -> bool {
+        self.entry_le(time).map_or(false, |e| e.1 .0)
+    }
+
+    /// C++: `double ValueTimeLine<T>::getSplitTime(double, double) const`
+    pub fn get_split_time(&self, low: f64, high: f64) -> f64 {
+        // afterLow == afterHigh (after the decrement) means both lie in the same entry
+        match (self.entry_gt(low).map(|e| *e.0), self.entry_le(high).map(|e| *e.0)) {
+            (Some(a), Some(b)) if a == b => a.0,
+            _ => -1.,
+        }
+    }
+
+    /// C++: `void ValueTimeLine<T>::fillGaps(T, bool)`
+    pub fn fill_gaps(&mut self, value: f64, extendOverBoundaries: bool) {
+        let mut value = value;
+        for (_, v) in self.myValues.iter_mut() {
+            if !v.0 {
+                v.1 = value;
+            }
+        }
+        if extendOverBoundaries && !self.myValues.is_empty() {
+            let (lastKey, lastValid) = self.myValues.iter().next_back().map(|(k, v)| (*k, v.0)).expect("non-empty");
+            if !lastValid {
+                self.myValues.remove(&lastKey);
+            }
+            if let Some((_, first)) = self.myValues.iter().next() {
+                value = first.1;
+            }
+        }
+        self.myValues.insert(ValueTimeLineKey(-1.), (false, value));
+    }
+}
+
+// C++ static members of ROEdge
+static mut MY_INTERPOLATE: bool = false;
+static mut MY_HAVE_E_WARNED: bool = false;
+static mut MY_HAVE_TT_WARNED: bool = false;
+static mut MY_EDGES: ROEdgeVector = Vec::new();
+static mut MY_PRIORITY_FACTOR: f64 = 0.;
+static mut MY_MIN_EDGE_PRIORITY: f64 = f64::MAX;
+static mut MY_EDGE_PRIORITY_RANGE: f64 = 0.;
+
+fn my_edges() -> &'static mut ROEdgeVector {
+    unsafe { &mut *std::ptr::addr_of_mut!(MY_EDGES) }
+}
+
+/// C++ `std::max(a, b)` as used by MAX2
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ `std::min(a, b)` as used by MIN2
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `gWeightsRandomFactor` (StdDefs.cpp) is not ported; it is set from the option of the same name
+// shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from (SystemFrame.cpp) on each use, upgrade when std_defs gains it
+fn g_weights_random_factor() -> f64 {
+    utils::options::options_cont::get_float("weights.random-factor")
+}
+
+/// C++ implicit conversion `ROVehicle *` -> `RORoutable *` (the base subobject)
+fn as_routable(veh: Ptr<ROVehicle>) -> Ptr<RORoutable> {
+    if veh.is_null() { Ptr::null() } else { Ptr::new(&veh.base) }
+}
+
+/// C++ `const_cast` to call a non-const method through a const `this` (the routing caches are mutable in C++)
+fn as_mut_edge(e: &ROEdge) -> &'static mut ROEdge {
+    Ptr::new(e).get_mut().expect("non-null ROEdge")
+}
+
+impl ROEdge {
+    /// C++ `myEdges[index] = this` from the constructor; Rust constructors return by value, so the owner calls this once the edge sits at its final address
+    pub fn register_in_all_edges(this: Ptr<ROEdge>) {
+        let index = this.myIndex as usize;
+        let edges = my_edges();
+        while edges.len() <= index {
+            edges.push(Ptr::null());
+        }
+        edges[index] = this;
+    }
+}
+
 impl ROEdge {
     /// C++: `void ROEdge::ROEdge(const std::string &, RONode *, RONode *, int, const int, const std::string &, const std::string &)`
     /// Constructor
@@ -134,7 +286,51 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
-        todo!("port ROEdge::ROEdge")
+        let mut this = ROEdge {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myFromJunction: from,
+            myToJunction: to,
+            myIndex: index,
+            myPriority: priority,
+            myType: type_.to_string(),
+            myRoutingType: routingType.to_string(),
+            mySpeed: -1.,
+            myLength: 0.,
+            myAmSink: false,
+            myAmSource: false,
+            myTravelTimes: ValueTimeLine::default(),
+            myUsingTTTimeLine: false,
+            myEfforts: ValueTimeLine::default(),
+            myUsingETimeLine: false,
+            myFollowingEdges: Vec::new(),
+            myFollowingViaEdges: Vec::new(),
+            myApproachingEdges: Vec::new(),
+            myFunction: SumoXMLEdgeFunc::UNKNOWN, // C++ leaves this uninitialised; set later by setFunction
+            mySpeedRestrictions: Ptr::null(),
+            myLanes: Vec::new(),
+            myCombinedPermissions: 0,
+            myOtherTazConnector: Ptr::null(),
+            myBidiEdge: Ptr::null(),
+            myBoundary: Boundary::new(),
+            myTimePenalty: 0.,
+            myParamRestrictions: Vec::new(),
+            myClassesSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: BTreeMap::new(),
+            myReversedRoutingEdge: Ptr::null(),
+            myFlippedRoutingEdge: Ptr::null(),
+            myRailwayRoutingEdge: Ptr::null(),
+        };
+        // shortcut: C++ also does myEdges[index] = this here; Rust returns the edge by value, so the owner must call ROEdge::register_in_all_edges once it is at its final address
+        if from.is_null() && to.is_null() {
+            // TAZ edge, no lanes
+            this.myCombinedPermissions = SVC_ALL;
+        } else {
+            // TODO we should not calculate the boundary here, the position for the nodes is not valid yet
+            this.myBoundary.add_pos(from.get_position());
+            this.myBoundary.add_pos(to.get_position());
+        }
+        this
     }
 
     /// C++: `void ROEdge::ROEdge(const std::string &, const RONode *, const RONode *, SVCPermissions)`
@@ -159,7 +355,41 @@ impl ROEdge {
     // { }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, p: SVCPermissions) -> Self {
-        todo!("port ROEdge::ROEdge")
+        ROEdge {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myFromJunction: from,
+            myToJunction: to,
+            myIndex: -1,
+            myPriority: 0,
+            myType: String::new(),
+            myRoutingType: String::new(),
+            mySpeed: f64::MAX,
+            myLength: 0.,
+            myAmSink: false,
+            myAmSource: false,
+            myTravelTimes: ValueTimeLine::default(),
+            myUsingTTTimeLine: false,
+            myEfforts: ValueTimeLine::default(),
+            myUsingETimeLine: false,
+            myFollowingEdges: Vec::new(),
+            myFollowingViaEdges: Vec::new(),
+            myApproachingEdges: Vec::new(),
+            myFunction: SumoXMLEdgeFunc::UNKNOWN,
+            mySpeedRestrictions: Ptr::null(),
+            myLanes: Vec::new(),
+            myCombinedPermissions: p,
+            myOtherTazConnector: Ptr::null(),
+            myBidiEdge: Ptr::null(),
+            myBoundary: Boundary::new(),
+            myTimePenalty: 0.,
+            myParamRestrictions: Vec::new(),
+            myClassesSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: BTreeMap::new(),
+            myReversedRoutingEdge: Ptr::null(),
+            myFlippedRoutingEdge: Ptr::null(),
+            myRailwayRoutingEdge: Ptr::null(),
+        }
     }
 
     /// C++: `void ROEdge::~ROEdge() noexcept` [virtual]
@@ -174,7 +404,21 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROEdge::~ROEdge")
+        for lane in self.myLanes.iter() {
+            drop(unsafe { Box::from_raw(lane.as_raw()) });
+        }
+        let reversed = self.myReversedRoutingEdge;
+        if !reversed.is_null() {
+            drop(unsafe { Box::from_raw(reversed.as_raw()) });
+        }
+        let flipped = self.myFlippedRoutingEdge;
+        if !flipped.is_null() {
+            drop(unsafe { Box::from_raw(flipped.as_raw()) });
+        }
+        let railway = self.myRailwayRoutingEdge;
+        if !railway.is_null() {
+            drop(unsafe { Box::from_raw(railway.as_raw()) });
+        }
     }
 
     /// C++: `void ROEdge::addLane(ROLane *)` [virtual]
@@ -194,7 +438,16 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_lane(&mut self, lane: Ptr<ROLane>) {
-        todo!("port ROEdge::addLane")
+        let speed = lane.get_speed();
+        if speed > self.mySpeed {
+            self.mySpeed = speed;
+            self.myLength = lane.get_length();
+        }
+        self.mySpeed = if speed > self.mySpeed { speed } else { self.mySpeed };
+        self.myLanes.push(lane);
+
+        // integrate new allowed classes
+        self.myCombinedPermissions |= lane.get_permissions();
     }
 
     /// C++: `void ROEdge::addSuccessor(ROEdge *, ROEdge *, std::string)` [virtual]
@@ -228,7 +481,31 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
-        todo!("port ROEdge::addSuccessor")
+        let this = Ptr::from_mut(self);
+        if self.is_internal() {
+            // for internal edges after an internal junction,
+            // this is called twice and only the second call counts
+            self.myFollowingEdges.clear();
+            self.myFollowingViaEdges.clear();
+        }
+        if !self.myFollowingEdges.contains(&s) {
+            self.myFollowingEdges.push(s);
+            self.myFollowingViaEdges.push((s, via));
+            if self.is_taz_connector() && !s.get_from_junction().is_null() {
+                self.myBoundary.add_pos(s.get_from_junction().get_position());
+            }
+            if !self.is_internal() {
+                s.m().myApproachingEdges.push(this);
+                if s.is_taz_connector() && !self.get_to_junction().is_null() {
+                    s.m().myBoundary.add_pos(self.get_to_junction().get_position());
+                }
+            }
+            if !via.is_null() {
+                if via.m().myApproachingEdges.is_empty() {
+                    via.m().myApproachingEdges.push(this);
+                }
+            }
+        }
     }
 
     /// C++: `void ROEdge::setFunction(SumoXMLEdgeFunc)`
@@ -238,7 +515,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_function(&mut self, func: SumoXMLEdgeFunc) {
-        todo!("port ROEdge::setFunction")
+        self.myFunction = func;
     }
 
     /// C++: `void ROEdge::setSource(const bool)`
@@ -248,7 +525,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_source(&mut self, isSource: bool) {
-        todo!("port ROEdge::setSource")
+        self.myAmSource = isSource;
     }
 
     /// C++: `void ROEdge::setSink(const bool)`
@@ -258,7 +535,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_sink(&mut self, isSink: bool) {
-        todo!("port ROEdge::setSink")
+        self.myAmSink = isSink;
     }
 
     /// C++: `void ROEdge::setSpeedRestrictions(const std::map<SUMOVehicleClass, double> *)`
@@ -268,7 +545,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_speed_restrictions(&mut self, restrictions: Ptr<BTreeMap<SUMOVehicleClass, f64>>) {
-        todo!("port ROEdge::setSpeedRestrictions")
+        self.mySpeedRestrictions = restrictions;
     }
 
     /// C++: `void ROEdge::setTimePenalty(double)`
@@ -277,7 +554,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_time_penalty(&mut self, value: f64) {
-        todo!("port ROEdge::setTimePenalty")
+        self.myTimePenalty = value;
     }
 
     /// C++: `double ROEdge::getTimePenalty() const` [const]
@@ -286,7 +563,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_penalty(&self) -> f64 {
-        todo!("port ROEdge::getTimePenalty")
+        self.myTimePenalty
     }
 
     /// C++: `bool ROEdge::isNormal() const` [const]
@@ -296,7 +573,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_normal(&self) -> bool {
-        todo!("port ROEdge::isNormal")
+        self.myFunction == SumoXMLEdgeFunc::NORMAL
     }
 
     /// C++: `bool ROEdge::isInternal() const` [const]
@@ -306,7 +583,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port ROEdge::isInternal")
+        self.myFunction == SumoXMLEdgeFunc::INTERNAL
     }
 
     /// C++: `bool ROEdge::isCrossing() const` [const]
@@ -316,7 +593,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_crossing(&self) -> bool {
-        todo!("port ROEdge::isCrossing")
+        self.myFunction == SumoXMLEdgeFunc::CROSSING
     }
 
     /// C++: `bool ROEdge::isWalkingArea() const` [const]
@@ -326,7 +603,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_walking_area(&self) -> bool {
-        todo!("port ROEdge::isWalkingArea")
+        self.myFunction == SumoXMLEdgeFunc::WALKINGAREA
     }
 
     /// C++: `bool ROEdge::isTazConnector() const` [const]
@@ -335,7 +612,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_taz_connector(&self) -> bool {
-        todo!("port ROEdge::isTazConnector")
+        self.myFunction == SumoXMLEdgeFunc::CONNECTOR
     }
 
     /// C++: `void ROEdge::setOtherTazConnector(const ROEdge *)`
@@ -344,7 +621,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_other_taz_connector(&mut self, edge: Ptr<ROEdge>) {
-        todo!("port ROEdge::setOtherTazConnector")
+        self.myOtherTazConnector = edge;
     }
 
     /// C++: `const ROEdge * ROEdge::getOtherTazConnector() const` [const]
@@ -353,7 +630,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_other_taz_connector(&self) -> Ptr<ROEdge> {
-        todo!("port ROEdge::getOtherTazConnector")
+        self.myOtherTazConnector
     }
 
     /// C++: `void ROEdge::buildTimeLines(const std::string &, const bool)`
@@ -392,7 +669,36 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn build_time_lines(&mut self, measure: &str, boundariesOverride: bool) {
-        todo!("port ROEdge::buildTimeLines")
+        if self.myUsingETimeLine {
+            let mut value = self.myLength / self.mySpeed;
+            let c = PollutantsInterface::get_class_by_name("HBEFA4/default", SVC_IGNORING);
+            if measure == "CO" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::CO, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "CO2" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::CO2, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "HC" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::HC, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "PMx" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::PM_X, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "NOx" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::NO_X, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "fuel" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::FUEL, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            if measure == "electricity" {
+                value = PollutantsInterface::compute(c, PollutantsInterface_EmissionType::ELEC, self.mySpeed, 0., 0., Ptr::null()) * value; // @todo: give correct slope
+            }
+            self.myEfforts.fill_gaps(value, boundariesOverride);
+        }
+        if self.myUsingTTTimeLine {
+            let tt = self.myLength / self.mySpeed + self.myTimePenalty;
+            self.myTravelTimes.fill_gaps(tt, boundariesOverride);
+        }
     }
 
     /// C++: `void ROEdge::cacheParamRestrictions(const std::vector<std::string> &)`
@@ -405,7 +711,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn cache_param_restrictions(&mut self, restrictionKeys: &Vec<String>) {
-        todo!("port ROEdge::cacheParamRestrictions")
+        for key in restrictionKeys {
+            let value = self.base2.get_parameter(key, "1e40");
+            // shortcut: C++ StringUtils::toDouble throws on malformed input; here it panics with the same message
+            self.myParamRestrictions.push(utils::common::string_utils::to_double(&value).unwrap_or_else(|e| panic!("{e}")));
+        }
     }
 
     /// C++: `SumoXMLEdgeFunc ROEdge::getFunction() const` [const]
@@ -415,7 +725,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_function(&self) -> SumoXMLEdgeFunc {
-        todo!("port ROEdge::getFunction")
+        self.myFunction
     }
 
     /// C++: `bool ROEdge::isSink() const` [const]
@@ -425,7 +735,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_sink(&self) -> bool {
-        todo!("port ROEdge::isSink")
+        self.myAmSink
     }
 
     /// C++: `double ROEdge::getLength() const` [const]
@@ -435,7 +745,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port ROEdge::getLength")
+        self.myLength
     }
 
     /// C++: `int ROEdge::getNumericalID() const` [const]
@@ -445,7 +755,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port ROEdge::getNumericalID")
+        self.myIndex
     }
 
     /// C++: `double ROEdge::getSpeedLimit() const` [const]
@@ -455,7 +765,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_limit(&self) -> f64 {
-        todo!("port ROEdge::getSpeedLimit")
+        self.mySpeed
     }
 
     /// C++: `double ROEdge::getLengthGeometryFactor() const` [const]
@@ -466,7 +776,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor(&self) -> f64 {
-        todo!("port ROEdge::getLengthGeometryFactor")
+        if self.myLanes.is_empty() {
+            1.
+        } else {
+            self.myLanes[0].get_shape().length() / self.myLanes[0].get_length()
+        }
     }
 
     /// C++: `int ROEdge::getNumLanes() const` [const]
@@ -476,7 +790,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_lanes(&self) -> i32 {
-        todo!("port ROEdge::getNumLanes")
+        self.myLanes.len() as i32
     }
 
     /// C++: `bool ROEdge::isConnectedTo(const ROEdge &, const SUMOVehicleClass, bool) const` [const]
@@ -490,7 +804,8 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_connected_to(&self, e: &ROEdge, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
-        todo!("port ROEdge::isConnectedTo")
+        let followers = self.get_successors(vClass);
+        followers.contains(&Ptr::new(e))
     }
 
     /// C++: `bool ROEdge::prohibits(const ROVehicle *const, bool) const` [const]
@@ -501,7 +816,8 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<ROVehicle>, checkRestrictions: bool) -> bool {
-        todo!("port ROEdge::prohibits")
+        let vclass = vehicle.get_v_class();
+        (self.myCombinedPermissions & vclass) != vclass || (checkRestrictions && self.restricts(vehicle))
     }
 
     /// C++: `SVCPermissions ROEdge::getPermissions() const` [const]
@@ -510,7 +826,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port ROEdge::getPermissions")
+        self.myCombinedPermissions
     }
 
     /// C++: `bool ROEdge::restricts(const ROVehicle *const) const` [const]
@@ -527,7 +843,15 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, vehicle: Ptr<ROVehicle>) -> bool {
-        todo!("port ROEdge::restricts")
+        let vType = vehicle.get_type();
+        let vTypeRestrictions = &vType.paramRestrictions;
+        debug_assert_eq!(vTypeRestrictions.len(), self.myParamRestrictions.len());
+        for i in 0..vTypeRestrictions.len() {
+            if vTypeRestrictions[i] > self.myParamRestrictions[i] {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool ROEdge::allFollowersProhibit(const ROVehicle *const) const` [const]
@@ -543,7 +867,12 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn all_followers_prohibit(&self, vehicle: Ptr<ROVehicle>) -> bool {
-        todo!("port ROEdge::allFollowersProhibit")
+        for f in self.myFollowingEdges.iter() {
+            if !f.prohibits(vehicle, false) {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `void ROEdge::addEffort(double, double, double)`
@@ -555,7 +884,8 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_effort(&mut self, value: f64, timeBegin: f64, timeEnd: f64) {
-        todo!("port ROEdge::addEffort")
+        self.myEfforts.add(timeBegin, timeEnd, value);
+        self.myUsingETimeLine = true;
     }
 
     /// C++: `void ROEdge::addTravelTime(double, double, double)`
@@ -567,7 +897,8 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_travel_time(&mut self, value: f64, timeBegin: f64, timeEnd: f64) {
-        todo!("port ROEdge::addTravelTime")
+        self.myTravelTimes.add(timeBegin, timeEnd, value);
+        self.myUsingTTTimeLine = true;
     }
 
     /// C++: `int ROEdge::getNumSuccessors() const` [const]
@@ -581,7 +912,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_num_successors(&self) -> i32 {
-        todo!("port ROEdge::getNumSuccessors")
+        if self.myAmSink {
+            0
+        } else {
+            self.myFollowingEdges.len() as i32
+        }
     }
 
     /// C++: `const ROEdgeVector & ROEdge::getSuccessors(SUMOVehicleClass) const` [const]
@@ -622,7 +957,31 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &ROEdgeVector {
-        todo!("port ROEdge::getSuccessors")
+        if vClass == SVC_IGNORING || !RONet::get_instance().has_permissions() || self.is_taz_connector() {
+            return &self.myFollowingEdges;
+        }
+        // the C++ caches the result per vClass in a mutable map; same here, through the non-owning pointer
+        if !self.myClassesSuccessorMap.contains_key(&vClass) {
+            // determinism: C++ std::set<ROEdge*> orders by address; BTreeSet<Ptr<ROEdge>> keeps that order
+            let mut followers: BTreeSet<Ptr<ROEdge>> = BTreeSet::new();
+            for lane in self.myLanes.iter() {
+                if (lane.get_permissions() & vClass) != 0 {
+                    for next in lane.get_outgoing_via_lanes() {
+                        if (next.0.get_permissions() & vClass) != 0 && (next.1.is_null() || (next.1.get_permissions() & vClass) != 0) {
+                            followers.insert(Ptr::from_mut(next.0.get_edge()));
+                        }
+                    }
+                }
+            }
+            // also add district edges (they are not connected at the lane level)
+            for e in self.myFollowingEdges.iter() {
+                if e.is_taz_connector() {
+                    followers.insert(*e);
+                }
+            }
+            as_mut_edge(self).myClassesSuccessorMap.insert(vClass, followers.into_iter().collect());
+        }
+        self.myClassesSuccessorMap.get(&vClass).expect("inserted above")
     }
 
     /// C++: `const ROConstEdgePairVector & ROEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -663,7 +1022,31 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ROConstEdgePairVector {
-        todo!("port ROEdge::getViaSuccessors")
+        if vClass == SVC_IGNORING || !RONet::get_instance().has_permissions() || self.is_taz_connector() {
+            return &self.myFollowingViaEdges;
+        }
+        // the C++ caches the result per vClass in a mutable map; same here, through the non-owning pointer
+        if !self.myClassesViaSuccessorMap.contains_key(&vClass) {
+            // determinism: C++ std::set<pair<ROEdge*, ROEdge*>> orders by address; BTreeSet keeps that order
+            let mut followers: BTreeSet<(Ptr<ROEdge>, Ptr<ROEdge>)> = BTreeSet::new();
+            for lane in self.myLanes.iter() {
+                if (lane.get_permissions() & vClass) != 0 {
+                    for next in lane.get_outgoing_via_lanes() {
+                        if (next.0.get_permissions() & vClass) != 0 && (next.1.is_null() || (next.1.get_permissions() & vClass) != 0) {
+                            followers.insert((Ptr::from_mut(next.0.get_edge()), next.1));
+                        }
+                    }
+                }
+            }
+            // also add district edges (they are not connected at the lane level)
+            for e in self.myFollowingEdges.iter() {
+                if e.is_taz_connector() {
+                    followers.insert((*e, *e));
+                }
+            }
+            as_mut_edge(self).myClassesViaSuccessorMap.insert(vClass, followers.into_iter().collect());
+        }
+        self.myClassesViaSuccessorMap.get(&vClass).expect("inserted above")
     }
 
     /// C++: `void ROEdge::resetSuccessors()`
@@ -674,7 +1057,8 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn reset_successors(&mut self) {
-        todo!("port ROEdge::resetSuccessors")
+        self.myClassesSuccessorMap.clear();
+        self.myClassesViaSuccessorMap.clear();
     }
 
     /// C++: `int ROEdge::getNumPredecessors() const` [const]
@@ -688,7 +1072,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_num_predecessors(&self) -> i32 {
-        todo!("port ROEdge::getNumPredecessors")
+        if self.myAmSource {
+            0
+        } else {
+            self.myApproachingEdges.len() as i32
+        }
     }
 
     /// C++: `const ROEdgeVector & ROEdge::getPredecessors() const` [const]
@@ -698,7 +1086,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_predecessors(&self) -> &ROEdgeVector {
-        todo!("port ROEdge::getPredecessors")
+        &self.myApproachingEdges
     }
 
     /// C++: `const ROEdge * ROEdge::getNormalBefore() const` [const]
@@ -714,7 +1102,12 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_before(&self) -> Ptr<ROEdge> {
-        todo!("port ROEdge::getNormalBefore")
+        let mut result = Ptr::new(self);
+        while result.is_internal() {
+            // C++ asserts that exactly one approaching edge exists
+            result = result.myApproachingEdges[0];
+        }
+        result
     }
 
     /// C++: `const ROEdge * ROEdge::getNormalAfter() const` [const]
@@ -730,7 +1123,12 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_after(&self) -> Ptr<ROEdge> {
-        todo!("port ROEdge::getNormalAfter")
+        let mut result = Ptr::new(self);
+        while result.is_internal() {
+            // C++ asserts that exactly one following edge exists
+            result = result.myFollowingEdges[0];
+        }
+        result
     }
 
     /// C++: `double ROEdge::getEffort(const ROVehicle *const, double) const` [const]
@@ -745,7 +1143,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_effort(&self, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getEffort")
+        let mut ret = 0.;
+        if !self.get_stored_effort_2(time, &mut ret) {
+            return self.myLength / self.get_max_speed(as_routable(veh));
+        }
+        ret
     }
 
     /// C++: `bool ROEdge::hasLoadedTravelTime(double) const` [const]
@@ -756,7 +1158,7 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_loaded_travel_time(&self, time: f64) -> bool {
-        todo!("port ROEdge::hasLoadedTravelTime")
+        self.myUsingTTTimeLine && self.myTravelTimes.describes_time(time)
     }
 
     /// C++: `double ROEdge::getTravelTime(const ROVehicle *const, double) const` [const]
@@ -786,7 +1188,24 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTime")
+        if self.myUsingTTTimeLine {
+            if self.myTravelTimes.describes_time(time) {
+                let mut lineTT = self.myTravelTimes.get_value(time);
+                if unsafe { MY_INTERPOLATE } {
+                    let inTT = lineTT;
+                    let split = self.myTravelTimes.get_split_time(time, time + inTT) - time;
+                    if split >= 0. {
+                        lineTT = self.myTravelTimes.get_value(time + inTT) * (1. - split / inTT) + split;
+                    }
+                }
+                return max2(self.get_minimum_travel_time(veh), lineTT);
+            } else if unsafe { !MY_HAVE_TT_WARNED } {
+                write_warningf!("No interval matches passed time=% in edge '%'.\n Using edge's length / max speed.", time, self.get_id());
+                unsafe { MY_HAVE_TT_WARNED = true; }
+            }
+        }
+        let speed = if !veh.is_null() { self.get_max_speed(as_routable(veh)) } else { self.mySpeed };
+        self.myLength / speed + self.myTimePenalty
     }
 
     /// C++: `double ROEdge::getEffortStatic(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -796,7 +1215,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_effort_static(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getEffortStatic")
+        edge.get_effort(veh, time)
     }
 
     /// C++: `double ROEdge::getTravelTimeStatic(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -806,7 +1225,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTimeStatic")
+        edge.get_travel_time(veh, time) * ROEdge::get_routing_factor(edge, veh)
     }
 
     /// C++: `double ROEdge::getTravelTimeStaticRandomized(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -817,7 +1236,9 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_randomized(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTimeStaticRandomized")
+        edge.get_travel_time(veh, time)
+            * (1. + utils::common::rand_helper::rand_hash(veh.get_random_seed() ^ edge.get_numerical_id() as i64) * (g_weights_random_factor() - 1.))
+            * ROEdge::get_routing_factor(edge, veh)
     }
 
     /// C++: `double ROEdge::getTravelTimeAggregated(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -827,7 +1248,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTimeAggregated")
+        edge.get_travel_time(veh, time) * ROEdge::get_routing_factor(edge, veh)
     }
 
     /// C++: `double ROEdge::getTravelTimeStaticPriorityFactor(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -842,7 +1263,12 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_priority_factor(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTimeStaticPriorityFactor")
+        let mut result = edge.get_travel_time(veh, time);
+        // lower priority should result in higher effort (and the edge with
+        // minimum priority receives a factor of myPriorityFactor
+        let relativeInversePrio = 1. - ((edge.get_priority() as f64 - unsafe { MY_MIN_EDGE_PRIORITY }) / unsafe { MY_EDGE_PRIORITY_RANGE });
+        result *= 1. + relativeInversePrio * unsafe { MY_PRIORITY_FACTOR };
+        result * ROEdge::get_routing_factor(edge, veh)
     }
 
     /// C++: `double ROEdge::getTravelTimeStaticPriorityFactorRandomized(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -858,7 +1284,13 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_priority_factor_randomized(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getTravelTimeStaticPriorityFactorRandomized")
+        let mut result = edge.get_travel_time(veh, time);
+        // lower priority should result in higher effort (and the edge with
+        // minimum priority receives a factor of myPriorityFactor
+        let relativeInversePrio = 1. - ((edge.get_priority() as f64 - unsafe { MY_MIN_EDGE_PRIORITY }) / unsafe { MY_EDGE_PRIORITY_RANGE });
+        result *= 1. + relativeInversePrio * unsafe { MY_PRIORITY_FACTOR };
+        result *= 1. + utils::common::rand_helper::rand_hash(veh.get_random_seed() ^ edge.get_numerical_id() as i64) * (g_weights_random_factor() - 1.);
+        result * ROEdge::get_routing_factor(edge, veh)
     }
 
     /// C++: `double ROEdge::getRoutingFactor(const ROEdge *const, const ROVehicle *const)` [static]
@@ -867,7 +1299,11 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_routing_factor(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>) -> f64 {
-        todo!("port ROEdge::getRoutingFactor")
+        if utils::common::std_defs::g_routing_preferences() {
+            1. / edge.get_preference(veh.get_v_type_parameter())
+        } else {
+            1.
+        }
     }
 
     /// C++: `double ROEdge::getMinimumTravelTime(const ROVehicle *const) const` [const]
@@ -883,7 +1319,13 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_minimum_travel_time(&self, veh: Ptr<ROVehicle>) -> f64 {
-        todo!("port ROEdge::getMinimumTravelTime")
+        if self.is_taz_connector() {
+            0.
+        } else if !veh.is_null() {
+            self.myLength / self.get_max_speed(as_routable(veh))
+        } else {
+            self.myLength / self.mySpeed
+        }
     }
 
     /// C++: `double ROEdge::getMaxSpeed(const RORoutable *const) const` [const]
@@ -892,7 +1334,9 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self, veh: Ptr<RORoutable>) -> f64 {
-        todo!("port ROEdge::getMaxSpeed")
+        let a = veh.get_max_speed();
+        let b = veh.get_chosen_speed_factor() * self.get_v_class_max_speed(veh.get_v_class());
+        if a < b { a } else { b }
     }
 
     /// C++: `double ROEdge::getVClassMaxSpeed(SUMOVehicleClass) const` [const]
@@ -908,7 +1352,12 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_class_max_speed(&self, vclass: SUMOVehicleClass) -> f64 {
-        todo!("port ROEdge::getVClassMaxSpeed")
+        if !self.mySpeedRestrictions.is_null() {
+            if let Some(r) = self.mySpeedRestrictions.get().and_then(|m| m.get(&vclass)) {
+                return *r;
+            }
+        }
+        self.mySpeed
     }
 
     /// C++: `double ROEdge::getEmissionEffort(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -924,8 +1373,15 @@ impl ROEdge {
     //         return ret;
     //     }
     #[allow(unused_variables)]
-    pub fn get_emission_effort() -> f64 {
-        todo!("port ROEdge::getEmissionEffort")
+    pub fn get_emission_effort(et: PollutantsInterface_EmissionType, edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        let mut ret = 0.;
+        if !edge.get_stored_effort_2(time, &mut ret) {
+            let typ = veh.get_type();
+            let vMax = edge.get_max_speed(as_routable(veh));
+            let accel = typ.get_cf_param(SUMO_ATTR_ACCEL, SUMOVTypeParameter::get_default_accel(typ.vehicleClass)) * typ.get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(typ.vehicleClass)) / 2.;
+            ret = PollutantsInterface::compute_default(typ.emissionClass, et, vMax, accel, 0., edge.get_travel_time(veh, time), Ptr::null()); // @todo: give correct slope
+        }
+        ret
     }
 
     /// C++: `double ROEdge::getNoiseEffort(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -939,7 +1395,11 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_effort(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getNoiseEffort")
+        let mut ret = 0.;
+        if !edge.get_stored_effort_2(time, &mut ret) {
+            ret = HelpersHarmonoise::compute_noise(veh.get_type().emissionClass, edge.get_max_speed(as_routable(veh)), 0.);
+        }
+        ret
     }
 
     /// C++: `double ROEdge::getStoredEffort(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -950,7 +1410,9 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_stored_effort(edge: Ptr<ROEdge>, arg1: Ptr<ROVehicle>, time: f64) -> f64 {
-        todo!("port ROEdge::getStoredEffort")
+        let mut ret = 0.;
+        edge.get_stored_effort_2(time, &mut ret);
+        ret
     }
 
     /// C++: `double ROEdge::getDistanceTo(const ROEdge *, const bool) const` [const]
@@ -975,7 +1437,20 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_to(&self, other: Ptr<ROEdge>, doBoundaryEstimate: bool) -> f64 {
-        todo!("port ROEdge::getDistanceTo")
+        // optimistic distance heuristic for use in routing
+        if doBoundaryEstimate {
+            return self.myBoundary.distance_to2d_boundary(&other.myBoundary);
+        }
+        if self.is_taz_connector() {
+            if other.is_taz_connector() {
+                return self.myBoundary.distance_to2d_boundary(&other.myBoundary);
+            }
+            return self.myBoundary.distance_to2d(other.get_from_junction().get_position());
+        }
+        if other.is_taz_connector() {
+            return other.myBoundary.distance_to2d(self.get_to_junction().get_position());
+        }
+        self.get_lanes()[0].get_shape().at(-1).distance_to2d(other.get_lanes()[0].get_shape().at(0))
     }
 
     /// C++: `const ROEdgeVector & ROEdge::getAllEdges()` [static]
@@ -986,7 +1461,7 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_all_edges() -> &'static ROEdgeVector {
-        todo!("port ROEdge::getAllEdges")
+        my_edges()
     }
 
     /// C++: `void ROEdge::setGlobalOptions(const bool)` [static]
@@ -995,7 +1470,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_global_options(interpolate: bool) {
-        todo!("port ROEdge::setGlobalOptions")
+        unsafe { MY_INTERPOLATE = interpolate; }
     }
 
     /// C++: `void ROEdge::disableTimelineWarning()` [static]
@@ -1004,7 +1479,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn disable_timeline_warning() {
-        todo!("port ROEdge::disableTimelineWarning")
+        unsafe { MY_HAVE_TT_WARNED = true; }
     }
 
     /// C++: `const Position ROEdge::getStopPosition(const SUMOVehicleParameter::Stop &)` [static]
@@ -1017,7 +1492,9 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
-        todo!("port ROEdge::getStopPosition")
+        let middle = (stop.endPos + stop.startPos) / 2.;
+        let edge = RONet::get_instance().get_edge(&utils::xml::sumo_xml_definitions::get_edge_id_from_lane(&stop.lane));
+        (*edge.get_from_junction().get_position() + *edge.get_to_junction().get_position()) * (middle / edge.get_length())
     }
 
     /// C++: `double ROEdge::getPreference(const SUMOVTypeParameter &) const` [const]
@@ -1027,7 +1504,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_preference(&self, pars: &SUMOVTypeParameter) -> f64 {
-        todo!("port ROEdge::getPreference")
+        RONet::get_instance().get_preference(self.get_routing_type(), pars)
     }
 
     /// C++: `int ROEdge::getPriority() const` [const]
@@ -1037,7 +1514,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_priority(&self) -> i32 {
-        todo!("port ROEdge::getPriority")
+        self.myPriority
     }
 
     /// C++: `const std::string & ROEdge::getType() const` [const]
@@ -1047,7 +1524,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> &str {
-        todo!("port ROEdge::getType")
+        &self.myType
     }
 
     /// C++: `const std::string & ROEdge::getRoutingType() const` [const]
@@ -1056,7 +1533,11 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_routing_type(&self) -> &str {
-        todo!("port ROEdge::getRoutingType")
+        if self.myRoutingType.is_empty() {
+            &self.myType
+        } else {
+            &self.myRoutingType
+        }
     }
 
     /// C++: `const RONode * ROEdge::getFromJunction() const` [const]
@@ -1065,7 +1546,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_junction(&self) -> Ptr<RONode> {
-        todo!("port ROEdge::getFromJunction")
+        self.myFromJunction
     }
 
     /// C++: `const RONode * ROEdge::getToJunction() const` [const]
@@ -1074,7 +1555,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_to_junction(&self) -> Ptr<RONode> {
-        todo!("port ROEdge::getToJunction")
+        self.myToJunction
     }
 
     /// C++: `const std::vector<ROLane *> & ROEdge::getLanes() const` [const]
@@ -1084,7 +1565,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_lanes(&self) -> &Vec<Ptr<ROLane>> {
-        todo!("port ROEdge::getLanes")
+        &self.myLanes
     }
 
     /// C++: `const ROEdge * ROEdge::getBidiEdge() const` [const]
@@ -1094,7 +1575,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<ROEdge> {
-        todo!("port ROEdge::getBidiEdge")
+        self.myBidiEdge
     }
 
     /// C++: `void ROEdge::setBidiEdge(const ROEdge *)`
@@ -1104,7 +1585,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_bidi_edge(&mut self, bidiEdge: Ptr<ROEdge>) {
-        todo!("port ROEdge::setBidiEdge")
+        self.myBidiEdge = bidiEdge;
     }
 
     /// C++: `ReversedEdge<ROEdge, ROVehicle> * ROEdge::getReversedRoutingEdge() const` [const]
@@ -1116,7 +1597,11 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_reversed_routing_edge(&self) -> Ptr<ReversedEdge<ROEdge, ROVehicle>> {
-        todo!("port ROEdge::getReversedRoutingEdge")
+        let me = as_mut_edge(self);
+        if me.myReversedRoutingEdge.is_null() {
+            me.myReversedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self)))));
+        }
+        me.myReversedRoutingEdge
     }
 
     /// C++: `FlippedEdge<ROEdge, RONode, ROVehicle> * ROEdge::getFlippedRoutingEdge() const` [const]
@@ -1128,7 +1613,11 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_flipped_routing_edge(&self) -> Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>> {
-        todo!("port ROEdge::getFlippedRoutingEdge")
+        let me = as_mut_edge(self);
+        if me.myFlippedRoutingEdge.is_null() {
+            me.myFlippedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(FlippedEdge::new(Ptr::new(self)))));
+        }
+        me.myFlippedRoutingEdge
     }
 
     /// C++: `RailEdge<ROEdge, ROVehicle> * ROEdge::getRailwayRoutingEdge() const` [const]
@@ -1140,7 +1629,11 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_railway_routing_edge(&self) -> Ptr<RailEdge<ROEdge, ROVehicle>> {
-        todo!("port ROEdge::getRailwayRoutingEdge")
+        let me = as_mut_edge(self);
+        if me.myRailwayRoutingEdge.is_null() {
+            me.myRailwayRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self)))));
+        }
+        me.myRailwayRoutingEdge
     }
 
     /// C++: `bool ROEdge::hasStoredEffort() const` [const]
@@ -1150,7 +1643,7 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn has_stored_effort(&self) -> bool {
-        todo!("port ROEdge::hasStoredEffort")
+        self.myUsingETimeLine
     }
 
     /// C++: `bool ROEdge::initPriorityFactor(double)` [static]
@@ -1173,7 +1666,19 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn init_priority_factor(priorityFactor: f64) -> bool {
-        todo!("port ROEdge::initPriorityFactor")
+        unsafe { MY_PRIORITY_FACTOR = priorityFactor; }
+        let mut maxEdgePriority = -f64::MAX;
+        for edge in my_edges().iter() {
+            maxEdgePriority = max2(maxEdgePriority, edge.get_priority() as f64);
+            unsafe { MY_MIN_EDGE_PRIORITY = min2(MY_MIN_EDGE_PRIORITY, edge.get_priority() as f64); }
+        }
+        unsafe { MY_EDGE_PRIORITY_RANGE = maxEdgePriority - MY_MIN_EDGE_PRIORITY; }
+        if unsafe { MY_EDGE_PRIORITY_RANGE } == 0. {
+            utils::common::msg_handler::write_warning("Option weights.priority-factor does not take effect because all edges have the same priority.");
+            unsafe { MY_PRIORITY_FACTOR = 0.; }
+            return false;
+        }
+        true
     }
 
     /// C++: `bool ROEdge::getStoredEffort(double, double &) const` [const, protected]
@@ -1203,7 +1708,26 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_stored_effort_2(&self, time: f64, ret: &mut f64) -> bool {
-        todo!("port ROEdge::getStoredEffort")
+        if self.myUsingETimeLine {
+            if !self.myEfforts.describes_time(time) {
+                if unsafe { !MY_HAVE_E_WARNED } {
+                    write_warningf!("No interval matches passed time=% in edge '%'.\n Using edge's length / edge's speed.", time, self.get_id());
+                    unsafe { MY_HAVE_E_WARNED = true; }
+                }
+                return false;
+            }
+            if unsafe { MY_INTERPOLATE } {
+                let inTT = self.myTravelTimes.get_value(time);
+                let ratio = (self.myEfforts.get_split_time(time, time + inTT) - time) / inTT;
+                if ratio >= 0. {
+                    *ret = ratio * self.myEfforts.get_value(time) + (1. - ratio) * self.myEfforts.get_value(time + inTT);
+                    return true;
+                }
+            }
+            *ret = self.myEfforts.get_value(time);
+            return true;
+        }
+        false
     }
 
     /// C++: `void ROEdge::ROEdge(const ROEdge &)` [private]
@@ -1211,7 +1735,8 @@ impl ROEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(src: &ROEdge) -> Self {
-        todo!("port ROEdge::ROEdge")
+        // C++ declares this copy constructor private and never defines it, so it can not be called
+        panic!("ROEdge copy constructor is private and not defined in C++");
     }
 
     /// C++: `ROEdge & ROEdge::operator=(const ROEdge &)` [private]
@@ -1219,7 +1744,8 @@ impl ROEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROEdge) -> &mut ROEdge {
-        todo!("port ROEdge::operator=")
+        // C++ declares this assignment operator private and never defines it, so it can not be called
+        panic!("ROEdge assignment operator is private and not defined in C++");
     }
 
 }
