@@ -1,6 +1,5 @@
 //! Port of mesosim/METypeHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
-use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 
 /// The XML-Handler for meso edge type loading
@@ -40,8 +39,7 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, net: &mut MSNet) -> Self {
-        let _ = file;
-        Self {
+        METypeHandler {
             base: utils::xml::sumo_sax_handler::new(file, ""),
             myNet: Ptr::from_mut(net),
             myCurrentTypeID: String::new(),
@@ -54,7 +52,7 @@ impl METypeHandler {
     // METypeHandler::~METypeHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor body is empty
+        // C++ destructor body is empty; the Rust fields are dropped automatically
     }
 
     /// C++: `bool METypeHandler::haveSeenMesoEdgeType() const` [const]
@@ -91,16 +89,24 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        // the Rust attribute getters report the error and return the default, they do not throw InvalidArgument, so the C++ catch has no counterpart here
-        match element {
-            SUMO_TAG_TYPE => {
-                let mut ok = true;
-                self.myCurrentTypeID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        // C++ `throw InvalidArgument` is modelled as panic_any(InvalidArgument); catch + WRITE_ERROR
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            match element {
+                SUMO_TAG_TYPE => {
+                    let mut ok = true;
+                    self.myCurrentTypeID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                }
+                SUMO_TAG_MESO => {
+                    self.add_meso_edge_type(attrs);
+                }
+                _ => {}
             }
-            SUMO_TAG_MESO => {
-                self.add_meso_edge_type(attrs);
+        }));
+        if let Err(payload) = result {
+            match payload.downcast::<utils::geom::InvalidArgument>() {
+                Ok(e) => utils::common::msg_handler::write_error(&e.0),
+                Err(other) => std::panic::resume_unwind(other),
             }
-            _ => {}
         }
     }
 
@@ -153,8 +159,8 @@ impl METypeHandler {
     #[allow(unused_variables)]
     pub fn add_meso_edge_type(&mut self, attrs: &SUMOSAXAttributes) {
         let mut ok = true;
-        let id = self.myCurrentTypeID.clone();
         let mut edgeType = *self.myNet.m().get_meso_type(""); // init defaults
+        let id = self.myCurrentTypeID.clone();
         edgeType.tauff = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUFF, &id, &mut ok, edgeType.tauff, true);
         edgeType.taufj = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUFJ, &id, &mut ok, edgeType.taufj, true);
         edgeType.taujf = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUJF, &id, &mut ok, edgeType.taujf, true);
@@ -169,7 +175,7 @@ impl METypeHandler {
         edgeType.lookahead = attrs.get_opt::<f64>(SUMO_ATTR_MESO_LOOKAHEAD, &id, &mut ok, edgeType.lookahead, true);
 
         if ok {
-            self.myNet.m().add_meso_type(&id, &edgeType);
+            self.myNet.m().add_meso_type(&self.myCurrentTypeID, &edgeType);
         }
         self.myHaveSeenMesoEdgeType = true;
     }
@@ -179,7 +185,7 @@ impl METypeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &METypeHandler) -> Self {
-        panic!("METypeHandler copy constructor is private and undefined in C++")
+        panic!("METypeHandler(const METypeHandler&) is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `METypeHandler & METypeHandler::operator=(const METypeHandler &)` [private]

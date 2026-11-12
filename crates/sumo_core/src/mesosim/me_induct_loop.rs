@@ -1,6 +1,7 @@
 //! Port of mesosim/MEInductLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils;
 
 /// An induction loop for mesoscopic simulation
 /// C++ class `MEInductLoop` (mesosim/MEInductLoop.h)
@@ -46,20 +47,19 @@ impl MEInductLoop {
     //     myMeanData.setDescription("inductionLoop_" + id);
     //     s->addDetector(&myMeanData);
     // }
+    // shortcut-free: returns Box<Self> because the body registers &myMeanData with the segment (stores `this`)
     #[allow(unused_variables)]
     pub fn new(id: &str, s: Ptr<MESegment>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Box<Self> {
-        let myMeanData = MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::default(), s.get_length(), false, Ptr::default());
-        // Box: the constructor registers &myMeanData with the segment, so the object must not move
+        let base = MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e));
         let mut b = Box::new(MEInductLoop {
-            base: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
+            base,
             myName: name,
             mySegment: s,
             myPosition: positionInMeters,
-            myMeanData,
+            myMeanData: MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::null(), s.get_length(), false, Ptr::null()),
         });
-        b.myMeanData.set_description(&format!("inductionLoop_{}", id));
-        let data = Ptr::from_mut(&mut b.myMeanData).cast::<MSMoveReminder>();
-        s.m().add_detector(data, -1);
+        b.myMeanData.base.base.set_description(&format!("inductionLoop_{}", id));
+        s.m().add_detector(Ptr::from_mut(&mut b.myMeanData.base.base), -1);
         b
     }
 
@@ -67,7 +67,7 @@ impl MEInductLoop {
     // MEInductLoop::~MEInductLoop() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor body is empty
+        // C++ destructor body is empty; the Rust fields are dropped automatically
     }
 
     /// C++: `void MEInductLoop::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -93,16 +93,21 @@ impl MEInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        self.mySegment.m().prepare_detector_for_writing(&mut self.myMeanData, -1);
-        dev.open_tag_id(SUMO_TAG_INTERVAL);
-        dev.write_attr(SUMO_ATTR_BEGIN, &time2string(startTime));
-        dev.write_attr(SUMO_ATTR_END, &time2string(stopTime));
-        dev.write_attr(SUMO_ATTR_ID, &utils::common::string_utils::escape_xml(self.get_id(), false));
-        dev.write_attr("sampledSeconds", &self.myMeanData.get_samples());
-        let edge = self.mySegment.get_edge();
-        let numLanes = edge.get_lanes().len() as i32;
-        let speedLimit = edge.get_speed_limit();
-        self.myMeanData.write(dev, &SumoXMLAttrMask::default(), stopTime - startTime, numLanes, speedLimit, -1.0, -1);
+        self.mySegment.m().prepare_detector_for_writing(&mut self.myMeanData.base.base, -1);
+        dev.open_tag_id(SUMO_TAG_INTERVAL)
+            .write_attr(SUMO_ATTR_BEGIN, &time2string(startTime))
+            .write_attr(SUMO_ATTR_END, &time2string(stopTime));
+        dev.write_attr(SUMO_ATTR_ID, &string_utils::escape_xml(self.get_id(), false))
+            .write_attr("sampledSeconds", &self.myMeanData.get_samples());
+        self.myMeanData.write(
+            dev,
+            &SumoXMLAttrMask(0),
+            stopTime - startTime,
+            self.mySegment.get_edge().get_lanes().len() as i32,
+            self.mySegment.get_edge().get_speed_limit(),
+            -1.0,
+            -1,
+        );
         self.myMeanData.reset(false);
     }
 
@@ -130,7 +135,7 @@ impl MEInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        panic!("MEInductLoop default constructor is private and undefined in C++")
+        panic!("MEInductLoop default constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `void MEInductLoop::MEInductLoop(const MEInductLoop &)` [private]
@@ -138,7 +143,7 @@ impl MEInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &MEInductLoop) -> Self {
-        panic!("MEInductLoop copy constructor is private and undefined in C++")
+        panic!("MEInductLoop copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `MEInductLoop & MEInductLoop::operator=(const MEInductLoop &)` [private]
