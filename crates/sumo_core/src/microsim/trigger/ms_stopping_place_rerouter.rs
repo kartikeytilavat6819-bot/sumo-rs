@@ -1,6 +1,15 @@
 //! Port of microsim/trigger/MSStoppingPlaceRerouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_globals::MSGlobals;
+use crate::microsim::devices::ms_routing_engine::MSRoutingEngine;
+use utils::common::string_utils::to_double;
+use utils::common::time::time2string;
+use utils::common::to_string::to_string;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::geom::NUMERICAL_EPS;
+
+type ParamMap = MSStoppingPlaceRerouter_StoppingPlaceParamMap_t;
 
 /// C++ typedef `std::map<const MSEdge *, RouterProhibition> MSStoppingPlaceRerouter::Prohibitions`
 pub type MSStoppingPlaceRerouter_Prohibitions = BTreeMap<Ptr<MSEdge>, RouterProhibition>;
@@ -19,6 +28,61 @@ pub type MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t = BTreeMap<String
 
 /// C++ typedef `std::pair<MSStoppingPlace *, bool> MSStoppingPlaceRerouter::StoppingPlaceVisible`
 pub type MSStoppingPlaceRerouter_StoppingPlaceVisible = (Ptr<MSStoppingPlace>, bool);
+
+/// C++ `operator[]` on a parameter map: inserts 0. for a missing key and returns it.
+fn param_mut<'a>(m: &'a mut ParamMap, k: &str) -> &'a mut f64 {
+    m.entry(k.to_string()).or_insert(0.)
+}
+
+/// C++ route color pointer: nullptr when the route has the default color (C++ compares addresses).
+fn color_ptr(c: &RGBColor) -> Ptr<RGBColor> {
+    if *c == RGBColor::DEFAULT_COLOR {
+        Ptr::null()
+    } else {
+        Ptr::from_raw(Box::leak(Box::new(*c)) as *mut RGBColor)
+    }
+}
+
+/// The stopping place's lane edge (C++ `&sp->getLane().getEdge()`).
+fn lane_edge(sp: Ptr<MSStoppingPlace>) -> Ptr<MSEdge> {
+    Ptr::from_mut(sp.get_lane().get_edge())
+}
+
+/// shortcut: SUMOVehicle::getRerouteOrigin and getCurrentRouteEdge are Unmapped (not ported), so the
+/// route position is taken as index 0; upgrade when they return route indices.
+fn route_cursor_index(_veh: &SUMOVehicle) -> usize {
+    0
+}
+
+/// C++ `MSRoute::getDistanceBetween(double, double, MSRouteIterator, MSRouteIterator, bool)`.
+/// Route iterators are indices into the route edges (MSRouteIterator is Unmapped).
+fn route_distance_between(route: &MSRoute, fromPos: f64, toPos: f64, fromIdx: usize, toIdx: usize, includeInternal: bool) -> f64 {
+    let edges = route.get_edges();
+    let end = edges.len();
+    if fromIdx == toIdx {
+        // destination position is on start edge
+        return if fromPos <= toPos { toPos - fromPos } else { f64::MAX };
+    } else if fromIdx > toIdx {
+        // we don't visit the edge again
+        return f64::MAX;
+    }
+    let mut isFirstIteration = true;
+    let mut distance = -fromPos;
+    let mut it = fromIdx;
+    while it != end {
+        if it == toIdx && !isFirstIteration {
+            distance += toPos;
+            break;
+        }
+        distance += edges[it].get_length();
+        if includeInternal && it + 1 != end {
+            distance += edges[it].get_internal_following_length_to(edges[it + 1], SVC_IGNORING);
+        }
+        isFirstIteration = false;
+        it += 1;
+    }
+    distance
+}
 
 /// C++ class `MSStoppingPlaceRerouter` (microsim/trigger/MSStoppingPlaceRerouter.h)
 pub struct MSStoppingPlaceRerouter {
@@ -46,14 +110,50 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn new(paramPrefix: String, checkValidity: bool, addEvalParams: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInvertParams: MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t) -> Self {
-        todo!("port MSStoppingPlaceRerouter::MSStoppingPlaceRerouter")
+        let mut this = MSStoppingPlaceRerouter {
+            myParamPrefix: paramPrefix,
+            myCheckValidity: checkValidity,
+            myEvalParams: BTreeMap::new(),
+            myNormParams: BTreeMap::new(),
+            myInvertParams: BTreeMap::new(),
+        };
+        this.myEvalParams = [
+            ("probability".to_string(), 0.),
+            ("capacity".to_string(), 0.),
+            ("timefrom".to_string(), 0.),
+            ("timeto".to_string(), 0.),
+            ("distancefrom".to_string(), 0.),
+            ("distanceto".to_string(), 1.),
+            ("absfreespace".to_string(), 0.),
+            ("relfreespace".to_string(), 0.),
+        ].into_iter().collect();
+        this.myInvertParams = [
+            ("probability".to_string(), false),
+            ("capacity".to_string(), true),
+            ("timefrom".to_string(), false),
+            ("timeto".to_string(), false),
+            ("distancefrom".to_string(), false),
+            ("distanceto".to_string(), false),
+            ("absfreespace".to_string(), true),
+            ("relfreespace".to_string(), true),
+        ].into_iter().collect();
+        for (key, value) in addEvalParams {
+            // addInvertParams.count(key) > 0 ? addInvertParams[key] : false
+            let invert = addInvertParams.get(&key).copied().unwrap_or(false);
+            this.myEvalParams.insert(key.clone(), value);
+            this.myInvertParams.insert(key, invert);
+        }
+        for key in this.myEvalParams.keys() {
+            this.myNormParams.insert(key.clone(), key != "probability");
+        }
+        this
     }
 
     /// C++: `void MSStoppingPlaceRerouter::~MSStoppingPlaceRerouter() noexcept` [virtual]
     // virtual ~MSStoppingPlaceRerouter() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStoppingPlaceRerouter::~MSStoppingPlaceRerouter")
+        // the C++ destructor body is empty
     }
 
     /// C++: `MSStoppingPlace * MSStoppingPlaceRerouter::rerouteStoppingPlace(MSStoppingPlace *, const std::vector<StoppingPlaceVisible> &, const std::vector<double> &, SUMOVehicle &, bool &, ConstMSEdgeVector &, StoppingPlaceParamMap_t &, const Prohibitions &, const int, const bool)`
@@ -392,7 +492,249 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn reroute_stopping_place(&mut self, destStoppingPlace: Ptr<MSStoppingPlace>, stoppingPlaceCandidates: &Vec<MSStoppingPlaceRerouter_StoppingPlaceVisible>, probs: &Vec<f64>, veh: &mut SUMOVehicle, newDestination: &mut bool, newRoute: &mut ConstMSEdgeVector, scores: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, closedEdges: &SUMOAbstractRouter_Prohibitions, insertStopIndex: i32, keepCurrentStop: bool) -> Ptr<MSStoppingPlace> {
-        todo!("port MSStoppingPlaceRerouter::rerouteStoppingPlace")
+        let mut nearStoppingPlace: Ptr<MSStoppingPlace> = Ptr::null();
+        let now = MSNet::get_instance().get_current_time_step();
+        let vp = Ptr::from_mut(veh);
+
+        // get vehicle params
+        let mut destVisible = false;
+        if !destStoppingPlace.is_null() {
+            destVisible = lane_edge(destStoppingPlace) == vp.get_edge();
+            // if the vehicle is on the destination stop edge it is always visible
+            for stoppingPlace in stoppingPlaceCandidates.iter() {
+                if stoppingPlace.0 == destStoppingPlace && stoppingPlace.1 {
+                    destVisible = true;
+                    break;
+                }
+            }
+        }
+
+        let route = vp.get_route();
+        let mut onTheWay: Ptr<MSStoppingPlace> = Ptr::null();
+        let stopAnywhere = self.get_weight(vp.m(), "anywhere".to_string(), -1., false) as i32;
+        let ignoreDest = self.get_weight(vp.m(), "ignoreDest".to_string(), if !destStoppingPlace.is_null() { 0. } else { 1. }, false) != 0.;
+        // check whether we are ready to accept any free stopping place along the way to our destination
+        if stopAnywhere < 0 || stopAnywhere > self.get_number_stopping_place_reroutes(vp.m()) {
+            if !destVisible {
+                // cannot determine destination occupancy, only register visibly full
+                for stoppingPlace in stoppingPlaceCandidates.iter() {
+                    if stoppingPlace.1 && self.get_last_step_stopping_place_occupancy(stoppingPlace.0, vp) >= self.get_stopping_place_capacity(stoppingPlace.0) {
+                        self.remember_stopping_place_score(vp.m(), stoppingPlace.0, "occupied");
+                        self.remember_blocked_stopping_place(vp.m(), stoppingPlace.0, lane_edge(stoppingPlace.0) == vp.get_edge());
+                    }
+                }
+            }
+        } else {
+            let mut bestDist = f64::MAX;
+            let brakeGap = vp.get_brake_gap(true);
+            for item in stoppingPlaceCandidates.iter() {
+                if item.1 && lane_edge(item.0) == vp.get_edge() && self.get_last_step_stopping_place_occupancy(item.0, vp) < self.get_stopping_place_capacity(item.0) {
+                    let distToStart = item.0.get_begin_lane_position() - vp.get_position_on_lane();
+                    let distToEnd = item.0.get_end_lane_position() - vp.get_position_on_lane();
+                    if distToEnd > brakeGap {
+                        self.remember_stopping_place_score(vp.m(), item.0, &format!("dist={}", to_string(&distToStart)));
+                        if distToStart < bestDist {
+                            bestDist = distToStart;
+                            onTheWay = item.0;
+                        }
+                    } else {
+                        self.remember_stopping_place_score(vp.m(), item.0, "tooClose");
+                    }
+                }
+            }
+        }
+        if !ignoreDest && !destVisible && onTheWay.is_null() {
+            return Ptr::null();
+        }
+
+        let destIsFull = !destStoppingPlace.is_null() && self.get_last_step_stopping_place_occupancy(destStoppingPlace, vp) >= self.get_stopping_place_capacity(destStoppingPlace);
+        if ignoreDest || destIsFull || !onTheWay.is_null() {
+            // if the current route ends at the stopping place, the new route will
+            // also end at the new stopping place
+            *newDestination = !destStoppingPlace.is_null()
+                && lane_edge(destStoppingPlace) == route.get_last_edge()
+                && vp.get_arrival_pos() >= destStoppingPlace.get_begin_lane_position()
+                && vp.get_arrival_pos() <= destStoppingPlace.get_end_lane_position()
+                && vp.get_stops().len() == 1;
+
+            let mut newRoutes: BTreeMap<Ptr<MSStoppingPlace>, ConstMSEdgeVector> = BTreeMap::new();
+            let mut stopApproaches: BTreeMap<Ptr<MSStoppingPlace>, ConstMSEdgeVector> = BTreeMap::new();
+            let mut weights = self.collect_weights(vp.m()); // add option to patch values for interdependent values
+            let mut maxValues: ParamMap = weights.keys().map(|k| (k.clone(), 0.)).collect();
+
+            // a map stores elegible stopping places
+            let mut stoppingPlaces: MSStoppingPlaceRerouter_StoppingPlaceMap_t = BTreeMap::new();
+            let router = Ptr::from_mut(self.get_router(vp.m(), closedEdges));
+            let brakeGap = vp.get_brake_gap(false);
+
+            if !onTheWay.is_null() {
+                // compute new route
+                if *newDestination {
+                    newRoute.push(vp.get_edge());
+                } else {
+                    let occ = self.get_last_step_stopping_place_occupancy(onTheWay, vp);
+                    let valid = self.evaluate_destination(vp.m(), brakeGap, *newDestination, onTheWay, occ, 1., router.m(), &mut stoppingPlaces, &mut newRoutes, &mut stopApproaches, &mut maxValues, scores, insertStopIndex, keepCurrentStop);
+                    if !valid {
+                        write_warningf!("Stopping place '%' along the way cannot be used by vehicle '%' for unknown reason", onTheWay.get_id(), vp.get_id());
+                        return Ptr::null();
+                    }
+                    *newRoute = newRoutes.get(&onTheWay).cloned().unwrap_or_default();
+                }
+                return onTheWay;
+            }
+
+            let mut numAlternatives = 0;
+            let mut blockedTimes: Vec<(SUMOTime, Ptr<MSStoppingPlace>, usize)> = Vec::new();
+            self.reset_stopping_place_scores(vp.m());
+
+            if !destStoppingPlace.is_null() && destIsFull {
+                self.remember_stopping_place_score(vp.m(), destStoppingPlace, "occupied");
+                self.remember_blocked_stopping_place(vp.m(), destStoppingPlace, lane_edge(destStoppingPlace) == vp.get_edge());
+            }
+            // shortcut: TIME2STEPS(x) is taken as x * 1000 (1 s step); upgrade when the step length is read from the net
+            let stoppingPlaceMemory = (self.get_weight(vp.m(), "memory".to_string(), 600., false) * 1000.) as SUMOTime;
+            let stoppingPlaceFrustration = self.get_weight(vp.m(), "frustration".to_string(), 100., false);
+            let stoppingPlaceKnowledge = self.get_weight(vp.m(), "knowledge".to_string(), 0., false);
+
+            for i in 0..stoppingPlaceCandidates.len() {
+                // alternative occupancy is randomized (but never full) if invisible
+                // current destination must be visible at this point
+                let cand = stoppingPlaceCandidates[i];
+                if !self.use_stopping_place(cand.0) {
+                    continue;
+                }
+                let visible = cand.1 || (cand.0 == destStoppingPlace && destVisible);
+                let mut occupancy = self.get_stopping_place_occupancy(cand.0, vp);
+                if !visible && (stoppingPlaceKnowledge == 0. || stoppingPlaceKnowledge < vp.get_rng().m().rand()) {
+                    let capacity = self.get_stopping_place_capacity(cand.0);
+                    let minOccupancy = (capacity - NUMERICAL_EPS).min(self.get_number_stopping_place_reroutes(vp.m()) as f64 * capacity / stoppingPlaceFrustration);
+                    occupancy = minOccupancy + (capacity - minOccupancy) * utils::common::rand_helper::rand();
+                    // previously visited?
+                    let blockedTime = self.saw_blocked_stopping_place(vp.m(), cand.0, false);
+                    if blockedTime >= 0 && now - blockedTime < stoppingPlaceMemory {
+                        // assume it's still occupied
+                        occupancy = capacity;
+                        blockedTimes.push((blockedTime, cand.0, i));
+                    }
+                }
+                if occupancy < self.get_stopping_place_capacity(cand.0) {
+                    if self.evaluate_destination(vp.m(), brakeGap, *newDestination, cand.0, occupancy, probs[i], router.m(), &mut stoppingPlaces, &mut newRoutes, &mut stopApproaches, &mut maxValues, scores, insertStopIndex, keepCurrentStop) {
+                        numAlternatives += 1;
+                    }
+                } else if visible {
+                    // might only be visible now (i.e. because it's on the other
+                    // side of the street), so we should remember this for later.
+                    self.remember_stopping_place_score(vp.m(), cand.0, "occupied");
+                    self.remember_blocked_stopping_place(vp.m(), cand.0, lane_edge(cand.0) == vp.get_edge());
+                }
+            }
+
+            if numAlternatives == 0 {
+                // use parkingArea with lowest blockedTime
+                blockedTimes.sort_by(|t1, t2| t1.0.cmp(&t2.0).then_with(|| t1.1.get_id().cmp(t2.1.get_id())).then_with(|| t1.2.cmp(&t2.2)));
+                for item in blockedTimes.clone() {
+                    let sp = item.1;
+                    let prob = probs[item.2];
+                    // all stopping places are occupied. We have no good basis for
+                    // prefering one or the other based on estimated occupancy
+                    let occupancy = self.get_stopping_place_capacity(sp) * utils::common::rand_helper::rand();
+                    if self.evaluate_destination(vp.m(), brakeGap, *newDestination, sp, occupancy, prob, router.m(), &mut stoppingPlaces, &mut newRoutes, &mut stopApproaches, &mut maxValues, scores, insertStopIndex, keepCurrentStop) {
+                        numAlternatives = 1;
+                        break;
+                    }
+                }
+            }
+            if numAlternatives == 0 {
+                // take any random target but prefer one that hasn't been visited yet
+                let mut candidates: Vec<(SUMOTime, Ptr<MSStoppingPlace>)> = Vec::new();
+                for stoppingPlaceCandidate in stoppingPlaceCandidates.iter() {
+                    if stoppingPlaceCandidate.0 == destStoppingPlace {
+                        continue;
+                    }
+                    let mut dummy = self.saw_blocked_stopping_place(vp.m(), stoppingPlaceCandidate.0, true);
+                    if dummy < 0 {
+                        // randomize among the unvisited
+                        // shortcut: C++ RandHelper::rand(int) draws an integer in [0, 1000000); here a real is drawn and truncated, so the random sequence differs from SUMO
+                        dummy = -((utils::common::rand_helper::rand() * 1000000.) as SUMOTime);
+                    }
+                    candidates.push((dummy, stoppingPlaceCandidate.0));
+                }
+                candidates.sort_by(|t1, t2| t1.0.cmp(&t2.0).then_with(|| t1.1.get_id().cmp(t2.1.get_id())));
+                for item in candidates.iter() {
+                    if self.evaluate_destination(vp.m(), brakeGap, *newDestination, item.1, 0., 1., router.m(), &mut stoppingPlaces, &mut newRoutes, &mut stopApproaches, &mut maxValues, scores, insertStopIndex, keepCurrentStop) {
+                        numAlternatives = 1;
+                        break;
+                    }
+                }
+            }
+            // reset closed edges
+            self.get_router(vp.m(), &Default::default());
+
+            // minimum cost to get the parking area
+            let mut minStoppingPlaceCost = 0.0;
+            // determinism: C++ orders stoppingPlaces by ComparatorIdLess; here the BTreeMap is ordered by pointer address
+            let entries: Vec<(Ptr<MSStoppingPlace>, ParamMap)> = stoppingPlaces.iter().map(|(k, v)| (*k, v.clone())).collect();
+            for (sp, mut stoppingPlaceValues) in entries {
+                // get the parking values
+                if *param_mut(&mut weights, "probability") > 0. && *param_mut(&mut maxValues, "probability") > 0. {
+                    // random search should not drive past a usable parking area
+                    let mut dominated = false;
+                    let endPos = sp.get_end_lane_position();
+                    let to1 = stopApproaches.get(&sp).cloned().unwrap_or_default();
+                    for altSp in stoppingPlaces.keys() {
+                        if *altSp == sp {
+                            continue;
+                        }
+                        let to2 = stopApproaches.get(altSp).cloned().unwrap_or_default();
+                        if to1.len() > to2.len() {
+                            if to1[..to2.len()] == to2[..] {
+                                // other target lies on the route to the current candidate
+                                dominated = true;
+                                break;
+                            }
+                        } else if to1 == to2 && endPos > altSp.get_end_lane_position() {
+                            // other target is on the same edge but ahead of the current candidate
+                            dominated = true;
+                            break;
+                        }
+                    }
+                    if !dominated {
+                        let p = *param_mut(&mut stoppingPlaceValues, "probability");
+                        let drawn = p * vp.get_rng().m().rand();
+                        *param_mut(&mut stoppingPlaceValues, "probability") = 1.0 - drawn / *param_mut(&mut maxValues, "probability");
+                    } else {
+                        // worst probability score
+                        *param_mut(&mut stoppingPlaceValues, "probability") = 1.0;
+                    }
+                } else {
+                    // value takes no effect due to weight=0
+                    *param_mut(&mut stoppingPlaceValues, "probability") = 0.;
+                }
+
+                // get the parking area cost
+                let stoppingPlaceCost = Self::get_target_value(&stoppingPlaceValues, &maxValues, &weights, &self.myNormParams, &self.myInvertParams);
+                self.remember_stopping_place_score(vp.m(), sp, &to_string(&stoppingPlaceCost));
+
+                // get the parking area with minimum cost
+                if nearStoppingPlace.is_null() || stoppingPlaceCost < minStoppingPlaceCost {
+                    minStoppingPlaceCost = stoppingPlaceCost;
+                    nearStoppingPlace = sp;
+                    *newRoute = newRoutes.get(&nearStoppingPlace).cloned().unwrap_or_default();
+                }
+            }
+
+            // expose the scores of the best solution
+            if !nearStoppingPlace.is_null() {
+                if let Some(m) = stoppingPlaces.get(&nearStoppingPlace) {
+                    for (k, v) in m.iter() {
+                        scores.insert(k.clone(), *v);
+                    }
+                }
+            }
+            let reroutes = self.get_number_stopping_place_reroutes(vp.m());
+            self.set_number_stopping_place_reroutes(vp.m(), reroutes + 1);
+        }
+        nearStoppingPlace
     }
 
     /// C++: `bool MSStoppingPlaceRerouter::evaluateDestination(SUMOVehicle &, double, bool, MSStoppingPlace *, double, double, SUMOAbstractRouter<MSEdge, SUMOVehicle> &, StoppingPlaceMap_t &, std::map<MSStoppingPlace *, ConstMSEdgeVector> &, std::map<MSStoppingPlace *, ConstMSEdgeVector> &, StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &, const int, const bool)` [virtual]
@@ -539,7 +881,136 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn evaluate_destination(&mut self, veh: &mut SUMOVehicle, brakeGap: f64, newDestination: bool, alternative: Ptr<MSStoppingPlace>, occupancy: f64, prob: f64, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, stoppingPlaces: &mut MSStoppingPlaceRerouter_StoppingPlaceMap_t, newRoutes: &mut BTreeMap<Ptr<MSStoppingPlace>, ConstMSEdgeVector>, stoppingPlaceApproaches: &mut BTreeMap<Ptr<MSStoppingPlace>, ConstMSEdgeVector>, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInput: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, insertStopIndex: i32, keepCurrentStop: bool) -> bool {
-        todo!("port MSStoppingPlaceRerouter::evaluateDestination")
+        // a map stores the stopping place values
+        let mut stoppingPlaceValues: ParamMap = BTreeMap::new();
+        let now = MSNet::get_instance().get_current_time_step();
+        let vp = Ptr::from_mut(veh);
+
+        let route = vp.get_route();
+        let c = route.get_color();
+        let stoppingPlaceEdge = lane_edge(alternative);
+
+        let includeInternalLengths = MSGlobals::using_internal_lanes() && MSNet::get_instance().has_internal_links();
+
+        // Compute the route from the current edge to the stopping place edge
+        let mut edgesToStop: ConstMSEdgeVector = Vec::new();
+        let mut edgesUpstream: ConstMSEdgeVector = Vec::new();
+        let targetPos = alternative.get_last_free_pos(vp.m(), 0.);
+        let rerouteOriginIdx = self.determine_reroute_origin(vp.m(), insertStopIndex);
+        let edges = route.get_edges();
+        let mut posOnLane = vp.get_position_on_lane();
+        if insertStopIndex > 0 {
+            posOnLane = 0.;
+            // determine preceding edges
+            let cur = route_cursor_index(vp.m());
+            for idx in cur..rerouteOriginIdx {
+                edgesUpstream.push(edges[idx]);
+            }
+        }
+        let rerouteOrigin = edges[rerouteOriginIdx];
+        let _ = router.compute_2(rerouteOrigin, posOnLane, stoppingPlaceEdge, targetPos, vp, now, &mut edgesToStop, true);
+        if edgesToStop.len() > 0 {
+            // Compute the route from the stopping place edge to the end of the route
+            if insertStopIndex == 0 && rerouteOrigin != vp.get_edge() {
+                edgesToStop.insert(0, vp.get_edge());
+            }
+            // prepend preceding edges
+            edgesUpstream.reverse();
+            for edge in edgesUpstream.iter() {
+                edgesToStop.insert(0, *edge);
+            }
+            let mut edgesFromStop: ConstMSEdgeVector = Vec::new();
+            stoppingPlaceApproaches.insert(alternative, edgesToStop.clone());
+
+            let mut nextDestination = route.get_last_edge();
+            let mut nextPos = vp.get_arrival_pos();
+            let mut nextDestinationIndex = route.size() - 1;
+            if !newDestination {
+                let stopIndices = vp.get_stop_indices();
+                let mut nextDestStopIndex = 1 + insertStopIndex;
+                if !keepCurrentStop {
+                    nextDestStopIndex += 1;
+                }
+                if stopIndices.len() as i32 > nextDestStopIndex {
+                    nextDestinationIndex = stopIndices[nextDestStopIndex as usize].0;
+                    nextDestination = edges[nextDestinationIndex as usize];
+                    nextPos = stopIndices[nextDestStopIndex as usize].1;
+                }
+                let _ = router.compute_2(stoppingPlaceEdge, targetPos, nextDestination, nextPos, vp, now, &mut edgesFromStop, true);
+            }
+            if edgesFromStop.len() > 0 || newDestination {
+                *param_mut(&mut stoppingPlaceValues, "probability") = prob;
+                if *param_mut(&mut stoppingPlaceValues, "probability") > *param_mut(maxValues, "probability") {
+                    *param_mut(maxValues, "probability") = *param_mut(&mut stoppingPlaceValues, "probability");
+                }
+                let capacity = self.get_stopping_place_capacity(alternative);
+                *param_mut(&mut stoppingPlaceValues, "capacity") = capacity;
+                *param_mut(&mut stoppingPlaceValues, "absfreespace") = capacity - occupancy;
+                // if capacity = 0 then absfreespace and relfreespace are also 0
+                let absfree = *param_mut(&mut stoppingPlaceValues, "absfreespace");
+                *param_mut(&mut stoppingPlaceValues, "relfreespace") = absfree / f64::max(1.0, capacity);
+                let routeToPark = MSRoute::new(&format!("{}!to{}#1", route.base.get_id(), self.myParamPrefix), &edgesToStop, false, color_ptr(c), route.get_stops(), -1, -1);
+
+                // The distance from the current edge to the new parking area
+                let mut toPos = alternative.get_begin_lane_position();
+                if lane_edge(alternative) == vp.get_edge() {
+                    toPos = f64::max(vp.get_position_on_lane(), toPos);
+                }
+                *param_mut(&mut stoppingPlaceValues, "distanceto") = route_distance_between(&routeToPark, vp.get_position_on_lane(), toPos, 0, routeToPark.get_edges().len() - 1, includeInternalLengths);
+                if *param_mut(&mut stoppingPlaceValues, "distanceto") == f64::MAX {
+                    write_warningf!("Invalid distance computation for vehicle '%' to stopping place '%' at time=%.", vp.get_id(), alternative.get_id(), time2string(now));
+                }
+                let endPos = alternative.get_last_free_pos(vp.m(), vp.get_position_on_lane() + brakeGap);
+                let distToEnd = *param_mut(&mut stoppingPlaceValues, "distanceto") - toPos + endPos;
+
+                if distToEnd < brakeGap {
+                    self.remember_stopping_place_score(vp.m(), alternative, "tooClose");
+                    return false;
+                }
+
+                // The time to reach the new stopping place
+                let correctionLastEdge = (alternative.get_lane().get_length() - alternative.get_end_lane_position()) / alternative.get_lane().get_vehicle_max_speed(vp.cast::<SUMOTrafficObject>());
+                let correctionFirstEdge = vp.get_position_on_lane() / edgesToStop[0].get_vehicle_max_speed(vp.cast::<SUMOTrafficObject>());
+
+                *param_mut(&mut stoppingPlaceValues, "timeto") = router.recompute_costs(&edgesToStop, vp, now, Ptr::null()) - correctionLastEdge - correctionFirstEdge;
+                let mut newEdges = edgesToStop.clone();
+                if newDestination {
+                    *param_mut(&mut stoppingPlaceValues, "distancefrom") = 0.;
+                    *param_mut(&mut stoppingPlaceValues, "timefrom") = 0.;
+                } else {
+                    let routeFromPark = MSRoute::new(&format!("{}!from{}#1", route.base.get_id(), self.myParamPrefix), &edgesFromStop, false, color_ptr(c), route.get_stops(), -1, -1);
+                    // The distance from the new parking area to the end of the route
+                    *param_mut(&mut stoppingPlaceValues, "distancefrom") = route_distance_between(&routeFromPark, alternative.get_begin_lane_position(), routeFromPark.get_last_edge().get_length(), 0, routeFromPark.get_edges().len() - 1, includeInternalLengths);
+                    if *param_mut(&mut stoppingPlaceValues, "distancefrom") == f64::MAX {
+                        write_warningf!("Invalid distance computation for vehicle '%' from stopping place '%' at time=%.", vp.get_id(), alternative.get_id(), time2string(now));
+                    }
+                    // The time to reach this area
+                    *param_mut(&mut stoppingPlaceValues, "timefrom") = router.recompute_costs(&edgesFromStop, vp, now, Ptr::null()) - (alternative.get_end_lane_position() / alternative.get_lane().get_speed_limit());
+                    newEdges.extend(edgesFromStop.iter().skip(1).cloned());
+                    newEdges.extend(edges[(nextDestinationIndex + 1) as usize..].iter().cloned());
+                }
+
+                // add some additional/custom target function components
+                let approach = stoppingPlaceApproaches.entry(alternative).or_default();
+                if !self.evaluate_custom_components(vp.m(), brakeGap, newDestination, alternative, occupancy, prob, router, &mut stoppingPlaceValues, &mut newEdges, approach, maxValues, addInput) {
+                    return false;
+                }
+                if !self.myCheckValidity || self.valid_component_values(&mut stoppingPlaceValues) {
+                    Self::update_max_values(&mut stoppingPlaceValues, maxValues);
+                    stoppingPlaces.insert(alternative, stoppingPlaceValues);
+                    newRoutes.insert(alternative, newEdges);
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                self.remember_stopping_place_score(vp.m(), alternative, "unreachable");
+            }
+        } else {
+            self.remember_stopping_place_score(vp.m(), alternative, "unreachable");
+        }
+        // unreachable
+        false
     }
 
     /// C++: `bool MSStoppingPlaceRerouter::evaluateCustomComponents(SUMOVehicle &, double, bool, MSStoppingPlace *, double, double, SUMOAbstractRouter<MSEdge, SUMOVehicle> &, StoppingPlaceParamMap_t &, ConstMSEdgeVector &, ConstMSEdgeVector &, StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &)` [virtual]
@@ -553,7 +1024,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn evaluate_custom_components(&mut self, veh: &mut SUMOVehicle, brakeGap: f64, newDestination: bool, alternative: Ptr<MSStoppingPlace>, occupancy: f64, prob: f64, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, newRoute: &mut ConstMSEdgeVector, stoppingPlaceApproach: &mut ConstMSEdgeVector, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInput: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
-        todo!("port MSStoppingPlaceRerouter::evaluateCustomComponents")
+        true
     }
 
     /// C++: `bool MSStoppingPlaceRerouter::validComponentValues(StoppingPlaceParamMap_t &)` [virtual]
@@ -564,7 +1035,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn valid_component_values(&mut self, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
-        todo!("port MSStoppingPlaceRerouter::validComponentValues")
+        true
     }
 
     /// C++: `bool MSStoppingPlaceRerouter::useStoppingPlace(MSStoppingPlace *)` [virtual]
@@ -575,7 +1046,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn use_stopping_place(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> bool {
-        todo!("port MSStoppingPlaceRerouter::useStoppingPlace")
+        true
     }
 
     /// C++: `SUMOAbstractRouter<MSEdge, SUMOVehicle> & MSStoppingPlaceRerouter::getRouter(SUMOVehicle &, const Prohibitions &)` [virtual]
@@ -586,7 +1057,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        todo!("port MSStoppingPlaceRerouter::getRouter")
+        MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
@@ -594,7 +1065,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSStoppingPlaceRerouter::getStoppingPlaceOccupancy")
+        panic!("MSStoppingPlaceRerouter::getStoppingPlaceOccupancy is pure virtual; subclasses must override it")
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
@@ -602,7 +1073,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_last_step_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy")
+        panic!("MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy is pure virtual; subclasses must override it")
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceCapacity(MSStoppingPlace *)` [virtual, pure virtual]
@@ -610,7 +1081,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stopping_place_capacity(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> f64 {
-        todo!("port MSStoppingPlaceRerouter::getStoppingPlaceCapacity")
+        panic!("MSStoppingPlaceRerouter::getStoppingPlaceCapacity is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSStoppingPlaceRerouter::rememberBlockedStoppingPlace(SUMOVehicle &, const MSStoppingPlace *, bool)` [virtual, pure virtual]
@@ -618,7 +1089,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, stoppingPlace: Ptr<MSStoppingPlace>, blocked: bool) {
-        todo!("port MSStoppingPlaceRerouter::rememberBlockedStoppingPlace")
+        panic!("MSStoppingPlaceRerouter::rememberBlockedStoppingPlace is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSStoppingPlaceRerouter::rememberStoppingPlaceScore(SUMOVehicle &, MSStoppingPlace *, const std::string &)` [virtual, pure virtual]
@@ -626,7 +1097,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_stopping_place_score(&mut self, veh: &mut SUMOVehicle, place: Ptr<MSStoppingPlace>, score: &str) {
-        todo!("port MSStoppingPlaceRerouter::rememberStoppingPlaceScore")
+        panic!("MSStoppingPlaceRerouter::rememberStoppingPlaceScore is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSStoppingPlaceRerouter::resetStoppingPlaceScores(SUMOVehicle &)` [virtual, pure virtual]
@@ -634,7 +1105,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_stopping_place_scores(&mut self, veh: &mut SUMOVehicle) {
-        todo!("port MSStoppingPlaceRerouter::resetStoppingPlaceScores")
+        panic!("MSStoppingPlaceRerouter::resetStoppingPlaceScores is pure virtual; subclasses must override it")
     }
 
     /// C++: `SUMOTime MSStoppingPlaceRerouter::sawBlockedStoppingPlace(SUMOVehicle &, MSStoppingPlace *, bool)` [virtual, pure virtual]
@@ -642,7 +1113,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn saw_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, place: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        todo!("port MSStoppingPlaceRerouter::sawBlockedStoppingPlace")
+        panic!("MSStoppingPlaceRerouter::sawBlockedStoppingPlace is pure virtual; subclasses must override it")
     }
 
     /// C++: `int MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes(SUMOVehicle &)` [virtual, pure virtual]
@@ -650,7 +1121,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle) -> i32 {
-        todo!("port MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes")
+        panic!("MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes(SUMOVehicle &, int)` [virtual, pure virtual]
@@ -658,7 +1129,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle, value: i32) {
-        todo!("port MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes")
+        panic!("MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
     }
 
     /// C++: `StoppingPlaceParamMap_t MSStoppingPlaceRerouter::collectWeights(SUMOVehicle &)` [virtual]
@@ -666,7 +1137,18 @@ impl MSStoppingPlaceRerouter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn collect_weights(&mut self, veh: &mut SUMOVehicle) -> MSStoppingPlaceRerouter_StoppingPlaceParamMap_t {
-        todo!("port MSStoppingPlaceRerouter::collectWeights")
+        let mut result: ParamMap = BTreeMap::new();
+        let d = *param_mut(&mut self.myEvalParams, "distanceto");
+        let w = self.get_weight(veh, "distance.weight".to_string(), d, false);
+        self.myEvalParams.insert("distanceto".to_string(), w);
+        let evalParams = self.myEvalParams.clone();
+        for (k, v) in evalParams.iter() {
+            let value = self.get_weight(veh, format!("{}.weight", k), *v, false);
+            result.insert(k.clone(), value);
+        }
+        let p = self.get_weight(veh, "probability.weight".to_string(), 0., false);
+        result.insert("probability".to_string(), p);
+        result
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getWeight(SUMOVehicle &, const std::string, const double, const bool)`
@@ -698,7 +1180,26 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_weight(&mut self, veh: &mut SUMOVehicle, param: String, defaultWeight: f64, warn: bool) -> f64 {
-        todo!("port MSStoppingPlaceRerouter::getWeight")
+        // get custom vehicle parameter
+        let key = format!("{}.{}", self.myParamPrefix, param);
+        if veh.get_parameter().has_parameter(&key) {
+            match to_double(&veh.get_parameter().get_parameter(&key, "-1")) {
+                Ok(v) => return v,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter '%'", veh.get_parameter().get_parameter(&key, "-1"), key),
+            }
+        } else {
+            // get custom vType parameter
+            if veh.get_vehicle_type().get_parameter().has_parameter(&key) {
+                match to_double(&veh.get_vehicle_type().get_parameter().get_parameter(&key, "-1")) {
+                    Ok(v) => return v,
+                    Err(_) => write_warningf!("Invalid value '%' for vType parameter '%'", veh.get_vehicle_type().get_parameter().get_parameter(&key, "-1"), key),
+                }
+            }
+        }
+        if warn {
+            write_messagef!("Vehicle '%' does not supply vehicle parameter '%'. Using default of %\n", veh.get_id(), key, to_string(&defaultWeight));
+        }
+        defaultWeight
     }
 
     /// C++: `void MSStoppingPlaceRerouter::updateMaxValues(StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &)` [static]
@@ -713,7 +1214,12 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn update_max_values(stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) {
-        todo!("port MSStoppingPlaceRerouter::updateMaxValues")
+        for (k, max) in maxValues.iter_mut() {
+            let v = *param_mut(stoppingPlaceValues, k);
+            if v > *max {
+                *max = v;
+            }
+        }
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getTargetValue(const StoppingPlaceParamMap_t &, const StoppingPlaceParamMap_t &, const StoppingPlaceParamMap_t &, const StoppingPlaceParamSwitchMap_t &, const StoppingPlaceParamSwitchMap_t &)` [static]
@@ -733,7 +1239,16 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_target_value(absValues: &MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, maxValues: &MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, weights: &MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, norm: &MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t, invert: &MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t) -> f64 {
-        todo!("port MSStoppingPlaceRerouter::getTargetValue")
+        let mut cost = 0.;
+        for (k, &v0) in absValues.iter() {
+            let weight = weights[k];
+            let mut val = v0;
+            if norm[k] && maxValues[k] > 0. {
+                val /= maxValues[k];
+            }
+            cost += if invert[k] { weight * (1. - val) } else { weight * val };
+        }
+        cost
     }
 
     /// C++: `void MSStoppingPlaceRerouter::readEvaluationWeights(SUMOVehicle &, StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &)` [protected]
@@ -749,7 +1264,15 @@ impl MSStoppingPlaceRerouter {
     //     }
     #[allow(unused_variables)]
     pub fn read_evaluation_weights(&mut self, veh: &mut SUMOVehicle, stoppingPlaceParams: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, stoppingPlaceDefaults: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) {
-        todo!("port MSStoppingPlaceRerouter::readEvaluationWeights")
+        for (k, it) in stoppingPlaceParams.iter_mut() {
+            let def = *param_mut(stoppingPlaceDefaults, k);
+            let value = self.get_weight(veh, k.clone(), def, false);
+            *it = value;
+            let m = param_mut(maxValues, k);
+            if value > *m {
+                *m = value;
+            }
+        }
     }
 
     /// C++: `const MSRouteIterator MSStoppingPlaceRerouter::determineRerouteOrigin(SUMOVehicle &, int)` [protected]
@@ -767,8 +1290,16 @@ impl MSStoppingPlaceRerouter {
     //         return relevantStop.edge;
     //     }
     #[allow(unused_variables)]
-    pub fn determine_reroute_origin(&mut self, veh: &mut SUMOVehicle, insertStopIndex: i32) -> MSRouteIterator {
-        todo!("port MSStoppingPlaceRerouter::determineRerouteOrigin")
+    pub fn determine_reroute_origin(&mut self, veh: &mut SUMOVehicle, insertStopIndex: i32) -> usize {
+        let stopCount = veh.get_stops().len() as i32;
+        if insertStopIndex == 0 || stopCount == 0 {
+            return route_cursor_index(veh);
+        }
+        // if the stop index is too high cap to route end
+        let stopIndex = insertStopIndex.min(stopCount - 1) as usize;
+        let _relevantStop = &veh.get_stops()[stopIndex];
+        // shortcut: MSStop::edge is Unmapped, so the stop's route index is unknown and the origin falls back to the route cursor
+        route_cursor_index(veh)
     }
 
     /// C++: `void MSStoppingPlaceRerouter::MSStoppingPlaceRerouter()` [private]
@@ -776,7 +1307,7 @@ impl MSStoppingPlaceRerouter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port MSStoppingPlaceRerouter::MSStoppingPlaceRerouter")
+        panic!("the private default constructor of MSStoppingPlaceRerouter is not callable")
     }
 
 }
@@ -793,14 +1324,14 @@ impl StoppingPlaceMemory {
     // StoppingPlaceMemory() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port StoppingPlaceMemory::StoppingPlaceMemory")
+        StoppingPlaceMemory { myMap: BTreeMap::new() }
     }
 
     /// C++: `void StoppingPlaceMemory::~StoppingPlaceMemory() noexcept` [virtual]
     // virtual ~StoppingPlaceMemory() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port StoppingPlaceMemory::~StoppingPlaceMemory")
+        // the C++ destructor body is empty
     }
 
     /// C++: `bool StoppingPlaceMemory::remove(MSStoppingPlace *)`
@@ -816,7 +1347,7 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn remove(&mut self, id: Ptr<MSStoppingPlace>) -> bool {
-        todo!("port StoppingPlaceMemory::remove")
+        self.myMap.remove(&id).is_some()
     }
 
     /// C++: `void StoppingPlaceMemory::clear()`
@@ -826,7 +1357,7 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port StoppingPlaceMemory::clear")
+        self.myMap.clear();
     }
 
     /// C++: `int StoppingPlaceMemory::size() const` [const]
@@ -836,7 +1367,7 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port StoppingPlaceMemory::size")
+        self.myMap.len() as i32
     }
 
     /// C++: `void StoppingPlaceMemory::rememberBlockedStoppingPlace(const MSStoppingPlace *, bool)`
@@ -849,7 +1380,12 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn remember_blocked_stopping_place(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, local: bool) {
-        todo!("port StoppingPlaceMemory::rememberBlockedStoppingPlace")
+        let now = MSNet::get_instance().get_current_time_step();
+        let entry = self.myMap.entry(stoppingPlace).or_insert_with(StoppingPlaceMemoryEntry::new);
+        entry.blockedAtTime = now;
+        if local {
+            entry.blockedAtTimeLocal = now;
+        }
     }
 
     /// C++: `SUMOTime StoppingPlaceMemory::sawBlockedStoppingPlace(const MSStoppingPlace *, bool) const` [const]
@@ -864,7 +1400,10 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn saw_blocked_stopping_place(&self, stoppingPlace: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        todo!("port StoppingPlaceMemory::sawBlockedStoppingPlace")
+        match self.myMap.get(&stoppingPlace) {
+            None => -1,
+            Some(it) => if local { it.blockedAtTimeLocal } else { it.blockedAtTime },
+        }
     }
 
     /// C++: `void StoppingPlaceMemory::rememberStoppingPlaceScore(const MSStoppingPlace *, const std::string &)`
@@ -874,7 +1413,7 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn remember_stopping_place_score(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, score: &str) {
-        todo!("port StoppingPlaceMemory::rememberStoppingPlaceScore")
+        self.myMap.entry(stoppingPlace).or_insert_with(StoppingPlaceMemoryEntry::new).score = score.to_string();
     }
 
     /// C++: `void StoppingPlaceMemory::resetStoppingPlaceScores()`
@@ -885,7 +1424,9 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn reset_stopping_place_scores(&mut self) {
-        todo!("port StoppingPlaceMemory::resetStoppingPlaceScores")
+        for item in self.myMap.values_mut() {
+            item.score = String::new();
+        }
     }
 
     /// C++: `typename StoppingPlaceMap::const_iterator StoppingPlaceMemory::begin() const` [const]
@@ -894,8 +1435,8 @@ impl StoppingPlaceMemory {
     //         return myMap.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn begin(&self) -> Unmapped /* StoppingPlaceMap::const_iterator */ {
-        todo!("port StoppingPlaceMemory::begin")
+    pub fn begin(&self) -> Box<dyn Iterator<Item = (&Ptr<MSStoppingPlace>, &StoppingPlaceMemoryEntry)> + '_> {
+        Box::new(self.myMap.iter())
     }
 
     /// C++: `typename StoppingPlaceMap::const_iterator StoppingPlaceMemory::end() const` [const]
@@ -904,8 +1445,9 @@ impl StoppingPlaceMemory {
     //         return myMap.end();
     //     }
     #[allow(unused_variables)]
-    pub fn end(&self) -> Unmapped /* StoppingPlaceMap::const_iterator */ {
-        todo!("port StoppingPlaceMemory::end")
+    pub fn end(&self) -> Box<dyn Iterator<Item = (&Ptr<MSStoppingPlace>, &StoppingPlaceMemoryEntry)> + '_> {
+        // shortcut: a C++ iterator pair cannot be expressed on a BTreeMap; callers iterate begin() instead
+        Box::new(std::iter::empty())
     }
 
 }
@@ -923,7 +1465,7 @@ impl StoppingPlaceMemoryEntry {
     // StoppingPlaceMemoryEntry() : blockedAtTime(-1), blockedAtTimeLocal(-1), score("") {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port StoppingPlaceMemoryEntry::StoppingPlaceMemoryEntry")
+        StoppingPlaceMemoryEntry { blockedAtTime: -1, blockedAtTimeLocal: -1, score: String::new() }
     }
 
 }
