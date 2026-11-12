@@ -594,7 +594,7 @@ impl MSTransportableControl {
                             && vehicle.is_stopped_in_range(t.get_edge_pos(), crate::microsim::ms_globals::stop_tolerance(), false)))
                 {
                     edge.remove_transportable(t);
-                    vehicle.add_transportable(t);
+                    vehicle.m().add_transportable(t);
                     if self.myAbortWaitingTimeout >= 0 {
                         t.m().set_abort_waiting(-1);
                     }

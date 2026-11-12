@@ -2,6 +2,17 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use super::common_handler::{attr_str, tag_str};
+use utils::xml::common_xml_structure::CommonXMLStructure_SumoBaseObject;
+use utils::common::std_defs::NETWORK_VERSION;
+
+const VEHPARS_VPH_SET: i64 = 2 << 7;
+const VEHPARS_CALIBRATORSPEED_SET: i64 = 2 << 27;
+
+/// C++ macro `SUMOTime_MAX_PERIOD` (SUMOTime.h): `SUMOTime_MAX - SUMOTime_MAX % DELTA_T`
+fn sumo_time_max_period() -> SUMOTime {
+    utils::common::time::SUMOTIME_MAX - utils::common::time::SUMOTIME_MAX % utils::common::time::delta_t()
+}
+
 
 /// unwrap a CommonXMLStructure getter; the C++ getters throw when the attribute is missing
 fn or_throw<T>(r: Result<T, utils::common::util_exceptions::ProcessError>) -> T {
@@ -1698,7 +1709,7 @@ impl AdditionalHandler {
         let length: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, "", &mut parsedOk, -1.00, true);
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, "", &mut parsedOk, false, true);
         // check parent
-        checkParsedParent(SUMO_TAG_ACCESS, {SUMO_TAG_BUS_STOP, SUMO_TAG_TRAIN_STOP, SUMO_TAG_CONTAINER_STOP}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_ACCESS, &vec![SUMO_TAG_BUS_STOP, SUMO_TAG_TRAIN_STOP, SUMO_TAG_CONTAINER_STOP], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -1857,10 +1868,10 @@ impl AdditionalHandler {
         let chargingPower: f64 = attrs.get_opt::<f64>(SUMO_ATTR_CHARGINGPOWER, &id, &mut parsedOk, 22000.0, true);
         let totalPower: f64 = attrs.get_opt::<f64>(SUMO_ATTR_TOTALPOWER, &id, &mut parsedOk, 0.0, true);
         let efficiency: f64 = attrs.get_opt::<f64>(SUMO_ATTR_EFFICIENCY, &id, &mut parsedOk, 0.95, true);
-        let chargeInTransit: bool = attrs.get_opt::<bool>(SUMO_ATTR_CHARGEINTRANSIT, &id, &mut parsedOk, 0, true);
+        let chargeInTransit: bool = attrs.get_opt::<bool>(SUMO_ATTR_CHARGEINTRANSIT, &id, &mut parsedOk, false, true);
         let chargeDelay: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_CHARGEDELAY, &id, &mut parsedOk, 0, true);
-        let chargeType: String = attrs.get_opt::<String>(SUMO_ATTR_CHARGETYPE, &id, &mut parsedOk, ChargeTypes.get_string(ChargeType::NORMAL).unwrap().to_string(), true);
-        let waitingTime: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_WAITINGTIME, &id, &mut parsedOk, time2steps(900), true);
+        let chargeType: String = attrs.get_opt::<String>(SUMO_ATTR_CHARGETYPE, &id, &mut parsedOk, ChargeTypes.get_string(ChargeType::NORMAL).to_string(), true);
+        let waitingTime: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_WAITINGTIME, &id, &mut parsedOk, time2steps(900.), true);
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut parsedOk, false, true);
         let parkingAreaID: String = attrs.get_opt::<String>(SUMO_ATTR_PARKING_AREA, &id, &mut parsedOk, String::new(), true);
         // check charge type
@@ -2032,7 +2043,7 @@ impl AdditionalHandler {
         let angle: String = attrs.get_opt::<String>(SUMO_ATTR_ANGLE, "", &mut parsedOk, String::new(), true);
         let slope: f64 = attrs.get_opt::<f64>(SUMO_ATTR_SLOPE, "", &mut parsedOk, 0.0, true);
         // check parent
-        checkParsedParent(SUMO_TAG_PARKING_SPACE, {SUMO_TAG_PARKING_AREA}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_PARKING_SPACE, &vec![SUMO_TAG_PARKING_AREA], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2096,7 +2107,7 @@ impl AdditionalHandler {
         let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let laneId: String = attrs.get::<String>(SUMO_ATTR_LANE, &id, &mut parsedOk, true);
         let position: f64 = attrs.get::<f64>(SUMO_ATTR_POSITION, &id, &mut parsedOk, true);
-        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, SUMOTime_MAX_PERIOD, true);
+        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, sumo_time_max_period(), true);
         let file: String = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut parsedOk, true);
         // optional attributes
         let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, String::new(), true);
@@ -2105,7 +2116,7 @@ impl AdditionalHandler {
         let detectPersons: String = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, "", &mut parsedOk, String::new(), true);
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut parsedOk, false, true);
         // continue if flag is ok
-        if (parsedOk && checkDetectPersons(SUMO_TAG_E1DETECTOR, id, detectPersons)) {
+        if (parsedOk && self.check_detect_persons(SUMO_TAG_E1DETECTOR, &id, &detectPersons)) {
             // set tag
             self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_E1DETECTOR);
             // add all attributes
@@ -2207,9 +2218,9 @@ impl AdditionalHandler {
     pub fn parse_e2_attributes(&mut self, attrs: &SUMOSAXAttributes) {
         // declare Ok Flag
         let mut parsedOk: bool = true;
-        let positionDef: i32 = attrs.has_attribute(SUMO_ATTR_POSITION) ? 1 : 0;
-        let endPosDef: i32 = attrs.has_attribute(SUMO_ATTR_ENDPOS) ? 1 : 0;
-        let lengthDef: i32 = attrs.has_attribute(SUMO_ATTR_LENGTH) ? 1 : 0;
+        let positionDef: i32 = if attrs.has_attribute(SUMO_ATTR_POSITION) { 1 } else { 0 };
+        let endPosDef: i32 = if attrs.has_attribute(SUMO_ATTR_ENDPOS) { 1 } else { 0 };
+        let lengthDef: i32 = if attrs.has_attribute(SUMO_ATTR_LENGTH) { 1 } else { 0 };
         // check attributes
         if (attrs.has_attribute(SUMO_ATTR_LANE) && ((positionDef + endPosDef + lengthDef) > 2)) {
             self.write_error(&utils::tlf!("'pos', 'endPos' and 'length' cannot be defined together in a single lane area detector."));
@@ -2228,10 +2239,10 @@ impl AdditionalHandler {
             let endPos: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ENDPOS, &id, &mut parsedOk, 0.0, true);
             let length: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, &id, &mut parsedOk, 0.0, true);
             // optional attributes
-            let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, SUMOTime_MAX_PERIOD, true);
+            let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, sumo_time_max_period(), true);
             let trafficLight: String = attrs.get_opt::<String>(SUMO_ATTR_TLID, &id, &mut parsedOk, String::new(), true);
             let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, String::new(), true);
-            let haltingTimeThreshold: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut parsedOk, time2steps(1), true);
+            let haltingTimeThreshold: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut parsedOk, time2steps(1.), true);
             let haltingSpeedThreshold: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, &id, &mut parsedOk, 1.39, true);
             let jamDistThreshold: f64 = attrs.get_opt::<f64>(SUMO_ATTR_JAM_DIST_THRESHOLD, &id, &mut parsedOk, 10.0, true);
             let vehicleTypes: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VTYPES, &id, &mut parsedOk, Vec::new(), true);
@@ -2240,7 +2251,7 @@ impl AdditionalHandler {
             let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut parsedOk, false, true);
             let show: bool = attrs.get_opt::<bool>(SUMO_ATTR_SHOW_DETECTOR, &id, &mut parsedOk, true, true);
             // continue if flag is ok
-            if (parsedOk && checkDetectPersons(SUMO_TAG_E2DETECTOR, id, detectPersons)) {
+            if (parsedOk && self.check_detect_persons(SUMO_TAG_E2DETECTOR, &id, &detectPersons)) {
                 // set tag
                 self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_E2DETECTOR);
                 // add attributes depending of Lane/Lanes
@@ -2329,19 +2340,19 @@ impl AdditionalHandler {
         // needed attributes
         let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let file: String = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut parsedOk, true);
-        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, SUMOTime_MAX_PERIOD, true);
+        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, sumo_time_max_period(), true);
         // optional attributes
-        let pos: Position = attrs.get_opt::<Position>(SUMO_ATTR_POSITION, &id, &mut parsedOk, Position(), true);
+        let pos: Position = attrs.get_opt::<Position>(SUMO_ATTR_POSITION, &id, &mut parsedOk, Position::new3(0., 0., 0.), true);
         let vehicleTypes: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VTYPES, &id, &mut parsedOk, Vec::new(), true);
         let nextEdges: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_NEXT_EDGES, &id, &mut parsedOk, Vec::new(), true);
         let detectPersons: String = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, "", &mut parsedOk, String::new(), true);
         let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, String::new(), true);
-        let haltingTimeThreshold: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut parsedOk, time2steps(1), true);
+        let haltingTimeThreshold: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut parsedOk, time2steps(1.), true);
         let haltingSpeedThreshold: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, &id, &mut parsedOk, 1.39, true);
         let openEntry: bool = attrs.get_opt::<bool>(SUMO_ATTR_OPEN_ENTRY, &id, &mut parsedOk, false, true);
         let expectedArrival: bool = attrs.get_opt::<bool>(SUMO_ATTR_EXPECT_ARRIVAL, &id, &mut parsedOk, false, true);
         // continue if flag is ok
-        if (parsedOk && checkDetectPersons(SUMO_TAG_E3DETECTOR, id, detectPersons)) {
+        if (parsedOk && self.check_detect_persons(SUMO_TAG_E3DETECTOR, &id, &detectPersons)) {
             // set tag
             self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_E3DETECTOR);
             // add all attributes
@@ -2397,7 +2408,7 @@ impl AdditionalHandler {
         // optional attributes
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, "", &mut parsedOk, false, true);
         // check parent
-        checkParsedParent(SUMO_TAG_DET_ENTRY, {SUMO_TAG_E3DETECTOR}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_DET_ENTRY, &vec![SUMO_TAG_E3DETECTOR], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2446,7 +2457,7 @@ impl AdditionalHandler {
         // optional attributes
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, "", &mut parsedOk, false, true);
         // check parent
-        checkParsedParent(SUMO_TAG_DET_EXIT, {SUMO_TAG_E3DETECTOR}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_DET_EXIT, &vec![SUMO_TAG_E3DETECTOR], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2511,7 +2522,7 @@ impl AdditionalHandler {
         let detectPersons: String = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, "", &mut parsedOk, String::new(), true);
         let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut parsedOk, false, true);
         // continue if flag is ok
-        if (parsedOk && checkDetectPersons(SUMO_TAG_INSTANT_INDUCTION_LOOP, id, detectPersons)) {
+        if (parsedOk && self.check_detect_persons(SUMO_TAG_INSTANT_INDUCTION_LOOP, &id, &detectPersons)) {
             // set tag
             self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_INSTANT_INDUCTION_LOOP);
             // add all attributes
@@ -2567,8 +2578,8 @@ impl AdditionalHandler {
         // needed attributes
         let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         // optional attributes
-        let shape: PositionVector = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut parsedOk, PositionVector(), true);
-        let center: Position = attrs.get_opt::<Position>(SUMO_ATTR_CENTER, &id, &mut parsedOk, shape.size() > 0 ? shape.getCentroid() : Position::INVALID, true);
+        let shape: PositionVector = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut parsedOk, PositionVector::new(), true);
+        let center: Position = attrs.get_opt::<Position>(SUMO_ATTR_CENTER, &id, &mut parsedOk, if shape.len() > 0 { shape.get_centroid() } else { Position::INVALID }, true);
         let fill: bool = attrs.get_opt::<bool>(SUMO_ATTR_FILL, &id, &mut parsedOk, false, true);
         let edges: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_EDGES, &id, &mut parsedOk, Vec::new(), true);
         let color: RGBColor = attrs.get_opt::<RGBColor>(SUMO_ATTR_COLOR, &id, &mut parsedOk, RGBColor::RED, true);
@@ -2620,7 +2631,7 @@ impl AdditionalHandler {
         let edgeID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let weight: f64 = attrs.get::<f64>(SUMO_ATTR_WEIGHT, &edgeID, &mut parsedOk, true);
         // check parent
-        checkParsedParent(SUMO_TAG_TAZSOURCE, {SUMO_TAG_TAZ}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_TAZSOURCE, &vec![SUMO_TAG_TAZ], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2663,7 +2674,7 @@ impl AdditionalHandler {
         let edgeID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let weight: f64 = attrs.get::<f64>(SUMO_ATTR_WEIGHT, &edgeID, &mut parsedOk, true);
         // check parent
-        checkParsedParent(SUMO_TAG_TAZSINK, {SUMO_TAG_TAZ}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_TAZSINK, &vec![SUMO_TAG_TAZ], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2711,7 +2722,7 @@ impl AdditionalHandler {
         let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let lanes: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_LANES, &id, &mut parsedOk, true);
         // optional attributes
-        let pos: Position = attrs.get_opt::<Position>(SUMO_ATTR_POSITION, &id, &mut parsedOk, Position(), true);
+        let pos: Position = attrs.get_opt::<Position>(SUMO_ATTR_POSITION, &id, &mut parsedOk, Position::new3(0., 0., 0.), true);
         let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, String::new(), true);
         let vehicleTypes: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_VTYPES, &id, &mut parsedOk, Vec::new(), true);
         // continue if flag is ok
@@ -2759,9 +2770,9 @@ impl AdditionalHandler {
         // needed attributes
         let time: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_TIME, "", &mut parsedOk, true);
         // optional attributes
-        let speed: f64 = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut parsedOk, OptionsCont::getOptions().getFloat("default.speed"), true);
+        let speed: f64 = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut parsedOk, utils::options::options_cont::get_float("default.speed"), true);
         // check parent
-        checkParsedParent(SUMO_TAG_STEP, {SUMO_TAG_VSS}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_STEP, &vec![SUMO_TAG_VSS], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -2916,7 +2927,7 @@ impl AdditionalHandler {
         // declare Ok Flag
         let mut parsedOk: bool = true;
         // check parent
-        if (checkCalibratorFlowParents()) {
+        if (self.check_calibrator_flow_parents()) {
             // check that frecuency and trafficLight aren't defined together
             if (!attrs.has_attribute(SUMO_ATTR_TYPE) && !attrs.has_attribute(SUMO_ATTR_VEHSPERHOUR) && !attrs.has_attribute(SUMO_ATTR_SPEED)) {
                 self.write_error(&utils::tlf!("CalibratorFlows need either the attribute vehsPerHour or speed or type (or any combination of these)"));
@@ -3012,7 +3023,7 @@ impl AdditionalHandler {
         let off: bool = attrs.get_opt::<bool>(SUMO_ATTR_OFF, &id, &mut parsedOk, false, true);
         let optional: bool = attrs.get_opt::<bool>(SUMO_ATTR_OPTIONAL, &id, &mut parsedOk, false, true);
         // check attributes
-        if (!checkNegative(SUMO_TAG_REROUTER, id, SUMO_ATTR_PROB, probability, true)) {
+        if (!self.check_negative_2(SUMO_TAG_REROUTER, &id, SUMO_ATTR_PROB, probability, true)) {
             parsedOk = false;
         }
         // continue if flag is ok
@@ -3064,7 +3075,7 @@ impl AdditionalHandler {
         let begin: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_BEGIN, "", &mut parsedOk, true);
         let end: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_END, "", &mut parsedOk, true);
         // check parent
-        checkParsedParent(SUMO_TAG_INTERVAL, {SUMO_TAG_REROUTER}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_INTERVAL, &vec![SUMO_TAG_REROUTER], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3110,9 +3121,9 @@ impl AdditionalHandler {
         let laneID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         // optional attributes
         let disallow: String = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, "", &mut parsedOk, String::new(), true);
-        let allow: String = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, "", &mut parsedOk, !disallow.size() ? "authority" : "", true);
+        let allow: String = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, "", &mut parsedOk, if disallow.is_empty() { "authority".to_string() } else { String::new() }, true);
         // check parent
-        checkParsedParent(SUMO_TAG_CLOSING_LANE_REROUTE, {SUMO_TAG_INTERVAL}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_CLOSING_LANE_REROUTE, &vec![SUMO_TAG_INTERVAL], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3161,7 +3172,7 @@ impl AdditionalHandler {
         let disallow: String = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, "", &mut parsedOk, String::new(), true);
         let allow: String = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, "", &mut parsedOk, String::new(), true);
         // check parent
-        checkParsedParent(SUMO_TAG_CLOSING_REROUTE, {SUMO_TAG_INTERVAL}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_CLOSING_REROUTE, &vec![SUMO_TAG_INTERVAL], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3209,11 +3220,11 @@ impl AdditionalHandler {
         let edgeID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let probability: f64 = attrs.get_opt::<f64>(SUMO_ATTR_PROB, "", &mut parsedOk, 1.0, true);
         // check attributes
-        if (!checkNegative(SUMO_TAG_DEST_PROB_REROUTE, edgeID, SUMO_ATTR_PROB, probability, true)) {
+        if (!self.check_negative_2(SUMO_TAG_DEST_PROB_REROUTE, &edgeID, SUMO_ATTR_PROB, probability, true)) {
             parsedOk = false;
         }
         // check parent
-        checkParsedParent(SUMO_TAG_DEST_PROB_REROUTE, {SUMO_TAG_INTERVAL}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_DEST_PROB_REROUTE, &vec![SUMO_TAG_INTERVAL], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3263,13 +3274,13 @@ impl AdditionalHandler {
         let parkingAreaID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let probability: f64 = attrs.get_opt::<f64>(SUMO_ATTR_PROB, "", &mut parsedOk, 1.0, true);
         // check attributes
-        if (!checkNegative(SUMO_TAG_PARKING_AREA_REROUTE, parkingAreaID, SUMO_ATTR_PROB, probability, true)) {
+        if (!self.check_negative_2(SUMO_TAG_PARKING_AREA_REROUTE, &parkingAreaID, SUMO_ATTR_PROB, probability, true)) {
             parsedOk = false;
         }
         // optional attributes
         let visible: bool = attrs.get_opt::<bool>(SUMO_ATTR_VISIBLE, "", &mut parsedOk, false, true);
         // check parent
-        checkParsedParent(SUMO_TAG_PARKING_AREA_REROUTE, {SUMO_TAG_INTERVAL}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_PARKING_AREA_REROUTE, &vec![SUMO_TAG_INTERVAL], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3317,11 +3328,11 @@ impl AdditionalHandler {
         let routeID: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let probability: f64 = attrs.get_opt::<f64>(SUMO_ATTR_PROB, "", &mut parsedOk, 1.0, true);
         // check attributes
-        if (!checkNegative(SUMO_TAG_ROUTE_PROB_REROUTE, routeID, SUMO_ATTR_PROB, probability, true)) {
+        if (!self.check_negative_2(SUMO_TAG_ROUTE_PROB_REROUTE, &routeID, SUMO_ATTR_PROB, probability, true)) {
             parsedOk = false;
         }
         // check parent
-        checkParsedParent(SUMO_TAG_ROUTE_PROB_REROUTE, {SUMO_TAG_INTERVAL}, parsedOk);
+        self.check_parsed_parent(SUMO_TAG_ROUTE_PROB_REROUTE, &vec![SUMO_TAG_INTERVAL], &mut parsedOk);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3373,7 +3384,7 @@ impl AdditionalHandler {
         let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
         let edge: String = attrs.get::<String>(SUMO_ATTR_EDGE, &id, &mut parsedOk, true);
         let file: String = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut parsedOk, true);
-        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, SUMOTime_MAX_PERIOD, true);
+        let period: SUMOTime = attrs.get_opt_period(&id, &mut parsedOk, sumo_time_max_period(), true);
         let begin: SUMOTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_BEGIN, &id, &mut parsedOk, -1, true);
         // optional attributes
         let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, String::new(), true);
@@ -3660,13 +3671,13 @@ impl AdditionalHandler {
         let color: RGBColor = attrs.get_opt::<RGBColor>(SUMO_ATTR_COLOR, &id, &mut parsedOk, RGBColor::RED, true);
         let geo: bool = attrs.get_opt::<bool>(SUMO_ATTR_GEO, &id, &mut parsedOk, false, true);
         let fill: bool = attrs.get_opt::<bool>(SUMO_ATTR_FILL, &id, &mut parsedOk, false, true);
-        let lineWidth: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LINEWIDTH, &id, &mut parsedOk, Shape::DEFAULT_LINEWIDTH, true);
-        let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, &id, &mut parsedOk, Shape::DEFAULT_LAYER, true);
-        let typeValue: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut parsedOk, Shape::DEFAULT_TYPE, true);
-        let imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, &id, &mut parsedOk, Shape::DEFAULT_IMG_FILE, true);
-        let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, &id, &mut parsedOk, Shape::DEFAULT_ANGLE, true);
-        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, Shape::DEFAULT_NAME, true);
-        let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, &id, &mut parsedOk, Shape::DEFAULT_HEIGHT, true);
+        let lineWidth: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LINEWIDTH, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_LINEWIDTH, true);
+        let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_LAYER, true);
+        let typeValue: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_TYPE.to_string(), true);
+        let imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_IMG_FILE.to_string(), true);
+        let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_ANGLE, true);
+        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_NAME.to_string(), true);
+        let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_HEIGHT, true);
         // continue if flag is ok
         if (parsedOk) {
             // set tag
@@ -3803,14 +3814,14 @@ impl AdditionalHandler {
         let lat: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAT, &id, &mut parsedOk, 0.0, true);
         // optional attributes
         let color: RGBColor = attrs.get_opt::<RGBColor>(SUMO_ATTR_COLOR, &id, &mut parsedOk, RGBColor::RED, true);
-        let typeValue: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, "", &mut parsedOk, Shape::DEFAULT_TYPE, true);
-        let mut icon: String = attrs.get_opt::<String>(SUMO_ATTR_ICON, "", &mut parsedOk, POIIcons.get_string(POIIcon::NONE).unwrap().to_string(), true);
-        let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, &id, &mut parsedOk, Shape::DEFAULT_LAYER_POI, true);
-        let imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, "", &mut parsedOk, Shape::DEFAULT_IMG_FILE, true);
-        let width: f64 = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &id, &mut parsedOk, Shape::DEFAULT_IMG_WIDTH, true);
-        let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, &id, &mut parsedOk, Shape::DEFAULT_IMG_HEIGHT, true);
-        let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, &id, &mut parsedOk, Shape::DEFAULT_ANGLE, true);
-        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, Shape::DEFAULT_NAME, true);
+        let typeValue: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, "", &mut parsedOk, crate::utils::shapes::shape::DEFAULT_TYPE.to_string(), true);
+        let mut icon: String = attrs.get_opt::<String>(SUMO_ATTR_ICON, "", &mut parsedOk, POIIcons.get_string(POIIcon::NONE).to_string(), true);
+        let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_LAYER_POI, true);
+        let imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, "", &mut parsedOk, crate::utils::shapes::shape::DEFAULT_IMG_FILE.to_string(), true);
+        let width: f64 = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_IMG_WIDTH, true);
+        let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_IMG_HEIGHT, true);
+        let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_ANGLE, true);
+        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut parsedOk, crate::utils::shapes::shape::DEFAULT_NAME.to_string(), true);
         // check icon
         if (!POIIcons.has_string(&icon)) {
             utils::common::msg_handler::write_warning(&utils::tlf!("Invalid icon % for POI '%', using default", icon, id));
