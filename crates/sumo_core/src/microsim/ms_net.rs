@@ -17,7 +17,7 @@ thread_local! {
 
 // C++ static const std::string members of MSNet
 const STAGE_EVENTS: &str = "events";
-const STAGE_MOVEMENTS: &str = "move";
+pub(crate) const STAGE_MOVEMENTS: &str = "move";
 const STAGE_LANECHANGE: &str = "laneChange";
 const STAGE_INSERTIONS: &str = "insertion";
 const STAGE_REMOTECONTROL: &str = "remoteControl";

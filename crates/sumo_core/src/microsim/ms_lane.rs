@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+use crate::microsim::ms_net::STAGE_MOVEMENTS;
 
 /// C++ enum `MSLane::CollisionAction`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -3919,7 +3920,7 @@ impl MSLane {
                 }
                 let leader = self.next_blocking(back, right, right + v.get_vehicle_type().get_width(), 0., false);
                 if !leader.0.is_null() && leader.1 < length && !leader.0.is_jammed() {
-                    if v.get_vehicle_type().get_gui_shape() == SUMOVehicleShape::AIRCRAFT {
+                    if v.get_vehicle_type().get_gui_shape() == SUMOVehicleShape::Aircraft {
                         // aircraft wings and body are above walking level
                         continue;
                     }
