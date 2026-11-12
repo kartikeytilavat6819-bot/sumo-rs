@@ -1514,6 +1514,7 @@ impl MESegment {
 
 /// edge type specific meso parameters
 /// C++ class `MESegment::MesoEdgeType` (mesosim/MESegment.h)
+#[derive(Clone, Copy)]
 pub struct MESegment_MesoEdgeType {
     pub tauff: SUMOTime,
     pub taufj: SUMOTime,

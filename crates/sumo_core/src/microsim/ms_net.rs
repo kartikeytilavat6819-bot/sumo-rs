@@ -7,6 +7,7 @@ use utils::common::to_string::f64_to_string_default;
 use utils::geom::POSITION_EPS;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
+use utils::common::msg_handler::write_message;
 
 thread_local! {
     static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
@@ -476,7 +477,7 @@ impl MSNet {
             myDynamicShapeUpdater: None,
         });
         MY_INSTANCE.with(|c| c.set(Ptr::from_box(&net)));
-        net.init_static();
+        MSNet::init_static();
         net
     }
 
@@ -1677,9 +1678,10 @@ impl MSNet {
         if hasPersonOutput {
             let od = device_by_option("person-summary-output");
             let mut od = od.borrow_mut();
+            let step_time = time2string(self.myStep);
             let pc = self.get_person_control();
             od.open_tag("step");
-            od.write_attr("time", &time2string(self.myStep));
+            od.write_attr("time", &step_time);
             od.write_attr("loaded", &pc.get_loaded_number());
             od.write_attr("inserted", &pc.get_departed_number());
             od.write_attr("walking", &pc.get_moving_number());
@@ -3127,7 +3129,8 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
         // shortcut: DijkstraRouter/AStarRouter/CCHRouter cannot be created yet (SUMOAbstractRouter_Operation and the lookup tables are Unmapped), so a router is only returned if one was already created
-        let me = Ptr::new(self).m();
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
         match me.myRouterTT.get(&rngIndex).copied() {
             Some(router) => {
                 router.m().prohibit(prohibited);
@@ -3152,7 +3155,8 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
         // shortcut: DijkstraRouter cannot be created yet (SUMOAbstractRouter_Operation is Unmapped), so a router is only returned if one was already created
-        let me = Ptr::new(self).m();
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
         match me.myRouterEffort.get(&rngIndex).copied() {
             Some(router) => {
                 router.m().prohibit(prohibited);
@@ -3175,9 +3179,10 @@ impl MSNet {
     //     return *myPedestrianRouter[rngIndex];
     // }
     #[allow(unused_variables)]
-    pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSPedestrianRouter {
+    pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
         // shortcut: PedestrianRouter::new is not ported yet, so a router is only returned if one was already created
-        let me = Ptr::new(self).m();
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
         match me.myPedestrianRouter.get(&rngIndex).copied() {
             Some(router) => {
                 router.m().prohibit(prohibited);
@@ -3212,7 +3217,8 @@ impl MSNet {
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
         // shortcut: IntermodalRouter::new (routing callback and effort calculator are Unmapped), so a router is only returned if one was already created
         let key = rngIndex * get_int("thread-rngs") + routingMode;
-        let me = Ptr::new(self).m();
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
         match me.myIntermodalRouter.get(&key).copied() {
             Some(router) => {
                 router.m().prohibit(prohibited);
@@ -3233,7 +3239,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn reset_intermodal_router(&self) {
-        let me = Ptr::new(self).m();
+        let me_ptr = Ptr::new(self);
+        let me = me_ptr.m();
         for (_, router) in std::mem::take(&mut me.myIntermodalRouter) {
             delete_ptr(router);
         }
@@ -3460,7 +3467,7 @@ impl MSNet {
     pub fn check_elevation(&mut self) -> bool {
         for e in self.myEdges.get_edges().iter() {
             for lane in e.get_lanes().iter() {
-                if lane.get_shape().has_elevation() {
+                if lane.get_shape_2().has_elevation() {
                     return true;
                 }
             }
