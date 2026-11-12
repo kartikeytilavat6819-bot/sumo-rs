@@ -79,7 +79,7 @@ impl MSSOTLTrafficLightLogic {
     }
 
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters);
         let mut this = Self::with_base(base, Ptr::null(), true);
         this.check_phases();
@@ -108,7 +108,7 @@ impl MSSOTLTrafficLightLogic {
     //     setToATargetPhase();
     // }
     #[allow(unused_variables)]
-    pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */, sensors: Ptr<MSSOTLSensors>) -> Self {
+    pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, sensors: Ptr<MSSOTLSensors>) -> Self {
         let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters);
         let mut this = Self::with_base(base, sensors, false);
         this.check_phases();

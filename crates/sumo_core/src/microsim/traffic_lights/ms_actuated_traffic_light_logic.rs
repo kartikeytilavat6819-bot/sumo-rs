@@ -185,7 +185,7 @@ impl MSActuatedTrafficLightLogic {
     /// Constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &Unmapped /* Parameterised::Map */, basePath: &str, conditions: &MSActuatedTrafficLightLogic_ConditionMap, assignments: &MSActuatedTrafficLightLogic_AssignmentMap, functions: &MSActuatedTrafficLightLogic_FunctionMap) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &ParameterisedMap, basePath: &str, conditions: &MSActuatedTrafficLightLogic_ConditionMap, assignments: &MSActuatedTrafficLightLogic_AssignmentMap, functions: &MSActuatedTrafficLightLogic_FunctionMap) -> Self {
         let mut this = MSActuatedTrafficLightLogic {
             base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::ACTUATED, phases, step, delay, parameter),
             myInductLoopsForPhase: Vec::new(),

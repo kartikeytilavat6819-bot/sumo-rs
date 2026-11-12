@@ -240,7 +240,7 @@ impl MSRailSignal {
     //     mySwitchCommand->deschedule(this);
     // }
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         todo!("port MSRailSignal::MSRailSignal")
     }
 

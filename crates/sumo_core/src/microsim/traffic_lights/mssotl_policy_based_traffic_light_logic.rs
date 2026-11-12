@@ -68,9 +68,7 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, policy: Ptr<MSSOTLPolicy>) -> Self {
-        // shortcut: MSSOTLTrafficLightLogic::new still takes Unmapped parameters, so the map is copied into base2 after construction; upgrade when mssotl_traffic_light_logic.rs maps Parameterised::Map.
-        let mut base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, &());
-        base.base.base.base2 = Parameterised::from_map(parameters.clone());
+        let mut base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, parameters);
         let res = MSSOTLPolicyBasedTrafficLightLogic { base, myPolicy: policy };
         write_message(&format!("*** Intersection {} will run using MSSOTL{}TrafficLightLogic ***", id, policy.m().get_name()));
         res
@@ -88,9 +86,7 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, policy: Ptr<MSSOTLPolicy>, sensors: Ptr<MSSOTLSensors>) -> Self {
-        // shortcut: same as the constructor above, the base still takes Unmapped parameters; upgrade when mssotl_traffic_light_logic.rs maps Parameterised::Map.
-        let mut base = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, &(), sensors);
-        base.base.base.base2 = Parameterised::from_map(parameters.clone());
+        let mut base = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, parameters, sensors);
         MSSOTLPolicyBasedTrafficLightLogic { base, myPolicy: policy }
     }
 

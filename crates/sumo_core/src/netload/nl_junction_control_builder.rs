@@ -1,12 +1,13 @@
 //! Port of netload/NLJunctionControlBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 
 /// C++ typedef `std::vector<MSLane *> NLJunctionControlBuilder::LaneVector`
 pub type NLJunctionControlBuilder_LaneVector = Vec<Ptr<MSLane>>;
 
 /// C++ typedef `Parameterised::Map NLJunctionControlBuilder::StringParameterMap`
-pub type NLJunctionControlBuilder_StringParameterMap = Unmapped /* Parameterised::Map */;
+pub type NLJunctionControlBuilder_StringParameterMap = ParameterisedMap;
 
 /// Builder of microsim-junctions and tls
 /// C++ class `NLJunctionControlBuilder` (netload/NLJunctionControlBuilder.h)
@@ -20,11 +21,11 @@ pub struct NLJunctionControlBuilder {
     /// The current logic type
     pub myLogicType: TrafficLightType,
     /// The right-of-way-logic of the currently chosen bitset-logic
-    pub myActiveLogic: MSBitSetLogic_Logic,
+    pub myActiveLogic: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
     /// The description about which lanes disallow other passing the junction simultaneously
-    pub myActiveFoes: MSBitSetLogic_Foes,
+    pub myActiveFoes: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
     /// The description about which lanes have an internal follower
-    pub myActiveConts: Unmapped /* std::bitset<256> */,
+    pub myActiveConts: [bool; SUMO_MAX_CONNECTIONS],
     /// The current phase definitions for a simple traffic light
     pub myActivePhases: MSTrafficLightLogic_Phases,
     /// The current switching conditions for an actuated traffic light
@@ -42,9 +43,9 @@ pub struct NLJunctionControlBuilder {
     /// The junctions controls
     pub myJunctions: Ptr<MSJunctionControl>,
     /// The list of the incoming lanes of the currently chosen junction
-    pub myActiveIncomingLanes: LaneVector,
+    pub myActiveIncomingLanes: NLJunctionControlBuilder_LaneVector,
     /// The list of the internal lanes of the currently chosen junction
-    pub myActiveInternalLanes: LaneVector,
+    pub myActiveInternalLanes: NLJunctionControlBuilder_LaneVector,
     /// The id of the currently chosen junction
     pub myActiveID: String,
     /// The key of the currently chosen junction
@@ -78,6 +79,36 @@ pub struct NLJunctionControlBuilder {
 
 // C++ static members of NLJunctionControlBuilder (port as module-level statics, see AGENTS.md):
 //   static const int NLJunctionControlBuilder::NO_REQUEST_SIZE;
+const NO_REQUEST_SIZE: i32 = -1;
+
+/// C++ `throw InvalidArgument(msg)`: the void signatures in this file unwind with the ProcessError (as other ported callers expect).
+fn throw_invalid_argument(msg: String) -> ! {
+    std::panic::panic_any(ProcessError::InvalidArgument(msg))
+}
+
+/// C++ `new T(...)` for objects the simulation owns for its whole lifetime (the C++ code never deletes them).
+fn leak_box<T>(v: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(v)))
+}
+
+/// C++ `std::bitset<SUMO_MAX_CONNECTIONS>(str)`: the rightmost character is bit 0, missing bits are 0.
+fn bitset_from_str(s: &str) -> [bool; SUMO_MAX_CONNECTIONS] {
+    let mut bits = [false; SUMO_MAX_CONNECTIONS];
+    for (i, c) in s.chars().rev().take(SUMO_MAX_CONNECTIONS).enumerate() {
+        match c {
+            '0' => {}
+            '1' => bits[i] = true,
+            // std::invalid_argument in C++
+            _ => panic!("bitset_from_str: invalid character in a junction logic string"),
+        }
+    }
+    bits
+}
+
+/// C++ `new MSBitsetLogic(nLinks, logic, foes, conts)` as an MSJunctionLogic pointer.
+fn new_bitset_logic(nLinks: i32, logic: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, foes: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, conts: [bool; SUMO_MAX_CONNECTIONS]) -> Ptr<MSJunctionLogic> {
+    leak_box(MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(nLinks, logic, foes, conts)).cast::<MSJunctionLogic>()
+}
 
 impl NLJunctionControlBuilder {
     /// C++: `void NLJunctionControlBuilder::NLJunctionControlBuilder(MSNet &, NLDetectorBuilder &)`
@@ -92,7 +123,44 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet, db: &mut NLDetectorBuilder) -> Self {
-        todo!("port NLJunctionControlBuilder::NLJunctionControlBuilder")
+        let mut b = Self {
+            myNet: Ptr::from_mut(net),
+            myDetectorBuilder: Ptr::from_mut(db),
+            myOffset: 0,
+            // C++ leaves the remaining members uninitialised until the first junction is opened
+            myLogicType: TrafficLightType::INVALID,
+            myActiveLogic: Vec::new(),
+            myActiveFoes: Vec::new(),
+            myActiveConts: [false; SUMO_MAX_CONNECTIONS],
+            myActivePhases: Vec::new(),
+            myActiveConditions: ParameterisedMap::new(),
+            myActiveAssignments: Vec::new(),
+            myActiveFunctions: BTreeMap::new(),
+            myActiveFunction: MSActuatedTrafficLightLogic_Function { id: String::new(), nArgs: 0, assignments: Vec::new() },
+            myRequestSize: NO_REQUEST_SIZE,
+            myRequestItemNumber: 0,
+            myJunctions: leak_box(MSJunctionControl::new()),
+            myActiveIncomingLanes: Vec::new(),
+            myActiveInternalLanes: Vec::new(),
+            myActiveID: String::new(),
+            myActiveKey: String::new(),
+            myActiveProgram: String::new(),
+            myType: SumoXMLNodeType::UNKNOWN,
+            myPosition: Position::default(),
+            myAbsDuration: 0,
+            myShape: PositionVector::default(),
+            myActiveName: String::new(),
+            myNetworkLogics: Vec::new(),
+            myAdditionalLogics: Vec::new(),
+            myRailSignals: Vec::new(),
+            myLogicParams: BTreeMap::new(),
+            myLogicControl: Ptr::null(),
+            myAdditionalParameter: ParameterisedMap::new(),
+            myCurrentHasError: false,
+            myNetIsLoaded: false,
+        };
+        b.myLogicControl = leak_box(MSTLLogicControl::new());
+        b
     }
 
     /// C++: `void NLJunctionControlBuilder::~NLJunctionControlBuilder() noexcept` [virtual]
@@ -103,7 +171,18 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLJunctionControlBuilder::~NLJunctionControlBuilder")
+        // delete myLogicControl
+        if !self.myLogicControl.is_null() {
+            let lc = self.myLogicControl;
+            lc.m().drop_();
+            drop(unsafe { Box::from_raw(lc.as_raw()) });
+        }
+        // delete myJunctions
+        if !self.myJunctions.is_null() {
+            let jc = self.myJunctions;
+            jc.m().drop_();
+            drop(unsafe { Box::from_raw(jc.as_raw()) });
+        }
     }
 
     /// C++: `void NLJunctionControlBuilder::openJunction(const std::string &, const std::string &, const SumoXMLNodeType, const Position, const PositionVector &, const std::vector<MSLane *> &, const std::vector<MSLane *> &, const std::string &)`
@@ -129,7 +208,15 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn open_junction(&mut self, id: &str, key: &str, type_: SumoXMLNodeType, pos: Position, shape: &PositionVector, incomingLanes: &Vec<Ptr<MSLane>>, internalLanes: &Vec<Ptr<MSLane>>, name: &str) {
-        todo!("port NLJunctionControlBuilder::openJunction")
+        self.myActiveInternalLanes = internalLanes.clone();
+        self.myActiveIncomingLanes = incomingLanes.clone();
+        self.myActiveID = id.to_string();
+        self.myActiveKey = key.to_string();
+        self.myType = type_;
+        self.myPosition = pos;
+        self.myShape = shape.clone();
+        self.myActiveName = name.to_string();
+        self.myAdditionalParameter.clear();
     }
 
     /// C++: `void NLJunctionControlBuilder::closeJunction(const std::string &)`
@@ -198,7 +285,70 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn close_junction(&mut self, basePath: &str) {
-        todo!("port NLJunctionControlBuilder::closeJunction")
+        if self.myCurrentHasError {
+            // had an error before...
+            return;
+        }
+        if self.myRequestSize != NO_REQUEST_SIZE && self.myRequestItemNumber != self.myRequestSize {
+            throw_invalid_argument(format!("The description for the junction logic '{}' is malicious.", self.myActiveKey));
+        }
+        if self.myJunctions.is_null() {
+            std::panic::panic_any(ProcessError::new("Information about the number of nodes was missing."));
+        }
+        let mut junction: Ptr<MSJunction> = Ptr::null();
+        match self.myType {
+            SumoXMLNodeType::NOJUNCTION | SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED | SumoXMLNodeType::DISTRICT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION => {
+                if !self.myActiveLogic.is_empty() {
+                    utils::common::msg_handler::write_warning(&format!("Ignoring junction logic for junction '{}'.", self.myActiveID));
+                }
+                junction = self.build_no_logic_junction();
+            }
+            SumoXMLNodeType::TRAFFIC_LIGHT
+            | SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
+            | SumoXMLNodeType::RIGHT_BEFORE_LEFT
+            | SumoXMLNodeType::LEFT_BEFORE_RIGHT
+            | SumoXMLNodeType::PRIORITY
+            | SumoXMLNodeType::PRIORITY_STOP
+            | SumoXMLNodeType::ALLWAY_STOP
+            | SumoXMLNodeType::ZIPPER => {
+                let logic = new_bitset_logic(self.myRequestSize, &self.myActiveLogic, &self.myActiveFoes, self.myActiveConts);
+                junction = self.build_logic_junction(logic);
+            }
+            SumoXMLNodeType::INTERNAL => {
+                if crate::microsim::ms_globals::using_internal_lanes() {
+                    if !self.myActiveLogic.is_empty() {
+                        utils::common::msg_handler::write_warning(&format!("Ignoring junction logic for junction '{}'.", self.myActiveID));
+                    }
+                    junction = self.build_internal_junction();
+                }
+            }
+            SumoXMLNodeType::RAIL_SIGNAL | SumoXMLNodeType::RAIL_CROSSING => {
+                self.myOffset = 0;
+                self.myActiveKey = self.myActiveID.clone();
+                self.myActiveProgram = "0".to_string();
+                self.myLogicType = if matches!(self.myType, SumoXMLNodeType::RAIL_SIGNAL) { TrafficLightType::RAIL_SIGNAL } else { TrafficLightType::RAIL_CROSSING };
+                self.close_traffic_light_logic(basePath);
+                let logic = new_bitset_logic(self.myRequestSize, &self.myActiveLogic, &self.myActiveFoes, self.myActiveConts);
+                junction = self.build_logic_junction(logic);
+            }
+            _ => throw_invalid_argument("False junction logic type.".to_string()),
+        }
+        if !junction.is_null() {
+            let added = {
+                let jc = self.myJunctions.m();
+                if jc.contains_key(&self.myActiveID) {
+                    false
+                } else {
+                    jc.insert(self.myActiveID.clone(), junction);
+                    true
+                }
+            };
+            if !added {
+                // shortcut: C++ `delete junction` on a duplicate id is skipped, the concrete junction type is not known here to free it
+                throw_invalid_argument(format!("Another junction with the id '{}' exists.", self.myActiveID));
+            }
+            junction.m().base2.update_parameters(&self.myAdditionalParameter);
+        }
     }
 
     /// C++: `MSJunctionControl * NLJunctionControlBuilder::build() const` [const]
@@ -210,8 +360,11 @@ impl NLJunctionControlBuilder {
     //     return js;
     // }
     #[allow(unused_variables)]
-    pub fn build(&self) -> Ptr<MSJunctionControl> {
-        todo!("port NLJunctionControlBuilder::build")
+    pub fn build(&mut self) -> Ptr<MSJunctionControl> {
+        // C++ is const but clears myJunctions, which needs &mut self here
+        let js = self.myJunctions;
+        self.myJunctions = Ptr::null();
+        js
     }
 
     /// C++: `void NLJunctionControlBuilder::initJunctionLogic(const std::string &)`
@@ -229,7 +382,14 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn init_junction_logic(&mut self, id: &str) {
-        todo!("port NLJunctionControlBuilder::initJunctionLogic")
+        self.myActiveKey = id.to_string();
+        self.myActiveProgram = String::new();
+        self.myActiveLogic.clear();
+        self.myActiveFoes.clear();
+        self.myActiveConts = [false; SUMO_MAX_CONNECTIONS];
+        self.myRequestSize = NO_REQUEST_SIZE; // seems not to be used
+        self.myRequestItemNumber = 0;
+        self.myCurrentHasError = false;
     }
 
     /// C++: `void NLJunctionControlBuilder::addLogicItem(int, const std::string &, const std::string &, bool)`
@@ -276,7 +436,38 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_logic_item(&mut self, request: i32, response: &str, foes: &str, cont: bool) {
-        todo!("port NLJunctionControlBuilder::addLogicItem")
+        if self.myCurrentHasError {
+            // had an error
+            return;
+        }
+        if request >= SUMO_MAX_CONNECTIONS as i32 {
+            // bad request
+            self.myCurrentHasError = true;
+            throw_invalid_argument(format!("Junction logic '{}' is larger than allowed; recheck the network.", self.myActiveKey));
+        }
+        if self.myRequestSize == NO_REQUEST_SIZE {
+            // initialize
+            self.myRequestSize = response.len() as i32;
+        }
+        if response.len() as i32 != self.myRequestSize {
+            self.myCurrentHasError = true;
+            throw_invalid_argument(format!("Invalid response size {} in Junction logic '{}' (expected  {})", response.len(), self.myActiveKey, self.myRequestSize));
+        }
+        if foes.len() as i32 != self.myRequestSize {
+            self.myCurrentHasError = true;
+            throw_invalid_argument(format!("Invalid foes size {} in Junction logic '{}' (expected  {})", foes.len(), self.myActiveKey, self.myRequestSize));
+        }
+        // assert that the logicitems come ordered by their request index
+        debug_assert_eq!(self.myActiveLogic.len() as i32, request);
+        debug_assert_eq!(self.myActiveFoes.len() as i32, request);
+        // add the read response for the given request index
+        self.myActiveLogic.push(bitset_from_str(response));
+        // add the read junction-internal foes for the given request index
+        self.myActiveFoes.push(bitset_from_str(foes));
+        // add whether the vehicle may drive a little bit further
+        self.myActiveConts[request as usize] = cont;
+        // increse number of set information
+        self.myRequestItemNumber += 1;
     }
 
     /// C++: `void NLJunctionControlBuilder::initTrafficLightLogic(const std::string &, const std::string &, TrafficLightType, SUMOTime)`
@@ -298,7 +489,17 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn init_traffic_light_logic(&mut self, id: &str, programID: &str, type_: TrafficLightType, offset: SUMOTime) {
-        todo!("port NLJunctionControlBuilder::initTrafficLightLogic")
+        self.myActiveKey = id.to_string();
+        self.myActiveProgram = programID.to_string();
+        self.myActivePhases.clear();
+        self.myActiveConditions.clear();
+        self.myActiveAssignments.clear();
+        self.myActiveFunctions.clear();
+        self.myAbsDuration = 0;
+        self.myRequestSize = NO_REQUEST_SIZE;
+        self.myLogicType = type_;
+        self.myOffset = offset;
+        self.myAdditionalParameter.clear();
     }
 
     /// C++: `void NLJunctionControlBuilder::addPhase(MSPhaseDefinition *)`
@@ -312,7 +513,10 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_phase(&mut self, phase: Ptr<MSPhaseDefinition>) {
-        todo!("port NLJunctionControlBuilder::addPhase")
+        // build and add the phase definition to the list
+        self.myActivePhases.push(phase);
+        // add phase duration to the absolute duration
+        self.myAbsDuration += phase.duration;
     }
 
     /// C++: `bool NLJunctionControlBuilder::addCondition(const std::string &, const std::string &)`
@@ -328,7 +532,12 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_condition(&mut self, id: &str, value: &str) -> bool {
-        todo!("port NLJunctionControlBuilder::addCondition")
+        if !self.myActiveConditions.contains_key(id) {
+            self.myActiveConditions.insert(id.to_string(), value.to_string());
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void NLJunctionControlBuilder::addAssignment(const std::string &, const std::string &, const std::string &)`
@@ -343,7 +552,11 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_assignment(&mut self, id: &str, check: &str, value: &str) {
-        todo!("port NLJunctionControlBuilder::addAssignment")
+        if self.myActiveFunction.id == "" {
+            self.myActiveAssignments.push((id.to_string(), check.to_string(), value.to_string()));
+        } else {
+            self.myActiveFunction.assignments.push((id.to_string(), check.to_string(), value.to_string()));
+        }
     }
 
     /// C++: `void NLJunctionControlBuilder::addFunction(const std::string &, int)`
@@ -355,7 +568,8 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_function(&mut self, id: &str, nArgs: i32) {
-        todo!("port NLJunctionControlBuilder::addFunction")
+        self.myActiveFunction.id = id.to_string();
+        self.myActiveFunction.nArgs = nArgs;
     }
 
     /// C++: `void NLJunctionControlBuilder::closeFunction()`
@@ -368,7 +582,9 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn close_function(&mut self) {
-        todo!("port NLJunctionControlBuilder::closeFunction")
+        self.myActiveFunctions.insert(self.myActiveFunction.id.clone(), self.myActiveFunction.clone());
+        self.myActiveFunction.id = String::new();
+        self.myActiveFunction.assignments.clear();
     }
 
     /// C++: `MSTLLogicControl::TLSLogicVariants & NLJunctionControlBuilder::getTLLogic(const std::string &) const` [const]
@@ -379,7 +595,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn get_tl_logic(&self, id: &str) -> &mut MSTLLogicControl_TLSLogicVariants {
-        todo!("port NLJunctionControlBuilder::getTLLogic")
+        self.get_tl_logic_control_to_use().get(id)
     }
 
     /// C++: `MSTLLogicControl * NLJunctionControlBuilder::buildTLLogics()`
@@ -399,7 +615,16 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_tl_logics(&mut self) -> Ptr<MSTLLogicControl> {
-        todo!("port NLJunctionControlBuilder::buildTLLogics")
+        if !self.myLogicControl.m().close_network_reading() {
+            std::panic::panic_any(ProcessError::new("Traffic lights could not be built."));
+        }
+        for logic in self.myRailSignals.iter() {
+            logic.m().init(self.myDetectorBuilder.m());
+        }
+        let ret = self.myLogicControl;
+        self.myNetIsLoaded = true;
+        self.myLogicControl = Ptr::null();
+        ret
     }
 
     /// C++: `void NLJunctionControlBuilder::closeTrafficLightLogic(const std::string &)` [virtual]
@@ -557,7 +782,195 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn close_traffic_light_logic(&mut self, basePath: &str) {
-        todo!("port NLJunctionControlBuilder::closeTrafficLightLogic")
+        if self.myActiveProgram == "off" {
+            if self.myAbsDuration > 0 {
+                throw_invalid_argument(format!("The off program for TLS '{}' has phases.", self.myActiveKey));
+            }
+            let off = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey)).cast::<MSTrafficLightLogic>();
+            if !self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, off, false) {
+                throw_invalid_argument(format!("Another logic with id '{}' and programID '{}' exists.", self.myActiveKey, self.myActiveProgram));
+            }
+            return;
+        }
+        let mut firstEventOffset: SUMOTime = 0;
+        let mut step: i32 = 0;
+        // C++ iterator `i` over myActivePhases; it moves to the existing logic's phases below
+        let mut phaseSrc: Ptr<MSTrafficLightLogic_Phases> = Ptr::from_mut(&mut self.myActivePhases);
+        let mut i: usize = 0;
+        let existing: Ptr<MSTrafficLightLogic> = self.get_tl_logic_control_to_use().get_2(&self.myActiveKey, &self.myActiveProgram);
+        let now = self.myNet.get_current_time_step();
+        if !existing.is_null() && matches!(existing.get_logic_type(), TrafficLightType::RAIL_SIGNAL | TrafficLightType::RAIL_CROSSING) {
+            existing.m().base2.update_parameters(&self.myAdditionalParameter);
+            return;
+        }
+        if !matches!(self.myLogicType, TrafficLightType::RAIL_SIGNAL | TrafficLightType::RAIL_CROSSING) {
+            if self.myAbsDuration == 0 {
+                if existing.is_null() {
+                    throw_invalid_argument(format!("TLS program '{}' for TLS '{}' has a duration of 0.", self.myActiveProgram, self.myActiveKey));
+                } else {
+                    // only modify the offset of an existing logic
+                    self.myAbsDuration = existing.get_default_cycle_time();
+                    phaseSrc = Ptr::new(existing.get_phases());
+                    i = 0;
+                }
+            } else if !existing.is_null() {
+                throw_invalid_argument(format!("Another logic with id '{}' and programID '{}' exists.", self.myActiveKey, self.myActiveProgram));
+            }
+            // compute the initial step and first switch time of the tls-logic
+            // a positive offset delays all phases by x (advance by absDuration - x) while a negative offset advances all phases by x seconds
+            // @note The implementation of % for negative values is implementation defined in ISO1998
+            let mut offset: SUMOTime; // the time to run the traffic light in advance
+            if self.myOffset >= 0 {
+                offset = (now + self.myAbsDuration - (self.myOffset % self.myAbsDuration)) % self.myAbsDuration;
+            } else {
+                offset = (now + ((-self.myOffset) % self.myAbsDuration)) % self.myAbsDuration;
+            }
+            let phases = phaseSrc.m();
+            while offset >= phases[i].duration {
+                step += 1;
+                offset -= phases[i].duration;
+                i += 1;
+            }
+            firstEventOffset = phases[i].duration - offset + now;
+            if !existing.is_null() {
+                existing.m().change_step_and_duration(self.get_tl_logic_control_to_use(), now, step, phases[i].duration - offset);
+                // parameters that are used when initializing a logic will not take
+                // effect but parameters that are checked at runtime can be used
+                // here (i.e. device.glosa.range)
+                self.myLogicParams.insert(existing, self.myAdditionalParameter.clone());
+                // MESegment::OVERRIDE_TLS_PENALTIES
+                const OVERRIDE_TLS_PENALTIES: &str = "meso.tls.control";
+                if self.myAdditionalParameter.contains_key(OVERRIDE_TLS_PENALTIES) {
+                    // value must be available when calling setMesoTypes and before setting the rest in postLoadInitialization
+                    let v = self.myAdditionalParameter[OVERRIDE_TLS_PENALTIES].clone();
+                    existing.m().base2.set_parameter(OVERRIDE_TLS_PENALTIES, &v);
+                }
+                return;
+            }
+        }
+
+        if self.myActiveProgram == "" {
+            self.myActiveProgram = "default".to_string();
+        }
+        let mut tlLogic: Ptr<MSTrafficLightLogic> = Ptr::null();
+        // build the tls-logic in dependence to its type
+        match self.myLogicType {
+            TrafficLightType::SWARM_BASED => {
+                firstEventOffset = utils::common::time::delta_t(); // this is needed because swarm needs to update the pheromone on the lanes at every step
+                tlLogic = leak_box(MSSwarmTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::HILVL_DETERMINISTIC => {
+                tlLogic = leak_box(MSDeterministicHiLevelTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::SOTL_REQUEST => {
+                let policy = leak_box(MSSOTLRequestPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
+                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::SOTL_PLATOON => {
+                let policy = leak_box(MSSOTLPlatoonPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
+                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::SOTL_WAVE => {
+                tlLogic = leak_box(MSSOTLWaveTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::SOTL_PHASE => {
+                let policy = leak_box(MSSOTLPhasePolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
+                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::SOTL_MARCHING => {
+                let policy = leak_box(MSSOTLMarchingPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
+                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::ACTUATED => {
+                // @note it is unclear how to apply the given offset in the context
+                // of variable-length phases
+                tlLogic = leak_box(MSActuatedTrafficLightLogic::new(
+                    self.get_tl_logic_control_to_use(),
+                    &self.myActiveKey,
+                    &self.myActiveProgram,
+                    self.myOffset,
+                    &self.myActivePhases,
+                    step,
+                    phaseSrc.m()[i].minDuration + now,
+                    &self.myAdditionalParameter,
+                    basePath,
+                    &self.myActiveConditions,
+                    &self.myActiveAssignments,
+                    &self.myActiveFunctions,
+                ))
+                .cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::NEMA => {
+                tlLogic = leak_box(NEMALogic::new(
+                    self.get_tl_logic_control_to_use(),
+                    &self.myActiveKey,
+                    &self.myActiveProgram,
+                    self.myOffset,
+                    &self.myActivePhases,
+                    step,
+                    phaseSrc.m()[i].minDuration + now,
+                    &self.myAdditionalParameter,
+                    basePath,
+                ))
+                .cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::DELAYBASED => {
+                tlLogic = leak_box(MSDelayBasedTrafficLightLogic::new(
+                    self.get_tl_logic_control_to_use(),
+                    &self.myActiveKey,
+                    &self.myActiveProgram,
+                    self.myOffset,
+                    &self.myActivePhases,
+                    step,
+                    phaseSrc.m()[i].minDuration + now,
+                    &self.myAdditionalParameter,
+                    basePath,
+                ))
+                .cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::STATIC => {
+                tlLogic = leak_box(MSSimpleTrafficLightLogic::new(
+                    self.get_tl_logic_control_to_use(),
+                    &self.myActiveKey,
+                    &self.myActiveProgram,
+                    self.myOffset,
+                    TrafficLightType::STATIC,
+                    &self.myActivePhases,
+                    step,
+                    firstEventOffset,
+                    &self.myAdditionalParameter,
+                ))
+                .cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::RAIL_SIGNAL => {
+                tlLogic = leak_box(MSRailSignal::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::RAIL_CROSSING => {
+                tlLogic = leak_box(MSRailCrossing::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::OFF => {
+                tlLogic = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey)).cast::<MSTrafficLightLogic>();
+            }
+            TrafficLightType::INVALID => {
+                std::panic::panic_any(ProcessError::new(format!("Invalid traffic light type '{}'", TrafficLightTypes.get_string(self.myLogicType))));
+            }
+        }
+        self.myActivePhases.clear();
+        if !tlLogic.is_null() {
+            if self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, tlLogic, false) {
+                if self.myNetIsLoaded {
+                    self.myAdditionalLogics.push(tlLogic);
+                } else if matches!(self.myLogicType, TrafficLightType::RAIL_SIGNAL) {
+                    // special case: intialize earlier because signals are already used when
+                    // loading train routes in additional files
+                    self.myRailSignals.push(tlLogic);
+                } else {
+                    self.myNetworkLogics.push(tlLogic);
+                }
+            } else {
+                utils::common::msg_handler::write_error(&format!("Another logic with id '{}' and programID '{}' exists.", self.myActiveKey, self.myActiveProgram));
+            }
+        }
     }
 
     /// C++: `void NLJunctionControlBuilder::addParam(const std::string &, const std::string &)`
@@ -569,7 +982,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_param(&mut self, key: &str, value: &str) {
-        todo!("port NLJunctionControlBuilder::addParam")
+        self.myAdditionalParameter.insert(key.to_string(), value.to_string());
     }
 
     /// C++: `const std::string & NLJunctionControlBuilder::getActiveKey() const` [const]
@@ -580,7 +993,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn get_active_key(&self) -> &str {
-        todo!("port NLJunctionControlBuilder::getActiveKey")
+        &self.myActiveKey
     }
 
     /// C++: `const std::string & NLJunctionControlBuilder::getActiveSubKey() const` [const]
@@ -591,7 +1004,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn get_active_sub_key(&self) -> &str {
-        todo!("port NLJunctionControlBuilder::getActiveSubKey")
+        &self.myActiveProgram
     }
 
     /// C++: `MSTLLogicControl & NLJunctionControlBuilder::getTLLogicControlToUse() const` [const]
@@ -605,7 +1018,10 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn get_tl_logic_control_to_use(&self) -> &mut MSTLLogicControl {
-        todo!("port NLJunctionControlBuilder::getTLLogicControlToUse")
+        if !self.myLogicControl.is_null() {
+            return self.myLogicControl.m();
+        }
+        self.myNet.m().get_tls_control()
     }
 
     /// C++: `void NLJunctionControlBuilder::postLoadInitialization()`
@@ -625,7 +1041,16 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn post_load_initialization(&mut self) {
-        todo!("port NLJunctionControlBuilder::postLoadInitialization")
+        for logic in self.myNetworkLogics.iter() {
+            logic.m().init(self.myDetectorBuilder.m());
+        }
+        for logic in self.myAdditionalLogics.iter() {
+            logic.m().init(self.myDetectorBuilder.m());
+        }
+        // delay parameter loading until initialization
+        for (logic, params) in self.myLogicParams.iter() {
+            logic.m().base2.update_parameters(params);
+        }
     }
 
     /// C++: `MSJunction * NLJunctionControlBuilder::retrieve(const std::string)`
@@ -640,7 +1065,12 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn retrieve(&mut self, id: String) -> Ptr<MSJunction> {
-        todo!("port NLJunctionControlBuilder::retrieve")
+        if !self.myJunctions.is_null() {
+            // MSJunctionControl::get: the null pointer when the id is unknown
+            self.myJunctions.m().get(&id).copied().unwrap_or(Ptr::null())
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `const MSSimpleTrafficLightLogic::Phases & NLJunctionControlBuilder::getLoadedPhases() const` [const]
@@ -650,7 +1080,7 @@ impl NLJunctionControlBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_loaded_phases(&self) -> &MSTrafficLightLogic_Phases {
-        todo!("port NLJunctionControlBuilder::getLoadedPhases")
+        &self.myActivePhases
     }
 
     /// C++: `void NLJunctionControlBuilder::netIsLoaded()`
@@ -659,7 +1089,7 @@ impl NLJunctionControlBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn net_is_loaded(&mut self) {
-        todo!("port NLJunctionControlBuilder::netIsLoaded")
+        self.myNetIsLoaded = true;
     }
 
     /// C++: `MSJunction * NLJunctionControlBuilder::buildNoLogicJunction()` [virtual, protected]
@@ -671,7 +1101,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_no_logic_junction(&mut self) -> Ptr<MSJunction> {
-        todo!("port NLJunctionControlBuilder::buildNoLogicJunction")
+        leak_box(MSNoLogicJunction::new(&self.myActiveID, self.myType, &self.myPosition, &self.myShape, &self.myActiveName, self.myActiveIncomingLanes.clone(), self.myActiveInternalLanes.clone())).cast::<MSJunction>()
     }
 
     /// C++: `MSJunction * NLJunctionControlBuilder::buildLogicJunction(MSJunctionLogic *const)` [virtual, protected]
@@ -683,7 +1113,7 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_logic_junction(&mut self, logic: Ptr<MSJunctionLogic>) -> Ptr<MSJunction> {
-        todo!("port NLJunctionControlBuilder::buildLogicJunction")
+        leak_box(MSRightOfWayJunction::new(&self.myActiveID, self.myType, &self.myPosition, &self.myShape, &self.myActiveName, self.myActiveIncomingLanes.clone(), self.myActiveInternalLanes.clone(), logic)).cast::<MSJunction>()
     }
 
     /// C++: `MSJunction * NLJunctionControlBuilder::buildInternalJunction()` [virtual, protected]
@@ -696,7 +1126,8 @@ impl NLJunctionControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_internal_junction(&mut self) -> Ptr<MSJunction> {
-        todo!("port NLJunctionControlBuilder::buildInternalJunction")
+        // build the junction
+        leak_box(MSInternalJunction::new(&self.myActiveID, self.myType, &self.myPosition, &self.myShape, self.myActiveIncomingLanes.clone(), self.myActiveInternalLanes.clone())).cast::<MSJunction>()
     }
 
     /// C++: `void NLJunctionControlBuilder::NLJunctionControlBuilder(const NLJunctionControlBuilder &)` [private]
@@ -704,7 +1135,7 @@ impl NLJunctionControlBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLJunctionControlBuilder) -> Self {
-        todo!("port NLJunctionControlBuilder::NLJunctionControlBuilder")
+        panic!("NLJunctionControlBuilder copy constructor is private and never defined in C++")
     }
 
     /// C++: `NLJunctionControlBuilder & NLJunctionControlBuilder::operator=(const NLJunctionControlBuilder &)` [private]
@@ -712,7 +1143,7 @@ impl NLJunctionControlBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLJunctionControlBuilder) -> &mut NLJunctionControlBuilder {
-        todo!("port NLJunctionControlBuilder::operator=")
+        panic!("NLJunctionControlBuilder::operator= is private and never defined in C++")
     }
 
 }

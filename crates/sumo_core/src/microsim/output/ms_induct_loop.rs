@@ -135,11 +135,11 @@ impl MSInductLoop {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, lane: Ptr<MSLane>, positionInMeters: f64, length: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, needLocking: bool) -> Self {
+    pub fn new(id: &str, lane: Ptr<MSLane>, positionInMeters: f64, length: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, needLocking: bool) -> Box<Self> {
         debug_assert!(length >= 0.);
         debug_assert!(positionInMeters >= 0. && positionInMeters + length <= lane.get_length());
-        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported: it needs a stable self address and this constructor returns by value; meso is off while g_use_meso_sim() is false
-        let mut s = MSInductLoop {
+        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while g_use_meso_sim() is false
+        let mut s = Box::new(MSInductLoop {
             base: MSMoveReminder::new(id, lane, true),
             // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
@@ -161,7 +161,9 @@ impl MSInductLoop {
             myLastIntervalEnd: -1,
             mySegment: Ptr::null(),
             mySegmentPos: 0.,
-        };
+        });
+        // C++ MSMoveReminder base constructor (doAdd = true): myLane->addMoveReminder(this)
+        lane.m().add_move_reminder(Ptr::from_mut(&mut s.base), true);
         s.reset();
         s
     }

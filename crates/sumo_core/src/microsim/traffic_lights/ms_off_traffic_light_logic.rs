@@ -33,7 +33,7 @@ impl MSOffTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str) -> Self {
-        let mut base = MSTrafficLightLogic::new(tlcontrol, id, "off", 0, TrafficLightType::OFF, 0, &());
+        let mut base = MSTrafficLightLogic::new(tlcontrol, id, "off", 0, TrafficLightType::OFF, 0, &ParameterisedMap::new());
         base.myDefaultCycleTime = time2steps(120.);
         Self { base, myPhaseDefinition: Vec::new() }
     }

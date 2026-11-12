@@ -48,7 +48,7 @@ impl MSRailCrossing {
     //     myDefaultCycleTime = 1;
     // }
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_CROSSING, &Vec::new(), 0, delay, parameters);
         // dummy phase, used to avoid crashing in MSTrafficLightLogic::setTrafficLightSignals()
         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS), "")))));

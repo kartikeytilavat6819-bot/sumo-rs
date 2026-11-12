@@ -29,7 +29,7 @@ impl MSSOTLRequestPolicy {
     //     MSSOTLPolicy("Request", parameters) {
     // }
     #[allow(unused_variables)]
-    pub fn new(parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(parameters: &ParameterisedMap) -> Self {
         Self { base: MSSOTLPolicy::new("Request".to_string(), parameters) }
     }
 
@@ -56,7 +56,7 @@ impl MSSOTLRequestPolicy {
     //
     // }
     #[allow(unused_variables)]
-    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         let base = MSSOTLPolicy::new_3("Request".to_string(), desirabilityAlgorithm, parameters);
         // getDesirabilityAlgorithm() is the pointer the base class just stored, so use the argument directly.
         desirabilityAlgorithm.m().set_key_prefix("REQUEST".to_string());

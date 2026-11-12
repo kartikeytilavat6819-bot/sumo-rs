@@ -89,13 +89,12 @@ impl MSTrafficLightLogic {
     //     MSNet::getInstance()->getBeginOfTimestepEvents()->addEvent(mySwitchCommand, delay);
     // }
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        // shortcut: C++ parameters argument is Unmapped (unit) in this skeleton, so the Parameterised::Map is not stored; upgrade when the signature takes ParameterisedMap
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         // shortcut: C++ also schedules `new SwitchCommand(tlcontrol, this, delay)` on MSNet's begin-of-timestep events here; a by-value constructor has no stable address, so callers must call schedule_switch_command on the boxed logic
         let _ = (tlcontrol, delay);
         MSTrafficLightLogic {
             base: Named::new(id),
-            base2: Parameterised::new(),
+            base2: Parameterised::from_map(parameters.clone()),
             myProgramID: programID.to_string(),
             myOffset: offset,
             myLogicType: logicType,

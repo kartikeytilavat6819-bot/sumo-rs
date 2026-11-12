@@ -34,7 +34,7 @@ impl MSSOTLPhasePolicy {
     //     init();
     // }
     #[allow(unused_variables)]
-    pub fn new(parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPhasePolicy::MSSOTLPhasePolicy")
     }
 
@@ -57,7 +57,7 @@ impl MSSOTLPhasePolicy {
     //     init();
     // }
     #[allow(unused_variables)]
-    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPhasePolicy::MSSOTLPhasePolicy")
     }
 

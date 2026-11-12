@@ -2,6 +2,19 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ MSSOTLDefinitions.h #define values (no Rust port of that header yet)
+const SENSOR_START: f64 = 0.0;
+const INPUT_SENSOR_LENGTH: f64 = 100.0;
+const OUTPUT_SENSOR_LENGTH: f64 = 80.0;
+const INPUT_COUNT_SENSOR_LENGTH: f64 = 15.0;
+const OUTPUT_COUNT_SENSOR_LENGTH: f64 = 15.0;
+const COUNT_SENSOR_START: f64 = 10000.0;
+const HALTING_TIME_THRS: SUMOTime = 10;
+const HALTING_SPEED_THRS: f64 = 1.0;
+const DIST_THRS: f64 = 20.0;
+// C++ INVALID_POSITION (geom helper)
+const INVALID_POSITION: f64 = -1000000.0;
+
 /// C++ class `MSSOTLE2Sensors` (microsim/traffic_lights/MSSOTLE2Sensors.h)
 #[repr(C)]
 pub struct MSSOTLE2Sensors {
@@ -33,7 +46,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensor_for_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildSensorForLane")
+        self.build_sensor_for_lane_2(lane, nb, INPUT_SENSOR_LENGTH);
     }
 
     /// C++: `void MSSOTLE2Sensors::buildSensorForLane(MSLane *, NLDetectorBuilder &, double)` [protected]
@@ -90,7 +103,32 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensor_for_lane_2(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder, sensorLength: f64) {
-        todo!("port MSSOTLE2Sensors::buildSensorForLane")
+        let edge = lane.get_edge();
+        if edge.is_internal() || edge.is_walking_area() || edge.is_crossing() {
+            return;
+        }
+        //Check not to have more than a sensor for lane
+        if !self.m_sensorMap.contains_key(lane.get_id()) {
+            //Check and set zero if the lane is not long enough for the specified sensor start
+            let sensorPos = if SENSOR_START <= lane.get_length() { SENSOR_START } else { 0.0 };
+            //Check and trim if the lane is not long enough for the specified sensor length
+            let lensorLength = if sensorLength <= (lane.get_length() - sensorPos) { sensorLength } else { lane.get_length() - sensorPos };
+            //Create sensor for lane and insert it into the map<MSLane*, MSE2Collector*>
+            let newSensor = nb.create_e2_detector(&format!("SOTL_E2_lane:{}_tl:{}", lane.get_id(), self.tlLogicID), DetectorUsage::DU_TL_CONTROL, lane, lane.get_length() - sensorPos - lensorLength, INVALID_POSITION, lensorLength, HALTING_TIME_THRS, HALTING_SPEED_THRS, DIST_THRS, String::new(), "", "", PersonMode::NONE as i32, true);
+            MSNet::get_instance().m().get_detector_control().add_2(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut newSensor.m().base2)).unwrap();
+            self.m_sensorMap.entry(lane.get_id().to_string()).or_insert(newSensor);
+            self.m_maxSpeedMap.entry(lane.get_id().to_string()).or_insert(lane.get_speed_limit());
+            //Avoid creating really small sensors. Only add a further sensors if the one created is less than 90% the requested length
+            if lensorLength < sensorLength * 0.9 {
+                utils::common::msg_handler::write_message(&format!("Sensor on lane {} is long {}, while it should be {}. Continuing it on the other lanes if possible", lane.get_id(), utils::common::to_string::f64_to_string_default(lensorLength), utils::common::to_string::f64_to_string_default(sensorLength)));
+                for it in lane.get_incoming_lanes() {
+                    let inEdge = it.lane.get_edge();
+                    if !inEdge.is_internal() && !inEdge.is_walking_area() && !inEdge.is_crossing() {
+                        self.build_continue_sensior(lane, nb, sensorLength, it.lane, lensorLength);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildContinueSensior(MSLane *, NLDetectorBuilder &, double, MSLane *, double)` [protected]
@@ -122,7 +160,24 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_continue_sensior(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder, sensorLength: f64, continueOnLane: Ptr<MSLane>, usedLength: f64) {
-        todo!("port MSSOTLE2Sensors::buildContinueSensior")
+        let availableLength = sensorLength - usedLength;
+        if !self.m_sensorMap.contains_key(continueOnLane.get_id()) {
+            let length = if availableLength <= continueOnLane.get_length() { availableLength } else { continueOnLane.get_length() };
+            let newSensor = nb.create_e2_detector(&format!("SOTL_E2_lane:{}_tl:{}", continueOnLane.get_id(), self.tlLogicID), DetectorUsage::DU_TL_CONTROL, continueOnLane, continueOnLane.get_length() - length, INVALID_POSITION, length, HALTING_TIME_THRS, HALTING_SPEED_THRS, DIST_THRS, String::new(), "", "", PersonMode::NONE as i32, true);
+            MSNet::get_instance().m().get_detector_control().add_2(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut newSensor.m().base2)).unwrap();
+            self.m_sensorMap.entry(continueOnLane.get_id().to_string()).or_insert(newSensor);
+            self.m_continueSensorOnLanes.entry(lane.get_id().to_string()).or_default().push(continueOnLane.get_id().to_string());
+            utils::common::msg_handler::write_message(&format!("Continue sensor on lane {}. Current length {}", continueOnLane.get_id(), utils::common::to_string::f64_to_string_default(length + usedLength)));
+            //Continue other line if needed.
+            if length + usedLength < sensorLength * 0.9 {
+                for it in continueOnLane.get_incoming_lanes() {
+                    let edge = it.lane.get_edge();
+                    if !edge.is_internal() && !edge.is_walking_area() && !edge.is_crossing() {
+                        self.build_continue_sensior(lane, nb, sensorLength, it.lane, length + usedLength);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildSensorForOutLane(MSLane *, NLDetectorBuilder &)` [virtual, protected]
@@ -132,7 +187,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensor_for_out_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildSensorForOutLane")
+        self.build_sensor_for_out_lane_2(lane, nb, OUTPUT_SENSOR_LENGTH);
     }
 
     /// C++: `void MSSOTLE2Sensors::buildSensorForOutLane(MSLane *, NLDetectorBuilder &, double)` [protected]
@@ -182,7 +237,18 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensor_for_out_lane_2(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder, sensorLength: f64) {
-        todo!("port MSSOTLE2Sensors::buildSensorForOutLane")
+        //Check not to have more than a sensor for lane
+        if !self.m_sensorMap.contains_key(lane.get_id()) {
+            //Check and set zero if the lane is not long enough for the specified sensor start
+            let sensorPos = (lane.get_length() - sensorLength) - (if SENSOR_START <= lane.get_length() { SENSOR_START } else { 0.0 });
+            //Check and trim if the lane is not long enough for the specified sensor length
+            let lensorLength = if sensorLength <= (lane.get_length() - sensorPos) { sensorLength } else { lane.get_length() - sensorPos };
+            //Create sensor for lane and insert it into the map<MSLane*, MSE2Collector*>
+            let newSensor = nb.create_e2_detector(&format!("SOTL_E2_lane:{}_tl:{}", lane.get_id(), self.tlLogicID), DetectorUsage::DU_TL_CONTROL, lane, lane.get_length() - sensorPos - lensorLength, INVALID_POSITION, lensorLength, HALTING_TIME_THRS, HALTING_SPEED_THRS, DIST_THRS, String::new(), "", "", PersonMode::NONE as i32, true);
+            MSNet::get_instance().m().get_detector_control().add_2(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut newSensor.m().base2)).unwrap();
+            self.m_sensorMap.entry(lane.get_id().to_string()).or_insert(newSensor);
+            self.m_maxSpeedMap.entry(lane.get_id().to_string()).or_insert(lane.get_speed_limit());
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildCountSensorForLane(MSLane *, NLDetectorBuilder &)` [protected]
@@ -229,7 +295,20 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_count_sensor_for_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildCountSensorForLane")
+        //Check not to have more than a sensor for lane
+        if !self.m_sensorMap.contains_key(lane.get_id()) {
+            //Check and set zero if the lane is not long enough for the specified sensor start
+            let sensorPos = if COUNT_SENSOR_START <= lane.get_length() { COUNT_SENSOR_START } else { 0.0 };
+            //Original:
+            let sensorLength = INPUT_COUNT_SENSOR_LENGTH;
+            //Check and trim if the lane is not long enough for the specified sensor length
+            let lensorLength = if sensorLength <= (lane.get_length() - sensorPos) { sensorLength } else { lane.get_length() - sensorPos };
+            //Create sensor for lane and insert it into the map<MSLane*, MSE2Collector*>
+            let newSensor = nb.create_e2_detector(&format!("SOTL_E2_lane:{}_tl:{}", lane.get_id(), self.tlLogicID), DetectorUsage::DU_TL_CONTROL, lane, lane.get_length() - sensorPos - lensorLength, INVALID_POSITION, lensorLength, HALTING_TIME_THRS, HALTING_SPEED_THRS, DIST_THRS, String::new(), "", "", PersonMode::NONE as i32, true);
+            MSNet::get_instance().m().get_detector_control().add_2(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut newSensor.m().base2)).unwrap();
+            self.m_sensorMap.entry(lane.get_id().to_string()).or_insert(newSensor);
+            self.m_maxSpeedMap.entry(lane.get_id().to_string()).or_insert(lane.get_speed_limit());
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildCountSensorForOutLane(MSLane *, NLDetectorBuilder &)` [protected]
@@ -278,7 +357,20 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_count_sensor_for_out_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildCountSensorForOutLane")
+        //Check not to have more than a sensor for lane
+        if !self.m_sensorMap.contains_key(lane.get_id()) {
+            //Original:
+            let sensorLength = OUTPUT_COUNT_SENSOR_LENGTH;
+            //Check and set zero if the lane is not long enough for the specified sensor start
+            let sensorPos = (lane.get_length() - sensorLength) - (if SENSOR_START <= lane.get_length() { SENSOR_START } else { 0.0 });
+            //Check and trim if the lane is not long enough for the specified sensor length
+            let lensorLength = if sensorLength <= (lane.get_length() - sensorPos) { sensorLength } else { lane.get_length() - sensorPos };
+            //Create sensor for lane and insert it into the map<MSLane*, MSE2Collector*>
+            let newSensor = nb.create_e2_detector(&format!("SOTL_E2_lane:{}_tl:{}", lane.get_id(), self.tlLogicID), DetectorUsage::DU_TL_CONTROL, lane, lane.get_length() - sensorPos - lensorLength, INVALID_POSITION, lensorLength, HALTING_TIME_THRS, HALTING_SPEED_THRS, DIST_THRS, String::new(), "", "", PersonMode::NONE as i32, true);
+            MSNet::get_instance().m().get_detector_control().add_2(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut newSensor.m().base2)).unwrap();
+            self.m_sensorMap.entry(lane.get_id().to_string()).or_insert(newSensor);
+            self.m_maxSpeedMap.entry(lane.get_id().to_string()).or_insert(lane.get_speed_limit());
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::MSSOTLE2Sensors(std::string, const MSTrafficLightLogic::Phases *)`
@@ -288,7 +380,15 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn new(tlLogicID: String, phases: Ptr<MSTrafficLightLogic_Phases>) -> Self {
-        todo!("port MSSOTLE2Sensors::MSSOTLE2Sensors")
+        //speedThresholdParam is uninitialised in C++; 0.0 is used here
+        Self {
+            base: MSSOTLSensors::new(tlLogicID, phases),
+            m_sensorMap: BTreeMap::new(),
+            m_maxSpeedMap: BTreeMap::new(),
+            speedThresholdParam: 0.0,
+            m_continueSensorOnLanes: BTreeMap::new(),
+            m_typeWeightMap: BTreeMap::new(),
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::~MSSOTLE2Sensors() noexcept` [virtual]
@@ -297,7 +397,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLE2Sensors::~MSSOTLE2Sensors")
+        // C++ body is empty: the sensors are deleted by the detector control
     }
 
     /// C++: `void MSSOTLE2Sensors::buildSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)` [virtual]
@@ -308,7 +408,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildSensors")
+        self.build_sensors_2(controlledLanes, nb, INPUT_SENSOR_LENGTH);
     }
 
     /// C++: `void MSSOTLE2Sensors::buildSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &, double)`
@@ -331,7 +431,13 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_sensors_2(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder, sensorLength: f64) {
-        todo!("port MSSOTLE2Sensors::buildSensors")
+        //for each lane build an appropriate sensor on it
+        for laneVector in &controlledLanes {
+            for lane in laneVector {
+                let currentLane = *lane;
+                self.build_sensor_for_lane_2(currentLane, nb, sensorLength);
+            }
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildOutSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)` [virtual]
@@ -342,7 +448,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_out_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildOutSensors")
+        self.build_out_sensors_2(controlledLanes, nb, OUTPUT_SENSOR_LENGTH);
     }
 
     /// C++: `void MSSOTLE2Sensors::buildOutSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &, double)`
@@ -365,7 +471,13 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_out_sensors_2(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder, sensorLength: f64) {
-        todo!("port MSSOTLE2Sensors::buildOutSensors")
+        //for each lane build an appropriate sensor on it
+        for laneVector in &controlledLanes {
+            for lane in laneVector {
+                let currentLane = *lane;
+                self.build_sensor_for_out_lane_2(currentLane, nb, sensorLength);
+            }
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildCountSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)`
@@ -387,7 +499,13 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_count_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildCountSensors")
+        //for each lane build an appropriate sensor on it
+        for laneVector in &controlledLanes {
+            for lane in laneVector {
+                let currentLane = *lane;
+                self.build_count_sensor_for_lane(currentLane, nb);
+            }
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::buildCountOutSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)`
@@ -410,7 +528,13 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn build_count_out_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLE2Sensors::buildCountOutSensors")
+        //for each lane build an appropriate sensor on it
+        for laneVector in &controlledLanes {
+            for lane in laneVector {
+                let currentLane = *lane;
+                self.build_count_sensor_for_out_lane(currentLane, nb);
+            }
+        }
     }
 
     /// C++: `int MSSOTLE2Sensors::getPassedVeh(std::string, bool)`
@@ -434,7 +558,23 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn get_passed_veh(&mut self, laneId: String, out: bool) -> i32 {
-        todo!("port MSSOTLE2Sensors::getPassedVeh")
+        let sensor = match self.m_sensorMap.get(&laneId).copied() {
+            Some(s) => s,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::getPassedVeh: no sensor for lane {}", laneId);
+                return 0;
+            }
+        };
+        let mut additional = 0;
+        if let Some(conts) = self.m_continueSensorOnLanes.get(&laneId).cloned() {
+            for it in conts {
+                let mut tmp = 0;
+                if self.get_velue_from_sensor(&it, |s| s.get_passed_veh(), &mut tmp) {
+                    additional += tmp;
+                }
+            }
+        }
+        sensor.m().get_passed_veh() + additional
     }
 
     /// C++: `void MSSOTLE2Sensors::subtractPassedVeh(std::string, int)`
@@ -450,7 +590,10 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn subtract_passed_veh(&mut self, laneId: String, passed: i32) {
-        todo!("port MSSOTLE2Sensors::subtractPassedVeh")
+        //TODO Ivan: ciclare tutti i sensori di count e resettare passedVeh
+        if let Some(sensor) = self.m_sensorMap.get(&laneId).copied() {
+            sensor.m().subtract_passed_veh(passed);
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::setSpeedThresholdParam(double)`
@@ -459,7 +602,7 @@ impl MSSOTLE2Sensors {
     //     }
     #[allow(unused_variables)]
     pub fn set_speed_threshold_param(&mut self, newThreshold: f64) {
-        todo!("port MSSOTLE2Sensors::setSpeedThresholdParam")
+        self.speedThresholdParam = newThreshold;
     }
 
     /// C++: `int MSSOTLE2Sensors::countVehicles(MSLane *)` [virtual]
@@ -468,7 +611,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn count_vehicles(&mut self, lane: Ptr<MSLane>) -> i32 {
-        todo!("port MSSOTLE2Sensors::countVehicles")
+        self.count_vehicles_2(lane.get_id().to_string())
     }
 
     /// C++: `int MSSOTLE2Sensors::countVehicles(std::string)` [virtual]
@@ -490,7 +633,22 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn count_vehicles_2(&mut self, laneId: String) -> i32 {
-        todo!("port MSSOTLE2Sensors::countVehicles")
+        let sensor = match self.m_sensorMap.get(&laneId).copied() {
+            Some(s) => s,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::countVehicles: no sensor for lane {}", laneId);
+                return 0;
+            }
+        };
+        let mut additional = 0;
+        if let Some(conts) = self.m_continueSensorOnLanes.get(&laneId).cloned() {
+            for it in conts {
+                if let Some(s) = self.m_sensorMap.get(&it).copied() {
+                    additional += self.count(s);
+                }
+            }
+        }
+        self.count(sensor) + additional
     }
 
     /// C++: `int MSSOTLE2Sensors::estimateVehicles(std::string)`
@@ -511,7 +669,22 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn estimate_vehicles(&mut self, laneId: String) -> i32 {
-        todo!("port MSSOTLE2Sensors::estimateVehicles")
+        let sensor = match self.m_sensorMap.get(&laneId).copied() {
+            Some(s) => s,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::estimateVehicles: no sensor for lane {}", laneId);
+                return 0;
+            }
+        };
+        let mut additional = 0;
+        if let Some(conts) = self.m_continueSensorOnLanes.get(&laneId).cloned() {
+            for it in conts {
+                if let Some(s) = self.m_sensorMap.get(&it).copied() {
+                    additional += s.m().get_estimated_current_vehicle_number(self.speedThresholdParam);
+                }
+            }
+        }
+        sensor.m().get_estimated_current_vehicle_number(self.speedThresholdParam) + additional
     }
 
     /// C++: `double MSSOTLE2Sensors::getEstimateQueueLength(std::string)`
@@ -538,7 +711,19 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn get_estimate_queue_length(&mut self, laneId: String) -> f64 {
-        todo!("port MSSOTLE2Sensors::getEstimateQueueLength")
+        let sensor = match self.m_sensorMap.get(&laneId).copied() {
+            Some(s) => s,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::getEstimateQueueLength: no sensor for lane {}", laneId);
+                return 0.0;
+            }
+        };
+        let estQL = sensor.m().get_estimate_queue_length();
+        if estQL == -1.0 {
+            0.0
+        } else {
+            estQL
+        }
     }
 
     /// C++: `double MSSOTLE2Sensors::getMaxSpeed(std::string)` [virtual]
@@ -553,7 +738,14 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(&mut self, laneId: String) -> f64 {
-        todo!("port MSSOTLE2Sensors::getMaxSpeed")
+        match self.m_maxSpeedMap.get(&laneId).copied() {
+            Some(v) => v,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::getMaxSpeed: no lane {}", laneId);
+                utils::common::msg_handler::write_error(&format!("MSSOTLE2Sensors::meanVehiclesSpeed:: No lane found {}", laneId));
+                0.0
+            }
+        }
     }
 
     /// C++: `double MSSOTLE2Sensors::meanVehiclesSpeed(MSLane *)` [virtual]
@@ -562,7 +754,7 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn mean_vehicles_speed(&mut self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSSOTLE2Sensors::meanVehiclesSpeed")
+        self.mean_vehicles_speed_2(lane.get_id().to_string())
     }
 
     /// C++: `double MSSOTLE2Sensors::meanVehiclesSpeed(std::string)` [virtual]
@@ -594,7 +786,37 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn mean_vehicles_speed_2(&mut self, laneId: String) -> f64 {
-        todo!("port MSSOTLE2Sensors::meanVehiclesSpeed")
+        let sensor = match self.m_sensorMap.get(&laneId).copied() {
+            Some(s) => s,
+            None => {
+                debug_assert!(false, "MSSOTLE2Sensors::meanVehiclesSpeed: no sensor for lane {}", laneId);
+                utils::common::msg_handler::write_error(&format!("MSSOTLE2Sensors::meanVehiclesSpeed:: No lane found {}", laneId));
+                return 0.0;
+            }
+        };
+        let mut meanSpeedAcc: f64 = 0.0;
+        let mut totalCarNumer: i32 = 0;
+        if let Some(conts) = self.m_continueSensorOnLanes.get(&laneId).cloned() {
+            for it in conts {
+                let mut number: i32 = 0;
+                let mut mean: f64 = -1.0;
+                if !self.get_velue_from_sensor(&it, |s| s.get_current_vehicle_number(), &mut number) {
+                    continue;
+                }
+                totalCarNumer += number;
+                self.get_velue_from_sensor(&it, |s| s.get_current_mean_speed(), &mut mean);
+                meanSpeedAcc += mean * (number as f64);
+            }
+        }
+        let number = sensor.m().get_current_vehicle_number();
+        totalCarNumer += number;
+        let mean = sensor.m().get_current_mean_speed();
+        meanSpeedAcc += mean * (number as f64);
+        if totalCarNumer == 0 {
+            -1.0
+        } else {
+            meanSpeedAcc / (totalCarNumer as f64)
+        }
     }
 
     /// C++: `void MSSOTLE2Sensors::setVehicleWeigths(const std::string &)` [virtual]
@@ -617,7 +839,21 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn set_vehicle_weigths(&mut self, weightString: &str) {
-        todo!("port MSSOTLE2Sensors::setVehicleWeigths")
+        let mut types: Vec<String> = Vec::new();
+        split(weightString, ';', &mut types);
+        let mut logstr = String::from("[MSSOTLE2Sensors::setVehicleWeigths] ");
+        for typesIt in types.iter() {
+            let mut typeWeight: Vec<String> = Vec::new();
+            split(typesIt, '=', &mut typeWeight);
+            if typeWeight.len() == 2 {
+                let typ = trim(&mut typeWeight[0]);
+                //C++ StringUtils::toInt throws on a malformed value; unwrap keeps that fatal
+                let value = utils::common::string_utils::to_int(&typeWeight[1]).unwrap();
+                logstr += &format!("{}={} ", typ, value);
+                self.m_typeWeightMap.insert(typ, value);
+            }
+        }
+        utils::common::msg_handler::write_message(&logstr);
     }
 
     /// C++: `int MSSOTLE2Sensors::count(MSE2Collector *)` [protected]
@@ -649,7 +885,25 @@ impl MSSOTLE2Sensors {
     // }
     #[allow(unused_variables)]
     pub fn count(&mut self, sensor: Ptr<MSE2Collector>) -> i32 {
-        todo!("port MSSOTLE2Sensors::count")
+        let totCars = sensor.m().get_current_vehicle_number();
+        if self.m_typeWeightMap.is_empty() {
+            return totCars;
+        }
+        let mut number = 0;
+        let vehicles = sensor.m().get_current_vehicles();
+        //the C++ logstr only feeds commented-out DBG output, so it is not built here
+        for vit in vehicles {
+            let vi = vit.m();
+            if vi.onDetector {
+                let vtype = vi.type_.clone();
+                if let Some(w) = self.m_typeWeightMap.get(&vtype) {
+                    number += *w;
+                } else {
+                    number += 1;
+                }
+            }
+        }
+        number
     }
 
     /// C++: `bool MSSOTLE2Sensors::getVelueFromSensor(std::string, Method, ValueType &)` [protected]
@@ -662,8 +916,12 @@ impl MSSOTLE2Sensors {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn get_velue_from_sensor(&mut self) -> bool {
-        todo!("port MSSOTLE2Sensors::getVelueFromSensor")
+    pub fn get_velue_from_sensor<T>(&mut self, laneId: &str, function: impl FnOnce(&mut MSE2Collector) -> T, value: &mut T) -> bool {
+        if let Some(sensor) = self.m_sensorMap.get(laneId) {
+            *value = function(sensor.m());
+            return true;
+        }
+        false
     }
 
 }
@@ -680,8 +938,13 @@ impl MSSOTLE2Sensors {
 //     return elems;
 // }
 #[allow(unused_variables)]
-pub fn split(s: &str, delim: i8, elems: &mut Vec<String>) -> &'static mut Vec<String> {
-    todo!("port split")
+pub fn split<'a>(s: &str, delim: char, elems: &'a mut Vec<String>) -> &'a mut Vec<String> {
+    for item in s.split(delim) {
+        if !item.is_empty() {
+            elems.push(item.to_string());
+        }
+    }
+    elems
 }
 
 /// C++: `std::string (std::string &) trim`
@@ -692,6 +955,7 @@ pub fn split(s: &str, delim: i8, elems: &mut Vec<String>) -> &'static mut Vec<St
 // }
 #[allow(unused_variables)]
 pub fn trim(str: &mut String) -> String {
-    todo!("port trim")
+    // shortcut: C++ substr throws std::out_of_range for an all-space or empty string; this returns ""
+    str.trim_matches(' ').to_string()
 }
 
