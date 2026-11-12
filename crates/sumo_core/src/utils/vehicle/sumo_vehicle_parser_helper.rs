@@ -1293,7 +1293,47 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_angle_times_map(vtype: Ptr<SUMOVTypeParameter>, arg1: String) -> bool {
-        todo!("port SUMOVehicleParserHelper::parseAngleTimesMap")
+        let mut st = StringTokenizer::with_token(&arg1, ",", false);
+        let mut angleTimesMap: BTreeMap<i32, (SUMOTime, SUMOTime)> = BTreeMap::new();
+        let mut tripletCount: usize = 0;
+        while st.has_next() {
+            let mut pos = StringTokenizer::new(&st.next().unwrap_or_default());
+            if pos.size() != 3 {
+                write_error(&format!("maneuverAngleTimes format for vType '{}' {} contains an invalid triplet.", vtype.id, arg1));
+                return false;
+            } else {
+                let parsed = (|| -> Result<(i32, SUMOTime, SUMOTime), ProcessError> {
+                    let angle = to_int(&pos.next()?)?;
+                    let t1 = string2time(&pos.next()?)?;
+                    let t2 = string2time(&pos.next()?)?;
+                    Ok((angle, t1, t2))
+                })();
+                match parsed {
+                    Ok((angle, t1, t2)) => {
+                        angleTimesMap.insert(angle, (t1, t2));
+                    }
+                    Err(_) => {
+                        write_error(&format!(
+                            "Triplet '{}' for vType '{}' maneuverAngleTimes cannot be parsed as 'int double double'",
+                            st.get(tripletCount).unwrap_or_default(),
+                            vtype.id
+                        ));
+                        return false;
+                    }
+                }
+                tripletCount += 1;
+            }
+        }
+        if angleTimesMap.len() > 0 {
+            let vt = vtype.m();
+            vt.myManoeuverAngleTimes.clear();
+            for (angle, times) in angleTimesMap {
+                vt.myManoeuverAngleTimes.insert(angle, times);
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool SUMOVehicleParserHelper::parseCFMParams(SUMOVTypeParameter *, const SumoXMLTag, const SUMOSAXAttributes &, const bool)` [static]
