@@ -2465,7 +2465,14 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_traffic_lights(&mut self) {
-        todo!("port NIImporter_VISUM::parse_TrafficLights")
+        self.myCurrentID = normal_id(&self.field(&keys_string(K::VISUM_NO)));
+        let cycleTime = time2steps(self.get_weighted_float2("Umlaufzeit", "UMLZEIT", "s"));
+        let intermediateTime = time2steps(self.get_weighted_float2("StdZwischenzeit", "STDZWZEIT", "s"));
+        let phaseBased = if self.myLineParser.know("PhasenBasiert") { throw(to_bool(&self.field("PhasenBasiert"))) } else { false };
+        let offset = if self.myLineParser.know("ZEITVERSATZ") { time2steps(self.get_weighted_float("ZEITVERSATZ", "s")) } else { 0 };
+        // add to the list
+        let tl = Ptr::from_raw(Box::into_raw(Box::new(NIVisumTL::new(&self.myCurrentID, cycleTime, offset, intermediateTime, phaseBased))));
+        self.myTLS.insert(self.myCurrentID.clone(), tl);
     }
 
     /// C++: `void NIImporter_VISUM::parse_NodesToTrafficLights()` [private]
@@ -2490,7 +2497,25 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_nodes_to_traffic_lights(&mut self) {
-        todo!("port NIImporter_VISUM::parse_NodesToTrafficLights")
+        let node = self.field("KnotNr");
+        if node == "0" {
+            // this is a dummy value which cannot be assigned to
+            return;
+        }
+        let trafficLight = self.field("LsaNr");
+        // add to the list
+        let n = self.myNetBuilder.m().get_node_cont().retrieve(&node);
+        let tlIt = self.myTLS.get(&trafficLight).copied();
+        match tlIt {
+            Some(tl) if !n.is_null() => tl.m().add_node(n),
+            _ => write_error(&format!(
+                "Could not assign{} node '{}' to{} traffic light '{}'",
+                if n.is_null() { " missing" } else { "" },
+                node,
+                if tlIt.is_none() { " missing" } else { "" },
+                trafficLight
+            )),
+        }
     }
 
     /// C++: `void NIImporter_VISUM::parse_SignalGroups()` [private]
@@ -2511,7 +2536,17 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_signal_groups(&mut self) {
-        todo!("port NIImporter_VISUM::parse_SignalGroups")
+        self.myCurrentID = normal_id(&self.field(&keys_string(K::VISUM_NO)));
+        let LSAid = normal_id(&self.field("LsaNr"));
+        let startTime = time2steps(self.get_named_float_2("GzStart", "GRUENANF"));
+        let endTime = time2steps(self.get_named_float_2("GzEnd", "GRUENENDE"));
+        let yellowTime = if self.myLineParser.know("GELB") { time2steps(self.get_named_float("GELB")) } else { -1 };
+        // add to the list
+        let Some(tl) = self.myTLS.get(&LSAid).copied() else {
+            write_errorf!("Could not find TLS '%' for setting the signal group.", LSAid.clone());
+            return;
+        };
+        tl.m().add_signal_group(&self.myCurrentID, startTime, endTime, yellowTime);
     }
 
     /// C++: `void NIImporter_VISUM::parse_TurnsToSignalGroups()` [private]
@@ -2574,7 +2609,50 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_turns_to_signal_groups(&mut self) {
-        todo!("port NIImporter_VISUM::parse_TurnsToSignalGroups")
+        // get the id
+        let SGid = self.get_named_string_2("SGNR", "SIGNALGRUPPENNR");
+        if !self.myLineParser.know("LsaNr") {
+            // XXX could be retrieved from context
+            write_warning("Ignoring SIGNALGRUPPEZUFSABBIEGER because LsaNr is not known");
+            return;
+        }
+        let LSAid = self.get_named_string("LsaNr");
+        // nodes
+        let from = if self.myLineParser.know("VonKnot") { self.get_named_node("VonKnot") } else { Ptr::null() };
+        let via = if self.myLineParser.know("KNOTNR") { self.get_named_node("KNOTNR") } else { self.get_named_node_2("UeberKnot", "UeberKnotNr") };
+        let to = if self.myLineParser.know("NachKnot") { self.get_named_node("NachKnot") } else { Ptr::null() };
+        // edges
+        let mut edg1: Ptr<NBEdge> = Ptr::null();
+        let mut edg2: Ptr<NBEdge> = Ptr::null();
+        if from.is_null() && to.is_null() {
+            edg1 = self.get_named_edge_continuating("VONSTRNR", via);
+            edg2 = self.get_named_edge_continuating("NACHSTRNR", via);
+        } else {
+            edg1 = self.get_edge(from, via);
+            edg2 = self.get_edge(via, to);
+        }
+        // add to the list
+        let tl = self.myTLS.get(&LSAid).copied().expect("unknown traffic light");
+        let SG = tl.m().get_signal_group(&SGid);
+        if !edg1.is_null() && !edg2.is_null() {
+            if !via.has_incoming(edg1) {
+                let mut sid = if edg1.get_id().starts_with('-') { edg1.get_id()[1..].to_string() } else { format!("-{}", edg1.get_id()) };
+                if let Some(p) = sid.find('_') {
+                    sid.truncate(p);
+                }
+                let e = self.myNetBuilder.m().get_edge_cont().retrieve(&sid, false);
+                edg1 = self.get_named_edge_continuating_3(e, via);
+            }
+            if !via.has_outgoing(edg2) {
+                let mut sid = if edg2.get_id().starts_with('-') { edg2.get_id()[1..].to_string() } else { format!("-{}", edg2.get_id()) };
+                if let Some(p) = sid.find('_') {
+                    sid.truncate(p);
+                }
+                let e = self.myNetBuilder.m().get_edge_cont().retrieve(&sid, false);
+                edg2 = self.get_named_edge_continuating_3(e, via);
+            }
+            SG.connections().push(NBConnection::new(edg1, edg2));
+        }
     }
 
     /// C++: `void NIImporter_VISUM::parse_AreaSubPartElement()` [private]
@@ -2628,7 +2706,44 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_area_sub_part_element(&mut self) {
-        todo!("port NIImporter_VISUM::parse_AreaSubPartElement")
+        let id = throw(to_long(&self.field(&keys_string(K::VISUM_FACEID))));
+        let edgeid = throw(to_long(&self.field(&keys_string(K::VISUM_EDGEID))));
+        if !self.myEdges.contains_key(&edgeid) {
+            write_error("Unknown edge in TEILFLAECHENELEMENT");
+            return;
+        }
+        let dir = self.field(&keys_string(K::VISUM_DIRECTION));
+        // get index (unused)
+        let (efrom, eto) = self.myEdges[&edgeid];
+        let origin = Position::new(0.0, 0.0);
+        let mut shape = PositionVector::default();
+        shape.0.push(*self.myPoints.entry(efrom).or_insert(origin));
+        shape.0.push(*self.myPoints.entry(eto).or_insert(origin));
+        if dir.starts_with('1') {
+            shape = shape.reverse();
+        }
+        if !self.mySubPartsAreas.contains_key(&id) {
+            write_errorf!("Unknown are for area part '%'.", self.myCurrentID.clone());
+            return;
+        }
+
+        let areas = self.mySubPartsAreas[&id].clone();
+        for a in areas {
+            let d = *self.myShapeDistrictMap.entry(a).or_insert(Ptr::null());
+            if d.is_null() {
+                continue;
+            }
+            let pfrom = *self.myPoints.entry(efrom).or_insert(origin);
+            let pto = *self.myPoints.entry(eto).or_insert(origin);
+            let ds = self.myDistrictShapes.entry(d).or_default();
+            if dir.starts_with('1') {
+                ds.0.push(pto);
+                ds.0.push(pfrom);
+            } else {
+                ds.0.push(pfrom);
+                ds.0.push(pto);
+            }
+        }
     }
 
     /// C++: `void NIImporter_VISUM::parse_Phases()` [private]
@@ -2645,7 +2760,14 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_phases(&mut self) {
-        todo!("port NIImporter_VISUM::parse_Phases")
+        // get the id
+        let phaseid = normal_id(&self.field(&keys_string(K::VISUM_NO)));
+        let LSAid = normal_id(&self.field("LsaNr"));
+        let startTime = time2steps(self.get_named_float_2("GzStart", "GRUENANF"));
+        let endTime = time2steps(self.get_named_float_2("GzEnd", "GRUENENDE"));
+        let yellowTime = if self.myLineParser.know("GELB") { time2steps(self.get_named_float("GELB")) } else { -1 };
+        let tl = self.myTLS.get(&LSAid).copied().expect("unknown traffic light");
+        tl.m().add_phase(&phaseid, startTime, endTime, yellowTime);
     }
 
     /// C++: `void NIImporter_VISUM::parse_SignalGroupsToPhases()` [private]
@@ -2663,7 +2785,15 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_signal_groups_to_phases(&mut self) {
-        todo!("port NIImporter_VISUM::parse_SignalGroupsToPhases")
+        // get the id
+        let Phaseid = normal_id(&self.field("PsNr"));
+        let LSAid = normal_id(&self.field("LsaNr"));
+        let SGid = normal_id(&self.field("SGNR"));
+        // insert
+        let LSA = self.myTLS.get(&LSAid).copied().expect("unknown traffic light");
+        let SG = LSA.m().get_signal_group(&SGid);
+        let PH = *LSA.m().get_phases().get(&Phaseid).expect("unknown phase");
+        SG.phases().insert(Phaseid, PH);
     }
 
     /// C++: `void NIImporter_VISUM::parse_LanesConnections()` [private]
@@ -2766,7 +2896,100 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_lanes_connections(&mut self) {
-        todo!("port NIImporter_VISUM::parse_LanesConnections")
+        // get the node and edges depending on network format
+        let nodeID = self.get_named_string_2("KNOTNR", "KNOT");
+        let mut node: Ptr<NBNode>;
+        let mut fromEdge: Ptr<NBEdge>;
+        let mut toEdge: Ptr<NBEdge>;
+        if nodeID == "0" {
+            fromEdge = self.get_named_edge_2("VONSTRNR", "VONSTR");
+            toEdge = self.get_named_edge_2("NACHSTRNR", "NACHSTR");
+            if fromEdge.is_null() {
+                return;
+            }
+            node = fromEdge.get_to_node();
+            write_warning("Ignoring lane-to-lane connection (not yet implemented for this format version)");
+            return;
+        } else {
+            node = self.get_named_node_2("KNOTNR", "KNOT");
+            if node.is_null() {
+                return;
+            }
+            fromEdge = self.get_named_edge_continuating_2("VONSTRNR", "VONSTR", node);
+            toEdge = self.get_named_edge_continuating_2("NACHSTRNR", "NACHSTR", node);
+        }
+        if fromEdge.is_null() || toEdge.is_null() {
+            return;
+        }
+
+        let mut fromLaneOffset: i32 = 0;
+        if !node.has_incoming(fromEdge) {
+            fromLaneOffset = fromEdge.get_num_lanes();
+            fromEdge = self.get_reversed_continuating(fromEdge, node);
+        } else {
+            fromEdge = self.get_reversed_continuating(fromEdge, node);
+            let tmp = self.myNetBuilder.m().get_edge_cont().retrieve(before_underscore(&fromEdge.get_id().to_string()), false);
+            fromLaneOffset = tmp.get_num_lanes();
+        }
+
+        let mut toLaneOffset: i32 = 0;
+        if !node.has_outgoing(toEdge) {
+            toLaneOffset = toEdge.get_num_lanes();
+            toEdge = self.get_reversed_continuating(toEdge, node);
+        } else {
+            let tmp = self.myNetBuilder.m().get_edge_cont().retrieve(before_underscore(&toEdge.get_id().to_string()), false);
+            toLaneOffset = tmp.get_num_lanes();
+        }
+        // get the from-lane
+        let fromLaneS = normal_id(&self.field("VONFSNR"));
+        let mut fromLane = match to_int(&fromLaneS) {
+            Ok(v) => v,
+            Err(ProcessError::NumberFormat(_)) => {
+                write_errorf!("A from-lane number for edge '%' is not numeric (%).", fromEdge.get_id().to_string(), fromLaneS.clone());
+                return;
+            }
+            Err(e) => std::panic::panic_any(e),
+        };
+        fromLane -= 1;
+        if fromLane < 0 {
+            write_errorf!("A from-lane number for edge '%' is not positive (%).", fromEdge.get_id().to_string(), fromLaneS.clone());
+            return;
+        }
+        // get the to-lane
+        let toLaneS = normal_id(&self.field("NACHFSNR"));
+        let mut toLane = match to_int(&toLaneS) {
+            Ok(v) => v,
+            Err(ProcessError::NumberFormat(_)) => {
+                write_errorf!("A to-lane number for edge '%' is not numeric (%).", toEdge.get_id().to_string(), toLaneS.clone());
+                return;
+            }
+            Err(e) => std::panic::panic_any(e),
+        };
+        toLane -= 1;
+        if toLane < 0 {
+            write_errorf!("A to-lane number for edge '%' is not positive (%).", toEdge.get_id().to_string(), toLaneS.clone());
+            return;
+        }
+        // !!! the next is probably a hack
+        if fromLane - fromLaneOffset >= 0 {
+            // C++ keeps fromLaneOffset unchanged in the other branch
+            fromLane = fromEdge.get_num_lanes() - (fromLane - fromLaneOffset) - 1;
+        }
+        if toLane - toLaneOffset >= 0 {
+            toLane = toEdge.get_num_lanes() - (toLane - toLaneOffset) - 1;
+        }
+        //
+        if fromEdge.get_num_lanes() <= fromLane {
+            write_errorf!("A from-lane number for edge '%' is larger than the edge's lane number (%).", fromEdge.get_id().to_string(), fromLaneS.clone());
+            return;
+        }
+        if toEdge.get_num_lanes() <= toLane {
+            write_errorf!("A to-lane number for edge '%' is larger than the edge's lane number (%).", toEdge.get_id().to_string(), toLaneS.clone());
+            return;
+        }
+        //
+        // shortcut: C++ passes NBEdge::myDefaultConnectionLength as the connection length; the static is private to nb_edge.rs so UNSPECIFIED_LOADED_LENGTH (-1) is used, upgrade when my_default_connection_length is pub
+        fromEdge.m().add_lane2_lane_connection(fromLane, toEdge, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
     }
 
     /// C++: `void NIImporter_VISUM::parse_stopPoints()` [private]
@@ -2822,7 +3045,53 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn parse_stop_points(&mut self) {
-        todo!("port NIImporter_VISUM::parse_stopPoints")
+        let id = normal_id(&self.field(&keys_string(K::VISUM_NO)));
+        let name = latin1_to_utf8(self.field(&keys_string(K::VISUM_NAME)).as_bytes());
+        let key = keys_string(K::VISUM_TYPES);
+        let dp = self.myDefaultPermissions;
+        let permissions = self.get_permissions(&key, &id, dp);
+        let from = self.get_named_node_secure(&keys_string(K::VISUM_FROMNODE), Ptr::null());
+        let to = self.get_named_node_secure(&keys_string(K::VISUM_FROMNODENO), Ptr::null());
+        let edgeID = self.field(&keys_string(K::VISUM_LINKNO));
+        if edgeID.is_empty() {
+            write_warningf!("Ignoring stopping place '%' without edge id", id.clone());
+        } else if from.is_null() && to.is_null() {
+            write_warningf!("Ignoring stopping place '%' without node information", id.clone());
+        } else {
+            let mut edge = self.get_named_edge(&keys_string(K::VISUM_LINKNO));
+            if edge.is_null() {
+                write_warningf!("Ignoring stopping place '%' with invalid edge reference '%'", id.clone(), edgeID.clone());
+                return;
+            } else if !from.is_null() {
+                if edge.get_to_node() == from {
+                    let edge2 = self.myNetBuilder.m().get_edge_cont().retrieve(&format!("-{}", edge.get_id()), false);
+                    if edge2.is_null() {
+                        write_warningf!("Could not find edge with from-node '%' and base id '%' for stopping place '%'", from.get_id().to_string(), edge.get_id().to_string(), id.clone());
+                    } else {
+                        edge = edge2;
+                    }
+                } else if edge.get_from_node() != from {
+                    write_warningf!("Unexpected from-node '%' for edge '%' of stopping place '%'", from.get_id().to_string(), edge.get_id().to_string(), id.clone());
+                }
+            } else if edge.get_from_node() == to {
+                let edge2 = self.myNetBuilder.m().get_edge_cont().retrieve(&format!("-{}", edge.get_id()), false);
+                if edge2.is_null() {
+                    write_warningf!("Could not find edge with to-node '%' and base id '%' for stopping place '%'", to.get_id().to_string(), edge.get_id().to_string(), id.clone());
+                } else {
+                    edge = edge2;
+                }
+            } else if edge.get_to_node() != to {
+                write_warningf!("Unexpected to-node '%' for edge '%' of stopping place '%'", to.get_id().to_string(), edge.get_id().to_string(), id.clone());
+            }
+            let relPos = throw(to_double(&self.field(&keys_string(K::VISUM_RELPOS))));
+            // @note could also retrieve Xkoord, ykoord from $HALTESTELLE
+            let pos = edge.get_geometry().position_at_offset(edge.get_length() * relPos, 0.0);
+
+            let length = opt_float("osm.stop-output.length");
+            let element = if is_railway(permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
+            let ptStop = std::rc::Rc::new(NBPTStop::new(element, id.clone(), pos, edge.get_id().to_string(), edge.get_id().to_string(), length, name.clone(), permissions, 0.0, RGBColor::new_valid(false), -1.0));
+            self.myNetBuilder.m().get_pt_stop_cont().insert(ptStop, false);
+        }
     }
 
     /// C++: `void NIImporter_VISUM::addParser(const std::string &, ParsingFunction)` [private]
@@ -2837,7 +3106,12 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn add_parser(&mut self, name: &str, function: NIImporter_VISUM_ParsingFunction) {
-        todo!("port NIImporter_VISUM::addParser")
+        self.mySingleDataParsers.push(NIImporter_VISUM_TypeParser {
+            name: name.to_string(),
+            function,
+            position: -1,
+            pattern: String::new(),
+        });
     }
 
     /// C++: `bool NIImporter_VISUM::isSplitEdge(NBEdge *, NBNode *)` [static, private]
@@ -2849,7 +3123,9 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn is_split_edge(edge: Ptr<NBEdge>, node: Ptr<NBNode>) -> bool {
-        todo!("port NIImporter_VISUM::isSplitEdge")
+        let eid = edge.get_id();
+        let nid = node.get_id();
+        eid.len() > nid.len() + 1 && eid.ends_with(format!("_{}", nid).as_str())
     }
 
     /// C++: `void NIImporter_VISUM::loadLanguage(const std::string &)` [protected]
@@ -2876,7 +3152,26 @@ impl NIImporter_VISUM {
     // }
     #[allow(unused_variables)]
     pub fn load_language(&mut self, file: &str) {
-        todo!("port NIImporter_VISUM::loadLanguage")
+        let content = match std::fs::read_to_string(file) {
+            Ok(c) => c,
+            Err(_) => std::panic::panic_any(ProcessError::new(utils::tlf!("Could not load VISUM language map from '%'.", file))),
+        };
+        // strm >> keyDE; strm >> keyNew; (whitespace separated tokens)
+        let mut toks = content.split_whitespace();
+        while let Some(keyDE) = toks.next() {
+            let keyNew = toks.next().unwrap_or("");
+            let known = KEYS.with(|k| k.borrow().has_string(keyDE));
+            if known {
+                KEYS.with(|k| {
+                    let mut k = k.borrow_mut();
+                    let key = throw(k.get(keyDE));
+                    k.remove(keyDE, key);
+                    throw(k.insert(keyNew, key, true));
+                });
+            } else {
+                write_warningf!("Unknown entry '%' in VISUM language map", keyDE.to_string());
+            }
+        }
     }
 
 }
@@ -2909,7 +3204,7 @@ impl NIImporter_VISUM_VSysType {
     // VSysType(const std::string& _type, const std::string& _name) : type(_type), name(_name) {}
     #[allow(unused_variables)]
     pub fn new(_type: &str, _name: &str) -> Self {
-        todo!("port VSysType::VSysType")
+        NIImporter_VISUM_VSysType { type_: _type.to_string(), name: _name.to_string() }
     }
 
 }
