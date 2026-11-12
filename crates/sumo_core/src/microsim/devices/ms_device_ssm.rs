@@ -3611,7 +3611,31 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn determine_conflict_point(eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::determineConflictPoint")
+        use MSDevice_SSM_EncounterType::*;
+        let type_ = eInfo.type_;
+        let e = eInfo.encounter;
+        if type_ == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_COLLISION {
+            // Both vehicles have already past the conflict entry.
+            if e.size() == 0 {
+                eInfo.conflictPoint = e.ego.get_position(0.);
+                write_warningf!("SSM device of vehicle '%' encountered an unexpected conflict with foe % at time=%. Please review your vehicle behavior settings.", e.egoID, e.foeID, time2string(MSNet::get_instance().get_current_time_step()));
+                return;
+            }
+            // A new encounter should not be created if both vehicles already entered the conflict area
+            eInfo.conflictPoint = *e.conflictPointSpan.back();
+        } else if type_ == ENCOUNTER_TYPE_CROSSING_FOLLOWER || type_ == ENCOUNTER_TYPE_MERGING_FOLLOWER || type_ == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA {
+            eInfo.conflictPoint = e.ego.get_position_along_best_lanes(eInfo.egoConflictEntryDist);
+        } else if type_ == ENCOUNTER_TYPE_CROSSING_LEADER || type_ == ENCOUNTER_TYPE_MERGING_LEADER || type_ == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA {
+            eInfo.conflictPoint = e.foe.get_position_along_best_lanes(eInfo.foeConflictEntryDist);
+        } else if type_ == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER {
+            eInfo.conflictPoint = e.foe.get_position(-e.foe.get_length());
+        } else if type_ == ENCOUNTER_TYPE_FOLLOWING_LEADER {
+            eInfo.conflictPoint = e.ego.get_position(-e.ego.get_length());
+        } else if type_ == ENCOUNTER_TYPE_ONCOMING {
+            eInfo.conflictPoint = (e.ego.get_position(0.) + e.foe.get_position(0.)) * 0.5;
+        } else {
+            return;
+        }
     }
 
     /// C++: `void MSDevice_SSM::estimateConflictTimes(EncounterApproachInfo &)` [static, private]
@@ -3773,7 +3797,100 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn estimate_conflict_times(eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::estimateConflictTimes")
+        // C++ DEBUG_SSM std::cout blocks are compiled out (DEBUG_SSM is not defined) and are not ported.
+        use MSDevice_SSM_EncounterType::*;
+        let e = eInfo.encounter;
+        debug_assert!(eInfo.type_ != ENCOUNTER_TYPE_NOCONFLICT_AHEAD); // arrival times not defined, if no conflict is ahead.
+        if eInfo.type_ == ENCOUNTER_TYPE_COLLISION {
+            eInfo.egoEstimatedConflictEntryTime = 0.;
+            eInfo.foeEstimatedConflictEntryTime = 0.;
+            return;
+        }
+
+        if eInfo.type_ == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER || eInfo.type_ == ENCOUNTER_TYPE_FOLLOWING_LEADER || eInfo.type_ == ENCOUNTER_TYPE_MERGING_ADJACENT || eInfo.type_ == ENCOUNTER_TYPE_ON_ADJACENT_LANES {
+            // No need to know the times until ...ConflictDistEntry, currently. They would correspond to an estimated time headway or similar.
+            // TTC must take into account the movement of the leader, as would DRAC, PET doesn't need the time either, since it uses aposteriori values.
+            return;
+        }
+
+        debug_assert!(eInfo.type_ == ENCOUNTER_TYPE_MERGING || eInfo.type_ == ENCOUNTER_TYPE_CROSSING
+            || eInfo.type_ == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+            || eInfo.type_ == ENCOUNTER_TYPE_ONCOMING);
+
+        // Determine exit distances
+        if eInfo.type_ == ENCOUNTER_TYPE_MERGING || eInfo.type_ == ENCOUNTER_TYPE_ONCOMING {
+            eInfo.egoConflictExitDist = eInfo.egoConflictEntryDist + e.ego.get_vehicle_type().get_length();
+            eInfo.foeConflictExitDist = eInfo.foeConflictEntryDist + e.foe.get_vehicle_type().get_length();
+        } else {
+            eInfo.egoConflictExitDist = eInfo.egoConflictEntryDist + eInfo.egoConflictAreaLength + e.ego.get_vehicle_type().get_length();
+            eInfo.foeConflictExitDist = eInfo.foeConflictEntryDist + eInfo.foeConflictAreaLength + e.foe.get_vehicle_type().get_length();
+        }
+
+        // Estimate entry times to stipulate a leader / follower relation for the encounter.
+        if eInfo.egoConflictEntryDist > utils::geom::NUMERICAL_EPS {
+            eInfo.egoEstimatedConflictEntryTime = MSCFModel::estimate_arrival_time(eInfo.egoConflictEntryDist, e.ego.get_speed(), e.ego.get_max_speed_on_lane(), min2(0., e.ego.get_acceleration()));
+            debug_assert!(eInfo.egoEstimatedConflictEntryTime > 0.);
+        } else {
+            // ego already entered conflict area
+            eInfo.egoEstimatedConflictEntryTime = 0.;
+        }
+        if eInfo.foeConflictEntryDist > utils::geom::NUMERICAL_EPS {
+            eInfo.foeEstimatedConflictEntryTime = MSCFModel::estimate_arrival_time(eInfo.foeConflictEntryDist, e.foe.get_speed(), e.foe.get_max_speed_on_lane(), min2(0., e.foe.get_acceleration()));
+            debug_assert!(eInfo.foeEstimatedConflictEntryTime > 0.);
+        } else {
+            // foe already entered conflict area
+            eInfo.foeEstimatedConflictEntryTime = 0.;
+        }
+
+        if eInfo.type_ == ENCOUNTER_TYPE_ONCOMING {
+            eInfo.egoEstimatedConflictEntryTime = eInfo.egoConflictEntryDist / (e.ego.get_speed() + e.foe.get_speed());
+            eInfo.foeEstimatedConflictEntryTime = eInfo.egoEstimatedConflictEntryTime;
+        }
+
+        // Estimate exit times from conflict area for leader / follower.
+        // assume vehicles start to accelerate after entring the intersection
+        if eInfo.egoConflictExitDist >= 0. {
+            eInfo.egoEstimatedConflictExitTime = MSCFModel::estimate_arrival_time(eInfo.egoConflictExitDist, e.ego.get_speed(), e.ego.get_max_speed_on_lane(), min2(0., e.ego.get_acceleration()));
+        } else {
+            eInfo.egoEstimatedConflictExitTime = 0.;
+        }
+        if eInfo.foeConflictExitDist >= 0. {
+            eInfo.foeEstimatedConflictExitTime = MSCFModel::estimate_arrival_time(eInfo.foeConflictExitDist, e.foe.get_speed(), e.foe.get_max_speed_on_lane(), min2(0., e.foe.get_acceleration()));
+        } else {
+            eInfo.foeEstimatedConflictExitTime = 0.;
+        }
+
+        if eInfo.type_ == ENCOUNTER_TYPE_ONCOMING {
+            eInfo.egoEstimatedConflictExitTime = eInfo.egoEstimatedConflictEntryTime;
+            eInfo.foeEstimatedConflictExitTime = eInfo.egoEstimatedConflictEntryTime;
+        }
+
+        if eInfo.type_ != ENCOUNTER_TYPE_MERGING && eInfo.type_ != ENCOUNTER_TYPE_CROSSING {
+            // this call is issued in context of an ongoing conflict, therefore complete type is already known for the encounter
+            // (One of EGO_ENTERED_CONFLICT_AREA, FOE_ENTERED_CONFLICT_AREA, EGO_LEFT_CONFLICT_AREA, FOE_LEFT_CONFLICT_AREA, BOTH_ENTERED_CONFLICT_AREA)
+            // --> no need to specify incomplete encounter type
+            return;
+        }
+
+        // For merging and crossing situation, the leader/follower relation not determined by classifyEncounter()
+        // This is done below based on the estimated conflict entry times
+        if eInfo.egoEstimatedConflictEntryTime == 0. && eInfo.foeEstimatedConflictEntryTime == 0. && eInfo.egoConflictExitDist >= 0. && eInfo.foeConflictExitDist >= 0. {
+            eInfo.type_ = ENCOUNTER_TYPE_COLLISION;
+            write_warningf!("SSM device of vehicle '%' detected collision with vehicle '%' at time=%.", e.egoID, e.foeID, time2string(MSNet::get_instance().get_current_time_step()));
+        } else if eInfo.egoEstimatedConflictEntryTime == INVALID_DOUBLE && eInfo.foeEstimatedConflictEntryTime == INVALID_DOUBLE {
+            eInfo.type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+        } else if eInfo.egoEstimatedConflictEntryTime < eInfo.foeEstimatedConflictEntryTime || eInfo.foeEstimatedConflictEntryTime == INVALID_DOUBLE {
+            // ego is estimated first at conflict point
+            eInfo.type_ = if eInfo.type_ == ENCOUNTER_TYPE_CROSSING { ENCOUNTER_TYPE_CROSSING_LEADER } else { ENCOUNTER_TYPE_MERGING_LEADER };
+        } else {
+            // ego is estimated second at conflict point
+            eInfo.type_ = if eInfo.type_ == ENCOUNTER_TYPE_CROSSING { ENCOUNTER_TYPE_CROSSING_FOLLOWER } else { ENCOUNTER_TYPE_MERGING_FOLLOWER };
+        }
     }
 
     /// C++: `void MSDevice_SSM::checkConflictEntryAndExit(EncounterApproachInfo &)` [static, private]
@@ -3920,7 +4037,95 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn check_conflict_entry_and_exit(eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::checkConflictEntryAndExit")
+        // determine exact entry and exit times
+        use MSDevice_SSM_EncounterType::*;
+        let e = eInfo.encounter;
+
+        let foePastConflictEntry = eInfo.foeConflictEntryDist < 0.0 && eInfo.foeConflictEntryDist != INVALID_DOUBLE;
+        let egoPastConflictEntry = eInfo.egoConflictEntryDist < 0.0 && eInfo.egoConflictEntryDist != INVALID_DOUBLE;
+        let foePastConflictExit = eInfo.foeConflictExitDist < 0.0 && eInfo.foeConflictExitDist != INVALID_DOUBLE;
+        let egoPastConflictExit = eInfo.egoConflictExitDist < 0.0 && eInfo.egoConflictExitDist != INVALID_DOUBLE;
+
+        if e.size() == 0 {
+            // This is a new conflict (or a conflict that was considered earlier
+            // but disregarded due to being 'over')
+
+            if egoPastConflictExit {
+                if foePastConflictExit {
+                    eInfo.type_ = ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA;
+                } else if foePastConflictEntry {
+                    eInfo.type_ = ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA;
+                } else {
+                    eInfo.type_ = ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA;
+                }
+            } else if foePastConflictExit {
+                if egoPastConflictEntry {
+                    eInfo.type_ = ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA;
+                } else {
+                    eInfo.type_ = ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA;
+                }
+            } else {
+                // No one left conflict area
+                if egoPastConflictEntry {
+                    if foePastConflictEntry {
+                        eInfo.type_ = ENCOUNTER_TYPE_COLLISION;
+                    } else {
+                        eInfo.type_ = ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA;
+                    }
+                } else if foePastConflictEntry {
+                    eInfo.type_ = ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA;
+                }
+                // else: both before conflict, keep current type
+            }
+            return;
+        }
+
+        // Distances to conflict area boundaries in previous step
+        let prevEgoConflictEntryDist = eInfo.egoConflictEntryDist + e.ego.get_last_step_dist();
+        let prevFoeConflictEntryDist = eInfo.foeConflictEntryDist + e.foe.get_last_step_dist();
+        let prevEgoConflictExitDist = prevEgoConflictEntryDist + eInfo.egoConflictAreaLength + e.ego.get_length();
+        let prevFoeConflictExitDist = prevFoeConflictEntryDist + eInfo.foeConflictAreaLength + e.foe.get_length();
+        let prevType = e.currentType;
+
+        // Check if ego entered in last step
+        if e.egoConflictEntryTime == INVALID_DOUBLE && egoPastConflictEntry && prevEgoConflictEntryDist >= 0. {
+            // ego must have entered the conflict in the last step. Determine exact entry time
+            e.m().egoConflictEntryTime = simtime() - ts() + MSCFModel::passing_time(-prevEgoConflictEntryDist, 0., -eInfo.egoConflictEntryDist, e.ego.get_previous_speed(), e.ego.get_speed());
+            // Update encounter type (only done here for entering, the other transitions are done in updatePassedEncounter)
+            if prevType == ENCOUNTER_TYPE_CROSSING_FOLLOWER || prevType == ENCOUNTER_TYPE_CROSSING_LEADER {
+                eInfo.type_ = ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA;
+            }
+        }
+
+        // Check if foe entered in last step
+        if e.foeConflictEntryTime == INVALID_DOUBLE && foePastConflictEntry && prevFoeConflictEntryDist >= 0. {
+            // foe must have entered the conflict in the last step. Determine exact entry time
+            e.m().foeConflictEntryTime = simtime() - ts() + MSCFModel::passing_time(-prevFoeConflictEntryDist, 0., -eInfo.foeConflictEntryDist, e.foe.get_previous_speed(), e.foe.get_speed());
+            // Update encounter type (only done here for entering, the other transitions are done in updatePassedEncounter)
+            if prevType == ENCOUNTER_TYPE_CROSSING_FOLLOWER || prevType == ENCOUNTER_TYPE_CROSSING_LEADER {
+                eInfo.type_ = ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA;
+            }
+        }
+
+        // Check if ego left conflict area
+        if e.egoConflictExitTime == INVALID_DOUBLE && eInfo.egoConflictExitDist < 0. && prevEgoConflictExitDist >= 0. {
+            // ego must have left the conflict area in the last step. Determine exact exit time
+            e.m().egoConflictExitTime = simtime() - ts() + MSCFModel::passing_time(-prevEgoConflictExitDist, 0., -eInfo.egoConflictExitDist, e.ego.get_previous_speed(), e.ego.get_speed());
+            // Update encounter type (only done here for entering, the other transitions are done in updatePassedEncounter)
+            if prevType == ENCOUNTER_TYPE_CROSSING_FOLLOWER || prevType == ENCOUNTER_TYPE_CROSSING_LEADER {
+                eInfo.type_ = ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA;
+            }
+        }
+
+        // Check if foe left conflict area
+        if e.foeConflictExitTime == INVALID_DOUBLE && eInfo.foeConflictExitDist < 0. && prevFoeConflictExitDist >= 0. {
+            // foe must have left the conflict area in the last step. Determine exact exit time
+            e.m().foeConflictExitTime = simtime() - ts() + MSCFModel::passing_time(-prevFoeConflictExitDist, 0., -eInfo.foeConflictExitDist, e.foe.get_previous_speed(), e.foe.get_speed());
+            // Update encounter type (only done here for entering, the other transitions are done in updatePassedEncounter)
+            if prevType == ENCOUNTER_TYPE_CROSSING_FOLLOWER || prevType == ENCOUNTER_TYPE_CROSSING_LEADER {
+                eInfo.type_ = ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA;
+            }
+        }
     }
 
     /// C++: `const MSLane * MSDevice_SSM::findFoeConflictLane(const MSVehicle *, const MSLane *, double &) const` [const, private]
@@ -4068,7 +4273,120 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn find_foe_conflict_lane(&self, foe: Ptr<MSVehicle>, egoConflictLane: Ptr<MSLane>, distToConflictLane: &mut f64) -> Ptr<MSLane> {
-        todo!("port MSDevice_SSM::findFoeConflictLane")
+        // C++ DEBUG_SSM std::cout blocks are compiled out and are not ported.
+        // every SUMOVehicle in the simulation is an MSBaseVehicle (base-first repr(C) embedding)
+        let holder: Ptr<MSBaseVehicle> = self.base.myHolder.cast::<MSBaseVehicle>();
+        // std::find(route.begin() + current, route.end(), edge) != route.end(), with route positions as usize indices
+        let ahead = |route: &MSRoute, cur: usize, edge: Ptr<MSEdge>| -> bool {
+            let edges = route.get_edges();
+            (cur..edges.len()).any(|i| edges[i] == edge)
+        };
+        if foe.get_lane_change_model_2().is_opposite() {
+            // distinguish three cases
+            // 1) foe is driving in the same direction as ego and ego is driving in lane direction -> ENCOUNTER_TYPE_ON_ADJACENT_LANES
+            // 2) foe is driving in the same direction as ego and ego is also driving in the opposite direction -> ENCOUNTER_TYPE_FOLLOWING
+            // 3) foe is driving in the opposite direction as ego and both are driving way from each other -> ENCOUNTER_TYPE_NOCONFLICT_AHEAD
+            // 3) foe is driving in the opposite direction as ego and both are driving towards each other -> ENCOUNTER_TYPE_ONCOMING
+            if ahead(holder.get_route(), *holder.get_current_route_edge(), foe.get_edge()) {
+                // same direction, foe is leader
+                if self.myHolderMS.get_lane_change_model_2().is_opposite() {
+                    if egoConflictLane.is_internal() && !foe.get_lane().is_internal() {
+                        // lead/follow situation resolved elsewhere
+                        return Ptr::default();
+                    }
+                    return foe.get_lane();
+                } else {
+                    // adjacent
+                    return Ptr::default();
+                }
+            }
+            if ahead(foe.get_route(), *foe.get_current_route_edge(), holder.get_edge()) {
+                // same direction, ego is leader
+                if self.myHolderMS.get_lane_change_model_2().is_opposite() {
+                    return egoConflictLane;
+                } else {
+                    // adjacent
+                    return Ptr::default();
+                }
+            }
+            if ahead(holder.get_route(), *holder.get_current_route_edge(), foe.get_edge().get_opposite_edge()) {
+                // opposite direction, driving towards each other
+                return egoConflictLane;
+            } else {
+                // opposite direction, driving away from each other
+                return Ptr::default();
+            }
+        }
+
+        let mut foeLane = foe.get_lane();
+        let bestLanes = foe.get_best_lanes_continuation();
+        let foeBestLanesEnd = bestLanes.len();
+        let mut laneIter: usize = 0;
+        debug_assert!(foeLane.is_internal() || bestLanes.first() == Some(&foeLane));
+        *distToConflictLane = -foe.get_position_on_lane();
+
+        // Potential conflict lies on junction if egoConflictLane is internal
+        let conflictJunction: Ptr<MSJunction> = if egoConflictLane.is_internal() { egoConflictLane.get_edge().get_to_junction() } else { Ptr::default() };
+
+        if foeLane.is_internal() && foeLane.get_edge().get_to_junction() == conflictJunction {
+            // foe is already on the conflict junction
+            if !egoConflictLane.is_null() && egoConflictLane.is_internal() && egoConflictLane.get_link_cont()[0].get_via_lane() == foeLane {
+                *distToConflictLane += egoConflictLane.get_length();
+            }
+            return foeLane;
+        }
+
+        // Foe is not on the conflict junction
+
+        // Leading internal lanes in bestlanes are resembled as a single NULL-pointer skip them
+        if bestLanes.get(laneIter).map_or(false, |l| l.is_null()) {
+            while !foeLane.is_null() && foeLane.is_internal() {
+                *distToConflictLane += foeLane.get_length();
+                foeLane = foeLane.get_link_cont()[0].get_via_lane();
+            }
+            laneIter += 1;
+            debug_assert!(laneIter == foeBestLanesEnd || !bestLanes[laneIter].is_null());
+        }
+
+        // Look for the junction downstream along foeBestLanes
+        while laneIter != foeBestLanesEnd && *distToConflictLane <= self.myRange {
+            // Eventual internal lanes were skipped
+            foeLane = bestLanes[laneIter];
+            debug_assert!(!foeLane.is_internal());
+            if foeLane.get_edge() as *const MSEdge == egoConflictLane.get_edge() as *const MSEdge {
+                // found the potential conflict edge along foeBestLanes
+                return foeLane;
+            }
+            // No conflict on foeLane
+            *distToConflictLane += foeLane.get_length();
+
+            // set laneIter to next non internal lane along foeBestLanes
+            laneIter += 1;
+            if laneIter == foeBestLanesEnd {
+                return Ptr::default();
+            }
+            let nextNonInternalLane = bestLanes[laneIter];
+            let link = foeLane.get_link_to(nextNonInternalLane);
+            if link.is_null() {
+                // encountered incomplete route
+                return Ptr::default();
+            }
+            // Set foeLane to first internal lane on the next junction
+            foeLane = link.get_via_lane();
+            if foeLane.is_null() {
+                foeLane = nextNonInternalLane;
+                continue;
+            }
+            if foeLane.get_edge().get_to_junction() == conflictJunction {
+                // found egoConflictLane, resp. the conflict junction, along foeBestLanes
+                return foeLane;
+            }
+            // No conflict on junction
+            *distToConflictLane += link.get_internal_lengths_after();
+            foeLane = nextNonInternalLane;
+        }
+        // Didn't find conflicting lane on foeBestLanes within range.
+        Ptr::default()
     }
 
     /// C++: `void MSDevice_SSM::closeEncounter(Encounter *)` [private]
@@ -4240,7 +4558,39 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_ss_ms(&self, e: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::computeSSMs")
+        use MSDevice_SSM_EncounterType::*;
+        let type_ = e.type_;
+
+        if type_ == ENCOUNTER_TYPE_CROSSING_FOLLOWER || type_ == ENCOUNTER_TYPE_CROSSING_LEADER
+            || type_ == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+            || type_ == ENCOUNTER_TYPE_MERGING_FOLLOWER || type_ == ENCOUNTER_TYPE_MERGING_LEADER
+            || type_ == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER || type_ == ENCOUNTER_TYPE_FOLLOWING_LEADER
+            || type_ == ENCOUNTER_TYPE_ONCOMING
+        {
+            if self.myComputeTTC || self.myComputeDRAC || self.myComputePPET || self.myComputeMDRAC {
+                self.determine_tt_cand_dra_cand_ppe_tand_mdrac(e);
+            }
+            self.determine_pet(e);
+        } else if type_ == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA {
+            self.determine_pet(e);
+        } else if type_ == ENCOUNTER_TYPE_COLLISION {
+            // C++ has a TODO here ("handle collision"); no measures are computed
+        } else if type_ == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+            || type_ == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA || type_ == ENCOUNTER_TYPE_NOCONFLICT_AHEAD
+        {
+            // No conflict measures apply for these states, which correspond to intermediate times between
+            // one vehicle leaving the conflict area and the arrival time for the other (difference corresponds to the PET)
+        } else if type_ == ENCOUNTER_TYPE_ON_ADJACENT_LANES || type_ == ENCOUNTER_TYPE_MERGING_ADJACENT {
+            // No conflict measures apply for this state
+        } else if type_ == ENCOUNTER_TYPE_MERGING_PASSED || type_ == ENCOUNTER_TYPE_FOLLOWING_PASSED {
+            // No conflict measures apply for this state
+        } else if type_ == ENCOUNTER_TYPE_NOCONFLICT_AHEAD {
+            // No conflict measures apply for this state
+        } else {
+            let mut ss = String::new();
+            shl_op(&mut ss, type_);
+            write_warning(&format!("Unknown or undetermined encounter type at computeSSMs(): '{}'", ss));
+        }
     }
 
     /// C++: `void MSDevice_SSM::determinePET(EncounterApproachInfo &) const` [const, private]
@@ -4344,7 +4694,62 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn determine_pet(&self, eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::determinePET")
+        use MSDevice_SSM_EncounterType::*;
+        let e = eInfo.encounter;
+        if e.size() == 0 {
+            return;
+        }
+        let type_ = eInfo.type_;
+
+        if type_ == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER || type_ == ENCOUNTER_TYPE_FOLLOWING_LEADER {
+            // For a following situation, the corresponding PET-value is merely the time-headway.
+            //       Determining these could be done by comparison of memorized gaps with memorized covered distances
+            //       Implementation is postponed. Tracing the time gaps (in contrast to crossing PET) corresponds to
+            //       a vector of values not a single value.
+            // pass
+        } else if type_ == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA {
+            let prevType = if e.typeSpan.len() > 0 { encounter_type_from_i32(*e.typeSpan.last().unwrap()) } else { ENCOUNTER_TYPE_NOCONFLICT_AHEAD };
+            if prevType == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA {
+                // pet must have been calculated already
+                debug_assert!(e.PET.value != INVALID_DOUBLE);
+                return;
+            }
+
+            // this situation should have emerged from one of the following
+            debug_assert!(prevType == ENCOUNTER_TYPE_CROSSING_FOLLOWER
+                || prevType == ENCOUNTER_TYPE_CROSSING_LEADER
+                || prevType == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA);
+
+            // But both have passed the conflict area
+            debug_assert!(e.egoConflictEntryTime != INVALID_DOUBLE || e.foeConflictEntryTime != INVALID_DOUBLE);
+
+            // Both have left the conflict region
+            // (Conflict may have started as one was already within the conflict area - thus the check for invalid entry times)
+            if e.foeConflictEntryTime == INVALID_DOUBLE || (e.egoConflictEntryTime != INVALID_DOUBLE && e.egoConflictEntryTime > e.foeConflictExitTime) {
+                eInfo.pet.0 = e.egoConflictEntryTime;
+                eInfo.pet.1 = e.egoConflictEntryTime - e.foeConflictExitTime;
+            } else if e.egoConflictEntryTime == INVALID_DOUBLE || (e.egoConflictEntryTime != INVALID_DOUBLE && e.foeConflictEntryTime > e.egoConflictExitTime) {
+                eInfo.pet.0 = e.foeConflictEntryTime;
+                eInfo.pet.1 = e.foeConflictEntryTime - e.egoConflictExitTime;
+            } else {
+                eInfo.pet.0 = e.egoConflictEntryTime;
+                eInfo.pet.1 = 0.;
+            }
+
+            // Reset entry and exit times two allow an eventual subsequent re-use
+            let em = e.m();
+            em.egoConflictEntryTime = INVALID_DOUBLE;
+            em.egoConflictExitTime = INVALID_DOUBLE;
+            em.foeConflictEntryTime = INVALID_DOUBLE;
+            em.foeConflictExitTime = INVALID_DOUBLE;
+        } else {
+            // other cases (merging and pre-crossing situations) do not correspond to a PET calculation.
+            return;
+        }
     }
 
     /// C++: `void MSDevice_SSM::determineTTCandDRACandPPETandMDRAC(EncounterApproachInfo &) const` [const, private]
@@ -4595,7 +5000,176 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn determine_tt_cand_dra_cand_ppe_tand_mdrac(&self, eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::determineTTCandDRACandPPETandMDRAC")
+        use MSDevice_SSM_EncounterType::*;
+        let e = eInfo.encounter;
+        let type_ = eInfo.type_;
+
+        // Dependent on the actual encounter situation (eInfo.type) calculate the TTC.
+        // For merging and crossing, different cases occur when a collision during the merging / crossing process is predicted.
+        if type_ == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER {
+            let gap = eInfo.egoConflictEntryDist;
+            if self.myComputeTTC {
+                eInfo.ttc = self.compute_ttc(gap, e.ego.get_speed(), e.foe.get_speed());
+            }
+            if self.myComputeDRAC {
+                eInfo.drac = Self::compute_drac(gap, e.ego.get_speed(), e.foe.get_speed());
+            }
+            if self.myComputeMDRAC {
+                eInfo.mdrac = Self::compute_mdrac(gap, e.ego.get_speed(), e.foe.get_speed(), self.myMDRACPRT);
+            }
+        } else if type_ == ENCOUNTER_TYPE_FOLLOWING_LEADER {
+            let gap = eInfo.foeConflictEntryDist;
+            if self.myComputeTTC {
+                eInfo.ttc = self.compute_ttc(gap, e.foe.get_speed(), e.ego.get_speed());
+            }
+            if self.myComputeDRAC {
+                eInfo.drac = Self::compute_drac(gap, e.foe.get_speed(), e.ego.get_speed());
+            }
+            if self.myComputeMDRAC {
+                eInfo.mdrac = Self::compute_mdrac(gap, e.foe.get_speed(), e.ego.get_speed(), self.myMDRACPRT);
+            }
+        } else if type_ == ENCOUNTER_TYPE_ONCOMING {
+            if self.myComputeTTC {
+                let dv = e.ego.get_speed() + e.foe.get_speed();
+                if dv > 0. {
+                    eInfo.ttc = eInfo.egoConflictEntryDist / dv;
+                }
+            }
+        } else if type_ == ENCOUNTER_TYPE_MERGING_FOLLOWER || type_ == ENCOUNTER_TYPE_MERGING_LEADER {
+            // TODO: calculate more specifically whether a following situation in the merge conflict area
+            //       is predicted when assuming constant speeds or whether a side collision is predicted.
+            //       Currently, we ignore any conflict area before the actual merging point of the lanes.
+
+            // linearly extrapolated arrival times at the conflict
+            // NOTE: These differ from the estimated times stored in eInfo
+            let egoEntryTime = if e.ego.get_speed() > 0. { eInfo.egoConflictEntryDist / e.ego.get_speed() } else { INVALID_DOUBLE };
+            let egoExitTime = if e.ego.get_speed() > 0. { eInfo.egoConflictExitDist / e.ego.get_speed() } else { INVALID_DOUBLE };
+            let foeEntryTime = if e.foe.get_speed() > 0. { eInfo.foeConflictEntryDist / e.foe.get_speed() } else { INVALID_DOUBLE };
+            let foeExitTime = if e.foe.get_speed() > 0. { eInfo.foeConflictExitDist / e.foe.get_speed() } else { INVALID_DOUBLE };
+
+            // based on that, we obtain
+            if egoEntryTime == INVALID_DOUBLE || foeEntryTime == INVALID_DOUBLE {
+                // at least one vehicle is stopped
+                eInfo.ttc = INVALID_DOUBLE;
+                eInfo.drac = INVALID_DOUBLE;
+                eInfo.mdrac = INVALID_DOUBLE;
+                return;
+            }
+            let leaderEntryTime = min2(egoEntryTime, foeEntryTime);
+            let followerEntryTime = max2(egoEntryTime, foeEntryTime);
+            let leaderExitTime = if leaderEntryTime == egoEntryTime { egoExitTime } else { foeExitTime };
+            //double followerExitTime = leaderEntryTime==egoEntryTime?foeExitTime:egoExitTime;
+            let leaderSpeed = if leaderEntryTime == egoEntryTime { e.ego.get_speed() } else { e.foe.get_speed() };
+            let followerSpeed = if leaderEntryTime == egoEntryTime { e.foe.get_speed() } else { e.ego.get_speed() };
+            let leaderConflictDist = if leaderEntryTime == egoEntryTime { eInfo.egoConflictEntryDist } else { eInfo.foeConflictEntryDist };
+            let followerConflictDist = if leaderEntryTime == egoEntryTime { eInfo.foeConflictEntryDist } else { eInfo.egoConflictEntryDist };
+            let leaderLength = if leaderEntryTime == egoEntryTime { e.ego.get_length() } else { e.foe.get_length() };
+            if self.myComputePPET && followerEntryTime != INVALID_DOUBLE && leaderEntryTime != INVALID_DOUBLE {
+                eInfo.ppet = followerEntryTime - leaderExitTime;
+            }
+            if leaderExitTime >= followerEntryTime {
+                // collision would occur at merge area
+                if self.myComputeTTC {
+                    eInfo.ttc = self.compute_ttc(followerConflictDist, followerSpeed, 0.);
+                }
+                // TODO: Calculate more specific drac for merging case here (complete stop is not always necessary -> see calculation for crossing case)
+                //       Rather the
+                if self.myComputeDRAC {
+                    eInfo.drac = Self::compute_drac(followerConflictDist, followerSpeed, 0.);
+                }
+                if self.myComputeMDRAC {
+                    eInfo.mdrac = Self::compute_mdrac(followerConflictDist, followerSpeed, 0., self.myMDRACPRT);
+                }
+            } else {
+                // -> No collision at the merge area
+                if self.myComputeTTC {
+                    // Check if after merge a collision would occur if speeds are hold constant.
+                    let gapAfterMerge = followerConflictDist - leaderExitTime * followerSpeed;
+                    debug_assert!(gapAfterMerge >= 0.);
+
+                    // ttc as for following situation (assumes no collision until leader merged)
+                    let ttcAfterMerge = self.compute_ttc(gapAfterMerge, followerSpeed, leaderSpeed);
+                    eInfo.ttc = if ttcAfterMerge == INVALID_DOUBLE { INVALID_DOUBLE } else { leaderExitTime + ttcAfterMerge };
+                }
+                if self.myComputeDRAC {
+                    // Intitial gap. (May be negative only if the leader speed is higher than the follower speed, i.e., dv < 0)
+                    let g0 = followerConflictDist - leaderConflictDist - leaderLength;
+                    if g0 < 0. {
+                        // Speed difference must be positive if g0<0.
+                        debug_assert!(leaderSpeed - followerSpeed > 0.);
+                        // no deceleration needed for dv>0 and gap after merge >= 0
+                        eInfo.drac = INVALID_DOUBLE;
+                    } else {
+                        // compute drac as for a following situation
+                        eInfo.drac = Self::compute_drac(g0, followerSpeed, leaderSpeed);
+                    }
+                }
+                if self.myComputeMDRAC {
+                    // Intitial gap. (May be negative only if the leader speed is higher than the follower speed, i.e., dv < 0)
+                    let g0 = followerConflictDist - leaderConflictDist - leaderLength;
+                    if g0 < 0. {
+                        // Speed difference must be positive if g0<0.
+                        debug_assert!(leaderSpeed - followerSpeed > 0.);
+                        // no deceleration needed for dv>0 and gap after merge >= 0
+                        eInfo.mdrac = INVALID_DOUBLE;
+                    } else {
+                        // compute drac as for a following situation
+                        eInfo.mdrac = Self::compute_mdrac(g0, followerSpeed, leaderSpeed, self.myMDRACPRT);
+                    }
+                }
+            }
+        } else if type_ == ENCOUNTER_TYPE_CROSSING_FOLLOWER || type_ == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA {
+            if self.myComputeDRAC {
+                eInfo.drac = Self::compute_drac_2(eInfo);
+            }
+            if eInfo.egoEstimatedConflictEntryTime <= eInfo.foeEstimatedConflictExitTime && eInfo.egoEstimatedConflictEntryTime != INVALID_DOUBLE {
+                // follower's predicted arrival at the crossing area is earlier than the leader's predicted exit -> collision predicted
+                let gap = eInfo.egoConflictEntryDist;
+                if self.myComputeTTC {
+                    eInfo.ttc = self.compute_ttc(gap, e.ego.get_speed(), 0.);
+                }
+                if self.myComputeMDRAC {
+                    eInfo.mdrac = Self::compute_mdrac(gap, e.ego.get_speed(), 0., self.myMDRACPRT);
+                }
+            } else {
+                // encounter is expected to happen without collision
+                eInfo.ttc = INVALID_DOUBLE;
+                eInfo.mdrac = INVALID_DOUBLE;
+            }
+            if self.myComputePPET {
+                let entryTime = eInfo.egoEstimatedConflictEntryTime;
+                let exitTime = if e.foeConflictExitTime == INVALID_DOUBLE { eInfo.foeEstimatedConflictExitTime } else { e.foeConflictExitTime };
+                if entryTime != INVALID_DOUBLE && exitTime != INVALID_DOUBLE {
+                    eInfo.ppet = entryTime - exitTime;
+                }
+            }
+        } else if type_ == ENCOUNTER_TYPE_CROSSING_LEADER || type_ == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA {
+            if self.myComputeDRAC {
+                eInfo.drac = Self::compute_drac_2(eInfo);
+            }
+            if eInfo.foeEstimatedConflictEntryTime <= eInfo.egoEstimatedConflictExitTime && eInfo.foeEstimatedConflictEntryTime != INVALID_DOUBLE {
+                // follower's predicted arrival at the crossing area is earlier than the leader's predicted exit -> collision predicted
+                let gap = eInfo.foeConflictEntryDist;
+                if self.myComputeTTC {
+                    eInfo.ttc = self.compute_ttc(gap, e.foe.get_speed(), 0.);
+                }
+                if self.myComputeMDRAC {
+                    eInfo.mdrac = Self::compute_mdrac(gap, e.foe.get_speed(), 0., self.myMDRACPRT);
+                }
+            } else {
+                // encounter is expected to happen without collision
+                eInfo.ttc = INVALID_DOUBLE;
+                eInfo.mdrac = INVALID_DOUBLE;
+            }
+            if self.myComputePPET {
+                let entryTime = eInfo.foeEstimatedConflictEntryTime;
+                let exitTime = if e.egoConflictExitTime == INVALID_DOUBLE { eInfo.egoEstimatedConflictExitTime } else { e.egoConflictExitTime };
+                if entryTime != INVALID_DOUBLE && exitTime != INVALID_DOUBLE {
+                    eInfo.ppet = entryTime - exitTime;
+                }
+            }
+        } else {
+        }
     }
 
     /// C++: `double MSDevice_SSM::computeTTC(double, double, double) const` [const, private]
@@ -4622,7 +5196,12 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_ttc(&self, gap: f64, followerSpeed: f64, leaderSpeed: f64) -> f64 {
-        todo!("port MSDevice_SSM::computeTTC")
+        let dv = followerSpeed - leaderSpeed;
+        if dv <= 0. {
+            return INVALID_DOUBLE; // no collision
+        }
+
+        gap / dv
     }
 
     /// C++: `double MSDevice_SSM::computeDRAC(double, double, double)` [static, private]
@@ -4646,7 +5225,12 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_drac(gap: f64, followerSpeed: f64, leaderSpeed: f64) -> f64 {
-        todo!("port MSDevice_SSM::computeDRAC")
+        let dv = followerSpeed - leaderSpeed;
+        if dv <= 0. {
+            return 0.0; // no need to break
+        }
+        debug_assert!(followerSpeed > 0.);
+        0.5 * dv * dv / gap // following Guido et al. (2011)
     }
 
     /// C++: `double MSDevice_SSM::computeMDRAC(double, double, double, double)` [static, private]
@@ -4673,7 +5257,15 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_mdrac(gap: f64, followerSpeed: f64, leaderSpeed: f64, prt: f64) -> f64 {
-        todo!("port MSDevice_SSM::computeMDRAC")
+        let dv = followerSpeed - leaderSpeed;
+        if dv <= 0. {
+            return 0.0; // no need to brake
+        }
+        if gap / dv == prt {
+            return INVALID_DOUBLE;
+        }
+        debug_assert!(followerSpeed > 0.);
+        0.5 * dv / (gap / dv - prt)
     }
 
     /// C++: `double MSDevice_SSM::computeDRAC(const EncounterApproachInfo &)` [static, private]
@@ -4797,7 +5389,61 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_drac_2(eInfo: &MSDevice_SSM_EncounterApproachInfo) -> f64 {
-        todo!("port MSDevice_SSM::computeDRAC")
+        // Introduce concise variable names
+        let dEntry1 = eInfo.egoConflictEntryDist;
+        let dEntry2 = eInfo.foeConflictEntryDist;
+        let dExit1 = eInfo.egoConflictExitDist;
+        let dExit2 = eInfo.foeConflictExitDist;
+        let v1 = eInfo.encounter.ego.get_speed();
+        let v2 = eInfo.encounter.foe.get_speed();
+        let tEntry1 = eInfo.egoEstimatedConflictEntryTime;
+        let tEntry2 = eInfo.foeEstimatedConflictEntryTime;
+        let tExit1 = eInfo.egoEstimatedConflictExitTime;
+        let tExit2 = eInfo.foeEstimatedConflictExitTime;
+
+        if dExit1 <= 0. || dExit2 <= 0. {
+            // At least one vehicle already left or is not about to enter conflict area at all => no breaking needed.
+            return 0.;
+        }
+        if dEntry1 <= 0. && dEntry2 <= 0. {
+            // collision... (both already entered conflict area but none left)
+            return INVALID_DOUBLE;
+        }
+
+        let mut drac = f64::MAX;
+        if dEntry1 > 0. {
+            // vehicle 1 could break
+            if tExit2 != INVALID_DOUBLE {
+                // Vehicle 2 is expected to leave conflict area at t2
+                drac = min2(drac, 2. * (v1 - dEntry1 / tExit2) / tExit2);
+            } else {
+                // Vehicle 2 is expected to stop on conflict area or earlier
+                if tEntry2 != INVALID_DOUBLE {
+                    // ... on conflict area => veh1 has to stop before entry
+                    drac = min2(drac, Self::compute_drac(dEntry1, v1, 0.));
+                } else {
+                    // ... before conflict area
+                }
+            }
+        }
+
+        if dEntry2 > 0. {
+            // vehicle 2 could break
+            if tExit1 != INVALID_DOUBLE {
+                // Vehicle 1 is expected to leave conflict area at t1
+                drac = min2(drac, 2. * (v2 - dEntry2 / tExit1) / tExit1);
+            } else {
+                // Vehicle 1 is expected to stop on conflict area or earlier
+                if tEntry1 != INVALID_DOUBLE {
+                    // ... on conflict area => veh2 has to stop before entry
+                    drac = min2(drac, Self::compute_drac(dEntry2, v2, 0.));
+                } else {
+                    // ... before conflict area
+                }
+            }
+        }
+
+        if drac > 0. { drac } else { INVALID_DOUBLE }
     }
 
     /// C++: `std::string MSDevice_SSM::makeStringWithNAs(const int &, const double)` [static, private]
