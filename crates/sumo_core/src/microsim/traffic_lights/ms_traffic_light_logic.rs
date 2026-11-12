@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub type MSTrafficLightLogic_LaneVector = Vec<Ptr<MSLane>>;
 
 /// C++ typedef `std::vector<LaneVector> MSTrafficLightLogic::LaneVectorVector`
-pub type MSTrafficLightLogic_LaneVectorVector = Vec<LaneVector>;
+pub type MSTrafficLightLogic_LaneVectorVector = Vec<MSTrafficLightLogic_LaneVector>;
 
 /// C++ typedef `std::vector<MSLink *> MSTrafficLightLogic::LinkVector`
 pub type MSTrafficLightLogic_LinkVector = Vec<Ptr<MSLink>>;
@@ -590,7 +590,7 @@ impl MSTrafficLightLogic {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_lanes_at(&self, i: i32) -> &LaneVector {
+    pub fn get_lanes_at(&self, i: i32) -> &MSTrafficLightLogic_LaneVector {
         todo!("port MSTrafficLightLogic::getLanesAt")
     }
 

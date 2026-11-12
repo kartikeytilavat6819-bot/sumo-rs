@@ -15,7 +15,7 @@ impl MSSOTLSensors {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_sensor_for_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLSensors::buildSensorForLane")
+        panic!("MSSOTLSensors::buildSensorForLane is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSSOTLSensors::buildSensorForOutLane(MSLane *, NLDetectorBuilder &)` [virtual, pure virtual, protected]
@@ -23,7 +23,7 @@ impl MSSOTLSensors {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_sensor_for_out_lane(&mut self, lane: Ptr<MSLane>, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLSensors::buildSensorForOutLane")
+        panic!("MSSOTLSensors::buildSensorForOutLane is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSSOTLSensors::MSSOTLSensors(std::string, const MSTrafficLightLogic::Phases *)`
@@ -33,14 +33,15 @@ impl MSSOTLSensors {
     // }
     #[allow(unused_variables)]
     pub fn new(tlLogicID: String, phases: Ptr<MSTrafficLightLogic_Phases>) -> Self {
-        todo!("port MSSOTLSensors::MSSOTLSensors")
+        // shortcut: C++ leaves currentStep uninitialized, Rust starts it at 0.
+        Self { myPhases: phases, tlLogicID, currentStep: 0 }
     }
 
     /// C++: `void MSSOTLSensors::~MSSOTLSensors() noexcept` [virtual]
     // MSSOTLSensors::~MSSOTLSensors() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLSensors::~MSSOTLSensors")
+        // C++ destructor is empty.
     }
 
     /// C++: `void MSSOTLSensors::buildSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)` [virtual, pure virtual]
@@ -48,7 +49,7 @@ impl MSSOTLSensors {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLSensors::buildSensors")
+        panic!("MSSOTLSensors::buildSensors is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSSOTLSensors::buildOutSensors(MSTrafficLightLogic::LaneVectorVector, NLDetectorBuilder &)` [virtual, pure virtual]
@@ -56,42 +57,42 @@ impl MSSOTLSensors {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_out_sensors(&mut self, controlledLanes: MSTrafficLightLogic_LaneVectorVector, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLSensors::buildOutSensors")
+        panic!("MSSOTLSensors::buildOutSensors is pure virtual; subclasses must override it")
     }
 
     /// C++: `int MSSOTLSensors::countVehicles(MSLane *)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn count_vehicles(&mut self, lane: Ptr<MSLane>) -> i32 {
-        todo!("port MSSOTLSensors::countVehicles")
+        panic!("MSSOTLSensors::countVehicles is pure virtual; subclasses must override it")
     }
 
     /// C++: `int MSSOTLSensors::countVehicles(std::string)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn count_vehicles_2(&mut self, laneId: String) -> i32 {
-        todo!("port MSSOTLSensors::countVehicles")
+        panic!("MSSOTLSensors::countVehicles is pure virtual; subclasses must override it")
     }
 
     /// C++: `double MSSOTLSensors::meanVehiclesSpeed(MSLane *)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn mean_vehicles_speed(&mut self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSSOTLSensors::meanVehiclesSpeed")
+        panic!("MSSOTLSensors::meanVehiclesSpeed is pure virtual; subclasses must override it")
     }
 
     /// C++: `double MSSOTLSensors::meanVehiclesSpeed(std::string)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn mean_vehicles_speed_2(&mut self, laneId: String) -> f64 {
-        todo!("port MSSOTLSensors::meanVehiclesSpeed")
+        panic!("MSSOTLSensors::meanVehiclesSpeed is pure virtual; subclasses must override it")
     }
 
     /// C++: `double MSSOTLSensors::getMaxSpeed(std::string)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_speed(&mut self, laneId: String) -> f64 {
-        todo!("port MSSOTLSensors::getMaxSpeed")
+        panic!("MSSOTLSensors::getMaxSpeed is pure virtual; subclasses must override it")
     }
 
     /// C++: `void MSSOTLSensors::stepChanged(int)` [virtual]
@@ -100,7 +101,7 @@ impl MSSOTLSensors {
     //     }
     #[allow(unused_variables)]
     pub fn step_changed(&mut self, newStep: i32) {
-        todo!("port MSSOTLSensors::stepChanged")
+        self.currentStep = newStep;
     }
 
 }

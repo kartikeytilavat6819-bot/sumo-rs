@@ -15,7 +15,7 @@ pub(crate) fn lane_emissions(lane: &MSLane, et: PollutantsInterface_EmissionType
     for v in lane.get_vehicles_secure() {
         // C++ MSBaseVehicle::getEmissions<ET>()
         if v.is_on_road() || v.is_idling() {
-            ret += PollutantsInterface::compute(v.get_vehicle_type().get_emission_class(), et, v.get_speed(), v.get_acceleration(), v.get_slope(), v.get_emission_parameters());
+            ret += PollutantsInterface::compute(v.get_vehicle_type().get_emission_class(), et, v.get_speed(), v.get_acceleration(), v.get_slope(), v.m().get_emission_parameters());
         }
     }
     lane.release_vehicles();

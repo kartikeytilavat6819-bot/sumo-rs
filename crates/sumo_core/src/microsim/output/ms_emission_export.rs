@@ -120,7 +120,7 @@ impl MSEmissionExport {
         of.write_func_attr(SUMO_ATTR_ECLASS, || PollutantsInterface::get_name(veh.get_vehicle_type().get_emission_class()), mask, false);
         if mask.test(SUMO_ATTR_CO2) || mask.test(SUMO_ATTR_CO) || mask.test(SUMO_ATTR_HC) || mask.test(SUMO_ATTR_NOX) || mask.test(SUMO_ATTR_PMX)
             || mask.test(SUMO_ATTR_FUEL) || mask.test(SUMO_ATTR_ELECTRICITY) {
-            let mut emiss = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.get_emission_parameters());
+            let mut emiss = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.m().get_emission_parameters());
             if options_cont::get_bool("emission-output.step-scaled") {
                 // C++ addScaled(emiss, TS - 1.) aliases its own operand; the copy reads the pre-scaling values
                 let copy = PollutantsInterface_Emissions { CO2: emiss.CO2, CO: emiss.CO, HC: emiss.HC, fuel: emiss.fuel, NOx: emiss.NOx, PMx: emiss.PMx, electricity: emiss.electricity };
