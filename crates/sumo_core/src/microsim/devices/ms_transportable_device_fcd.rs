@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSTransportableDevice_FCD.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSTransportableDevice_FCD` (microsim/devices/MSTransportableDevice_FCD.h)
@@ -34,7 +35,10 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSTransportableDevice_FCD::insertOptions")
+        MSDevice::insert_default_assignment_options("fcd", "FCD Device", oc, true);
+
+        oc.do_register("person-device.fcd.period", SumoOption::string_with("0"));
+        oc.add_description("person-device.fcd.period", "FCD Device", "Recording period for FCD-data");
     }
 
     /// C++: `void MSTransportableDevice_FCD::buildDevices(MSTransportable &, std::vector<MSTransportableDevice *> &)` [static]
@@ -49,7 +53,16 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn build_devices(t: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
-        todo!("port MSTransportableDevice_FCD::buildDevices")
+        let outputOptionSet = utils::options::options_cont::is_set("fcd-output");
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "fcd", t.get_id(), t.get_parameter(), t.get_vehicle_type().get_parameter(), outputOptionSet, true)
+        });
+        if equipped {
+            let id = format!("fcd_{}", t.get_id());
+            // shortcut: device is leaked; the person's device list will own it once person device ownership is ported, upgrade then
+            let device: &mut MSTransportableDevice_FCD = Box::leak(Box::new(MSTransportableDevice_FCD::new(t, &id)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSTransportableDevice_FCD::~MSTransportableDevice_FCD() noexcept` [virtual]
@@ -58,7 +71,7 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableDevice_FCD::~MSTransportableDevice_FCD")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSTransportableDevice_FCD::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -67,7 +80,7 @@ impl MSTransportableDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, arg0: &mut SUMOTrafficObject, arg1: MSMoveReminder_Notification, arg2: Ptr<MSLane>) -> bool {
-        todo!("port MSTransportableDevice_FCD::notifyEnter")
+        false
     }
 
     /// C++: `void MSTransportableDevice_FCD::saveState(OutputDevice &) const` [const, virtual]
@@ -75,7 +88,7 @@ impl MSTransportableDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn save_state(&self, arg0: &mut OutputDevice) {
-        todo!("port MSTransportableDevice_FCD::saveState")
+        // C++ saveState body is empty
     }
 
     /// C++: `const std::string MSTransportableDevice_FCD::deviceName() const` [const, virtual]
@@ -85,7 +98,7 @@ impl MSTransportableDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSTransportableDevice_FCD::deviceName")
+        "fcd".to_string()
     }
 
     /// C++: `void MSTransportableDevice_FCD::cleanup()` [static]
@@ -95,7 +108,7 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSTransportableDevice_FCD::cleanup")
+        // C++ cleanup body is empty
     }
 
     /// C++: `void MSTransportableDevice_FCD::MSTransportableDevice_FCD(MSTransportable &, const std::string &)` [private]
@@ -105,7 +118,9 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str) -> Self {
-        todo!("port MSTransportableDevice_FCD::MSTransportableDevice_FCD")
+        MSTransportableDevice_FCD {
+            base: MSTransportableDevice::new(holder, id),
+        }
     }
 
     /// C++: `void MSTransportableDevice_FCD::MSTransportableDevice_FCD(const MSTransportableDevice_FCD &)` [private]
