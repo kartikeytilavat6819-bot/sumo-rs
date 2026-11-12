@@ -3985,7 +3985,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn init_rn_gs(oc: &OptionsCont) {
-        todo!("port MSLane::initRNGs")
+        // shortcut: options are read from the global options container (utils::options::options_cont free fns), the oc argument is not used
+        MY_RNGS.with(|r| r.borrow_mut().clear());
+        let numRNGs = utils::options::options_cont::get_int("thread-rngs");
+        let random = utils::options::options_cont::get_bool("random");
+        let mut seed = utils::options::options_cont::get_int("seed");
+        MY_RNGS.with(|r| r.borrow_mut().reserve(numRNGs as usize)); // this is needed for stable pointers on debugging
+        for i in 0..numRNGs {
+            let rng = SumoRNG::new(&format!("lanes_{}", i));
+            MY_RNGS.with(|r| r.borrow_mut().push(rng));
+            MY_RNGS.with(|r| utils::common::rand_helper::init_rand(r.borrow_mut().last_mut(), random, seed));
+            seed += 1;
+        }
     }
 
     /// C++: `std::vector<MSLink *>::const_iterator MSLane::succLinkSec(const SUMOVehicle &, int, const MSLane &, const std::vector<MSLane *> &)` [static]
