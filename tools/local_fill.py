@@ -77,64 +77,88 @@ def struct_fields(text, name):
 
 
 def cargo_errors(wt):
+    """[(file, line, message)] for every compile error."""
     r = subprocess.run([CARGO, "check", "-q", "-p", "sumo_core", "--message-format", "short"],
                        cwd=wt, env=CARGO_ENV, capture_output=True, text=True)
     errs = []
     for l in (r.stdout + r.stderr).splitlines():
-        m = re.match(r"(crates[\\/][^:]+):(\d+):\d+: error", l)
+        m = re.match(r"(crates[\\/][^:]+):(\d+):\d+: (error.*)", l)
         if m:
-            errs.append((m.group(1).replace("\\", "/"), int(m.group(2))))
+            errs.append((m.group(1).replace("\\", "/"), int(m.group(2)), m.group(3)))
     return errs
+
+
+def rewrite(lines, spans, new_bodies):
+    """Replace span bodies (start -> new line list; None = revert to the todo!() line).
+    spans: [dict(start, n, orig, ...)] sorted by start. Returns the updated span list."""
+    for sp in sorted(spans, key=lambda s: s["start"], reverse=True):  # bottom-up keeps indices valid
+        if sp["start"] in new_bodies:
+            new = new_bodies[sp["start"]] or [sp["orig"]]
+            lines[sp["start"]:sp["start"] + sp["n"]] = new
+            sp["new_n"] = len(new)
+    out, shift = [], 0
+    for sp in sorted(spans, key=lambda s: s["start"]):
+        changed = sp["start"] in new_bodies
+        reverted = changed and new_bodies[sp["start"]] is None
+        start = sp["start"] + shift
+        n = sp.pop("new_n", sp["n"])
+        shift += n - sp["n"]
+        if not reverted:
+            out.append(dict(sp, start=start, n=n))
+    return out
 
 
 def fill_file(wt, rel, model, max_lines):
     path = os.path.join(wt, rel)
+    rel = rel.replace("\\", "/")
     text = open(path, encoding="utf8").read()
     lines = text.split("\n")
-    original = {}  # line index of filled body start -> (original todo line, number of inserted lines)
-    edits = []
+    spans, new_bodies = [], {}
     for i, cpp, sig, impl in methods(lines, max_lines):
+        fields = struct_fields(text, impl or "")
         try:
-            body = ask(model, cpp, sig, struct_fields(text, impl or ""))
+            body = ask(model, cpp, sig, fields)
         except Exception as e:  # noqa: BLE001
             print(f"  model error on {sig[:60]}: {e}")
             continue
         if not body or "todo!(" in body:
             continue
         indent = re.match(r"\s*", lines[i]).group(0)
-        edits.append((i, [indent + b for b in body.splitlines()]))
-    if not edits:
+        spans.append(dict(start=i, n=1, orig=lines[i], cpp=cpp, sig=sig, fields=fields, indent=indent))
+        new_bodies[i] = [indent + b for b in body.splitlines()]
+    if not spans:
         return 0
-    # apply bottom-up so indices stay valid; remember spans for reverting
-    spans = []
-    for i, new in sorted(edits, reverse=True):
-        spans.append((i, lines[i], len(new)))
-        lines[i:i + 1] = new
-    spans.sort()
-    # compute final positions of each span (top-down shift)
-    shift, final = 0, []
-    for i, orig, n in spans:
-        final.append((i + shift, orig, n))
-        shift += n - 1
+    spans = rewrite(lines, spans, new_bodies)
     open(path, "w", encoding="utf8", newline="\n").write("\n".join(lines))
-    for _ in range(4):  # revert failing methods until the file compiles
-        bad = {ln - 1 for f, ln in cargo_errors(wt) if f == rel.replace("\\", "/")}
+    # one retry per failing method, showing the model its compiler errors
+    errs = [(ln - 1, msg) for f, ln, msg in cargo_errors(wt) if f == rel]
+    retry = {}
+    for sp in spans:
+        mine = [msg for ln, msg in errs if sp["start"] <= ln < sp["start"] + sp["n"]]
+        if not mine:
+            continue
+        prev = "\n".join(l.strip() for l in lines[sp["start"]:sp["start"] + sp["n"]])
+        try:
+            body = ask(model, sp["cpp"] + "\n\nYour previous Rust body:\n" + prev + "\n\nIt failed to compile:\n"
+                       + "\n".join(mine[:6]) + "\nFix it. If a called method doesn't exist, use the closest snake_case name.",
+                       sp["sig"], sp["fields"])
+        except Exception:  # noqa: BLE001
+            body = ""
+        retry[sp["start"]] = [sp["indent"] + b for b in body.splitlines()] if body and "todo!(" not in body else None
+    if retry:
+        spans = rewrite(lines, spans, retry)
+        open(path, "w", encoding="utf8", newline="\n").write("\n".join(lines))
+    for _ in range(4):  # revert whatever still fails until the file compiles
+        bad = {ln - 1 for f, ln, _ in cargo_errors(wt) if f == rel}
         if not bad:
             break
-        lines = open(path, encoding="utf8").read().split("\n")
-        reverted = {s for s, _, n in final if any(s <= b < s + n for b in bad)}
-        for start, orig, n in sorted(final, reverse=True):  # bottom-up keeps upper indices valid
-            if start in reverted:
-                lines[start:start + n] = [orig]
-        shift, new_final = 0, []  # spans below a reverted span move up by (n - 1)
-        for start, orig, n in sorted(final):
-            if start in reverted:
-                shift += n - 1
-            else:
-                new_final.append((start - shift, orig, n))
-        final = new_final
+        revert = {sp["start"]: None for sp in spans if any(sp["start"] <= b < sp["start"] + sp["n"] for b in bad)}
+        if not revert:
+            break
+        spans = rewrite(lines, spans, revert)
         open(path, "w", encoding="utf8", newline="\n").write("\n".join(lines))
-    if any(f == rel.replace("\\", "/") for f, _ in cargo_errors(wt)):
+    final = spans
+    if any(f == rel for f, _, _ in cargo_errors(wt)):
         subprocess.run(["git", "checkout", "--", rel], cwd=wt)  # give up on this file, keep main clean
         return 0
     return len(final)
