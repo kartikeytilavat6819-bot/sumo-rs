@@ -4,7 +4,6 @@
 #   3. start the vLLM server (restart on crash; smaller context; fall back to Ollama qwen3:8b)
 #   4. fill short skeleton methods in rounds, merge each round into main (compile-checked) and push
 # Log: C:\Users\karti\sumo-rs-local-fill.log      Launch detached (see bottom of PORTING.md).
-export MSYS_NO_PATHCONV=1  # stop Git Bash rewriting /mnt/c/... arguments to wsl.exe
 LOG=/c/Users/karti/sumo-rs-local-fill.log
 WT=/c/Users/karti/sumo-rs-local
 REPO=/c/Users/karti/sumo-rs
@@ -13,7 +12,7 @@ STATE=/c/Users/karti/sumo-rs-local-fill.state
 EXCLUDE=ms_lane.rs,ms_vehicle.rs,nb_edge.rs,nb_node.rs,ni_importer_open_street_map.rs,ms_lane_changer_sublane.rs,ms_parking_area.rs,tra_ci_server.rs,tra_ci_defs.rs,person.rs,ro_edge.rs,ro_net.rs,ro_loader.rs,ro_net_handler.rs,ms_delay_based_traffic_light_logic.rs,ms_push_button.rs,ms_swarm_traffic_light_logic.rs,ms_deterministic_hi_level_traffic_light_logic.rs,nb_traffic_light_definition.rs,nb_own_tl_def.rs,nb_traffic_light_logic.rs,nb_request.rs,nb_edge_cont.rs,nb_node_cont.rs,nb_algorithms.rs,nb_algorithms_ramps.rs,nb_cont_helper.rs,nb_district.rs,nb_district_cont.rs,ms_stage.rs,ms_stage_walking.rs,ms_transportable.rs,nixml_nodes_handler.rs,nixml_edges_handler.rs,nixml_connections_handler.rs,nixml_traffic_lights_handler.rs,nixmlpt_handler.rs
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
-in_wsl() { wsl.exe -d Ubuntu-24.04 -e bash -c "$1"; }
+in_wsl() { MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -e bash -c "$1"; }  # no Git Bash path rewriting for WSL args
 
 # 1. keep the system awake while this script runs (released automatically when it exits)
 powershell.exe -NoProfile -Command '$t=Add-Type -MemberDefinition "[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint f);" -Name W -Namespace K -PassThru; while($true){ $t::SetThreadExecutionState(0x80000001) | Out-Null; Start-Sleep 30 }' &
@@ -36,7 +35,7 @@ API_URL=""
 api_up() { curl -s --max-time 5 "$1/models" | grep -q '"id"'; }
 start_vllm() {  # $1 = max model len; returns 0 when the API answers
   log "starting vLLM (max-model-len $1)"
-  wsl.exe -d Ubuntu-24.04 -e bash /mnt/c/Users/karti/sumo-rs/tools/start_vllm.sh "$1" >> /c/Users/karti/vllm-server.log 2>&1 &
+  MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu-24.04 -e bash /mnt/c/Users/karti/sumo-rs/tools/start_vllm.sh "$1" >> /c/Users/karti/vllm-server.log 2>&1 &
   SERVER=$!
   for i in $(seq 1 120); do   # up to 60 min: first start downloads the model (~5.5 GB)
     api_up http://localhost:8000/v1 && return 0
@@ -47,6 +46,9 @@ start_vllm() {  # $1 = max model len; returns 0 when the API answers
 }
 ensure_server() {
   [ -n "$API_URL" ] && api_up "$API_URL" && return 0
+  if api_up http://localhost:8000/v1; then  # a vLLM server is already running: adopt it
+    API_URL=http://localhost:8000/v1; export LOCAL_LLM_URL=$API_URL/chat/completions LOCAL_LLM_MODEL=""; log "using running vLLM"; return 0
+  fi
   kill "$SERVER" 2>/dev/null; in_wsl 'pkill -f "vllm serve"' 2>/dev/null; sleep 5
   for len in 8192 8192 4096; do
     if start_vllm $len; then API_URL=http://localhost:8000/v1; export LOCAL_LLM_URL=$API_URL/chat/completions LOCAL_LLM_MODEL=""; log "vLLM up"; return 0; fi
