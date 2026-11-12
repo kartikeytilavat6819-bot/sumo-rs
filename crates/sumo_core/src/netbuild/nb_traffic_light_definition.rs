@@ -67,6 +67,12 @@ impl std::ops::DerefMut for NBTrafficLightDefinition {
 //   static const std::string NBTrafficLightDefinition::OSM_DIRECTION;
 //   static const std::string NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION;
 //   static const std::string NBTrafficLightDefinition::DummyID;
+pub const NBTrafficLightDefinition_DefaultProgramID: &str = "0";
+pub const NBTrafficLightDefinition_UNSPECIFIED_DURATION: SUMOTime = -1;
+pub const NBTrafficLightDefinition_MIN_YELLOW_SECONDS: i32 = 3;
+pub const NBTrafficLightDefinition_OSM_DIRECTION: &str = "osm:direction";
+pub const NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
+pub const NBTrafficLightDefinition_DummyID: &str = "dummy";
 
 impl NBTrafficLightDefinition {
     /// C++: `void NBTrafficLightDefinition::NBTrafficLightDefinition(const std::string &, const std::vector<NBNode *> &, const std::string &, SUMOTime, TrafficLightType)`
@@ -98,7 +104,38 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBTrafficLightDefinition::NBTrafficLightDefinition")
+        let mut myControlledNodes: Vec<Ptr<NBNode>> = junctions.clone();
+        let mut i = 0;
+        while i < myControlledNodes.len() {
+            let mut j = i + 1;
+            while j < myControlledNodes.len() {
+                if myControlledNodes[i] == myControlledNodes[j] {
+                    myControlledNodes.remove(j);
+                } else {
+                    j += 1;
+                }
+            }
+            i += 1;
+        }
+        // determinism: node ids are unique within a net, so this sort order is total
+        myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+        // shortcut: C++ calls node->addTrafficLight(this) here, but `this` is not stable in a by-value constructor, so the nodes are not registered (callers must register after boxing), upgrade: construct the definition boxed/in place
+        Self {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myControlledNodes,
+            myIncomingEdges: Vec::new(),
+            myEdgesWithin: Vec::new(),
+            myControlledLinks: Vec::new(),
+            myControlledInnerEdges: BTreeSet::new(),
+            mySubID: programID.to_string(),
+            myOffset: offset,
+            myType: type_,
+            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelationReady: false,
+            myExtraConflicts: BTreeSet::new(),
+            myExtraConflictsReady: false,
+        }
     }
 
     /// C++: `void NBTrafficLightDefinition::NBTrafficLightDefinition(const std::string &, NBNode *, const std::string &, SUMOTime, TrafficLightType)`
@@ -115,7 +152,23 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBTrafficLightDefinition::NBTrafficLightDefinition")
+        // shortcut: C++ addNode(junction) also calls junction->addTrafficLight(this); `this` is not stable in a by-value constructor, so only the node list is filled, upgrade: construct the definition boxed/in place
+        Self {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myControlledNodes: vec![junction],
+            myIncomingEdges: Vec::new(),
+            myEdgesWithin: Vec::new(),
+            myControlledLinks: Vec::new(),
+            myControlledInnerEdges: BTreeSet::new(),
+            mySubID: programID.to_string(),
+            myOffset: offset,
+            myType: type_,
+            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelationReady: false,
+            myExtraConflicts: BTreeSet::new(),
+            myExtraConflictsReady: false,
+        }
     }
 
     /// C++: `void NBTrafficLightDefinition::NBTrafficLightDefinition(const std::string &, const std::string &, SUMOTime, TrafficLightType)`
@@ -131,7 +184,22 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBTrafficLightDefinition::NBTrafficLightDefinition")
+        Self {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myControlledNodes: Vec::new(),
+            myIncomingEdges: Vec::new(),
+            myEdgesWithin: Vec::new(),
+            myControlledLinks: Vec::new(),
+            myControlledInnerEdges: BTreeSet::new(),
+            mySubID: programID.to_string(),
+            myOffset: offset,
+            myType: type_,
+            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelationReady: false,
+            myExtraConflicts: BTreeSet::new(),
+            myExtraConflictsReady: false,
+        }
     }
 
     /// C++: `void NBTrafficLightDefinition::~NBTrafficLightDefinition() noexcept` [virtual]
@@ -139,7 +207,7 @@ impl NBTrafficLightDefinition {
     // NBTrafficLightDefinition::~NBTrafficLightDefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBTrafficLightDefinition::~NBTrafficLightDefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `NBTrafficLightLogic * NBTrafficLightDefinition::compute(const OptionsCont &)`
@@ -182,7 +250,37 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn compute(&mut self, oc: &OptionsCont) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBTrafficLightDefinition::compute")
+        // it is not really a traffic light if no incoming edge exists
+        if self.am_invalid() {
+            // make a copy of myControlledNodes because it will be modified;
+            let nodes = self.myControlledNodes.clone();
+            for it in nodes {
+                it.m().remove_traffic_light(Ptr::from_mut(self));
+            }
+            write_warningf!("The traffic light '%' does not control any links; it will not be build.", self.get_id());
+            return Ptr::default();
+        }
+        // compute the time needed to brake
+        let mut brakingTime = self.compute_braking_time(oc.get_float("tls.yellow.min-decel").unwrap());
+        // perform the computation depending on whether the traffic light
+        //  definition was loaded or shall be computed new completely
+        if !oc.is_default("tls.yellow.time") {
+            brakingTime = oc.get_int("tls.yellow.time").unwrap();
+        }
+        let ret = self.my_compute(brakingTime);
+        ret.m().base2.update_parameters(self.base2.get_parameters_map());
+        if ret.get_type() == TrafficLightType::ACTUATED {
+            for param in ["jam-threshold", "passing-time", "detector-gap", "detector-length", "inactive-threshold"] {
+                let opt = format!("tls.actuated.{}", param);
+                if !oc.is_default(&opt) && !ret.base2.has_parameter(param) {
+                    ret.m().base2.set_parameter(param, &oc.get_value_string(&opt).unwrap());
+                }
+            }
+            if !oc.is_default("tls.actuated.show-detectors") && !ret.base2.has_parameter("show-detectors") {
+                ret.m().base2.set_parameter("show-detectors", &oc.get_value_string("tls.actuated.show-detectors").unwrap());
+            }
+        }
+        ret
     }
 
     /// C++: `void NBTrafficLightDefinition::addNode(NBNode *)` [virtual]
@@ -197,7 +295,12 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn add_node(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBTrafficLightDefinition::addNode")
+        if !self.myControlledNodes.contains(&node) {
+            self.myControlledNodes.push(node);
+            // determinism: node ids are unique within a net, so this sort order is total
+            self.myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+        }
+        node.m().add_traffic_light(Ptr::from_mut(self));
     }
 
     /// C++: `void NBTrafficLightDefinition::removeNode(NBNode *)` [virtual]
@@ -212,7 +315,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn remove_node(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBTrafficLightDefinition::removeNode")
+        if let Some(i) = self.myControlledNodes.iter().position(|n| *n == node) {
+            self.myControlledNodes.remove(i);
+        }
+        // !!! remove in node?
     }
 
     /// C++: `void NBTrafficLightDefinition::removeConnection(const NBConnection &, bool)` [virtual]
@@ -223,7 +329,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn remove_connection(&mut self, conn: &NBConnection, reconstruct: bool) {
-        todo!("port NBTrafficLightDefinition::removeConnection")
+        // C++ body only marks the parameters as unused; the base implementation does nothing
     }
 
     /// C++: `const std::vector<NBNode *> & NBTrafficLightDefinition::getNodes() const` [const]
@@ -233,7 +339,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_nodes(&self) -> &Vec<Ptr<NBNode>> {
-        todo!("port NBTrafficLightDefinition::getNodes")
+        &self.myControlledNodes
     }
 
     /// C++: `bool NBTrafficLightDefinition::mustBrake(const NBEdge *const, const NBEdge *const) const` [const]
@@ -253,7 +359,14 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn must_brake(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) -> bool {
-        todo!("port NBTrafficLightDefinition::mustBrake")
+        let node = self.myControlledNodes.iter().copied().find(|n| n.has_incoming(from));
+        // C++ asserts i != end here
+        let node = node.unwrap();
+        if !node.has_outgoing(to) {
+            return true; // !!!
+        }
+        // @todo recheck relevance of lane indices
+        node.must_brake(from, to, -1, -1, true)
     }
 
     /// C++: `bool NBTrafficLightDefinition::mustBrake(const NBConnection &, const NBConnection &, bool) const` [const]
@@ -268,7 +381,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn must_brake_2(&self, possProhibited: &NBConnection, possProhibitor: &NBConnection, regardNonSignalisedLowerPriority: bool) -> bool {
-        todo!("port NBTrafficLightDefinition::mustBrake")
+        self.forbids(possProhibitor.get_from(), possProhibitor.get_to(), possProhibited.get_from(), possProhibited.get_to(), regardNonSignalisedLowerPriority, false)
     }
 
     /// C++: `bool NBTrafficLightDefinition::mustBrake(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const, bool) const` [const]
@@ -285,7 +398,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn must_brake_3(&self, possProhibitedFrom: Ptr<NBEdge>, possProhibitedTo: Ptr<NBEdge>, possProhibitorFrom: Ptr<NBEdge>, possProhibitorTo: Ptr<NBEdge>, regardNonSignalisedLowerPriority: bool) -> bool {
-        todo!("port NBTrafficLightDefinition::mustBrake")
+        self.forbids(possProhibitorFrom, possProhibitorTo, possProhibitedFrom, possProhibitedTo, regardNonSignalisedLowerPriority, false)
     }
 
     /// C++: `bool NBTrafficLightDefinition::forbids(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const, bool, bool) const` [const]
@@ -409,7 +522,70 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn forbids(&self, possProhibitorFrom: Ptr<NBEdge>, possProhibitorTo: Ptr<NBEdge>, possProhibitedFrom: Ptr<NBEdge>, possProhibitedTo: Ptr<NBEdge>, regardNonSignalisedLowerPriority: bool, sameNodeOnly: bool) -> bool {
-        todo!("port NBTrafficLightDefinition::forbids")
+        if possProhibitorFrom.is_null() || possProhibitorTo.is_null() || possProhibitedFrom.is_null() || possProhibitedTo.is_null() {
+            return false;
+        }
+        // retrieve both nodes
+        let incnode = self.myControlledNodes.iter().copied().find(|n| n.has_incoming(possProhibitorFrom));
+        let outnode = self.myControlledNodes.iter().copied().find(|n| n.has_outgoing(possProhibitedTo));
+        // C++ asserts incoming != end and dereferences outgoing unchecked; a missing outgoing node is treated as the null node
+        let incnode = incnode.unwrap();
+        let outnode = outnode.unwrap_or_default();
+        if incnode != outnode {
+            if sameNodeOnly {
+                return false;
+            }
+            // the links are located at different nodes
+            let ev1 = possProhibitedTo.get_connected_edges();
+            // go through the following edge,
+            //  check whether one of these connections is prohibited
+            for &i in ev1.iter() {
+                let outnode2 = self.myControlledNodes.iter().copied().find(|n| n.has_outgoing(i));
+                let outnode2 = match outnode2 {
+                    Some(n) => n,
+                    None => continue,
+                };
+                if incnode != outnode2 {
+                    continue;
+                }
+                if incnode.get_direction(possProhibitedTo, i, false) != LinkDirection::STRAIGHT {
+                    continue;
+                }
+                let ret1 = incnode.foes(possProhibitorFrom, possProhibitorTo, possProhibitedTo, i);
+                let ret2 = incnode.forbids(possProhibitorFrom, possProhibitorTo, possProhibitedTo, i, regardNonSignalisedLowerPriority);
+                let ret = ret1 || ret2;
+                if ret {
+                    return true;
+                }
+            }
+
+            let ev2 = possProhibitorTo.get_connected_edges();
+            // go through the following edge,
+            //  check whether one of these connections is prohibited
+            for &i in ev2.iter() {
+                let incnode2 = self.myControlledNodes.iter().copied().find(|n| n.has_incoming(possProhibitorTo));
+                let incnode2 = match incnode2 {
+                    Some(n) => n,
+                    None => continue,
+                };
+                if incnode2 != outnode {
+                    continue;
+                }
+                if incnode2.get_direction(possProhibitorTo, i, false) != LinkDirection::STRAIGHT {
+                    continue;
+                }
+                let ret1 = incnode2.foes(possProhibitorTo, i, possProhibitedFrom, possProhibitedTo);
+                let ret2 = incnode2.forbids(possProhibitorTo, i, possProhibitedFrom, possProhibitedTo, regardNonSignalisedLowerPriority);
+                let ret = ret1 || ret2;
+                if ret {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // both links are located at the same node
+        //  check using this node's information
+        incnode.forbids(possProhibitorFrom, possProhibitorTo, possProhibitedFrom, possProhibitedTo, regardNonSignalisedLowerPriority)
     }
 
     /// C++: `bool NBTrafficLightDefinition::foes(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const) const` [const]
@@ -437,7 +613,19 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn foes(&self, from1: Ptr<NBEdge>, to1: Ptr<NBEdge>, from2: Ptr<NBEdge>, to2: Ptr<NBEdge>) -> bool {
-        todo!("port NBTrafficLightDefinition::foes")
+        if to1.is_null() || to2.is_null() {
+            return false;
+        }
+        // retrieve both nodes (it is possible that a connection
+        let incnode = self.myControlledNodes.iter().copied().find(|n| n.has_incoming(from1));
+        let outnode = self.myControlledNodes.iter().copied().find(|n| n.has_outgoing(to1));
+        // C++ asserts incoming != end and dereferences outgoing unchecked; a missing outgoing node is treated as the null node
+        let incnode = incnode.unwrap();
+        let outnode = outnode.unwrap_or_default();
+        if incnode != outnode {
+            return false;
+        }
+        incnode.foes(from1, to1, from2, to2)
     }
 
     /// C++: `void NBTrafficLightDefinition::setTLControllingInformation() const` [const, virtual, pure virtual]
@@ -445,7 +633,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        todo!("port NBTrafficLightDefinition::setTLControllingInformation")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::setTLControllingInformation is pure virtual")
     }
 
     /// C++: `void NBTrafficLightDefinition::setParticipantsInformation()` [virtual]
@@ -458,7 +647,9 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn set_participants_information(&mut self) {
-        todo!("port NBTrafficLightDefinition::setParticipantsInformation")
+        // collect the information about participating edges and links
+        self.collect_edges();
+        self.collect_links();
     }
 
     /// C++: `void NBTrafficLightDefinition::addControlledInnerEdges(const std::vector<std::string> &)`
@@ -469,7 +660,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn add_controlled_inner_edges(&mut self, edges: &Vec<String>) {
-        todo!("port NBTrafficLightDefinition::addControlledInnerEdges")
+        self.myControlledInnerEdges.extend(edges.iter().cloned());
     }
 
     /// C++: `std::vector<std::string> NBTrafficLightDefinition::getControlledInnerEdges() const` [const]
@@ -480,7 +671,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn get_controlled_inner_edges(&self) -> Vec<String> {
-        todo!("port NBTrafficLightDefinition::getControlledInnerEdges")
+        self.myControlledInnerEdges.iter().cloned().collect()
     }
 
     /// C++: `void NBTrafficLightDefinition::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)` [virtual, pure virtual]
@@ -488,7 +679,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBTrafficLightDefinition::remapRemoved")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::remapRemoved is pure virtual")
     }
 
     /// C++: `void NBTrafficLightDefinition::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual, pure virtual]
@@ -496,7 +688,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBTrafficLightDefinition::replaceRemoved")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::replaceRemoved is pure virtual")
     }
 
     /// C++: `void NBTrafficLightDefinition::shiftTLConnectionLaneIndex(NBEdge *, int, int)` [virtual]
@@ -508,7 +701,8 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn shift_tl_connection_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
-        todo!("port NBTrafficLightDefinition::shiftTLConnectionLaneIndex")
+        // C++ base body only marks the parameters as unused; subclasses patch their plans
+
     }
 
     /// C++: `const EdgeVector & NBTrafficLightDefinition::getIncomingEdges() const` [const]
@@ -519,7 +713,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_edges(&self) -> &EdgeVector {
-        todo!("port NBTrafficLightDefinition::getIncomingEdges")
+        &self.myIncomingEdges
     }
 
     /// C++: `const NBConnectionVector & NBTrafficLightDefinition::getControlledLinks() const` [const]
@@ -529,7 +723,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_controlled_links(&self) -> &NBConnectionVector {
-        todo!("port NBTrafficLightDefinition::getControlledLinks")
+        &self.myControlledLinks
     }
 
     /// C++: `NBConnectionVector & NBTrafficLightDefinition::getControlledLinks()`
@@ -539,7 +733,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_controlled_links_2(&mut self) -> &mut NBConnectionVector {
-        todo!("port NBTrafficLightDefinition::getControlledLinks")
+        &mut self.myControlledLinks
     }
 
     /// C++: `const std::string & NBTrafficLightDefinition::getProgramID() const` [const]
@@ -549,7 +743,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_program_id(&self) -> &str {
-        todo!("port NBTrafficLightDefinition::getProgramID")
+        &self.mySubID
     }
 
     /// C++: `void NBTrafficLightDefinition::setProgramID(const std::string &)` [virtual]
@@ -559,7 +753,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
-        todo!("port NBTrafficLightDefinition::setProgramID")
+        self.mySubID = programID.to_string();
     }
 
     /// C++: `TrafficLightLayout NBTrafficLightDefinition::getLayout() const` [const, virtual]
@@ -568,7 +762,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_layout(&self) -> TrafficLightLayout {
-        todo!("port NBTrafficLightDefinition::getLayout")
+        TrafficLightLayout::DEFAULT
     }
 
     /// C++: `SUMOTime NBTrafficLightDefinition::getOffset()`
@@ -578,7 +772,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_offset(&mut self) -> SUMOTime {
-        todo!("port NBTrafficLightDefinition::getOffset")
+        self.myOffset
     }
 
     /// C++: `TrafficLightType NBTrafficLightDefinition::getType() const` [const]
@@ -588,7 +782,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> TrafficLightType {
-        todo!("port NBTrafficLightDefinition::getType")
+        self.myType
     }
 
     /// C++: `void NBTrafficLightDefinition::setType(TrafficLightType)` [virtual]
@@ -598,7 +792,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: TrafficLightType) {
-        todo!("port NBTrafficLightDefinition::setType")
+        self.myType = type_;
     }
 
     /// C++: `bool NBTrafficLightDefinition::needsCont(const NBEdge *, const NBEdge *, const NBEdge *, const NBEdge *) const` [const]
@@ -613,7 +807,11 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn needs_cont(&self, fromE: Ptr<NBEdge>, toE: Ptr<NBEdge>, otherFromE: Ptr<NBEdge>, otherToE: Ptr<NBEdge>) -> bool {
-        todo!("port NBTrafficLightDefinition::needsCont")
+        if !self.myNeedsContRelationReady {
+            self.init_needs_cont_relation();
+            // assert(myNeedsContRelationReady)
+        }
+        self.myNeedsContRelation.contains(&NBTrafficLightDefinition_StreamPair::new(fromE, toE, otherFromE, otherToE))
     }
 
     /// C++: `bool NBTrafficLightDefinition::extraConflict(int, int) const` [const, virtual]
@@ -625,7 +823,8 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
-        todo!("port NBTrafficLightDefinition::extraConflict")
+        self.init_extra_conflicts();
+        self.myExtraConflicts.contains(&(index, foeIndex))
     }
 
     /// C++: `void NBTrafficLightDefinition::initNeedsContRelation() const` [const, virtual]
@@ -643,7 +842,16 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        todo!("port NBTrafficLightDefinition::initNeedsContRelation")
+        if !self.am_invalid() {
+            let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
+            dummy.init_needs_cont_relation();
+            // the C++ code assigns through a const method, so the cache is written via Ptr::m
+            Ptr::new(self).m().myNeedsContRelation = dummy.myNeedsContRelation.clone();
+            for node in self.myControlledNodes.clone() {
+                node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+            }
+        }
+        Ptr::new(self).m().myNeedsContRelationReady = true;
     }
 
     /// C++: `void NBTrafficLightDefinition::initExtraConflicts() const` [const, virtual]
@@ -667,7 +875,19 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn init_extra_conflicts(&self) {
-        todo!("port NBTrafficLightDefinition::initExtraConflicts")
+        if !self.myExtraConflictsReady {
+            let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
+            dummy.set_participants_information();
+            let tllDummy = dummy.compute_logic_and_conts(0, true);
+            // shortcut: C++ deletes tllDummy here; Ptr-owned logics have no ownership convention yet, so it is leaked, upgrade: free it once Ptr ownership is defined
+            let _ = tllDummy;
+            // the C++ code assigns through a const method, so the cache is written via Ptr::m
+            Ptr::new(self).m().myExtraConflicts = dummy.myExtraConflicts.clone();
+            for node in self.myControlledNodes.clone() {
+                node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+            }
+            Ptr::new(self).m().myExtraConflictsReady = true;
+        }
     }
 
     /// C++: `int NBTrafficLightDefinition::getMaxIndex()` [virtual, pure virtual]
@@ -675,7 +895,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        todo!("port NBTrafficLightDefinition::getMaxIndex")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::getMaxIndex is pure virtual")
     }
 
     /// C++: `int NBTrafficLightDefinition::getMaxValidIndex()` [virtual]
@@ -685,7 +906,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_valid_index(&mut self) -> i32 {
-        todo!("port NBTrafficLightDefinition::getMaxValidIndex")
+        self.get_max_index()
     }
 
     /// C++: `int NBTrafficLightDefinition::computeBrakingTime(double) const` [const]
@@ -710,7 +931,21 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn compute_braking_time(&self, minDecel: f64) -> i32 {
-        todo!("port NBTrafficLightDefinition::computeBrakingTime")
+        if self.myIncomingEdges.is_empty() {
+            // don't crash
+            return NBTrafficLightDefinition_MIN_YELLOW_SECONDS;
+        }
+        let vmax = NBContHelper::max_speed(&self.myIncomingEdges);
+        if vmax < 71.0 / 3.6 {
+            // up to 50kmh: 3 seconds , 60km/h: 4, 70kmh: 5
+            // @note: these are German regulations, other countries may differ
+            return NBTrafficLightDefinition_MIN_YELLOW_SECONDS + (f64::max(0.0, ((vmax - 50.0 / 3.6) * 0.37).floor()) as i32);
+        } else {
+            // above 70km/h we use a function that grows according to the "natural"
+            // formula (vmax / 2 * minDecel) but continues smoothly where the german
+            // rules leave of
+            return (1.8 + vmax / 2.0 / minDecel) as i32;
+        }
     }
 
     /// C++: `bool NBTrafficLightDefinition::usingSignalGroups() const` [const, virtual]
@@ -720,7 +955,7 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn using_signal_groups(&self) -> bool {
-        todo!("port NBTrafficLightDefinition::usingSignalGroups")
+        false
     }
 
     /// C++: `std::string NBTrafficLightDefinition::getDescription() const` [const]
@@ -731,7 +966,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn get_description(&self) -> String {
-        todo!("port NBTrafficLightDefinition::getDescription")
+        format!("{}:{}@{:p}", self.get_id(), self.get_program_id(), self as *const Self)
     }
 
     /// C++: `void NBTrafficLightDefinition::finalChecks() const` [const, virtual]
@@ -739,7 +974,8 @@ impl NBTrafficLightDefinition {
     // virtual void finalChecks() const {}
     #[allow(unused_variables)]
     pub fn final_checks(&self) {
-        todo!("port NBTrafficLightDefinition::finalChecks")
+        // virtual with an empty base body
+
     }
 
     /// C++: `NBTrafficLightLogic * NBTrafficLightDefinition::myCompute(int)` [virtual, pure virtual, protected]
@@ -747,7 +983,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBTrafficLightDefinition::myCompute")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::myCompute is pure virtual")
     }
 
     /// C++: `void NBTrafficLightDefinition::collectLinks()` [virtual, pure virtual, protected]
@@ -755,7 +992,8 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBTrafficLightDefinition::collectLinks")
+        // pure virtual in C++: there is no base implementation, subclasses provide it
+        unreachable!("NBTrafficLightDefinition::collectLinks is pure virtual")
     }
 
     /// C++: `void NBTrafficLightDefinition::collectEdges()` [virtual, protected]
