@@ -4134,7 +4134,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSVehicle::getLane")
+        self.myLane
     }
 
     /// C++: `MSLane * MSVehicle::getMutableLane() const` [const]
@@ -4144,7 +4144,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_mutable_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSVehicle::getMutableLane")
+        self.myLane
     }
 
     /// C++: `const MSLane * MSVehicle::getBackLane() const` [const, virtual]
@@ -4158,7 +4158,11 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_back_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSVehicle::getBackLane")
+        if self.myFurtherLanes.len() > 0 {
+            *self.myFurtherLanes.last().unwrap()
+        } else {
+            self.myLane
+        }
     }
 
     /// C++: `double MSVehicle::getMaxSpeedOnLane() const` [const]
@@ -4172,7 +4176,10 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getMaxSpeedOnLane")
+        if !self.myLane.is_null() {
+            return self.myLane.m().get_vehicle_max_speed(Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOTrafficObject>());
+        }
+        self.myType.m().get_max_speed()
     }
 
     /// C++: `bool MSVehicle::isOnRoad() const` [const, virtual]
@@ -4182,7 +4189,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        todo!("port MSVehicle::isOnRoad")
+        self.myAmOnNet
     }
 
     /// C++: `void MSVehicle::setIdling(bool)`
@@ -4193,7 +4200,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_idling(&mut self, amIdling: bool) {
-        todo!("port MSVehicle::setIdling")
+        self.myAmIdling = amIdling;
     }
 
     /// C++: `bool MSVehicle::isIdling() const` [const, virtual]
@@ -4203,7 +4210,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_idling(&self) -> bool {
-        todo!("port MSVehicle::isIdling")
+        self.myAmIdling
     }
 
     /// C++: `bool MSVehicle::isActive() const` [const]
@@ -4213,7 +4220,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_active(&self) -> bool {
-        todo!("port MSVehicle::isActive")
+        self.myActionStep
     }
 
     /// C++: `bool MSVehicle::isActionStep(SUMOTime) const` [const]
@@ -4224,7 +4231,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_action_step(&self, t: SUMOTime) -> bool {
-        todo!("port MSVehicle::isActionStep")
+        (t - self.myLastActionTime) % self.get_action_step_length() == 0
     }
 
     /// C++: `bool MSVehicle::isFrontOnLane(const MSLane *) const` [const, virtual]
@@ -4235,7 +4242,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_front_on_lane(&self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSVehicle::isFrontOnLane")
+        lane == self.myLane || lane == self.myLaneChangeModel.m().get_shadow_lane() || lane == self.myLane.m().get_bidi_lane()
     }
 
     /// C++: `const MSEdge * MSVehicle::getCurrentEdge() const` [const, virtual]
@@ -4246,7 +4253,11 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSVehicle::getCurrentEdge")
+        if !self.myLane.is_null() {
+            Ptr::from_mut(self.myLane.m().get_edge())
+        } else {
+            self.get_edge()
+        }
     }
 
     /// C++: `const MSEdge * MSVehicle::getNextEdgePtr() const` [const, virtual]
