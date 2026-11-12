@@ -49,7 +49,31 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_edge_priorities(nc: &mut NBNodeCont) {
-        todo!("port NBEdgePriorityComputer::computeEdgePriorities")
+        for node in nc.myNodes.values().copied() {
+            // preset all junction's edge priorities to zero
+            for edge in node.myAllEdges.iter() {
+                edge.m().set_junction_priority(node, NBEdge_JunctionPriority::MINOR_ROAD as i32);
+            }
+            node.m().mark_bent_priority(false);
+            // check if the junction is not a real junction
+            if node.myIncomingEdges.len() == 1 && node.myOutgoingEdges.len() == 1 {
+                continue;
+            }
+            // compute the priorities on junction when needed
+            if node.get_type() != SumoXMLNodeType::RIGHT_BEFORE_LEFT
+                && node.get_type() != SumoXMLNodeType::LEFT_BEFORE_RIGHT
+                && node.get_type() != SumoXMLNodeType::ALLWAY_STOP
+                && node.get_type() != SumoXMLNodeType::NOJUNCTION
+            {
+                if node.get_right_of_way() == RightOfWay::EDGEPRIORITY {
+                    for e in node.get_incoming_edges().iter() {
+                        e.m().set_junction_priority(node, e.get_priority());
+                    }
+                } else {
+                    NBEdgePriorityComputer::set_priority_junction_priorities(node.m(), false);
+                }
+            }
+        }
     }
 
     /// C++: `void NBEdgePriorityComputer::setPriorityJunctionPriorities(NBNode &, bool)` [static, private]
