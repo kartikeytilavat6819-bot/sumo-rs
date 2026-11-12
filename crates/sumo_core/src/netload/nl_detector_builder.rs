@@ -803,15 +803,8 @@ impl NLDetectorBuilder {
     pub fn build_route_probe(&mut self, id: &str, edge: &str, frequency: SUMOTime, begin: SUMOTime, device: &str, vTypes: &str) {
         self.check_sample_interval(frequency, SUMO_TAG_ROUTEPROBE, id);
         let e = self.get_edge_checking(edge, SUMO_TAG_ROUTEPROBE, id);
-        let mut probe = Box::new(MSRouteProbe::new(id, e, &format!("{}_{}", id, begin), &format!("{}_{}", id, begin - frequency), vTypes));
-        // C++ registers the probe as move reminder on the lanes of its edge (meso segments are not handled here)
-        if crate::microsim::ms_globals::use_meso_sim() {
-            // shortcut: meso branch needs MELoop::getSegmentForEdge(edge) without a position, not ported; meso is off by default
-        } else {
-            for lane in e.get_lanes().iter() {
-                lane.m().add_move_reminder(Ptr::from_mut(&mut probe.base2), true);
-            }
-        }
+        // the constructor registers the probe as move reminder on the lanes of its edge
+        let probe = MSRouteProbe::new(id, e, &format!("{}_{}", id, begin), &format!("{}_{}", id, begin - frequency), vTypes);
         let probe_ptr = Ptr::from_raw(Box::into_raw(probe)).cast::<MSDetectorFileOutput>();
         // add the file output
         self.myNet.m().get_detector_control().add(SUMO_TAG_ROUTEPROBE, probe_ptr, device, frequency, begin).unwrap_or_else(|e| std::panic::panic_any(e));
@@ -842,7 +835,7 @@ impl NLDetectorBuilder {
             return Ptr::from_raw(Box::into_raw(b)).cast::<MSDetectorFileOutput>();
         }
         // the Box keeps the loop at a stable address; the detector control owns it from here on, as in C++
-        let b: &mut MSInductLoop = Box::leak(Box::new(MSInductLoop::new(id, lane, pos, length, name, vTypes, nextEdges, detectPersons, false)));
+        let b: &mut MSInductLoop = Box::leak(MSInductLoop::new(id, lane, pos, length, name, vTypes, nextEdges, detectPersons, false));
         Ptr::from_mut(&mut b.base2)
     }
 
@@ -878,12 +871,7 @@ impl NLDetectorBuilder {
     // }
     #[allow(unused_variables)]
     pub fn create_e2_detector(&mut self, id: &str, usage: DetectorUsage, lane: Ptr<MSLane>, pos: f64, endPos: f64, length: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, showDetector: bool) -> Ptr<MSE2Collector> {
-        let det: &mut MSE2Collector = Box::leak(Box::new(
-            MSE2Collector::new(id, usage, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
-        ));
-        // C++ constructor: addDetectorToLanes(lanes), now that the object has its final address
-        let mut lanes = det.get_lanes();
-        det.add_detector_to_lanes(&mut lanes);
+        let det: &mut MSE2Collector = Box::leak(MSE2Collector::new(id, usage, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)));
         Ptr::from_mut(det)
     }
 
@@ -899,12 +887,7 @@ impl NLDetectorBuilder {
     // }
     #[allow(unused_variables)]
     pub fn create_e2_detector_2(&mut self, id: &str, usage: DetectorUsage, lanes: Vec<Ptr<MSLane>>, pos: f64, endPos: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, showDetector: bool) -> Ptr<MSE2Collector> {
-        let det: &mut MSE2Collector = Box::leak(Box::new(
-            MSE2Collector::new_2(id, usage, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
-        ));
-        // C++ constructor: addDetectorToLanes(lanes), now that the object has its final address
-        let mut lanes = det.get_lanes();
-        det.add_detector_to_lanes(&mut lanes);
+        let det: &mut MSE2Collector = Box::leak(MSE2Collector::new_2(id, usage, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)));
         Ptr::from_mut(det)
     }
 

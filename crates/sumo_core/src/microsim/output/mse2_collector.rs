@@ -319,11 +319,11 @@ impl MSE2Collector {
     //     addDetectorToLanes(lanes);
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, usage: DetectorUsage, lane: Ptr<MSLane>, startPos: f64, endPos: f64, length: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Self, ProcessError> {
+    pub fn new(id: &str, usage: DetectorUsage, lane: Ptr<MSLane>, startPos: f64, endPos: f64, length: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Box<Self>, ProcessError> {
         let mut startPos = startPos;
         let mut endPos = endPos;
         let mut length = length;
-        let mut this = Self::new_base(id, lane, usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?;
+        let mut this = Box::new(Self::new_base(id, lane, usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?);
         // check that exactly one of length, startPos, endPos is invalid
         let lengthInvalid = length == f64::MAX || length <= 0.0;
         let endPosInvalid = endPos == f64::MAX;
@@ -370,7 +370,7 @@ impl MSE2Collector {
         };
         this.init_auxiliaries(&mut lanes)?;
         this.check_positioning(endPosInvalid, length);
-        // shortcut: C++ calls addDetectorToLanes(lanes) here; Rust returns Self by value, so the address registered with the lanes would dangle. The caller must call add_detector_to_lanes on the final object, upgrade when constructors can take a stable address
+        this.add_detector_to_lanes(&mut lanes);
         Ok(this)
     }
 
@@ -428,10 +428,10 @@ impl MSE2Collector {
     //     addDetectorToLanes(lanes);
     // }
     #[allow(unused_variables)]
-    pub fn new_2(id: &str, usage: DetectorUsage, lanes: Vec<Ptr<MSLane>>, startPos: f64, endPos: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Self, ProcessError> {
+    pub fn new_2(id: &str, usage: DetectorUsage, lanes: Vec<Ptr<MSLane>>, startPos: f64, endPos: f64, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Box<Self>, ProcessError> {
         let mut lanes = lanes;
         let last = lanes.len() - 1;
-        let mut this = Self::new_base(id, lanes[last], usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?;
+        let mut this = Box::new(Self::new_base(id, lanes[last], usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?);
         this.myFirstLane = lanes[0];
         this.myLastLane = lanes[last];
         this.myStartPos = startPos;
@@ -446,7 +446,7 @@ impl MSE2Collector {
         }
         this.init_auxiliaries(&mut lanes)?;
         this.check_positioning(false, 0.0);
-        // shortcut: C++ calls addDetectorToLanes(lanes) here; Rust returns Self by value, so the address registered with the lanes would dangle. The caller must call add_detector_to_lanes on the final object, upgrade when constructors can take a stable address
+        this.add_detector_to_lanes(&mut lanes);
         Ok(this)
     }
 

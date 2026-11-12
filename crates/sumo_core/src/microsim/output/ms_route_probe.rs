@@ -56,11 +56,10 @@ impl MSRouteProbe {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, edge: Ptr<MSEdge>, distID: &str, lastID: &str, vTypes: &str) -> Self {
+    pub fn new(id: &str, edge: Ptr<MSEdge>, distID: &str, lastID: &str, vTypes: &str) -> Box<Self> {
         let base = MSDetectorFileOutput::new(id, vTypes, "", 0).unwrap_or_else(|e| panic!("{e}"));
         let base2 = MSMoveReminder::new(id, Ptr::null(), true);
-        // shortcut: C++ registers `this` as a move reminder on the edge's lanes (or meso segments) here; a by-value constructor has no stable address, so the caller must register the boxed probe; upgrade when constructors return Box<Self>
-        MSRouteProbe {
+        let mut b = Box::new(MSRouteProbe {
             base,
             base2,
             myDistID: distID.to_string(),
@@ -68,7 +67,16 @@ impl MSRouteProbe {
             myLastRouteDistribution: Ptr::null(),
             myCurrentRouteDistribution: Ptr::null(),
             myEdge: edge,
+        });
+        // C++ registers `this` on each lane of the edge (meso segment branch not ported: meso is off by default)
+        if crate::microsim::ms_globals::use_meso_sim() {
+            // shortcut: meso branch needs MELoop::getSegmentForEdge(edge) without a position, not ported; meso is off by default
+        } else {
+            for lane in edge.get_lanes().iter() {
+                lane.m().add_move_reminder(Ptr::from_mut(&mut b.base2), true);
+            }
         }
+        b
     }
 
     /// C++: `void MSRouteProbe::~MSRouteProbe() noexcept` [virtual]
