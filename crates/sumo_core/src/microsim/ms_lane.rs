@@ -32,6 +32,20 @@ pub type LaneCoverageInfo = BTreeMap<Ptr<MSLane>, (f64, f64)>;
 /// C++ typedef `std::vector<MSVehicle *> MSLane::VehCont`
 pub type MSLane_VehCont = Vec<Ptr<MSVehicle>>;
 
+/// Member-wise copy of an MSLeaderInfo (C++ implicit copy constructor/assignment).
+/// MSLeaderInfo in ms_leader_info.rs does not derive Clone.
+fn leader_info_copy(src: &MSLeaderInfo) -> MSLeaderInfo {
+    MSLeaderInfo {
+        myWidth: src.myWidth,
+        myOffset: src.myOffset,
+        myVehicles: src.myVehicles.clone(),
+        myFreeSublanes: src.myFreeSublanes,
+        egoRightMost: src.egoRightMost,
+        egoLeftMost: src.egoLeftMost,
+        myHasVehicles: src.myHasVehicles,
+    }
+}
+
 /// AnyVehicleIterator is a structure, which manages the iteration through all vehicles on the lane, that may be of importance for the car-following dynamics along that lane. The relevant types of vehicles are: 1) vehicles with their front on the lane (myVehicles), 2) vehicles intersecting the lane but with front on another lane (myPartialVehicles)
 /// C++ class `MSLane::AnyVehicleIterator` (microsim/MSLane.h)
 pub struct MSLane_AnyVehicleIterator {
@@ -2464,7 +2478,26 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_vehicle_information(&self, ego: Ptr<MSVehicle>, latOffset: f64, minPos: f64, allowCached: bool, ignore: Ptr<MSVehicle>) -> MSLeaderInfo {
-        todo!("port MSLane::getLastVehicleInformation")
+        if self.myLeaderInfoTime < MSNet::get_instance().get_current_time_step() || !ego.is_null() || minPos > 0.0 || !allowCached {
+            let mut leaderTmp = MSLeaderInfo::new(self.myWidth, ego, latOffset);
+            let mut last = self.any_vehicles_begin();
+            let mut freeSublanes: i32 = 1; // number of sublanes for which no leader was found
+            let mut veh = last.mul_op();
+            while freeSublanes > 0 && !veh.is_null() {
+                if veh != ego && veh != ignore && f64::max(0.0, veh.get_position_on_lane_2(Ptr::new(self))) >= minPos {
+                    let vehLatOffset = veh.get_lat_offset(Ptr::new(self));
+                    freeSublanes = leaderTmp.add_leader(veh, true, vehLatOffset);
+                }
+                veh = last.op__2().mul_op();
+            }
+            if ego.is_null() && minPos == 0.0 {
+                // update cached value
+                Ptr::new(self).m().myLeaderInfo = leader_info_copy(&leaderTmp);
+                Ptr::new(self).m().myLeaderInfoTime = MSNet::get_instance().get_current_time_step();
+            }
+            return leaderTmp;
+        }
+        leader_info_copy(&self.myLeaderInfo)
     }
 
     /// C++: `const MSLeaderInfo MSLane::getFirstVehicleInformation(const MSVehicle *, double, bool, double, bool) const` [const]
@@ -2523,7 +2556,26 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_first_vehicle_information(&self, ego: Ptr<MSVehicle>, latOffset: f64, onlyFrontOnLane: bool, maxPos: f64, allowCached: bool) -> MSLeaderInfo {
-        todo!("port MSLane::getFirstVehicleInformation")
+        if self.myFollowerInfoTime < MSNet::get_instance().get_current_time_step() || !ego.is_null() || maxPos < self.myLength || !allowCached || onlyFrontOnLane {
+            let mut followerTmp = MSLeaderInfo::new(self.myWidth, ego, latOffset);
+            let mut first = self.any_vehicles_upstream_begin();
+            let mut freeSublanes: i32 = 1; // number of sublanes for which no leader was found
+            let mut veh = first.mul_op();
+            while freeSublanes > 0 && !veh.is_null() {
+                if veh != ego && veh.get_position_on_lane_2(Ptr::new(self)) <= maxPos && (!onlyFrontOnLane || veh.is_front_on_lane(Ptr::new(self))) {
+                    let vehLatOffset = veh.get_lat_offset(Ptr::new(self));
+                    freeSublanes = followerTmp.add_leader(veh, true, vehLatOffset);
+                }
+                veh = first.op__2().mul_op();
+            }
+            if ego.is_null() && maxPos == f64::MAX {
+                // update cached value
+                Ptr::new(self).m().myFollowerInfo = leader_info_copy(&followerTmp);
+                Ptr::new(self).m().myFollowerInfoTime = MSNet::get_instance().get_current_time_step();
+            }
+            return followerTmp;
+        }
+        leader_info_copy(&self.myFollowerInfo)
     }
 
     /// C++: `int MSLane::getVehicleNumber() const` [const]
