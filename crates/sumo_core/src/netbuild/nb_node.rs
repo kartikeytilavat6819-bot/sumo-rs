@@ -5041,7 +5041,44 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossing_outlines(&mut self) {
-        todo!("port NBNode::buildCrossingOutlines")
+        let mut waShapes: BTreeMap<String, PositionVector> = BTreeMap::new();
+        for wa in self.myWalkingAreas.iter() {
+            waShapes.insert(wa.id.clone(), wa.shape.clone());
+        }
+        for c in self.get_crossings() {
+            let c = c.m();
+            let mut wa1 = waShapes.get(&c.prevWalkingArea).cloned().unwrap_or_default();
+            let mut wa2 = waShapes.get(&c.nextWalkingArea).cloned().unwrap_or_default();
+            if wa1.is_empty() || wa2.is_empty() {
+                continue;
+            }
+            wa1.close_polygon();
+            wa2.close_polygon();
+            let mut side1 = c.shape.clone();
+            let mut side2 = c.shape.reverse();
+            side1.move2side(c.width / 2., 100.);
+            side2.move2side(c.width / 2., 100.);
+            let side1default = side1.clone();
+            let side2default = side2.clone();
+            side1.extrapolate(POSITION_EPS, false, false);
+            side2.extrapolate(c.width, false, false);
+            side1 = self.cut_at_shapes(&side1, &wa1, &wa2, &side1default);
+            side2 = self.cut_at_shapes(&side2, &wa1, &wa2, &side2default);
+            let mut side1ex = side1.clone();
+            let mut side2ex = side2.clone();
+            side1ex.extrapolate(POSITION_EPS, false, false);
+            side2ex.extrapolate(if side2 == side2default { c.width / 2. } else { POSITION_EPS }, false, false);
+            let side3 = self.cut_at_shapes(&wa2, &side1ex, &side2ex, &PositionVector::default());
+            let side4 = self.cut_at_shapes(&wa1, &side1ex, &side2ex, &PositionVector::default());
+            c.outlineShape = side1;
+            c.outlineShape.append(&side3, POSITION_EPS);
+            c.outlineShape.append(&side2, POSITION_EPS);
+            c.outlineShape.append(&side4, POSITION_EPS);
+            c.outlineShape.remove_double_points(POSITION_EPS, false, 0, 0, false);
+            if c.outlineShape.back().almost_same(c.outlineShape.front(), POSITION_EPS) {
+                c.outlineShape.pop();
+            }
+        }
     }
 
     /// C++: `void NBNode::buildCrossingsAndWalkingAreas()`
@@ -5095,7 +5132,51 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossings_and_walking_areas(&mut self) {
-        todo!("port NBNode::buildCrossingsAndWalkingAreas")
+        self.build_crossings();
+        self.build_walking_areas(utils::options::options_cont::get_int("junctions.corner-detail"), utils::options::options_cont::get_float("walkingareas.join-dist"));
+        self.build_crossing_outlines();
+        // ensure that all crossings are properly connected
+        let mut recheck = !self.myCrossings.is_empty();
+        while recheck {
+            recheck = false;
+            let nodeID = self.get_id().to_string();
+            let mut waIDs: BTreeSet<String> = BTreeSet::new();
+            let mut numSidewalks: i32 = 0;
+            for wa in self.myWalkingAreas.iter() {
+                waIDs.insert(wa.id.clone());
+                numSidewalks += (wa.prevSidewalks.len() + wa.nextSidewalks.len()) as i32;
+            }
+            if numSidewalks < 2 {
+                // all crossings are invalid if there are fewer than 2 sidewalks involved
+                waIDs.clear();
+            }
+            for crossing in self.myCrossings.iter_mut() {
+                if !waIDs.contains(&crossing.prevWalkingArea) || !waIDs.contains(&crossing.nextWalkingArea) || !crossing.valid {
+                    if crossing.valid {
+                        let mut edgesStr = String::new();
+                        crate::netbuild::nb_cont_helper::shl_op(&mut edgesStr, &crossing.edges);
+                        utils::common::msg_handler::write_warning(&format!("Discarding invalid crossing '{}' at junction '{}' with edges [{}] (no walkingarea found).", crossing.id, nodeID, edgesStr));
+                        recheck = true;
+                    }
+                    let mut i = 0;
+                    while i < self.myWalkingAreas.len() {
+                        let wa = &mut self.myWalkingAreas[i];
+                        if let Some(pos) = wa.nextCrossings.iter().position(|x| *x == crossing.id) {
+                            wa.nextCrossings.remove(pos);
+                        }
+                        if wa.prevSidewalks.len() + wa.nextSidewalks.len() + wa.nextCrossings.len() + wa.prevCrossings.len() < 2 {
+                            self.myWalkingAreas.remove(i);
+                            recheck = true;
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    crossing.valid = false;
+                    crossing.prevWalkingArea = String::new();
+                    crossing.nextWalkingArea = String::new();
+                }
+            }
+        }
     }
 
     /// C++: `EdgeVector NBNode::edgesBetween(const NBEdge *, const NBEdge *) const` [const]
@@ -5116,7 +5197,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn edges_between(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> EdgeVector {
-        todo!("port NBNode::edgesBetween")
+        let mut result: EdgeVector = Vec::new();
+        let mut it = self.myAllEdges.iter().position(|e| *e == e1).expect("edge not found in myAllEdges");
+        NBContHelper::next_cw(&self.myAllEdges, &mut it);
+        let it_end = self.myAllEdges.iter().position(|e| *e == e2).expect("edge not found in myAllEdges");
+        while it != it_end {
+            result.push(self.myAllEdges[it]);
+            NBContHelper::next_cw(&self.myAllEdges, &mut it);
+        }
+        result
     }
 
     /// C++: `bool NBNode::crossingBetween(const NBEdge *, const NBEdge *) const` [const]
@@ -5142,7 +5231,20 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn crossing_between(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::crossingBetween")
+        if e1 == e2 {
+            return false;
+        }
+        if self.myAllEdges.len() > 3 {
+            // pedestrian scramble
+            return false;
+        }
+        for c in self.get_crossings() {
+            let edges = &c.edges;
+            if edges.contains(&e1) && edges.contains(&e2) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::alreadyConnectedPaths(const NBEdge *, const NBEdge *, double) const` [const]
@@ -5168,7 +5270,20 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn already_connected_paths(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, dist: f64) -> bool {
-        todo!("port NBNode::alreadyConnectedPaths")
+        if e1 == e2 {
+            return false;
+        }
+        if e1.get_permissions(-1) != SVC_PEDESTRIAN || e2.get_permissions(-1) != SVC_PEDESTRIAN {
+            // no paths
+            return false;
+        }
+        if e1.get_final_length() > dist && e2.get_final_length() > dist {
+            // too long
+            return false;
+        }
+        let other1 = if e1.get_from_node() == Ptr::new(self) { e1.get_to_node() } else { e1.get_from_node() };
+        let other2 = if e2.get_from_node() == Ptr::new(self) { e2.get_to_node() } else { e2.get_from_node() };
+        other1 == other2
     }
 
     /// C++: `bool NBNode::crossesFringe(const NBEdge *, const NBEdge *) const` [const]
@@ -5286,7 +5401,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_roundabout(&mut self) {
-        todo!("port NBNode::setRoundabout")
+        if self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT || self.myType == SumoXMLNodeType::LEFT_BEFORE_RIGHT {
+            self.myType = SumoXMLNodeType::PRIORITY;
+        }
     }
 
     /// C++: `bool NBNode::isRoundabout() const` [const]
@@ -5302,7 +5419,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_roundabout(&self) -> bool {
-        todo!("port NBNode::isRoundabout")
+        for out in self.myOutgoingEdges.iter() {
+            if out.get_junction_priority(Ptr::new(self)) == NBEdge_JunctionPriority::ROUNDABOUT as i32 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `NBNode::Crossing * NBNode::addCrossing(EdgeVector, double, bool, int, int, const PositionVector &, bool, const Parameterised *)`
@@ -5322,7 +5444,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_crossing(&mut self, edges: EdgeVector, width: f64, priority: bool, tlIndex: i32, tlIndex2: i32, customShape: &PositionVector, fromSumoNet: bool, params: Ptr<Parameterised>) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::addCrossing")
+        let mut c = Box::new(NBNode_Crossing::new(Ptr::from_mut(self), &edges, width, priority, tlIndex, tlIndex2, customShape));
+        if !params.is_null() {
+            c.update_parameters(params.get_parameters_map());
+        }
+        let cp = Ptr::from_box(&c);
+        self.myCrossings.push(c);
+        if fromSumoNet {
+            self.myCrossingsLoadedFromSumoNet += 1;
+        }
+        cp
     }
 
     /// C++: `void NBNode::addWalkingAreaShape(EdgeVector, const PositionVector &, double)`
@@ -5337,7 +5468,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_walking_area_shape(&mut self, edges: EdgeVector, shape: &PositionVector, width: f64) {
-        todo!("port NBNode::addWalkingAreaShape")
+        let mut wacs = NBNode_WalkingAreaCustomShape { edges: BTreeSet::new(), shape: shape.clone(), width };
+        wacs.edges.extend(edges.iter().copied());
+        self.myWalkingAreaCustomShapes.push(wacs);
     }
 
     /// C++: `void NBNode::removeCrossing(const EdgeVector &)`
@@ -5356,7 +5489,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_crossing(&mut self, edges: &EdgeVector) {
-        todo!("port NBNode::removeCrossing")
+        let edgeSet: BTreeSet<Ptr<NBEdge>> = edges.iter().copied().collect();
+        self.myCrossings.retain(|c| {
+            let edgeSet2: BTreeSet<Ptr<NBEdge>> = c.edges.iter().copied().collect();
+            edgeSet != edgeSet2
+        });
     }
 
     /// C++: `void NBNode::discardAllCrossings(bool)`
@@ -5371,7 +5508,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn discard_all_crossings(&mut self, rejectAll: bool) {
-        todo!("port NBNode::discardAllCrossings")
+        self.myCrossings.clear();
+        // also discard all further crossings
+        if rejectAll {
+            self.myDiscardAllCrossings = true;
+        }
     }
 
     /// C++: `void NBNode::discardWalkingareas()`
@@ -5382,7 +5523,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn discard_walkingareas(&mut self) {
-        todo!("port NBNode::discardWalkingareas")
+        self.myWalkingAreas.clear();
     }
 
     /// C++: `int NBNode::numCrossingsFromSumoNet() const` [const]
@@ -5392,7 +5533,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn num_crossings_from_sumo_net(&self) -> i32 {
-        todo!("port NBNode::numCrossingsFromSumoNet")
+        self.myCrossingsLoadedFromSumoNet
     }
 
     /// C++: `std::vector<Crossing *> NBNode::getCrossings() const` [const]
@@ -5400,7 +5541,7 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossings(&self) -> Vec<Ptr<NBNode_Crossing>> {
-        todo!("port NBNode::getCrossings")
+        self.myCrossings.iter().filter(|c| c.valid).map(|c| Ptr::from_box(c)).collect()
     }
 
     /// C++: `const std::vector<std::unique_ptr<Crossing>> & NBNode::getCrossingsIncludingInvalid() const` [const]
@@ -5409,7 +5550,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_crossings_including_invalid(&self) -> &Vec<Box<NBNode_Crossing>> {
-        todo!("port NBNode::getCrossingsIncludingInvalid")
+        &self.myCrossings
     }
 
     /// C++: `const std::vector<WalkingArea> & NBNode::getWalkingAreas() const` [const]
@@ -5419,7 +5560,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_areas(&self) -> &Vec<NBNode_WalkingArea> {
-        todo!("port NBNode::getWalkingAreas")
+        &self.myWalkingAreas
     }
 
     /// C++: `const std::vector<WalkingAreaCustomShape> & NBNode::getWalkingAreaCustomShapes() const` [const]
@@ -5428,7 +5569,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_area_custom_shapes(&self) -> &Vec<NBNode_WalkingAreaCustomShape> {
-        todo!("port NBNode::getWalkingAreaCustomShapes")
+        &self.myWalkingAreaCustomShapes
     }
 
     /// C++: `Crossing * NBNode::getCrossing(const std::string &) const` [const]
@@ -5436,7 +5577,12 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossing(&self, id: &str) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::getCrossing")
+        for c in self.myCrossings.iter() {
+            if c.id == id {
+                return Ptr::from_box(c);
+            }
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Request for unknown crossing '{}'", id)));
     }
 
     /// C++: `Crossing * NBNode::getCrossing(const EdgeVector &, bool) const` [const]
@@ -5444,7 +5590,17 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossing_2(&self, edges: &EdgeVector, hardFail: bool) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::getCrossing")
+        let edgeSet: BTreeSet<Ptr<NBEdge>> = edges.iter().copied().collect();
+        for crossing in self.myCrossings.iter() {
+            let edgeSet2: BTreeSet<Ptr<NBEdge>> = crossing.edges.iter().copied().collect();
+            if edgeSet == edgeSet2 {
+                return Ptr::from_box(crossing);
+            }
+        }
+        if !hardFail {
+            return Ptr::default();
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new("Request for unknown crossing for the given Edges"));
     }
 
     /// C++: `WalkingArea & NBNode::getWalkingArea(const std::string &)`
@@ -5452,7 +5608,22 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_walking_area(&mut self, id: &str) -> &mut NBNode_WalkingArea {
-        todo!("port NBNode::getWalkingArea")
+        if let Some(i) = self.myWalkingAreas.iter().position(|wa| wa.id == id) {
+            return &mut self.myWalkingAreas[i];
+        }
+        // not found, maybe we need to rebuild
+        self.update_surrounding_geometry();
+        self.sort_edges(true);
+        self.build_crossings_and_walking_areas();
+        if let Some(i) = self.myWalkingAreas.iter().position(|wa| wa.id == id) {
+            return &mut self.myWalkingAreas[i];
+        }
+        if !self.myWalkingAreas.is_empty() {
+            // don't crash
+            utils::common::msg_handler::write_warning(&format!("Could not retrieve walkingarea '{}' (edge ordering changed after recompute).", id));
+            return &mut self.myWalkingAreas[0];
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Request for unknown walkingarea '{}'.", id)));
     }
 
     /// C++: `bool NBNode::setCrossingTLIndices(const std::string &, int, bool)`
@@ -5475,7 +5646,23 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_crossing_tl_indices(&mut self, tlID: &str, startIndex: i32, ignoreCustom: bool) -> bool {
-        todo!("port NBNode::setCrossingTLIndices")
+        let mut usedCustom = false;
+        let mut startIndex = startIndex;
+        for c in self.get_crossings() {
+            let c = c.m();
+            c.tlLinkIndex = startIndex;
+            startIndex += 1;
+            c.tlID = tlID.to_string();
+            if c.customTLIndex != -1 && !ignoreCustom {
+                usedCustom |= c.tlLinkIndex != c.customTLIndex;
+                c.tlLinkIndex = c.customTLIndex;
+            }
+            if c.customTLIndex2 != -1 && !ignoreCustom {
+                usedCustom = true;
+                c.tlLinkIndex2 = c.customTLIndex2;
+            }
+        }
+        usedCustom
     }
 
     /// C++: `int NBNode::numNormalConnections() const` [const]
@@ -5495,7 +5682,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn num_normal_connections(&self) -> i32 {
-        todo!("port NBNode::numNormalConnections")
+        if self.myRequest.is_null() {
+            // could be an uncontrolled type
+            let mut result = 0;
+            for edge in self.myIncomingEdges.iter() {
+                result += edge.get_connections().len() as i32;
+            }
+            result
+        } else {
+            self.myRequest.get_sizes().1
+        }
     }
 
     /// C++: `void NBNode::avoidOverlap()`
@@ -5519,7 +5715,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn avoid_overlap(&mut self) {
-        todo!("port NBNode::avoidOverlap")
+        // simple case: edges with LaneSpreadFunction::CENTER and a (possible) turndirection at the same node
+        let mut haveModifications = false;
+        for edge in self.myIncomingEdges.clone() {
+            let turnDest = edge.get_turn_destination(true);
+            if !turnDest.is_null() {
+                haveModifications |= edge.m().shift_position_at_node(Ptr::from_mut(self), turnDest);
+                haveModifications |= turnDest.m().shift_position_at_node(Ptr::from_mut(self), edge);
+            }
+        }
+        if haveModifications {
+            crate::netbuild::nb_algorithms::NBTurningDirectionsComputer::compute_turn_directions_for_node(Ptr::from_mut(self), false);
+        }
+        // @todo: edges in the same direction with sharp angles starting/ending at the same position
     }
 
     /// C++: `bool NBNode::extraConflict(int, int) const` [const]
@@ -5535,7 +5743,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
-        todo!("port NBNode::extraConflict")
+        for def in self.myTrafficLights.iter() {
+            if def.extra_conflict(index, foeIndex) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void NBNode::sortEdges(bool)`
@@ -5658,7 +5871,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_traffic_light(type_: SumoXMLNodeType) -> bool {
-        todo!("port NBNode::isTrafficLight")
+        type_ == SumoXMLNodeType::TRAFFIC_LIGHT
+            || type_ == SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION
+            || type_ == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
     }
 
     /// C++: `bool NBNode::isTrafficLight() const` [const]
@@ -5667,7 +5882,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn is_traffic_light_2(&self) -> bool {
-        todo!("port NBNode::isTrafficLight")
+        NBNode::is_traffic_light(self.myType)
     }
 
     /// C++: `bool NBNode::isSimpleContinuation(bool, bool) const` [const]
@@ -6807,7 +7022,20 @@ impl NBNode_WalkingArea {
     //         }
     #[allow(unused_variables)]
     pub fn new(_id: &str, _width: f64) -> Self {
-        todo!("port WalkingArea::WalkingArea")
+        NBNode_WalkingArea {
+            id: _id.to_string(),
+            width: _width,
+            length: utils::common::std_defs::INVALID_DOUBLE,
+            shape: PositionVector::default(),
+            nextCrossings: Vec::new(),
+            prevCrossings: Vec::new(),
+            nextSidewalks: Vec::new(),
+            prevSidewalks: Vec::new(),
+            hasCustomShape: false,
+            minNextCrossingEdges: i32::MAX,
+            minPrevCrossingEdges: i32::MAX,
+            refEdges: BTreeSet::new(),
+        }
     }
 
 }
