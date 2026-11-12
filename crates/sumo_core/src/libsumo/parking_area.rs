@@ -1,5 +1,6 @@
 //! Port of libsumo/ParkingArea.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+// shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 
 /// C++ class `libsumo::ParkingArea` (libsumo/ParkingArea.h)
@@ -10,6 +11,13 @@ pub struct ParkingArea {
 //   static const int ParkingArea::DOMAIN_ID;
 //   static SubscriptionResults ParkingArea::mySubscriptionResults;
 //   static ContextSubscriptionResults ParkingArea::myContextSubscriptionResults;
+thread_local! {
+    /// C++ static `ParkingArea::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `ParkingArea::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 
 impl ParkingArea {
     /// C++: `std::string ParkingArea::getLaneID(const std::string &)` [static]
@@ -19,7 +27,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(stopID: &str) -> String {
-        todo!("port ParkingArea::getLaneID")
+        Self::get_parking_area(stopID).get_lane().get_id().to_string()
     }
 
     /// C++: `double ParkingArea::getStartPos(const std::string &)` [static]
@@ -29,7 +37,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_start_pos(stopID: &str) -> f64 {
-        todo!("port ParkingArea::getStartPos")
+        Self::get_parking_area(stopID).get_begin_lane_position()
     }
 
     /// C++: `double ParkingArea::getEndPos(const std::string &)` [static]
@@ -39,7 +47,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_end_pos(stopID: &str) -> f64 {
-        todo!("port ParkingArea::getEndPos")
+        Self::get_parking_area(stopID).get_end_lane_position()
     }
 
     /// C++: `std::string ParkingArea::getName(const std::string &)` [static]
@@ -49,7 +57,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_name(stopID: &str) -> String {
-        todo!("port ParkingArea::getName")
+        Self::get_parking_area(stopID).get_my_name().to_string()
     }
 
     /// C++: `int ParkingArea::getVehicleCount(const std::string &)` [static]
@@ -59,7 +67,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_count(stopID: &str) -> i32 {
-        todo!("port ParkingArea::getVehicleCount")
+        Self::get_parking_area(stopID).get_stopped_vehicles().len() as i32
     }
 
     /// C++: `std::vector<std::string> ParkingArea::getVehicleIDs(const std::string &)` [static]
@@ -73,7 +81,11 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_i_ds(stopID: &str) -> Vec<String> {
-        todo!("port ParkingArea::getVehicleIDs")
+        let mut result: Vec<String> = Vec::new();
+        for veh in Self::get_parking_area(stopID).get_stopped_vehicles() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> ParkingArea::getAcceptedBadges(const std::string &)` [static]
@@ -83,7 +95,8 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_accepted_badges(stopID: &str) -> Vec<String> {
-        todo!("port ParkingArea::getAcceptedBadges")
+        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
+        Self::get_parking_area(stopID).cast::<MSParkingArea>().get_accepted_badges()
     }
 
     /// C++: `std::vector<std::string> ParkingArea::getIDList()` [static]
@@ -98,7 +111,12 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port ParkingArea::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        for item in MSNet::get_instance().get_stopping_places(SUMO_TAG_PARKING_AREA) {
+            ids.push(item.0.to_string());
+        }
+        ids.sort();
+        ids
     }
 
     /// C++: `int ParkingArea::getIDCount()` [static]
@@ -108,7 +126,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port ParkingArea::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string ParkingArea::getParameter(const std::string &, const std::string &)` [static]
@@ -118,14 +136,14 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port ParkingArea::getParameter")
+        Self::get_parking_area(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> ParkingArea::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(ParkingArea)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port ParkingArea::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void ParkingArea::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -135,77 +153,78 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port ParkingArea::setParameter")
+        Self::get_parking_area(objectID).base2.set_parameter(key, value);
     }
 
     /// C++: `void ParkingArea::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port ParkingArea::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_PARKINGAREA_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void ParkingArea::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port ParkingArea::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_PARKINGAREA_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void ParkingArea::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port ParkingArea::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_PARKINGAREA_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void ParkingArea::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port ParkingArea::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_PARKINGAREA_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults ParkingArea::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port ParkingArea::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults ParkingArea::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port ParkingArea::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults ParkingArea::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port ParkingArea::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults ParkingArea::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port ParkingArea::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void ParkingArea::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port ParkingArea::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: ParkingArea::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int ParkingArea::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port ParkingArea::domainID")
+        CMD_GET_PARKINGAREA_VARIABLE
     }
 
     /// C++: `void ParkingArea::setAcceptedBadges(const std::string &, const std::vector<std::string> &)` [static]
@@ -215,7 +234,10 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_accepted_badges(stopID: &str, badges: &Vec<String>) {
-        todo!("port ParkingArea::setAcceptedBadges")
+        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
+        let pa = Self::get_parking_area(stopID).cast::<MSParkingArea>();
+        pa.m().myAcceptedBadges.clear();
+        pa.m().myAcceptedBadges.extend(badges.iter().cloned());
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> ParkingArea::makeWrapper()` [static]
@@ -225,7 +247,8 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port ParkingArea::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: ParkingArea::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool ParkingArea::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -262,7 +285,30 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port ParkingArea::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_POSITION => wrapper.m().wrap_double(objID, variable, Self::get_start_pos(objID)),
+            VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_end_pos(objID)),
+            VAR_NAME => wrapper.m().wrap_string(objID, variable, &Self::get_name(objID)),
+            VAR_ACCESS_BADGE => wrapper.m().wrap_string_list(objID, variable, &Self::get_accepted_badges(objID)),
+            VAR_STOP_STARTING_VEHICLES_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_vehicle_count(objID)),
+            VAR_STOP_STARTING_VEHICLES_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_vehicle_i_ds(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSStoppingPlace * ParkingArea::getParkingArea(const std::string &)` [static, private]
@@ -272,7 +318,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_parking_area(id: &str) -> Ptr<MSStoppingPlace> {
-        todo!("port ParkingArea::getParkingArea")
+        Helper::get_stopping_place(id, SUMO_TAG_PARKING_AREA)
     }
 
     /// C++: `void ParkingArea::ParkingArea()` [private]
@@ -280,7 +326,7 @@ impl ParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ParkingArea::ParkingArea")
+        panic!("libsumo::ParkingArea cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

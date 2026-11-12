@@ -1,5 +1,6 @@
 //! Port of libsumo/Route.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+// shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 
 /// C++ class `libsumo::Route` (libsumo/Route.h)
@@ -10,6 +11,13 @@ pub struct Route {
 //   static const int Route::DOMAIN_ID;
 //   static SubscriptionResults Route::mySubscriptionResults;
 //   static ContextSubscriptionResults Route::myContextSubscriptionResults;
+thread_local! {
+    /// C++ static `Route::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Route::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 
 impl Route {
     /// C++: `std::vector<std::string> Route::getEdges(const std::string &)` [static]
@@ -24,7 +32,12 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_edges(routeID: &str) -> Vec<String> {
-        todo!("port Route::getEdges")
+        let r = Self::get_route(routeID);
+        let mut ids: Vec<String> = Vec::new();
+        for e in r.get_edges() {
+            ids.push(e.get_id().to_string());
+        }
+        ids
     }
 
     /// C++: `std::vector<std::string> Route::getIDList()` [static]
@@ -37,7 +50,10 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Route::getIDList")
+        MSNet::get_instance(); // just to check that we actually have a network
+        let mut ids: Vec<String> = Vec::new();
+        MSRoute::insert_i_ds(&mut ids);
+        ids
     }
 
     /// C++: `int Route::getIDCount()` [static]
@@ -47,7 +63,7 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Route::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Route::getParameter(const std::string &, const std::string &)` [static]
@@ -58,14 +74,14 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Route::getParameter")
+        Self::get_route(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Route::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Route)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Route::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Route::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -76,77 +92,80 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Route::setParameter")
+        let r = Self::get_route(objectID);
+        // C++ const_cast: the route dictionary holds const pointers, parameters are still set in place
+        Ptr::from_raw(Rc::as_ptr(&r) as *mut MSRoute).m().base2.set_parameter(key, value);
     }
 
     /// C++: `void Route::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Route::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Route::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Route::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Route::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Route::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Route::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Route::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_ROUTE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Route::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Route::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Route::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Route::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Route::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Route::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Route::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Route::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Route::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Route, ROUTE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Route::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Route::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Route::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Route::domainID")
+        CMD_GET_ROUTE_VARIABLE
     }
 
     /// C++: `void Route::add(const std::string &, const std::vector<std::string> &)` [static]
@@ -170,8 +189,23 @@ impl Route {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add(routeID: &str, edges: &Vec<String>) {
-        todo!("port Route::add")
+    pub fn add(routeID: &str, edgeIDs: &Vec<String>) {
+        let mut edges: ConstMSEdgeVector = Vec::new();
+        if edgeIDs.len() == 0 {
+            panic!("{}", format!("Cannot add route '{}' without edges.", routeID));
+        }
+        for ei in edgeIDs.iter() {
+            let edge = MSEdge::dictionary_2(ei);
+            if edge.is_null() {
+                panic!("{}", format!("Unknown edge '{}' in route.", ei));
+            }
+            edges.push(edge);
+        }
+        let stops: StopParVector = Vec::new();
+        let route: ConstMSRoutePtr = Rc::new(MSRoute::new(routeID, &edges, true, Ptr::null(), &stops, -1, -1));
+        if !MSRoute::dictionary(routeID, route) {
+            panic!("{}", format!("Could not add route '{}'.", routeID));
+        }
     }
 
     /// C++: `void Route::remove(const std::string &)` [static]
@@ -182,7 +216,7 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn remove(routeID: &str) {
-        todo!("port Route::remove")
+        Self::get_route(routeID).check_removal(true);
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Route::makeWrapper()` [static]
@@ -192,7 +226,8 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Route::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Route::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Route::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -217,7 +252,24 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Route::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_EDGES => wrapper.m().wrap_string_list(objID, variable, &Self::get_edges(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `ConstMSRoutePtr Route::getRoute(const std::string &)` [static, private]
@@ -231,7 +283,11 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_route(id: &str) -> ConstMSRoutePtr {
-        todo!("port Route::getRoute")
+        // shortcut: MSRoute::dictionary cannot return nullptr through Rc<MSRoute>, so existence is checked with hasRoute first
+        if !MSRoute::has_route(id) {
+            panic!("{}", format!("Route '{}' is not known", id));
+        }
+        MSRoute::dictionary_3(id, Ptr::null())
     }
 
     /// C++: `void Route::Route()` [private]
@@ -239,7 +295,7 @@ impl Route {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Route::Route")
+        panic!("libsumo::Route cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

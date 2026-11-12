@@ -1,6 +1,11 @@
 //! Port of microsim/trigger/MSLaneSpeedTrigger.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_event_control::Command;
+use std::cell::RefCell;
+use utils::common::util_exceptions::ProcessError;
+use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
+use utils::xml::sumo_sax_attributes::SUMOSAXAttributes;
 
 /// Changes the speed allowed on a set of lanes
 /// C++ class `MSLaneSpeedTrigger` (microsim/trigger/MSLaneSpeedTrigger.h)
@@ -9,7 +14,7 @@ pub struct MSLaneSpeedTrigger {
     /// C++ base class `Named`
     pub base: Named,
     /// C++ base class `SUMOSAXHandler`
-    pub base2: Unmapped /* SUMOSAXHandler */,
+    pub base2: GenericSAXHandler,
     /// the lane the trigger is responsible for
     pub myDestLanes: Vec<Ptr<MSLane>>,
     /// The original speed allowed on the lanes
@@ -22,8 +27,10 @@ pub struct MSLaneSpeedTrigger {
     pub mySpeedOverrideValue: f64,
     pub myLoadedSpeeds: Vec<(SUMOTime, f64)>,
     pub myLoadedFrictions: Vec<(SUMOTime, f64)>,
-    pub myCurrentSpeedEntry: Unmapped /* std::vector<std::pair<SUMOTime, double>>::iterator */,
-    pub myCurrentFrictionEntry: Unmapped /* std::vector<std::pair<SUMOTime, double>>::iterator */,
+    /// iterator into myLoadedSpeeds; an index, myLoadedSpeeds.len() is end()
+    pub myCurrentSpeedEntry: usize,
+    /// iterator into myLoadedFrictions; an index, myLoadedFrictions.len() is end()
+    pub myCurrentFrictionEntry: usize,
     /// The information whether init was called
     pub myDidInit: bool,
 }
@@ -42,6 +49,27 @@ impl std::ops::DerefMut for MSLaneSpeedTrigger {
 
 // C++ static members of MSLaneSpeedTrigger (port as module-level statics, see AGENTS.md):
 //   static std::map<std::string, MSLaneSpeedTrigger *> MSLaneSpeedTrigger::myInstances;
+
+thread_local! {
+    /// C++ `MSLaneSpeedTrigger::myInstances`
+    static MY_INSTANCES: RefCell<BTreeMap<String, Ptr<MSLaneSpeedTrigger>>> = RefCell::new(BTreeMap::new());
+}
+
+/// C++ `WrappingCommand<MSLaneSpeedTrigger>` bound to executeSpeedChange or executeFrictionChange
+struct LaneSpeedTriggerCommand {
+    trigger: Ptr<MSLaneSpeedTrigger>,
+    friction: bool,
+}
+
+impl Command for LaneSpeedTriggerCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        if self.friction {
+            self.trigger.m().execute_friction_change(currentTime)
+        } else {
+            self.trigger.m().execute_speed_change(currentTime)
+        }
+    }
+}
 
 impl MSLaneSpeedTrigger {
     /// C++: `void MSLaneSpeedTrigger::MSLaneSpeedTrigger(const std::string &, const std::vector<MSLane *> &, const std::string &)`
@@ -68,8 +96,44 @@ impl MSLaneSpeedTrigger {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, destLanes: &Vec<Ptr<MSLane>>, file: &str) -> Self {
-        todo!("port MSLaneSpeedTrigger::MSLaneSpeedTrigger")
+    // Returns a Box: init() schedules events and the registry stores `this`, so the object must not
+    // move after that point. C++ throws ProcessError, which is the Err arm here.
+    pub fn new(id: &str, destLanes: &Vec<Ptr<MSLane>>, file: &str) -> Result<Box<Self>, ProcessError> {
+        let mut this = Box::new(MSLaneSpeedTrigger {
+            base: Named::new(id),
+            base2: utils::xml::sumo_sax_handler::new(file, ""),
+            myDestLanes: destLanes.clone(),
+            myDefaultSpeed: destLanes[0].get_speed_limit(),
+            myDefaultFriction: destLanes[0].get_friction_coefficient(),
+            myAmOverriding: false,
+            mySpeedOverrideValue: destLanes[0].get_speed_limit(),
+            myLoadedSpeeds: Vec::new(),
+            myLoadedFrictions: Vec::new(),
+            myCurrentSpeedEntry: 0,
+            myCurrentFrictionEntry: 0,
+            myDidInit: false,
+        });
+        MY_INSTANCES.with(|m| {
+            m.borrow_mut().insert(id.to_string(), Ptr::from_box(&this));
+        });
+        if file != "" {
+            let parsed = match utils::xml::xml_sub_sys::run_parser(&mut *this, file, false, false, false, true) {
+                Ok(parsed) => parsed,
+                Err(e) => {
+                    // C++ leaves the dangling registry entry; removing it keeps the registry valid
+                    MY_INSTANCES.with(|m| m.borrow_mut().remove(id));
+                    return Err(e);
+                }
+            };
+            if !parsed {
+                MY_INSTANCES.with(|m| m.borrow_mut().remove(id));
+                return Err(ProcessError::new(""));
+            }
+            if !this.myDidInit {
+                this.init();
+            }
+        }
+        Ok(this)
     }
 
     /// C++: `void MSLaneSpeedTrigger::~MSLaneSpeedTrigger() noexcept` [virtual]
@@ -79,7 +143,8 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneSpeedTrigger::~MSLaneSpeedTrigger")
+        let id = self.base.get_id().to_string();
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&id));
     }
 
     /// C++: `SUMOTime MSLaneSpeedTrigger::executeSpeedChange(SUMOTime)`
@@ -90,7 +155,7 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn execute_speed_change(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSLaneSpeedTrigger::executeSpeedChange")
+        self.process_command(true, currentTime)
     }
 
     /// C++: `SUMOTime MSLaneSpeedTrigger::executeFrictionChange(SUMOTime)`
@@ -110,7 +175,17 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn execute_friction_change(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSLaneSpeedTrigger::executeFrictionChange")
+        let friction = self.get_current_friction();
+        for lane in &self.myDestLanes {
+            lane.m().set_friction_coefficient(friction);
+        }
+        if self.myCurrentFrictionEntry != self.myLoadedFrictions.len() {
+            self.myCurrentFrictionEntry += 1;
+        }
+        if self.myCurrentFrictionEntry != self.myLoadedFrictions.len() {
+            return self.myLoadedFrictions[self.myCurrentFrictionEntry].0 - currentTime;
+        }
+        0
     }
 
     /// C++: `SUMOTime MSLaneSpeedTrigger::processCommand(bool, SUMOTime)`
@@ -135,7 +210,22 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn process_command(&mut self, move2next: bool, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSLaneSpeedTrigger::processCommand")
+        let speed = self.get_current_speed();
+        let altered = speed != self.myDefaultSpeed;
+        for lane in &self.myDestLanes {
+            lane.m().set_max_speed(speed, altered, -1.0);
+        }
+        if !move2next {
+            // changed from the gui
+            return 0;
+        }
+        if self.myCurrentSpeedEntry != self.myLoadedSpeeds.len() {
+            self.myCurrentSpeedEntry += 1;
+        }
+        if self.myCurrentSpeedEntry != self.myLoadedSpeeds.len() {
+            return self.myLoadedSpeeds[self.myCurrentSpeedEntry].0 - currentTime;
+        }
+        0
     }
 
     /// C++: `double MSLaneSpeedTrigger::getDefaultSpeed() const` [const]
@@ -145,7 +235,7 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn get_default_speed(&self) -> f64 {
-        todo!("port MSLaneSpeedTrigger::getDefaultSpeed")
+        self.myDefaultSpeed
     }
 
     /// C++: `void MSLaneSpeedTrigger::setOverriding(bool)`
@@ -156,7 +246,8 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn set_overriding(&mut self, val: bool) {
-        todo!("port MSLaneSpeedTrigger::setOverriding")
+        self.myAmOverriding = val;
+        self.process_command(false, MSNet::get_instance().get_current_time_step());
     }
 
     /// C++: `void MSLaneSpeedTrigger::setOverridingValue(double)`
@@ -167,7 +258,8 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn set_overriding_value(&mut self, val: f64) {
-        todo!("port MSLaneSpeedTrigger::setOverridingValue")
+        self.mySpeedOverrideValue = val;
+        self.process_command(false, MSNet::get_instance().get_current_time_step());
     }
 
     /// C++: `double MSLaneSpeedTrigger::getLoadedSpeed()`
@@ -184,7 +276,14 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn get_loaded_speed(&mut self) -> f64 {
-        todo!("port MSLaneSpeedTrigger::getLoadedSpeed")
+        if self.myLoadedSpeeds.is_empty() {
+            return self.myDefaultSpeed;
+        }
+        if self.myCurrentSpeedEntry != 0 {
+            self.myLoadedSpeeds[self.myCurrentSpeedEntry - 1].1
+        } else {
+            self.myLoadedSpeeds[self.myCurrentSpeedEntry].1
+        }
     }
 
     /// C++: `double MSLaneSpeedTrigger::getCurrentSpeed() const` [const]
@@ -214,7 +313,25 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn get_current_speed(&self) -> f64 {
-        todo!("port MSLaneSpeedTrigger::getCurrentSpeed")
+        if self.myAmOverriding {
+            return self.mySpeedOverrideValue;
+        }
+        if self.myLoadedSpeeds.is_empty() {
+            return self.myDefaultSpeed;
+        }
+        let now = MSNet::get_instance().get_current_time_step();
+        // ok, maybe the first shall not yet be the valid one
+        if self.myCurrentSpeedEntry == 0 && self.myLoadedSpeeds[0].0 > now {
+            return self.myDefaultSpeed;
+        }
+        // try the loaded
+        if self.myCurrentSpeedEntry != self.myLoadedSpeeds.len() && self.myLoadedSpeeds[self.myCurrentSpeedEntry].0 <= now {
+            self.myLoadedSpeeds[self.myCurrentSpeedEntry].1
+        } else {
+            // we have run past the end of the loaded steps or the current step is not yet active:
+            // -> use the value of the previous step
+            self.myLoadedSpeeds[self.myCurrentSpeedEntry - 1].1
+        }
     }
 
     /// C++: `double MSLaneSpeedTrigger::getCurrentFriction() const` [const]
@@ -240,7 +357,22 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn get_current_friction(&self) -> f64 {
-        todo!("port MSLaneSpeedTrigger::getCurrentFriction")
+        if self.myLoadedFrictions.is_empty() {
+            return self.myDefaultFriction;
+        }
+        let now = MSNet::get_instance().get_current_time_step();
+        // ok, maybe the first shall not yet be the valid one
+        if self.myCurrentFrictionEntry == 0 && self.myLoadedFrictions[0].0 > now {
+            return self.myDefaultFriction;
+        }
+        // try the loaded
+        if self.myCurrentFrictionEntry != self.myLoadedFrictions.len() && self.myLoadedFrictions[self.myCurrentFrictionEntry].0 <= now {
+            self.myLoadedFrictions[self.myCurrentFrictionEntry].1
+        } else {
+            // we have run past the end of the loaded steps or the current step is not yet active:
+            // -> use the value of the previous step
+            self.myLoadedFrictions[self.myCurrentFrictionEntry - 1].1
+        }
     }
 
     /// C++: `const std::map<std::string, MSLaneSpeedTrigger *> & MSLaneSpeedTrigger::getInstances()` [static]
@@ -249,8 +381,9 @@ impl MSLaneSpeedTrigger {
     //         return myInstances;
     //     }
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static BTreeMap<String, Ptr<MSLaneSpeedTrigger>> {
-        todo!("port MSLaneSpeedTrigger::getInstances")
+    pub fn get_instances() -> BTreeMap<String, Ptr<MSLaneSpeedTrigger>> {
+        // returned by value, as in MSTriggeredRerouter: the C++ static map lives in a thread_local RefCell
+        MY_INSTANCES.with(|m| m.borrow().clone())
     }
 
     /// C++: `const std::vector<MSLane *> & MSLaneSpeedTrigger::getLanes()`
@@ -259,7 +392,7 @@ impl MSLaneSpeedTrigger {
     //     }
     #[allow(unused_variables)]
     pub fn get_lanes(&mut self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSLaneSpeedTrigger::getLanes")
+        &self.myDestLanes
     }
 
     /// C++: `void MSLaneSpeedTrigger::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -306,7 +439,43 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port MSLaneSpeedTrigger::myStartElement")
+        // check whether the correct tag is read
+        if element != SUMO_TAG_STEP {
+            return;
+        }
+        // extract the values
+        let mut ok = true;
+        let id = self.base.get_id().to_string();
+        let next = attrs.get_sumo_time_reporting(SUMO_ATTR_TIME, &id, &mut ok, true);
+        let mut speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, &id, &mut ok, -1.0, true);
+        let mut friction = attrs.get_opt::<f64>(SUMO_ATTR_FRICTION, &id, &mut ok, -1.0, true);
+        // check the values
+        if next < 0 || (speed > 0.0 && !self.myLoadedSpeeds.is_empty() && self.myLoadedSpeeds.last().unwrap().0 > next) || (friction > 0.0 && !self.myLoadedFrictions.is_empty() && self.myLoadedFrictions.last().unwrap().0 > next) {
+            write_errorf!("Invalid or unsorted time entry in vss '%'.", self.base.get_id());
+            return;
+        }
+        if speed < 0.0 && friction < 0.0 {
+            speed = self.myDefaultSpeed;
+            friction = self.myDefaultFriction;
+        }
+        if speed < 0.0 && attrs.has_attribute(SUMO_ATTR_SPEED) {
+            speed = self.myDefaultSpeed;
+        }
+        if friction < 0.0 && attrs.has_attribute(SUMO_ATTR_FRICTION) {
+            friction = self.myDefaultFriction;
+        }
+        // set the values for the next step if they are valid
+        if speed >= 0.0 {
+            if self.myLoadedSpeeds.len() != 0 && self.myLoadedSpeeds.last().unwrap().0 == next {
+                write_warningf!("Time % was set twice for vss '%'; replacing first entry.", time2string(next), self.base.get_id());
+                self.myLoadedSpeeds.last_mut().unwrap().1 = speed;
+            } else {
+                self.myLoadedSpeeds.push((next, speed));
+            }
+        }
+        if friction >= 0.0 {
+            self.myLoadedFrictions.push((next, friction));
+        }
     }
 
     /// C++: `void MSLaneSpeedTrigger::myEndElement(int)` [virtual, protected]
@@ -319,7 +488,9 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port MSLaneSpeedTrigger::myEndElement")
+        if element == SUMO_TAG_VSS && !self.myDidInit {
+            self.init();
+        }
     }
 
     /// C++: `void MSLaneSpeedTrigger::MSLaneSpeedTrigger(const MSLaneSpeedTrigger &)` [private]
@@ -327,7 +498,7 @@ impl MSLaneSpeedTrigger {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSLaneSpeedTrigger) -> Self {
-        todo!("port MSLaneSpeedTrigger::MSLaneSpeedTrigger")
+        panic!("MSLaneSpeedTrigger copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSLaneSpeedTrigger & MSLaneSpeedTrigger::operator=(const MSLaneSpeedTrigger &)` [private]
@@ -335,7 +506,7 @@ impl MSLaneSpeedTrigger {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSLaneSpeedTrigger) -> &mut MSLaneSpeedTrigger {
-        todo!("port MSLaneSpeedTrigger::operator=")
+        panic!("MSLaneSpeedTrigger assignment is private and invalidated in C++")
     }
 
     /// C++: `void MSLaneSpeedTrigger::init()` [private]
@@ -368,8 +539,45 @@ impl MSLaneSpeedTrigger {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSLaneSpeedTrigger::init")
-    }
+        // set the process to the begin
+        self.myCurrentSpeedEntry = 0;
+        self.myCurrentFrictionEntry = 0;
+        // pass previous time steps
+        let now = MSNet::get_instance().get_current_time_step();
+        while self.myCurrentSpeedEntry != self.myLoadedSpeeds.len() && self.myLoadedSpeeds[self.myCurrentSpeedEntry].0 < now {
+            self.process_command(true, now);
+        }
+        while self.myCurrentFrictionEntry != self.myLoadedFrictions.len() && self.myLoadedFrictions[self.myCurrentFrictionEntry].0 < now {
+            self.execute_friction_change(now);
+        }
 
+        // add the processing to the event handler
+        let this = Ptr::from_mut(self);
+        if self.myCurrentSpeedEntry != self.myLoadedSpeeds.len() {
+            let at = self.myLoadedSpeeds[self.myCurrentSpeedEntry].0;
+            let cmd = LaneSpeedTriggerCommand { trigger: this, friction: false };
+            MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(Box::into_raw(Box::new(cmd)) as *mut dyn Command), at);
+        }
+        if self.myCurrentFrictionEntry != self.myLoadedFrictions.len() {
+            let at = self.myLoadedFrictions[self.myCurrentFrictionEntry].0;
+            let cmd = LaneSpeedTriggerCommand { trigger: this, friction: true };
+            MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(Box::into_raw(Box::new(cmd)) as *mut dyn Command), at);
+        }
+        self.myDidInit = true;
+    }
+}
+
+impl SaxHandler for MSLaneSpeedTrigger {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base2
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        MSLaneSpeedTrigger::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        MSLaneSpeedTrigger::my_end_element(self, element);
+        Ok(())
+    }
 }
 
