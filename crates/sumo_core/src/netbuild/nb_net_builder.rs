@@ -34,8 +34,22 @@ impl NBNetBuilder {
     //     myNetworkHaveCrossings(false) {
     // }
     #[allow(unused_variables)]
-    pub fn new() -> Self {
-        todo!("port NBNetBuilder::NBNetBuilder")
+    pub fn new() -> Box<Self> {
+        let mut b = Box::new(NBNetBuilder {
+            myNodeCont: NBNodeCont::new(),
+            myTypeCont: NBTypeCont::new(),
+            // placeholder; re-pointed at the boxed builder's own myTypeCont below
+            myEdgeCont: NBEdgeCont::new(&mut NBTypeCont::new()),
+            myTLLCont: NBTrafficLightLogicCont::new(),
+            myDistrictCont: NBDistrictCont::new(),
+            myPTStopCont: NBPTStopCont { myPTStops: BTreeMap::new(), myPTStopLookup: BTreeMap::new(), myFloatingStops: Vec::new() },
+            myPTLineCont: NBPTLineCont { myPTLines: BTreeMap::new(), myPTLineLookup: BTreeMap::new() },
+            myParkingCont: NBParkingCont { base: Vec::new() },
+            myShapeCont: ShapeContainer::new(),
+            myNetworkHaveCrossings: false,
+        });
+        b.myEdgeCont = NBEdgeCont::new(&mut b.myTypeCont);
+        b
     }
 
     /// C++: `void NBNetBuilder::~NBNetBuilder()`
@@ -43,7 +57,7 @@ impl NBNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBNetBuilder::~NBNetBuilder")
+        // implicit C++ destructor (no body): Rust drops the members
     }
 
     /// C++: `void NBNetBuilder::applyOptions(OptionsCont &)`
@@ -62,7 +76,21 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn apply_options(&mut self, oc: &mut OptionsCont) {
-        todo!("port NBNetBuilder::applyOptions")
+        // apply options to type control
+        self.myTypeCont.set_edge_type_defaults(
+            oc.get_int("default.lanenumber").unwrap(),
+            oc.get_float("default.lanewidth").unwrap(),
+            oc.get_float("default.speed").unwrap(),
+            oc.get_float("default.friction").unwrap(),
+            oc.get_int("default.priority").unwrap(),
+            parse_vehicle_classes_allow_disallow(&oc.get_string("default.allow").unwrap(), &oc.get_string("default.disallow").unwrap(), utils::common::std_defs::NETWORK_VERSION),
+            LaneSpreadFunctions.get(&oc.get_string("default.spreadtype").unwrap()).unwrap(),
+        );
+        // apply options to edge control
+        self.myEdgeCont.apply_options(oc);
+        // apply options to traffic light logics control
+        self.myTLLCont.apply_options(oc);
+        NBEdge::set_default_connection_length(oc.get_float("default.connection-length").unwrap());
     }
 
     /// C++: `void NBNetBuilder::compute(OptionsCont &, const std::set<std::string> &, bool)`
@@ -739,7 +767,586 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn compute(&mut self, oc: &mut OptionsCont, explicitTurnarounds: &BTreeSet<String>, mayAddOrRemove: bool) {
-        todo!("port NBNetBuilder::compute")
+        // PROGRESS_BEGIN/PROGRESS_TIME_MESSAGE timing output is not ported; the WRITE_MESSAGEF lines are.
+        let lefthand = oc.get_bool("lefthand").unwrap();
+        if lefthand {
+            self.mirror_x();
+        }
+
+        // MODIFYING THE SETS OF NODES AND EDGES
+        // Removes edges that are connecting the same node
+        let mut numRemovedEdges: i32 = 0;
+        numRemovedEdges += self.myNodeCont.remove_self_loops(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont);
+        if mayAddOrRemove && oc.exists("remove-edges.isolated") && oc.get_bool("remove-edges.isolated").unwrap() {
+            numRemovedEdges += self.myNodeCont.remove_isolated_roads(&mut self.myDistrictCont, &mut self.myEdgeCont);
+        }
+        if mayAddOrRemove && oc.exists("keep-edges.components") && oc.get_int("keep-edges.components").unwrap() > 0 {
+            let hasStops = oc.exists("ptstop-output") && oc.is_set("ptstop-output", true).unwrap() && !self.myPTStopCont.get_stops().is_empty();
+            numRemovedEdges += self.myNodeCont.remove_components(&mut self.myDistrictCont, &mut self.myEdgeCont, oc.get_int("keep-edges.components").unwrap(), hasStops);
+        }
+        if mayAddOrRemove && oc.exists("keep-edges.postload") && oc.get_bool("keep-edges.postload").unwrap() {
+            // pre-process lines to set permissions
+            if !self.myPTLineCont.get_lines().is_empty() {
+                self.myPTLineCont.process(&mut self.myEdgeCont, &mut self.myPTStopCont, false);
+            }
+            if oc.is_set("keep-edges.explicit", true).unwrap() || oc.is_set("keep-edges.input-file", true).unwrap() {
+                numRemovedEdges += self.myEdgeCont.remove_unwished_edges(&mut self.myDistrictCont);
+            }
+            let removed = self.myEdgeCont.remove_edges_by_speed(&mut self.myDistrictCont);
+            if removed > 0 {
+                numRemovedEdges += removed;
+                write_messagef!(" Removed % edges because by minimum speed.", removed);
+            }
+            let removed2 = self.myEdgeCont.remove_edges_by_permissions(&mut self.myDistrictCont);
+            if removed2 > 0 {
+                numRemovedEdges += removed2;
+                write_messagef!(" Removed % edges based on vClass.", removed2);
+            }
+        }
+        if mayAddOrRemove && oc.get_float("keep-lanes.min-width").unwrap() > 0.0 {
+            let removed = self.myEdgeCont.remove_lanes_by_width(&mut self.myDistrictCont, oc.get_float("keep-lanes.min-width").unwrap());
+            if removed > 0 {
+                numRemovedEdges += removed;
+                write_messagef!(" Removed % edges because of lane width.", removed);
+            }
+        }
+        if mayAddOrRemove && oc.exists("junctions.attach-removed") && oc.get_float("junctions.attach-removed").unwrap() >= 0.0 {
+            let numSplit = self.myEdgeCont.attach_removed(&mut self.myNodeCont, &mut self.myDistrictCont, oc.get_float("junctions.attach-removed").unwrap());
+            if numSplit > 0 {
+                write_messagef!(" Split % edges to attach removed nodes", numSplit);
+            }
+        }
+        // Processing pt stops and lines
+        if !self.myPTStopCont.get_stops().is_empty() {
+            if !(oc.exists("ptline-output") && oc.is_set("ptline-output", true).unwrap()) && !oc.get_bool("ptstop-output.no-bidi").unwrap() {
+                self.myPTStopCont.localize_pt_stops(&mut self.myEdgeCont);
+            }
+            self.myPTStopCont.assign_edge_for_floating_stops(&mut self.myEdgeCont, 20.0);
+            self.myPTStopCont.assign_lanes(&mut self.myEdgeCont);
+        }
+        if mayAddOrRemove && oc.exists("keep-edges.components") && oc.get_int("keep-edges.components").unwrap() > 0 {
+            // post process rail components unless they have stops
+            numRemovedEdges += self.myNodeCont.remove_rail_components(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myPTStopCont);
+        }
+        // removal is done, clean up roundabouts
+        if numRemovedEdges > 0 {
+            self.myEdgeCont.cleanup_roundabouts();
+        }
+
+        if !self.myPTLineCont.get_lines().is_empty() {
+            self.myPTLineCont.process(&mut self.myEdgeCont, &mut self.myPTStopCont, false);
+        }
+
+        if !self.myPTStopCont.get_stops().is_empty() && !oc.get_bool("ptstop-output.no-bidi").unwrap() {
+            self.myPTStopCont.align_id_signs();
+        }
+        // analyze and fix railway topology
+        let mut numAddedBidi: i32 = 0;
+        if oc.exists("railway.topology.all-bidi") && oc.get_bool("railway.topology.all-bidi").unwrap() {
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
+            numAddedBidi = NBRailwayTopologyAnalyzer::make_all_bidi(&mut self.myEdgeCont);
+        } else if oc.exists("railway.topology.repair") && oc.get_bool("railway.topology.repair").unwrap() {
+            // correct railway angles for angle-based connectivity heuristic
+            self.myEdgeCont.check_geometries(0.0, false, oc.get_float("geometry.min-radius").unwrap(), false, oc.get_bool("geometry.min-radius.fix.railways").unwrap(), true);
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
+            numAddedBidi = NBRailwayTopologyAnalyzer::repair_topology(&mut self.myEdgeCont, &mut self.myPTStopCont, &mut self.myPTLineCont);
+        }
+        NBRailwaySignalGuesser::guess_rail_signals(&mut self.myNodeCont, &mut self.myEdgeCont, &mut self.myPTStopCont, &mut self.myDistrictCont);
+        if numAddedBidi > 0 {
+            // update routes
+            self.myPTLineCont.process(&mut self.myEdgeCont, &mut self.myPTStopCont, true);
+        }
+        if oc.exists("railway.topology.direction-priority") && oc.get_bool("railway.topology.direction-priority").unwrap() {
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false); // recompute after new edges were added
+            NBRailwayTopologyAnalyzer::extend_direction_priority(&mut self.myEdgeCont, true);
+        } else if oc.exists("railway.topology.extend-priority")
+            && (oc.get_bool("railway.topology.extend-priority").unwrap() || oc.get_string_vector("railway.topology.ptline-priority").unwrap().len() > 0)
+        {
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false); // recompute after new edges were added
+            if oc.get_string_vector("railway.topology.ptline-priority").unwrap().len() > 0 {
+                let vClasses = parse_vehicle_classes_vec(oc.get_string_vector("railway.topology.ptline-priority").unwrap()).unwrap();
+                NBRailwayTopologyAnalyzer::set_pt_line_priority(&mut self.myEdgeCont, &mut self.myPTLineCont, vClasses);
+            }
+            NBRailwayTopologyAnalyzer::extend_direction_priority(&mut self.myEdgeCont, false);
+        }
+        if oc.exists("railway.topology.output") && oc.is_set("railway.topology.output", true).unwrap() {
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false); // recompute after new edges were added
+            NBRailwayTopologyAnalyzer::analyze_topology(&mut self.myEdgeCont);
+        }
+        if oc.exists("railway.geometry.straighten") && oc.get_bool("railway.geometry.straighten").unwrap() {
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false); // recompute after new edges were added
+            NBRailwayGeometryHelper::straigthen_corrdidor(&mut self.myEdgeCont, oc.get_float("geometry.max-angle").unwrap());
+        }
+
+        if mayAddOrRemove && oc.exists("edges.join-tram-dist") && oc.get_float("edges.join-tram-dist").unwrap() >= 0.0 {
+            // should come before joining junctions
+            let numJoinedTramEdges = self.myEdgeCont.join_tram_edges(&mut self.myDistrictCont, &mut self.myPTStopCont, &mut self.myPTLineCont, oc.get_float("edges.join-tram-dist").unwrap());
+            if numJoinedTramEdges > 0 {
+                write_messagef!(" Joined % tram edges into roads.", numJoinedTramEdges);
+            }
+        }
+        if oc.get_bool("junctions.join").unwrap()
+            || (oc.exists("ramps.guess") && oc.get_bool("ramps.guess").unwrap())
+            || oc.get_bool("tls.guess.joining").unwrap()
+            || (oc.exists("tls.guess-signals") && oc.get_bool("tls.guess-signals").unwrap())
+        {
+            // preliminary geometry computations to determine the length of edges
+            // This depends on turning directions and sorting of edge list
+            // in case junctions are joined geometry computations have to be repeated
+            // preliminary roundabout computations to avoid damaging roundabouts via junctions.join or ramps.guess
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
+            NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, false);
+            self.myEdgeCont.compute_lane_shapes();
+            self.myNodeCont.compute_node_shapes(-1.0);
+            self.myEdgeCont.compute_edge_shapes(-1.0);
+            if oc.get_bool("roundabouts.guess").unwrap() {
+                self.myEdgeCont.guess_roundabouts();
+            }
+            let roundabouts = self.myEdgeCont.get_roundabouts();
+            for round in roundabouts.iter() {
+                let mut nodeIDs: Vec<String> = Vec::new();
+                for edge in round.iter() {
+                    nodeIDs.push(edge.get_to_node().get_id().to_string());
+                }
+                self.myNodeCont.add_join_exclusion(&nodeIDs);
+            }
+            NBNodeTypeComputer::validate_rail_crossings(&mut self.myNodeCont, &mut self.myTLLCont);
+        } else if (self.myEdgeCont.has_guessed_roundabouts() || oc.get_bool("crossings.guess").unwrap()) && oc.get_bool("roundabouts.guess").unwrap() {
+            self.myEdgeCont.guess_roundabouts();
+            self.myEdgeCont.mark_roundabouts();
+        }
+        // join junctions (may create new "geometry"-nodes so it needs to come before removing these
+        if mayAddOrRemove && oc.exists("junctions.join-exclude") && oc.is_set("junctions.join-exclude", true).unwrap() {
+            self.myNodeCont.add_join_exclusion(oc.get_string_vector("junctions.join-exclude").unwrap());
+        }
+        let mut numJoined = self.myNodeCont.join_loaded_clusters(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont);
+        if mayAddOrRemove && oc.get_bool("junctions.join").unwrap() {
+            numJoined += self.myNodeCont.join_junctions(oc.get_float("junctions.join-dist").unwrap(), &mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, &mut self.myPTStopCont);
+        }
+        if numJoined > 0 {
+            write_messagef!(" Joined % junction cluster(s).", numJoined);
+        }
+        if mayAddOrRemove && oc.get_float("junctions.join-same").unwrap() >= 0.0 {
+            let numJoined2 = self.myNodeCont.join_same_junctions(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, oc.get_float("junctions.join-same").unwrap());
+            if numJoined2 > 0 {
+                write_messagef!(" Joined % junctions.", numJoined2);
+            }
+        }
+        //
+        if mayAddOrRemove && oc.exists("join-lanes") && oc.get_bool("join-lanes").unwrap() {
+            let num = self.myEdgeCont.join_lanes(SVC_IGNORING) + self.myEdgeCont.join_lanes(SVC_PEDESTRIAN);
+            write_messagef!("   Joined lanes on % edges.", num);
+        }
+        //
+        if mayAddOrRemove {
+            let removeGeometryNodes = oc.exists("geometry.remove") && oc.get_bool("geometry.remove").unwrap();
+            // removeUnwishedNodes needs turnDirections. @todo: try to call this less often
+            NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
+            let numRemoved = self.myNodeCont.remove_unwished_nodes(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, &mut self.myPTStopCont, &mut self.myPTLineCont, &mut self.myParkingCont, removeGeometryNodes);
+            write_messagef!("   % nodes removed.", numRemoved);
+        }
+
+        // MOVE TO ORIGIN
+        // compute new boundary after network modifications have taken place
+        let mut boundary = Boundary::new();
+        for node in self.myNodeCont.myNodes.values() {
+            boundary.add_pos(node.get_position());
+        }
+        for edge in self.myEdgeCont.myEdges.values() {
+            boundary.add_boundary(&edge.get_geometry().get_box_boundary());
+        }
+        GeoConvHelper::with_processing(|g| g.set_conv_boundary(boundary));
+
+        if !oc.get_bool("offset.disable-normalization").unwrap() && oc.is_default("offset.x") && oc.is_default("offset.y") {
+            GeoConvHelper::with_processing(|g| self.move_to_origin(g, lefthand));
+        }
+        self.round_inputs();
+        GeoConvHelper::compute_final(lefthand); // information needed for location element fixed at this point
+
+        // reset shapes and angles for stable re-computation
+        if self.myNodeCont.reset_node_shapes() {
+            self.myEdgeCont.compute_angles();
+        }
+
+        if oc.exists("geometry.min-dist") && !oc.is_default("geometry.min-dist") {
+            self.myEdgeCont.reduce_geometries(oc.get_float("geometry.min-dist").unwrap());
+        }
+        // @note: removing geometry can create similar edges so joinSimilarEdges  must come afterwards
+        // @note: likewise splitting can destroy similarities so joinSimilarEdges must come before
+        if mayAddOrRemove && oc.get_bool("edges.join").unwrap() {
+            let removeDuplicates = oc.get_float("junctions.join-same").unwrap() >= 0.0;
+            self.myNodeCont.join_similar_edges(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, removeDuplicates);
+            // now we may have new chances to remove geometry if wished
+            if oc.exists("geometry.remove") && oc.get_bool("geometry.remove").unwrap() {
+                self.myNodeCont.remove_unwished_nodes(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, &mut self.myPTStopCont, &mut self.myPTLineCont, &mut self.myParkingCont, true);
+            }
+        }
+        if oc.get_bool("opposites.guess").unwrap() {
+            self.myEdgeCont.guess_opposites();
+        }
+        //
+        if mayAddOrRemove && oc.exists("geometry.split") && oc.get_bool("geometry.split").unwrap() {
+            self.myEdgeCont.split_geometry(&mut self.myDistrictCont, &mut self.myNodeCont);
+            // newly split junctions might also be joinable
+            if oc.get_float("junctions.join-same").unwrap() >= 0.0 {
+                let numJoined3 = self.myNodeCont.join_same_junctions(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, oc.get_float("junctions.join-same").unwrap());
+                if numJoined3 > 0 {
+                    write_messagef!(" Joined % junctions after splitting geometry.", numJoined3);
+                }
+            }
+        }
+        // turning direction
+        NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, true);
+        // correct edge geometries to avoid overlap
+        if oc.exists("geometry.avoid-overlap") && oc.get_bool("geometry.avoid-overlap").unwrap() {
+            self.myNodeCont.avoid_overlap();
+        }
+
+        // GUESS TLS POSITIONS
+        if oc.is_set("tls.set", true).unwrap() {
+            let tlControlledNodes = oc.get_string_vector("tls.set").unwrap().clone();
+            let type_ = TrafficLightTypes.get(&oc.get_string("tls.default-type").unwrap()).unwrap();
+            for i in tlControlledNodes.iter() {
+                let node = self.myNodeCont.retrieve(i);
+                if node.is_null() {
+                    utils::common::msg_handler::write_warning(&format!("Building a tl-logic for junction '{}' is not possible.\n The junction '{}' is not known.", i, i));
+                } else {
+                    self.myNodeCont.set_as_tl_controlled(node, &mut self.myTLLCont, type_, String::new());
+                }
+            }
+        }
+        self.myNodeCont.guess_t_ls(oc, &mut self.myTLLCont);
+
+        // guess ramps (after guessing tls because ramps should not be build at traffic lights)
+        let modifyRamps = mayAddOrRemove
+            && ((oc.exists("ramps.guess") && oc.get_bool("ramps.guess").unwrap()) || (oc.exists("ramps.set") && oc.is_set("ramps.set", true).unwrap()));
+        if modifyRamps || (oc.exists("ramps.guess-acceleration-lanes") && oc.get_bool("ramps.guess-acceleration-lanes").unwrap()) {
+            NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, false);
+            let mut rc = NBRampsComputer::new();
+            rc.compute_ramps(self, oc, mayAddOrRemove);
+        }
+        // guess bike lanes
+        if mayAddOrRemove && (oc.get_bool("bikelanes.guess").unwrap() || oc.get_bool("bikelanes.guess.from-permissions").unwrap()) {
+            let bikelanes = self.myEdgeCont.guess_special_lanes(
+                SVC_BICYCLE,
+                oc.get_float("default.bikelane-width").unwrap(),
+                oc.get_float("bikelanes.guess.min-speed").unwrap(),
+                oc.get_float("bikelanes.guess.max-speed").unwrap(),
+                oc.get_bool("bikelanes.guess.from-permissions").unwrap(),
+                "bikelanes.guess.exclude",
+                &mut self.myTLLCont,
+            );
+            write_messagef!("Guessed % bike lanes.", bikelanes);
+        }
+
+        // guess sidewalks
+        if mayAddOrRemove && (oc.get_bool("sidewalks.guess").unwrap() || oc.get_bool("sidewalks.guess.from-permissions").unwrap()) {
+            let sidewalks = self.myEdgeCont.guess_special_lanes(
+                SVC_PEDESTRIAN,
+                oc.get_float("default.sidewalk-width").unwrap(),
+                oc.get_float("sidewalks.guess.min-speed").unwrap(),
+                oc.get_float("sidewalks.guess.max-speed").unwrap(),
+                oc.get_bool("sidewalks.guess.from-permissions").unwrap(),
+                "sidewalks.guess.exclude",
+                &mut self.myTLLCont,
+            );
+            write_messagef!("Guessed % sidewalks.", sidewalks);
+        }
+        // check whether any not previously setable connections may be set now
+        self.myEdgeCont.recheck_post_process_connections();
+
+        // remap ids if wished
+        if mayAddOrRemove {
+            let numericalIDs = oc.get_bool("numerical-ids").unwrap();
+            let reservedIDs = oc.is_set("reserved-ids", true).unwrap();
+            let keptIDs = oc.is_set("kept-ids", true).unwrap();
+            let numChangedEdges = self.myEdgeCont.remap_i_ds(numericalIDs, reservedIDs, keptIDs, &oc.get_string("prefix.edge").unwrap(), &mut self.myPTStopCont);
+            let numChangedNodes = self.myNodeCont.remap_i_ds(numericalIDs, reservedIDs, keptIDs, &oc.get_string("prefix.junction").unwrap(), &mut self.myTLLCont);
+            if numChangedEdges + numChangedNodes > 0 {
+                write_messagef!("Remapped % edge IDs and % node IDs.", numChangedEdges, numChangedNodes);
+            }
+        }
+
+        //
+        if oc.exists("geometry.max-angle") {
+            self.myEdgeCont.check_geometries(
+                utils::geom::geom_helper::deg2rad(oc.get_float("geometry.max-angle").unwrap()),
+                oc.get_bool("geometry.max-angle.fix").unwrap(),
+                oc.get_float("geometry.min-radius").unwrap(),
+                oc.get_bool("geometry.min-radius.fix").unwrap(),
+                oc.get_bool("geometry.min-radius.fix.railways").unwrap(),
+                false,
+            );
+        }
+
+        // GEOMETRY COMPUTATION
+        //
+        NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, false);
+        self.myEdgeCont.compute_lane_shapes();
+        //
+        if oc.exists("geometry.junction-mismatch-threshold") {
+            self.myNodeCont.compute_node_shapes(oc.get_float("geometry.junction-mismatch-threshold").unwrap());
+        } else {
+            self.myNodeCont.compute_node_shapes(-1.0);
+        }
+        //
+        let maxGrade = if oc.get_bool("geometry.max-grade.fix").unwrap() { oc.get_float("geometry.max-grade").unwrap() / 100.0 } else { -1.0 };
+        self.myEdgeCont.compute_edge_shapes(maxGrade);
+        // resort edges based on the node and edge shapes
+        NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, true);
+        NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
+
+        // APPLY SPEED MODIFICATIONS
+        if oc.exists("speed.offset") {
+            let speedOffset = oc.get_float("speed.offset").unwrap();
+            let speedFactor = oc.get_float("speed.factor").unwrap();
+            let speedMin = oc.get_float("speed.minimum").unwrap();
+            if speedOffset != 0.0 || speedFactor != 1.0 || speedMin > 0.0 {
+                for edge in self.myEdgeCont.myEdges.values() {
+                    let e = edge.m();
+                    for i in 0..e.get_num_lanes() {
+                        let v = e.get_lane_speed(i) * speedFactor + speedOffset;
+                        // MAX2(a, b) = a > b ? a : b
+                        e.set_speed(i, if v > speedMin { v } else { speedMin });
+                    }
+                }
+            }
+        }
+
+        // CONNECTIONS COMPUTATION
+        //
+        NBNode::init_rail_signal_classes(&self.myNodeCont);
+        NBNodeTypeComputer::compute_node_types(&mut self.myNodeCont, &mut self.myTLLCont);
+        //
+        self.myNetworkHaveCrossings = oc.get_bool("walkingareas").unwrap();
+        if mayAddOrRemove && oc.get_bool("crossings.guess").unwrap() {
+            self.myNetworkHaveCrossings = true;
+            let mut crossings: i32 = 0;
+            for node in self.myNodeCont.myNodes.values() {
+                crossings += node.m().guess_crossings();
+            }
+            write_messagef!("Guessed % pedestrian crossings.", crossings);
+        }
+        if !self.myNetworkHaveCrossings {
+            let mut haveValidCrossings = false;
+            // recheck whether we had crossings in the input
+            for node in self.myNodeCont.myNodes.values() {
+                if node.get_crossings().len() > 0 {
+                    self.myNetworkHaveCrossings = true;
+                    haveValidCrossings = true;
+                    break;
+                } else if node.get_crossings_including_invalid().len() > 0 {
+                    self.myNetworkHaveCrossings = true;
+                }
+            }
+            if self.myNetworkHaveCrossings && !haveValidCrossings {
+                // initial crossings removed or invalidated, keep walkingareas
+                oc.reset_writable();
+                oc.set("walkingareas", "true", false).unwrap();
+            }
+        }
+
+        if !mayAddOrRemove && self.myNetworkHaveCrossings {
+            // crossings added via netedit
+            oc.reset_writable();
+            oc.set("no-internal-links", "false", false).unwrap();
+        }
+
+        //
+        NBEdgePriorityComputer::compute_edge_priorities(&mut self.myNodeCont);
+        //
+        self.myEdgeCont.compute_edge2_edges(oc.get_bool("no-left-connections").unwrap());
+        //
+        if oc.get_bool("roundabouts.guess").unwrap() {
+            let numGuessed = self.myEdgeCont.guess_roundabouts();
+            if numGuessed > 0 {
+                write_messagef!(" Guessed % roundabout(s).", numGuessed);
+            }
+        }
+        self.myEdgeCont.mark_roundabouts();
+        //
+        self.myEdgeCont.compute_lanes2_edges();
+        //
+        self.myNodeCont.compute_lanes2_lanes();
+        self.myEdgeCont.sort_outgoing_lanes_connections();
+        //
+        if oc.get_bool("fringe.guess").unwrap() {
+            let numGuessed = self.myNodeCont.guess_fringe();
+            if numGuessed > 0 {
+                write_messagef!(" Guessed % fringe nodes.", numGuessed);
+            }
+        }
+        //
+        if !oc.get_bool("no-turnarounds").unwrap() {
+            self.myEdgeCont.append_turnarounds(
+                oc.get_bool("no-turnarounds.tls").unwrap(),
+                oc.get_bool("no-turnarounds.fringe").unwrap(),
+                oc.get_bool("no-turnarounds.except-deadend").unwrap(),
+                oc.get_bool("no-turnarounds.except-turnlane").unwrap(),
+                oc.get_bool("no-turnarounds.geometry").unwrap(),
+            );
+        } else {
+            self.myEdgeCont.append_turnarounds_2(explicitTurnarounds, oc.get_bool("no-turnarounds.tls").unwrap());
+        }
+        if oc.exists("railway.topology.repair.stop-turn") && oc.get_bool("railway.topology.repair.stop-turn").unwrap() && self.myPTStopCont.get_stops().len() > 0 {
+            // allow direction reversal at all bidi-edges with stops
+            self.myEdgeCont.append_railway_turnarounds(&self.myPTStopCont);
+        }
+        //
+        self.myEdgeCont.recheck_lanes();
+
+        if self.myNetworkHaveCrossings && !oc.get_bool("no-internal-links").unwrap() {
+            for node in self.myNodeCont.myNodes.values() {
+                node.m().build_crossings_and_walking_areas();
+            }
+        } else {
+            for node in self.myNodeCont.myNodes.values() {
+                // needed by netedit if the last crossings was deleted from the network
+                // and walkingareas have been invalidated since the last call to compute()
+                node.m().discard_walkingareas();
+            }
+            if oc.get_bool("no-internal-links").unwrap() {
+                for node in self.myNodeCont.myNodes.values() {
+                    node.m().discard_all_crossings(false);
+                }
+            }
+        }
+        // join traffic lights (after building connections)
+        if oc.get_bool("tls.join").unwrap() {
+            self.myNodeCont.join_tls(&mut self.myTLLCont, oc.get_float("tls.join-dist").unwrap());
+        }
+
+        // COMPUTING RIGHT-OF-WAY AND TRAFFIC LIGHT PROGRAMS
+        //
+        self.myTLLCont.set_tl_controlling_information(&self.myEdgeCont, &self.myNodeCont);
+        if oc.exists("opendrive-files") && oc.is_set("opendrive-files", true).unwrap() {
+            self.myTLLCont.set_open_drive_signal_parameters();
+        }
+        //
+        self.myNodeCont.compute_logics(&self.myEdgeCont);
+
+        //
+        let numbers = self.myTLLCont.compute_logics(oc);
+        let mut progCount = String::new();
+        if numbers.0 != numbers.1 {
+            progCount = format!("({} programs) ", numbers.1);
+        }
+        write_messagef!(" % traffic light(s) %computed.", numbers.0, progCount);
+        if oc.exists("opendrive-files") && oc.is_set("opendrive-files", true).unwrap() && oc.get_bool("opendrive.signal-groups").unwrap() {
+            self.myTLLCont.apply_open_drive_controllers(oc);
+        }
+
+        for edge in self.myEdgeCont.myEdges.values() {
+            edge.m().sort_outgoing_connections_by_index();
+        }
+        // FINISHING INNER EDGES
+        // determinism: C++ std::set of pointers; only the order of recomputation depends on it
+        let mut largeNodeTLS: BTreeSet<Ptr<NBTrafficLightDefinition>> = BTreeSet::new();
+        if !oc.get_bool("no-internal-links").unwrap() {
+            // walking areas shall only be built if crossings are wished as well
+            for item in self.myNodeCont.myNodes.values() {
+                if item.m().build_inner_edges() > NBTrafficLightDefinition_MIN_YELLOW_SECONDS as f64 {
+                    let tlDefs = item.get_controlling_tls();
+                    largeNodeTLS.extend(tlDefs.iter().cloned());
+                }
+            }
+        }
+        // PATCH NODE SHAPES
+        if oc.get_float("junctions.scurve-stretch").unwrap() > 0.0 {
+            // @note: nodes have collected correction hints in buildInnerEdges()
+            self.myEdgeCont.compute_lane_shapes();
+            self.myNodeCont.compute_node_shapes(-1.0);
+            let maxGrade = if oc.get_bool("geometry.max-grade.fix").unwrap() { oc.get_float("geometry.max-grade").unwrap() / 100.0 } else { -1.0 };
+            self.myEdgeCont.compute_edge_shapes(maxGrade);
+            for item in self.myNodeCont.myNodes.values() {
+                item.m().build_inner_edges();
+            }
+        }
+        if self.myEdgeCont.get_num_edge_splits() > 0 && !oc.get_bool("no-internal-links").unwrap() {
+            // edges with custom lengths were split, this has to take into account
+            // internal edge lengths (after geometry computation)
+            self.myEdgeCont.fix_split_custom_length();
+        }
+        // recheck phases for large junctions
+        for def in largeNodeTLS.iter() {
+            self.myTLLCont.compute_single_logic(oc, *def);
+        }
+        // compute lane-to-lane node logics (require traffic lights and inner edges to be done)
+        self.myNodeCont.compute_logics2(&self.myEdgeCont, oc);
+
+        // remove guessed traffic lights at junctions without conflicts (requires computeLogics2)
+        self.myNodeCont.recheck_guessed_tls(&mut self.myTLLCont);
+
+        // compute keepClear status (requires computeLogics2)
+        self.myNodeCont.compute_keep_clear();
+
+        //
+        if oc.is_set("street-sign-output", true).unwrap() {
+            self.myEdgeCont.generate_street_signs();
+        }
+
+        if lefthand != oc.get_bool("flip-y-axis").unwrap() {
+            self.mirror_x();
+        }
+
+        if oc.exists("geometry.check-overlap") && oc.get_float("geometry.check-overlap").unwrap() > 0.0 {
+            self.myEdgeCont.check_overlap(oc.get_float("geometry.check-overlap").unwrap(), oc.get_float("geometry.check-overlap.vertical-threshold").unwrap());
+        }
+        if GeoConvHelper::with_processing(|g| g.get_conv_boundary().get_z_range()) > 0.0 && oc.get_float("geometry.max-grade").unwrap() > 0.0 {
+            // user input is in %
+            self.myEdgeCont.check_grade(oc.get_float("geometry.max-grade").unwrap() / 100.0);
+        }
+
+        // find accesses for pt rail stops and add bidi-stops
+        if !self.myPTStopCont.get_stops().is_empty() {
+            // re-adapt stop lanes after adding special lanes and cutting edge shapes at junction
+            self.myPTStopCont.assign_lanes(&mut self.myEdgeCont);
+            let numBidiStops = if !oc.get_bool("ptstop-output.no-bidi").unwrap() {
+                self.myPTStopCont.generate_bidi_stops(&mut self.myEdgeCont)
+            } else {
+                self.myPTStopCont.count_bidi_stops(&mut self.myEdgeCont)
+            };
+            let maxRadius = oc.get_float("railway.access-distance").unwrap();
+            let accessFactor = oc.get_float("railway.access-factor").unwrap();
+            let maxCount = oc.get_int("railway.max-accesses").unwrap();
+            self.myPTStopCont.find_access_edges_for_rail_stops(&mut self.myEdgeCont, maxRadius, maxCount, accessFactor);
+            if numBidiStops > 0 {
+                self.myPTLineCont.fix_bidi_stops(&self.myEdgeCont);
+            }
+        }
+        self.myPTLineCont.remove_invalid_edges(&self.myEdgeCont);
+        // ensure that all turning lanes have sufficient permissions
+        self.myPTLineCont.fix_permissions();
+        if oc.exists("ptline-clean-up") && oc.get_bool("ptline-clean-up").unwrap() {
+            let mut usedStops = self.myPTLineCont.get_served_pt_stops();
+            self.myPTStopCont.postprocess(&mut usedStops);
+        } else {
+            let numDeletedStops = self.myPTStopCont.cleanup_deleted(&mut self.myEdgeCont, false);
+            if numDeletedStops > 0 {
+                write_warningf!("Removed % pt stops because they could not be assigned to the network", numDeletedStops);
+            }
+        }
+
+        if oc.exists("ignore-change-restrictions") && !oc.is_default("ignore-change-restrictions") {
+            let ignoring = parse_vehicle_classes_vec(oc.get_string_vector("ignore-change-restrictions").unwrap()).unwrap();
+            self.myEdgeCont.update_all_change_restrictions(ignoring);
+        }
+
+        NBRequest::report_warnings();
+        // report on very large networks
+        let conv = GeoConvHelper::with_processing(|g| *g.get_conv_boundary());
+        let maxCoord = if conv.xmax() > conv.ymax() { conv.xmax() } else { conv.ymax() }; // MAX2
+        let minCoord = if conv.xmin() < conv.ymin() { conv.xmin() } else { conv.ymin() }; // MIN2
+        if maxCoord > 1000000.0 || minCoord < -1000000.0 {
+            utils::common::msg_handler::write_warning("Network contains very large coordinates and will probably flicker in the GUI. Check for outlying nodes and make sure the network is shifted to the coordinate origin");
+        }
+
+        // clean up OSM processing params
+        if oc.exists("osm-files") && oc.is_set("osm-files", true).unwrap() {
+            for item in self.myEdgeCont.myEdges.values() {
+                item.m().base2.unset_parameter(NBTrafficLightDefinition_OSM_DIRECTION);
+            }
+        }
     }
 
     /// C++: `NBEdgeCont & NBNetBuilder::getEdgeCont()`
@@ -749,7 +1356,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_cont(&mut self) -> &mut NBEdgeCont {
-        todo!("port NBNetBuilder::getEdgeCont")
+        &mut self.myEdgeCont
     }
 
     /// C++: `NBNodeCont & NBNetBuilder::getNodeCont()`
@@ -759,7 +1366,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_node_cont(&mut self) -> &mut NBNodeCont {
-        todo!("port NBNetBuilder::getNodeCont")
+        &mut self.myNodeCont
     }
 
     /// C++: `NBTypeCont & NBNetBuilder::getTypeCont()`
@@ -769,7 +1376,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_type_cont(&mut self) -> &mut NBTypeCont {
-        todo!("port NBNetBuilder::getTypeCont")
+        &mut self.myTypeCont
     }
 
     /// C++: `NBTrafficLightLogicCont & NBNetBuilder::getTLLogicCont()`
@@ -779,7 +1386,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_logic_cont(&mut self) -> &mut NBTrafficLightLogicCont {
-        todo!("port NBNetBuilder::getTLLogicCont")
+        &mut self.myTLLCont
     }
 
     /// C++: `NBDistrictCont & NBNetBuilder::getDistrictCont()`
@@ -789,7 +1396,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_district_cont(&mut self) -> &mut NBDistrictCont {
-        todo!("port NBNetBuilder::getDistrictCont")
+        &mut self.myDistrictCont
     }
 
     /// C++: `NBPTStopCont & NBNetBuilder::getPTStopCont()`
@@ -799,7 +1406,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_pt_stop_cont(&mut self) -> &mut NBPTStopCont {
-        todo!("port NBNetBuilder::getPTStopCont")
+        &mut self.myPTStopCont
     }
 
     /// C++: `NBPTLineCont & NBNetBuilder::getPTLineCont()`
@@ -809,7 +1416,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_pt_line_cont(&mut self) -> &mut NBPTLineCont {
-        todo!("port NBNetBuilder::getPTLineCont")
+        &mut self.myPTLineCont
     }
 
     /// C++: `NBParkingCont & NBNetBuilder::getParkingCont()`
@@ -818,7 +1425,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_parking_cont(&mut self) -> &mut NBParkingCont {
-        todo!("port NBNetBuilder::getParkingCont")
+        &mut self.myParkingCont
     }
 
     /// C++: `ShapeContainer & NBNetBuilder::getShapeCont()`
@@ -827,7 +1434,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape_cont(&mut self) -> &mut ShapeContainer {
-        todo!("port NBNetBuilder::getShapeCont")
+        &mut self.myShapeCont
     }
 
     /// C++: `bool NBNetBuilder::haveNetworkCrossings()`
@@ -837,7 +1444,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn have_network_crossings(&mut self) -> bool {
-        todo!("port NBNetBuilder::haveNetworkCrossings")
+        self.myNetworkHaveCrossings
     }
 
     /// C++: `void NBNetBuilder::setHaveNetworkCrossings(bool)`
@@ -847,7 +1454,7 @@ impl NBNetBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn set_have_network_crossings(&mut self, value: bool) {
-        todo!("port NBNetBuilder::setHaveNetworkCrossings")
+        self.myNetworkHaveCrossings = value;
     }
 
     /// C++: `bool NBNetBuilder::transformCoordinate(Position &, bool, GeoConvHelper *)` [static]
@@ -890,7 +1497,44 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn transform_coordinate(from: &mut Position, includeInBoundary: bool, from_srs: Ptr<GeoConvHelper>) -> bool {
-        todo!("port NBNetBuilder::transformCoordinate")
+        // Position orig(from);
+        let orig = *from;
+        let mut ok = true;
+        if GeoConvHelper::get_num_loaded() > 1
+            && GeoConvHelper::with_loaded(|l| l.using_geo_projection())
+            && !from_srs.is_null()
+            && from_srs.using_geo_projection()
+            && GeoConvHelper::with_loaded(|l| *l != *from_srs)
+        {
+            from_srs.cartesian2geo(from);
+            ok &= GeoConvHelper::with_loaded(|l| l.x2cartesian(from, false));
+        }
+        if from_srs.is_null() || !GeoConvHelper::with_processing(|p| p.using_geo_projection()) {
+            // if getProcessing is not a geo-projection, assume it a cartesian transformation (i.e. shift)
+            ok &= GeoConvHelper::with_processing(|p| p.x2cartesian(from, includeInBoundary));
+
+            if from_srs.is_null() && GeoConvHelper::with_processing(|p| p.using_geo_projection()) && GeoConvHelper::get_num_loaded() > 0 && GeoConvHelper::with_loaded(|l| l.using_geo_projection()) {
+                // apply geo patch to loaded geo-network (offset must match)
+                let off = GeoConvHelper::with_loaded(|l| l.get_offset());
+                *from = *from + off;
+            }
+        }
+        if ok {
+            let hm = NBHeightMapper::get();
+            if hm.ready() {
+                let mut o = orig;
+                if !from_srs.is_null() && from_srs.using_geo_projection() {
+                    from_srs.cartesian2geo(&mut o);
+                }
+                let z = hm.get_z(&o) + GeoConvHelper::with_processing(|p| p.get_offset().z());
+                from.setz(z);
+            }
+        }
+        let eps = 1e-6;
+        let (nx, ny, nz) = ((from.x() / eps).round() * eps, (from.y() / eps).round() * eps, (from.z() / eps).round() * eps);
+        from.set(nx, ny);
+        from.setz(nz);
+        ok
     }
 
     /// C++: `bool NBNetBuilder::transformCoordinates(PositionVector &, bool, GeoConvHelper *)` [static]
@@ -913,7 +1557,20 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn transform_coordinates(from: &mut PositionVector, includeInBoundary: bool, from_srs: Ptr<GeoConvHelper>) -> bool {
-        todo!("port NBNetBuilder::transformCoordinates")
+        let maxLength = utils::options::options_cont::get_float("geometry.max-segment-length");
+        if maxLength > 0.0 && from.len() > 1 {
+            // transformation to cartesian coordinates must happen before we can check segment length
+            let mut copy = from.clone();
+            for i in 0..copy.len() {
+                Self::transform_coordinate(&mut copy[i], false, Ptr::from_raw(std::ptr::null_mut()));
+            }
+            Self::add_geometry_segments(from, &copy, maxLength);
+        }
+        let mut ok = true;
+        for i in 0..from.len() {
+            ok = ok && Self::transform_coordinate(&mut from[i], includeInBoundary, from_srs);
+        }
+        ok
     }
 
     /// C++: `int NBNetBuilder::addGeometrySegments(PositionVector &, const PositionVector &, const double)` [static]
@@ -940,7 +1597,23 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_geometry_segments(from: &mut PositionVector, cartesian: &PositionVector, maxLength: f64) -> i32 {
-        todo!("port NBNetBuilder::addGeometrySegments")
+        // check lengths and insert new points where needed (in the original
+        // coordinate system)
+        let mut inserted: i32 = 0;
+        for i in 0..(cartesian.len() as i32 - 1) {
+            let start = from[(i + inserted) as usize];
+            let end = from[(i + inserted + 1) as usize];
+            let mut length = cartesian[i as usize].distance_to(&cartesian[(i + 1) as usize]);
+            let step = (end - start) * (maxLength / length);
+            let mut steps: i32 = 0;
+            while length > maxLength {
+                length -= maxLength;
+                steps += 1;
+                from.insert((i + inserted + 1) as usize, start + step * (steps as f64));
+                inserted += 1;
+            }
+        }
+        inserted
     }
 
     /// C++: `bool NBNetBuilder::runningNetedit()` [static]
@@ -952,7 +1625,8 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn running_netedit() -> bool {
-        todo!("port NBNetBuilder::runningNetedit")
+        // see GNELoadThread::fillOptions
+        utils::options::options_cont::exists("new")
     }
 
     /// C++: `void NBNetBuilder::moveToOrigin(GeoConvHelper &, bool)` [private]
@@ -983,7 +1657,22 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn move_to_origin(&mut self, geoConvHelper: &mut GeoConvHelper, lefthand: bool) {
-        todo!("port NBNetBuilder::moveToOrigin")
+        let boundary = *geoConvHelper.get_conv_boundary();
+        let x = -boundary.xmin();
+        let y = -(if lefthand { boundary.ymax() } else { boundary.ymin() });
+        for node in self.myNodeCont.myNodes.values() {
+            node.m().reshift_position(x, y);
+        }
+        for edge in self.myEdgeCont.myEdges.values() {
+            edge.m().reshift_position(x, y);
+        }
+        for district in self.myDistrictCont.myDistricts.values() {
+            district.m().reshift_position(x, y);
+        }
+        for stop in self.myPTStopCont.get_stops().values() {
+            stop_m(stop).reshift_position(x, y);
+        }
+        geoConvHelper.move_converted_by(x, y);
     }
 
     /// C++: `void NBNetBuilder::roundInputs()` [private]
@@ -1005,7 +1694,18 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn round_inputs(&mut self) {
-        todo!("port NBNetBuilder::roundInputs")
+        // ensure that computed speeds (using during right-of-way computation) are the same as the written speeds
+        for edge in self.myEdgeCont.myEdges.values() {
+            edge.m().round_speed();
+        }
+        // ensure that derived junction and lane geometry computation is done with the same input
+        // edge coordinates as those that will be written to the output.
+        for node in self.myNodeCont.myNodes.values() {
+            node.m().round_geometry();
+        }
+        for edge in self.myEdgeCont.myEdges.values() {
+            edge.m().round_geometry();
+        }
     }
 
     /// C++: `void NBNetBuilder::mirrorX()` [private]
@@ -1028,7 +1728,19 @@ impl NBNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBNetBuilder::mirrorX")
+        // mirror the network along the X-axis
+        for node in self.myNodeCont.myNodes.values() {
+            node.m().mirror_x();
+        }
+        for edge in self.myEdgeCont.myEdges.values() {
+            edge.m().mirror_x();
+        }
+        for district in self.myDistrictCont.myDistricts.values() {
+            district.m().mirror_x();
+        }
+        for stop in self.myPTStopCont.get_stops().values() {
+            stop_m(stop).mirror_x();
+        }
     }
 
     /// C++: `void NBNetBuilder::NBNetBuilder(const NBNetBuilder &)` [private]
@@ -1036,7 +1748,7 @@ impl NBNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NBNetBuilder) -> Self {
-        todo!("port NBNetBuilder::NBNetBuilder")
+        panic!("NBNetBuilder: copy constructor is invalidated in C++ (private, never defined)")
     }
 
     /// C++: `NBNetBuilder & NBNetBuilder::operator=(const NBNetBuilder &)` [private]
@@ -1044,7 +1756,7 @@ impl NBNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBNetBuilder) -> &mut NBNetBuilder {
-        todo!("port NBNetBuilder::operator=")
+        panic!("NBNetBuilder: assignment is invalidated in C++ (private operator=, never defined)")
     }
 
 }
@@ -1060,7 +1772,7 @@ impl NBNetBuilder_by_id_sorter {
     // explicit by_id_sorter() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port by_id_sorter::by_id_sorter")
+        NBNetBuilder_by_id_sorter {}
     }
 
     /// C++: `int by_id_sorter::operator()(const NBNode *, const NBNode *) const` [const]
@@ -1070,8 +1782,14 @@ impl NBNetBuilder_by_id_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, n1: Ptr<NBNode>, n2: Ptr<NBNode>) -> i32 {
-        todo!("port by_id_sorter::operator()")
+        (n1.get_id() < n2.get_id()) as i32
     }
 
 }
 
+/// shortcut: C++ shared_ptr<NBPTStop> is mutated freely; Rc only gives &T, so the stops are mutated
+/// through the raw pointer the way nbpt_stop_cont.rs does. Replace with RefCell once the owners are ported.
+#[allow(clippy::mut_from_ref)]
+fn stop_m(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
