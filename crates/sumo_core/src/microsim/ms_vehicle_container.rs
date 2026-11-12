@@ -25,7 +25,7 @@ impl MSVehicleContainer_DepartFinder {
     //     : myTime(time) {}
     #[allow(unused_variables)]
     pub fn new(time: SUMOTime) -> Self {
-        todo!("port DepartFinder::DepartFinder")
+        Self { myTime: time }
     }
 
     /// C++: `bool DepartFinder::operator()(const VehicleDepartureVector &) const` [const]
@@ -37,7 +37,7 @@ impl MSVehicleContainer_DepartFinder {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e: &MSVehicleContainer_VehicleDepartureVector) -> bool {
-        todo!("port DepartFinder::operator()")
+        self.myTime + delta_t() > e.0 && self.myTime <= e.0
     }
 
 }
@@ -58,7 +58,10 @@ impl MSVehicleContainer {
     //     : currentSize(0), array(capacity + 1, VehicleDepartureVector()) {}
     #[allow(unused_variables)]
     pub fn new(capacity: i32) -> Self {
-        todo!("port MSVehicleContainer::MSVehicleContainer")
+        Self {
+            currentSize: 0,
+            array: (0..capacity + 1).map(|_| (0, MSVehicleContainer_VehicleVector::new())).collect(),
+        }
     }
 
     /// C++: `void MSVehicleContainer::~MSVehicleContainer()`
@@ -66,7 +69,7 @@ impl MSVehicleContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicleContainer::~MSVehicleContainer")
+        // destructor: nothing to release explicitly, the Vec fields drop with the struct
     }
 
     /// C++: `void MSVehicleContainer::add(SUMOVehicle *)`
@@ -131,7 +134,20 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_2(&mut self, time: SUMOTime, cont: &MSVehicleContainer_VehicleVector) {
-        todo!("port MSVehicleContainer::add")
+        let finder = MSVehicleContainer_DepartFinder::new(time);
+        let j = if self.currentSize == 0 {
+            None
+        } else {
+            self.array[1..=self.currentSize as usize].iter().position(|e| finder.call_op(e))
+        };
+        match j {
+            None => self.add_replacing(&(time, cont.clone())),
+            Some(k) => {
+                let stored = &mut self.array[k + 1].1;
+                stored.reserve(stored.len() + cont.len());
+                stored.extend(cont.iter().cloned());
+            }
+        }
     }
 
     /// C++: `bool MSVehicleContainer::anyWaitingBefore(SUMOTime) const` [const]
@@ -142,7 +158,7 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn any_waiting_before(&self, time: SUMOTime) -> bool {
-        todo!("port MSVehicleContainer::anyWaitingBefore")
+        !self.is_empty() && self.top_time() <= time
     }
 
     /// C++: `const VehicleVector & MSVehicleContainer::top()`
@@ -150,7 +166,7 @@ impl MSVehicleContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn top(&mut self) -> &MSVehicleContainer_VehicleVector {
-        todo!("port MSVehicleContainer::top")
+        &self.array[1].1
     }
 
     /// C++: `SUMOTime MSVehicleContainer::topTime() const` [const]
@@ -165,7 +181,11 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn top_time(&self) -> SUMOTime {
-        todo!("port MSVehicleContainer::topTime")
+        if self.is_empty() {
+            panic!("MSVehicleContainer::topTime: underflow"); // C++: throw 1
+        }
+        assert!(self.array.len() > 1);
+        self.array[1].0
     }
 
     /// C++: `void MSVehicleContainer::pop()`
@@ -184,7 +204,13 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn pop(&mut self) {
-        todo!("port MSVehicleContainer::pop")
+        if self.is_empty() {
+            panic!("MSVehicleContainer::pop: underflow"); // C++: throw 1
+        }
+        assert!(self.array.len() > 1);
+        self.array[1] = self.array[self.currentSize as usize].clone();
+        self.currentSize -= 1;
+        self.percolate_down(1);
     }
 
     /// C++: `bool MSVehicleContainer::isEmpty() const` [const]
@@ -195,7 +221,7 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MSVehicleContainer::isEmpty")
+        self.currentSize == 0
     }
 
     /// C++: `int MSVehicleContainer::size() const` [const]
@@ -206,7 +232,7 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port MSVehicleContainer::size")
+        self.currentSize
     }
 
     /// C++: `void MSVehicleContainer::showArray() const` [const]
@@ -223,7 +249,14 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn show_array(&self) {
-        todo!("port MSVehicleContainer::showArray")
+        for i in 1..=self.currentSize as usize {
+            if i != 1 {
+                print!(", ");
+            }
+            print!("{}", self.array[i].0);
+        }
+        println!();
+        println!("-------------------------");
     }
 
     /// C++: `void MSVehicleContainer::clearState()`
@@ -238,7 +271,11 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSVehicleContainer::clearState")
+        for vdv in self.array.iter_mut() {
+            vdv.0 = 0;
+            vdv.1.clear();
+        }
+        self.currentSize = 0;
     }
 
     /// C++: `void MSVehicleContainer::addReplacing(const VehicleDepartureVector &)` [private]
@@ -265,7 +302,22 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_replacing(&mut self, cont: &MSVehicleContainer_VehicleDepartureVector) {
-        todo!("port MSVehicleContainer::addReplacing")
+        if self.is_full() {
+            let mut array2: MSVehicleContainer_VehicleHeap = (0..(self.array.len() - 1) * 2 + 1).map(|_| (0, MSVehicleContainer_VehicleVector::new())).collect();
+            for i in (0..self.array.len()).rev() {
+                array2[i] = self.array[i].clone();
+            }
+            self.array = array2;
+        }
+
+        // Percolate up
+        self.currentSize += 1;
+        let mut hole = self.currentSize;
+        while hole > 1 && cont.0 < self.array[(hole / 2) as usize].0 {
+            self.array[hole as usize] = self.array[(hole / 2) as usize].clone();
+            hole /= 2;
+        }
+        self.array[hole as usize] = cont.clone();
     }
 
     /// C++: `bool MSVehicleContainer::isFull() const` [const, private]
@@ -276,7 +328,7 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn is_full(&self) -> bool {
-        todo!("port MSVehicleContainer::isFull")
+        self.currentSize >= (self.array.len() as i32) - 1
     }
 
     /// C++: `void MSVehicleContainer::percolateDown(int)` [private]
@@ -304,7 +356,22 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn percolate_down(&mut self, hole: i32) {
-        todo!("port MSVehicleContainer::percolateDown")
+        let mut hole = hole;
+        let tmp = self.array[hole as usize].clone();
+
+        while hole * 2 <= self.currentSize {
+            let mut child = hole * 2;
+            if child != self.currentSize && self.array[(child + 1) as usize].0 < self.array[child as usize].0 {
+                child += 1;
+            }
+            if self.array[child as usize].0 < tmp.0 {
+                self.array[hole as usize] = self.array[child as usize].clone();
+            } else {
+                break;
+            }
+            hole = child;
+        }
+        self.array[hole as usize] = tmp;
     }
 
 }
@@ -324,7 +391,7 @@ impl MSVehicleContainer_VehicleDepartureVectorSortCrit {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: &MSVehicleContainer_VehicleDepartureVector, e2: &MSVehicleContainer_VehicleDepartureVector) -> bool {
-        todo!("port VehicleDepartureVectorSortCrit::operator()")
+        e1.0 < e2.0
     }
 
 }
@@ -346,3 +413,23 @@ pub fn shl_op(strm: &mut Unmapped /* std::ostream */, cont: &mut MSVehicleContai
     todo!("port operator<<")
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn heap_pops_in_departure_order_across_growth() {
+        // capacity 2 forces addReplacing to grow the heap array twice
+        let mut c = MSVehicleContainer::new(2);
+        for t in [30, 10, 20, 40, 5] {
+            c.add_replacing(&(t, MSVehicleContainer_VehicleVector::new()));
+        }
+        assert_eq!(c.size(), 5);
+        let mut out = Vec::new();
+        while !c.is_empty() {
+            out.push(c.top_time());
+            c.pop();
+        }
+        assert_eq!(out, vec![5, 10, 20, 30, 40]);
+    }
+}

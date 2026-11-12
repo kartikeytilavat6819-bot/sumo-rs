@@ -5,6 +5,9 @@
 # Build OK -> keep merge. Build broken -> save the merged state as branch fix-<id> (for a fixer agent),
 # reset main. Worktrees are NOT removed here (an agent may still be finishing); use tools/cleanup_worktrees.sh.
 cd "$(dirname "$0")/.."
+LOCK=/c/Users/karti/sumo-rs-merge.lock
+until mkdir "$LOCK" 2>/dev/null; do sleep 5; done   # one merge run at a time; manual commits to main must take it too
+trap 'rmdir "$LOCK"' EXIT
 export PATH="$HOME/.cargo/bin:$PATH" CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target-main CARGO_BUILD_JOBS=8
 for id in "$@"; do
   case "$id" in worktree-agent-*|fix-*) br=$id; wt="" ;; *) br=worktree-agent-$id; wt=.claude/worktrees/agent-$id ;; esac

@@ -36,7 +36,7 @@ impl RONode {
     //     : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port RONode::RONode")
+        RONode { base: Named::new(id), myPosition: Position::default(), myIncoming: Vec::new(), myOutgoing: Vec::new(), myFlippedRoutingNode: Ptr::null() }
     }
 
     /// C++: `void RONode::~RONode() noexcept` [virtual]
@@ -46,7 +46,10 @@ impl RONode {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RONode::~RONode")
+        if !self.myFlippedRoutingNode.is_null() {
+            // delete myFlippedRoutingNode (allocated with Box in getFlippedRoutingNode)
+            drop(unsafe { Box::from_raw(self.myFlippedRoutingNode.as_raw()) });
+        }
     }
 
     /// C++: `void RONode::setPosition(const Position &)`
@@ -57,7 +60,7 @@ impl RONode {
     // }
     #[allow(unused_variables)]
     pub fn set_position(&mut self, p: &Position) {
-        todo!("port RONode::setPosition")
+        self.myPosition = *p;
     }
 
     /// C++: `const Position & RONode::getPosition() const` [const]
@@ -67,7 +70,7 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port RONode::getPosition")
+        &self.myPosition
     }
 
     /// C++: `const ConstROEdgeVector & RONode::getIncoming() const` [const]
@@ -76,7 +79,7 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming(&self) -> &ConstROEdgeVector {
-        todo!("port RONode::getIncoming")
+        &self.myIncoming
     }
 
     /// C++: `const ConstROEdgeVector & RONode::getOutgoing() const` [const]
@@ -85,7 +88,7 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing(&self) -> &ConstROEdgeVector {
-        todo!("port RONode::getOutgoing")
+        &self.myOutgoing
     }
 
     /// C++: `void RONode::addIncoming(ROEdge *)`
@@ -94,7 +97,7 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn add_incoming(&mut self, edge: Ptr<ROEdge>) {
-        todo!("port RONode::addIncoming")
+        self.myIncoming.push(edge);
     }
 
     /// C++: `void RONode::addOutgoing(ROEdge *)`
@@ -103,7 +106,7 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn add_outgoing(&mut self, edge: Ptr<ROEdge>) {
-        todo!("port RONode::addOutgoing")
+        self.myOutgoing.push(edge);
     }
 
     /// C++: `FlippedNode<ROEdge, RONode, ROVehicle> * RONode::getFlippedRoutingNode() const` [const]
@@ -115,7 +118,11 @@ impl RONode {
     //     }
     #[allow(unused_variables)]
     pub fn get_flipped_routing_node(&self) -> Ptr<FlippedNode<ROEdge, RONode, ROVehicle>> {
-        todo!("port RONode::getFlippedRoutingNode")
+        let node = Ptr::new(self);
+        if node.myFlippedRoutingNode.is_null() {
+            node.m().myFlippedRoutingNode = Ptr::from_raw(Box::into_raw(Box::new(FlippedNode::new(node))));
+        }
+        self.myFlippedRoutingNode
     }
 
     /// C++: `void RONode::RONode(const RONode &)` [private]
@@ -123,7 +130,8 @@ impl RONode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RONode) -> Self {
-        todo!("port RONode::RONode")
+        // C++ copy constructor is private and never defined: copying is disallowed
+        panic!("RONode is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `RONode & RONode::operator=(const RONode &)` [private]
@@ -131,7 +139,8 @@ impl RONode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RONode) -> &mut RONode {
-        todo!("port RONode::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("RONode is not assignable (private operator= in C++)")
     }
 
 }

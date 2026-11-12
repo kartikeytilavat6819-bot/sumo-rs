@@ -76,7 +76,17 @@ impl MSLane_AnyVehicleIterator {
     //         }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, i1: i32, i2: i32, i3: i32, i1End: i32, i2End: i32, i3End: i32, downstream: bool) -> Self {
-        todo!("port AnyVehicleIterator::AnyVehicleIterator")
+        MSLane_AnyVehicleIterator {
+            myLane: lane,
+            myI1: i1,
+            myI2: i2,
+            myI3: i3,
+            myI1End: i1End,
+            myI2End: i2End,
+            myI3End: i3End,
+            myDownstream: downstream,
+            myDirection: if downstream { 1 } else { -1 },
+        }
     }
 
     /// C++: `bool AnyVehicleIterator::operator==(const AnyVehicleIterator &) const` [const]
@@ -90,7 +100,12 @@ impl MSLane_AnyVehicleIterator {
     //         }
     #[allow(unused_variables)]
     pub fn eq_op(&self, other: &MSLane_AnyVehicleIterator) -> bool {
-        todo!("port AnyVehicleIterator::operator==")
+        self.myI1 == other.myI1
+            && self.myI2 == other.myI2
+            && self.myI3 == other.myI3
+            && self.myI1End == other.myI1End
+            && self.myI2End == other.myI2End
+            && self.myI3End == other.myI3End
     }
 
     /// C++: `bool AnyVehicleIterator::operator!=(const AnyVehicleIterator &) const` [const]
@@ -99,7 +114,7 @@ impl MSLane_AnyVehicleIterator {
     //         }
     #[allow(unused_variables)]
     pub fn ne_op(&self, other: &MSLane_AnyVehicleIterator) -> bool {
-        todo!("port AnyVehicleIterator::operator!=")
+        !(self.eq_op(other))
     }
 
     /// C++: `const MSVehicle * AnyVehicleIterator::operator->()`
@@ -108,7 +123,7 @@ impl MSLane_AnyVehicleIterator {
     //         }
     #[allow(unused_variables)]
     pub fn op_(&mut self) -> Ptr<MSVehicle> {
-        todo!("port AnyVehicleIterator::operator->")
+        self.mul_op()
     }
 
     /// C++: `const MSVehicle * AnyVehicleIterator::operator*()`
@@ -129,14 +144,35 @@ impl MSLane_AnyVehicleIterator {
     // }
     #[allow(unused_variables)]
     pub fn mul_op(&mut self) -> Ptr<MSVehicle> {
-        todo!("port AnyVehicleIterator::operator*")
+        if self.next_is_my_vehicles() {
+            if self.myI1 != self.myI1End {
+                self.myLane.myVehicles[self.myI1 as usize]
+            } else if self.myI3 != self.myI3End {
+                self.myLane.myTmpVehicles[self.myI3 as usize]
+            } else {
+                assert!(self.myI2 == self.myI2End);
+                Ptr::null()
+            }
+        } else {
+            self.myLane.myPartialVehicles[self.myI2 as usize]
+        }
     }
 
     /// C++: `AnyVehicleIterator & AnyVehicleIterator::operator++()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn op__2(&mut self) -> &mut MSLane_AnyVehicleIterator {
-        todo!("port AnyVehicleIterator::operator++")
+        if self.next_is_my_vehicles() {
+            if self.myI1 != self.myI1End {
+                self.myI1 += self.myDirection;
+            } else if self.myI3 != self.myI3End {
+                self.myI3 += self.myDirection;
+            }
+            // else: already at end
+        } else {
+            self.myI2 += self.myDirection;
+        }
+        self
     }
 
     /// C++: `bool AnyVehicleIterator::nextIsMyVehicles() const` [const, private]
@@ -183,7 +219,24 @@ impl MSLane_AnyVehicleIterator {
     // }
     #[allow(unused_variables)]
     pub fn next_is_my_vehicles(&self) -> bool {
-        todo!("port AnyVehicleIterator::nextIsMyVehicles")
+        if self.myI1 == self.myI1End && self.myI3 == self.myI3End {
+            if self.myI2 != self.myI2End {
+                return false;
+            } else {
+                return true; // @note. must be caught
+            }
+        } else {
+            if self.myI2 == self.myI2End {
+                return true;
+            } else {
+                let cand = if self.myI1 == self.myI1End { self.myLane.myTmpVehicles[self.myI3 as usize] } else { self.myLane.myVehicles[self.myI1 as usize] };
+                if cand.get_position_on_lane() < self.myLane.myPartialVehicles[self.myI2 as usize].get_position_on_lane_2(self.myLane) {
+                    return self.myDownstream;
+                } else {
+                    return !self.myDownstream;
+                }
+            }
+        }
     }
 
 }
@@ -325,6 +378,30 @@ impl std::ops::DerefMut for MSLane {
 //   static DepartSpeedDefinition MSLane::myDefaultDepartSpeedDefinition;
 //   static double MSLane::myDefaultDepartSpeed;
 
+// shortcut: MSGlobals::gLateralResolution is not ported yet, uses the C++ default of -1 (disabled)
+fn g_lateral_resolution() -> f64 {
+    -1.
+}
+
+/// C++: `RandHelper::rand(double max)` with the default RNG
+fn rand_max_default(max: f64) -> f64 {
+    utils::common::rand_helper::with_default(|r| r.rand_max(max))
+}
+
+/// C++: `MSLane::CHANGE_PERMISSIONS_PERMANENT`
+pub const MSLane_CHANGE_PERMISSIONS_PERMANENT: i64 = 0;
+/// C++: `MSLane::CHANGE_PERMISSIONS_GUI`
+pub const MSLane_CHANGE_PERMISSIONS_GUI: i64 = 1;
+
+thread_local! {
+    /// C++: `MSLane::myDict`
+    static MY_DICT: std::cell::RefCell<MSLane_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    /// C++: `MSLane::myRNGs`
+    static MY_RNGS: std::cell::RefCell<Vec<SumoRNG>> = std::cell::RefCell::new(Vec::new());
+    /// C++: `MSLane::myExtrapolateSubstepDepart`
+    static MY_EXTRAPOLATE_SUBSTEP_DEPART: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
 impl MSLane {
     /// C++: `void MSLane::MSLane(const std::string &, double, double, double, MSEdge *const, int, const PositionVector &, double, SVCPermissions, SVCPermissions, SVCPermissions, int, bool, const std::string &, const PositionVector &)`
     /// Constructor
@@ -377,7 +454,69 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, maxSpeed: f64, friction: f64, length: f64, edge: Ptr<MSEdge>, numericalID: i32, shape: &PositionVector, width: f64, permissions: SVCPermissions, changeLeft: SVCPermissions, changeRight: SVCPermissions, index: i32, isRampAccel: bool, type_: &str, outlineShape: &PositionVector) -> Self {
-        todo!("port MSLane::MSLane")
+        // shortcut: myStopWatch holds placeholder entries until StopWatch is ported; mySimulationTask is HAVE_FOX-only and skipped
+        let mut lane = MSLane {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myNumericalID: numericalID,
+            myShape: shape.clone(),
+            myOutlineShape: Ptr::null(),
+            myIndex: index,
+            myVehicles: Vec::new(),
+            myPartialVehicles: Vec::new(),
+            myTmpVehicles: Vec::new(),
+            myVehBuffer: (),
+            myManeuverReservations: Vec::new(),
+            myParkingVehicles: BTreeSet::new(),
+            myLength: length,
+            myWidth: width,
+            myLaneStopOffset: StopOffset::default(),
+            myEdge: edge,
+            myMaxSpeed: maxSpeed,
+            myFrictionCoefficient: friction,
+            mySpeedModified: false,
+            myPermissions: permissions,
+            myChangeLeft: changeLeft,
+            myChangeRight: changeRight,
+            myOriginalPermissions: permissions,
+            myRestrictions: Ptr::null(),
+            myIncomingLanes: Vec::new(),
+            myLogicalPredecessorLane: Ptr::null(),
+            myCanonicalPredecessorLane: Ptr::null(),
+            myCanonicalSuccessorLane: Ptr::null(),
+            myBruttoVehicleLengthSum: 0.,
+            myNettoVehicleLengthSum: 0.,
+            myBruttoVehicleLengthSumToRemove: 0.,
+            myNettoVehicleLengthSumToRemove: 0.,
+            myRecalculateBruttoSum: false,
+            myLinks: Vec::new(),
+            myApproachingLanes: BTreeMap::new(),
+            myLeaderInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
+            myFollowerInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
+            myLeaderInfoTime: SUMOTIME_MIN,
+            myFollowerInfoTime: SUMOTIME_MIN,
+            myLengthGeometryFactor: utils::geom::POSITION_EPS.max(shape.length()) / length,
+            myIsRampAccel: isRampAccel,
+            myLaneType: type_.to_string(),
+            myRightSideOnEdge: 0.,
+            myRightmostSublane: 0,
+            myNeedsCollisionCheck: false,
+            myOpposite: Ptr::null(),
+            myBidiLane: Ptr::null(),
+            myPermissionChanges: BTreeMap::new(),
+            myRNGIndex: 0,
+            myMoveReminders: Vec::new(),
+            myStopWatch: vec![(); 3],
+        };
+        // initialized in MSEdge::initialize
+        lane.init_restrictions(); // may be reloaded again from initialized in MSEdge::closeBuilding
+        let nRNGs = MY_RNGS.with(|r| r.borrow().len());
+        assert!(nRNGs > 0);
+        lane.myRNGIndex = (numericalID as usize % nRNGs) as i32;
+        if outlineShape.len() > 0 {
+            lane.myOutlineShape = Ptr::from_raw(Box::into_raw(Box::new(outlineShape.clone())));
+        }
+        lane
     }
 
     /// C++: `void MSLane::~MSLane() noexcept` [virtual]
@@ -390,7 +529,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLane::~MSLane")
+        // shortcut: links are not owned by MSLane in the Rust port yet (no delete l), only the outline shape is freed
+        self.myLinks.clear();
+        if !self.myOutlineShape.is_null() {
+            unsafe { drop(Box::from_raw(self.myOutlineShape.as_raw())) };
+            self.myOutlineShape = Ptr::null();
+        }
     }
 
     /// C++: `int MSLane::getThreadIndex() const` [const]
@@ -400,7 +544,8 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_thread_index(&self) -> i32 {
-        todo!("port MSLane::getThreadIndex")
+        // shortcut: MSGlobals::gNumSimThreads is not ported yet, single simulation thread assumed
+        self.myRNGIndex % 1
     }
 
     /// C++: `int MSLane::getRNGIndex() const` [const]
@@ -410,7 +555,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_rng_index(&self) -> i32 {
-        todo!("port MSLane::getRNGIndex")
+        self.myRNGIndex
     }
 
     /// C++: `SumoRNG * MSLane::getRNG() const` [const]
@@ -420,7 +565,8 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_rng(&self) -> Ptr<SumoRNG> {
-        todo!("port MSLane::getRNG")
+        let idx = self.myRNGIndex as usize;
+        Ptr::from_raw(MY_RNGS.with(|r| &mut r.borrow_mut()[idx] as *mut SumoRNG))
     }
 
     /// C++: `int MSLane::getNumRNGs()` [static]
@@ -430,7 +576,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_rn_gs() -> i32 {
-        todo!("port MSLane::getNumRNGs")
+        MY_RNGS.with(|r| r.borrow().len() as i32)
     }
 
     /// C++: `void MSLane::saveRNGStates(OutputDevice &)` [static]
@@ -446,7 +592,13 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn save_rng_states(out: &mut OutputDevice) {
-        todo!("port MSLane::saveRNGStates")
+        for i in 0..MSLane::get_num_rn_gs() {
+            out.open_tag_id(SUMO_TAG_RNGLANE);
+            out.write_attr(SUMO_ATTR_INDEX, &i);
+            let state = MY_RNGS.with(|r| r.borrow()[i as usize].save_state());
+            out.write_attr(SUMO_ATTR_STATE, &state);
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSLane::loadRNGState(int, const std::string &)` [static]
@@ -460,7 +612,10 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn load_rng_state(index: i32, state: &str) {
-        todo!("port MSLane::loadRNGState")
+        if index >= MSLane::get_num_rn_gs() {
+            panic!("{}", ProcessError::Process(utils::tlf!("State was saved with more than % threads. Change the number of threads or do not load RNG state", MSLane::get_num_rn_gs().to_string())));
+        }
+        MY_RNGS.with(|r| r.borrow_mut()[index as usize].load_state(state));
     }
 
     /// C++: `void MSLane::addLink(MSLink *)`
@@ -471,7 +626,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>) {
-        todo!("port MSLane::addLink")
+        self.myLinks.push(link);
     }
 
     /// C++: `void MSLane::setOpposite(MSLane *)`
@@ -485,7 +640,10 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_opposite(&mut self, oppositeLane: Ptr<MSLane>) {
-        todo!("port MSLane::setOpposite")
+        self.myOpposite = oppositeLane;
+        if !self.myOpposite.is_null() && self.get_length() > self.myOpposite.get_length() {
+            utils::write_warningf!("Unequal lengths of neigh lane '%' and lane '%' (% != %).", self.get_id(), self.myOpposite.get_id(), self.get_length(), self.myOpposite.get_length());
+        }
     }
 
     /// C++: `void MSLane::setBidiLane(MSLane *)`
@@ -501,7 +659,13 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_bidi_lane(&mut self, bidyLane: Ptr<MSLane>) {
-        todo!("port MSLane::setBidiLane")
+        self.myBidiLane = bidyLane;
+        if !self.myBidiLane.is_null() && self.get_length() > self.myBidiLane.get_length() {
+            // shortcut: MSGlobals::gUsingInternalLanes is not ported yet, treated as false
+            if self.is_normal() || false {
+                utils::write_warningf!("Unequal lengths of bidi lane '%' and lane '%' (% != %).", self.get_id(), self.myBidiLane.get_id(), self.get_length(), self.myBidiLane.get_length());
+            }
+        }
     }
 
     /// C++: `void MSLane::addSecondaryShape(const PositionVector &)` [virtual]
@@ -509,7 +673,8 @@ impl MSLane {
     // virtual void addSecondaryShape(const PositionVector& /*shape*/) {}
     #[allow(unused_variables)]
     pub fn add_secondary_shape(&mut self, arg0: &PositionVector) {
-        todo!("port MSLane::addSecondaryShape")
+        // virtual no-op in the base class; subclasses override
+
     }
 
     /// C++: `double MSLane::getLengthGeometryFactor(bool) const` [const, virtual]
@@ -518,7 +683,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor(&self, arg0: bool) -> f64 {
-        todo!("port MSLane::getLengthGeometryFactor")
+        self.myLengthGeometryFactor
     }
 
     /// C++: `const PositionVector & MSLane::getShape(bool) const` [const, virtual]
@@ -527,7 +692,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape(&self, arg0: bool) -> &PositionVector {
-        todo!("port MSLane::getShape")
+        &self.myShape
     }
 
     /// C++: `void MSLane::updateMesoGUISegments()` [virtual]
@@ -535,7 +700,7 @@ impl MSLane {
     // virtual void updateMesoGUISegments() {}
     #[allow(unused_variables)]
     pub fn update_meso_gui_segments(&mut self) {
-        todo!("port MSLane::updateMesoGUISegments")
+        // virtual no-op in the base class; subclasses override
     }
 
     /// C++: `void MSLane::addMoveReminder(MSMoveReminder *, bool)` [virtual]
@@ -552,7 +717,13 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_move_reminder(&mut self, rem: Ptr<MSMoveReminder>, addToVehicles: bool) {
-        todo!("port MSLane::addMoveReminder")
+        self.myMoveReminders.push(rem);
+        if addToVehicles {
+            for veh in self.myVehicles.clone() {
+                veh.m().add_reminder(rem, 0.);
+            }
+        }
+        // XXX: Here, the partial occupators are ignored!? Refs. #3255
     }
 
     /// C++: `void MSLane::removeMoveReminder(MSMoveReminder *)` [virtual]
@@ -569,7 +740,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn remove_move_reminder(&mut self, rem: Ptr<MSMoveReminder>) {
-        todo!("port MSLane::removeMoveReminder")
+        if let Some(it) = self.myMoveReminders.iter().position(|r| *r == rem) {
+            self.myMoveReminders.remove(it);
+            for veh in self.myVehicles.clone() {
+                veh.m().remove_reminder(rem);
+            }
+        }
     }
 
     /// C++: `const std::vector<MSMoveReminder *> & MSLane::getMoveReminders() const` [const]
@@ -579,7 +755,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_move_reminders(&self) -> &Vec<Ptr<MSMoveReminder>> {
-        todo!("port MSLane::getMoveReminders")
+        &self.myMoveReminders
     }
 
     /// C++: `bool MSLane::insertVehicle(MSVehicle &)`
@@ -711,7 +887,128 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn insert_vehicle(&mut self, v: &mut MSVehicle) -> bool {
-        todo!("port MSLane::insertVehicle")
+        let mut pos: f64 = 0.;
+        let mut patchSpeed: bool = true; // whether the speed shall be adapted to infrastructure/traffic in front
+        // the C++ holds a reference into the vehicle; a raw pointer keeps the same aliasing
+        let pars: &SUMOVehicleParameter = unsafe { &*(v.get_parameter() as *const SUMOVehicleParameter) };
+        let mut speed = self.get_depart_speed(v, &mut patchSpeed);
+        let mut posLat = self.get_depart_pos_lat(v);
+
+        // determine the position
+        match pars.departPosProcedure {
+            DepartPosDefinition::GIVEN => {
+                pos = pars.departPos;
+                if pos < 0. {
+                    pos += self.myLength;
+                }
+            }
+            DepartPosDefinition::RANDOM => {
+                pos = utils::common::std_defs::round_decimal(rand_max_default(self.get_length()), utils::common::std_defs::g_precision_random());
+            }
+            DepartPosDefinition::RANDOM_FREE => {
+                for i in 0..10 {
+                    // we will try some random positions ...
+                    pos = rand_max_default(self.get_length());
+                    posLat = self.get_depart_pos_lat(v); // could be random as well
+                    if self.is_insertion_success(Ptr::from_mut(v), speed, pos, posLat, patchSpeed, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
+                        MSNet::get_instance().m().get_insertion_control().retract_deschedule_departure(Ptr::from_mut(v));
+                        return true;
+                    }
+                }
+                // ... and if that doesn't work, we put the vehicle to the free position
+                let success = self.free_insertion(v, speed, posLat, MSMoveReminder_Notification::NOTIFICATION_DEPARTED);
+                if success {
+                    MSNet::get_instance().m().get_insertion_control().retract_deschedule_departure(Ptr::from_mut(v));
+                }
+                return success;
+            }
+            DepartPosDefinition::FREE => {
+                return self.free_insertion(v, speed, posLat, MSMoveReminder_Notification::NOTIFICATION_DEPARTED);
+            }
+            DepartPosDefinition::LAST => {
+                return self.last_insertion(v, speed, posLat, patchSpeed);
+            }
+            DepartPosDefinition::STOP if v.has_stops() && v.get_next_stop().edge == *v.get_current_route_edge() => {
+                // getLastFreePos of stopping place could return negative position to avoid blocking the stop
+                pos = 0.0f64.max(v.get_next_stop().get_end_pos(v));
+            }
+            _ => {
+                // BASE, DEFAULT, SPLIT_FRONT, and the STOP fallthrough
+                if pars.departProcedure == DepartDefinition::SPLIT {
+                    pos = self.get_length();
+                    // find the vehicle from which we are splitting off (should only be a single lane to check)
+                    let end = self.any_vehicles_end();
+                    let mut it = self.any_vehicles_begin();
+                    while it.ne_op(&end) {
+                        let cand = it.mul_op();
+                        if cand.is_stopped() && cand.get_next_stop_parameter().split == v.get_id() {
+                            if pars.departPosProcedure == DepartPosDefinition::SPLIT_FRONT {
+                                pos = cand.get_position_on_lane() + cand.get_vehicle_type().get_min_gap() + v.get_length();
+                            } else {
+                                pos = cand.get_back_position_on_lane(Ptr::from_mut(self)) - v.get_vehicle_type().get_min_gap();
+                            }
+                            break;
+                        }
+                        it.op__2();
+                    }
+                } else {
+                    pos = v.base_pos(self.myEdge);
+                }
+            }
+        }
+        // determine the lateral position for special cases
+        if g_lateral_resolution() > 0. {
+            match pars.departPosLatProcedure {
+                DepartPosLatDefinition::RANDOM_FREE => {
+                    for i in 0..10 {
+                        // we will try some random positions ...
+                        posLat = rand_max_default(self.get_width()) - self.get_width() * 0.5;
+                        if self.is_insertion_success(Ptr::from_mut(v), speed, pos, posLat, patchSpeed, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
+                            return true;
+                        }
+                    }
+                    // no break! continue with DepartPosLatDefinition::FREE
+                    return self.insert_vehicle_lat_free(v, speed, pos, &mut posLat, &mut patchSpeed);
+                }
+                DepartPosLatDefinition::FREE => {
+                    return self.insert_vehicle_lat_free(v, speed, pos, &mut posLat, &mut patchSpeed);
+                }
+                _ => {}
+            }
+        }
+        // try to insert
+        let success = self.is_insertion_success(Ptr::from_mut(v), speed, pos, posLat, patchSpeed, MSMoveReminder_Notification::NOTIFICATION_DEPARTED);
+        if success && MY_EXTRAPOLATE_SUBSTEP_DEPART.with(|c| c.get()) && v.get_depart_delay() > 0 {
+            let relevantDelay = utils::common::time::delta_t().min(v.get_depart_delay());
+            // try to compensate sub-step depart delay by moving the vehicle forward
+            speed = v.get_speed(); // may have been adapted in isInsertionSuccess
+            let mut dist = speed * utils::common::time::steps2time(relevantDelay);
+            let (leader, leaderGap) = self.get_leader(Ptr::from_mut(v), pos, v.get_best_lanes_continuation(), 0., false);
+            if !leader.is_null() {
+                let vp = Ptr::from_mut(v);
+                let frontGapNeeded = v.get_car_follow_model().get_secure_gap(vp, leader, speed, leader.get_speed(), leader.get_car_follow_model().get_max_decel());
+                dist = dist.min(leaderGap - frontGapNeeded);
+            }
+            if dist > 0. {
+                v.execute_fractional_move(dist);
+            }
+        }
+        success
+    }
+
+    /// Helper for insertVehicle: the FREE lateral search (C++ `case DepartPosLatDefinition::FREE`), shared by the fallthrough from RANDOM_FREE.
+    fn insert_vehicle_lat_free(&mut self, v: &mut MSVehicle, speed: f64, pos: f64, posLat: &mut f64, patchSpeed: &mut bool) -> bool {
+        // systematically test all positions until a free lateral position is found
+        let posLatMin = -self.get_width() * 0.5 + v.get_vehicle_type().get_width() * 0.5;
+        let posLatMax = self.get_width() * 0.5 - v.get_vehicle_type().get_width() * 0.5;
+        *posLat = posLatMin;
+        while *posLat < posLatMax {
+            if self.is_insertion_success(Ptr::from_mut(v), speed, pos, *posLat, *patchSpeed, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
+                return true;
+            }
+            *posLat += g_lateral_resolution();
+        }
+        false
     }
 
     /// C++: `bool MSLane::isInsertionSuccess(MSVehicle *, double, double, double, bool, MSMoveReminder::Notification)`
@@ -1814,7 +2111,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape_2(&self) -> &PositionVector {
-        todo!("port MSLane::getShape")
+        &self.myShape
     }
 
     /// C++: `double MSLane::getLengthGeometryFactor() const` [const]
@@ -1824,7 +2121,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor_2(&self) -> f64 {
-        todo!("port MSLane::getLengthGeometryFactor")
+        self.myLengthGeometryFactor
     }
 
     /// C++: `bool MSLane::isAccelLane() const` [const]
@@ -6087,7 +6384,7 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSLane) -> Self {
-        todo!("port MSLane::MSLane")
+        panic!("MSLane copy constructor is invalidated")
     }
 
     /// C++: `MSLane & MSLane::operator=(const MSLane &)` [private]

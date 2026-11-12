@@ -123,6 +123,26 @@ impl FromAttr for PositionVector {
         Ok(shape)
     }
 }
+// the real geom::PositionVector (netload/netbuild ports); same parsing as the stand-in above
+impl FromAttr for crate::geom::position_vector::PositionVector {
+    fn invalid_return() -> Self {
+        Self::default()
+    }
+    fn from_attr(value: &str) -> Result<Self, ProcessError> {
+        let mut shape = Self::default();
+        for p in tokenize_white(value) {
+            let pos = tokenize(p, ",");
+            if pos.len() != 2 && pos.len() != 3 {
+                return Err(ProcessError::Format("is not a valid list of positions".into()));
+            }
+            let x = to_double(pos[0])?;
+            let y = to_double(pos[1])?;
+            let z = if pos.len() == 3 { to_double(pos[2])? } else { 0. };
+            shape.push(crate::geom::position::Position::new3(x, y, z));
+        }
+        Ok(shape)
+    }
+}
 impl FromAttr for Boundary {
     fn invalid_return() -> Self {
         Boundary::default()

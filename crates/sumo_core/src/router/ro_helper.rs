@@ -27,7 +27,7 @@ impl ROVehicleByDepartureComperator {
     // explicit ROVehicleByDepartureComperator() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ROVehicleByDepartureComperator::ROVehicleByDepartureComperator")
+        ROVehicleByDepartureComperator { base: () }
     }
 
     /// C++: `void ROVehicleByDepartureComperator::~ROVehicleByDepartureComperator() noexcept`
@@ -35,7 +35,7 @@ impl ROVehicleByDepartureComperator {
     // ~ROVehicleByDepartureComperator() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROVehicleByDepartureComperator::~ROVehicleByDepartureComperator")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool ROVehicleByDepartureComperator::operator()(ROVehicle *, ROVehicle *) const` [const]
@@ -48,7 +48,10 @@ impl ROVehicleByDepartureComperator {
     //     }
     #[allow(unused_variables)]
     pub fn call_op(&self, veh1: Ptr<ROVehicle>, veh2: Ptr<ROVehicle>) -> bool {
-        todo!("port ROVehicleByDepartureComperator::operator()")
+        if veh1.get_depart() == veh2.get_depart() {
+            return veh1.get_id() > veh2.get_id();
+        }
+        veh1.get_depart() > veh2.get_depart()
     }
 
 }
@@ -68,8 +71,16 @@ impl ROVehicleByDepartureComperator {
 //     return true;
 // }
 #[allow(unused_variables)]
-pub fn no_mandatory(mandatory: &ConstROEdgeVector, start: Unmapped /* ConstROEdgeVector::const_iterator */, end: Unmapped /* ConstROEdgeVector::const_iterator */) -> bool {
-    todo!("port noMandatory")
+/// `range` is the C++ iterator pair [start, end) as a slice
+pub fn no_mandatory(mandatory: &ConstROEdgeVector, range: &[Ptr<ROEdge>]) -> bool {
+    for m in mandatory {
+        for it in range {
+            if it == m {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// C++: `void (ConstROEdgeVector &, const ConstROEdgeVector &) ROHelper::recheckForLoops`
@@ -159,6 +170,63 @@ pub fn no_mandatory(mandatory: &ConstROEdgeVector, start: Unmapped /* ConstROEdg
 // }
 #[allow(unused_variables)]
 pub fn recheck_for_loops(edges: &mut ConstROEdgeVector, mandatory: &ConstROEdgeVector) {
-    todo!("port recheckForLoops")
+    // for simplicities sake, prevent removal of any mandatory edges
+    // in theory these edges could occur multiple times so it might be possible
+    // to delete some of them anyway.
+    // XXX check for departLane, departPos, departSpeed, ....
+
+    // removal of edge loops within the route (edge occurs twice)
+    // call repeatedly until no more loops have been found
+    let mut findLoop = true;
+    while findLoop {
+        findLoop = false;
+        let mut lastOccurrence: BTreeMap<Ptr<ROEdge>, usize> = BTreeMap::new(); // index of the last occurrence of this edge
+        for ii in 0..edges.len() {
+            if let Some(&pre) = lastOccurrence.get(&edges[ii]) {
+                if no_mandatory(mandatory, &edges[pre..ii]) {
+                    edges.drain(pre..ii);
+                    findLoop = true;
+                    break;
+                }
+            }
+            lastOccurrence.insert(edges[ii], ii);
+        }
+    }
+
+    // remove loops at the route's begin
+    //  (vehicle makes a turnaround to get into the right direction at an already passed node)
+    let mut start = edges[0].get_from_junction();
+    if start.is_null() && edges.len() > 1 {
+        // taz edge has no fromJunction
+        start = edges[1].get_from_junction();
+    }
+    if !start.is_null() {
+        let mut lastStart: usize = 0;
+        for i in 1..edges.len() {
+            if edges[i].get_from_junction() == start {
+                lastStart = i;
+            }
+        }
+        if lastStart > 0 && no_mandatory(mandatory, &edges[0..lastStart - 1]) {
+            edges.drain(0..lastStart - 1);
+        }
+    }
+    // remove loops at the route's end
+    //  (vehicle makes a turnaround to get into the right direction at an already passed node)
+    let mut end = edges[edges.len() - 1].get_to_junction();
+    if end.is_null() && edges.len() > 1 {
+        // taz edge has no toJunction
+        end = edges[edges.len() - 2].get_to_junction();
+    }
+    if !end.is_null() {
+        for i in 0..edges.len() - 1 {
+            if edges[i].get_to_junction() == end && no_mandatory(mandatory, &edges[i + 2..]) {
+                edges.drain(i + 2..);
+                break;
+            }
+        }
+    }
+
+    // removal of node loops (node occurs twice) is not done because these may occur legitimately
 }
 

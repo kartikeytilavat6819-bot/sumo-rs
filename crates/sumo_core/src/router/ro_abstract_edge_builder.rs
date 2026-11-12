@@ -15,7 +15,7 @@ impl ROAbstractEdgeBuilder {
     // ROAbstractEdgeBuilder() : myCurrentIndex(0) { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ROAbstractEdgeBuilder::ROAbstractEdgeBuilder")
+        ROAbstractEdgeBuilder { myCurrentIndex: 0 }
     }
 
     /// C++: `void ROAbstractEdgeBuilder::~ROAbstractEdgeBuilder() noexcept` [virtual]
@@ -23,7 +23,7 @@ impl ROAbstractEdgeBuilder {
     // virtual ~ROAbstractEdgeBuilder() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROAbstractEdgeBuilder::~ROAbstractEdgeBuilder")
+        // C++ destructor body is empty
     }
 
     /// C++: `ROEdge * ROAbstractEdgeBuilder::buildEdge(const std::string &, RONode *, RONode *, const int, const std::string &, const std::string &)` [virtual, pure virtual]
@@ -31,7 +31,8 @@ impl ROAbstractEdgeBuilder {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        todo!("port ROAbstractEdgeBuilder::buildEdge")
+        // C++ pure virtual: only subclasses define it
+        panic!("ROAbstractEdgeBuilder::buildEdge is pure virtual; subclasses must implement it")
     }
 
     /// C++: `int ROAbstractEdgeBuilder::getNextIndex()` [protected]
@@ -41,7 +42,9 @@ impl ROAbstractEdgeBuilder {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_index(&mut self) -> i32 {
-        todo!("port ROAbstractEdgeBuilder::getNextIndex")
+        let idx = self.myCurrentIndex;
+        self.myCurrentIndex += 1;
+        idx
     }
 
     /// C++: `void ROAbstractEdgeBuilder::ROAbstractEdgeBuilder(const ROAbstractEdgeBuilder &)` [private]
@@ -49,7 +52,8 @@ impl ROAbstractEdgeBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROAbstractEdgeBuilder) -> Self {
-        todo!("port ROAbstractEdgeBuilder::ROAbstractEdgeBuilder")
+        // C++ copy constructor is private and never defined: copying is disallowed
+        panic!("ROAbstractEdgeBuilder is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `ROAbstractEdgeBuilder & ROAbstractEdgeBuilder::operator=(const ROAbstractEdgeBuilder &)` [private]
@@ -57,7 +61,8 @@ impl ROAbstractEdgeBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROAbstractEdgeBuilder) -> &mut ROAbstractEdgeBuilder {
-        todo!("port ROAbstractEdgeBuilder::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("ROAbstractEdgeBuilder is not assignable (private operator= in C++)")
     }
 
 }
