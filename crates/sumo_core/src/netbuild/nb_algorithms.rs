@@ -715,7 +715,86 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_node_types(nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NBNodeTypeComputer::computeNodeTypes")
+        Self::validate_rail_crossings(nc, tlc);
+        let rightBeforeLeftSpeed = utils::options::options_cont::get_float("junctions.right-before-left.speed-threshold");
+        for n in nc.myNodes.values().copied() {
+            // the type may already be set from the data
+            if n.myType != SumoXMLNodeType::UNKNOWN && n.myType != SumoXMLNodeType::DEAD_END {
+                n.m().myTypeWasGuessed = false;
+                continue;
+            }
+            // check whether the node was set to be unregulated by the user
+            if utils::options::options_cont::get_bool("keep-nodes-unregulated")
+                || utils::options::options_cont::with_options(|oc| {
+                    oc.is_in_string_vector("keep-nodes-unregulated.explicit", n.get_id()).unwrap_or_else(|e| std::panic::panic_any(e))
+                })
+                || (utils::options::options_cont::get_bool("keep-nodes-unregulated.district-nodes") && (n.is_near_district() || n.is_district()))
+            {
+                n.m().myType = SumoXMLNodeType::NOJUNCTION;
+                continue;
+            }
+            // check whether the node is a waterway node. Set to unregulated by default
+            let mut waterway = true;
+            for e in n.get_edges().iter() {
+                if !is_waterway(e.get_permissions(-1)) {
+                    waterway = false;
+                    break;
+                }
+            }
+            if waterway && (n.myType == SumoXMLNodeType::UNKNOWN || n.myType == SumoXMLNodeType::DEAD_END) {
+                n.m().myType = SumoXMLNodeType::NOJUNCTION;
+                continue;
+            }
+
+            // check whether the junction is not a real junction
+            if n.myIncomingEdges.len() == 1 {
+                n.m().myType = SumoXMLNodeType::PRIORITY;
+                continue;
+            }
+            // @todo "isSimpleContinuation" should be revalidated
+            if n.is_simple_continuation(true, false) {
+                n.m().myType = SumoXMLNodeType::PRIORITY;
+                continue;
+            }
+            if Self::is_railway_node(n) {
+                if n.unsignalized_operation() && (n.get_incoming_edges().len() as i32) == 2 && (n.get_outgoing_edges().len() as i32) == 1 {
+                    // avoid slowing down when there are no foe vehicles
+                    n.m().myType = SumoXMLNodeType::ZIPPER;
+                } else {
+                    // priority instead of unregulated to ensure that collisions can be detected
+                    n.m().myType = SumoXMLNodeType::PRIORITY;
+                }
+                continue;
+            }
+            // determine the type
+            let mut type_ = if utils::options::options_cont::get_bool("junctions.left-before-right") {
+                SumoXMLNodeType::LEFT_BEFORE_RIGHT
+            } else {
+                SumoXMLNodeType::RIGHT_BEFORE_LEFT
+            };
+            let incoming: EdgeVector = n.myIncomingEdges.clone();
+            for i in 0..incoming.len() {
+                for j in (i + 1)..incoming.len() {
+                    // @todo "getOppositeIncoming" should probably be refactored into something the edge knows
+                    if n.get_opposite_incoming(incoming[j]) == incoming[i] && n.myIncomingEdges.len() > 2 {
+                        continue;
+                    }
+                    // @todo check against a legal document
+                    // @todo figure out when SumoXMLNodeType::PRIORITY_STOP is appropriate
+                    let s1 = incoming[i].get_speed();
+                    let s2 = incoming[j].get_speed();
+                    let p1 = incoming[i].get_priority();
+                    let p2 = incoming[j].get_priority();
+                    if (s1 - s2).abs() > (9.5 / 3.6) || s1.max(s2) >= rightBeforeLeftSpeed || p1 != p2 {
+                        type_ = SumoXMLNodeType::PRIORITY;
+                        break;
+                    }
+                }
+            }
+            // save type
+            n.m().myType = type_;
+            n.m().myTypeWasGuessed = true;
+        }
     }
 
     /// C++: `void NBNodeTypeComputer::validateRailCrossings(NBNodeCont &, NBTrafficLightLogicCont &)` [static]
@@ -771,7 +850,55 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn validate_rail_crossings(nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NBNodeTypeComputer::validateRailCrossings")
+        for n in nc.myNodes.values().copied() {
+            if n.myType == SumoXMLNodeType::RAIL_CROSSING {
+                // check if it really is a rail crossing
+                let mut numRailway: i32 = 0;
+                let mut numNonRailIn: i32 = 0;
+                let mut numNonRailOut: i32 = 0;
+                // only the size of this set is used, so a hash set is enough
+                let mut nonRailNodes: HashSet<Ptr<NBNode>> = HashSet::new();
+                let mut numNonRailwayNonPed: i32 = 0;
+                for e in n.get_incoming_edges().iter().copied() {
+                    if (e.get_permissions(-1) & !SVC_RAIL_CLASSES) != 0 {
+                        numNonRailIn += 1;
+                        if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                            numNonRailwayNonPed += 1;
+                        }
+                        nonRailNodes.insert(e.get_from_node());
+                    } else if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                        numRailway += 1;
+                    }
+                }
+                for e in n.get_outgoing_edges().iter().copied() {
+                    if (e.get_permissions(-1) & !SVC_RAIL_CLASSES) != 0 {
+                        numNonRailOut += 1;
+                        nonRailNodes.insert(e.get_to_node());
+                    }
+                }
+                if numNonRailIn == 0 || numNonRailOut == 0 || numRailway == 0 {
+                    // not a crossing (maybe unregulated or rail_signal)
+                    write_warningf!("Converting invalid rail_crossing to priority junction '%'.", n.get_id());
+                    n.m().myType = SumoXMLNodeType::PRIORITY;
+                } else if numNonRailwayNonPed > 2 || nonRailNodes.len() > 2 {
+                    // does not look like a rail crossing (roads in conflict). maybe a traffic light?
+                    write_warningf!("Converting invalid rail_crossing to traffic_light at junction '%'.", n.get_id());
+                    let type_ = TrafficLightTypes
+                        .get(&utils::options::options_cont::get_string("tls.default-type"))
+                        .unwrap_or_else(|e| std::panic::panic_any(e));
+                    let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(n.get_id(), n, 0, type_)));
+                    let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                    n.m().myType = SumoXMLNodeType::TRAFFIC_LIGHT;
+                    if !tlc.insert(tlDef, false) {
+                        // actually, nothing should fail here
+                        n.m().remove_traffic_light(tlDef);
+                        n.m().myType = SumoXMLNodeType::PRIORITY;
+                        drop(unsafe { Box::from_raw(raw) });
+                        write_warningf!("Could not allocate tls '%'.", n.get_id());
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNodeTypeComputer::isRailwayNode(const NBNode *)` [static]
@@ -790,7 +917,15 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn is_railway_node(n: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeTypeComputer::isRailwayNode")
+        let mut hasRailway = false;
+        for e in n.get_incoming_edges().iter() {
+            if (e.get_permissions(-1) & !(SVC_RAIL_CLASSES | SVC_TAXI)) != 0 {
+                return false;
+            } else if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                hasRailway = true;
+            }
+        }
+        hasRailway
     }
 
 }
