@@ -213,7 +213,7 @@ impl MSDevice_Transportable {
         let currentTime = net.get_current_time_step();
         if self.myStopped {
             if !holder.is_stopped() {
-                let freeFlowTimeCorrection = if MSGlobals::gUseMesoSim() { time2steps(newPos / newSpeed) } else { 0 };
+                let freeFlowTimeCorrection = if crate::microsim::ms_globals::use_meso_sim() { time2steps(newPos / newSpeed) } else { 0 };
                 for transportable in self.myTransportables.iter() {
                     transportable.m().set_departed(currentTime - freeFlowTimeCorrection);
                 }
@@ -234,7 +234,7 @@ impl MSDevice_Transportable {
                     if canLeave && !Self::will_transfer_at_join(transportable, joinVeh) {
                         let timeForNext: &mut SUMOTime = if self.myAmContainer { &mut stop.timeToLoadNextContainer } else { &mut stop.timeToBoardNextPerson };
                         let taxiDevice = taxi_device_of(holder);
-                        if !taxiDevice.is_null() && *timeForNext == 0 && !MSGlobals::gUseMesoSim() {
+                        if !taxiDevice.is_null() && *timeForNext == 0 && !crate::microsim::ms_globals::use_meso_sim() {
                             // taxi passengers must leave at the end of the stop duration
                             *timeForNext = stop.pars.started + stop.pars.duration;
                         }
@@ -251,7 +251,7 @@ impl MSDevice_Transportable {
                         }
 
                         let mut arrivalTime = currentTime;
-                        if MSGlobals::gUseMesoSim() {
+                        if crate::microsim::ms_globals::use_meso_sim() {
                             // no boarding / unboarding time in meso
                             arrivalTime += 1;
                         } else {
@@ -322,7 +322,7 @@ impl MSDevice_Transportable {
                 transportable.m().set_departed(currentTime);
             }
         }
-        if MSGlobals::gUseMesoSim() {
+        if crate::microsim::ms_globals::use_meso_sim() {
             // to trigger vehicle leaving
             self.notify_move(veh, -1., -1., -1.);
         }
@@ -603,7 +603,7 @@ impl MSDevice_Transportable {
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
         out.open_tag_id(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, self.get_id());
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.base.get_id());
         let mut nextPerson: SUMOTime = 0;
         let mut nextContainer: SUMOTime = 0;
         if self.myHolder.is_stopped() {
@@ -769,7 +769,8 @@ impl MSDevice_Transportable {
                         let length = self.myOriginalType.get_length() + numAttached * loaded.get_length();
                         stype.set_length(&length);
                         stype.set_mass(self.myOriginalType.get_mass() + numAttached * loaded.get_mass());
-                        let sparam = Ptr::new(stype.get_parameter()).m();
+                        let mut sparamPtr = Ptr::new(stype.get_parameter());
+                        let sparam = sparamPtr.m();
                         sparam.carriageLength = loaded.get_parameter().carriageLength;
                         sparam.locomotiveLength = loaded.get_parameter().locomotiveLength;
                         sparam.carriageGap = loaded.get_parameter().carriageGap;

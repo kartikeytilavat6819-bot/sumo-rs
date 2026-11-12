@@ -9,6 +9,15 @@ use utils::common::time::time2string;
 use utils::common::to_string::to_string;
 use utils::iodevices::output_device::OutputDeviceRef;
 use utils::options::options_cont::{get_bool, is_default, is_set, with_options};
+/// C++ `#define`d flags from utils/vehicle/SUMOVehicleParameter.h (not exported by the port yet)
+const VEHPARS_DEPARTLANE_SET: i64 = 2 << 1;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const VEHPARS_DEPARTSPEED_SET: i64 = 2 << 3;
+const VEHPARS_DEPARTPOSLAT_SET: i64 = 2 << 21;
+const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_Vehroutes` (microsim/devices/MSDevice_Vehroutes.h)
@@ -217,7 +226,8 @@ impl MSDevice_Vehroutes {
             return Ptr::null();
         }
         let hasOption = is_set("vehroute-output");
-        let equipped = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "vehroute", vp.m(), hasOption));
+        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is still todo!() with no arguments in ms_device.rs, upgrade when it is ported
+        let equipped: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported yet");
         if equipped {
             let mut maxRoutes = maxRoutes;
             if MY_LAST_ROUTE_ONLY.load(Relaxed) {
@@ -396,7 +406,7 @@ impl MSDevice_Vehroutes {
                 let departure = if MY_INTENDED_DEPART.load(Relaxed) { this.myHolder.get_parameter().depart } else { sim_step() };
                 *my_route_infos().m().departureCounts.entry(departure).or_insert(0) += 1;
             }
-            if !MSGlobals::gUseMesoSim() {
+            if !crate::microsim::ms_globals::use_meso_sim() {
                 // C++ static_cast<MSVehicle&>(veh): the notified object is the holder, so its lane/lateral data are read from it
                 this.m().myDepartLane = veh.get_lane().get_index();
                 this.m().myDepartPosLat = this.myHolder.get_lateral_position_on_lane();
@@ -405,7 +415,7 @@ impl MSDevice_Vehroutes {
             this.m().myDepartPos = veh.get_position_on_lane();
         }
         if MY_WRITE_STOP_PRIOR_EDGES.load(Relaxed) {
-            if MSGlobals::gUseMesoSim() {
+            if crate::microsim::ms_globals::use_meso_sim() {
                 let e = veh.get_edge();
                 if this.myPriorEdges.is_empty() || *this.myPriorEdges.last().unwrap() != e {
                     this.m().myPriorEdges.push(e);
@@ -581,9 +591,9 @@ impl MSDevice_Vehroutes {
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
         out.open_tag_id(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, self.get_id());
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.base.get_id());
         let mut internals: Vec<String> = Vec::new();
-        if !MSGlobals::gUseMesoSim() {
+        if !crate::microsim::ms_globals::use_meso_sim() {
             internals.push(to_string(&self.myDepartLane));
             internals.push(to_string(&self.myDepartPosLat));
         }
@@ -662,7 +672,7 @@ impl MSDevice_Vehroutes {
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
         let state = attrs.get_string(SUMO_ATTR_STATE);
         let mut bis = state.split_whitespace();
-        if !MSGlobals::gUseMesoSim() {
+        if !crate::microsim::ms_globals::use_meso_sim() {
             self.myDepartLane = next_as(&mut bis);
             self.myDepartPosLat = next_as(&mut bis);
         }
@@ -681,7 +691,8 @@ impl MSDevice_Vehroutes {
             self.myCurrentValid = next_as::<i32>(&mut bis) != 0;
 
             // shortcut: MSRoute::dictionary(id) lookup (returns the route) is not ported yet, only the insert form
-            if let Some(route) = MSRoute::dictionary_lookup(&routeID) {
+            let foundRoute: Option<ConstMSRoutePtr> = panic!("shortcut: MSRoute::dictionary(id) getter is not ported yet, only the insert form exists");
+            if let Some(route) = foundRoute {
                 let edge = MSEdge::dictionary_2(&edgeID);
                 self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(edge, time, route, &info, lastIndex, newIndex, self.myCurrentValid));
             }
@@ -778,7 +789,7 @@ impl MSDevice_Vehroutes {
         let mut dummyMsg = String::new();
         this.myCurrentValid = this.myHolder.has_valid_route(&mut dummyMsg, this.myCurrentRoute.clone());
         if this.myCurrentRoute.get_costs() < 0.0 && MY_WRITE_COSTS.load(Relaxed) {
-            this.myInitialCost = this.myHolder.get_router_tt().recompute_costs(this.myCurrentRoute.get_edges(), this.myHolder, sim_step());
+            this.myInitialCost = this.myHolder.get_router_tt().recompute_costs(this.myCurrentRoute.get_edges(), this.myHolder, sim_step(), Ptr::default());
         }
         this
     }
@@ -935,7 +946,7 @@ impl MSDevice_Vehroutes {
             edgesS.pop(); // remove last ' '
             os.write_attr(SUMO_ATTR_EDGES, &edgesS);
             if MY_ROUTE_LENGTH.load(Relaxed) {
-                let includeInternalLengths = MSGlobals::gUsingInternalLanes() && MSNet::get_instance().has_internal_links();
+                let includeInternalLengths = crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links();
                 let route = self.myReplacedRoutes[iu].route.clone();
                 let routeLength = route.get_distance_between_2(
                     self.myHolder.get_depart_pos(),
@@ -1105,7 +1116,7 @@ impl MSDevice_Vehroutes {
         let od: Ptr<OutputDevice> = if MY_SORTED.load(Relaxed) && routeOut.is_xml() { Ptr::from_mut(&mut stringOut) } else { routeOut };
         let mut tmp: SUMOVehicleParameter = self.myHolder.get_parameter().clone();
         tmp.depart = if MY_INTENDED_DEPART.load(Relaxed) { self.myHolder.get_parameter().depart } else { self.myHolder.get_departure() };
-        if !MSGlobals::gUseMesoSim() {
+        if !crate::microsim::ms_globals::use_meso_sim() {
             if tmp.was_set(VEHPARS_DEPARTLANE_SET) {
                 tmp.departLaneProcedure = DepartLaneDefinition::GIVEN;
                 tmp.departLane = self.myDepartLane;
@@ -1146,7 +1157,7 @@ impl MSDevice_Vehroutes {
             od.m().write_attr("arrival", &time2string(MSNet::get_instance().get_current_time_step()));
         }
         if MY_ROUTE_LENGTH.load(Relaxed) {
-            let includeInternalLengths = MSGlobals::gUsingInternalLanes() && MSNet::get_instance().has_internal_links();
+            let includeInternalLengths = crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links();
             let finalPos = if hasArrived { self.myHolder.get_arrival_pos() } else { self.myHolder.get_position_on_lane() };
             let route = self.myHolder.get_route();
             let routeLength = route.get_distance_between_2(
@@ -1213,7 +1224,8 @@ impl MSDevice_Vehroutes {
         if routeOut.is_xml() {
             od.m().write(&self.myStopOut.get_string());
         }
-        self.myHolder.get_parameter().write_params(od.m());
+        // shortcut: Parameterised::writeParams is not ported yet, upgrade with utils/common/Parameterised
+        panic!("shortcut: writeParams(dev) not ported");
         od.m().close_tag("");
         od.m().lf();
         if MY_SORTED.load(Relaxed) && routeOut.is_xml() {
