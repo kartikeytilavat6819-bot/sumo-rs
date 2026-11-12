@@ -27,7 +27,20 @@ impl AGCity {
     //         streetsCompleted(false) {}
     #[allow(unused_variables)]
     pub fn new(net: Ptr<RONet>) -> Self {
-        todo!("port AGCity::AGCity")
+        Self {
+            statData: Ptr::from_mut(AGDataAndStatistics::get_data_and_statistics()),
+            streets: Vec::new(),
+            passengerStreets: Vec::new(),
+            workPositions: Vec::new(),
+            schools: VecDeque::new(),
+            busLines: VecDeque::new(),
+            households: VecDeque::new(),
+            cityGates: Vec::new(),
+            peopleIncoming: VecDeque::new(),
+            net,
+            streetsCompleted: false,
+            nbrCars: 0,
+        }
     }
 
     /// C++: `void AGCity::completeStreets()`
@@ -85,7 +98,55 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn complete_streets(&mut self) {
-        todo!("port AGCity::completeStreets")
+        if self.streetsCompleted {
+            return;
+        } else {
+            self.streetsCompleted = true;
+        }
+
+        let mut pop = 0.0;
+        let mut work = 0.0;
+
+        for it in self.streets.iter() {
+            pop += it.get_population();
+            work += it.get_workplace_number();
+            if it.allows(SVC_PASSENGER) {
+                self.passengerStreets.push(*it);
+            }
+        }
+        let sd = self.statData;
+        sd.m().factorInhabitants = sd.m().inhabitants as f64 / pop;
+        //can be improved with other input data
+        let mut neededWorkPositionsInCity = (1.0 - sd.m().unemployement)
+            * ((sd.m().get_people_younger_than(sd.m().limitAgeRetirement) as f64)
+                - (sd.m().get_people_younger_than(sd.m().limitAgeChildren) as f64))
+            + (sd.m().incomingTraffic as f64);
+        // by default laborDemand = 1.05. We generate 5% more work positions that really needed to avoid any expensive research of random work positions
+        neededWorkPositionsInCity *= sd.m().laborDemand;
+        sd.m().workPositions = neededWorkPositionsInCity as i32;
+        sd.m().factorWorkPositions = neededWorkPositionsInCity / work;
+
+        for it in self.streets.iter() {
+            let f = sd.m().factorInhabitants;
+            let p = it.get_population() * f;
+            it.m().set_population(p);
+            let w = it.get_workplace_number() * sd.m().factorWorkPositions;
+            it.m().set_workplace_number(w);
+        }
+
+        //completing streets from edges of the network not handled/present in STAT file (no population no work position)
+        let net = self.net;
+        for (_, itE) in net.get_edge_map().iter() {
+            let found = self.streets.iter().any(|s| *s == itE.cast::<AGStreet>());
+            //if this edge isn't represented by a street
+            if !found && !itE.is_internal() {
+                let street = itE.cast::<AGStreet>();
+                self.streets.push(street);
+                if (itE.get_permissions() & SVC_PASSENGER) == SVC_PASSENGER {
+                    self.passengerStreets.push(street);
+                }
+            }
+        }
     }
 
     /// C++: `void AGCity::generateWorkPositions()`
@@ -115,7 +176,26 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn generate_work_positions(&mut self) {
-        todo!("port AGCity::generateWorkPositions")
+        let mut workPositionCounter = 0;
+        // shortcut: C++ try/catch(std::bad_alloc) that prints the counter and rethrows is not mirrored; Rust aborts on OOM
+        for s in 0..self.streets.len() {
+            let street = self.streets[s];
+            let mut i: i32 = 0;
+            while (i as f64) < street.get_workplace_number() {
+                self.workPositions.push(AGWorkPosition::new(self.statData, &*street));
+                workPositionCounter += 1;
+                i += 1;
+            }
+        }
+        //std::cout << "Inner work positions done. " << workPositionCounter << " generated." << std::endl;
+
+        // Work positions outside the city
+        self.generate_outgoing_wp();
+        let sd = self.statData;
+        println!("--> work position:");
+        println!("  |-> in city: {}", workPositionCounter);
+        println!("  |-> out city: {}", sd.m().workPositions - workPositionCounter);
+        println!("  |-> in+out city: {}", sd.m().workPositions);
     }
 
     /// C++: `void AGCity::completeBusLines()`
@@ -129,7 +209,10 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn complete_bus_lines(&mut self) {
-        todo!("port AGCity::completeBusLines")
+        for it in self.busLines.iter_mut() {
+            //it->generateOpositDirection();
+            it.set_bus_names();
+        }
     }
 
     /// C++: `void AGCity::generatePopulation()`
@@ -218,7 +301,85 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn generate_population(&mut self) {
-        todo!("port AGCity::generatePopulation")
+        self.nbrCars = 0;
+        let mut idHouseholds: i32 = 0;
+        let sd = self.statData;
+        let hhCount = sd.m().households;
+        let mut numAdults: Vec<i32> = vec![0; hhCount as usize];
+        let mut numChilds: Vec<i32> = vec![0; hhCount as usize];
+        let mut totalChildrenLeft = sd.m().inhabitants - sd.m().get_people_older_than(sd.m().limitAgeChildren);
+        // C++ divides two ints here (integer division, then converted to double): kept as is
+        let retiredProb = (sd.m().get_people_older_than(sd.m().limitAgeRetirement) / sd.m().get_people_older_than(sd.m().limitAgeChildren)) as f64;
+        for i in 0..hhCount {
+            let i = i as usize;
+            numAdults[i] = 1;
+            numChilds[i] = 0;
+            if utils::common::rand_helper::rand() < retiredProb {
+                numAdults[i] = -numAdults[i];
+            } else if totalChildrenLeft > 0 {
+                let mean = sd.m().meanNbrChildren;
+                numChilds[i] = sd.m().get_poissons_number_of_children(mean);
+                totalChildrenLeft -= numChilds[i];
+            }
+        }
+        //compensate with adults for too many / missing children
+        let numSecondPers = sd.m().get_people_older_than(sd.m().limitAgeChildren) - sd.m().households + totalChildrenLeft;
+        for i in 0..numSecondPers {
+            let index = (i as usize) % numAdults.len();
+            if numAdults[index] >= 0 {
+                numAdults[index] += 1;
+            } else {
+                numAdults[index] -= 1;
+            }
+        }
+        let mut people = 0.0;
+        for s in 0..self.streets.len() {
+            let street = self.streets[s];
+            people += street.get_population();
+            while people > 0.0 && idHouseholds < numAdults.len() as i32 {
+                let i = utils::common::rand_helper::with_default(|r| r.rand_int(numAdults.len() as i32 - idHouseholds)) as usize;
+                idHouseholds += 1;
+                let city = Ptr::from_mut(self);
+                self.households.push_back(AGHousehold::new_2(street, city, idHouseholds));
+                let adults = numAdults[i].abs();
+                let children = numChilds[i];
+                let firstRetired = numAdults[i] < 0;
+                self.households.back_mut().unwrap().generate_people(adults, children, firstRetired);
+                people -= self.households.back_mut().unwrap().get_people_nbr() as f64;
+                numAdults[i] = numAdults[numAdults.len() - (idHouseholds as usize)];
+                numChilds[i] = numChilds[numAdults.len() - (idHouseholds as usize)];
+            }
+        }
+
+        //people from outside of the city generation:
+        self.generate_incoming_population();
+
+        //TEST
+        let mut nbrSingle = 0;
+        let mut nbrCouple = 0;
+        let mut nbrChild = 0;
+        let mut nbrHH = 0;
+        for itt in self.households.iter_mut() {
+            if itt.get_adult_nbr() == 1 {
+                nbrSingle += 1;
+            }
+            if itt.get_adult_nbr() == 2 {
+                nbrCouple += 2;
+            }
+            nbrChild += itt.get_people_nbr() - itt.get_adult_nbr();
+            nbrHH += 1;
+        }
+        //END TEST
+
+        println!("--> population:");
+        println!("  |-> city households: {}", nbrHH);
+        println!("  |-> city people: {}", nbrSingle + nbrCouple + nbrChild);
+        println!("    |-> city single: {} / (in) couple: {}", nbrSingle, nbrCouple);
+        println!("    |-> city adults: {}", nbrSingle + nbrCouple);
+        println!("      |-> estimation: {}", sd.m().get_people_older_than(sd.m().limitAgeChildren));
+        println!("      |-> retired: {}", sd.m().get_people_older_than(sd.m().limitAgeRetirement));
+        println!("    |-> city children: {}", nbrChild);
+        println!("      |-> estimation: {}", sd.m().get_people_younger_than(sd.m().limitAgeChildren));
     }
 
     /// C++: `void AGCity::schoolAllocation()`
@@ -244,7 +405,10 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn school_allocation(&mut self) {
-        todo!("port AGCity::schoolAllocation")
+        for it in self.households.iter_mut() {
+            // C++ shortage warning is commented out upstream, so the result is unused
+            let _shortage = !it.allocate_children_school();
+        }
     }
 
     /// C++: `void AGCity::workAllocation()`
@@ -315,7 +479,64 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn work_allocation(&mut self) {
-        todo!("port AGCity::workAllocation")
+        let debug = utils::options::options_cont::get_bool("debug");
+        let sd = self.statData;
+        sd.m().AdultNbr = 0;
+        //end tests
+        /**
+         * people from the city
+         */
+        if debug {
+            println!();
+        }
+
+        for it in self.households.iter_mut() {
+            if it.retired_householders() {
+                continue;
+            }
+            let shortage = !it.allocate_adults_work();
+            if shortage {
+                println!("===> ERROR: Not enough work positions in the city for all working people...");
+            }
+            sd.m().AdultNbr += it.get_adult_nbr(); //TESTING
+            if debug {
+                print!(" processed {} adults\r", sd.m().AdultNbr);
+            }
+        }
+
+        /**
+         * people from outside
+         */
+        for itA in self.peopleIncoming.iter_mut() {
+            if sd.m().workPositions > 0 {
+                itA.try_to_work(1.0, Ptr::from_mut(&mut self.workPositions));
+            } else {
+                //shouldn't happen
+                println!("not enough work for incoming people...");
+            }
+        }
+
+        //BEGIN TESTS
+        let mut workingP = 0;
+        for itt in self.households.iter_mut() {
+            if itt.get_adult_nbr() == 1 {
+                if itt.get_adults().front().unwrap().is_working() {
+                    workingP += 1;
+                }
+            }
+            if itt.get_adult_nbr() == 2 {
+                if itt.get_adults().front().unwrap().is_working() {
+                    workingP += 1;
+                }
+                if itt.get_adults().back().unwrap().is_working() {
+                    workingP += 1;
+                }
+            }
+        }
+        println!("  |-> working people: {}", self.peopleIncoming.len() as i32 + workingP);
+        println!("    |-> working people in city: {}", workingP);
+        println!("    |-> working people from outside: {}", self.peopleIncoming.len());
+        //END TESTS
     }
 
     /// C++: `void AGCity::carAllocation()`
@@ -364,7 +585,38 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn car_allocation(&mut self) {
-        todo!("port AGCity::carAllocation")
+        let sd = self.statData;
+        sd.m().hhFarFromPT = 0;
+        self.nbrCars = 0;
+        // shortcut: the std::map overload of isCloseFromPubTransport is not ported; the bus stations are copied in map order and the list overload is used
+        let mut busStations: VecDeque<AGPosition> = sd.m().busStations.values().copied().collect();
+        let busStationsPtr = Ptr::from_mut(&mut busStations);
+        for it in self.households.iter_mut() {
+            if !it.is_close_from_pub_transport(busStationsPtr) {
+                sd.m().hhFarFromPT += 1;
+                self.nbrCars += 1;
+                it.add_a_car();
+            }
+            sd.m().householdsNbr += 1;
+        }
+        // new rate: the rate on the people that have'nt any car yet:
+        // nR = (R * Drivers - AlreadyCars) / (Drivers - AlreadyCars)
+        let older = sd.m().get_people_older_than(sd.m().limitAgeChildren);
+        let mut newRate = sd.m().carRate * (older as f64) - (sd.m().hhFarFromPT as f64);
+        if older == sd.m().hhFarFromPT {
+            newRate = 0.0;
+        } else {
+            newRate /= (older - sd.m().hhFarFromPT) as f64;
+        }
+        if newRate < 0.0 || newRate >= 1.0 {
+            newRate = 0.0;
+        }
+
+        self.nbrCars = 0;
+        for it in self.households.iter_mut() {
+            it.generate_cars(newRate);
+            self.nbrCars += it.get_car_nbr();
+        }
     }
 
     /// C++: `const AGStreet & AGCity::getStreet(const std::string &)`
@@ -395,7 +647,25 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn get_street(&mut self, edge: &str) -> &AGStreet {
-        todo!("port AGCity::getStreet")
+        /**
+         * verify if it is the first time this function is called
+         * in this case, we have to complete the streets with the
+         * network edges this means that streets are completely
+         * loaded (no any more to be read from stat-file)
+         */
+        if !self.streetsCompleted {
+            self.statData.m().consolidate_stat();
+            self.complete_streets();
+            println!("first completed in getStreet() of City: Consolidation of data not needed in ActivityGen any more");
+        }
+        //rest of the function
+        for s in self.streets.iter() {
+            if s.get_id() == edge {
+                return &**s;
+            }
+        }
+        println!("===> ERROR: WRONG STREET EDGE ({}) given and not found in street set.", edge);
+        panic!("{}", ProcessError::new(format!("Street not found with edge id {}", edge)));
     }
 
     /// C++: `const AGStreet & AGCity::getRandomStreet()`
@@ -409,7 +679,12 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn get_random_street(&mut self) -> &AGStreet {
-        todo!("port AGCity::getRandomStreet")
+        if self.passengerStreets.is_empty() {
+            panic!("{}", ProcessError::new("No street that allows passenger vehicles found in this city."));
+        }
+        let v = &self.passengerStreets;
+        let s = utils::common::rand_helper::with_default(|r| r.get_random_from(v));
+        &**s
     }
 
     /// C++: `AGSchool AGCity::closestSchoolTo(AGPosition)` [private]
@@ -451,7 +726,31 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn generate_outgoing_wp(&mut self) {
-        todo!("port AGCity::generateOutgoingWP")
+        // work positions outside the city
+        let sd = self.statData;
+        let mut nbrWorkers = (sd.m().get_people_younger_than(sd.m().limitAgeRetirement) - sd.m().get_people_younger_than(sd.m().limitAgeChildren)) as f64;
+        if nbrWorkers <= 0.0 {
+            return;
+        }
+        nbrWorkers *= 1.0 - sd.m().unemployement;
+        /**
+         * N_out = N_in * (ProportionOut / (1 - ProportionOut)) = N_out = N_in * (Noutworkers / (Nworkers - Noutworkers))
+         */
+        let outgoing = sd.m().outgoingTraffic as f64;
+        let nbrOutWorkPositions = (self.workPositions.len() as f64 * outgoing / (nbrWorkers - outgoing)) as i32;
+
+        if self.cityGates.is_empty() {
+            sd.m().workPositions = self.workPositions.len() as i32;
+            return;
+        }
+
+        for _i in 0..nbrOutWorkPositions {
+            let posi = sd.m().get_random_city_gate_by_outgoing() as usize;
+            let gate = self.cityGates[posi];
+            self.workPositions.push(AGWorkPosition::new_2(sd, gate.get_street(), gate.get_position()));
+        }
+        //cout << "outgoing traffic: " << statData.outgoingTraffic << std::endl;
+        sd.m().workPositions = self.workPositions.len() as i32;
     }
 
     /// C++: `void AGCity::generateIncomingPopulation()` [private]
@@ -465,7 +764,11 @@ impl AGCity {
     // }
     #[allow(unused_variables)]
     pub fn generate_incoming_population(&mut self) {
-        todo!("port AGCity::generateIncomingPopulation")
+        let sd = self.statData;
+        for _i in 0..sd.m().incomingTraffic {
+            let age = sd.m().get_random_pop_distributed(sd.m().limitAgeChildren, sd.m().limitAgeRetirement);
+            self.peopleIncoming.push_back(AGAdult::new(age));
+        }
     }
 
     /// C++: `AGCity & AGCity::operator=(const AGCity &)` [private]
