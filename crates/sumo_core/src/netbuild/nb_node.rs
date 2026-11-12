@@ -4,6 +4,7 @@ use crate::prelude::*;
 use utils::common::to_string::f64_to_string;
 use utils::geom::POSITION_EPS;
 use utils::geom::geom_helper::{angle_diff, deg2rad, rad2deg};
+use utils::common::sumo_vehicle_class::SVC_PEDESTRIAN;
 
 // C++ static constants of NBNode (NBNode.cpp:86-94)
 const NBNODE_FORWARD: i32 = 1;
@@ -14,6 +15,12 @@ const NBNODE_FOUR_CONTROL_POINTS: i32 = 4;
 const NBNODE_AVOID_INTERSECTING_LEFT_TURNS: i32 = 8;
 const NBNODE_SCURVE_IGNORE: i32 = 16;
 const NBNODE_INDIRECT_LEFT: i32 = 32;
+// C++ NBNode.cpp:60-63 (degrees / meters)
+const NBNODE_EXTEND_CROSSING_ANGLE_THRESHOLD: f64 = 35.0;
+const NBNODE_SPLIT_CROSSING_WIDTH_THRESHOLD: f64 = 1.5;
+const NBNODE_SPLIT_CROSSING_ANGLE_THRESHOLD: f64 = 5.0;
+// C++ NBEdge::UNSPECIFIED_WIDTH
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
 
 // C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
 // nb_edge.rs / nb_node.rs expose them as statics).
@@ -3921,7 +3928,107 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn guess_crossings(&mut self) -> i32 {
-        todo!("port NBNode::guessCrossings")
+        let mut numGuessed: i32 = 0;
+        if self.myCrossings.len() > 0 || self.myDiscardAllCrossings {
+            // user supplied crossings, do not guess
+            return numGuessed;
+        }
+        let me = Ptr::from_mut(self);
+        let allEdges = self.get_edges_sorted_by_angle_at_node_center();
+        // check for pedestrial lanes going clockwise around the node
+        let mut normalizedLanes: Vec<(Ptr<NBEdge>, bool)> = Vec::new();
+        for it in allEdges.iter() {
+            let edge = *it;
+            let lanes = edge.get_lanes();
+            if edge.get_from_node() == me {
+                for lane in lanes.iter().rev() {
+                    normalizedLanes.push((edge, (lane.permissions & SVC_PEDESTRIAN) != 0));
+                }
+            } else {
+                for lane in lanes.iter() {
+                    normalizedLanes.push((edge, (lane.permissions & SVC_PEDESTRIAN) != 0));
+                }
+            }
+        }
+        // do we even have a pedestrian lane?
+        let mut firstSidewalk: i32 = -1;
+        for i in 0..normalizedLanes.len() {
+            if normalizedLanes[i].1 {
+                firstSidewalk = i as i32;
+                break;
+            }
+        }
+        let mut hadCandidates: i32 = 0;
+        let mut connectedCandidates: Vec<i32> = Vec::new(); // number of crossings that were built for each connected candidate
+        if firstSidewalk != -1 {
+            // rotate lanes to ensure that the first one allows pedestrians
+            let fs = firstSidewalk as usize;
+            let mut tmp: Vec<(Ptr<NBEdge>, bool)> = Vec::new();
+            tmp.extend_from_slice(&normalizedLanes[fs..]);
+            tmp.extend_from_slice(&normalizedLanes[..fs]);
+            normalizedLanes = tmp;
+            // find candidates
+            let mut candidates: EdgeVector = Vec::new();
+            for i in 0..normalizedLanes.len() {
+                let edge = normalizedLanes[i].0;
+                let allowsPed = normalizedLanes[i].1;
+                if !allowsPed && (candidates.len() == 0 || candidates.last() != Some(&edge)) {
+                    candidates.push(edge);
+                } else if allowsPed {
+                    if candidates.len() > 0 {
+                        if hadCandidates > 0 || self.forbids_pedestrians_after(normalizedLanes.clone(), i as i32) {
+                            hadCandidates += 1;
+                            let n = self.check_crossing(candidates.clone(), false);
+                            numGuessed += n;
+                            if n > 0 {
+                                connectedCandidates.push(n);
+                            }
+                        }
+                        candidates.clear();
+                    }
+                }
+            }
+            if hadCandidates > 0 && candidates.len() > 0 {
+                // avoid wrapping around to the same sidewalk
+                hadCandidates += 1;
+                let n = self.check_crossing(candidates.clone(), false);
+                numGuessed += n;
+                if n > 0 {
+                    connectedCandidates.push(n);
+                }
+            }
+        }
+        // Avoid duplicate crossing between the same pair of walkingareas
+        if hadCandidates == 2 && connectedCandidates.len() == 2 {
+            // One or both of them might be split: remove the one with less splits
+            if connectedCandidates[1] <= connectedCandidates[0] {
+                numGuessed -= connectedCandidates[1];
+                let keep = self.myCrossings.len() - connectedCandidates[1] as usize;
+                self.myCrossings.truncate(keep);
+            } else {
+                numGuessed -= connectedCandidates[0];
+                self.myCrossings.drain(0..connectedCandidates[0] as usize);
+            }
+        }
+        // determinism: C++ std::sort is unstable; a stable sort_by is used here
+        let sorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(Ptr::from_mut(self), &self.myAllEdges);
+        self.myCrossings.sort_by(|a, b| {
+            if sorter.call_op(a, b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(b, a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        if numGuessed > 0 && self.is_simple_continuation(true, true) {
+            // avoid narrow node shape when there is a crossing
+            self.compute_node_shape(-1.);
+            for e in self.myAllEdges.iter() {
+                e.m().compute_edge_shape(-1.);
+            }
+        }
+        numGuessed
     }
 
     /// C++: `int NBNode::checkCrossing(EdgeVector, bool)`
@@ -4004,7 +4111,75 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_crossing(&mut self, candidates: EdgeVector, checkOnly: bool) -> i32 {
-        todo!("port NBNode::checkCrossing")
+        if candidates.len() == 0 {
+            // no crossing added (numCandidates=0)
+            return 0;
+        }
+        let me = Ptr::from_mut(self);
+        // check whether the edges may be part of a common crossing due to having similar angle
+        let mut prevAngle: f64 = -100000.; // dummy
+        for i in 0..candidates.len() {
+            let edge = candidates[i];
+            let angle = candidates[i].m().get_crossing_angle(me);
+            // edges should be sorted by angle but this only holds true approximately
+            if i > 0 && NBHelpers::rel_angle(angle, prevAngle).abs() > NBNODE_EXTEND_CROSSING_ANGLE_THRESHOLD {
+                return 0;
+            }
+            if !checkOnly && !self.is_tl_controlled() && self.get_type() != SumoXMLNodeType::RAIL_CROSSING && edge.get_speed() > utils::options::options_cont::get_float("crossings.guess.speed-threshold") {
+                return 0;
+            }
+            prevAngle = angle;
+        }
+        if candidates.len() == 1 || self.get_type() == SumoXMLNodeType::RAIL_CROSSING {
+            if !checkOnly {
+                let priority = self.is_tl_controlled() || (self.is_roundabout() && utils::options::options_cont::get_bool("crossings.guess.roundabout-priority"));
+                self.add_crossing(candidates, NBEDGE_UNSPECIFIED_WIDTH, priority, -1, -1, &PositionVector::default(), false, Ptr::default());
+            }
+            return 1;
+        }
+        // check for intermediate walking areas
+        prevAngle = -100000.; // dummy
+        for it in 0..candidates.len() {
+            let angle = candidates[it].m().get_crossing_angle(me);
+            if it != 0 {
+                let prev = candidates[it - 1];
+                let curr = candidates[it];
+                // compute distance between candiate edges
+                let mut intermediateWidth: f64 = 0.;
+                let mut laneI: i32;
+                let prevPos: Position;
+                if prev.get_to_node() == me {
+                    laneI = prev.get_num_lanes() - 1;
+                    prevPos = *prev.get_lanes()[laneI as usize].shape.at(-1);
+                } else {
+                    laneI = 0;
+                    prevPos = *prev.get_lanes()[laneI as usize].shape.at(0);
+                }
+                intermediateWidth -= 0.5 * prev.get_lane_width_2(laneI);
+                let currPos: Position;
+                if curr.get_from_node() == me {
+                    laneI = curr.get_num_lanes() - 1;
+                    currPos = *curr.get_lanes()[laneI as usize].shape.at(0);
+                } else {
+                    laneI = 0;
+                    currPos = *curr.get_lanes()[laneI as usize].shape.at(-1);
+                }
+                intermediateWidth -= 0.5 * curr.get_lane_width_2(laneI);
+                intermediateWidth += currPos.distance_to2d(&prevPos);
+                if NBHelpers::rel_angle(prevAngle, angle).abs() > NBNODE_SPLIT_CROSSING_ANGLE_THRESHOLD || (intermediateWidth > NBNODE_SPLIT_CROSSING_WIDTH_THRESHOLD) {
+                    // determinism: C++ leaves the evaluation order of the two operands of '+' unspecified; left-to-right here
+                    let first = self.check_crossing(candidates[..it].to_vec(), checkOnly);
+                    let second = self.check_crossing(candidates[it..].to_vec(), checkOnly);
+                    return first + second;
+                }
+            }
+            prevAngle = angle;
+        }
+        if !checkOnly {
+            let priority = self.is_tl_controlled() || (self.is_roundabout() && utils::options::options_cont::get_bool("crossings.guess.roundabout-priority"));
+            self.add_crossing(candidates, NBEDGE_UNSPECIFIED_WIDTH, priority, -1, -1, &PositionVector::default(), false, Ptr::default());
+        }
+        1
     }
 
     /// C++: `bool NBNode::checkCrossingDuplicated(EdgeVector)`
@@ -4026,7 +4201,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_crossing_duplicated(&mut self, edges: EdgeVector) -> bool {
-        todo!("port NBNode::checkCrossingDuplicated")
+        // sort edge vector
+        let mut edges = edges;
+        edges.sort();
+        // iterate over crossing to find a crossing with the same edges
+        for crossing in self.myCrossings.iter() {
+            // sort edges of crossing before compare
+            let mut edgesOfCrossing: EdgeVector = crossing.edges.clone();
+            edgesOfCrossing.sort();
+            if edgesOfCrossing == edges {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double NBNode::buildInnerEdges()`
@@ -4055,7 +4242,25 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_inner_edges(&mut self) -> f64 {
-        todo!("port NBNode::buildInnerEdges")
+        // myDisplacementError is computed during this operation. reset first
+        self.myDisplacementError = 0.;
+        // build inner edges for vehicle movements across the junction
+        let mut noInternalNoSplits: i32 = 0;
+        for edge in self.myIncomingEdges.iter() {
+            for con in edge.get_connections().iter() {
+                if con.toEdge.is_null() {
+                    continue;
+                }
+                noInternalNoSplits += 1;
+            }
+        }
+        let mut lno: i32 = 0;
+        let mut splitNo: i32 = 0;
+        let mut maxCrossingSeconds: f64 = 0.;
+        for edge in self.myIncomingEdges.iter() {
+            maxCrossingSeconds = maxCrossingSeconds.max(edge.m().build_inner_edges(&*self, noInternalNoSplits, &mut lno, &mut splitNo));
+        }
+        maxCrossingSeconds
     }
 
     /// C++: `int NBNode::buildCrossings()`
