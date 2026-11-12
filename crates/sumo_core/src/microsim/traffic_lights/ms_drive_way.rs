@@ -375,16 +375,13 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_depart_drive_way(edge: Ptr<MSEdge>, id: &str) -> Ptr<MSDriveWay> {
-        MY_DEPARTURE_DRIVEWAYS.with(|m| {
-            if let Some(dws) = m.borrow().get(&edge) {
-                for dw in dws {
-                    if dw.base2.get_id() == id {
-                        return *dw;
-                    }
-                }
+        let dws = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().get(&edge).cloned().unwrap_or_default());
+        for dw in dws.iter() {
+            if dw.base2.get_id() == id {
+                return *dw;
             }
-            Ptr::null()
-        })
+        }
+        Ptr::null()
     }
 
     /// C++: `bool MSDriveWay::notifyEnter(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -1223,7 +1220,7 @@ impl MSDriveWay {
                     let e = self.myRoute[start as usize];
                     if e.get_from_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
                         let p = self.myRoute[start as usize - 1];
-                        let link = p.get_lanes().first().unwrap().get_link_to(e.get_lanes().first().unwrap());
+                        let link = p.get_lanes().first().unwrap().get_link_to(*e.get_lanes().first().unwrap());
                         if !link.is_null() && link.is_tls_controlled() {
                             let rs = as_rail_signal(link.get_tl_logic());
                             if !rs.is_null() {
@@ -2491,7 +2488,8 @@ impl MSDriveWay {
         }
         let junction = edge.get_from_junction();
         let index = MY_DEPART_DRIVEWAY_INDEX.with(|m| {
-            let e = m.borrow_mut().entry(junction).or_insert(0);
+            let mut map = m.borrow_mut();
+            let e = map.entry(junction).or_insert(0);
             let v = *e;
             *e += 1;
             v
@@ -3362,13 +3360,13 @@ impl MSDriveWay {
             for &in_lane in in_edge.get_lanes().iter() {
                 let in_bidi = in_lane.get_bidi_lane();
                 if is_railway_or_shared(in_lane.get_permissions())
-                    && !visited.contains(&in_lane)
-                    && (in_bidi.is_null() || !visited.contains(&in_bidi))
+                    && !visited.contains_key(&in_lane)
+                    && (in_bidi.is_null() || !visited.contains_key(&in_bidi))
                 {
                     for &link in in_lane.get_link_cont().iter() {
                         if link.get_index() >= 0
                             && link_bits_test(logic.get_foes_for(dwLink.get_index()), link.get_index())
-                            && !visited.contains(&link.get_lane())
+                            && !visited.contains_key(&link.get_lane())
                         {
                             if link.get_via_lane().is_null() {
                                 flankSwitches.insert(link);
@@ -5128,22 +5126,23 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn is_switch(link: Ptr<MSLink>) -> bool {
-        for &other in link.get_lane_before().get_normal_predecessor_lane().get_link_cont().iter() {
+        let lane_before = link.get_lane_before();
+        let normal_predecessor = lane_before.get_normal_predecessor_lane();
+        for &other in normal_predecessor.get_link_cont().iter() {
             if other.get_lane() != link.get_lane() && !other.is_turnaround() {
                 return true;
             }
         }
-        for ili in link.get_lane().get_incoming_lanes().iter() {
+        let lane = link.get_lane();
+        for ili in lane.get_incoming_lanes().iter() {
             if ili.viaLink != link && !ili.viaLink.is_turnaround() {
                 return true;
             }
         }
-        let bidi = link.get_lane().get_bidi_lane();
+        let bidi = lane.get_bidi_lane();
         if !bidi.is_null() {
             for &other in bidi.get_link_cont().iter() {
-                if other.get_lane() != link.get_lane_before().get_normal_predecessor_lane().get_bidi_lane()
-                    && !other.is_turnaround()
-                {
+                if other.get_lane() != normal_predecessor.get_bidi_lane() && !other.is_turnaround() {
                     return true;
                 }
             }
