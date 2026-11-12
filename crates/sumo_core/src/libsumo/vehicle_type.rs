@@ -349,7 +349,7 @@ impl VehicleType {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
+    pub fn get_parameter(typeID: &str, key: &str) -> String {
         if starts_with(key, "junctionModel.") {
             panic!("shortcut: VehicleType::getParameter junctionModel branch needs SUMOVTypeParameter::AllowedJMAttrs, which is not ported")
         } else {
@@ -670,7 +670,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn copy(origTypeID: &str, newTypeID: &str) {
-        Self::get_v_type(typeID.to_string()).duplicate_type(newTypeID, true);
+        Self::get_v_type(origTypeID.to_string()).duplicate_type(newTypeID, true);
     }
 
     /// C++: `void VehicleType::setSpeedDeviation(const std::string &, double)` [static]

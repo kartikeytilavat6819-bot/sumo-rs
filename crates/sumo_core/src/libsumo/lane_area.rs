@@ -267,8 +267,10 @@ impl LaneArea {
     //     return getDetector(detID)->getParameter(param, "");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
-        Self::get_detector(detID).get_parameter(key, "")
+    pub fn get_parameter(detID: &str, key: &str) -> String {
+        // shortcut: MSE2Collector has no ported getParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
+        let _ = (detID, key);
+        panic!("LaneArea::getParameter: detector parameters not ported")
     }
 
     /// C++: `const std::pair<std::string, std::string> LaneArea::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -284,8 +286,10 @@ impl LaneArea {
     //     getDetector(detID)->setParameter(name, value);
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        Self::get_detector(detID).m().set_parameter(key, value);
+    pub fn set_parameter(detID: &str, key: &str, value: &str) {
+        // shortcut: MSE2Collector has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
+        let _ = (detID, key, value);
+        panic!("LaneArea::setParameter: detector parameters not ported")
     }
 
     /// C++: `void LaneArea::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -400,7 +404,7 @@ impl LaneArea {
     //     shape.push_back(det->getLanes().back()->getShape().positionAtOffset(det->getEndPos()));
     // }
     #[allow(unused_variables)]
-    pub fn store_shape(id: &str, shape: &mut PositionVector) {
+    pub fn store_shape(detID: &str, shape: &mut PositionVector) {
         let det = Self::get_detector(detID);
         let lanes = det.m().get_lanes();
         shape.push(lanes.first().unwrap().get_shape_2().position_at_offset(det.get_start_pos(), 0.0));
