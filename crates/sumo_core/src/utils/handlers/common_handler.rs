@@ -1,7 +1,13 @@
-//! Port of utils/handlers/CommonHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of utils/handlers/CommonHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Every method is now ported from the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::xml::common_xml_structure::{CommonXMLStructure, CommonXMLStructure_SumoBaseObject};
+use utils::xml::sumo_xml_definitions::{
+    SUMO_ATTR_FROM, SUMO_ATTR_FROM_JUNCTION, SUMO_ATTR_FROM_TAZ, SUMO_ATTR_ID, SUMO_ATTR_KEY, SUMO_ATTR_ROUTE, SUMO_ATTR_TO,
+    SUMO_ATTR_TO_JUNCTION, SUMO_ATTR_TO_TAZ, SUMO_ATTR_VALUE, SUMO_TAG_CONTAINER, SUMO_TAG_CONTAINERFLOW, SUMO_TAG_ERROR, SUMO_TAG_FLOW,
+    SUMO_TAG_PARAM, SUMO_TAG_PERSON, SUMO_TAG_PERSONFLOW, SUMO_TAG_ROOTFILE, SUMO_TAG_ROUTE, SUMO_TAG_ROUTE_DISTRIBUTION, SUMO_TAG_TRIP,
+    SUMO_TAG_VEHICLE, SUMO_TAG_VTYPE_DISTRIBUTION,
+};
 
 /// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table.
 // shortcut: linear reverse lookup of the generated TAGS table, C++ uses a map; upgrade by generating a reverse map
@@ -160,7 +166,32 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_parameters(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port CommonHandler::parseParameters")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // get key
+        let key: String = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut parsedOk, true);
+        // get SumoBaseObject parent
+        let SumoBaseObjectParent = self.myCommonXMLStructure.get_current_sumo_base_object().get_parent_sumo_base_object();
+        // check parent
+        if SumoBaseObjectParent.is_null() || SumoBaseObjectParent.get_tag() == SUMO_TAG_ROOTFILE {
+            self.write_error("Parameters must be defined within an object");
+        } else if SumoBaseObjectParent.get_tag() == SUMO_TAG_PARAM {
+            self.write_error("Parameters cannot be defined within another parameter.");
+        } else if (SumoBaseObjectParent.get_tag() != SUMO_TAG_ERROR) && parsedOk {
+            // get tag str
+            let parentTagStr = tag_str(SumoBaseObjectParent.get_tag());
+            // circumventing empty string value
+            let value: String = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+            // show warnings if values are invalid
+            if key.is_empty() {
+                self.write_error(&format!("Error parsing key from {} generic parameter. Key cannot be empty", parentTagStr));
+            } else if !utils::xml::sumo_xml_definitions::is_valid_parameter_key(&key) {
+                self.write_error(&format!("Error parsing key from {} generic parameter. Key contains invalid characters", parentTagStr));
+            } else {
+                // insert parameter in SumoBaseObjectParent
+                SumoBaseObjectParent.m().add_parameter(&key, &value);
+            }
+        }
     }
 
     /// C++: `CommonXMLStructure::SumoBaseObject * CommonHandler::getEmbeddedRoute(const CommonXMLStructure::SumoBaseObject *) const` [const, protected]
@@ -177,7 +208,13 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_embedded_route(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> Ptr<CommonXMLStructure_SumoBaseObject> {
-        todo!("port CommonHandler::getEmbeddedRoute")
+        // locate route in childrens
+        for embeddedRoute in sumoBaseObject.get_sumo_base_object_children().iter() {
+            if (embeddedRoute.get_tag() == SUMO_TAG_ROUTE) && (!embeddedRoute.has_string_attribute(SUMO_ATTR_ID)) {
+                return Ptr::from_box(embeddedRoute).cast();
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void CommonHandler::checkParsedParent(const SumoXMLTag, const std::vector<SumoXMLTag> &, bool &)` [protected]
@@ -213,7 +250,43 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_parsed_parent(&mut self, currentTag: SumoXMLTag, parentTags: &Vec<SumoXMLTag>, ok: &mut bool) {
-        todo!("port CommonHandler::checkParsedParent")
+        if parentTags.len() > 0 {
+            let mut tagsStr = String::new();
+            let n = parentTags.len();
+            for (i, parentTag) in parentTags.iter().enumerate() {
+                tagsStr.push_str(&tag_str(*parentTag));
+                if i + 1 != n {
+                    if i + 2 != n {
+                        tagsStr.push_str(", ");
+                    } else {
+                        tagsStr.push_str(" or ");
+                    }
+                }
+            }
+            // obtain parent
+            let parent = self.myCommonXMLStructure.get_current_sumo_base_object().get_parent_sumo_base_object();
+            if parent.is_null() {
+                *ok = self.write_error(&format!("'{}' must be defined within the definition of a {}.", tag_str(currentTag), tagsStr));
+            } else if (parent.get_tag() != SUMO_TAG_ERROR) && !parentTags.contains(&parent.get_tag()) {
+                if parent.has_string_attribute(SUMO_ATTR_ID) {
+                    let parentID = parent.get_string_attribute(SUMO_ATTR_ID).cloned().unwrap_or_default();
+                    *ok = self.write_error(&format!(
+                        "'{}' must be defined within the definition of a '{}' (found {} '{}').",
+                        tag_str(currentTag),
+                        tagsStr,
+                        tag_str(parent.get_tag()),
+                        parentID
+                    ));
+                } else {
+                    *ok = self.write_error(&format!(
+                        "'{}' must be defined within the definition of a '{}' (found {}).",
+                        tag_str(currentTag),
+                        tagsStr,
+                        tag_str(parent.get_tag())
+                    ));
+                }
+            }
+        }
     }
 
     /// C++: `bool CommonHandler::checkListOfVehicleTypes(const SumoXMLTag, const std::string &, const std::vector<std::string> &)` [protected]
@@ -253,7 +326,15 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_within_distribution(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port CommonHandler::checkWithinDistribution")
+        if obj.get_parent_sumo_base_object().is_null() {
+            return false;
+        } else if obj.get_parent_sumo_base_object().get_tag() == SUMO_TAG_ROUTE_DISTRIBUTION {
+            return true;
+        } else if obj.get_parent_sumo_base_object().get_tag() == SUMO_TAG_VTYPE_DISTRIBUTION {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool CommonHandler::checkVehicleParents(CommonXMLStructure::SumoBaseObject *)` [protected]
@@ -289,7 +370,33 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_vehicle_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port CommonHandler::checkVehicleParents")
+        let sbo = obj;
+        if obj.is_null() {
+            return false;
+        } else if !sbo.has_string_attribute(SUMO_ATTR_ID) {
+            return false;
+        } else {
+            let tag = sbo.get_tag();
+            let id = sbo.get_string_attribute(SUMO_ATTR_ID).cloned().unwrap_or_default();
+            let hasRoute = sbo.has_string_attribute(SUMO_ATTR_ROUTE);
+            let hasEmbeddedRoute = !self.get_embedded_route(obj).is_null();
+            let overEdges = sbo.has_string_attribute(SUMO_ATTR_FROM) && sbo.has_string_attribute(SUMO_ATTR_TO);
+            let overJunctions = sbo.has_string_attribute(SUMO_ATTR_FROM_JUNCTION) && sbo.has_string_attribute(SUMO_ATTR_TO_JUNCTION);
+            let overTAZs = sbo.has_string_attribute(SUMO_ATTR_FROM_TAZ) && sbo.has_string_attribute(SUMO_ATTR_TO_TAZ);
+            if hasRoute && hasEmbeddedRoute {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Cannot have an external route and an embedded route in the same definition.", tag_str(tag), id));
+            }
+            if (overEdges as i32 + overJunctions as i32 + overTAZs as i32) > 1 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Cannot have multiple from-to attributes.", tag_str(tag), id));
+            }
+            if (hasRoute as i32 + hasEmbeddedRoute as i32 + overEdges as i32 + overJunctions as i32 + overTAZs as i32) > 1 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Cannot have from-to attributes and route attributes in the same definition.", tag_str(tag), id));
+            }
+            if (hasRoute as i32 + hasEmbeddedRoute as i32 + overEdges as i32 + overJunctions as i32 + overTAZs as i32) == 0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Requires either a route or an embedded route or a from-to attribute (Edges, junctions or TAZs).", tag_str(tag), id));
+            }
+            return true;
+        }
     }
 
     /// C++: `bool CommonHandler::checkPersonPlanParents(CommonXMLStructure::SumoBaseObject *)` [protected]
@@ -309,7 +416,16 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_person_plan_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port CommonHandler::checkPersonPlanParents")
+        let parent = obj.get_parent_sumo_base_object();
+        if parent.is_null() {
+            return false;
+        } else if !parent.was_created() {
+            return false;
+        } else if (parent.get_tag() == SUMO_TAG_PERSON) || (parent.get_tag() == SUMO_TAG_PERSONFLOW) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool CommonHandler::checkContainerPlanParents(CommonXMLStructure::SumoBaseObject *)` [protected]
@@ -329,7 +445,16 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_container_plan_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port CommonHandler::checkContainerPlanParents")
+        let parent = obj.get_parent_sumo_base_object();
+        if parent.is_null() {
+            return false;
+        } else if !parent.was_created() {
+            return false;
+        } else if (parent.get_tag() == SUMO_TAG_CONTAINER) || (parent.get_tag() == SUMO_TAG_CONTAINERFLOW) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool CommonHandler::checkStopParents(CommonXMLStructure::SumoBaseObject *)` [protected]
@@ -352,7 +477,24 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_stop_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
-        todo!("port CommonHandler::checkStopParents")
+        let parent = obj.get_parent_sumo_base_object();
+        if parent.is_null() {
+            return false;
+        } else if !parent.was_created() {
+            return false;
+        } else if (parent.get_tag() == SUMO_TAG_ROUTE)
+            || (parent.get_tag() == SUMO_TAG_TRIP)
+            || (parent.get_tag() == SUMO_TAG_VEHICLE)
+            || (parent.get_tag() == SUMO_TAG_FLOW)
+            || (parent.get_tag() == SUMO_TAG_PERSON)
+            || (parent.get_tag() == SUMO_TAG_PERSONFLOW)
+            || (parent.get_tag() == SUMO_TAG_CONTAINER)
+            || (parent.get_tag() == SUMO_TAG_CONTAINERFLOW)
+        {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool CommonHandler::checkNegative(const SumoXMLTag, const std::string &, const SumoXMLAttr, const int, const bool)` [protected]

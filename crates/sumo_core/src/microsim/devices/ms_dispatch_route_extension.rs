@@ -31,7 +31,7 @@ impl MSDispatch_RouteExtension {
     //         MSDispatch_Greedy(params)
     //     {}
     #[allow(unused_variables)]
-    pub fn new(params: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
         todo!("port MSDispatch_RouteExtension::MSDispatch_RouteExtension")
     }
 

@@ -1498,6 +1498,57 @@ pub struct SUMOVehicleParameter_Stop {
     pub breakDown: bool,
 }
 
+/// C++ `SUMOVehicleParameter::Stop stop;` (default member values of SUMOVehicleParameter.h)
+impl Default for SUMOVehicleParameter_Stop {
+    fn default() -> Self {
+        SUMOVehicleParameter_Stop {
+            base: Parameterised::new(),
+            edge: String::new(),
+            lane: String::new(),
+            busstop: String::new(),
+            containerstop: String::new(),
+            parkingarea: String::new(),
+            chargingStation: String::new(),
+            overheadWireSegment: String::new(),
+            startPos: 0.,
+            endPos: 0.,
+            arrival: -1,
+            duration: -1,
+            durationDist: (),
+            until: -1,
+            extension: -1,
+            waitUntil: -1,
+            triggered: false,
+            containerTriggered: false,
+            joinTriggered: false,
+            parking: ParkingType::ONROAD,
+            awaitedPersons: BTreeSet::new(),
+            permitted: BTreeSet::new(),
+            awaitedContainers: BTreeSet::new(),
+            friendlyPos: false,
+            actType: String::new(),
+            tripId: String::new(),
+            line: String::new(),
+            split: String::new(),
+            join: String::new(),
+            speed: 0.,
+            posLat: utils::common::std_defs::INVALID_DOUBLE,
+            onDemand: false,
+            priority: -1.,
+            jump: -1,
+            jumpUntil: -1,
+            started: -1,
+            ended: -1,
+            accessPos: Vec::new(),
+            index: 0,
+            routeIndex: 0,
+            parametersSet: 0,
+            collision: false,
+            breakDown: false,
+        }
+    }
+}
+
 impl std::ops::Deref for SUMOVehicleParameter_Stop {
     type Target = Parameterised;
     fn deref(&self) -> &Parameterised {

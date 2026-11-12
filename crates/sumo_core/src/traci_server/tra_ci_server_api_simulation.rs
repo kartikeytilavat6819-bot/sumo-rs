@@ -2,6 +2,12 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `throw libsumo::TraCIException(what)`
+// shortcut: panics with the message (C++ throws libsumo::TraCIException); TraCIException::new is still todo!, upgrade when it is ported and TraCIServer::process_get catches exceptions instead of unwinding
+fn throw_traci_exception(what: &str) -> ! {
+    panic!("{}", what)
+}
+
 /// APIs for getting/setting simulation values via TraCI
 /// C++ class `TraCIServerAPI_Simulation` (traci-server/TraCIServerAPI_Simulation.h)
 pub struct TraCIServerAPI_Simulation {
@@ -211,7 +217,230 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn process_get(server: &mut TraCIServer, inputStorage: &mut Storage, objID: &str, variable: i32) -> bool {
-        todo!("port TraCIServerAPI_Simulation::processGet")
+        match variable {
+            VAR_LOADED_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::BUILT);
+            }
+            VAR_LOADED_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::BUILT);
+            }
+            VAR_DEPARTED_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::DEPARTED);
+            }
+            VAR_DEPARTED_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::DEPARTED);
+            }
+            VAR_TELEPORT_STARTING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::STARTING_TELEPORT);
+            }
+            VAR_TELEPORT_STARTING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::STARTING_TELEPORT);
+            }
+            VAR_TELEPORT_ENDING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::ENDING_TELEPORT);
+            }
+            VAR_TELEPORT_ENDING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::ENDING_TELEPORT);
+            }
+            VAR_ARRIVED_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::ARRIVED);
+            }
+            VAR_ARRIVED_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::ARRIVED);
+            }
+            VAR_PARKING_STARTING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::STARTING_PARKING);
+            }
+            VAR_PARKING_STARTING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::STARTING_PARKING);
+            }
+            VAR_PARKING_MANEUVERING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::MANEUVERING);
+            }
+            VAR_PARKING_MANEUVERING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::MANEUVERING);
+            }
+            VAR_PARKING_ENDING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::ENDING_PARKING);
+            }
+            VAR_PARKING_ENDING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::ENDING_PARKING);
+            }
+            VAR_STOP_STARTING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::STARTING_STOP);
+            }
+            VAR_STOP_STARTING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::STARTING_STOP);
+            }
+            VAR_STOP_ENDING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::ENDING_STOP);
+            }
+            VAR_STOP_ENDING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::ENDING_STOP);
+            }
+            VAR_COLLIDING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::COLLISION);
+            }
+            VAR_COLLIDING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::COLLISION);
+            }
+            VAR_EMERGENCYSTOPPING_VEHICLES_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_number(server, ws.m(), MSNet_VehicleState::EMERGENCYSTOP);
+            }
+            VAR_EMERGENCYSTOPPING_VEHICLES_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_vehicle_state_i_ds(server, ws.m(), MSNet_VehicleState::EMERGENCYSTOP);
+            }
+            VAR_DEPARTED_PERSONS_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_transportable_state_number(server, ws.m(), MSNet_TransportableState::PERSON_DEPARTED);
+            }
+            VAR_DEPARTED_PERSONS_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_transportable_state_i_ds(server, ws.m(), MSNet_TransportableState::PERSON_DEPARTED);
+            }
+            VAR_ARRIVED_PERSONS_NUMBER => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_transportable_state_number(server, ws.m(), MSNet_TransportableState::PERSON_ARRIVED);
+            }
+            VAR_ARRIVED_PERSONS_IDS => {
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::write_transportable_state_i_ds(server, ws.m(), MSNet_TransportableState::PERSON_ARRIVED);
+            }
+            VAR_COLLISIONS => {
+                let collisions = Simulation::get_collisions();
+                let ws = server.get_wrapper_storage();
+                ws.write_unsigned_byte(TYPE_COMPOUND).unwrap();
+                let cnt = 1 + (collisions.len() as i32) * 4;
+                ws.write_int(cnt);
+                ws.write_unsigned_byte(TYPE_INTEGER).unwrap();
+                ws.write_int(collisions.len() as i32);
+                for c in &collisions {
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.collider);
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.victim);
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.colliderType);
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.victimType);
+                    ws.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+                    ws.write_double(c.colliderSpeed);
+                    ws.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+                    ws.write_double(c.victimSpeed);
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.type_);
+                    ws.write_unsigned_byte(TYPE_STRING).unwrap();
+                    ws.write_string(&c.lane);
+                    ws.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+                    ws.write_double(c.pos);
+                }
+            }
+            VAR_NET_BOUNDING_BOX => {
+                let tb = Simulation::get_net_boundary();
+                let ws = server.get_wrapper_storage();
+                ws.write_unsigned_byte(TYPE_POLYGON).unwrap();
+                ws.write_byte(2).unwrap();
+                ws.write_double(tb.value[0].x);
+                ws.write_double(tb.value[0].y);
+                ws.write_double(tb.value[1].x);
+                ws.write_double(tb.value[1].y);
+            }
+            POSITION_CONVERSION => {
+                if inputStorage.read_unsigned_byte().unwrap() != TYPE_COMPOUND {
+                    throw_traci_exception("Position conversion requires a compound object.");
+                }
+                let compoundSize = inputStorage.read_int().unwrap();
+                if compoundSize < 2 || compoundSize > 3 {
+                    throw_traci_exception("Position conversion requires a source position and a position type as parameter.");
+                }
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::command_position_conversion(inputStorage, compoundSize, ws.m());
+            }
+            DISTANCE_REQUEST => {
+                if inputStorage.read_unsigned_byte().unwrap() != TYPE_COMPOUND {
+                    throw_traci_exception("Retrieval of distance requires a compound object.");
+                }
+                if inputStorage.read_int().unwrap() != 3 {
+                    throw_traci_exception("Retrieval of distance requires two positions and a distance type as parameter.");
+                }
+                let ws = Ptr::from_mut(server.get_wrapper_storage());
+                Self::command_distance_request(inputStorage, ws.m());
+            }
+            FIND_ROUTE => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "Retrieval of a route requires a compound object.");
+                if parameterCount < 5 || parameterCount > 7 {
+                    throw_traci_exception("Retrieval of a route requires between five to seven parameters.");
+                }
+                let from = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as first parameter.");
+                let to = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as second parameter.");
+                let vtype = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as third parameter.");
+                let depart = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as fourth parameter.");
+                let routingMode = StoHelp::read_typed_int(inputStorage, "Retrieval of a route requires an integer as fifth parameter.");
+                let mut departPos = 0.;
+                if parameterCount > 5 {
+                    departPos = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as sixth parameter.");
+                }
+                let mut arrivalPos = INVALID_DOUBLE_VALUE;
+                if parameterCount > 6 {
+                    arrivalPos = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as seventh parameter.");
+                }
+                let stage = Simulation::find_route(&from, &to, &vtype, depart, routingMode, departPos, arrivalPos);
+                StoHelp::write_stage(server.get_wrapper_storage(), &stage);
+            }
+            FIND_INTERMODAL_ROUTE => {
+                StoHelp::read_compound(inputStorage, 13, "Retrieval of an intermodal route requires thirteen parameters.");
+                let from = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as first parameter.");
+                let to = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as second parameter.");
+                let modes = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as third parameter.");
+                let depart = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as fourth parameter.");
+                let routingMode = StoHelp::read_typed_int(inputStorage, "Retrieval of a route requires an integer as fifth parameter.");
+                let speed = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as sixth parameter.");
+                let walkFactor = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as seventh parameter.");
+                let departPos = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as eighth parameter.");
+                let arrivalPos = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as ninth parameter.");
+                let departPosLat = StoHelp::read_typed_double(inputStorage, "Retrieval of a route requires a double as tenth parameter.");
+                let ptype = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as eleventh parameter.");
+                let vtype = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as twelfth parameter.");
+                let destStop = StoHelp::read_typed_string(inputStorage, "Retrieval of a route requires a string as thirteenth parameter.");
+                let result = Simulation::find_intermodal_route(&from, &to, &modes, depart, routingMode, speed, walkFactor, departPos, arrivalPos, departPosLat, &ptype, &vtype, &destStop);
+                let ws = server.get_wrapper_storage();
+                ws.write_unsigned_byte(TYPE_COMPOUND).unwrap();
+                ws.write_int(result.len() as i32);
+                for s in &result {
+                    StoHelp::write_stage(ws, s);
+                }
+            }
+            _ => {
+                if !Simulation::handle_variable(objID, variable, Ptr::from_mut(&mut server.base2), Ptr::from_mut(inputStorage)) {
+                    throw_traci_exception(&format!("Get Simulation Variable: unsupported variable {} specified", to_hex(variable as u64, 2, 0)));
+                }
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServerAPI_Simulation::processSet(TraCIServer &, tcpip::Storage &, tcpip::Storage &)` [static]
@@ -279,7 +508,74 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Simulation::processSet")
+        let warning = ""; // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().unwrap();
+        if variable != CMD_CLEAR_PENDING_VEHICLES
+            && variable != CMD_SAVE_SIMSTATE
+            && variable != CMD_LOAD_SIMSTATE
+            && variable != VAR_PARAMETER
+            && variable != VAR_SCALE
+            && variable != CMD_MESSAGE
+        {
+            return server.write_error_status_cmd(CMD_SET_SIM_VARIABLE, &format!("Set Simulation Variable: unsupported variable {} specified", to_hex(variable as u64, 2, 0)), outputStorage);
+        }
+        // id
+        let id = inputStorage.read_string().unwrap();
+        // process
+        // C++ try/catch of libsumo::TraCIException: a thrown exception unwinds to catch_unwind below
+        let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Option<bool> {
+            match variable {
+                VAR_SCALE => {
+                    let value = StoHelp::read_typed_double(inputStorage, "A double is needed for setting traffic scale.");
+                    if value < 0.0 {
+                        return Some(server.write_error_status_cmd(CMD_SET_SIM_VARIABLE, "Traffic scale may not be negative.", outputStorage));
+                    }
+                    Simulation::set_scale(value);
+                }
+                CMD_CLEAR_PENDING_VEHICLES => {
+                    //clear any pending vehicle insertions
+                    Simulation::clear_pending(&StoHelp::read_typed_string(inputStorage, "A string is needed for clearing pending vehicles."));
+                }
+                CMD_SAVE_SIMSTATE => {
+                    //save current simulation state
+                    Simulation::save_state(&StoHelp::read_typed_string(inputStorage, "A string is needed for saving simulation state."));
+                }
+                CMD_LOAD_SIMSTATE => {
+                    //quick-load simulation state
+                    let time = Simulation::load_state(&StoHelp::read_typed_string(inputStorage, "A string is needed for loading simulation state."));
+                    TraCIServer::get_instance().m().state_loaded(time2steps(time));
+                }
+                VAR_PARAMETER => {
+                    StoHelp::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                    let name = StoHelp::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                    let value = StoHelp::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                    Simulation::set_parameter(&id, &name, &value);
+                }
+                CMD_MESSAGE => {
+                    Simulation::write_message(&StoHelp::read_typed_string(inputStorage, "A string is needed for adding a log message."));
+                }
+                _ => {}
+            }
+            None
+        }));
+        match outcome {
+            Ok(Some(ret)) => return ret,
+            Ok(None) => {}
+            Err(payload) => {
+                // the TraCIException message is the panic message
+                let what = match payload.downcast::<String>() {
+                    Ok(s) => *s,
+                    Err(payload) => match payload.downcast::<&str>() {
+                        Ok(s) => s.to_string(),
+                        Err(payload) => std::panic::resume_unwind(payload),
+                    },
+                };
+                return server.write_error_status_cmd(CMD_SET_SIM_VARIABLE, &what, outputStorage);
+            }
+        }
+        server.write_status_cmd(CMD_SET_SIM_VARIABLE, RTYPE_OK, warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_Simulation::commandPositionConversion(tcpip::Storage &, const int, tcpip::Storage &)` [static, private]
@@ -374,7 +670,81 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn command_position_conversion(inputStorage: &mut Storage, compoundSize: i32, outputStorage: &mut Storage) {
-        todo!("port TraCIServerAPI_Simulation::commandPositionConversion")
+        // actual position type that will be converted
+        let mut cartesianPos = Position::default();
+        let mut geoPos = Position::default();
+        let mut z: f64 = 0.;
+
+        let srcPosType = inputStorage.read_unsigned_byte().unwrap();
+
+        match srcPosType {
+            POSITION_2D | POSITION_3D | POSITION_LON_LAT | POSITION_LON_LAT_ALT => {
+                let x = inputStorage.read_double().unwrap();
+                let y = inputStorage.read_double().unwrap();
+                if srcPosType != POSITION_2D && srcPosType != POSITION_LON_LAT {
+                    z = inputStorage.read_double().unwrap();
+                }
+                geoPos.set(x, y);
+                cartesianPos.set(x, y);
+                if srcPosType == POSITION_LON_LAT || srcPosType == POSITION_LON_LAT_ALT {
+                    GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut cartesianPos));
+                } else {
+                    GeoConvHelper::with_final(|g| g.cartesian2geo(&mut geoPos));
+                }
+            }
+            POSITION_ROADMAP => {
+                let roadID = inputStorage.read_string().unwrap();
+                let pos = inputStorage.read_double().unwrap();
+                let laneIdx = inputStorage.read_unsigned_byte().unwrap();
+                // convert edge,offset,laneIdx to cartesian position
+                cartesianPos = Helper::get_lane_checking(&roadID, laneIdx, pos).m().geometry_position_at_offset(pos, 0.0);
+                geoPos = cartesianPos;
+                z = cartesianPos.z();
+                GeoConvHelper::with_final(|g| g.cartesian2geo(&mut geoPos));
+            }
+            _ => throw_traci_exception("Source position type not supported"),
+        }
+
+        let destPosType = StoHelp::read_typed_unsigned_byte(inputStorage, "Destination position type must be of type ubyte.");
+        let mut vClass: SUMOVehicleClass = SVC_IGNORING;
+        if compoundSize == 3 {
+            inputStorage.read_unsigned_byte().unwrap();
+            let vClassString = inputStorage.read_string().unwrap();
+            if !SUMO_VEHICLE_CLASS_STRINGS.has_string(&vClassString) {
+                throw_traci_exception(&format!("Unknown vehicle class '{}'.", vClassString));
+            }
+            vClass = SUMO_VEHICLE_CLASS_STRINGS.get(&vClassString).unwrap();
+        }
+
+        match destPosType {
+            POSITION_ROADMAP => {
+                // convert cartesion position to edge,offset,lane_index
+                let roadPos = Helper::convert_cartesian_to_road_map(&cartesianPos, vClass);
+                if roadPos.0.is_null() {
+                    throw_traci_exception("No matching lane found.");
+                }
+                // write result that is added to response msg
+                outputStorage.write_unsigned_byte(POSITION_ROADMAP).unwrap();
+                let edgeID = roadPos.0.m().get_edge().get_id();
+                outputStorage.write_string(&edgeID);
+                outputStorage.write_double(roadPos.1);
+                outputStorage.write_unsigned_byte(roadPos.0.m().get_index()).unwrap();
+            }
+            POSITION_2D | POSITION_3D | POSITION_LON_LAT | POSITION_LON_LAT_ALT => {
+                outputStorage.write_unsigned_byte(destPosType).unwrap();
+                if destPosType == POSITION_LON_LAT || destPosType == POSITION_LON_LAT_ALT {
+                    outputStorage.write_double(geoPos.x());
+                    outputStorage.write_double(geoPos.y());
+                } else {
+                    outputStorage.write_double(cartesianPos.x());
+                    outputStorage.write_double(cartesianPos.y());
+                }
+                if destPosType != POSITION_2D && destPosType != POSITION_LON_LAT {
+                    outputStorage.write_double(z);
+                }
+            }
+            _ => throw_traci_exception("Destination position type not supported"),
+        }
     }
 
     /// C++: `void TraCIServerAPI_Simulation::commandDistanceRequest(tcpip::Storage &, tcpip::Storage &)` [static, private]
@@ -474,7 +844,86 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn command_distance_request(inputStorage: &mut Storage, outputStorage: &mut Storage) {
-        todo!("port TraCIServerAPI_Simulation::commandDistanceRequest")
+        let mut pos1 = Position::default();
+        let mut pos2 = Position::default();
+        let mut roadPos1: (Ptr<MSLane>, f64) = (Ptr::null(), 0.0);
+        let mut roadPos2: (Ptr<MSLane>, f64) = (Ptr::null(), 0.0);
+
+        // read position 1
+        let mut posType = inputStorage.read_unsigned_byte().unwrap();
+        match posType {
+            POSITION_ROADMAP => {
+                let roadID = inputStorage.read_string().unwrap();
+                roadPos1.1 = inputStorage.read_double().unwrap();
+                let laneIdx = inputStorage.read_unsigned_byte().unwrap();
+                roadPos1.0 = Helper::get_lane_checking(&roadID, laneIdx, roadPos1.1);
+                pos1 = roadPos1.0.m().geometry_position_at_offset(roadPos1.1, 0.0);
+            }
+            POSITION_2D | POSITION_3D => {
+                let p1x = inputStorage.read_double().unwrap();
+                let p1y = inputStorage.read_double().unwrap();
+                pos1.set(p1x, p1y);
+                if posType == POSITION_3D {
+                    inputStorage.read_double().unwrap(); // z value is ignored
+                }
+                roadPos1 = Helper::convert_cartesian_to_road_map(&pos1, SVC_IGNORING);
+            }
+            POSITION_LON_LAT | POSITION_LON_LAT_ALT => {
+                let p1x = inputStorage.read_double().unwrap();
+                let p1y = inputStorage.read_double().unwrap();
+                pos1.set(p1x, p1y);
+                GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos1));
+                if posType == POSITION_LON_LAT_ALT {
+                    inputStorage.read_double().unwrap(); // altitude value is ignored
+                }
+                roadPos1 = Helper::convert_cartesian_to_road_map(&pos1, SVC_IGNORING);
+            }
+            _ => throw_traci_exception("Unknown position format used for distance request"),
+        }
+
+        // read position 2
+        posType = inputStorage.read_unsigned_byte().unwrap();
+        match posType {
+            POSITION_ROADMAP => {
+                let roadID = inputStorage.read_string().unwrap();
+                roadPos2.1 = inputStorage.read_double().unwrap();
+                let laneIdx = inputStorage.read_unsigned_byte().unwrap();
+                roadPos2.0 = Helper::get_lane_checking(&roadID, laneIdx, roadPos2.1);
+                pos2 = roadPos2.0.m().geometry_position_at_offset(roadPos2.1, 0.0);
+            }
+            POSITION_2D | POSITION_3D => {
+                let p2x = inputStorage.read_double().unwrap();
+                let p2y = inputStorage.read_double().unwrap();
+                pos2.set(p2x, p2y);
+                if posType == POSITION_3D {
+                    inputStorage.read_double().unwrap(); // z value is ignored
+                }
+                roadPos2 = Helper::convert_cartesian_to_road_map(&pos2, SVC_IGNORING);
+            }
+            POSITION_LON_LAT | POSITION_LON_LAT_ALT => {
+                let p2x = inputStorage.read_double().unwrap();
+                let p2y = inputStorage.read_double().unwrap();
+                pos2.set(p2x, p2y);
+                GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos2));
+                if posType == POSITION_LON_LAT_ALT {
+                    inputStorage.read_double().unwrap(); // altitude value is ignored
+                }
+                roadPos2 = Helper::convert_cartesian_to_road_map(&pos2, SVC_IGNORING);
+            }
+            _ => throw_traci_exception("Unknown position format used for distance request"),
+        }
+
+        // read distance type
+        let distType = inputStorage.read_unsigned_byte().unwrap();
+
+        let distance = if distType == REQUEST_DRIVINGDIST {
+            Helper::get_driving_distance(&mut roadPos1, &mut roadPos2)
+        } else {
+            // compute air distance (default)
+            pos1.distance_to(&pos2)
+        };
+        // write response command
+        StoHelp::write_typed_double(outputStorage, distance);
     }
 
     /// C++: `void TraCIServerAPI_Simulation::writeVehicleStateNumber(TraCIServer &, tcpip::Storage &, MSNet::VehicleState)` [static, private]
@@ -484,7 +933,7 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicle_state_number(server: &mut TraCIServer, outputStorage: &mut Storage, state: MSNet_VehicleState) {
-        todo!("port TraCIServerAPI_Simulation::writeVehicleStateNumber")
+        StoHelp::write_typed_int(outputStorage, server.get_vehicle_state_changes()[&state].len() as i32);
     }
 
     /// C++: `void TraCIServerAPI_Simulation::writeVehicleStateIDs(TraCIServer &, tcpip::Storage &, MSNet::VehicleState)` [static, private]
@@ -494,7 +943,7 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicle_state_i_ds(server: &mut TraCIServer, outputStorage: &mut Storage, state: MSNet_VehicleState) {
-        todo!("port TraCIServerAPI_Simulation::writeVehicleStateIDs")
+        StoHelp::write_typed_string_list(outputStorage, &server.get_vehicle_state_changes()[&state]);
     }
 
     /// C++: `void TraCIServerAPI_Simulation::writeTransportableStateNumber(TraCIServer &, tcpip::Storage &, MSNet::TransportableState)` [static, private]
@@ -504,7 +953,7 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn write_transportable_state_number(server: &mut TraCIServer, outputStorage: &mut Storage, state: MSNet_TransportableState) {
-        todo!("port TraCIServerAPI_Simulation::writeTransportableStateNumber")
+        StoHelp::write_typed_int(outputStorage, server.get_transportable_state_changes()[&state].len() as i32);
     }
 
     /// C++: `void TraCIServerAPI_Simulation::writeTransportableStateIDs(TraCIServer &, tcpip::Storage &, MSNet::TransportableState)` [static, private]
@@ -514,7 +963,7 @@ impl TraCIServerAPI_Simulation {
     // }
     #[allow(unused_variables)]
     pub fn write_transportable_state_i_ds(server: &mut TraCIServer, outputStorage: &mut Storage, state: MSNet_TransportableState) {
-        todo!("port TraCIServerAPI_Simulation::writeTransportableStateIDs")
+        StoHelp::write_typed_string_list(outputStorage, &server.get_transportable_state_changes()[&state]);
     }
 
     /// C++: `void TraCIServerAPI_Simulation::TraCIServerAPI_Simulation(const TraCIServerAPI_Simulation &)` [private]
