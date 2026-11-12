@@ -8625,7 +8625,70 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn resume_from_stopping(&mut self) -> bool {
-        todo!("port MSVehicle::resumeFromStopping")
+        if self.is_stopped() {
+            if self.myAmRegisteredAsWaiting {
+                MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                self.myAmRegisteredAsWaiting = false;
+            }
+            let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+            let stop: Ptr<MSStop> = Ptr::from_mut(self.myStops.front_mut().unwrap());
+            // we have waited long enough and fulfilled any passenger-requirements
+            if !stop.busstop.is_null() {
+                // inform bus stop about leaving it
+                stop.busstop.m().leave_from(me.cast::<SUMOVehicle>());
+            }
+            // we have waited long enough and fulfilled any container-requirements
+            if !stop.containerstop.is_null() {
+                // inform container stop about leaving it
+                stop.containerstop.m().leave_from(me.cast::<SUMOVehicle>());
+            }
+            if !stop.parkingarea.is_null() && stop.get_speed() <= 0.0 {
+                // inform parking area about leaving it
+                stop.parkingarea.m().leave_from(me.cast::<SUMOVehicle>());
+            }
+            if !stop.chargingStation.is_null() {
+                // inform charging station about leaving it
+                stop.chargingStation.m().leave_from(me.cast::<SUMOVehicle>());
+            }
+            // the current stop is no longer valid
+            self.myLane.get_edge().remove_waiting(me.cast::<SUMOVehicle>());
+            // MSStopOut needs to know whether the stop had a loaded 'ended' value so we call this before replacing the value
+            if stop.pars.started == -1 {
+                // waypoint edge was passed in a single step
+                stop.m().pars.started = MSNet::get_instance().get_current_time_step();
+            }
+            if MSStopOut::active() {
+                MSStopOut::get_instance().m().stop_ended(me.cast::<SUMOVehicle>(), stop.m(), false);
+            }
+            stop.m().pars.ended = MSNet::get_instance().get_current_time_step();
+            for (rem, _) in self.myMoveReminders.iter() {
+                rem.m().notify_stop_ended();
+            }
+            if stop.pars.collision && matches!(MSLane::get_collision_action(), MSLane_CollisionAction::COLLISION_ACTION_WARN) {
+                self.myCollisionImmunity = time2steps(5.0); // leave the conflict area
+            }
+            if stop.pars.posLat != utils::common::std_defs::INVALID_DOUBLE && MSGlobals::lateral_resolution() <= 0.0 {
+                // reset lateral position to default
+                self.myState.myPosLat = 0.0;
+            }
+            let wasWaypoint = stop.get_speed() > 0.0;
+            let mut pastPars: SUMOVehicleParameter_Stop = stop.pars.clone();
+            pastPars.routeIndex = stop.edge as i32;
+            self.myPastStops.push(pastPars);
+            self.myStops.pop_front();
+            self.myStopDist = f64::MAX;
+            // do not count the stopping time towards gridlock time.
+            // Other outputs use an independent counter and are not affected.
+            self.myWaitingTime = 0;
+            self.myStopSpeed = self.get_car_follow_model().max_next_speed(self.get_speed(), me);
+            // maybe the next stop is on the same edge; let's rebuild best lanes
+            self.update_best_lanes(true, Ptr::default());
+            // continue as wished...
+            MSNet::get_instance().m().inform_vehicle_state_listener(me.cast::<SUMOVehicle>(), MSNet_VehicleState::ENDING_STOP, "");
+            MSNet::get_instance().m().get_vehicle_control().register_stop_ended();
+            return !wasWaypoint;
+        }
+        false
     }
 
     /// C++: `double MSVehicle::updateFurtherLanes(std::vector<MSLane *> &, std::vector<double> &, const std::vector<MSLane *> &)`
@@ -8710,7 +8773,66 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_further_lanes(&mut self, furtherLanes: &mut Vec<Ptr<MSLane>>, furtherLanesPosLat: &mut Vec<f64>, passedLanes: &Vec<Ptr<MSLane>>) -> f64 {
-        todo!("port MSVehicle::updateFurtherLanes")
+        use utils::common::sumo_vehicle_class::{is_railway, SVC_RAIL_CLASSES};
+        let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+        let vClass = self.get_v_class();
+        for further in furtherLanes.iter() {
+            further.m().reset_partial_occupation(me);
+            let bidi = further.get_bidi_lane();
+            if !bidi.is_null() && (!is_railway(vClass) || (further.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                bidi.m().reset_partial_occupation(me);
+            }
+        }
+
+        let mut newFurther: Vec<Ptr<MSLane>> = Vec::new();
+        let mut newFurtherPosLat: Vec<f64> = Vec::new();
+        let mut backPosOnPreviousLane: f64 = self.myState.myPos - self.get_length();
+        let widthShift = self.myFurtherLanesPosLat.len() > self.myFurtherLanes.len();
+        if passedLanes.len() > 1 {
+            // There are candidates for further lanes. (passedLanes[-1] is the current lane, or current shadow lane in context of updateShadowLanes())
+            let mut fi: usize = 0;
+            let mut fpi: usize = 0;
+            // C++ `for (pi = passedLanes.rbegin() + 1; pi != passedLanes.rend() && backPos < 0; ++pi)`
+            let mut k: usize = 1;
+            while k < passedLanes.len() && backPosOnPreviousLane < 0.0 {
+                // As long as vehicle back reaches into passed lane, add it to the further lanes
+                let further: Ptr<MSLane> = passedLanes[passedLanes.len() - 1 - k];
+                newFurther.push(further);
+                backPosOnPreviousLane += further.m().set_partial_occupation(me);
+                let bidi = further.get_bidi_lane();
+                if !bidi.is_null() && (!is_railway(vClass) || (further.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                    bidi.m().set_partial_occupation(me);
+                }
+                if fi < furtherLanes.len() && further == furtherLanes[fi] {
+                    // Lateral position on this lane is already known. Assume constant and use old value.
+                    newFurtherPosLat.push(furtherLanesPosLat[fpi]);
+                    fi += 1;
+                    fpi += 1;
+                } else {
+                    // The lane *pi was not in furtherLanes before.
+                    // If it is downstream, we assume as lateral position the current position
+                    // If it is a new lane upstream (can appear as shadow further in case of LC-maneuvering, e.g.)
+                    // we assign the last known lateral position.
+                    if newFurtherPosLat.len() == 0 {
+                        if widthShift {
+                            newFurtherPosLat.push(*self.myFurtherLanesPosLat.last().unwrap());
+                        } else {
+                            newFurtherPosLat.push(self.myState.myPosLat);
+                        }
+                    } else {
+                        let last = *newFurtherPosLat.last().unwrap();
+                        newFurtherPosLat.push(last);
+                    }
+                }
+                k += 1;
+            }
+            *furtherLanes = newFurther;
+            *furtherLanesPosLat = newFurtherPosLat;
+        } else {
+            furtherLanes.clear();
+            furtherLanesPosLat.clear();
+        }
+        backPosOnPreviousLane
     }
 
     /// C++: `PositionVector MSVehicle::getBoundingBox(double) const` [const, virtual]
