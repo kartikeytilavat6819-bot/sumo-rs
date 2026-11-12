@@ -1656,14 +1656,25 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn propagate_own(&mut self) {
-        todo!("port NIVissimEdge::propagateOwn")
+        for i in 0..(self.myLaneSpeeds.len() as i32) {
+            if self.myLaneSpeeds[i as usize] == -1.0 {
+                continue;
+            }
+            let connected = self.get_outgoing_connected(i);
+            for c in connected {
+                let e = Self::dictionary_3(c.get_to_edge_id());
+                // propagate
+                e.m().propagate_speed(self.myLaneSpeeds[i as usize], c.get_to_lanes().clone());
+            }
+        }
     }
 
     /// C++: `NBNode * NIVissimEdge::getNodeSecure(int, const Position &, const std::string &)` [static, private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_node_secure(nodeid: i32, pos: &Position, possibleName: &str) -> Ptr<NBNode> {
-        todo!("port NIVissimEdge::getNodeSecure")
+        // declared in NIVissimEdge.h but never defined in SUMO, so calling it is a link error in C++
+        panic!("NIVissimEdge::getNodeSecure has no definition (declared only in NIVissimEdge.h)")
     }
 
     /// C++: `std::pair<NBNode *, NBNode *> NIVissimEdge::remapOneOfNodes(NBNodeCont &, NIVissimDistrictConnection *, NBNode *, NBNode *)` [private]
@@ -1693,7 +1704,18 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn remap_one_of_nodes(&mut self, nc: &mut NBNodeCont, d: Ptr<NIVissimDistrictConnection>, fromNode: Ptr<NBNode>, toNode: Ptr<NBNode>) -> (Ptr<NBNode>, Ptr<NBNode>) {
-        todo!("port NIVissimEdge::remapOneOfNodes")
+        let nid = format!("ParkingPlace{}", d.get_id());
+        if d.geom_position().distance_to(fromNode.get_position()) < d.geom_position().distance_to(toNode.get_position()) {
+            let newNode = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&nid, fromNode.get_position(), SumoXMLNodeType::NOJUNCTION))));
+            nc.erase(fromNode);
+            nc.insert_2(newNode);
+            (newNode, toNode)
+        } else {
+            let newNode = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&nid, toNode.get_position(), SumoXMLNodeType::NOJUNCTION))));
+            nc.erase(toNode);
+            nc.insert_2(newNode);
+            (fromNode, newNode)
+        }
     }
 
 }
@@ -1741,7 +1763,7 @@ impl NIVissimEdge_connection_cluster_position_sorter {
     //     : myEdgeID(edgeid) {}
     #[allow(unused_variables)]
     pub fn new(edgeid: i32) -> Self {
-        todo!("port connection_cluster_position_sorter::connection_cluster_position_sorter")
+        Self { myEdgeID: edgeid }
     }
 
     /// C++: `int connection_cluster_position_sorter::operator()(NIVissimConnectionCluster *, NIVissimConnectionCluster *) const` [const]
@@ -1761,7 +1783,14 @@ impl NIVissimEdge_connection_cluster_position_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, cc1: Ptr<NIVissimConnectionCluster>, cc2: Ptr<NIVissimConnectionCluster>) -> i32 {
-        todo!("port connection_cluster_position_sorter::operator()")
+        let pos1 = cc1.get_position_for_edge(self.myEdgeID);
+        let pos2 = cc2.get_position_for_edge(self.myEdgeID);
+        if pos2 < 0.0 || pos1 < 0.0 {
+            cc1.get_position_for_edge(self.myEdgeID);
+            cc2.get_position_for_edge(self.myEdgeID);
+        }
+        debug_assert!(pos1 >= 0.0 && pos2 >= 0.0);
+        (pos1 < pos2) as i32
     }
 
 }
@@ -1780,7 +1809,7 @@ impl NIVissimEdge_connection_position_sorter {
     //     : myEdgeID(edgeid) {}
     #[allow(unused_variables)]
     pub fn new(edgeid: i32) -> Self {
-        todo!("port connection_position_sorter::connection_position_sorter")
+        Self { myEdgeID: edgeid }
     }
 
     /// C++: `int connection_position_sorter::operator()(int, int) const` [const]
@@ -1800,7 +1829,11 @@ impl NIVissimEdge_connection_position_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1id: i32, c2id: i32) -> i32 {
-        todo!("port connection_position_sorter::operator()")
+        let c1 = NIVissimConnection::dictionary_2(c1id);
+        let c2 = NIVissimConnection::dictionary_2(c2id);
+        let pos1 = if c1.get_from_edge_id() == self.myEdgeID { c1.get_from_position() } else { c1.get_to_position() };
+        let pos2 = if c2.get_from_edge_id() == self.myEdgeID { c2.get_from_position() } else { c2.get_to_position() };
+        (pos1 < pos2) as i32
     }
 
 }
