@@ -4,6 +4,30 @@ use crate::prelude::*;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use utils::tlf;
+
+/// C++ implicit upcast MSVehicle* -> SUMOTrafficObject* (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
+fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
+    Ptr::from_mut(&mut v.m().base.base.base)
+}
+
+// shortcut: MSPModel::SAFETY_GAP (msp_model.rs) is not ported yet, this stub holds the C++ value 1.0, upgrade when MSPModel constants are ported
+const MSPMODEL_SAFETY_GAP: f64 = 1.0;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+
+/// C++ implicit upcast SUMOVehicle* -> SUMOTrafficObject* (base sub-object, same address)
+fn veh_to_traffic_object(v: Ptr<SUMOVehicle>) -> Ptr<SUMOTrafficObject> {
+    Ptr::from_mut(&mut v.m().base)
+}
+
+/// C++ implicit upcast MSPerson* -> SUMOTrafficObject* (through MSTransportable)
+fn person_to_traffic_object(p: Ptr<MSPerson>) -> Ptr<SUMOTrafficObject> {
+    Ptr::from_mut(&mut p.m().base.base)
+}
+
+// shortcut: ego->getRNG() (per-vehicle RNG) is not ported on SUMOTrafficObject, this uses the global rand helper, upgrade when the per-object RNG is ported
+fn ego_rand() -> f64 {
+    utils::common::rand_helper::rand()
+}
 use utils::geom::NUMERICAL_EPS;
 use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_degree, INVALID_OFFSET};
 
@@ -1651,7 +1675,135 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn opened(&self, arrivalTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, vehicleLength: f64, impatience: f64, decel: f64, waitingTime: SUMOTime, posLat: f64, collectFoes: Ptr<MSLink_BlockingFoes>, ignoreRed: bool, ego: Ptr<SUMOTrafficObject>, dist: f64) -> bool {
-        todo!("port MSLink::opened")
+        if self.have_red() && !ignoreRed {
+            return false;
+        }
+        if self.is_cont() && g_using_internal_lanes() {
+            return true;
+        }
+        let leaveTime = self.get_leave_time(arrivalTime, arrivalSpeed, leaveSpeed, vehicleLength);
+        if g_lateral_resolution() > 0. {
+            for &foeLink in self.mySublaneFoeLinks.iter() {
+                debug_assert!(self.myLane != foeLink.get_lane());
+                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                    let foeLat = foe.get_lateral_position_on_lane();
+                    if ((posLat < foeLat + info.latOffset && self.myLane.get_index() > foeLink.myLane.get_index())
+                        || (posLat > foeLat + info.latOffset && self.myLane.get_index() < foeLink.myLane.get_index()))
+                        && (arrivalTime > info.arrivalTime || (arrivalTime == info.arrivalTime && posLat > foeLat))
+                    {
+                        if self.blocked_by_foe(foe, info, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, false, impatience, decel, waitingTime, ego) {
+                            if collectFoes.is_null() {
+                                return false;
+                            } else {
+                                collectFoes.m().push(veh_to_traffic_object(foe));
+                            }
+                        }
+                    }
+                }
+            }
+            let lhSign = if g_lefthand() { -1. } else { 1. };
+            for &foeLink in self.mySublaneFoeLinks2.iter() {
+                debug_assert!(self.myDirection != LinkDirection::STRAIGHT);
+                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                    let egoWidth = if ego.is_null() { 1.8 } else { ego.get_vehicle_type().get_width() };
+                    let foeLat = foe.get_lateral_position_on_lane() + info.latOffset;
+                    if !MSLink::lateral_overlap(posLat, egoWidth, foeLat, foe.get_vehicle_type().get_width())
+                        && (((self.myDirection == LinkDirection::RIGHT || self.myDirection == LinkDirection::PARTRIGHT) && (posLat * lhSign > foeLat * lhSign))
+                            || ((self.myDirection == LinkDirection::LEFT || self.myDirection == LinkDirection::PARTLEFT) && (posLat * lhSign < foeLat * lhSign)))
+                    {
+                        if self.blocked_by_foe(foe, info, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, false, impatience, decel, waitingTime, ego) {
+                            if collectFoes.is_null() {
+                                return false;
+                            } else {
+                                collectFoes.m().push(veh_to_traffic_object(foe));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (self.have_priority()
+            || self.last_was_cont_state(LINKSTATE_TL_GREEN_MAJOR)
+            || (self.is_exit_link_after_internal_junction() && self.get_corresponding_entry_link().get_state() == LINKSTATE_TL_GREEN_MAJOR))
+            && self.myState != LINKSTATE_ZIPPER
+        {
+            return collectFoes.is_null() || collectFoes.len() == 0;
+        }
+        if self.myState == LINKSTATE_ALLWAY_STOP
+            && waitingTime < time2steps(if ego.is_null() { ts() } else { ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_ALLWAYSTOP_WAIT, ts()) })
+        {
+            return false;
+        } else if self.myState == LINKSTATE_STOP
+            && waitingTime < time2steps(if ego.is_null() { ts() } else { ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPSIGN_WAIT, ts()) })
+        {
+            return false;
+        }
+        let foeLinks: Vec<Ptr<MSLink>> = if self.myOffFoeLinks.is_null() || self.get_corresponding_entry_link().get_state() != LINKSTATE_ALLWAY_STOP {
+            self.myFoeLinks.clone()
+        } else {
+            self.myOffFoeLinks.clone()
+        };
+        if g_use_meso_sim() && impatience == 1. && !self.myLane.get_edge().is_roundabout() {
+            return true;
+        }
+        if !self.myLane.get_bidi_lane().is_null() {
+            let bidi = self.myLane.get_bidi_lane();
+            if bidi.get_vehicle_number() > 0 {
+                if ego.is_null() {
+                    return false;
+                }
+                let mut maxOncomingWidth = 0.;
+                let vehs = bidi.get_vehicles_secure();
+                for &foe in vehs.iter() {
+                    maxOncomingWidth = max2(maxOncomingWidth, foe.get_vehicle_type().get_width());
+                }
+                bidi.release_vehicles();
+                if g_lateral_resolution() > 0. {
+                    if ego.get_vehicle_type().get_width() + maxOncomingWidth + g_lateral_resolution() < self.myLane.get_width() {
+                        return false;
+                    }
+                } else if maxOncomingWidth > 0. {
+                    return false;
+                }
+            }
+            for ili in bidi.get_incoming_lanes().iter() {
+                let ilane = ili.lane;
+                if ilane.get_edge().get_priority() > self.myLaneBefore.get_edge().get_priority()
+                    || (ilane.get_edge().get_priority() == self.myLaneBefore.get_edge().get_priority() && ilane.get_id() > self.myLaneBefore.get_id())
+                {
+                    let mut bidiApproachFoes: MSLink_BlockingFoes = Vec::new();
+                    let mut maxOncomingWidth = 0.;
+                    let collect = if g_lateral_resolution() != 0. { Ptr::from_mut(&mut bidiApproachFoes) } else { Ptr::null() };
+                    if ili.viaLink.blocked_at_time(arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, false, 0., decel, 0, collect, ego, false, -1.) || bidiApproachFoes.len() > 0 {
+                        if g_lateral_resolution() > 0. {
+                            for &foe in bidiApproachFoes.iter() {
+                                maxOncomingWidth = max2(maxOncomingWidth, foe.get_vehicle_type().get_width());
+                            }
+                            if ego.get_vehicle_type().get_width() + maxOncomingWidth + g_lateral_resolution() < self.myLane.get_width() {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        let lastWasContRed = self.last_was_cont_state(LINKSTATE_TL_RED);
+        for &link in foeLinks.iter() {
+            if g_use_meso_sim() {
+                if link.have_red() {
+                    continue;
+                }
+            }
+            if link.blocked_at_time(arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, self.myLane == link.get_lane(), impatience, decel, waitingTime, collectFoes, ego, lastWasContRed, dist) {
+                return false;
+            }
+        }
+        if !collectFoes.is_null() && collectFoes.len() > 0 {
+            return false;
+        }
+        true
     }
 
     /// C++: `bool MSLink::blockedAtTime(SUMOTime, SUMOTime, double, double, bool, double, double, SUMOTime, BlockingFoes *, const SUMOTrafficObject *, bool, double) const` [const]
@@ -1743,7 +1895,58 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn blocked_at_time(&self, arrivalTime: SUMOTime, leaveTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, sameTargetLane: bool, impatience: f64, decel: f64, waitingTime: SUMOTime, collectFoes: Ptr<MSLink_BlockingFoes>, ego: Ptr<SUMOTrafficObject>, lastWasContRed: bool, dist: f64) -> bool {
-        todo!("port MSLink::blockedAtTime")
+        for (&veh, it) in self.myApproachingVehicles.iter() {
+            let vehObj = veh_to_traffic_object(veh);
+            if vehObj != ego
+                && (ego.is_null()
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < it.speed
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                && !MSLink::ignore_foe(ego, vehObj)
+                && (!lastWasContRed || veh.get_speed() > SUMO_CONST_HALTING_SPEED)
+                && self.blocked_by_foe(veh, it, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, sameTargetLane, impatience, decel, waitingTime, ego)
+            {
+                if collectFoes.is_null() {
+                    return true;
+                } else {
+                    collectFoes.m().push(vehObj);
+                }
+            }
+        }
+        if !self.myApproachingPersons.is_null() && !self.have_red() {
+            let lookAhead: SUMOTime = if ego.is_null() {
+                MSLink::myLookaheadTime
+            } else {
+                time2steps(ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_TIMEGAP_MINOR, steps2time(MSLink::myLookaheadTime)))
+            };
+            for (&person, it) in self.myApproachingPersons.iter() {
+                let personObj = person_to_traffic_object(person);
+                if (ego.is_null()
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < person.get_speed()
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                    && !MSLink::ignore_foe(ego, personObj)
+                    && !((arrivalTime > it.leavingTime + lookAhead) || (leaveTime + lookAhead < it.arrivalTime))
+                {
+                    if ego.is_null() {
+                        if self.myJunction.get_type() == SumoXMLNodeType::RAIL_CROSSING {
+                            continue;
+                        } else {
+                            return true;
+                        }
+                    }
+                    let cfm = ego.get_vehicle_type().get_car_follow_model();
+                    if dist > cfm.brake_gap_2(ego.get_speed(), cfm.get_max_decel(), 0.) {
+                        if collectFoes.is_null() {
+                            return true;
+                        } else {
+                            collectFoes.m().push(personObj);
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool MSLink::hasApproachingFoe(SUMOTime, SUMOTime, double, double) const` [const]
@@ -1764,7 +1967,17 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn has_approaching_foe(&self, arrivalTime: SUMOTime, leaveTime: SUMOTime, speed: f64, decel: f64) -> bool {
-        todo!("port MSLink::hasApproachingFoe")
+        for &link in self.myFoeLinks.iter() {
+            if link.blocked_at_time(arrivalTime, leaveTime, speed, speed, self.myLane == link.get_lane(), 0., decel, 0, Ptr::null(), Ptr::null(), false, -1.) {
+                return true;
+            }
+        }
+        for &lane in self.myFoeLanes.iter() {
+            if lane.get_vehicle_number_with_partials() > 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `std::pair<const SUMOVehicle *, const MSLink *> MSLink::getFirstApproachingFoe(const MSLink *) const` [const]
@@ -1792,7 +2005,23 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_first_approaching_foe(&self, wrapAround: Ptr<MSLink>) -> (Ptr<SUMOVehicle>, Ptr<MSLink>) {
-        todo!("port MSLink::getFirstApproachingFoe")
+        let mut closetDist = f64::MAX;
+        let mut closest: Ptr<SUMOVehicle> = Ptr::null();
+        let mut foeLink: Ptr<MSLink> = Ptr::null();
+        for &link in self.myFoeLinks.iter() {
+            for (&veh, it) in link.myApproachingVehicles.iter() {
+                if link.get_lane_before() == wrapAround.get_lane_before() {
+                    return (Ptr::null(), wrapAround);
+                } else if it.dist < closetDist {
+                    closetDist = it.dist;
+                    if it.willPass {
+                        closest = veh;
+                        foeLink = link;
+                    }
+                }
+            }
+        }
+        (closest, foeLink)
     }
 
     /// C++: `MSJunction * MSLink::getJunction() const` [const]
@@ -3036,7 +3265,43 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn check_walking_area_foe(&self, ego: Ptr<MSVehicle>, foeLane: Ptr<MSLane>, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>, result: &mut MSLink_LinkLeaders) {
-        todo!("port MSLink::checkWalkingAreaFoe")
+        if !foeLane.is_null() && foeLane.get_edge().get_persons().len() > 0 {
+            let mut distToPeds = f64::MAX;
+            debug_assert!(!self.myInternalLaneBefore.is_null());
+            let mut egoPath = self.myInternalLaneBefore.get_shape_2().clone();
+            if ego.get_lateral_position_on_lane() != 0. {
+                egoPath.move2side((if g_lefthand() { 1. } else { -1. }) * ego.get_lateral_position_on_lane(), 100.);
+            }
+            for &t in foeLane.get_edge().get_persons().iter() {
+                // shortcut: static_cast<MSPerson*>(t) relies on MSPerson being #[repr(C)] with base first, upgrade when MSEdge stores MSPerson pointers
+                let p: Ptr<MSPerson> = Ptr::from_raw(t.as_raw() as *mut MSPerson);
+                let mut dist = ego.get_position().distance_to2d(&p.base.get_position()) - p.base.get_vehicle_type().get_length();
+                let inFront = self.is_in_front(ego, &egoPath, &p.base.get_position()) || self.is_in_front(ego, &egoPath, &self.get_future_position(p, 1.));
+                if inFront {
+                    dist -= max2(ego.get_vehicle_type().get_min_gap(), MSPMODEL_SAFETY_GAP);
+                }
+                if dist < ego.get_vehicle_type().get_width() / 2. || inFront {
+                    if inFront {
+                        let oncomingFactor = self.is_on_coming_ped(ego, p);
+                        if oncomingFactor > 0. {
+                            let timeToStop = dist.sqrt() / 2.;
+                            let pedDist = p.base.get_max_speed() * max2(timeToStop, ts()) * oncomingFactor;
+                            dist = max2(0.0, dist - pedDist);
+                        }
+                    }
+                    if MSLink::ignore_foe(msveh_to_traffic_object(ego), person_to_traffic_object(p)) {
+                        continue;
+                    }
+                    distToPeds = min2(distToPeds, dist);
+                    if !collectBlockers.is_null() {
+                        collectBlockers.m().push(p);
+                    }
+                }
+            }
+            if distToPeds != f64::MAX {
+                result.push(MSLink_LinkLeader::new(Ptr::null(), -1., distToPeds, MSLink_LinkLeaderFlag::LL_FROM_LEFT as i32, 0.));
+            }
+        }
     }
 
     /// C++: `bool MSLink::isInFront(const MSVehicle *, const PositionVector &, const Position &) const` [const, private]
@@ -3057,7 +3322,12 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_in_front(&self, ego: Ptr<MSVehicle>, egoPath: &PositionVector, pPos: &Position) -> bool {
-        todo!("port MSLink::isInFront")
+        let pedAngle = ego.get_position().angle_to2d(pPos);
+        let angleDiff = angle_diff(ego.get_angle(), pedAngle).abs();
+        if angleDiff < deg2rad(75.) {
+            return egoPath.distance2d(pPos, false) < ego.get_vehicle_type().get_width() + MSPMODEL_SAFETY_GAP;
+        }
+        false
     }
 
     /// C++: `double MSLink::isOnComingPed(const MSVehicle *, const MSPerson *) const` [const, private]
@@ -3080,7 +3350,13 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_on_coming_ped(&self, ego: Ptr<MSVehicle>, p: Ptr<MSPerson>) -> f64 {
-        todo!("port MSLink::isOnComingPed")
+        let pedToEgoAngle = p.base.get_position().angle_to2d(&ego.get_position());
+        let angleDiff = angle_diff(p.base.get_angle(), pedToEgoAngle).abs();
+        if angleDiff <= deg2rad(90.) {
+            angleDiff.cos()
+        } else {
+            0.
+        }
     }
 
     /// C++: `Position MSLink::getFuturePosition(const MSPerson *, double) const` [const, private]
@@ -3095,7 +3371,10 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_future_position(&self, p: Ptr<MSPerson>, timeHorizon: f64) -> Position {
-        todo!("port MSLink::getFuturePosition")
+        let a = p.base.get_angle();
+        let dist = timeHorizon * p.base.get_max_speed();
+        let offset = Position::new(a.cos() * dist, a.sin() * dist);
+        p.base.get_position() + offset
     }
 
     /// C++: `bool MSLink::blockedByFoe(const SUMOVehicle *, const ApproachingVehicleInformation &, SUMOTime, SUMOTime, double, double, bool, double, double, SUMOTime, const SUMOTrafficObject *) const` [const, private]
@@ -3211,7 +3490,49 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn blocked_by_foe(&self, veh: Ptr<SUMOVehicle>, avi: &MSLink_ApproachingVehicleInformation, arrivalTime: SUMOTime, leaveTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, sameTargetLane: bool, impatience: f64, decel: f64, waitingTime: SUMOTime, ego: Ptr<SUMOTrafficObject>) -> bool {
-        todo!("port MSLink::blockedByFoe")
+        if !avi.willPass {
+            return false;
+        }
+        if self.myState == LINKSTATE_ALLWAY_STOP {
+            debug_assert!(waitingTime > 0);
+            let actionDelta = MSNet::get_instance().get_current_time_step() - veh.get_last_action_time();
+            if waitingTime > avi.waitingTime + actionDelta {
+                return false;
+            }
+            if waitingTime == (avi.waitingTime + actionDelta) && arrivalTime < avi.arrivalTime + actionDelta {
+                return false;
+            }
+        }
+        let mut foeArrivalTime = avi.arrivalTime;
+        let mut foeArrivalSpeedBraking = avi.arrivalSpeedBraking;
+        if impatience > 0. && arrivalTime < avi.arrivalTime {
+            let fatb = MSLink::compute_foe_arrival_time_braking(arrivalTime, veh, avi.arrivalTime, impatience, avi.dist, &mut foeArrivalSpeedBraking);
+            foeArrivalTime = ((1. - impatience) * (avi.arrivalTime as f64) + impatience * (fatb as f64)) as SUMOTime;
+        }
+        let lookAhead: SUMOTime = if self.myState == LINKSTATE_ZIPPER {
+            MSLink::myLookaheadTimeZipper
+        } else if ego.is_null() {
+            MSLink::myLookaheadTime
+        } else {
+            time2steps(ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_TIMEGAP_MINOR, steps2time(MSLink::myLookaheadTime)))
+        };
+        if avi.leavingTime < arrivalTime {
+            if sameTargetLane
+                && (arrivalTime - avi.leavingTime < lookAhead
+                    || MSLink::unsafe_merge_speeds(avi.leaveSpeed, arrivalSpeed, veh.get_vehicle_type().get_car_follow_model().get_max_decel(), decel))
+            {
+                return true;
+            }
+        } else if foeArrivalTime > leaveTime + lookAhead {
+            if sameTargetLane
+                && MSLink::unsafe_merge_speeds(leaveSpeed, foeArrivalSpeedBraking, decel, veh.get_vehicle_type().get_car_follow_model().get_max_decel())
+            {
+                return true;
+            }
+        } else {
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSLink::checkContOff() const` [const, private]
@@ -3460,7 +3781,28 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn compute_foe_arrival_time_braking(arrivalTime: SUMOTime, foe: Ptr<SUMOVehicle>, foeArrivalTime: SUMOTime, impatience: f64, dist: f64, fasb: &mut f64) -> SUMOTime {
-        todo!("port MSLink::computeFoeArrivalTimeBraking")
+        let mut arrivalTime = arrivalTime;
+        let deltaT = delta_t();
+        if arrivalTime - arrivalTime % deltaT == foeArrivalTime - foeArrivalTime % deltaT {
+            return foeArrivalTime;
+        }
+        if arrivalTime % deltaT > 0 {
+            arrivalTime = arrivalTime - (arrivalTime % deltaT) + deltaT;
+        }
+        let m = foe.get_vehicle_type().get_car_follow_model().get_max_decel() * impatience;
+        let dt = steps2time(foeArrivalTime - arrivalTime);
+        let d = dt * m;
+        let a = dt * d / 2.;
+        let simStep = MSNet::get_instance().get_current_time_step();
+        let v = dist / steps2time(foeArrivalTime - simStep + deltaT);
+        let dist2 = dist - v * steps2time(arrivalTime - simStep);
+        if 0.5 * v * v / m <= dist2 {
+            *fasb = 0.;
+            return foeArrivalTime + time2steps(30.);
+        }
+        let x = ((4. * (v - d) * (v - d) - 8. * m * a).sqrt() * -0.5 - d + v) / m;
+        *fasb = v - (dt + x) * m;
+        foeArrivalTime + time2steps(x)
     }
 
     /// C++: `bool MSLink::lateralOverlap(double, double, double, double)` [static, private]
@@ -3471,7 +3813,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn lateral_overlap(posLat: f64, width: f64, posLat2: f64, width2: f64) -> bool {
-        todo!("port MSLink::lateralOverlap")
+        (posLat2 - posLat).abs() < (width + width2) / 2.
     }
 
     /// C++: `const CustomConflict * MSLink::getCustomConflict(const MSLane *) const` [const, private]
