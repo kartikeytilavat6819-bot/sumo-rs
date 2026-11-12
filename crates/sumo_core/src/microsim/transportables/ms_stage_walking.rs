@@ -1,6 +1,9 @@
 //! Port of microsim/transportables/MSStageWalking.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::std_defs::g_precision;
 
 // C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
 const MSPMODEL_FORWARD: i32 = 1;
@@ -330,9 +333,9 @@ impl MSStageWalking {
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
         // shortcut: MSPModel::usingShortcuts() is assumed false (movement model not ported), so the invalid-tripinfo warning is never written
         let distance = self.walk_distance(true);
-        let maxSpeed = self.get_max_speed(person);
+        let maxSpeed = self.get_max_speed(transportable);
         let duration = self.myArrived - self.myDeparted;
-        let timeLoss = self.get_time_loss(person);
+        let timeLoss = self.get_time_loss(transportable);
         // shortcut: MSDevice_Tripinfo::addPedestrianData is not ported yet, so the pedestrian totals are not updated
         os.open_tag("walk");
         let depart = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
@@ -411,7 +414,7 @@ impl MSStageWalking {
             if stop.get_my_name() != "" {
                 comment = format!(" <!-- {} -->", utils::common::string_utils::escape_xml(stop.get_my_name(), true));
             }
-        } else if self.was_set(VEHPARS_ARRIVALPOS_SET) {
+        } else if self.was_set(VEHPARS_ARRIVALPOS_SET as i32) {
             os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.myArrivalPos);
         }
         if self.myWalkingTime > 0 {

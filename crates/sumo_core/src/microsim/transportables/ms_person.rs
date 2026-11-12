@@ -1,6 +1,7 @@
 //! Port of microsim/transportables/MSPerson.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
 
 /// Changes the wished person speed and position
 /// C++ class `MSPerson::Influencer` (microsim/transportables/MSPerson.h)

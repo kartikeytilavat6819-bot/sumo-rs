@@ -1,6 +1,8 @@
 //! Port of microsim/transportables/MSTransportable.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::geom::POSITION_EPS;
 
 /// C++ typedef `std::vector<MSStage *> MSTransportable::MSTransportablePlan`
 pub type MSTransportable_MSTransportablePlan = Vec<Ptr<MSStage>>;
@@ -369,7 +371,8 @@ impl MSTransportable {
             accessToStop = self.check_access(prior, true);
         } else if prior.get_stage_type() == MSStageType::WAITING_FOR_DEPART {
             for dev in self.myDevices.clone() {
-                dev.m().notify_enter(&mut self.base, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
+                // shortcut: calls the MSMoveReminder base notifyEnter (no virtual dispatch); MSTransportableDevice_FCD override returns false but the result is discarded, upgrade when devices are trait objects
+                dev.m().base2.notify_enter(&mut self.base, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
             }
         }
         if !accessToStop && (self.myStep == self.myPlan.len() || (self.myPlan[self.myStep].get_stage_type() != MSStageType::DRIVING && self.myPlan[self.myStep].get_stage_type() != MSStageType::TRIP)) {
