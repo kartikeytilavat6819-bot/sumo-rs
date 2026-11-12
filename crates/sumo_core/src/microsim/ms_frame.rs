@@ -7,6 +7,69 @@ use crate::prelude::*;
 pub struct MSFrame {
 }
 
+// ----- helpers for MSFrame::checkOptions (the OptionsCont is only reachable inside with_options) -----
+
+fn or_panic<T>(r: Result<T, utils::common::util_exceptions::ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn opt_bool(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    or_panic(oc.get_bool(name))
+}
+
+fn opt_float(oc: &utils::options::options_cont::OptionsCont, name: &str) -> f64 {
+    or_panic(oc.get_float(name))
+}
+
+fn opt_int(oc: &utils::options::options_cont::OptionsCont, name: &str) -> i32 {
+    or_panic(oc.get_int(name))
+}
+
+fn opt_str(oc: &utils::options::options_cont::OptionsCont, name: &str) -> String {
+    or_panic(oc.get_string(name))
+}
+
+fn opt_strs(oc: &utils::options::options_cont::OptionsCont, name: &str) -> Vec<String> {
+    or_panic(oc.get_string_vector(name)).clone()
+}
+
+fn opt_is_set(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    or_panic(oc.is_set(name, true))
+}
+
+fn opt_is_default(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    oc.is_default(name)
+}
+
+/// C++ string2time(...) that throws ProcessError
+fn st(s: &str) -> utils::common::time::SUMOTime {
+    or_panic(utils::common::time::string2time(s))
+}
+
+/// C++ checkStepLengthMultiple (utils/common/SUMOTime.cpp); only emits warnings, its C++ return value is always false
+// shortcut: this function lives in utils/common/SUMOTime.cpp and is not ported there yet, so it is local to MSFrame
+fn check_step_length_multiple(t: utils::common::time::SUMOTime, error: &str, delta_t: utils::common::time::SUMOTime, begin: utils::common::time::SUMOTime) {
+    use utils::common::time::time2string;
+    if begin % delta_t == 0 {
+        if t % delta_t != 0 {
+            utils::common::msg_handler::write_warning(&format!(
+                "The given time value {} is not a multiple of the step length {}{}.",
+                time2string(t),
+                time2string(delta_t),
+                error
+            ));
+        }
+    } else if (t - begin) % delta_t != 0 {
+        utils::common::msg_handler::write_warning(&format!(
+            "The given time value {} is not reached with step length {} and begin time {}{}.",
+            time2string(t),
+            time2string(delta_t),
+            time2string(begin),
+            error
+        ));
+    }
+}
+
 impl MSFrame {
     /// C++: `void MSFrame::fillOptions()` [static]
     /// Inserts options used by the simulation into the OptionsCont-singleton
@@ -1766,7 +1829,226 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options() -> bool {
-        todo!("port MSFrame::checkOptions")
+        utils::options::options_cont::with_options(|oc| {
+            let mut ok = true;
+            if opt_bool(oc, "ignore.routeelements") {
+                or_panic(oc.reset_writable_name("route-files"));
+                or_panic(oc.reset_default_name("route-files"));
+            }
+            if opt_bool(oc, "ignore.additionalelements") {
+                or_panic(oc.reset_writable_name("additional-files"));
+                or_panic(oc.reset_default_name("additional-files"));
+            }
+            if !opt_is_set(oc, "net-file") && opt_is_default(oc, "remote-port") {
+                utils::common::msg_handler::write_error("No network file (-n) specified.");
+                ok = false;
+            }
+            if opt_float(oc, "scale") < 0. {
+                utils::common::msg_handler::write_error("Invalid scaling factor.");
+                ok = false;
+            }
+            if opt_bool(oc, "vehroute-output.exit-times") && !opt_is_set(oc, "vehroute-output") {
+                utils::common::msg_handler::write_error("A vehroute-output file is needed for exit times.");
+                ok = false;
+            }
+            if opt_is_set(oc, "gui-settings-file") && opt_str(oc, "gui-settings-file") != "" && !or_panic(oc.is_usable_file_list("gui-settings-file")) {
+                ok = false;
+            }
+            if opt_bool(oc, "demo") && opt_is_default(oc, "start") {
+                or_panic(oc.set_default("start", "true"));
+            }
+            if opt_bool(oc, "demo") && opt_bool(oc, "quit-on-end") {
+                utils::common::msg_handler::write_error("You can either restart or quit on end.");
+                ok = false;
+            }
+            if opt_bool(oc, "meso-junction-control.limited") && !opt_bool(oc, "meso-junction-control") {
+                if !opt_is_default(oc, "meso-junction-control") {
+                    utils::common::msg_handler::write_warning("The option 'meso-junction-control.limited' implies 'meso-junction-control'.");
+                }
+                or_panic(oc.set_default("meso-junction-control", "true"));
+            }
+            if opt_bool(oc, "meso-ltm") && opt_is_default(oc, "mesosim") {
+                or_panic(oc.set_default("mesosim", "true"));
+            }
+            if opt_bool(oc, "mesosim") && opt_is_default(oc, "pedestrian.model") {
+                or_panic(oc.set_default("pedestrian.model", "nonInteracting"));
+            }
+            if st(&opt_str(oc, "device.fcd.begin")) < 0 {
+                let v = opt_str(oc, "begin");
+                or_panic(oc.set_default("device.fcd.begin", &v));
+            }
+            if st(&opt_str(oc, "device.emissions.begin")) < 0 {
+                let v = opt_str(oc, "begin");
+                or_panic(oc.set_default("device.emissions.begin", &v));
+            }
+            let begin = st(&opt_str(oc, "begin"));
+            let end = st(&opt_str(oc, "end"));
+            if begin < 0 {
+                utils::common::msg_handler::write_error("The begin time should not be negative.");
+                ok = false;
+            }
+            // DELTA_T not yet initialized
+            let deltaT = std::cmp::max(1, st(&opt_str(oc, "step-length")));
+            if begin < utils::common::time::time2steps(1.0) {
+                check_step_length_multiple(begin, " for begin", deltaT, 0);
+            }
+            if end != st("-1") && end < begin {
+                utils::common::msg_handler::write_error("The end time should be after the begin time.");
+                ok = false;
+            }
+            if st(&opt_str(oc, "step-length")) <= 0 {
+                utils::common::msg_handler::write_error("the minimum step-length is 0.001.");
+                ok = false;
+            }
+            let period = st(&opt_str(oc, "device.fcd.period"));
+            if period > 0 {
+                check_step_length_multiple(period, " for device.fcd.period", deltaT, 0);
+            }
+            let statePeriod = st(&opt_str(oc, "save-state.period"));
+            if statePeriod > 0 {
+                check_step_length_multiple(statePeriod, " for save-state.period", deltaT, 0);
+            }
+            for timeStr in opt_strs(oc, "save-state.times") {
+                match utils::common::time::string2time(&timeStr) {
+                    Ok(saveT) => {
+                        if end > 0 && saveT >= end {
+                            utils::common::msg_handler::write_warning(&format!(
+                                "The save-state time={} will not be used before simulation end at {}.",
+                                timeStr,
+                                utils::common::time::time2string(end)
+                            ));
+                        } else {
+                            check_step_length_multiple(saveT, " for save-state.times", deltaT, begin);
+                        }
+                    }
+                    Err(e) => {
+                        utils::common::msg_handler::write_error(&format!("Invalid time '{}' for option 'save-state.times'. {}", timeStr, e));
+                        ok = false;
+                    }
+                }
+            }
+            // shortcut: C++ movereminder-output check is only compiled under _DEBUG; not checked in this port
+            if opt_bool(oc, "sloppy-insert") {
+                utils::common::msg_handler::write_warning("The option 'sloppy-insert' is deprecated, because it is now activated by default, see the new option 'eager-insert'.");
+            }
+            if st(&opt_str(oc, "lanechange.duration")) > 0 && opt_float(oc, "lateral-resolution") > 0. {
+                utils::common::msg_handler::write_error("Only one of the options 'lanechange.duration' or 'lateral-resolution' may be given.");
+                ok = false;
+            }
+            if opt_bool(oc, "mesosim") && (opt_float(oc, "lateral-resolution") > 0. || st(&opt_str(oc, "lanechange.duration")) > 0) {
+                utils::common::msg_handler::write_error("Sublane dynamics are not supported by mesoscopic simulation.");
+                ok = false;
+            }
+            if opt_bool(oc, "ignore-accidents") {
+                utils::common::msg_handler::write_warning("The option 'ignore-accidents' is deprecated. Use 'collision.action none' instead.");
+            }
+            if opt_bool(oc, "duration-log.statistics") && opt_is_default(oc, "verbose") {
+                or_panic(oc.set_default("verbose", "true"));
+            }
+            if opt_is_default(oc, "precision") && st(&opt_str(oc, "step-length")) % 10 != 0 {
+                or_panic(oc.set_default("precision", "3"));
+            }
+            if opt_is_default(oc, "tracker-interval") && !opt_is_default(oc, "step-length") {
+                let v = opt_str(oc, "step-length");
+                or_panic(oc.set_default("tracker-interval", &v));
+            }
+            if opt_bool(oc, "tripinfo-output.write-undeparted") {
+                if !opt_is_default(oc, "tripinfo-output.write-unfinished") && !opt_bool(oc, "tripinfo-output.write-unfinished") {
+                    utils::common::msg_handler::write_warning("The option tripinfo-output.write-undeparted implies tripinfo-output.write-unfinished.");
+                }
+                or_panic(oc.set_default("tripinfo-output.write-unfinished", "true"));
+            }
+            if opt_int(oc, "precision") > 2 {
+                for name in [
+                    "netstate-dump.precision",
+                    "emission-output.precision",
+                    "battery-output.precision",
+                    "elechybrid-output.precision",
+                    "substations-output.precision",
+                ] {
+                    if opt_is_default(oc, name) {
+                        let v = opt_int(oc, "precision").to_string();
+                        or_panic(oc.set_default(name, &v));
+                    }
+                }
+            }
+            let carFollowModel = opt_str(oc, "carfollow.model");
+            if !utils::xml::sumo_xml_definitions_gen::CarFollowModels.has_string(&carFollowModel) {
+                utils::common::msg_handler::write_error(&format!("Unknown model '{}' for option 'carfollow.model'.", carFollowModel));
+                ok = false;
+            }
+            if opt_is_set(oc, "default.emergencydecel") {
+                let val = opt_str(oc, "default.emergencydecel");
+                if val != "default" && val != "decel" && utils::common::string_utils::to_double(&val).is_err() {
+                    utils::common::msg_handler::write_error(&format!(
+                        "Invalid value '{}' for option 'default.emergencydecel'. Must be a FLOAT or 'default' or 'decel'.",
+                        val
+                    ));
+                    ok = false;
+                }
+            }
+            if opt_is_set(oc, "time-to-teleport.railsignal-deadlock") {
+                let t1 = st(&opt_str(oc, "time-to-teleport"));
+                let t2 = st(&opt_str(oc, "time-to-teleport.railsignal-deadlock"));
+                if t1 > 0 && t2 > 0 && t1 <= t2 {
+                    utils::common::msg_handler::write_warning(&format!(
+                        "Railsignal-deadlock will not be detected because time-to-teleport ({}) is lower than time-to-teleport.railsignal-deadlock ({}).",
+                        utils::common::time::time2string(t1),
+                        utils::common::time::time2string(t2)
+                    ));
+                }
+            }
+            oc.do_register("", utils::options::option::SumoOption::string_typed("-1", "TIME"));
+            if opt_float(oc, "delay") < 0.0 {
+                utils::common::msg_handler::write_error("You need a non-negative delay.");
+                ok = false;
+            }
+            for val in opt_strs(oc, "breakpoints") {
+                if let Err(e) = utils::common::time::string2time(&val) {
+                    utils::common::msg_handler::write_error(&format!("Invalid time '{}' for option 'breakpoints'. {}", val, e));
+                    ok = false;
+                }
+            }
+            // shortcut: the C++ #ifndef HAVE_FOX check is applied because this port is built without Fox
+            if opt_int(oc, "threads") > 1 {
+                utils::common::msg_handler::write_error("Parallel simulation is only possible when compiled with Fox.");
+                ok = false;
+            }
+            if opt_int(oc, "threads") < 1 {
+                utils::common::msg_handler::write_error("You need at least one thread.");
+                ok = false;
+            }
+            if opt_int(oc, "threads") > opt_int(oc, "thread-rngs") {
+                utils::common::msg_handler::write_warning("Number of threads exceeds number of thread-rngs. Simulation runs with the same seed may produce different results.");
+            }
+            if opt_str(oc, "game.mode") != "tls" && opt_str(oc, "game.mode") != "drt" {
+                utils::common::msg_handler::write_error("game.mode must be one of ['tls', 'drt']");
+                ok = false;
+            }
+            if opt_is_set(oc, "persontrip.transfer.car-walk") {
+                for opt in opt_strs(oc, "persontrip.transfer.car-walk") {
+                    if opt != "parkingAreas" && opt != "ptStops" && opt != "allJunctions" {
+                        utils::common::msg_handler::write_error(&format!(
+                            "Invalid transfer option '{}'. Must be one of 'parkingAreas', 'ptStops' or 'allJunctions'.",
+                            opt
+                        ));
+                        ok = false;
+                    }
+                }
+            }
+            if !opt_is_default(oc, "weights.random-factor") && (opt_is_set(oc, "astar.all-distances") || opt_is_set(oc, "astar.landmark-distances")) {
+                utils::common::msg_handler::write_warning("The option --weights.random-factor should not be used together with astar and precomputed distances.");
+            }
+            if opt_int(oc, "threads") > 1 {
+                utils::common::msg_handler::write_warning("The option --threads has known problems and does NOT provide meaningful speedup at this time (https://github.com/eclipse-sumo/sumo/issues/4767). Using it is not recommended!");
+            }
+            if opt_bool(oc, "mapmatch.junctions") && opt_is_default(oc, "junction-taz") {
+                or_panic(oc.set_default("junction-taz", "true"));
+            }
+            ok &= crate::microsim::devices::ms_device::MSDevice::check_options(oc);
+            // shortcut: C++ SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here
+            ok
+        })
     }
 
     /// C++: `void MSFrame::setMSGlobals(OptionsCont &)` [static]
@@ -1883,7 +2165,116 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn set_ms_globals(oc: &mut OptionsCont) {
-        todo!("port MSFrame::setMSGlobals")
+        use crate::microsim::ms_globals as g;
+        // pre-initialise the network
+        // set whether empty edges shall be printed on dump
+        g::set_omit_empty_edges_on_dump(!opt_bool(oc, "netstate-dump.empty-edges"));
+        // set whether internal lanes shall be used
+        g::set_using_internal_lanes(!opt_bool(oc, "no-internal-links"));
+        let ignoreJunctionBlocker = st(&opt_str(oc, "ignore-junction-blocker"));
+        g::set_ignore_junction_blocker(if ignoreJunctionBlocker < 0 { i64::MAX } else { ignoreJunctionBlocker });
+        // set the grid lock time
+        let timeToTeleport = st(&opt_str(oc, "time-to-teleport"));
+        g::set_time_to_gridlock(if timeToTeleport < 0 { 0 } else { timeToTeleport });
+        g::set_time_to_impatience(st(&opt_str(oc, "time-to-impatience")));
+        let timeToTeleportHighways = st(&opt_str(oc, "time-to-teleport.highways"));
+        g::set_time_to_gridlock_highways(if timeToTeleportHighways < 0 { 0 } else { timeToTeleportHighways });
+        g::set_gridlock_highways_speed(opt_float(oc, "time-to-teleport.highways.min-speed"));
+        g::set_time_to_teleport_disconnected(st(&opt_str(oc, "time-to-teleport.disconnected")));
+        g::set_time_to_teleport_bidi(st(&opt_str(oc, "time-to-teleport.bidi")));
+        g::set_time_to_teleport_rs_deadlock(st(&opt_str(oc, "time-to-teleport.railsignal-deadlock")));
+        g::set_remove_gridlocked(opt_bool(oc, "time-to-teleport.remove"));
+        g::set_check4_accidents(!opt_bool(oc, "ignore-accidents"));
+        g::set_check_routes(!opt_bool(oc, "ignore-route-errors"));
+        g::set_emergency_insert(opt_bool(oc, "emergency-insert"));
+        g::set_weights_separate_turns(opt_float(oc, "weights.separate-turns"));
+        g::set_startup_wait_threshold(st(&opt_str(oc, "startup-wait-threshold")));
+        g::set_lane_change_duration(st(&opt_str(oc, "lanechange.duration")));
+        g::set_lateral_resolution(opt_float(oc, "lateral-resolution"));
+        g::set_sublane(g::lane_change_duration() > 0 || g::lateral_resolution() > 0.);
+        g::set_state_loaded(opt_is_set(oc, "load-state"));
+        g::set_use_meso_sim(opt_bool(oc, "mesosim"));
+        g::set_meso_limited_junction_control(opt_bool(oc, "meso-junction-control.limited"));
+        g::set_meso_interpolate_pos(opt_bool(oc, "meso-interpolate-pos"));
+        g::set_waiting_time_memory(st(&opt_str(oc, "waiting-time-memory")));
+        crate::microsim::lcmodels::ms_abstract_lane_change_model::MSAbstractLaneChangeModel::init_global_options(oc);
+        g::set_overhead_wire_solver(opt_bool(oc, "overhead-wire.solver"));
+        g::set_overhead_wire_recuperation(opt_bool(oc, "overhead-wire.recuperation"));
+        Circuit::enforce_current_limits(opt_bool(oc, "overhead-wire.substation-current-limits"));
+        g::set_insertion_checks(crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_insertion_checks(&opt_str(oc, "insertion-checks")));
+        g::set_max_rail_signal_block_length(opt_float(oc, "railsignal.max-block-length"));
+        crate::microsim::ms_lane::MSLane::init_collision_options(oc);
+        utils::common::time::set_delta_t(st(&opt_str(oc, "step-length")));
+        let integrationMethodSet = !opt_is_default(oc, "step-method.ballistic");
+        let actionStepLengthSet = !opt_is_default(oc, "default.action-step-length");
+        g::set_semi_implicit_euler_update(!opt_bool(oc, "step-method.ballistic"));
+        // Init default value for gActionStepLength
+        if g::semi_implicit_euler_update() && actionStepLengthSet && !integrationMethodSet {
+            utils::common::msg_handler::write_message("Integration method was set to 'ballistic', since a default action step length was specified.");
+            g::set_semi_implicit_euler_update(false);
+        }
+        let givenDefaultActionStepLength = opt_float(oc, "default.action-step-length");
+        g::set_action_step_length(crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::process_action_step_length(givenDefaultActionStepLength));
+        let defaultEmergencyDecelOption = opt_str(oc, "default.emergencydecel");
+        if defaultEmergencyDecelOption == "default" {
+            // VTYPEPARS_DEFAULT_EMERGENCYDECEL_DEFAULT (SUMOVTypeParameter.h)
+            g::set_default_emergency_decel(-1.0);
+        } else if defaultEmergencyDecelOption == "decel" {
+            // VTYPEPARS_DEFAULT_EMERGENCYDECEL_DECEL (SUMOVTypeParameter.h)
+            g::set_default_emergency_decel(-2.0);
+        } else {
+            // value already checked in checkOptions()
+            g::set_default_emergency_decel(or_panic(utils::common::string_utils::to_double(&defaultEmergencyDecelOption)));
+        }
+        g::set_num_sim_threads(opt_int(oc, "threads"));
+        g::set_num_threads(std::cmp::max(g::num_sim_threads(), opt_int(oc, "device.rerouting.threads")));
+        g::set_emergency_decel_warning_threshold(opt_float(oc, "emergencydecel.warning-threshold"));
+        g::set_minor_penalty(opt_float(oc, "weights.minor-penalty"));
+        g::set_tls_penalty(opt_float(oc, "weights.tls-penalty"));
+        g::set_turnaround_penalty(opt_float(oc, "weights.turnaround-penalty"));
+        g::set_model_parking_manoeuver(opt_bool(oc, "parking.maneuver"));
+        g::set_stop_tolerance(opt_float(oc, "ride.stop-tolerance"));
+        g::set_tls_yellow_min_decel(opt_float(oc, "tls.yellow.min-decel"));
+        g::set_use_stop_ended(opt_bool(oc, "use-stop-ended"));
+        g::set_use_stop_started(opt_bool(oc, "use-stop-started"));
+        g::set_slope_centered(opt_bool(oc, "slope-centered"));
+        let mut defaultClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "railsignal.default-classes") {
+            defaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        let mut mBdefaultClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "railsignal.moving-block.default-classes") {
+            mBdefaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::init_signalized(defaultClasses, mBdefaultClasses);
+        // shortcut: gTaxiClasses is SVCPermissions (i64) in C++, but the utils global is i32, so the high bits are dropped
+        let mut taxiClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "device.taxi.vclasses") {
+            taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        utils::common::std_defs::set_g_taxi_classes(taxiClasses as i32);
+        let mut error = String::new();
+        if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_lane(
+            &opt_str(oc, "default.departlane"),
+            "options",
+            "",
+            crate::microsim::ms_edge::MSEdge::get_default_depart_lane(),
+            crate::microsim::ms_edge::MSEdge::get_default_depart_lane_definition(),
+            &mut error,
+        ) {
+            utils::common::msg_handler::write_error(&error);
+        }
+        if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_speed(
+            &opt_str(oc, "default.departspeed"),
+            "options",
+            "",
+            crate::microsim::ms_lane::MSLane::get_default_depart_speed(),
+            crate::microsim::ms_lane::MSLane::get_default_depart_speed_definition(),
+            &mut error,
+        ) {
+            utils::common::msg_handler::write_error(&error);
+        }
+        // shortcut: the C++ _DEBUG-only movereminder-output initialisation (MSBaseVehicle::initMoveReminderOutput) is not ported
     }
 
 }
