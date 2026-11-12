@@ -18,6 +18,8 @@ const SPEED_EPS: f64 = 0.01; // config.h.cmake
 const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
 const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
 const STOPPING_PLACE_OFFSET: f64 = 0.5; // MSVehicle.cpp
+const STOP_STARTED_SET: i32 = 2 << 17; // SUMOVehicleParameter.h
+const STOP_ENDED_SET: i32 = 2 << 16; // SUMOVehicleParameter.h
 
 /// C++ implicit upcast MSVehicle& -> SUMOTrafficObject& (MSVehicle derives from SUMOVehicle, which derives from SUMOTrafficObject)
 #[allow(dead_code)]
@@ -9470,7 +9472,20 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_parking_state(&mut self) {
-        todo!("port MSVehicle::updateParkingState")
+        self.update_state(0.0, true);
+        // deboard while parked
+        let pos = self.get_position_on_lane();
+        if !self.myPersonDevice.is_null() {
+            let dev = self.myPersonDevice;
+            dev.m().notify_move(as_traffic_object(self), pos, pos, 0.0);
+        }
+        if !self.myContainerDevice.is_null() {
+            let dev = self.myContainerDevice;
+            dev.m().notify_move(as_traffic_object(self), pos, pos, 0.0);
+        }
+        for dev in self.myDevices.iter() {
+            dev.m().base.notify_parking();
+        }
     }
 
     /// C++: `void MSVehicle::replaceVehicleType(const MSVehicleType *)` [virtual]
@@ -9558,7 +9573,61 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSVehicle::saveState")
+        self.base.save_state(out);
+        // here starts the vehicle internal part (see loading)
+        let mut internals: Vec<String> = Vec::new();
+        internals.push(to_string(&self.myParameter.parametersSet));
+        internals.push(to_string(&self.myDeparture));
+        internals.push(to_string(&(self.myCurrEdge as i64))); // distance(myRoute->begin(), myCurrEdge)
+        internals.push(to_string(&self.myDepartPos));
+        internals.push(to_string(&self.myWaitingTime));
+        internals.push(to_string(&self.myTimeLoss));
+        internals.push(to_string(&self.myLastActionTime));
+        internals.push(to_string(&self.is_stopped()));
+        internals.push(to_string(&(if self.is_stopped() { self.myStops.front().unwrap().duration } else { 0 })));
+        internals.push(to_string(&self.myPastStops.len()));
+        internals.push(to_string(&self.myJunctionEntryTime));
+        internals.push(to_string(&self.myJunctionConflictEntryTime));
+        internals.push(to_string(&self.myJunctionEntryTimeNeverYield));
+        out.write_attr(SUMO_ATTR_STATE, &internals);
+        let positionVec: Vec<f64> = vec![self.myState.myPos, self.myState.myBackPos, self.myState.myLastCoveredDist];
+        out.write_attr(SUMO_ATTR_POSITION, &positionVec);
+        let speedVec: Vec<f64> = vec![self.myState.mySpeed, self.myState.myPreviousSpeed];
+        out.write_attr(SUMO_ATTR_SPEED, &speedVec);
+        out.write_attr(SUMO_ATTR_ANGLE, &utils::geom::geom_helper::navi_degree(self.myAngle));
+        out.write_attr(SUMO_ATTR_POSITION_LAT, &self.myState.myPosLat);
+        out.write_attr(SUMO_ATTR_WAITINGTIME, &self.myWaitingTimeCollector.get_state());
+        if self.is_stopped() && self.myStops.front().unwrap().entryPos != self.get_position_on_lane() {
+            out.write_attr(SUMO_ATTR_ENTRYPOS, &self.myStops.front().unwrap().entryPos);
+        }
+        self.myLaneChangeModel.save_state(out);
+        // save past stops
+        for stop in self.myPastStops.clone() {
+            stop.write(out, false, true);
+            // do not write started and ended twice
+            if (stop.parametersSet & STOP_STARTED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_STARTED, &time2string(stop.started));
+            }
+            if (stop.parametersSet & STOP_ENDED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_ENDED, &time2string(stop.ended));
+            }
+            stop.write_params(out);
+            out.close_tag("");
+        }
+        // save upcoming stops
+        for stop in self.myStops.iter() {
+            stop.write(out);
+        }
+        // save parameters and device states
+        self.myParameter.write_params(out);
+        for dev in self.myDevices.iter() {
+            // shortcut: virtual dispatch to MSVehicleDevice subclasses is not available, only the base MSDevice::saveState runs
+            dev.m().base2.save_state(out);
+        }
+        if !self.myCFVariables.is_null() {
+            self.myCFVariables.save_state(out, self.get_car_follow_model());
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSVehicle::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
