@@ -2485,7 +2485,59 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn check_geometry(&mut self, maxAngle: f64, fixAngle: bool, minRadius: f64, fix: bool, silent: bool) {
-        todo!("port NBEdge::checkGeometry")
+        if self.myGeom.len() < 3 {
+            return;
+        }
+        //std::cout << "checking geometry of " << getID() << " geometry = " << toString(myGeom) << "\n";
+        let mut angles: Vec<f64> = Vec::new(); // absolute segment angles
+        for i in 0..self.myGeom.len() - 1 {
+            angles.push(self.myGeom.angle_at2d(i as i32));
+        }
+        let bidi = self.get_bidi_edge(); // const_cast<NBEdge*>(getBidiEdge())
+        for i in 0..angles.len() - 1 {
+            let relAngle = utils::geom::geom_helper::angle_diff(angles[i], angles[i + 1]).abs();
+            if maxAngle > 0.0 && relAngle > maxAngle {
+                if fixAngle {
+                    write_messagef!("Removing sharp angle of % degrees at edge '%', segment %.", relAngle, self.get_id(), i as i32);
+                    self.myGeom.remove(i + 1);
+                    if !bidi.is_null() {
+                        bidi.m().myGeom = self.myGeom.reverse();
+                    }
+                    self.check_geometry(maxAngle, fixAngle, minRadius, fix, silent);
+                    return;
+                } else if !silent {
+                    let deg = utils::geom::geom_helper::rad2deg(relAngle);
+                    write_warningf!("Found angle of % degrees at edge '%', segment %.", deg, self.get_id(), i as i32);
+                }
+            }
+            if relAngle < utils::geom::geom_helper::deg2rad(1.0) {
+                continue;
+            }
+            if i == 0 || i == angles.len() - 2 {
+                let start = i == 0;
+                let dist = if start {
+                    self.myGeom.at(0).distance_to2d(self.myGeom.at(1))
+                } else {
+                    self.myGeom.at(-2).distance_to2d(self.myGeom.at(-1))
+                };
+                let r = (0.5 * (std::f64::consts::PI - relAngle)).tan() * dist;
+                let where_ = if start { "start" } else { "end" };
+                if minRadius > 0.0 && r < minRadius {
+                    if fix {
+                        write_messagef!("Removing sharp turn with radius % at the % of edge '%'.", r, where_, self.get_id());
+                        self.myGeom.remove(if start { 1 } else { i + 1 });
+                        if !bidi.is_null() {
+                            bidi.m().myGeom = self.myGeom.reverse();
+                        }
+                        self.check_geometry(maxAngle, fixAngle, minRadius, fix, silent);
+                        return;
+                    } else if !silent {
+                        write_warningf!("Found sharp turn with radius % at the % of edge '%'.", r, where_, self.get_id());
+                    }
+                }
+            }
+        }
+        //std::cout << "\n";
     }
 
     /// C++: `bool NBEdge::addEdge2EdgeConnection(NBEdge *, bool, SVCPermissions)`
