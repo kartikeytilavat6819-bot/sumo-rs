@@ -99,3 +99,8 @@ same output text, same floating-point results.
   and return `b`. Returning `Self` by value makes those stored pointers dangle when the caller moves it.
 - Callers keep the Box alive for the object's lifetime (store it in the owning container, or `Box::leak`
   with a `// shortcut:` note where C++ ownership is unclear).
+
+### Ptr method-name clash
+
+- `Ptr<T>` has its own `get()`, `m()`, `cast()`, `is_null()`. If the pointee has a method with the same
+  name (e.g. `RandomDistributor::get(rng)`), call it through an explicit deref: `(*p).get(None)`.

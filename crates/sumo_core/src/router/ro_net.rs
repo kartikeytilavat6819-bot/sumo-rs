@@ -1187,7 +1187,7 @@ impl RONet {
             return ty;
         }
         if let Some(dist) = self.myVTypeDistDict.get(id).copied() {
-            return dist.get(None).unwrap_or_else(|e| panic!("{e}"));
+            return (*dist).get(None).unwrap_or_else(|e| panic!("{e}"));  // explicit deref: Ptr::get would shadow RandomDistributor::get
         }
         if id == "" {
             // ok, no vehicle type or an unknown type was given within the user input

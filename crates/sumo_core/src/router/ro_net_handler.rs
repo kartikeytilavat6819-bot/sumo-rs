@@ -1,6 +1,7 @@
 //! Port of router/RONetHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::string_bijection::StringBijection;
 use utils::common::sumo_vehicle_class::{SVC_ALL, SVC_PEDESTRIAN};
 
@@ -58,7 +59,7 @@ fn throw_error(e: ProcessError) -> ! {
 
 /// C++ `StringBijection::get` as used for enum attributes; an unknown value reports and clears ok
 // shortcut: enum-valued attributes are parsed with the StringBijection tables here, SUMOSAXAttributes has no enum FromAttr yet
-fn parse_enum<T: Copy>(value: &str, bijection: &StringBijection<T>, ok: &mut bool, default_value: T) -> T {
+fn parse_enum<T: Copy + Ord>(value: &str, bijection: &utils::xml::string_bijection::StringBijection<T>, ok: &mut bool, default_value: T) -> T {
     match bijection.get(value) {
         Ok(v) => v,
         Err(e) => {
@@ -70,7 +71,7 @@ fn parse_enum<T: Copy>(value: &str, bijection: &StringBijection<T>, ok: &mut boo
 }
 
 /// C++ `attrs.getOpt<E>(attr, ...)` for an enum attribute with a default
-fn get_opt_enum<T: Copy>(attrs: &SUMOSAXAttributes, attr: i32, ok: &mut bool, default_value: T, bijection: &StringBijection<T>) -> T {
+fn get_opt_enum<T: Copy + Ord>(attrs: &SUMOSAXAttributes, attr: i32, ok: &mut bool, default_value: T, bijection: &utils::xml::string_bijection::StringBijection<T>) -> T {
     match attrs.get_string_opt(attr) {
         None => default_value,
         Some(s) => parse_enum(&s, bijection, ok, default_value),
@@ -584,7 +585,7 @@ impl RONetHandler {
             throw_error(ProcessError::Process(String::new()));
         }
         let name = self.myCurrentName.clone();
-        let func: SumoXMLEdgeFunc = get_opt_enum(attrs, SUMO_ATTR_FUNCTION, &mut ok, SumoXMLEdgeFunc::NORMAL, &EdgeFunctions);
+        let func: SumoXMLEdgeFunc = get_opt_enum(attrs, SUMO_ATTR_FUNCTION, &mut ok, SumoXMLEdgeFunc::NORMAL, &*EdgeFunctions);
         if !ok {
             return;
         }
@@ -750,7 +751,7 @@ impl RONetHandler {
         // get the id, report an error if not given or empty...
         let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
         let typeName = attrs.get::<String>(SUMO_ATTR_TYPE, &id, &mut ok, true);
-        let type_ = parse_enum(&typeName, &NodeTypes, &mut ok, SumoXMLNodeType::INTERNAL);
+        let type_ = parse_enum(&typeName, &*NodeTypes, &mut ok, SumoXMLNodeType::INTERNAL);
         if type_ == SumoXMLNodeType::INTERNAL {
             return;
         }
@@ -886,12 +887,12 @@ impl RONetHandler {
             from.m().add_successor(to, via, dir.clone());
             via.m().add_successor(to, Ptr::null(), dir.clone());
             let stateName = attrs.get::<String>(SUMO_ATTR_STATE, "", &mut ok, true);
-            let state = parse_enum(&stateName, &LinkStates, &mut ok, LINKSTATE_DEADEND);
+            let state = parse_enum(&stateName, &*LinkStates, &mut ok, LINKSTATE_DEADEND);
             if state == LINKSTATE_MINOR || state == LINKSTATE_EQUAL || state == LINKSTATE_STOP || state == LINKSTATE_ALLWAY_STOP {
                 via.m().set_time_penalty(self.myMinorPenalty);
             }
-            let turn = LinkDirections.get_string(LinkDirection::TURN).unwrap_or_default();
-            let turnLefthand = LinkDirections.get_string(LinkDirection::TURN_LEFTHAND).unwrap_or_default();
+            let turn = LinkDirections.get_string(LinkDirection::TURN);
+            let turnLefthand = LinkDirections.get_string(LinkDirection::TURN_LEFTHAND);
             if dir == turn || dir == turnLefthand {
                 via.m().set_time_penalty(self.myTurnaroundPenalty);
             }
