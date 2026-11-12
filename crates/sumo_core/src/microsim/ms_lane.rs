@@ -1,6 +1,8 @@
 //! Port of microsim/MSLane.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+use utils::geom::NUMERICAL_EPS;
 
 /// C++ enum `MSLane::CollisionAction`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1643,7 +1645,7 @@ impl MSLane {
                 dwBlocked = true;
             }
             if dwBlocked {
-                self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.get_id());
+                self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.base2.get_id());
                 return false;
             }
         }
