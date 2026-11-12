@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
-use utils::xml::sumo_xml_definitions_gen::{SUMO_ATTR_DEPART, SUMO_ATTR_ID, SUMO_ATTR_JUMP, SUMO_ATTR_PARKING, SUMO_TAG_VEHICLETRANSFER};
+use utils::xml::sumo_xml_definitions::{SUMO_ATTR_DEPART, SUMO_ATTR_ID, SUMO_ATTR_JUMP, SUMO_ATTR_PARKING, SUMO_TAG_VEHICLETRANSFER};
 
 // C++ static members, ported as module-level items
 pub const MSVehicleTransfer_TeleportMinSpeed: f64 = 1.0;
