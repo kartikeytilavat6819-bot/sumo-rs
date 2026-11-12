@@ -30,7 +30,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // EdgeFloatTimeLineRetriever_EdgeEffort(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::EdgeFloatTimeLineRetriever_EdgeEffort")
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort { base: (), myNet: Ptr::from_mut(net) }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeEffort::~EdgeFloatTimeLineRetriever_EdgeEffort() noexcept` [virtual]
@@ -38,7 +38,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // ~EdgeFloatTimeLineRetriever_EdgeEffort() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::~EdgeFloatTimeLineRetriever_EdgeEffort")
+        // C++ destructor has an empty body
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeEffort::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -55,7 +55,12 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::addEdgeWeight")
+        let edge = MSEdge::dictionary_2(id);
+        if !edge.is_null() {
+            self.myNet.m().get_weights_storage().add_effort(edge, beg, end, val);
+        } else {
+            write_errorf!("Trying to set the effort for the unknown edge '%'.", id);
+        }
     }
 
 }
@@ -88,7 +93,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // EdgeFloatTimeLineRetriever_EdgeTravelTime(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime { base: (), myNet: Ptr::from_mut(net) }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime() noexcept` [virtual]
@@ -96,7 +101,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // ~EdgeFloatTimeLineRetriever_EdgeTravelTime() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        // C++ destructor has an empty body
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -113,7 +118,12 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight")
+        let edge = MSEdge::dictionary_2(id);
+        if !edge.is_null() {
+            self.myNet.m().get_weights_storage().add_travel_time(edge, beg, end, val);
+        } else {
+            write_errorf!("Trying to set the travel time for the unknown edge '%'.", id);
+        }
     }
 
 }
@@ -149,7 +159,14 @@ impl NLBuilder {
     //       myNet(net), myXMLHandler(xmlHandler) {}
     #[allow(unused_variables)]
     pub fn new(oc: &mut OptionsCont, net: &mut MSNet, eb: &mut NLEdgeControlBuilder, jb: &mut NLJunctionControlBuilder, db: &mut NLDetectorBuilder, xmlHandler: &mut NLHandler) -> Self {
-        todo!("port NLBuilder::NLBuilder")
+        NLBuilder {
+            myOptions: Ptr::from_mut(oc),
+            myEdgeBuilder: Ptr::from_mut(eb),
+            myJunctionBuilder: Ptr::from_mut(jb),
+            myDetectorBuilder: Ptr::from_mut(db),
+            myNet: Ptr::from_mut(net),
+            myXMLHandler: Ptr::from_mut(xmlHandler),
+        }
     }
 
     /// C++: `void NLBuilder::~NLBuilder()` [virtual]
@@ -157,7 +174,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLBuilder::~NLBuilder")
+        // C++ destructor is implicit and has no body
     }
 
     /// C++: `bool NLBuilder::build()` [virtual]
@@ -610,7 +627,28 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_default_mean_data(&mut self, optionName: &str, id: &str, useLanes: bool) {
-        todo!("port NLBuilder::buildDefaultMeanData")
+        use utils::options::options_cont::{get_bool, get_string, is_set};
+        if is_set(optionName) {
+            let mut useLanes = useLanes;
+            if useLanes && use_meso_sim() && !get_bool("meso-lane-queue") {
+                utils::common::msg_handler::write_warning("LaneData requested for mesoscopic simulation but --meso-lane-queue is not active. Falling back to edgeData.");
+                useLanes = false;
+            }
+            let detBuilder = self.myDetectorBuilder;
+            let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let begin = utils::common::time::string2time(&get_string("begin")).unwrap_or_else(|e| std::panic::panic_any(e));
+                detBuilder.m().create_edge_lane_mean_data(id, -1, begin, -1, "traffic", useLanes, "true", false, false, 0, 100000.0, 0.0, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, 0.0, "", "", Vec::new(), AggregateType::NO, &get_string(optionName));
+            }));
+            if let Err(payload) = caught {
+                match payload.downcast::<ProcessError>() {
+                    Ok(e) => match *e {
+                        ProcessError::InvalidArgument(m) | ProcessError::IOError(m) => utils::common::msg_handler::write_error(&m),
+                        other => std::panic::resume_unwind(Box::new(other)),
+                    },
+                    Err(p) => std::panic::resume_unwind(p),
+                }
+            }
+        }
     }
 
     /// C++: `void NLBuilder::NLBuilder(const NLBuilder &)` [private]
@@ -618,7 +656,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLBuilder) -> Self {
-        todo!("port NLBuilder::NLBuilder")
+        panic!("NLBuilder copy constructor is private and undefined in C++, it must not be used")
     }
 
     /// C++: `NLBuilder & NLBuilder::operator=(const NLBuilder &)` [private]
@@ -626,7 +664,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLBuilder) -> &mut NLBuilder {
-        todo!("port NLBuilder::operator=")
+        panic!("NLBuilder assignment is private and undefined in C++, it must not be used")
     }
 
 }
