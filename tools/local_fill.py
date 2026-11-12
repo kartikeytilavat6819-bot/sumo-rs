@@ -12,6 +12,7 @@ import argparse, json, os, re, subprocess, sys, urllib.request
 
 API = os.environ.get("LOCAL_LLM_URL", "http://localhost:8000/v1/chat/completions")
 MODEL = os.environ.get("LOCAL_LLM_MODEL", "")  # empty -> first model the server reports
+CARGO = os.path.join(os.path.expanduser("~"), ".cargo", "bin", "cargo.exe")  # Windows: subprocess ignores env PATH for lookup
 CARGO_ENV = dict(os.environ, CARGO_TARGET_DIR=r"C:\Users\karti\sumo-rs-target-local", CARGO_BUILD_JOBS="8")
 CARGO_ENV["PATH"] = os.path.expanduser(r"~\.cargo\bin") + os.pathsep + CARGO_ENV.get("PATH", "")
 
@@ -76,7 +77,7 @@ def struct_fields(text, name):
 
 
 def cargo_errors(wt):
-    r = subprocess.run(["cargo", "check", "-q", "-p", "sumo_core", "--message-format", "short"],
+    r = subprocess.run([CARGO, "check", "-q", "-p", "sumo_core", "--message-format", "short"],
                        cwd=wt, env=CARGO_ENV, capture_output=True, text=True)
     errs = []
     for l in (r.stdout + r.stderr).splitlines():

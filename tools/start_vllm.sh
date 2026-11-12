@@ -4,4 +4,4 @@
 MAXLEN=${1:-8192}
 source ~/vllm-env/bin/activate
 exec vllm serve Qwen/Qwen2.5-Coder-7B-Instruct-AWQ --quantization awq --max-model-len "$MAXLEN" \
-  --gpu-memory-utilization 0.90 --max-num-seqs 8 --port 8000 --host 0.0.0.0
+  --gpu-memory-utilization 0.80 --max-num-seqs 8 --enforce-eager --port 8000 --host 0.0.0.0

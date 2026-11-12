@@ -4,6 +4,7 @@
 #   3. start the vLLM server (restart on crash; smaller context; fall back to Ollama qwen3:8b)
 #   4. fill short skeleton methods in rounds, merge each round into main (compile-checked) and push
 # Log: C:\Users\karti\sumo-rs-local-fill.log      Launch detached (see bottom of PORTING.md).
+export MSYS_NO_PATHCONV=1  # stop Git Bash rewriting /mnt/c/... arguments to wsl.exe
 LOG=/c/Users/karti/sumo-rs-local-fill.log
 WT=/c/Users/karti/sumo-rs-local
 REPO=/c/Users/karti/sumo-rs
@@ -21,9 +22,11 @@ trap 'kill $AWAKE $SERVER 2>/dev/null' EXIT
 log "start (keep-awake pid $AWAKE)"
 
 # 2. make sure vLLM is importable; if no pip is running and it's still missing, (re)install it
-for attempt in $(seq 1 6); do
-  if in_wsl 'source ~/vllm-env/bin/activate 2>/dev/null && python -c "import vllm" 2>/dev/null'; then break; fi
+attempt=0
+while [ $attempt -lt 4 ]; do
+  if in_wsl 'source ~/vllm-env/bin/activate 2>/dev/null && python -c "import vllm" 2>/dev/null'; then log "vllm importable"; break; fi
   if in_wsl 'pgrep -f "pip install" >/dev/null'; then log "pip install still running, waiting"; sleep 120; continue; fi
+  attempt=$((attempt+1))
   log "vllm missing, installing (attempt $attempt)"
   in_wsl 'python3 -m venv ~/vllm-env 2>/dev/null; source ~/vllm-env/bin/activate && pip install -q vllm' >> "$LOG" 2>&1
 done
