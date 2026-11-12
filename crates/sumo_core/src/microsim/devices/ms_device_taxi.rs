@@ -1681,7 +1681,8 @@ impl MSDevice_Taxi {
                         DEFAULT_VTYPE_ID.to_string()
                     } else {
                         let typeID = format!("DEFAULT_{}TYPE", vClassName.to_uppercase());
-                        let vc = MSNet::get_instance().get_vehicle_control();
+                        let netPtr = MSNet::get_instance();
+    let vc = netPtr.m().get_vehicle_control();
                         if !vc.has_v_type(&typeID) {
                             let mut tp = SUMOVTypeParameter::new(&typeID, svc);
                             let t = MSVehicleType::build(&mut tp, "");
