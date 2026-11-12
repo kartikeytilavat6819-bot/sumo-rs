@@ -8,6 +8,28 @@ pub type NodeSubCluster_ConnectionCont = Vec<Ptr<NIVissimConnection>>;
 /// C++ typedef `std::vector<NIVissimConnectionCluster *> NIVissimConnectionCluster::ContType`
 pub type NIVissimConnectionCluster_ContType = Vec<Ptr<NIVissimConnectionCluster>>;
 
+thread_local! {
+    /// C++ static `NIVissimConnectionCluster::myClusters`
+    static MY_CLUSTERS: std::cell::RefCell<NIVissimConnectionCluster_ContType> = const { std::cell::RefCell::new(Vec::new()) };
+    /// C++ static `NIVissimConnectionCluster::myFirstFreeID`
+    static MY_FIRST_FREE_ID: std::cell::Cell<i32> = const { std::cell::Cell::new(100000) };
+    /// C++ static `NIVissimConnectionCluster::myStaticBlaID`
+    static MY_STATIC_BLA_ID: std::cell::Cell<i32> = const { std::cell::Cell::new(0) };
+}
+
+/// C++ `VectorHelper<int>::removeDouble`: keeps the first occurrence of every value, in order
+fn remove_double_i32(v: &mut Vec<i32>) {
+    let mut seen: Vec<i32> = Vec::new();
+    v.retain(|x| {
+        if seen.contains(x) {
+            false
+        } else {
+            seen.push(*x);
+            true
+        }
+    });
+}
+
 /// This class holds a list of connections either all outgoing or all incoming within an edge, which do lies close together. This shall be the connections which belong to a single node. It still are not all of the node's connections, as other edges may participate to this node, too.
 /// C++ class `NIVissimConnectionCluster` (netimport/vissim/tempstructs/NIVissimConnectionCluster.h)
 pub struct NIVissimConnectionCluster {
@@ -54,9 +76,42 @@ impl NIVissimConnectionCluster {
     //     VectorHelper<int>::removeDouble(myIncomingEdges);
     //     VectorHelper<int>::removeDouble(myOutgoingEdges);
     // }
+    /// Returns a Box because the constructor registers `this` in myClusters
     #[allow(unused_variables)]
-    pub fn new(connections: &Vec<i32>, nodeCluster: i32, edgeid: i32) -> Self {
-        todo!("port NIVissimConnectionCluster::NIVissimConnectionCluster")
+    pub fn new(connections: &Vec<i32>, nodeCluster: i32, edgeid: i32) -> Box<Self> {
+        let blaID = MY_STATIC_BLA_ID.with(|c| {
+            let v = c.get();
+            c.set(v + 1);
+            v
+        });
+        let mut b = Box::new(Self {
+            myConnections: connections.clone(),
+            myBoundary: Boundary::default(),
+            myNodeCluster: nodeCluster,
+            myEdges: Vec::new(),
+            myNodes: Vec::new(),
+            myTLs: Vec::new(),
+            myOutgoingEdges: Vec::new(),
+            myIncomingEdges: Vec::new(),
+            myBlaID: blaID,
+        });
+        b.recompute_boundary();
+        MY_CLUSTERS.with(|c| c.borrow_mut().push(Ptr::from_box(&b)));
+        debug_assert!(edgeid > 0);
+        if edgeid >= 0 {
+            b.myEdges.push(edgeid);
+        }
+        // add information about incoming and outgoing edges
+        for i in connections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            debug_assert!(!c.is_null());
+            b.myOutgoingEdges.push(c.get_to_edge_id());
+            b.myIncomingEdges.push(c.get_from_edge_id());
+            debug_assert!(c.get_from_edge_id() == edgeid || c.get_to_edge_id() == edgeid);
+        }
+        remove_double_i32(&mut b.myIncomingEdges);
+        remove_double_i32(&mut b.myOutgoingEdges);
+        b
     }
 
     /// C++: `void NIVissimConnectionCluster::NIVissimConnectionCluster(const std::vector<int> &, const Boundary &, int, const std::vector<int> &)`
@@ -81,9 +136,39 @@ impl NIVissimConnectionCluster {
     //     VectorHelper<int>::removeDouble(myIncomingEdges);
     //     VectorHelper<int>::removeDouble(myOutgoingEdges);
     // }
+    /// Returns a Box because the constructor registers `this` in myClusters
     #[allow(unused_variables)]
-    pub fn new_2(connections: &Vec<i32>, boundary: &Boundary, nodeCluster: i32, edges: &Vec<i32>) -> Self {
-        todo!("port NIVissimConnectionCluster::NIVissimConnectionCluster")
+    pub fn new_2(connections: &Vec<i32>, boundary: &Boundary, nodeCluster: i32, edges: &Vec<i32>) -> Box<Self> {
+        let blaID = MY_STATIC_BLA_ID.with(|c| {
+            let v = c.get();
+            c.set(v + 1);
+            v
+        });
+        let mut b = Box::new(Self {
+            myConnections: connections.clone(),
+            myBoundary: *boundary,
+            myNodeCluster: nodeCluster,
+            myEdges: edges.clone(),
+            myNodes: Vec::new(),
+            myTLs: Vec::new(),
+            myOutgoingEdges: Vec::new(),
+            myIncomingEdges: Vec::new(),
+            myBlaID: blaID,
+        });
+        MY_CLUSTERS.with(|c| c.borrow_mut().push(Ptr::from_box(&b)));
+        b.recompute_boundary();
+        debug_assert!(b.myBoundary.xmax() >= b.myBoundary.xmin());
+        // add information about incoming and outgoing edges
+        for i in connections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            debug_assert!(!c.is_null());
+            b.myOutgoingEdges.push(c.get_to_edge_id());
+            b.myIncomingEdges.push(c.get_from_edge_id());
+            debug_assert!(edges.contains(&c.get_from_edge_id()) || edges.contains(&c.get_to_edge_id()));
+        }
+        remove_double_i32(&mut b.myIncomingEdges);
+        remove_double_i32(&mut b.myOutgoingEdges);
+        b
     }
 
     /// C++: `void NIVissimConnectionCluster::~NIVissimConnectionCluster()`
@@ -91,7 +176,7 @@ impl NIVissimConnectionCluster {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimConnectionCluster::~NIVissimConnectionCluster")
+        // implicit C++ destructor: no members need explicit release
     }
 
     /// C++: `bool NIVissimConnectionCluster::overlapsWith(NIVissimConnectionCluster *, double) const` [const]
