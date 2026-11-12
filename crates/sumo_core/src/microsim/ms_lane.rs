@@ -3726,7 +3726,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MSLane::isEmpty")
+        self.myVehicles.is_empty() && self.myPartialVehicles.is_empty()
     }
 
     /// C++: `bool MSLane::isInternal() const` [const]
@@ -3737,7 +3737,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port MSLane::isInternal")
+        self.myEdge.is_internal()
     }
 
     /// C++: `bool MSLane::isNormal() const` [const]
@@ -3748,7 +3748,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_normal(&self) -> bool {
-        todo!("port MSLane::isNormal")
+        self.myEdge.is_normal()
     }
 
     /// C++: `bool MSLane::isCrossing() const` [const]
@@ -3759,7 +3759,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_crossing(&self) -> bool {
-        todo!("port MSLane::isCrossing")
+        self.myEdge.is_crossing()
     }
 
     /// C++: `bool MSLane::isPriorityCrossing() const` [const]
@@ -3770,7 +3770,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_priority_crossing(&self) -> bool {
-        todo!("port MSLane::isPriorityCrossing")
+        self.is_crossing() && self.get_incoming_lanes()[0].viaLink.get_off_state() == LINKSTATE_MAJOR
     }
 
     /// C++: `bool MSLane::isWalkingArea() const` [const]
@@ -3781,7 +3781,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_walking_area(&self) -> bool {
-        todo!("port MSLane::isWalkingArea")
+        self.myEdge.is_walking_area()
     }
 
     /// C++: `MSVehicle * MSLane::getLastFullVehicle() const` [const]
@@ -3795,7 +3795,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_full_vehicle(&self) -> Ptr<MSVehicle> {
-        todo!("port MSLane::getLastFullVehicle")
+        self.myVehicles.first().copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `MSVehicle * MSLane::getFirstFullVehicle() const` [const]
@@ -3809,7 +3809,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_first_full_vehicle(&self) -> Ptr<MSVehicle> {
-        todo!("port MSLane::getFirstFullVehicle")
+        self.myVehicles.last().copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `MSVehicle * MSLane::getLastAnyVehicle() const` [const]
@@ -3833,7 +3833,20 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_any_vehicle(&self) -> Ptr<MSVehicle> {
-        todo!("port MSLane::getLastAnyVehicle")
+        // all vehicles in myVehicles should have positions smaller or equal to
+        // those in myPartialVehicles (unless we're on a bidi-lane)
+        if !self.myVehicles.is_empty() {
+            if !self.myBidiLane.is_null() && !self.myPartialVehicles.is_empty() {
+                if self.myVehicles[0].get_position_on_lane() > self.myPartialVehicles[0].get_position_on_lane_2(Ptr::new(self)) {
+                    return self.myPartialVehicles[0];
+                }
+            }
+            return self.myVehicles[0];
+        }
+        if !self.myPartialVehicles.is_empty() {
+            return self.myPartialVehicles[0];
+        }
+        Ptr::null()
     }
 
     /// C++: `MSVehicle * MSLane::getFirstAnyVehicle() const` [const]
@@ -3852,7 +3865,16 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_first_any_vehicle(&self) -> Ptr<MSVehicle> {
-        todo!("port MSLane::getFirstAnyVehicle")
+        let mut result = Ptr::null();
+        if !self.myVehicles.is_empty() {
+            result = *self.myVehicles.last().unwrap();
+        }
+        if !self.myPartialVehicles.is_empty()
+            && (result.is_null() || result.get_position_on_lane_2(Ptr::new(self)) < self.myPartialVehicles.last().unwrap().get_position_on_lane_2(Ptr::new(self)))
+        {
+            result = *self.myPartialVehicles.last().unwrap();
+        }
+        result
     }
 
     /// C++: `MSVehicle * MSLane::removeVehicle(MSVehicle *, MSMoveReminder::Notification, bool)` [virtual]
@@ -3874,7 +3896,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn remove_vehicle(&mut self, remVehicle: Ptr<MSVehicle>, notification: MSMoveReminder_Notification, notify: bool) -> Ptr<MSVehicle> {
-        todo!("port MSLane::removeVehicle")
+        if let Some(pos) = self.myVehicles.iter().position(|v| *v == remVehicle) {
+            if notify {
+                remVehicle.m().leave_lane(notification, Ptr::null());
+            }
+            self.myVehicles.remove(pos);
+            self.myBruttoVehicleLengthSum -= remVehicle.get_vehicle_type().get_length_with_gap();
+            self.myNettoVehicleLengthSum -= remVehicle.get_vehicle_type().get_length();
+        }
+        remVehicle
     }
 
     /// C++: `void MSLane::leftByLaneChange(MSVehicle *)`
@@ -3885,7 +3915,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn left_by_lane_change(&mut self, v: Ptr<MSVehicle>) {
-        todo!("port MSLane::leftByLaneChange")
+        self.myBruttoVehicleLengthSum -= v.get_vehicle_type().get_length_with_gap();
+        self.myNettoVehicleLengthSum -= v.get_vehicle_type().get_length();
     }
 
     /// C++: `void MSLane::enteredByLaneChange(MSVehicle *)`
@@ -3896,7 +3927,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn entered_by_lane_change(&mut self, v: Ptr<MSVehicle>) {
-        todo!("port MSLane::enteredByLaneChange")
+        self.myBruttoVehicleLengthSum += v.get_vehicle_type().get_length_with_gap();
+        self.myNettoVehicleLengthSum += v.get_vehicle_type().get_length();
     }
 
     /// C++: `MSLane * MSLane::getParallelLane(int, bool) const` [const]
@@ -3907,7 +3939,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_parallel_lane(&self, offset: i32, includeOpposite: bool) -> Ptr<MSLane> {
-        todo!("port MSLane::getParallelLane")
+        self.myEdge.parallel_lane(Ptr::new(self), offset, includeOpposite)
     }
 
     /// C++: `void MSLane::setPermissions(SVCPermissions, long long)`
@@ -3926,7 +3958,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, permissions: SVCPermissions, transientID: i64) {
-        todo!("port MSLane::setPermissions")
+        let oldPermissions = self.myPermissions;
+        if transientID == MSLane_CHANGE_PERMISSIONS_PERMANENT {
+            self.myPermissions = permissions;
+            self.myOriginalPermissions = permissions;
+            self.update_internal_lane_permissions(oldPermissions);
+        } else {
+            self.myPermissionChanges.insert(transientID, permissions);
+            self.reset_permissions(MSLane_CHANGE_PERMISSIONS_PERMANENT);
+        }
     }
 
     /// C++: `void MSLane::resetPermissions(long long)`
@@ -3947,7 +3987,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn reset_permissions(&mut self, transientID: i64) {
-        todo!("port MSLane::resetPermissions")
+        let oldPermissions = self.myPermissions;
+        self.myPermissionChanges.remove(&transientID);
+        if self.myPermissionChanges.is_empty() {
+            self.myPermissions = self.myOriginalPermissions;
+        } else {
+            // combine all permission changes
+            self.myPermissions = SVC_ALL;
+            for item in self.myPermissionChanges.values() {
+                self.myPermissions &= *item;
+            }
+        }
+        self.update_internal_lane_permissions(oldPermissions);
     }
 
     /// C++: `bool MSLane::hadPermissionChanges() const` [const]
@@ -3957,7 +4008,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn had_permission_changes(&self) -> bool {
-        todo!("port MSLane::hadPermissionChanges")
+        !self.myPermissionChanges.is_empty()
     }
 
     /// C++: `void MSLane::updateInternalLanePermissions(SVCPermissions)`
@@ -3979,7 +4030,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn update_internal_lane_permissions(&mut self, oldPermissions: SVCPermissions) {
-        todo!("port MSLane::updateInternalLanePermissions")
+        if self.is_internal() {
+            return;
+        }
+        for link in self.myLinks.iter() {
+            let internal = link.get_via_lane();
+            // only update internal lanes that mirror the permissions of this lane;
+            // lanes with connection-specific permissions are left untouched
+            if !internal.is_null() && internal.get_permissions() == oldPermissions {
+                internal.m().set_permissions(self.myPermissions, MSLane_CHANGE_PERMISSIONS_PERMANENT);
+                internal.get_edge().rebuild_allowed_lanes(false, false);
+            }
+        }
     }
 
     /// C++: `void MSLane::setChangeLeft(SVCPermissions)`
@@ -3990,7 +4052,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_change_left(&mut self, permissions: SVCPermissions) {
-        todo!("port MSLane::setChangeLeft")
+        self.myChangeLeft = permissions;
     }
 
     /// C++: `void MSLane::setChangeRight(SVCPermissions)`
@@ -4001,7 +4063,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_change_right(&mut self, permissions: SVCPermissions) {
-        todo!("port MSLane::setChangeRight")
+        self.myChangeRight = permissions;
     }
 
     /// C++: `bool MSLane::allowsVehicleClass(SUMOVehicleClass) const` [const]
@@ -4010,7 +4072,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn allows_vehicle_class(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port MSLane::allowsVehicleClass")
+        (self.myPermissions & vclass) == vclass
     }
 
     /// C++: `bool MSLane::allowsVehicleClass(SUMOVehicleClass, int) const` [const]
@@ -4020,7 +4082,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn allows_vehicle_class_2(&self, vclass: SUMOVehicleClass, routingMode: i32) -> bool {
-        todo!("port MSLane::allowsVehicleClass")
+        let perms = if (routingMode & ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0 { self.myOriginalPermissions } else { self.myPermissions };
+        (perms & vclass) == vclass
     }
 
     /// C++: `bool MSLane::allowsChangingLeft(SUMOVehicleClass) const` [const]
@@ -4030,7 +4093,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn allows_changing_left(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port MSLane::allowsChangingLeft")
+        (self.myChangeLeft & vclass) == vclass
     }
 
     /// C++: `bool MSLane::allowsChangingRight(SUMOVehicleClass) const` [const]
@@ -4040,7 +4103,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn allows_changing_right(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port MSLane::allowsChangingRight")
+        (self.myChangeRight & vclass) == vclass
     }
 
     /// C++: `void MSLane::addIncomingLane(MSLane *, MSLink *)`
@@ -4054,7 +4117,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_incoming_lane(&mut self, lane: Ptr<MSLane>, viaLink: Ptr<MSLink>) {
-        todo!("port MSLane::addIncomingLane")
+        let ili = MSLane_IncomingLaneInfo {
+            lane,
+            viaLink,
+            length: lane.get_length(),
+        };
+        self.myIncomingLanes.push(ili);
     }
 
     /// C++: `const std::vector<IncomingLaneInfo> & MSLane::getIncomingLanes() const` [const]
@@ -4063,7 +4131,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming_lanes(&self) -> &Vec<MSLane_IncomingLaneInfo> {
-        todo!("port MSLane::getIncomingLanes")
+        &self.myIncomingLanes
     }
 
     /// C++: `void MSLane::addApproachingLane(MSLane *, bool)`
@@ -4082,7 +4150,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_approaching_lane(&mut self, lane: Ptr<MSLane>, warnMultiCon: bool) {
-        todo!("port MSLane::addApproachingLane")
+        let approachingEdge: Ptr<MSEdge> = Ptr::from_mut(lane.get_edge());
+        if !self.myApproachingLanes.contains_key(&approachingEdge) {
+            self.myApproachingLanes.insert(approachingEdge, Vec::new());
+        } else if !approachingEdge.is_internal() && warnMultiCon {
+            // whenever a normal edge connects twice, there is a corresponding
+            // internal edge which connects twice, one warning is sufficient
+            utils::write_warningf!("Lane '%' is approached multiple times from edge '%'. This may cause collisions.", self.get_id(), approachingEdge.get_id());
+        }
+        self.myApproachingLanes.entry(approachingEdge).or_default().push(lane);
     }
 
     /// C++: `bool MSLane::isApproachedFrom(MSEdge *const)`
@@ -4091,7 +4167,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn is_approached_from(&mut self, edge: Ptr<MSEdge>) -> bool {
-        todo!("port MSLane::isApproachedFrom")
+        self.myApproachingLanes.contains_key(&edge)
     }
 
     /// C++: `bool MSLane::isApproachedFrom(MSLane *const, SUMOVehicleClass)`
@@ -4106,7 +4182,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_approached_from_2(&mut self, lane: Ptr<MSLane>, svc: SUMOVehicleClass) -> bool {
-        todo!("port MSLane::isApproachedFrom")
+        for link in lane.get_link_cont() {
+            if link.get_lane() == Ptr::new(self) && (link.get_permissions() & svc) == svc {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double MSLane::getVehicleStopOffset(const MSVehicle *) const` [const]
@@ -4124,7 +4205,14 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_stop_offset(&self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSLane::getVehicleStopOffset")
+        if !self.myLaneStopOffset.is_defined() {
+            return 0.;
+        }
+        if (self.myLaneStopOffset.get_permissions() & veh.get_vehicle_type().get_vehicle_class()) != 0 {
+            return self.myLaneStopOffset.get_offset();
+        } else {
+            return 0.;
+        }
     }
 
     /// C++: `const StopOffset & MSLane::getLaneStopOffsets() const` [const]
@@ -4135,7 +4223,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_stop_offsets(&self) -> &StopOffset {
-        todo!("port MSLane::getLaneStopOffsets")
+        &self.myLaneStopOffset
     }
 
     /// C++: `void MSLane::setLaneStopOffset(const StopOffset &)`
@@ -4146,7 +4234,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_stop_offset(&mut self, stopOffset: &StopOffset) {
-        todo!("port MSLane::setLaneStopOffset")
+        self.myLaneStopOffset = stopOffset.clone();
     }
 
     /// C++: `MSLeaderDistanceInfo MSLane::getFollowersOnConsecutive(const MSVehicle *, double, bool, double, MinorLinkMode, bool) const` [const]
