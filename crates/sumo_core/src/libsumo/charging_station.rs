@@ -11,6 +11,11 @@ pub struct ChargingStation {
 //   static SubscriptionResults ChargingStation::mySubscriptionResults;
 //   static ContextSubscriptionResults ChargingStation::myContextSubscriptionResults;
 
+thread_local! {
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 impl ChargingStation {
     /// C++: `std::string ChargingStation::getLaneID(const std::string &)` [static]
     // std::string
@@ -19,7 +24,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(stopID: &str) -> String {
-        todo!("port ChargingStation::getLaneID")
+        Self::get_charging_station(stopID).get_lane().get_id().to_string()
     }
 
     /// C++: `double ChargingStation::getStartPos(const std::string &)` [static]
@@ -29,7 +34,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_start_pos(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getStartPos")
+        Self::get_charging_station(stopID).get_begin_lane_position()
     }
 
     /// C++: `double ChargingStation::getEndPos(const std::string &)` [static]
@@ -39,7 +44,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_end_pos(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getEndPos")
+        Self::get_charging_station(stopID).get_end_lane_position()
     }
 
     /// C++: `std::string ChargingStation::getName(const std::string &)` [static]
@@ -49,7 +54,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_name(stopID: &str) -> String {
-        todo!("port ChargingStation::getName")
+        Self::get_charging_station(stopID).get_my_name().to_string()
     }
 
     /// C++: `int ChargingStation::getVehicleCount(const std::string &)` [static]
@@ -59,7 +64,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_count(stopID: &str) -> i32 {
-        todo!("port ChargingStation::getVehicleCount")
+        Self::get_charging_station(stopID).get_stopped_vehicles().len() as i32
     }
 
     /// C++: `std::vector<std::string> ChargingStation::getVehicleIDs(const std::string &)` [static]
@@ -73,7 +78,11 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_i_ds(stopID: &str) -> Vec<String> {
-        todo!("port ChargingStation::getVehicleIDs")
+        let mut result: Vec<String> = Vec::new();
+        for veh in Self::get_charging_station(stopID).get_stopped_vehicles() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `double ChargingStation::getChargingPower(const std::string &)` [static]
@@ -83,7 +92,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_charging_power(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getChargingPower")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().get_charging_power(true)
     }
 
     /// C++: `double ChargingStation::getEfficiency(const std::string &)` [static]
@@ -93,7 +102,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_efficiency(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getEfficiency")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().get_efficency()
     }
 
     /// C++: `double ChargingStation::getChargeDelay(const std::string &)` [static]
@@ -103,7 +112,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_charge_delay(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getChargeDelay")
+        utils::common::time::steps2time(Self::get_charging_station(stopID).cast::<MSChargingStation>().get_charge_delay())
     }
 
     /// C++: `int ChargingStation::getChargeInTransit(const std::string &)` [static]
@@ -113,7 +122,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_charge_in_transit(stopID: &str) -> i32 {
-        todo!("port ChargingStation::getChargeInTransit")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().get_charge_in_transit() as i32
     }
 
     /// C++: `double ChargingStation::getTotalPower(const std::string &)` [static]
@@ -123,7 +132,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_total_power(stopID: &str) -> f64 {
-        todo!("port ChargingStation::getTotalPower")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().get_total_charging_power()
     }
 
     /// C++: `std::vector<std::string> ChargingStation::getIDList()` [static]
@@ -153,7 +162,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port ChargingStation::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string ChargingStation::getParameter(const std::string &, const std::string &)` [static]
@@ -163,14 +172,14 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port ChargingStation::getParameter")
+        Self::get_charging_station(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> ChargingStation::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(ChargingStation)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port ChargingStation::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void ChargingStation::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -180,21 +189,21 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port ChargingStation::setParameter")
+        Self::get_charging_station(objectID).m().base2.set_parameter(key, value);
     }
 
     /// C++: `void ChargingStation::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port ChargingStation::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_CHARGINGSTATION_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void ChargingStation::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port ChargingStation::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_CHARGINGSTATION_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void ChargingStation::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -208,42 +217,43 @@ impl ChargingStation {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port ChargingStation::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_CHARGINGSTATION_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults ChargingStation::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port ChargingStation::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults ChargingStation::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port ChargingStation::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults ChargingStation::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port ChargingStation::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults ChargingStation::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port ChargingStation::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void ChargingStation::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ChargingStation, CHARGINGSTATION)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port ChargingStation::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: ChargingStation::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int ChargingStation::domainID()` [static]
@@ -260,7 +270,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_charging_power(stopID: &str, power: f64) {
-        todo!("port ChargingStation::setChargingPower")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().m().set_charging_power(power);
     }
 
     /// C++: `void ChargingStation::setEfficiency(const std::string &, double)` [static]
@@ -270,7 +280,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_efficiency(stopID: &str, efficiency: f64) {
-        todo!("port ChargingStation::setEfficiency")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().m().set_efficiency(efficiency);
     }
 
     /// C++: `void ChargingStation::setChargeDelay(const std::string &, double)` [static]
@@ -280,7 +290,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_charge_delay(stopID: &str, delay: f64) {
-        todo!("port ChargingStation::setChargeDelay")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().m().set_charge_delay(utils::common::time::time2steps(delay));
     }
 
     /// C++: `void ChargingStation::setChargeInTransit(const std::string &, bool)` [static]
@@ -290,7 +300,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_charge_in_transit(stopID: &str, inTransit: bool) {
-        todo!("port ChargingStation::setChargeInTransit")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().m().set_charge_in_transit(inTransit);
     }
 
     /// C++: `void ChargingStation::setTotalPower(const std::string &, double)` [static]
@@ -300,7 +310,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn set_total_power(stopID: &str, totalPower: f64) {
-        todo!("port ChargingStation::setTotalPower")
+        Self::get_charging_station(stopID).cast::<MSChargingStation>().m().set_total_charging_power(totalPower);
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> ChargingStation::makeWrapper()` [static]
@@ -310,7 +320,8 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port ChargingStation::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: ChargingStation::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool ChargingStation::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -355,7 +366,32 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port ChargingStation::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_POSITION => wrapper.m().wrap_double(objID, variable, Self::get_start_pos(objID)),
+            VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_end_pos(objID)),
+            VAR_NAME => wrapper.m().wrap_string(objID, variable, &Self::get_name(objID)),
+            VAR_STOP_STARTING_VEHICLES_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_vehicle_count(objID)),
+            VAR_STOP_STARTING_VEHICLES_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_vehicle_i_ds(objID)),
+            VAR_CS_POWER => wrapper.m().wrap_double(objID, variable, Self::get_charging_power(objID)),
+            VAR_CS_EFFICIENCY => wrapper.m().wrap_double(objID, variable, Self::get_efficiency(objID)),
+            VAR_CS_CHARGE_DELAY => wrapper.m().wrap_double(objID, variable, Self::get_charge_delay(objID)),
+            VAR_CS_CHARGE_IN_TRANSIT => wrapper.m().wrap_int(objID, variable, Self::get_charge_in_transit(objID)),
+            VAR_CS_TOTAL_POWER => wrapper.m().wrap_double(objID, variable, Self::get_total_power(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSStoppingPlace * ChargingStation::getChargingStation(const std::string &)` [static, private]
