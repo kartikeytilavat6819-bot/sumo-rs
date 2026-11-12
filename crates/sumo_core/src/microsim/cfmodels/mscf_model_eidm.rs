@@ -58,7 +58,7 @@ impl std::ops::DerefMut for MSCFModel_EIDM {
 /// determinism: the type_info match is approximated by the "glosa_" id prefix that MSDevice_GLOSA::buildVehicleDevices gives its device
 fn glosa_device(veh: &Ptr<MSVehicle>) -> Ptr<MSDevice_GLOSA> {
     for dev in veh.get_devices().iter() {
-        if MSDevice::get_device_name(dev.get_id()) == "glosa" {
+        if MSDevice::get_device_name(dev.base2.get_id()) == "glosa" {
             return dev.cast::<MSDevice_GLOSA>();
         }
     }
@@ -98,7 +98,7 @@ impl MSCFModel_EIDM {
         let p = vtype.get_parameter();
         let mut base = MSCFModel::new(vtype);
         let myDelta = p.get_cf_param(SUMO_ATTR_CF_IDM_DELTA, 4.);
-        let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, .25) + .5) as i32;
+        let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, 0.25) + 0.5) as i32;
         let myIterations = if 1 > iterations0 { 1 } else { iterations0 };
         let myTPersDrive = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_PERSISTENCE_DRIVE, 3.);
         let myTreaction = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_REACTION, 0.5);

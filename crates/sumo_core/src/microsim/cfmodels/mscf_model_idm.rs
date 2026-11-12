@@ -64,7 +64,7 @@ impl MSCFModel_IDM {
         let myDelta = if idmm { 4.0 } else { p.get_cf_param(SUMO_ATTR_CF_IDM_DELTA, 4.) };
         let myAdaptationFactor = if idmm { p.get_cf_param(SUMO_ATTR_CF_IDMM_ADAPT_FACTOR, 1.8) } else { 1.0 };
         let myAdaptationTime = if idmm { p.get_cf_param(SUMO_ATTR_CF_IDMM_ADAPT_TIME, 600.0) } else { 0.0 };
-        let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, .25) + .5) as i32;
+        let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, 0.25) + 0.5) as i32;
         let myIterations = if 1 > iterations0 { 1 } else { iterations0 };
         let myTwoSqrtAccelDecel = 2. * (base.myAccel * base.myDecel).sqrt();
         // IDM does not drive very precise and may violate minGap on occasion
