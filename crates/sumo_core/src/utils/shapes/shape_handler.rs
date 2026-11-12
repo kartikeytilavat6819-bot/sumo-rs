@@ -1,13 +1,12 @@
-//! Port of utils/shapes/ShapeHandler.{h,cpp}
+//! Port of utils/shapes/ShapeHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use super::shape::{DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_HEIGHT, DEFAULT_IMG_WIDTH, DEFAULT_LAYER, DEFAULT_LAYER_POI, DEFAULT_LINEWIDTH, DEFAULT_NAME, DEFAULT_TYPE};
 
 /// The XML-Handler for network loading
 /// C++ class `ShapeHandler` (utils/shapes/ShapeHandler.h)
 pub struct ShapeHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */, // shortcut: SUMOSAXHandler not ported yet, placeholder base
+    pub base: Unmapped /* SUMOSAXHandler */,
     /// reference to shape container in which all Shares are being added
     pub myShapeContainer: Ptr<ShapeContainer>,
     /// The prefix to use
@@ -53,18 +52,8 @@ impl ShapeHandler {
     //     myGeoConvHelper(geoConvHelper) {
     // }
     #[allow(unused_variables)]
-    pub fn new(file: &str, sc: &mut ShapeContainer, geoConvHelper: Ptr<GeoConvHelper>) -> Self {
-        ShapeHandler {
-            base: (),
-            myShapeContainer: Ptr::from_mut(sc),
-            myPrefix: String::new(),
-            myDefaultColor: RGBColor::RED,
-            myDefaultIcon: POIIcons.get_string(POIIcon::NONE).unwrap().to_string(),
-            myDefaultLayer: 0.0,
-            myDefaultFill: false,
-            myLastParameterised: Ptr::null(),
-            myGeoConvHelper: geoConvHelper,
-        }
+    pub fn new(file: &str, sc: &mut ShapeContainer, arg2: Ptr<GeoConvHelper>) -> Self {
+        todo!("port ShapeHandler::ShapeHandler")
     }
 
     /// C++: `void ShapeHandler::~ShapeHandler()` [virtual]
@@ -72,21 +61,15 @@ impl ShapeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor: implicit, nothing to do
+        todo!("port ShapeHandler::~ShapeHandler")
     }
 
     /// C++: `bool ShapeHandler::loadFiles(const int &, ShapeHandler &)` [static]
     /// loads all of the given files
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn load_files(files: &Vec<String>, sh: &mut ShapeHandler) -> bool {
-        for fileIt in files.iter() {
-            if !XMLSubSys::runParser(&mut *sh, fileIt, false) {
-                write_messagef!(TL("Loading of shapes from % failed."), fileIt);
-                return false;
-            }
-        }
-        true
+    pub fn load_files(files: &i32, sh: &mut ShapeHandler) -> bool {
+        todo!("port ShapeHandler::loadFiles")
     }
 
     /// C++: `void ShapeHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -133,39 +116,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        match element {
-            SUMO_TAG_POLY => {
-                // default layer is different depending if we're parsing a Poly or a POI, therefore it has to be here defined
-                self.myDefaultLayer = DEFAULT_LAYER;
-                self.add_poly(attrs, false, false);
-            }
-            SUMO_TAG_POI => {
-                // default layer is different depending if we're parsing a Poly or a POI, therefore it has to be here defined
-                self.myDefaultLayer = DEFAULT_LAYER_POI;
-                self.add_poi(attrs, false, false);
-            }
-            SUMO_TAG_PARAM => {
-                if !self.myLastParameterised.is_null() {
-                    let mut ok = true;
-                    let key: String = attrs.get::<String>(SUMO_ATTR_KEY, None, &mut ok);
-                    // continue if key was successfully loaded
-                    if ok {
-                        // circumventing empty string value
-                        let val: String = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
-                        // show warnings if values are invalid
-                        if key.is_empty() {
-                            write_warning(&TL("Error parsing key from shape generic parameter. Key cannot be empty"));
-                        } else if !SUMOXMLDefinitions::isValidParameterKey(&key) {
-                            write_warning(&TL("Error parsing key from shape generic parameter. Key contains invalid characters"));
-                        } else {
-                            self.myLastParameterised.m().setParameter(&key, &val);
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-        // shortcut: C++ catches InvalidArgument from attrs and calls WRITE_ERROR(e.what()); SUMOSAXAttributes does not return Result yet
+        todo!("port ShapeHandler::myStartElement")
     }
 
     /// C++: `void ShapeHandler::myEndElement(int)` [virtual, protected]
@@ -178,9 +129,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        if element != SUMO_TAG_PARAM {
-            self.myLastParameterised = Ptr::null();
-        }
+        todo!("port ShapeHandler::myEndElement")
     }
 
     /// C++: `Position ShapeHandler::getLanePos(const std::string &, const std::string &, double, bool, double)` [virtual, pure virtual, protected]
@@ -188,7 +137,7 @@ impl ShapeHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_lane_pos(&mut self, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
-        panic!("ShapeHandler::getLanePos is pure virtual in C++; subclasses must override it")
+        todo!("port ShapeHandler::getLanePos")
     }
 
     /// C++: `bool ShapeHandler::addLanePosParams()` [virtual, protected]
@@ -199,7 +148,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_lane_pos_params(&mut self) -> bool {
-        false
+        todo!("port ShapeHandler::addLanePosParams")
     }
 
     /// C++: `void ShapeHandler::setDefaults(const std::string &, const RGBColor &, const std::string &, const double, const bool)` [protected]
@@ -214,11 +163,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn set_defaults(&mut self, prefix: &str, color: &RGBColor, icon: &str, layer: f64, fill: bool) {
-        self.myPrefix = prefix.to_string();
-        self.myDefaultColor = color.clone();
-        self.myDefaultIcon = icon.to_string();
-        self.myDefaultLayer = layer;
-        self.myDefaultFill = fill;
+        todo!("port ShapeHandler::setDefaults")
     }
 
     /// C++: `void ShapeHandler::addPOI(const SUMOSAXAttributes &, const bool, const bool)` [protected]
@@ -324,111 +269,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_poi(&mut self, attrs: &SUMOSAXAttributes, ignorePruning: bool, useProcessing: bool) {
-        let mut ok = true;
-        let INVALID_POSITION: f64 = -1000000.0;
-        let id: String = self.myPrefix.clone() + &attrs.get::<String>(SUMO_ATTR_ID, None, &mut ok);
-        let mut x: f64 = attrs.get_opt::<f64>(SUMO_ATTR_X, Some(id.as_str()), &mut ok, INVALID_POSITION);
-        let y: f64 = attrs.get_opt::<f64>(SUMO_ATTR_Y, Some(id.as_str()), &mut ok, INVALID_POSITION);
-        let z: f64 = attrs.get_opt::<f64>(SUMO_ATTR_Z, Some(id.as_str()), &mut ok, INVALID_POSITION);
-        let mut lon: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LON, Some(id.as_str()), &mut ok, INVALID_POSITION);
-        let mut lat: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAT, Some(id.as_str()), &mut ok, INVALID_POSITION);
-        let lanePos: f64 = attrs.get_opt::<f64>(SUMO_ATTR_POSITION, Some(id.as_str()), &mut ok, 0.0);
-        let friendlyPos: bool = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, Some(id.as_str()), &mut ok, false);
-        let lanePosLat: f64 = attrs.get_opt::<f64>(SUMO_ATTR_POSITION_LAT, Some(id.as_str()), &mut ok, 0.0);
-        let mut icon: String = attrs.get_opt::<String>(SUMO_ATTR_ICON, Some(id.as_str()), &mut ok, self.myDefaultIcon.clone());
-        // check icon
-        if !POIIcons.hasString(&icon) {
-            write_warningf!(TLF("Invalid icon % for POI '%', using default", icon, id));
-            icon = "none".to_string();
-        }
-        let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, Some(id.as_str()), &mut ok, self.myDefaultLayer);
-        let type_: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, Some(id.as_str()), &mut ok, String::new());
-        let laneID: String = attrs.get_opt::<String>(SUMO_ATTR_LANE, Some(id.as_str()), &mut ok, String::new());
-        let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, Some(id.as_str()), &mut ok, DEFAULT_ANGLE);
-        let mut imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, Some(id.as_str()), &mut ok, DEFAULT_IMG_FILE.to_string());
-        let color: RGBColor = if attrs.has_attribute(SUMO_ATTR_COLOR) {
-            attrs.get::<RGBColor>(SUMO_ATTR_COLOR, Some(id.as_str()), &mut ok)
-        } else if imgFile != "" {
-            RGBColor::WHITE
-        } else {
-            self.myDefaultColor.clone()
-        };
-        // If the image file is set, change the default POI color to white.
-        if imgFile != "" && !FileHelpers::isAbsolute(&imgFile) {
-            imgFile = FileHelpers::getConfigurationRelative(self.get_file_name(), &imgFile);
-        }
-        let width: f64 = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, Some(id.as_str()), &mut ok, DEFAULT_IMG_WIDTH);
-        let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, Some(id.as_str()), &mut ok, DEFAULT_IMG_HEIGHT);
-        // check if ID is valid
-        if !SUMOXMLDefinitions::isValidTypeID(&id) {
-            write_warningf!(TL("Invalid characters for PoI ID '%'"), id);
-            ok = false;
-        }
-        // continue
-        if ok {
-            // set GEOConverter
-            let gch: Ptr<GeoConvHelper> = if !self.myGeoConvHelper.is_null() {
-                self.myGeoConvHelper.clone()
-            } else if useProcessing {
-                Ptr::from_mut(GeoConvHelper::getProcessing())
-            } else {
-                Ptr::from_mut(GeoConvHelper::getFinal())
-            };
-            // check if GEOProjection has to be used
-            if useProcessing && gch.usingGeoProjection() {
-                if (lat == INVALID_POSITION) || (lon == INVALID_POSITION) {
-                    lon = x;
-                    lat = y;
-                    x = INVALID_POSITION;
-                }
-            }
-            let mut pos: Position = Position::new(x, y);
-            let mut useGeo = false;
-            if (x == INVALID_POSITION) || (y == INVALID_POSITION) {
-                // try computing x,y from lane,pos
-                if laneID != "" {
-                    pos = self.get_lane_pos(&id, &laneID, lanePos, friendlyPos, lanePosLat);
-                } else {
-                    // try computing x,y from lon,lat
-                    if (lat == INVALID_POSITION) || (lon == INVALID_POSITION) {
-                        write_errorf!(TL("Either (x, y), (lon, lat) or (lane, pos) must be specified for PoI '%'."), id);
-                        return;
-                    } else if !gch.usingGeoProjection() {
-                        write_errorf!(TL("(lon, lat) is specified for PoI '%' but no geo-conversion is specified for the network."), id);
-                        return;
-                    }
-                    pos.set(lon, lat);
-                    useGeo = true;
-                    let success: bool = if useProcessing {
-                        GeoConvHelper::getProcessing().x2cartesian(&mut pos)
-                    } else {
-                        gch.x2cartesian_const(&mut pos)
-                    };
-                    if !success {
-                        write_errorf!(TL("Unable to project coordinates for POI '%'."), id);
-                        return;
-                    }
-                }
-            }
-            if z != INVALID_POSITION {
-                pos.setz(z);
-            }
-            if !self.myShapeContainer.m().add_poi(&id, &type_, &color, &pos, useGeo, &laneID, lanePos, friendlyPos, lanePosLat, &icon,
-                                                 layer, angle, &imgFile, width, height, ignorePruning) {
-                write_errorf!(TL("PoI '%' already exists."), id);
-            }
-            let poi: Option<Ptr<PointOfInterest>> = self.myShapeContainer.get_po_is().get(&id).cloned();
-            self.myLastParameterised = match poi {
-                Some(p) => Ptr::from_mut(&mut p.m().base3),
-                None => Ptr::null(),
-            };
-            if (laneID != "") && self.add_lane_pos_params() {
-                let lp = self.myLastParameterised.m();
-                lp.setParameter(&to_string(&SUMO_ATTR_LANE), &laneID);
-                lp.setParameter(&to_string(&SUMO_ATTR_POSITION), &to_string(&lanePos));
-                lp.setParameter(&to_string(&SUMO_ATTR_POSITION_LAT), &to_string(&lanePosLat));
-            }
-        }
+        todo!("port ShapeHandler::addPOI")
     }
 
     /// C++: `void ShapeHandler::addPoly(const SUMOSAXAttributes &, const bool, const bool)` [protected]
@@ -498,73 +339,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_poly(&mut self, attrs: &SUMOSAXAttributes, ignorePruning: bool, useProcessing: bool) {
-        let mut ok = true;
-        let id: String = self.myPrefix.clone() + &attrs.get::<String>(SUMO_ATTR_ID, None, &mut ok);
-        // check if ID is valid
-        if !SUMOXMLDefinitions::isValidTypeID(&id) {
-            write_warningf!(TL("Invalid characters for Poly ID '%'"), id);
-            ok = false;
-        }
-        // get the id, report an error if not given or empty...
-        if ok {
-            // continue loading parameters
-            let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, Some(id.as_str()), &mut ok, self.myDefaultLayer);
-            let fill: bool = attrs.get_opt::<bool>(SUMO_ATTR_FILL, Some(id.as_str()), &mut ok, self.myDefaultFill);
-            let lineWidth: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LINEWIDTH, Some(id.as_str()), &mut ok, DEFAULT_LINEWIDTH);
-            let type_: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, Some(id.as_str()), &mut ok, DEFAULT_TYPE.to_string());
-            let color: RGBColor = if attrs.has_attribute(SUMO_ATTR_COLOR) {
-                attrs.get::<RGBColor>(SUMO_ATTR_COLOR, Some(id.as_str()), &mut ok)
-            } else {
-                self.myDefaultColor.clone()
-            };
-            let mut shape: PositionVector = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, Some(id.as_str()), &mut ok);
-            let geo: bool = attrs.get_opt::<bool>(SUMO_ATTR_GEO, Some(id.as_str()), &mut ok, false);
-            // set geo converter
-            let gch: Ptr<GeoConvHelper> = if !self.myGeoConvHelper.is_null() {
-                self.myGeoConvHelper.clone()
-            } else {
-                Ptr::from_mut(GeoConvHelper::getFinal())
-            };
-            // check if poly use geo coordinates
-            if geo || useProcessing {
-                let mut success = true;
-                for i in 0..shape.size() {
-                    if useProcessing {
-                        success &= GeoConvHelper::getProcessing().x2cartesian(&mut shape[i]);
-                    } else {
-                        success &= gch.x2cartesian_const(&mut shape[i]);
-                    }
-                }
-                if !success {
-                    write_warningf!(TL("Unable to project coordinates for polygon '%'."), id);
-                    return;
-                }
-            }
-            let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, Some(id.as_str()), &mut ok, DEFAULT_ANGLE);
-            let mut imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, Some(id.as_str()), &mut ok, DEFAULT_IMG_FILE.to_string());
-            if imgFile != "" && !FileHelpers::isAbsolute(&imgFile) {
-                imgFile = FileHelpers::getConfigurationRelative(self.get_file_name(), &imgFile);
-            }
-            // check that shape's size is valid
-            if shape.size() == 0 {
-                write_error(&TL("Polygon's shape cannot be empty."));
-                return;
-            }
-            // check that lineWidth is positive
-            if lineWidth <= 0.0 {
-                write_error(&TL("Polygon's lineWidth must be greater than 0."));
-                return;
-            }
-            // create polygon, or show an error if polygon already exists
-            if !self.myShapeContainer.m().add_polygon(&id, &type_, &color, layer, angle, &imgFile, &shape, geo, fill, lineWidth, ignorePruning, DEFAULT_NAME) {
-                write_errorf!(TL("Polygon '%' already exists."), id);
-            }
-            let poly: Option<Ptr<SUMOPolygon>> = self.myShapeContainer.get_polygons().get(&id).cloned();
-            self.myLastParameterised = match poly {
-                Some(p) => Ptr::from_mut(&mut p.m().base2),
-                None => Ptr::null(),
-            };
-        }
+        todo!("port ShapeHandler::addPoly")
     }
 
     /// C++: `Parameterised * ShapeHandler::getLastParameterised() const` [const, protected]
@@ -575,7 +350,7 @@ impl ShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_last_parameterised(&self) -> Ptr<Parameterised> {
-        self.myLastParameterised.clone()
+        todo!("port ShapeHandler::getLastParameterised")
     }
 
     /// C++: `void ShapeHandler::ShapeHandler(const ShapeHandler &)` [protected]
@@ -583,8 +358,7 @@ impl ShapeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ShapeHandler) -> Self {
-        // C++ copy constructor is deleted
-        panic!("ShapeHandler copy constructor is deleted in C++")
+        todo!("port ShapeHandler::ShapeHandler")
     }
 
     /// C++: `ShapeHandler & ShapeHandler::operator=(const ShapeHandler &)` [protected]
@@ -592,8 +366,7 @@ impl ShapeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &ShapeHandler) -> &mut ShapeHandler {
-        // C++ operator= is deleted
-        panic!("ShapeHandler::operator= is deleted in C++")
+        todo!("port ShapeHandler::operator=")
     }
 
 }

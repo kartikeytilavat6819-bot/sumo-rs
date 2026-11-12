@@ -1,7 +1,6 @@
-//! Port of utils/shapes/SUMOPolygon.{h,cpp}
+//! Port of utils/shapes/SUMOPolygon.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use super::shape::{DEFAULT_ANGLE, DEFAULT_HEIGHT, DEFAULT_IMG_FILE, DEFAULT_LINEWIDTH};
 
 /// A 2D- or 3D-polygon
 /// C++ class `SUMOPolygon` (utils/shapes/SUMOPolygon.h)
@@ -52,17 +51,8 @@ impl SUMOPolygon {
     //     myHeight(height) {
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, type_: &str, color: &RGBColor, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, layer: f64, angle: f64, imgFile: &str, name: &str, height: f64, parameters: &BTreeMap<String, String>) -> Self {
-        SUMOPolygon {
-            base: Shape::new_2(id, type_, color, layer, angle, imgFile, name),
-            base2: Parameterised::from_map(parameters),
-            myShape: shape.clone(),
-            myHoles: Vec::new(),
-            myGEO: geo,
-            myFill: fill,
-            myLineWidth: lineWidth,
-            myHeight: height,
-        }
+    pub fn new(id: &str, type_: &str, color: &RGBColor, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, layer: f64, angle: f64, imgFile: &str, name: &str, height: f64, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+        todo!("port SUMOPolygon::SUMOPolygon")
     }
 
     /// C++: `void SUMOPolygon::~SUMOPolygon() noexcept` [virtual]
@@ -70,7 +60,7 @@ impl SUMOPolygon {
     // SUMOPolygon::~SUMOPolygon() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor body is empty
+        todo!("port SUMOPolygon::~SUMOPolygon")
     }
 
     /// C++: `const PositionVector & SUMOPolygon::getShape() const` [const]
@@ -81,7 +71,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        &self.myShape
+        todo!("port SUMOPolygon::getShape")
     }
 
     /// C++: `PositionVector & SUMOPolygon::getShapeRef()`
@@ -92,7 +82,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_ref(&mut self) -> &mut PositionVector {
-        &mut self.myShape
+        todo!("port SUMOPolygon::getShapeRef")
     }
 
     /// C++: `const std::vector<PositionVector> & SUMOPolygon::getHoles() const` [const]
@@ -103,7 +93,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_holes(&self) -> &Vec<PositionVector> {
-        &self.myHoles
+        todo!("port SUMOPolygon::getHoles")
     }
 
     /// C++: `bool SUMOPolygon::getFill() const` [const]
@@ -114,7 +104,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_fill(&self) -> bool {
-        self.myFill
+        todo!("port SUMOPolygon::getFill")
     }
 
     /// C++: `double SUMOPolygon::getLineWidth() const` [const]
@@ -125,7 +115,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_line_width(&self) -> f64 {
-        self.myLineWidth
+        todo!("port SUMOPolygon::getLineWidth")
     }
 
     /// C++: `double SUMOPolygon::getHeight() const` [const]
@@ -136,7 +126,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn get_height(&self) -> f64 {
-        self.myHeight
+        todo!("port SUMOPolygon::getHeight")
     }
 
     /// C++: `void SUMOPolygon::setFill(bool)`
@@ -147,7 +137,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn set_fill(&mut self, fill: bool) {
-        self.myFill = fill;
+        todo!("port SUMOPolygon::setFill")
     }
 
     /// C++: `void SUMOPolygon::setLineWidth(double)`
@@ -158,7 +148,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn set_line_width(&mut self, lineWidth: f64) {
-        self.myLineWidth = lineWidth;
+        todo!("port SUMOPolygon::setLineWidth")
     }
 
     /// C++: `void SUMOPolygon::setHeight(double)`
@@ -169,7 +159,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn set_height(&mut self, height: f64) {
-        self.myHeight = height;
+        todo!("port SUMOPolygon::setHeight")
     }
 
     /// C++: `void SUMOPolygon::setShape(const PositionVector &)` [virtual]
@@ -180,7 +170,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn set_shape(&mut self, shape: &PositionVector) {
-        self.myShape = shape.clone();
+        todo!("port SUMOPolygon::setShape")
     }
 
     /// C++: `void SUMOPolygon::setHoles(const std::vector<PositionVector> &)` [virtual]
@@ -191,7 +181,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn set_holes(&mut self, holes: &Vec<PositionVector>) {
-        self.myHoles = holes.clone();
+        todo!("port SUMOPolygon::setHoles")
     }
 
     /// C++: `void SUMOPolygon::writeXML(OutputDevice &, bool) const` [const]
@@ -235,41 +225,7 @@ impl SUMOPolygon {
     // }
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool) {
-        out.open_tag_id(SUMO_TAG_POLY);
-        out.write_attr(SUMO_ATTR_ID, &StringUtils::escapeXML(self.get_id()));
-        if !self.get_shape_type().is_empty() {
-            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escapeXML(self.get_shape_type()));
-        }
-        out.write_attr(SUMO_ATTR_COLOR, self.get_shape_color());
-        out.write_attr(SUMO_ATTR_FILL, &self.get_fill());
-        if self.get_line_width() != DEFAULT_LINEWIDTH {
-            out.write_attr(SUMO_ATTR_LINEWIDTH, &self.get_line_width());
-        }
-        if self.get_height() != DEFAULT_HEIGHT {
-            out.write_attr(SUMO_ATTR_HEIGHT, &self.get_height());
-        }
-        out.write_attr(SUMO_ATTR_LAYER, &self.get_shape_layer());
-        if !self.get_shape_name().is_empty() {
-            out.write_attr(SUMO_ATTR_NAME, self.get_shape_name());
-        }
-        let mut shape: PositionVector = self.get_shape().clone();
-        if geo {
-            out.write_attr(SUMO_ATTR_GEO, &true);
-            for i in 0..shape.size() {
-                GeoConvHelper::getFinal().cartesian2geo(&mut shape[i]);
-            }
-        }
-        out.set_precision(Some(gPrecisionGeo));
-        out.write_attr(SUMO_ATTR_SHAPE, &shape);
-        out.set_precision(None); // C++ setPrecision() without argument
-        if self.get_shape_navi_degree() != DEFAULT_ANGLE {
-            out.write_attr(SUMO_ATTR_ANGLE, &self.get_shape_navi_degree());
-        }
-        if self.get_shape_img_file() != DEFAULT_IMG_FILE {
-            out.write_attr(SUMO_ATTR_IMGFILE, self.get_shape_img_file());
-        }
-        self.base2.write_params(out);
-        out.close_tag("");
+        todo!("port SUMOPolygon::writeXML")
     }
 
 }

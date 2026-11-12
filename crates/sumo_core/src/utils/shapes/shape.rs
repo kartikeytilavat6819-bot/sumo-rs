@@ -1,18 +1,6 @@
-//! Port of utils/shapes/Shape.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Filled: faithful translation of the C++ shown above each method.
+//! Port of utils/shapes/Shape.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-
-// C++ static members of Shape (Shape.cpp)
-pub const DEFAULT_TYPE: &str = "";
-pub const DEFAULT_LAYER: f64 = 0.0;
-pub const DEFAULT_LINEWIDTH: f64 = 1.0;
-pub const DEFAULT_LAYER_POI: f64 = 202.0; // (double)GLO_POI
-pub const DEFAULT_ANGLE: f64 = 0.0;
-pub const DEFAULT_IMG_FILE: &str = "";
-pub const DEFAULT_IMG_WIDTH: f64 = 2.6;
-pub const DEFAULT_IMG_HEIGHT: f64 = 1.0;
-pub const DEFAULT_HEIGHT: f64 = 0.0;
-pub const DEFAULT_NAME: &str = "";
 
 /// A 2D- or 3D-Shape
 /// C++ class `Shape` (utils/shapes/Shape.h)
@@ -67,7 +55,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        Shape { base: Named::new(id), myType: DEFAULT_TYPE.to_string(), myColor: RGBColor::BLACK, myLayer: DEFAULT_LAYER, myNaviDegreeAngle: DEFAULT_ANGLE, myImgFile: DEFAULT_IMG_FILE.to_string(), myName: DEFAULT_NAME.to_string() }
+        todo!("port Shape::Shape")
     }
 
     /// C++: `void Shape::Shape(const std::string &, const std::string &, const RGBColor &, double, double, const std::string &, const std::string &)`
@@ -84,7 +72,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, type_: &str, color: &RGBColor, layer: f64, angle: f64, imgFile: &str, name: &str) -> Self {
-        Shape { base: Named::new(id), myType: type_.to_string(), myColor: color.clone(), myLayer: layer, myNaviDegreeAngle: angle, myImgFile: imgFile.to_string(), myName: name.to_string() }
+        todo!("port Shape::Shape")
     }
 
     /// C++: `void Shape::~Shape() noexcept` [virtual]
@@ -92,7 +80,7 @@ impl Shape {
     // Shape::~Shape() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor body is empty
+        todo!("port Shape::~Shape")
     }
 
     /// C++: `void Shape::writeShapeAttributes(OutputDevice &, const RGBColor &, const double) const` [const]
@@ -126,30 +114,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn write_shape_attributes(&self, device: &mut OutputDevice, defaultColor: &RGBColor, defaultLayer: f64) {
-        // name
-        if self.myName != DEFAULT_NAME {
-            device.write_attr(SUMO_ATTR_NAME, self.myName.as_str());
-        }
-        // type
-        if self.myType != DEFAULT_TYPE {
-            device.write_attr(SUMO_ATTR_TYPE, StringUtils::escapeXML(&self.myType).as_str());
-        }
-        // color
-        if self.myColor != *defaultColor {
-            device.write_attr(SUMO_ATTR_COLOR, &self.myColor);
-        }
-        // layer
-        if self.myLayer != defaultLayer {
-            device.write_attr(SUMO_ATTR_LAYER, &self.myLayer);
-        }
-        // angle
-        if self.myNaviDegreeAngle != DEFAULT_ANGLE {
-            device.write_attr(SUMO_ATTR_ANGLE, &self.myNaviDegreeAngle);
-        }
-        // img file
-        if self.myImgFile != DEFAULT_IMG_FILE {
-            device.write_attr(SUMO_ATTR_IMGFILE, self.myImgFile.as_str());
-        }
+        todo!("port Shape::writeShapeAttributes")
     }
 
     /// C++: `const std::string & Shape::getShapeType() const` [const]
@@ -160,7 +125,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_type(&self) -> &str {
-        &self.myType
+        todo!("port Shape::getShapeType")
     }
 
     /// C++: `const RGBColor & Shape::getShapeColor() const` [const]
@@ -171,7 +136,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_color(&self) -> &RGBColor {
-        &self.myColor
+        todo!("port Shape::getShapeColor")
     }
 
     /// C++: `double Shape::getShapeLayer() const` [const]
@@ -182,7 +147,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_layer(&self) -> f64 {
-        self.myLayer
+        todo!("port Shape::getShapeLayer")
     }
 
     /// C++: `double Shape::getShapeNaviDegree() const` [const]
@@ -193,7 +158,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_navi_degree(&self) -> f64 {
-        self.myNaviDegreeAngle
+        todo!("port Shape::getShapeNaviDegree")
     }
 
     /// C++: `const std::string & Shape::getShapeImgFile() const` [const]
@@ -204,7 +169,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_img_file(&self) -> &str {
-        &self.myImgFile
+        todo!("port Shape::getShapeImgFile")
     }
 
     /// C++: `const std::string & Shape::getShapeName() const` [const]
@@ -215,7 +180,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_name(&self) -> &str {
-        &self.myName
+        todo!("port Shape::getShapeName")
     }
 
     /// C++: `void Shape::setShapeType(const std::string &)`
@@ -226,7 +191,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_type(&mut self, type_: &str) {
-        self.myType = type_.to_string();
+        todo!("port Shape::setShapeType")
     }
 
     /// C++: `void Shape::setShapeColor(const RGBColor &)`
@@ -237,7 +202,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_color(&mut self, col: &RGBColor) {
-        self.myColor = col.clone();
+        todo!("port Shape::setShapeColor")
     }
 
     /// C++: `void Shape::setShapeAlpha(unsigned char)`
@@ -248,7 +213,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_alpha(&mut self, alpha: u8) {
-        self.myColor.set_alpha(alpha);
+        todo!("port Shape::setShapeAlpha")
     }
 
     /// C++: `void Shape::setShapeLayer(const double)`
@@ -259,7 +224,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_layer(&mut self, layer: f64) {
-        self.myLayer = layer;
+        todo!("port Shape::setShapeLayer")
     }
 
     /// C++: `void Shape::setShapeNaviDegree(const double)` [virtual]
@@ -270,7 +235,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_navi_degree(&mut self, angle: f64) {
-        self.myNaviDegreeAngle = angle;
+        todo!("port Shape::setShapeNaviDegree")
     }
 
     /// C++: `void Shape::setShapeImgFile(const std::string &)`
@@ -281,7 +246,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_img_file(&mut self, imgFile: &str) {
-        self.myImgFile = imgFile.to_string();
+        todo!("port Shape::setShapeImgFile")
     }
 
     /// C++: `void Shape::setShapeName(const std::string &)`
@@ -292,7 +257,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_name(&mut self, name: &str) {
-        self.myName = name.to_string();
+        todo!("port Shape::setShapeName")
     }
 
 }

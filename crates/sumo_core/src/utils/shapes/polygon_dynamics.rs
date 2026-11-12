@@ -1,4 +1,4 @@
-//! Port of utils/shapes/PolygonDynamics.{h,cpp}
+//! Port of utils/shapes/PolygonDynamics.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
@@ -22,7 +22,7 @@ pub struct PolygonDynamics {
     pub myTrackedObject: Ptr<SUMOTrafficObject>,
     pub myTrackedObjectID: String,
     /// Initial position of the tracked object
-    pub myTrackedObjectsInitialPositon: Option<Box<Position>>, // None == nullptr
+    pub myTrackedObjectsInitialPositon: Box<Position>,
     /// Initial angle of the tracked object
     pub myTrackedObjectsInitialAngle: f64,
     /// the original shape of the polygon (in case of tracking another object, this is converted to relative coords wrt to the other objects initial position as origin)
@@ -30,13 +30,13 @@ pub struct PolygonDynamics {
     /// Time points corresponding to the anchor values of the dynamic properties
     pub myTimeSpan: Box<Vec<f64>>,
     /// Pointer to the next time points in timeSpan
-    pub myPrevTime: usize, // index into myTimeSpan (C++ iterator)
-    pub myNextTime: usize, // index into myTimeSpan (C++ iterator)
+    pub myPrevTime: Unmapped /* std::vector<double>::const_iterator */,
+    pub myNextTime: Unmapped /* std::vector<double>::const_iterator */,
     /// Alpha values corresponding to
     pub myAlphaSpan: Box<Vec<f64>>,
     /// Pointer to the next alpha points in alphaSpan
-    pub myPrevAlpha: usize, // index into myAlphaSpan (C++ iterator)
-    pub myNextAlpha: usize, // index into myAlphaSpan (C++ iterator)
+    pub myPrevAlpha: Unmapped /* std::vector<double>::const_iterator */,
+    pub myNextAlpha: Unmapped /* std::vector<double>::const_iterator */,
     /// RTree will be supplied in case of GUI simulation to be updated on move
     pub myVis: Ptr<Unmapped /* SUMORTree */>,
 }
@@ -106,59 +106,14 @@ impl PolygonDynamics {
     // }
     #[allow(unused_variables)]
     pub fn new(creationTime: f64, p: Ptr<SUMOPolygon>, trackedObject: Ptr<SUMOTrafficObject>, timeSpan: &Vec<f64>, alphaSpan: &Vec<f64>, looped: bool, rotate: bool) -> Self {
-        let animated = !timeSpan.is_empty();
-        let tracking = !trackedObject.is_null();
-        let mut this = PolygonDynamics {
-            myPolygon: p.clone(),
-            myCurrentTime: 0.0,
-            myLastUpdateTime: creationTime,
-            animated,
-            looped,
-            tracking,
-            rotate,
-            myTrackedObject: trackedObject.clone(),
-            myTrackedObjectID: String::new(),
-            myTrackedObjectsInitialPositon: None,
-            myTrackedObjectsInitialAngle: -1.0,
-            myOriginalShape: Box::new(PositionVector::default()),
-            myTimeSpan: Box::new(Vec::new()),
-            myPrevTime: 0,
-            myNextTime: 0,
-            myAlphaSpan: Box::new(Vec::new()),
-            myPrevAlpha: 0,
-            myNextAlpha: 0,
-            myVis: Ptr::null(),
-        };
-        // Check for consistency (C++ asserts; debug only)
-        if animated {
-            this.myTimeSpan = Box::new(timeSpan.clone());
-            debug_assert!(this.myTimeSpan.len() >= 2);
-            debug_assert!(this.myTimeSpan[0] == 0.0);
-            debug_assert!(this.myAlphaSpan.is_empty() || this.myAlphaSpan.len() >= 2);
-            this.myPrevTime = 0;
-            this.myNextTime = 1;
-        }
-        this.myOriginalShape = Box::new(p.get_shape().clone());
-        if this.tracking {
-            // Try initializing the tracked position (depends on whether object is already on the road)
-            this.init_tracked_position();
-            this.myTrackedObjectID = this.myTrackedObject.get_id().to_string();
-        }
-        if !alphaSpan.is_empty() {
-            this.myAlphaSpan = Box::new(alphaSpan.clone());
-            debug_assert!(this.myAlphaSpan.len() >= 2);
-            debug_assert!(this.myAlphaSpan.len() == this.myTimeSpan.len());
-            this.myPrevAlpha = 0;
-            this.myNextAlpha = 1;
-        }
-        this
+        todo!("port PolygonDynamics::PolygonDynamics")
     }
 
     /// C++: `void PolygonDynamics::~PolygonDynamics()` [virtual]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ destructor body is empty
+        todo!("port PolygonDynamics::~PolygonDynamics")
     }
 
     /// C++: `const std::string & PolygonDynamics::getPolygonID() const` [const]
@@ -167,7 +122,7 @@ impl PolygonDynamics {
     //     }
     #[allow(unused_variables)]
     pub fn get_polygon_id(&self) -> &str {
-        self.myPolygon.get_id()
+        todo!("port PolygonDynamics::getPolygonID")
     }
 
     /// C++: `SUMOPolygon * PolygonDynamics::getPolygon() const` [const]
@@ -176,7 +131,7 @@ impl PolygonDynamics {
     //     }
     #[allow(unused_variables)]
     pub fn get_polygon(&self) -> Ptr<SUMOPolygon> {
-        self.myPolygon.clone()
+        todo!("port PolygonDynamics::getPolygon")
     }
 
     /// C++: `const std::string & PolygonDynamics::getTrackedObjectID() const` [const]
@@ -185,7 +140,7 @@ impl PolygonDynamics {
     //     }
     #[allow(unused_variables)]
     pub fn get_tracked_object_id(&self) -> &str {
-        &self.myTrackedObjectID
+        todo!("port PolygonDynamics::getTrackedObjectID")
     }
 
     /// C++: `SUMOTime PolygonDynamics::update(SUMOTime)`
@@ -322,93 +277,7 @@ impl PolygonDynamics {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self, t: SUMOTime) -> SUMOTime {
-        let simtime = steps2time(t);
-        let dt = simtime - self.myLastUpdateTime;
-        self.myLastUpdateTime = simtime;
-
-        let mut ret: SUMOTime = DELTA_T;
-
-        if self.tracking {
-            if self.myTrackedObjectsInitialPositon.is_none() {
-                // Tracked object hasn't entered the network, until now.
-                // Continuously try to obtain its initial position
-                self.init_tracked_position();
-            }
-            if self.myTrackedObjectsInitialPositon.is_some() {
-                // Initial position was initialized, relative tracking is possible
-                let objPos: Position = self.myTrackedObject.get_position().clone();
-                let onRoad = objPos != Position::INVALID;
-                if onRoad {
-                    // Update polygon's shape
-                    let mut newShape: PositionVector = (*self.myOriginalShape).clone();
-                    if self.rotate {
-                        let relRotation = self.myTrackedObject.get_angle() - self.myTrackedObjectsInitialAngle;
-                        newShape.rotate2d(relRotation);
-                    }
-                    newShape.add(&objPos);
-                    self.myPolygon.m().set_shape(&newShape);
-                }
-            }
-        }
-
-        if self.animated {
-            // Continue animation
-            self.myCurrentTime += dt;
-            while self.myCurrentTime >= self.myTimeSpan[self.myNextTime] {
-                // step forward along time lines to appropriate anchor points
-                self.myPrevTime += 1;
-                self.myNextTime += 1;
-                if self.myNextTime == self.myTimeSpan.len() {
-                    // Set indices back to point to valid positions
-                    self.myPrevTime -= 1;
-                    self.myNextTime -= 1;
-                    break;
-                } else {
-                    // Forward corresponding indices for property time lines
-                    if !self.myAlphaSpan.is_empty() {
-                        self.myPrevAlpha += 1;
-                        self.myNextAlpha += 1;
-                    }
-                }
-            }
-
-            // Linear interpolation factor between previous and next time
-            let mut theta = 1.0;
-            if self.looped {
-                let resetAnimation = self.myCurrentTime >= self.myTimeSpan[self.myNextTime];
-                if resetAnimation {
-                    // Reset animation time line to start, if appropriate
-                    while self.myCurrentTime >= self.myTimeSpan[self.myNextTime] {
-                        self.myCurrentTime -= self.myTimeSpan[self.myNextTime];
-                    }
-                    // MAX2(myCurrentTime, 0.0)
-                    self.myCurrentTime = if self.myCurrentTime > 0.0 { self.myCurrentTime } else { 0.0 };
-                    self.myPrevTime = 0;
-                    self.myNextTime = 1;
-                    if !self.myAlphaSpan.is_empty() {
-                        self.myPrevAlpha = 0;
-                        self.myNextAlpha = 1;
-                    }
-                }
-            }
-            if self.myCurrentTime >= self.myTimeSpan[self.myNextTime] {
-                debug_assert!(!self.looped);
-                // Reached the end of the dynamics, indicate expiration by returning zero
-                // and set all properties to the final state (theta remains one)
-                ret = 0;
-            } else {
-                // Animation is still going on, schedule next update
-                if self.myTimeSpan[self.myNextTime] - self.myTimeSpan[self.myPrevTime] != 0.0 {
-                    theta = (self.myCurrentTime - self.myTimeSpan[self.myPrevTime]) / (self.myTimeSpan[self.myNextTime] - self.myTimeSpan[self.myPrevTime]);
-                }
-            }
-            if !self.myAlphaSpan.is_empty() {
-                // Interpolate values of properties
-                let alpha = self.myAlphaSpan[self.myPrevAlpha] + theta * (self.myAlphaSpan[self.myNextAlpha] - self.myAlphaSpan[self.myPrevAlpha]);
-                self.set_alpha(alpha);
-            }
-        }
-        ret
+        todo!("port PolygonDynamics::update")
     }
 
     /// C++: `void PolygonDynamics::setRTree(SUMORTree *)`
@@ -418,7 +287,7 @@ impl PolygonDynamics {
     //     }
     #[allow(unused_variables)]
     pub fn set_r_tree(&mut self, rtree: Ptr<Unmapped /* SUMORTree */>) {
-        self.myVis = rtree;
+        todo!("port PolygonDynamics::setRTree")
     }
 
     /// C++: `void PolygonDynamics::setAlpha(double)` [private]
@@ -433,8 +302,7 @@ impl PolygonDynamics {
     // }
     #[allow(unused_variables)]
     pub fn set_alpha(&mut self, alpha: f64) {
-        let a = alpha as i32; // (int) cast
-        self.myPolygon.m().set_shape_alpha(a as u8); // (unsigned char) cast
+        todo!("port PolygonDynamics::setAlpha")
     }
 
     /// C++: `void PolygonDynamics::initTrackedPosition()` [private]
@@ -455,14 +323,7 @@ impl PolygonDynamics {
     // }
     #[allow(unused_variables)]
     pub fn init_tracked_position(&mut self) {
-        let objPos: Position = self.myTrackedObject.get_position().clone();
-        if objPos != Position::INVALID {
-            // Initialize Position of tracked object
-            self.myTrackedObjectsInitialPositon = Some(Box::new(objPos.clone()));
-            self.myTrackedObjectsInitialAngle = self.myTrackedObject.get_angle();
-            // Store original polygon shape relative to the tracked object's original position
-            self.myOriginalShape.sub(&objPos);
-        }
+        todo!("port PolygonDynamics::initTrackedPosition")
     }
 
 }
