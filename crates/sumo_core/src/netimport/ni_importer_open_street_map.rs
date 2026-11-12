@@ -200,6 +200,12 @@ impl NIImporter_OpenStreetMap_CompareEdges {
 pub struct NIImporter_OpenStreetMap_CompareNodes {
 }
 
+/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
+#[allow(clippy::mut_from_ref)]
+fn pt_stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
+
 /// A node pointer ordered by CompareNodes, so a BTreeSet behaves like C++ `std::set<NIOSMNode *, CompareNodes>`
 /// (find/insert match on coordinates, not on pointer value).
 #[derive(Clone, Copy)]
@@ -4876,7 +4882,40 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, osmEdges: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptStopCont: Ptr<NBPTStopCont>, platfromShapes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptLineCont: Ptr<NBPTLineCont>, oc: &OptionsCont) -> Self {
-        todo!("port RelationHandler::RelationHandler")
+        let mut handler = NIImporter_OpenStreetMap_RelationHandler {
+            base: utils::xml::sumo_sax_handler::new("osm - file", ""),
+            myOSMNodes: Ptr::new(osmNodes),
+            myOSMEdges: Ptr::new(osmEdges),
+            myPlatformShapes: Ptr::new(platfromShapes),
+            myNBPTStopCont: nbptStopCont,
+            myNBPTLineCont: nbptLineCont,
+            // the remaining members are set by resetValues() below
+            myCurrentRelation: INVALID_ID,
+            myIsRestriction: false,
+            myRestrictionException: SVC_IGNORING,
+            myFromWay: INVALID_ID,
+            myToWay: INVALID_ID,
+            myViaNode: INVALID_ID,
+            myViaWay: INVALID_ID,
+            myStation: INVALID_ID,
+            myOptionsCont: Ptr::new(oc),
+            myRestrictionType: RelationHandler_RestrictionType::UNKNOWN,
+            myStops: Vec::new(),
+            myPlatformStops: BTreeSet::new(),
+            myPlatforms: Vec::new(),
+            myWays: Vec::new(),
+            myIsStopArea: false,
+            myIsRoute: false,
+            myPTRouteType: String::new(),
+            myRouteColor: RGBColor::default(),
+            myName: String::new(),
+            myRef: String::new(),
+            myInterval: -1,
+            myNightService: String::new(),
+            myStopAreas: BTreeMap::new(),
+        };
+        handler.reset_values();
+        handler
     }
 
     /// C++: `void RelationHandler::~RelationHandler() noexcept` [virtual]
@@ -4884,7 +4923,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // NIImporter_OpenStreetMap::RelationHandler::~RelationHandler()
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RelationHandler::~RelationHandler")
+        // C++ body is defaulted; Rust drops the members.
     }
 
     /// C++: `void RelationHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -5042,7 +5081,148 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port RelationHandler::myStartElement")
+        if element == SUMO_TAG_RELATION {
+            let mut ok = true;
+            self.myCurrentRelation = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            let action: String = attrs.get_opt(SUMO_ATTR_ACTION, "", &mut ok, String::new(), true);
+            if action == "delete" || !ok {
+                self.myCurrentRelation = INVALID_ID;
+            }
+            self.myName = String::new();
+            self.myRef = String::new();
+            self.myInterval = -1;
+            self.myNightService = String::new();
+            return;
+        }
+        if self.myCurrentRelation == INVALID_ID {
+            return;
+        }
+        if element == SUMO_TAG_MEMBER {
+            let mut ok = true;
+            let role: String = if attrs.has_attribute_name("role") { attrs.get_string_secure_name("role", "") } else { String::new() };
+            let ref_: i64 = attrs.get(SUMO_ATTR_REF, "", &mut ok, true);
+            if role == "via" {
+                // u-turns for divided ways may be given with 2 via-nodes or 1 via-way
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" && self.check_edge_ref(ref_) {
+                    self.myViaWay = ref_;
+                } else if memberType == "node" {
+                    if self.myOSMNodes.contains_key(&ref_) {
+                        self.myViaNode = ref_;
+                    } else {
+                        write_warningf!("No node found for reference '%' in relation '%'.", ref_, self.myCurrentRelation);
+                    }
+                }
+            } else if role == "from" && self.check_edge_ref(ref_) {
+                self.myFromWay = ref_;
+            } else if role == "to" && self.check_edge_ref(ref_) {
+                self.myToWay = ref_;
+            } else if starts_with(&role, "stop") {
+                // permit _entry_only and _exit_only variants
+                self.myStops.push(ref_);
+            } else if starts_with(&role, "platform") {
+                // permit _entry_only and _exit_only variants
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" {
+                    if self.myPlatformShapes.contains_key(&ref_) {
+                        self.myPlatforms.push(RelationHandler_NIIPTPlatform { ref_, isWay: true });
+                    }
+                } else if memberType == "node" {
+                    // myIsStopArea may not be set yet
+                    self.myStops.push(ref_);
+                    self.myPlatformStops.insert(ref_);
+                    self.myPlatforms.push(RelationHandler_NIIPTPlatform { ref_, isWay: false });
+                }
+            } else if role == "station" {
+                self.myStation = ref_;
+            } else if role.is_empty() {
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" {
+                    self.myWays.push(ref_);
+                } else if memberType == "node" {
+                    let hasRailwayRef = self.myOSMNodes.get(&ref_).is_some_and(|n| n.has_parameter("railway:ref"));
+                    if hasRailwayRef {
+                        self.myStation = ref_;
+                    } else {
+                        self.myStops.push(ref_);
+                    }
+                }
+            }
+            return;
+        }
+        // parse values
+        if element == SUMO_TAG_TAG {
+            let mut ok = true;
+            let relation = self.myCurrentRelation.to_string();
+            let key: String = attrs.get(SUMO_ATTR_K, &relation, &mut ok, false);
+            // we check whether the key is relevant (and we really need to transcode the value) to avoid hitting #1636
+            if key == "type" || key == "restriction" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if key == "type" && value == "restriction" {
+                    self.myIsRestriction = true;
+                    return;
+                }
+                if key == "type" && value == "route" {
+                    self.myIsRoute = true;
+                    return;
+                }
+                if key == "restriction" {
+                    // @note: the 'right/left/straight' part is ignored since the information is
+                    // redundantly encoded in the 'from', 'to' and 'via' members
+                    if value.get(0..5) == Some("only_") {
+                        self.myRestrictionType = RelationHandler_RestrictionType::ONLY;
+                    } else if value.get(0..3) == Some("no_") {
+                        self.myRestrictionType = RelationHandler_RestrictionType::NO;
+                    } else {
+                        write_warningf!("Found unknown restriction type '%' in relation '%'", value, self.myCurrentRelation);
+                    }
+                    return;
+                }
+            } else if key == "except" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                let mut tok = StringTokenizer::with_token(&value, ";", false);
+                for v in tok.get_vector() {
+                    if v == "psv" {
+                        self.myRestrictionException |= SVC_BUS;
+                    } else if v == "bicycle" {
+                        self.myRestrictionException |= SVC_BICYCLE;
+                    } else if v == "hgv" {
+                        self.myRestrictionException |= SVC_TRUCK | SVC_TRAILER;
+                    } else if v == "motorcar" {
+                        self.myRestrictionException |= SVC_PASSENGER | SVC_TAXI;
+                    } else if v == "emergency" {
+                        self.myRestrictionException |= SVC_EMERGENCY;
+                    }
+                }
+            } else if key == "public_transport" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if value == "stop_area" {
+                    self.myIsStopArea = true;
+                }
+            } else if key == "route" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if value == "train" || value == "subway" || value == "light_rail" || value == "monorail" || value == "tram" || value == "bus"
+                    || value == "trolleybus" || value == "aerialway" || value == "ferry" || value == "share_taxi" || value == "minibus" {
+                    self.myPTRouteType = value;
+                }
+            } else if key == "name" {
+                self.myName = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "colour" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                match utils::common::rgb_color::RGBColor::parse_color(&value) {
+                    Ok(color) => self.myRouteColor = color,
+                    Err(_) => {
+                        write_warningf!("Invalid color value '%' in relation %", value, self.myCurrentRelation);
+                    }
+                }
+            } else if key == "ref" {
+                self.myRef = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "interval" || key == "headway" {
+                self.myInterval = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "by_night" {
+                self.myNightService = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            }
+        }
     }
 
     /// C++: `void RelationHandler::myEndElement(int)` [virtual, protected]
@@ -5225,7 +5405,180 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port RelationHandler::myEndElement")
+        if element == SUMO_TAG_RELATION {
+            if self.myIsRestriction {
+                assert!(self.myCurrentRelation != INVALID_ID);
+                let mut ok = true;
+                if self.myRestrictionType == RelationHandler_RestrictionType::UNKNOWN {
+                    write_warningf!("Ignoring restriction relation '%' with unknown type.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myFromWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown from-way.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myToWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown to-way.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myViaNode == INVALID_ID && self.myViaWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown via.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if ok && !self.apply_restriction() {
+                    write_warningf!("Ignoring restriction relation '%'.", self.myCurrentRelation);
+                }
+            } else if self.myIsStopArea {
+                for ref_ in self.myStops.clone() {
+                    self.myStopAreas.insert(ref_, self.myCurrentRelation);
+                    if !self.myOSMNodes.contains_key(&ref_) {
+                        //WRITE_WARNING(
+                        //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                        //    + "' does not exist. Probably OSM file is incomplete.");
+                        continue;
+                    }
+
+                    let n = self.myOSMNodes[&ref_];
+                    let ptStop: Rc<NBPTStop> = match self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned() {
+                        Some(stop) => stop,
+                        None => {
+                            //WRITE_WARNING(
+                            //    "Relation '" + toString(myCurrentRelation) + "' refers to a non existing pt stop at node: '"
+                            //    + toString(n->id) + "'. Probably OSM file is incomplete.");
+                            continue;
+                        }
+                    };
+                    for myPlatform in self.myPlatforms.clone() {
+                        if myPlatform.isWay {
+                            // assert(myPlatformShapes.find(myPlatform.ref) != myPlatformShapes.end()); //already tested earlier
+                            let edge: Ptr<NIImporter_OpenStreetMap_Edge> = self.myPlatformShapes[&myPlatform.ref_];
+                            let numNodes = edge.myCurrentNodes.len();
+                            if numNodes > 1 && edge.myCurrentNodes[0] == edge.myCurrentNodes[numNodes - 1] {
+                                write_warningf!("Platform '%' in relation: '%' is given as polygon, which currently is not supported.", myPlatform.ref_, self.myCurrentRelation);
+                                continue;
+                            }
+                            let mut p = PositionVector(Vec::new());
+                            for nodeRef in edge.myCurrentNodes.iter() {
+                                if !self.myOSMNodes.contains_key(nodeRef) {
+                                    //WRITE_WARNING(
+                                    //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                                    //    + "' does not exist. Probably OSM file is incomplete.");
+                                    continue;
+                                }
+                                let pNode = self.myOSMNodes[nodeRef];
+                                let mut pNodePos = Position::new3(pNode.lon, pNode.lat, pNode.ele);
+                                if !NBNetBuilder::transform_coordinate(&mut pNodePos, true, Ptr::null()) {
+                                    write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
+                                    continue;
+                                }
+                                p.push(pNodePos);
+                            }
+                            if p.len() == 0 {
+                                write_warningf!("Referenced platform: '%' in relation: '%' is corrupt. Probably OSM file is incomplete.", myPlatform.ref_.to_string(), self.myCurrentRelation.to_string());
+                                continue;
+                            }
+                            let platform = NBPTPlatform::new(p[p.len() / 2], p.length());
+                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                        } else {
+                            if !self.myOSMNodes.contains_key(&myPlatform.ref_) {
+                                //WRITE_WARNING(
+                                //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                                //    + "' does not exist. Probably OSM file is incomplete.");
+                                continue;
+                            }
+                            let pNode = self.myOSMNodes[&myPlatform.ref_];
+                            let mut platformPos = Position::new3(pNode.lon, pNode.lat, pNode.ele);
+                            if !NBNetBuilder::transform_coordinate(&mut platformPos, true, Ptr::null()) {
+                                write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
+                            }
+                            let platform = NBPTPlatform::new(platformPos, opt::get_float("osm.stop-output.length"));
+                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                        }
+                    }
+                    pt_stop_mut(&ptStop).set_is_multiple_stop_positions(self.myStops.len() > 1, self.myCurrentRelation);
+                    if self.myStation != INVALID_ID {
+                        if let Some(station) = self.myOSMNodes.get(&self.myStation) {
+                            if station.has_parameter("railway:ref") {
+                                let stationRef = station.get_parameter("railway:ref", "");
+                                pt_stop_mut(&ptStop).set_parameter("stationRef", &stationRef);
+                            }
+                        }
+                    }
+                }
+            } else if self.myPTRouteType != "" && self.myIsRoute {
+                let vClass = NIImporter_OpenStreetMap::interpret_transport_type(&self.myPTRouteType, Ptr::null());
+                let ptLine: Ptr<NBPTLine> = Ptr::from_raw(Box::into_raw(Box::new(NBPTLine::new(
+                    &self.myCurrentRelation.to_string(), &self.myName, &self.myPTRouteType, &self.myRef, self.myInterval, &self.myNightService, vClass, self.myRouteColor,
+                ))));
+                let mut consecutiveGap: i32 = 0;
+                let mut missingBefore: i32 = 0;
+                let mut missingAfter: i32 = 0;
+                for ref_ in self.myStops.clone() {
+                    let Some(n) = self.myOSMNodes.get(&ref_).copied() else {
+                        if ptLine.m().get_stops().is_empty() {
+                            missingBefore += 1;
+                        } else {
+                            missingAfter += 1;
+                            consecutiveGap += 1;
+                        }
+                        continue;
+                    };
+                    // give some slack for single missing stops
+                    if consecutiveGap > 1 {
+                        write_warningf!("PT line '%' in relation % has a gap of % stops, only keeping first part.", self.myName, self.myCurrentRelation, consecutiveGap);
+                        missingAfter = self.myStops.len() as i32 - missingBefore - ptLine.m().get_stops().len() as i32;
+                        break;
+                    }
+                    // reset gap
+                    consecutiveGap = 0;
+
+                    let mut ptStop: Option<Rc<NBPTStop>> = self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned();
+                    if ptStop.is_none() {
+                        // loose stop, which must later be mapped onto a line way
+                        let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
+                        if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
+                            write_errorf!("Unable to project coordinates for node '%'.", n.id);
+                        }
+                        let stopElement = if is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
+                        let newStop: Rc<NBPTStop> = Rc::new(NBPTStop::new(
+                            stopElement, n.id.to_string(), ptPos, String::new(), String::new(), n.ptStopLength, n.name.clone(), n.permissions,
+                            0.0, RGBColor::new_valid(false), -1.0,
+                        ));
+                        self.myNBPTStopCont.m().insert(newStop.clone(), false);
+                        if self.myStopAreas.contains_key(&n.id) {
+                            pt_stop_mut(&newStop).set_is_multiple_stop_positions(false, self.myStopAreas[&n.id]);
+                        }
+                        if self.myPlatformStops.contains(&n.id) {
+                            pt_stop_mut(&newStop).set_is_platform();
+                        }
+                        ptStop = Some(newStop);
+                    }
+                    ptLine.m().add_pt_stop(ptStop.unwrap());
+                }
+                for myWay in self.myWays.clone() {
+                    if let Some(edge) = self.myOSMEdges.get(&myWay).copied() {
+                        for myCurrentNode in edge.myCurrentNodes.iter() {
+                            ptLine.m().add_way_node(myWay, *myCurrentNode);
+                        }
+                    }
+                }
+                ptLine.m().set_num_of_stops(self.myStops.len() as i32, missingBefore, missingAfter);
+                if ptLine.m().get_stops().is_empty() {
+                    write_warningf!("PT line in relation % with no stops ignored. Probably OSM file is incomplete.", self.myCurrentRelation);
+                    // SAFETY: the line was allocated with Box::into_raw above and was not inserted anywhere.
+                    drop(unsafe { Box::from_raw(ptLine.as_raw()) });
+                    self.reset_values();
+                    return;
+                }
+                if !self.myNBPTLineCont.m().insert(ptLine) {
+                    write_warningf!("Ignoring duplicate PT line '%'.", self.myCurrentRelation);
+                    // SAFETY: the line was rejected by the container, so nothing else holds it.
+                    drop(unsafe { Box::from_raw(ptLine.as_raw()) });
+                }
+            }
+            // other relations might use similar subelements so reset in any case
+            self.reset_values();
+        }
     }
 
     /// C++: `void RelationHandler::resetValues()` [private]
@@ -5252,7 +5605,23 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn reset_values(&mut self) {
-        todo!("port RelationHandler::resetValues")
+        self.myCurrentRelation = INVALID_ID;
+        self.myIsRestriction = false;
+        self.myRestrictionException = SVC_IGNORING;
+        self.myFromWay = INVALID_ID;
+        self.myToWay = INVALID_ID;
+        self.myViaNode = INVALID_ID;
+        self.myViaWay = INVALID_ID;
+        self.myStation = INVALID_ID;
+        self.myRestrictionType = RelationHandler_RestrictionType::UNKNOWN;
+        self.myPlatforms.clear();
+        self.myStops.clear();
+        self.myPlatformStops.clear();
+        self.myWays.clear();
+        self.myIsStopArea = false;
+        self.myIsRoute = false;
+        self.myPTRouteType = String::new();
+        self.myRouteColor.set_valid(false);
     }
 
     /// C++: `bool RelationHandler::checkEdgeRef(long long) const` [const, private]
@@ -5267,7 +5636,11 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_edge_ref(&self, ref_: i64) -> bool {
-        todo!("port RelationHandler::checkEdgeRef")
+        if self.myOSMEdges.contains_key(&ref_) {
+            return true;
+        }
+        write_warningf!("No way found for reference '%' in relation '%'", ref_, self.myCurrentRelation);
+        false
     }
 
     /// C++: `bool RelationHandler::applyRestriction() const` [const, private]
@@ -5325,7 +5698,54 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn apply_restriction(&self) -> bool {
-        todo!("port RelationHandler::applyRestriction")
+        // since OSM ways are bidirectional we need the via to figure out which direction was meant
+        if self.myViaNode != INVALID_ID {
+            let viaNode = self.myOSMNodes[&self.myViaNode].node;
+            if viaNode.is_null() {
+                write_warningf!("Via-node '%' was not instantiated", self.myViaNode);
+                return false;
+            }
+            let from = self.find_edge_ref(self.myFromWay, viaNode.get_incoming_edges());
+            let to = self.find_edge_ref(self.myToWay, viaNode.get_outgoing_edges());
+            if from.is_null() {
+                write_warningf!("from-edge '%' of restriction relation could not be determined", self.myFromWay);
+                return false;
+            }
+            if to.is_null() {
+                write_warningf!("to-edge '%' of restriction relation could not be determined", self.myToWay);
+                return false;
+            }
+            if self.myRestrictionType == RelationHandler_RestrictionType::ONLY {
+                from.m().add_edge2_edge_connection(to, true, SVC_UNSPECIFIED);
+                // make sure that these connections remain disabled even if network
+                // modifications (ramps.guess) reset existing connections
+                for cand in from.get_to_node().get_outgoing_edges().clone() {
+                    if !from.is_connected_to(cand, false) {
+                        if self.myRestrictionException == SVC_IGNORING {
+                            from.m().remove_from_connections(cand, -1, -1, true, false, false);
+                        } else {
+                            from.m().add_edge2_edge_connection(cand, true, self.myRestrictionException);
+                        }
+                    }
+                }
+            } else {
+                if self.myRestrictionException == SVC_IGNORING {
+                    from.m().remove_from_connections(to, -1, -1, true, false, false);
+                } else {
+                    from.m().add_edge2_edge_connection(to, true, self.myRestrictionException);
+                    for cand in from.get_to_node().get_outgoing_edges().clone() {
+                        if !from.is_connected_to(cand, false) {
+                            from.m().add_edge2_edge_connection(cand, true, SVC_UNSPECIFIED);
+                        }
+                    }
+                }
+            }
+        } else {
+            // XXX interpreting via-ways or via-node lists not yet implemented
+            write_warningf!("direction of restriction relation could not be determined%", "");
+            return false;
+        }
+        true
     }
 
     /// C++: `NBEdge * RelationHandler::findEdgeRef(long long, const std::vector<NBEdge *> &) const` [const, private]
@@ -5352,7 +5772,22 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn find_edge_ref(&self, wayRef: i64, candidates: &Vec<Ptr<NBEdge>>) -> Ptr<NBEdge> {
-        todo!("port RelationHandler::findEdgeRef")
+        let prefix = wayRef.to_string();
+        let backPrefix = format!("-{prefix}");
+        let mut result: Ptr<NBEdge> = Ptr::null();
+        let mut found = 0;
+        for candidate in candidates.iter() {
+            let id = candidate.get_id();
+            if id.starts_with(&prefix) || id.starts_with(&backPrefix) {
+                result = *candidate;
+                found += 1;
+            }
+        }
+        if found > 1 {
+            write_warningf!("Ambiguous way reference '%' in restriction relation", prefix);
+            result = Ptr::null();
+        }
+        result
     }
 
     /// C++: `void RelationHandler::RelationHandler(const RelationHandler &)` [private]
@@ -5360,7 +5795,8 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIImporter_OpenStreetMap_RelationHandler) -> Self {
-        todo!("port RelationHandler::RelationHandler")
+        // C++ declares the copy constructor private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::RelationHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `RelationHandler & RelationHandler::operator=(const RelationHandler &)` [private]
@@ -5368,7 +5804,8 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_RelationHandler) -> &mut NIImporter_OpenStreetMap_RelationHandler {
-        todo!("port RelationHandler::operator=")
+        // C++ declares the assignment operator private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::RelationHandler::operator= is private and undefined in C++")
     }
 
 }
