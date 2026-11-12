@@ -2,6 +2,38 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// Leaks a heap object for the whole simulation, like the C++ `new` the constructor uses.
+fn leak<T>(value: T) -> &'static mut T {
+    Box::leak(Box::new(value))
+}
+
+/// Owned copy of a phase. The generated countVehicles takes the phase by value, the C++ takes const&.
+// shortcut: copy only because MSSOTLTrafficLightLogic::count_vehicles takes MSPhaseDefinition by value, change it to &MSPhaseDefinition and drop this copy
+fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
+    MSPhaseDefinition {
+        duration: p.duration,
+        lastDuration: p.lastDuration,
+        minDuration: p.minDuration,
+        maxDuration: p.maxDuration,
+        earliestEnd: p.earliestEnd,
+        latestEnd: p.latestEnd,
+        earlyTarget: p.earlyTarget.clone(),
+        finalTarget: p.finalTarget.clone(),
+        myLastSwitch: p.myLastSwitch,
+        myLastEnd: p.myLastEnd,
+        nextPhases: p.nextPhases.clone(),
+        name: p.name.clone(),
+        yellow: p.yellow,
+        red: p.red,
+        vehext: p.vehext,
+        myTransientNotDecisional: p.myTransientNotDecisional,
+        myCommit: p.myCommit,
+        myUndefined: p.myUndefined,
+        myTargetLaneSet: p.myTargetLaneSet.clone(),
+        myState: p.myState.clone(),
+    }
+}
+
 /// C++ class `MSDeterministicHiLevelTrafficLightLogic` (microsim/traffic_lights/MSDeterministicHiLevelTrafficLightLogic.h)
 pub struct MSDeterministicHiLevelTrafficLightLogic {
     /// C++ base class `MSSOTLHiLevelTrafficLightLogic`
@@ -42,7 +74,25 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::MSDeterministicHiLevelTrafficLightLogic")
+        let mut this = Self {
+            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters),
+            inputLanes: BTreeSet::new(),
+            outputLanes: BTreeSet::new(),
+        };
+        // the policies are owned for the whole simulation, as the C++ `new` calls leak them
+        let platoonStimulus = leak(MSSOTLPolicy3DStimulus::new("PLATOON".to_string(), parameters));
+        let platoon = leak(MSSOTLPlatoonPolicy::new_3(Ptr::from_mut(&mut platoonStimulus.base.base), parameters));
+        this.add_policy(Ptr::from_mut(&mut platoon.base));
+        let phaseStimulus = leak(MSSOTLPolicy3DStimulus::new("PHASE".to_string(), parameters));
+        let phase = leak(MSSOTLPhasePolicy::new_3(Ptr::from_mut(&mut phaseStimulus.base.base), parameters));
+        this.add_policy(Ptr::from_mut(&mut phase.base));
+        let marchingStimulus = leak(MSSOTLPolicy3DStimulus::new("MARCHING".to_string(), parameters));
+        let marching = leak(MSSOTLMarchingPolicy::new_3(Ptr::from_mut(&mut marchingStimulus.base.base), parameters));
+        this.add_policy(Ptr::from_mut(&mut marching.base));
+        let congestionStimulus = leak(MSSOTLPolicy3DStimulus::new("CONGESTION".to_string(), parameters));
+        let congestion = leak(MSSOTLCongestionPolicy::new_3(Ptr::from_mut(&mut congestionStimulus.base.base), parameters));
+        this.add_policy(Ptr::from_mut(&mut congestion.base));
+        this
     }
 
     /// C++: `void MSDeterministicHiLevelTrafficLightLogic::~MSDeterministicHiLevelTrafficLightLogic() noexcept` [virtual]
@@ -51,7 +101,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::~MSDeterministicHiLevelTrafficLightLogic")
+        // C++ body is empty
     }
 
     /// C++: `void MSDeterministicHiLevelTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -94,7 +144,29 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::init")
+        self.base.init(nb);
+        // Setting the startup policy
+        self.choose_policy(0.0, 0.0);
+        utils::common::msg_handler::write_message(&format!("*** Intersection {} will run using MSDeterministicHiLevelTrafficLightLogic ***", self.get_id()));
+
+        let myLanes = self.myLanes.clone();
+        for laneVector in myLanes.iter() {
+            for &currentLane in laneVector.iter() {
+                if !self.inputLanes.contains(currentLane.get_id()) {
+                    self.inputLanes.insert(currentLane.get_id().to_string());
+                }
+            }
+        }
+
+        let links = self.get_links().clone();
+        for oneLink in links.iter() {
+            for j in 0..oneLink.len() {
+                let currentLane = oneLink[j].get_lane();
+                if !self.outputLanes.contains(currentLane.get_id()) {
+                    self.outputLanes.insert(currentLane.get_id().to_string());
+                }
+            }
+        }
     }
 
     /// C++: `const std::string MSDeterministicHiLevelTrafficLightLogic::getLogicType() const` [const]
@@ -104,7 +176,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic_type(&self) -> String {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::getLogicType")
+        "DeterministicHighLevelTrafficLightLogic".to_string()
     }
 
     /// C++: `int MSDeterministicHiLevelTrafficLightLogic::decideNextPhase()` [virtual, protected]
@@ -135,7 +207,20 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self) -> i32 {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::decideNextPhase")
+        // Decide the current policy according to pheromone levels. this should be done only at the end of a chain, before selecting the new one
+        if self.get_current_phase_def().is_commit() {
+            self.decide_policy();
+        }
+        // Execute current policy. congestion "policy" must maintain the commit phase, and that must be an all-red one
+        let policy = self.myCurrentPolicy;
+        let curPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
+        let elapsed = self.get_current_phase_elapsed();
+        let currentPhaseIndex = self.get_current_phase_index();
+        let phaseMaxCTS = self.get_phase_index_with_max_cts();
+        let thresholdPassed = self.is_threshold_passed();
+        let pushButtonPressed = self.is_push_button_pressed();
+        let vehicleCount = self.count_vehicles(curPhase);
+        policy.m().decide_next_phase(elapsed, curPhase, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
     }
 
     /// C++: `bool MSDeterministicHiLevelTrafficLightLogic::canRelease()` [virtual, protected]
@@ -151,7 +236,13 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self) -> bool {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::canRelease")
+        let policy = self.myCurrentPolicy;
+        let elapsed = self.get_current_phase_elapsed();
+        let thresholdPassed = self.is_threshold_passed();
+        let pushButtonPressed = self.is_push_button_pressed();
+        let curPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
+        let vehicleCount = self.count_vehicles(curPhase);
+        policy.m().can_release(elapsed, thresholdPassed, pushButtonPressed, curPhase, vehicleCount)
     }
 
     /// C++: `double MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForInputLanes()` [protected]
@@ -177,7 +268,18 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed_for_input_lanes(&mut self) -> f64 {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForInputLanes")
+        if self.inputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut vSpeedInTot: f64 = 0.0;
+        let inputLanes = self.inputLanes.clone();
+        for laneId in inputLanes.iter() {
+            let maxSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            if maxSpeed > -1.0 {
+                vSpeedInTot += (13.89 - maxSpeed) * 10.0 / 13.89;
+            }
+        }
+        vSpeedInTot / (self.inputLanes.len() as f64)
     }
 
     /// C++: `double MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForOutputLanes()` [protected]
@@ -203,7 +305,18 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed_for_output_lanes(&mut self) -> f64 {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForOutputLanes")
+        if self.outputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut vSpeedOutTot: f64 = 0.0;
+        let outputLanes = self.outputLanes.clone();
+        for laneId in outputLanes.iter() {
+            let maxSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            if maxSpeed > -1.0 {
+                vSpeedOutTot += (13.89 - maxSpeed) * 10.0 / 13.89;
+            }
+        }
+        vSpeedOutTot / (self.outputLanes.len() as f64)
     }
 
     /// C++: `void MSDeterministicHiLevelTrafficLightLogic::decidePolicy()` [virtual, protected]
@@ -234,7 +347,10 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_policy(&mut self) {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::decidePolicy")
+        // Decide if it is the case to check for another plan
+        let mean_vSpeed_in = self.get_mean_speed_for_input_lanes();
+        let mean_vSpeed_out = self.get_mean_speed_for_output_lanes();
+        self.choose_policy(mean_vSpeed_in, mean_vSpeed_out);
     }
 
     /// C++: `void MSDeterministicHiLevelTrafficLightLogic::choosePolicy(double, double)` [protected]
@@ -262,7 +378,19 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn choose_policy(&mut self, mean_vSpeed_in: f64, mean_vSpeed_out: f64) {
-        todo!("port MSDeterministicHiLevelTrafficLightLogic::choosePolicy")
+        let mut index_maxStimulus: usize = 0;
+        let mut maxStimulus: f64 = -1.0;
+        // Compute simulus for each policy
+        for i in 0..self.myPolicies.len() {
+            let policy = self.myPolicies[i];
+            let stimulus = policy.m().compute_desirability_2(mean_vSpeed_in, mean_vSpeed_out);
+            if stimulus > maxStimulus {
+                maxStimulus = stimulus;
+                index_maxStimulus = i;
+            }
+        }
+        let chosen = self.myPolicies[index_maxStimulus];
+        self.activate(chosen);
     }
 
 }

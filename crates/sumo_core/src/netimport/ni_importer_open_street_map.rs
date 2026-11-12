@@ -6,6 +6,33 @@ use utils::xml::sumo_sax_reader::SUMOSAXReader;
 use utils::xml::sumo_sax_handler;
 use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
 use utils::{write_errorf, write_messagef, write_warningf};
+use utils::common::std_defs::{g_precision, SUMO_CONST_LANE_WIDTH};
+use utils::common::string_utils::starts_with;
+use utils::common::to_string::join_to_string_prec;
+use utils::common::string_utils::{escape_xml, is_bool, to_bool, to_long};
+
+/// C++ `NBTrafficLightDefinition::OSM_DIRECTION`
+const OSM_DIRECTION: &str = "osm:direction";
+
+/// C++ `toString(LaneSpreadFunction)`: the first name in SUMOXMLDefinitions' table for the value
+fn lane_spread_str(l: LaneSpreadFunction) -> &'static str {
+    match l {
+        LaneSpreadFunction::RIGHT => "right",
+        LaneSpreadFunction::ROADCENTER => "roadCenter",
+        LaneSpreadFunction::CENTER => "center",
+        LaneSpreadFunction::SPREAD_UNKNOWN => "unknown",
+    }
+}
+
+/// C++ `toString(SumoXMLAttr)`: the attribute name from the SUMOXML attribute table
+fn attr_name(a: i32) -> &'static str {
+    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, v)| *v == a).map(|(n, _)| *n).unwrap_or("")
+}
+
+// C++ NBEdge::UNSPECIFIED_* constants
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
+const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
 // shortcut: NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION is not ported as a const yet (nb_traffic_light_definition.rs keeps it as a comment); mirrors NBTrafficLightDefinition.cpp:49, switch to the ported constant when it lands
 const OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
 
@@ -20,6 +47,15 @@ const NBEDGE_TURN_SIGN_SHIFT_TAXI: i32 = 16;
 const NBEDGE_TURN_SIGN_SHIFT_BICYCLE: i32 = 24;
 
 /// SAX reader results: a ProcessError is thrown in C++ and propagates to the caller, so panic here.
+// C++ MAX2/MIN2 macros (ties return the second operand for MAX2, as in the macro)
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
 fn sax_result(r: Result<bool, ProcessError>) -> bool {
     r.unwrap_or_else(|e| panic!("{e}"))
 }
@@ -181,6 +217,44 @@ impl NIImporter_OpenStreetMap_CompareEdges {
 /// Functor which compares two NIOSMNodes according to their coordinates
 /// C++ class `NIImporter_OpenStreetMap::CompareNodes` (netimport/NIImporter_OpenStreetMap.h)
 pub struct NIImporter_OpenStreetMap_CompareNodes {
+}
+
+/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
+#[allow(clippy::mut_from_ref)]
+fn pt_stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
+
+/// A node pointer ordered by CompareNodes, so a BTreeSet behaves like C++ `std::set<NIOSMNode *, CompareNodes>`
+/// (find/insert match on coordinates, not on pointer value).
+#[derive(Clone, Copy)]
+pub struct NIImporter_OpenStreetMap_NodeByCoord(pub Ptr<NIImporter_OpenStreetMap_NIOSMNode>);
+
+impl PartialEq for NIImporter_OpenStreetMap_NodeByCoord {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == std::cmp::Ordering::Equal
+    }
+}
+
+impl Eq for NIImporter_OpenStreetMap_NodeByCoord {}
+
+impl PartialOrd for NIImporter_OpenStreetMap_NodeByCoord {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for NIImporter_OpenStreetMap_NodeByCoord {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let cmp = NIImporter_OpenStreetMap_CompareNodes {};
+        if cmp.call_op(self.0, other.0) {
+            std::cmp::Ordering::Less
+        } else if cmp.call_op(other.0, self.0) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    }
 }
 
 impl NIImporter_OpenStreetMap_CompareNodes {
@@ -1966,6 +2040,7 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
 }
 
 /// C++ class `RelationHandler::NIIPTPlatform` (netimport/NIImporter_OpenStreetMap.h)
+#[derive(Clone, Copy)]
 pub struct RelationHandler_NIIPTPlatform {
     pub ref_: i64,
     pub isWay: bool,
@@ -1980,7 +2055,7 @@ pub struct NIImporter_OpenStreetMap {
     /// the map from OSM node ids to actual nodes
     pub myOSMNodes: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>,
     /// the set of unique nodes used in NodesHandler, used when freeing memory
-    pub myUniqueNodes: BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, // C++: std::set<NIOSMNode *, CompareNodes>
+    pub myUniqueNodes: BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>, // C++: std::set<NIOSMNode *, CompareNodes>
     /// the map from OSM way ids to edge objects
     pub myEdges: BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>,
     /// the map from OSM way ids to platform shapes
@@ -2149,7 +2224,7 @@ impl NIImporter_OpenStreetMap {
         // delete nodes
         for myUniqueNode in self.myUniqueNodes.iter() {
             // SAFETY: nodes were allocated with Box::into_raw and are only freed here.
-            drop(unsafe { Box::from_raw(myUniqueNode.as_raw()) });
+            drop(unsafe { Box::from_raw(myUniqueNode.0.as_raw()) });
         }
         // delete edges
         for myEdge in self.myEdges.values() {
@@ -2447,10 +2522,10 @@ impl NIImporter_OpenStreetMap {
     pub fn load(&mut self, oc: &OptionsCont, nb: &mut NBNetBuilder) {
         use utils::common::msg_handler::*;
         use utils::options::options_cont as opt;
-        if !opt::is_set("osm-files") {
+        if !utils::options::options_cont::is_set("osm-files") {
             return;
         }
-        let files = opt::get_string_vector("osm-files");
+        let files = utils::options::options_cont::get_string_vector("osm-files");
         let mut readers: Vec<Option<SUMOSAXReader>> = Vec::new();
 
         self.myImportLaneAccess = oc.get_bool("osm.lane-access").unwrap();
@@ -2464,8 +2539,8 @@ impl NIImporter_OpenStreetMap {
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
-        myAllAttributes.with(|c| c.set(opt::get_bool("osm.all-attributes")));
-        let extra = opt::get_string_vector("osm.extra-attributes");
+        myAllAttributes.with(|c| c.set(utils::options::options_cont::get_bool("osm.all-attributes")));
+        let extra = utils::options::options_cont::get_string_vector("osm.extra-attributes");
         myExtraAttributes.with(|s| {
             s.borrow_mut().extend(extra.iter().cloned());
             if s.borrow().contains("all") {
@@ -2626,7 +2701,7 @@ impl NIImporter_OpenStreetMap {
             /* After edges are instantiated
              * nodes are parsed again to add pedestrian crossings to them
              * This is only executed if crossings are imported and not guessed */
-            let crossingWidth = opt::get_float("default.crossing-width");
+            let crossingWidth = utils::options::options_cont::get_float("default.crossing-width");
             for item in nodeUsage.keys() {
                 let osmNode = self.myOSMNodes[item];
                 if osmNode.pedestrianCrossing {
@@ -2699,7 +2774,7 @@ impl NIImporter_OpenStreetMap {
             }
         }
 
-        let layerElevation = opt::get_float("osm.layer-elevation");
+        let layerElevation = utils::options::options_cont::get_float("osm.layer-elevation");
         if layerElevation > 0.0 {
             self.reconstruct_layer_elevation(layerElevation, nb);
         }
@@ -3475,7 +3550,607 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn insert_edge(&mut self, e: Ptr<NIImporter_OpenStreetMap_Edge>, index: i32, from: Ptr<NBNode>, to: Ptr<NBNode>, passed: &Vec<i64>, nb: &mut NBNetBuilder, first: Ptr<NBNode>, last: Ptr<NBNode>) -> i32 {
-        todo!("port NIImporter_OpenStreetMap::insertEdge")
+        let WAY_NONE: i64 = NIImporter_OpenStreetMap_WayType::WAY_NONE as i64;
+        let WAY_FORWARD: i64 = NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i64;
+        let WAY_BACKWARD: i64 = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i64;
+        let WAY_BOTH: i64 = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i64;
+        let WAY_UNKNOWN: i64 = NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i64;
+        let WAY_PREFER_FORWARD: i64 = NIImporter_OpenStreetMap_WayType::WAY_PREFER_FORWARD as i64;
+        let WAY_PREFER_BACKWARD: i64 = NIImporter_OpenStreetMap_WayType::WAY_PREFER_BACKWARD as i64;
+        let PARKING_LEFT: i32 = NIImporter_OpenStreetMap_ParkingType::PARKING_LEFT as i32;
+        let PARKING_RIGHT: i32 = NIImporter_OpenStreetMap_ParkingType::PARKING_RIGHT as i32;
+        let PARKING_BOTH: i32 = NIImporter_OpenStreetMap_ParkingType::PARKING_BOTH as i32;
+        let nc: Ptr<NBNodeCont> = Ptr::from_mut(nb.get_node_cont());
+        let ec: Ptr<NBEdgeCont> = Ptr::from_mut(nb.get_edge_cont());
+        let tc: Ptr<NBTypeCont> = Ptr::from_mut(nb.get_type_cont());
+        let sc: Ptr<NBPTStopCont> = Ptr::from_mut(nb.get_pt_stop_cont());
+        let tlsc: Ptr<NBTrafficLightLogicCont> = Ptr::from_mut(nb.get_tl_logic_cont());
+        // patch the id
+        let mut id = e.id.to_string();
+        if from.is_null() || to.is_null() {
+            write_errorf!("Discarding edge '%' because the nodes could not be built.", id);
+            return index;
+        }
+        let mut index = index;
+        if index >= 0 {
+            id = format!("{id}#{index}");
+        } else {
+            index = 0;
+        }
+        if from == to {
+            assert!(passed.len() >= 2);
+            if passed.len() == 2 {
+                write_warningf!("Discarding edge '%' which connects two identical nodes without geometry.", id);
+                return index;
+            }
+            // in the special case of a looped way split again using passed
+            let intermediateIndex = passed.len() / 2;
+            let intermediate = self.insert_node_checking(passed[intermediateIndex], nc.m(), tlsc.m());
+            let part1: Vec<i64> = passed[..=intermediateIndex].to_vec();
+            let part2: Vec<i64> = passed[intermediateIndex..].to_vec();
+            index = self.insert_edge(e, index, from, intermediate, &part1, nb, first, last);
+            return self.insert_edge(e, index, intermediate, to, &part2, nb, first, last);
+        }
+        let newIndex = index + 1;
+        let type_ = self.usable_type(&e.myHighWayType, &id, tc.m());
+        if type_ == "" {
+            // we do not want to import it
+            return newIndex;
+        }
+        let mut routingType = String::new();
+        let mut numLanesForward = tc.get_edge_type_num_lanes(&type_);
+        let mut numLanesBackward = tc.get_edge_type_num_lanes(&type_);
+        let mut speed = tc.get_edge_type_speed(&type_);
+        let mut defaultsToOneWay = tc.get_edge_type_is_one_way(&type_);
+        let defaultPermissions: SVCPermissions = tc.get_edge_type_permissions(&type_);
+        let mut extra: SVCPermissions = if self.myImportBikeAccess { e.myExtraAllowed } else { e.myExtraAllowed & !SVC_BICYCLE };
+        let extraDis: SVCPermissions = if self.myImportBikeAccess { e.myExtraDisallowed } else { e.myExtraDisallowed & !SVC_BICYCLE };
+        let mut defaults: Vec<i32> = Vec::new(); // SumoXMLAttr values
+        // extra permissions are more specific than extra prohibitions except for buses (which come from the less specific psv tag)
+        if (extraDis & SVC_BUS) != 0 && (extra & SVC_BUS) != 0 {
+            extra = extra & !SVC_BUS;
+        }
+        let mut permissions: SVCPermissions = (defaultPermissions & !extraDis) | extra;
+        if !self.myImportBikeAccess && permissions == (SVC_PEDESTRIAN | SVC_BICYCLE) && (e.myExtraDisallowed & SVC_BICYCLE) != 0 && (e.myExtraAllowed & SVC_BICYCLE) == 0 {
+            // remove bicyle permissions where they affect network building the most
+            permissions = SVC_PEDESTRIAN;
+            defaultsToOneWay = true;
+        }
+        if defaultPermissions == SVC_SHIP {
+            // extra permission apply to the ships operating on the route rather than the waterway
+            permissions = defaultPermissions;
+        }
+        if defaultsToOneWay && defaultPermissions == SVC_PEDESTRIAN && (permissions & (!SVC_PEDESTRIAN)) != 0 {
+            defaultsToOneWay = false;
+        }
+        if (permissions & SVC_RAIL) != 0 && e.myExtraTags.contains_key("electrified") {
+            permissions |= SVC_RAIL_ELECTRIC | SVC_RAIL_FAST;
+        }
+
+        // convert the shape
+        let mut shape = PositionVector(Vec::new());
+        let mut distanceStart = self.myOSMNodes[&passed[0]].positionMeters;
+        let mut distanceEnd = self.myOSMNodes[&passed[passed.len() - 1]].positionMeters;
+        let useDistance = distanceStart != f64::MAX && distanceEnd != f64::MAX;
+        if useDistance {
+            // negative sign denotes counting in the other direction
+            if distanceStart < distanceEnd {
+                distanceEnd *= -1.0;
+            } else {
+                distanceStart *= -1.0;
+            }
+        } else {
+            distanceStart = 0.0;
+            distanceEnd = 0.0;
+        }
+
+        // get additional direction information
+        let mut nodeDirection: i64 = WAY_UNKNOWN;
+        let fromOSM = self.myOSMNodes[&to_long(from.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
+        let toOSM = self.myOSMNodes[&to_long(to.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
+        if fromOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            nodeDirection |= fromOSM.myRailDirection as i64;
+        }
+        if toOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            nodeDirection |= toOSM.myRailDirection as i64;
+        }
+
+        let mut ptStops: Vec<Rc<NBPTStop>> = Vec::new();
+        for i in passed.iter() {
+            let n = self.myOSMNodes[i];
+            // recheck permissions, maybe they got assigned to a strange edge, see #11656
+            if n.ptStopPosition && (n.permissions == 0 || (permissions & n.permissions) != 0) {
+                let existingPtStop: Option<Rc<NBPTStop>> = sc.get_stops().get(&n.id.to_string()).cloned();
+                if let Some(existingPtStop) = existingPtStop {
+                    pt_stop_mut(&existingPtStop).register_additional_edge(e.id.to_string(), id.clone());
+                } else {
+                    let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
+                    if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
+                        write_errorf!("Unable to project coordinates for node '%'.", n.id);
+                    }
+                    let element = if is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
+                    let stop: Rc<NBPTStop> = Rc::new(NBPTStop::new(
+                        element, n.id.to_string(), ptPos, id.clone(), e.id.to_string(), n.ptStopLength, n.name.clone(), n.permissions,
+                        0.0, RGBColor::new_valid(false), -1.0,
+                    ));
+                    ptStops.push(stop.clone());
+                    sc.m().insert(stop, false);
+                }
+            }
+            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+                nodeDirection |= n.myRailDirection as i64;
+            }
+            let pos = Position::new3(n.lon, n.lat, n.ele);
+            shape.push(pos);
+        }
+        //if (e->id == DEBUGID) { ... debug output omitted in C++ }
+        if e.myRailDirection as i64 == WAY_UNKNOWN && (nodeDirection & WAY_BACKWARD) != 0 {
+            // legacy behavior seems to have handled missing tags quite well
+            e.m().myRailDirection = WAY_BOTH as i32;
+        } else if nodeDirection != WAY_UNKNOWN {
+            // additional direction information can just be added
+            e.m().myRailDirection = ((e.myRailDirection as i64 | nodeDirection) & !WAY_UNKNOWN) as i32;
+        }
+
+        if !NBNetBuilder::transform_coordinates(&mut shape, true, Ptr::null()) {
+            write_errorf!("Unable to project coordinates for edge '%'.", id);
+        }
+
+        let mut forwardPermissions = permissions;
+        let mut backwardPermissions = permissions;
+        let streetName: String = if is_railway(permissions) && e.ref_ != "" { e.ref_.clone() } else { e.streetName.clone() };
+        if streetName == e.ref_ {
+            e.m().unset_parameter("ref"); // avoid superfluous param for railways
+        }
+        let mut forwardWidth = tc.get_edge_type_width(&type_);
+        let mut backwardWidth = tc.get_edge_type_width(&type_);
+        let mut sidewalkWidth = tc.get_edge_type_sidewalk_width(&type_);
+        let mut addSidewalk = sidewalkWidth != NBEDGE_UNSPECIFIED_WIDTH;
+        if self.myImportSidewalks {
+            if addSidewalk {
+                // only use sidewalk width from typemap but don't add sidewalks
+                // unless OSM specifies them
+                addSidewalk = false;
+            } else {
+                sidewalkWidth = utils::options::options_cont::get_float("default.sidewalk-width");
+            }
+        }
+        let mut bikeLaneWidth = tc.get_edge_type_bike_lane_width(&type_);
+        let onewayBike: String = e.m().myExtraTags.entry("oneway:bicycle".to_string()).or_default().clone();
+        if onewayBike == "false" || onewayBike == "no" || onewayBike == "0" {
+            e.m().myCyclewayType = if e.myCyclewayType == WAY_UNKNOWN { WAY_BACKWARD } else { e.myCyclewayType | WAY_BACKWARD };
+        }
+
+        let addBikeLane = bikeLaneWidth != NBEDGE_UNSPECIFIED_WIDTH
+            || (self.myImportBikeAccess && (((e.myCyclewayType & WAY_BOTH) != 0 || e.myExtraTags.contains_key("segregated"))
+                && !(e.myCyclewayType == WAY_BACKWARD && (e.myBuswayType & WAY_BOTH) != 0)));
+        if addBikeLane && bikeLaneWidth == NBEDGE_UNSPECIFIED_WIDTH {
+            bikeLaneWidth = utils::options::options_cont::get_float("default.bikelane-width");
+        }
+        // check directions
+        let mut addForward = true;
+        let mut addBackward = true;
+        let isBoolOneWay = is_bool(&e.myIsOneWay);
+        let oneWayValue = isBoolOneWay && to_bool(&e.myIsOneWay).unwrap_or(false);
+        let explicitOneWay = isBoolOneWay && oneWayValue;
+        let explicitTwoWay = isBoolOneWay && !oneWayValue;
+        if (explicitOneWay || (defaultsToOneWay && (!explicitTwoWay || is_railway(permissions)))) && (e.myRailDirection as i64 & WAY_BACKWARD) == 0 {
+            addBackward = false;
+        }
+        if e.myIsOneWay == "-1" || e.myIsOneWay == "reverse" || ((e.myRailDirection as i64 & WAY_BACKWARD) != 0 && (e.myRailDirection as i64 & WAY_FORWARD) == 0) {
+            // one-way in reversed direction of way
+            addForward = false;
+            addBackward = true;
+        }
+        if !e.myIsOneWay.is_empty() && !explicitOneWay && !explicitTwoWay && e.myIsOneWay != "-1" && e.myIsOneWay != "reverse" {
+            write_warningf!("New value for oneway found: %", e.myIsOneWay.clone());
+        }
+        if permissions == SVC_BICYCLE || permissions == (SVC_BICYCLE | SVC_PEDESTRIAN) || permissions == SVC_PEDESTRIAN {
+            if addBackward && (onewayBike == "true" || onewayBike == "yes" || onewayBike == "1") {
+                addBackward = false;
+            }
+            if addForward && (onewayBike == "reverse" || onewayBike == "-1") {
+                addForward = false;
+            }
+            if !addBackward && (onewayBike == "false" || onewayBike == "no" || onewayBike == "0") {
+                addBackward = true;
+            }
+        }
+        // if we had been able to extract the number of lanes, override the highway type default
+        if e.myNoLanes > 0 {
+            if addForward && !addBackward {
+                numLanesForward = if e.myNoLanesForward > 0 { e.myNoLanesForward } else { e.myNoLanes };
+            } else if !addForward && addBackward {
+                numLanesBackward = if e.myNoLanesForward < 0 { -e.myNoLanesForward } else { e.myNoLanes };
+            } else {
+                if e.myNoLanesForward > 0 {
+                    numLanesForward = e.myNoLanesForward;
+                } else if e.myNoLanesForward < 0 {
+                    numLanesForward = e.myNoLanes + e.myNoLanesForward;
+                } else {
+                    numLanesForward = (e.myNoLanes as f64 / 2.0).ceil() as i32;
+                }
+                numLanesBackward = e.myNoLanes - numLanesForward;
+                // sometimes ways are tagged according to their physical width of a single
+                // lane but they are intended for traffic in both directions
+                numLanesForward = std::cmp::max(1, numLanesForward);
+                numLanesBackward = std::cmp::max(1, numLanesBackward);
+            }
+        } else if e.myNoLanes == 0 {
+            write_warningf!("Skipping edge '%' because it has zero lanes.", id);
+            return newIndex;
+        } else {
+            // the total number of lanes is not known but at least one direction
+            if e.myNoLanesForward > 0 {
+                numLanesForward = e.myNoLanesForward;
+            } else if (e.myBuswayType & WAY_FORWARD) != 0 && (extraDis & SVC_PASSENGER) == 0 {
+                // if we have a busway lane, yet cars may drive this implies at least two lanes
+                numLanesForward = std::cmp::max(numLanesForward, 2);
+            }
+            if e.myNoLanesForward < 0 {
+                numLanesBackward = -e.myNoLanesForward;
+            } else if (e.myBuswayType & WAY_BACKWARD) != 0 && (extraDis & SVC_PASSENGER) == 0 {
+                // if we have a busway lane, yet cars may drive this implies at least two lanes
+                numLanesBackward = std::cmp::max(numLanesForward, 2);
+            }
+            if self.myAnnotateDefaults && e.myNoLanesForward == 0 {
+                defaults.push(SUMO_ATTR_NUMLANES);
+            }
+        }
+        // deal with busways that run in the opposite direction of a one-way street
+        if !addForward && (e.myBuswayType & WAY_FORWARD) != 0 {
+            addForward = true;
+            forwardPermissions = SVC_BUS;
+            numLanesForward = 1;
+        }
+        if !addBackward && (e.myBuswayType & WAY_BACKWARD) != 0 {
+            addBackward = true;
+            backwardPermissions = SVC_BUS;
+            numLanesBackward = 1;
+        }
+        // width is meant for raw lane count before adding sidewalks or cycleways
+        let taggedLanes = (if addForward { numLanesForward } else { 0 }) + (if addBackward { numLanesBackward } else { 0 });
+        if e.myWidth > 0.0 && e.myWidthLanesForward.is_empty() && e.myWidthLanesBackward.is_empty() && taggedLanes != 0 && !utils::options::options_cont::get_bool("ignore-widths") {
+            // width is tagged excluding sidewalks and cycleways
+            forwardWidth = e.myWidth / taggedLanes as f64;
+            backwardWidth = forwardWidth;
+        }
+
+        // if we had been able to extract the maximum speed, override the type's default
+        if e.myMaxSpeed != MAXSPEED_UNGIVEN {
+            speed = e.myMaxSpeed;
+        } else if self.myAnnotateDefaults {
+            defaults.push(SUMO_ATTR_SPEED);
+        }
+        let mut speedBackward = speed;
+        if e.myMaxSpeedBackward != MAXSPEED_UNGIVEN {
+            speedBackward = e.myMaxSpeedBackward;
+            addBackward = true;
+        }
+        if speed <= 0.0 || speedBackward <= 0.0 {
+            write_warningf!("Skipping edge '%' because it has speed %.", id, speed);
+            return newIndex;
+        }
+        if e.myNoLanes == 1 && addForward && addBackward {
+            // narrow road which now receives a total of 2 lanes but has less capacity than implied
+            if e.myWidth < 0.0 && e.myWidthLanesForward.is_empty() && e.myWidthLanesBackward.is_empty() {
+                if forwardWidth == NBEDGE_UNSPECIFIED_WIDTH {
+                    forwardWidth = SUMO_CONST_LANE_WIDTH;
+                }
+                if backwardWidth == NBEDGE_UNSPECIFIED_WIDTH {
+                    backwardWidth = SUMO_CONST_LANE_WIDTH;
+                }
+                forwardWidth /= 2.0;
+                backwardWidth /= 2.0;
+            }
+            if e.myWidth < 5.0 {
+                routingType = "narrow".to_string();
+            }
+        }
+        // deal with cycleways that run in the opposite direction of a one-way street
+        let mut cyclewayType: i64 = e.myCyclewayType; // make a copy because we do some temporary modifications
+        if addBikeLane {
+            if !addForward && (cyclewayType & WAY_FORWARD) != 0 {
+                addForward = true;
+                forwardPermissions = SVC_BICYCLE;
+                forwardWidth = bikeLaneWidth;
+                numLanesForward = 1;
+                // do not add an additional cycle lane
+                cyclewayType &= !WAY_FORWARD;
+            }
+            if !addBackward && (cyclewayType & WAY_BACKWARD) != 0 {
+                addBackward = true;
+                backwardPermissions = SVC_BICYCLE;
+                backwardWidth = bikeLaneWidth;
+                numLanesBackward = 1;
+                // do not add an additional cycle lane
+                cyclewayType &= !WAY_BACKWARD;
+            }
+        }
+        // deal with sidewalks that run in the opposite direction of a one-way street
+        let mut sidewalkType: i64 = e.mySidewalkType; // make a copy because we do some temporary modifications
+        if sidewalkType == WAY_UNKNOWN && (e.myExtraAllowed & SVC_PEDESTRIAN) != 0 && (permissions & SVC_PASSENGER) != 0 {
+            // do not assume shared space unless sidewalk is actively disabled
+            if self.myOnewayDualSidewalk {
+                sidewalkType = WAY_BOTH;
+            }
+        }
+        if addSidewalk || (self.myImportSidewalks && (permissions & SVC_ROAD_CLASSES) != 0 && defaultPermissions != SVC_PEDESTRIAN) {
+            if !addForward && (sidewalkType & WAY_FORWARD) != 0 {
+                addForward = true;
+                forwardPermissions = SVC_PEDESTRIAN;
+                forwardWidth = tc.get_edge_type_sidewalk_width(&type_);
+                numLanesForward = 1;
+                // do not add an additional sidewalk
+                sidewalkType &= !WAY_FORWARD;
+            } else if addSidewalk && addForward && (sidewalkType & WAY_BOTH) == 0 && numLanesForward == 1 && numLanesBackward <= 1 && (e.myExtraDisallowed & SVC_PEDESTRIAN) == 0 {
+                // our typemap says pedestrians should walk here but the data says
+                // there is no sidewalk at all. If the road is small, pedestrians can just walk
+                // on the road
+                forwardPermissions |= SVC_PEDESTRIAN;
+            }
+            if !addBackward && (sidewalkType & WAY_BACKWARD) != 0 {
+                addBackward = true;
+                backwardPermissions = SVC_PEDESTRIAN;
+                backwardWidth = tc.get_edge_type_sidewalk_width(&type_);
+                numLanesBackward = 1;
+                // do not add an additional cycle lane
+                sidewalkType &= !WAY_BACKWARD;
+            } else if addSidewalk && addBackward && (sidewalkType & WAY_BOTH) == 0 && numLanesBackward == 1 && numLanesForward <= 1 && (e.myExtraDisallowed & SVC_PEDESTRIAN) == 0 {
+                // our typemap says pedestrians should walk here but the data says
+                // there is no sidewalk at all. If the road is small, pedestrians can just walk
+                // on the road
+                backwardPermissions |= SVC_PEDESTRIAN;
+            }
+        }
+
+        let mut applyPlacement = false;
+        let mut placementOffset: f64 = 0.0;
+        if e.myPlacement != NIImporter_OpenStreetMap_PlacementType::NONE {
+            if !explicitOneWay {
+                if index <= 0 {
+                    self.myPlacementSkippedNonExplicitOneWay += 1;
+                }
+            } else if !(addForward && !addBackward) {
+                if index <= 0 {
+                    self.myPlacementSkippedAuxOppositeDirection += 1;
+                }
+            } else if numLanesForward <= 0 {
+                if index <= 0 {
+                    write_warningf!("Ignoring placement for edge '%' because lane count is invalid.", id);
+                }
+            } else {
+                let defaultPlacementWidth = if forwardWidth == NBEDGE_UNSPECIFIED_WIDTH || forwardWidth <= 0.0 { SUMO_CONST_LANE_WIDTH } else { forwardWidth };
+                let mut laneWidths: Vec<f64> = vec![defaultPlacementWidth; numLanesForward as usize];
+                if !utils::options::options_cont::get_bool("ignore-widths") && e.myWidthLanesForward.len() as i32 == numLanesForward {
+                    for i in 0..numLanesForward as usize {
+                        laneWidths[i] = if e.myWidthLanesForward[i] > 0.0 { e.myWidthLanesForward[i] } else { defaultPlacementWidth };
+                    }
+                }
+                if e.myPlacementLane < 1 || e.myPlacementLane > numLanesForward {
+                    if index <= 0 {
+                        write_warningf!("Ignoring placement for edge '%' because lane index '%' is out of range [1, %].", id, e.myPlacementLane, numLanesForward);
+                    }
+                } else {
+                    let laneIndex = (e.myPlacementLane - 1) as usize;
+                    let mut leftOffset = 0.0;
+                    for i in 0..laneIndex {
+                        leftOffset += laneWidths[i];
+                    }
+                    let mut placementRefOffset = leftOffset;
+                    if e.myPlacement == NIImporter_OpenStreetMap_PlacementType::RIGHT_OF {
+                        placementRefOffset += laneWidths[laneIndex];
+                    } else if e.myPlacement == NIImporter_OpenStreetMap_PlacementType::MIDDLE_OF {
+                        placementRefOffset += laneWidths[laneIndex] / 2.0;
+                    }
+                    let mut totalWidth = 0.0;
+                    for laneWidth in laneWidths.iter() {
+                        totalWidth += laneWidth;
+                    }
+                    placementOffset = totalWidth / 2.0 - placementRefOffset;
+                    applyPlacement = true;
+                }
+            }
+        }
+        if applyPlacement && placementOffset.abs() > utils::geom::POSITION_EPS {
+            // shortcut: C++ catches InvalidArgument from move2side and skips placement; the Rust move2side has no Result, so a failure here is not caught, upgrade when move2side returns Result
+            shape.move2side(placementOffset, 100.0);
+        }
+
+        let origID = if utils::options::options_cont::get_bool("output.original-names") { e.id.to_string() } else { String::new() };
+        let lefthand = utils::options::options_cont::get_bool("lefthand");
+        let offsetFactor: i32 = if lefthand { -1 } else { 1 };
+        let mut lsf = if (addBackward || utils::options::options_cont::get_bool("osm.oneway-spread-right"))
+            && (!is_railway(permissions) || (permissions == SVC_CABLE_CAR && e.myRailDirection as i64 == WAY_UNKNOWN))
+        {
+            LaneSpreadFunction::RIGHT
+        } else {
+            LaneSpreadFunction::CENTER
+        };
+        if addBackward && lsf == LaneSpreadFunction::RIGHT && utils::options::options_cont::get_string("default.spreadtype") == lane_spread_str(LaneSpreadFunction::ROADCENTER) {
+            lsf = LaneSpreadFunction::ROADCENTER;
+        }
+        if addForward && addBackward && lsf == LaneSpreadFunction::RIGHT && explicitOneWay {
+            lsf = LaneSpreadFunction::ROADCENTER;
+        }
+        if tc.get_edge_type_spread_type(&type_) != LaneSpreadFunction::SPREAD_UNKNOWN {
+            // user defined value overrides defaults
+            lsf = tc.get_edge_type_spread_type(&type_);
+        }
+        if applyPlacement {
+            // placement references the directional edge centerline for one-way edges
+            lsf = LaneSpreadFunction::CENTER;
+        }
+        let defaultsStr: String = defaults.iter().map(|a| attr_name(*a)).collect::<Vec<_>>().join(" ");
+        if defaults.len() > 0 {
+            e.m().set_parameter("osmDefaults", &defaultsStr);
+        }
+
+        id = escape_xml(&id, false);
+        let reverseID = format!("-{id}");
+        let markOSMDirection = from.get_type() == SumoXMLNodeType::RAIL_SIGNAL || to.get_type() == SumoXMLNodeType::RAIL_SIGNAL;
+        if addForward {
+            assert!(numLanesForward > 0);
+            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(
+                &id, from, to, type_.clone(), speed, NBEDGE_UNSPECIFIED_FRICTION, numLanesForward, tc.get_edge_type_priority(&type_),
+                forwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.clone(), lsf, &escape_xml(&streetName, false), &origID, true,
+            ))));
+            if markOSMDirection {
+                nbe.m().base2.set_parameter(OSM_DIRECTION, "forward");
+            }
+            nbe.m().set_permissions(forwardPermissions, -1);
+            if (e.myBuswayType & WAY_FORWARD) != 0 {
+                nbe.m().set_permissions(SVC_BUS, 0);
+            }
+            NIImporter_OpenStreetMap::apply_change_prohibition(nbe, e.myChangeForward);
+            self.apply_lane_use(nbe, e, true);
+            self.apply_turn_signs(nbe, &e.myTurnSignsForward);
+            nbe.m().set_turn_sign_target(last.base.get_id());
+            if addBikeLane && (cyclewayType == WAY_UNKNOWN || (cyclewayType & WAY_FORWARD) != 0) {
+                nbe.m().add_bike_lane(bikeLaneWidth * offsetFactor as f64);
+            } else if nbe.get_permissions(0) == SVC_BUS {
+                // bikes drive on buslanes if no separate cycle lane is available
+                nbe.m().set_permissions(SVC_BUS | SVC_BICYCLE, 0);
+            }
+            if (addSidewalk && (sidewalkType == WAY_UNKNOWN || (sidewalkType & WAY_FORWARD) != 0))
+                || (self.myImportSidewalks && (sidewalkType & WAY_FORWARD) != 0 && defaultPermissions != SVC_PEDESTRIAN)
+            {
+                nbe.m().add_sidewalk(sidewalkWidth * offsetFactor as f64);
+            }
+            if !addBackward && (e.myExtraAllowed & SVC_PEDESTRIAN) != 0 && (nbe.get_permissions(0) & SVC_PEDESTRIAN) == 0 {
+                // Pedestrians are explicitly allowed (maybe through foot="yes") but did not get a sidewalk (maybe through sidewalk="no").
+                // Since we do not have a backward edge, we need to make sure they can at least walk somewhere, see #14124
+                nbe.m().set_permissions(nbe.get_permissions(0) | SVC_PEDESTRIAN, 0);
+            }
+            let params = e.get_parameters_map().clone();
+            nbe.m().base2.update_parameters(&params);
+            nbe.m().set_distance(distanceStart);
+            if e.myAmInRoundabout {
+                // ensure roundabout edges have the precedence
+                nbe.m().set_junction_priority(to, NBEdge_JunctionPriority::ROUNDABOUT as i32);
+                nbe.m().set_junction_priority(from, NBEdge_JunctionPriority::ROUNDABOUT as i32);
+            }
+
+            // process forward lanes width
+            let numForwardLanesFromWidthKey = e.myWidthLanesForward.len() as i32;
+            if numForwardLanesFromWidthKey > 0 && !utils::options::options_cont::get_bool("ignore-widths") {
+                if nbe.get_lanes().len() as i32 != numForwardLanesFromWidthKey {
+                    write_warningf!(
+                        "Forward lanes count for edge '%' ('%') is not matching the number of lanes defined in width:lanes:forward key ('%'). Using default width values.",
+                        id, nbe.get_lanes().len(), numForwardLanesFromWidthKey
+                    );
+                } else {
+                    for i in 0..numForwardLanesFromWidthKey {
+                        let actualWidth = if e.myWidthLanesForward[i as usize] <= 0.0 { forwardWidth } else { e.myWidthLanesForward[i as usize] };
+                        let laneIndex = if lefthand { i } else { numForwardLanesFromWidthKey - i - 1 };
+                        nbe.m().set_lane_width(laneIndex, actualWidth);
+                    }
+                }
+            }
+            if (e.myRailDirection as i64 & WAY_PREFER_FORWARD) != 0 && is_railway(forwardPermissions) {
+                nbe.m().set_routing_type("4");
+            } else {
+                nbe.m().set_routing_type(&routingType);
+            }
+
+            if !ec.m().insert(nbe, false) {
+                // SAFETY: the edge was rejected by the container, so nothing else holds it.
+                drop(unsafe { Box::from_raw(nbe.as_raw()) });
+                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
+                panic!("{}", ProcessError::new(format!("Could not add edge '{id}'.")));
+            }
+        }
+        if addBackward {
+            assert!(numLanesBackward > 0);
+            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(
+                &reverseID, to, from, type_.clone(), speedBackward, NBEDGE_UNSPECIFIED_FRICTION, numLanesBackward, tc.get_edge_type_priority(&type_),
+                backwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.reverse(), lsf, &escape_xml(&streetName, false), &origID, true,
+            ))));
+            if markOSMDirection {
+                nbe.m().base2.set_parameter(OSM_DIRECTION, "backward");
+            }
+            nbe.m().set_permissions(backwardPermissions, -1);
+            if (e.myBuswayType & WAY_BACKWARD) != 0 {
+                nbe.m().set_permissions(SVC_BUS, 0);
+            }
+            NIImporter_OpenStreetMap::apply_change_prohibition(nbe, e.myChangeBackward);
+            self.apply_lane_use(nbe, e, false);
+            self.apply_turn_signs(nbe, &e.myTurnSignsBackward);
+            nbe.m().set_turn_sign_target(first.base.get_id());
+            if addBikeLane && (cyclewayType == WAY_UNKNOWN || (cyclewayType & WAY_BACKWARD) != 0) {
+                nbe.m().add_bike_lane(bikeLaneWidth * offsetFactor as f64);
+            } else if nbe.get_permissions(0) == SVC_BUS {
+                // bikes drive on buslanes if no separate cycle lane is available
+                nbe.m().set_permissions(SVC_BUS | SVC_BICYCLE, 0);
+            }
+            if (addSidewalk && (sidewalkType == WAY_UNKNOWN || (sidewalkType & WAY_BACKWARD) != 0))
+                || (self.myImportSidewalks && (sidewalkType & WAY_BACKWARD) != 0 && defaultPermissions != SVC_PEDESTRIAN)
+            {
+                nbe.m().add_sidewalk(sidewalkWidth * offsetFactor as f64);
+            }
+            let params = e.get_parameters_map().clone();
+            nbe.m().base2.update_parameters(&params);
+            nbe.m().set_distance(distanceEnd);
+            if e.myAmInRoundabout {
+                // ensure roundabout edges have the precedence
+                nbe.m().set_junction_priority(from, NBEdge_JunctionPriority::ROUNDABOUT as i32);
+                nbe.m().set_junction_priority(to, NBEdge_JunctionPriority::ROUNDABOUT as i32);
+            }
+
+            // process backward lanes width
+            let numBackwardLanesFromWidthKey = e.myWidthLanesBackward.len() as i32;
+            if numBackwardLanesFromWidthKey > 0 && !utils::options::options_cont::get_bool("ignore-widths") {
+                if nbe.get_lanes().len() as i32 != numBackwardLanesFromWidthKey {
+                    write_warningf!(
+                        "Backward lanes count for edge '%' ('%') is not matching the number of lanes defined in width:lanes:backward key ('%'). Using default width values.",
+                        id, nbe.get_lanes().len(), numBackwardLanesFromWidthKey
+                    );
+                } else {
+                    for i in 0..numBackwardLanesFromWidthKey {
+                        let actualWidth = if e.myWidthLanesBackward[i as usize] <= 0.0 { backwardWidth } else { e.myWidthLanesBackward[i as usize] };
+                        let laneIndex = if lefthand { i } else { numBackwardLanesFromWidthKey - i - 1 };
+                        nbe.m().set_lane_width(laneIndex, actualWidth);
+                    }
+                }
+            }
+            if (e.myRailDirection as i64 & WAY_PREFER_BACKWARD) != 0 && is_railway(backwardPermissions) {
+                nbe.m().set_routing_type("4");
+            } else {
+                nbe.m().set_routing_type(&routingType);
+            }
+
+            if !ec.m().insert(nbe, false) {
+                // SAFETY: the edge was rejected by the container, so nothing else holds it.
+                drop(unsafe { Box::from_raw(nbe.as_raw()) });
+                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
+                panic!("{}", ProcessError::new(format!("Could not add edge '-{id}'.")));
+            }
+        }
+        if (e.myParkingType & PARKING_BOTH) != 0 && utils::options::options_cont::is_set("parking-output") {
+            if (e.myParkingType & PARKING_RIGHT) != 0 {
+                if addForward {
+                    nb.get_parking_cont().push(NBParking::new(&id, &id, ""));
+                } else {
+                    // XXX parking area should be added on the left side of a reverse one-way street
+                    if (e.myParkingType & PARKING_LEFT) == 0 && !addBackward {
+                        // put it on the wrong side (better than nothing)
+                        nb.get_parking_cont().push(NBParking::new(&reverseID, &reverseID, ""));
+                    }
+                }
+            }
+            if (e.myParkingType & PARKING_LEFT) != 0 {
+                if addBackward {
+                    nb.get_parking_cont().push(NBParking::new(&reverseID, &reverseID, ""));
+                } else {
+                    // XXX parking area should be added on the left side of an one-way street
+                    if (e.myParkingType & PARKING_RIGHT) == 0 && !addForward {
+                        // put it on the wrong side (better than nothing)
+                        nb.get_parking_cont().push(NBParking::new(&id, &id, ""));
+                    }
+                }
+            }
+        }
+        newIndex
     }
 
     /// C++: `void NIImporter_OpenStreetMap::reconstructLayerElevation(double, NBNetBuilder &)` [private]
@@ -3483,7 +4158,142 @@ impl NIImporter_OpenStreetMap {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn reconstruct_layer_elevation(&mut self, layerElevation: f64, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_OpenStreetMap::reconstructLayerElevation")
+        let nc: Ptr<NBNodeCont> = Ptr::from_mut(nb.get_node_cont());
+        // reconstruct elevation from layer info
+        // build a map of raising and lowering forces (attractor and distance)
+        // for all nodes unknownElevation
+        let mut layerForces: BTreeMap<Ptr<NBNode>, Vec<(f64, f64)>> = BTreeMap::new();
+
+        // collect all nodes that belong to a way with layer information
+        let mut knownElevation: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        for myEdge in self.myEdges.values() {
+            let e = *myEdge;
+            if e.myLayer != 0 {
+                for j in e.myCurrentNodes.iter() {
+                    let node = nc.m().retrieve(&j.to_string());
+                    if !node.is_null() {
+                        knownElevation.insert(node);
+                        layerForces.entry(node).or_default().push((e.myLayer as f64 * layerElevation, utils::geom::POSITION_EPS));
+                    }
+                }
+            }
+        }
+        // layer data only provides a lower bound on elevation since it is used to
+        // resolve the relation among overlapping ways.
+        // Perform a sanity check for steep inclines and raise the knownElevation if necessary
+        let mut knownEleMax: BTreeMap<Ptr<NBNode>, f64> = BTreeMap::new();
+        for it in knownElevation.iter() {
+            let mut eleMax = -f64::MAX;
+            let primaryLayers = layerForces.entry(*it).or_default().clone();
+            for primaryLayer in primaryLayers.iter() {
+                eleMax = max2(eleMax, primaryLayer.0);
+            }
+            knownEleMax.insert(*it, eleMax);
+        }
+        let gradeThreshold = utils::options::options_cont::get_float("osm.layer-elevation.max-grade") / 100.0;
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for it in knownElevation.iter() {
+                let neighbors = self.get_neighboring_nodes(*it, knownEleMax[it] / gradeThreshold * 3.0, &knownElevation);
+                for (neighborNode, neighborVal) in neighbors.iter() {
+                    if knownElevation.contains(neighborNode) {
+                        let grade = (knownEleMax[it] - knownEleMax[neighborNode]).abs() / max2(utils::geom::POSITION_EPS, neighborVal.0);
+                        if grade > gradeThreshold * 50.0 / 3.6 / neighborVal.1 {
+                            // raise the lower node to the higher level
+                            let eleMax = max2(knownEleMax[it], knownEleMax[neighborNode]);
+                            if knownEleMax[it] < eleMax {
+                                knownEleMax.insert(*it, eleMax);
+                            } else {
+                                knownEleMax.insert(*neighborNode, eleMax);
+                            }
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // collect all nodes within a grade-dependent range around knownElevation-nodes and apply knowElevation forces
+        let mut unknownElevation: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        for it in knownElevation.iter() {
+            let eleMax = knownEleMax[it];
+            let maxDist = eleMax.abs() * 100.0 / layerElevation;
+            let neighbors = self.get_neighboring_nodes(*it, maxDist, &knownElevation);
+            for (neighborNode, neighborVal) in neighbors.iter() {
+                if !knownElevation.contains(neighborNode) {
+                    unknownElevation.insert(*neighborNode);
+                    layerForces.entry(*neighborNode).or_default().push((eleMax, neighborVal.0));
+                }
+            }
+        }
+
+        // apply forces to ground-level nodes (neither in knownElevation nor unknownElevation)
+        for it in unknownElevation.iter() {
+            let mut eleMax = -f64::MAX;
+            let primaryLayers = layerForces.entry(*it).or_default().clone();
+            for primaryLayer in primaryLayers.iter() {
+                eleMax = max2(eleMax, primaryLayer.0);
+            }
+            let maxDist = eleMax.abs() * 100.0 / layerElevation;
+            let neighbors = self.get_neighboring_nodes(*it, maxDist, &knownElevation);
+            for (neighborNode, neighborVal) in neighbors.iter() {
+                if !knownElevation.contains(neighborNode) && !unknownElevation.contains(neighborNode) {
+                    layerForces.entry(*it).or_default().push((0.0, neighborVal.0));
+                }
+            }
+        }
+        // compute the elevation for each node as the weighted average of all forces
+        let mut nodeElevation: BTreeMap<Ptr<NBNode>, f64> = BTreeMap::new();
+        for (layerForceNode, forces) in layerForces.iter() {
+            if knownElevation.contains(layerForceNode) {
+                // use the maximum value
+                nodeElevation.insert(*layerForceNode, knownEleMax[layerForceNode]);
+            } else if forces.len() == 1 {
+                nodeElevation.insert(*layerForceNode, forces[0].0);
+            } else {
+                // use the weighted sum
+                let mut distSum = 0.0;
+                for force in forces.iter() {
+                    distSum += force.1;
+                }
+                let mut weightSum = 0.0;
+                let mut elevation = 0.0;
+                for force in forces.iter() {
+                    let weight = (distSum - force.1) / distSum;
+                    weightSum += weight;
+                    elevation += force.0 * weight;
+                }
+                nodeElevation.insert(*layerForceNode, elevation / weightSum);
+            }
+        }
+        // apply node elevations
+        for (n, z) in nodeElevation.iter() {
+            let n = *n;
+            let newPos = n.get_position().clone() + Position::new3(0.0, 0.0, *z);
+            let t = n.get_type();
+            n.m().reinit(&newPos, t, false);
+        }
+
+        // apply way elevation to all edges that had layer information
+        let edges: Vec<Ptr<NBEdge>> = nb.get_edge_cont().myEdges.values().copied().collect();
+        for edge in edges {
+            let geom = edge.get_geometry().clone();
+            let length = geom.length2d();
+            let zFrom = *nodeElevation.entry(edge.get_from_node()).or_insert(0.0);
+            let zTo = *nodeElevation.entry(edge.get_to_node()).or_insert(0.0);
+            // XXX if the from- or to-node was part of multiple ways with
+            // different layers, reconstruct the layer value from origID
+            let mut dist = 0.0;
+            let mut newGeom = PositionVector(Vec::new());
+            for (idx, itPos) in geom.iter().enumerate() {
+                if idx != 0 {
+                    dist += itPos.distance_to2d(&geom[idx - 1]);
+                }
+                newGeom.push(*itPos + Position::new3(0.0, 0.0, zFrom + (zTo - zFrom) * dist / length));
+            }
+            edge.m().set_geometry(&newGeom, false);
+        }
     }
 
     /// C++: `std::map<NBNode *, std::pair<double, double>> NIImporter_OpenStreetMap::getNeighboringNodes(NBNode *, double, const std::set<NBNode *> &)` [private]
@@ -3527,7 +4337,34 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn get_neighboring_nodes(&mut self, node: Ptr<NBNode>, maxDist: f64, knownElevation: &BTreeSet<Ptr<NBNode>>) -> BTreeMap<Ptr<NBNode>, (f64, f64)> {
-        todo!("port NIImporter_OpenStreetMap::getNeighboringNodes")
+        let mut result: BTreeMap<Ptr<NBNode>, (f64, f64)> = BTreeMap::new();
+        let mut visited: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut open: Vec<Ptr<NBNode>> = Vec::new();
+        open.push(node);
+        result.insert(node, (0.0, 0.0));
+        while let Some(n) = open.pop() {
+            if visited.contains(&n) {
+                continue;
+            }
+            visited.insert(n);
+            let edges = n.get_edges().clone();
+            for e in edges.iter() {
+                let s = if n.has_incoming(*e) { e.get_from_node() } else { e.get_to_node() };
+                let dist = result[&n].0 + e.get_geometry().length2d();
+                let speed = max2(e.get_speed(), result[&n].1);
+                if !result.contains_key(&s) {
+                    result.insert(s, (dist, speed));
+                } else {
+                    let cur = result[&s];
+                    result.insert(s, (min2(dist, cur.0), max2(speed, cur.1)));
+                }
+                if dist < maxDist && !knownElevation.contains(&s) {
+                    open.push(s);
+                }
+            }
+        }
+        result.remove(&node);
+        result
     }
 
     /// C++: `std::string NIImporter_OpenStreetMap::usableType(const std::string &, const std::string &, NBTypeCont &)` [private]
@@ -3634,7 +4471,98 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn usable_type(&mut self, type_: &str, id: &str, tc: &mut NBTypeCont) -> String {
-        todo!("port NIImporter_OpenStreetMap::usableType")
+        if tc.knows(type_) {
+            return type_.to_string();
+        }
+        if self.myUnusableTypes.contains(type_) {
+            return String::new();
+        }
+        if self.myKnownCompoundTypes.contains_key(type_) {
+            return self.myKnownCompoundTypes[type_].clone();
+        }
+        // this edge has a type which does not yet exist in the TypeContainer
+        let mut tok = StringTokenizer::with_token(type_, compoundTypeSeparator, false);
+        let mut types: Vec<String> = Vec::new();
+        while tok.has_next() {
+            let t = tok.next().unwrap_or_else(|e| panic!("{e}"));
+            if tc.knows(&t) {
+                if !types.contains(&t) {
+                    types.push(t);
+                }
+            } else if tok.size() > 1 {
+                if !starts_with(&t, "service.") {
+                    write_warningf!("Discarding unknown compound '%' in type '%' (first occurrence for edge '%').", t, type_, id);
+                }
+            }
+        }
+        if types.is_empty() {
+            if !starts_with(type_, "service.") {
+                write_warningf!("Discarding unusable type '%' (first occurrence for edge '%').", type_, id);
+            }
+            self.myUnusableTypes.insert(type_.to_string());
+            return String::new();
+        }
+        let newType = types.join(compoundTypeSeparator);
+        if tc.knows(&newType) {
+            self.myKnownCompoundTypes.insert(type_.to_string(), newType.clone());
+            return newType;
+        } else if self.myKnownCompoundTypes.contains_key(&newType) {
+            return self.myKnownCompoundTypes[&newType].clone();
+        } else {
+            // build a new type by merging all values
+            let mut numLanes: i32 = 0;
+            let mut maxSpeed: f64 = 0.0;
+            let mut prio: i32 = 0;
+            let mut width: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut sidewalkWidth: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut bikelaneWidth: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut defaultIsOneWay = true;
+            let mut permissions: SVCPermissions = 0;
+            let mut spreadType = LaneSpreadFunction::RIGHT;
+            let mut discard = true;
+            let mut hadDiscard = false;
+            for type2 in types.iter() {
+                if !tc.get_edge_type_shall_be_discarded(type2) {
+                    numLanes = std::cmp::max(numLanes, tc.get_edge_type_num_lanes(type2));
+                    maxSpeed = max2(maxSpeed, tc.get_edge_type_speed(type2));
+                    prio = std::cmp::max(prio, tc.get_edge_type_priority(type2));
+                    defaultIsOneWay &= tc.get_edge_type_is_one_way(type2);
+                    permissions |= tc.get_edge_type_permissions(type2);
+                    spreadType = tc.get_edge_type_spread_type(type2);
+                    width = max2(width, tc.get_edge_type_width(type2));
+                    sidewalkWidth = max2(sidewalkWidth, tc.get_edge_type_sidewalk_width(type2));
+                    bikelaneWidth = max2(bikelaneWidth, tc.get_edge_type_bike_lane_width(type2));
+                    discard = false;
+                } else {
+                    hadDiscard = true;
+                }
+            }
+            if hadDiscard && permissions == 0 {
+                discard = true;
+            }
+            if discard {
+                write_warningf!("Discarding compound type '%' (first occurrence for edge '%').", newType, id);
+                self.myUnusableTypes.insert(newType.clone());
+                return String::new();
+            }
+            if width != NBEDGE_UNSPECIFIED_WIDTH {
+                width = max2(width, SUMO_CONST_LANE_WIDTH);
+            }
+            // ensure pedestrians don't run into trains
+            if sidewalkWidth == NBEDGE_UNSPECIFIED_WIDTH && (permissions & SVC_PEDESTRIAN) != 0 && (permissions & SVC_RAIL_CLASSES) != 0 {
+                sidewalkWidth = utils::options::options_cont::get_float("default.sidewalk-width");
+            }
+
+            write_messagef!("Adding new type '%' (first occurrence for edge '%').", type_, id);
+            tc.insert_edge_type(&newType, numLanes, maxSpeed, prio, permissions, spreadType, width, defaultIsOneWay, sidewalkWidth, bikelaneWidth, 0.0, 0.0, 0.0);
+            for type3 in types.iter() {
+                if !tc.get_edge_type_shall_be_discarded(type3) {
+                    tc.copy_edge_type_restrictions_and_attrs(type3, &newType);
+                }
+            }
+            self.myKnownCompoundTypes.insert(type_.to_string(), newType.clone());
+            newType
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::extendRailwayDistances(Edge *, NBTypeCont &)` [private]
@@ -3703,7 +4631,60 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn extend_railway_distances(&mut self, e: Ptr<NIImporter_OpenStreetMap_Edge>, tc: &mut NBTypeCont) {
-        todo!("port NIImporter_OpenStreetMap::extendRailwayDistances")
+        let id = e.id.to_string();
+        let type_ = self.usable_type(&e.myHighWayType, &id, tc);
+        if type_ != "" && is_railway(tc.get_edge_type_permissions(&type_)) {
+            let mut nodes: Vec<Ptr<NIImporter_OpenStreetMap_NIOSMNode>> = Vec::new();
+            let mut usablePositions: Vec<f64> = Vec::new();
+            let mut usableIndex: Vec<usize> = Vec::new();
+            for n in e.myCurrentNodes.iter() {
+                let node = self.myOSMNodes[n];
+                node.m().positionMeters = Self::interpret_distance(node);
+                if node.positionMeters != f64::MAX {
+                    usablePositions.push(node.positionMeters);
+                    usableIndex.push(nodes.len());
+                }
+                nodes.push(node);
+            }
+            if usablePositions.is_empty() {
+                return;
+            }
+            let mut forward = true;
+            if usablePositions.len() == 1 {
+                write_warningf!("Ambiguous railway kilometrage direction for way '%' (assuming forward)", id);
+            } else {
+                forward = usablePositions[0] < usablePositions[usablePositions.len() - 1];
+            }
+            // check for consistency
+            for i in 1..usablePositions.len() {
+                if (usablePositions[i - 1] < usablePositions[i]) != forward {
+                    write_warningf!("Inconsistent railway kilometrage direction for way '%': % (skipping)", id, join_to_string_prec(&usablePositions, " ", g_precision()));
+                    return;
+                }
+            }
+            if nodes.len() > usablePositions.len() {
+                // complete missing values
+                let mut shape = PositionVector(Vec::new());
+                for node in nodes.iter() {
+                    shape.push(Position::new3(node.lon, node.lat, 0.0));
+                }
+                if !NBNetBuilder::transform_coordinates(&mut shape, true, Ptr::null()) {
+                    return; // error will be given later
+                }
+                let sign = if forward { 1.0 } else { -1.0 };
+                // extend backward before first usable value
+                let first = usableIndex[0];
+                for i in (0..first).rev() {
+                    nodes[i].m().positionMeters = nodes[i + 1].positionMeters - sign * shape[i].distance_to2d(&shape[i + 1]);
+                }
+                // extend forward
+                for i in (first + 1)..nodes.len() {
+                    if nodes[i].positionMeters == f64::MAX {
+                        nodes[i].m().positionMeters = nodes[i - 1].positionMeters + sign * shape[i].distance_to2d(&shape[i - 1]);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `double NIImporter_OpenStreetMap::interpretDistance(NIOSMNode *)` [static, private]
@@ -3725,7 +4706,20 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn interpret_distance(node: Ptr<NIImporter_OpenStreetMap_NIOSMNode>) -> f64 {
-        todo!("port NIImporter_OpenStreetMap::interpretDistance")
+        if !node.position.is_empty() {
+            let parsed = if starts_with(&node.position, "mi:") {
+                utils::common::string_utils::to_double(&node.position[3..]).map(|v| v * 1609.344) // meters per mile
+            } else {
+                utils::common::string_utils::to_double(&node.position).map(|v| v * 1000.0)
+            };
+            match parsed {
+                Ok(v) => return v,
+                Err(_) => {
+                    write_warningf!("Value of railway:position is not numeric ('%') in node '%'.", node.position, node.id.to_string());
+                }
+            }
+        }
+        f64::MAX
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyChangeProhibition(NBEdge *, int)` [static, protected]
@@ -3745,7 +4739,19 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_change_prohibition(e: Ptr<NBEdge>, changeProhibition: i32) {
-        todo!("port NIImporter_OpenStreetMap::applyChangeProhibition")
+        let mut changeProhibition = changeProhibition;
+        let multiLane = changeProhibition > 3;
+        let mut lane: i32 = 0;
+        while changeProhibition > 0 && lane < e.get_num_lanes() {
+            let code = changeProhibition % 4; // only look at the last 2 bits
+            let changeLeft: SVCPermissions = if (code & NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_LEFT as i32) == 0 { SVC_ALL } else { SVC_AUTHORITY };
+            let changeRight: SVCPermissions = if (code & NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_RIGHT as i32) == 0 { SVC_ALL } else { SVC_AUTHORITY };
+            e.m().set_permitted_changing(lane, changeLeft, changeRight);
+            if multiLane {
+                changeProhibition = changeProhibition >> 2;
+            }
+            lane += 1;
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyLaneUse(NBEdge *, NIImporter_OpenStreetMap::Edge *, const bool)` [protected]
@@ -3776,7 +4782,28 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_lane_use(&mut self, e: Ptr<NBEdge>, nie: Ptr<NIImporter_OpenStreetMap_Edge>, forward: bool) {
-        todo!("port NIImporter_OpenStreetMap::applyLaneUse")
+        if self.myImportLaneAccess {
+            let numLanes = e.get_num_lanes();
+            let lefthand = utils::options::options_cont::get_bool("lefthand");
+            let designated: &Vec<bool> = if forward { &nie.myDesignatedLaneForward } else { &nie.myDesignatedLaneBackward };
+            let allowed: &Vec<SVCPermissions> = if forward { &nie.myAllowedLaneForward } else { &nie.myAllowedLaneBackward };
+            let disallowed: &Vec<SVCPermissions> = if forward { &nie.myDisallowedLaneForward } else { &nie.myDisallowedLaneBackward };
+            for lane in 0..numLanes {
+                // laneUse stores from left to right
+                let i = if lefthand { lane } else { numLanes - 1 - lane };
+                // Extra allowed SVCs for this lane or none if no info was present for the lane
+                let extraAllowed: SVCPermissions = if (i as usize) < allowed.len() { allowed[i as usize] } else { SVC_IGNORING };
+                // Extra disallowed SVCs for this lane or none if no info was present for the lane
+                let extraDisallowed: SVCPermissions = if (i as usize) < disallowed.len() { disallowed[i as usize] } else { SVC_IGNORING };
+                if (i as usize) < designated.len() && designated[i as usize] {
+                    // if designated, delete all permissions
+                    e.m().set_permissions(SVC_IGNORING, lane);
+                    e.m().prefer_vehicle_class(lane, extraAllowed);
+                }
+                let permissions = (e.get_permissions(lane) | extraAllowed) & (!extraDisallowed);
+                e.m().set_permissions(permissions, lane);
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::mergeTurnSigns(std::vector<int> &, std::vector<int>)` [static, protected]
@@ -3792,7 +4819,13 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn merge_turn_signs(signs: &mut Vec<i32>, signs2: Vec<i32>) {
-        todo!("port NIImporter_OpenStreetMap::mergeTurnSigns")
+        if signs.is_empty() {
+            signs.extend(signs2);
+        } else {
+            for i in 0..std::cmp::min(signs.len(), signs2.len()) {
+                signs[i] |= signs2[i];
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyTurnSigns(NBEdge *, const std::vector<int> &)` [protected]
@@ -3815,7 +4848,19 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_turn_signs(&mut self, e: Ptr<NBEdge>, turnSigns: &Vec<i32>) {
-        todo!("port NIImporter_OpenStreetMap::applyTurnSigns")
+        if self.myImportTurnSigns && turnSigns.len() > 0 {
+            // no sidewalks and bike lanes have been added yet
+            if turnSigns.len() as i32 == e.get_num_lanes() {
+                for i in 0..turnSigns.len() {
+                    // laneUse stores from left to right
+                    let laneIndex = e.get_num_lanes() - 1 - i as i32;
+                    let lane = e.m().get_lane_struct(laneIndex);
+                    lane.turnSigns = turnSigns[i];
+                }
+            } else {
+                write_warningf!("Ignoring turn sign information for % lanes on edge % with % driving lanes", turnSigns.len(), e.get_id(), e.get_num_lanes());
+            }
+        }
     }
 
 }
@@ -3890,7 +4935,26 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
     //             node(nullptr) { }
     #[allow(unused_variables)]
     pub fn new(_id: i64, _lon: f64, _lat: f64) -> Self {
-        todo!("port NIOSMNode::NIOSMNode")
+        Self {
+            base: Parameterised::new(),
+            id: _id,
+            lon: _lon,
+            lat: _lat,
+            ele: 0.0,
+            tlsControlled: false,
+            pedestrianCrossing: false,
+            railwayCrossing: false,
+            railwaySignal: NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32,
+            railwayBufferStop: false,
+            ptStopPosition: false,
+            ptStopLength: 0.0,
+            name: String::new(),
+            permissions: SVC_IGNORING,
+            position: String::new(),
+            positionMeters: f64::MAX,
+            myRailDirection: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i32,
+            node: Ptr::null(),
+        }
     }
 
     /// C++: `NIOSMNode & NIOSMNode::operator=(const NIOSMNode &)` [private]
@@ -3898,7 +4962,8 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_NIOSMNode) -> &mut NIImporter_OpenStreetMap_NIOSMNode {
-        todo!("port NIOSMNode::operator=")
+        // C++ declares this as `= delete`, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NIOSMNode::operator= is deleted in C++")
     }
 
 }
@@ -3919,7 +4984,7 @@ pub struct NIImporter_OpenStreetMap_NodesHandler {
     /// The current hierarchy level
     pub myHierarchyLevel: i32,
     /// the set of unique nodes (used for duplicate detection/substitution)
-    pub myUniqueNodes: Ptr<BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>>, // C++: std::set<NIOSMNode *, CompareNodes> &
+    pub myUniqueNodes: Ptr<BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>>, // C++: std::set<NIOSMNode *, CompareNodes> &
     /// whether elevation data should be imported
     pub myImportElevation: bool,
     /// custom requirements for rail signal tagging
@@ -3969,8 +5034,33 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(toFill: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, uniqueNodes: &mut BTreeSet<Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, cont: &OptionsCont) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+    pub fn new(toFill: &mut BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, uniqueNodes: &mut BTreeSet<NIImporter_OpenStreetMap_NodeByCoord>, cont: &OptionsCont) -> Self {
+        let mut myRailSignalRules: StringVector = Vec::new();
+        // init rail signal rules
+        for kv in cont.get_string_vector("osm.railsignals").unwrap_or_else(|e| panic!("{e}")) {
+            if kv == "DEFAULT" {
+                myRailSignalRules.push("railway:signal:main=".to_string());
+                myRailSignalRules.push("railway:signal:combined=".to_string());
+            } else if kv == "ALL" {
+                myRailSignalRules.push("railway=signal".to_string());
+            } else {
+                myRailSignalRules.push(format!("railway:signal:{kv}"));
+            }
+        }
+        NIImporter_OpenStreetMap_NodesHandler {
+            base: utils::xml::sumo_sax_handler::new("osm - file", ""),
+            myToFill: Ptr::from_mut(toFill),
+            myLastNodeID: String::new(),
+            myCurrentNode: Ptr::null(),
+            myIsStation: false,
+            myRailwayRef: String::new(),
+            myHierarchyLevel: 0,
+            myUniqueNodes: Ptr::from_mut(uniqueNodes),
+            myImportElevation: cont.get_bool("osm.elevation").unwrap_or_else(|e| panic!("{e}")),
+            myRailSignalRules,
+            myDuplicateNodes: 0,
+            myOptionsCont: Ptr::new(cont),
+        }
     }
 
     /// C++: `void NodesHandler::~NodesHandler() noexcept` [virtual]
@@ -3978,7 +5068,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // NIImporter_OpenStreetMap::NodesHandler::~NodesHandler()
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NodesHandler::~NodesHandler")
+        // C++ body is defaulted; Rust drops the members.
     }
 
     /// C++: `int NodesHandler::getDuplicateNodes() const` [const]
@@ -3987,7 +5077,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //         }
     #[allow(unused_variables)]
     pub fn get_duplicate_nodes(&self) -> i32 {
-        todo!("port NodesHandler::getDuplicateNodes")
+        self.myDuplicateNodes
     }
 
     /// C++: `void NodesHandler::resetHierarchy()`
@@ -3996,7 +5086,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     //         }
     #[allow(unused_variables)]
     pub fn reset_hierarchy(&mut self) {
-        todo!("port NodesHandler::resetHierarchy")
+        self.myHierarchyLevel = 0;
     }
 
     /// C++: `void NodesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -4136,7 +5226,140 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NodesHandler::myStartElement")
+        self.myHierarchyLevel += 1;
+        if element == SUMO_TAG_NODE {
+            let mut ok = true;
+            self.myLastNodeID = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            if self.myHierarchyLevel != 2 {
+                utils::common::msg_handler::write_error(&format!("Node element on wrong XML hierarchy level (id='{}', level='{}').", self.myLastNodeID, self.myHierarchyLevel));
+                return;
+            }
+            let action: String = attrs.get_opt(SUMO_ATTR_ACTION, &self.myLastNodeID, &mut ok, String::new(), true);
+            if action == "delete" || !ok {
+                return;
+            }
+            // we do not use attrs.get here to save some time on parsing
+            let id: i64 = match utils::common::string_utils::to_long(&self.myLastNodeID) {
+                Ok(v) => v,
+                Err(_) => {
+                    utils::common::msg_handler::write_error("Attribute 'id' in the definition of a node is not of type long long int.");
+                    return;
+                }
+            };
+            self.myCurrentNode = Ptr::null();
+            if !self.myToFill.contains_key(&id) {
+                // assume we are loading multiple files, so we won't report duplicate nodes
+                let tlon: f64 = attrs.get(SUMO_ATTR_LON, &self.myLastNodeID, &mut ok, true);
+                let tlat: f64 = attrs.get(SUMO_ATTR_LAT, &self.myLastNodeID, &mut ok, true);
+                if !ok {
+                    return;
+                }
+                let mut current: Ptr<NIImporter_OpenStreetMap_NIOSMNode> = Ptr::from_raw(Box::into_raw(Box::new(NIImporter_OpenStreetMap_NIOSMNode::new(id, tlon, tlat))));
+                self.myCurrentNode = current;
+                let key = NIImporter_OpenStreetMap_NodeByCoord(current);
+                let uniqueNodes = self.myUniqueNodes.m();
+                if let Some(similarNode) = uniqueNodes.get(&key).copied() {
+                    // SAFETY: the freshly allocated node was never inserted anywhere, so it is freed here.
+                    drop(unsafe { Box::from_raw(current.as_raw()) });
+                    current = similarNode.0;
+                    self.myCurrentNode = current;
+                    self.myDuplicateNodes += 1;
+                } else {
+                    uniqueNodes.insert(key);
+                }
+                self.myToFill.m().insert(id, current);
+            }
+        }
+        if element == SUMO_TAG_TAG && !self.myCurrentNode.is_null() {
+            if self.myHierarchyLevel != 3 {
+                utils::common::msg_handler::write_error("Tag element on wrong XML hierarchy level.");
+                return;
+            }
+            let mut ok = true;
+            let node = self.myCurrentNode;
+            let key: String = attrs.get(SUMO_ATTR_K, &self.myLastNodeID, &mut ok, false);
+            // we check whether the key is relevant (and we really need to transcode the value) to avoid hitting #1636
+            if key == "highway" || key == "ele" || key == "crossing" || key == "railway" || key == "public_transport"
+                || key == "name" || key == "train" || key == "bus" || key == "tram" || key == "light_rail" || key == "subway" || key == "station" || key == "noexit"
+                || key == "crossing:barrier"
+                || key == "crossing:light"
+                || key == "railway:ref"
+                || starts_with(&key, "railway:signal")
+                || starts_with(&key, "railway:position")
+            {
+                let value: String = attrs.get(SUMO_ATTR_V, &self.myLastNodeID, &mut ok, false);
+                if key == "highway" && value.contains("traffic_signal") {
+                    node.m().tlsControlled = true;
+                } else if key == "crossing" && value.contains("traffic_signals") {
+                    node.m().tlsControlled = true;
+                } else if key == "highway" && value.contains("crossing") {
+                    node.m().pedestrianCrossing = true;
+                } else if (key == "noexit" && value == "yes") || (key == "railway" && value == "buffer_stop") {
+                    node.m().railwayBufferStop = true;
+                } else if key == "railway" && value.contains("crossing") {
+                    node.m().railwayCrossing = true;
+                } else if key == "crossing:barrier" {
+                    node.m().set_parameter("crossing:barrier", &value);
+                } else if key == "crossing:light" {
+                    node.m().set_parameter("crossing:light", &value);
+                } else if key == "railway:signal:direction" {
+                    if value == "both" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_BOTH as i32;
+                    } else if value == "backward" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32;
+                    } else if value == "forward" {
+                        node.m().myRailDirection = NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32;
+                    }
+                } else if starts_with(&key, "railway:signal") || (key == "railway" && value == "signal") {
+                    let kv = format!("{key}={value}");
+                    let kglob = format!("{key}=");
+                    if key == "railway:signal:train_protection" && value == "DE-ESO:ne14" {
+                        node.m().railwaySignal |= NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32;
+                    } else if node.railwaySignal == NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+                        if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
+                            node.m().railwaySignal = NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32;
+                        }
+                    }
+                } else if starts_with(&key, "railway:position") && value.len() > node.position.len() {
+                    // use the entry with the highest precision (more digits)
+                    node.m().position = value;
+                } else if (key == "public_transport" && value == "stop_position") || (key == "highway" && value == "bus_stop") {
+                    node.m().ptStopPosition = true;
+                    if node.ptStopLength == 0.0 {
+                        // default length
+                        node.m().ptStopLength = self.myOptionsCont.get_float("osm.stop-output.length").unwrap_or_else(|e| panic!("{e}"));
+                    }
+                } else if key == "name" {
+                    node.m().name = value;
+                } else if self.myImportElevation && key == "ele" {
+                    match utils::common::string_utils::parse_dist(&value) {
+                        Ok(elevation) => {
+                            if elevation.is_nan() {
+                                write_warningf!("Value of key '%' is invalid ('%') in node '%'.", key, value, self.myLastNodeID);
+                            } else {
+                                node.m().ele = elevation;
+                            }
+                        }
+                        Err(_) => {
+                            write_warningf!("Value of key '%' is not numeric ('%') in node '%'.", key, value, self.myLastNodeID);
+                        }
+                    }
+                } else if key == "station" {
+                    NIImporter_OpenStreetMap::interpret_transport_type(&value, node);
+                    self.myIsStation = true;
+                } else if key == "railway:ref" {
+                    self.myRailwayRef = value;
+                } else {
+                    // v="yes"
+                    NIImporter_OpenStreetMap::interpret_transport_type(&key, node);
+                }
+            }
+            if myAllAttributes.with(|c| c.get()) && myExtraAttributes.with(|s| s.borrow().contains(&key) || s.borrow().is_empty()) {
+                let info = format!("node={}, k={}", node.id, key);
+                let v: String = attrs.get(SUMO_ATTR_V, &info, &mut ok, false);
+                node.m().set_parameter(&key, &v);
+            }
+        }
     }
 
     /// C++: `void NodesHandler::myEndElement(int)` [virtual, protected]
@@ -4155,23 +5378,33 @@ impl NIImporter_OpenStreetMap_NodesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NodesHandler::myEndElement")
+        if element == SUMO_TAG_NODE && self.myHierarchyLevel == 2 {
+            if self.myIsStation && self.myRailwayRef != "" {
+                self.myCurrentNode.m().set_parameter("railway:ref", &self.myRailwayRef);
+            }
+            self.myCurrentNode = Ptr::null();
+            self.myIsStation = false;
+            self.myRailwayRef = String::new();
+        }
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NodesHandler::NodesHandler(const NodesHandler &)` [private]
     /// invalidated copy constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new_2(s: &NIImporter_DlrNavteq_NodesHandler) -> Self {
-        todo!("port NodesHandler::NodesHandler")
+    pub fn new_2(s: &NIImporter_OpenStreetMap_NodesHandler) -> Self {
+        // C++ declares the copy constructor private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NodesHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `NodesHandler & NodesHandler::operator=(const NodesHandler &)` [private]
     /// invalidated assignment operator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn assign_op(&mut self, s: &NIImporter_DlrNavteq_NodesHandler) -> &mut NIImporter_DlrNavteq_NodesHandler {
-        todo!("port NodesHandler::operator=")
+    pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_NodesHandler) -> &mut NIImporter_OpenStreetMap_NodesHandler {
+        // C++ declares the assignment operator private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NodesHandler::operator= is private and undefined in C++")
     }
 
 }
@@ -4269,7 +5502,40 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(osmNodes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_NIOSMNode>>, osmEdges: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptStopCont: Ptr<NBPTStopCont>, platfromShapes: &BTreeMap<i64, Ptr<NIImporter_OpenStreetMap_Edge>>, nbptLineCont: Ptr<NBPTLineCont>, oc: &OptionsCont) -> Self {
-        todo!("port RelationHandler::RelationHandler")
+        let mut handler = NIImporter_OpenStreetMap_RelationHandler {
+            base: utils::xml::sumo_sax_handler::new("osm - file", ""),
+            myOSMNodes: Ptr::new(osmNodes),
+            myOSMEdges: Ptr::new(osmEdges),
+            myPlatformShapes: Ptr::new(platfromShapes),
+            myNBPTStopCont: nbptStopCont,
+            myNBPTLineCont: nbptLineCont,
+            // the remaining members are set by resetValues() below
+            myCurrentRelation: INVALID_ID,
+            myIsRestriction: false,
+            myRestrictionException: SVC_IGNORING,
+            myFromWay: INVALID_ID,
+            myToWay: INVALID_ID,
+            myViaNode: INVALID_ID,
+            myViaWay: INVALID_ID,
+            myStation: INVALID_ID,
+            myOptionsCont: Ptr::new(oc),
+            myRestrictionType: RelationHandler_RestrictionType::UNKNOWN,
+            myStops: Vec::new(),
+            myPlatformStops: BTreeSet::new(),
+            myPlatforms: Vec::new(),
+            myWays: Vec::new(),
+            myIsStopArea: false,
+            myIsRoute: false,
+            myPTRouteType: String::new(),
+            myRouteColor: RGBColor::default(),
+            myName: String::new(),
+            myRef: String::new(),
+            myInterval: -1,
+            myNightService: String::new(),
+            myStopAreas: BTreeMap::new(),
+        };
+        handler.reset_values();
+        handler
     }
 
     /// C++: `void RelationHandler::~RelationHandler() noexcept` [virtual]
@@ -4277,7 +5543,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // NIImporter_OpenStreetMap::RelationHandler::~RelationHandler()
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RelationHandler::~RelationHandler")
+        // C++ body is defaulted; Rust drops the members.
     }
 
     /// C++: `void RelationHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -4435,7 +5701,148 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port RelationHandler::myStartElement")
+        if element == SUMO_TAG_RELATION {
+            let mut ok = true;
+            self.myCurrentRelation = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            let action: String = attrs.get_opt(SUMO_ATTR_ACTION, "", &mut ok, String::new(), true);
+            if action == "delete" || !ok {
+                self.myCurrentRelation = INVALID_ID;
+            }
+            self.myName = String::new();
+            self.myRef = String::new();
+            self.myInterval = -1;
+            self.myNightService = String::new();
+            return;
+        }
+        if self.myCurrentRelation == INVALID_ID {
+            return;
+        }
+        if element == SUMO_TAG_MEMBER {
+            let mut ok = true;
+            let role: String = if attrs.has_attribute_name("role") { attrs.get_string_secure_name("role", "") } else { String::new() };
+            let ref_: i64 = attrs.get(SUMO_ATTR_REF, "", &mut ok, true);
+            if role == "via" {
+                // u-turns for divided ways may be given with 2 via-nodes or 1 via-way
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" && self.check_edge_ref(ref_) {
+                    self.myViaWay = ref_;
+                } else if memberType == "node" {
+                    if self.myOSMNodes.contains_key(&ref_) {
+                        self.myViaNode = ref_;
+                    } else {
+                        write_warningf!("No node found for reference '%' in relation '%'.", ref_, self.myCurrentRelation);
+                    }
+                }
+            } else if role == "from" && self.check_edge_ref(ref_) {
+                self.myFromWay = ref_;
+            } else if role == "to" && self.check_edge_ref(ref_) {
+                self.myToWay = ref_;
+            } else if starts_with(&role, "stop") {
+                // permit _entry_only and _exit_only variants
+                self.myStops.push(ref_);
+            } else if starts_with(&role, "platform") {
+                // permit _entry_only and _exit_only variants
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" {
+                    if self.myPlatformShapes.contains_key(&ref_) {
+                        self.myPlatforms.push(RelationHandler_NIIPTPlatform { ref_, isWay: true });
+                    }
+                } else if memberType == "node" {
+                    // myIsStopArea may not be set yet
+                    self.myStops.push(ref_);
+                    self.myPlatformStops.insert(ref_);
+                    self.myPlatforms.push(RelationHandler_NIIPTPlatform { ref_, isWay: false });
+                }
+            } else if role == "station" {
+                self.myStation = ref_;
+            } else if role.is_empty() {
+                let memberType: String = attrs.get(SUMO_ATTR_TYPE, "", &mut ok, true);
+                if memberType == "way" {
+                    self.myWays.push(ref_);
+                } else if memberType == "node" {
+                    let hasRailwayRef = (*self.myOSMNodes).get(&ref_).is_some_and(|n| n.has_parameter("railway:ref"));
+                    if hasRailwayRef {
+                        self.myStation = ref_;
+                    } else {
+                        self.myStops.push(ref_);
+                    }
+                }
+            }
+            return;
+        }
+        // parse values
+        if element == SUMO_TAG_TAG {
+            let mut ok = true;
+            let relation = self.myCurrentRelation.to_string();
+            let key: String = attrs.get(SUMO_ATTR_K, &relation, &mut ok, false);
+            // we check whether the key is relevant (and we really need to transcode the value) to avoid hitting #1636
+            if key == "type" || key == "restriction" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if key == "type" && value == "restriction" {
+                    self.myIsRestriction = true;
+                    return;
+                }
+                if key == "type" && value == "route" {
+                    self.myIsRoute = true;
+                    return;
+                }
+                if key == "restriction" {
+                    // @note: the 'right/left/straight' part is ignored since the information is
+                    // redundantly encoded in the 'from', 'to' and 'via' members
+                    if value.get(0..5) == Some("only_") {
+                        self.myRestrictionType = RelationHandler_RestrictionType::ONLY;
+                    } else if value.get(0..3) == Some("no_") {
+                        self.myRestrictionType = RelationHandler_RestrictionType::NO;
+                    } else {
+                        write_warningf!("Found unknown restriction type '%' in relation '%'", value, self.myCurrentRelation);
+                    }
+                    return;
+                }
+            } else if key == "except" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                let mut tok = StringTokenizer::with_token(&value, ";", false);
+                for v in tok.get_vector() {
+                    if v == "psv" {
+                        self.myRestrictionException |= SVC_BUS;
+                    } else if v == "bicycle" {
+                        self.myRestrictionException |= SVC_BICYCLE;
+                    } else if v == "hgv" {
+                        self.myRestrictionException |= SVC_TRUCK | SVC_TRAILER;
+                    } else if v == "motorcar" {
+                        self.myRestrictionException |= SVC_PASSENGER | SVC_TAXI;
+                    } else if v == "emergency" {
+                        self.myRestrictionException |= SVC_EMERGENCY;
+                    }
+                }
+            } else if key == "public_transport" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if value == "stop_area" {
+                    self.myIsStopArea = true;
+                }
+            } else if key == "route" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                if value == "train" || value == "subway" || value == "light_rail" || value == "monorail" || value == "tram" || value == "bus"
+                    || value == "trolleybus" || value == "aerialway" || value == "ferry" || value == "share_taxi" || value == "minibus" {
+                    self.myPTRouteType = value;
+                }
+            } else if key == "name" {
+                self.myName = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "colour" {
+                let value: String = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+                match utils::common::rgb_color::RGBColor::parse_color(&value) {
+                    Ok(color) => self.myRouteColor = color,
+                    Err(_) => {
+                        write_warningf!("Invalid color value '%' in relation %", value, self.myCurrentRelation);
+                    }
+                }
+            } else if key == "ref" {
+                self.myRef = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "interval" || key == "headway" {
+                self.myInterval = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            } else if key == "by_night" {
+                self.myNightService = attrs.get(SUMO_ATTR_V, &relation, &mut ok, false);
+            }
+        }
     }
 
     /// C++: `void RelationHandler::myEndElement(int)` [virtual, protected]
@@ -4618,7 +6025,180 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port RelationHandler::myEndElement")
+        if element == SUMO_TAG_RELATION {
+            if self.myIsRestriction {
+                assert!(self.myCurrentRelation != INVALID_ID);
+                let mut ok = true;
+                if self.myRestrictionType == RelationHandler_RestrictionType::UNKNOWN {
+                    write_warningf!("Ignoring restriction relation '%' with unknown type.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myFromWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown from-way.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myToWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown to-way.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if self.myViaNode == INVALID_ID && self.myViaWay == INVALID_ID {
+                    write_warningf!("Ignoring restriction relation '%' with unknown via.", self.myCurrentRelation);
+                    ok = false;
+                }
+                if ok && !self.apply_restriction() {
+                    write_warningf!("Ignoring restriction relation '%'.", self.myCurrentRelation);
+                }
+            } else if self.myIsStopArea {
+                for ref_ in self.myStops.clone() {
+                    self.myStopAreas.insert(ref_, self.myCurrentRelation);
+                    if !self.myOSMNodes.contains_key(&ref_) {
+                        //WRITE_WARNING(
+                        //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                        //    + "' does not exist. Probably OSM file is incomplete.");
+                        continue;
+                    }
+
+                    let n = self.myOSMNodes[&ref_];
+                    let ptStop: Rc<NBPTStop> = match self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned() {
+                        Some(stop) => stop,
+                        None => {
+                            //WRITE_WARNING(
+                            //    "Relation '" + toString(myCurrentRelation) + "' refers to a non existing pt stop at node: '"
+                            //    + toString(n->id) + "'. Probably OSM file is incomplete.");
+                            continue;
+                        }
+                    };
+                    for myPlatform in self.myPlatforms.clone() {
+                        if myPlatform.isWay {
+                            // assert(myPlatformShapes.find(myPlatform.ref) != myPlatformShapes.end()); //already tested earlier
+                            let edge: Ptr<NIImporter_OpenStreetMap_Edge> = self.myPlatformShapes[&myPlatform.ref_];
+                            let numNodes = edge.myCurrentNodes.len();
+                            if numNodes > 1 && edge.myCurrentNodes[0] == edge.myCurrentNodes[numNodes - 1] {
+                                write_warningf!("Platform '%' in relation: '%' is given as polygon, which currently is not supported.", myPlatform.ref_, self.myCurrentRelation);
+                                continue;
+                            }
+                            let mut p = PositionVector(Vec::new());
+                            for nodeRef in edge.myCurrentNodes.iter() {
+                                if !self.myOSMNodes.contains_key(nodeRef) {
+                                    //WRITE_WARNING(
+                                    //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                                    //    + "' does not exist. Probably OSM file is incomplete.");
+                                    continue;
+                                }
+                                let pNode = self.myOSMNodes[nodeRef];
+                                let mut pNodePos = Position::new3(pNode.lon, pNode.lat, pNode.ele);
+                                if !NBNetBuilder::transform_coordinate(&mut pNodePos, true, Ptr::null()) {
+                                    write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
+                                    continue;
+                                }
+                                p.push(pNodePos);
+                            }
+                            if p.len() == 0 {
+                                write_warningf!("Referenced platform: '%' in relation: '%' is corrupt. Probably OSM file is incomplete.", myPlatform.ref_.to_string(), self.myCurrentRelation.to_string());
+                                continue;
+                            }
+                            let platform = NBPTPlatform::new(p[p.len() / 2], p.length());
+                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                        } else {
+                            if !self.myOSMNodes.contains_key(&myPlatform.ref_) {
+                                //WRITE_WARNING(
+                                //    "Referenced node: '" + toString(ref) + "' in relation: '" + toString(myCurrentRelation)
+                                //    + "' does not exist. Probably OSM file is incomplete.");
+                                continue;
+                            }
+                            let pNode = self.myOSMNodes[&myPlatform.ref_];
+                            let mut platformPos = Position::new3(pNode.lon, pNode.lat, pNode.ele);
+                            if !NBNetBuilder::transform_coordinate(&mut platformPos, true, Ptr::null()) {
+                                write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
+                            }
+                            let platform = NBPTPlatform::new(platformPos, utils::options::options_cont::get_float("osm.stop-output.length"));
+                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                        }
+                    }
+                    pt_stop_mut(&ptStop).set_is_multiple_stop_positions(self.myStops.len() > 1, self.myCurrentRelation);
+                    if self.myStation != INVALID_ID {
+                        if let Some(station) = (*self.myOSMNodes).get(&self.myStation) {
+                            if station.has_parameter("railway:ref") {
+                                let stationRef = station.get_parameter("railway:ref", "");
+                                pt_stop_mut(&ptStop).set_parameter("stationRef", &stationRef);
+                            }
+                        }
+                    }
+                }
+            } else if self.myPTRouteType != "" && self.myIsRoute {
+                let vClass = NIImporter_OpenStreetMap::interpret_transport_type(&self.myPTRouteType, Ptr::null());
+                let ptLine: Ptr<NBPTLine> = Ptr::from_raw(Box::into_raw(Box::new(NBPTLine::new(
+                    &self.myCurrentRelation.to_string(), &self.myName, &self.myPTRouteType, &self.myRef, self.myInterval, &self.myNightService, vClass, self.myRouteColor,
+                ))));
+                let mut consecutiveGap: i32 = 0;
+                let mut missingBefore: i32 = 0;
+                let mut missingAfter: i32 = 0;
+                for ref_ in self.myStops.clone() {
+                    let Some(n) = (*self.myOSMNodes).get(&ref_).copied() else {
+                        if ptLine.m().get_stops().is_empty() {
+                            missingBefore += 1;
+                        } else {
+                            missingAfter += 1;
+                            consecutiveGap += 1;
+                        }
+                        continue;
+                    };
+                    // give some slack for single missing stops
+                    if consecutiveGap > 1 {
+                        write_warningf!("PT line '%' in relation % has a gap of % stops, only keeping first part.", self.myName, self.myCurrentRelation, consecutiveGap);
+                        missingAfter = self.myStops.len() as i32 - missingBefore - ptLine.m().get_stops().len() as i32;
+                        break;
+                    }
+                    // reset gap
+                    consecutiveGap = 0;
+
+                    let mut ptStop: Option<Rc<NBPTStop>> = self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned();
+                    if ptStop.is_none() {
+                        // loose stop, which must later be mapped onto a line way
+                        let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
+                        if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
+                            write_errorf!("Unable to project coordinates for node '%'.", n.id);
+                        }
+                        let stopElement = if is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
+                        let newStop: Rc<NBPTStop> = Rc::new(NBPTStop::new(
+                            stopElement, n.id.to_string(), ptPos, String::new(), String::new(), n.ptStopLength, n.name.clone(), n.permissions,
+                            0.0, RGBColor::new_valid(false), -1.0,
+                        ));
+                        self.myNBPTStopCont.m().insert(newStop.clone(), false);
+                        if self.myStopAreas.contains_key(&n.id) {
+                            pt_stop_mut(&newStop).set_is_multiple_stop_positions(false, self.myStopAreas[&n.id]);
+                        }
+                        if self.myPlatformStops.contains(&n.id) {
+                            pt_stop_mut(&newStop).set_is_platform();
+                        }
+                        ptStop = Some(newStop);
+                    }
+                    ptLine.m().add_pt_stop(ptStop.unwrap());
+                }
+                for myWay in self.myWays.clone() {
+                    if let Some(edge) = (*self.myOSMEdges).get(&myWay).copied() {
+                        for myCurrentNode in edge.myCurrentNodes.iter() {
+                            ptLine.m().add_way_node(myWay, *myCurrentNode);
+                        }
+                    }
+                }
+                ptLine.m().set_num_of_stops(self.myStops.len() as i32, missingBefore, missingAfter);
+                if ptLine.m().get_stops().is_empty() {
+                    write_warningf!("PT line in relation % with no stops ignored. Probably OSM file is incomplete.", self.myCurrentRelation);
+                    // SAFETY: the line was allocated with Box::into_raw above and was not inserted anywhere.
+                    drop(unsafe { Box::from_raw(ptLine.as_raw()) });
+                    self.reset_values();
+                    return;
+                }
+                if !self.myNBPTLineCont.m().insert(ptLine) {
+                    write_warningf!("Ignoring duplicate PT line '%'.", self.myCurrentRelation);
+                    // SAFETY: the line was rejected by the container, so nothing else holds it.
+                    drop(unsafe { Box::from_raw(ptLine.as_raw()) });
+                }
+            }
+            // other relations might use similar subelements so reset in any case
+            self.reset_values();
+        }
     }
 
     /// C++: `void RelationHandler::resetValues()` [private]
@@ -4645,7 +6225,23 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn reset_values(&mut self) {
-        todo!("port RelationHandler::resetValues")
+        self.myCurrentRelation = INVALID_ID;
+        self.myIsRestriction = false;
+        self.myRestrictionException = SVC_IGNORING;
+        self.myFromWay = INVALID_ID;
+        self.myToWay = INVALID_ID;
+        self.myViaNode = INVALID_ID;
+        self.myViaWay = INVALID_ID;
+        self.myStation = INVALID_ID;
+        self.myRestrictionType = RelationHandler_RestrictionType::UNKNOWN;
+        self.myPlatforms.clear();
+        self.myStops.clear();
+        self.myPlatformStops.clear();
+        self.myWays.clear();
+        self.myIsStopArea = false;
+        self.myIsRoute = false;
+        self.myPTRouteType = String::new();
+        self.myRouteColor.set_valid(false);
     }
 
     /// C++: `bool RelationHandler::checkEdgeRef(long long) const` [const, private]
@@ -4660,7 +6256,11 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_edge_ref(&self, ref_: i64) -> bool {
-        todo!("port RelationHandler::checkEdgeRef")
+        if self.myOSMEdges.contains_key(&ref_) {
+            return true;
+        }
+        write_warningf!("No way found for reference '%' in relation '%'", ref_, self.myCurrentRelation);
+        false
     }
 
     /// C++: `bool RelationHandler::applyRestriction() const` [const, private]
@@ -4718,7 +6318,54 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn apply_restriction(&self) -> bool {
-        todo!("port RelationHandler::applyRestriction")
+        // since OSM ways are bidirectional we need the via to figure out which direction was meant
+        if self.myViaNode != INVALID_ID {
+            let viaNode = self.myOSMNodes[&self.myViaNode].node;
+            if viaNode.is_null() {
+                write_warningf!("Via-node '%' was not instantiated", self.myViaNode);
+                return false;
+            }
+            let from = self.find_edge_ref(self.myFromWay, viaNode.get_incoming_edges());
+            let to = self.find_edge_ref(self.myToWay, viaNode.get_outgoing_edges());
+            if from.is_null() {
+                write_warningf!("from-edge '%' of restriction relation could not be determined", self.myFromWay);
+                return false;
+            }
+            if to.is_null() {
+                write_warningf!("to-edge '%' of restriction relation could not be determined", self.myToWay);
+                return false;
+            }
+            if self.myRestrictionType == RelationHandler_RestrictionType::ONLY {
+                from.m().add_edge2_edge_connection(to, true, SVC_UNSPECIFIED);
+                // make sure that these connections remain disabled even if network
+                // modifications (ramps.guess) reset existing connections
+                for cand in from.get_to_node().get_outgoing_edges().clone() {
+                    if !from.is_connected_to(cand, false) {
+                        if self.myRestrictionException == SVC_IGNORING {
+                            from.m().remove_from_connections(cand, -1, -1, true, false, false);
+                        } else {
+                            from.m().add_edge2_edge_connection(cand, true, self.myRestrictionException);
+                        }
+                    }
+                }
+            } else {
+                if self.myRestrictionException == SVC_IGNORING {
+                    from.m().remove_from_connections(to, -1, -1, true, false, false);
+                } else {
+                    from.m().add_edge2_edge_connection(to, true, self.myRestrictionException);
+                    for cand in from.get_to_node().get_outgoing_edges().clone() {
+                        if !from.is_connected_to(cand, false) {
+                            from.m().add_edge2_edge_connection(cand, true, SVC_UNSPECIFIED);
+                        }
+                    }
+                }
+            }
+        } else {
+            // XXX interpreting via-ways or via-node lists not yet implemented
+            write_warningf!("direction of restriction relation could not be determined%", "");
+            return false;
+        }
+        true
     }
 
     /// C++: `NBEdge * RelationHandler::findEdgeRef(long long, const std::vector<NBEdge *> &) const` [const, private]
@@ -4745,7 +6392,22 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // }
     #[allow(unused_variables)]
     pub fn find_edge_ref(&self, wayRef: i64, candidates: &Vec<Ptr<NBEdge>>) -> Ptr<NBEdge> {
-        todo!("port RelationHandler::findEdgeRef")
+        let prefix = wayRef.to_string();
+        let backPrefix = format!("-{prefix}");
+        let mut result: Ptr<NBEdge> = Ptr::null();
+        let mut found = 0;
+        for candidate in candidates.iter() {
+            let id = candidate.get_id();
+            if id.starts_with(&prefix) || id.starts_with(&backPrefix) {
+                result = *candidate;
+                found += 1;
+            }
+        }
+        if found > 1 {
+            write_warningf!("Ambiguous way reference '%' in restriction relation", prefix);
+            result = Ptr::null();
+        }
+        result
     }
 
     /// C++: `void RelationHandler::RelationHandler(const RelationHandler &)` [private]
@@ -4753,7 +6415,8 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIImporter_OpenStreetMap_RelationHandler) -> Self {
-        todo!("port RelationHandler::RelationHandler")
+        // C++ declares the copy constructor private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::RelationHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `RelationHandler & RelationHandler::operator=(const RelationHandler &)` [private]
@@ -4761,7 +6424,8 @@ impl NIImporter_OpenStreetMap_RelationHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_RelationHandler) -> &mut NIImporter_OpenStreetMap_RelationHandler {
-        todo!("port RelationHandler::operator=")
+        // C++ declares the assignment operator private and never defines it, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::RelationHandler::operator= is private and undefined in C++")
     }
 
 }

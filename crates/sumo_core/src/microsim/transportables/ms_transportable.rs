@@ -1,12 +1,15 @@
 //! Port of microsim/transportables/MSTransportable.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::geom::POSITION_EPS;
 
 /// C++ typedef `std::vector<MSStage *> MSTransportable::MSTransportablePlan`
 pub type MSTransportable_MSTransportablePlan = Vec<Ptr<MSStage>>;
 
 /// The class holds a simulated moveable object
 /// C++ class `MSTransportable` (microsim/transportables/MSTransportable.h)
+#[repr(C)]
 pub struct MSTransportable {
     /// C++ base class `SUMOTrafficObject`
     pub base: SUMOTrafficObject,
@@ -19,7 +22,7 @@ pub struct MSTransportable {
     /// the plan of the transportable
     pub myPlan: Ptr<MSTransportable_MSTransportablePlan>,
     /// the iterator over the route
-    pub myStep: Unmapped /* MSTransportablePlan::iterator */,
+    pub myStep: usize /* index into *myPlan (C++ MSTransportablePlan::iterator) */,
     /// The devices this transportable has
     pub myDevices: Vec<Ptr<MSTransportableDevice>>,
     pub myAmPerson: bool,
@@ -42,6 +45,11 @@ impl std::ops::DerefMut for MSTransportable {
 
 // C++ static members of MSTransportable (port as module-level statics, see AGENTS.md):
 //   static NumericalID MSTransportable::myCurrentNumericalIndex;
+static MY_CURRENT_NUMERICAL_INDEX: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+// C++ constants from SUMOVehicleParameter.h / SUMOVTypeParameter.h (headers not ported yet)
+const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+const VEHPARS_JUNCTIONMODEL_PARAMS_SET: i64 = 2 << 28;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
 impl MSTransportable {
     /// C++: `bool MSTransportable::isPerson() const` [const, virtual]
@@ -51,7 +59,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_person(&self) -> bool {
-        todo!("port MSTransportable::isPerson")
+        self.myAmPerson
     }
 
     /// C++: `bool MSTransportable::isContainer() const` [const, virtual]
@@ -60,7 +68,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_container(&self) -> bool {
-        todo!("port MSTransportable::isContainer")
+        !self.myAmPerson
     }
 
     /// C++: `std::string MSTransportable::getObjectType()`
@@ -69,7 +77,11 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_object_type(&mut self) -> String {
-        todo!("port MSTransportable::getObjectType")
+        if self.myAmPerson {
+            "Person".to_string()
+        } else {
+            "Container".to_string()
+        }
     }
 
     /// C++: `NumericalID MSTransportable::getNumericalID() const` [const, virtual]
@@ -78,7 +90,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> SUMOTrafficObject_NumericalID {
-        todo!("port MSTransportable::getNumericalID")
+        self.myNumericalID
     }
 
     /// C++: `long long MSTransportable::getRandomSeed() const` [const, virtual]
@@ -88,7 +100,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_random_seed(&self) -> i64 {
-        todo!("port MSTransportable::getRandomSeed")
+        self.myRandomSeed
     }
 
     /// C++: `bool MSTransportable::isStopped() const` [const, virtual]
@@ -97,7 +109,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_stopped(&self) -> bool {
-        todo!("port MSTransportable::isStopped")
+        self.get_current_stage_type() == MSStageType::WAITING
     }
 
     /// C++: `double MSTransportable::getSlope() const` [const, virtual]
@@ -110,7 +122,10 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_slope(&self) -> f64 {
-        todo!("port MSTransportable::getSlope")
+        let edge = self.get_edge();
+        let ep = self.get_edge_pos();
+        let gp = edge.get_lanes()[0].interpolate_lane_pos_to_geometry_pos(ep);
+        edge.get_lanes()[0].get_shape_2().slope_degree_at_offset(gp)
     }
 
     /// C++: `SUMOVehicleClass MSTransportable::getVClass() const` [const, virtual]
@@ -120,7 +135,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        todo!("port MSTransportable::getVClass")
+        self.get_vehicle_type().get_vehicle_class()
     }
 
     /// C++: `bool MSTransportable::isJammed() const` [const, virtual]
@@ -130,7 +145,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        todo!("port MSTransportable::isJammed")
+        false
     }
 
     /// C++: `double MSTransportable::getMaxSpeed() const` [const, virtual]
@@ -141,7 +156,9 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self) -> f64 {
-        todo!("port MSTransportable::getMaxSpeed")
+        let a = self.get_vehicle_type().get_max_speed();
+        let b = self.get_vehicle_type().get_desired_max_speed() * self.get_chosen_speed_factor();
+        if b < a { b } else { a }
     }
 
     /// C++: `SUMOTime MSTransportable::getWaitingTime(const bool) const` [const, virtual]
@@ -151,7 +168,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self, accumulated: bool) -> SUMOTime {
-        todo!("port MSTransportable::getWaitingTime")
+        self.get_current_stage().get_waiting_time()
     }
 
     /// C++: `double MSTransportable::getPreviousSpeed() const` [const, virtual]
@@ -160,7 +177,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        todo!("port MSTransportable::getPreviousSpeed")
+        self.get_speed()
     }
 
     /// C++: `double MSTransportable::getAcceleration() const` [const, virtual]
@@ -169,7 +186,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        todo!("port MSTransportable::getAcceleration")
+        0.0
     }
 
     /// C++: `double MSTransportable::getPositionOnLane() const` [const, virtual]
@@ -178,7 +195,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_position_on_lane(&self) -> f64 {
-        todo!("port MSTransportable::getPositionOnLane")
+        self.get_edge_pos()
     }
 
     /// C++: `double MSTransportable::getBackPositionOnLane(const MSLane *) const` [const, virtual]
@@ -188,7 +205,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSTransportable::getBackPositionOnLane")
+        self.get_edge_pos() - self.get_vehicle_type().get_length()
     }
 
     /// C++: `Position MSTransportable::getPosition(const double) const` [const, virtual]
@@ -197,7 +214,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self, arg0: f64) -> Position {
-        todo!("port MSTransportable::getPosition")
+        self.get_position_2()
     }
 
     /// C++: `void MSTransportable::MSTransportable(const SUMOVehicleParameter *, MSVehicleType *, MSTransportablePlan *, const bool)`
@@ -217,7 +234,22 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, isPerson: bool) -> Self {
-        todo!("port MSTransportable::MSTransportable")
+        let numerical_id = MY_CURRENT_NUMERICAL_INDEX.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // shortcut: C++ stage->init(this) and MSDevice::buildTransportableDevices need the final address of the object, which a
+        // constructor returning Self does not have; the caller must run them after boxing, upgrade when constructors return Box/Ptr
+        MSTransportable {
+            base: SUMOTrafficObject::new(&pars.id),
+            myParameter: pars,
+            myVType: vtype,
+            myWriteEvents: false,
+            myPlan: plan,
+            myStep: 0,
+            myDevices: Vec::new(),
+            myAmPerson: isPerson,
+            myNumericalID: numerical_id,
+            myRandomSeed: utils::common::rand_helper::murmur3_32(&pars.id, utils::common::rand_helper::with_default(|r| r.orig_seed)) as i64,
+            myAbortCommand: Ptr::null(),
+        }
     }
 
     /// C++: `void MSTransportable::~MSTransportable() noexcept` [virtual]
@@ -248,7 +280,19 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportable::~MSTransportable")
+        let plan = self.myPlan;
+        if self.myStep != plan.len() && self.get_current_stage_type() == MSStageType::DRIVING {
+            let stage: Ptr<MSStageDriving> = self.get_current_stage().cast::<MSStageDriving>();
+            if !stage.get_vehicle().is_null() {
+                stage.get_vehicle().m().remove_transportable(Ptr::from_mut(self));
+            } else if !stage.get_origin_stop().is_null() {
+                stage.get_origin_stop().m().remove_transportable(Ptr::from_mut(self));
+            }
+        }
+        // shortcut: C++ also deletes the plan stages, devices and myParameter here; ownership of those objects is not modelled yet
+        if self.myVType.is_vehicle_specific() {
+            MSNet::get_instance().m().get_vehicle_control().remove_v_type(self.myVType);
+        }
     }
 
     /// C++: `bool MSTransportable::proceed(MSNet *, SUMOTime, const bool)` [virtual]
@@ -308,7 +352,57 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn proceed(&mut self, net: Ptr<MSNet>, time: SUMOTime, vehicleArrived: bool) -> bool {
-        todo!("port MSTransportable::proceed")
+        let prior = self.get_current_stage();
+        let error = prior.m().set_arrived(net, Ptr::from_mut(self), time, vehicleArrived);
+        // must be done before increasing myStep to avoid invalid state for rendering
+        prior.get_edge().remove_transportable(Ptr::from_mut(self));
+        self.myStep += 1;
+        if error != "" {
+            panic!("{}", ProcessError::Process(error));
+        }
+        // We need to check whether an access stage is needed (or maybe even two).
+        // The general scheme is: If the prior stage ended at a stop and the next stage
+        // starts at an edge which is not the one the stop is at, but the stop has an access to it
+        // we need an access stage. The same is true if prior ends at an edge, the next stage
+        // is allowed to start at any stop the edge has access to.
+        // If we start at a stop or end at a stop no access is needed.
+        let mut accessToStop = false;
+        if prior.get_stage_type() == MSStageType::WALKING || prior.get_stage_type() == MSStageType::DRIVING {
+            accessToStop = self.check_access(prior, true);
+        } else if prior.get_stage_type() == MSStageType::WAITING_FOR_DEPART {
+            for dev in self.myDevices.clone() {
+                // shortcut: calls the MSMoveReminder base notifyEnter (no virtual dispatch); MSTransportableDevice_FCD override returns false but the result is discarded, upgrade when devices are trait objects
+                dev.m().base2.notify_enter(&mut self.base, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
+            }
+        }
+        if !accessToStop && (self.myStep == self.myPlan.len() || (self.myPlan[self.myStep].get_stage_type() != MSStageType::DRIVING && self.myPlan[self.myStep].get_stage_type() != MSStageType::TRIP)) {
+            let priorStop = if prior.get_stage_type() == MSStageType::TRIP { prior.get_origin_stop() } else { prior.get_destination_stop() };
+            // a trip might resolve to DRIVING so we would have to stay at the stop
+            // if a trip resolves to something else, this step will do stop removal
+            if !priorStop.is_null() {
+                priorStop.m().remove_transportable(Ptr::from_mut(self));
+            }
+        }
+        let mut net_ptr = net;
+        let tc: &mut MSTransportableControl = if self.is_person() { net_ptr.m().get_person_control() } else { net_ptr.m().get_container_control() };
+        if self.myStep != self.myPlan.len() {
+            let next = self.myPlan[self.myStep];
+            if next.get_stage_type() == MSStageType::WALKING && (prior.get_stage_type() != MSStageType::ACCESS || prior.get_destination() != next.get_from_edge()) {
+                self.check_access(prior, false);
+            } else if next.get_stage_type() == MSStageType::WAITING && prior.get_stage_type() == MSStageType::WAITING && prior.get_destination() != next.get_from_edge() {
+                self.check_access(prior, false);
+            }
+            if next.m().proceed(net, Ptr::from_mut(self), time, prior) {
+                return true;
+            } else {
+                // some problem was encountered
+                tc.add_arrived();
+                return false;
+            }
+        } else {
+            tc.add_arrived();
+            return false;
+        }
     }
 
     /// C++: `bool MSTransportable::checkAccess(const MSStage *const, const bool)` [virtual]
@@ -319,7 +413,11 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn check_access(&mut self, prior: Ptr<MSStage>, waitAtStop: bool) -> bool {
-        todo!("port MSTransportable::checkAccess")
+        if self.myAmPerson {
+            // MSPerson overrides checkAccess; dispatched by the person flag until vtables exist
+            return Ptr::from_mut(self).cast::<MSPerson>().m().check_access(prior, waitAtStop);
+        }
+        false
     }
 
     /// C++: `void MSTransportable::setID(const std::string &)` [virtual]
@@ -330,7 +428,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_id(&mut self, newID: &str) {
-        todo!("port MSTransportable::setID")
+        panic!("{}", ProcessError::Process("Changing a transportable ID is not permitted".to_string()));
     }
 
     /// C++: `const SUMOVehicleParameter & MSTransportable::getParameter() const` [const, virtual]
@@ -339,7 +437,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVehicleParameter {
-        todo!("port MSTransportable::getParameter")
+        &*self.myParameter
     }
 
     /// C++: `const MSVehicleType & MSTransportable::getVehicleType() const` [const, virtual]
@@ -348,7 +446,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_type(&self) -> &MSVehicleType {
-        todo!("port MSTransportable::getVehicleType")
+        &*self.myVType
     }
 
     /// C++: `const SUMOVTypeParameter & MSTransportable::getVTypeParameter() const` [const, virtual]
@@ -358,7 +456,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_type_parameter(&self) -> &SUMOVTypeParameter {
-        todo!("port MSTransportable::getVTypeParameter")
+        self.myVType.get_parameter()
     }
 
     /// C++: `SumoRNG * MSTransportable::getRNG() const` [const, virtual]
@@ -369,7 +467,9 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_rng(&self) -> Ptr<SumoRNG> {
-        todo!("port MSTransportable::getRNG")
+        let edge = self.get_edge();
+        let rng = edge.get_lanes()[0].get_rng();
+        rng
     }
 
     /// C++: `int MSTransportable::getRNGIndex() const` [const, virtual]
@@ -381,7 +481,9 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_rng_index(&self) -> i32 {
-        todo!("port MSTransportable::getRNGIndex")
+        let edge = self.get_edge();
+        let lanes = edge.get_lanes();
+        if lanes.is_empty() { 0 } else { lanes[0].get_rng_index() }
     }
 
     /// C++: `SUMOTime MSTransportable::getDesiredDepart() const` [const]
@@ -392,7 +494,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_desired_depart(&self) -> SUMOTime {
-        todo!("port MSTransportable::getDesiredDepart")
+        self.myParameter.depart
     }
 
     /// C++: `void MSTransportable::setDeparted(SUMOTime)`
@@ -403,7 +505,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_departed(&mut self, now: SUMOTime) {
-        todo!("port MSTransportable::setDeparted")
+        self.get_current_stage().m().set_departed(now);
     }
 
     /// C++: `SUMOTime MSTransportable::getDeparture() const` [const]
@@ -419,7 +521,12 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_departure(&self) -> SUMOTime {
-        todo!("port MSTransportable::getDeparture")
+        for stage in self.myPlan.iter() {
+            if stage.get_departed() >= 0 {
+                return stage.get_departed();
+            }
+        }
+        -1
     }
 
     /// C++: `const MSEdge * MSTransportable::getDestination() const` [const]
@@ -429,7 +536,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getDestination")
+        self.get_current_stage().get_destination()
     }
 
     /// C++: `const MSEdge * MSTransportable::getNextDestination() const` [const]
@@ -439,7 +546,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_destination(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getNextDestination")
+        self.myPlan[self.myStep + 1].get_destination()
     }
 
     /// C++: `const MSEdge * MSTransportable::getEdge() const` [const, virtual]
@@ -449,7 +556,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getEdge")
+        self.get_current_stage().get_edge()
     }
 
     /// C++: `const MSEdge * MSTransportable::getCurrentEdge() const` [const, virtual]
@@ -460,7 +567,12 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getCurrentEdge")
+        let lane = self.get_lane();
+        if lane.is_null() {
+            self.get_edge()
+        } else {
+            Ptr::from_mut(lane.get_edge())
+        }
     }
 
     /// C++: `const MSLane * MSTransportable::getLane() const` [const, virtual]
@@ -470,7 +582,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSTransportable::getLane")
+        self.get_current_stage().get_lane()
     }
 
     /// C++: `const MSLane * MSTransportable::getBackLane() const` [const, virtual]
@@ -479,7 +591,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_back_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSTransportable::getBackLane")
+        self.get_lane()
     }
 
     /// C++: `const MSEdge * MSTransportable::getFromEdge() const` [const]
@@ -489,7 +601,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getFromEdge")
+        self.get_current_stage().get_from_edge()
     }
 
     /// C++: `double MSTransportable::getEdgePos() const` [const, virtual]
@@ -500,7 +612,8 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self) -> f64 {
-        todo!("port MSTransportable::getEdgePos")
+        let now = MSNet::get_instance().get_current_time_step();
+        self.get_current_stage().get_edge_pos(now)
     }
 
     /// C++: `int MSTransportable::getDirection() const` [const, virtual]
@@ -511,7 +624,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        todo!("port MSTransportable::getDirection")
+        self.get_current_stage().get_direction()
     }
 
     /// C++: `Position MSTransportable::getPosition() const` [const, virtual]
@@ -522,7 +635,8 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_position_2(&self) -> Position {
-        todo!("port MSTransportable::getPosition")
+        let now = MSNet::get_instance().get_current_time_step();
+        self.get_current_stage().get_position(now)
     }
 
     /// C++: `double MSTransportable::getAngle() const` [const, virtual]
@@ -533,7 +647,8 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port MSTransportable::getAngle")
+        let now = MSNet::get_instance().get_current_time_step();
+        self.get_current_stage().get_angle(now)
     }
 
     /// C++: `double MSTransportable::getWaitingSeconds() const` [const, virtual]
@@ -544,7 +659,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_seconds(&self) -> f64 {
-        todo!("port MSTransportable::getWaitingSeconds")
+        steps2time(self.get_current_stage().get_waiting_time())
     }
 
     /// C++: `double MSTransportable::getSpeed() const` [const, virtual]
@@ -555,7 +670,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MSTransportable::getSpeed")
+        self.get_current_stage().get_speed()
     }
 
     /// C++: `double MSTransportable::getChosenSpeedFactor() const` [const, virtual]
@@ -565,7 +680,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        todo!("port MSTransportable::getChosenSpeedFactor")
+        1.
     }
 
     /// C++: `MSStageType MSTransportable::getCurrentStageType() const` [const]
@@ -575,7 +690,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_stage_type(&self) -> MSStageType {
-        todo!("port MSTransportable::getCurrentStageType")
+        self.get_current_stage().get_stage_type()
     }
 
     /// C++: `MSStageType MSTransportable::getStageType(int) const` [const]
@@ -587,7 +702,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_stage_type(&self, next: i32) -> MSStageType {
-        todo!("port MSTransportable::getStageType")
+        self.myPlan[(self.myStep as i64 + next as i64) as usize].get_stage_type()
     }
 
     /// C++: `std::string MSTransportable::getStageSummary(int) const` [const]
@@ -600,7 +715,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_stage_summary(&self, stageIndex: i32) -> String {
-        todo!("port MSTransportable::getStageSummary")
+        self.myPlan[stageIndex as usize].get_stage_summary(self.myAmPerson)
     }
 
     /// C++: `std::string MSTransportable::getCurrentStageDescription() const` [const]
@@ -610,7 +725,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_stage_description(&self) -> String {
-        todo!("port MSTransportable::getCurrentStageDescription")
+        self.get_current_stage().get_stage_description(self.myAmPerson)
     }
 
     /// C++: `MSStage * MSTransportable::getCurrentStage() const` [const]
@@ -620,7 +735,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_stage(&self) -> Ptr<MSStage> {
-        todo!("port MSTransportable::getCurrentStage")
+        self.myPlan[self.myStep]
     }
 
     /// C++: `MSStage * MSTransportable::getNextStage(int) const` [const]
@@ -632,7 +747,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_stage(&self, offset: i32) -> Ptr<MSStage> {
-        todo!("port MSTransportable::getNextStage")
+        self.myPlan[(self.myStep as i64 + offset as i64) as usize]
     }
 
     /// C++: `const std::set<NumericalID> MSTransportable::getUpcomingEdgeIDs() const` [const, virtual]
@@ -640,7 +755,16 @@ impl MSTransportable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_upcoming_edge_i_ds(&self) -> BTreeSet<SUMOTrafficObject_NumericalID> {
-        todo!("port MSTransportable::getUpcomingEdgeIDs")
+        let mut result = BTreeSet::new();
+        for step in self.myPlan[self.myStep..].iter() {
+            for e in step.get_edges() {
+                if !e.is_null() {
+                    // catch incomplete rides
+                    result.insert(e.get_numerical_id() as SUMOTrafficObject_NumericalID);
+                }
+            }
+        }
+        result
     }
 
     /// C++: `int MSTransportable::getNumStages() const` [const]
@@ -650,7 +774,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_stages(&self) -> i32 {
-        todo!("port MSTransportable::getNumStages")
+        self.myPlan.len() as i32
     }
 
     /// C++: `int MSTransportable::getNumRemainingStages() const` [const]
@@ -660,7 +784,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_remaining_stages(&self) -> i32 {
-        todo!("port MSTransportable::getNumRemainingStages")
+        (self.myPlan.len() - self.myStep) as i32
     }
 
     /// C++: `int MSTransportable::getCurrentStageIndex() const` [const]
@@ -670,7 +794,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_stage_index(&self) -> i32 {
-        todo!("port MSTransportable::getCurrentStageIndex")
+        self.myStep as i32
     }
 
     /// C++: `int MSTransportable::getRoutePosition() const` [const, virtual]
@@ -680,7 +804,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        todo!("port MSTransportable::getRoutePosition")
+        self.get_current_stage().get_route_position()
     }
 
     /// C++: `const MSEdge * MSTransportable::getNextEdgePtr() const` [const, virtual]
@@ -690,7 +814,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getNextEdgePtr")
+        Ptr::null()
     }
 
     /// C++: `void MSTransportable::tripInfoOutput(OutputDevice &) const` [const]
@@ -750,7 +874,61 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice) {
-        todo!("port MSTransportable::tripInfoOutput")
+        let departure = self.myPlan[0].get_departed();
+        os.open_tag(if self.is_person() { "personinfo" } else { "containerinfo" });
+        os.write_attr(SUMO_ATTR_ID, self.get_id());
+        let departStr = if departure >= 0 { time2string(departure) } else { "-1".to_string() };
+        os.write_attr(SUMO_ATTR_DEPART, &departStr);
+        os.write_attr(SUMO_ATTR_TYPE, self.get_vehicle_type().get_id());
+        if self.is_person() {
+            os.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.get_chosen_speed_factor());
+        }
+        let mut duration: SUMOTime = 0;
+        let mut waitingTime: SUMOTime = 0;
+        let mut timeLoss: SUMOTime = 0;
+        let mut travelTime: SUMOTime = 0;
+        let mut durationOK = true;
+        let mut waitingTimeOK = true;
+        let mut timeLossOK = true;
+        let mut travelTimeOK = true;
+        for i in self.myPlan.iter() {
+            let mut t = i.get_duration();
+            if t != SUMOTIME_MAX {
+                duration += t;
+            } else {
+                durationOK = false;
+            }
+            t = i.get_total_waiting_time();
+            if t != SUMOTIME_MAX {
+                waitingTime += t;
+            } else {
+                waitingTimeOK = false;
+            }
+            t = i.get_time_loss(Ptr::new(self));
+            if t != SUMOTIME_MAX {
+                timeLoss += t;
+            } else {
+                timeLossOK = false;
+            }
+            t = i.get_travel_time();
+            if t != SUMOTIME_MAX {
+                travelTime += t;
+            } else {
+                travelTimeOK = false;
+            }
+        }
+        let durStr = if durationOK { time2string(duration) } else { "-1".to_string() };
+        os.write_attr(SUMO_ATTR_DURATION, &durStr);
+        let waitStr = if waitingTimeOK { time2string(waitingTime) } else { "-1".to_string() };
+        os.write_attr(SUMO_ATTR_WAITINGTIME, &waitStr);
+        let lossStr = if timeLossOK { time2string(timeLoss) } else { "-1".to_string() };
+        os.write_attr(SUMO_ATTR_TIMELOSS, &lossStr);
+        let travelStr = if travelTimeOK { time2string(travelTime) } else { "-1".to_string() };
+        os.write_attr(SUMO_ATTR_TRAVELTIME, &travelStr);
+        for i in self.myPlan.iter() {
+            i.trip_info_output(os, Ptr::new(self));
+        }
+        os.close_tag("");
     }
 
     /// C++: `void MSTransportable::routeOutput(OutputDevice &, const bool) const` [const]
@@ -776,7 +954,27 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn route_output(&self, os: &mut OutputDevice, withRouteLength: bool) {
-        todo!("port MSTransportable::routeOutput")
+        let typeID: String = if (self.is_person() && self.get_vehicle_type().get_id() == DEFAULT_PEDTYPE_ID) || (self.is_container() && self.get_vehicle_type().get_id() == DEFAULT_CONTAINERTYPE_ID) {
+            String::new()
+        } else {
+            self.get_vehicle_type().get_id().to_string()
+        };
+        let altTag = if self.is_person() { SUMO_TAG_PERSON } else { SUMO_TAG_CONTAINER };
+        let myParameter = self.myParameter;
+        utils::options::options_cont::with_options(|oc| myParameter.write(os, oc, altTag, &typeID));
+        if self.has_arrived() {
+            let now = MSNet::get_instance().get_current_time_step();
+            os.write_attr("arrival", &time2string(now));
+        }
+        let mut previous: Ptr<MSStage> = Ptr::null();
+        let withTiming = utils::options::options_cont::get_bool("vehroute-output.exit-times");
+        for stage in self.myPlan.iter() {
+            stage.route_output(self.myAmPerson, os, withRouteLength, previous, withTiming, false);
+            previous = *stage;
+        }
+        // shortcut: SUMOVehicleParameter::writeParams is not ported yet, so the extra parameters are not written
+        os.close_tag("");
+        os.lf();
     }
 
     /// C++: `bool MSTransportable::isWaitingFor(const SUMOVehicle *) const` [const]
@@ -786,7 +984,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_waiting_for(&self, vehicle: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSTransportable::isWaitingFor")
+        self.get_current_stage().is_waiting_for(vehicle)
     }
 
     /// C++: `bool MSTransportable::isWaiting4Vehicle() const` [const]
@@ -796,7 +994,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_waiting4_vehicle(&self) -> bool {
-        todo!("port MSTransportable::isWaiting4Vehicle")
+        self.get_current_stage().is_waiting4_vehicle()
     }
 
     /// C++: `void MSTransportable::setAbortWaiting(const SUMOTime)`
@@ -812,7 +1010,12 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_abort_waiting(&mut self, timeout: SUMOTime) {
-        todo!("port MSTransportable::setAbortWaiting")
+        if timeout < 0 && !self.myAbortCommand.is_null() {
+            // shortcut: WrappingCommand is not ported, so the scheduled abort command cannot be descheduled, upgrade when WrappingCommand lands
+            self.myAbortCommand = Ptr::null();
+            return;
+        }
+        // shortcut: WrappingCommand<MSTransportable> is not ported, so the abort timeout is not scheduled, upgrade when WrappingCommand lands
     }
 
     /// C++: `SUMOTime MSTransportable::abortStage(SUMOTime)`
@@ -831,7 +1034,15 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn abort_stage(&mut self, step: SUMOTime) -> SUMOTime {
-        todo!("port MSTransportable::abortStage")
+        write_warningf!("Teleporting % '%'; waited too long, from edge '%', time=%.", (if self.is_person() { "person" } else { "container" }).to_string(), self.get_id().to_string(), self.get_current_stage().get_edge().get_id().to_string(), time2string(step));
+        let net = MSNet::get_instance();
+        let tc: &mut MSTransportableControl = if self.is_person() { net.m().get_person_control() } else { net.m().get_container_control() };
+        tc.register_teleport_abort_wait();
+        self.get_current_stage().m().abort(Ptr::from_mut(self));
+        if !self.proceed(net, step, false) {
+            tc.erase(Ptr::from_mut(self));
+        }
+        0
     }
 
     /// C++: `SUMOVehicle * MSTransportable::getVehicle() const` [const]
@@ -841,7 +1052,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle(&self) -> Ptr<SUMOVehicle> {
-        todo!("port MSTransportable::getVehicle")
+        self.get_current_stage().get_vehicle()
     }
 
     /// C++: `void MSTransportable::appendStage(MSStage *, int)`
@@ -862,7 +1073,17 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn append_stage(&mut self, stage: Ptr<MSStage>, next: i32) {
-        todo!("port MSTransportable::appendStage")
+        // myStep is invalidated upon modifying myPlan
+        let stepIndex = self.myStep as i32;
+        if next < 0 {
+            self.myPlan.m().push(stage);
+        } else {
+            if stepIndex + next > self.myPlan.len() as i32 {
+                panic!("{}", ProcessError::Process(format!("invalid index '{}' for inserting new stage into plan of '{}'", next, self.get_id())));
+            }
+            self.myPlan.m().insert((stepIndex + next) as usize, stage);
+        }
+        self.myStep = stepIndex as usize;
     }
 
     /// C++: `void MSTransportable::removeStage(int, bool)`
@@ -894,7 +1115,31 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn remove_stage(&mut self, next: i32, stayInSim: bool) {
-        todo!("port MSTransportable::removeStage")
+        assert!(next >= 0);
+        if next > 0 {
+            // myStep is invalidated upon modifying myPlan
+            let stepIndex = self.myStep;
+            // shortcut: the removed stage is not freed, ownership of plan stages is not modelled yet
+            self.myPlan.m().remove(self.myStep + next as usize);
+            self.myStep = stepIndex;
+        } else {
+            if self.myStep + 1 == self.myPlan.len() && stayInSim {
+                // stay in the simulation until the start of simStep to allow appending new stages (at the correct position)
+                let stage = MSStageWaiting::new(self.get_edge(), Ptr::null(), 0, 0, self.get_edge_pos(), "last stage removed", false, -1);
+                let stagePtr = Ptr::from_mut(Box::leak(Box::new(stage))).cast::<MSStage>();
+                self.append_stage(stagePtr, -1);
+            } else if self.myStep + 1 != self.myPlan.len() {
+                let originStop = if self.get_edge() == self.get_from_edge() { self.get_current_stage().get_origin_stop() } else { Ptr::null() };
+                self.myPlan[self.myStep + 1].m().set_origin(self.get_edge(), originStop, self.get_edge_pos());
+            }
+            self.get_current_stage().m().abort(Ptr::from_mut(self));
+            let simstep = MSNet::get_instance().get_current_time_step();
+            if !self.proceed(MSNet::get_instance(), simstep, false) {
+                MSNet::get_instance().m().get_person_control().erase(Ptr::from_mut(self));
+            } else if self.myPlan[0].get_departed() < 0 {
+                self.myPlan[0].m().set_departed(simstep);
+            }
+        }
     }
 
     /// C++: `void MSTransportable::setSpeed(double)`
@@ -908,7 +1153,10 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(&mut self, speed: f64) {
-        todo!("port MSTransportable::setSpeed")
+        for i in self.myStep..self.myPlan.len() {
+            self.myPlan[i].m().set_speed(speed);
+        }
+        self.get_singular_type().set_max_speed(&speed);
     }
 
     /// C++: `double MSTransportable::getArrivalPos() const` [const]
@@ -918,7 +1166,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self) -> f64 {
-        todo!("port MSTransportable::getArrivalPos")
+        self.myPlan[self.myPlan.len() - 1].get_arrival_pos()
     }
 
     /// C++: `const MSEdge * MSTransportable::getArrivalEdge() const` [const]
@@ -928,7 +1176,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrival_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getArrivalEdge")
+        self.myPlan[self.myPlan.len() - 1].get_edges().last().copied().unwrap()
     }
 
     /// C++: `const MSEdge * MSTransportable::getRerouteDestination() const` [const, virtual]
@@ -938,7 +1186,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_reroute_destination(&self) -> Ptr<MSEdge> {
-        todo!("port MSTransportable::getRerouteDestination")
+        self.get_arrival_edge()
     }
 
     /// C++: `bool MSTransportable::reroute(SUMOTime, const std::string &, MSTransportableRouter &, const bool, const bool, const bool, const MSEdge *)`
@@ -1006,7 +1254,58 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, t: SUMOTime, info: &str, router: &mut MSTransportableRouter, onInit: bool, withTaz: bool, silent: bool, sink: Ptr<MSEdge>) -> bool {
-        todo!("port MSTransportable::reroute")
+        let trip: Ptr<MSStageTrip> = self.get_current_stage().get_trip();
+        if trip.is_null() {
+            // TODO this should be possible after factoring out MSStageTrip::reroute
+            return false;
+        }
+        if !self.get_current_stage().get_vehicle().is_null() {
+            // TODO rerouting during a ride still needs to be implemented
+            return false;
+        }
+        // find the final stage of the trip
+        let mut tripEndOffset: i32 = -1;
+        for i in (0..self.get_num_remaining_stages()).rev() {
+            if self.get_next_stage(i).get_trip() == trip {
+                tripEndOffset = i;
+                break;
+            }
+        }
+        let mut stages: Vec<Ptr<MSStage>> = Vec::new();
+        let mut start = MSStageWaiting::new(self.get_edge(), self.get_current_stage().get_origin_stop(), -1, t, self.get_edge_pos(), "start", true, -1);
+        let startPtr = Ptr::from_mut(&mut start).cast::<MSStage>();
+        let origin = self.get_edge();
+        let destination = self.get_reroute_destination();
+        if trip.m().reroute(t, router, Ptr::from_mut(self), startPtr, origin, destination, &mut stages).is_empty() {
+            // check whether the new plan actually differs
+            // shortcut: deleted stages are not freed, ownership of stages is not modelled yet
+            while tripEndOffset >= 0 && !stages.is_empty() && stages.last().unwrap().equals(&*self.get_next_stage(tripEndOffset)) {
+                stages.pop();
+                tripEndOffset -= 1;
+            }
+            // shortcut: the identical-future-route check for walks needs MSStageMoving's route index, which is Unmapped; it is skipped here
+            let abortCurrent = true;
+            if stages.is_empty() {
+                return false;
+            }
+            // remove future stages of the trip
+            let mut i = tripEndOffset;
+            while i >= 1 {
+                self.remove_stage(i, true);
+                i -= 1;
+            }
+            // insert new stages of the rerouting
+            let mut idx = 1;
+            for stage in stages.iter() {
+                self.append_stage(*stage, idx);
+                idx += 1;
+            }
+            if abortCurrent {
+                self.remove_stage(0, true);
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSTransportable::replaceRoute(ConstMSRoutePtr, const std::string &, bool, int, bool, bool, std::string *)` [virtual]
@@ -1021,7 +1320,11 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
-        todo!("port MSTransportable::replaceRoute")
+        if self.is_person() {
+            Ptr::from_mut(self).cast::<MSPerson>().m().replace_walk(route.get_edges(), self.get_position_on_lane(), 0, 1);
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSTransportable::replaceVehicleType(const MSVehicleType *)` [virtual]
@@ -1042,7 +1345,14 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        todo!("port MSTransportable::replaceVehicleType")
+        let oldVClass = self.myVType.get_vehicle_class();
+        if self.myVType.is_vehicle_specific() {
+            MSNet::get_instance().m().get_vehicle_control().remove_v_type(self.myVType);
+        }
+        if self.is_person() && type_.get_vehicle_class() != oldVClass && type_.get_vehicle_class() != SVC_PEDESTRIAN && !type_.get_parameter().was_set(VTYPEPARS_VEHICLECLASS_SET) {
+            write_warningf!("Person '%' receives type '%' which implicitly uses unsuitable vClass '%'.", self.get_id().to_string(), type_.get_id().to_string(), utils::common::sumo_vehicle_class::get_vehicle_class_names(type_.get_vehicle_class(), false));
+        }
+        self.myVType = type_;
     }
 
     /// C++: `MSVehicleType & MSTransportable::getSingularType()`
@@ -1058,7 +1368,12 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_singular_type(&mut self) -> &mut MSVehicleType {
-        todo!("port MSTransportable::getSingularType")
+        if self.myVType.is_vehicle_specific() {
+            return self.myVType.get_mut().unwrap();
+        }
+        let typ = self.myVType.build_singular_type(&format!("{}@{}", self.myVType.get_id(), self.get_id()));
+        self.replace_vehicle_type(typ);
+        typ.get_mut().unwrap()
     }
 
     /// C++: `PositionVector MSTransportable::getBoundingBox() const` [const]
@@ -1081,7 +1396,18 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_box(&self) -> PositionVector {
-        todo!("port MSTransportable::getBoundingBox")
+        let mut centerLine = PositionVector(Vec::new());
+        let p = self.get_position_2();
+        let angle = self.get_angle();
+        let length = self.get_vehicle_type().get_length();
+        let back = p + Position::new(-angle.cos() * length, -angle.sin() * length);
+        centerLine.push(p);
+        centerLine.push(back);
+        centerLine.move2side(0.5 * self.get_vehicle_type().get_width(), 100.);
+        let mut result = centerLine.clone();
+        centerLine.move2side(-self.get_vehicle_type().get_width(), 100.);
+        result.append(&centerLine.reverse(), POSITION_EPS);
+        result
     }
 
     /// C++: `bool MSTransportable::hasArrived() const` [const, virtual]
@@ -1092,7 +1418,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn has_arrived(&self) -> bool {
-        todo!("port MSTransportable::hasArrived")
+        self.myStep == self.myPlan.len()
     }
 
     /// C++: `bool MSTransportable::hasDeparted() const` [const]
@@ -1103,7 +1429,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn has_departed(&self) -> bool {
-        todo!("port MSTransportable::hasDeparted")
+        self.myPlan.len() > 0 && (self.myPlan[0].get_departed() >= 0 || self.myStep > 0)
     }
 
     /// C++: `void MSTransportable::rerouteParkingArea(MSStoppingPlace *, MSStoppingPlace *)`
@@ -1192,7 +1518,62 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn reroute_parking_area(&mut self, orig: Ptr<MSStoppingPlace>, replacement: Ptr<MSStoppingPlace>) {
-        todo!("port MSTransportable::rerouteParkingArea")
+        assert!(self.get_current_stage_type() == MSStageType::DRIVING);
+        if !self.myAmPerson {
+            write_warning("parkingAreaReroute not supported for containers");
+            return;
+        }
+        let origEdge = Ptr::from_mut(orig.get_lane().get_edge());
+        if self.get_destination() == origEdge {
+            let stage: Ptr<MSStageDriving> = self.get_current_stage().cast::<MSStageDriving>();
+            assert!(!stage.get_vehicle().is_null());
+            // adapt plan
+            let replEdge = Ptr::from_mut(replacement.get_lane().get_edge());
+            stage.m().set_destination(replEdge, replacement);
+            stage.m().set_arrival_pos((replacement.get_begin_lane_position() + replacement.get_end_lane_position()) / 2.);
+            if self.myStep + 1 == self.myPlan.len() {
+                return;
+            }
+            // if the next step is a walk, adapt the route
+            let nextStage = self.myPlan[self.myStep + 1];
+            if nextStage.get_stage_type() == MSStageType::TRIP {
+                nextStage.cast::<MSStageTrip>().m().set_origin(stage.get_destination(), stage.get_destination_stop(), stage.get_arrival_pos());
+            } else if nextStage.get_stage_type() == MSStageType::WALKING {
+                let newStage = MSStageTrip::new(stage.get_destination(), Ptr::null(), nextStage.get_destination(), nextStage.get_destination_stop(), -1, 0, "", -1., 1., &self.get_id().to_string(), 0., true, nextStage.get_arrival_pos());
+                let newPtr = Ptr::from_mut(Box::leak(Box::new(newStage))).cast::<MSStage>();
+                self.remove_stage(1, true);
+                self.append_stage(newPtr, 1);
+            } else if nextStage.get_stage_type() == MSStageType::WAITING {
+                let newStage = MSStageTrip::new(stage.get_destination(), Ptr::null(), nextStage.get_destination(), nextStage.get_destination_stop(), -1, 0, "", -1., 1., &self.get_id().to_string(), 0., true, nextStage.get_arrival_pos());
+                let newPtr = Ptr::from_mut(Box::leak(Box::new(newStage))).cast::<MSStage>();
+                self.append_stage(newPtr, 1);
+            }
+            // if the plan contains another ride with the same vehicle from the same
+            // parking area, adapt the preceeding walk to end at the replacement
+            let mut it = self.myStep + 2;
+            while it != self.myPlan.len() {
+                let futureStage = self.myPlan[it];
+                let prevStage = self.myPlan[it - 1];
+                if futureStage.get_stage_type() == MSStageType::DRIVING {
+                    let ds: Ptr<MSStageDriving> = futureStage.cast::<MSStageDriving>();
+                    // ride origin is set implicitly from the walk destination
+                    ds.m().set_origin(Ptr::null(), Ptr::null(), -1.);
+                    if *ds.get_lines() == *stage.get_lines() && prevStage.get_destination() == origEdge {
+                        if prevStage.get_stage_type() == MSStageType::TRIP {
+                            prevStage.cast::<MSStageTrip>().m().set_destination(stage.get_destination(), replacement);
+                        } else if prevStage.get_stage_type() == MSStageType::WALKING {
+                            let newStage = MSStageTrip::new(prevStage.get_from_edge(), Ptr::null(), stage.get_destination(), replacement, -1, 0, "", -1., 1., &self.get_id().to_string(), 0., true, stage.get_arrival_pos());
+                            let newPtr = Ptr::from_mut(Box::leak(Box::new(newStage))).cast::<MSStage>();
+                            let prevStageRelIndex = (it as i32) - 1 - (self.myStep as i32);
+                            self.remove_stage(prevStageRelIndex, true);
+                            self.append_stage(newPtr, prevStageRelIndex);
+                        }
+                        break;
+                    }
+                }
+                it += 1;
+            }
+        }
     }
 
     /// C++: `MSDevice * MSTransportable::getDevice(const std::type_info &) const` [const, virtual]
@@ -1208,7 +1589,8 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        todo!("port MSTransportable::getDevice")
+        // shortcut: typeid(*dev) == type cannot be checked (std::type_info is Unmapped), returns no device until device type ids are ported
+        Ptr::null()
     }
 
     /// C++: `void MSTransportable::setJunctionModelParameter(const std::string &, const std::string &)`
@@ -1225,7 +1607,12 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_junction_model_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSTransportable::setJunctionModelParameter")
+        if key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_IDS) || key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_TYPES) {
+            self.myParameter.m().parametersSet |= VEHPARS_JUNCTIONMODEL_PARAMS_SET;
+            // shortcut: SUMOVehicleParameter::setParameter is not ported yet, so the value is not stored; upgrade when it lands
+        } else {
+            panic!("{}", InvalidArgument(format!("{} '{}' does not support junctionModel parameter '{}'", self.get_object_type(), self.get_id(), key)).0);
+        }
     }
 
     /// C++: `const std::vector<MSTransportableDevice *> & MSTransportable::getDevices() const` [const]
@@ -1235,7 +1622,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_devices(&self) -> &Vec<Ptr<MSTransportableDevice>> {
-        todo!("port MSTransportable::getDevices")
+        &self.myDevices
     }
 
     /// C++: `bool MSTransportable::hasInfluencer() const` [const, virtual]
@@ -1244,7 +1631,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        todo!("port MSTransportable::hasInfluencer")
+        false
     }
 
     /// C++: `bool MSTransportable::isSelected() const` [const, virtual]
@@ -1254,7 +1641,7 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn is_selected(&self) -> bool {
-        todo!("port MSTransportable::isSelected")
+        false
     }
 
     /// C++: `int MSTransportable::getRoutingMode() const` [const, virtual]
@@ -1266,7 +1653,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn get_routing_mode(&self) -> i32 {
-        todo!("port MSTransportable::getRoutingMode")
+        ROUTING_MODE_DEFAULT
     }
 
     /// C++: `void MSTransportable::setRoutingMode(int)` [virtual]
@@ -1278,7 +1665,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn set_routing_mode(&mut self, value: i32) {
-        todo!("port MSTransportable::setRoutingMode")
+        // the routing mode is not configurable yet, value is ignored
     }
 
     /// C++: `void MSTransportable::saveState(OutputDevice &)`
@@ -1322,7 +1709,43 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSTransportable::saveState")
+        // this saves lots of departParameters which are only needed for transportables that did not yet depart
+        // the parameters may hold the name of a vTypeDistribution but we are interested in the actual type
+        let desiredDepart = self.myParameter.depart;
+        if self.myPlan[0].get_departed() >= 0 {
+            // this is only relevant in the context of delayed departure (max-num-persons)
+            self.myParameter.m().depart = self.myPlan[0].get_departed();
+        }
+        let typeID = self.get_vehicle_type().get_id().to_string();
+        let altTag = if self.myAmPerson { SUMO_TAG_PERSON } else { SUMO_TAG_CONTAINER };
+        let myParameter = self.myParameter;
+        utils::options::options_cont::with_options(|oc| myParameter.write(out, oc, altTag, &typeID));
+        self.myParameter.m().depart = desiredDepart;
+        if !self.myParameter.was_set(VEHPARS_SPEEDFACTOR_SET) {
+            out.set_precision(std::cmp::max(utils::common::std_defs::g_precision_random(), utils::common::std_defs::g_precision()));
+            out.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.get_chosen_speed_factor());
+            out.set_precision(utils::common::std_defs::g_precision());
+        }
+        let mut stepIdx = self.myStep as i32;
+        for it in 0..self.myStep {
+            let st = self.myPlan[it].get_stage_type();
+            if st == MSStageType::TRIP || st == MSStageType::ACCESS {
+                stepIdx -= 1;
+            }
+        }
+        let isAccess = self.get_current_stage().get_stage_type() == MSStageType::ACCESS;
+        let stepText = if isAccess { utils::common::to_string::f64_to_string_prec(stepIdx as f64 - 0.5, 1) } else { stepIdx.to_string() };
+        let mut state = format!("{} {}", self.myParameter.parametersSet, stepText);
+        self.get_current_stage().m().save_state(&mut state, Ptr::from_mut(self));
+        out.write_attr(SUMO_ATTR_STATE, &state);
+        let mut previous: Ptr<MSStage> = Ptr::null();
+        for stage in self.myPlan.iter() {
+            let routeLength = stage.get_departed() >= 0 && stage.get_stage_type() == MSStageType::DRIVING;
+            let withTiming = stage.get_departed() >= 0;
+            stage.route_output(self.myAmPerson, out, routeLength, previous, withTiming, true);
+            previous = *stage;
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSTransportable::loadState(const std::string &)`
@@ -1354,7 +1777,30 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, state: &str) {
-        todo!("port MSTransportable::loadState")
+        let mut iss = state.split_whitespace();
+        let parametersSet: i64 = iss.next().and_then(|s| s.parse().ok()).unwrap_or_default();
+        self.myParameter.m().parametersSet = parametersSet;
+        let step: f64 = iss.next().and_then(|s| s.parse().ok()).unwrap_or_default();
+        self.myPlan[0].m().set_departed(self.myParameter.depart);
+        if step != step.floor() {
+            // we are in an access stage
+            let priorIndex = (step - 0.5) as i32;
+            let prior = self.myPlan[priorIndex as usize];
+            self.myStep = priorIndex as usize + 1;
+            let waitAtStop = !prior.get_destination_stop().is_null() && Ptr::from_mut(prior.get_destination_stop().get_lane().get_edge()) != prior.get_destination();
+            self.check_access(prior, waitAtStop);
+        } else {
+            self.myStep = step as usize;
+        }
+        self.get_current_stage().m().load_state(Ptr::from_mut(self), &mut iss);
+        let mut i: usize = 1;
+        while (i as f64) < step {
+            if self.myPlan[i].get_stage_type() == MSStageType::DRIVING {
+                let prevArrived = self.myPlan[i - 1].get_arrived();
+                self.myPlan[i].cast::<MSStageDriving>().m().set_waiting_since(prevArrived);
+            }
+            i += 1;
+        }
     }
 
     /// C++: `void MSTransportable::MSTransportable(const MSTransportable &)` [private]
@@ -1362,7 +1808,7 @@ impl MSTransportable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportable) -> Self {
-        todo!("port MSTransportable::MSTransportable")
+        panic!("MSTransportable copy constructor is invalidated in C++ (private)");
     }
 
     /// C++: `MSTransportable & MSTransportable::operator=(const MSTransportable &)` [private]
@@ -1370,7 +1816,7 @@ impl MSTransportable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportable) -> &mut MSTransportable {
-        todo!("port MSTransportable::operator=")
+        panic!("MSTransportable assignment operator is invalidated in C++ (private)");
     }
 
 }
