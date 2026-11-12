@@ -1,6 +1,7 @@
 //! Port of microsim/MSVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
 
 // C++ MIN2/MAX2 macros: `(a < b ? a : b)` / `(a > b ? a : b)` (NaN-equivalent to the C++ form).
 #[allow(dead_code)]
@@ -848,7 +849,7 @@ impl MSVehicle_Influencer {
     //     return speed;
     // }
     #[allow(unused_variables)]
-    pub fn influence_speed(&mut self, currentTime: SUMOTime, speed: f64, vSafe: f64, vMin: f64, vMax: f64) -> f64 {
+    pub fn influence_speed(&mut self, mut currentTime: SUMOTime, mut speed: f64, vSafe: f64, vMin: f64, vMax: f64) -> f64 {
         // remove leading commands which are no longer valid
         while self.mySpeedTimeLine.len() == 1 || (self.mySpeedTimeLine.len() > 1 && currentTime > self.mySpeedTimeLine[1].0) {
             self.mySpeedTimeLine.remove(0);
@@ -1064,12 +1065,12 @@ impl MSVehicle_Influencer {
                 self.myGapControlState.prevLeader = leaderInfo.0;
 
                 // Calculate desired following speed assuming the alternative headway time
-                // shortcut: C++ casts away const on getCarFollowModel(); mirrored with a raw pointer cast
-                let cfm: &mut MSCFModel = unsafe { &mut *(msVeh.get_vehicle_type().get_car_follow_model() as *const MSCFModel as *mut MSCFModel) };
-                let origTau = cfm.get_headway_time();
-                cfm.set_headway_time(self.myGapControlState.tauCurrent);
-                gapControlSpeed = min2(gapControlSpeed, cfm.follow_speed(msVeh, currentSpeed, fakeDist, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::CURRENT));
-                cfm.set_headway_time(origTau);
+                // C++ const_cast on getCarFollowModel(): go through Ptr, which allows mutable access
+                let cfm: Ptr<MSCFModel> = Ptr::new(msVeh.get_vehicle_type().get_car_follow_model());
+                let origTau = cfm.m().get_headway_time();
+                cfm.m().set_headway_time(self.myGapControlState.tauCurrent);
+                gapControlSpeed = min2(gapControlSpeed, cfm.m().follow_speed(msVeh, currentSpeed, fakeDist, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::CURRENT));
+                cfm.m().set_headway_time(origTau);
 
                 if self.myGapControlState.maxDecel > 0.0 {
                     gapControlSpeed = max2(gapControlSpeed, currentSpeed - ts() * self.myGapControlState.maxDecel);
@@ -1527,8 +1528,8 @@ impl MSVehicle_Influencer {
             // only replace route at this time if the vehicle is moving with the flow
             let isForward = !v.get_lane().is_null() && Ptr::from_mut(v.get_lane().get_edge()) == self.myRemoteRoute[0];
             if isForward {
-                let _ = v.replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
-                v.update_best_lanes(false, Ptr::null());
+                let _ = v.m().replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
+                v.m().update_best_lanes(false, Ptr::null());
             }
         }
     }

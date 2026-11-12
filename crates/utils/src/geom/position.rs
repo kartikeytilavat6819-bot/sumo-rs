@@ -194,6 +194,12 @@ impl Position {
     }
 }
 
+impl crate::common::to_string::ToStringPrec for Position {
+    fn to_string_prec(&self, accuracy: i32) -> String {
+        Position::to_string_prec(self, accuracy)
+    }
+}
+
 /// Formats like the C++ stream operator in an OutputDevice: fixed, gPrecision decimals
 /// (or `{:.N}` precision), z only if non-zero.
 impl fmt::Display for Position {
