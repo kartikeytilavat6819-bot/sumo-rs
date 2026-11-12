@@ -894,21 +894,84 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn add(personID: &str, edgeID: &str, pos: f64, depart: f64, typeID: String) {
-        todo!("port Person::add")
+        let existing = MSNet::get_instance().m().get_person_control().get(personID);
+        if !existing.is_null() {
+            panic!("The person {} to add already exists.", personID);
+        }
+        let departTime: SUMOTime = time2steps(depart);
+        let mut vehicleParams = SUMOVehicleParameter::new();
+        vehicleParams.id = personID.to_string();
+        let vehicleType = MSNet::get_instance().m().get_vehicle_control().get_v_type(&typeID, Ptr::null(), false);
+        if vehicleType.is_null() {
+            panic!("Invalid type '{}' for person '{}'", typeID, personID);
+        }
+        let edge = MSEdge::dictionary_2(edgeID);
+        if edge.is_null() {
+            panic!("Invalid edge '{}' for person: '{}'", edgeID, personID);
+        }
+        if depart < 0. {
+            let proc_ = (-depart) as i32;
+            if proc_ >= DepartDefinition::DEF_MAX as i32 {
+                panic!("Invalid departure time.{} {}", departTime, proc_);
+            }
+            vehicleParams.departProcedure = match proc_ {
+                0 => DepartDefinition::GIVEN,
+                1 => DepartDefinition::TRIGGERED,
+                2 => DepartDefinition::CONTAINER_TRIGGERED,
+                3 => DepartDefinition::NOW,
+                4 => DepartDefinition::SPLIT,
+                _ => DepartDefinition::BEGIN,
+            };
+            vehicleParams.depart = MSNet::get_instance().get_current_time_step();
+        } else if departTime < MSNet::get_instance().get_current_time_step() {
+            vehicleParams.depart = MSNet::get_instance().get_current_time_step();
+            utils::write_warningf!("Departure time=% for person '%' is in the past; using current time=% instead.", depart, personID, time2string(vehicleParams.depart));
+        } else {
+            vehicleParams.depart = departTime;
+        }
+
+        vehicleParams.departPosProcedure = DepartPosDefinition::GIVEN;
+        if pos.abs() > edge.get_length() {
+            panic!("Invalid departure position.");
+        }
+        let mut pos = pos;
+        if pos < 0. {
+            pos += edge.get_length();
+        }
+        vehicleParams.departPos = pos;
+
+        let params = Ptr::from_mut(Box::leak(Box::new(vehicleParams)));
+        let mut plan: MSTransportable_MSTransportablePlan = Vec::new();
+        let waitStage = MSStageWaiting::new(edge, Ptr::null(), 0, departTime, pos, "awaiting departure", true, -1);
+        plan.push(Ptr::from_mut(Box::leak(Box::new(waitStage))).cast::<MSStage>());
+        let planPtr = Ptr::from_mut(Box::leak(Box::new(plan)));
+        // ProcessError from buildPerson is re-raised as TraCIException(e.what()) in C++; here it propagates as a panic with the same text
+        let person = MSNet::get_instance().m().get_person_control().build_person(params, vehicleType, planPtr, Ptr::null());
+        MSNet::get_instance().m().get_person_control().add(person);
     }
 
     /// C++: `void Person::appendStage(const std::string &, const libsumo::TraCIStage &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn append_stage(personID: &str, stage: &TraCIStage) {
-        todo!("port Person::appendStage")
+        let p = Self::get_person(personID);
+        let personStage = Self::convert_tra_ci_stage(stage, personID.to_string());
+        p.m().append_stage(personStage, -1);
     }
 
     /// C++: `void Person::replaceStage(const std::string &, const int, const libsumo::TraCIStage &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn replace_stage(personID: &str, stageIndex: i32, stage: &TraCIStage) {
-        todo!("port Person::replaceStage")
+        let p = Self::get_person(personID);
+        if stageIndex >= p.get_num_remaining_stages() {
+            panic!("Specified stage index:  is not valid for person {}", personID);
+        }
+        let personStage = Self::convert_tra_ci_stage(stage, personID.to_string());
+        // removing the current stage triggers abort+proceed so the replacement
+        // stage must be ready beforehand
+        p.m().append_stage(personStage, stageIndex + 1);
+        p.m().remove_stage(stageIndex, true);
     }
 
     /// C++: `void Person::appendWaitingStage(const std::string &, double, const std::string &, const std::string &)` [static]
@@ -929,7 +992,15 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn append_waiting_stage(personID: &str, duration: f64, description: &str, stopID: &str) {
-        todo!("port Person::appendWaitingStage")
+        let p = Self::get_person(personID);
+        if duration < 0. {
+            panic!("Duration for person: '{}' must not be negative", personID);
+        }
+        if stopID != "" && MSNet::get_instance().get_stopping_place(stopID, SUMO_TAG_BUS_STOP).is_null() {
+            panic!("Invalid stopping place id '{}' for person: '{}'", stopID, personID);
+        }
+        let stage = MSStageWaiting::new(p.get_arrival_edge(), Ptr::null(), time2steps(duration), 0, p.get_arrival_pos(), description, false, -1);
+        p.m().append_stage(Ptr::from_mut(Box::leak(Box::new(stage))).cast::<MSStage>(), -1);
     }
 
     /// C++: `void Person::appendWalkingStage(const std::string &, const std::vector<std::string> &, double, double, double, const std::string &)` [static]
@@ -962,7 +1033,31 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn append_walking_stage(personID: &str, edges: &Vec<String>, arrivalPos: f64, duration: f64, speed: f64, stopID: &str) {
-        todo!("port Person::appendWalkingStage")
+        let p = Self::get_person(personID);
+        let mut edges: ConstMSEdgeVector = Vec::new();
+        // ProcessError from parseEdgesList is re-raised as TraCIException(e.what()) in C++; here it propagates as a panic
+        MSEdge::parse_edges_list_2(edgeIDs, &mut edges, "<unknown>");
+        if edges.is_empty() {
+            panic!("Empty edge list for walking stage of person '{}'.", personID);
+        }
+        let lastEdge = *edges.last().unwrap();
+        if arrivalPos.abs() > lastEdge.get_length() {
+            panic!("Invalid arrivalPos for walking stage of person '{}'.", personID);
+        }
+        let mut arrivalPos = arrivalPos;
+        if arrivalPos < 0. {
+            arrivalPos += lastEdge.get_length();
+        }
+        let mut bs: Ptr<MSStoppingPlace> = Ptr::null();
+        if stopID != "" {
+            bs = MSNet::get_instance().get_stopping_place(stopID, SUMO_TAG_BUS_STOP);
+            if bs.is_null() {
+                panic!("Invalid stopping place id '{}' for person: '{}'", stopID, personID);
+            }
+        }
+        // f64::MAX is MSPModel::UNSPECIFIED_POS_LAT
+        let stage = MSStageWalking::new(p.get_id(), &edges, bs, time2steps(duration), speed, p.get_arrival_pos(), arrivalPos, f64::MAX, -1, "");
+        p.m().append_stage(Ptr::from_mut(Box::leak(Box::new(stage))).cast::<MSStage>(), -1);
     }
 
     /// C++: `void Person::appendDrivingStage(const std::string &, const std::string &, const std::string &, const std::string &)` [static]
@@ -987,7 +1082,25 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn append_driving_stage(personID: &str, toEdge: &str, lines: &str, stopID: &str) {
-        todo!("port Person::appendDrivingStage")
+        let p = Self::get_person(personID);
+        let edge = MSEdge::dictionary_2(toEdge);
+        if edge.is_null() {
+            panic!("Invalid edge '{}' for person: '{}'", toEdge, personID);
+        }
+        if lines.is_empty() {
+            panic!("Empty lines parameter for person: '{}'", personID);
+        }
+        let mut bs: Ptr<MSStoppingPlace> = Ptr::null();
+        if stopID != "" {
+            bs = MSNet::get_instance().get_stopping_place_2(stopID);
+            if bs.is_null() {
+                panic!("Invalid stopping place id '{}' for person: '{}'", stopID, personID);
+            }
+        }
+        let mut tokenizer = StringTokenizer::new(lines);
+        let lineVec: Vec<String> = tokenizer.get_vector();
+        let stage = MSStageDriving::new(Ptr::null(), edge, bs, edge.get_length() - utils::geom::NUMERICAL_EPS, 0.0, &lineVec, "", "", -1);
+        p.m().append_stage(Ptr::from_mut(Box::leak(Box::new(stage))).cast::<MSStage>(), -1);
     }
 
     /// C++: `void Person::removeStage(const std::string &, int)` [static]
@@ -1004,7 +1117,14 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn remove_stage(personID: &str, nextStageIndex: i32) {
-        todo!("port Person::removeStage")
+        let p = Self::get_person(personID);
+        if nextStageIndex >= p.get_num_remaining_stages() {
+            panic!("The stage index must be lower than the number of remaining stages.");
+        }
+        if nextStageIndex < 0 {
+            panic!("The stage index may not be negative.");
+        }
+        p.m().remove_stage(nextStageIndex, true);
     }
 
     /// C++: `void Person::rerouteTraveltime(const std::string &)` [static]
@@ -1060,7 +1180,53 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn reroute_traveltime(personID: &str) {
-        todo!("port Person::rerouteTraveltime")
+        let p = Self::get_person(personID);
+        if p.get_num_remaining_stages() == 0 {
+            panic!("Person '{}' has no remaining stages.", personID);
+        }
+        let from = p.get_edge();
+        let departPos = p.get_edge_pos();
+        // reroute to the start of the next-non-walking stage
+        let firstIndex: i32;
+        if p.get_current_stage_type() == MSStageType::WALKING {
+            firstIndex = 0;
+        } else if p.get_current_stage_type() == MSStageType::WAITING {
+            if p.get_num_remaining_stages() < 2 || p.get_stage_type(1) != MSStageType::WALKING {
+                panic!("Person '{}' cannot reroute after the current stop.", personID);
+            }
+            firstIndex = 1;
+        } else {
+            panic!("Person '{}' cannot reroute in stage type '{}'.", personID, p.get_current_stage_type() as i32);
+        }
+        let mut nextIndex = firstIndex + 1;
+        while nextIndex < p.get_num_remaining_stages() {
+            if p.get_stage_type(nextIndex) != MSStageType::WALKING {
+                break;
+            }
+            nextIndex += 1;
+        }
+        let destStage = p.get_next_stage(nextIndex - 1);
+        let to = *destStage.get_edges().last().unwrap();
+        let arrivalPos = destStage.get_arrival_pos();
+        let speed = p.get_max_speed();
+        let mut newEdges: ConstMSEdgeVector = Vec::new();
+        MSNet::get_instance().get_pedestrian_router(0, &MSNet_Prohibitions::new()).compute(from, to, departPos, arrivalPos, speed, 0, Ptr::null(), p.get_v_type_parameter(), &mut newEdges, false);
+        if newEdges.is_empty() {
+            panic!("Could not find new route for person '{}'.", personID);
+        }
+        let mut oldEdges: ConstMSEdgeVector = p.get_next_stage(firstIndex).get_edges();
+        assert!(!oldEdges.is_empty());
+        if oldEdges.first().unwrap().get_function() != SumoXMLEdgeFunc::NORMAL {
+            oldEdges.remove(0);
+        }
+        if newEdges == oldEdges && (firstIndex + 1 == nextIndex) {
+            return;
+        }
+        if *newEdges.first().unwrap() != from {
+            // @note: maybe this should be done automatically by the router
+            newEdges.insert(0, from);
+        }
+        p.m().replace_walk(&newEdges, departPos, firstIndex, nextIndex);
     }
 
     /// C++: `void Person::moveTo(const std::string &, const std::string &, double, double)` [static]
