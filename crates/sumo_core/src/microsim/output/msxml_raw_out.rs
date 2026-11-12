@@ -24,7 +24,14 @@ impl MSXMLRawOut {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, ec: &MSEdgeControl, timestep: SUMOTime, precision: i32) {
-        todo!("port MSXMLRawOut::write")
+        of.open_tag("timestep").write(" time=\"").write(&time2string(timestep)).write("\"");
+        of.set_precision(precision);
+        let edges = ec.get_edges();
+        for e in edges.iter() {
+            Self::write_edge(of, e, timestep);
+        }
+        of.set_precision(g_precision());
+        of.close_tag("");
     }
 
     /// C++: `void MSXMLRawOut::writeVehicle(OutputDevice &, const MSBaseVehicle &)` [static]
@@ -68,7 +75,41 @@ impl MSXMLRawOut {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicle(of: &mut OutputDevice, veh: &MSBaseVehicle) {
-        todo!("port MSXMLRawOut::writeVehicle")
+        if veh.is_on_road() {
+            of.open_tag("vehicle");
+            of.write_attr(SUMO_ATTR_ID, veh.get_id());
+            of.write_attr(SUMO_ATTR_POSITION, &veh.get_position_on_lane());
+            of.write_attr(SUMO_ATTR_SPEED, &veh.get_speed());
+            // TODO: activate action step length output, if required
+            //of.writeAttr(SUMO_ATTR_ACTIONSTEPLENGTH, veh.getActionStepLength());
+            if !use_meso_sim() {
+                // static_cast<const MSVehicle&>(veh): caller guarantees a microsim vehicle when !gUseMesoSim
+                let microVeh: Ptr<MSVehicle> = Ptr::new(veh).cast::<MSVehicle>();
+                // microsim-specific stuff
+                if sublane() {
+                    let posLat = microVeh.get_lateral_position_on_lane();
+                    of.write_attr(SUMO_ATTR_POSITION_LAT, &posLat);
+                    of.write_attr(SUMO_ATTR_SPEED_LAT, &microVeh.get_lane_change_model_2().get_speed_lat());
+                }
+                let personNumber = microVeh.get_person_number();
+                if personNumber > 0 {
+                    of.write_attr(SUMO_ATTR_PERSON_NUMBER, &personNumber);
+                }
+                let containerNumber = microVeh.get_container_number();
+                if containerNumber > 0 {
+                    of.write_attr(SUMO_ATTR_CONTAINER_NUMBER, &containerNumber);
+                }
+                let persons = microVeh.get_persons();
+                for it_p in persons.iter() {
+                    Self::write_transportable(of, *it_p, SUMO_TAG_PERSON);
+                }
+                let containers = microVeh.get_containers();
+                for it_c in containers.iter() {
+                    Self::write_transportable(of, *it_c, SUMO_TAG_CONTAINER);
+                }
+            }
+            of.close_tag("");
+        }
     }
 
     /// C++: `void MSXMLRawOut::writeEdge(OutputDevice &, const MSEdge &, SUMOTime)` [static, private]
@@ -132,7 +173,60 @@ impl MSXMLRawOut {
     // }
     #[allow(unused_variables)]
     pub fn write_edge(of: &mut OutputDevice, edge: &MSEdge, timestep: SUMOTime) {
-        todo!("port MSXMLRawOut::writeEdge")
+        if !using_internal_lanes() && !edge.is_normal() {
+            return;
+        }
+        //en
+        let mut dump = !omit_empty_edges_on_dump();
+        if !dump {
+            if use_meso_sim() {
+                let mut seg = meso_net().m().get_segment_for_edge(edge, 0.0);
+                while !seg.is_null() {
+                    if seg.get_car_number() != 0 {
+                        dump = true;
+                        break;
+                    }
+                    seg = seg.get_next_segment();
+                }
+            } else {
+                let lanes = edge.get_lanes();
+                for lane in lanes.iter() {
+                    if lane.get_vehicle_number() != 0 {
+                        dump = true;
+                        break;
+                    }
+                }
+            }
+        }
+        //en
+        let persons = edge.get_sorted_persons(timestep, false);
+        let containers = edge.get_sorted_containers(timestep, false);
+        if dump || persons.len() > 0 || containers.len() > 0 {
+            of.open_tag("edge").write(" id=\"").write(edge.get_id()).write("\"");
+            if dump {
+                if use_meso_sim() {
+                    let mut seg = meso_net().m().get_segment_for_edge(edge, 0.0);
+                    while !seg.is_null() {
+                        seg.write_vehicles(of);
+                        seg = seg.get_next_segment();
+                    }
+                } else {
+                    let lanes = edge.get_lanes();
+                    for lane in lanes.iter() {
+                        Self::write_lane(of, lane);
+                    }
+                }
+            }
+            // write persons
+            for it_p in persons.iter() {
+                Self::write_transportable(of, *it_p, SUMO_TAG_PERSON);
+            }
+            // write containers
+            for it_c in containers.iter() {
+                Self::write_transportable(of, *it_c, SUMO_TAG_CONTAINER);
+            }
+            of.close_tag("");
+        }
     }
 
     /// C++: `void MSXMLRawOut::writeLane(OutputDevice &, const MSLane &)` [static, private]
@@ -148,7 +242,12 @@ impl MSXMLRawOut {
     // }
     #[allow(unused_variables)]
     pub fn write_lane(of: &mut OutputDevice, lane: &MSLane) {
-        todo!("port MSXMLRawOut::writeLane")
+        of.open_tag("lane").write_attr(SUMO_ATTR_ID, lane.get_id());
+        for veh in lane.get_vehicles_secure().iter() {
+            Self::write_vehicle(of, veh);
+        }
+        lane.release_vehicles();
+        of.close_tag("");
     }
 
     /// C++: `void MSXMLRawOut::writeTransportable(OutputDevice &, const MSTransportable *, SumoXMLTag)` [static, private]
@@ -164,7 +263,12 @@ impl MSXMLRawOut {
     // }
     #[allow(unused_variables)]
     pub fn write_transportable(of: &mut OutputDevice, p: Ptr<MSTransportable>, tag: SumoXMLTag) {
-        todo!("port MSXMLRawOut::writeTransportable")
+        of.open_tag_id(tag);
+        of.write_attr(SUMO_ATTR_ID, p.get_id());
+        of.write_attr(SUMO_ATTR_POSITION, &p.get_edge_pos());
+        of.write_attr(SUMO_ATTR_ANGLE, &utils::geom::geom_helper::navi_degree(p.get_angle()));
+        of.write_attr(SUMO_ATTR_STAGE, &p.get_current_stage_description());
+        of.close_tag("");
     }
 
     /// C++: `void MSXMLRawOut::MSXMLRawOut(const MSXMLRawOut &)` [private]
@@ -172,7 +276,7 @@ impl MSXMLRawOut {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSXMLRawOut) -> Self {
-        todo!("port MSXMLRawOut::MSXMLRawOut")
+        panic!("MSXMLRawOut copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSXMLRawOut & MSXMLRawOut::operator=(const MSXMLRawOut &)` [private]
@@ -180,7 +284,7 @@ impl MSXMLRawOut {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSXMLRawOut) -> &mut MSXMLRawOut {
-        todo!("port MSXMLRawOut::operator=")
+        panic!("MSXMLRawOut assignment operator is private and undefined in C++")
     }
 
 }
