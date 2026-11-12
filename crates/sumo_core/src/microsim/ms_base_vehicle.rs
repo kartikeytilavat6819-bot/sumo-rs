@@ -3607,7 +3607,7 @@ impl MSBaseVehicle {
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
         // shortcut: the parking-area / bus-stop / container-stop / charging-station length and access checks,
         // the meso segment lookup and the insertion after searchStart are not ported; stops are appended
-        let mut stop = MSStop::new(stopPar.clone());
+        let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
             stop.lane = e.get_first_allowed(self.get_v_class(), false, self.get_routing_mode());
