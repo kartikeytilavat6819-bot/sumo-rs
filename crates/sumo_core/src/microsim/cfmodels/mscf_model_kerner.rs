@@ -1,6 +1,9 @@
 //! Port of microsim/cfmodels/MSCFModel_Kerner.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
 
 /// car-following model by B. Kerner
 /// C++ class `MSCFModel_Kerner` (microsim/cfmodels/MSCFModel_Kerner.h)
@@ -41,7 +44,13 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_Kerner::MSCFModel_Kerner")
+        let myK = vtype.get_parameter().get_cf_param(SUMO_ATTR_K, 0.5);
+        let myPhi = vtype.get_parameter().get_cf_param(SUMO_ATTR_CF_KERNER_PHI, 5.0);
+        let mut base = MSCFModel::new(vtype);
+        let myTauDecel = base.myDecel * base.myHeadwayTime;
+        // Kerner does not drive very precise and may violate minGap on occasion
+        base.myCollisionMinGapFactor = vtype.get_parameter().get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
+        MSCFModel_Kerner { base, myK, myPhi, myTauDecel }
     }
 
     /// C++: `void MSCFModel_Kerner::~MSCFModel_Kerner() noexcept` [virtual]
@@ -49,7 +58,7 @@ impl MSCFModel_Kerner {
     // MSCFModel_Kerner::~MSCFModel_Kerner() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_Kerner::~MSCFModel_Kerner")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_Kerner::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -63,7 +72,10 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_Kerner::finalizeSpeed")
+        let vNext = self.base.finalize_speed(veh, vPos);
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Kerner_VehicleVariables);
+        vars.m().rand = veh.get_rng().m().rand();
+        vNext
     }
 
     /// C++: `double MSCFModel_Kerner::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -74,7 +86,7 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Kerner::followSpeed")
+        min2(self.v(veh, speed, self.max_next_speed(speed, veh), gap2pred, predSpeed), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_Kerner::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -85,7 +97,7 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Kerner::stopSpeed")
+        min2(self.v(veh, speed, self.max_next_speed(speed, veh), gap2pred, 0.), self.max_next_speed(speed, veh))
     }
 
     /// C++: `int MSCFModel_Kerner::getModelID() const` [const, virtual]
@@ -95,7 +107,7 @@ impl MSCFModel_Kerner {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_Kerner::getModelID")
+        SUMO_TAG_CF_BKERNER as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_Kerner::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -106,7 +118,7 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_Kerner::duplicate")
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Kerner::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `MSCFModel::VehicleVariables * MSCFModel_Kerner::createVehicleVariables() const` [const, virtual]
@@ -119,7 +131,8 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_Kerner::createVehicleVariables")
+        let rand = utils::common::rand_helper::rand();
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Kerner_VehicleVariables { base: MSCFModel_VehicleVariables {}, rand })) as *mut MSCFModel_VehicleVariables)
     }
 
     /// C++: `double MSCFModel_Kerner::_v(const MSVehicle *const, double, double, double, double) const` [const, private]
@@ -141,7 +154,21 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, speed: f64, vfree: f64, gap: f64, predSpeed: f64) -> f64 {
-        todo!("port MSCFModel_Kerner::_v")
+        if predSpeed == 0. && gap < 0.01 {
+            return 0.;
+        }
+        // !!! in the following, the prior step is not considered!!!
+        let G = max2(0., speed2dist(self.myK * speed) + self.myPhi / self.myAccel * speed * (speed - predSpeed));
+        let vcond = if gap > G {
+            speed + accel2speed(self.myAccel)
+        } else {
+            speed + max2(accel2speed(-self.myDecel), min2(accel2speed(self.myAccel), predSpeed - speed))
+        };
+        let vsafe = -1. * self.myTauDecel + (self.myTauDecel * self.myTauDecel + (predSpeed * predSpeed) + (2. * self.myDecel * gap)).sqrt();
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Kerner_VehicleVariables);
+        let va = max2(0., min3(vfree, vsafe, vcond)) + vars.rand;
+        let v = max2(0., min2(min2(vfree, va), min2(speed + accel2speed(self.myAccel), vsafe)));
+        v
     }
 
 }
@@ -180,7 +207,12 @@ impl MSCFModel_Kerner_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "BKerner");
+        let internals = f64_to_string_prec(self.rand, 6);
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -196,8 +228,18 @@ impl MSCFModel_Kerner_VehicleVariables {
     //     bis >> rand;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "BKerner" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for BKerner", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        if let Some(v) = bis.next().and_then(|s| s.parse::<f64>().ok()) {
+            self.rand = v;
+        }
+        Ok(())
     }
 
 }
