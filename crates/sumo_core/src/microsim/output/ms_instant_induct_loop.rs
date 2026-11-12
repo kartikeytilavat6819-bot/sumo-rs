@@ -56,6 +56,7 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, od: &mut OutputDevice, lane: Ptr<MSLane>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
+        // shortcut: C++ MSMoveReminder(id, lane) registers this reminder with the lane (doAdd); new() returns by value, so the caller must call MSLane::add_move_reminder after placing it
         let this = MSInstantInductLoop {
             base: MSMoveReminder::new(id, lane, true),
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons),
