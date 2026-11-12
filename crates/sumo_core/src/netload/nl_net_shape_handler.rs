@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// C++ class `NLNetShapeHandler` (netload/NLNetShapeHandler.h)
 pub struct NLNetShapeHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The net to fill (preinitialised)
     pub myNet: Ptr<MSNet>,
     /// mapping between primary internal lane and corresponding secondary internal lane
@@ -16,13 +16,13 @@ pub struct NLNetShapeHandler {
 }
 
 impl std::ops::Deref for NLNetShapeHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NLNetShapeHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -37,7 +37,13 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, net: &mut MSNet) -> Self {
-        todo!("port NLNetShapeHandler::NLNetShapeHandler")
+        Self {
+            base: utils::xml::sumo_sax_handler::new(file, "net"),
+            myNet: Ptr::from_mut(net),
+            myShuffledJunctions: BTreeMap::new(),
+            // determinism: std::set<MSEdge*> is ordered by address in C++ as well, BTreeSet<Ptr> keeps that order
+            myPrimaryEdges: MSEdge::get_all_edges().iter().copied().collect(),
+        }
     }
 
     /// C++: `void NLNetShapeHandler::~NLNetShapeHandler() noexcept` [virtual]
@@ -45,7 +51,7 @@ impl NLNetShapeHandler {
     // NLNetShapeHandler::~NLNetShapeHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLNetShapeHandler::~NLNetShapeHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NLNetShapeHandler::sortInternalShapes()`
@@ -74,7 +80,24 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn sort_internal_shapes(&mut self) {
-        todo!("port NLNetShapeHandler::sortInternalShapes")
+        // even when the alternative network has the same topology as
+        // the primary network, the ids of internal lanes may differ
+        // since they are based on a clockwise sorting of the edges.
+        // hence we must verify connections and shuffle the shapes as needed
+        for (junction, laneMap) in self.myShuffledJunctions.iter() {
+            let mut shapes2: BTreeMap<Ptr<MSLane>, PositionVector> = BTreeMap::new();
+            for lane in junction.get_internal_lanes() {
+                shapes2.insert(lane, lane.get_shape(true).clone());
+            }
+            for (first, second) in laneMap.iter() {
+                let shape = shapes2.entry(*second).or_default().clone();
+                first.m().add_secondary_shape(&shape);
+            }
+        }
+        // final warning
+        if self.myPrimaryEdges.len() > 0 {
+            utils::common::msg_handler::write_warning(&format!("{} edges of the primary network did not occur in the alternative-net-file", self.myPrimaryEdges.len()));
+        }
     }
 
     /// C++: `void NLNetShapeHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -101,7 +124,17 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NLNetShapeHandler::myStartElement")
+        match element {
+            SUMO_TAG_LANE => self.add_lane(attrs),
+            SUMO_TAG_JUNCTION => self.add_junction(attrs),
+            SUMO_TAG_CONNECTION => {
+                if self.myNet.has_internal_links() {
+                    // see sortInternalShapes
+                    self.add_connection(attrs);
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NLNetShapeHandler::addLane(const SUMOSAXAttributes &)` [private]
@@ -125,7 +158,20 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_lane(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLNetShapeHandler::addLane")
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !self.myNet.has_internal_links() && id.starts_with(':') {
+            return;
+        }
+        let lane = MSLane::dictionary_2(&id);
+        if lane.is_null() {
+            utils::common::msg_handler::write_warning(&format!("The lane '{}' does not exist in the primary network.", id));
+            return;
+        }
+        let shape = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, true);
+        lane.m().add_secondary_shape(&shape);
+        self.myPrimaryEdges.remove(&Ptr::from_mut(lane.get_edge()));
     }
 
     /// C++: `void NLNetShapeHandler::addJunction(const SUMOSAXAttributes &)` [private]
@@ -150,7 +196,21 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_junction(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLNetShapeHandler::addJunction")
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !self.myNet.has_internal_links() && id.starts_with(':') {
+            return;
+        }
+        let junction = self.myNet.m().get_junction_control().get(&id).copied().unwrap_or_else(Ptr::null);
+        if junction.is_null() {
+            utils::common::msg_handler::write_warning(&format!("The junction '{}' does not exist in the primary network.", id));
+            return;
+        }
+        let x = attrs.get::<f64>(SUMO_ATTR_X, &id, &mut ok, true);
+        let y = attrs.get::<f64>(SUMO_ATTR_Y, &id, &mut ok, true);
+        let z = attrs.get_opt::<f64>(SUMO_ATTR_Z, &id, &mut ok, 0., true);
+        junction.m().add_secondary_position(&Position::new3(x, y, z));
     }
 
     /// C++: `void NLNetShapeHandler::addConnection(const SUMOSAXAttributes &)` [private]
@@ -189,7 +249,35 @@ impl NLNetShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_connection(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLNetShapeHandler::addConnection")
+        if !attrs.has_attribute(SUMO_ATTR_VIA) {
+            return;
+        }
+        let mut ok = true;
+        let fromID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+        let toID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+        let fromLaneIdx = attrs.get::<i32>(SUMO_ATTR_FROM_LANE, "", &mut ok, true);
+        let toLaneIdx = attrs.get::<i32>(SUMO_ATTR_TO_LANE, "", &mut ok, true);
+        let viaID = attrs.get::<String>(SUMO_ATTR_VIA, "", &mut ok, true);
+        let lane = MSLane::dictionary_2(&viaID);
+        if lane.is_null() {
+            // warning already given in addLane
+            return;
+        }
+        let fromLaneID = format!("{}_{}", fromID, fromLaneIdx);
+        let toLaneID = format!("{}_{}", toID, toLaneIdx);
+
+        if lane.get_link_cont()[0].get_lane().get_id() != toLaneID.as_str()
+                || lane.get_incoming_lanes()[0].lane.get_id() != fromLaneID.as_str() {
+            // mismatch: find the correct lane that connects fromLaneID and toLaneID
+            let junction = lane.get_edge().get_to_junction();
+            for lane2 in junction.get_internal_lanes() {
+                if lane2.get_link_cont()[0].get_lane().get_id() == toLaneID.as_str()
+                        && lane2.get_incoming_lanes()[0].lane.get_id() == fromLaneID.as_str() {
+                    self.myShuffledJunctions.entry(junction).or_default().insert(lane2, lane);
+                    break;
+                }
+            }
+        }
     }
 
     /// C++: `void NLNetShapeHandler::NLNetShapeHandler(const NLNetShapeHandler &)` [private]
@@ -197,7 +285,7 @@ impl NLNetShapeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLNetShapeHandler) -> Self {
-        todo!("port NLNetShapeHandler::NLNetShapeHandler")
+        panic!("NLNetShapeHandler copy constructor is declared private and never defined in C++")
     }
 
     /// C++: `NLNetShapeHandler & NLNetShapeHandler::operator=(const NLNetShapeHandler &)` [private]
@@ -205,7 +293,7 @@ impl NLNetShapeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLNetShapeHandler) -> &mut NLNetShapeHandler {
-        todo!("port NLNetShapeHandler::operator=")
+        panic!("NLNetShapeHandler assignment is declared private and never defined in C++")
     }
 
 }

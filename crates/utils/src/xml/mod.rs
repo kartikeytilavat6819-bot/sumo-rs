@@ -1,5 +1,6 @@
 //! Port of utils/xml
-// shortcut: CommonXMLStructure, GenericHandler, NamespaceIDs and SAXWeightsHandler are not ported yet
+// shortcut: GenericHandler, NamespaceIDs and SAXWeightsHandler are not ported yet
+pub mod common_xml_structure;
 pub mod generic_sax_handler;
 pub mod stand_ins;
 pub mod string_bijection;

@@ -42,7 +42,8 @@ impl RORoute {
     //       myProbability(prop), myRoute(route), myColor(color), myStops(stops) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, costs: f64, prob: f64, route: &ConstROEdgeVector, color: Ptr<RGBColor>, stops: &StopParVector) -> Self {
-        todo!("port RORoute::RORoute")
+        // shortcut: C++ copies the stops into myStops; SUMOVehicleParameter::Stop has no Clone yet (utils/vehicle/sumo_vehicle_parameter.rs, outside this batch), add #[derive(Clone)] there and copy the stops
+        panic!("RORoute::RORoute: copying SUMOVehicleParameter::Stop is not ported yet")
     }
 
     /// C++: `void RORoute::RORoute(const std::string &, const ConstROEdgeVector &)`
@@ -52,7 +53,14 @@ impl RORoute {
     //       myProbability(0.0), myRoute(route), myColor(nullptr), myStops() {}
     #[allow(unused_variables)]
     pub fn new_2(id: &str, route: &ConstROEdgeVector) -> Self {
-        todo!("port RORoute::RORoute")
+        RORoute {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            myCosts: 0.0,
+            myProbability: 0.0,
+            myRoute: route.clone(),
+            myColor: Ptr::null(),
+            myStops: Vec::new(),
+        }
     }
 
     /// C++: `void RORoute::RORoute(const RORoute &)`
@@ -66,7 +74,14 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn new_3(src: &RORoute) -> Self {
-        todo!("port RORoute::RORoute")
+        RORoute {
+            base: Named::new(src.get_id()),
+            myCosts: src.myCosts,
+            myProbability: src.myProbability,
+            myRoute: src.myRoute.clone(),
+            myColor: if src.myColor.is_null() { Ptr::null() } else { Ptr::from_raw(Box::into_raw(Box::new(*src.myColor))) },
+            myStops: Vec::new(),
+        }
     }
 
     /// C++: `void RORoute::~RORoute() noexcept` [virtual]
@@ -76,7 +91,10 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RORoute::~RORoute")
+        if !self.myColor.is_null() {
+            // delete myColor (allocated with Box in the copy constructor or owned from the caller)
+            drop(unsafe { Box::from_raw(self.myColor.as_raw()) });
+        }
     }
 
     /// C++: `const ROEdge * RORoute::getFirst() const` [const]
@@ -86,7 +104,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_first(&self) -> Ptr<ROEdge> {
-        todo!("port RORoute::getFirst")
+        self.myRoute[0]
     }
 
     /// C++: `const ROEdge * RORoute::getLast() const` [const]
@@ -96,7 +114,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_last(&self) -> Ptr<ROEdge> {
-        todo!("port RORoute::getLast")
+        *self.myRoute.last().unwrap()
     }
 
     /// C++: `double RORoute::getCosts() const` [const]
@@ -106,7 +124,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_costs(&self) -> f64 {
-        todo!("port RORoute::getCosts")
+        self.myCosts
     }
 
     /// C++: `double RORoute::getProbability() const` [const]
@@ -116,7 +134,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_probability(&self) -> f64 {
-        todo!("port RORoute::getProbability")
+        self.myProbability
     }
 
     /// C++: `void RORoute::setCosts(double)`
@@ -127,7 +145,7 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn set_costs(&mut self, costs: f64) {
-        todo!("port RORoute::setCosts")
+        self.myCosts = costs;
     }
 
     /// C++: `void RORoute::setProbability(double)`
@@ -138,7 +156,7 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn set_probability(&mut self, prob: f64) {
-        todo!("port RORoute::setProbability")
+        self.myProbability = prob;
     }
 
     /// C++: `int RORoute::size() const` [const]
@@ -148,7 +166,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port RORoute::size")
+        self.myRoute.len() as i32
     }
 
     /// C++: `const ConstROEdgeVector & RORoute::getEdgeVector() const` [const]
@@ -158,7 +176,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_vector(&self) -> &ConstROEdgeVector {
-        todo!("port RORoute::getEdgeVector")
+        &self.myRoute
     }
 
     /// C++: `const RGBColor * RORoute::getColor() const` [const]
@@ -168,7 +186,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_color(&self) -> Ptr<RGBColor> {
-        todo!("port RORoute::getColor")
+        self.myColor
     }
 
     /// C++: `void RORoute::recheckForLoops(const ConstROEdgeVector &)`
@@ -179,7 +197,7 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn recheck_for_loops(&mut self, mandatory: &ConstROEdgeVector) {
-        todo!("port RORoute::recheckForLoops")
+        crate::router::ro_helper::recheck_for_loops(&mut self.myRoute, mandatory);
     }
 
     /// C++: `bool RORoute::isValid(const ROVehicle &, bool, MsgHandler *) const` [const]
@@ -201,7 +219,21 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn is_valid(&self, veh: &ROVehicle, ignoreErrors: bool, mh: Ptr<MsgHandler>) -> bool {
-        todo!("port RORoute::isValid")
+        for i in 1..self.myRoute.len() {
+            let prev = self.myRoute[i - 1];
+            let cur = self.myRoute[i];
+            if !prev.is_connected_to(&cur, veh.get_v_class(), false) {
+                let args: [&dyn utils::common::to_string::ToStringPrec; 3] = [&prev.get_id(), &cur.get_id(), &veh.get_id()];
+                if mh.is_null() {
+                    let t = if ignoreErrors { utils::common::msg_handler::MsgType::Warning } else { utils::common::msg_handler::MsgType::Error };
+                    utils::common::msg_handler::with_instance(t, |h| h.informf("Edge '%' not connected to edge '%' for vehicle '%'.", &args));
+                } else {
+                    mh.m().informf("Edge '%' not connected to edge '%' for vehicle '%'.", &args);
+                }
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool RORoute::isPermitted(const ROVehicle *, MsgHandler *) const` [const]
@@ -222,7 +254,18 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn is_permitted(&self, veh: Ptr<ROVehicle>, mh: Ptr<MsgHandler>) -> bool {
-        todo!("port RORoute::isPermitted")
+        let hasRestrictions = RONet::get_instance().has_param_restrictions();
+        let hasPermissions = RONet::get_instance().has_permissions();
+        if hasRestrictions || hasPermissions {
+            for e in &self.myRoute {
+                if (hasPermissions && e.prohibits(veh, false)) || (hasRestrictions && e.restricts(veh)) {
+                    let args: [&dyn utils::common::to_string::ToStringPrec; 2] = [&veh.get_id(), &e.get_id()];
+                    mh.m().informf("Vehicle '%' is not permitted on Edge '%'", &args);
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// C++: `OutputDevice & RORoute::writeXMLDefinition(OutputDevice &, const ROVehicle *const, const bool, const bool, const bool, const bool, const std::string &) const` [const]
@@ -271,8 +314,44 @@ impl RORoute {
     //     return dev;
     // }
     #[allow(unused_variables)]
-    pub fn write_xml_definition(&self, dev: &mut OutputDevice, veh: Ptr<ROVehicle>, withCosts: bool, asAlternatives: bool, withExitTimes: bool, withLength: bool, id: &str) -> &mut OutputDevice {
-        todo!("port RORoute::writeXMLDefinition")
+    pub fn write_xml_definition<'a>(&self, dev: &'a mut OutputDevice, veh: Ptr<ROVehicle>, withCosts: bool, asAlternatives: bool, withExitTimes: bool, withLength: bool, id: &str) -> &'a mut OutputDevice {
+        dev.open_tag_id(SUMO_TAG_ROUTE);
+        if !id.is_empty() {
+            dev.write_attr(SUMO_ATTR_ID, id);
+        }
+        if withCosts {
+            dev.write_attr(SUMO_ATTR_COST, &self.myCosts);
+        }
+        if asAlternatives {
+            dev.set_precision(8);
+            dev.write_attr(SUMO_ATTR_PROB, &self.myProbability);
+            dev.set_precision(utils::common::std_defs::g_precision());
+        }
+        if !self.myColor.is_null() {
+            dev.write_attr(SUMO_ATTR_COLOR, &(*self.myColor).to_string());
+        }
+        let normalEdges: Vec<String> = self.get_normal_edges().iter().map(|e| e.get_id().to_string()).collect();
+        dev.write_attr(SUMO_ATTR_EDGES, &normalEdges.join(" "));
+        if withExitTimes {
+            let mut exitTimes: Vec<f64> = Vec::new();
+            let mut time = utils::common::time::steps2time(veh.get_departure_time());
+            for roe in &self.myRoute {
+                time += roe.get_travel_time(veh, time);
+                if !roe.is_internal() && !roe.is_taz_connector() {
+                    exitTimes.push(time);
+                }
+            }
+            dev.write_attr("exitTimes", &exitTimes);
+        }
+        if withLength {
+            let mut length = 0.;
+            for roe in &self.myRoute {
+                length += roe.get_length();
+            }
+            dev.write_attr("routeLength", &length);
+        }
+        dev.close_tag("");
+        dev
     }
 
     /// C++: `void RORoute::addProbability(double)`
@@ -283,7 +362,7 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn add_probability(&mut self, prob: f64) {
-        todo!("port RORoute::addProbability")
+        self.myProbability += prob;
     }
 
     /// C++: `const StopParVector & RORoute::getStops() const` [const]
@@ -293,7 +372,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_stops(&self) -> &StopParVector {
-        todo!("port RORoute::getStops")
+        &self.myStops
     }
 
     /// C++: `void RORoute::addStopOffset(const SUMOTime)`
@@ -311,7 +390,14 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn add_stop_offset(&mut self, offset: SUMOTime) {
-        todo!("port RORoute::addStopOffset")
+        for stop in self.myStops.iter_mut() {
+            if stop.until >= 0 {
+                stop.until += offset;
+            }
+            if stop.arrival >= 0 {
+                stop.arrival += offset;
+            }
+        }
     }
 
     /// C++: `ConstROEdgeVector RORoute::getNormalEdges() const` [const]
@@ -328,7 +414,13 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_edges(&self) -> ConstROEdgeVector {
-        todo!("port RORoute::getNormalEdges")
+        let mut tempRoute: ConstROEdgeVector = Vec::new();
+        for roe in &self.myRoute {
+            if !roe.is_internal() && !roe.is_taz_connector() {
+                tempRoute.push(*roe);
+            }
+        }
+        tempRoute
     }
 
     /// C++: `RORoute & RORoute::operator=(const RORoute &)` [private]
@@ -336,7 +428,8 @@ impl RORoute {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RORoute) -> &mut RORoute {
-        todo!("port RORoute::operator=")
+        // C++ assignment operator is private and never defined: assignment is disallowed
+        panic!("RORoute is not assignable (private operator= in C++)")
     }
 
 }

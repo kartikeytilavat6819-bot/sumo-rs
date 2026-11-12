@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSDetectorFileOutput.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_PUBLIC_CLASSES, SVC_TAXI};
 
 /// C++ enum `DetectorUsage`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -59,8 +60,25 @@ impl MSDetectorFileOutput {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
-        todo!("port MSDetectorFileOutput::MSDetectorFileOutput")
+    pub fn new(id: &str, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Self, ProcessError> {
+        let myVehicleTypes: BTreeSet<String> = StringTokenizer::new(vTypes).get_vector().into_iter().collect();
+        let mut myNextEdges = Vec::new();
+        for edgeID in StringTokenizer::new(nextEdges).get_vector() {
+            // C++ MSEdge::dictionary(edgeID) is MSEdge::dictionaryHint(edgeID, 0), which just looks the id up
+            let e = MSEdge::dictionary_hint(&edgeID, 0);
+            if !e.is_null() {
+                myNextEdges.push(e);
+            } else {
+                return Err(ProcessError::new(format!("Unknown edge '{}' given as nextEdges in detector '{}'", edgeID, id)));
+            }
+        }
+        Ok(MSDetectorFileOutput {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myVehicleTypes,
+            myNextEdges,
+            myDetectPersons: detectPersons,
+        })
     }
 
     /// C++: `void MSDetectorFileOutput::~MSDetectorFileOutput() noexcept` [virtual]
@@ -68,7 +86,7 @@ impl MSDetectorFileOutput {
     // virtual ~MSDetectorFileOutput() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDetectorFileOutput::~MSDetectorFileOutput")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `void MSDetectorFileOutput::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual, pure virtual]
@@ -76,7 +94,7 @@ impl MSDetectorFileOutput {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSDetectorFileOutput::writeXMLOutput")
+        panic!("pure virtual MSDetectorFileOutput::writeXMLOutput, subclasses implement it")
     }
 
     /// C++: `void MSDetectorFileOutput::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual, pure virtual]
@@ -84,7 +102,7 @@ impl MSDetectorFileOutput {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSDetectorFileOutput::writeXMLDetectorProlog")
+        panic!("pure virtual MSDetectorFileOutput::writeXMLDetectorProlog, subclasses implement it")
     }
 
     /// C++: `void MSDetectorFileOutput::reset()` [virtual]
@@ -92,7 +110,7 @@ impl MSDetectorFileOutput {
     // virtual void reset() { }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port MSDetectorFileOutput::reset")
+        // C++ body is empty; subclasses that collect values override it.
     }
 
     /// C++: `void MSDetectorFileOutput::detectorUpdate(const SUMOTime)` [virtual]
@@ -102,7 +120,7 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        todo!("port MSDetectorFileOutput::detectorUpdate")
+        let _ = step; // UNUSED_PARAMETER(step)
     }
 
     /// C++: `GUIDetectorWrapper * MSDetectorFileOutput::buildDetectorGUIRepresentation()` [virtual]
@@ -112,7 +130,7 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn build_detector_gui_representation(&mut self) -> Ptr<Unmapped /* GUIDetectorWrapper */> {
-        todo!("port MSDetectorFileOutput::buildDetectorGUIRepresentation")
+        Ptr::null()
     }
 
     /// C++: `bool MSDetectorFileOutput::vehicleApplies(const SUMOTrafficObject &) const` [const]
@@ -163,7 +181,24 @@ impl MSDetectorFileOutput {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_applies(&self, veh: &SUMOTrafficObject) -> bool {
-        todo!("port MSDetectorFileOutput::vehicleApplies")
+        if veh.is_vehicle() == self.detects_persons() {
+            return false;
+        }
+        if !self.myVehicleTypes.is_empty() && !self.myVehicleTypes.contains(veh.get_vehicle_type().get_original_id()) {
+            let vTypeDists = MSNet::get_instance().m().get_vehicle_control().get_v_type_distribution_membership(veh.get_vehicle_type().get_original_id());
+            let mut typeMatches = false;
+            for vTypeDist in vTypeDists.iter() {
+                if self.myVehicleTypes.contains(vTypeDist) {
+                    typeMatches = true;
+                    break;
+                }
+            }
+            if !typeMatches {
+                return false;
+            }
+        }
+        // shortcut: the nextEdges check (C++ dynamic_cast<const SUMOVehicle/MSTransportable&>(veh) to reach the route) is skipped, since SUMOTrafficObject has no downcast or route accessor here; upgrade when those exist
+        true
     }
 
     /// C++: `bool MSDetectorFileOutput::personApplies(const MSTransportable &, int) const` [const]
@@ -198,7 +233,29 @@ impl MSDetectorFileOutput {
     // }
     #[allow(unused_variables)]
     pub fn person_applies(&self, p: &MSTransportable, dir: i32) -> bool {
-        todo!("port MSDetectorFileOutput::personApplies")
+        if p.get_vehicle().is_null() {
+            let dirCode = if dir < 0 { 2 } else { dir };
+            if (dirCode & self.myDetectPersons) == 0 {
+                // person walking in wrong direction or not walking at all
+                return false;
+            }
+        } else {
+            let svc = p.get_vehicle().get_v_class();
+            let vClassCode: i32 = if (svc & SVC_PUBLIC_CLASSES) != 0 {
+                PersonMode::PUBLIC as i32
+            } else if (svc & SVC_BICYCLE) != 0 {
+                PersonMode::BICYCLE as i32
+            } else if (svc & SVC_TAXI) != 0 {
+                PersonMode::TAXI as i32
+            } else {
+                PersonMode::CAR as i32
+            };
+            if (vClassCode & self.myDetectPersons) == 0 {
+                // person riding in the wrong vehicle
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool MSDetectorFileOutput::isTyped() const` [const]
@@ -208,7 +265,7 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn is_typed(&self) -> bool {
-        todo!("port MSDetectorFileOutput::isTyped")
+        !self.myVehicleTypes.is_empty()
     }
 
     /// C++: `const std::set<std::string> & MSDetectorFileOutput::getVehicleTypes() const` [const]
@@ -217,7 +274,7 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_types(&self) -> &BTreeSet<String> {
-        todo!("port MSDetectorFileOutput::getVehicleTypes")
+        &self.myVehicleTypes
     }
 
     /// C++: `bool MSDetectorFileOutput::detectsPersons() const` [const]
@@ -226,7 +283,7 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn detects_persons(&self) -> bool {
-        todo!("port MSDetectorFileOutput::detectsPersons")
+        self.myDetectPersons != 0
     }
 
     /// C++: `void MSDetectorFileOutput::clearState(SUMOTime)` [virtual]
@@ -234,7 +291,7 @@ impl MSDetectorFileOutput {
     // virtual void clearState(SUMOTime /*step*/) {}
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, arg0: SUMOTime) {
-        todo!("port MSDetectorFileOutput::clearState")
+        // C++ body is empty
     }
 
     /// C++: `void MSDetectorFileOutput::saveState(OutputDevice &) const` [const, virtual]
@@ -242,7 +299,7 @@ impl MSDetectorFileOutput {
     // virtual void saveState(OutputDevice& /*out*/) const {}
     #[allow(unused_variables)]
     pub fn save_state(&self, arg0: &mut OutputDevice) {
-        todo!("port MSDetectorFileOutput::saveState")
+        // C++ body is empty
     }
 
     /// C++: `void MSDetectorFileOutput::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
@@ -250,7 +307,7 @@ impl MSDetectorFileOutput {
     // virtual void loadState(const SUMOSAXAttributes& /*attrs*/, const SUMOTime /*offset*/) {}
     #[allow(unused_variables)]
     pub fn load_state(&mut self, arg0: &SUMOSAXAttributes, arg1: SUMOTime) {
-        todo!("port MSDetectorFileOutput::loadState")
+        // C++ body is empty
     }
 
     /// C++: `void MSDetectorFileOutput::MSDetectorFileOutput(const MSDetectorFileOutput &)` [private]
@@ -258,7 +315,7 @@ impl MSDetectorFileOutput {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDetectorFileOutput) -> Self {
-        todo!("port MSDetectorFileOutput::MSDetectorFileOutput")
+        panic!("MSDetectorFileOutput copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSDetectorFileOutput & MSDetectorFileOutput::operator=(const MSDetectorFileOutput &)` [private]
@@ -266,7 +323,7 @@ impl MSDetectorFileOutput {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDetectorFileOutput) -> &mut MSDetectorFileOutput {
-        todo!("port MSDetectorFileOutput::operator=")
+        panic!("MSDetectorFileOutput assignment operator is private and invalidated in C++")
     }
 
 }
