@@ -6,6 +6,15 @@ use utils::common::time::{SUMOTIME_MAX, SUMOTIME_MIN, steps2time, delta_t};
 // C++ `static const int MESegment::PARKING_QUEUE = -1` (used by MEVehicle)
 const PARKING_QUEUE: i32 = -1;
 
+// C++ SUMOVehicleParameter::Stop parametersSet flags (utils/vehicle/SUMOVehicleParameter.h)
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
+
+// Reads the next whitespace-separated token like C++ `istringstream >> x` (default on failure)
+fn next_token<'a, T: std::str::FromStr + Default>(it: &mut impl Iterator<Item = &'a str>) -> T {
+    it.next().and_then(|s| s.parse().ok()).unwrap_or_default()
+}
+
 // C++ MIN2 on doubles (same comparison order as the C++ macro)
 fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
@@ -1150,7 +1159,20 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_current_stopping_time_seconds(&self) -> f64 {
-        todo!("port MEVehicle::getCurrentStoppingTimeSeconds")
+        let mut time = self.myLastEntryTime;
+        for stop in self.myStops.iter() {
+            if stop.reached {
+                time += stop.duration;
+                if stop.pars.until > time {
+                    // @note: this assumes the stop is reached at time. With the way this is called in MESegment (time == entryTime),
+                    // travel time is overestimated of the stop is not at the start of the segment
+                    time = stop.pars.until;
+                }
+            } else {
+                break;
+            }
+        }
+        steps2time(time - self.myLastEntryTime)
     }
 
     /// C++: `bool MEVehicle::replaceRoute(ConstMSRoutePtr, const std::string &, bool, int, bool, bool, std::string *)` [virtual]
@@ -1175,7 +1197,24 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addRouteStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
-        todo!("port MEVehicle::replaceRoute")
+        let me = Ptr::from_mut(self);
+        let seg = self.mySegment;
+        let oldLink = if !seg.is_null() { seg.get_link(me, false) } else { Ptr::null() };
+        if self.base.replace_route(route, info, onInit, offset, addRouteStops, removeStops, msgReturn) {
+            let seg = self.mySegment;
+            if !seg.is_null() {
+                let newLink = seg.get_link(me, false);
+                // update approaching vehicle information
+                if oldLink != newLink {
+                    if !oldLink.is_null() {
+                        oldLink.m().remove_approaching(me.cast::<SUMOVehicle>());
+                    }
+                    self.set_approaching(newLink);
+                }
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MEVehicle::mayProceed()`
@@ -1192,7 +1231,14 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn may_proceed(&mut self) -> bool {
-        todo!("port MEVehicle::mayProceed")
+        if self.mySegment.is_null() {
+            return true;
+        }
+        if !self.end_triggered_stop() {
+            return false;
+        }
+        let seg = self.mySegment;
+        seg.is_open(Ptr::from_mut(self))
     }
 
     /// C++: `void MEVehicle::updateDetectorForWriting(MSMoveReminder *, SUMOTime, SUMOTime)`
@@ -1215,7 +1261,17 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_detector_for_writing(&mut self, rem: Ptr<MSMoveReminder>, currentTime: SUMOTime, exitTime: SUMOTime) {
-        todo!("port MEVehicle::updateDetectorForWriting")
+        for i in 0..self.myMoveReminders.len() {
+            if self.myMoveReminders[i].0 == rem {
+                let seg = self.mySegment;
+                let start = (seg.get_index() as f64) * seg.get_length();
+                let end = ((seg.get_index() + 1) as f64) * seg.get_length();
+                let entry = self.get_last_entry_time();
+                rem.m().update_detector(self, start, end, entry, currentTime, exitTime, false);
+                // shortcut: traceMoveReminder() is _DEBUG-only and not ported
+                return;
+            }
+        }
     }
 
     /// C++: `void MEVehicle::updateDetectors(const SUMOTime, const SUMOTime, const bool, const MSMoveReminder::Notification)`
@@ -1266,7 +1322,41 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_detectors(&mut self, currentTime: SUMOTime, exitTime: SUMOTime, isLeave: bool, reason: MSMoveReminder_Notification) {
-        todo!("port MEVehicle::updateDetectors")
+        // segments of the same edge have the same reminder so no cleaning up must take place
+        let cleanUp = isLeave && (reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT);
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let rem = self.myMoveReminders[i].0;
+            if currentTime != self.get_last_entry_time() && reason < MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR {
+                let seg = self.mySegment;
+                let start = (seg.get_index() as f64) * seg.get_length();
+                let end = ((seg.get_index() + 1) as f64) * seg.get_length();
+                let entry = self.get_last_entry_time();
+                rem.m().update_detector(self, start, end, entry, currentTime, exitTime, cleanUp);
+                // shortcut: traceMoveReminder() is _DEBUG-only and not ported
+            }
+            let keep = if !isLeave {
+                true
+            } else {
+                let seg = self.mySegment;
+                let last_pos = if seg.is_null() { 0. } else { seg.get_length() };
+                rem.m().notify_leave(self, last_pos, reason, Ptr::null())
+            };
+            if keep {
+                if isLeave {
+                    let edge_len = self.get_edge().get_length();
+                    self.myMoveReminders[i].1 += edge_len;
+                    // shortcut: traceMoveReminder("adaptedPos") is _DEBUG-only and not ported
+                }
+                i += 1;
+            } else {
+                // shortcut: traceMoveReminder("remove") is _DEBUG-only and not ported
+                self.myMoveReminders.remove(i);
+            }
+        }
+        if reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            self.myOdometer += self.get_edge().get_length();
+        }
     }
 
     /// C++: `BaseInfluencer & MEVehicle::getBaseInfluencer()` [virtual]
@@ -1365,7 +1455,56 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MEVehicle::saveState")
+        if !self.mySegment.is_null() && MESegment::is_invalid(self.mySegment) {
+            // segment is vaporization target, do not write this vehicle
+            return;
+        }
+        self.base.save_state(out);
+        // assert(mySegment == nullptr || *myCurrEdge == &mySegment->getEdge() || mySegment->getEdge().isInternal());
+        let internals: Vec<SUMOTime> = vec![
+            self.myParameter.parametersSet,
+            self.myDeparture,
+            self.myCurrEdge as SUMOTime,
+            (self.myDepartPos as SUMOTime) * 1000, // store as mm
+            if self.mySegment.is_null() { -1 } else { self.mySegment.get_index() as SUMOTime },
+            self.get_que_index() as SUMOTime,
+            self.myEventTime,
+            self.myLastEntryTime,
+            self.myBlockTime,
+            self.is_stopped() as SUMOTime,
+            self.myPastStops.len() as SUMOTime,
+            self.myWasJammed as SUMOTime,
+            self.myEventIndex,
+            self.myUnqueuedEventTime,
+        ];
+        let state = internals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ");
+        out.write_attr(SUMO_ATTR_STATE, &state);
+
+        // save past stops
+        for stop in self.myPastStops.clone() {
+            stop.write(out, false, true);
+            // do not write started and ended twice
+            if (stop.parametersSet & STOP_STARTED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_STARTED, &utils::common::time::time2string(stop.started));
+            }
+            if (stop.parametersSet & STOP_ENDED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_ENDED, &utils::common::time::time2string(stop.ended));
+            }
+            out.close_tag("");
+        }
+        // save upcoming stops
+        for stop in self.myStops.iter() {
+            stop.write(out);
+        }
+        // save parameters
+        self.myParameter.write_params(out);
+        for dev in self.myDevices.iter() {
+            dev.m().save_state(out);
+        }
+        for item in self.myMoveReminders.iter() {
+            item.0.m().save_reminder_state(out, &*self);
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MEVehicle::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
@@ -1460,7 +1599,97 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
-        todo!("port MEVehicle::loadState")
+        if attrs.has_attribute(SUMO_ATTR_POSITION) {
+            panic!("{}", ProcessError::new("Error: Invalid vehicles in state (may be a micro state)!"));
+        }
+        let me = Ptr::from_mut(self);
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        self.myParameter.m().parametersSet = next_token::<i64>(&mut bis);
+        self.myDeparture = next_token(&mut bis);
+        let routeOffset: i32 = next_token(&mut bis);
+        self.myDepartPos = next_token(&mut bis);
+        let segIndex: i32 = next_token(&mut bis);
+        let queIndex: i32 = next_token(&mut bis);
+        self.myEventTime = next_token(&mut bis);
+        self.myLastEntryTime = next_token(&mut bis);
+        self.myBlockTime = next_token(&mut bis);
+        let stopped = next_token::<i32>(&mut bis) != 0;
+        let mut pastStops: i32 = next_token(&mut bis);
+        self.myWasJammed = next_token::<i32>(&mut bis) != 0;
+        self.myEventIndex = next_token(&mut bis);
+        self.myUnqueuedEventTime = next_token(&mut bis);
+        self.myDepartPos /= 1000.; // was stored as mm
+
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS_RANDOMIZED) {
+            let mut ok = false;
+            let objectid = self.get_id().to_string();
+            self.myArrivalPos = attrs.get::<f64>(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &objectid, &mut ok, true);
+        }
+
+        // load stops
+        self.myStops.clear();
+        // shortcut: addStops(!MSGlobals::gCheckRoutes, &myCurrEdge, false) needs an MSRouteIterator (Unmapped); stops are not re-added from the saved state until it is mapped
+
+        if self.has_departed() {
+            self.myDeparture -= offset;
+            self.myEventTime -= offset;
+            self.myLastEntryTime -= offset;
+            self.myCurrEdge = routeOffset as usize;
+            // fix stops
+            while pastStops > 0 {
+                for rem in self.myMoveReminders.iter() {
+                    rem.0.m().notify_stop_ended();
+                }
+                let pars = self.myStops.front().unwrap().pars.clone();
+                self.myPastStops.push(pars);
+                // shortcut: routeIndex is (int)(stop.edge - myRoute->begin()) on an Unmapped iterator; uses the current route position
+                self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+                self.myStops.pop_front();
+                pastStops -= 1;
+            }
+            if segIndex >= 0 {
+                let curEdge = self.myRoute.index_op(self.myCurrEdge as i32);
+                let meso = MSGlobals::meso_net();
+                let mut seg = meso.m().get_segment_for_edge(&curEdge, 0.);
+                while seg.get_index() != segIndex {
+                    seg = seg.get_next_segment();
+                    if seg.is_null() {
+                        panic!("{}", ProcessError::new(utils::tlf!("Unknown segment '%:%' for vehicle '%' in loaded state.", curEdge.get_id(), segIndex, self.get_id())));
+                    }
+                }
+                self.set_segment(seg, queIndex);
+                if queIndex == PARKING_QUEUE {
+                    meso.m().add_leader_car(me, Ptr::null(), true);
+                    let lane0 = self.get_current_edge().get_lanes()[0];
+                    lane0.m().add_parking(me.cast::<MSBaseVehicle>());
+                }
+            } else {
+                // on teleport
+                self.set_segment(Ptr::null(), 0);
+                debug_assert!(self.myEventTime != SUMOTIME_MIN);
+                MSGlobals::meso_net().m().add_leader_car(me, Ptr::null(), true);
+            }
+            // see MSBaseVehicle constructor
+            if self.myParameter.was_set(VEHPARS_FORCE_REROUTE) {
+                self.calculate_arrival_params(true);
+            }
+        }
+        if self.myBlockTime != SUMOTIME_MAX {
+            self.myBlockTime -= offset;
+        }
+        if self.myUnqueuedEventTime != SUMOTIME_MIN {
+            self.myUnqueuedEventTime -= offset;
+        }
+        let dis = attrs.get_string(SUMO_ATTR_DISTANCE);
+        let mut dis_tokens = dis.split_whitespace();
+        self.myOdometer = next_token(&mut dis_tokens);
+        self.myNumberReroutes = next_token(&mut dis_tokens);
+        if stopped {
+            let front = self.myStops.front_mut().unwrap();
+            front.startedFromState = true;
+            front.reached = true;
+        }
     }
 
 }
