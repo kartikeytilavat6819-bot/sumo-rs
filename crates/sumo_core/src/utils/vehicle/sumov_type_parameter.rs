@@ -1,8 +1,84 @@
 //! Port of utils/vehicle/SUMOVTypeParameter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::cfmodels::mscf_model::LinearApproxMap;
+use crate::utils::emissions::pollutants_interface::PollutantsInterface;
+use utils::common::sumo_vehicle_class::*;
+use utils::common::time::{SUMOTIME_MIN, steps2time, time2string};
 
-/// C++ enum `LatAlignmentDefinition`
+// C++ VTYPEPARS_* bit flags (SUMOVTypeParameter.h), recording which attributes were set
+const VTYPEPARS_LENGTH_SET: i64 = 1;
+const VTYPEPARS_MINGAP_SET: i64 = 1 << 1;
+const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
+const VTYPEPARS_PROBABILITY_SET: i64 = 1 << 3;
+const VTYPEPARS_SPEEDFACTOR_SET: i64 = 1 << 4;
+const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
+const VTYPEPARS_COLOR_SET: i64 = 1 << 6;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+const VTYPEPARS_WIDTH_SET: i64 = 1 << 8;
+const VTYPEPARS_HEIGHT_SET: i64 = 1 << 9;
+const VTYPEPARS_SHAPE_SET: i64 = 1 << 10;
+const VTYPEPARS_OSGFILE_SET: i64 = 1 << 11;
+const VTYPEPARS_IMGFILE_SET: i64 = 1 << 12;
+const VTYPEPARS_IMPATIENCE_SET: i64 = 1 << 13;
+const VTYPEPARS_LANE_CHANGE_MODEL_SET: i64 = 1 << 14;
+const VTYPEPARS_PERSON_CAPACITY: i64 = 1 << 15;
+const VTYPEPARS_BOARDING_DURATION: i64 = 1 << 16;
+const VTYPEPARS_CONTAINER_CAPACITY: i64 = 1 << 17;
+const VTYPEPARS_LOADING_DURATION: i64 = 1 << 18;
+const VTYPEPARS_CAR_FOLLOW_MODEL: i64 = 1 << 19;
+const VTYPEPARS_MAXSPEED_LAT_SET: i64 = 1 << 20;
+const VTYPEPARS_LATALIGNMENT_SET: i64 = 1 << 21;
+const VTYPEPARS_MINGAP_LAT_SET: i64 = 1 << 22;
+const VTYPEPARS_ACTIONSTEPLENGTH_SET: i64 = 1 << 23;
+const VTYPEPARS_DESIRED_MAXSPEED_SET: i64 = 1 << 24;
+const VTYPEPARS_CARRIAGE_LENGTH_SET: i64 = 1 << 25;
+const VTYPEPARS_LOCOMOTIVE_LENGTH_SET: i64 = 1 << 26;
+const VTYPEPARS_CARRIAGE_GAP_SET: i64 = 1 << 27;
+const VTYPEPARS_CARRIAGE_DOORS_SET: i64 = 1 << 28;
+const VTYPEPARS_MANEUVER_ANGLE_TIMES_SET: i64 = 1 << 29;
+const VTYPEPARS_FRONT_SEAT_POS_SET: i64 = 1 << 30;
+const VTYPEPARS_SCALE_SET: i64 = 1 << 31;
+const VTYPEPARS_MASS_SET: i64 = 1 << 32;
+const VTYPEPARS_TTT_SET: i64 = 1 << 33;
+const VTYPEPARS_TTT_BIDI_SET: i64 = 1 << 34;
+const VTYPEPARS_SEATING_WIDTH_SET: i64 = 1 << 35;
+const VTYPEPARS_SPEEDFACTOR_PREMATURE_SET: i64 = 1 << 36;
+const VTYPEPARS_PARKING_BADGES_SET: i64 = 1 << 37;
+const VTYPEPARS_BOARDING_FACTOR_SET: i64 = 1 << 38;
+// C++ VTYPEPARS_DEFAULT_EMERGENCYDECEL_DEFAULT / _DECEL
+const VTYPEPARS_DEFAULT_EMERGENCYDECEL_DEFAULT: f64 = -1.0;
+const VTYPEPARS_DEFAULT_EMERGENCYDECEL_DECEL: f64 = -2.0;
+
+/// C++ `#define EMPREFIX std::string("HBEFA4/")`
+const EMPREFIX: &str = "HBEFA4/";
+
+/// `std::string` + `ProcessError` throw: C++ `throw ProcessError(msg)` becomes a panic carrying the error
+fn throw_process_error(msg: String) -> ! {
+    std::panic::panic_any(ProcessError::new(msg))
+}
+
+/// C++ `StringUtils::toDouble` / `toInt` throw on bad input; the Rust helpers return Result
+fn or_throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{}", e))
+}
+
+/// C++ `Distribution_Parameterized::setParameter(1, v)` (index 1 always exists on the 4-parameter speedFactor)
+fn set_speed_factor_deviation(speedFactor: &mut DistributionParameterized, v: f64) {
+    speedFactor.set_parameter(1, v).unwrap();
+}
+
+/// C++ `LinearApproxHelpers::LinearApproxMap::operator[]` on the sorted-vector representation
+fn linear_approx_map_set(map: &mut LinearApproxMap, key: f64, value: f64) {
+    let pos = map.partition_point(|(k, _)| *k < key);
+    if pos < map.len() && map[pos].0 == key {
+        map[pos].1 = value;
+    } else {
+        map.insert(pos, (key, value));
+    }
+}
+
+/// C++ `LatAlignmentDefinition` (SUMOVTypeParameter.h)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i64)]
 pub enum LatAlignmentDefinition {
@@ -40,7 +116,7 @@ pub struct SUMOVTypeParameter {
     /// The probability when being added to a distribution without an explicit probability
     pub defaultProbability: f64,
     /// The factor by which the maximum speed may deviate from the allowed max speed on the street
-    pub speedFactor: Unmapped /* Distribution_Parameterized */,
+    pub speedFactor: DistributionParameterized,
     /// The emission class of this vehicle
     pub emissionClass: SUMOEmissionClass,
     /// The mass
@@ -227,16 +303,90 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn new(vtid: &str, vc: SUMOVehicleClass) -> Self {
-        todo!("port SUMOVTypeParameter::SUMOVTypeParameter")
+        // member initialiser emissionClass(getClassByName(EMPREFIX + "default", vclass)) runs before the body;
+        // its value is overwritten by the VClassDefaultValues below, but the call itself is kept for ordering
+        PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}default"), vc);
+        let mut cfModel = SUMO_TAG_CF_KRAUSS;
+        if utils::options::options_cont::exists("carfollow.model") {
+            // check for valid value has been performed in MSFrame
+            cfModel = or_throw(CarFollowModels.get(&utils::options::options_cont::get_string("carfollow.model")));
+        }
+        // obtain default values depending of vclass
+        let defaultValues = SUMOVTypeParameter_VClassDefaultValues::new(vc);
+        let mut speedFactor = defaultValues.speedFactor.clone();
+        // check if default speeddev was defined
+        if utils::options::options_cont::exists("default.speeddev") {
+            let defaultSpeedDev = utils::options::options_cont::get_float("default.speeddev");
+            if defaultSpeedDev >= 0. {
+                set_speed_factor_deviation(&mut speedFactor, defaultSpeedDev);
+            }
+        } else {
+            set_speed_factor_deviation(&mut speedFactor, -1.);
+        }
+        let mut result = SUMOVTypeParameter {
+            base: Parameterised::new(),
+            id: vtid.to_string(),
+            length: defaultValues.length,
+            minGap: defaultValues.minGap,
+            maxSpeed: defaultValues.maxSpeed,
+            desiredMaxSpeed: defaultValues.desiredMaxSpeed,
+            actionStepLength: 0,
+            defaultProbability: DEFAULT_VEH_PROB,
+            speedFactor,
+            emissionClass: defaultValues.emissionClass,
+            mass: defaultValues.mass,
+            color: RGBColor::DEFAULT_COLOR,
+            vehicleClass: vc,
+            impatience: 0.0,
+            personCapacity: defaultValues.personCapacity,
+            containerCapacity: defaultValues.containerCapacity,
+            boardingDuration: 500,
+            loadingDuration: 90000,
+            scale: 1.,
+            width: defaultValues.width,
+            height: defaultValues.height,
+            shape: defaultValues.shape,
+            osgFile: defaultValues.osgFile,
+            imgFile: String::new(),
+            carriageImages: Vec::new(),
+            cfModel,
+            cfParameter: BTreeMap::new(),
+            lcParameter: BTreeMap::new(),
+            jmParameter: BTreeMap::new(),
+            lcModel: LaneChangeModel::DEFAULT,
+            maxSpeedLat: 1.0,
+            latAlignmentOffset: 0.0,
+            latAlignmentProcedure: defaultValues.latAlignmentProcedure,
+            minGapLat: defaultValues.minGapLat,
+            scaleVisual: 1.,
+            carriageLength: defaultValues.carriageLength,
+            locomotiveLength: defaultValues.locomotiveLength,
+            carriageGap: 1.,
+            carriageDoors: defaultValues.carriageDoors,
+            carriageDoorWidth: defaultValues.carriageDoorWidth,
+            maxPlatformDistance: defaultValues.maxPlatformDistance,
+            timeToTeleport: SUMOTIME_MIN,
+            timeToTeleportBidi: SUMOTIME_MIN,
+            speedFactorPremature: -1.,
+            frontSeatPos: 1.7,
+            seatingWidth: -1.,
+            parkingBadges: Vec::new(),
+            boardingFactor: 1.,
+            parametersSet: 0,
+            saved: false,
+            onlyReferenced: false,
+            paramRestrictions: Vec::new(),
+            myManoeuverAngleTimes: BTreeMap::new(),
+        };
+        result.set_manoeuver_angle_times(vc);
+        result
     }
 
     /// C++: `void SUMOVTypeParameter::~SUMOVTypeParameter() noexcept` [virtual]
     /// virtual destructor
     // virtual ~SUMOVTypeParameter() {}
     #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        todo!("port SUMOVTypeParameter::~SUMOVTypeParameter")
-    }
+    pub fn drop_(&mut self) {}
 
     /// C++: `bool SUMOVTypeParameter::wasSet(long long) const` [const]
     /// Returns whether the given parameter was set
@@ -245,7 +395,7 @@ impl SUMOVTypeParameter {
     //     }
     #[allow(unused_variables)]
     pub fn was_set(&self, what: i64) -> bool {
-        todo!("port SUMOVTypeParameter::wasSet")
+        (self.parametersSet & what) != 0
     }
 
     /// C++: `void SUMOVTypeParameter::write(OutputDevice &) const` [const]
@@ -434,7 +584,183 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice) {
-        todo!("port SUMOVTypeParameter::write")
+        // first check if vehicle type can be written
+        if self.onlyReferenced {
+            return;
+        }
+        // open vehicle tag
+        dev.open_tag_id(SUMO_TAG_VTYPE);
+        // write ID (always needed)
+        dev.write_attr(SUMO_ATTR_ID, &self.id);
+        // write parameters depending if is set
+        if self.was_set(VTYPEPARS_LENGTH_SET) {
+            dev.write_attr(SUMO_ATTR_LENGTH, &self.length);
+        }
+        if self.was_set(VTYPEPARS_MINGAP_SET) {
+            dev.write_attr(SUMO_ATTR_MINGAP, &self.minGap);
+        }
+        if self.was_set(VTYPEPARS_MAXSPEED_SET) {
+            dev.write_attr(SUMO_ATTR_MAXSPEED, &self.maxSpeed);
+        }
+        if self.was_set(VTYPEPARS_DESIRED_MAXSPEED_SET) {
+            dev.write_attr(SUMO_ATTR_DESIRED_MAXSPEED, &self.desiredMaxSpeed);
+        }
+        if self.was_set(VTYPEPARS_PROBABILITY_SET) {
+            dev.write_attr(SUMO_ATTR_PROB, &self.defaultProbability);
+        }
+        if self.was_set(VTYPEPARS_SPEEDFACTOR_SET) {
+            dev.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.speedFactor.to_str(dev.get_precision()));
+        }
+        if self.was_set(VTYPEPARS_ACTIONSTEPLENGTH_SET) {
+            // Note: action step length is only exposed in seconds to the user
+            dev.write_attr(SUMO_ATTR_ACTIONSTEPLENGTH, &steps2time(self.actionStepLength));
+        }
+        if self.was_set(VTYPEPARS_VEHICLECLASS_SET) {
+            dev.write_attr(SUMO_ATTR_VCLASS, SUMO_VEHICLE_CLASS_STRINGS.get_string(self.vehicleClass).unwrap());
+        }
+        if self.was_set(VTYPEPARS_EMISSIONCLASS_SET) {
+            dev.write_attr(SUMO_ATTR_EMISSIONCLASS, &PollutantsInterface::get_name(self.emissionClass));
+        }
+        if self.was_set(VTYPEPARS_MASS_SET) {
+            dev.write_attr(SUMO_ATTR_MASS, &self.mass);
+        }
+        if self.was_set(VTYPEPARS_IMPATIENCE_SET) {
+            if self.impatience == -f64::MAX {
+                dev.write_attr(SUMO_ATTR_IMPATIENCE, "off");
+            } else {
+                dev.write_attr(SUMO_ATTR_IMPATIENCE, &self.impatience);
+            }
+        }
+        if self.was_set(VTYPEPARS_SHAPE_SET) {
+            dev.write_attr(SUMO_ATTR_GUISHAPE, &get_vehicle_shape_name(self.shape));
+        }
+        if self.was_set(VTYPEPARS_WIDTH_SET) {
+            dev.write_attr(SUMO_ATTR_WIDTH, &self.width);
+        }
+        if self.was_set(VTYPEPARS_HEIGHT_SET) {
+            dev.write_attr(SUMO_ATTR_HEIGHT, &self.height);
+        }
+        if self.was_set(VTYPEPARS_COLOR_SET) {
+            dev.write_attr(SUMO_ATTR_COLOR, &self.color);
+        }
+        if self.was_set(VTYPEPARS_OSGFILE_SET) {
+            dev.write_attr(SUMO_ATTR_OSGFILE, &self.osgFile);
+        }
+        if self.was_set(VTYPEPARS_IMGFILE_SET) {
+            dev.write_attr(SUMO_ATTR_IMGFILE, &self.imgFile);
+        }
+        if self.was_set(VTYPEPARS_PERSON_CAPACITY) {
+            dev.write_attr(SUMO_ATTR_PERSON_CAPACITY, &self.personCapacity);
+        }
+        if self.was_set(VTYPEPARS_CONTAINER_CAPACITY) {
+            dev.write_attr(SUMO_ATTR_CONTAINER_CAPACITY, &self.containerCapacity);
+        }
+        if self.was_set(VTYPEPARS_BOARDING_DURATION) {
+            dev.write_attr(SUMO_ATTR_BOARDING_DURATION, &time2string(self.boardingDuration));
+        }
+        if self.was_set(VTYPEPARS_LOADING_DURATION) {
+            dev.write_attr(SUMO_ATTR_LOADING_DURATION, &time2string(self.loadingDuration));
+        }
+        if self.was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
+            dev.write_attr(SUMO_ATTR_MAXSPEED_LAT, &self.maxSpeedLat);
+        }
+        if self.was_set(VTYPEPARS_LATALIGNMENT_SET) {
+            match self.latAlignmentProcedure {
+                LatAlignmentDefinition::GIVEN => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, &self.latAlignmentOffset);
+                }
+                LatAlignmentDefinition::RIGHT => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "right");
+                }
+                LatAlignmentDefinition::CENTER => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "center");
+                }
+                LatAlignmentDefinition::ARBITRARY => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "arbitrary");
+                }
+                LatAlignmentDefinition::NICE => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "nice");
+                }
+                LatAlignmentDefinition::COMPACT => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "compact");
+                }
+                LatAlignmentDefinition::LEFT => {
+                    dev.write_attr(SUMO_ATTR_LATALIGNMENT, "left");
+                }
+                LatAlignmentDefinition::DEFAULT => {}
+            }
+        }
+        if self.was_set(VTYPEPARS_MINGAP_LAT_SET) {
+            dev.write_attr(SUMO_ATTR_MINGAP_LAT, &self.minGapLat);
+        }
+        if self.was_set(VTYPEPARS_MANEUVER_ANGLE_TIMES_SET) {
+            dev.write_attr(SUMO_ATTR_MANEUVER_ANGLE_TIMES, &self.get_manoeuver_angle_times_s());
+        }
+        if self.was_set(VTYPEPARS_SCALE_SET) {
+            dev.write_attr(SUMO_ATTR_SCALE, &self.scale);
+        }
+        if self.was_set(VTYPEPARS_TTT_SET) {
+            dev.write_attr(SUMO_ATTR_TIME_TO_TELEPORT, &time2string(self.timeToTeleport));
+        }
+        if self.was_set(VTYPEPARS_TTT_BIDI_SET) {
+            dev.write_attr(SUMO_ATTR_TIME_TO_TELEPORT_BIDI, &time2string(self.timeToTeleportBidi));
+        }
+        if self.was_set(VTYPEPARS_SPEEDFACTOR_PREMATURE_SET) {
+            dev.write_attr(SUMO_ATTR_SPEEDFACTOR_PREMATURE, &self.speedFactorPremature);
+        }
+        if self.was_set(VTYPEPARS_BOARDING_FACTOR_SET) {
+            dev.write_attr(SUMO_ATTR_BOARDING_FACTOR, &self.boardingFactor);
+        }
+        if self.was_set(VTYPEPARS_LANE_CHANGE_MODEL_SET) {
+            dev.write_attr(SUMO_ATTR_LANE_CHANGE_MODEL, &self.lcModel);
+        }
+        // Write Lane Change Model parameters
+        for (lcParamKey, lcParamValue) in &self.lcParameter {
+            dev.write_attr(*lcParamKey, lcParamValue);
+        }
+        // Write Junction Model parameter
+        for (jmParamKey, jmParamValue) in &self.jmParameter {
+            dev.write_attr(*jmParamKey, jmParamValue);
+        }
+        if self.was_set(VTYPEPARS_CAR_FOLLOW_MODEL) {
+            dev.write_attr(SUMO_ATTR_CAR_FOLLOW_MODEL, CarFollowModels.get_string(self.cfModel));
+        }
+        // Write Car Following Model parameters
+        for (cfParamKey, cfParamValue) in &self.cfParameter {
+            dev.write_attr(*cfParamKey, cfParamValue);
+        }
+        // Write carriage length
+        if self.was_set(VTYPEPARS_CARRIAGE_LENGTH_SET) {
+            dev.open_tag_id(SUMO_TAG_PARAM);
+            dev.write_attr(SUMO_ATTR_KEY, Attrs.get_string(SUMO_ATTR_CARRIAGE_LENGTH));
+            dev.write_attr(SUMO_ATTR_VALUE, &utils::common::to_string::to_string(&self.carriageLength));
+            dev.close_tag("");
+        }
+        // Write locomotive length
+        if self.was_set(VTYPEPARS_LOCOMOTIVE_LENGTH_SET) {
+            dev.open_tag_id(SUMO_TAG_PARAM);
+            dev.write_attr(SUMO_ATTR_KEY, Attrs.get_string(SUMO_ATTR_LOCOMOTIVE_LENGTH));
+            dev.write_attr(SUMO_ATTR_VALUE, &utils::common::to_string::to_string(&self.locomotiveLength));
+            dev.close_tag("");
+        }
+        // Write carriage gap
+        if self.was_set(VTYPEPARS_CARRIAGE_GAP_SET) {
+            dev.open_tag_id(SUMO_TAG_PARAM);
+            dev.write_attr(SUMO_ATTR_KEY, Attrs.get_string(SUMO_ATTR_CARRIAGE_GAP));
+            dev.write_attr(SUMO_ATTR_VALUE, &utils::common::to_string::to_string(&self.carriageGap));
+            dev.close_tag("");
+        }
+        // Write carriage doors
+        if self.was_set(VTYPEPARS_CARRIAGE_DOORS_SET) {
+            dev.open_tag_id(SUMO_TAG_PARAM);
+            dev.write_attr(SUMO_ATTR_KEY, Attrs.get_string(SUMO_ATTR_CARRIAGE_DOORS));
+            dev.write_attr(SUMO_ATTR_VALUE, &self.carriageDoors.to_string());
+            dev.close_tag("");
+        }
+        // Write rest of parameters
+        self.write_params(dev);
+        // close tag
+        dev.close_tag("");
     }
 
     /// C++: `double SUMOVTypeParameter::getCFParam(const SumoXMLAttr, const double) const` [const]
@@ -449,7 +775,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_cf_param(&self, attr: SumoXMLAttr, defaultValue: f64) -> f64 {
-        todo!("port SUMOVTypeParameter::getCFParam")
+        if let Some(v) = self.cfParameter.get(&attr) {
+            or_throw(utils::common::string_utils::to_double(v))
+        } else {
+            defaultValue
+        }
     }
 
     /// C++: `std::vector<double> SUMOVTypeParameter::getCFValueTable(SumoXMLAttr) const` [const]
@@ -467,7 +797,14 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_cf_value_table(&self, attr: SumoXMLAttr) -> Vec<f64> {
-        todo!("port SUMOVTypeParameter::getCFValueTable")
+        let mut result = Vec::new();
+        let values = self.get_cf_param_string(attr, String::new());
+        if !values.is_empty() {
+            for value in utils::common::string_tokenizer::StringTokenizer::new(&values).get_vector() {
+                result.push(or_throw(utils::common::string_utils::to_double(&value)));
+            }
+        }
+        result
     }
 
     /// C++: `std::string SUMOVTypeParameter::getCFParamString(const SumoXMLAttr, const std::string) const` [const]
@@ -482,7 +819,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_cf_param_string(&self, attr: SumoXMLAttr, defaultValue: String) -> String {
-        todo!("port SUMOVTypeParameter::getCFParamString")
+        if let Some(v) = self.cfParameter.get(&attr) {
+            v.clone()
+        } else {
+            defaultValue
+        }
     }
 
     /// C++: `double SUMOVTypeParameter::getLCParam(const SumoXMLAttr, const double) const` [const]
@@ -497,7 +838,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_lc_param(&self, attr: SumoXMLAttr, defaultValue: f64) -> f64 {
-        todo!("port SUMOVTypeParameter::getLCParam")
+        if let Some(v) = self.lcParameter.get(&attr) {
+            or_throw(utils::common::string_utils::to_double(v))
+        } else {
+            defaultValue
+        }
     }
 
     /// C++: `std::string SUMOVTypeParameter::getLCParamString(const SumoXMLAttr, const std::string &) const` [const]
@@ -512,7 +857,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_lc_param_string(&self, attr: SumoXMLAttr, defaultValue: &str) -> String {
-        todo!("port SUMOVTypeParameter::getLCParamString")
+        if let Some(v) = self.lcParameter.get(&attr) {
+            v.clone()
+        } else {
+            defaultValue.to_string()
+        }
     }
 
     /// C++: `const SubParams & SUMOVTypeParameter::getLCParams() const` [const]
@@ -520,7 +869,7 @@ impl SUMOVTypeParameter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_lc_params(&self) -> &SUMOVTypeParameter_SubParams {
-        todo!("port SUMOVTypeParameter::getLCParams")
+        &self.lcParameter
     }
 
     /// C++: `double SUMOVTypeParameter::getJMParam(const SumoXMLAttr, const double) const` [const]
@@ -535,7 +884,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_jm_param(&self, attr: SumoXMLAttr, defaultValue: f64) -> f64 {
-        todo!("port SUMOVTypeParameter::getJMParam")
+        if let Some(v) = self.jmParameter.get(&attr) {
+            or_throw(utils::common::string_utils::to_double(v))
+        } else {
+            defaultValue
+        }
     }
 
     /// C++: `std::string SUMOVTypeParameter::getJMParamString(const SumoXMLAttr, const std::string) const` [const]
@@ -550,7 +903,11 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_jm_param_string(&self, attr: SumoXMLAttr, defaultValue: String) -> String {
-        todo!("port SUMOVTypeParameter::getJMParamString")
+        if let Some(v) = self.jmParameter.get(&attr) {
+            v.clone()
+        } else {
+            defaultValue
+        }
     }
 
     /// C++: `void SUMOVTypeParameter::cacheParamRestrictions(const std::vector<std::string> &)`
@@ -562,7 +919,10 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn cache_param_restrictions(&mut self, restrictionKeys: &Vec<String>) {
-        todo!("port SUMOVTypeParameter::cacheParamRestrictions")
+        for key in restrictionKeys {
+            let value = self.get_parameter(key, "0");
+            self.paramRestrictions.push(or_throw(utils::common::string_utils::to_double(&value)));
+        }
     }
 
     /// C++: `void SUMOVTypeParameter::initRailVisualizationParameters(const std::string)`
@@ -688,7 +1048,114 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn init_rail_visualization_parameters(&mut self, fileName: String) {
-        todo!("port SUMOVTypeParameter::initRailVisualizationParameters")
+        if self.has_parameter("scaleVisual") {
+            self.scaleVisual = or_throw(utils::common::string_utils::to_double(&self.get_parameter("scaleVisual", "")));
+        }
+        if self.has_parameter("carriageLength") {
+            self.carriageLength = or_throw(utils::common::string_utils::to_double(&self.get_parameter("carriageLength", "")));
+            self.parametersSet |= VTYPEPARS_CARRIAGE_LENGTH_SET;
+        } else {
+            match self.shape {
+                SUMOVehicleShape::BusFlexible => {
+                    self.carriageLength = 8.25; // 16.5 overall, 2 modules http://de.wikipedia.org/wiki/Ikarus_180
+                    self.carriageGap = 0.;
+                }
+                SUMOVehicleShape::Rail => {
+                    if self.vehicleClass == SVC_RAIL_ELECTRIC {
+                        self.carriageLength = 24.5;
+                        self.locomotiveLength = 19.100; // https://en.wikipedia.org/wiki/DB_Class_101
+                    } else if self.vehicleClass == SVC_RAIL_FAST {
+                        self.carriageLength = 24.775; // http://de.wikipedia.org/wiki/ICE_3
+                        self.locomotiveLength = 25.835;
+                    } else {
+                        self.carriageLength = 24.5; // http://de.wikipedia.org/wiki/UIC-Y-Wagen_%28DR%29
+                        self.locomotiveLength = 16.4; // https://en.wikipedia.org/wiki/DB_Class_218
+                    }
+                }
+                SUMOVehicleShape::RailCar => {
+                    if self.vehicleClass == SVC_TRAM {
+                        self.carriageLength = 5.71; // http://de.wikipedia.org/wiki/Bombardier_Flexity_Berlin
+                        self.locomotiveLength = 5.71;
+                    } else if self.vehicleClass == SVC_RAIL_URBAN {
+                        self.carriageLength = 18.4; // https://en.wikipedia.org/wiki/DBAG_Class_481
+                        self.locomotiveLength = 18.4;
+                    } else {
+                        self.carriageLength = 16.85; // 67.4m overall, 4 carriages http://de.wikipedia.org/wiki/DB-Baureihe_423
+                    }
+                }
+                SUMOVehicleShape::RailCargo => {
+                    self.carriageLength = 13.86; // UIC 571-1 http://de.wikipedia.org/wiki/Flachwagen
+                }
+                SUMOVehicleShape::TruckSemitrailer => {
+                    self.carriageLength = 13.5;
+                    self.locomotiveLength = 2.5;
+                    self.carriageGap = 0.5;
+                }
+                SUMOVehicleShape::Truck1Trailer => {
+                    self.carriageLength = 6.75;
+                    self.locomotiveLength = 2.5 + 6.75;
+                    self.carriageGap = 0.5;
+                }
+                _ => {}
+            }
+        }
+        if self.has_parameter("locomotiveLength") {
+            self.locomotiveLength = or_throw(utils::common::string_utils::to_double(&self.get_parameter("locomotiveLength", "")));
+            self.parametersSet |= VTYPEPARS_LOCOMOTIVE_LENGTH_SET;
+        } else if self.locomotiveLength < 0. {
+            self.locomotiveLength = self.carriageLength;
+        }
+        if self.has_parameter("carriageGap") {
+            self.carriageGap = or_throw(utils::common::string_utils::to_double(&self.get_parameter("carriageGap", "")));
+            self.parametersSet |= VTYPEPARS_CARRIAGE_GAP_SET;
+        }
+        if self.has_parameter("carriageDoors") {
+            self.carriageDoors = or_throw(utils::common::string_utils::to_int(&self.get_parameter("carriageDoors", "")));
+            self.parametersSet |= VTYPEPARS_CARRIAGE_DOORS_SET;
+        }
+        if self.has_parameter("carriageDoorWidth") {
+            self.carriageDoorWidth = or_throw(utils::common::string_utils::to_double(&self.get_parameter("carriageDoorWidth", "")));
+        }
+        if self.has_parameter("maxPlatformDistance") {
+            self.maxPlatformDistance = or_throw(utils::common::string_utils::to_double(&self.get_parameter("maxPlatformDistance", "")));
+        }
+        if self.has_parameter("frontSeatPos") {
+            self.frontSeatPos = or_throw(utils::common::string_utils::to_double(&self.get_parameter("frontSeatPos", "")));
+            self.parametersSet |= VTYPEPARS_FRONT_SEAT_POS_SET;
+        } else {
+            match self.shape {
+                SUMOVehicleShape::Ship => {
+                    self.frontSeatPos = 5.;
+                }
+                SUMOVehicleShape::Delivery => {
+                    self.frontSeatPos = 1.2;
+                }
+                SUMOVehicleShape::Bicycle => {
+                    self.frontSeatPos = 0.6;
+                }
+                SUMOVehicleShape::Moped | SUMOVehicleShape::Motorcycle => {
+                    self.frontSeatPos = 0.9;
+                }
+                SUMOVehicleShape::Bus | SUMOVehicleShape::BusCoach | SUMOVehicleShape::BusFlexible | SUMOVehicleShape::BusTrolley => {
+                    self.frontSeatPos = 0.5;
+                }
+                SUMOVehicleShape::Truck | SUMOVehicleShape::Truck1Trailer | SUMOVehicleShape::TruckSemitrailer => {
+                    self.frontSeatPos = 0.8;
+                }
+                _ => {}
+            }
+        }
+
+        if self.has_parameter("seatingWidth") {
+            self.seatingWidth = or_throw(utils::common::string_utils::to_double(&self.get_parameter("seatingWidth", "")));
+            self.parametersSet |= VTYPEPARS_SEATING_WIDTH_SET;
+        }
+        if self.has_parameter("carriageImages") {
+            let rawFiles = utils::common::string_tokenizer::StringTokenizer::with_token(&self.get_parameter("carriageImages", ""), ",", false).get_vector();
+            for f in rawFiles {
+                self.carriageImages.push(utils::common::file_helpers::check_for_relativity(&f, &fileName));
+            }
+        }
     }
 
     /// C++: `double SUMOVTypeParameter::getLength() const` [const]
@@ -698,7 +1165,7 @@ impl SUMOVTypeParameter {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port SUMOVTypeParameter::getLength")
+        self.length
     }
 
     /// C++: `double SUMOVTypeParameter::getDefaultAccel(const SUMOVehicleClass)` [static]
@@ -741,7 +1208,22 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_default_accel(vc: SUMOVehicleClass) -> f64 {
-        todo!("port SUMOVTypeParameter::getDefaultAccel")
+        match vc {
+            SVC_PEDESTRIAN | SVC_WHEELCHAIR => 1.5,
+            SVC_BICYCLE | SVC_SCOOTER => 1.2,
+            SVC_MOTORCYCLE => 6.,
+            SVC_MOPED => 1.1,
+            SVC_TRUCK => 1.3,
+            SVC_TRAILER => 1.1,
+            SVC_BUS => 1.2,
+            SVC_COACH => 2.,
+            SVC_TRAM => 1.,
+            SVC_RAIL_URBAN => 1.,
+            SVC_RAIL => 0.25,
+            SVC_RAIL_ELECTRIC | SVC_RAIL_FAST => 0.5,
+            SVC_SHIP => 0.1,
+            _ => 2.6, //2.9;
+        }
     }
 
     /// C++: `double SUMOVTypeParameter::getDefaultDecel(const SUMOVehicleClass)` [static]
@@ -779,7 +1261,17 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_default_decel(vc: SUMOVehicleClass) -> f64 {
-        todo!("port SUMOVTypeParameter::getDefaultDecel")
+        match vc {
+            SVC_PEDESTRIAN | SVC_WHEELCHAIR => 2.,
+            SVC_BICYCLE | SVC_SCOOTER => 3.,
+            SVC_MOPED => 7.,
+            SVC_MOTORCYCLE => 10.,
+            SVC_TRUCK | SVC_TRAILER | SVC_BUS | SVC_COACH => 4.,
+            SVC_TRAM | SVC_RAIL_URBAN => 3.,
+            SVC_RAIL | SVC_RAIL_ELECTRIC | SVC_RAIL_FAST => 1.3,
+            SVC_SHIP => 0.15,
+            _ => 4.5, //7.5;
+        }
     }
 
     /// C++: `double SUMOVTypeParameter::getDefaultEmergencyDecel(const SUMOVehicleClass, double, double)` [static]
@@ -830,7 +1322,24 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_default_emergency_decel(vc: SUMOVehicleClass, decel: f64, defaultOption: f64) -> f64 {
-        todo!("port SUMOVTypeParameter::getDefaultEmergencyDecel")
+        if defaultOption == VTYPEPARS_DEFAULT_EMERGENCYDECEL_DEFAULT {
+            let vcDecel = match vc {
+                SVC_PEDESTRIAN | SVC_WHEELCHAIR => 5.,
+                SVC_BICYCLE | SVC_SCOOTER => 7.,
+                SVC_MOPED | SVC_MOTORCYCLE => 10.,
+                SVC_TRUCK | SVC_TRAILER | SVC_BUS | SVC_COACH | SVC_TRAM | SVC_RAIL_URBAN => 7.,
+                SVC_RAIL | SVC_RAIL_ELECTRIC | SVC_RAIL_FAST => 5.,
+                SVC_SHIP => 1.,
+                _ => 9.,
+            };
+            // C++ MAX2(a, b) = a > b ? a : b
+            if decel > vcDecel { decel } else { vcDecel }
+        } else if defaultOption == VTYPEPARS_DEFAULT_EMERGENCYDECEL_DECEL {
+            decel
+        } else {
+            // value already checked in MSFrame::checkOptions
+            if decel > defaultOption { decel } else { defaultOption }
+        }
     }
 
     /// C++: `double SUMOVTypeParameter::getDefaultImperfection(const SUMOVehicleClass)` [static]
@@ -851,7 +1360,10 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_default_imperfection(vc: SUMOVehicleClass) -> f64 {
-        todo!("port SUMOVTypeParameter::getDefaultImperfection")
+        match vc {
+            SVC_TRAM | SVC_RAIL_URBAN | SVC_RAIL | SVC_RAIL_ELECTRIC | SVC_RAIL_FAST | SVC_SHIP => 0.,
+            _ => 0.5,
+        }
     }
 
     /// C++: `const SUMOVTypeParameter & SUMOVTypeParameter::getDefault()` [static]
@@ -863,7 +1375,9 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_default() -> &'static SUMOVTypeParameter {
-        todo!("port SUMOVTypeParameter::getDefault")
+        // static SUMOVTypeParameter defaultParams("");
+        static DEFAULT_PARAMS: std::sync::OnceLock<SUMOVTypeParameter> = std::sync::OnceLock::new();
+        DEFAULT_PARAMS.get_or_init(|| SUMOVTypeParameter::new("", SVC_IGNORING))
     }
 
     /// C++: `bool SUMOVTypeParameter::parseLatAlignment(const std::string &, double &, LatAlignmentDefinition &)` [static]
@@ -896,7 +1410,29 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn parse_lat_alignment(val: &str, lao: &mut f64, lad: &mut LatAlignmentDefinition) -> bool {
-        todo!("port SUMOVTypeParameter::parseLatAlignment")
+        let mut ok = true;
+        *lao = 0.0;
+        *lad = LatAlignmentDefinition::GIVEN;
+        if val == "right" {
+            *lad = LatAlignmentDefinition::RIGHT;
+        } else if val == "center" {
+            *lad = LatAlignmentDefinition::CENTER;
+        } else if val == "arbitrary" {
+            *lad = LatAlignmentDefinition::ARBITRARY;
+        } else if val == "nice" {
+            *lad = LatAlignmentDefinition::NICE;
+        } else if val == "compact" {
+            *lad = LatAlignmentDefinition::COMPACT;
+        } else if val == "left" {
+            *lad = LatAlignmentDefinition::LEFT;
+        } else {
+            // try { lao = StringUtils::toDouble(val); } catch (...) { ok = false; }
+            match utils::common::string_utils::to_double(val) {
+                Ok(v) => *lao = v,
+                Err(_) => ok = false,
+            }
+        }
+        ok
     }
 
     /// C++: `bool SUMOVTypeParameter::isValidLatAlignment(const std::string &)` [static]
@@ -907,7 +1443,9 @@ impl SUMOVTypeParameter {
     //     }
     #[allow(unused_variables)]
     pub fn is_valid_lat_alignment(val: &str) -> bool {
-        todo!("port SUMOVTypeParameter::isValidLatAlignment")
+        let mut lao: f64 = 0.0;
+        let mut lad: LatAlignmentDefinition = LatAlignmentDefinition::GIVEN;
+        SUMOVTypeParameter::parse_lat_alignment(val, &mut lao, &mut lad)
     }
 
     /// C++: `std::vector<std::string> SUMOVTypeParameter::getLatAlignmentStrings()` [static]
@@ -924,7 +1462,14 @@ impl SUMOVTypeParameter {
     //     }
     #[allow(unused_variables)]
     pub fn get_lat_alignment_strings() -> Vec<String> {
-        todo!("port SUMOVTypeParameter::getLatAlignmentStrings")
+        let mut result: Vec<String> = Vec::new();
+        result.push("right".to_string());
+        result.push("center".to_string());
+        result.push("arbitrary".to_string());
+        result.push("nice".to_string());
+        result.push("compact".to_string());
+        result.push("left".to_string());
+        result
     }
 
     /// C++: `void SUMOVTypeParameter::setManoeuverAngleTimes(const SUMOVehicleClass)`
@@ -978,7 +1523,38 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn set_manoeuver_angle_times(&mut self, vclass: SUMOVehicleClass) {
-        todo!("port SUMOVTypeParameter::setManoeuverAngleTimes")
+        self.myManoeuverAngleTimes.clear();
+        // Defaults assume:   approaching at angles between 0-10 and 171-180 (will never be > 180) are approaching a space roughly parallel to the road
+        //                    approaching at angles between 11-80 are approaching an acute angled space that is easiest to drive straight in
+        //                    approaching at angles between 81-110 are approaching a space at approximately right angles to the road so the driver has a choice
+        //                    approaching at angles between 111 and 170 are approaching an obtuse angled space that is easiest to drive past and reverse in
+        //              More (or less) granular angle ranges can be used - configurable as a vType parameter
+        match vclass {
+            SVC_PASSENGER | SVC_HOV | SVC_TAXI | SVC_E_VEHICLE => {
+                self.myManoeuverAngleTimes.insert(10, (3000, 4000)); // straight in but potentially needing parallel parking
+                self.myManoeuverAngleTimes.insert(80, (1000, 11000)); // straight in
+                self.myManoeuverAngleTimes.insert(110, (11000, 2000)); // optional forwards/backwards
+                self.myManoeuverAngleTimes.insert(170, (8000, 3000)); // backwards into obtuse space
+                self.myManoeuverAngleTimes.insert(181, (3000, 4000)); // straight in but potentially needing parallel parking
+            }
+            SVC_TRUCK | SVC_TRAILER | SVC_BUS | SVC_COACH | SVC_DELIVERY => {
+                self.myManoeuverAngleTimes.insert(10, (6000, 8000)); // straight in but potentially needing parallel parking
+                self.myManoeuverAngleTimes.insert(80, (2000, 21000)); // straight in
+                self.myManoeuverAngleTimes.insert(110, (21000, 2000)); // optional forwards/backwards
+                self.myManoeuverAngleTimes.insert(170, (14000, 5000)); // backwards into obtuse space
+                self.myManoeuverAngleTimes.insert(181, (6000, 8000)); // straight in but potentially needing parallel parking
+            }
+            SVC_PEDESTRIAN | SVC_MOPED | SVC_BICYCLE => {
+                self.myManoeuverAngleTimes.insert(181, (1000, 1000)); // no dependence on angle
+            }
+            _ => {
+                self.myManoeuverAngleTimes.insert(10, (3000, 4000)); // straight in but potentially needing parallel parking
+                self.myManoeuverAngleTimes.insert(80, (1000, 11000)); // straight in
+                self.myManoeuverAngleTimes.insert(110, (11000, 2000)); // optional forwards/backwards
+                self.myManoeuverAngleTimes.insert(170, (8000, 3000)); // backwards into obtuse space
+                self.myManoeuverAngleTimes.insert(181, (3000, 4000)); // straight in but potentially needing parallel parking
+            }
+        }
     }
 
     /// C++: `SUMOTime SUMOVTypeParameter::getEntryManoeuvreTime(const int) const` [const]
@@ -997,7 +1573,15 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_entry_manoeuvre_time(&self, angle: i32) -> SUMOTime {
-        todo!("port SUMOVTypeParameter::getEntryManoeuvreTime")
+        let mut last: SUMOTime = 0;
+        for (key, angleTime) in &self.myManoeuverAngleTimes {
+            if angle <= *key {
+                return angleTime.0;
+            } else {
+                last = angleTime.0;
+            }
+        }
+        last
     }
 
     /// C++: `SUMOTime SUMOVTypeParameter::getExitManoeuvreTime(const int) const` [const]
@@ -1016,7 +1600,15 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_exit_manoeuvre_time(&self, angle: i32) -> SUMOTime {
-        todo!("port SUMOVTypeParameter::getExitManoeuvreTime")
+        let mut last: SUMOTime = 0;
+        for (key, angleTime) in &self.myManoeuverAngleTimes {
+            if angle <= *key {
+                return angleTime.1;
+            } else {
+                last = angleTime.1;
+            }
+        }
+        last
     }
 
     /// C++: `std::string SUMOVTypeParameter::getManoeuverAngleTimesS() const` [const]
@@ -1038,7 +1630,12 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_manoeuver_angle_times_s(&self) -> String {
-        todo!("port SUMOVTypeParameter::getManoeuverAngleTimesS")
+        // stream << std::fixed << std::setprecision(1); -> {:.1} for the STEPS2TIME values
+        let mut triplets: Vec<String> = Vec::new();
+        for (key, angleTime) in &self.myManoeuverAngleTimes {
+            triplets.push(format!("{} {:.1} {:.1}", key, steps2time(angleTime.0), steps2time(angleTime.1)));
+        }
+        triplets.join(",")
     }
 
     /// C++: `SUMOTime SUMOVTypeParameter::getTimeToTeleport(SUMOTime) const` [const]
@@ -1049,7 +1646,7 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_time_to_teleport(&self, defaultValue: SUMOTime) -> SUMOTime {
-        todo!("port SUMOVTypeParameter::getTimeToTeleport")
+        if self.timeToTeleport == SUMOTIME_MIN { defaultValue } else { self.timeToTeleport }
     }
 
     /// C++: `SUMOTime SUMOVTypeParameter::getTimeToTeleportBidi(SUMOTime) const` [const]
@@ -1060,7 +1657,7 @@ impl SUMOVTypeParameter {
     // }
     #[allow(unused_variables)]
     pub fn get_time_to_teleport_bidi(&self, defaultValue: SUMOTime) -> SUMOTime {
-        todo!("port SUMOVTypeParameter::getTimeToTeleportBidi")
+        if self.timeToTeleportBidi == SUMOTIME_MIN { defaultValue } else { self.timeToTeleportBidi }
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap SUMOVTypeParameter::getDefaultMaxAccelProfile(const SUMOVehicleClass, double)` [static]
@@ -1090,8 +1687,14 @@ impl SUMOVTypeParameter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_default_max_accel_profile(vc: SUMOVehicleClass, maxAccel: f64) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port SUMOVTypeParameter::getDefaultMaxAccelProfile")
+    pub fn get_default_max_accel_profile(vc: SUMOVehicleClass, maxAccel: f64) -> LinearApproxMap {
+        // UNUSED_PARAMETER(maxAccel);
+        let result: LinearApproxMap = LinearApproxMap::new();
+        // every vehicle class leaves the (empty) result unchanged in C++
+        match vc {
+            SVC_PEDESTRIAN | SVC_BICYCLE | SVC_MOTORCYCLE | SVC_MOPED | SVC_TRUCK | SVC_TRAILER | SVC_BUS | SVC_COACH | SVC_TRAM | SVC_RAIL_URBAN | SVC_RAIL | SVC_RAIL_ELECTRIC | SVC_RAIL_FAST | SVC_SHIP => result,
+            _ => result,
+        }
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap SUMOVTypeParameter::getDefaultDesAccelProfile(const SUMOVehicleClass, double)` [static]
@@ -1120,8 +1723,14 @@ impl SUMOVTypeParameter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_default_des_accel_profile(vc: SUMOVehicleClass, desAccel: f64) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port SUMOVTypeParameter::getDefaultDesAccelProfile")
+    pub fn get_default_des_accel_profile(vc: SUMOVehicleClass, desAccel: f64) -> LinearApproxMap {
+        // UNUSED_PARAMETER(desAccel);
+        let result: LinearApproxMap = LinearApproxMap::new();
+        // every vehicle class leaves the (empty) result unchanged in C++
+        match vc {
+            SVC_PEDESTRIAN | SVC_BICYCLE | SVC_MOTORCYCLE | SVC_MOPED | SVC_TRUCK | SVC_TRAILER | SVC_BUS | SVC_COACH | SVC_TRAM | SVC_RAIL_URBAN | SVC_RAIL | SVC_RAIL_ELECTRIC | SVC_RAIL_FAST | SVC_SHIP => result,
+            _ => result,
+        }
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap SUMOVTypeParameter::getCFProfile(const SumoXMLAttr, const LinearApproxHelpers::LinearApproxMap &) const` [const]
@@ -1146,8 +1755,29 @@ impl SUMOVTypeParameter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_cf_profile(&self, attr: SumoXMLAttr, defaultProfile: &Unmapped /* LinearApproxHelpers::LinearApproxMap */) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port SUMOVTypeParameter::getCFProfile")
+    pub fn get_cf_profile(&self, attr: SumoXMLAttr, defaultProfile: &LinearApproxMap) -> LinearApproxMap {
+        if self.cfParameter.contains_key(&attr) {
+            let speedTable = self.get_cf_value_table(SUMO_ATTR_SPEED_TABLE);
+            let valueTable = self.get_cf_value_table(attr);
+            if valueTable.len() == 1 {
+                throw_process_error(utils::tlf!("Invalid size of % table for vType '%' (at least 2 values are required).", Attrs.get_string(attr), self.id));
+            } else if speedTable.len() != valueTable.len() {
+                throw_process_error(utils::tlf!(
+                    "Mismatching size of speedTable (%) and % table (%) for vType '%'.",
+                    speedTable.len(),
+                    Attrs.get_string(attr),
+                    valueTable.len(),
+                    self.id
+                ));
+            }
+            let mut result: LinearApproxMap = LinearApproxMap::new();
+            for i in 0..speedTable.len() {
+                linear_approx_map_set(&mut result, speedTable[i], valueTable[i]);
+            }
+            result
+        } else {
+            defaultProfile.clone()
+        }
     }
 
     /// C++: `std::vector<std::pair<double, double>> SUMOVTypeParameter::createCFProfile(const SumoXMLAttr, const std::string) const` [const]
@@ -1155,7 +1785,9 @@ impl SUMOVTypeParameter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn create_cf_profile(&self, attr: SumoXMLAttr, profile: String) -> Vec<(f64, f64)> {
-        todo!("port SUMOVTypeParameter::createCFProfile")
+        // shortcut: C++ declares SUMOVTypeParameter::createCFProfile (SUMOVTypeParameter.h:566) but never defines it,
+        // so any call is a link error in C++; upgrade only if a definition is added upstream
+        panic!("SUMOVTypeParameter::createCFProfile is declared but not defined in C++ (attr {}, profile {})", Attrs.get_string(attr), profile)
     }
 
 }
@@ -1184,7 +1816,7 @@ pub struct SUMOVTypeParameter_VClassDefaultValues {
     /// This class' mass
     pub mass: f64,
     /// The factor by which the maximum speed may deviate from the allowed max speed on the street
-    pub speedFactor: Unmapped /* Distribution_Parameterized */,
+    pub speedFactor: DistributionParameterized,
     /// The person capacity of the vehicle
     pub personCapacity: i32,
     /// The container capacity of the vehicle
@@ -1465,7 +2097,255 @@ impl SUMOVTypeParameter_VClassDefaultValues {
     // }
     #[allow(unused_variables)]
     pub fn new(vClass: SUMOVehicleClass) -> Self {
-        todo!("port VClassDefaultValues::VClassDefaultValues")
+        let mut result = SUMOVTypeParameter_VClassDefaultValues {
+            length: get_default_vehicle_length(vClass),
+            minGap: 2.5,
+            minGapLat: 0.6,
+            maxSpeed: 200. / 3.6,
+            desiredMaxSpeed: 10000. / 3.6, // backward-compatibility: do not influence speeds by default
+            width: DEFAULT_VEH_WIDTH,
+            height: DEFAULT_VEH_HEIGHT,
+            shape: SUMOVehicleShape::Unknown,
+            emissionClass: PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}default"), vClass),
+            mass: DEFAULT_VEH_MASS,
+            speedFactor: DistributionParameterized::with_bounds("normc", 1.0, 0.0, 0.2, 2.0),
+            personCapacity: 4,
+            containerCapacity: 0,
+            osgFile: "car-normal-citrus.obj".to_string(),
+            carriageLength: -1.,
+            locomotiveLength: -1.,
+            carriageDoors: 2,
+            carriageDoorWidth: 1.5,
+            maxPlatformDistance: 3.,
+            latAlignmentProcedure: LatAlignmentDefinition::CENTER,
+        };
+        // sources for the default values should be in docs/Vehicle_Type_Parameter_Defaults.md
+        match vClass {
+            SVC_PEDESTRIAN => {
+                result.minGap = 0.25;
+                result.maxSpeed = 37.58 / 3.6; // Usain Bolt
+                result.desiredMaxSpeed = DEFAULT_PEDESTRIAN_SPEED;
+                result.width = 0.478;
+                result.height = 1.719;
+                result.shape = SUMOVehicleShape::Pedestrian;
+                result.osgFile = "humanResting.obj".to_string();
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 70.; // https://en.wikipedia.org/wiki/Human_body_weight for Europe
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_WHEELCHAIR => {
+                result.minGap = 0.5;
+                result.maxSpeed = 30.0 / 3.6; // https://en.wikipedia.org/wiki/Wheelchair_racing
+                result.desiredMaxSpeed = DEFAULT_PEDESTRIAN_SPEED;
+                result.width = 0.72;
+                result.height = 1.2;
+                result.shape = SUMOVehicleShape::Pedestrian;
+                result.osgFile = "humanResting.obj".to_string();
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 90.; // 20 (empty) + 70 (person)
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_BICYCLE => {
+                result.minGap = 0.5;
+                result.minGapLat = 0.35;
+                result.maxSpeed = 50. / 3.6;
+                result.desiredMaxSpeed = DEFAULT_BICYCLE_SPEED;
+                result.width = 0.65;
+                result.height = 1.7;
+                result.shape = SUMOVehicleShape::Bicycle;
+                result.personCapacity = 1;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 10.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+                result.latAlignmentProcedure = LatAlignmentDefinition::RIGHT;
+            }
+            SVC_SCOOTER => {
+                result.minGap = 0.5;
+                result.minGapLat = 0.35;
+                result.maxSpeed = 25. / 3.6;
+                result.desiredMaxSpeed = DEFAULT_BICYCLE_SPEED;
+                result.width = 0.5;
+                result.height = 1.7;
+                result.shape = SUMOVehicleShape::Scooter;
+                result.personCapacity = 1;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 10.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+                result.latAlignmentProcedure = LatAlignmentDefinition::RIGHT;
+            }
+            SVC_MOPED => {
+                result.maxSpeed = 60. / 3.6;
+                result.width = 0.78;
+                result.height = 1.7;
+                result.shape = SUMOVehicleShape::Moped;
+                result.personCapacity = 1;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}Moped_le50cc_Euro-2"), vClass);
+                result.mass = 80.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_MOTORCYCLE => {
+                result.width = 0.9;
+                result.height = 1.5;
+                result.shape = SUMOVehicleShape::Motorcycle;
+                result.personCapacity = 1;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}MC_4S_gt250cc_preEuro"), vClass);
+                result.mass = 200.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_TRUCK => {
+                result.maxSpeed = 130. / 3.6;
+                result.width = 2.4;
+                result.height = 2.4;
+                result.shape = SUMOVehicleShape::Truck;
+                result.osgFile = "car-microcargo-citrus.obj".to_string();
+                result.personCapacity = 2;
+                result.containerCapacity = 1;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}RT_le7.5t_Euro-VI_A-C"), vClass);
+                result.mass = 4500.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.05);
+            }
+            SVC_TRAILER => {
+                result.maxSpeed = 130. / 3.6;
+                result.width = 2.55;
+                result.height = 4.;
+                result.shape = SUMOVehicleShape::Truck1Trailer;
+                result.osgFile = "car-microcargo-citrus.obj".to_string();
+                result.personCapacity = 2;
+                result.containerCapacity = 2;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}TT_AT_gt34-40t_Euro-VI_A-C"), vClass);
+                result.mass = 13000.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.05);
+            }
+            SVC_BUS => {
+                result.maxSpeed = 100. / 3.6;
+                result.width = 2.5;
+                result.height = 3.4;
+                result.shape = SUMOVehicleShape::Bus;
+                result.osgFile = "car-minibus-citrus.obj".to_string();
+                result.personCapacity = 85;
+                // the following values keep better consistency with the default bus length,
+                // although the most frequent city bus seems to have 3 axes and >18t according to the HBEFA4 data
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}UBus_Std_gt15-18t_Euro-VI_A-C"), vClass);
+                result.mass = 12000.;
+            }
+            SVC_COACH => {
+                result.maxSpeed = 100. / 3.6;
+                result.width = 2.6;
+                result.height = 4.;
+                result.shape = SUMOVehicleShape::BusCoach;
+                result.osgFile = "car-minibus-citrus.obj".to_string();
+                result.personCapacity = 70;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}Coach_3-Axes_gt18t_Euro-VI_A-C"), vClass);
+                result.mass = 25000.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.05);
+            }
+            SVC_TRAM => {
+                result.maxSpeed = 80. / 3.6;
+                result.width = 2.4;
+                result.height = 3.2;
+                result.shape = SUMOVehicleShape::RailCar;
+                result.osgFile = "tram.obj".to_string();
+                result.personCapacity = 120;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 37900.;
+            }
+            SVC_RAIL_URBAN | SVC_SUBWAY => {
+                result.maxSpeed = 100. / 3.6;
+                result.minGap = 5.;
+                result.width = 3.0;
+                result.height = 3.6;
+                result.shape = SUMOVehicleShape::RailCar;
+                result.personCapacity = 300;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 59000.;
+            }
+            SVC_RAIL => {
+                result.maxSpeed = 160. / 3.6;
+                result.minGap = 5.;
+                result.width = 2.84;
+                result.height = 3.75;
+                result.shape = SUMOVehicleShape::Rail;
+                result.personCapacity = 434;
+                // slight understatement (-:
+                result.emissionClass = PollutantsInterface::get_class_by_name("HBEFA3/HDV_D_EU0", vClass);
+                result.mass = 79500.; // only locomotive
+            }
+            SVC_RAIL_ELECTRIC => {
+                result.maxSpeed = 220. / 3.6;
+                result.minGap = 5.;
+                result.width = 2.95;
+                result.height = 3.89;
+                result.shape = SUMOVehicleShape::Rail;
+                result.personCapacity = 425;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 83000.; // only locomotive
+            }
+            SVC_RAIL_FAST => {
+                result.maxSpeed = 330. / 3.6;
+                result.minGap = 5.;
+                result.width = 2.95;
+                result.height = 3.89;
+                result.shape = SUMOVehicleShape::Rail;
+                result.personCapacity = 425;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                result.mass = 409000.;
+            }
+            SVC_DELIVERY => {
+                result.width = 2.16;
+                result.height = 2.86;
+                result.shape = SUMOVehicleShape::Delivery;
+                result.personCapacity = 2;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}LCV_diesel_N1-III_Euro-6ab"), vClass);
+                result.mass = 5000.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.05);
+            }
+            SVC_EMERGENCY => {
+                result.width = 2.16;
+                result.height = 2.86;
+                result.shape = SUMOVehicleShape::Delivery;
+                result.personCapacity = 2;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}LCV_diesel_N1-III_Euro-6ab"), vClass);
+                result.mass = 5000.;
+            }
+            SVC_PRIVATE | SVC_VIP | SVC_PASSENGER | SVC_HOV | SVC_CUSTOM1 | SVC_CUSTOM2 => {
+                result.shape = SUMOVehicleShape::Passenger;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_TAXI => {
+                result.shape = SUMOVehicleShape::Taxi;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.05);
+            }
+            SVC_E_VEHICLE => {
+                result.shape = SUMOVehicleShape::EVehicle;
+                result.emissionClass = PollutantsInterface::get_class_by_name(&format!("{EMPREFIX}zero"), vClass);
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            SVC_CONTAINER => {
+                // ISO Container TEU
+                result.width = 2.438;
+                result.height = 2.591;
+            }
+            SVC_DRONE => {
+                result.width = 0.5;
+            }
+            SVC_AIRCRAFT => {
+                // Airbus A380
+                result.shape = SUMOVehicleShape::Aircraft;
+                result.width = 79.8;
+            }
+            SVC_SHIP => {
+                result.width = 4.;
+                result.maxSpeed = 8. / 1.94; // 8 knots
+                result.height = 4.;
+                result.shape = SUMOVehicleShape::Ship;
+                // slight understatement (-:
+                result.emissionClass = PollutantsInterface::get_class_by_name("HBEFA3/HDV_D_EU0", vClass);
+                result.mass = 100000.;
+                set_speed_factor_deviation(&mut result.speedFactor, 0.1);
+            }
+            _ => {}
+        }
+        result
     }
 
     /// C++: `void VClassDefaultValues::VClassDefaultValues()` [private]
@@ -1474,7 +2354,29 @@ impl SUMOVTypeParameter_VClassDefaultValues {
     //     speedFactor("normc", 1.0, 0.0, 0.2, 2.0) {}
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port VClassDefaultValues::VClassDefaultValues")
+        // the C++ default constructor leaves the other members uninitialised; zero them here
+        SUMOVTypeParameter_VClassDefaultValues {
+            length: 0.,
+            minGap: 0.,
+            minGapLat: 0.,
+            maxSpeed: 0.,
+            desiredMaxSpeed: 0.,
+            width: 0.,
+            height: 0.,
+            shape: SUMOVehicleShape::Unknown,
+            emissionClass: 0,
+            mass: 0.,
+            speedFactor: DistributionParameterized::with_bounds("normc", 1.0, 0.0, 0.2, 2.0),
+            personCapacity: 0,
+            containerCapacity: 0,
+            osgFile: String::new(),
+            carriageLength: 0.,
+            locomotiveLength: 0.,
+            carriageDoors: 0,
+            carriageDoorWidth: 0.,
+            maxPlatformDistance: 0.,
+            latAlignmentProcedure: LatAlignmentDefinition::DEFAULT,
+        }
     }
 
 }

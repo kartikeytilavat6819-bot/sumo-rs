@@ -307,8 +307,7 @@ impl MSVehicleType {
     #[allow(unused_variables)]
     pub fn compute_chosen_speed_deviation(&self, speedFactorOverride: f64, rng: Ptr<SumoRNG>, minDev: f64) -> f64 {
         if speedFactorOverride < 0. {
-            // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized::sample(rng) is unavailable; uses its mean 1.0 with no deviation until that field is mapped
-            round_decimal(if minDev > 1.0 { minDev } else { 1.0 }, g_precision_random())
+            round_decimal(max2(minDev, self.myParameter.speedFactor.sample(Some(rng.m())).unwrap_or_else(|e| panic!("{}", e))), g_precision_random())
         } else {
             speedFactorOverride
         }
@@ -380,7 +379,7 @@ impl MSVehicleType {
     //         return myParameter.speedFactor;
     //     }
     #[allow(unused_variables)]
-    pub fn get_speed_factor(&self) -> &Unmapped /* Distribution_Parameterized */ {
+    pub fn get_speed_factor(&self) -> &DistributionParameterized {
         &self.myParameter.speedFactor
     }
 
@@ -982,7 +981,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_factor(&mut self, factor: &f64) {
-        // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized parameter 0 (and the original's value) cannot be set, upgrade when that field is mapped
+        if !self.myOriginalType.is_null() && *factor < 0. {
+            let v = self.myOriginalType.m().myParameter.speedFactor.get_parameter(0);
+            self.myParameter.speedFactor.set_parameter(0, v).unwrap();
+        } else {
+            self.myParameter.speedFactor.set_parameter(0, *factor).unwrap();
+        }
         self.myParameter.parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
     }
 
@@ -999,7 +1003,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_deviation(&mut self, dev: &f64) {
-        // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized parameter 1 (and the original's value) cannot be set, upgrade when that field is mapped
+        if !self.myOriginalType.is_null() && *dev < 0. {
+            let v = self.myOriginalType.m().myParameter.speedFactor.get_parameter(1);
+            self.myParameter.speedFactor.set_parameter(1, v).unwrap();
+        } else {
+            self.myParameter.speedFactor.set_parameter(1, *dev).unwrap();
+        }
         self.myParameter.parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
     }
 
