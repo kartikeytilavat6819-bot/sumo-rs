@@ -3628,7 +3628,22 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn appropriate(&self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLane::appropriate")
+        if veh.get_lane_change_model_2().is_opposite() {
+            return false;
+        }
+        if self.myEdge.is_internal() {
+            return true;
+        }
+        if veh.succ_edge(1).is_null() {
+            debug_assert!(veh.get_best_lanes().len() as i32 > veh.get_lane_index());
+            if veh.get_best_lanes()[veh.get_lane_index() as usize].bestLaneOffset == 0 {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        let link = MSLane::succ_link_sec(&*veh, 1, self, veh.get_best_lanes_continuation());
+        link != self.myLinks.len()
     }
 
     /// C++: `const std::vector<MSLink *> & MSLane::getLinkCont() const` [const]
@@ -3638,7 +3653,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_link_cont(&self) -> &Vec<Ptr<MSLink>> {
-        todo!("port MSLane::getLinkCont")
+        &self.myLinks
     }
 
     /// C++: `const MSLink * MSLane::getLinkTo(const MSLane *const) const` [const]
@@ -3655,7 +3670,13 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_link_to(&self, arg0: Ptr<MSLane>) -> Ptr<MSLink> {
-        todo!("port MSLane::getLinkTo")
+        let internal = arg0.is_internal();
+        for l in self.myLinks.iter() {
+            if (internal && l.get_via_lane() == arg0) || (!internal && l.get_lane() == arg0) {
+                return *l;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `const MSLane * MSLane::getInternalFollowingLane(const MSLane *const) const` [const]
@@ -3671,7 +3692,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_following_lane(&self, arg0: Ptr<MSLane>) -> Ptr<MSLane> {
-        todo!("port MSLane::getInternalFollowingLane")
+        for l in self.myLinks.iter() {
+            if l.get_lane() == arg0 {
+                return l.get_via_lane();
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `const MSLink * MSLane::getEntryLink() const` [const]
@@ -3693,7 +3719,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_entry_link(&self) -> Ptr<MSLink> {
-        todo!("port MSLane::getEntryLink")
+        if !self.is_internal() {
+            return Ptr::null();
+        }
+        let mut internal = Ptr::new(self);
+        let mut lane = self.get_canonical_predecessor_lane();
+        debug_assert!(!lane.is_null());
+        while lane.is_internal() {
+            internal = lane;
+            lane = lane.get_canonical_predecessor_lane();
+            debug_assert!(!lane.is_null());
+        }
+        lane.get_link_to(internal)
     }
 
     /// C++: `bool MSLane::empty() const` [const]
@@ -3704,7 +3741,8 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn empty(&self) -> bool {
-        todo!("port MSLane::empty")
+        debug_assert!(self.myVehBuffer.len() == 0);
+        self.myVehicles.is_empty()
     }
 
     /// C++: `void MSLane::setMaxSpeed(const double, const bool, const double)`
@@ -3724,7 +3762,10 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(&mut self, val: f64, modified: bool, jamThreshold: f64) {
-        todo!("port MSLane::setMaxSpeed")
+        self.myMaxSpeed = val;
+        self.mySpeedModified = modified;
+        self.myEdge.m().recalc_cache();
+        // shortcut: MSGlobals::gUseMesoSim segment speed update (MESegment) not ported, upgrade when mesoscopic model is ported
     }
 
     /// C++: `void MSLane::setFrictionCoefficient(double)`
@@ -3736,7 +3777,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_friction_coefficient(&mut self, val: f64) {
-        todo!("port MSLane::setFrictionCoefficient")
+        self.myFrictionCoefficient = val;
+        self.myEdge.m().recalc_cache();
     }
 
     /// C++: `void MSLane::setLength(double)`
@@ -3748,7 +3790,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_length(&mut self, val: f64) {
-        todo!("port MSLane::setLength")
+        self.myLength = val;
+        self.myEdge.m().recalc_cache();
     }
 
     /// C++: `MSEdge & MSLane::getEdge() const` [const]
@@ -3758,7 +3801,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> &mut MSEdge {
-        todo!("port MSLane::getEdge")
+        self.myEdge.m()
     }
 
     /// C++: `const MSJunction * MSLane::getFromJunction() const` [const]
@@ -3768,7 +3811,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_from_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSLane::getFromJunction")
+        self.myEdge.get_from_junction()
     }
 
     /// C++: `const MSJunction * MSLane::getToJunction() const` [const]
@@ -3778,7 +3821,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_to_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSLane::getToJunction")
+        self.myEdge.get_to_junction()
     }
 
     /// C++: `const MSEdge * MSLane::getNextNormal() const` [const]
@@ -3789,7 +3832,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_next_normal(&self) -> Ptr<MSEdge> {
-        todo!("port MSLane::getNextNormal")
+        self.myEdge.get_normal_successor()
     }
 
     /// C++: `const MSLane * MSLane::getFirstInternalInConnection(double &) const` [const]
@@ -3811,7 +3854,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_first_internal_in_connection(&self, offset: &mut f64) -> Ptr<MSLane> {
-        todo!("port MSLane::getFirstInternalInConnection")
+        if !self.is_internal() {
+            return Ptr::null();
+        }
+        *offset = 0.;
+        let mut firstInternal = Ptr::new(self);
+        let mut pred = self.get_canonical_predecessor_lane();
+        while !pred.is_null() && pred.is_internal() {
+            firstInternal = pred;
+            *offset += pred.get_length();
+            pred = firstInternal.get_canonical_predecessor_lane();
+        }
+        firstInternal
     }
 
     /// C++: `bool MSLane::dictionary(const std::string &, MSLane *)` [static]
