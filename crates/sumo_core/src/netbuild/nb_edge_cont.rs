@@ -966,7 +966,13 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn create_unused_id(&mut self, base: &str, sep: &str) -> String {
-        todo!("port NBEdgeCont::createUnusedID")
+        let mut result = base.to_string();
+        let mut i: i32 = 0;
+        while self.myEdges.contains_key(&result) {
+            result = format!("{}{}{}", base, sep, i);
+            i += 1;
+        }
+        result
     }
 
     /// C++: `int NBEdgeCont::size() const` [const]
@@ -976,7 +982,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBEdgeCont::size")
+        self.myEdges.len() as i32
     }
 
     /// C++: `std::vector<std::string> NBEdgeCont::getAllNames() const` [const]
@@ -991,7 +997,7 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_all_names(&self) -> Vec<String> {
-        todo!("port NBEdgeCont::getAllNames")
+        self.myEdges.keys().cloned().collect()
     }
 
     /// C++: `const std::pair<NBEdge *, NBEdge *> * NBEdgeCont::getSplit(const NBEdge *const) const` [const]
@@ -1005,7 +1011,11 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_split(&self, origEdge: Ptr<NBEdge>) -> Ptr<(Ptr<NBEdge>, Ptr<NBEdge>)> {
-        todo!("port NBEdgeCont::getSplit")
+        // pointer into the map value, like C++ `&split->second`
+        match self.myEdgesSplit.get(&origEdge) {
+            Some(split) => Ptr::new(split),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `NBEdge * NBEdgeCont::getSplitBase(const std::string &) const` [const]
@@ -1023,7 +1033,15 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_split_base(&self, edgeID: &str) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::getSplitBase")
+        let mut longest: Ptr<NBEdge> = Ptr::null();
+        for item in self.myEdgesSplit.keys() {
+            if item.get_id() == edgeID {
+                if longest.is_null() || longest.get_loaded_length() < item.get_loaded_length() {
+                    longest = *item;
+                }
+            }
+        }
+        longest
     }
 
     /// C++: `int NBEdgeCont::getNumEdgeSplits() const` [const]
@@ -1033,7 +1051,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_edge_splits(&self) -> i32 {
-        todo!("port NBEdgeCont::getNumEdgeSplits")
+        self.myEdgesSplit.len() as i32
     }
 
     /// C++: `int NBEdgeCont::removeUnwishedEdges(NBDistrictCont &)`
@@ -1056,7 +1074,19 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_unwished_edges(&mut self, dc: &mut NBDistrictCont) -> i32 {
-        todo!("port NBEdgeCont::removeUnwishedEdges")
+        let mut to_remove: EdgeVector = Vec::new();
+        for item in self.myEdges.values() {
+            let edge = *item;
+            if !self.myEdges2Keep.contains(edge.get_id()) {
+                edge.get_from_node().m().remove_edge(edge, true);
+                edge.get_to_node().m().remove_edge(edge, true);
+                to_remove.push(edge);
+            }
+        }
+        for j in to_remove.iter() {
+            self.erase(dc, *j);
+        }
+        to_remove.len() as i32
     }
 
     /// C++: `void NBEdgeCont::splitGeometry(NBDistrictCont &, NBNodeCont &)`
