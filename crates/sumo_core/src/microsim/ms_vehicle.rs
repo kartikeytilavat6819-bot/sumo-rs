@@ -4794,7 +4794,60 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn enter_lane_at_move(&mut self, enteredLane: Ptr<MSLane>, onTeleporting: bool) {
-        todo!("port MSVehicle::enterLaneAtMove")
+        self.myAmOnNet = !onTeleporting;
+        // vaporizing edge block is commented out in C++ as well
+        // Adjust MoveReminder offset to the next lane
+        self.adapt_lane_entering2_move_reminder(&enteredLane);
+        // set the entered lane as the current lane
+        let oldLane = self.myLane;
+        self.myLane = enteredLane;
+        self.myLastBestLanesEdge = Ptr::null();
+
+        // internal edges are not a part of the route...
+        if !enteredLane.get_edge().is_internal() {
+            self.myCurrEdge += 1;
+            debug_assert!(self.myLaneChangeModel.m().is_opposite() || self.have_valid_stop_edges(false));
+        }
+        if !self.myInfluencer.is_null() {
+            let shift = self.myLane.get_index() - oldLane.get_index();
+            self.myInfluencer.m().adapt_lane_time_line(shift);
+        }
+        if !onTeleporting {
+            self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_JUNCTION, enteredLane);
+            if crate::microsim::ms_globals::lateral_resolution() > 0.0 {
+                let posLat = self.myState.myPosLat;
+                self.myFurtherLanesPosLat.push(posLat);
+                // transform lateral position when the lane width changes
+                debug_assert!(!oldLane.is_null());
+                let link = oldLane.get_link_to(self.myLane);
+                if !link.is_null() {
+                    self.myState.myPosLat += link.get_lateral_shift();
+                } else {
+                    self.myState.myPosLat += (oldLane.get_center_on_edge() - self.myLane.get_canonical_predecessor_lane().get_right_side_on_edge()) / 2.0;
+                }
+            } else if self.myState.myPosLat.abs() > utils::geom::NUMERICAL_EPS {
+                let overlap = max2(0.0, self.get_lateral_overlap_3(self.myState.myPosLat, oldLane));
+                let range = (oldLane.get_width() - self.get_vehicle_type().get_width()) * 0.5 + overlap;
+                let range2 = (self.myLane.get_width() - self.get_vehicle_type().get_width()) * 0.5 + overlap;
+                self.myState.myPosLat *= range2 / range;
+            }
+            if !self.myLane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+                // (unless the lane is shared with cars)
+                let bidi = self.myLane.get_bidi_lane();
+                bidi.m().set_partial_occupation(Ptr::from_mut(self));
+            }
+        } else {
+            // normal move() isn't called so reset position here. must be done
+            // before calling reminders
+            self.myState.myPos = 0.0;
+            self.myCachedPosition = Position::INVALID;
+            self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_TELEPORT, enteredLane);
+        }
+        // update via
+        if self.myParameter.m().via.len() > 0 && self.myLane.get_edge().get_id() == self.myParameter.m().via[0] {
+            self.myParameter.m().via.remove(0);
+        }
     }
 
     /// C++: `void MSVehicle::enterLaneAtInsertion(MSLane *, double, double, double, MSMoveReminder::Notification)`
@@ -4868,7 +4921,70 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn enter_lane_at_insertion(&mut self, enteredLane: Ptr<MSLane>, pos: f64, speed: f64, posLat: f64, notification: MSMoveReminder_Notification) {
-        todo!("port MSVehicle::enterLaneAtInsertion")
+        let backPos = pos - self.get_vehicle_type().get_length();
+        let previousSpeed = if self.has_departed() { self.myState.myPreviousSpeed } else { speed };
+        self.myState = MSVehicle_State::new(pos, speed, posLat, backPos, previousSpeed);
+        if self.myDeparture == MS_BASE_VEHICLE_NOT_YET_DEPARTED {
+            self.on_depart();
+        }
+        if enteredLane.is_internal() && self.myJunctionEntryTime == SUMOTIME_MAX {
+            self.myJunctionEntryTime = MSNet::get_instance().get_current_time_step();
+            self.myJunctionEntryTimeNeverYield = self.myJunctionEntryTime;
+            debug_assert!(enteredLane.get_incoming_lanes().len() == 1);
+            if enteredLane.get_incoming_lanes()[0].viaLink.is_conflict_entry_link() {
+                self.myJunctionConflictEntryTime = self.myJunctionEntryTime;
+            }
+        }
+        self.myCachedPosition = Position::INVALID;
+        debug_assert!(self.myState.myPos >= 0.0);
+        debug_assert!(self.myState.mySpeed >= 0.0);
+        self.myLane = enteredLane;
+        self.myAmOnNet = true;
+        // schedule action for the next timestep
+        self.myLastActionTime = MSNet::get_instance().get_current_time_step() + delta_t();
+        if notification != MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            if notification == MSMoveReminder_Notification::NOTIFICATION_PARKING && !self.myInfluencer.is_null() {
+                self.draw_outside_network(false);
+            }
+            // set and activate the new lane's reminders, teleports already did that at enterLaneAtMove
+            for rem in enteredLane.get_move_reminders().iter() {
+                self.add_reminder(*rem, 0.0);
+            }
+            self.activate_reminders(notification, enteredLane);
+        } else {
+            self.myLastBestLanesEdge = Ptr::null();
+            self.myLastBestLanesInternalLane = Ptr::null();
+            self.myLaneChangeModel.m().reset_state();
+            // shortcut: MSStop::edge is an Unmapped route iterator (ms_route.rs), so the C++ while-loop that pops stops passed by the teleport cannot be evaluated; upgrade when MSRouteIterator is mapped
+            if !self.myStops.is_empty() {
+                panic!("enterLaneAtInsertion: teleport with pending stops needs MSRouteIterator, which is not ported yet");
+            }
+            // avoid startup-effects after teleport
+            self.myTimeSinceStartup = self.get_car_follow_model().get_startup_delay() + delta_t();
+            self.myStopSpeed = f64::MAX;
+        }
+        self.compute_further_lanes(enteredLane, pos, false);
+        if crate::microsim::ms_globals::lateral_resolution() > 0.0 {
+            self.myLaneChangeModel.m().update_shadow_lane();
+            self.myLaneChangeModel.m().update_target_lane();
+        } else if crate::microsim::ms_globals::lane_change_duration() > 0 {
+            self.myLaneChangeModel.m().update_shadow_lane();
+        }
+        if notification != MSMoveReminder_Notification::NOTIFICATION_LOAD_STATE {
+            self.myAngle = self.compute_angle();
+            self.myRawAngle = self.myAngle;
+            if self.myLaneChangeModel.m().is_opposite() {
+                self.myAngle += std::f64::consts::PI;
+            }
+        }
+        if MSNet::get_instance().has_persons() {
+            let net = MSNet::get_instance();
+            for further in self.myFurtherLanes.iter() {
+                if further.must_check_junction_collisions() {
+                    net.m().get_edge_control().check_collision_for_inactive(*further);
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::setTentativeLaneAndPosition(MSLane *, double, double)`
@@ -4989,7 +5105,71 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn enter_lane_at_lane_change(&mut self, enteredLane: Ptr<MSLane>) {
-        todo!("port MSVehicle::enterLaneAtLaneChange")
+        self.myAmOnNet = true;
+        self.myLane = enteredLane;
+        self.myCachedPosition = Position::INVALID;
+        // need to update myCurrentLaneInBestLanes
+        self.update_best_lanes();
+        // switch to and activate the new lane's reminders
+        // keep OldLaneReminders
+        for rem in enteredLane.get_move_reminders().iter() {
+            self.add_reminder(*rem, 0.0);
+        }
+        self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE, enteredLane);
+        let mut lane = self.myLane;
+        let mut leftLength = self.get_vehicle_type().get_length() - self.myState.myPos;
+        let mut deleteFurther: usize = 0;
+        if !self.myLane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+            // railways don't need to "see" each other when moving in opposite directions on the same track (efficiency)
+            // (unless the lane is shared with cars)
+            let bidi = self.myLane.get_bidi_lane();
+            bidi.m().set_partial_occupation(Ptr::from_mut(self));
+        }
+        for i in 0..self.myFurtherLanes.len() {
+            if !lane.is_null() {
+                lane = lane.get_logical_predecessor_lane_2(self.myFurtherLanes[i].get_edge());
+            }
+            if leftLength > 0.0 {
+                if !lane.is_null() {
+                    let mut fl = self.myFurtherLanes[i];
+                    fl.m().reset_partial_occupation(Ptr::from_mut(self));
+                    if !fl.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (fl.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                        fl.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                    }
+                    // lane changing onto longer lanes may reduce the number of
+                    // remaining further lanes
+                    self.myFurtherLanes[i] = lane;
+                    self.myFurtherLanesPosLat[i] = self.myState.myPosLat;
+                    leftLength -= lane.m().set_partial_occupation(Ptr::from_mut(self));
+                    if !lane.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (lane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                        lane.get_bidi_lane().m().set_partial_occupation(Ptr::from_mut(self));
+                    }
+                    self.myState.myBackPos = -leftLength;
+                } else {
+                    // keep the old values, but ensure there is no shadow
+                    if self.myLaneChangeModel.m().is_changing_lanes() {
+                        let fl = self.myFurtherLanes[i];
+                        self.myLaneChangeModel.m().set_no_shadow_partial_occupator(fl);
+                    }
+                    if self.myState.myBackPos < 0.0 {
+                        self.myState.myBackPos += self.myFurtherLanes[i].get_length();
+                    }
+                }
+            } else {
+                let mut fl = self.myFurtherLanes[i];
+                fl.m().reset_partial_occupation(Ptr::from_mut(self));
+                if !fl.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (fl.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                    fl.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                }
+                deleteFurther += 1;
+            }
+        }
+        if deleteFurther > 0 {
+            let newLen = self.myFurtherLanes.len() - deleteFurther;
+            self.myFurtherLanes.truncate(newLen);
+            self.myFurtherLanesPosLat.truncate(newLen);
+        }
+        self.myAngle = self.compute_angle();
     }
 
     /// C++: `void MSVehicle::leaveLane(const MSMoveReminder::Notification, const MSLane *)`
@@ -5093,7 +5273,52 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn leave_lane(&mut self, reason: MSMoveReminder_Notification, approachedLane: Ptr<MSLane>) {
-        todo!("port MSVehicle::leaveLane")
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let mut rem = self.myMoveReminders[i].0;
+            let remPos = self.myMoveReminders[i].1;
+            let lastPos = self.myState.myPos + remPos;
+            if rem.notify_leave(self, lastPos, reason, approachedLane) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
+        if (reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION) && !self.myLane.is_null() {
+            self.myOdometer += self.myLane.get_length();
+        }
+        if !self.myLane.is_null() && !self.myLane.get_bidi_lane().is_null() && self.myAmOnNet && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (self.myLane.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+            self.myLane.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            // @note. In case of lane change, myFurtherLanes and partial occupation
+            // are handled in enterLaneAtLaneChange()
+            let furthers = self.myFurtherLanes.clone();
+            for further in furthers {
+                further.m().reset_partial_occupation(Ptr::from_mut(self));
+                if !further.get_bidi_lane().is_null() && (!utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || (further.get_permissions() & !utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0) {
+                    further.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                }
+            }
+            self.myFurtherLanes.clear();
+            self.myFurtherLanesPosLat.clear();
+        }
+        if reason >= MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            self.myAmOnNet = false;
+            self.myWaitingTime = 0;
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && self.resume_from_stopping() {
+            self.myStopDist = f64::MAX;
+            if self.myPastStops.last().unwrap().speed <= 0.0 {
+                write_warningf!("Vehicle '%' aborts stop.", self.get_id());
+            }
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            // shortcut: the C++ while-loop over myStops also compares front().edge (MSStop::edge is an Unmapped MSRouteIterator, see ms_route.rs) with myCurrEdge; the stop-handling body is not ported, so this panics where the loop would run; upgrade when MSRouteIterator is mapped
+            if !self.myStops.is_empty() && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
+                panic!("leaveLane: stop handling on the same edge needs MSRouteIterator, which is not ported yet");
+            }
+        }
     }
 
     /// C++: `void MSVehicle::leaveLaneBack(const MSMoveReminder::Notification, const MSLane *)`
@@ -5129,7 +5354,15 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn leave_lane_back(&mut self, reason: MSMoveReminder_Notification, leftLane: Ptr<MSLane>) {
-        todo!("port MSVehicle::leaveLaneBack")
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            let mut rem = self.myMoveReminders[i].0;
+            if rem.notify_leave_back(self, reason, leftLane) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
     }
 
     /// C++: `void MSVehicle::updateDriveItems()`
@@ -5294,7 +5527,96 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_drive_items(&mut self) {
-        todo!("port MSVehicle::updateDriveItems")
+        if self.myLFLinkLanes.len() == 0 {
+            // nothing to update
+            return;
+        }
+        let mut nextPlannedLink: Ptr<MSLink> = Ptr::null();
+        let mut i = self.myNextDriveItem;
+        while i < self.myLFLinkLanes.len() && nextPlannedLink.is_null() {
+            nextPlannedLink = self.myLFLinkLanes[i].myLink;
+            i += 1;
+        }
+        if nextPlannedLink.is_null() {
+            // No link for upcoming item -> no need for an update
+            return;
+        }
+        if self.myLane == nextPlannedLink.get_lane_before() {
+            // Current lane approaches the stored next link, i.e. no LC happend and no update is required.
+            return;
+        }
+        // Lane must have been changed, determine the change direction
+        let mut parallelLink = nextPlannedLink.get_parallel_link(1);
+        if !parallelLink.is_null() && parallelLink.get_lane_before() == self.myLane {
+            // lcDir = 1;
+        } else {
+            parallelLink = nextPlannedLink.get_parallel_link(-1);
+            if !parallelLink.is_null() && parallelLink.get_lane_before() == self.myLane {
+                // lcDir = -1;
+            } else {
+                // If the vehicle's current lane is not the approaching lane for the next
+                // drive process item's link, it is expected to lead to a parallel link,
+                // XXX: What if the lc was an overtaking maneuver and there is no upcoming link?
+                //      Then a stop item should be scheduled! -> TODO!
+                return;
+            }
+        }
+        // Trace link sequence along current best lanes and transfer drive items to the corresponding links
+        let mut driveItemIt = self.myNextDriveItem;
+        // In the loop below, lane holds the currently considered lane on the vehicles continuation (including internal lanes)
+        let mut lane = self.myLane;
+        debug_assert!(self.myLane == parallelLink.get_lane_before());
+        // *lit is a pointer to the next lane in best continuations for the current lane (always non-internal)
+        // C++ iterator begin() + 1, as an index
+        let mut bestLaneIt: usize = 1;
+        // Pointer to the new link for the current drive process item
+        let mut newLink: Ptr<MSLink>;
+        while driveItemIt < self.myLFLinkLanes.len() {
+            if self.myLFLinkLanes[driveItemIt].myLink.is_null() {
+                // Items not related to a specific link are not updated
+                driveItemIt += 1;
+                continue;
+            }
+            // Continuation links for current best lanes are less than for the former drive items (myLFLinkLanes)
+            // We just remove the leftover link-items, as they cannot be mapped to new links.
+            if bestLaneIt == self.get_best_lanes_continuation().len() {
+                while driveItemIt < self.myLFLinkLanes.len() {
+                    if self.myLFLinkLanes[driveItemIt].myLink.is_null() {
+                        driveItemIt += 1;
+                        continue;
+                    } else {
+                        let link = self.myLFLinkLanes[driveItemIt].myLink;
+                        link.m().remove_approaching(Ptr::from_mut(self).cast::<SUMOVehicle>());
+                        self.myLFLinkLanes.remove(driveItemIt);
+                    }
+                }
+                break;
+            }
+            // Do the actual link-remapping for the item. And un/register approaching information on the corresponding links
+            let target = self.get_best_lanes_continuation()[bestLaneIt];
+            debug_assert!(!target.is_internal());
+            newLink = Ptr::null();
+            for link in lane.get_link_cont().iter() {
+                if link.get_lane() == target {
+                    newLink = *link;
+                    break;
+                }
+            }
+            if newLink == self.myLFLinkLanes[driveItemIt].myLink {
+                // new continuation merged into previous - stop update
+                break;
+            }
+            let veh = Ptr::from_mut(self).cast::<SUMOVehicle>();
+            let ai = self.myLFLinkLanes[driveItemIt].myLink.get_approaching(veh);
+            newLink.m().set_approaching_2(veh, ai);
+            self.myLFLinkLanes[driveItemIt].myLink.m().remove_approaching(veh);
+            self.myLFLinkLanes[driveItemIt].myLink = newLink;
+            lane = newLink.get_via_lane_or_lane();
+            driveItemIt += 1;
+            if !lane.is_internal() {
+                bestLaneIt += 1;
+            }
+        }
     }
 
     /// C++: `const std::pair<double, const MSLink *> & MSVehicle::getNextTurn()`
@@ -5304,7 +5626,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_turn(&mut self) -> &(f64, Ptr<MSLink>) {
-        todo!("port MSVehicle::getNextTurn")
+        &self.myNextTurn
     }
 
     /// C++: `MSAbstractLaneChangeModel & MSVehicle::getLaneChangeModel()`
@@ -5314,7 +5636,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_model(&mut self) -> &mut MSAbstractLaneChangeModel {
-        todo!("port MSVehicle::getLaneChangeModel")
+        self.myLaneChangeModel.m()
     }
 
     /// C++: `const MSAbstractLaneChangeModel & MSVehicle::getLaneChangeModel() const` [const]
@@ -5324,7 +5646,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_model_2(&self) -> &MSAbstractLaneChangeModel {
-        todo!("port MSVehicle::getLaneChangeModel")
+        self.myLaneChangeModel.m()
     }
 
     /// C++: `const std::vector<MSLane *> & MSVehicle::getFurtherLanes() const` [const]
@@ -5333,7 +5655,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_further_lanes(&self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSVehicle::getFurtherLanes")
+        &self.myFurtherLanes
     }
 
     /// C++: `const std::vector<double> & MSVehicle::getFurtherLanesPosLat() const` [const]
@@ -5342,7 +5664,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_further_lanes_pos_lat(&self) -> &Vec<f64> {
-        todo!("port MSVehicle::getFurtherLanesPosLat")
+        &self.myFurtherLanesPosLat
     }
 
     /// C++: `bool MSVehicle::onFurtherEdge(const MSEdge *) const` [const]
@@ -5358,7 +5680,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn on_further_edge(&self, edge: Ptr<MSEdge>) -> bool {
-        todo!("port MSVehicle::onFurtherEdge")
+        self.myFurtherLanes.iter().any(|i| std::ptr::eq(i.get_edge() as *const MSEdge, &*edge as *const MSEdge))
     }
 
     /// C++: `bool MSVehicle::isBidiOn(const MSLane *) const` [const]
@@ -5371,7 +5693,8 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_on(&self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSVehicle::isBidiOn")
+        let bidi = lane.get_bidi_lane();
+        !bidi.is_null() && (self.myLane == bidi || self.on_further_edge(Ptr::from_mut(bidi.get_edge())))
     }
 
     /// C++: `const std::vector<LaneQ> & MSVehicle::getBestLanes() const` [const]
@@ -5379,7 +5702,7 @@ impl MSVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_best_lanes(&self) -> &Vec<MSVehicle_LaneQ> {
-        todo!("port MSVehicle::getBestLanes")
+        &self.myBestLanes[0]
     }
 
     /// C++: `void MSVehicle::updateBestLanes(bool, const MSLane *)` [virtual]
