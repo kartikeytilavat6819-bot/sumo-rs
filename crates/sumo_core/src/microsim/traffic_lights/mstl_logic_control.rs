@@ -1,6 +1,11 @@
 //! Port of microsim/traffic_lights/MSTLLogicControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::to_double;
+use utils::common::time::{delta_t, string2time, steps2time, time2steps, SUMOTIME_DAY, SUMOTIME_MAX};
+use utils::common::to_string::to_string;
+
+const TRACI_PROGRAM: &str = "online";
 
 /// A class that stores and controls tls and switching of their programs
 /// C++ class `MSTLLogicControl` (microsim/traffic_lights/MSTLLogicControl.h)
@@ -22,7 +27,12 @@ impl MSTLLogicControl {
     //     : myNetWasLoaded(false) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSTLLogicControl::MSTLLogicControl")
+        Self {
+            myWAUTs: BTreeMap::new(),
+            myCurrentlySwitched: Vec::new(),
+            myLogics: BTreeMap::new(),
+            myNetWasLoaded: false,
+        }
     }
 
     /// C++: `void MSTLLogicControl::~MSTLLogicControl()`
@@ -30,7 +40,17 @@ impl MSTLLogicControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTLLogicControl::~MSTLLogicControl")
+        // delete tls
+        let logics = std::mem::take(&mut self.myLogics);
+        for (_id, variants) in logics {
+            variants.m().drop_();
+            unsafe { drop(Box::from_raw(variants.as_raw())) };
+        }
+        // delete WAUTs
+        let wauts = std::mem::take(&mut self.myWAUTs);
+        for (_id, waut) in wauts {
+            unsafe { drop(Box::from_raw(waut.as_raw())) };
+        }
     }
 
     /// C++: `bool MSTLLogicControl::closeNetworkReading()`
@@ -47,7 +67,13 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn close_network_reading(&mut self) -> bool {
-        todo!("port MSTLLogicControl::closeNetworkReading")
+        let mut had_errors = false;
+        for it in self.myLogics.values() {
+            had_errors |= !it.check_original_tls();
+            it.m().save_initial_states();
+        }
+        self.myNetWasLoaded = true;
+        !had_errors
     }
 
     /// C++: `void MSTLLogicControl::setTrafficLightSignals(SUMOTime) const` [const]
@@ -60,7 +86,9 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn set_traffic_light_signals(&self, t: SUMOTime) {
-        todo!("port MSTLLogicControl::setTrafficLightSignals")
+        for variants in self.myLogics.values() {
+            variants.get_active().set_traffic_light_signals(t);
+        }
     }
 
     /// C++: `std::vector<MSTrafficLightLogic *> MSTLLogicControl::getAllLogics() const` [const]
@@ -77,7 +105,11 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn get_all_logics(&self) -> Vec<Ptr<MSTrafficLightLogic>> {
-        todo!("port MSTLLogicControl::getAllLogics")
+        let mut ret = Vec::new();
+        for variants in self.myLogics.values() {
+            ret.extend(variants.get_all_logics());
+        }
+        ret
     }
 
     /// C++: `TLSLogicVariants & MSTLLogicControl::get(const std::string &) const` [const]
@@ -85,7 +117,10 @@ impl MSTLLogicControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get(&self, id: &str) -> &mut MSTLLogicControl_TLSLogicVariants {
-        todo!("port MSTLLogicControl::get")
+        match self.myLogics.get(id) {
+            Some(variants) => variants.m(),
+            None => panic!("The tls '{}' is not known.", id),
+        }
     }
 
     /// C++: `MSTrafficLightLogic * MSTLLogicControl::get(const std::string &, const std::string &) const` [const]
@@ -100,7 +135,10 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn get_2(&self, id: &str, programID: &str) -> Ptr<MSTrafficLightLogic> {
-        todo!("port MSTLLogicControl::get")
+        match self.myLogics.get(id) {
+            Some(variants) => variants.get_logic(programID),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `MSTrafficLightLogic * MSTLLogicControl::getActive(const std::string &) const` [const]
@@ -115,7 +153,10 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn get_active(&self, id: &str) -> Ptr<MSTrafficLightLogic> {
-        todo!("port MSTLLogicControl::getActive")
+        match self.myLogics.get(id) {
+            Some(variants) => variants.get_active(),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `std::vector<std::string> MSTLLogicControl::getAllTLIds() const` [const]
@@ -130,7 +171,7 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn get_all_tl_ids(&self) -> Vec<String> {
-        todo!("port MSTLLogicControl::getAllTLIds")
+        self.myLogics.keys().cloned().collect()
     }
 
     /// C++: `bool MSTLLogicControl::add(const std::string &, const std::string &, MSTrafficLightLogic *, bool)`
@@ -149,7 +190,12 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, id: &str, programID: &str, logic: Ptr<MSTrafficLightLogic>, newDefault: bool) -> bool {
-        todo!("port MSTLLogicControl::add")
+        if !self.myLogics.contains_key(id) {
+            let variants = Ptr::from_raw(Box::into_raw(Box::new(MSTLLogicControl_TLSLogicVariants::new())));
+            self.myLogics.insert(id.to_string(), variants);
+        }
+        let tlmap = self.myLogics[id];
+        tlmap.m().add_logic(programID, logic, self.myNetWasLoaded, newDefault)
     }
 
     /// C++: `bool MSTLLogicControl::knows(const std::string &) const` [const]
@@ -160,7 +206,7 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn knows(&self, id: &str) -> bool {
-        todo!("port MSTLLogicControl::knows")
+        self.myLogics.contains_key(id)
     }
 
     /// C++: `bool MSTLLogicControl::isActive(const MSTrafficLightLogic *) const` [const]
@@ -175,7 +221,10 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn is_active(&self, tl: Ptr<MSTrafficLightLogic>) -> bool {
-        todo!("port MSTLLogicControl::isActive")
+        match self.myLogics.get(tl.get_id()) {
+            Some(variants) => variants.is_active(tl),
+            None => false,
+        }
     }
 
     /// C++: `void MSTLLogicControl::switchTo(const std::string &, const std::string &)`
@@ -192,7 +241,12 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn switch_to(&mut self, id: &str, programID: &str) {
-        todo!("port MSTLLogicControl::switchTo")
+        // try to get the tls program definitions; handle problems
+        if !self.myLogics.contains_key(id) {
+            panic!("{}", utils::tlf!("Could not switch tls '%' to program '%': No such tls exists.", id, programID));
+        }
+        let variants = self.myLogics[id];
+        variants.m().switch_to(self, programID);
     }
 
     /// C++: `void MSTLLogicControl::addWAUT(SUMOTime, const std::string &, const std::string &, SUMOTime)`
@@ -214,7 +268,19 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn add_waut(&mut self, refTime: SUMOTime, id: &str, startProg: &str, period: SUMOTime) {
-        todo!("port MSTLLogicControl::addWAUT")
+        // check whether the waut was already defined
+        if self.myWAUTs.contains_key(id) {
+            panic!("{}", utils::tlf!("Waut '%' was already defined.", id));
+        }
+        let w = MSTLLogicControl_WAUT {
+            id: id.to_string(),
+            startProg: startProg.to_string(),
+            refTime,
+            period,
+            switches: Vec::new(),
+            junctions: Vec::new(),
+        };
+        self.myWAUTs.insert(id.to_string(), Ptr::from_raw(Box::into_raw(Box::new(w))));
     }
 
     /// C++: `void MSTLLogicControl::addWAUTSwitch(const std::string &, SUMOTime, const std::string &)`
@@ -239,7 +305,20 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn add_waut_switch(&mut self, wautid: &str, when: SUMOTime, to: &str) {
-        todo!("port MSTLLogicControl::addWAUTSwitch")
+        // try to get the waut
+        if !self.myWAUTs.contains_key(wautid) {
+            panic!("{}", utils::tlf!("Waut '%' was not yet defined.", wautid));
+        }
+        // build and save the waut switch definition
+        let waut = self.myWAUTs[wautid];
+        let mut s = MSTLLogicControl_WAUTSwitch {
+            to: to.to_string(),
+            when: waut.refTime + when,
+        };
+        if waut.period > 0 {
+            s.when = s.when % waut.period;
+        }
+        waut.m().switches.push(s);
     }
 
     /// C++: `void MSTLLogicControl::addWAUTJunction(const std::string &, const std::string &, const std::string &, bool)`
@@ -282,7 +361,38 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn add_waut_junction(&mut self, wautid: &str, tls: &str, proc: &str, synchron: bool) {
-        todo!("port MSTLLogicControl::addWAUTJunction")
+        // try to get the waut
+        if !self.myWAUTs.contains_key(wautid) {
+            panic!("{}", utils::tlf!("Waut '%' was not yet defined.", wautid));
+        }
+        // try to get the tls to switch
+        if !self.myLogics.contains_key(tls) {
+            panic!("{}", utils::tlf!("TLS '%' to switch in WAUT '%' was not yet defined.", tls, wautid));
+        }
+        let waut = self.myWAUTs[wautid];
+        waut.m().junctions.push(MSTLLogicControl_WAUTJunction {
+            junction: tls.to_string(),
+            procedure: proc.to_string(),
+            synchron,
+        });
+        let mut initProg = waut.startProg.clone();
+        let now = MSNet::get_instance().get_current_time_step();
+        let len = waut.switches.len();
+        // first == len stands for switches.end()
+        let mut first = len;
+        let mut minExecTime: SUMOTime = -1;
+        for i in 0..len {
+            let when = waut.switches[i].when;
+            if when > now && (minExecTime == -1 || when < minExecTime) {
+                minExecTime = when;
+                first = i;
+            }
+            if first != 0 {
+                initProg = waut.switches[first - 1].to.clone();
+            }
+        }
+        // activate the first one
+        self.switch_to(tls, &initProg);
     }
 
     /// C++: `void MSTLLogicControl::closeWAUT(const std::string &)`
@@ -321,7 +431,31 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn close_waut(&mut self, wautid: &str) {
-        todo!("port MSTLLogicControl::closeWAUT")
+        // try to get the waut
+        if !self.myWAUTs.contains_key(wautid) {
+            panic!("{}", utils::tlf!("Waut '%' was not yet defined.", wautid));
+        }
+        let w = self.myWAUTs[wautid];
+        let now = MSNet::get_instance().get_current_time_step();
+        // get the switch to be performed as first
+        let mut minExecTime: SUMOTime = SUMOTIME_MAX;
+        let mut firstIndex: i32 = -1;
+        for (i, s) in w.switches.iter().enumerate() {
+            if s.when >= now && s.when < minExecTime {
+                minExecTime = s.when;
+                firstIndex = i as i32;
+            }
+        }
+        // activate the first one
+        if firstIndex >= 0 {
+            let cmd = Box::into_raw(Box::new(MSTLLogicControl_SwitchInitCommand::new(self, wautid, firstIndex)));
+            // shortcut: the begin-of-timestep queue takes Command as Ptr<()> (Command is Unmapped), so the scheduled switch cannot run yet, upgrade when Command is ported
+            MSNet::get_instance()
+                .m()
+                .get_begin_of_timestep_events()
+                .m()
+                .add_event(Ptr::from_raw(cmd as *mut ()), std::cmp::max(now, minExecTime));
+        }
     }
 
     /// C++: `void MSTLLogicControl::check2Switch(SUMOTime)`
@@ -344,7 +478,21 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn check2_switch(&mut self, step: SUMOTime) {
-        todo!("port MSTLLogicControl::check2Switch")
+        let mut i = 0;
+        while i < self.myCurrentlySwitched.len() {
+            if self.myCurrentlySwitched[i].proc.try_switch(step) {
+                let to = self.myCurrentlySwitched[i].to;
+                let toId = to.get_id().to_string();
+                // do not switch away from TraCI control
+                if self.get_active(&toId).get_program_id() != TRACI_PROGRAM {
+                    let toProgramId = to.get_program_id().to_string();
+                    self.switch_to(&toId, &toProgramId);
+                }
+                self.myCurrentlySwitched.remove(i);
+            } else {
+                i += 1;
+            }
+        }
     }
 
     /// C++: `std::pair<SUMOTime, MSPhaseDefinition> MSTLLogicControl::getPhaseDef(const std::string &) const` [const]
@@ -356,7 +504,8 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_def(&self, tlid: &str) -> (SUMOTime, MSPhaseDefinition) {
-        todo!("port MSTLLogicControl::getPhaseDef")
+        let tl = self.get_active(tlid);
+        (MSNet::get_instance().get_current_time_step(), clone_phase_def(tl.get_current_phase_def()))
     }
 
     /// C++: `void MSTLLogicControl::switchOffAll()`
@@ -374,7 +523,17 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn switch_off_all(&mut self) {
-        todo!("port MSTLLogicControl::switchOffAll")
+        let entries: Vec<(String, Ptr<MSTLLogicControl_TLSLogicVariants>)> =
+            self.myLogics.iter().map(|(id, v)| (id.clone(), *v)).collect();
+        for (id, variants) in entries {
+            if matches!(variants.get_active().get_logic_type(), TrafficLightType::RAIL_SIGNAL) {
+                // there is no sensible fall-back behavior when switching of rail
+                // signals so they should ignore tls.all-off
+                continue;
+            }
+            let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSOffTrafficLightLogic::new(self, &id))) as *mut MSTrafficLightLogic);
+            variants.m().add_logic("off", off, true, true);
+        }
     }
 
     /// C++: `void MSTLLogicControl::saveState(OutputDevice &)`
@@ -389,7 +548,11 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSTLLogicControl::saveState")
+        MSRailSignalConstraint::save_state(out); // always saves vehicle tracker states
+        for logic in self.myLogics.values() {
+            logic.m().save_state(out);
+        }
+        MSDriveWay::save_state(out);
     }
 
     /// C++: `void MSTLLogicControl::clearState(SUMOTime, bool)`
@@ -428,7 +591,36 @@ impl MSTLLogicControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, time: SUMOTime, quickReload: bool) {
-        todo!("port MSTLLogicControl::clearState")
+        MSRailSignalConstraint::clear_state();
+        if quickReload {
+            let variants_list: Vec<Ptr<MSTLLogicControl_TLSLogicVariants>> = self.myLogics.values().copied().collect();
+            for variants in variants_list {
+                for logic in variants.get_all_logics() {
+                    if matches!(
+                        logic.get_logic_type(),
+                        TrafficLightType::OFF | TrafficLightType::RAIL_SIGNAL | TrafficLightType::RAIL_CROSSING
+                    ) {
+                        continue;
+                    }
+                    let mut step: i32 = 0;
+                    let cycleTime = logic.get_default_cycle_time();
+                    let mut offset = logic.get_offset();
+                    if offset >= 0 {
+                        offset = (time + cycleTime - (offset % cycleTime)) % cycleTime;
+                    } else {
+                        offset = (time + ((-offset) % cycleTime)) % cycleTime;
+                    }
+                    while offset >= logic.get_phases()[step as usize].duration {
+                        offset -= logic.get_phases()[step as usize].duration;
+                        step += 1;
+                    }
+                    let nextSwitch = time + logic.get_phases()[step as usize].duration - offset;
+                    let timeInCycle = (time - offset) % logic.get_default_cycle_time();
+                    let active = logic.is_active();
+                    logic.m().load_state(self, time, step, offset, nextSwitch, timeInCycle, active);
+                }
+            }
+        }
     }
 
     /// C++: `SUMOTime MSTLLogicControl::initWautSwitch(SwitchInitCommand &)`
@@ -436,7 +628,63 @@ impl MSTLLogicControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn init_waut_switch(&mut self, cmd: &mut MSTLLogicControl_SwitchInitCommand) -> SUMOTime {
-        todo!("port MSTLLogicControl::initWautSwitch")
+        let wautid = cmd.get_wautid().to_string();
+        let index = cmd.get_index();
+        let waut = self.myWAUTs[&wautid];
+        // copy of the switch, as in C++
+        let sTo = waut.switches[*index as usize].to.clone();
+        for i in 0..waut.junctions.len() {
+            let junction = waut.junctions[i].junction.clone();
+            let procedure = waut.junctions[i].procedure.clone();
+            let synchron = waut.junctions[i].synchron;
+            // get the current program and the one to instantiate
+            let vars = self.myLogics[&junction];
+            let from = vars.get_active();
+            let to = vars.m().get_logic_instantiating_off(self, &sTo);
+            let proc = match procedure.as_str() {
+                "GSP" => MSTLLogicControl_WAUTSwitchProcedureVariant::GSP(MSTLLogicControl_WAUTSwitchProcedure_GSP::new(
+                    self,
+                    waut.m(),
+                    from,
+                    to,
+                    synchron,
+                )),
+                "Stretch" => MSTLLogicControl_WAUTSwitchProcedureVariant::Stretch(MSTLLogicControl_WAUTSwitchProcedure_Stretch::new(
+                    self,
+                    waut.m(),
+                    from,
+                    to,
+                    synchron,
+                )),
+                _ => MSTLLogicControl_WAUTSwitchProcedureVariant::JustSwitch(MSTLLogicControl_WAUTSwitchProcedure_JustSwitch::new(
+                    self,
+                    waut.m(),
+                    from,
+                    to,
+                    synchron,
+                )),
+            };
+            self.myCurrentlySwitched.push(MSTLLogicControl_WAUTSwitchProcess {
+                junction,
+                from,
+                to,
+                proc,
+            });
+        }
+        *index += 1;
+        if *index == waut.switches.len() as i32 {
+            if waut.period <= 0 {
+                return 0;
+            } else {
+                *index = 0; // start over
+                let period = waut.period;
+                for ws in waut.m().switches.iter_mut() {
+                    ws.when += period;
+                }
+            }
+        }
+        let idx = *index as usize;
+        waut.switches[idx].when - MSNet::get_instance().get_current_time_step()
     }
 
     /// C++: `void MSTLLogicControl::MSTLLogicControl(const MSTLLogicControl &)` [private]
@@ -444,7 +692,7 @@ impl MSTLLogicControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTLLogicControl) -> Self {
-        todo!("port MSTLLogicControl::MSTLLogicControl")
+        panic!("MSTLLogicControl copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSTLLogicControl & MSTLLogicControl::operator=(const MSTLLogicControl &)` [private]
@@ -452,7 +700,7 @@ impl MSTLLogicControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTLLogicControl) -> &mut MSTLLogicControl {
-        todo!("port MSTLLogicControl::operator=")
+        panic!("MSTLLogicControl assignment operator is private and invalidated in C++")
     }
 
 }
@@ -468,7 +716,7 @@ impl MSTLLogicControl_OnSwitchAction {
     // virtual ~OnSwitchAction() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port OnSwitchAction::~OnSwitchAction")
+        // C++ virtual destructor has an empty body
     }
 
     /// C++: `void OnSwitchAction::execute()` [virtual, pure virtual]
@@ -476,7 +724,7 @@ impl MSTLLogicControl_OnSwitchAction {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn execute(&mut self) {
-        todo!("port OnSwitchAction::execute")
+        panic!("OnSwitchAction::execute is pure virtual; call it on a concrete action")
     }
 
 }
@@ -527,7 +775,12 @@ impl MSTLLogicControl_SwitchInitCommand {
     //             : myParent(p), myWAUTID(wautid), myIndex(index) { }
     #[allow(unused_variables)]
     pub fn new(p: &mut MSTLLogicControl, wautid: &str, index: i32) -> Self {
-        todo!("port SwitchInitCommand::SwitchInitCommand")
+        Self {
+            base: (),
+            myParent: Ptr::from_mut(p),
+            myWAUTID: wautid.to_string(),
+            myIndex: index,
+        }
     }
 
     /// C++: `void SwitchInitCommand::~SwitchInitCommand() noexcept` [virtual]
@@ -535,7 +788,7 @@ impl MSTLLogicControl_SwitchInitCommand {
     // ~SwitchInitCommand() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SwitchInitCommand::~SwitchInitCommand")
+        // C++ destructor has an empty body
     }
 
     /// C++: `SUMOTime SwitchInitCommand::execute(SUMOTime)` [virtual]
@@ -545,7 +798,8 @@ impl MSTLLogicControl_SwitchInitCommand {
     //         }
     #[allow(unused_variables)]
     pub fn execute(&mut self, arg0: SUMOTime) -> SUMOTime {
-        todo!("port SwitchInitCommand::execute")
+        let mut parent = self.myParent;
+        parent.m().init_waut_switch(self)
     }
 
     /// C++: `const std::string & SwitchInitCommand::getWAUTID() const` [const]
@@ -555,7 +809,7 @@ impl MSTLLogicControl_SwitchInitCommand {
     //         }
     #[allow(unused_variables)]
     pub fn get_wautid(&self) -> &str {
-        todo!("port SwitchInitCommand::getWAUTID")
+        &self.myWAUTID
     }
 
     /// C++: `int & SwitchInitCommand::getIndex()`
@@ -565,7 +819,7 @@ impl MSTLLogicControl_SwitchInitCommand {
     //         }
     #[allow(unused_variables)]
     pub fn get_index(&mut self) -> &mut i32 {
-        todo!("port SwitchInitCommand::getIndex")
+        &mut self.myIndex
     }
 
     /// C++: `void SwitchInitCommand::SwitchInitCommand(const SwitchInitCommand &)` [private]
@@ -573,7 +827,7 @@ impl MSTLLogicControl_SwitchInitCommand {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTLLogicControl_SwitchInitCommand) -> Self {
-        todo!("port SwitchInitCommand::SwitchInitCommand")
+        panic!("MSTLLogicControl_SwitchInitCommand copy constructor is private and invalidated in C++")
     }
 
     /// C++: `SwitchInitCommand & SwitchInitCommand::operator=(const SwitchInitCommand &)` [private]
@@ -581,7 +835,7 @@ impl MSTLLogicControl_SwitchInitCommand {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTLLogicControl_SwitchInitCommand) -> &mut MSTLLogicControl_SwitchInitCommand {
-        todo!("port SwitchInitCommand::operator=")
+        panic!("MSTLLogicControl_SwitchInitCommand assignment operator is private and invalidated in C++")
     }
 
 }
@@ -610,7 +864,13 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TLSLogicVariants::TLSLogicVariants")
+        Self {
+            myCurrentProgram: Ptr::null(),
+            myDefaultProgram: Ptr::null(),
+            myVariants: BTreeMap::new(),
+            myOriginalLinkStates: BTreeMap::new(),
+            mySwitchActions: Vec::new(),
+        }
     }
 
     /// C++: `void TLSLogicVariants::~TLSLogicVariants()`
@@ -618,7 +878,9 @@ impl MSTLLogicControl_TLSLogicVariants {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TLSLogicVariants::~TLSLogicVariants")
+        // shortcut: owned programs and switch actions are only forgotten, not freed (their subclasses cannot be dropped through the base pointer), upgrade when logic ownership is ported
+        self.myVariants.clear();
+        self.mySwitchActions.clear();
     }
 
     /// C++: `bool TLSLogicVariants::checkOriginalTLS() const` [const]
@@ -644,7 +906,22 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn check_original_tls(&self) -> bool {
-        todo!("port TLSLogicVariants::checkOriginalTLS")
+        let mut had_errors = false;
+        for (id, logic) in self.myVariants.iter() {
+            let phases = logic.get_phases();
+            let link_no = logic.get_links().len();
+            let mut had_program_errors = false;
+            for phase in phases.iter() {
+                if phase.get_state().len() < link_no {
+                    had_program_errors = true;
+                }
+            }
+            if had_program_errors {
+                utils::write_errorf!("Mismatching phase size in tls '%', program '%'.", logic.get_id(), id);
+                had_errors = true;
+            }
+        }
+        !had_errors
     }
 
     /// C++: `bool TLSLogicVariants::addLogic(const std::string &, MSTrafficLightLogic *, bool, bool)`
@@ -692,7 +969,41 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn add_logic(&mut self, programID: &str, logic: Ptr<MSTrafficLightLogic>, netWasLoaded: bool, isNewDefault: bool) -> bool {
-        todo!("port TLSLogicVariants::addLogic")
+        if self.myVariants.contains_key(programID) {
+            // shortcut: a rejected logic is leaked, not deleted (its subclass cannot be freed through the base pointer), upgrade when logic ownership is ported
+            return false;
+        }
+        // assert the links are set
+        if netWasLoaded {
+            // this one has not yet its links set
+            if self.myCurrentProgram.is_null() {
+                let id = logic.get_id().to_string();
+                panic!("{}", utils::tlf!("No initial signal plan loaded for tls '%'.", id));
+            }
+            logic.m().adapt_link_information_from(&*self.myCurrentProgram);
+            if logic.get_links().len() > logic.get_phase(0).get_state().len() {
+                let id = logic.get_id().to_string();
+                panic!("{}", utils::tlf!("Mismatching phase size in tls '%', program '%'.", id, programID));
+            }
+        }
+        // add to the list of active
+        if self.myVariants.is_empty() || isNewDefault {
+            if !self.myCurrentProgram.is_null() {
+                self.myCurrentProgram.m().deactivate_program();
+            }
+            self.myCurrentProgram = logic;
+            self.myCurrentProgram.m().activate_program();
+            if self.myVariants.is_empty() {
+                self.myDefaultProgram = logic;
+            }
+        }
+        // add to the list of logic
+        self.myVariants.insert(programID.to_string(), logic);
+        if self.myVariants.len() == 1 || isNewDefault {
+            logic.m().set_traffic_light_signals(MSNet::get_instance().get_current_time_step());
+            self.execute_on_switch_actions();
+        }
+        true
     }
 
     /// C++: `MSTrafficLightLogic * TLSLogicVariants::getLogic(const std::string &) const` [const]
@@ -705,7 +1016,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn get_logic(&self, programID: &str) -> Ptr<MSTrafficLightLogic> {
-        todo!("port TLSLogicVariants::getLogic")
+        self.myVariants.get(programID).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `void TLSLogicVariants::addSwitchCommand(OnSwitchAction *)`
@@ -715,7 +1026,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn add_switch_command(&mut self, c: Ptr<MSTLLogicControl_OnSwitchAction>) {
-        todo!("port TLSLogicVariants::addSwitchCommand")
+        self.mySwitchActions.push(c);
     }
 
     /// C++: `std::vector<MSTrafficLightLogic *> TLSLogicVariants::getAllLogics() const` [const]
@@ -730,7 +1041,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn get_all_logics(&self) -> Vec<Ptr<MSTrafficLightLogic>> {
-        todo!("port TLSLogicVariants::getAllLogics")
+        self.myVariants.values().copied().collect()
     }
 
     /// C++: `void TLSLogicVariants::saveInitialStates()`
@@ -740,7 +1051,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn save_initial_states(&mut self) {
-        todo!("port TLSLogicVariants::saveInitialStates")
+        self.myOriginalLinkStates = self.myCurrentProgram.collect_link_states();
     }
 
     /// C++: `void TLSLogicVariants::saveState(OutputDevice &)`
@@ -752,7 +1063,9 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port TLSLogicVariants::saveState")
+        for item in self.myVariants.values() {
+            item.m().save_state(out);
+        }
     }
 
     /// C++: `bool TLSLogicVariants::isActive(const MSTrafficLightLogic *) const` [const]
@@ -762,7 +1075,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn is_active(&self, tl: Ptr<MSTrafficLightLogic>) -> bool {
-        todo!("port TLSLogicVariants::isActive")
+        tl == self.myCurrentProgram
     }
 
     /// C++: `MSTrafficLightLogic * TLSLogicVariants::getActive() const` [const]
@@ -772,7 +1085,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn get_active(&self) -> Ptr<MSTrafficLightLogic> {
-        todo!("port TLSLogicVariants::getActive")
+        self.myCurrentProgram
     }
 
     /// C++: `MSTrafficLightLogic * TLSLogicVariants::getDefault() const` [const]
@@ -783,7 +1096,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn get_default(&self) -> Ptr<MSTrafficLightLogic> {
-        todo!("port TLSLogicVariants::getDefault")
+        self.myDefaultProgram
     }
 
     /// C++: `void TLSLogicVariants::switchTo(MSTLLogicControl &, const std::string &)`
@@ -802,7 +1115,16 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn switch_to(&mut self, tlc: &mut MSTLLogicControl, programID: &str) {
-        todo!("port TLSLogicVariants::switchTo")
+        // set the found wished sub-program as this tls' current one
+        let state = self.myCurrentProgram.get_current_phase_def().get_state().to_string();
+        self.myCurrentProgram.m().deactivate_program();
+        self.myCurrentProgram = self.get_logic_instantiating_off(tlc, programID);
+        self.myCurrentProgram.m().activate_program();
+        self.myCurrentProgram.m().set_traffic_light_signals(MSNet::get_instance().get_current_time_step());
+        if state.as_str() != self.myCurrentProgram.get_current_phase_def().get_state() {
+            self.myCurrentProgram.m().reset_last_switch(MSNet::get_instance().get_current_time_step());
+        }
+        self.execute_on_switch_actions();
     }
 
     /// C++: `void TLSLogicVariants::switchToLoaded(MSTrafficLightLogic *)`
@@ -817,7 +1139,11 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn switch_to_loaded(&mut self, tl: Ptr<MSTrafficLightLogic>) {
-        todo!("port TLSLogicVariants::switchToLoaded")
+        // setting tl as active and updating signal states happens on the calling side (MSTrafficLightLogic::loadState)
+        if self.myCurrentProgram != tl {
+            self.myCurrentProgram.m().deactivate_program();
+            self.myCurrentProgram = tl;
+        }
     }
 
     /// C++: `MSTrafficLightLogic * TLSLogicVariants::getLogicInstantiatingOff(MSTLLogicControl &, const std::string &)`
@@ -840,7 +1166,30 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn get_logic_instantiating_off(&mut self, tlc: &mut MSTLLogicControl, programID: &str) -> Ptr<MSTrafficLightLogic> {
-        todo!("port TLSLogicVariants::getLogicInstantiatingOff")
+        if !self.myVariants.contains_key(programID) {
+            if programID == "off" {
+                // build an off-tll if this switch indicates it
+                let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSOffTrafficLightLogic::new(
+                    tlc,
+                    self.myCurrentProgram.get_id(),
+                ))) as *mut MSTrafficLightLogic);
+                if !self.add_logic("off", off, true, true) {
+                    // inform the user if this fails
+                    panic!("{}", utils::tlf!("Could not build an off-state for tls '%'.", self.myCurrentProgram.get_id()));
+                }
+            } else {
+                // inform the user about a missing logic
+                panic!(
+                    "{}",
+                    utils::tlf!(
+                        "Can not switch tls '%' to program '%';\n The program is not known.",
+                        self.myCurrentProgram.get_id(),
+                        programID
+                    )
+                );
+            }
+        }
+        self.get_logic(programID)
     }
 
     /// C++: `void TLSLogicVariants::setStateInstantiatingOnline(MSTLLogicControl &, const std::string &)`
@@ -868,7 +1217,33 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn set_state_instantiating_online(&mut self, tlc: &mut MSTLLogicControl, state: &str) {
-        todo!("port TLSLogicVariants::setStateInstantiatingOnline")
+        // build only once...
+        let logic = self.get_logic(TRACI_PROGRAM);
+        if logic.is_null() {
+            let mut phase = MSPhaseDefinition::new(SUMOTIME_DAY, state, "");
+            phase.earliestEnd = SUMOTIME_DAY; // prevent immediate switch
+            let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(phase)))];
+            let now = MSNet::get_instance().get_current_time_step();
+            let newLogic: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(
+                tlc,
+                self.myCurrentProgram.get_id(),
+                TRACI_PROGRAM,
+                0,
+                TrafficLightType::STATIC,
+                &phases,
+                0,
+                now + delta_t(),
+                &(),
+            ))) as *mut MSTrafficLightLogic);
+            if self.add_logic(TRACI_PROGRAM, newLogic, true, true) {
+                MSNet::get_instance().m().create_tl_wrapper(newLogic);
+            }
+        } else {
+            let nphase = MSPhaseDefinition::new(SUMOTIME_DAY, state, "");
+            let phase0 = logic.get_phases()[0];
+            *phase0.m() = nphase;
+            self.switch_to(tlc, TRACI_PROGRAM);
+        }
     }
 
     /// C++: `void TLSLogicVariants::executeOnSwitchActions() const` [const]
@@ -880,7 +1255,9 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn execute_on_switch_actions(&self) {
-        todo!("port TLSLogicVariants::executeOnSwitchActions")
+        for action in self.mySwitchActions.iter() {
+            action.m().execute();
+        }
     }
 
     /// C++: `void TLSLogicVariants::addLink(MSLink *, MSLane *, int)`
@@ -892,7 +1269,9 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
-        todo!("port TLSLogicVariants::addLink")
+        for logic in self.myVariants.values() {
+            logic.m().add_link(link, lane, pos);
+        }
     }
 
     /// C++: `void TLSLogicVariants::ignoreLinkIndex(int)`
@@ -904,7 +1283,9 @@ impl MSTLLogicControl_TLSLogicVariants {
     // }
     #[allow(unused_variables)]
     pub fn ignore_link_index(&mut self, pos: i32) {
-        todo!("port TLSLogicVariants::ignoreLinkIndex")
+        for logic in self.myVariants.values() {
+            logic.m().ignore_link_index(pos);
+        }
     }
 
     /// C++: `void TLSLogicVariants::TLSLogicVariants(const TLSLogicVariants &)` [private]
@@ -912,7 +1293,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTLLogicControl_TLSLogicVariants) -> Self {
-        todo!("port TLSLogicVariants::TLSLogicVariants")
+        panic!("MSTLLogicControl_TLSLogicVariants copy constructor is private and invalidated in C++")
     }
 
     /// C++: `TLSLogicVariants & TLSLogicVariants::operator=(const TLSLogicVariants &)` [private]
@@ -920,7 +1301,7 @@ impl MSTLLogicControl_TLSLogicVariants {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTLLogicControl_TLSLogicVariants) -> &mut MSTLLogicControl_TLSLogicVariants {
-        todo!("port TLSLogicVariants::operator=")
+        panic!("MSTLLogicControl_TLSLogicVariants assignment operator is private and invalidated in C++")
     }
 
 }
@@ -995,7 +1376,13 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     //             : myFrom(from), myTo(to), mySwitchSynchron(synchron), myWAUT(waut), myControl(control) { }
     #[allow(unused_variables)]
     pub fn new(control: &mut MSTLLogicControl, waut: &mut MSTLLogicControl_WAUT, from: Ptr<MSTrafficLightLogic>, to: Ptr<MSTrafficLightLogic>, synchron: bool) -> Self {
-        todo!("port WAUTSwitchProcedure::WAUTSwitchProcedure")
+        Self {
+            myFrom: from,
+            myTo: to,
+            mySwitchSynchron: synchron,
+            myWAUT: Ptr::from_mut(waut),
+            myControl: Ptr::from_mut(control),
+        }
     }
 
     /// C++: `void WAUTSwitchProcedure::~WAUTSwitchProcedure() noexcept` [virtual]
@@ -1003,7 +1390,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // virtual ~WAUTSwitchProcedure() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port WAUTSwitchProcedure::~WAUTSwitchProcedure")
+        // C++ destructor has an empty body
     }
 
     /// C++: `bool WAUTSwitchProcedure::trySwitch(SUMOTime)` [virtual]
@@ -1026,7 +1413,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self, step: SUMOTime) -> bool {
-        todo!("port WAUTSwitchProcedure::trySwitch")
+        self.try_switch_with(step, &mut |p: &mut MSTLLogicControl_WAUTSwitchProcedure, s: SUMOTime| p.adapt_logic(s))
     }
 
     /// C++: `bool WAUTSwitchProcedure::isPosAtGSP(SUMOTime, const MSTrafficLightLogic &)` [protected]
@@ -1039,7 +1426,10 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // }
     #[allow(unused_variables)]
     pub fn is_pos_at_gsp(&mut self, currentTime: SUMOTime, logic: &MSTrafficLightLogic) -> bool {
-        todo!("port WAUTSwitchProcedure::isPosAtGSP")
+        // switch to the next programm if the GSP is reached
+        let gspTime = self.get_gsp_time(logic) % logic.get_default_cycle_time();
+        let programTime = logic.get_offset_from_index(logic.get_current_phase_index()) + logic.get_spent_duration(currentTime);
+        gspTime == programTime
     }
 
     /// C++: `SUMOTime WAUTSwitchProcedure::getDiffToStartOfPhase(MSTrafficLightLogic &, SUMOTime)` [protected]
@@ -1053,7 +1443,10 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // }
     #[allow(unused_variables)]
     pub fn get_diff_to_start_of_phase(&mut self, logic: &mut MSTrafficLightLogic, toTime: SUMOTime) -> SUMOTime {
-        todo!("port WAUTSwitchProcedure::getDiffToStartOfPhase")
+        let stepOfMyPos = logic.get_index_from_offset(toTime);
+        let startOfPhase = logic.get_offset_from_index(stepOfMyPos);
+        assert!(toTime >= startOfPhase);
+        toTime - startOfPhase
     }
 
     /// C++: `void WAUTSwitchProcedure::switchToPos(SUMOTime, MSTrafficLightLogic &, SUMOTime)` [protected]
@@ -1068,7 +1461,11 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // }
     #[allow(unused_variables)]
     pub fn switch_to_pos(&mut self, simStep: SUMOTime, logic: &mut MSTrafficLightLogic, toTime: SUMOTime) {
-        todo!("port WAUTSwitchProcedure::switchToPos")
+        let stepTo = logic.get_index_from_offset(toTime);
+        let diff = self.get_diff_to_start_of_phase(logic, toTime);
+        let leftDuration = logic.get_phase(stepTo).duration - diff;
+        let control = self.myControl;
+        logic.change_step_and_duration(control.m(), simStep, stepTo, leftDuration);
     }
 
     /// C++: `SUMOTime WAUTSwitchProcedure::getGSPTime(const MSTrafficLightLogic &) const` [const, protected]
@@ -1079,7 +1476,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // }
     #[allow(unused_variables)]
     pub fn get_gsp_time(&self, logic: &MSTrafficLightLogic) -> SUMOTime {
-        todo!("port WAUTSwitchProcedure::getGSPTime")
+        string2time(&logic.base2.get_parameter("GSP", "0")).unwrap()
     }
 
     /// C++: `void WAUTSwitchProcedure::adaptLogic(SUMOTime)` [virtual, protected]
@@ -1089,7 +1486,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     //         }
     #[allow(unused_variables)]
     pub fn adapt_logic(&mut self, step: SUMOTime) {
-        todo!("port WAUTSwitchProcedure::adaptLogic")
+        panic!("WAUTSwitchProcedure::adaptLogic is pure virtual; call it on a concrete switch procedure")
     }
 
     /// C++: `void WAUTSwitchProcedure::WAUTSwitchProcedure(const WAUTSwitchProcedure &)` [private]
@@ -1097,7 +1494,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTLLogicControl_WAUTSwitchProcedure) -> Self {
-        todo!("port WAUTSwitchProcedure::WAUTSwitchProcedure")
+        panic!("MSTLLogicControl_WAUTSwitchProcedure copy constructor is private and invalidated in C++")
     }
 
     /// C++: `WAUTSwitchProcedure & WAUTSwitchProcedure::operator=(const WAUTSwitchProcedure &)` [private]
@@ -1105,7 +1502,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTLLogicControl_WAUTSwitchProcedure) -> &mut MSTLLogicControl_WAUTSwitchProcedure {
-        todo!("port WAUTSwitchProcedure::operator=")
+        panic!("MSTLLogicControl_WAUTSwitchProcedure assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1138,7 +1535,9 @@ impl MSTLLogicControl_WAUTSwitchProcedure_GSP {
     //     : MSTLLogicControl::WAUTSwitchProcedure(control, waut, from, to, synchron) {}
     #[allow(unused_variables)]
     pub fn new(control: &mut MSTLLogicControl, waut: &mut MSTLLogicControl_WAUT, from: Ptr<MSTrafficLightLogic>, to: Ptr<MSTrafficLightLogic>, synchron: bool) -> Self {
-        todo!("port WAUTSwitchProcedure_GSP::WAUTSwitchProcedure_GSP")
+        Self {
+            base: MSTLLogicControl_WAUTSwitchProcedure::new(control, waut, from, to, synchron),
+        }
     }
 
     /// C++: `void WAUTSwitchProcedure_GSP::~WAUTSwitchProcedure_GSP() noexcept` [virtual]
@@ -1146,7 +1545,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_GSP {
     // MSTLLogicControl::WAUTSwitchProcedure_GSP::~WAUTSwitchProcedure_GSP() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port WAUTSwitchProcedure_GSP::~WAUTSwitchProcedure_GSP")
+        // C++ destructor has an empty body
     }
 
     /// C++: `void WAUTSwitchProcedure_GSP::adaptLogic(SUMOTime)` [virtual, protected]
@@ -1165,7 +1564,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_GSP {
     // }
     #[allow(unused_variables)]
     pub fn adapt_logic(&mut self, step: SUMOTime) {
-        todo!("port WAUTSwitchProcedure_GSP::adaptLogic")
+        gsp_adapt_logic(&mut self.base, step);
     }
 
 }
@@ -1198,7 +1597,9 @@ impl MSTLLogicControl_WAUTSwitchProcedure_JustSwitch {
     //     : MSTLLogicControl::WAUTSwitchProcedure(control, waut, from, to, synchron) {}
     #[allow(unused_variables)]
     pub fn new(control: &mut MSTLLogicControl, waut: &mut MSTLLogicControl_WAUT, from: Ptr<MSTrafficLightLogic>, to: Ptr<MSTrafficLightLogic>, synchron: bool) -> Self {
-        todo!("port WAUTSwitchProcedure_JustSwitch::WAUTSwitchProcedure_JustSwitch")
+        Self {
+            base: MSTLLogicControl_WAUTSwitchProcedure::new(control, waut, from, to, synchron),
+        }
     }
 
     /// C++: `void WAUTSwitchProcedure_JustSwitch::~WAUTSwitchProcedure_JustSwitch() noexcept` [virtual]
@@ -1206,7 +1607,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_JustSwitch {
     // MSTLLogicControl::WAUTSwitchProcedure_JustSwitch::~WAUTSwitchProcedure_JustSwitch() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port WAUTSwitchProcedure_JustSwitch::~WAUTSwitchProcedure_JustSwitch")
+        // C++ destructor has an empty body
     }
 
     /// C++: `bool WAUTSwitchProcedure_JustSwitch::trySwitch(SUMOTime)` [virtual]
@@ -1217,7 +1618,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_JustSwitch {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self, step: SUMOTime) -> bool {
-        todo!("port WAUTSwitchProcedure_JustSwitch::trySwitch")
+        true
     }
 
 }
@@ -1262,7 +1663,23 @@ impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     // }
     #[allow(unused_variables)]
     pub fn new(control: &mut MSTLLogicControl, waut: &mut MSTLLogicControl_WAUT, from: Ptr<MSTrafficLightLogic>, to: Ptr<MSTrafficLightLogic>, synchron: bool) -> Self {
-        todo!("port WAUTSwitchProcedure_Stretch::WAUTSwitchProcedure_Stretch")
+        let base = MSTLLogicControl_WAUTSwitchProcedure::new(control, waut, from, to, synchron);
+        let mut myStretchRanges = Vec::new();
+        let mut idx = 1;
+        while base.myTo.base2.has_parameter(&format!("B{}.begin", idx)) {
+            let def = WAUTSwitchProcedure_Stretch_StretchRange {
+                begin: string2time(&base.myTo.base2.get_parameter(&format!("B{}.begin", idx), "")).unwrap(),
+                end: string2time(&base.myTo.base2.get_parameter(&format!("B{}.end", idx), "")).unwrap(),
+                fac: to_double(&base.myTo.base2.get_parameter(&format!("B{}.factor", idx), "")).unwrap(),
+            };
+            myStretchRanges.push(def);
+            // shortcut: the C++ loop never increments idx (it would loop forever on B1.begin), incremented here, verify against upstream SUMO
+            idx += 1;
+        }
+        Self {
+            base,
+            myStretchRanges,
+        }
     }
 
     /// C++: `void WAUTSwitchProcedure_Stretch::~WAUTSwitchProcedure_Stretch() noexcept` [virtual]
@@ -1270,7 +1687,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     // MSTLLogicControl::WAUTSwitchProcedure_Stretch::~WAUTSwitchProcedure_Stretch() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port WAUTSwitchProcedure_Stretch::~WAUTSwitchProcedure_Stretch")
+        // C++ destructor has an empty body
     }
 
     /// C++: `void WAUTSwitchProcedure_Stretch::adaptLogic(SUMOTime)` [virtual, protected]
@@ -1305,7 +1722,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     // }
     #[allow(unused_variables)]
     pub fn adapt_logic(&mut self, step: SUMOTime) {
-        todo!("port WAUTSwitchProcedure_Stretch::adaptLogic")
+        stretch_adapt_logic(&mut self.base, step, &self.myStretchRanges);
     }
 
     /// C++: `void WAUTSwitchProcedure_Stretch::stretchLogic(SUMOTime, SUMOTime, SUMOTime)` [protected]
@@ -1364,7 +1781,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     // }
     #[allow(unused_variables)]
     pub fn stretch_logic(&mut self, step: SUMOTime, startPos: SUMOTime, allStretchTime: SUMOTime) {
-        todo!("port WAUTSwitchProcedure_Stretch::stretchLogic")
+        stretch_stretch_logic(&mut self.base, &self.myStretchRanges, step, startPos, allStretchTime);
     }
 
     /// C++: `void WAUTSwitchProcedure_Stretch::cutLogic(SUMOTime, SUMOTime, SUMOTime)` [protected]
@@ -1411,7 +1828,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     // }
     #[allow(unused_variables)]
     pub fn cut_logic(&mut self, step: SUMOTime, startPos: SUMOTime, allCutTime: SUMOTime) {
-        todo!("port WAUTSwitchProcedure_Stretch::cutLogic")
+        stretch_cut_logic(&mut self.base, &self.myStretchRanges, step, startPos, allCutTime);
     }
 
 }
@@ -1426,9 +1843,242 @@ pub struct MSTLLogicControl_WAUTSwitchProcess {
     /// The program to switch the tls to
     pub to: Ptr<MSTrafficLightLogic>,
     /// The used procedure
-    pub proc: Ptr<MSTLLogicControl_WAUTSwitchProcedure>,
+    pub proc: MSTLLogicControl_WAUTSwitchProcedureVariant,
 }
 
 impl MSTLLogicControl_WAUTSwitchProcess {
 }
 
+
+// ---------------------------------------------------------------------------
+// Ported helpers (no direct C++ counterpart; they implement virtual dispatch
+// and the C++ copy semantics that the skeleton's types cannot express directly)
+// ---------------------------------------------------------------------------
+
+/// The concrete switch procedure of a running WAUT switch. C++ stores a
+/// `WAUTSwitchProcedure*` and calls the virtual `trySwitch`; the Rust port
+/// dispatches on the concrete type instead.
+pub enum MSTLLogicControl_WAUTSwitchProcedureVariant {
+    JustSwitch(MSTLLogicControl_WAUTSwitchProcedure_JustSwitch),
+    GSP(MSTLLogicControl_WAUTSwitchProcedure_GSP),
+    Stretch(MSTLLogicControl_WAUTSwitchProcedure_Stretch),
+}
+
+impl MSTLLogicControl_WAUTSwitchProcedureVariant {
+    /// C++ `WAUTSwitchProcedure::trySwitch(SUMOTime)` [virtual], dispatched on the concrete type
+    pub fn try_switch(&mut self, step: SUMOTime) -> bool {
+        match self {
+            Self::JustSwitch(p) => p.try_switch(step),
+            Self::GSP(p) => p.try_switch(step),
+            Self::Stretch(p) => p.try_switch(step),
+        }
+    }
+}
+
+impl MSTLLogicControl_WAUTSwitchProcedure {
+    /// C++ `WAUTSwitchProcedure::trySwitch`; `adapt` plays the role of the virtual `adaptLogic` call
+    fn try_switch_with(&mut self, step: SUMOTime, adapt: &mut dyn FnMut(&mut MSTLLogicControl_WAUTSwitchProcedure, SUMOTime)) -> bool {
+        // switch to the next programm if the GSP is reached
+        let from = self.myFrom;
+        if self.is_pos_at_gsp(step, &*from) {
+            // adapt program's state
+            if self.mySwitchSynchron {
+                adapt(&mut *self, step);
+            } else {
+                let to = self.myTo;
+                let gspTime = self.get_gsp_time(&*to);
+                self.switch_to_pos(step, to.m(), gspTime);
+            }
+            // switch to destination program
+            return true;
+        }
+        // do not switch, yet
+        false
+    }
+}
+
+impl MSTLLogicControl_WAUTSwitchProcedure_GSP {
+    /// C++ `WAUTSwitchProcedure_GSP` inherits `trySwitch`; the virtual `adaptLogic` is GSP's
+    pub fn try_switch(&mut self, step: SUMOTime) -> bool {
+        self.base.try_switch_with(step, &mut |p: &mut MSTLLogicControl_WAUTSwitchProcedure, s: SUMOTime| gsp_adapt_logic(p, s))
+    }
+}
+
+impl MSTLLogicControl_WAUTSwitchProcedure_Stretch {
+    /// C++ `WAUTSwitchProcedure_Stretch` inherits `trySwitch`; the virtual `adaptLogic` is Stretch's
+    pub fn try_switch(&mut self, step: SUMOTime) -> bool {
+        let ranges = &self.myStretchRanges;
+        self.base.try_switch_with(step, &mut |p: &mut MSTLLogicControl_WAUTSwitchProcedure, s: SUMOTime| stretch_adapt_logic(p, s, ranges))
+    }
+}
+
+/// C++ `WAUTSwitchProcedure_GSP::adaptLogic`
+fn gsp_adapt_logic(p: &mut MSTLLogicControl_WAUTSwitchProcedure, step: SUMOTime) {
+    let to = p.myTo;
+    let gspTo = p.get_gsp_time(&*to) % to.get_default_cycle_time();
+    let currentPosTo = to.get_offset_from_index(to.get_current_phase_index()) + to.get_spent_duration(step);
+    let mut deltaToStretch = gspTo - currentPosTo;
+    if deltaToStretch < 0 {
+        deltaToStretch += to.get_default_cycle_time();
+    }
+    let stepTo = to.get_index_from_offset(gspTo);
+    let newdur = to.get_phase(stepTo).duration - p.get_diff_to_start_of_phase(to.m(), gspTo) + deltaToStretch;
+    to.m().change_step_and_duration(p.myControl.m(), step, stepTo, newdur);
+}
+
+/// C++ `WAUTSwitchProcedure_Stretch::adaptLogic`
+fn stretch_adapt_logic(p: &mut MSTLLogicControl_WAUTSwitchProcedure, step: SUMOTime, ranges: &[WAUTSwitchProcedure_Stretch_StretchRange]) {
+    let to = p.myTo;
+    let gspTo = p.get_gsp_time(&*to);
+    let cycleTime = to.get_default_cycle_time();
+    // the position, where the logic has to be after synchronisation
+    let posAfterSyn = to.get_phase_index_at_time(step);
+    // calculate the difference, that has to be equalized
+    let deltaToCut: SUMOTime = if posAfterSyn < gspTo {
+        posAfterSyn + cycleTime - gspTo
+    } else {
+        posAfterSyn - gspTo
+    };
+    // test, wheter cutting of the Signalplan is possible
+    let mut deltaPossible: SUMOTime = 0;
+    for def in ranges {
+        debug_assert!(def.end >= def.begin);
+        deltaPossible += def.end - def.begin;
+    }
+    let stretchUmlaufAnz = to_double(&to.base2.get_parameter("StretchUmlaufAnz", "")).unwrap() as i32;
+    deltaPossible = stretchUmlaufAnz as SUMOTime * deltaPossible;
+    if deltaPossible > deltaToCut && deltaToCut < (cycleTime / 2) {
+        stretch_cut_logic(p, ranges, step, gspTo, deltaToCut);
+    } else {
+        let deltaToStretch = (cycleTime - deltaToCut) % cycleTime;
+        stretch_stretch_logic(p, ranges, step, gspTo, deltaToStretch);
+    }
+}
+
+/// C++ `WAUTSwitchProcedure_Stretch::cutLogic`
+fn stretch_cut_logic(p: &mut MSTLLogicControl_WAUTSwitchProcedure, ranges: &[WAUTSwitchProcedure_Stretch_StretchRange], step: SUMOTime, startPos: SUMOTime, mut allCutTime: SUMOTime) {
+    let to = p.myTo;
+    let actStep = to.get_index_from_offset(startPos);
+    // switches to startPos and cuts this phase, if there is a "Bereich"
+    let mut toCut: SUMOTime = 0;
+    for def in ranges {
+        let stepOfBegin = to.get_index_from_offset(def.begin);
+        if stepOfBegin == actStep {
+            if def.begin < startPos {
+                toCut = def.end - startPos;
+            } else {
+                toCut = def.end - def.begin;
+            }
+            toCut = std::cmp::min(allCutTime, toCut);
+            allCutTime = allCutTime - toCut;
+        }
+    }
+    let remainingDur = to.get_phase(actStep).duration - p.get_diff_to_start_of_phase(to.m(), startPos);
+    let newDur = remainingDur - toCut;
+    to.m().change_step_and_duration(p.myControl.m(), step, actStep, newDur);
+
+    // changes the duration of all other phases
+    let mut currStep = (actStep + 1) % (to.get_phases().len() as i32);
+    while allCutTime > 0 {
+        for i in currStep..(to.get_phases().len() as i32) {
+            let beginOfPhase = to.get_offset_from_index(i);
+            let mut durOfPhase = to.get_phase(i).duration;
+            let endOfPhase = beginOfPhase + durOfPhase;
+            for def in ranges {
+                if beginOfPhase <= def.begin && endOfPhase >= def.end {
+                    let maxCutOfPhase = std::cmp::min(def.end - def.begin, allCutTime);
+                    allCutTime = allCutTime - maxCutOfPhase;
+                    durOfPhase = durOfPhase - maxCutOfPhase;
+                }
+            }
+            to.m().add_overriding_duration(durOfPhase);
+        }
+        currStep = 0;
+    }
+}
+
+/// C++ `WAUTSwitchProcedure_Stretch::stretchLogic`
+fn stretch_stretch_logic(p: &mut MSTLLogicControl_WAUTSwitchProcedure, ranges: &[WAUTSwitchProcedure_Stretch_StretchRange], step: SUMOTime, startPos: SUMOTime, allStretchTime: SUMOTime) {
+    let to = p.myTo;
+    let mut currStep = to.get_index_from_offset(startPos);
+    let mut durOfPhase = to.get_phase(currStep).duration;
+    let mut remainingStretchTime = allStretchTime;
+    let mut StretchTimeOfPhase: SUMOTime = 0;
+    let stretchUmlaufAnz = to_double(&to.base2.get_parameter("StretchUmlaufAnz", "")).unwrap() as i32;
+    let mut facSum: f64 = 0.0;
+    for def in ranges {
+        facSum += def.fac;
+    }
+    facSum *= stretchUmlaufAnz as f64;
+
+    //switch to startPos and stretch this phase, if there is a end of "bereich" between startpos and end of phase
+    let diffToStart = p.get_diff_to_start_of_phase(to.m(), startPos);
+    for def in ranges {
+        let endOfPhase = startPos + durOfPhase - diffToStart;
+        if def.end <= endOfPhase && def.end >= startPos {
+            let actualfac = def.fac / facSum;
+            facSum = facSum - def.fac;
+            StretchTimeOfPhase = time2steps(((steps2time(remainingStretchTime) * actualfac + 0.5) as i32) as f64);
+            remainingStretchTime = allStretchTime - StretchTimeOfPhase;
+        }
+    }
+    if facSum == 0.0 {
+        utils::write_warningf!(
+            "The computed factor sum in WAUT '%' at time '%' equals zero;\n assuming an error in WAUT definition.",
+            p.myWAUT.id,
+            to_string(&steps2time(step))
+        );
+        return;
+    }
+    durOfPhase = durOfPhase - diffToStart + StretchTimeOfPhase;
+    to.m().change_step_and_duration(p.myControl.m(), step, currStep, durOfPhase);
+
+    currStep = (currStep + 1) % (to.get_phases().len() as i32);
+    // stretch all other phases, if there is a "bereich"
+    while remainingStretchTime > 0 {
+        let mut i = currStep;
+        while i < (to.get_phases().len() as i32) && remainingStretchTime > 0 {
+            durOfPhase = to.get_phase(i).duration;
+            let beginOfPhase = to.get_offset_from_index(i);
+            let endOfPhase = beginOfPhase + durOfPhase;
+            for def in ranges {
+                if beginOfPhase <= def.end && endOfPhase >= def.end {
+                    let actualfac = def.fac / facSum;
+                    StretchTimeOfPhase = time2steps(((steps2time(remainingStretchTime) * actualfac + 0.5) as i32) as f64);
+                    facSum -= def.fac;
+                    durOfPhase += StretchTimeOfPhase;
+                    remainingStretchTime -= StretchTimeOfPhase;
+                }
+            }
+            to.m().add_overriding_duration(durOfPhase);
+            i += 1;
+        }
+        currStep = 0;
+    }
+}
+
+/// Field-wise copy of an MSPhaseDefinition (C++ copies it by value; the type has no Clone derive)
+fn clone_phase_def(p: &MSPhaseDefinition) -> MSPhaseDefinition {
+    MSPhaseDefinition {
+        duration: p.duration,
+        lastDuration: p.lastDuration,
+        minDuration: p.minDuration,
+        maxDuration: p.maxDuration,
+        earliestEnd: p.earliestEnd,
+        latestEnd: p.latestEnd,
+        earlyTarget: p.earlyTarget.clone(),
+        finalTarget: p.finalTarget.clone(),
+        myLastSwitch: p.myLastSwitch,
+        myLastEnd: p.myLastEnd,
+        nextPhases: p.nextPhases.clone(),
+        name: p.name.clone(),
+        yellow: p.yellow,
+        red: p.red,
+        vehext: p.vehext,
+        myTransientNotDecisional: p.myTransientNotDecisional,
+        myCommit: p.myCommit,
+        myUndefined: p.myUndefined,
+        myTargetLaneSet: p.myTargetLaneSet.clone(),
+        myState: p.myState.clone(),
+    }
+}
