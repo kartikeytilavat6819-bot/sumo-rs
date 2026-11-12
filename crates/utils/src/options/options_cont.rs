@@ -47,11 +47,30 @@ pub struct OptionsCont {
 
 static OPTIONS: LazyLock<Mutex<OptionsCont>> = LazyLock::new(|| Mutex::new(OptionsCont::new()));
 
-/// OptionsCont::getOptions(). Not reentrant: do not call `with_options` (or the getters
-/// below) from inside `f`.
+thread_local! {
+    /// The container while this thread holds OPTIONS (null otherwise).
+    static HELD: std::cell::Cell<*mut OptionsCont> = const { std::cell::Cell::new(std::ptr::null_mut()) };
+}
+
+/// OptionsCont::getOptions(). Reentrant on one thread, as the C++ singleton is: ported code calls
+/// the getters below from inside `f` all the time. Other threads wait for the lock.
 pub fn with_options<R>(f: impl FnOnce(&mut OptionsCont) -> R) -> R {
+    let held = HELD.with(|h| h.get());
+    if !held.is_null() {
+        // shortcut: nested access aliases the outer &mut like C++ does; fine single-threaded, revisit if options get a real owner
+        return f(unsafe { &mut *held });
+    }
     let mut g = OPTIONS.lock().unwrap_or_else(|e| e.into_inner());
-    f(&mut g)
+    let p: *mut OptionsCont = &mut *g;
+    struct Release;
+    impl Drop for Release {
+        fn drop(&mut self) {
+            HELD.with(|h| h.set(std::ptr::null_mut()));
+        }
+    }
+    HELD.with(|h| h.set(p));
+    let _release = Release; // cleared even if f panics, before the guard unlocks
+    f(unsafe { &mut *p })
 }
 
 fn or_panic<T>(r: Result<T, ProcessError>) -> T {
@@ -1127,5 +1146,20 @@ pub(crate) mod tests {
         oc.set("net-file", "a.net.xml,/abs/b.net.xml", false).unwrap();
         oc.relocate_files("cfg/x.sumocfg");
         assert_eq!(oc.get_string_vector("net-file").unwrap(), &vec!["cfg/a.net.xml", "/abs/b.net.xml"]);
+    }
+}
+
+#[cfg(test)]
+mod reentrancy_tests {
+    use super::*;
+    #[test]
+    fn nested_access_does_not_deadlock() {
+        // C++ code reads options while holding OptionsCont::getOptions(); the port must allow it
+        let outer = with_options(|oc| {
+            let inner = with_options(|oc2| oc2.exists("no-such-option-xyz"));
+            (oc.exists("no-such-option-xyz"), inner)
+        });
+        assert_eq!(outer, (false, false));
+        assert!(!exists("no-such-option-xyz")); // lock released afterwards
     }
 }
