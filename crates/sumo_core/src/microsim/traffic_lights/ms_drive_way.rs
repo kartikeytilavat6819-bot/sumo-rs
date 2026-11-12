@@ -5302,3 +5302,74 @@ impl MSDriveWay_VehicleEvent {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A lane pointer that is only used as a distinct map key and is never dereferenced.
+    fn fake_lane(addr: usize) -> Ptr<MSLane> {
+        Ptr::from_raw(addr as *mut MSLane)
+    }
+
+    #[test]
+    fn constructor_assigns_numerical_ids() {
+        // C++: myNumericalID(temporary ? -1 : myGlobalDriveWayIndex++)
+        let tmp = MSDriveWay::new(Ptr::null(), "tmp", true);
+        assert_eq!(tmp.get_numerical_id(), -1);
+        assert_eq!(tmp.base2.get_id(), "tmp");
+        let a = MSDriveWay::new(Ptr::null(), "a", false);
+        let b = MSDriveWay::new(Ptr::null(), "b", false);
+        assert!(b.get_numerical_id() > a.get_numerical_id());
+        // a driveway without an origin link is a departure driveway
+        assert!(a.is_depart_driveway());
+        assert!(!a.is_sub_drive_way());
+        assert!(a.get_origin().is_null());
+        assert!(a.get_parent().is_null());
+    }
+
+    #[test]
+    fn append_map_index_counts_existing_entries() {
+        // C++: const int tmp = (int)map.size(); map[lane] = tmp;
+        let mut map: MSRailSignal_LaneVisitedMap = BTreeMap::new();
+        let l1 = fake_lane(0x1000);
+        let l2 = fake_lane(0x2000);
+        MSDriveWay::append_map_index(&mut map, l1);
+        assert_eq!(map.get(&l1), Some(&0));
+        MSDriveWay::append_map_index(&mut map, l2);
+        assert_eq!(map.get(&l2), Some(&1));
+        assert_eq!(map.len(), 2);
+        // re-visiting a lane keeps its original index
+        MSDriveWay::append_map_index(&mut map, l1);
+        assert_eq!(map.get(&l1), Some(&2));
+        assert_eq!(map.len(), 2);
+    }
+
+    #[test]
+    fn notification_names_match_the_cpp_bijection() {
+        assert_eq!(notification_string(MSMoveReminder_Notification::NOTIFICATION_DEPARTED), "departed");
+        assert_eq!(notification_string(MSMoveReminder_Notification::NOTIFICATION_JUNCTION), "junction");
+        assert_eq!(notification_string(MSMoveReminder_Notification::NOTIFICATION_REROUTE), "reroute");
+        assert_eq!(notification_string(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_VAPORIZER), "vaporizer");
+        assert_eq!(notification_string(MSMoveReminder_Notification::NOTIFICATION_NONE), "none");
+    }
+
+    #[test]
+    fn siding_and_vehicle_event_constructors() {
+        let s = MSDriveWay_Siding::new(1, 2, 3.5, vec![4]);
+        assert_eq!(s.start, 1);
+        assert_eq!(s.end, 2);
+        assert_eq!(s.length, 3.5);
+        assert_eq!(s.intermediateEnds, vec![4]);
+        let e = MSDriveWay_VehicleEvent::new(7, true, "veh", MSMoveReminder_Notification::NOTIFICATION_JUNCTION);
+        assert_eq!(e.time, 7);
+        assert!(e.isEntry);
+        assert_eq!(e.id, "veh");
+        assert_eq!(e.reason, MSMoveReminder_Notification::NOTIFICATION_JUNCTION);
+    }
+
+    #[test]
+    fn format_visited_map_returns_the_cpp_dummy() {
+        assert_eq!(MSDriveWay::format_visited_map(&BTreeMap::new()), "dummy");
+    }
+}
+
