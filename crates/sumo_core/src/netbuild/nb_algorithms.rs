@@ -2,6 +2,20 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// determinism: C++ std::sort is unstable and Rust sort_by is stable, so edges that compare equal may end up in a different order.
+// Converts a C++ strict-weak-order comparator (returns bool) into the ordering std::sort would use.
+fn sort_edges_by(v: &mut Vec<Ptr<NBEdge>>, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
+    v.sort_by(|a, b| {
+        if less(*a, *b) {
+            std::cmp::Ordering::Less
+        } else if less(*b, *a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
+}
+
 /// Stores the information about the angle between an incoming ("from") and an outgoing ("to") edge
 /// C++ class `NBTurningDirectionsComputer::Combination` (netbuild/NBAlgorithms.h)
 pub struct NBTurningDirectionsComputer_Combination {
@@ -278,7 +292,175 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn set_priority_junction_priorities(n: &mut NBNode, forceStraight: bool) {
-        todo!("port NBEdgePriorityComputer::setPriorityJunctionPriorities")
+        let np: Ptr<NBNode> = Ptr::from_mut(n);
+        if np.myIncomingEdges.len() == 0 || np.myOutgoingEdges.len() == 0 {
+            return;
+        }
+        let mut minPrio: i32 = i32::MAX;
+        let mut maxPrio: i32 = -i32::MAX;
+        let mut maxNumLanes: i32 = -i32::MAX;
+        let mut maxSpeed: f64 = -f64::MAX;
+        // check available vClasses to consider for lane number comparison
+        let mut all: SVCPermissions = 0;
+        for edge in np.myAllEdges.iter() {
+            all |= edge.get_permissions(-1);
+        }
+        if (all & (SVC_PASSENGER & SVC_TRAM & SVC_BUS)) != 0 {
+            all = SVC_PASSENGER & SVC_TRAM & SVC_BUS;
+        } else if (all & !SVC_VULNERABLE) != 0 {
+            all &= !SVC_VULNERABLE;
+        }
+        if forceStraight {
+            // called a second time, preset all junction's edge priorities to zero
+            for edge in np.myAllEdges.iter() {
+                edge.m().set_junction_priority(np, NBEdge_JunctionPriority::MINOR_ROAD as i32);
+                minPrio = minPrio.min(edge.get_priority());
+                maxPrio = maxPrio.max(edge.get_priority());
+                maxNumLanes = maxNumLanes.max(edge.get_num_lanes_that_allow(all, false));
+                maxSpeed = maxSpeed.max(edge.get_speed());
+            }
+        }
+        let mut incoming: EdgeVector = np.myIncomingEdges.clone();
+        let mut outgoing: EdgeVector = np.myOutgoingEdges.clone();
+        // what we do want to have is to extract the pair of roads that are
+        //  the major roads for this junction
+        // let's get the list of incoming edges with the highest priority
+        let prio_sorter = NBContHelper_edge_by_priority_sorter::new(all);
+        sort_edges_by(&mut incoming, |a, b| prio_sorter.call_op(a, b) != 0);
+        let mut bestIncoming: EdgeVector = Vec::new();
+        let bestIn: Ptr<NBEdge> = incoming[0];
+        while incoming.len() > 0 && (forceStraight || NBEdgePriorityComputer::same_priority(bestIn, incoming[0], all)) {
+            bestIncoming.push(incoming[0]);
+            incoming.remove(0);
+        }
+        // now, let's get the list of best outgoing
+        assert!(outgoing.len() != 0);
+        sort_edges_by(&mut outgoing, |a, b| prio_sorter.call_op(a, b) != 0);
+        let mut bestOutgoing: EdgeVector = Vec::new();
+        let firstOut: Ptr<NBEdge> = outgoing[0];
+        while outgoing.len() > 0 && (forceStraight || NBEdgePriorityComputer::same_priority(firstOut, outgoing[0], all)) {
+            bestOutgoing.push(outgoing[0]);
+            outgoing.remove(0);
+        }
+        // special case: user input makes mainDirection unambiguous
+        let mainDirectionExplicit = bestIncoming.len() == 1
+            && np.myIncomingEdges.len() <= 2
+            && (incoming.len() == 0 || bestIncoming[0].get_priority() > incoming[0].get_priority())
+            && bestOutgoing.len() == 1
+            && np.myOutgoingEdges.len() <= 2
+            && (outgoing.len() == 0 || bestOutgoing[0].get_priority() > outgoing[0].get_priority())
+            && !bestIncoming[0].is_turning_direction_at(bestOutgoing[0]);
+        // now, let's compute for each of the best incoming edges
+        //  the incoming which is most opposite
+        //  the outgoing which is most opposite
+        let mut counterIncomingEdges: HashMap<Ptr<NBEdge>, Ptr<NBEdge>> = HashMap::new();
+        let mut counterOutgoingEdges: HashMap<Ptr<NBEdge>, Ptr<NBEdge>> = HashMap::new();
+        incoming = np.myIncomingEdges.clone();
+        outgoing = np.myOutgoingEdges.clone();
+        for i in bestIncoming.iter().copied() {
+            let opp_in = NBContHelper_edge_opposite_direction_sorter::new(i, np, !forceStraight);
+            sort_edges_by(&mut incoming, |a, b| opp_in.call_op(a, b) != 0);
+            counterIncomingEdges.insert(i, incoming[0]);
+            let opp_out = NBContHelper_edge_opposite_direction_sorter::new(i, np, !forceStraight);
+            sort_edges_by(&mut outgoing, |a, b| opp_out.call_op(a, b) != 0);
+            counterOutgoingEdges.insert(i, outgoing[0]);
+        }
+        // at a tls junction we must prevent an underlying bent-priority layout
+        // because that would lead to invalid right-of-way rules for an oncoming
+        // tls layout (but not vice versa). See #7764
+        let hasTLS = np.is_tl_controlled();
+        // ok, let's try
+        // 1) there is one best incoming road
+        if bestIncoming.len() == 1 {
+            // let's mark this road as the best
+            let best1 = NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestIncoming, 1);
+            if !mainDirectionExplicit && counterIncomingEdges.contains_key(&best1) {
+                // ok, look, what we want is the opposite of the straight continuation edge
+                // but, what if such an edge does not exist? By now, we'll determine it
+                // geometrically
+                let s = counterIncomingEdges[&best1];
+                let minAngleDiff = utils::geom::geom_helper::get_min_angle_diff(best1.get_angle_at_node(np), s.get_angle_at_node(np));
+                if minAngleDiff > 180.0 - 45.0
+                    || (minAngleDiff > 75.0 && s.get_priority() == best1.get_priority() && NBEdgePriorityComputer::has_different_priorities(&incoming, best1))
+                {
+                    s.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+                }
+            }
+            NBEdgePriorityComputer::mark_best_parallel(np.m(), best1, Ptr::null());
+            assert!(bestOutgoing.len() != 0);
+            // mark the best outgoing as the continuation
+            let similar = NBContHelper_edge_similar_direction_sorter::new(best1, true);
+            sort_edges_by(&mut bestOutgoing, |a, b| similar.call_op(a, b) != 0);
+            // assign extra priority if the priorities are unambiguous (regardless of geometry)
+            let bestOut = NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+            if !mainDirectionExplicit && counterOutgoingEdges.contains_key(&bestOut) {
+                let s = counterOutgoingEdges[&bestOut];
+                if utils::geom::geom_helper::get_min_angle_diff(bestOut.get_angle_at_node(np), s.get_angle_at_node(np)) > 180.0 - 45.0 {
+                    s.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+                }
+            }
+            let isBent = np.get_direction(best1, bestOut, false) != LinkDirection::STRAIGHT;
+            if isBent && hasTLS && !forceStraight {
+                // redo but force straight computation
+                NBEdgePriorityComputer::set_priority_junction_priorities(np.m(), true);
+            } else {
+                np.m().mark_bent_priority(isBent);
+            }
+            return;
+        }
+
+        // ok, what we want to do in this case is to determine which incoming
+        //  has the best continuation...
+        // This means, when several incoming roads have the same priority,
+        //  we want a (any) straight connection to be more priorised than a turning
+        let mut bestAngle: f64 = -1.0;
+        let mut bestFirst: Ptr<NBEdge> = Ptr::null();
+        let mut bestSecond: Ptr<NBEdge> = Ptr::null();
+        for i in 0..bestIncoming.len() {
+            let t1 = bestIncoming[i];
+            let mut angle1 = t1.get_angle_at_node(np) + 180.0;
+            if angle1 >= 360.0 {
+                angle1 -= 360.0;
+            }
+            for j in (i + 1)..bestIncoming.len() {
+                let t2 = bestIncoming[j];
+                let mut angle2 = t2.get_angle_at_node(np) + 180.0;
+                if angle2 >= 360.0 {
+                    angle2 -= 360.0;
+                }
+                let score = if forceStraight {
+                    NBEdgePriorityComputer::get_score(t1, t2, minPrio, maxPrio, maxNumLanes, maxSpeed, all)
+                } else {
+                    0.0
+                };
+                let angle = utils::geom::geom_helper::get_min_angle_diff(angle1, angle2) + 45.0 * score;
+                if angle > bestAngle {
+                    bestAngle = angle.max(bestAngle);
+                    bestFirst = bestIncoming[i];
+                    bestSecond = bestIncoming[j];
+                }
+            }
+        }
+        bestFirst.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+        let similarFirst = NBContHelper_edge_similar_direction_sorter::new(bestFirst, true);
+        sort_edges_by(&mut bestOutgoing, |a, b| similarFirst.call_op(a, b) != 0);
+        if bestOutgoing.len() != 0 {
+            NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+        }
+        bestSecond.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+        let similarSecond = NBContHelper_edge_similar_direction_sorter::new(bestSecond, true);
+        sort_edges_by(&mut bestOutgoing, |a, b| similarSecond.call_op(a, b) != 0);
+        if bestOutgoing.len() != 0 {
+            NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+        }
+        let isBent = utils::geom::geom_helper::get_min_angle_diff(bestFirst.get_angle_at_node(np), bestSecond.get_angle_at_node(np)) < 135.0;
+        if isBent && hasTLS && !forceStraight {
+            // redo but force straight computation
+            NBEdgePriorityComputer::set_priority_junction_priorities(np.m(), true);
+        } else {
+            np.m().mark_bent_priority(isBent);
+            NBEdgePriorityComputer::mark_best_parallel(np.m(), bestFirst, bestSecond);
+        }
     }
 
     /// C++: `double NBEdgePriorityComputer::getScore(const NBEdge *, const NBEdge *, int, int, int, double, SVCPermissions)` [static, private]
@@ -301,7 +483,24 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_score(e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, minPrio: i32, maxPrio: i32, maxNumLanes: i32, maxSpeed: f64, permissions: SVCPermissions) -> f64 {
-        todo!("port NBEdgePriorityComputer::getScore")
+        // normalize priorities to [0.1,1]
+        let mut normPrio1: f64 = 1.0;
+        let mut normPrio2: f64 = 1.0;
+        if minPrio != maxPrio {
+            // int / int stays integral in C++, so integer division is kept here
+            normPrio1 = (((e1.get_priority() - minPrio) / (maxPrio - minPrio)) as f64) * 0.9 + 0.1;
+            normPrio2 = (((e2.get_priority() - minPrio) / (maxPrio - minPrio)) as f64) * 0.9 + 0.1;
+        }
+        normPrio1
+            * (e1.get_num_lanes_that_allow(permissions, false) as f64)
+            / (maxNumLanes as f64)
+            * e1.get_speed()
+            / maxSpeed
+            * normPrio2
+            * (e2.get_num_lanes_that_allow(permissions, false) as f64)
+            / (maxNumLanes as f64)
+            * e2.get_speed()
+            / maxSpeed
     }
 
     /// C++: `void NBEdgePriorityComputer::markBestParallel(const NBNode &, NBEdge *, NBEdge *)` [static, private]
@@ -326,7 +525,24 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn mark_best_parallel(n: &NBNode, bestFirst: Ptr<NBEdge>, bestSecond: Ptr<NBEdge>) {
-        todo!("port NBEdgePriorityComputer::markBestParallel")
+        let np: Ptr<NBNode> = Ptr::new(n);
+        // edges running parallel to the main direction should also be prioritised
+        let a1 = bestFirst.get_angle_at_node(np);
+        let a2 = if bestSecond.is_null() { a1 } else { bestSecond.get_angle_at_node(np) };
+        let p1: SVCPermissions = bestFirst.get_permissions(-1);
+        let p2: SVCPermissions = if bestSecond.is_null() { p1 } else { bestSecond.get_permissions(-1) };
+        for e in n.get_incoming_edges().iter().copied() {
+            // @note: this rule might also apply if there are common permissions but
+            // then we would not further rules to resolve the priority between the best edge and its parallel edge
+            let perm: SVCPermissions = e.get_permissions(-1);
+            if (utils::geom::geom_helper::get_min_angle_diff(e.get_angle_at_node(np), a1) < 10.0
+                || utils::geom::geom_helper::get_min_angle_diff(e.get_angle_at_node(np), a2) < 10.0)
+                && (p1 & perm) == 0
+                && (p2 & perm) == 0
+            {
+                e.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+            }
+        }
     }
 
     /// C++: `NBEdge * NBEdgePriorityComputer::extractAndMarkFirst(NBNode &, std::vector<NBEdge *> &, int)` [static, private]
@@ -343,7 +559,13 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn extract_and_mark_first(n: &mut NBNode, s: &mut Vec<Ptr<NBEdge>>, prio: i32) -> Ptr<NBEdge> {
-        todo!("port NBEdgePriorityComputer::extractAndMarkFirst")
+        if s.len() == 0 {
+            return Ptr::null();
+        }
+        let ret = s[0];
+        s.remove(0);
+        ret.m().set_junction_priority(Ptr::from_mut(n), prio);
+        ret
     }
 
     /// C++: `bool NBEdgePriorityComputer::samePriority(const NBEdge *const, const NBEdge *const, SVCPermissions)` [static, private]
@@ -363,7 +585,16 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn same_priority(e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, permissions: SVCPermissions) -> bool {
-        todo!("port NBEdgePriorityComputer::samePriority")
+        if e1 == e2 {
+            return true;
+        }
+        if e1.get_priority() != e2.get_priority() {
+            return false;
+        }
+        if (e1.get_speed() as i32) != (e2.get_speed() as i32) {
+            return false;
+        }
+        e1.get_num_lanes_that_allow(permissions, false) == e2.get_num_lanes_that_allow(permissions, false)
     }
 
     /// C++: `bool NBEdgePriorityComputer::hasDifferentPriorities(const EdgeVector &, const NBEdge *)` [static, private]
@@ -383,7 +614,16 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn has_different_priorities(edges: &EdgeVector, excluded: Ptr<NBEdge>) -> bool {
-        todo!("port NBEdgePriorityComputer::hasDifferentPriorities")
+        if edges.len() < 2 {
+            return false;
+        }
+        let prio = if edges[0] == excluded { edges[1].get_priority() } else { edges[0].get_priority() };
+        for e in edges.iter() {
+            if *e != excluded && e.get_priority() != prio {
+                return true;
+            }
+        }
+        false
     }
 
 }
