@@ -1300,7 +1300,23 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        todo!("port NBOwnTLDef::initNeedsContRelation")
+        if !self.myNeedsContRelationReady {
+            if self.myControlledNodes.len() > 0 {
+                // we use a dummy node just to maintain const-correctness
+                Ptr::new(self).m().myNeedsContRelation.clear();
+                for n in self.myControlledNodes.clone() {
+                    // shortcut: C++ registers the dummy with node n via its constructor; the port's constructor does not, upgrade: construct the definition boxed/in place
+                    let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
+                    dummy.set_participants_information();
+                    let tllDummy = dummy.compute_logic_and_conts(0, true);
+                    let _ = tllDummy; // C++: delete tllDummy
+                    let rel = dummy.myNeedsContRelation.clone();
+                    Ptr::new(self).m().myNeedsContRelation.extend(rel);
+                    n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+                }
+            }
+            Ptr::new(self).m().myNeedsContRelationReady = true;
+        }
     }
 
     /// C++: `void NBOwnTLDef::buildAllRedState(SUMOTime, NBTrafficLightLogic *, const std::string &)`
@@ -1319,7 +1335,17 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn build_all_red_state(&mut self, allRedTime: SUMOTime, logic: Ptr<NBTrafficLightLogic>, state: &str) {
-        todo!("port NBOwnTLDef::buildAllRedState")
+        if allRedTime > 0 {
+            // build all-red phase
+            let mut allRedState: Vec<u8> = state.as_bytes().to_vec();
+            for i in 0..state.len() {
+                if allRedState[i] == b'Y' || allRedState[i] == b'y' {
+                    allRedState[i] = b'r';
+                }
+            }
+            let allRedState = String::from_utf8(allRedState).unwrap();
+            logic.m().add_step(time2steps(steps2time(allRedTime).ceil()), &allRedState, &Vec::new(), "", -1);
+        }
     }
 
     /// C++: `int NBOwnTLDef::getMaxIndex()` [virtual]
@@ -1336,7 +1362,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        todo!("port NBOwnTLDef::getMaxIndex")
+        self.set_participants_information();
+        let logic = utils::options::options_cont::with_options(|oc| self.compute(oc));
+        if !logic.is_null() {
+            logic.m().get_num_links() - 1
+        } else {
+            -1
+        }
     }
 
     /// C++: `void NBOwnTLDef::setLayout(TrafficLightLayout)`
@@ -1346,7 +1378,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_layout(&mut self, layout: TrafficLightLayout) {
-        todo!("port NBOwnTLDef::setLayout")
+        self.myLayout = layout;
     }
 
     /// C++: `TrafficLightLayout NBOwnTLDef::getLayout() const` [const, virtual]
@@ -1355,7 +1387,7 @@ impl NBOwnTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn get_layout(&self) -> TrafficLightLayout {
-        todo!("port NBOwnTLDef::getLayout")
+        self.myLayout
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::myCompute(int)` [virtual, protected]
@@ -1372,7 +1404,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTimeSeconds: i32) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBOwnTLDef::myCompute")
+        if self.myControlledNodes.len() > 1 {
+            // call this first so that the following call to computeLogicAndConts resets linkIndices
+            self.init_needs_cont_relation();
+            // reset insideTLS info
+            self.collect_edges();
+        }
+        self.compute_logic_and_conts(brakingTimeSeconds, false)
     }
 
     /// C++: `void NBOwnTLDef::collectLinks()` [virtual, protected]
@@ -1384,7 +1422,10 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBOwnTLDef::collectLinks")
+        self.myControlledLinks.clear();
+        let mut links: NBConnectionVector = Vec::new();
+        self.collect_all_links(&mut links);
+        self.myControlledLinks = links;
     }
 
     /// C++: `void NBOwnTLDef::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual, protected]
@@ -1394,7 +1435,7 @@ impl NBOwnTLDef {
     //                            NBEdge* /*by*/, int /*byLane*/, bool /*incoming*/) {}
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBOwnTLDef::replaceRemoved")
+        // C++ body is empty
     }
 
     /// C++: `bool NBOwnTLDef::corridorLike() const` [const, protected]
@@ -1433,7 +1474,29 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn corridor_like(&self) -> bool {
-        todo!("port NBOwnTLDef::corridorLike")
+        if self.get_id() == NBTrafficLightDefinition_DummyID {
+            // avoid infinite recursion
+            return true;
+        }
+        // setParticipantsInformation resets myAmInTLS so we need to make a copy
+        let edgeInsideTLS: Vec<bool> = self.myIncomingEdges.iter().map(|e| e.is_inside_tls()).collect();
+        assert!(self.myControlledNodes.len() >= 2);
+        let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
+        dummy.set_participants_information();
+        let tllDummy = dummy.compute_logic_and_conts(0, true);
+        let mut greenPhases = 0;
+        for phase in tllDummy.get_phases().iter() {
+            if phase.state.chars().any(|c| c == 'g' || c == 'G') {
+                greenPhases += 1;
+            }
+        }
+        for controlledNode in self.myControlledNodes.iter() {
+            controlledNode.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+        }
+        for (i, e) in self.myIncomingEdges.iter().enumerate() {
+            e.m().set_inside_tls(edgeInsideTLS[i]);
+        }
+        greenPhases <= 2
     }
 
     /// C++: `NBTrafficLightLogic * NBOwnTLDef::buildNemaPhases(const EdgeVector &, const EdgeVector &, const std::vector<NBNode::Crossing *> &, const std::vector<std::pair<NBEdge *, NBEdge *>> &, const std::vector<std::string> &, const std::vector<std::string> &)` [protected]
@@ -1626,7 +1689,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_directional_weight(&mut self, dir: LinkDirection) -> f64 {
-        todo!("port NBOwnTLDef::getDirectionalWeight")
+        const HEIGH_WEIGHT: f64 = 2.0;
+        const LOW_WEIGHT: f64 = 0.5;
+        match dir {
+            LinkDirection::STRAIGHT | LinkDirection::PARTLEFT | LinkDirection::PARTRIGHT => HEIGH_WEIGHT,
+            LinkDirection::LEFT | LinkDirection::RIGHT => LOW_WEIGHT,
+            _ => 0.0,
+        }
     }
 
     /// C++: `int NBOwnTLDef::getToPrio(const NBEdge *const)` [protected]
@@ -1637,7 +1706,7 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_to_prio(&mut self, e: Ptr<NBEdge>) -> i32 {
-        todo!("port NBOwnTLDef::getToPrio")
+        e.get_junction_priority(e.get_to_node())
     }
 
     /// C++: `double NBOwnTLDef::computeUnblockedWeightedStreamNumber(const NBEdge *const, const NBEdge *const)` [protected]
