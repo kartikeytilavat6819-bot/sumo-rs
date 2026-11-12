@@ -588,7 +588,7 @@ impl MSRailSignalControl {
                     .get_lanes()
                     .first()
                     .unwrap()
-                    .get_link_to(edges[i + 1].get_lanes().first().unwrap());
+                    .get_link_to(*edges[i + 1].get_lanes().first().unwrap());
                 if !link.is_null() && link.is_tls_controlled() {
                     first_signal_edge = edges[i];
                     break;
@@ -846,7 +846,7 @@ impl MSRailSignalControl {
             for follower in followers {
                 for foe in follower.get_foes() {
                     if foe.get_forward().last().unwrap().myEdge.get_to_junction() == other_j {
-                        self.find_deadlock_foes(foe, dl, signal_index, deadlock_foes.clone());
+                        self.find_deadlock_foes(*foe, dl, signal_index, deadlock_foes.clone());
                     } else if foe.is_sub_drive_way()
                         && foe.get_parent().get_forward().last().unwrap().myEdge.get_to_junction() == other_j
                         && foe.get_parent_remaining_length() < max_train_length

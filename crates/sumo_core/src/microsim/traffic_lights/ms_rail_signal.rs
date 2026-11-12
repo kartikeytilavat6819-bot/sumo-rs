@@ -1415,7 +1415,11 @@ impl MSRailSignal {
             while i > depart_index {
                 let e = edges[i as usize];
                 if e.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
-                    let link = e.get_lanes().first().unwrap().get_link_to(next.get_lanes().first().unwrap());
+                    let link = e
+                        .get_lanes()
+                        .first()
+                        .unwrap()
+                        .get_link_to(*next.get_lanes().first().unwrap());
                     //std::cout << SIMTIME << " veh=" << ego->getID() << " rp=" << ego->getRoutePosition()
                     //    << " i=" << i << " e=" << e->getID() << " next=" << next->getID() << " link=" << (link == nullptr ? "NUL" : link->getDescription()) << "\n";
                     if !link.is_null() && link.is_tls_controlled() {
@@ -1456,7 +1460,7 @@ impl MSRailSignal {
                                 let dw = Ptr::new(driveway);
                                 MSRailSignalControl::get_instance().add_driveway_follower(prev, dw);
                                 MSRailSignalControl::get_instance().add_dw_deadlock_checks(rs, prev);
-                                MSRailSignalControl::get_instance().notify_approach(link);
+                                MSRailSignalControl::get_instance().notify_approach(*link);
                                 prev = dw;
                                 if update && rs.is_active() {
                                     // vehicle may have rerouted its intial trip
@@ -1722,7 +1726,8 @@ impl MSRailSignal {
     pub fn describe_links(links: Vec<Ptr<MSLink>>) -> String {
         let mut result = String::new();
         for link in links {
-            result += &link.get_description() + " ";
+            result.push_str(&link.get_description());
+            result.push(' ');
         }
         result
     }
