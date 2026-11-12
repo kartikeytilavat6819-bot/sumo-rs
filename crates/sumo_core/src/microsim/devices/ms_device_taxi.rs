@@ -64,6 +64,34 @@ impl std::ops::DerefMut for MSDevice_Taxi {
 //   static SUMOTime MSDevice_Taxi::myNextDispatchTime;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedCustomers;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedReservations;
+thread_local! {
+    static MY_DISPATCH_PERIOD: std::cell::RefCell<SUMOTime> = std::cell::RefCell::new(0);
+    static MY_DISPATCHER: std::cell::RefCell<Ptr<MSDispatch>> = std::cell::RefCell::new(Ptr::null());
+    static MY_DISPATCH_COMMAND: std::cell::RefCell<Ptr<Unmapped>> = std::cell::RefCell::new(Ptr::null());
+    static MY_FLEET: std::cell::RefCell<Vec<Ptr<MSDevice_Taxi>>> = std::cell::RefCell::new(Vec::new());
+    static MY_MAX_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
+    static MY_MAX_CONTAINER_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
+    static MY_TAXI_TYPES: std::cell::RefCell<BTreeMap<SUMOVehicleClass, String>> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_NEXT_DISPATCH_TIME: std::cell::RefCell<SUMOTime> = std::cell::RefCell::new(0);
+    static MY_STATE_LOADED_CUSTOMERS: std::cell::RefCell<BTreeMap<String, Ptr<MSDevice_Taxi>>> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_STATE_LOADED_RESERVATIONS: std::cell::RefCell<BTreeMap<String, Ptr<MSDevice_Taxi>>> = std::cell::RefCell::new(BTreeMap::new());
+}
+
+/// C++ `#define TAXI_SERVICE "taxi"`
+pub const TAXI_SERVICE: &str = "taxi";
+/// C++ `#define TAXI_SERVICE_PREFIX "taxi:"`
+pub const TAXI_SERVICE_PREFIX: &str = "taxi:";
+
+// C++ SUMOVehicleParameter.h stop-parameter flags (`2 << n`, as in C++)
+const STOP_DURATION_SET: i32 = 2 << 1;
+const STOP_TRIGGER_SET: i32 = 2 << 4;
+const STOP_PARKING_SET: i32 = 2 << 5;
+const STOP_PERMITTED_SET: i32 = 2 << 15;
+
+/// C++ `toString(std::set<const MSTransportable *>)`: ids joined by a space (Named::getIDSecure)
+fn ids_to_string<'a>(v: impl Iterator<Item = &'a Ptr<MSTransportable>>) -> String {
+    v.map(|p| p.get_id().to_string()).collect::<Vec<_>>().join(" ")
+}
 
 impl MSDevice_Taxi {
     /// C++: `void MSDevice_Taxi::insertOptions(OptionsCont &)` [static]
@@ -100,7 +128,33 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Taxi::insertOptions")
+        oc.add_option_sub_topic("Taxi Device");
+        MSDevice::insert_default_assignment_options("taxi", "Taxi Device", oc, false);
+
+        oc.do_register("device.taxi.dispatch-algorithm", SumoOption::string_with("greedy"));
+        oc.add_description("device.taxi.dispatch-algorithm", "Taxi Device", "The dispatch algorithm [greedy|greedyClosest|greedyShared|routeExtension|traci]");
+
+        oc.do_register("device.taxi.dispatch-algorithm.output", SumoOption::file_name());
+        oc.add_description("device.taxi.dispatch-algorithm.output", "Taxi Device", "Write information from the dispatch algorithm to FILE");
+
+        oc.do_register("device.taxi.dispatch-algorithm.params", SumoOption::string_with(""));
+        oc.add_description("device.taxi.dispatch-algorithm.params", "Taxi Device", "Load dispatch algorithm parameters in format KEY1:VALUE1[,KEY2:VALUE]");
+
+        oc.do_register("device.taxi.dispatch-period", SumoOption::string_typed("60", "TIME"));
+        oc.add_description("device.taxi.dispatch-period", "Taxi Device", "The period between successive calls to the dispatcher");
+
+        oc.do_register("device.taxi.dispatch-keep-unreachable", SumoOption::string_typed("3600", "TIME"));
+        oc.add_description("device.taxi.dispatch-keep-unreachable", "Taxi Device", "The time before aborting unreachable reservations");
+
+        oc.do_register("device.taxi.idle-algorithm", SumoOption::string_with("stop"));
+        oc.add_description("device.taxi.idle-algorithm", "Taxi Device", "The behavior of idle taxis [stop|randomCircling|taxistand]");
+
+        oc.do_register("device.taxi.idle-algorithm.output", SumoOption::file_name());
+        oc.add_description("device.taxi.idle-algorithm.output", "Taxi Device", "Write information from the idling algorithm to FILE");
+
+        oc.do_register("device.taxi.vclasses", SumoOption::string_vector_with(vec!["taxi".to_string()]));
+        oc.add_synonyme("device.taxi.vclasses", "taxi.vclasses", false);
+        oc.add_description("device.taxi.vclasses", "Taxi Device", "Network permissions that can be accessed by taxis");
     }
 
     /// C++: `void MSDevice_Taxi::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -136,7 +190,36 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_Taxi::buildVehicleDevices")
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "taxi", v, false, false)) {
+            // build the device
+            let device: Ptr<MSDevice_Taxi> = Ptr::from_mut(Box::leak(Box::new(MSDevice_Taxi::new(v, &format!("taxi_{}", v.get_id())))));
+            into.push(device.cast::<MSVehicleDevice>());
+            MY_FLEET.with(|f| f.borrow_mut().push(device));
+            if v.get_parameter().line.is_empty() {
+                // automatically set the line so that persons are willing to enter
+                // (see MSStageDriving::isWaitingFor)
+                // const_cast on the vehicle parameter, as in C++
+                let p = v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
+                unsafe { (*p).line = TAXI_SERVICE.to_string(); }
+            }
+            let personCapacity = v.get_vehicle_type().get_person_capacity();
+            let containerCapacity = v.get_vehicle_type().get_container_capacity();
+            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), personCapacity));
+            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), containerCapacity));
+            let vclass = v.get_v_class();
+            let needType = MY_TAXI_TYPES.with(|t| t.borrow().get(&vclass).map_or(true, |s| s.is_empty()));
+            if needType {
+                let tid = v.get_vehicle_type().get_id().to_string();
+                MY_TAXI_TYPES.with(|t| t.borrow_mut().insert(vclass, tid));
+            }
+            if (g_taxi_classes() as SVCPermissions & vclass) == 0 {
+                set_g_taxi_classes((g_taxi_classes() as SVCPermissions | vclass) as i32);
+                MSNet::get_instance().reset_intermodal_router();
+            }
+            if personCapacity < 1 && containerCapacity < 1 {
+                write_warningf!("Vehicle '%' with personCapacity % and containerCapacity % is not usable as taxi.", v.get_id(), personCapacity, containerCapacity);
+            }
+        }
     }
 
     /// C++: `bool MSDevice_Taxi::isReservation(const std::set<std::string> &)` [static]
@@ -149,7 +232,10 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn is_reservation(lines: &BTreeSet<String>) -> bool {
-        todo!("port MSDevice_Taxi::isReservation")
+        lines.len() == 1 && {
+            let first = lines.iter().next().unwrap().as_str();
+            first == TAXI_SERVICE || first.starts_with(TAXI_SERVICE_PREFIX)
+        }
     }
 
     /// C++: `void MSDevice_Taxi::addReservation(MSTransportable *, const std::set<std::string> &, SUMOTime, SUMOTime, SUMOTime, const MSEdge *, double, const MSStoppingPlace *, const MSEdge *, double, const MSStoppingPlace *, const std::string &)` [static]
@@ -196,7 +282,35 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn add_reservation(person: Ptr<MSTransportable>, lines: &BTreeSet<String>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: &str) {
-        todo!("port MSDevice_Taxi::addReservation")
+        if !Self::is_reservation(lines) {
+            return;
+        }
+        let kind = if person.is_person() { "person" } else { "container" };
+        let pid = person.get_id().to_string();
+        if (to.get_permissions() & g_taxi_classes() as SVCPermissions) == 0 {
+            panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because destination edge '{}' does not permit taxi access", kind, pid, to.get_id())));
+        }
+        if (from.get_permissions() & g_taxi_classes() as SVCPermissions) == 0 {
+            panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because origin edge '{}' does not permit taxi access", kind, pid, from.get_id())));
+        }
+        if MY_DISPATCH_COMMAND.with(|c| c.borrow().is_null()) {
+            Self::init_dispatch(0);
+        }
+        // pickup position should be at the stop-endPos
+        let fromPos = if !fromStop.is_null() && Ptr::new(fromStop.get_lane().get_edge()) == from {
+            fromStop.get_end_lane_position()
+        } else {
+            fromPos
+        };
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        let res = dispatcher.m().add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group.to_string(), lines.iter().next().unwrap().as_str(), MY_MAX_CAPACITY.with(|c| *c.borrow()), MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow()));
+        if MY_STATE_LOADED_CUSTOMERS.with(|m| m.borrow().len() > 0) {
+            let taxi = MY_STATE_LOADED_CUSTOMERS.with(|m| m.borrow().get(&pid).copied());
+            if let Some(taxi) = taxi {
+                //std::cout << SIMTIME << " loadedServed p=" << person->getID() << " res=" << res->getID() << " taxi=" << it->second->getID() << "\n";
+                dispatcher.m().served_reservation(res, taxi);
+            }
+        }
     }
 
     /// C++: `void MSDevice_Taxi::removeReservation(MSTransportable *, const std::set<std::string> &, const MSEdge *, double, const MSEdge *, double, const std::string &)` [static]
@@ -213,7 +327,10 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn remove_reservation(person: Ptr<MSTransportable>, lines: &BTreeSet<String>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: &str) {
-        todo!("port MSDevice_Taxi::removeReservation")
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        if !dispatcher.is_null() && lines.len() == 1 && lines.iter().next().unwrap().as_str() == TAXI_SERVICE {
+            dispatcher.m().remove_reservation(person, from, fromPos, to, toPos, group.to_string());
+        }
     }
 
     /// C++: `void MSDevice_Taxi::updateReservationFromPos(MSTransportable *, const std::set<std::string> &, const MSEdge *, double, const MSEdge *, double, const std::string &, double)` [static]
@@ -230,7 +347,10 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn update_reservation_from_pos(person: Ptr<MSTransportable>, lines: &BTreeSet<String>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: &str, newFromPos: f64) {
-        todo!("port MSDevice_Taxi::updateReservationFromPos")
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        if !dispatcher.is_null() && lines.len() == 1 && lines.iter().next().unwrap().as_str() == TAXI_SERVICE {
+            dispatcher.m().update_reservation_from_pos(person, from, fromPos, to, toPos, group.to_string(), newFromPos);
+        }
     }
 
     /// C++: `SUMOTime MSDevice_Taxi::triggerDispatch(SUMOTime)` [static]
@@ -249,7 +369,17 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn trigger_dispatch(currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSDevice_Taxi::triggerDispatch")
+        let mut active: Vec<Ptr<MSDevice_Taxi>> = Vec::new();
+        for taxi in MY_FLEET.with(|f| f.borrow().clone()) {
+            if taxi.get_holder().has_departed() {
+                active.push(taxi);
+            }
+        }
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        dispatcher.m().compute_dispatch(currentTime, &active);
+        let period = MY_DISPATCH_PERIOD.with(|p| *p.borrow());
+        MY_NEXT_DISPATCH_TIME.with(|t| *t.borrow_mut() = currentTime + period);
+        period
     }
 
     /// C++: `bool MSDevice_Taxi::hasServableReservations()` [static]
@@ -260,7 +390,8 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn has_servable_reservations() -> bool {
-        todo!("port MSDevice_Taxi::hasServableReservations")
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        !dispatcher.is_null() && dispatcher.m().has_servable_reservations()
     }
 
     /// C++: `void MSDevice_Taxi::cleanup()` [static]
@@ -276,7 +407,14 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_Taxi::cleanup")
+        let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+        if !dispatcher.is_null() {
+            // delete myDispatcher
+            drop(unsafe { Box::from_raw(dispatcher.as_raw()) });
+            MY_DISPATCHER.with(|d| *d.borrow_mut() = Ptr::null());
+        }
+        MY_DISPATCH_COMMAND.with(|c| *c.borrow_mut() = Ptr::null());
+        MY_TAXI_TYPES.with(|t| t.borrow_mut().clear());
     }
 
     /// C++: `MSDispatch * MSDevice_Taxi::getDispatchAlgorithm()` [static]
@@ -285,7 +423,7 @@ impl MSDevice_Taxi {
     //     }
     #[allow(unused_variables)]
     pub fn get_dispatch_algorithm() -> Ptr<MSDispatch> {
-        todo!("port MSDevice_Taxi::getDispatchAlgorithm")
+        MY_DISPATCHER.with(|d| *d.borrow())
     }
 
     /// C++: `const std::vector<MSDevice_Taxi *> & MSDevice_Taxi::getFleet()` [static]
@@ -294,7 +432,8 @@ impl MSDevice_Taxi {
     //     }
     #[allow(unused_variables)]
     pub fn get_fleet() -> &'static Vec<Ptr<MSDevice_Taxi>> {
-        todo!("port MSDevice_Taxi::getFleet")
+        // SAFETY: thread-local storage lives for the thread; C++ returns a reference to the global vector
+        MY_FLEET.with(|f| unsafe { &*f.as_ptr() })
     }
 
     /// C++: `void MSDevice_Taxi::~MSDevice_Taxi() noexcept` [virtual]
@@ -312,7 +451,26 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Taxi::~MSDevice_Taxi")
+        let me = Ptr::from_mut(self);
+        MY_FLEET.with(|f| {
+            let mut fleet = f.borrow_mut();
+            if let Some(pos) = fleet.iter().position(|t| *t == me) {
+                fleet.remove(pos);
+            }
+            // recompute myMaxCapacity
+            let mut maxCap = 0;
+            let mut maxContainerCap = 0;
+            for taxi in fleet.iter() {
+                maxCap = std::cmp::max(maxCap, taxi.get_holder().get_vehicle_type().get_person_capacity());
+                maxContainerCap = std::cmp::max(maxContainerCap, taxi.get_holder().get_vehicle_type().get_container_capacity());
+            }
+            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = maxCap);
+            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
+        });
+        // delete myIdleAlgorithm
+        drop(unsafe { Box::from_raw(self.myIdleAlgorithm.as_raw()) });
+        // base class destructor runs after the derived one in C++
+        self.base.drop_();
     }
 
     /// C++: `bool MSDevice_Taxi::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -325,7 +483,8 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Taxi::notifyMove")
+        self.update_move(delta_t(), newPos - oldPos);
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_Taxi::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -339,7 +498,10 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Taxi::notifyEnter")
+        if self.is_empty() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
+            self.myIdleAlgorithm.m().idle(Ptr::from_mut(self));
+        }
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_Taxi::deviceName() const` [const, virtual]
@@ -349,7 +511,7 @@ impl MSDevice_Taxi {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Taxi::deviceName")
+        "taxi".to_string()
     }
 
     /// C++: `bool MSDevice_Taxi::isEmpty()`
@@ -360,7 +522,7 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&mut self) -> bool {
-        todo!("port MSDevice_Taxi::isEmpty")
+        self.myState == MSDevice_Taxi_TaxiState::EMPTY as i32
     }
 
     /// C++: `int MSDevice_Taxi::getState() const` [const]
@@ -369,7 +531,7 @@ impl MSDevice_Taxi {
     //     }
     #[allow(unused_variables)]
     pub fn get_state(&self) -> i32 {
-        todo!("port MSDevice_Taxi::getState")
+        self.myState
     }
 
     /// C++: `bool MSDevice_Taxi::hasFleet()` [static]
@@ -380,7 +542,7 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn has_fleet() -> bool {
-        todo!("port MSDevice_Taxi::hasFleet")
+        MY_FLEET.with(|f| f.borrow().len() > 0)
     }
 
     /// C++: `void MSDevice_Taxi::dispatch(const Reservation &)`
@@ -391,7 +553,7 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn dispatch(&mut self, res: &Reservation) {
-        todo!("port MSDevice_Taxi::dispatch")
+        self.dispatch_shared(vec![Ptr::new(res), Ptr::new(res)]);
     }
 
     /// C++: `void MSDevice_Taxi::dispatchShared(std::vector<const Reservation *>)`
@@ -611,7 +773,184 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn dispatch_shared(&mut self, reservations: Vec<Ptr<Reservation>>) {
-        todo!("port MSDevice_Taxi::dispatchShared")
+        // #ifdef DEBUG_DISPATCH output omitted (debug only)
+        let mut reservations = reservations;
+        self.myLastDispatch = reservations.clone();
+        let mut tmpEdges: ConstMSEdgeVector = Vec::new();
+        let mut stops: StopParVector = Vec::new();
+        let holderPtr = self.myHolder;
+        let holder = holderPtr.m();
+        let mut lastPos: f64 = holder.get_position_on_lane();
+        // shortcut: C++ `*getRerouteOrigin()` is an iterator into the route; MSBaseVehicle::getRerouteOrigin is not ported yet and returns its current edge, upgrade when it returns Ptr<MSEdge>
+        let rerouteOrigin: Ptr<MSEdge> = holder.get_edge();
+        if self.is_empty() {
+            // start fresh from the current edge
+            if holder.is_stopped_parking() {
+                // parking stop must be ended normally
+                let stoppedTriggered = holder.is_stopped_triggered();
+                {
+                    let stop = holder.get_next_stop_mutable();
+                    stop.duration = 0;
+                    lastPos = stop.pars.endPos;
+                    if stoppedTriggered {
+                        stop.triggered = false;
+                        stop.containerTriggered = false;
+                        stop.joinTriggered = false;
+                    }
+                }
+                if stoppedTriggered {
+                    holder.unregister_waiting();
+                }
+                // prevent unauthorized/premature entry
+                holder.get_next_stop_mutable().pars.permitted.insert(String::new());
+                while holder.get_stops().len() > 1 {
+                    holder.abort_next_stop(1);
+                }
+            } else {
+                while holder.has_stops() {
+                    // in meso there might be more than 1 stop at this point
+                    holder.abort_next_stop(0);
+                }
+                assert!(!holder.has_stops());
+            }
+            tmpEdges.push(holder.get_edge());
+            if holder.get_edge() != rerouteOrigin {
+                tmpEdges.push(rerouteOrigin);
+            }
+        } else {
+            assert!(holder.has_stops());
+            // check how often existing customers appear in the new reservations
+            let mut nOccur: BTreeMap<Ptr<MSTransportable>, i32> = BTreeMap::new();
+            for &res in reservations.iter() {
+                for &person in res.persons.iter() {
+                    if self.myCustomers.contains(&person) {
+                        *nOccur.entry(person).or_insert(0) += 1;
+                        if !self.myCurrentReservations.contains(&res) {
+                            panic!("{}", ProcessError::new(format!("Invalid Re-dispatch for existing customer '{}' with a new reservation", person.get_id())));
+                        }
+                    }
+                }
+            }
+            if nOccur.is_empty() {
+                // no overlap with existing customers - extend route
+                tmpEdges = holder.get_route().get_edges().clone();
+                lastPos = holder.get_stops().back().unwrap().pars.endPos;
+            } else if nOccur.len() == self.myCustomers.len() {
+                // redefine route (verify correct number of mentions)
+                let mut onBoard: BTreeSet<Ptr<MSTransportable>> = BTreeSet::new();
+                onBoard.extend(holder.get_persons().iter().copied());
+                onBoard.extend(holder.get_containers().iter().copied());
+                let mut redundantPickup: BTreeSet<Ptr<MSTransportable>> = BTreeSet::new();
+                for (&person, &count) in nOccur.iter() {
+                    if count == 1 {
+                        // customers must already be on board
+                        if !onBoard.contains(&person) {
+                            panic!("{}", ProcessError::new(format!("Re-dispatch did not mention pickup for existing customer '{}'", person.get_id())));
+                        }
+                    } else if count == 2 {
+                        if !onBoard.contains(&person) {
+                            // treat like a new customer
+                            // TODO: need to be checked
+                            self.myCustomers.remove(&person);
+                        } else {
+                            redundantPickup.insert(person);
+                        }
+                    } else {
+                        panic!("{}", ProcessError::new(format!("Re-dispatch mentions existing customer '{}' {} times", person.get_id(), count)));
+                    }
+                }
+                // remove redundancy
+                if !redundantPickup.is_empty() {
+                    let mut i = 0;
+                    while i < reservations.len() {
+                        let isRedundant = reservations[i].persons.iter().any(|p| redundantPickup.contains(p));
+                        if isRedundant {
+                            for p in reservations[i].persons.iter() {
+                                redundantPickup.remove(p);
+                            }
+                            reservations.remove(i);
+                        } else {
+                            i += 1;
+                        }
+                    }
+                }
+                while holder.has_stops() {
+                    holder.abort_next_stop(0);
+                }
+                tmpEdges.push(holder.get_edge());
+                if holder.get_edge() != rerouteOrigin {
+                    tmpEdges.push(rerouteOrigin);
+                }
+            } else {
+                // inconsistent re-dispatch
+                let mut missing: Vec<String> = Vec::new();
+                for c in self.myCustomers.iter() {
+                    if !nOccur.contains_key(c) {
+                        missing.push(c.get_id().to_string());
+                    }
+                }
+                panic!("{}", ProcessError::new(format!("Re-dispatch did mention some customers but failed to mention {}", join_to_string_sorting(&missing, " "))));
+            }
+        }
+
+        let mut hasPickup = false;
+        for &res in reservations.iter() {
+            self.myCurrentReservations.insert(res);
+            let mut isPickup = false;
+            for &person in res.persons.iter() {
+                if !self.myCustomers.contains(&person) {
+                    self.myCustomers.insert(person);
+                    isPickup = true;
+                    hasPickup = true;
+                }
+            }
+            if isPickup {
+                let action = format!("pickup {} ({})", ids_to_string(res.persons.iter()), res.id);
+                self.prepare_stop(&mut tmpEdges, &mut stops, &mut lastPos, res.from, res.fromPos, res.fromStop, &action, res, isPickup);
+                for &transportable in res.persons.iter() {
+                    if transportable.is_person() {
+                        stops.last_mut().unwrap().triggered = true;
+                    } else {
+                        stops.last_mut().unwrap().containerTriggered = true;
+                    }
+                    stops.last_mut().unwrap().permitted.insert(transportable.get_id().to_string());
+                    stops.last_mut().unwrap().parametersSet |= STOP_PERMITTED_SET | STOP_TRIGGER_SET;
+                }
+                for &t in res.persons.iter() {
+                    stops.last_mut().unwrap().awaitedPersons.insert(t.get_id().to_string());
+                }
+
+                if stops.last().unwrap().duration == -1 {
+                    // keep dropOffDuration if the stop is dropOff and pickUp
+                    let d = holder.get_float_param("device.taxi.pickUpDuration", false, 0.0, false);
+                    stops.last_mut().unwrap().duration = time2steps(d);
+                }
+            } else {
+                let action = format!("dropOff {} ({})", ids_to_string(res.persons.iter()), res.id);
+                self.prepare_stop(&mut tmpEdges, &mut stops, &mut lastPos, res.to, res.toPos, res.toStop, &action, res, isPickup);
+                // pay and collect bags
+                let d = holder.get_float_param("device.taxi.dropOffDuration", false, 60.0, false);
+                stops.last_mut().unwrap().duration = time2steps(d);
+            }
+            stops.last_mut().unwrap().parametersSet |= STOP_DURATION_SET | STOP_PARKING_SET;
+        }
+        // #ifdef DEBUG_DISPATCH output omitted (debug only)
+
+        let t: SUMOTime = MSNet::get_instance().get_current_time_step();
+        if !holder.replace_route_edges(&mut tmpEdges, -1.0, 0.0, "taxi:prepare_dispatch", false, false, false, Ptr::null()) {
+            panic!("{}", ProcessError::new(format!("Route replacement for taxi dispatch failed for vehicle '{}' at time={}.", holder.get_id(), time2string(t))));
+        }
+        for stop in stops.iter() {
+            let mut error = String::new();
+            if !holder.add_stop(stop, &mut error, 0, Ptr::null()) {
+                write_warningf!("Could not add taxi stop for %, desc=% time=% error=%", holder.get_id(), stop.actType, time2string(t), error);
+            }
+        }
+        let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+        holder.reroute(t, "taxi:dispatch", router, false, false, false, Ptr::null());
+        if hasPickup {
+            self.myState |= MSDevice_Taxi_TaxiState::PICKUP as i32;
+        }
     }
 
     /// C++: `void MSDevice_Taxi::cancelCurrentCustomers()`
