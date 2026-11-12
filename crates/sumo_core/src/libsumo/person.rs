@@ -1,8 +1,33 @@
 //! Port of libsumo/Person.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::geom_helper::navi_degree;
+use utils::common::sumo_vehicle_class::get_vehicle_shape_name;
+use utils::common::time::steps2time;
+use utils::common::to_string::to_string;
+use utils::common::sumo_vehicle_class::SVC_PEDESTRIAN;
 
-/// C++ class `libsumo::Person` (libsumo/Person.h)
+/// C++ `getSidewalk<MSEdge, MSLane>(edge)` with the default svc = SVC_PEDESTRIAN (utils/router/IntermodalEdge.h).
+fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
+    if edge.is_null() {
+        return Ptr::null();
+    }
+    let lanes = edge.get_lanes();
+    // prefer lanes that are exclusive to pedestrians
+    for lane in lanes.iter() {
+        if lane.get_permissions() == SVC_PEDESTRIAN {
+            return *lane;
+        }
+    }
+    for lane in lanes.iter() {
+        if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
+            return *lane;
+        }
+    }
+    Ptr::null()
+}
+
+/// C++ `libsumo::Person` (libsumo/Person.h)
 pub struct Person {
 }
 
@@ -19,21 +44,21 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(personID: &str) -> f64 {
-        todo!("port Person::getSpeed")
+        Self::get_person(personID).get_speed()
     }
 
     /// C++: `libsumo::TraCIPosition Person::getPosition(const std::string &, const bool)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_position(personID: &str, includeZ: bool) -> TraCIPosition {
-        todo!("port Person::getPosition")
+        Helper::make_tra_ci_position(&Self::get_person(personID).get_position(0.), includeZ)
     }
 
     /// C++: `libsumo::TraCIPosition Person::getPosition3D(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_position3_d(personID: &str) -> TraCIPosition {
-        todo!("port Person::getPosition3D")
+        Self::get_position(personID, true)
     }
 
     /// C++: `std::string Person::getRoadID(const std::string &)` [static]
@@ -43,7 +68,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_road_id(personID: &str) -> String {
-        todo!("port Person::getRoadID")
+        Self::get_person(personID).get_edge().get_id().to_string()
     }
 
     /// C++: `std::string Person::getLaneID(const std::string &)` [static]
@@ -53,7 +78,8 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(personID: &str) -> String {
-        todo!("port Person::getLaneID")
+        let lane = Self::get_person(personID).get_lane();
+        if lane.is_null() { String::new() } else { lane.get_id().to_string() }
     }
 
     /// C++: `std::string Person::getTypeID(const std::string &)` [static]
@@ -63,7 +89,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_type_id(personID: &str) -> String {
-        todo!("port Person::getTypeID")
+        Self::get_person(personID).get_vehicle_type().get_id().to_string()
     }
 
     /// C++: `double Person::getWaitingTime(const std::string &)` [static]
@@ -73,7 +99,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(personID: &str) -> f64 {
-        todo!("port Person::getWaitingTime")
+        Self::get_person(personID).get_waiting_seconds()
     }
 
     /// C++: `double Person::getArrivalPos(const std::string &)` [static]
@@ -83,7 +109,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(personID: &str) -> f64 {
-        todo!("port Person::getArrivalPos")
+        Self::get_person(personID).get_arrival_pos()
     }
 
     /// C++: `std::string Person::getNextEdge(const std::string &)` [static]
@@ -93,7 +119,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge(personID: &str) -> String {
-        todo!("port Person::getNextEdge")
+        Self::get_person(personID).get_next_edge().to_string()
     }
 
     /// C++: `std::string Person::getVehicle(const std::string &)` [static]
@@ -108,7 +134,8 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle(personID: &str) -> String {
-        todo!("port Person::getVehicle")
+        let veh = Self::get_person(personID).get_vehicle();
+        if veh.is_null() { String::new() } else { veh.get_id().to_string() }
     }
 
     /// C++: `int Person::getRemainingStages(const std::string &)` [static]
@@ -118,7 +145,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_remaining_stages(personID: &str) -> i32 {
-        todo!("port Person::getRemainingStages")
+        Self::get_person(personID).get_num_remaining_stages()
     }
 
     /// C++: `libsumo::TraCIStage Person::getStage(const std::string &, int)` [static]
@@ -148,7 +175,20 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_edges(personID: &str, nextStageIndex: i32) -> Vec<String> {
-        todo!("port Person::getEdges")
+        let p = Self::get_person(personID);
+        if nextStageIndex >= p.get_num_remaining_stages() {
+            panic!("The stage index must be lower than the number of remaining stages.");
+        }
+        if nextStageIndex < (p.get_num_remaining_stages() - p.get_num_stages()) {
+            panic!("The negative stage index must refer to a valid previous stage.");
+        }
+        let mut edgeIDs: Vec<String> = Vec::new();
+        for e in p.get_next_stage(nextStageIndex).get_edges().iter() {
+            if !e.is_null() {
+                edgeIDs.push(e.get_id().to_string());
+            }
+        }
+        edgeIDs
     }
 
     /// C++: `double Person::getAngle(const std::string &)` [static]
@@ -158,7 +198,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(personID: &str) -> f64 {
-        todo!("port Person::getAngle")
+        navi_degree(Self::get_person(personID).get_angle())
     }
 
     /// C++: `double Person::getSlope(const std::string &)` [static]
@@ -175,7 +215,14 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_slope(personID: &str) -> f64 {
-        todo!("port Person::getSlope")
+        let person = Self::get_person(personID);
+        let ep = person.get_edge_pos();
+        let mut lane = get_sidewalk_lane(person.get_edge());
+        if lane.is_null() {
+            lane = person.get_edge().get_lanes()[0];
+        }
+        let gp = lane.interpolate_lane_pos_to_geometry_pos(ep);
+        lane.get_shape_2().slope_degree_at_offset(gp)
     }
 
     /// C++: `double Person::getLanePosition(const std::string &)` [static]
@@ -185,7 +232,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_position(personID: &str) -> f64 {
-        todo!("port Person::getLanePosition")
+        Self::get_person(personID).get_edge_pos()
     }
 
     /// C++: `double Person::getWalkingDistance(const std::string &, const std::string &, double, int)` [static]
@@ -230,7 +277,9 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_walking_distance2_d(personID: &str, x: f64, y: f64) -> f64 {
-        todo!("port Person::getWalkingDistance2D")
+        let p = Self::get_person(personID);
+        let roadPos = Helper::convert_cartesian_to_road_map(&Position::new(x, y), p.get_vehicle_type().get_vehicle_class());
+        Self::get_walking_distance(personID, &roadPos.0.get_edge().get_id().to_string(), roadPos.1, roadPos.0.get_index())
     }
 
     /// C++: `std::vector<libsumo::TraCIReservation> Person::getTaxiReservations(int)` [static]
@@ -271,7 +320,8 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Person::getIDList")
+        // shortcut: MSTransportableControl::loadedBegin/End return an Unmapped map iterator, so the id list cannot be built yet; upgrade when the transportable dict iterator is mapped
+        panic!("getIDList not yet ported: MSTransportableControl loaded iterator is unmapped")
     }
 
     /// C++: `int Person::getIDCount()` [static]
@@ -281,7 +331,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Person::getIDCount")
+        MSNet::get_instance().m().get_person_control().size()
     }
 
     /// C++: `std::string Person::getParameter(const std::string &, const std::string &)` [static]
@@ -291,14 +341,14 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Person::getParameter")
+        Self::get_person(objectID).get_parameter().get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Person::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Person)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Person::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Person::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -327,7 +377,21 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Person::setParameter")
+        if key.starts_with("device.") {
+            panic!("{}", format!("Person '{}' does not support device parameters\n", objectID));
+        } else if key.starts_with("laneChangeModel.") {
+            panic!("{}", format!("Person '{}' does not support laneChangeModel parameters\n", objectID));
+        } else if key.starts_with("carFollowModel.") {
+            panic!("{}", format!("Person '{}' does not support carFollowModel parameters\n", objectID));
+        } else if key.starts_with("junctionModel.") {
+            // use the whole key (including junctionModel prefix)
+            Self::get_person(objectID).m().set_junction_model_parameter(key, value);
+        } else if key.starts_with("has.") && key.ends_with(".device") {
+            panic!("{}", format!("Person '{}' does not support chanigng device status\n", objectID));
+        } else {
+            let par = Self::get_person(objectID).get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
+            unsafe { &mut *par }.set_parameter(key, value);
+        }
     }
 
     /// C++: `double Person::getLength(const std::string &)` [static]
@@ -336,8 +400,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getLength();
     // }
     #[allow(unused_variables)]
-    pub fn get_length(typeID: &str) -> f64 {
-        todo!("port Person::getLength")
+    pub fn get_length(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_length()
     }
 
     /// C++: `double Person::getMaxSpeed(const std::string &)` [static]
@@ -346,8 +410,8 @@ impl Person {
     //     return getPerson(personID)->getMaxSpeed();
     // }
     #[allow(unused_variables)]
-    pub fn get_max_speed(typeID: &str) -> f64 {
-        todo!("port Person::getMaxSpeed")
+    pub fn get_max_speed(personID: &str) -> f64 {
+        Self::get_person(personID).get_max_speed()
     }
 
     /// C++: `std::string Person::getVehicleClass(const std::string &)` [static]
@@ -356,8 +420,8 @@ impl Person {
     //     return toString(getPerson(personID)->getVehicleType().getVehicleClass());
     // }
     #[allow(unused_variables)]
-    pub fn get_vehicle_class(typeID: &str) -> String {
-        todo!("port Person::getVehicleClass")
+    pub fn get_vehicle_class(personID: &str) -> String {
+        to_string(&Self::get_person(personID).get_vehicle_type().get_vehicle_class())
     }
 
     /// C++: `double Person::getSpeedFactor(const std::string &)` [static]
@@ -366,8 +430,8 @@ impl Person {
     //     return getPerson(personID)->getChosenSpeedFactor();
     // }
     #[allow(unused_variables)]
-    pub fn get_speed_factor(typeID: &str) -> f64 {
-        todo!("port Person::getSpeedFactor")
+    pub fn get_speed_factor(personID: &str) -> f64 {
+        Self::get_person(personID).get_chosen_speed_factor()
     }
 
     /// C++: `double Person::getAccel(const std::string &)` [static]
@@ -376,8 +440,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getMaxAccel();
     // }
     #[allow(unused_variables)]
-    pub fn get_accel(typeID: &str) -> f64 {
-        todo!("port Person::getAccel")
+    pub fn get_accel(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_max_accel()
     }
 
     /// C++: `double Person::getDecel(const std::string &)` [static]
@@ -386,8 +450,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getMaxDecel();
     // }
     #[allow(unused_variables)]
-    pub fn get_decel(typeID: &str) -> f64 {
-        todo!("port Person::getDecel")
+    pub fn get_decel(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_max_decel()
     }
 
     /// C++: `double Person::getEmergencyDecel(const std::string &)` [static]
@@ -395,8 +459,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getEmergencyDecel();
     // }
     #[allow(unused_variables)]
-    pub fn get_emergency_decel(typeID: &str) -> f64 {
-        todo!("port Person::getEmergencyDecel")
+    pub fn get_emergency_decel(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_emergency_decel()
     }
 
     /// C++: `double Person::getApparentDecel(const std::string &)` [static]
@@ -404,8 +468,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getApparentDecel();
     // }
     #[allow(unused_variables)]
-    pub fn get_apparent_decel(typeID: &str) -> f64 {
-        todo!("port Person::getApparentDecel")
+    pub fn get_apparent_decel(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_apparent_decel()
     }
 
     /// C++: `double Person::getImperfection(const std::string &)` [static]
@@ -414,8 +478,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getImperfection();
     // }
     #[allow(unused_variables)]
-    pub fn get_imperfection(typeID: &str) -> f64 {
-        todo!("port Person::getImperfection")
+    pub fn get_imperfection(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_imperfection()
     }
 
     /// C++: `double Person::getTau(const std::string &)` [static]
@@ -424,8 +488,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getCarFollowModel().getHeadwayTime();
     // }
     #[allow(unused_variables)]
-    pub fn get_tau(typeID: &str) -> f64 {
-        todo!("port Person::getTau")
+    pub fn get_tau(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_car_follow_model().get_headway_time()
     }
 
     /// C++: `std::string Person::getEmissionClass(const std::string &)` [static]
@@ -434,8 +498,8 @@ impl Person {
     //     return PollutantsInterface::getName(getPerson(personID)->getVehicleType().getEmissionClass());
     // }
     #[allow(unused_variables)]
-    pub fn get_emission_class(typeID: &str) -> String {
-        todo!("port Person::getEmissionClass")
+    pub fn get_emission_class(personID: &str) -> String {
+        PollutantsInterface::get_name(Self::get_person(personID).get_vehicle_type().get_emission_class())
     }
 
     /// C++: `std::string Person::getShapeClass(const std::string &)` [static]
@@ -444,8 +508,8 @@ impl Person {
     //     return getVehicleShapeName(getPerson(personID)->getVehicleType().getGuiShape());
     // }
     #[allow(unused_variables)]
-    pub fn get_shape_class(typeID: &str) -> String {
-        todo!("port Person::getShapeClass")
+    pub fn get_shape_class(personID: &str) -> String {
+        get_vehicle_shape_name(Self::get_person(personID).get_vehicle_type().get_gui_shape())
     }
 
     /// C++: `double Person::getMinGap(const std::string &)` [static]
@@ -454,8 +518,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getMinGap();
     // }
     #[allow(unused_variables)]
-    pub fn get_min_gap(typeID: &str) -> f64 {
-        todo!("port Person::getMinGap")
+    pub fn get_min_gap(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_min_gap()
     }
 
     /// C++: `double Person::getWidth(const std::string &)` [static]
@@ -464,8 +528,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getWidth();
     // }
     #[allow(unused_variables)]
-    pub fn get_width(typeID: &str) -> f64 {
-        todo!("port Person::getWidth")
+    pub fn get_width(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_width()
     }
 
     /// C++: `double Person::getHeight(const std::string &)` [static]
@@ -474,8 +538,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getHeight();
     // }
     #[allow(unused_variables)]
-    pub fn get_height(typeID: &str) -> f64 {
-        todo!("port Person::getHeight")
+    pub fn get_height(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_height()
     }
 
     /// C++: `double Person::getMass(const std::string &)` [static]
@@ -484,15 +548,15 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getMass();
     // }
     #[allow(unused_variables)]
-    pub fn get_mass(typeID: &str) -> f64 {
-        todo!("port Person::getMass")
+    pub fn get_mass(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_mass()
     }
 
     /// C++: `libsumo::TraCIColor Person::getColor(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_color(typeID: &str) -> TraCIColor {
-        todo!("port Person::getColor")
+    pub fn get_color(personID: &str) -> TraCIColor {
+        Helper::make_tra_ci_color(&Self::get_person(personID).get_parameter().color)
     }
 
     /// C++: `double Person::getMinGapLat(const std::string &)` [static]
@@ -501,8 +565,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getMinGapLat();
     // }
     #[allow(unused_variables)]
-    pub fn get_min_gap_lat(typeID: &str) -> f64 {
-        todo!("port Person::getMinGapLat")
+    pub fn get_min_gap_lat(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_min_gap_lat()
     }
 
     /// C++: `double Person::getMaxSpeedLat(const std::string &)` [static]
@@ -511,8 +575,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getMaxSpeedLat();
     // }
     #[allow(unused_variables)]
-    pub fn get_max_speed_lat(typeID: &str) -> f64 {
-        todo!("port Person::getMaxSpeedLat")
+    pub fn get_max_speed_lat(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_max_speed_lat()
     }
 
     /// C++: `std::string Person::getLateralAlignment(const std::string &)` [static]
@@ -521,8 +585,9 @@ impl Person {
     //     return toString(getPerson(personID)->getVehicleType().getPreferredLateralAlignment());
     // }
     #[allow(unused_variables)]
-    pub fn get_lateral_alignment(typeID: &str) -> String {
-        todo!("port Person::getLateralAlignment")
+    pub fn get_lateral_alignment(personID: &str) -> String {
+        let _ = Self::get_person(personID).get_vehicle_type().get_preferred_lateral_alignment();
+        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
     }
 
     /// C++: `int Person::getPersonCapacity(const std::string &)` [static]
@@ -531,8 +596,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getPersonCapacity();
     // }
     #[allow(unused_variables)]
-    pub fn get_person_capacity(typeID: &str) -> i32 {
-        todo!("port Person::getPersonCapacity")
+    pub fn get_person_capacity(personID: &str) -> i32 {
+        Self::get_person(personID).get_vehicle_type().get_person_capacity()
     }
 
     /// C++: `double Person::getActionStepLength(const std::string &)` [static]
@@ -540,8 +605,8 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getActionStepLengthSecs();
     // }
     #[allow(unused_variables)]
-    pub fn get_action_step_length(typeID: &str) -> f64 {
-        todo!("port Person::getActionStepLength")
+    pub fn get_action_step_length(personID: &str) -> f64 {
+        Self::get_person(personID).get_vehicle_type().get_action_step_length_secs()
     }
 
     /// C++: `double Person::getSpeedDeviation(const std::string &)` [static]
@@ -550,8 +615,9 @@ impl Person {
     //     return getPerson(personID)->getVehicleType().getSpeedFactor().getParameter(1);
     // }
     #[allow(unused_variables)]
-    pub fn get_speed_deviation(typeID: &str) -> f64 {
-        todo!("port Person::getSpeedDeviation")
+    pub fn get_speed_deviation(personID: &str) -> f64 {
+        // shortcut: MSVehicleType::getSpeedFactor() returns an Unmapped Distribution_Parameterized, so getParameter(1) cannot be read; upgrade when that type is mapped
+        panic!("getSpeedDeviation not yet ported: VehicleType speed factor distribution is unmapped")
     }
 
     /// C++: `double Person::getBoardingDuration(const std::string &)` [static]
@@ -560,8 +626,8 @@ impl Person {
     //     return STEPS2TIME(getPerson(personID)->getVehicleType().getBoardingDuration(true));
     // }
     #[allow(unused_variables)]
-    pub fn get_boarding_duration(typeID: &str) -> f64 {
-        todo!("port Person::getBoardingDuration")
+    pub fn get_boarding_duration(personID: &str) -> f64 {
+        steps2time(Self::get_person(personID).get_vehicle_type().get_boarding_duration(true))
     }
 
     /// C++: `double Person::getImpatience(const std::string &)` [static]
@@ -570,8 +636,8 @@ impl Person {
     //     return getPerson(personID)->getImpatience();
     // }
     #[allow(unused_variables)]
-    pub fn get_impatience(typeID: &str) -> f64 {
-        todo!("port Person::getImpatience")
+    pub fn get_impatience(personID: &str) -> f64 {
+        Self::get_person(personID).get_impatience()
     }
 
     /// C++: `void Person::add(const std::string &, const std::string &, double, double, const std::string)` [static]
@@ -1456,7 +1522,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_person(id: &str) -> Ptr<MSPerson> {
-        todo!("port Person::getPerson")
+        Helper::get_person(id)
     }
 
     /// C++: `MSStage * Person::convertTraCIStage(const TraCIStage &, const std::string)` [static, private]
