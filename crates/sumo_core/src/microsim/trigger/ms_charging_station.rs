@@ -67,7 +67,7 @@ pub struct MSChargingStation {
     /// Charge Delay
     pub myChargeDelay: SUMOTime,
     /// charge type
-    pub myChargeType: ChargeType,
+    pub myChargeType: MSChargingStation_ChargeType,
     /// waiting time
     pub myWaitingTime: SUMOTime,
     /// Check if in the current TimeStep chargingStation is charging a vehicle
@@ -114,7 +114,7 @@ impl MSChargingStation {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn charge_type_to_string(type_: ChargeType) -> String {
+    pub fn charge_type_to_string(type_: MSChargingStation_ChargeType) -> String {
         todo!("port MSChargingStation::chargeTypeToString")
     }
 
@@ -133,7 +133,7 @@ impl MSChargingStation {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn string_to_charge_type(repr: &str) -> ChargeType {
+    pub fn string_to_charge_type(repr: &str) -> MSChargingStation_ChargeType {
         todo!("port MSChargingStation::stringToChargeType")
     }
 
@@ -248,7 +248,7 @@ impl MSChargingStation {
     /// Get charge type
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_charge_type(&self) -> ChargeType {
+    pub fn get_charge_type(&self) -> MSChargingStation_ChargeType {
         todo!("port MSChargingStation::getChargeType")
     }
 
