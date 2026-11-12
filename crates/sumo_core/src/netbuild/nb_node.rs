@@ -2303,7 +2303,20 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn must_brake(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, fromLane: i32, toLane: i32, includePedCrossings: bool) -> bool {
-        todo!("port NBNode::mustBrake")
+        // unregulated->does not need to brake
+        if self.myRequest.is_null() {
+            return false;
+        }
+        // vehicles which do not have a following lane must always decelerate to the end
+        if to.is_null() {
+            return true;
+        }
+        // maybe we need to brake due to entering a bidi-edge
+        if to.is_bidi_edge(false) && !from.is_bidi_edge(false) {
+            return true;
+        }
+        // check whether any other connection on this node prohibits this connection
+        self.myRequest.must_brake_2(from, to, fromLane, toLane, includePedCrossings)
     }
 
     /// C++: `bool NBNode::mustBrakeForCrossing(const NBEdge *const, const NBEdge *const, const Crossing &) const` [const]
@@ -2311,7 +2324,7 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn must_brake_for_crossing(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, crossing: &NBNode_Crossing) -> bool {
-        todo!("port NBNode::mustBrakeForCrossing")
+        NBRequest::must_brake_for_crossing(Ptr::new(self), from, to, crossing)
     }
 
     /// C++: `bool NBNode::brakeForCrossingOnExit(const NBEdge *, LinkDirection, bool) const` [const]
@@ -2837,7 +2850,43 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_node_shape(&mut self, mismatchThreshold: f64) {
-        todo!("port NBNode::computeNodeShape")
+        if self.myHaveCustomPoly {
+            return;
+        }
+        if self.myIncomingEdges.is_empty() && self.myOutgoingEdges.is_empty() {
+            // may be an intermediate step during network editing
+            self.myPoly.clear();
+            self.myPoly.push(self.myPosition);
+            return;
+        }
+        if utils::options::options_cont::get_float("default.junctions.radius") < 0. {
+            // skip shape computation by option
+            return;
+        }
+        // shortcut: C++ catches InvalidArgument from the shape computation (then clears myPoly and warns);
+        // NBNodeShapeComputer::compute returns PositionVector without a Result, upgrade when it can fail
+        let (poly, radius) = {
+            let mut computer = NBNodeShapeComputer::new(self);
+            let poly = computer.compute(utils::options::options_cont::get_bool("junctions.minimal-shape"));
+            let radius = computer.get_radius();
+            (poly, radius)
+        };
+        self.myPoly = poly;
+        if self.myRadius == NBNODE_UNSPECIFIED_RADIUS && !utils::options::options_cont::is_default("default.junctions.radius") {
+            self.myRadius = radius;
+        }
+        if self.myPoly.len() > 0 {
+            let mut tmp = self.myPoly.clone();
+            let first = *tmp.at(0);
+            tmp.push_back_no_double_pos(&first); // need closed shape
+            if mismatchThreshold >= 0. && !tmp.around(&self.myPosition, 0.) && tmp.distance2d(&self.myPosition, false) > mismatchThreshold {
+                write_warning(&format!(
+                    "Shape for junction '{}' has distance {} to its given position.",
+                    self.get_id(),
+                    f64_to_string(tmp.distance2d(&self.myPosition, false))
+                ));
+            }
+        }
     }
 
     /// C++: `void NBNode::updateSurroundingGeometry()`
