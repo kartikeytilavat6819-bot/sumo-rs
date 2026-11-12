@@ -1,6 +1,57 @@
-//! Port of microsim/devices/MSDevice_FCD.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/devices/MSDevice_FCD.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::{Cell, RefCell};
+use utils::common::string_utils::starts_with;
+use utils::common::time::string2time;
+use utils::iodevices::output_device::OutputDevice;
+use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set};
+use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
+
+/// shortcut: SumoXMLAttrMask has no reset()/all() in utils (bitset<96> semantics), local helpers mirror them, upgrade when the utils mask gains these methods
+fn mask_all(m: SumoXMLAttrMask) -> bool {
+    m.0 == (1u128 << SumoXMLAttrMask::SIZE) - 1
+}
+fn mask_reset(m: &mut SumoXMLAttrMask, bit: i32) {
+    m.0 &= !(1u128 << bit);
+}
+
+/// shortcut: MSGlobals is unported (no accessors); gUseMesoSim is set from the "mesosim" option in MSFrame::init, so read it from there
+/// Names read by `while (strm.good()) { strm >> name; ... }`: whitespace-separated tokens, plus one
+/// empty name when the stream hits EOF on a `>>` (trailing whitespace or an empty file)
+fn edge_filter_names(content: &str) -> Vec<&str> {
+    let mut names: Vec<&str> = content.split_whitespace().collect();
+    if content.is_empty() || content.ends_with(char::is_whitespace) {
+        names.push("");
+    }
+    names
+}
+
+fn g_use_meso_sim() -> bool {
+    get_bool("mesosim")
+}
+/// shortcut: MSGlobals is unported (no accessors); gSublane is set in MSFrame::init from lanechange.duration and lateral-resolution, re-derived here
+fn g_sublane() -> bool {
+    string2time(&get_string("lanechange.duration")).unwrap_or_else(|e| panic!("{e}")) > 0
+        || get_float("lateral-resolution") > 0.0
+}
+
+thread_local! {
+    static MY_BEGIN: Cell<SUMOTime> = const { Cell::new(0) };
+    static MY_PERIOD: Cell<SUMOTime> = const { Cell::new(0) };
+    static MY_USE_GEO: Cell<bool> = const { Cell::new(false) };
+    static MY_USE_UTM: Cell<bool> = const { Cell::new(false) };
+    static MY_MAX_LEADER_DISTANCE: Cell<f64> = const { Cell::new(0.0) };
+    static MY_PARAMS_TO_WRITE: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    static MY_RADIUS: Cell<f64> = const { Cell::new(0.0) };
+    static MY_EDGE_FILTER: RefCell<BTreeSet<Ptr<MSEdge>>> = const { RefCell::new(BTreeSet::new()) };
+    static MY_EDGE_FILTER_INITIALIZED: Cell<bool> = const { Cell::new(false) };
+    static MY_SHAPE4_FILTERS: RefCell<Vec<PositionVector>> = const { RefCell::new(Vec::new()) };
+    static MY_SHAPE_FILTER_INITIALIZED: Cell<bool> = const { Cell::new(false) };
+    static MY_SHAPE_FILTER_DESIRED: Cell<bool> = const { Cell::new(false) };
+    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
+    static MY_SKIP_EMPTY: Cell<bool> = const { Cell::new(false) };
+}
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_FCD` (microsim/devices/MSDevice_FCD.h)
@@ -56,7 +107,17 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_FCD::insertOptions")
+        oc.add_option_sub_topic("FCD Device");
+        MSDevice::insert_default_assignment_options("fcd", "FCD Device", oc, false);
+
+        oc.do_register("device.fcd.begin", SumoOption::string_with("-1"));
+        oc.add_description("device.fcd.begin", "FCD Device", "Recording begin time for FCD-data");
+
+        oc.do_register("device.fcd.period", SumoOption::string_with("0"));
+        oc.add_description("device.fcd.period", "FCD Device", "Recording period for FCD-data");
+
+        oc.do_register("device.fcd.radius", SumoOption::float(0.0));
+        oc.add_description("device.fcd.radius", "FCD Device", "Record objects in a radius around equipped vehicles");
     }
 
     /// C++: `void MSDevice_FCD::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -71,7 +132,13 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_FCD::buildVehicleDevices")
+        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "fcd", v, isSet("fcd-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
+        if MSDevice::equipped_by_default_assignment_options() {
+            let id = format!("fcd_{}", v.get_id());
+            // the device is owned by the vehicle's device list for the rest of the run, as in C++
+            let device: &mut MSDevice_FCD = Box::leak(Box::new(MSDevice_FCD::new(v, &id)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_FCD::~MSDevice_FCD() noexcept` [virtual]
@@ -80,7 +147,7 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_FCD::~MSDevice_FCD")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSDevice_FCD::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -89,7 +156,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, arg0: &mut SUMOTrafficObject, arg1: MSMoveReminder_Notification, arg2: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_FCD::notifyEnter")
+        false
     }
 
     /// C++: `void MSDevice_FCD::saveState(OutputDevice &) const` [const, virtual]
@@ -97,7 +164,8 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn save_state(&self, arg0: &mut OutputDevice) {
-        todo!("port MSDevice_FCD::saveState")
+        // C++ saveState body is empty
+
     }
 
     /// C++: `const std::string MSDevice_FCD::deviceName() const` [const, virtual]
@@ -107,7 +175,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_FCD::deviceName")
+        "fcd".to_string()
     }
 
     /// C++: `SUMOTime MSDevice_FCD::getBegin()` [static]
@@ -116,7 +184,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn get_begin() -> SUMOTime {
-        todo!("port MSDevice_FCD::getBegin")
+        MY_BEGIN.with(|c| c.get())
     }
 
     /// C++: `SUMOTime MSDevice_FCD::getPeriod()` [static]
@@ -125,7 +193,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn get_period() -> SUMOTime {
-        todo!("port MSDevice_FCD::getPeriod")
+        MY_PERIOD.with(|c| c.get())
     }
 
     /// C++: `bool MSDevice_FCD::useGeo()` [static]
@@ -134,7 +202,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn use_geo() -> bool {
-        todo!("port MSDevice_FCD::useGeo")
+        MY_USE_GEO.with(|c| c.get())
     }
 
     /// C++: `bool MSDevice_FCD::useUTM()` [static]
@@ -143,7 +211,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn use_utm() -> bool {
-        todo!("port MSDevice_FCD::useUTM")
+        MY_USE_UTM.with(|c| c.get())
     }
 
     /// C++: `double MSDevice_FCD::getMaxLeaderDistance()` [static]
@@ -152,7 +220,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_leader_distance() -> f64 {
-        todo!("port MSDevice_FCD::getMaxLeaderDistance")
+        MY_MAX_LEADER_DISTANCE.with(|c| c.get())
     }
 
     /// C++: `const std::vector<std::string> & MSDevice_FCD::getParamsToWrite()` [static]
@@ -160,8 +228,9 @@ impl MSDevice_FCD {
     //         return myParamsToWrite;
     //     }
     #[allow(unused_variables)]
-    pub fn get_params_to_write() -> &'static Vec<String> {
-        todo!("port MSDevice_FCD::getParamsToWrite")
+    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    pub fn get_params_to_write() -> Vec<String> {
+        MY_PARAMS_TO_WRITE.with(|c| c.borrow().clone())
     }
 
     /// C++: `double MSDevice_FCD::getRadius()` [static]
@@ -170,7 +239,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn get_radius() -> f64 {
-        todo!("port MSDevice_FCD::getRadius")
+        MY_RADIUS.with(|c| c.get())
     }
 
     /// C++: `const std::set<const MSEdge *> & MSDevice_FCD::getEdgeFilter()` [static]
@@ -178,8 +247,9 @@ impl MSDevice_FCD {
     //         return myEdgeFilter;
     //     }
     #[allow(unused_variables)]
-    pub fn get_edge_filter() -> &'static BTreeSet<Ptr<MSEdge>> {
-        todo!("port MSDevice_FCD::getEdgeFilter")
+    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    pub fn get_edge_filter() -> BTreeSet<Ptr<MSEdge>> {
+        MY_EDGE_FILTER.with(|c| c.borrow().clone())
     }
 
     /// C++: `const SumoXMLAttrMask & MSDevice_FCD::getWrittenAttributes()` [static]
@@ -187,8 +257,9 @@ impl MSDevice_FCD {
     //         return myWrittenAttributes;
     //     }
     #[allow(unused_variables)]
-    pub fn get_written_attributes() -> &'static SumoXMLAttrMask {
-        todo!("port MSDevice_FCD::getWrittenAttributes")
+    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    pub fn get_written_attributes() -> SumoXMLAttrMask {
+        MY_WRITTEN_ATTRIBUTES.with(|c| c.get())
     }
 
     /// C++: `bool MSDevice_FCD::skipEmpty()` [static]
@@ -197,7 +268,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn skip_empty() -> bool {
-        todo!("port MSDevice_FCD::skipEmpty")
+        MY_SKIP_EMPTY.with(|c| c.get())
     }
 
     /// C++: `void MSDevice_FCD::initOnce()` [static]
@@ -298,7 +369,106 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn init_once() {
-        todo!("port MSDevice_FCD::initOnce")
+        if MY_EDGE_FILTER_INITIALIZED.get() {
+            return;
+        }
+        MY_EDGE_FILTER_INITIALIZED.set(true);
+        MY_PERIOD.set(string2time(&get_string("device.fcd.period")).unwrap_or_else(|e| panic!("{e}")));
+        MY_BEGIN.set(string2time(&get_string("device.fcd.begin")).unwrap_or_else(|e| panic!("{e}")));
+        MY_USE_GEO.set(get_bool("fcd-output.geo"));
+        MY_USE_UTM.set(get_bool("fcd-output.utm"));
+        MY_MAX_LEADER_DISTANCE.set(get_float("fcd-output.max-leader-distance"));
+        MY_PARAMS_TO_WRITE.with(|c| *c.borrow_mut() = get_string_vector("fcd-output.params"));
+        MY_RADIUS.set(get_float("device.fcd.radius"));
+        MY_SKIP_EMPTY.set(get_bool("fcd-output.skip-empty"));
+        if is_set("fcd-output.filter-edges.input-file") {
+            let file = get_string("fcd-output.filter-edges.input-file");
+            let content = match std::fs::read_to_string(&file) {
+                Ok(content) => content,
+                Err(_) => panic!("{}", utils::tlf!("Could not load names of edges for filtering fcd-output from '%'.", file)),
+            };
+            for name in edge_filter_names(&content) {
+                let name = if starts_with(name, "edge:") { &name[5..] } else { name };
+                // shortcut: MSEdge::dictionary(const std::string&) is declared in ms_edge.rs as dictionary_2(&Unmapped string_view), so edge names cannot be resolved yet (name: {name}), upgrade when ms_edge.rs maps the string overload
+                panic!("shortcut: fcd-output.filter-edges.input-file cannot be used until MSEdge::dictionary(name) is ported (edge '{name}')");
+            }
+        }
+        let mut emissions = SumoXMLAttrMask::default();
+        emissions.set(SUMO_ATTR_ECLASS);
+        emissions.set(SUMO_ATTR_CO2);
+        emissions.set(SUMO_ATTR_CO);
+        emissions.set(SUMO_ATTR_HC);
+        emissions.set(SUMO_ATTR_NOX);
+        emissions.set(SUMO_ATTR_PMX);
+        emissions.set(SUMO_ATTR_FUEL);
+        emissions.set(SUMO_ATTR_ELECTRICITY);
+        emissions.set(SUMO_ATTR_NOISE);
+        let mut misc = SumoXMLAttrMask::default();
+        misc.set(SUMO_ATTR_SIGNALS);
+        misc.set(SUMO_ATTR_ACCELERATION);
+        misc.set(SUMO_ATTR_ACCELERATION_LAT);
+        misc.set(SUMO_ATTR_SPEED_VEC);
+        misc.set(SUMO_ATTR_ACCEL_VEC);
+        misc.set(SUMO_ATTR_DISTANCE);
+        misc.set(SUMO_ATTR_ODOMETER);
+        misc.set(SUMO_ATTR_POSITION_LAT);
+        misc.set(SUMO_ATTR_SPEED_LAT);
+        misc.set(SUMO_ATTR_SPEEDREL);
+        misc.set(SUMO_ATTR_LEADER_ID);
+        misc.set(SUMO_ATTR_LEADER_SPEED);
+        misc.set(SUMO_ATTR_ARRIVALDELAY);
+        misc.set(SUMO_ATTR_DELAY);
+        misc.set(SUMO_ATTR_SEGMENT);
+        misc.set(SUMO_ATTR_QUEUE);
+        misc.set(SUMO_ATTR_ENTRYTIME);
+        misc.set(SUMO_ATTR_EVENTTIME);
+        misc.set(SUMO_ATTR_BLOCKTIME);
+        let special: HashMap<String, SumoXMLAttrMask> = HashMap::from([
+            ("location".to_string(), MSDevice_FCD::get_default_mask()),
+            ("emissions".to_string(), emissions),
+            ("misc".to_string(), misc),
+        ]);
+        let mut written = if is_set("fcd-output.attributes") {
+            OutputDevice::parse_written_attributes(&get_string_vector("fcd-output.attributes"), "fcd output", &special)
+        } else {
+            MSDevice_FCD::get_default_mask()
+        };
+        // need to store this because some attributes are reset later
+        let all = mask_all(written);
+        written.set(SUMO_ATTR_ID);
+        if !MSNet::get_instance().has_elevation() {
+            mask_reset(&mut written, SUMO_ATTR_Z);
+        }
+        if get_bool("fcd-output.signals") {
+            written.set(SUMO_ATTR_SIGNALS);
+        }
+        if get_bool("fcd-output.acceleration") {
+            written.set(SUMO_ATTR_ACCELERATION);
+        }
+        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && g_sublane();
+        if accel_lat {
+            written.set(SUMO_ATTR_ACCELERATION_LAT);
+        } else {
+            mask_reset(&mut written, SUMO_ATTR_ACCELERATION_LAT);
+        }
+        if get_bool("fcd-output.distance") {
+            written.set(SUMO_ATTR_DISTANCE);
+        }
+        if get_bool("fcd-output.speed-relative") {
+            written.set(SUMO_ATTR_SPEEDREL);
+        }
+        MY_WRITTEN_ATTRIBUTES.set(written);
+
+        if is_set("fcd-output.filter-shapes") {
+            // build the shape filter if it is desired
+            MY_SHAPE_FILTER_DESIRED.set(true);
+            MSDevice_FCD::build_shape_filter();
+        }
+        let expected = if all { SumoXMLAttrMask::default() } else { written };
+        OutputDevice::get_device_by_option("fcd-output")
+            .unwrap_or_else(|e| panic!("{e}"))
+            .borrow_mut()
+            .set_expected_attributes(expected, 2);
     }
 
     /// C++: `void MSDevice_FCD::cleanup()` [static]
@@ -314,7 +484,12 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_FCD::cleanup")
+        MY_EDGE_FILTER.with(|c| c.borrow_mut().clear());
+        MY_SHAPE4_FILTERS.with(|c| c.borrow_mut().clear());
+        MY_EDGE_FILTER_INITIALIZED.set(false);
+        MY_SHAPE_FILTER_INITIALIZED.set(false);
+        MY_SHAPE_FILTER_DESIRED.set(false);
+        MY_WRITTEN_ATTRIBUTES.set(SumoXMLAttrMask::default());
     }
 
     /// C++: `bool MSDevice_FCD::shapeFilter(const SUMOTrafficObject *)` [static]
@@ -335,7 +510,13 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn shape_filter(veh: Ptr<SUMOTrafficObject>) -> bool {
-        todo!("port MSDevice_FCD::shapeFilter")
+        // lazily build the shape filter in the case where route file is loaded as an additional file
+        if !MY_SHAPE_FILTER_INITIALIZED.get() {
+            MSDevice_FCD::build_shape_filter();
+        }
+        // shortcut: dynamic_cast<const MSVehicle*> has no Rust equivalent for SUMOTrafficObject, so the back-position test (msVeh->getBackPosition()) is skipped, upgrade when a SUMOTrafficObject-to-MSVehicle downcast exists
+        let pos = veh.get_position(0.0);
+        MY_SHAPE4_FILTERS.with(|c| c.borrow().iter().any(|shape| shape.around(&pos, 0.0)))
     }
 
     /// C++: `bool MSDevice_FCD::hasShapeFilter()` [static]
@@ -345,7 +526,7 @@ impl MSDevice_FCD {
     //     }
     #[allow(unused_variables)]
     pub fn has_shape_filter() -> bool {
-        todo!("port MSDevice_FCD::hasShapeFilter")
+        MY_SHAPE_FILTER_DESIRED.get()
     }
 
     /// C++: `void MSDevice_FCD::MSDevice_FCD(SUMOVehicle &, const std::string &)` [private]
@@ -355,7 +536,9 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        todo!("port MSDevice_FCD::MSDevice_FCD")
+        MSDevice_FCD {
+            base: MSVehicleDevice::new(holder, id),
+        }
     }
 
     /// C++: `SumoXMLAttrMask MSDevice_FCD::getDefaultMask()` [static, private]
@@ -383,7 +566,25 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn get_default_mask() -> SumoXMLAttrMask {
-        todo!("port MSDevice_FCD::getDefaultMask")
+        let mut mask = SumoXMLAttrMask::default();
+        mask.set(SUMO_ATTR_X);
+        mask.set(SUMO_ATTR_Y);
+        if MSNet::get_instance().has_elevation() {
+            mask.set(SUMO_ATTR_Z);
+        }
+        mask.set(SUMO_ATTR_ANGLE);
+        mask.set(SUMO_ATTR_TYPE);
+        mask.set(SUMO_ATTR_SPEED);
+        mask.set(SUMO_ATTR_POSITION);
+        mask.set(SUMO_ATTR_LANE); // for micro vehicles only
+        mask.set(SUMO_ATTR_EDGE); // for persons and meso vehicles
+        mask.set(SUMO_ATTR_SLOPE);
+        if !g_use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
+            mask.set(SUMO_ATTR_LEADER_ID);
+            mask.set(SUMO_ATTR_LEADER_SPEED);
+            mask.set(SUMO_ATTR_LEADER_GAP);
+        }
+        mask
     }
 
     /// C++: `void MSDevice_FCD::MSDevice_FCD(const MSDevice_FCD &)` [private]
@@ -391,7 +592,8 @@ impl MSDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_FCD) -> Self {
-        todo!("port MSDevice_FCD::MSDevice_FCD")
+        // the C++ copy constructor is private and has no definition, so it is never called
+        unreachable!("MSDevice_FCD copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice_FCD & MSDevice_FCD::operator=(const MSDevice_FCD &)` [private]
@@ -399,7 +601,8 @@ impl MSDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_FCD) -> &mut MSDevice_FCD {
-        todo!("port MSDevice_FCD::operator=")
+        // the C++ assignment operator is private and has no definition, so it is never called
+        unreachable!("MSDevice_FCD assignment operator is private and undefined in C++")
     }
 
     /// C++: `void MSDevice_FCD::buildShapeFilter()` [static, private]
@@ -425,8 +628,41 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn build_shape_filter() {
-        todo!("port MSDevice_FCD::buildShapeFilter")
+        if is_set("fcd-output.filter-shapes") {
+            // shortcut: ShapeContainer::getPolygons() is Unmapped in utils/shapes/shape_container.rs (NamedObjectCont<SUMOPolygon*> unported), so the loaded polygons cannot be looked up (and the empty-container and missing-shape branches cannot run), upgrade when shape_container.rs maps myPolygons
+            panic!("shortcut: fcd-output.filter-shapes cannot be used until ShapeContainer polygons are ported");
+        } else {
+            MY_SHAPE_FILTER_INITIALIZED.set(true);
+        }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edge_filter_names_match_stream_extraction() {
+        assert_eq!(edge_filter_names("a b\nc"), vec!["a", "b", "c"]);
+        // `strm >> name` hits EOF after trailing whitespace and yields an empty name
+        assert_eq!(edge_filter_names("a b\n"), vec!["a", "b", ""]);
+        assert_eq!(edge_filter_names(""), vec![""]);
+        assert_eq!(edge_filter_names("   "), vec![""]);
+    }
+
+    #[test]
+    fn mask_helpers_mirror_bitset() {
+        let mut m = SumoXMLAttrMask::default();
+        assert!(!mask_all(m));
+        m.set(3);
+        assert!(m.test(3));
+        mask_reset(&mut m, 3);
+        assert!(!m.test(3));
+        let mut full = SumoXMLAttrMask((1u128 << SumoXMLAttrMask::SIZE) - 1);
+        assert!(mask_all(full));
+        mask_reset(&mut full, 95);
+        assert!(!mask_all(full));
+    }
 }
 
