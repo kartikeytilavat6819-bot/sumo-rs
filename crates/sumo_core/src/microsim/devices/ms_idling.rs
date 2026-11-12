@@ -36,9 +36,9 @@ impl MSIdling {
 }
 
 // C++ static/defined stop flags (SUMOVehicleParameter.h), parametersSet is i64
-const STOP_END_SET: i64 = 2;
-const STOP_TRIGGER_SET: i64 = 2 << 4;
-const STOP_PARKING_SET: i64 = 2 << 5;
+const STOP_END_SET: i32 = 2;
+const STOP_TRIGGER_SET: i32 = 2 << 4;
+const STOP_PARKING_SET: i32 = 2 << 5;
 
 /// C++ class `MSIdling_RandomCircling` (microsim/devices/MSIdling.h)
 #[repr(C)]
@@ -288,11 +288,11 @@ impl MSIdling_Stop {
                 // stops are only checked in MESegment::receive so we need to put this onto the next segment
                 let route = vehB.get_route();
                 let riIdx = *vehB.get_current_route_edge();
-                let mut curSeg = meso_net().m().get_segment_for_edge(route.get_edges()[riIdx], vehB.get_position_on_lane());
+                let mut curSeg = meso_net().m().get_segment_for_edge(&route.get_edges()[riIdx], vehB.get_position_on_lane());
                 let mut stopSeg = curSeg.get_next_segment();
                 if stopSeg.is_null() {
                     if riIdx + 1 < route.get_edges().len() {
-                        stopSeg = meso_net().m().get_segment_for_edge(route.get_edges()[riIdx + 1], 0.0);
+                        stopSeg = meso_net().m().get_segment_for_edge(&route.get_edges()[riIdx + 1], 0.0);
                     } else {
                         utils::common::msg_handler::write_warning(&utils::tlf!("Idle taxi '%' has no next segment to stop. time=%.", veh.get_id(), time2string(now)));
                         return;
@@ -475,7 +475,7 @@ impl MSIdling_TaxiStand {
             lastStop = Some(vehB.m().get_stop(n - 1));
         }
         if lastStop.as_ref().map_or(true, |s| s.parkingarea.is_null()) {
-            let pa = rerouteDef.parkProbs.get_vals()[0].cast::<MSParkingArea>();
+            let pa = rerouteDef.parkProbs.get_vals()[0].0.cast::<MSParkingArea>();
             let mut stop = SUMOVehicleParameter_Stop::default();
             stop.lane = pa.get_lane().get_id().to_string();
             stop.startPos = pa.get_begin_lane_position();

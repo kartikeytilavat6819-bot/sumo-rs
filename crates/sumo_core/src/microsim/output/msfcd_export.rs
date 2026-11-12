@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSFCDExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, g_precision_geo, INVALID_DOUBLE};
 
 /// C++ `const Named*` key, used for the std::set<const Named*> membership tests
 fn as_named<T>(p: Ptr<T>) -> Ptr<Named> {
