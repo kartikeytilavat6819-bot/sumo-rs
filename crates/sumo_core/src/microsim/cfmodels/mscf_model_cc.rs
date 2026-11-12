@@ -939,7 +939,12 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_information(&self, veh: Ptr<MSVehicle>, speed: &mut f64, acceleration: &mut f64, controllerAcceleration: &mut f64, position: &mut Position, time: &mut f64) {
-        todo!("port MSCFModel_CC::getVehicleInformation")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        *speed = veh.get_speed();
+        *acceleration = veh.get_acceleration();
+        *controllerAcceleration = vars.controllerAcceleration;
+        *position = veh.get_position();
+        *time = utils::common::time::steps2time(MSNet::get_instance().get_current_time_step());
     }
 
     /// C++: `void MSCFModel_CC::switchOnACC(const MSVehicle *, double) const` [const]
@@ -951,7 +956,9 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn switch_on_acc(&self, veh: Ptr<MSVehicle>, ccDesiredSpeed: f64) {
-        todo!("port MSCFModel_CC::switchOnACC")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        vars.m().ccDesiredSpeed = ccDesiredSpeed;
+        vars.m().activeController = ACTIVE_CONTROLLER::ACC;
     }
 
     /// C++: `enum Plexe::ACTIVE_CONTROLLER MSCFModel_CC::getActiveController(const MSVehicle *) const` [const]
@@ -962,7 +969,8 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_active_controller(&self, veh: Ptr<MSVehicle>) -> ACTIVE_CONTROLLER {
-        todo!("port MSCFModel_CC::getActiveController")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        vars.activeController
     }
 
     /// C++: `void MSCFModel_CC::getRadarMeasurements(const MSVehicle *, double &, double &) const` [const]
@@ -980,7 +988,15 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_radar_measurements(&self, veh: Ptr<MSVehicle>, distance: &mut f64, relativeSpeed: &mut f64) {
-        todo!("port MSCFModel_CC::getRadarMeasurements")
+        let l = crate::libsumo::vehicle::Vehicle::get_leader(&veh.get_id(), 250.);
+        if l.1 < 0. {
+            *distance = -1.;
+            *relativeSpeed = 0.;
+        } else {
+            *distance = l.1;
+            let leader = self.find_vehicle(l.0.clone());
+            *relativeSpeed = leader.get_speed() - veh.get_speed();
+        }
     }
 
     /// C++: `double MSCFModel_CC::getACCAcceleration(const MSVehicle *) const` [const]
@@ -997,7 +1013,15 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_acc_acceleration(&self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_CC::getACCAcceleration")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let mut distance = 0.;
+        let mut relSpeed = 0.;
+        self.get_radar_measurements(veh, &mut distance, &mut relSpeed);
+        if distance < 0. {
+            0.
+        } else {
+            self.acc(veh, veh.get_speed(), relSpeed + veh.get_speed(), distance, vars.accHeadwayTime)
+        }
     }
 
     /// C++: `int MSCFModel_CC::isPlatoonLaneChangeSafe(const MSVehicle *, bool) const` [const]
@@ -1058,7 +1082,58 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn is_platoon_lane_change_safe(&self, veh: Ptr<MSVehicle>, left: bool) -> i32 {
-        todo!("port MSCFModel_CC::isPlatoonLaneChangeSafe")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        if !vars.isLeader {
+            // before asking the leader, be sure it is still in the simulation
+            if !self.find_vehicle(vars.leaderVehicleId.clone()).is_null() {
+                return self.is_platoon_lane_change_safe(vars.leaderVehicle, left);
+            } else {
+                return LCA_BLOCKED;
+            }
+        }
+        let mut result: i32 = 0;
+        let id = veh.get_id();
+        let state = crate::libsumo::vehicle::Vehicle::get_lane_change_state(&id, if left { 1 } else { -1 });
+        // bit 1: query lateral direction (left:0, right:1)
+        // bit 2: query longitudinal direction (followers:0, leaders:1)
+        // bit 3: blocking (return all:0, return only blockers:1)
+        let mut followers = crate::libsumo::vehicle::Vehicle::get_neighbors(&id, if left { 0b100 } else { 0b101 });
+        let mut leaders = crate::libsumo::vehicle::Vehicle::get_neighbors(&id, if left { 0b110 } else { 0b111 });
+        let mut noNeighbors = followers.is_empty() && leaders.is_empty();
+        if (state.1 & LCA_BLOCKED) == 0 && noNeighbors {
+            // leader is not blocked. check all the members
+            for (_, memberId) in vars.members.iter() {
+                let mState = crate::libsumo::vehicle::Vehicle::get_lane_change_state(memberId, if left { 1 } else { -1 });
+                followers = crate::libsumo::vehicle::Vehicle::get_neighbors(memberId, if left { 0b100 } else { 0b101 });
+                leaders = crate::libsumo::vehicle::Vehicle::get_neighbors(memberId, if left { 0b110 } else { 0b111 });
+                noNeighbors = followers.is_empty() && leaders.is_empty();
+                if (mState.1 & LCA_BLOCKED) != 0 || !noNeighbors {
+                    if (mState.1 & LCA_BLOCKED) != 0 {
+                        result = mState.1;
+                    } else {
+                        if !followers.is_empty() {
+                            result |= if left { LCA_BLOCKED_BY_LEFT_FOLLOWER } else { LCA_BLOCKED_BY_RIGHT_FOLLOWER };
+                        }
+                        if !leaders.is_empty() {
+                            result |= if left { LCA_BLOCKED_BY_LEFT_LEADER } else { LCA_BLOCKED_BY_RIGHT_LEADER };
+                        }
+                    }
+                    break;
+                }
+            }
+        } else {
+            if (state.1 & LCA_BLOCKED) != 0 {
+                result = state.1;
+            } else {
+                if !followers.is_empty() {
+                    result |= if left { LCA_BLOCKED_BY_LEFT_FOLLOWER } else { LCA_BLOCKED_BY_RIGHT_FOLLOWER };
+                }
+                if !leaders.is_empty() {
+                    result |= if left { LCA_BLOCKED_BY_LEFT_LEADER } else { LCA_BLOCKED_BY_RIGHT_LEADER };
+                }
+            }
+        }
+        result
     }
 
     /// C++: `void MSCFModel_CC::setLeader(MSVehicle *, MSVehicle *const, std::string) const` [const]
@@ -1078,7 +1153,15 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn set_leader(&self, veh: Ptr<MSVehicle>, leader: Ptr<MSVehicle>, leaderId: String) {
-        todo!("port MSCFModel_CC::setLeader")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        vars.m().leaderVehicle = leader;
+        vars.m().leaderVehicleId = leaderId;
+        if !leader.is_null() {
+            vars.m().isLeader = false;
+        } else {
+            // if we are removing our leader, then this vehicle must become a leader of itself until being member of another platoon
+            vars.m().isLeader = true;
+        }
     }
 
     /// C++: `bool MSCFModel_CC::isLeader(const MSVehicle *) const` [const]
@@ -1090,7 +1173,8 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn is_leader(&self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSCFModel_CC::isLeader")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        vars.isLeader
     }
 
     /// C++: `int MSCFModel_CC::commitToLaneChange(const MSVehicle *, bool) const` [const]
@@ -1125,7 +1209,31 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn commit_to_lane_change(&self, veh: Ptr<MSVehicle>, left: bool) -> i32 {
-        todo!("port MSCFModel_CC::commitToLaneChange")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        if self.is_leader(veh) {
+            let timestep = MSNet::get_instance().get_current_time_step();
+            if vars.laneChangeCommitTime == timestep {
+                if vars.commitToLaneChange {
+                    0
+                } else {
+                    vars.noCommitReason
+                }
+            } else {
+                let blocked = self.is_platoon_lane_change_safe(veh, left);
+                if blocked == 0 {
+                    vars.m().commitToLaneChange = true;
+                    vars.m().laneChangeCommitTime = timestep;
+                }
+                blocked
+            }
+        } else {
+            // before asking the leader, be sure it is still in the simulation
+            if !self.find_vehicle(vars.leaderVehicleId.clone()).is_null() {
+                self.commit_to_lane_change(vars.leaderVehicle, left)
+            } else {
+                LCA_BLOCKED
+            }
+        }
     }
 
     /// C++: `MSVehicle * MSCFModel_CC::findVehicle(std::string) const` [const]
@@ -1136,7 +1244,8 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn find_vehicle(&self, id: String) -> Ptr<MSVehicle> {
-        todo!("port MSCFModel_CC::findVehicle")
+        // shortcut: C++ dynamic_cast is a plain cast here, the vehicle control only holds MSVehicle objects
+        MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id).cast::<MSVehicle>()
     }
 
     /// C++: `int MSCFModel_CC::getMyLanesCount() const` [const]
@@ -1146,7 +1255,7 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn get_my_lanes_count(&self) -> i32 {
-        todo!("port MSCFModel_CC::getMyLanesCount")
+        self.myLanesCount
     }
 
     /// C++: `void MSCFModel_CC::recomputeParameters(const MSVehicle *) const` [const, private]
@@ -1161,7 +1270,12 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn recompute_parameters(&self, veh: Ptr<MSVehicle>) {
-        todo!("port MSCFModel_CC::recomputeParameters")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        vars.m().caccAlpha1 = 1. - vars.caccC1;
+        vars.m().caccAlpha2 = vars.caccC1;
+        vars.m().caccAlpha3 = -(2. * vars.caccXi - vars.caccC1 * (vars.caccXi + (vars.caccXi * vars.caccXi - 1.).sqrt())) * vars.caccOmegaN;
+        vars.m().caccAlpha4 = -(vars.caccXi + (vars.caccXi * vars.caccXi - 1.).sqrt()) * vars.caccOmegaN * vars.caccC1;
+        vars.m().caccAlpha5 = -vars.caccOmegaN * vars.caccOmegaN;
     }
 
     /// C++: `void MSCFModel_CC::resetConsensus(const MSVehicle *) const` [const, private]
@@ -1175,7 +1289,11 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn reset_consensus(&self, veh: Ptr<MSVehicle>) {
-        todo!("port MSCFModel_CC::resetConsensus")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        for i in 0..8usize { // MAX_N_CARS == 8, the size of the per-car arrays
+            vars.m().initialized[i] = false;
+            vars.m().nInitialized = 0;
+        }
     }
 
     /// C++: `void MSCFModel_CC::changeWholePlatoonLane(MSVehicle *const, int) const` [const, private]
@@ -1190,7 +1308,11 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn change_whole_platoon_lane(&self, veh: Ptr<MSVehicle>, direction: i32) {
-        todo!("port MSCFModel_CC::changeWholePlatoonLane")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        crate::libsumo::vehicle::Vehicle::change_lane(&veh.get_id(), veh.get_lane_index() + direction, 0.);
+        for member in vars.members.values() {
+            crate::libsumo::vehicle::Vehicle::change_lane(member, veh.get_lane_index() + direction, 0.);
+        }
     }
 
     /// C++: `void MSCFModel_CC::performAutoLaneChange(MSVehicle *const) const` [const, private]
@@ -1218,7 +1340,25 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn perform_auto_lane_change(&self, veh: Ptr<MSVehicle>) {
-        todo!("port MSCFModel_CC::performAutoLaneChange")
+        // check for left lane change
+        let id = veh.get_id();
+        let state = crate::libsumo::vehicle::Vehicle::get_lane_change_state(&id, 1);
+        let mut traciState = state.0;
+        if traciState & LCA_LEFT != 0 && traciState & LCA_SPEEDGAIN != 0 {
+            // we can gain by moving left. check that all vehicles can move left
+            if self.is_platoon_lane_change_safe(veh, true) == 0 {
+                self.change_whole_platoon_lane(veh, 1);
+            }
+        }
+        // check for right lane change
+        let state = crate::libsumo::vehicle::Vehicle::get_lane_change_state(&id, -1);
+        traciState = state.0;
+        if traciState & LCA_RIGHT != 0 && traciState & LCA_KEEPRIGHT != 0 {
+            // we should move back right. check that all vehicles can move right
+            if self.is_platoon_lane_change_safe(veh, false) == 0 {
+                self.change_whole_platoon_lane(veh, -1);
+            }
+        }
     }
 
     /// C++: `void MSCFModel_CC::performPlatoonLaneChange(MSVehicle *const) const` [const, private]
@@ -1239,7 +1379,17 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn perform_platoon_lane_change(&self, veh: Ptr<MSVehicle>) {
-        todo!("port MSCFModel_CC::performPlatoonLaneChange")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        let currentLane = veh.get_lane_index();
+        if currentLane == vars.platoonFixedLane {
+            // platoon has already reached the desired lane
+            vars.m().platoonFixedLane = -1;
+            return;
+        }
+        let left = currentLane < vars.platoonFixedLane;
+        if self.is_platoon_lane_change_safe(veh, left) == 0 {
+            self.change_whole_platoon_lane(veh, if left { 1 } else { -1 });
+        }
     }
 
     /// C++: `double MSCFModel_CC::_v(const MSVehicle *const, double, double, double) const` [const, private]
@@ -1429,7 +1579,13 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn cc(&self, veh: Ptr<MSVehicle>, egoSpeed: f64, desSpeed: f64) -> f64 {
-        todo!("port MSCFModel_CC::_cc")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        //Eq. 5.5 of the Rajamani book, with Ki = 0 and bounds on max and min acceleration
+        // std::max(a, b) == (a < b ? b : a); std::min(a, b) == (b < a ? b : a)
+        let lo = -self.myCcDecel;
+        let mx = -vars.ccKp * (egoSpeed - desSpeed);
+        let m = if lo < mx { mx } else { lo };
+        if m < self.myCcAccel { m } else { self.myCcAccel }
     }
 
     /// C++: `double MSCFModel_CC::_acc(const MSVehicle *, double, double, double, double) const` [const, private]
@@ -1444,7 +1600,9 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn acc(&self, veh: Ptr<MSVehicle>, egoSpeed: f64, predSpeed: f64, gap2pred: f64, headwayTime: f64) -> f64 {
-        todo!("port MSCFModel_CC::_acc")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        //Eq. 6.18 of the Rajamani book
+        -1.0 / headwayTime * (egoSpeed - predSpeed + vars.accLambda * (-gap2pred + headwayTime * egoSpeed + 2.))
     }
 
     /// C++: `double MSCFModel_CC::_cacc(const MSVehicle *, double, double, double, double, double, double, double) const` [const, private]
@@ -1462,7 +1620,14 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn cacc(&self, veh: Ptr<MSVehicle>, egoSpeed: f64, predSpeed: f64, predAcceleration: f64, gap2pred: f64, leaderSpeed: f64, leaderAcceleration: f64, spacing: f64) -> f64 {
-        todo!("port MSCFModel_CC::_cacc")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        //compute epsilon, i.e., the desired distance error
+        let epsilon = -gap2pred + spacing; //NOTICE: error (if any) should already be included in gap2pred
+        //compute epsilon_dot, i.e., the desired speed error
+        let epsilon_dot = egoSpeed - predSpeed;
+        //Eq. 7.39 of the Rajamani book
+        vars.caccAlpha1 * predAcceleration + vars.caccAlpha2 * leaderAcceleration +
+            vars.caccAlpha3 * epsilon_dot + vars.caccAlpha4 * (egoSpeed - leaderSpeed) + vars.caccAlpha5 * epsilon
     }
 
     /// C++: `double MSCFModel_CC::_ploeg(const MSVehicle *, double, double, double, double) const` [const, private]
@@ -1479,7 +1644,13 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn ploeg(&self, veh: Ptr<MSVehicle>, egoSpeed: f64, predSpeed: f64, predAcceleration: f64, gap2pred: f64) -> f64 {
-        todo!("port MSCFModel_CC::_ploeg")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        (1. / vars.ploegH * (
+            -vars.controllerAcceleration +
+            vars.ploegKp * (gap2pred - (2. + vars.ploegH * egoSpeed)) +
+            vars.ploegKd * (predSpeed - egoSpeed - vars.ploegH * veh.get_acceleration()) +
+            predAcceleration
+        )) * ts()
     }
 
     /// C++: `double MSCFModel_CC::_consensus(const MSVehicle *, double, Position, double) const` [const, private]
@@ -1591,7 +1762,18 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn d_i_j(&self, vehicles: Ptr<VEHICLE_DATA>, h: [f64; 8], i: i32, j: i32) -> f64 {
-        todo!("port MSCFModel_CC::d_i_j")
+        let (min_i, max_i) = if j < i { (j, i - 1) } else { (i, j - 1) };
+        let mut d = 0.;
+        //compute indexes of the summation
+        //compute distance
+        for k in min_i..=max_i {
+            d += h[k as usize] * unsafe { (*vehicles.as_raw()).speed } + unsafe { (*vehicles.as_raw().add(k as usize)).length } + 15.;
+        }
+        if j < i {
+            d
+        } else {
+            -d
+        }
     }
 
     /// C++: `double MSCFModel_CC::_flatbed(const MSVehicle *, double, double, double, double, double) const` [const, private]
@@ -1608,7 +1790,10 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn flatbed(&self, veh: Ptr<MSVehicle>, egoAcceleration: f64, egoSpeed: f64, predSpeed: f64, gap2pred: f64, leaderSpeed: f64) -> f64 {
-        todo!("port MSCFModel_CC::_flatbed")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
+        -vars.flatbedKa * egoAcceleration +
+            vars.flatbedKv * (predSpeed - egoSpeed) +
+            vars.flatbedKp * (gap2pred - vars.flatbedD - vars.flatbedH * (egoSpeed - leaderSpeed))
     }
 
     /// C++: `MSCFModel_CC & MSCFModel_CC::operator=(const MSCFModel_CC &)` [private]
@@ -1616,7 +1801,7 @@ impl MSCFModel_CC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSCFModel_CC) -> &mut MSCFModel_CC {
-        todo!("port MSCFModel_CC::operator=")
+        panic!("MSCFModel_CC assignment operator is invalidated (deleted) in C++")
     }
 
 }
