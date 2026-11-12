@@ -1,30 +1,59 @@
 //! Port of microsim/transportables/MSPModel_NonInteracting.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_event_control::Command;
+
+const MSPMODEL_FORWARD: i32 = 1;
+const MSPMODEL_BACKWARD: i32 = -1;
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+// C++ MSPModel::SIDEWALK_OFFSET
+const MSPMODEL_SIDEWALK_OFFSET: f64 = 3.0;
+
+// C++ static members of CState (port as module-level statics, see AGENTS.md):
+//   static const double CState::LATERAL_OFFSET;
+const CSTATE_LATERAL_OFFSET: f64 = 0.0;
+
+/// C++ getSidewalk<MSEdge, MSLane>(edge) with the default svc = SVC_PEDESTRIAN (utils/router/IntermodalEdge.h)
+// shortcut: local copy of the pedestrian-only path, because the generic intermodal_edge.rs getSidewalk is still a stub, upgrade when it is ported
+fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
+    if edge.is_null() {
+        return Ptr::null();
+    }
+    let lanes = edge.get_lanes();
+    // prefer lanes that are exclusive to pedestrians
+    for lane in lanes.iter() {
+        if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
+            return *lane;
+        }
+    }
+    for lane in lanes.iter() {
+        if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
+            return *lane;
+        }
+    }
+    Ptr::null()
+}
 
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
 #[repr(C)]
 pub struct MSPModel_NonInteracting_CState {
     /// C++ base class `PState`
-    pub base: MSPModel_Striping_PState,
+    pub base: MSPModel_NonInteracting_PState,
     pub myCurrentBeginPosition: Position,
     pub myCurrentEndPosition: Position,
 }
 
 impl std::ops::Deref for MSPModel_NonInteracting_CState {
-    type Target = MSPModel_Striping_PState;
-    fn deref(&self) -> &MSPModel_Striping_PState {
+    type Target = MSPModel_NonInteracting_PState;
+    fn deref(&self) -> &MSPModel_NonInteracting_PState {
         &self.base
     }
 }
 impl std::ops::DerefMut for MSPModel_NonInteracting_CState {
-    fn deref_mut(&mut self) -> &mut MSPModel_Striping_PState {
+    fn deref_mut(&mut self) -> &mut MSPModel_NonInteracting_PState {
         &mut self.base
     }
 }
-
-// C++ static members of CState (port as module-level statics, see AGENTS.md):
-//   static const double CState::LATERAL_OFFSET;
 
 impl MSPModel_NonInteracting_CState {
     /// C++: `void CState::CState(MoveToNextEdge *, std::istringstream *)`
@@ -32,7 +61,11 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
-        todo!("port CState::CState")
+        Self {
+            base: MSPModel_NonInteracting_PState::new(cmd, in_),
+            myCurrentBeginPosition: Position::default(),
+            myCurrentEndPosition: Position::default(),
+        }
     }
 
     /// C++: `Position CState::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -45,7 +78,10 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, stage: &MSStageMoving, now: SUMOTime) -> Position {
-        todo!("port CState::getPosition")
+        let dist = self.myCurrentBeginPosition.distance_to2d(&self.myCurrentEndPosition); //distance between begin and end position of this tranship stage
+        let speedDist = steps2time(now - self.myLastEntryTime) * stage.get_max_speed(Ptr::null()); //the container shall not go beyond its end position
+        let pos = if speedDist < dist { speedDist } else { dist };
+        PositionVector::position_at_offset2d_seg(&self.myCurrentBeginPosition, &self.myCurrentEndPosition, pos, 0.0, false)
     }
 
     /// C++: `double CState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -60,7 +96,11 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        todo!("port CState::getAngle")
+        let mut angle = stage.get_edge_angle(stage.get_edge(), self.get_edge_pos(now)) + (if self.myCurrentEndPos < self.myCurrentBeginPos { 1.5 * std::f64::consts::PI } else { 0.5 * std::f64::consts::PI });
+        if angle > std::f64::consts::PI {
+            angle -= 2.0 * std::f64::consts::PI;
+        }
+        angle
     }
 
     /// C++: `SUMOTime CState::computeDuration(const MSEdge *, const MSStageMoving &, SUMOTime)` [virtual]
@@ -82,7 +122,19 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn compute_duration(&mut self, prev: Ptr<MSEdge>, stage: &MSStageMoving, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port CState::computeDuration")
+        self.myLastEntryTime = currentTime;
+
+        self.myCurrentBeginPos = stage.get_depart_pos();
+        self.myCurrentEndPos = stage.get_arrival_pos();
+
+        let fromLane = stage.get_from_edge().get_lanes()[0]; //the lane the container starts from during its tranship stage
+        self.myCurrentBeginPosition = stage.get_lane_position(fromLane, self.myCurrentBeginPos, CSTATE_LATERAL_OFFSET);
+        let edges = stage.get_edges();
+        let toLane = edges.last().unwrap().get_lanes()[0]; //the lane the container ends during its tranship stage
+        self.myCurrentEndPosition = stage.get_lane_position(toLane, self.myCurrentEndPos, CSTATE_LATERAL_OFFSET);
+
+        self.myCurrentDuration = std::cmp::max(1, time2steps((self.myCurrentEndPosition.distance_to(&self.myCurrentBeginPosition)).abs() / stage.get_max_speed(Ptr::null())));
+        self.myCurrentDuration
     }
 
 }
@@ -122,7 +174,11 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
-        todo!("port MSPModel_NonInteracting::MSPModel_NonInteracting")
+        Self {
+            base: MSPModel {},
+            myNet: net,
+            myNumActivePedestrians: 0,
+        }
     }
 
     /// C++: `void MSPModel_NonInteracting::~MSPModel_NonInteracting() noexcept` [virtual]
@@ -130,7 +186,6 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_NonInteracting::~MSPModel_NonInteracting")
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_NonInteracting::add(MSTransportable *, MSStageMoving *, SUMOTime)` [virtual]
@@ -145,7 +200,20 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel_NonInteracting::add")
+        self.myNumActivePedestrians += 1;
+        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
+        let (state, duration) = if transportable.is_person() {
+            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::null()))));
+            let d = s.m().compute_duration(Ptr::null(), &*stage, now);
+            (Ptr::from_mut(&mut s.m().base), d)
+        } else {
+            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, Ptr::null()))));
+            let d = s.m().compute_duration(Ptr::null(), &*stage, now);
+            (Ptr::from_mut(&mut s.m().base.base), d)
+        };
+        self.myNet.m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd.m() as &mut dyn Command), now + duration);
+        state
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_NonInteracting::loadState(MSTransportable *, MSStageMoving *, std::istringstream &)` [virtual]
@@ -160,7 +228,18 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel_NonInteracting::loadState")
+        self.myNumActivePedestrians += 1;
+        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
+        let (state, eventTime) = if transportable.is_person() {
+            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::from_mut(in_)))));
+            (Ptr::from_mut(&mut s.m().base), s.get_event_time())
+        } else {
+            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, Ptr::from_mut(in_)))));
+            (Ptr::from_mut(&mut s.m().base.base), s.get_event_time())
+        };
+        self.myNet.m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd.m() as &mut dyn Command), eventTime);
+        state
     }
 
     /// C++: `void MSPModel_NonInteracting::clearState()` [virtual]
@@ -171,7 +250,7 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSPModel_NonInteracting::clearState")
+        self.myNumActivePedestrians = 0;
     }
 
     /// C++: `void MSPModel_NonInteracting::remove(MSTransportableStateAdapter *)` [virtual]
@@ -183,7 +262,9 @@ impl MSPModel_NonInteracting {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSPModel_NonInteracting::remove")
+        self.myNumActivePedestrians -= 1;
+        // static_cast-equivalent: every state handed out by this model is a PState (CState derives from it)
+        state.cast::<MSPModel_NonInteracting_PState>().get_command().m().abort_walk();
     }
 
     /// C++: `bool MSPModel_NonInteracting::usingInternalLanes()` [virtual]
@@ -193,7 +274,7 @@ impl MSPModel_NonInteracting {
     //     }
     #[allow(unused_variables)]
     pub fn using_internal_lanes(&mut self) -> bool {
-        todo!("port MSPModel_NonInteracting::usingInternalLanes")
+        false
     }
 
     /// C++: `int MSPModel_NonInteracting::getActiveNumber()` [virtual]
@@ -203,7 +284,7 @@ impl MSPModel_NonInteracting {
     //     }
     #[allow(unused_variables)]
     pub fn get_active_number(&mut self) -> i32 {
-        todo!("port MSPModel_NonInteracting::getActiveNumber")
+        self.myNumActivePedestrians
     }
 
     /// C++: `void MSPModel_NonInteracting::registerArrived()`
@@ -212,7 +293,7 @@ impl MSPModel_NonInteracting {
     //     }
     #[allow(unused_variables)]
     pub fn register_arrived(&mut self) {
-        todo!("port MSPModel_NonInteracting::registerArrived")
+        self.myNumActivePedestrians -= 1;
     }
 
 }
@@ -245,7 +326,12 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
     //             myParent(walk), myTransportable(transportable), myModel(model) {}
     #[allow(unused_variables)]
     pub fn new(transportable: Ptr<MSTransportable>, walk: &mut MSStageMoving, model: Ptr<MSPModel_NonInteracting>) -> Self {
-        todo!("port MoveToNextEdge::MoveToNextEdge")
+        Self {
+            base: (),
+            myParent: Ptr::from_mut(walk),
+            myTransportable: transportable,
+            myModel: model,
+        }
     }
 
     /// C++: `SUMOTime MoveToNextEdge::execute(SUMOTime)` [virtual]
@@ -270,7 +356,30 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MoveToNextEdge::execute")
+        if self.myTransportable.is_null() {
+            return 0; // descheduled
+        }
+        // the state's concrete type (PState or CState) is fixed by the transportable kind, used for the virtual computeDuration below
+        let is_person = self.myTransportable.is_person();
+        let old = self.myParent.get_edge();
+        let dir = self.myParent.get_p_state().cast::<MSPModel_NonInteracting_PState>().get_direction();
+        // shortcut: MSStageMoving::move_to_next_edge is a panic stub (virtual dispatch to the walking/tranship stage is not ported), upgrade when stage subclasses dispatch
+        let arrived = self.myParent.m().move_to_next_edge(self.myTransportable, currentTime, dir, Ptr::null(), false);
+        if arrived {
+            self.myModel.m().register_arrived();
+            return 0;
+        }
+        let nextDuration = if is_person {
+            self.myParent.get_p_state().cast::<MSPModel_NonInteracting_PState>().m().compute_duration(old, &*self.myParent, currentTime)
+        } else {
+            self.myParent.get_p_state().cast::<MSPModel_NonInteracting_CState>().m().compute_duration(old, &*self.myParent, currentTime)
+        };
+        // first compute position on the new edge
+        self.myParent.m().activate_entry_reminders(self.myTransportable, false);
+        if self.myTransportable.is_null() {
+            return 0; // descheduled by rerouter on new edge
+        }
+        nextDuration
     }
 
     /// C++: `void MoveToNextEdge::abortWalk()`
@@ -279,7 +388,7 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
     //         }
     #[allow(unused_variables)]
     pub fn abort_walk(&mut self) {
-        todo!("port MoveToNextEdge::abortWalk")
+        self.myTransportable = Ptr::null();
     }
 
     /// C++: `const MSTransportable * MoveToNextEdge::getTransportable() const` [const]
@@ -288,7 +397,7 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
     //         }
     #[allow(unused_variables)]
     pub fn get_transportable(&self) -> Ptr<MSTransportable> {
-        todo!("port MoveToNextEdge::getTransportable")
+        self.myTransportable
     }
 
     /// C++: `MoveToNextEdge & MoveToNextEdge::operator=(const MoveToNextEdge &)` [private]
@@ -299,6 +408,12 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
         todo!("port MoveToNextEdge::operator=")
     }
 
+}
+
+impl Command for MSPModel_NonInteracting_MoveToNextEdge {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSPModel_NonInteracting_MoveToNextEdge::execute(self, currentTime)
+    }
 }
 
 /// implementation of callbacks to retrieve various state information from the model
@@ -335,7 +450,15 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
-        todo!("port PState::PState")
+        // shortcut: `(*in) >> myLastEntryTime >> myCurrentDuration` is not ported (no istringstream type in the Rust port), upgrade when the loadState stream type is decided
+        Self {
+            base: MSTransportableStateAdapter {},
+            myLastEntryTime: 0,
+            myCurrentDuration: 0,
+            myCurrentBeginPos: 0.0,
+            myCurrentEndPos: 0.0,
+            myCommand: cmd,
+        }
     }
 
     /// C++: `double PState::getEdgePos(SUMOTime) const` [const, virtual]
@@ -347,7 +470,7 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        todo!("port PState::getEdgePos")
+        self.myCurrentBeginPos + (self.myCurrentEndPos - self.myCurrentBeginPos) / (self.myCurrentDuration as f64) * ((now - self.myLastEntryTime) as f64)
     }
 
     /// C++: `int PState::getDirection() const` [const, virtual]
@@ -361,7 +484,13 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        todo!("port PState::getDirection")
+        if self.myCurrentBeginPos == self.myCurrentEndPos {
+            MSPMODEL_UNDEFINED_DIRECTION
+        } else if self.myCurrentBeginPos < self.myCurrentEndPos {
+            MSPMODEL_FORWARD
+        } else {
+            MSPMODEL_BACKWARD
+        }
     }
 
     /// C++: `Position PState::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -382,7 +511,12 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, stage: &MSStageMoving, now: SUMOTime) -> Position {
-        todo!("port PState::getPosition")
+        let mut lane = get_sidewalk_lane(stage.get_edge());
+        if lane.is_null() {
+            lane = stage.get_edge().get_lanes()[0];
+        }
+        let lateral_offset = if lane.allows_vehicle_class(SVC_PEDESTRIAN) { 0.0 } else { MSPMODEL_SIDEWALK_OFFSET * (if MSGlobals::lefthand() { -1.0 } else { 1.0 }) };
+        stage.get_lane_position(lane, self.get_edge_pos(now), lateral_offset)
     }
 
     /// C++: `double PState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -397,7 +531,11 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        todo!("port PState::getAngle")
+        let mut angle = stage.get_edge_angle(stage.get_edge(), self.get_edge_pos(now)) + (if self.myCurrentEndPos < self.myCurrentBeginPos { std::f64::consts::PI } else { 0.0 });
+        if angle > std::f64::consts::PI {
+            angle -= 2.0 * std::f64::consts::PI;
+        }
+        angle
     }
 
     /// C++: `SUMOTime PState::getWaitingTime() const` [const, virtual]
@@ -406,7 +544,7 @@ impl MSPModel_NonInteracting_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        todo!("port PState::getWaitingTime")
+        0
     }
 
     /// C++: `double PState::getSpeed(const MSStageMoving &) const` [const, virtual]
@@ -416,7 +554,7 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self, stage: &MSStageMoving) -> f64 {
-        todo!("port PState::getSpeed")
+        stage.get_max_speed(self.myCommand.get_transportable())
     }
 
     /// C++: `const MSEdge * PState::getNextEdge(const MSStageMoving &) const` [const, virtual]
@@ -426,7 +564,7 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        todo!("port PState::getNextEdge")
+        stage.get_next_route_edge()
     }
 
     /// C++: `SUMOTime PState::computeDuration(const MSEdge *, const MSStageMoving &, SUMOTime)` [virtual]
@@ -465,7 +603,34 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn compute_duration(&mut self, prev: Ptr<MSEdge>, stage: &MSStageMoving, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port PState::computeDuration")
+        self.myLastEntryTime = currentTime;
+        let edge = stage.get_edge();
+        let next = stage.get_next_route_edge();
+        let mut dir = MSPMODEL_UNDEFINED_DIRECTION;
+        if prev.is_null() {
+            self.myCurrentBeginPos = stage.get_depart_pos();
+        } else {
+            // default to FORWARD if not connected
+            dir = if edge.get_to_junction() == prev.get_to_junction() || edge.get_to_junction() == prev.get_from_junction() { MSPMODEL_BACKWARD } else { MSPMODEL_FORWARD };
+            self.myCurrentBeginPos = if dir == MSPMODEL_FORWARD { 0.0 } else { edge.get_length() };
+        }
+        if next.is_null() {
+            self.myCurrentEndPos = stage.get_arrival_pos();
+        } else {
+            if dir == MSPMODEL_UNDEFINED_DIRECTION {
+                // default to FORWARD if not connected
+                dir = if edge.get_from_junction() == next.get_from_junction() || edge.get_from_junction() == next.get_to_junction() { MSPMODEL_BACKWARD } else { MSPMODEL_FORWARD };
+            }
+            self.myCurrentEndPos = if dir == MSPMODEL_FORWARD { edge.get_length() } else { 0.0 };
+        }
+        // ensure that a result > 0 is returned even if the walk ends immediately
+        // adding 0.5ms is done to ensure proper rounding
+        self.myCurrentDuration = std::cmp::max(1, time2steps((self.myCurrentEndPos - self.myCurrentBeginPos).abs() / stage.get_max_speed(self.myCommand.get_transportable())));
+        // round to the next timestep to avoid systematic higher walking speed
+        if self.myCurrentDuration % delta_t() > 0 {
+            self.myCurrentDuration += delta_t();
+        }
+        self.myCurrentDuration
     }
 
     /// C++: `MoveToNextEdge * PState::getCommand() const` [const]
@@ -474,7 +639,7 @@ impl MSPModel_NonInteracting_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_command(&self) -> Ptr<MSPModel_NonInteracting_MoveToNextEdge> {
-        todo!("port PState::getCommand")
+        self.myCommand
     }
 
     /// C++: `SUMOTime PState::getEventTime() const` [const]
@@ -483,7 +648,7 @@ impl MSPModel_NonInteracting_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_event_time(&self) -> SUMOTime {
-        todo!("port PState::getEventTime")
+        self.myLastEntryTime + self.myCurrentDuration
     }
 
     /// C++: `void PState::saveState(std::ostringstream &)` [virtual]
@@ -494,7 +659,7 @@ impl MSPModel_NonInteracting_PState {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        todo!("port PState::saveState")
+        // shortcut: `out << " " << myLastEntryTime << " " << myCurrentDuration` is not ported (no ostringstream type in the Rust port), upgrade when the saveState stream type is decided
     }
 
 }

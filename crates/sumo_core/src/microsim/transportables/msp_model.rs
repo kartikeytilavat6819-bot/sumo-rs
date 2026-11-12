@@ -5,6 +5,10 @@ use crate::prelude::*;
 /// C++ typedef `std::pair<const MSPerson *, double> PersonDist`
 pub type PersonDist = (Ptr<MSPerson>, f64);
 
+const MSPMODEL_FORWARD: i32 = 1;
+const MSPMODEL_BACKWARD: i32 = -1;
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)
 pub struct MSPModel {
@@ -24,7 +28,6 @@ impl MSPModel {
     // virtual ~MSPModel() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel::~MSPModel")
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel::add(MSTransportable *, MSStageMoving *, SUMOTime)` [virtual, pure virtual]
@@ -45,7 +48,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, state: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel::loadState")
+        Ptr::null()
     }
 
     /// C++: `void MSPModel::clearState()` [virtual, pure virtual]
@@ -78,7 +81,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn blocked_at_dist(&mut self, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
-        todo!("port MSPModel::blockedAtDist")
+        false
     }
 
     /// C++: `bool MSPModel::hasPedestrians(const MSLane *)` [virtual]
@@ -89,7 +92,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn has_pedestrians(&mut self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSPModel::hasPedestrians")
+        false
     }
 
     /// C++: `PersonDist MSPModel::nextBlocking(const MSLane *, double, double, double, double, bool)` [virtual]
@@ -105,7 +108,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn next_blocking(&mut self, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
-        todo!("port MSPModel::nextBlocking")
+        (Ptr::null(), -1.0)
     }
 
     /// C++: `bool MSPModel::usingInternalLanes()` [virtual, pure virtual]
@@ -123,7 +126,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn using_shortcuts(&mut self) -> bool {
-        todo!("port MSPModel::usingShortcuts")
+        false
     }
 
     /// C++: `bool MSPModel::usingDoors()` [virtual]
@@ -133,7 +136,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn using_doors(&mut self) -> bool {
-        todo!("port MSPModel::usingDoors")
+        false
     }
 
     /// C++: `int MSPModel::getActiveNumber()` [virtual, pure virtual]
@@ -166,8 +169,24 @@ impl MSPModel {
     //     return dir;
     // }
     #[allow(unused_variables)]
-    pub fn can_traverse(dir: i32, route: &ConstMSEdgeVector, passedEdges: &mut i32) -> i32 {
-        todo!("port MSPModel::canTraverse")
+    pub fn can_traverse(mut dir: i32, route: &ConstMSEdgeVector, passedEdges: &mut i32) -> i32 {
+        let mut junction: Ptr<MSJunction> = Ptr::null();
+        for it in 0..route.len() {
+            let edge = route[it];
+            if !junction.is_null() {
+                //std::cout << " junction=" << junction->getID() << " edge=" << edge->getID() << "\n";
+                if junction == edge.get_from_junction() {
+                    dir = MSPMODEL_FORWARD;
+                } else if junction == edge.get_to_junction() {
+                    dir = MSPMODEL_BACKWARD;
+                } else {
+                    return MSPMODEL_UNDEFINED_DIRECTION;
+                }
+            }
+            junction = if dir == MSPMODEL_FORWARD { edge.get_to_junction() } else { edge.get_from_junction() };
+            *passedEdges += 1;
+        }
+        dir
     }
 
 }
@@ -182,7 +201,6 @@ impl MSTransportableStateAdapter {
     // virtual ~MSTransportableStateAdapter() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableStateAdapter::~MSTransportableStateAdapter")
     }
 
     /// C++: `double MSTransportableStateAdapter::getEdgePos(SUMOTime) const` [const, virtual, pure virtual]
@@ -231,7 +249,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_waiting_time(&self) -> SUMOTime {
-        todo!("port MSTransportableStateAdapter::getTotalWaitingTime")
+        0
     }
 
     /// C++: `double MSTransportableStateAdapter::getSpeed(const MSStageMoving &) const` [const, virtual, pure virtual]
@@ -262,7 +280,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn move_to(&mut self, p: Ptr<MSPerson>, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, t: SUMOTime) {
-        todo!("port MSTransportableStateAdapter::moveTo")
+        utils::common::msg_handler::write_warning("moveTo is ignored by the current movement model");
     }
 
     /// C++: `void MSTransportableStateAdapter::moveToXY(MSPerson *, Position, MSLane *, double, double, double, int, const ConstMSEdgeVector &, SUMOTime)` [virtual]
@@ -283,7 +301,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn move_to_xy(&mut self, p: Ptr<MSPerson>, pos: Position, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, angle: f64, routeOffset: i32, edges: &ConstMSEdgeVector, t: SUMOTime) {
-        todo!("port MSTransportableStateAdapter::moveToXY")
+        utils::common::msg_handler::write_warning("moveToXY is ignored by the current movement model");
     }
 
     /// C++: `bool MSTransportableStateAdapter::isJammed() const` [const, virtual]
@@ -293,7 +311,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        todo!("port MSTransportableStateAdapter::isJammed")
+        false
     }
 
     /// C++: `bool MSTransportableStateAdapter::isFinished() const` [const, virtual]
@@ -303,7 +321,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn is_finished(&self) -> bool {
-        todo!("port MSTransportableStateAdapter::isFinished")
+        true
     }
 
     /// C++: `const MSLane * MSTransportableStateAdapter::getLane() const` [const, virtual]
@@ -313,7 +331,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSTransportableStateAdapter::getLane")
+        Ptr::null()
     }
 
     /// C++: `double MSTransportableStateAdapter::getPathLength() const` [const, virtual]
@@ -323,7 +341,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_path_length(&self) -> f64 {
-        todo!("port MSTransportableStateAdapter::getPathLength")
+        0.0
     }
 
     /// C++: `void MSTransportableStateAdapter::saveState(std::ostringstream &)` [virtual]
@@ -333,7 +351,6 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        todo!("port MSTransportableStateAdapter::saveState")
     }
 
 }

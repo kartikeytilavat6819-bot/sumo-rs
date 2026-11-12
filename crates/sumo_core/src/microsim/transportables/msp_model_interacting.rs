@@ -8,6 +8,14 @@ pub type MSPModel_Interacting_ActiveLanes = BTreeMap<Ptr<MSLane>, MSPModel_Inter
 /// C++ typedef `std::vector<MSPModel_InteractingState *> MSPModel_Interacting::Pedestrians`
 pub type MSPModel_Interacting_Pedestrians = Vec<Ptr<MSPModel_InteractingState>>;
 
+const MSPMODEL_FORWARD: i32 = 1;
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+
+thread_local! {
+    /// C++ static `MSPModel_Interacting::noPedestrians` (returned by getPedestrians for unknown lanes)
+    static NO_PEDESTRIANS: Ptr<MSPModel_Interacting_Pedestrians> = Ptr::from_mut(Box::leak(Box::new(Vec::new())));
+}
+
 /// The abstract superclass for pedestrian models which actually interact with vehicles
 /// C++ class `MSPModel_Interacting` (microsim/transportables/MSPModel_Interacting.h)
 #[repr(C)]
@@ -46,7 +54,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_Interacting::~MSPModel_Interacting")
+        self.clear_state();
     }
 
     /// C++: `void MSPModel_Interacting::clearState()` [virtual]
@@ -59,7 +67,9 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSPModel_Interacting::clearState")
+        self.myActiveLanes.clear();
+        self.myNumActivePedestrians = 0;
+        self.myAmActive = false;
     }
 
     /// C++: `void MSPModel_Interacting::remove(MSTransportableStateAdapter *)` [virtual]
@@ -79,7 +89,15 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSPModel_Interacting::remove")
+        let p: Ptr<MSPModel_InteractingState> = state.cast::<MSPModel_InteractingState>();
+        let pedestrians = self.myActiveLanes.entry(state.get_lane()).or_default();
+        if let Some(idx) = pedestrians.iter().position(|x| *x == p) {
+            if !p.get_next_crossing().is_null() {
+                MSPModel_Interacting::unregister_crossing_approach(&*p, p.get_next_crossing());
+            }
+            pedestrians.remove(idx);
+            self.myNumActivePedestrians -= 1;
+        }
     }
 
     /// C++: `bool MSPModel_Interacting::blockedAtDist(const SUMOTrafficObject *, const MSLane *, double, double, double, std::vector<const MSPerson *> *)` [virtual]
@@ -122,7 +140,26 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn blocked_at_dist(&mut self, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
-        todo!("port MSPModel_Interacting::blockedAtDist")
+        for ped in self.get_pedestrians(lane).iter().copied() {
+            let leaderFrontDist = (if ped.get_direction() == MSPMODEL_FORWARD { vehCenter - ped.get_edge_pos(0) } else { ped.get_edge_pos(0) - vehCenter }) - vehWidth * 0.5;
+            let leaderBackDist = leaderFrontDist + ped.get_person().get_vehicle_type().get_length();
+            // DEBUG_INTERACTING output (compile-time debug logging) is not ported
+            if leaderBackDist >= -vehWidth && (leaderFrontDist < 0.0 || (leaderFrontDist <= oncomingGap && ped.get_waiting_time() < utils::common::time::time2steps(2.0))) {
+                let person = ped.get_person();
+                if MSLink::ignore_foe(ego, Ptr::from_mut(&mut person.m().base.base)) {
+                    continue;
+                }
+                // found one pedestrian that is not completely past the crossing point
+                if collectBlockers.is_null() {
+                    return true;
+                }
+                collectBlockers.m().push(person);
+            }
+        }
+        if collectBlockers.is_null() {
+            return false;
+        }
+        collectBlockers.m().len() > 0
     }
 
     /// C++: `PersonDist MSPModel_Interacting::nextBlocking(const MSLane *, double, double, double, double, bool)` [virtual]
@@ -165,7 +202,24 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn next_blocking(&mut self, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
-        todo!("port MSPModel_Interacting::nextBlocking")
+        let mut result: PersonDist = (Ptr::null(), f64::MAX);
+        for ped in self.get_pedestrians(lane).iter().copied() {
+            // account for distance covered by oncoming pedestrians
+            let relX2 = ped.get_edge_pos(0) - (if ped.get_direction() == MSPMODEL_FORWARD { 0.0 } else { stopTime * ped.get_person().get_max_speed() });
+            let dist = ((relX2 - minPos) * (if bidi { -1.0 } else { 1.0 }) - (if ped.get_direction() == MSPMODEL_FORWARD { ped.get_person().get_vehicle_type().get_length() } else { 0.0 }));
+            let aheadOfVehicle = if bidi { ped.get_edge_pos(0) < minPos } else { ped.get_edge_pos(0) > minPos };
+            if aheadOfVehicle && dist < result.1 {
+                let center = ped.get_lat_offset() + 0.5 * lane.get_width();
+                let halfWidth = 0.5 * ped.get_person().get_vehicle_type().get_width();
+                let overlap = center + halfWidth > minRight && center - halfWidth < maxLeft;
+                // DEBUG_INTERACTING output (compile-time debug logging) is not ported
+                if overlap {
+                    result.0 = ped.get_person();
+                    result.1 = dist;
+                }
+            }
+        }
+        result
     }
 
     /// C++: `bool MSPModel_Interacting::hasPedestrians(const MSLane *)` [virtual]
@@ -176,7 +230,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn has_pedestrians(&mut self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSPModel_Interacting::hasPedestrians")
+        self.get_pedestrians(lane).len() > 0
     }
 
     /// C++: `bool MSPModel_Interacting::usingInternalLanes()` [virtual]
@@ -187,7 +241,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn using_internal_lanes(&mut self) -> bool {
-        todo!("port MSPModel_Interacting::usingInternalLanes")
+        Self::using_internal_lanes_static()
     }
 
     /// C++: `bool MSPModel_Interacting::usingInternalLanesStatic()` [static]
@@ -197,7 +251,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn using_internal_lanes_static() -> bool {
-        todo!("port MSPModel_Interacting::usingInternalLanesStatic")
+        MSGlobals::using_internal_lanes() && MSNet::get_instance().has_internal_links() && MSNet::get_instance().has_pedestrian_network()
     }
 
     /// C++: `int MSPModel_Interacting::getActiveNumber()` [virtual]
@@ -207,7 +261,7 @@ impl MSPModel_Interacting {
     //     }
     #[allow(unused_variables)]
     pub fn get_active_number(&mut self) -> i32 {
-        todo!("port MSPModel_Interacting::getActiveNumber")
+        self.myNumActivePedestrians
     }
 
     /// C++: `void MSPModel_Interacting::registerActive()`
@@ -217,7 +271,7 @@ impl MSPModel_Interacting {
     //     }
     #[allow(unused_variables)]
     pub fn register_active(&mut self) {
-        todo!("port MSPModel_Interacting::registerActive")
+        self.myNumActivePedestrians += 1;
     }
 
     /// C++: `void MSPModel_Interacting::unregisterCrossingApproach(const MSPModel_InteractingState &, const MSLane *)` [static]
@@ -234,7 +288,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn unregister_crossing_approach(ped: &MSPModel_InteractingState, crossing: Ptr<MSLane>) {
-        todo!("port MSPModel_Interacting::unregisterCrossingApproach")
+        crossing.get_incoming_lanes()[0].viaLink.m().remove_approaching_person(ped.get_person());
     }
 
     /// C++: `Pedestrians & MSPModel_Interacting::getPedestrians(const MSLane *)` [protected]
@@ -242,7 +296,10 @@ impl MSPModel_Interacting {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_pedestrians(&mut self, lane: Ptr<MSLane>) -> &mut MSPModel_Interacting_Pedestrians {
-        todo!("port MSPModel_Interacting::getPedestrians")
+        if let Some(v) = self.myActiveLanes.get_mut(&lane) {
+            return v;
+        }
+        NO_PEDESTRIANS.with(|p| *p).get_mut().unwrap()
     }
 
 }
@@ -308,14 +365,29 @@ impl MSPModel_InteractingState {
     //         myWaitingToEnter(person != nullptr) {}
     #[allow(unused_variables)]
     pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, lane: Ptr<MSLane>) -> Self {
-        todo!("port MSPModel_InteractingState::MSPModel_InteractingState")
+        Self {
+            base: MSTransportableStateAdapter {},
+            myPerson: person,
+            myStage: stage,
+            myLane: lane,
+            myEdgePos: if !stage.is_null() { stage.get_depart_pos() } else { 0. },
+            myPosLat: if !stage.is_null() { stage.get_depart_pos_lat() } else { 0. },
+            myDir: MSPMODEL_UNDEFINED_DIRECTION,
+            mySpeed: 0.,
+            mySpeedLat: 0.,
+            myWaitingToEnter: !person.is_null(),
+            myWaitingTime: 0,
+            myTotalWaitingTime: 0,
+            myAmJammed: false,
+            myRemoteXYPos: Position::INVALID,
+            myAngle: f64::MAX,
+        }
     }
 
     /// C++: `void MSPModel_InteractingState::~MSPModel_InteractingState() noexcept` [virtual]
     // ~MSPModel_InteractingState() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_InteractingState::~MSPModel_InteractingState")
     }
 
     /// C++: `double MSPModel_InteractingState::getEdgePos(SUMOTime) const` [const, virtual]
@@ -325,7 +397,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, arg0: SUMOTime) -> f64 {
-        todo!("port MSPModel_InteractingState::getEdgePos")
+        self.myEdgePos
     }
 
     /// C++: `int MSPModel_InteractingState::getDirection() const` [const, virtual]
@@ -335,7 +407,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        todo!("port MSPModel_InteractingState::getDirection")
+        self.myDir
     }
 
     /// C++: `SUMOTime MSPModel_InteractingState::getWaitingTime() const` [const, virtual]
@@ -345,7 +417,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        todo!("port MSPModel_InteractingState::getWaitingTime")
+        self.myWaitingTime
     }
 
     /// C++: `SUMOTime MSPModel_InteractingState::getTotalWaitingTime() const` [const, virtual]
@@ -354,7 +426,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_waiting_time(&self) -> SUMOTime {
-        todo!("port MSPModel_InteractingState::getTotalWaitingTime")
+        self.myTotalWaitingTime
     }
 
     /// C++: `double MSPModel_InteractingState::getSpeed() const` [const]
@@ -364,7 +436,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MSPModel_InteractingState::getSpeed")
+        self.mySpeed
     }
 
     /// C++: `double MSPModel_InteractingState::getSpeed(const MSStageMoving &) const` [const, virtual]
@@ -374,7 +446,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_2(&self, arg0: &MSStageMoving) -> f64 {
-        todo!("port MSPModel_InteractingState::getSpeed")
+        self.mySpeed
     }
 
     /// C++: `bool MSPModel_InteractingState::isJammed() const` [const, virtual]
@@ -384,7 +456,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        todo!("port MSPModel_InteractingState::isJammed")
+        self.myAmJammed
     }
 
     /// C++: `const MSLane * MSPModel_InteractingState::getLane() const` [const, virtual]
@@ -394,7 +466,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSPModel_InteractingState::getLane")
+        self.myLane
     }
 
     /// C++: `const MSLane * MSPModel_InteractingState::getNextCrossing() const` [const, virtual]
@@ -404,7 +476,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_crossing(&self) -> Ptr<MSLane> {
-        todo!("port MSPModel_InteractingState::getNextCrossing")
+        Ptr::null()
     }
 
     /// C++: `double MSPModel_InteractingState::getLatOffset() const` [const, virtual]
@@ -414,7 +486,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
-        todo!("port MSPModel_InteractingState::getLatOffset")
+        self.myPosLat
     }
 
     /// C++: `MSPerson * MSPModel_InteractingState::getPerson() const` [const]
@@ -424,7 +496,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_person(&self) -> Ptr<MSPerson> {
-        todo!("port MSPModel_InteractingState::getPerson")
+        self.myPerson
     }
 
     /// C++: `MSStageMoving * MSPModel_InteractingState::getStage() const` [const]
@@ -434,7 +506,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_stage(&self) -> Ptr<MSStageMoving> {
-        todo!("port MSPModel_InteractingState::getStage")
+        self.myStage
     }
 
     /// C++: `bool MSPModel_InteractingState::isWaitingToEnter() const` [const]
@@ -444,7 +516,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn is_waiting_to_enter(&self) -> bool {
-        todo!("port MSPModel_InteractingState::isWaitingToEnter")
+        self.myWaitingToEnter
     }
 
     /// C++: `const Position & MSPModel_InteractingState::getRemotePosition() const` [const]
@@ -454,7 +526,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_remote_position(&self) -> &Position {
-        todo!("port MSPModel_InteractingState::getRemotePosition")
+        &self.myRemoteXYPos
     }
 
     /// C++: `const std::string & MSPModel_InteractingState::getID() const` [const, virtual]
@@ -464,7 +536,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port MSPModel_InteractingState::getID")
+        self.myPerson.get_id()
     }
 
     /// C++: `double MSPModel_InteractingState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -474,7 +546,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_angle(&self, arg0: &MSStageMoving, arg1: SUMOTime) -> f64 {
-        todo!("port MSPModel_InteractingState::getAngle")
+        self.myAngle
     }
 
     /// C++: `MSPModel_InteractingState & MSPModel_InteractingState::operator=(const MSPModel_InteractingState &)` [private]
