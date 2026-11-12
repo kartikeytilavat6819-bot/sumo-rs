@@ -1045,7 +1045,26 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::prepareStep")
+        *self.get_canceled_state(-1) = LCA_NONE;
+        *self.get_canceled_state(0) = LCA_NONE;
+        *self.get_canceled_state(1) = LCA_NONE;
+        self.save_lc_state(-1, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.save_lc_state(0, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.save_lc_state(1, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.myLastLateralGapRight = NO_NEIGHBOR;
+        self.myLastLateralGapLeft = NO_NEIGHBOR;
+        if !self.myDontResetLCGaps {
+            self.myLastLeaderGap = NO_NEIGHBOR;
+            self.myLastLeaderSecureGap = NO_NEIGHBOR;
+            self.myLastFollowerGap = NO_NEIGHBOR;
+            self.myLastFollowerSecureGap = NO_NEIGHBOR;
+            self.myLastOrigLeaderGap = NO_NEIGHBOR;
+            self.myLastOrigLeaderSecureGap = NO_NEIGHBOR;
+            self.myLastLeaderSpeed = NO_NEIGHBOR;
+            self.myLastFollowerSpeed = NO_NEIGHBOR;
+            self.myLastOrigLeaderSpeed = NO_NEIGHBOR;
+        }
+        self.myCommittedSpeed = 0.;
     }
 
     /// C++: `int MSAbstractLaneChangeModel::wantsChange(int, MSAbstractLaneChangeModel::MSLCMessager &, int, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const MSLane &, const std::vector<MSVehicle::LaneQ> &, MSVehicle **, MSVehicle **)` [virtual]
@@ -1076,7 +1095,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::wantsChange")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `int MSAbstractLaneChangeModel::wantsChangeSublane(int, LaneChangeAction, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLane &, const std::vector<MSVehicle::LaneQ> &, MSVehicle **, MSVehicle **, double &, double &, int &)` [virtual]
@@ -1113,7 +1135,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change_sublane(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, targetDistLat: &mut f64, blocked: &mut i32) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::wantsChangeSublane")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `void MSAbstractLaneChangeModel::updateExpectedSublaneSpeeds(const MSLeaderDistanceInfo &, int, int)` [virtual]
@@ -1126,7 +1151,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn update_expected_sublane_speeds(&mut self, ahead: &MSLeaderDistanceInfo, sublaneOffset: i32, laneIndex: i32) {
-        todo!("port MSAbstractLaneChangeModel::updateExpectedSublaneSpeeds")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `StateAndDist MSAbstractLaneChangeModel::decideDirection(StateAndDist, StateAndDist) const` [const, virtual]
@@ -1138,7 +1166,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn decide_direction(&self, sd1: MSAbstractLaneChangeModel_StateAndDist, sd2: MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
-        todo!("port MSAbstractLaneChangeModel::decideDirection")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `void * MSAbstractLaneChangeModel::inform(void *, MSVehicle *)` [virtual, pure virtual]
@@ -1167,7 +1198,8 @@ impl MSAbstractLaneChangeModel {
     // virtual void resetState() {}
     #[allow(unused_variables)]
     pub fn reset_state(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::resetState")
+        // C++ base body is empty; subclasses override
+
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getSafetyFactor() const` [const, virtual]
@@ -1177,7 +1209,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_safety_factor(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getSafetyFactor")
+        1.0
+
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getOppositeSafetyFactor() const` [const, virtual]
@@ -1187,7 +1220,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_opposite_safety_factor(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getOppositeSafetyFactor")
+        1.0
+
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::debugVehicle() const` [const, virtual]
@@ -1197,7 +1231,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn debug_vehicle(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::debugVehicle")
+        false
+
     }
 
     /// C++: `void MSAbstractLaneChangeModel::changedToOpposite()`
@@ -1209,7 +1244,8 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn changed_to_opposite(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::changedToOpposite")
+        self.myAmOpposite = !self.myAmOpposite;
+        self.myAlreadyChanged = true;
     }
 
     /// C++: `void MSAbstractLaneChangeModel::unchanged()`
@@ -1222,7 +1258,11 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn unchanged(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::unchanged")
+        if self.myLastLaneChangeOffset > 0 {
+            self.myLastLaneChangeOffset += delta_t();
+        } else if self.myLastLaneChangeOffset < 0 {
+            self.myLastLaneChangeOffset -= delta_t();
+        }
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::getShadowLane() const` [const]
