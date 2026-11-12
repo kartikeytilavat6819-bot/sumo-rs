@@ -2209,7 +2209,120 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn convert_tra_ci_stage(stage: &TraCIStage, personID: String) -> Ptr<MSStage> {
-        todo!("port Person::convertTraCIStage")
+        let mut bs: Ptr<MSStoppingPlace> = Ptr::null();
+        if !stage.destStop.is_empty() {
+            bs = MSNet::get_instance().get_stopping_place_2(&stage.destStop);
+            if bs.is_null() {
+                panic!("Invalid stopping place id '{}' for person: '{}'", stage.destStop, personID);
+            }
+        }
+        match stage.type_ {
+            STAGE_DRIVING => {
+                if stage.edges.is_empty() {
+                    panic!("The stage should have at least one edge");
+                }
+                let toId = stage.edges.last().unwrap();
+                let to = MSEdge::dictionary_2(toId);
+                if to.is_null() {
+                    panic!("Invalid edge '{}' for person: '{}'", toId, personID);
+                }
+                if stage.line.is_empty() {
+                    panic!("Empty lines parameter for person: '{}'", personID);
+                }
+                let mut arrivalPos = stage.arrivalPos;
+                if arrivalPos == INVALID_DOUBLE_VALUE {
+                    if !bs.is_null() {
+                        arrivalPos = bs.get_end_lane_position();
+                    } else {
+                        arrivalPos = to.get_length();
+                    }
+                }
+                let lineVec: Vec<String> = StringTokenizer::new(&stage.line).get_vector();
+                let s = MSStageDriving::new(Ptr::null(), to, bs, arrivalPos, 0.0, &lineVec, "", "", -1);
+                Ptr::from_mut(Box::leak(Box::new(s))).cast::<MSStage>()
+            }
+            STAGE_WALKING => {
+                let p = Self::get_person(&personID);
+                let mut edges: ConstMSEdgeVector = Vec::new();
+                // ProcessError from parseEdgesList is re-raised as TraCIException(e.what()) in C++; here it propagates as a panic
+                MSEdge::parse_edges_list_2(&stage.edges, &mut edges, "<unknown>");
+                if edges.is_empty() {
+                    panic!("Empty edge list for walking stage of person '{}'.", personID);
+                }
+                let lastLength = edges.last().unwrap().get_length();
+                let mut arrivalPos = stage.arrivalPos;
+                if arrivalPos.abs() > lastLength {
+                    panic!("Invalid arrivalPos for walking stage of person '{}'.", personID);
+                }
+                if arrivalPos < 0. {
+                    arrivalPos += lastLength;
+                }
+                // f64::MAX is MSPModel::UNSPECIFIED_POS_LAT
+                let s = MSStageWalking::new(p.get_id(), &edges, bs, -1, -1., p.get_arrival_pos(), arrivalPos, f64::MAX, -1, "");
+                Ptr::from_mut(Box::leak(Box::new(s))).cast::<MSStage>()
+            }
+            STAGE_WAITING => {
+                let p = Self::get_person(&personID);
+                if stage.travelTime < 0. {
+                    panic!("Duration for person: '{}' must not be negative", personID);
+                }
+                let s = MSStageWaiting::new(p.get_arrival_edge(), Ptr::null(), time2steps(stage.travelTime), 0, p.get_arrival_pos(), &stage.description, false, -1);
+                Ptr::from_mut(Box::leak(Box::new(s))).cast::<MSStage>()
+            }
+            STAGE_TRIP => {
+                let p = Self::get_person(&personID);
+                let mut edges: ConstMSEdgeVector = Vec::new();
+                // ProcessError from parseEdgesList is re-raised as TraCIException(e.what()) in C++; here it propagates as a panic
+                MSEdge::parse_edges_list_2(&stage.edges, &mut edges, "<unknown>");
+                if (edges.is_empty() && bs.is_null()) || edges.len() > 1 {
+                    panic!("A trip should be defined with a destination edge or a destination stop for person '{}'.", personID);
+                }
+                let to: Ptr<MSEdge>;
+                if !bs.is_null() {
+                    to = Ptr::from_mut(bs.get_lane().get_edge());
+                    if !edges.is_empty() && to != *edges.last().unwrap() {
+                        panic!("Mismatching destination edge and destination stop edge for person '{}'.", personID);
+                    }
+                } else {
+                    to = *edges.last().unwrap();
+                }
+                let mut modeSet: SVCPermissions = 0;
+                for vtypeid in StringTokenizer::new(&stage.vType).get_vector() {
+                    let vType = MSNet::get_instance().m().get_vehicle_control().get_v_type(&vtypeid, Ptr::null(), false);
+                    if vType.is_null() {
+                        panic!("The vehicle type '{}' in a trip for person '{}' is not known.", vtypeid, personID);
+                    }
+                    modeSet |= if vType.get_vehicle_class() == SVC_BICYCLE { SVC_BICYCLE } else { SVC_PASSENGER };
+                }
+                if stage.line.is_empty() {
+                    modeSet = p.get_parameter().modes;
+                } else {
+                    let mut errorMsg = String::new();
+                    if !SUMOVehicleParameter::parse_person_modes(&stage.line, "person", &personID, &mut modeSet, &mut errorMsg) {
+                        panic!("{}", errorMsg);
+                    }
+                }
+                let hasArrivalPos = stage.arrivalPos != INVALID_DOUBLE_VALUE;
+                let mut arrivalPos = stage.arrivalPos;
+                if hasArrivalPos {
+                    if arrivalPos.abs() > to.get_length() {
+                        panic!("Invalid arrivalPos for walking stage of person '{}'.", personID);
+                    }
+                    if arrivalPos < 0. {
+                        arrivalPos += to.get_length();
+                    }
+                }
+                let cur = p.get_current_stage();
+                let walkfactor = utils::options::options_cont::get_float("persontrip.walkfactor");
+                let group = stage.intended.clone();
+                let duration: SUMOTime = -1;
+                let speed = -1.;
+                // f64::MAX is MSPModel::UNSPECIFIED_POS_LAT
+                let s = MSStageTrip::new(cur.get_destination(), cur.get_destination_stop(), to, bs, duration, modeSet, &stage.vType, speed, walkfactor, &group, f64::MAX, hasArrivalPos, arrivalPos);
+                Ptr::from_mut(Box::leak(Box::new(s))).cast::<MSStage>()
+            }
+            _ => Ptr::null(),
+        }
     }
 
     /// C++: `bool Person::filterReservation(int, const Reservation *, std::vector<libsumo::TraCIReservation> &)` [static, private]
