@@ -678,7 +678,51 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSTriggeredRerouter::setPermissions")
+        let mut updateVehicles = false;
+        for i in &self.myIntervals {
+            if i.begin == currentTime && !(i.closed.is_empty() && i.closedLanes.is_empty()) {
+                for (edge, settings) in &i.closed {
+                    if settings.0 != SVC_UNSPECIFIED {
+                        for lane in edge.get_lanes() {
+                            lane.m().set_permissions(settings.0, i.id);
+                        }
+                        edge.m().rebuild_allowed_lanes(false, false);
+                        updateVehicles = true;
+                    }
+                }
+                for (lane, perm) in &i.closedLanes {
+                    lane.m().set_permissions(*perm, i.id);
+                    lane.get_edge().rebuild_allowed_lanes(false, false);
+                    updateVehicles = true;
+                }
+                // shortcut: C++ schedules WrappingCommand<MSTriggeredRerouter>(this, setPermissions) at i.end to reopen the lanes; WrappingCommand is not ported, so the closure is never reverted, upgrade when WrappingCommand is ported
+            }
+            if i.end == currentTime && !(i.closed.is_empty() && i.closedLanes.is_empty()) {
+                for (edge, settings) in &i.closed {
+                    if settings.0 != SVC_UNSPECIFIED {
+                        for lane in edge.get_lanes() {
+                            lane.m().reset_permissions(i.id);
+                        }
+                        edge.m().rebuild_allowed_lanes(false, false);
+                        updateVehicles = true;
+                    }
+                }
+                for (lane, _perm) in &i.closedLanes {
+                    lane.m().reset_permissions(i.id);
+                    lane.get_edge().rebuild_allowed_lanes(false, false);
+                    updateVehicles = true;
+                }
+            }
+        }
+        if updateVehicles {
+            MSNet::get_instance().set_permissions_found();
+            // only vehicles on the affected lanes had their bestlanes updated so far
+            for e in &self.myEdges {
+                // also updates vehicles
+                e.m().rebuild_allowed_targets(true);
+            }
+        }
+        0
     }
 
     /// C++: `const RerouteInterval * MSTriggeredRerouter::getCurrentReroute(SUMOTime) const` [const]
@@ -706,7 +750,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn set_user_mode(&mut self, val: bool) {
-        todo!("port MSTriggeredRerouter::setUserMode")
+        self.myAmInUserMode = val;
     }
 
     /// C++: `void MSTriggeredRerouter::setUserUsageProbability(double)`
@@ -717,7 +761,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn set_user_usage_probability(&mut self, prob: f64) {
-        todo!("port MSTriggeredRerouter::setUserUsageProbability")
+        self.myUserProbability = prob;
     }
 
     /// C++: `bool MSTriggeredRerouter::inUserMode() const` [const]
@@ -728,7 +772,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn in_user_mode(&self) -> bool {
-        todo!("port MSTriggeredRerouter::inUserMode")
+        self.myAmInUserMode
     }
 
     /// C++: `double MSTriggeredRerouter::getProbability() const` [const]
@@ -739,7 +783,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_probability(&self) -> f64 {
-        todo!("port MSTriggeredRerouter::getProbability")
+        if self.myAmInUserMode { self.myUserProbability } else { self.myProbability }
     }
 
     /// C++: `double MSTriggeredRerouter::getUserProbability() const` [const]
@@ -750,7 +794,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_user_probability(&self) -> f64 {
-        todo!("port MSTriggeredRerouter::getUserProbability")
+        self.myUserProbability
     }
 
     /// C++: `bool MSTriggeredRerouter::isParkingRerouter() const` [const, virtual]
@@ -759,7 +803,7 @@ impl MSTriggeredRerouter {
     //     }
     #[allow(unused_variables)]
     pub fn is_parking_rerouter(&self) -> bool {
-        todo!("port MSTriggeredRerouter::isParkingRerouter")
+        self.myHaveParkProbs
     }
 
     /// C++: `const Position & MSTriggeredRerouter::getPosition()`
@@ -768,7 +812,7 @@ impl MSTriggeredRerouter {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&mut self) -> &Position {
-        todo!("port MSTriggeredRerouter::getPosition")
+        &self.myPosition
     }
 
     /// C++: `double MSTriggeredRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual]
@@ -781,7 +825,11 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place_occupancy(&mut self, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSTriggeredRerouter::getStoppingPlaceOccupancy")
+        if sp.get_element() == SUMO_TAG_PARKING_AREA {
+            Ptr::from_raw(sp.as_raw() as *mut MSParkingArea).get_occupancy_including_remote_reservations(veh) as f64
+        } else {
+            sp.get_stopped_vehicles().len() as f64
+        }
     }
 
     /// C++: `double MSTriggeredRerouter::getLastStepStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual]
@@ -794,7 +842,11 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_stopping_place_occupancy(&mut self, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSTriggeredRerouter::getLastStepStoppingPlaceOccupancy")
+        if sp.get_element() == SUMO_TAG_PARKING_AREA {
+            Ptr::from_raw(sp.as_raw() as *mut MSParkingArea).get_last_step_occupancy_including_remote_reservations(veh) as f64
+        } else {
+            sp.get_stopped_vehicles().len() as f64
+        }
     }
 
     /// C++: `double MSTriggeredRerouter::getStoppingPlaceCapacity(MSStoppingPlace *)` [virtual]
@@ -812,7 +864,16 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place_capacity(&mut self, sp: Ptr<MSStoppingPlace>) -> f64 {
-        todo!("port MSTriggeredRerouter::getStoppingPlaceCapacity")
+        if !self.myBlockedStoppingPlaces.contains(&sp) {
+            if sp.get_element() == SUMO_TAG_PARKING_AREA {
+                Ptr::from_raw(sp.as_raw() as *mut MSParkingArea).get_capacity() as f64
+            } else {
+                // assume only one vehicle at a time (for stationReroute)
+                1.0
+            }
+        } else {
+            0.0
+        }
     }
 
     /// C++: `void MSTriggeredRerouter::rememberBlockedStoppingPlace(SUMOVehicle &, const MSStoppingPlace *, bool)` [virtual]
@@ -823,7 +884,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn remember_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, parkingArea: Ptr<MSStoppingPlace>, blocked: bool) {
-        todo!("port MSTriggeredRerouter::rememberBlockedStoppingPlace")
+        veh.remember_blocked_parking_area(parkingArea, blocked);
     }
 
     /// C++: `void MSTriggeredRerouter::rememberStoppingPlaceScore(SUMOVehicle &, MSStoppingPlace *, const std::string &)` [virtual]
@@ -834,7 +895,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn remember_stopping_place_score(&mut self, veh: &mut SUMOVehicle, parkingArea: Ptr<MSStoppingPlace>, score: &str) {
-        todo!("port MSTriggeredRerouter::rememberStoppingPlaceScore")
+        veh.remember_parking_area_score(parkingArea, score);
     }
 
     /// C++: `void MSTriggeredRerouter::resetStoppingPlaceScores(SUMOVehicle &)` [virtual]
@@ -845,7 +906,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn reset_stopping_place_scores(&mut self, veh: &mut SUMOVehicle) {
-        todo!("port MSTriggeredRerouter::resetStoppingPlaceScores")
+        veh.reset_parking_area_scores();
     }
 
     /// C++: `SUMOTime MSTriggeredRerouter::sawBlockedStoppingPlace(SUMOVehicle &, MSStoppingPlace *, bool)` [virtual]
@@ -856,7 +917,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn saw_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, parkingArea: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        todo!("port MSTriggeredRerouter::sawBlockedStoppingPlace")
+        veh.saw_blocked_parking_area(parkingArea, local)
     }
 
     /// C++: `int MSTriggeredRerouter::getNumberStoppingPlaceReroutes(SUMOVehicle &)` [virtual]
@@ -867,7 +928,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle) -> i32 {
-        todo!("port MSTriggeredRerouter::getNumberStoppingPlaceReroutes")
+        veh.get_number_parking_reroutes()
     }
 
     /// C++: `void MSTriggeredRerouter::setNumberStoppingPlaceReroutes(SUMOVehicle &, int)` [virtual]
@@ -878,7 +939,7 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn set_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle, value: i32) {
-        todo!("port MSTriggeredRerouter::setNumberStoppingPlaceReroutes")
+        veh.set_number_parking_reroutes(value);
     }
 
     /// C++: `MSParkingArea * MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterval *, SUMOVehicle &, bool &, ConstMSEdgeVector &)`
