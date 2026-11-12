@@ -25,7 +25,7 @@ impl AGTrip {
     //         myDay(0) {}
     #[allow(unused_variables)]
     pub fn new(from: AGPosition, to: AGPosition, at: i32) -> Self {
-        todo!("port AGTrip::AGTrip")
+        AGTrip { myFrom: from, myTo: to, myDepTime: at, myVehicle: String::new(), myType: "default".to_string(), myDay: 0, myPassBy: VecDeque::new() }
     }
 
     /// C++: `void AGTrip::AGTrip(AGPosition, AGPosition, AGCar, int)`
@@ -38,7 +38,7 @@ impl AGTrip {
     //         myDay(0) {}
     #[allow(unused_variables)]
     pub fn new_2(from: AGPosition, to: AGPosition, c: AGCar, at: i32) -> Self {
-        todo!("port AGTrip::AGTrip")
+        AGTrip { myFrom: from, myTo: to, myDepTime: at, myVehicle: c.get_name(), myType: "default".to_string(), myDay: 0, myPassBy: VecDeque::new() }
     }
 
     /// C++: `void AGTrip::AGTrip(AGPosition, AGPosition, AGBus, int)`
@@ -51,7 +51,8 @@ impl AGTrip {
     //         myDay(0) {}
     #[allow(unused_variables)]
     pub fn new_3(from: AGPosition, to: AGPosition, b: AGBus, at: i32) -> Self {
-        todo!("port AGTrip::AGTrip")
+        let mut b = b;
+        AGTrip { myFrom: from, myTo: to, myDepTime: at, myVehicle: b.get_name(), myType: "bus".to_string(), myDay: 0, myPassBy: VecDeque::new() }
     }
 
     /// C++: `void AGTrip::AGTrip(AGPosition, AGPosition, std::string, int)`
@@ -64,7 +65,7 @@ impl AGTrip {
     //         myDay(0) {}
     #[allow(unused_variables)]
     pub fn new_4(from: AGPosition, to: AGPosition, v: String, at: i32) -> Self {
-        todo!("port AGTrip::AGTrip")
+        AGTrip { myFrom: from, myTo: to, myDepTime: at, myVehicle: v, myType: "default".to_string(), myDay: 0, myPassBy: VecDeque::new() }
     }
 
     /// C++: `void AGTrip::AGTrip(AGPosition, AGPosition, std::string, int, int)`
@@ -77,7 +78,7 @@ impl AGTrip {
     //         myDay(day) {}
     #[allow(unused_variables)]
     pub fn new_5(from: AGPosition, to: AGPosition, v: String, at: i32, day: i32) -> Self {
-        todo!("port AGTrip::AGTrip")
+        AGTrip { myFrom: from, myTo: to, myDepTime: at, myVehicle: v, myType: "default".to_string(), myDay: day, myPassBy: VecDeque::new() }
     }
 
     /// C++: `void AGTrip::print() const` [const]
@@ -94,7 +95,14 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn print(&self) {
-        todo!("port AGTrip::print")
+        println!("Trip: ");
+        print!("\t-From= ");
+        self.myFrom.print();
+        print!("\t-To= ");
+        self.myTo.print();
+        println!("\t-At= {} -Day= {}", self.myDepTime, self.myDay);
+        println!("\t-Vehicle= {}", self.myVehicle);
+        println!("\t-type= {}", self.myType);
     }
 
     /// C++: `bool AGTrip::operator<(const AGTrip &) const` [const]
@@ -111,7 +119,15 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn lt_op(&self, trip: &AGTrip) -> bool {
-        todo!("port AGTrip::operator<")
+        if self.get_day() < trip.get_day() {
+            return true;
+        }
+        if self.get_day() == trip.get_day() {
+            if self.get_time() < trip.get_time() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void AGTrip::addLayOver(AGPosition)`
@@ -121,7 +137,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn add_lay_over(&mut self, by: AGPosition) {
-        todo!("port AGTrip::addLayOver")
+        self.myPassBy.push_back(by);
     }
 
     /// C++: `void AGTrip::addLayOver(AGTrip &)`
@@ -135,7 +151,10 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn add_lay_over_2(&mut self, trip: &mut AGTrip) {
-        todo!("port AGTrip::addLayOver")
+        for it in trip.myPassBy.iter() {
+            self.myPassBy.push_back(*it);
+        }
+        self.myPassBy.push_back(trip.myTo);
     }
 
     /// C++: `void AGTrip::addLayOverWithoutDestination(AGTrip &)`
@@ -148,7 +167,9 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn add_lay_over_without_destination(&mut self, trip: &mut AGTrip) {
-        todo!("port AGTrip::addLayOverWithoutDestination")
+        for it in trip.myPassBy.iter() {
+            self.myPassBy.push_back(*it);
+        }
     }
 
     /// C++: `AGPosition AGTrip::getDep() const` [const]
@@ -158,7 +179,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_dep(&self) -> AGPosition {
-        todo!("port AGTrip::getDep")
+        self.myFrom
     }
 
     /// C++: `AGPosition AGTrip::getArr() const` [const]
@@ -168,7 +189,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_arr(&self) -> AGPosition {
-        todo!("port AGTrip::getArr")
+        self.myTo
     }
 
     /// C++: `int AGTrip::getTime() const` [const]
@@ -178,7 +199,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_time(&self) -> i32 {
-        todo!("port AGTrip::getTime")
+        self.myDepTime
     }
 
     /// C++: `void AGTrip::setDepTime(int)`
@@ -188,7 +209,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_dep_time(&mut self, time: i32) {
-        todo!("port AGTrip::setDepTime")
+        self.myDepTime = time;
     }
 
     /// C++: `const std::string & AGTrip::getVehicleName() const` [const]
@@ -198,7 +219,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_name(&self) -> &str {
-        todo!("port AGTrip::getVehicleName")
+        &self.myVehicle
     }
 
     /// C++: `void AGTrip::setVehicleName(std::string)`
@@ -208,7 +229,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_vehicle_name(&mut self, name: String) {
-        todo!("port AGTrip::setVehicleName")
+        self.myVehicle = name;
     }
 
     /// C++: `void AGTrip::setArr(AGPosition)`
@@ -218,7 +239,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_arr(&mut self, arrival: AGPosition) {
-        todo!("port AGTrip::setArr")
+        self.myTo = AGPosition::new(arrival.get_street(), arrival.get_position());
     }
 
     /// C++: `void AGTrip::setDep(AGPosition)`
@@ -228,7 +249,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_dep(&mut self, departure: AGPosition) {
-        todo!("port AGTrip::setDep")
+        self.myFrom = AGPosition::new(departure.get_street(), departure.get_position());
     }
 
     /// C++: `int AGTrip::getDay() const` [const]
@@ -238,7 +259,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_day(&self) -> i32 {
-        todo!("port AGTrip::getDay")
+        self.myDay
     }
 
     /// C++: `void AGTrip::setDay(int)`
@@ -248,7 +269,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_day(&mut self, day: i32) {
-        todo!("port AGTrip::setDay")
+        self.myDay = day;
     }
 
     /// C++: `const std::string & AGTrip::getType() const` [const]
@@ -258,7 +279,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> &str {
-        todo!("port AGTrip::getType")
+        &self.myType
     }
 
     /// C++: `void AGTrip::setType(std::string)`
@@ -268,7 +289,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: String) {
-        todo!("port AGTrip::setType")
+        self.myType = type_;
     }
 
     /// C++: `const std::list<AGPosition> * AGTrip::getPassed() const` [const]
@@ -278,7 +299,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_passed(&self) -> Ptr<VecDeque<AGPosition>> {
-        todo!("port AGTrip::getPassed")
+        Ptr::new(&self.myPassBy)
     }
 
     /// C++: `int AGTrip::getRideBackArrTime(double) const` [const]
@@ -289,7 +310,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_ride_back_arr_time(&self, secPerKm: f64) -> i32 {
-        todo!("port AGTrip::getRideBackArrTime")
+        self.get_arr_time(secPerKm) + (secPerKm * self.myTo.distance_to(&self.myFrom) / 1000.0) as i32
     }
 
     /// C++: `int AGTrip::getArrTime(double) const` [const]
@@ -300,7 +321,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_arr_time(&self, secPerKm: f64) -> i32 {
-        todo!("port AGTrip::getArrTime")
+        self.myDepTime + self.get_time_trip(secPerKm)
     }
 
     /// C++: `int AGTrip::getTimeTrip(double) const` [const]
@@ -325,7 +346,19 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_time_trip(&self, secPerKm: f64) -> i32 {
-        todo!("port AGTrip::getTimeTrip")
+        let mut dist: f64 = 0.0;
+        let mut positions: Vec<AGPosition> = Vec::new();
+        positions.push(self.myFrom);
+        for it in self.myPassBy.iter() {
+            positions.push(*it);
+        }
+        positions.push(self.myTo);
+        let mut temp: &AGPosition = &positions[0];
+        for it in positions.iter().skip(1) {
+            dist += temp.distance_to(it);
+            temp = it;
+        }
+        (secPerKm * (dist / 1000.0)) as i32
     }
 
     /// C++: `int AGTrip::estimateDepTime(int, double) const` [const]
@@ -336,7 +369,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn estimate_dep_time(&self, arrTime: i32, secPerKm: f64) -> i32 {
-        todo!("port AGTrip::estimateDepTime")
+        arrTime - self.get_time_trip(secPerKm)
     }
 
     /// C++: `bool AGTrip::isDaily() const` [const]
@@ -347,7 +380,7 @@ impl AGTrip {
     // }
     #[allow(unused_variables)]
     pub fn is_daily(&self) -> bool {
-        todo!("port AGTrip::isDaily")
+        self.myDay == 0
     }
 
 }
