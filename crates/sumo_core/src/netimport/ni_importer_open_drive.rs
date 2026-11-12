@@ -15,6 +15,8 @@ thread_local! {
 const UNSET_CONNECTION: i32 = 100000;
 // C++ NIImporter_OpenDrive.h: `#define UNSET_LANEVALIDITY 100000`
 const UNSET_LANEVALIDITY: i32 = 100000;
+/// C++ static NIImporter_OpenDrive::myDummyController
+static MY_DUMMY_CONTROLLER: std::sync::OnceLock<NIImporter_OpenDrive_OpenDriveController> = std::sync::OnceLock::new();
 
 /// C++ static NIImporter_OpenDrive::openDriveTags (SequentialStringBijection::Entry[]), terminated by the empty entry
 const OPEN_DRIVE_TAGS: &[(&str, i32)] = &[
@@ -1412,11 +1414,11 @@ impl NIImporter_OpenDrive {
             }
             if e.from.is_null() {
                 let nid = format!("{}.begin", e.id);
-                e.from = NIImporter_OpenDrive::get_or_build_node(&nid, e.geom.front(), nc.m());
+                e.from = NIImporter_OpenDrive::get_or_build_node(&nid, e.geom.front(), nc.m())?;
             }
             if e.to.is_null() {
                 let nid = format!("{}.end", e.id);
-                e.to = NIImporter_OpenDrive::get_or_build_node(&nid, e.geom.back(), nc.m());
+                e.to = NIImporter_OpenDrive::get_or_build_node(&nid, e.geom.back(), nc.m())?;
             }
         }
 
@@ -2509,7 +2511,7 @@ impl NIImporter_OpenDrive {
     //     }
     #[allow(unused_variables)]
     pub fn get_signals(&mut self) -> &mut BTreeMap<String, NIImporter_OpenDrive_OpenDriveSignal> {
-        todo!("port NIImporter_OpenDrive::getSignals")
+        &mut self.mySignals
     }
 
     /// C++: `std::map<std::string, OpenDriveController> & NIImporter_OpenDrive::getControllers()` [protected]
@@ -2518,7 +2520,7 @@ impl NIImporter_OpenDrive {
     //     }
     #[allow(unused_variables)]
     pub fn get_controllers(&mut self) -> &mut BTreeMap<String, NIImporter_OpenDrive_OpenDriveController> {
-        todo!("port NIImporter_OpenDrive::getControllers")
+        &mut self.myControllers
     }
 
     /// C++: `std::map<std::string, std::vector<std::string>> & NIImporter_OpenDrive::getJunctions2Controllers()` [protected]
@@ -2527,7 +2529,7 @@ impl NIImporter_OpenDrive {
     //     }
     #[allow(unused_variables)]
     pub fn get_junctions2_controllers(&mut self) -> &mut BTreeMap<String, Vec<String>> {
-        todo!("port NIImporter_OpenDrive::getJunctions2Controllers")
+        &mut self.myJunctions2Controllers
     }
 
     /// C++: `const OpenDriveController & NIImporter_OpenDrive::getController(std::string)` [protected]
@@ -2539,7 +2541,11 @@ impl NIImporter_OpenDrive {
     //     }
     #[allow(unused_variables)]
     pub fn get_controller(&mut self, signalID: String) -> &NIImporter_OpenDrive_OpenDriveController {
-        todo!("port NIImporter_OpenDrive::getController")
+        if self.mySignals.contains_key(&signalID) && self.myControllers.contains_key(&self.mySignals[&signalID].controller) {
+            let ctrl = self.mySignals[&signalID].controller.clone();
+            return &self.myControllers[&ctrl];
+        }
+        MY_DUMMY_CONTROLLER.get_or_init(NIImporter_OpenDrive_OpenDriveController::new_2)
     }
 
     /// C++: `int NIImporter_OpenDrive::getTLIndexForController(std::string)` [protected]
@@ -2558,7 +2564,16 @@ impl NIImporter_OpenDrive {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_index_for_controller(&mut self, controllerID: String) -> i32 {
-        todo!("port NIImporter_OpenDrive::getTLIndexForController")
+        let junctionID = self.myControllers.entry(controllerID.clone()).or_insert_with(NIImporter_OpenDrive_OpenDriveController::new_2).junction.clone();
+        let mut junctionControllers: Vec<String> = Vec::new();
+        for (k, v) in &self.myControllers {
+            if v.junction == junctionID {
+                junctionControllers.push(k.clone());
+            }
+        }
+        // determinism: keys are unique, so sorting is total
+        junctionControllers.sort();
+        junctionControllers.iter().position(|c| *c == controllerID).unwrap_or(junctionControllers.len()) as i32
     }
 
     /// C++: `void NIImporter_OpenDrive::addLink(LinkType, const std::string &, const std::string &, const std::string &)` [private]
@@ -2960,7 +2975,32 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn lane_sections_connected(edge: Ptr<NIImporter_OpenDrive_OpenDriveEdge>, in_: i32, out: i32) -> bool {
-        todo!("port NIImporter_OpenDrive::laneSectionsConnected")
+        let edge = edge.m();
+        if edge.laneSections.len() == 1 {
+            return in_ == out;
+        }
+        // there could be spacing lanes (type 'none') that lead to a shift in lane index
+        let mut in_ = in_;
+        for it in 0..edge.laneSections.len() - 1 {
+            let laneSection = &edge.laneSections[it];
+            if let Some(lanes) = laneSection.lanesByDir.get(&NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT) {
+                for lane in lanes {
+                    if lane.id == in_ {
+                        in_ = lane.successor;
+                        break;
+                    }
+                }
+            }
+            if let Some(lanes) = laneSection.lanesByDir.get(&NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT) {
+                for lane in lanes {
+                    if lane.id == in_ {
+                        in_ = lane.successor;
+                        break;
+                    }
+                }
+            }
+        }
+        in_ == out
     }
 
     /// C++: `std::string NIImporter_OpenDrive::reversedEdgeID(const std::string &)` [static, private]
@@ -2970,7 +3010,7 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn reversed_edge_id(id: &str) -> String {
-        todo!("port NIImporter_OpenDrive::reversedEdgeID")
+        if id.starts_with('-') { id[1..].to_string() } else { format!("-{}", id) }
     }
 
     /// C++: `NBNode * NIImporter_OpenDrive::getOrBuildNode(const std::string &, const Position &, NBNodeCont &)` [static, protected]
@@ -2988,8 +3028,15 @@ impl NIImporter_OpenDrive {
     //     return nc.retrieve(id);
     // }
     #[allow(unused_variables)]
-    pub fn get_or_build_node(id: &str, pos: &Position, nc: &mut NBNodeCont) -> Ptr<NBNode> {
-        todo!("port NIImporter_OpenDrive::getOrBuildNode")
+    pub fn get_or_build_node(id: &str, pos: &Position, nc: &mut NBNodeCont) -> Result<Ptr<NBNode>, ProcessError> {
+        if nc.retrieve(id).is_null() {
+            // not yet built; build now
+            if !nc.insert(id, pos, Ptr::default()) {
+                // !!! clean up
+                return Err(ProcessError::new(tlf!("Could not add node '%'.", id.to_string())));
+            }
+        }
+        Ok(nc.retrieve(id))
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromLine(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
