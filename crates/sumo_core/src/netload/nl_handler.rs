@@ -16,6 +16,12 @@ fn tag_to_string(tag: SumoXMLTag) -> String {
     utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
 }
 
+/// C++ `toString(SumoXMLAttr)`: the canonical name of an attribute
+// shortcut: scans the ATTRS table instead of the SumoXMLAttrs bijection, upgrade when sumo_xml_definitions exposes toString
+fn attr_to_string(attr: i32) -> String {
+    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, v)| *v == attr).map(|(s, _)| s.to_string()).unwrap_or_default()
+}
+
 /// C++ `throw InvalidArgument(msg)`; caught by `try_catch_args`
 fn throw_invalid_argument(msg: String) -> ! {
     std::panic::panic_any(ProcessError::InvalidArgument(msg))
@@ -44,6 +50,26 @@ fn unwrap_or_throw<T>(r: Result<T, ProcessError>) -> T {
 /// C++ implicit `MSStoppingPlace*` -> `Parameterised*` conversion (base2 is the Parameterised part)
 fn stopping_place_as_parameterised(p: Ptr<MSStoppingPlace>) -> Ptr<Parameterised> {
     Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
+}
+
+/// C++ implicit `MSLane*` -> `Parameterised*` conversion (base2 is the Parameterised part)
+fn lane_as_parameterised(p: Ptr<MSLane>) -> Ptr<Parameterised> {
+    Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
+}
+
+/// C++ `parseVehicleClasses(allowedS, disallowedS, networkVersion)` (SUMOVehicleClass.cpp); the utils port
+/// only has the single-argument overload, so the 3-argument one lives here until it is ported there
+fn parse_vehicle_classes_v(allowed: &str, disallowed: &str, network_version: (i32, f64)) -> SVCPermissions {
+    if allowed.is_empty() && disallowed.is_empty() {
+        SVC_ALL
+    } else if !allowed.is_empty() && !disallowed.is_empty() {
+        write_warning("SVCPermissions must be specified either via 'allow' or 'disallow'. Ignoring 'disallow'");
+        parse_vehicle_classes(allowed)
+    } else if !allowed.is_empty() {
+        parse_vehicle_classes(allowed)
+    } else {
+        invert_permissions(extra_disallowed(parse_vehicle_classes(disallowed), network_version))
+    }
 }
 
 /// The XML-Handler for network loading
@@ -2197,7 +2223,79 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_lane(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addLane")
+        // omit internal edges if not wished and broken edges
+        if self.myCurrentIsInternalToSkip || self.myCurrentIsBroken {
+            return;
+        }
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let maxSpeed = attrs.get::<f64>(SUMO_ATTR_SPEED, &id, &mut ok, true);
+        let friction = attrs.get_opt::<f64>(SUMO_ATTR_FRICTION, &id, &mut ok, 1.0, false);
+        let length = attrs.get::<f64>(SUMO_ATTR_LENGTH, &id, &mut ok, true);
+        // sanity check values that could lead to crashing later on
+        if length.is_nan() {
+            // shortcut: C++ streams NaN as "nan" through ostream; written literally here
+            write_error(&format!("Attribute length of lane '{}' is invalid (nan)", id));
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        if maxSpeed.is_nan() {
+            write_error(&format!("Attribute maxSpeed of lane '{}' is invalid (nan)", id));
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let allow = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, &id, &mut ok, String::new(), false);
+        let disallow = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, &id, &mut ok, String::new(), true);
+        let changeLeftS = attrs.get_opt::<String>(SUMO_ATTR_CHANGE_LEFT, &id, &mut ok, String::new(), true);
+        let changeRightS = attrs.get_opt::<String>(SUMO_ATTR_CHANGE_RIGHT, &id, &mut ok, String::new(), true);
+        let width = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &id, &mut ok, utils::common::std_defs::SUMO_CONST_LANE_WIDTH, true);
+        let shape = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, true);
+        let outlineShape = attrs.get_opt::<PositionVector>(SUMO_ATTR_OUTLINESHAPE, &id, &mut ok, PositionVector::default(), true);
+        let index = attrs.get::<i32>(SUMO_ATTR_INDEX, &id, &mut ok, true);
+        let isRampAccel = attrs.get_opt::<bool>(SUMO_ATTR_ACCELERATION, &id, &mut ok, false, true);
+        let type_ = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut ok, String::new(), true);
+        if shape.size() < 2 && self.myEdgeControlBuilder.m().get_current_edge_function() != SumoXMLEdgeFunc::WALKINGAREA {
+            write_error(&format!("Shape of lane '{}' is broken.\n Can not build according edge.", id));
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let permissions = parse_vehicle_classes_v(&allow, &disallow, self.myNetworkVersion);
+        let mut changeLeft = parse_vehicle_classes_v(&changeLeftS, "", self.myNetworkVersion);
+        let mut changeRight = parse_vehicle_classes_v(&changeRightS, "", self.myNetworkVersion);
+        if lefthand() {
+            // internally, changeLeft always checks for the higher lane index
+            // even though the higher lane index is to the right in a left-hand network
+            std::mem::swap(&mut changeLeft, &mut changeRight);
+        }
+        if permissions != SVC_ALL || changeLeft != SVC_ALL || changeRight != SVC_ALL {
+            self.myNet.m().set_permissions_found();
+        }
+        self.myCurrentIsBroken |= !ok;
+        if !self.myCurrentIsBroken {
+            let result = try_catch_args(|| {
+                self.myEdgeControlBuilder.m().add_lane(&id, maxSpeed, friction, length, &shape, width, permissions, changeLeft, changeRight, index, isRampAccel, &type_, &outlineShape)
+            });
+            match result {
+                Ok(lane) => {
+                    // insert the lane into the lane-dictionary, checking
+                    if !MSLane::dictionary(&id, lane) {
+                        // C++ `delete lane`
+                        drop(unsafe { Box::from_raw(lane.as_raw()) });
+                        write_error(&format!("Another lane with the id '{}' exists.", id));
+                        self.myCurrentIsBroken = true;
+                        self.myLastParameterised.push(Ptr::null());
+                    } else {
+                        self.myLastParameterised.push(lane_as_parameterised(lane));
+                    }
+                }
+                Err(what) => write_error(&what),
+            }
+        }
     }
 
     /// C++: `void NLHandler::addRequest(const SUMOSAXAttributes &)` [private]
@@ -2227,7 +2325,23 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_request(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addRequest")
+        if self.myCurrentIsBroken {
+            return;
+        }
+        let mut ok = true;
+        let request = attrs.get::<i32>(SUMO_ATTR_INDEX, "", &mut ok, true);
+        let cont = attrs.get_opt::<bool>(SUMO_ATTR_CONT, "", &mut ok, false, true);
+        let response = attrs.get::<String>(SUMO_ATTR_RESPONSE, "", &mut ok, true);
+        let foes = attrs.get::<String>(SUMO_ATTR_FOES, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        // store received information
+        if request >= 0 && !response.is_empty() {
+            if let Err(what) = try_catch_args(|| self.myJunctionControlBuilder.m().add_logic_item(request, &response, &foes, cont)) {
+                write_error(&what);
+            }
+        }
     }
 
     /// C++: `void NLHandler::initJunctionLogic(const SUMOSAXAttributes &)` [private]
@@ -2247,7 +2361,16 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn init_junction_logic(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::initJunctionLogic")
+        if self.myCurrentIsBroken {
+            return;
+        }
+        self.myAmParsingTLLogicOrJunction = true;
+        let mut ok = true;
+        // we either a have a junction or a legacy network with ROWLogic
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if ok {
+            self.myJunctionControlBuilder.m().init_junction_logic(&id);
+        }
     }
 
     /// C++: `void NLHandler::initTrafficLightLogic(const SUMOSAXAttributes &)` [private]
@@ -2298,7 +2421,47 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn init_traffic_light_logic(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::initTrafficLightLogic")
+        self.myCurrentIsBroken = false;
+        self.myAmParsingTLLogicOrJunction = true;
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let programID = attrs.get_opt::<String>(SUMO_ATTR_PROGRAMID, &id, &mut ok, "<unknown>".to_string(), true);
+        let mut type_ = TrafficLightType::STATIC;
+        let mut typeS = String::new();
+        if self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().get_2(&id, &programID).is_null() {
+            // SUMO_ATTR_TYPE is not needed when only modifying the offset of an
+            // existing program
+            typeS = attrs.get::<String>(SUMO_ATTR_TYPE, &id, &mut ok, true);
+            if !ok {
+                self.myCurrentIsBroken = true;
+                return;
+            }
+            if TrafficLightTypes.has_string(&typeS) {
+                type_ = unwrap_or_throw(TrafficLightTypes.get(&typeS));
+            } else {
+                write_error(&format!("Traffic light '{}' has unknown type '{}'.", id, typeS));
+            }
+            if use_meso_sim() && type_ != TrafficLightType::STATIC && type_ != TrafficLightType::ACTUATED && type_ != TrafficLightType::RAIL_SIGNAL && type_ != TrafficLightType::RAIL_CROSSING && type_ != TrafficLightType::OFF {
+                if !self.myHaveWarnedAboutInvalidTLType {
+                    write_warning(&format!(
+                        "Traffic light type '{}' cannot be used in mesoscopic simulation. Using '{}' as fallback.",
+                        TrafficLightTypes.get_string(type_).unwrap_or_default(),
+                        TrafficLightTypes.get_string(TrafficLightType::STATIC).unwrap_or_default()
+                    ));
+                    self.myHaveWarnedAboutInvalidTLType = true;
+                }
+                type_ = TrafficLightType::STATIC;
+            }
+        }
+        let mut offset = attrs.get_opt_offset_reporting(SUMO_ATTR_OFFSET, &id, &mut ok, 0, true);
+        if offset == SUMOTIME_MAX {
+            offset = unwrap_or_throw(utils::common::time::string2time(&utils::options::options_cont::get_string("begin")));
+        }
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        self.myJunctionControlBuilder.m().init_traffic_light_logic(&id, &programID, type_, offset);
     }
 
     /// C++: `void NLHandler::addPhase(const SUMOSAXAttributes &)` [private]
@@ -2385,7 +2548,86 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_phase(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addPhase")
+        // try to get the phase definition
+        let mut ok = true;
+        let id = self.myJunctionControlBuilder.m().get_active_key().to_string();
+        let tDefault = UNSPECIFIED_DURATION;
+
+        let duration = attrs.get_sumo_time_reporting(SUMO_ATTR_DURATION, &id, &mut ok, true);
+        let state = attrs.get::<String>(SUMO_ATTR_STATE, "", &mut ok, true);
+        if duration == 0 {
+            let loaded = self.myJunctionControlBuilder.m().get_loaded_phases().len();
+            write_error(&format!(
+                "Duration of phase {} for tlLogic '{}' program '{}' is zero.",
+                loaded,
+                self.myJunctionControlBuilder.m().get_active_key(),
+                self.myJunctionControlBuilder.m().get_active_sub_key()
+            ));
+            return;
+        }
+        if !ok {
+            return;
+        }
+        let mut phase = MSPhaseDefinition::new(duration, &state, "");
+
+        // if the traffic light is an actuated traffic light, try to get
+        //  the minimum and maximum durations
+        phase.minDuration = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MINDURATION, &id, &mut ok, duration, true);
+        // if minDur is set but not maxDur, assume high maxDur (avoid using the absolute max in case we do some arithmetic later)
+        let defaultMaxDur = if attrs.has_attribute(SUMO_ATTR_MINDURATION) { i32::MAX as SUMOTime } else { duration };
+        phase.maxDuration = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MAXDURATION, &id, &mut ok, defaultMaxDur, true);
+        phase.earliestEnd = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_EARLIEST_END, &id, &mut ok, tDefault, true);
+        phase.latestEnd = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_LATEST_END, &id, &mut ok, tDefault, true);
+        phase.nextPhases = attrs.get_opt::<Vec<i32>>(SUMO_ATTR_NEXT, &id, &mut ok, Vec::new(), true);
+        phase.earlyTarget = attrs.get_opt::<String>(SUMO_ATTR_EARLY_TARGET, &id, &mut ok, String::new(), true);
+        phase.finalTarget = attrs.get_opt::<String>(SUMO_ATTR_FINAL_TARGET, &id, &mut ok, String::new(), true);
+        phase.name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+
+        phase.vehext = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_VEHICLEEXTENSION, &id, &mut ok, tDefault, true);
+        phase.yellow = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_YELLOW, &id, &mut ok, tDefault, true);
+        phase.red = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_RED, &id, &mut ok, tDefault, true);
+
+        if attrs.has_attribute(SUMO_ATTR_TYPE) {
+            // SOTL attributes
+            // If the type attribute is not present, the parsed phase is of type "undefined" (MSPhaseDefinition constructor),
+            // in this way SOTL traffic light logic can recognize the phase as unsuitable or decides other
+            // behaviors. See SOTL traffic light logic implementations.
+            let mut phaseTypeString = String::new();
+            // C++ `catch (EmptyData&)`: an empty type makes the get() fail without a value
+            let mut typeOk = true;
+            let typeValue = attrs.get::<String>(SUMO_ATTR_TYPE, &id, &mut typeOk, false);
+            if typeOk {
+                phaseTypeString = typeValue;
+            } else {
+                write_warning("Empty type definition. Assuming phase type as SUMOSOTL_TagAttrDefinitions::SOTL_ATTL_TYPE_TRANSIENT");
+                phase.myTransientNotDecisional = false;
+            }
+            if phaseTypeString.contains("decisional") {
+                phase.myTransientNotDecisional = false;
+            } else if phaseTypeString.contains("transient") {
+                phase.myTransientNotDecisional = true;
+            } else {
+                write_warning("SOTL_ATTL_TYPE_DECISIONAL nor SOTL_ATTL_TYPE_TRANSIENT. Assuming phase type as SUMOSOTL_TagAttrDefinitions::SOTL_ATTL_TYPE_TRANSIENT");
+                phase.myTransientNotDecisional = false;
+            }
+            phase.myCommit = phaseTypeString.contains("commit");
+
+            if phaseTypeString.contains("target") {
+                // Phase declared as target, getting targetLanes attribute
+                // (the C++ `catch (EmptyData&)` around getStringSecure is unreachable: that getter never throws)
+                let targetLanes = attrs.get_string_secure(SUMO_ATTR_TARGETLANE, "");
+                phase.myTargetLaneSet = StringTokenizer::with_token(&targetLanes, " ,;", true).get_vector();
+            }
+        }
+
+        if phase.maxDuration < phase.minDuration {
+            write_warning(&format!("maxDur {} should not be smaller than minDir {} in phase of tlLogic {}", phase.maxDuration, phase.minDuration, id));
+            phase.maxDuration = phase.duration;
+        }
+
+        phase.myLastSwitch = unwrap_or_throw(utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))) - 1; // SUMOTime-option
+        // C++ `new`: the phase is owned by the junction control builder
+        self.myJunctionControlBuilder.m().add_phase(Ptr::from_raw(Box::into_raw(Box::new(phase))));
     }
 
     /// C++: `void NLHandler::addCondition(const SUMOSAXAttributes &)` [private]
@@ -2401,7 +2643,12 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_condition(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addCondition")
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let value = attrs.get::<String>(SUMO_ATTR_VALUE, &id, &mut ok, true);
+        if !self.myJunctionControlBuilder.m().add_condition(&id, &value) {
+            write_error(&format!("Duplicate condition '{}' in tlLogic '{}'", id, self.myJunctionControlBuilder.m().get_active_key()));
+        }
     }
 
     /// C++: `void NLHandler::addAssignment(const SUMOSAXAttributes &)` [private]
@@ -2416,7 +2663,11 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_assignment(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addAssignment")
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let check = attrs.get::<String>(SUMO_ATTR_CHECK, "", &mut ok, true);
+        let value = attrs.get::<String>(SUMO_ATTR_VALUE, &id, &mut ok, true);
+        self.myJunctionControlBuilder.m().add_assignment(&id, &check, &value);
     }
 
     /// C++: `void NLHandler::addFunction(const SUMOSAXAttributes &)` [private]
@@ -2430,7 +2681,10 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_function(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addFunction")
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let nArgs = attrs.get::<i32>(SUMO_ATTR_NARGS, "", &mut ok, true);
+        self.myJunctionControlBuilder.m().add_function(&id, nArgs);
     }
 
     /// C++: `void NLHandler::closeFunction()` [private]
@@ -2441,7 +2695,7 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_function(&mut self) {
-        todo!("port NLHandler::closeFunction")
+        self.myJunctionControlBuilder.m().close_function();
     }
 
     /// C++: `void NLHandler::openJunction(const SUMOSAXAttributes &)` [virtual, private]
@@ -2491,14 +2745,67 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_junction(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::openJunction")
+        self.myCurrentIsBroken = false;
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let mut shape = PositionVector::default();
+        if attrs.has_attribute(SUMO_ATTR_SHAPE) {
+            // inner junctions have no shape
+            shape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, PositionVector::default(), true);
+            if shape.size() > 2 {
+                shape.close_polygon();
+            }
+        }
+        let x = attrs.get::<f64>(SUMO_ATTR_X, &id, &mut ok, true);
+        let y = attrs.get::<f64>(SUMO_ATTR_Y, &id, &mut ok, true);
+        let z = attrs.get_opt::<f64>(SUMO_ATTR_Z, &id, &mut ok, 0.0, true);
+        let type_ = attrs.get::<SumoXMLNodeType>(SUMO_ATTR_TYPE, &id, &mut ok, true);
+        let key = attrs.get_opt::<String>(SUMO_ATTR_KEY, &id, &mut ok, String::new(), true);
+        let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        // incoming lanes
+        let mut incomingLanes: Vec<Ptr<MSLane>> = Vec::new();
+        self.parse_lanes(&id, &attrs.get_string_secure(SUMO_ATTR_INCLANES, ""), &mut incomingLanes, &mut ok);
+        // internal lanes
+        let mut internalLanes: Vec<Ptr<MSLane>> = Vec::new();
+        if using_internal_lanes() {
+            self.parse_lanes(&id, &attrs.get_string_secure(SUMO_ATTR_INTLANES, ""), &mut internalLanes, &mut ok);
+        }
+        if !ok {
+            self.myCurrentIsBroken = true;
+        } else {
+            let result = try_catch_args(|| {
+                self.myJunctionControlBuilder.m().open_junction(&id, &key, type_, Position::new(x, y, z), &shape, &incomingLanes, &internalLanes, &name);
+            });
+            if let Err(what) = result {
+                write_error(&format!("{}\n Can not build according junction.", what));
+                self.myCurrentIsBroken = true;
+            }
+        }
     }
 
     /// C++: `void NLHandler::parseLanes(const std::string &, const std::string &, int &, bool &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn parse_lanes(&mut self, junctionID: &str, def: &str, into: &mut i32, ok: &mut bool) {
-        todo!("port NLHandler::parseLanes")
+    pub fn parse_lanes(&mut self, junctionID: &str, def: &str, into: &mut Vec<Ptr<MSLane>>, ok: &mut bool) {
+        let mut st = StringTokenizer::with_token(def, " ", false);
+        while *ok && st.has_next() {
+            let laneID = unwrap_or_throw(st.next());
+            let lane = MSLane::dictionary_2(&laneID);
+            if !using_internal_lanes() && laneID.starts_with(':') {
+                continue;
+            }
+            if lane.is_null() {
+                write_error(&format!("An unknown lane ('{}') was tried to be set as incoming to junction '{}'.", laneID, junctionID));
+                *ok = false;
+                continue;
+            }
+            into.push(lane);
+        }
     }
 
     /// C++: `void NLHandler::addConnection(const SUMOSAXAttributes &)` [private]
@@ -2606,7 +2913,101 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_connection(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addConnection")
+        let mut ok = true;
+        let fromID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+        let toID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+        if !using_internal_lanes() && (fromID.starts_with(':') || toID.starts_with(':')) {
+            let tlID = attrs.get_opt::<String>(SUMO_ATTR_TLID, "", &mut ok, String::new(), true);
+            if tlID != "" {
+                let tlLinkIdx = attrs.get::<i32>(SUMO_ATTR_TLLINKINDEX, "", &mut ok, true);
+                self.myJunctionControlBuilder.m().get_tl_logic(&tlID).ignore_link_index(tlLinkIdx);
+            }
+            return;
+        }
+
+        self.myCurrentLink = Ptr::null();
+        let result = try_catch_args(|| {
+            let fromLaneIdx = attrs.get::<i32>(SUMO_ATTR_FROM_LANE, "", &mut ok, true);
+            let toLaneIdx = attrs.get::<i32>(SUMO_ATTR_TO_LANE, "", &mut ok, true);
+            let dirS = attrs.get::<String>(SUMO_ATTR_DIR, "", &mut ok, true);
+            let dir = self.parse_link_dir(&dirS);
+            let stateS = attrs.get::<String>(SUMO_ATTR_STATE, "", &mut ok, true);
+            let state = self.parse_link_state(&stateS);
+            let foeVisibilityDistance = attrs.get_opt::<f64>(SUMO_ATTR_VISIBILITY_DISTANCE, "", &mut ok, if state == LINKSTATE_ZIPPER { 100.0 } else { 4.5 }, true);
+            let keepClear = attrs.get_opt::<bool>(SUMO_ATTR_KEEP_CLEAR, "", &mut ok, true, true);
+            let indirect = attrs.get_opt::<bool>(SUMO_ATTR_INDIRECT, "", &mut ok, false, true);
+            let tlID = attrs.get_opt::<String>(SUMO_ATTR_TLID, "", &mut ok, String::new(), true);
+            let viaID = attrs.get_opt::<String>(SUMO_ATTR_VIA, "", &mut ok, String::new(), true);
+
+            let from = MSEdge::dictionary_hint(&fromID, self.myPreviousEdgeIdx);
+            if from.is_null() {
+                write_error(&format!("Unknown from-edge '{}' in connection.", fromID));
+                return;
+            }
+            self.myPreviousEdgeIdx = from.get_numerical_id();
+            let to = MSEdge::dictionary_2(&toID);
+            if to.is_null() {
+                write_error(&format!("Unknown to-edge '{}' in connection.", toID));
+                return;
+            }
+            if fromLaneIdx < 0 || fromLaneIdx as usize >= from.get_lanes().len() || toLaneIdx < 0 || toLaneIdx as usize >= to.get_lanes().len() {
+                write_error(&format!("Invalid lane index in connection from '{}' to '{}'.", from.get_id(), to.get_id()));
+                return;
+            }
+            let fromLane = from.get_lanes()[fromLaneIdx as usize];
+            let toLane = to.get_lanes()[toLaneIdx as usize];
+
+            let mut logic: Ptr<MSTrafficLightLogic> = Ptr::null();
+            let mut tlLinkIdx: i32 = -1;
+            if tlID != "" {
+                tlLinkIdx = attrs.get::<i32>(SUMO_ATTR_TLLINKINDEX, "", &mut ok, true);
+                // make sure that the index is in range
+                logic = self.myJunctionControlBuilder.m().get_tl_logic(&tlID).get_active();
+                let stateLen = logic.get_current_phase_def().get_state().len() as i32;
+                if (tlLinkIdx < 0 || tlLinkIdx >= stateLen) && logic.get_logic_type() != TrafficLightType::RAIL_SIGNAL && logic.get_logic_type() != TrafficLightType::RAIL_CROSSING {
+                    write_error(&format!("Invalid {} '{}' in connection controlled by '{}'", attr_to_string(SUMO_ATTR_TLLINKINDEX), tlLinkIdx, tlID));
+                    return;
+                }
+                if !ok {
+                    return;
+                }
+            }
+
+            let length: f64;
+            // build the link
+            let mut via: Ptr<MSLane> = Ptr::null();
+            if viaID != "" && using_internal_lanes() {
+                via = MSLane::dictionary_2(&viaID);
+                if via.is_null() {
+                    write_error(&format!("An unknown lane ('{}') should be set as a via-lane for lane '{}'.", viaID, toLane.get_id()));
+                    return;
+                }
+                length = via.get_length();
+            } else if toLane.is_crossing() {
+                length = toLane.get_length();
+            } else {
+                length = fromLane.get_shape(false).at(-1).distance_to(toLane.get_shape(false).at(0));
+            }
+            self.myCurrentLink = Ptr::from_raw(Box::into_raw(Box::new(MSLink::new(fromLane, toLane, via, dir, state, length, foeVisibilityDistance, keepClear, logic, tlLinkIdx, indirect))));
+            if !via.is_null() {
+                via.m().add_incoming_lane(fromLane, self.myCurrentLink);
+            } else {
+                toLane.m().add_incoming_lane(fromLane, self.myCurrentLink);
+            }
+            toLane.m().add_approaching_lane(fromLane, self.myNetworkVersion < (0, 25.0));
+
+            // if a traffic light is responsible for it, inform the traffic light
+            // check whether this link is controlled by a traffic light
+            // we can not reuse logic here because it might be an inactive one
+            if tlID != "" {
+                self.myJunctionControlBuilder.m().get_tl_logic(&tlID).add_link(self.myCurrentLink, fromLane, tlLinkIdx);
+            }
+            // add the link
+            fromLane.m().add_link(self.myCurrentLink);
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addConflict(const SUMOSAXAttributes &)` [private]
@@ -2648,7 +3049,36 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_conflict(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addConflict")
+        if self.myCurrentLink.is_null() {
+            throw_invalid_argument(format!("{} must occur within a {} element", tag_to_string(SUMO_TAG_CONFLICT), tag_to_string(SUMO_TAG_CONNECTION)));
+        }
+        if !using_internal_lanes() {
+            return;
+        }
+        let mut ok = true;
+        let fromID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+        let toID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+        let fromLaneIdx = attrs.get::<i32>(SUMO_ATTR_FROM_LANE, "", &mut ok, true);
+        let toLaneIdx = attrs.get::<i32>(SUMO_ATTR_TO_LANE, "", &mut ok, true);
+        let startPos = attrs.get::<f64>(SUMO_ATTR_STARTPOS, "", &mut ok, true);
+        let endPos = attrs.get::<f64>(SUMO_ATTR_ENDPOS, "", &mut ok, true);
+        let from = MSEdge::dictionary_2(&fromID);
+        if from.is_null() {
+            write_error(&format!("Unknown from-edge '{}' in conflict.", fromID));
+            return;
+        }
+        let to = MSEdge::dictionary_2(&toID);
+        if to.is_null() {
+            write_error(&format!("Unknown to-edge '{}' in conflict.", toID));
+            return;
+        }
+        if fromLaneIdx < 0 || fromLaneIdx as usize >= from.get_lanes().len() || toLaneIdx < 0 || toLaneIdx as usize >= to.get_lanes().len() {
+            write_error(&format!("Invalid lane index in conflict with '{}' to '{}'.", from.get_id(), to.get_id()));
+            return;
+        }
+        let fromLane = from.get_lanes()[fromLaneIdx as usize];
+        let toLane = to.get_lanes()[toLaneIdx as usize];
+        self.myCurrentLink.m().add_custom_conflict(fromLane, toLane, startPos, endPos);
     }
 
     /// C++: `void NLHandler::openWAUT(const SUMOSAXAttributes &)` [virtual, private]
@@ -2680,7 +3110,30 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_waut(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::openWAUT")
+        self.myCurrentIsBroken = false;
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let refTime = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_REF_TIME, &id, &mut ok, 0, true);
+        let period = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_PERIOD, &id, &mut ok, 0, true);
+        let startProg = attrs.get::<String>(SUMO_ATTR_START_PROG, &id, &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+        }
+        if !self.myCurrentIsBroken {
+            self.myCurrentWAUTID = id.clone();
+            let result = try_catch_args(|| {
+                self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().add_waut(refTime, &id, &startProg, period);
+            });
+            if let Err(what) = result {
+                write_error(&what);
+                self.myCurrentIsBroken = true;
+            }
+        }
     }
 
     /// C++: `void NLHandler::addWAUTSwitch(const SUMOSAXAttributes &)` [private]
@@ -2703,7 +3156,21 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_waut_switch(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addWAUTSwitch")
+        let mut ok = true;
+        let t = attrs.get_sumo_time_reporting(SUMO_ATTR_TIME, &self.myCurrentWAUTID, &mut ok, true);
+        let to = attrs.get::<String>(SUMO_ATTR_TO, &self.myCurrentWAUTID, &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+        }
+        if !self.myCurrentIsBroken {
+            let result = try_catch_args(|| {
+                self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().add_waut_switch(&self.myCurrentWAUTID, t, &to);
+            });
+            if let Err(what) = result {
+                write_error(&what);
+                self.myCurrentIsBroken = true;
+            }
+        }
     }
 
     /// C++: `void NLHandler::addWAUTJunction(const SUMOSAXAttributes &)` [private]
@@ -2728,7 +3195,23 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_waut_junction(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addWAUTJunction")
+        let mut ok = true;
+        let wautID = attrs.get::<String>(SUMO_ATTR_WAUT_ID, "", &mut ok, true);
+        let junctionID = attrs.get::<String>(SUMO_ATTR_JUNCTION_ID, "", &mut ok, true);
+        let procedure = attrs.get_opt::<String>(SUMO_ATTR_PROCEDURE, "", &mut ok, String::new(), true);
+        let synchron = attrs.get_opt::<bool>(SUMO_ATTR_SYNCHRON, "", &mut ok, false, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+        }
+        let result = try_catch_args(|| {
+            if !self.myCurrentIsBroken {
+                self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().add_waut_junction(&wautID, &junctionID, &procedure, synchron);
+            }
+        });
+        if let Err(what) = result {
+            write_error(&what);
+            self.myCurrentIsBroken = true;
+        }
     }
 
     /// C++: `void NLHandler::setLocation(const SUMOSAXAttributes &)` [private]
@@ -2754,7 +3237,22 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn set_location(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::setLocation")
+        if self.myNetIsLoaded {
+            //WRITE_WARNING(TL("POIs and Polygons should be loaded using option --po-files"))
+            return;
+        }
+        let mut ok = true;
+        let s = attrs.get::<PositionVector>(SUMO_ATTR_NET_OFFSET, "", &mut ok, true);
+        let convBoundary = attrs.get::<Boundary>(SUMO_ATTR_CONV_BOUNDARY, "", &mut ok, true);
+        let origBoundary = attrs.get::<Boundary>(SUMO_ATTR_ORIG_BOUNDARY, "", &mut ok, true);
+        let proj = attrs.get::<String>(SUMO_ATTR_ORIG_PROJ, "", &mut ok, true);
+        if ok {
+            let networkOffset = *s.at(0);
+            GeoConvHelper::init(&proj, networkOffset, origBoundary, convBoundary, 1.0);
+            if utils::options::options_cont::get_bool("fcd-output.geo") && !GeoConvHelper::with_final(|g| g.using_geo_projection()) {
+                write_warning("no valid geo projection loaded from network. fcd-output.geo will not work");
+            }
+        }
     }
 
     /// C++: `void NLHandler::addDistrict(const SUMOSAXAttributes &)` [private]
@@ -2889,7 +3387,18 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_roundabout(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addRoundabout")
+        let mut ok = true;
+        let edgeIDs = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, "", &mut ok, true);
+        if ok {
+            for eID in &edgeIDs {
+                let edge = MSEdge::dictionary_2(eID);
+                if edge.is_null() {
+                    write_error(&format!("Unknown edge '{}' in roundabout", eID));
+                } else {
+                    edge.m().mark_as_roundabout();
+                }
+            }
+        }
     }
 
     /// C++: `void NLHandler::closeWAUT()` [private]
@@ -2907,7 +3416,15 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_waut(&mut self) {
-        todo!("port NLHandler::closeWAUT")
+        if !self.myCurrentIsBroken {
+            let wautID = self.myCurrentWAUTID.clone();
+            let result = try_catch_args(|| self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().close_waut(&wautID));
+            if let Err(what) = result {
+                write_error(&what);
+                self.myCurrentIsBroken = true;
+            }
+        }
+        self.myCurrentWAUTID = String::new();
     }
 
     /// C++: `LinkDirection NLHandler::parseLinkDir(const std::string &)` [private]
@@ -2922,7 +3439,11 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_link_dir(&mut self, dir: &str) -> LinkDirection {
-        todo!("port NLHandler::parseLinkDir")
+        if LinkDirections.has_string(dir) {
+            unwrap_or_throw(LinkDirections.get(dir))
+        } else {
+            throw_invalid_argument(format!("Unrecognised link direction '{}'.", dir));
+        }
     }
 
     /// C++: `LinkState NLHandler::parseLinkState(const std::string &)` [private]
@@ -2942,7 +3463,15 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_link_state(&mut self, state: &str) -> LinkState {
-        todo!("port NLHandler::parseLinkState")
+        if LinkStates.has_string(state) {
+            unwrap_or_throw(LinkStates.get(state))
+        } else if state == "t" {
+            // legacy networks
+            // WRITE_WARNING(TL("Obsolete link state 't'. Use 'o' instead"));
+            LINKSTATE_TL_OFF_BLINKING
+        } else {
+            throw_invalid_argument(format!("Unrecognised link state '{}'.", state));
+        }
     }
 
     /// C++: `int NLHandler::parseDetectPersons(const std::string &, const std::string &, bool &)` [private]
@@ -2962,7 +3491,17 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_detect_persons(&mut self, detectPersonsString: &str, id: &str, ok: &mut bool) -> i32 {
-        todo!("port NLHandler::parseDetectPersons")
+        let mut detectPersons: i32 = 0;
+        for mode in StringTokenizer::new(detectPersonsString).get_vector() {
+            if PersonModeValues.has_string(&mode) {
+                detectPersons |= unwrap_or_throw(PersonModeValues.get(&mode)) as i32;
+            } else {
+                write_error(&format!("Invalid person mode '{}' in E1 detector definition '{}'", mode, id));
+                *ok = false;
+                return 0;
+            }
+        }
+        detectPersons
     }
 
     /// C++: `void NLHandler::NLHandler(const NLHandler &)` [private]
@@ -2970,7 +3509,8 @@ impl NLHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLHandler) -> Self {
-        todo!("port NLHandler::NLHandler")
+        // C++ declares the copy constructor private and never defines it
+        std::panic::panic_any(ProcessError::new("NLHandler copy constructor is private and undefined in C++"))
     }
 
     /// C++: `NLHandler & NLHandler::operator=(const NLHandler &)` [private]
@@ -2978,7 +3518,8 @@ impl NLHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLHandler) -> &mut NLHandler {
-        todo!("port NLHandler::operator=")
+        // C++ declares the assignment operator private and never defines it
+        std::panic::panic_any(ProcessError::new("NLHandler assignment operator is private and undefined in C++"))
     }
 
 }
