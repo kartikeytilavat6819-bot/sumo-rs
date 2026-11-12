@@ -105,7 +105,7 @@ pub struct MSAbstractLaneChangeModel {
 //   static bool MSAbstractLaneChangeModel::myLCXYOutput;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use utils::common::time::{delta_t, dist2speed, speed2dist, steps2time, time2steps};
+use utils::common::time::{delta_t, dist2speed, speed2accel, speed2dist, steps2time, time2steps};
 use utils::geom::NUMERICAL_EPS;
 use utils::options::options_cont::{get_bool, is_set};
 
@@ -2344,7 +2344,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn sublane_change_completed(&self, latDist: f64) -> bool {
-        todo!("port MSAbstractLaneChangeModel::sublaneChangeCompleted")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        );
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setShadowApproachingInformation(MSLink *) const` [const]
@@ -2379,7 +2382,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn is_opposite(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::isOpposite")
+        self.myAmOpposite
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getNormalizedLaneIndex()`
@@ -2395,7 +2398,12 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_normalized_lane_index(&mut self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getNormalizedLaneIndex")
+        let i = self.myVehicle.get_lane().get_index();
+        if self.myAmOpposite {
+            self.myVehicle.get_lane().get_parallel_opposite().get_edge().get_num_lanes() + self.myVehicle.get_lane().get_edge().get_num_lanes() - 1 - i
+        } else {
+            i
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getCommittedSpeed() const` [const]
@@ -2404,7 +2412,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_committed_speed(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getCommittedSpeed")
+        self.myCommittedSpeed
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getSpeedLat() const` [const]
@@ -2414,7 +2422,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_lat(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getSpeedLat")
+        self.mySpeedLat
     }
 
     /// C++: `void MSAbstractLaneChangeModel::resetSpeedLat()` [virtual]
@@ -2426,7 +2434,9 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn reset_speed_lat(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::resetSpeedLat")
+        if MSGlobals::lane_change_duration() > 0 && !self.is_changing_lanes() {
+            self.set_speed_lat(0.);
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getAccelerationLat() const` [const]
@@ -2436,7 +2446,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_acceleration_lat(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getAccelerationLat")
+        self.myAccelerationLat
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getStrategicLookahead() const` [const]
@@ -2445,7 +2455,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_strategic_lookahead(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getStrategicLookahead")
+        self.myStrategicLookahead
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setSpeedLat(double)`
@@ -2457,7 +2467,8 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_lat(&mut self, speedLat: f64) {
-        todo!("port MSAbstractLaneChangeModel::setSpeedLat")
+        self.myAccelerationLat = speed2accel(speedLat - self.mySpeedLat);
+        self.mySpeedLat = speedLat;
     }
 
     /// C++: `double MSAbstractLaneChangeModel::computeSpeedLat(double, double &, bool) const` [const, virtual]
@@ -2473,7 +2484,12 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::computeSpeedLat")
+        if self.myVehicle.get_vehicle_type().was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
+            let stepsToChange = (maneuverDist.abs() / speed2dist(self.myVehicle.get_vehicle_type().get_max_speed_lat())).ceil() as i32;
+            dist2speed(*maneuverDist / stepsToChange as f64)
+        } else {
+            *maneuverDist / steps2time(MSGlobals::lane_change_duration())
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getAssumedDecelForLaneChangeDuration() const` [const, virtual]
