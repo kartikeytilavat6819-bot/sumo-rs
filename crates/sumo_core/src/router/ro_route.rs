@@ -314,7 +314,7 @@ impl RORoute {
     //     return dev;
     // }
     #[allow(unused_variables)]
-    pub fn write_xml_definition(&self, dev: &mut OutputDevice, veh: Ptr<ROVehicle>, withCosts: bool, asAlternatives: bool, withExitTimes: bool, withLength: bool, id: &str) -> &mut OutputDevice {
+    pub fn write_xml_definition<'a>(&self, dev: &'a mut OutputDevice, veh: Ptr<ROVehicle>, withCosts: bool, asAlternatives: bool, withExitTimes: bool, withLength: bool, id: &str) -> &'a mut OutputDevice {
         dev.open_tag_id(SUMO_TAG_ROUTE);
         if !id.is_empty() {
             dev.write_attr(SUMO_ATTR_ID, id);
