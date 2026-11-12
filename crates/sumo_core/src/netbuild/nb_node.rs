@@ -7182,7 +7182,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_edges_sorted_by_angle_at_node_center(&self) -> EdgeVector {
-        todo!("port NBNode::getEdgesSortedByAngleAtNodeCenter")
+        let mut result = self.myAllEdges.clone();
+        let sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(Ptr::new(self));
+        sort_edges_by(&mut result, |a, b| sorter.call_op(a, b));
+        // let the first edge in myAllEdges remain the first
+        rotate_edges_to_front(&mut result, self.myAllEdges.first().copied());
+        result
     }
 
     /// C++: `bool NBNode::isLongEnough(NBEdge *, double)` [static, private]
@@ -7204,7 +7209,18 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_long_enough(out: Ptr<NBEdge>, minLength: f64) -> bool {
-        todo!("port NBNode::isLongEnough")
+        let mut out = out;
+        let mut seen = out.get_loaded_length();
+        while seen < minLength {
+            // advance along trivial continuations
+            if out.get_to_node().myOutgoingEdges.len() != 1 || out.get_to_node().myIncomingEdges.len() != 1 {
+                return false;
+            } else {
+                out = out.get_to_node().myOutgoingEdges[0];
+                seen += out.get_loaded_length();
+            }
+        }
+        true
     }
 
     /// C++: `void NBNode::removeJoinedTrafficLights()` [private]
@@ -7297,7 +7313,13 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn includes(super_: &BTreeSet<Ptr<NBEdge>>, sub: &BTreeSet<Ptr<NBEdge>>) -> bool {
-        todo!("port NBNode::includes")
+        // for some reason std::include does not work reliably
+        for e in sub.iter() {
+            if !super_.contains(e) {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `NBEdge * NBNode::getNextCompatibleOutgoing(const NBEdge *, SVCPermissions, EdgeVector::const_iterator, bool) const` [const, private]
@@ -7958,7 +7980,7 @@ impl NBNode_edge_by_direction_sorter {
     // explicit edge_by_direction_sorter(NBNode* n) : myNode(n) {}
     #[allow(unused_variables)]
     pub fn new(n: Ptr<NBNode>) -> Self {
-        todo!("port edge_by_direction_sorter::edge_by_direction_sorter")
+        Self { myNode: n }
     }
 
     /// C++: `int edge_by_direction_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -7969,7 +7991,8 @@ impl NBNode_edge_by_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_direction_sorter::operator()")
+        // C++: return e1->getFromNode() == myNode;
+        (e1.get_from_node() == self.myNode) as i32
     }
 
 }
@@ -7985,7 +8008,7 @@ impl NBNode_nodes_by_id_sorter {
     // explicit nodes_by_id_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port nodes_by_id_sorter::nodes_by_id_sorter")
+        Self {}
     }
 
     /// C++: `int nodes_by_id_sorter::operator()(NBNode *, NBNode *) const` [const]
@@ -7995,7 +8018,7 @@ impl NBNode_nodes_by_id_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, n1: Ptr<NBNode>, n2: Ptr<NBNode>) -> i32 {
-        todo!("port nodes_by_id_sorter::operator()")
+        (n1.get_id() < n2.get_id()) as i32
     }
 
 }
