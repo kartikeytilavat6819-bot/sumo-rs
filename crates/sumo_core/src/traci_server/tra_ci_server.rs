@@ -1,9 +1,22 @@
 //! Port of traci-server/TraCIServer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 
 /// C++ typedef `bool (*)(TraCIServer &, tcpip::Storage &, tcpip::Storage &) TraCIServer::CmdExecutor`
-pub type TraCIServer_CmdExecutor = Unmapped /* bool (*)(TraCIServer &, tcpip::Storage &, tcpip::Storage &) */;
+pub type TraCIServer_CmdExecutor = fn(&mut TraCIServer, &mut Storage, &mut Storage) -> bool;
+
+// C++ static members of TraCIServer: `myInstance` and `myDoCloseConnection`
+static MY_INSTANCE: AtomicPtr<TraCIServer> = AtomicPtr::new(std::ptr::null_mut());
+static MY_DO_CLOSE_CONNECTION: AtomicBool = AtomicBool::new(false);
+
+fn my_instance() -> Ptr<TraCIServer> {
+    Ptr::from_raw(MY_INSTANCE.load(Ordering::Relaxed))
+}
+
+fn set_my_instance(p: Ptr<TraCIServer>) {
+    MY_INSTANCE.store(p.as_raw(), Ordering::Relaxed);
+}
 
 /// C++ class `TraCIServer::SocketInfo` (traci-server/TraCIServer.h)
 pub struct TraCIServer_SocketInfo {
@@ -14,9 +27,9 @@ pub struct TraCIServer_SocketInfo {
     /// Socket object for this client
     pub socket: Ptr<Socket>,
     /// container for vehicle state changes since last step taken by this client
-    pub vehicleStateChanges: i32,
+    pub vehicleStateChanges: BTreeMap<MSNet_VehicleState, Vec<String>>,
     /// container for transportable state changes since last step taken by this client
-    pub transportableStateChanges: i32,
+    pub transportableStateChanges: BTreeMap<MSNet_TransportableState, Vec<String>>,
 }
 
 impl TraCIServer_SocketInfo {
@@ -26,7 +39,13 @@ impl TraCIServer_SocketInfo {
     //             : targetTime(t), socket(socket) {}
     #[allow(unused_variables)]
     pub fn new(socket: Ptr<Socket>, t: SUMOTime) -> Self {
-        todo!("port SocketInfo::SocketInfo")
+        TraCIServer_SocketInfo {
+            targetTime: t,
+            executeMove: false,
+            socket,
+            vehicleStateChanges: BTreeMap::new(),
+            transportableStateChanges: BTreeMap::new(),
+        }
     }
 
     /// C++: `void SocketInfo::~SocketInfo() noexcept`
@@ -36,33 +55,37 @@ impl TraCIServer_SocketInfo {
     //         }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SocketInfo::~SocketInfo")
+        if !self.socket.is_null() {
+            drop(unsafe { Box::from_raw(self.socket.as_raw()) });
+        }
     }
 
     /// C++: `void SocketInfo::SocketInfo(const SocketInfo &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &TraCIServer_SocketInfo) -> Self {
-        todo!("port SocketInfo::SocketInfo")
+        // C++ declares this copy constructor private and never defines it, so it cannot be used
+        panic!("TraCIServer::SocketInfo copy constructor is private and undefined in C++")
     }
 
 }
 
 /// TraCI server used to control sumo by a remote TraCI client
 /// C++ class `TraCIServer` (traci-server/TraCIServer.h)
+#[repr(C)]
 pub struct TraCIServer {
-    /// C++ base class `MSNet::VehicleStateListener`
+    /// C++ base class `MSNet::VehicleStateListener` (first field, so the struct can be cast to it)
     pub base: MSNet_VehicleStateListener,
     /// C++ base class `libsumo::VariableWrapper`
     pub base2: VariableWrapper,
     /// C++ base class `MSNet::TransportableStateListener`
     pub base3: MSNet_TransportableStateListener,
     /// The socket connections to the clients the first component (index) determines the client's order (lowest index's commands are processed first),
-    pub mySockets: i32,
+    pub mySockets: BTreeMap<i32, Ptr<TraCIServer_SocketInfo>>,
     /// This stores the setOrder(int) requests of the clients.
-    pub mySocketReorderRequests: i32,
-    /// The currently active client socket
-    pub myCurrentSocket: i32,
+    pub mySocketReorderRequests: BTreeMap<i32, Ptr<TraCIServer_SocketInfo>>,
+    /// The currently active client, as its key in mySockets (None = end())
+    pub myCurrentSocket: Option<i32>,
     /// The time step to reach until processing the next commands
     pub myTargetTime: SUMOTime,
     /// The storage to read from
@@ -74,18 +97,19 @@ pub struct TraCIServer {
     /// The last timestep's subscription results
     pub mySubscriptionCache: Storage,
     /// Map of commandIds -> their executors; applicable if the executor applies to the method footprint
-    pub myExecutors: i32,
+    pub myExecutors: BTreeMap<i32, TraCIServer_CmdExecutor>,
     /// Set of variables which have parameters
-    pub myParameterized: i32,
-    pub myLoadArgs: i32,
+    pub myParameterized: BTreeSet<(i32, i32)>,
+    /// Arguments of a load command
+    pub myLoadArgs: Vec<String>,
     /// The list of known, still valid subscriptions
-    pub mySubscriptions: i32,
+    pub mySubscriptions: Vec<Subscription>,
     /// The last modified context subscription (the one to add a filter to, see (), currently only for vehicle to vehicle context)
     pub myLastContextSubscription: Ptr<Subscription>,
     /// Changes in the states of simulated vehicles
-    pub myVehicleStateChanges: i32,
+    pub myVehicleStateChanges: BTreeMap<MSNet_VehicleState, Vec<String>>,
     /// Changes in the states of simulated transportables
-    pub myTransportableStateChanges: i32,
+    pub myTransportableStateChanges: BTreeMap<MSNet_TransportableState, Vec<String>>,
 }
 
 impl std::ops::Deref for TraCIServer {
@@ -111,7 +135,7 @@ impl TraCIServer {
     //     }
     #[allow(unused_variables)]
     pub fn get_target_time(&self) -> SUMOTime {
-        todo!("port TraCIServer::getTargetTime")
+        self.myTargetTime
     }
 
     /// C++: `TraCIServer * TraCIServer::getInstance()` [static]
@@ -120,7 +144,7 @@ impl TraCIServer {
     //     }
     #[allow(unused_variables)]
     pub fn get_instance() -> Ptr<TraCIServer> {
-        todo!("port TraCIServer::getInstance")
+        my_instance()
     }
 
     /// C++: `void TraCIServer::openSocket(const int &)` [static]
@@ -143,8 +167,27 @@ impl TraCIServer {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn open_socket(execs: &i32) {
-        todo!("port TraCIServer::openSocket")
+    pub fn open_socket(execs: &BTreeMap<i32, TraCIServer_CmdExecutor>) {
+        if my_instance().is_null() && !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) && utils::options::options_cont::get_int("remote-port") != 0 {
+            let server = TraCIServer::new(
+                string2time(&utils::options::options_cont::get_string("begin")).unwrap(),
+                utils::options::options_cont::get_int("remote-port"),
+                utils::options::options_cont::get_int("num-clients"),
+            );
+            let inst = Ptr::from_raw(Box::into_raw(Box::new(server)));
+            set_my_instance(inst);
+            for (k, v) in execs {
+                inst.m().myExecutors.insert(k.clone(), v.clone());
+            }
+        }
+        let inst = my_instance();
+        if !inst.is_null() {
+            // maybe net was deleted and built again
+            let net = MSNet::get_instance();
+            net.m().add_vehicle_state_listener(inst.cast::<MSNet_VehicleStateListener>());
+            net.m().add_transportable_state_listener(inst.cast::<MSNet_TransportableStateListener>());
+            inst.m().mySubscriptionCache.write_int(0);
+        }
     }
 
     /// C++: `void TraCIServer::close()` [static]
@@ -160,7 +203,15 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn close() {
-        todo!("port TraCIServer::close")
+        let inst = my_instance();
+        if inst.is_null() {
+            return;
+        }
+        // C++ `delete myInstance`: run the destructor, then free the object
+        inst.m().drop_();
+        drop(unsafe { Box::from_raw(inst.as_raw()) });
+        set_my_instance(Ptr::null());
+        MY_DO_CLOSE_CONNECTION.store(true, Ordering::Relaxed);
     }
 
     /// C++: `bool TraCIServer::wasClosed()` [static]
@@ -171,7 +222,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn was_closed() -> bool {
-        todo!("port TraCIServer::wasClosed")
+        MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed)
     }
 
     /// C++: `int TraCIServer::processCommands(const SUMOTime, const bool)`
@@ -637,7 +688,10 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn init_wrapper(&mut self, domainID: i32, variable: i32, objID: &str) {
-        todo!("port TraCIServer::initWrapper")
+        self.myWrapperStorage.reset();
+        self.myWrapperStorage.write_unsigned_byte(domainID).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(variable).unwrap();
+        self.myWrapperStorage.write_string(objID);
     }
 
     /// C++: `bool TraCIServer::wrapConnectionVector(const std::string &, const int, const int &)`
@@ -658,8 +712,21 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapConnectionVector")
+    pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &[TraCIConnection]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 8);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_typed_string(w, &c.approachedLane);
+            StorageHelper::write_typed_string(w, &c.approachedInternal);
+            StorageHelper::write_typed_unsigned_byte(w, c.hasPrio as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.isOpen as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.hasFoe as i32);
+            StorageHelper::write_typed_string(w, &c.state);
+            StorageHelper::write_typed_string(w, &c.direction);
+            StorageHelper::write_typed_double(w, c.length);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapDouble(const std::string &, const int, const double)` [virtual]
@@ -671,7 +738,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
-        todo!("port TraCIServer::wrapDouble")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+        self.myWrapperStorage.write_double(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapInt(const std::string &, const int, const int)` [virtual]
@@ -683,7 +752,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
-        todo!("port TraCIServer::wrapInt")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_INTEGER).unwrap();
+        self.myWrapperStorage.write_int(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapString(const std::string &, const int, const std::string &)` [virtual]
@@ -695,7 +766,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
-        todo!("port TraCIServer::wrapString")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_STRING).unwrap();
+        self.myWrapperStorage.write_string(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringList(const std::string &, const int, const int &)`
@@ -706,8 +779,10 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapStringList")
+    pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &[String]) -> bool {
+        self.myWrapperStorage.write_unsigned_byte(TYPE_STRINGLIST).unwrap();
+        self.myWrapperStorage.write_string_list(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapDoubleList(const std::string &, const int, const int &)`
@@ -718,8 +793,10 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapDoubleList")
+    pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &[f64]) -> bool {
+        self.myWrapperStorage.write_unsigned_byte(TYPE_DOUBLELIST).unwrap();
+        self.myWrapperStorage.write_double_list(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapPosition(const std::string &, const int, const libsumo::TraCIPosition &)` [virtual]
@@ -736,7 +813,14 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
-        todo!("port TraCIServer::wrapPosition")
+        let include_z = variable == VAR_POSITION3D;
+        self.myWrapperStorage.write_unsigned_byte(if include_z { POSITION_3D } else { POSITION_2D }).unwrap();
+        self.myWrapperStorage.write_double(value.x);
+        self.myWrapperStorage.write_double(value.y);
+        if include_z {
+            self.myWrapperStorage.write_double(value.z);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapPositionVector(const std::string &, const int, const libsumo::TraCIPositionVector &)` [virtual]
@@ -757,7 +841,18 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
-        todo!("port TraCIServer::wrapPositionVector")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_POLYGON).unwrap();
+        if value.value.len() < 256 {
+            self.myWrapperStorage.write_unsigned_byte(value.value.len() as i32).unwrap();
+        } else {
+            self.myWrapperStorage.write_unsigned_byte(0).unwrap();
+            self.myWrapperStorage.write_int(value.value.len() as i32);
+        }
+        for pos in &value.value {
+            self.myWrapperStorage.write_double(pos.x);
+            self.myWrapperStorage.write_double(pos.y);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapColor(const std::string &, const int, const libsumo::TraCIColor &)` [virtual]
@@ -772,7 +867,12 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
-        todo!("port TraCIServer::wrapColor")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_COLOR).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.r).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.g).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.b).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.a).unwrap();
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringDoublePair(const std::string &, const int, const std::pair<std::string, double> &)` [virtual]
@@ -785,7 +885,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
-        todo!("port TraCIServer::wrapStringDoublePair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_string(w, &value.0);
+        StorageHelper::write_typed_double(w, value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringDoublePairList(const std::string &, const int, const int &)`
@@ -799,8 +903,14 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapStringDoublePairList")
+    pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &[(String, f64)]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for p in value {
+            w.write_string(&p.0);
+            w.write_double(p.1);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringPair(const std::string &, const int, const std::pair<std::string, std::string> &)` [virtual]
@@ -813,7 +923,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
-        todo!("port TraCIServer::wrapStringPair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_string(w, &value.0);
+        StorageHelper::write_typed_string(w, &value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapIntPair(const std::string &, const int, const std::pair<int, int> &)` [virtual]
@@ -826,7 +940,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
-        todo!("port TraCIServer::wrapIntPair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_int(w, value.0);
+        StorageHelper::write_typed_int(w, value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStage(const std::string &, const int, const libsumo::TraCIStage &)` [virtual]
@@ -837,7 +955,8 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_stage(&mut self, objID: &str, variable: i32, value: &TraCIStage) -> bool {
-        todo!("port TraCIServer::wrapStage")
+        StorageHelper::write_stage(&mut self.myWrapperStorage, value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapReservationVector(const std::string &, const int, const int &)`
@@ -860,8 +979,23 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapReservationVector")
+    pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &[TraCIReservation]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for r in value {
+            StorageHelper::write_compound(w, 10);
+            StorageHelper::write_typed_string(w, &r.id);
+            StorageHelper::write_typed_string_list(w, &r.persons);
+            StorageHelper::write_typed_string(w, &r.group);
+            StorageHelper::write_typed_string(w, &r.fromEdge);
+            StorageHelper::write_typed_string(w, &r.toEdge);
+            StorageHelper::write_typed_double(w, r.departPos);
+            StorageHelper::write_typed_double(w, r.arrivalPos);
+            StorageHelper::write_typed_double(w, r.depart);
+            StorageHelper::write_typed_double(w, r.reservationTime);
+            StorageHelper::write_typed_int(w, r.state);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapLogicVector(const std::string &, const int, const int &)`
@@ -894,8 +1028,33 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapLogicVector")
+    pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &[TraCILogic]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for logic in value {
+            StorageHelper::write_compound(w, 5);
+            StorageHelper::write_typed_string(w, &logic.programID);
+            StorageHelper::write_typed_int(w, logic.type_);
+            StorageHelper::write_typed_int(w, logic.currentPhaseIndex);
+            StorageHelper::write_compound(w, logic.phases.len() as i32);
+            for phase in &logic.phases {
+                StorageHelper::write_compound(w, 6);
+                StorageHelper::write_typed_double(w, phase.duration);
+                StorageHelper::write_typed_string(w, &phase.state);
+                StorageHelper::write_typed_double(w, phase.minDur);
+                StorageHelper::write_typed_double(w, phase.maxDur);
+                StorageHelper::write_compound(w, phase.next.len() as i32);
+                for n in &phase.next {
+                    StorageHelper::write_typed_int(w, *n);
+                }
+                StorageHelper::write_typed_string(w, &phase.name);
+            }
+            StorageHelper::write_compound(w, logic.subParameter.len() as i32);
+            for (k, v) in &logic.subParameter {
+                StorageHelper::write_typed_string_list(w, &vec![k.clone(), v.clone()]);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapLinkVectorVector(const std::string &, const int, const int &)`
@@ -916,8 +1075,21 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapLinkVectorVector")
+    pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &[Vec<TraCILink>]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        let mut cnt = 1;
+        for sublinks in value {
+            cnt += sublinks.len() as i32 + 1;
+        }
+        StorageHelper::write_compound(w, cnt);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for sublinks in value {
+            StorageHelper::write_typed_int(w, sublinks.len() as i32);
+            for link in sublinks {
+                StorageHelper::write_typed_string_list(w, &vec![link.fromLane.clone(), link.toLane.clone(), link.viaLane.clone()]);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapSignalConstraintVector(const std::string &, const int, const int &)`
@@ -931,8 +1103,14 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapSignalConstraintVector")
+    pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &[TraCISignalConstraint]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 5);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_constraint(w, c);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapJunctionFoeVector(const std::string &, const int, const int &)`
@@ -954,8 +1132,22 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapJunctionFoeVector")
+    pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &[TraCIJunctionFoe]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 9);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_typed_string(w, &c.foeId);
+            StorageHelper::write_typed_double(w, c.egoDist);
+            StorageHelper::write_typed_double(w, c.foeDist);
+            StorageHelper::write_typed_double(w, c.egoExitDist);
+            StorageHelper::write_typed_double(w, c.foeExitDist);
+            StorageHelper::write_typed_string(w, &c.egoLane);
+            StorageHelper::write_typed_string(w, &c.foeLane);
+            StorageHelper::write_typed_unsigned_byte(w, c.egoResponse as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.foeResponse as i32);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapNextStopDataVector(const std::string &, const int, const int &)`
@@ -988,8 +1180,33 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapNextStopDataVector")
+    pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextStopData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 4);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        let full = variable == VAR_NEXT_STOPS2;
+        for s in value {
+            let legacy_stop_flags = (s.stopFlags << 1) + if s.arrival >= 0.0 { 1 } else { 0 };
+            StorageHelper::write_typed_string(w, &s.lane);
+            StorageHelper::write_typed_double(w, s.endPos);
+            StorageHelper::write_typed_string(w, &s.stoppingPlaceID);
+            StorageHelper::write_typed_int(w, if full { s.stopFlags } else { legacy_stop_flags });
+            StorageHelper::write_typed_double(w, s.duration);
+            StorageHelper::write_typed_double(w, s.until);
+            if full {
+                StorageHelper::write_typed_double(w, s.startPos);
+                StorageHelper::write_typed_double(w, s.intendedArrival);
+                StorageHelper::write_typed_double(w, s.arrival);
+                StorageHelper::write_typed_double(w, s.depart);
+                StorageHelper::write_typed_string(w, &s.split);
+                StorageHelper::write_typed_string(w, &s.join);
+                StorageHelper::write_typed_string(w, &s.actType);
+                StorageHelper::write_typed_string(w, &s.tripId);
+                StorageHelper::write_typed_string(w, &s.line);
+                StorageHelper::write_typed_double(w, s.speed);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapVehicleDataVector(const std::string &, const int, const int &)`
@@ -1007,8 +1224,18 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapVehicleDataVector")
+    pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIVehicleData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 5);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for vd in value {
+            StorageHelper::write_typed_string(w, &vd.id);
+            StorageHelper::write_typed_double(w, vd.length);
+            StorageHelper::write_typed_double(w, vd.entryTime);
+            StorageHelper::write_typed_double(w, vd.leaveTime);
+            StorageHelper::write_typed_string(w, &vd.typeID);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapBestLanesDataVector(const std::string &, const int, const int &)`
@@ -1027,8 +1254,19 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapBestLanesDataVector")
+    pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIBestLanesData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 6);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for bld in value {
+            StorageHelper::write_typed_string(w, &bld.laneID);
+            StorageHelper::write_typed_double(w, bld.length);
+            StorageHelper::write_typed_double(w, bld.occupation);
+            StorageHelper::write_typed_byte(w, bld.bestLaneOffset);
+            StorageHelper::write_typed_unsigned_byte(w, if bld.allowsContinuation { 1 } else { 0 });
+            StorageHelper::write_typed_string_list(w, &bld.continuationLanes);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapNextTLSDataVector(const std::string &, const int, const int &)`
@@ -1045,8 +1283,17 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapNextTLSDataVector")
+    pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextTLSData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 4);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for tlsd in value {
+            StorageHelper::write_typed_string(w, &tlsd.id);
+            StorageHelper::write_typed_int(w, tlsd.tlIndex);
+            StorageHelper::write_typed_double(w, tlsd.dist);
+            StorageHelper::write_typed_byte(w, tlsd.state as i32);
+        }
+        true
     }
 
     /// C++: `tcpip::Storage & TraCIServer::getWrapperStorage()`
@@ -1056,7 +1303,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn get_wrapper_storage(&mut self) -> &mut Storage {
-        todo!("port TraCIServer::getWrapperStorage")
+        &mut self.myWrapperStorage
     }
 
     /// C++: `void TraCIServer::TraCIServer(const SUMOTime, const int, const int)` [private]
