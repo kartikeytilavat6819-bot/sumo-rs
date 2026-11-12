@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_BUS, SVC_TAXI};
+use utils::common::msg_handler::write_warning;
 // shortcut: LINE_ANY belongs to SUMOVehicleParameter.h, not ported yet, move it there
 const LINE_ANY: &str = "ANY";
 /// C++ `SUMOXMLDefinitions::getEdgeIDFromLane`: the lane id without its "_<index>" suffix
@@ -1042,8 +1043,8 @@ impl RORouteHandler {
         let mustReroute = self.myActiveRoute.len() == 0 && self.myActiveRouteStops.len() != 0;
         if mustReroute {
             // implicit route from stops
-            for stop in self.myActiveRouteStops.iter() {
-                let edge = self.myNet.get_edge(&stop.edge);
+            for i in 0..self.myActiveRouteStops.len() {
+                let edge = self.myNet.get_edge(&self.myActiveRouteStops[i].edge);
                 self.myActiveRoute.push(edge);
             }
         }
