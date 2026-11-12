@@ -9278,7 +9278,103 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_leader(&self, link: Ptr<MSLink>, veh: Ptr<MSVehicle>, gap: f64) -> bool {
-        todo!("port MSVehicle::isLeader")
+        // assert(link->fromInternalLane()) is a debug-only check and is not ported
+        if veh.is_null() {
+            return false;
+        }
+        if !self.myLane.is_internal() || self.myLane.get_edge().get_to_junction() != link.get_junction() {
+            // if this vehicle is not yet on the junction, every vehicle is a leader
+            return true;
+        }
+        if veh.get_lane_change_model_2().has_blue_light() {
+            // blue light device automatically gets right of way
+            return true;
+        }
+        let foeLane: Ptr<MSLane> = veh.get_lane();
+        if foeLane.is_internal() {
+            if foeLane.get_edge().get_from_junction() == link.get_junction() {
+                let mut egoET: SUMOTime = self.myJunctionConflictEntryTime;
+                let mut foeET: SUMOTime = veh.myJunctionEntryTime;
+                // check relationship between link and foeLane
+                if foeLane.get_normal_predecessor_lane() == link.get_internal_lane_before().get_normal_predecessor_lane() {
+                    // we are entering the junction from the same lane
+                    egoET = self.myJunctionEntryTimeNeverYield;
+                    foeET = veh.myJunctionEntryTimeNeverYield;
+                    if link.is_exit_link_after_internal_junction() && link.get_internal_lane_before().get_logical_predecessor_lane().get_entry_link().is_indirect() {
+                        egoET = self.myJunctionConflictEntryTime;
+                    }
+                } else {
+                    let foeLink: Ptr<MSLink> = foeLane.get_incoming_lanes()[0].viaLink;
+                    // determine who has right of way
+                    let response: bool;
+                    let response2: bool;
+                    // attempt 1: tlLinkState
+                    let entry: Ptr<MSLink> = link.get_corresponding_entry_link();
+                    let foeEntry: Ptr<MSLink> = foeLink.get_corresponding_entry_link();
+                    if entry.have_red() || foeEntry.have_red() {
+                        // ensure that vehicles which are stuck on the intersection may exit
+                        if !foeEntry.have_red() && veh.get_speed() > SUMO_const_haltingSpeed && gap < 0.0 {
+                            // foe might be oncoming, don't drive unless foe can still brake safely
+                            let foeNextSpeed = veh.get_speed() + accel2speed(veh.get_car_follow_model().get_max_accel());
+                            let foeBrakeGap = veh.get_car_follow_model().brake_gap_2(foeNextSpeed, veh.get_car_follow_model().get_max_decel(), veh.get_car_follow_model().get_headway_time());
+                            // the minGap was subtracted from gap in MSLink::getLeaderInfo (enlarging the negative gap)
+                            // so the -2* makes it point in the right direction
+                            let foeGap = -gap - veh.get_length() - 2.0 * self.get_vehicle_type().get_min_gap();
+                            if foeGap < foeBrakeGap {
+                                response = true;
+                                response2 = false;
+                            } else {
+                                response = false;
+                                response2 = true;
+                            }
+                        } else {
+                            // let conflict entry time decide
+                            response = true;
+                            response2 = true;
+                        }
+                    } else if entry.have_priority() != foeEntry.have_priority() {
+                        response = !entry.have_priority();
+                        response2 = !foeEntry.have_priority();
+                    } else if entry.have_yellow() && foeEntry.have_yellow() {
+                        // let the faster vehicle keep moving
+                        response = veh.get_speed() >= self.get_speed();
+                        response2 = self.get_speed() >= veh.get_speed();
+                    } else {
+                        // fallback if pedestrian crossings are involved
+                        // shortcut: needs logic->getResponseFor(i).test(j) on MSLogicJunction_LinkBits, which is not ported (Unmapped), so no response is assumed, upgrade when ms_logic_junction is ported
+                        response = false;
+                        response2 = false;
+                    }
+                    if !response {
+                        // if we have right of way over the foe, entryTime does not matter
+                        foeET = veh.myJunctionConflictEntryTime;
+                        egoET = self.myJunctionEntryTime;
+                    } else if response && response2 {
+                        // in a mutual conflict scenario, use entry time to avoid deadlock
+                        foeET = veh.myJunctionConflictEntryTime;
+                        egoET = self.myJunctionConflictEntryTime;
+                    }
+                }
+                if egoET == foeET {
+                    // try to use speed as tie braker
+                    if self.get_speed() == veh.get_speed() {
+                        // use ID as tie braker
+                        return self.get_id() < veh.get_id();
+                    } else {
+                        return self.get_speed() < veh.get_speed();
+                    }
+                } else {
+                    // leader was on the junction first
+                    return egoET > foeET;
+                }
+            } else {
+                // vehicle can only be partially on the junction. Must be a leader
+                return true;
+            }
+        } else {
+            // vehicle can only be partially on the junction. Must be a leader
+            return true;
+        }
     }
 
     /// C++: `const Position MSVehicle::getBackPosition() const` [const]
