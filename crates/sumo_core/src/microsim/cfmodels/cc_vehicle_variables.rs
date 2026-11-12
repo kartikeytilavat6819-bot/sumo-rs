@@ -2,6 +2,30 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ CC_VehicleVariables::defaultL / defaultK / defaultB / defaultH (CC_VehicleVariables.cpp)
+const DEFAULT_L: [[i32; 8]; 8] = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0],
+    [1, 0, 1, 0, 0, 0, 0, 0],
+    [1, 0, 0, 1, 0, 0, 0, 0],
+    [1, 0, 0, 0, 1, 0, 0, 0],
+    [1, 0, 0, 0, 0, 1, 0, 0],
+    [1, 0, 0, 0, 0, 0, 1, 0],
+];
+const DEFAULT_K: [[f64; 8]; 8] = [
+    [0., 0., 0., 0., 0., 0., 0., 0.],
+    [460., 0., 0., 0., 0., 0., 0., 0.],
+    [80., 860., 0., 0., 0., 0., 0., 0.],
+    [80., 0., 860., 0., 0., 0., 0., 0.],
+    [80., 0., 0., 860., 0., 0., 0., 0.],
+    [80., 0., 0., 0., 860., 0., 0., 0.],
+    [80., 0., 0., 0., 0., 860., 0., 0.],
+    [80., 0., 0., 0., 0., 0., 860., 0.],
+];
+const DEFAULT_B: [f64; 8] = [1800., 1800., 1800., 1800., 1800., 1800., 1800., 1800.];
+const DEFAULT_H: [f64; 8] = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8];
+
 /// C++ class `CC_VehicleVariables` (microsim/cfmodels/CC_VehicleVariables.h)
 pub struct CC_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
@@ -67,17 +91,17 @@ pub struct CC_VehicleVariables {
     /// fake controller data.
     pub fakeData: CC_VehicleVariables_FAKE_CONTROLLER_DATA,
     /// L matrix
-    pub L: Unmapped /* int[8][8] */,
+    pub L: [[i32; 8]; 8],
     /// K matrix
-    pub K: Unmapped /* double[8][8] */,
+    pub K: [[f64; 8]; 8],
     /// vector of damping ratios b
-    pub b: Unmapped /* double[8] */,
+    pub b: [f64; 8],
     /// vector of time headways h
-    pub h: Unmapped /* double[8] */,
+    pub h: [f64; 8],
     /// data about vehicles in the platoon
-    pub vehicles: Unmapped /* Plexe::VEHICLE_DATA[8] */,
+    pub vehicles: [VEHICLE_DATA; 8],
     /// tells whether data about a certain vehicle has been initialized
-    pub initialized: Unmapped /* bool[8] */,
+    pub initialized: [bool; 8],
     /// count of initialized vehicles
     pub nInitialized: i32,
     /// my position within the platoon (0 = first car)
@@ -193,7 +217,48 @@ impl CC_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port CC_VehicleVariables::CC_VehicleVariables")
+        // C++ member-init order and defaults; L, K, b, h are memcpy'd from the default tables above
+        Self {
+            base: MSCFModel_VehicleVariables {},
+            controllerAcceleration: 0., frontSpeed: 0., frontAcceleration: 0.,
+            frontControllerAcceleration: 0., frontPosition: Position::new(0., 0.), frontDataReadTime: 0., frontVelocity: Position::new(0., 0.),
+            frontAngle: 0., frontInitialized: false,
+            autoFeed: false, leaderVehicle: Ptr::null(), leaderVehicleId: String::new(), frontVehicle: Ptr::null(), frontVehicleId: String::new(),
+            isLeader: true,
+            accHeadwayTime: 1.5, accLambda: 0.1,
+            useControllerAcceleration: true, leaderSpeed: 0.,
+            leaderAcceleration: 0., leaderControllerAcceleration: 0., leaderPosition: Position::new(0., 0.), leaderDataReadTime: 0., leaderVelocity: Position::new(0., 0.), leaderAngle: 0.,
+            leaderInitialized: false, caccInitialized: false,
+            useFixedAcceleration: 0, fixedAcceleration: 0.,
+            crashed: false,
+            ccDesiredSpeed: 14., ccKp: 1., activeController: ACTIVE_CONTROLLER::DRIVER,
+            fakeData: CC_VehicleVariables_FAKE_CONTROLLER_DATA {
+                frontDistance: 0., frontSpeed: 0., frontAcceleration: 0., frontControllerAcceleration: 0.,
+                leaderSpeed: 0., leaderAcceleration: 0., leaderControllerAcceleration: 0.,
+            },
+            L: DEFAULT_L,
+            K: DEFAULT_K,
+            b: DEFAULT_B,
+            h: DEFAULT_H,
+            // zero-filled: the C++ VEHICLE_DATA array has no initializer
+            vehicles: std::array::from_fn(|_| VEHICLE_DATA {
+                index: 0, speed: 0., acceleration: 0., positionX: 0., positionY: 0., time: 0., length: 0., u: 0., speedX: 0., speedY: 0., angle: 0.,
+            }),
+            initialized: [false; 8],
+            nInitialized: 0, position: -1, nCars: 8,
+            caccXi: -1., caccOmegaN: -1., caccC1: -1., caccAlpha1: -1., caccAlpha2: -1.,
+            caccAlpha3: -1., caccAlpha4: -1., caccAlpha5: -1., caccSpacing: 5.,
+            engineTau: 0.5,
+            uMin: -1e6, uMax: 1e6,
+            ploegH: 0.5, ploegKp: 0.2, ploegKd: 0.7,
+            flatbedKa: 2.4, flatbedKv: 0.6, flatbedKp: 12., flatbedD: 5., flatbedH: 4.,
+            engine: Ptr::null(), engineModel: 0, // 0 = CC_ENGINE_MODEL_FOLM
+            usePrediction: false,
+            members: BTreeMap::new(),
+            autoLaneChange: false,
+            platoonFixedLane: -1,
+            commitToLaneChange: true, noCommitReason: 0, laneChangeCommitTime: -1,
+        }
     }
 
     /// C++: `void CC_VehicleVariables::~CC_VehicleVariables() noexcept` [virtual]
@@ -204,7 +269,10 @@ impl CC_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CC_VehicleVariables::~CC_VehicleVariables")
+        if !self.engine.is_null() {
+            // C++ `delete engine`
+            drop(unsafe { Box::from_raw(self.engine.as_raw()) });
+        }
     }
 
 }

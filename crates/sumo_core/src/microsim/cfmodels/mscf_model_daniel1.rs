@@ -2,6 +2,14 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ MIN2/MAX2 macros (argument order and tie behaviour kept)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
 /// The original Krauss (1998) car-following model and parameter
 /// C++ class `MSCFModel_Daniel1` (microsim/cfmodels/MSCFModel_Daniel1.h)
 pub struct MSCFModel_Daniel1 {
@@ -50,7 +58,19 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_Daniel1::MSCFModel_Daniel1")
+        let base = MSCFModel::new(vtype);
+        let myDawdle = vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(vtype.get_parameter().vehicleClass));
+        let myTauDecel = base.myDecel * base.myHeadwayTime;
+        Self {
+            base,
+            myDawdle,
+            myTauDecel,
+            myTmp1: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP1, 1.0),
+            myTmp2: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP2, 1.0),
+            myTmp3: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP3, 1.0),
+            myTmp4: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP4, 1.0),
+            myTmp5: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP5, 1.0),
+        }
     }
 
     /// C++: `void MSCFModel_Daniel1::~MSCFModel_Daniel1() noexcept` [virtual]
@@ -58,7 +78,7 @@ impl MSCFModel_Daniel1 {
     // MSCFModel_Daniel1::~MSCFModel_Daniel1() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_Daniel1::~MSCFModel_Daniel1")
+        // C++ destructor body is empty; the base model is released by Rust drop glue.
     }
 
     /// C++: `double MSCFModel_Daniel1::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -82,7 +102,17 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_Daniel1::finalizeSpeed")
+        let oldV = veh.get_speed(); // save old v for optional acceleration computation
+        let vSafe = min2(vPos, veh.m().process_next_stop(vPos)); // process stops
+        // we need the acceleration for emission computation;
+        //  in this case, we neglect dawdling, nonetheless, using
+        //  vSafe does not incorporate speed reduction due to interaction
+        //  on lane changing
+        let vMin = self.get_speed_after_max_decel(oldV);
+        let vMax = min2(min2(veh.get_lane().get_vehicle_max_speed(Ptr::new(&veh.base.base.base)), self.max_next_speed(oldV, veh)), vSafe);
+        // shortcut: the _DEBUG-only warning for vMin > vMax is not ported, upgrade when debug-build output must match
+        let wanted = max2(vMin, self.dawdle(vMax, veh.get_rng()));
+        veh.m().get_lane_change_model().patch_speed(vMin, wanted, vMax, self)
     }
 
     /// C++: `double MSCFModel_Daniel1::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -93,7 +123,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Daniel1::followSpeed")
+        min2(self.vsafe(gap2pred, predSpeed), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_Daniel1::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -104,7 +134,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Daniel1::stopSpeed")
+        min2(self.vsafe(gap2pred, 0.), self.max_next_speed(speed, veh))
     }
 
     /// C++: `int MSCFModel_Daniel1::getModelID() const` [const, virtual]
@@ -114,7 +144,7 @@ impl MSCFModel_Daniel1 {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_Daniel1::getModelID")
+        SUMO_TAG_CF_DANIEL1
     }
 
     /// C++: `double MSCFModel_Daniel1::getImperfection() const` [const, virtual]
@@ -124,7 +154,7 @@ impl MSCFModel_Daniel1 {
     //     }
     #[allow(unused_variables)]
     pub fn get_imperfection(&self) -> f64 {
-        todo!("port MSCFModel_Daniel1::getImperfection")
+        self.myDawdle
     }
 
     /// C++: `void MSCFModel_Daniel1::setMaxDecel(double)` [virtual]
@@ -135,7 +165,8 @@ impl MSCFModel_Daniel1 {
     //     }
     #[allow(unused_variables)]
     pub fn set_max_decel(&mut self, decel: f64) {
-        todo!("port MSCFModel_Daniel1::setMaxDecel")
+        self.myDecel = decel;
+        self.myTauDecel = self.myDecel * self.myHeadwayTime;
     }
 
     /// C++: `void MSCFModel_Daniel1::setImperfection(double)` [virtual]
@@ -145,7 +176,7 @@ impl MSCFModel_Daniel1 {
     //     }
     #[allow(unused_variables)]
     pub fn set_imperfection(&mut self, imperfection: f64) {
-        todo!("port MSCFModel_Daniel1::setImperfection")
+        self.myDawdle = imperfection;
     }
 
     /// C++: `void MSCFModel_Daniel1::setHeadwayTime(double)` [virtual]
@@ -156,7 +187,8 @@ impl MSCFModel_Daniel1 {
     //     }
     #[allow(unused_variables)]
     pub fn set_headway_time(&mut self, headwayTime: f64) {
-        todo!("port MSCFModel_Daniel1::setHeadwayTime")
+        self.myHeadwayTime = headwayTime;
+        self.myTauDecel = self.myDecel * headwayTime;
     }
 
     /// C++: `MSCFModel * MSCFModel_Daniel1::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -167,7 +199,9 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_Daniel1::duplicate")
+        // shortcut: returns the MSCFModel base of a leaked Daniel1; virtual calls through it do not reach Daniel1 overrides, upgrade when car-following models get enum dispatch
+        let p: *mut MSCFModel_Daniel1 = Box::into_raw(Box::new(MSCFModel_Daniel1::new(vtype)));
+        Ptr::from_raw(unsafe { &mut (*p).base as *mut MSCFModel })
     }
 
     /// C++: `double MSCFModel_Daniel1::_vsafe(double, double) const` [const, virtual, private]
@@ -187,7 +221,13 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn vsafe(&self, gap: f64, predSpeed: f64) -> f64 {
-        todo!("port MSCFModel_Daniel1::_vsafe")
+        if predSpeed == 0. && gap < 0.01 {
+            return 0.;
+        }
+        let vsafe = -1. * self.myTauDecel
+            + (self.myTauDecel * self.myTauDecel + (predSpeed * predSpeed) + (2. * self.myDecel * gap)).sqrt();
+        debug_assert!(vsafe >= 0.);
+        vsafe
     }
 
     /// C++: `double MSCFModel_Daniel1::dawdle(double, SumoRNG *) const` [const, virtual, private]
@@ -198,7 +238,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn dawdle(&self, speed: f64, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port MSCFModel_Daniel1::dawdle")
+        max2(0., speed - accel2speed(self.myDawdle * self.myAccel * rng.m().rand()))
     }
 
 }
