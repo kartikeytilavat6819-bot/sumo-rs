@@ -1287,7 +1287,7 @@ impl MSPModel_Striping {
                             ped.get_person().get_id(), junction.get_id(), currentEdge.get_id(), nextRouteEdge.get_id(),
                             utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
                     }
-                } else if nextLane.get_length() <= POSITION_EPS {
+                } else if nextLane.get_length() <= utils::geom::POSITION_EPS {
                     // internal lane too short
                     // most often this is due to a zero-size junction. However, if
                     // the person needs to pass a crossing we cannot skip ahead
@@ -1381,7 +1381,40 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn init_walking_area_paths(net: Ptr<MSNet>) {
-        todo!("port MSPModel_Striping::initWalkingAreaPaths")
+        // (the C++ net parameter is unused)
+        let _ = net;
+        if MY_WALKING_AREA_PATHS.with(|m| m.borrow().len() > 0) {
+            return;
+        }
+        // collect vehicle lanes that cross walkingareas
+        for edge in MSEdge::get_all_edges().iter().copied() {
+            if !edge.is_walking_area() && !edge.is_crossing() {
+                for lane in edge.get_lanes().iter().copied() {
+                    for link in lane.get_link_cont().iter().copied() {
+                        let foe = link.m().get_walking_area_foe();
+                        if !foe.is_null() {
+                            // link is an exit link
+                            let link_before = link.get_lane_before();
+                            MY_WALKING_AREA_FOES.with(|m| m.borrow_mut().entry(Ptr::from_mut(foe.m().get_edge())).or_default().push(link_before));
+                        }
+                        let foeExit = link.m().get_walking_area_foe_exit();
+                        if !foeExit.is_null() {
+                            // link is an exit link
+                            let link_before = link.get_lane_before();
+                            MY_WALKING_AREA_FOES.with(|m| m.borrow_mut().entry(Ptr::from_mut(foeExit.m().get_edge())).or_default().push(link_before));
+                        }
+                    }
+                }
+            }
+        }
+
+        // build walkingareaPaths
+        // (built in a local map and moved into the thread-local afterwards, so no RefCell borrow is held while inserting)
+        let mut into: MSPModel_Striping_WalkingAreaPaths = BTreeMap::new();
+        for edge in MSEdge::get_all_edges().iter().copied() {
+            Self::insert_walk_are_paths(edge, &mut into);
+        }
+        MY_WALKING_AREA_PATHS.with(|m| *m.borrow_mut() = into);
     }
 
     /// C++: `void MSPModel_Striping::insertWalkArePaths(const MSEdge *, WalkingAreaPaths &)` [static, private]
@@ -1465,7 +1498,87 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn insert_walk_are_paths(edge: Ptr<MSEdge>, into: &mut MSPModel_Striping_WalkingAreaPaths) {
-        todo!("port MSPModel_Striping::insertWalkArePaths")
+        // MSPModel_Striping::insertWalkArePaths(const MSEdge* edge, WalkingAreaPaths& into)
+        if edge.is_walking_area() {
+            let walkingArea = get_sidewalk(edge, SVC_PEDESTRIAN);
+            MY_MIN_NEXT_LENGTHS.with(|m| m.borrow_mut().insert(walkingArea, walkingArea.get_length()));
+            // build all possible paths across this walkingArea
+            // gather all incident lanes
+            let mut lanes: Vec<Ptr<MSLane>> = Vec::new();
+            for in_ in edge.get_predecessors().iter().copied() {
+                if !in_.is_taz_connector() {
+                    lanes.push(get_sidewalk(in_, SVC_PEDESTRIAN));
+                    if lanes.last().unwrap().is_null() {
+                        panic!("{}", format!("Invalid connection from edge '{}' to walkingarea edge '{}'", in_.get_id(), edge.get_id()));
+                    }
+                }
+            }
+            for out in edge.get_successors(SVC_IGNORING).iter().copied() {
+                if !out.is_taz_connector() {
+                    lanes.push(get_sidewalk(out, SVC_PEDESTRIAN));
+                    if lanes.last().unwrap().is_null() {
+                        panic!("{}", format!("Invalid connection from walkingarea edge '{}' to edge '{}'", edge.get_id(), out.get_id()));
+                    }
+                }
+            }
+            // build all combinations
+            for j in 0..lanes.len() {
+                for k in 0..lanes.len() {
+                    if j != k {
+                        // build the walkingArea
+                        let from = lanes[j];
+                        let to = lanes[k];
+                        let fromDir = if !from.get_link_to(walkingArea).is_null() { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+                        let toDir = if !walkingArea.get_link_to(to).is_null() { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+                        let mut shape = PositionVector::new();
+                        let fromPos = *from.get_shape_2().at(if fromDir == MSPMODEL_FORWARD { -1 } else { 0 });
+                        let toPos = *to.get_shape_2().at(if toDir == MSPMODEL_FORWARD { 0 } else { -1 });
+                        let maxExtent = fromPos.distance_to2d(&toPos) / 4.; // prevent sharp corners
+                        let extrapolateBy = f64::min(maxExtent, walkingArea.get_width() / 2.);
+                        // assemble shape
+                        shape.push(fromPos);
+                        if extrapolateBy > utils::geom::POSITION_EPS {
+                            let mut fromShp = from.get_shape_2().clone();
+                            fromShp.extrapolate(extrapolateBy, false, false);
+                            shape.push_back_no_double_pos(if fromDir == MSPMODEL_FORWARD { fromShp.back() } else { fromShp.front() });
+                            let mut nextShp = to.get_shape_2().clone();
+                            nextShp.extrapolate(extrapolateBy, false, false);
+                            shape.push_back_no_double_pos(if toDir == MSPMODEL_FORWARD { nextShp.front() } else { nextShp.back() });
+                        }
+                        shape.push_back_no_double_pos(&toPos);
+                        if shape.len() < 2 {
+                            let mut fromShp = from.get_shape_2().clone();
+                            fromShp.extrapolate(1.5 * utils::geom::POSITION_EPS, false, false); // noDoublePos requires a difference of POSITION_EPS in at least one coordinate
+                            shape.push_back_no_double_pos(if fromDir == MSPMODEL_FORWARD { fromShp.back() } else { fromShp.front() });
+                            debug_assert!(shape.len() == 2);
+                        } else if my_walking_area_detail() > 4 {
+                            shape = shape.bezier(my_walking_area_detail());
+                        }
+                        let mut angleOverride = utils::common::std_defs::INVALID_DOUBLE;
+                        if shape.len() >= 4 && shape.length() < walkingArea.get_width() {
+                            let aStart = shape.angle_at2d(0);
+                            let aEnd = shape.angle_at2d(shape.len() as i32 - 2);
+                            if f64::abs(aStart - aEnd) < utils::geom::geom_helper::deg2rad(10.) {
+                                angleOverride = (aStart + aEnd) / 2.;
+                            }
+                        }
+                        if fromDir == MSPMODEL_BACKWARD {
+                            // will be walking backward on walkingArea
+                            shape = shape.reverse();
+                        }
+                        let wap = MSPModel_Striping_WalkingAreaPath::new(from, walkingArea, to, &shape, fromDir, angleOverride);
+                        let wapLength = wap.length;
+                        into.entry((from, to)).or_insert(wap);
+                        MY_MIN_NEXT_LENGTHS.with(|m| {
+                            let mut m = m.borrow_mut();
+                            let cur = *m.entry(walkingArea).or_insert(0.);
+                            let v = if cur < wapLength { cur } else { wapLength };
+                            m.insert(walkingArea, v);
+                        });
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `const WalkingAreaPath * MSPModel_Striping::getWalkingAreaPath(const MSEdge *, const MSLane *, const MSLane *)` [static, private]
