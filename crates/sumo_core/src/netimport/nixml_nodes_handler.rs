@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// C++ class `NIXMLNodesHandler` (netimport/NIXMLNodesHandler.h)
 pub struct NIXMLNodesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// A reference to the program's options
     pub myOptions: Ptr<OptionsCont>,
     /// The id of the currently parsed node
@@ -28,13 +28,13 @@ pub struct NIXMLNodesHandler {
 }
 
 impl std::ops::Deref for NIXMLNodesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIXMLNodesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -437,3 +437,16 @@ impl NIXMLNodesHandler {
 
 }
 
+impl SaxHandler for NIXMLNodesHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIXMLNodesHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIXMLNodesHandler::my_end_element(self, element);
+        Ok(())
+    }
+}

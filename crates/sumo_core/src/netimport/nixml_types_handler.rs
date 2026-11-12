@@ -1,12 +1,19 @@
 //! Port of netimport/NIXMLTypesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::NETWORK_VERSION;
+use utils::common::msg_handler::write_error;
+
+/// C++ `throw`: raised as a panic carrying the ProcessError until a top-level catch exists
+fn throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
+}
 
 /// Importer for edge type information stored in XML
 /// C++ class `NIXMLTypesHandler` (netimport/NIXMLTypesHandler.h)
 pub struct NIXMLTypesHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The type container to fill
     pub myTypeCont: Ptr<NBTypeCont>,
     /// The currently parsed type
@@ -14,13 +21,13 @@ pub struct NIXMLTypesHandler {
 }
 
 impl std::ops::Deref for NIXMLTypesHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIXMLTypesHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -33,7 +40,11 @@ impl NIXMLTypesHandler {
     //       myTypeCont(tc) {}
     #[allow(unused_variables)]
     pub fn new(tc: &mut NBTypeCont) -> Self {
-        todo!("port NIXMLTypesHandler::NIXMLTypesHandler")
+        Self {
+            base: utils::xml::sumo_sax_handler::new("xml-types - file", ""),
+            myTypeCont: Ptr::from_mut(tc),
+            myCurrentTypeID: String::new(),
+        }
     }
 
     /// C++: `void NIXMLTypesHandler::~NIXMLTypesHandler()` [virtual]
@@ -41,7 +52,7 @@ impl NIXMLTypesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLTypesHandler::~NIXMLTypesHandler")
+        // the C++ destructor has no body
     }
 
     /// C++: `void NIXMLTypesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual]
@@ -153,7 +164,103 @@ impl NIXMLTypesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLTypesHandler::myStartElement")
+        match element {
+            SUMO_TAG_TYPE => {
+                let mut ok = true;
+                // get the id, report a warning if not given or empty...
+                self.myCurrentTypeID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                let id = self.myCurrentTypeID.clone();
+                let defType = if self.myTypeCont.m().knows(&self.myCurrentTypeID) { self.myCurrentTypeID.clone() } else { String::new() };
+                let priority = attrs.get_opt::<i32>(SUMO_ATTR_PRIORITY, &id, &mut ok, self.myTypeCont.m().get_edge_type_priority(&defType), true);
+                let numLanes = attrs.get_opt::<i32>(SUMO_ATTR_NUMLANES, &id, &mut ok, self.myTypeCont.m().get_edge_type_num_lanes(&defType), true);
+                let speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, &id, &mut ok, self.myTypeCont.m().get_edge_type_speed(&defType), true);
+                let allowS = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, &id, &mut ok, String::new(), true);
+                let disallowS = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, &id, &mut ok, String::new(), true);
+                let spreadTypeS = attrs.get_opt::<String>(SUMO_ATTR_SPREADTYPE, &id, &mut ok, LaneSpreadFunctions.get_string(LaneSpreadFunction::SPREAD_UNKNOWN).to_string(), true);
+                let oneway = attrs.get_opt::<bool>(SUMO_ATTR_ONEWAY, &id, &mut ok, self.myTypeCont.m().get_edge_type_is_one_way(&defType), true);
+                let discard = attrs.get_opt::<bool>(SUMO_ATTR_DISCARD, &id, &mut ok, false, true);
+                let width = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &id, &mut ok, self.myTypeCont.m().get_edge_type_width(&defType), true);
+                let maxWidth = attrs.get_opt::<f64>(SUMO_ATTR_MAXWIDTH, &id, &mut ok, self.myTypeCont.m().get_edge_type_max_width(&defType), true);
+                let minWidth = attrs.get_opt::<f64>(SUMO_ATTR_MINWIDTH, &id, &mut ok, self.myTypeCont.m().get_edge_type_min_width(&defType), true);
+                let widthResolution = attrs.get_opt::<f64>(SUMO_ATTR_WIDTHRESOLUTION, &id, &mut ok, self.myTypeCont.m().get_edge_type_width_resolution(&defType), true);
+                let sidewalkWidth = attrs.get_opt::<f64>(SUMO_ATTR_SIDEWALKWIDTH, &id, &mut ok, self.myTypeCont.m().get_edge_type_sidewalk_width(&defType), true);
+                let bikeLaneWidth = attrs.get_opt::<f64>(SUMO_ATTR_BIKELANEWIDTH, &id, &mut ok, self.myTypeCont.m().get_edge_type_bike_lane_width(&defType), true);
+                // continue if parsing parameter was ok
+                if ok {
+                    // build the type
+                    let mut permissions = self.myTypeCont.m().get_edge_type_permissions(&defType);
+                    if !allowS.is_empty() || !disallowS.is_empty() {
+                        permissions = parse_vehicle_classes_allow_disallow(&allowS, &disallowS, NETWORK_VERSION);
+                    }
+                    // get spreadType
+                    let mut spreadType = LaneSpreadFunction::RIGHT;
+                    // check if spreadType is valid
+                    if LaneSpreadFunctions.has_string(&spreadTypeS) {
+                        spreadType = throw(LaneSpreadFunctions.get(&spreadTypeS));
+                    } else {
+                        write_error(&format!("Invalid lane spread type '{spreadTypeS}'. Using default 'right'"));
+                    }
+                    // insert edgeType in container
+                    self.myTypeCont.m().insert_edge_type(&self.myCurrentTypeID, numLanes, speed, priority, permissions, spreadType, width,
+                        oneway, sidewalkWidth, bikeLaneWidth, widthResolution, maxWidth, minWidth);
+                    // check if mark edgeType as discard
+                    if discard {
+                        self.myTypeCont.m().mark_edge_type_as_to_discard(&self.myCurrentTypeID);
+                    }
+                    // mark attributes as set
+                    let myAttrs = [SUMO_ATTR_PRIORITY, SUMO_ATTR_NUMLANES, SUMO_ATTR_SPEED, SUMO_ATTR_ALLOW,
+                        SUMO_ATTR_DISALLOW, SUMO_ATTR_SPREADTYPE, SUMO_ATTR_ONEWAY, SUMO_ATTR_DISCARD,
+                        SUMO_ATTR_WIDTH, SUMO_ATTR_SIDEWALKWIDTH, SUMO_ATTR_BIKELANEWIDTH];
+                    for attr in myAttrs {
+                        if attrs.has_attribute(attr) {
+                            self.myTypeCont.m().mark_edge_type_as_set(&self.myCurrentTypeID, attr);
+                        }
+                    }
+                }
+            }
+            SUMO_TAG_LANETYPE => {
+                let mut ok = true;
+                // use id of last inserted edge
+                let edgeTypeId = self.myCurrentTypeID.clone();
+                let index = attrs.get::<i32>(SUMO_ATTR_INDEX, &edgeTypeId, &mut ok, true);
+                let defType = if self.myTypeCont.m().knows(&self.myCurrentTypeID) { self.myCurrentTypeID.clone() } else { String::new() };
+                if index >= self.myTypeCont.m().get_edge_type_num_lanes(&defType) {
+                    write_error(&format!("Invalid lane index {index} for edge type '{defType}' with {} lanes", self.myTypeCont.m().get_edge_type_num_lanes(&defType)));
+                    ok = false;
+                }
+                let speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, &edgeTypeId, &mut ok, self.myTypeCont.m().get_edge_type_speed(&edgeTypeId), true);
+                let allowS = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, &edgeTypeId, &mut ok, String::new(), true);
+                let disallowS = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, &edgeTypeId, &mut ok, String::new(), true);
+                let width = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &edgeTypeId, &mut ok, self.myTypeCont.m().get_edge_type_width(&defType), true);
+                // continue if parsing parameter was ok
+                if ok {
+                    // build the type
+                    let mut permissions = self.myTypeCont.m().get_edge_type_permissions(&defType);
+                    if !allowS.is_empty() || !disallowS.is_empty() {
+                        permissions = parse_vehicle_classes_allow_disallow(&allowS, &disallowS, NETWORK_VERSION);
+                    }
+                    // insert laneType in container
+                    self.myTypeCont.m().insert_lane_type(&self.myCurrentTypeID, index, speed, permissions, width, &BTreeSet::new());
+                    // mark attributes as set
+                    let myAttrs = [SUMO_ATTR_SPEED, SUMO_ATTR_ALLOW, SUMO_ATTR_DISALLOW, SUMO_ATTR_WIDTH];
+                    for attr in myAttrs {
+                        if attrs.has_attribute(attr) {
+                            self.myTypeCont.m().mark_lane_type_as_set(&self.myCurrentTypeID, index, attr);
+                        }
+                    }
+                }
+            }
+            SUMO_TAG_RESTRICTION => {
+                let mut ok = true;
+                let currentID = self.myCurrentTypeID.clone();
+                let svc = throw(get_vehicle_class_id(&attrs.get::<String>(SUMO_ATTR_VCLASS, &currentID, &mut ok, true)));
+                let speed = attrs.get::<f64>(SUMO_ATTR_SPEED, &currentID, &mut ok, true);
+                if ok {
+                    self.myTypeCont.m().add_edge_type_restriction(&currentID, svc, speed);
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NIXMLTypesHandler::NIXMLTypesHandler(const NIXMLTypesHandler &)` [private]
@@ -161,7 +268,8 @@ impl NIXMLTypesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIXMLTypesHandler) -> Self {
-        todo!("port NIXMLTypesHandler::NIXMLTypesHandler")
+        // the copy constructor is declared private and never defined in C++
+        panic!("NIXMLTypesHandler is not copyable")
     }
 
     /// C++: `NIXMLTypesHandler & NIXMLTypesHandler::operator=(const NIXMLTypesHandler &)` [private]
@@ -169,8 +277,18 @@ impl NIXMLTypesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIXMLTypesHandler) -> &mut NIXMLTypesHandler {
-        todo!("port NIXMLTypesHandler::operator=")
+        // the assignment operator is declared private and never defined in C++
+        panic!("NIXMLTypesHandler is not assignable")
     }
 
 }
 
+impl SaxHandler for NIXMLTypesHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIXMLTypesHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}

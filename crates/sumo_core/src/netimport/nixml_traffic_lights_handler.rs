@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// C++ class `NIXMLTrafficLightsHandler` (netimport/NIXMLTrafficLightsHandler.h)
 pub struct NIXMLTrafficLightsHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The traffic light container to fill
     pub myTLLCont: Ptr<NBTrafficLightLogicCont>,
     /// The edge container for retrieving edges
@@ -22,13 +22,13 @@ pub struct NIXMLTrafficLightsHandler {
 }
 
 impl std::ops::Deref for NIXMLTrafficLightsHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIXMLTrafficLightsHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -400,3 +400,16 @@ impl NIXMLTrafficLightsHandler {
 
 }
 
+impl SaxHandler for NIXMLTrafficLightsHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIXMLTrafficLightsHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIXMLTrafficLightsHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
