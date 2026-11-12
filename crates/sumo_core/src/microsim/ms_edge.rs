@@ -1170,7 +1170,7 @@ impl MSEdge {
         if bidiID != "" {
             self.myBidiEdge = MSEdge::dictionary_2(bidiID);
             if self.myBidiEdge.is_null() {
-                write_error(&format!("Bidi-edge '{}' does not exist", bidiID));
+                utils::common::msg_handler::write_error(&format!("Bidi-edge '{}' does not exist", bidiID));
             }
             self.set_bidi_lanes();
             return;
@@ -1184,7 +1184,7 @@ impl MSEdge {
             if it.get_to_junction() == self.myFromJunction {
                 // reverse edge
                 if !self.myBidiEdge.is_null() && self.is_superposable(*it) {
-                    write_warning(&format!(
+                    utils::common::msg_handler::write_warning(&format!(
                         "Ambiguous superposable edges between junction '{}' and '{}'.",
                         self.myToJunction.get_id(),
                         self.myFromJunction.get_id()
@@ -1350,7 +1350,7 @@ impl MSEdge {
                         self.myEdgeType = format!("{}|{}", typeBefore, typeAfter);
                         if net.get_restrictions(&self.myEdgeType).is_null() {
                             for (svc, speed) in resBefore.iter() {
-                                if let Some(speed2) = resAfter.get(svc) {
+                                if let Some(speed2) = (*resAfter).get(svc) {
                                     let newSpeed = if net.has_junction_higher_speeds() { if *speed > *speed2 { *speed } else { *speed2 } } else { (speed + speed2) / 2. };
                                     net.m().add_restriction(&self.myEdgeType, *svc, newSpeed);
                                 }
@@ -2952,7 +2952,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&self, t: Ptr<MSTransportable>) {
-        let me = Ptr::new(self).m();
+        let meP = Ptr::new(self); let me = meP.m();
         let tc = if t.is_person() { &mut me.myPersons } else { &mut me.myContainers };
         tc.remove(&t);
     }
@@ -3308,7 +3308,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        let me = Ptr::new(self).m();
+        let meP = Ptr::new(self); let me = meP.m();
         if let Some(i) = me.myWaiting.iter().position(|v| *v == vehicle) {
             me.myWaiting.remove(i);
         }
@@ -3351,7 +3351,7 @@ impl MSEdge {
                 }
                 if !vehicle.is_line_stop(position) && vehicle.allows_boarding(transportable) {
                     // shortcut: C++ toString(double) uses the global output precision; Rust default formatting is used here
-                    write_warning(&format!(
+                    utils::common::msg_handler::write_warning(&format!(
                         "{} '{}' at edge '{}' position {} cannot use waiting vehicle '{}' at position {} because it is too far away.",
                         if transportable.is_person() { "Person" } else { "Container" },
                         transportable.get_id(),
@@ -3619,7 +3619,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_reversed_routing_edge(&self) -> Ptr<ReversedEdge<MSEdge, SUMOVehicle>> {
-        let me = Ptr::new(self).m();
+        let meP = Ptr::new(self); let me = meP.m();
         if me.myReversedRoutingEdge.is_null() {
             me.myReversedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self)))));
         }
@@ -3635,7 +3635,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
-        let me = Ptr::new(self).m();
+        let meP = Ptr::new(self); let me = meP.m();
         if me.myRailwayRoutingEdge.is_null() {
             me.myRailwayRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self)))));
         }
@@ -3826,7 +3826,7 @@ impl MSEdge {
             }
             // warn only once for each pair
             if numBidiLanes == 0 && self.get_numerical_id() < bidi.get_numerical_id() {
-                write_warning(&format!("Edge '{}' and bidi edge '{}' have no matching bidi lanes", self.get_id(), bidi.get_id()));
+                utils::common::msg_handler::write_warning(&format!("Edge '{}' and bidi edge '{}' have no matching bidi lanes", self.get_id(), bidi.get_id()));
             }
         }
     }
