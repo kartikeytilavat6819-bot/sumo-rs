@@ -8772,7 +8772,59 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_speed(&mut self, veh: &MSVehicle, patchSpeed: &mut bool) -> f64 {
-        todo!("port MSLane::getDepartSpeed")
+        let min2 = |a: f64, b: f64| if a < b { a } else { b };
+        let mut speed = 0.;
+        let pars = veh.get_parameter();
+        let mut dsd = pars.departSpeedProcedure;
+        if dsd == DepartSpeedDefinition::DEFAULT {
+            dsd = *MSLane::get_default_depart_speed_definition();
+            if dsd == DepartSpeedDefinition::GIVEN {
+                speed = *MSLane::get_default_depart_speed();
+            }
+        } else if dsd == DepartSpeedDefinition::GIVEN {
+            speed = pars.departSpeed;
+        }
+        let vehPtr = Ptr::new(veh).cast::<SUMOTrafficObject>();
+        match dsd {
+            DepartSpeedDefinition::GIVEN => {
+                *patchSpeed = false;
+            }
+            DepartSpeedDefinition::RANDOM => {
+                speed = utils::common::std_defs::round_decimal(rand_max_default(self.get_vehicle_max_speed(vehPtr)), utils::common::std_defs::g_precision_random());
+                *patchSpeed = true;
+            }
+            DepartSpeedDefinition::MAX => {
+                speed = self.get_vehicle_max_speed(vehPtr);
+                *patchSpeed = true;
+            }
+            DepartSpeedDefinition::DESIRED => {
+                speed = self.get_vehicle_max_speed(vehPtr);
+                *patchSpeed = false;
+            }
+            DepartSpeedDefinition::LIMIT => {
+                speed = self.get_vehicle_max_speed(vehPtr) / veh.get_chosen_speed_factor();
+                *patchSpeed = false;
+            }
+            DepartSpeedDefinition::LAST => {
+                let last = self.get_last_any_vehicle();
+                speed = self.get_vehicle_max_speed(vehPtr);
+                if !last.is_null() {
+                    speed = min2(speed, last.get_speed());
+                    *patchSpeed = false;
+                }
+            }
+            DepartSpeedDefinition::AVG => {
+                speed = min2(self.get_vehicle_max_speed(vehPtr), self.get_mean_speed());
+                if !self.get_last_any_vehicle().is_null() {
+                    *patchSpeed = false;
+                }
+            }
+            _ => {
+                // speed = 0 was set before
+                *patchSpeed = false; // @todo check
+            }
+        }
+        speed
     }
 
     /// C++: `double MSLane::getDepartPosLat(const MSVehicle &)` [protected]
@@ -8802,7 +8854,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_pos_lat(&mut self, veh: &MSVehicle) -> f64 {
-        todo!("port MSLane::getDepartPosLat")
+        let pars = veh.get_parameter();
+        match pars.departPosLatProcedure {
+            DepartPosLatDefinition::GIVEN => pars.departPosLat,
+            DepartPosLatDefinition::RIGHT => -self.get_width() * 0.5 + veh.get_vehicle_type().get_width() * 0.5,
+            DepartPosLatDefinition::LEFT => self.get_width() * 0.5 - veh.get_vehicle_type().get_width() * 0.5,
+            DepartPosLatDefinition::RANDOM => {
+                let raw = rand_max_default(self.get_width() - veh.get_vehicle_type().get_width()) - self.get_width() * 0.5 + veh.get_vehicle_type().get_width() * 0.5;
+                utils::common::std_defs::round_decimal(raw, utils::common::std_defs::g_precision_random())
+            }
+            // @note: FREE and RANDOM_FREE are not handled here because they involve multiple insertion attempts
+            _ => 0.,
+        }
     }
 
     /// C++: `double MSLane::safeInsertionSpeed(const MSVehicle *, double, const MSLeaderInfo &, double)` [protected]
@@ -8848,7 +8911,31 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn safe_insertion_speed(&mut self, veh: Ptr<MSVehicle>, seen: f64, leaders: &MSLeaderInfo, speed: f64) -> f64 {
-        todo!("port MSLane::safeInsertionSpeed")
+        let min2 = |a: f64, b: f64| if a < b { a } else { b };
+        let this = Ptr::new(self);
+        let mut nspeed = speed;
+        for i in 0..leaders.num_sublanes() {
+            let leader = leaders.index_op(i);
+            if !leader.is_null() {
+                let mut gap = leader.get_back_position_on_lane(this) + seen - veh.get_vehicle_type().get_min_gap();
+                if leader.get_lane() == self.get_bidi_lane() {
+                    // use distance to front position and account for movement
+                    gap -= leader.get_length() + leader.get_brake_gap(true);
+                }
+                if gap < 0. {
+                    if veh.get_insertion_checks() & (InsertionCheck::COLLISION as i32) != 0 {
+                        return crate::microsim::cfmodels::mscf_model::INVALID_SPEED;
+                    } else {
+                        return 0.;
+                    }
+                }
+                nspeed = min2(
+                    nspeed,
+                    veh.get_car_follow_model().insertion_follow_speed(veh, speed, gap, leader.get_speed(), leader.get_car_follow_model().get_max_decel(), leader),
+                );
+            }
+        }
+        nspeed
     }
 
     /// C++: `bool MSLane::checkForPedestrians(const MSVehicle *, double &, double &, double, bool) const` [const, protected]
@@ -8920,7 +9007,46 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn check_for_pedestrians(&self, aVehicle: Ptr<MSVehicle>, speed: &mut f64, dist: &mut f64, pos: f64, patchSpeed: bool) -> bool {
-        todo!("port MSLane::checkForPedestrians")
+        if self.get_edge().get_persons().len() > 0 && self.has_pedestrians() {
+            let leader = self.next_blocking(
+                pos - aVehicle.get_vehicle_type().get_length(),
+                aVehicle.get_right_side_on_lane(),
+                aVehicle.get_right_side_on_lane() + aVehicle.get_vehicle_type().get_width(),
+                (*speed / aVehicle.get_car_follow_model().get_max_decel()).ceil(),
+                false,
+            );
+            if !leader.0.is_null() {
+                let gap = leader.1 - aVehicle.get_vehicle_type().get_length_with_gap();
+                let stopSpeed = aVehicle.get_car_follow_model().stop_speed(aVehicle, *speed, gap, MSCFModel_CalcReason::FUTURE);
+                if (gap < 0. && (aVehicle.get_insertion_checks() & ((InsertionCheck::COLLISION as i32) | (InsertionCheck::PEDESTRIAN as i32))) != 0)
+                    || self.check_failure(aVehicle, speed, dist, stopSpeed, patchSpeed, String::new(), InsertionCheck::PEDESTRIAN)
+                {
+                    // we may not drive with the given velocity - we crash into the pedestrian
+                    return false;
+                }
+            }
+        }
+        let mut backLength = aVehicle.get_length() - pos;
+        if backLength > 0. && MSNet::get_instance().has_persons() {
+            // look upstream for pedestrian crossings
+            let mut prev = self.get_logical_predecessor_lane();
+            let mut cur = Ptr::new(self);
+            while backLength > 0. && !prev.is_null() {
+                let link = prev.get_link_to(cur);
+                if link.has_foe_crossing() {
+                    for foe in link.get_foe_lanes() {
+                        let via = foe.get_incoming_lanes()[0].viaLink;
+                        if foe.is_crossing() && (foe.has_pedestrians() || (!via.get_approaching_persons().is_null() && via.get_approaching_persons().len() > 0)) {
+                            return false;
+                        }
+                    }
+                }
+                backLength -= prev.get_length();
+                cur = prev;
+                prev = prev.get_logical_predecessor_lane();
+            }
+        }
+        true
     }
 
     /// C++: `bool MSLane::hasApproaching(const std::vector<MSLink *> &) const` [const, protected]
@@ -8928,7 +9054,13 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn has_approaching_2(&self, links: &Vec<Ptr<MSLink>>) -> bool {
-        todo!("port MSLane::hasApproaching")
+        // shortcut: C++ declares this overload but never defines or calls it; it mirrors hasApproaching() over the given links
+        for link in links.iter() {
+            if link.get_approaching_2().len() > 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double MSLane::getFractionalVehicleLength(bool) const` [const, protected]
@@ -8953,7 +9085,21 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_fractional_vehicle_length(&self, brutto: bool) -> f64 {
-        todo!("port MSLane::getFractionalVehicleLength")
+        let mut sum = 0.;
+        if self.myPartialVehicles.len() > 0 {
+            let bidi = self.get_bidi_lane();
+            for cand in self.myPartialVehicles.iter() {
+                if MSGlobals::sublane() && cand.get_lane_change_model_2().get_shadow_lane() == Ptr::new(self) {
+                    continue;
+                }
+                if cand.get_lane() == bidi {
+                    sum += if brutto { cand.get_vehicle_type().get_length_with_gap() } else { cand.get_vehicle_type().get_length() };
+                } else {
+                    sum += self.myLength - cand.get_back_position_on_lane(Ptr::new(self));
+                }
+            }
+        }
+        sum
     }
 
     /// C++: `bool MSLane::mayContinue(const MSVehicle *) const` [const, protected]
@@ -8973,7 +9119,17 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn may_continue(&self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLane::mayContinue")
+        // shortcut: get_device() is not keyed by type yet, so the MSDevice_Taxi lookup never finds a device
+        if !veh.get_device(&()).is_null() {
+            // taxi device may assign a new route that continues past the end of the initial route
+            return true;
+        }
+        // dynamic_cast<MSTriggeredRerouter*> is matched by pointer identity to each rerouter's MSMoveReminder base
+        let rerouterReminders: Vec<Ptr<MSMoveReminder>> = MSTriggeredRerouter::get_instances().values().map(|r| Ptr::new(&r.base2)).collect();
+        if self.myMoveReminders.iter().any(|rem| rerouterReminders.contains(rem)) {
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSLane::hasUnsafeLink() const` [const, protected]
@@ -8989,7 +9145,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn has_unsafe_link(&self) -> bool {
-        todo!("port MSLane::hasUnsafeLink")
+        for link in self.myLinks.iter() {
+            if !link.have_priority() || link.get_state() == LINKSTATE_ZIPPER {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSLane::isFrontalCollision(const MSVehicle *, const MSVehicle *)` [static, protected]
@@ -9014,7 +9175,21 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn is_frontal_collision(collider: Ptr<MSVehicle>, victim: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLane::isFrontalCollision")
+        if collider.get_lane_change_model_2().is_opposite() != victim.get_lane_change_model_2().is_opposite() {
+            return true;
+        } else {
+            let victimBidi = victim.get_lane().myEdge.get_bidi_edge();
+            if collider.get_lane().myEdge == victimBidi {
+                return true;
+            } else {
+                for further in collider.get_further_lanes() {
+                    if further.myEdge == victimBidi {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSLane::MSLane(const MSLane &)` [private]
@@ -9030,7 +9205,7 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSLane) -> &mut MSLane {
-        todo!("port MSLane::operator=")
+        panic!("MSLane assignment operator is invalidated")
     }
 
 }
