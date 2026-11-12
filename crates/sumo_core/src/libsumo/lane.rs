@@ -1,6 +1,10 @@
 //! Port of libsumo/Lane.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::sumo_vehicle_class::{get_vehicle_class_names_list, invert_permissions, parse_vehicle_classes_vec};
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+use utils::geom::geom_helper::navi_degree;
+// shortcut: C++ `throw TraCIException(msg)` is mapped to `panic!("{}", msg)` (unwinds where C++ throws), upgrade when libsumo has a typed TraCI error that callers can catch
 
 /// C++ class `libsumo::Lane` (libsumo/Lane.h)
 pub struct Lane {
@@ -11,6 +15,13 @@ pub struct Lane {
 //   static SubscriptionResults Lane::mySubscriptionResults;
 //   static ContextSubscriptionResults Lane::myContextSubscriptionResults;
 
+thread_local! {
+    /// C++ static `Lane::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Lane::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 impl Lane {
     /// C++: `int Lane::getLinkNumber(const std::string &)` [static]
     // int
@@ -19,7 +30,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_link_number(laneID: &str) -> i32 {
-        todo!("port Lane::getLinkNumber")
+        Self::get_lane(laneID).get_link_cont().len() as i32
     }
 
     /// C++: `std::string Lane::getEdgeID(const std::string &)` [static]
@@ -29,7 +40,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(laneID: &str) -> String {
-        todo!("port Lane::getEdgeID")
+        Self::get_lane(laneID).get_edge().get_id().to_string()
     }
 
     /// C++: `double Lane::getLength(const std::string &)` [static]
@@ -39,7 +50,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_length(laneID: &str) -> f64 {
-        todo!("port Lane::getLength")
+        Self::get_lane(laneID).get_length()
     }
 
     /// C++: `double Lane::getMaxSpeed(const std::string &)` [static]
@@ -49,7 +60,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(laneID: &str) -> f64 {
-        todo!("port Lane::getMaxSpeed")
+        Self::get_lane(laneID).get_speed_limit()
     }
 
     /// C++: `double Lane::getFriction(const std::string &)` [static]
@@ -59,7 +70,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_friction(laneID: &str) -> f64 {
-        todo!("port Lane::getFriction")
+        Self::get_lane(laneID).get_friction_coefficient()
     }
 
     /// C++: `std::vector<std::string> Lane::getAllowed(const std::string &)` [static]
@@ -69,7 +80,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_allowed(laneID: &str) -> Vec<String> {
-        todo!("port Lane::getAllowed")
+        get_vehicle_class_names_list(Self::get_lane(laneID).get_permissions())
     }
 
     /// C++: `std::vector<std::string> Lane::getDisallowed(const std::string &)` [static]
@@ -79,7 +90,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_disallowed(laneID: &str) -> Vec<String> {
-        todo!("port Lane::getDisallowed")
+        // negation yields disallowed
+        get_vehicle_class_names_list(invert_permissions(Self::get_lane(laneID).get_permissions()))
     }
 
     /// C++: `std::vector<std::string> Lane::getChangePermissions(const std::string &, const int)` [static]
@@ -95,21 +107,33 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_change_permissions(laneID: &str, direction: i32) -> Vec<String> {
-        todo!("port Lane::getChangePermissions")
+        if direction == LANECHANGE_LEFT {
+            get_vehicle_class_names_list(Self::get_lane(laneID).get_change_left())
+        } else if direction == LANECHANGE_RIGHT {
+            get_vehicle_class_names_list(Self::get_lane(laneID).get_change_right())
+        } else {
+            panic!("{}", format!("Invalid direction for change permission (must be {} or {}", LANECHANGE_LEFT, LANECHANGE_RIGHT));
+        }
     }
 
     /// C++: `std::vector<libsumo::TraCIConnection> Lane::getLinks(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_links(laneID: &str) -> Vec<TraCIConnection> {
-        todo!("port Lane::getLinks")
+        // shortcut: needs MSLink::opened with its default arguments (posLat, collectFoes, ignoreRed, ego, dist) and MSLink::opened is still unported, upgrade when MSLink::opened is ported
+        panic!("shortcut: Lane::getLinks needs MSLink::opened with default arguments")
     }
 
     /// C++: `libsumo::TraCIPositionVector Lane::getShape(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_shape(laneID: &str) -> TraCIPositionVector {
-        todo!("port Lane::getShape")
+        let shp = Self::get_lane(laneID).get_shape(false).clone();
+        let mut pv = TraCIPositionVector { base: TraCIResult::new(), value: Vec::new() };
+        for pi in shp.iter() {
+            pv.value.push(TraCIPosition { base: TraCIResult::new(), x: pi.x(), y: pi.y(), z: pi.z() });
+        }
+        pv
     }
 
     /// C++: `double Lane::getWidth(const std::string &)` [static]
@@ -119,7 +143,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_width(laneID: &str) -> f64 {
-        todo!("port Lane::getWidth")
+        Self::get_lane(laneID).get_width()
     }
 
     /// C++: `double Lane::getCO2Emission(const std::string &)` [static]
@@ -129,7 +153,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getCO2Emission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO2>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getCO2Emission needs MSLane::getEmissions<CO2>")
     }
 
     /// C++: `double Lane::getCOEmission(const std::string &)` [static]
@@ -139,7 +164,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getCOEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getCOEmission needs MSLane::getEmissions<CO>")
     }
 
     /// C++: `double Lane::getHCEmission(const std::string &)` [static]
@@ -149,7 +175,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getHCEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::HC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getHCEmission needs MSLane::getEmissions<HC>")
     }
 
     /// C++: `double Lane::getPMxEmission(const std::string &)` [static]
@@ -159,7 +186,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getPMxEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::PM_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getPMxEmission needs MSLane::getEmissions<PM_X>")
     }
 
     /// C++: `double Lane::getNOxEmission(const std::string &)` [static]
@@ -169,7 +197,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getNOxEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::NO_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getNOxEmission needs MSLane::getEmissions<NO_X>")
     }
 
     /// C++: `double Lane::getFuelConsumption(const std::string &)` [static]
@@ -179,7 +208,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(laneID: &str) -> f64 {
-        todo!("port Lane::getFuelConsumption")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::FUEL>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getFuelConsumption needs MSLane::getEmissions<FUEL>")
     }
 
     /// C++: `double Lane::getNoiseEmission(const std::string &)` [static]
@@ -189,7 +219,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(laneID: &str) -> f64 {
-        todo!("port Lane::getNoiseEmission")
+        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
+        panic!("shortcut: Lane::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
     }
 
     /// C++: `double Lane::getElectricityConsumption(const std::string &)` [static]
@@ -199,7 +230,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(laneID: &str) -> f64 {
-        todo!("port Lane::getElectricityConsumption")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::ELEC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
+        panic!("shortcut: Lane::getElectricityConsumption needs MSLane::getEmissions<ELEC>")
     }
 
     /// C++: `double Lane::getLastStepMeanSpeed(const std::string &)` [static]
@@ -209,7 +241,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_mean_speed(laneID: &str) -> f64 {
-        todo!("port Lane::getLastStepMeanSpeed")
+        Self::get_lane(laneID).get_mean_speed()
     }
 
     /// C++: `double Lane::getLastStepOccupancy(const std::string &)` [static]
@@ -219,7 +251,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy(laneID: &str) -> f64 {
-        todo!("port Lane::getLastStepOccupancy")
+        Self::get_lane(laneID).get_netto_occupancy()
     }
 
     /// C++: `double Lane::getLastStepLength(const std::string &)` [static]
@@ -239,7 +271,17 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_length(laneID: &str) -> f64 {
-        todo!("port Lane::getLastStepLength")
+        let lane = Self::get_lane(laneID);
+        let mut length: f64 = 0.0;
+        let vehs = lane.get_vehicles_secure();
+        for veh in vehs.iter() {
+            length += veh.get_vehicle_type().get_length();
+        }
+        if vehs.len() > 0 {
+            length = length / (vehs.len() as f64);
+        }
+        lane.release_vehicles();
+        length
     }
 
     /// C++: `double Lane::getWaitingTime(const std::string &)` [static]
@@ -249,7 +291,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(laneID: &str) -> f64 {
-        todo!("port Lane::getWaitingTime")
+        Self::get_lane(laneID).get_waiting_seconds()
     }
 
     /// C++: `double Lane::getTraveltime(const std::string &)` [static]
@@ -265,7 +307,13 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_traveltime(laneID: &str) -> f64 {
-        todo!("port Lane::getTraveltime")
+        let lane = Self::get_lane(laneID);
+        let meanSpeed = lane.get_mean_speed();
+        if meanSpeed != 0.0 {
+            lane.get_length() / meanSpeed
+        } else {
+            1000000.0
+        }
     }
 
     /// C++: `int Lane::getLastStepVehicleNumber(const std::string &)` [static]
@@ -275,7 +323,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_number(laneID: &str) -> i32 {
-        todo!("port Lane::getLastStepVehicleNumber")
+        Self::get_lane(laneID).get_vehicle_number()
     }
 
     /// C++: `int Lane::getLastStepHaltingNumber(const std::string &)` [static]
@@ -294,7 +342,16 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_halting_number(laneID: &str) -> i32 {
-        todo!("port Lane::getLastStepHaltingNumber")
+        let lane = Self::get_lane(laneID);
+        let mut halting: i32 = 0;
+        let vehs = lane.get_vehicles_secure();
+        for veh in vehs.iter() {
+            if veh.get_speed() < SUMO_CONST_HALTING_SPEED {
+                halting += 1;
+            }
+        }
+        lane.release_vehicles();
+        halting
     }
 
     /// C++: `std::vector<std::string> Lane::getLastStepVehicleIDs(const std::string &)` [static]
@@ -311,7 +368,14 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_i_ds(laneID: &str) -> Vec<String> {
-        todo!("port Lane::getLastStepVehicleIDs")
+        let lane = Self::get_lane(laneID);
+        let mut vehIDs: Vec<String> = Vec::new();
+        let vehs = lane.get_vehicles_secure();
+        for veh in vehs.iter() {
+            vehIDs.push(veh.get_id().to_string());
+        }
+        lane.release_vehicles();
+        vehIDs
     }
 
     /// C++: `std::vector<std::string> Lane::getFoes(const std::string &, const std::string &)` [static]
@@ -332,7 +396,18 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_foes(laneID: &str, toLaneID: &str) -> Vec<String> {
-        todo!("port Lane::getFoes")
+        if toLaneID == "" {
+            return Self::get_internal_foes(laneID);
+        }
+        let mut foeIDs: Vec<String> = Vec::new();
+        let link = Self::get_lane(laneID).get_link_to(Self::get_lane(toLaneID));
+        if link.is_null() {
+            panic!("{}", format!("No connection from lane '{}' to lane '{}'", laneID, toLaneID));
+        }
+        for foe in link.get_foe_links().iter() {
+            foeIDs.push(foe.get_lane_before().get_id().to_string());
+        }
+        foeIDs
     }
 
     /// C++: `std::vector<std::string> Lane::getInternalFoes(const std::string &)` [static]
@@ -355,7 +430,15 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_foes(laneID: &str) -> Vec<String> {
-        todo!("port Lane::getInternalFoes")
+        let lane = Self::get_lane(laneID);
+        let mut foeIDs: Vec<String> = Vec::new();
+        if (lane.is_internal() || lane.is_crossing()) && lane.get_link_cont().len() > 0 {
+            let link = lane.get_link_cont()[0];
+            for foe in link.get_foe_lanes().iter() {
+                foeIDs.push(foe.get_id().to_string());
+            }
+        }
+        foeIDs
     }
 
     /// C++: `const std::vector<std::string> Lane::getPendingVehicles(const std::string &)` [static]
@@ -372,7 +455,14 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_pending_vehicles(laneID: &str) -> Vec<String> {
-        todo!("port Lane::getPendingVehicles")
+        let l = Self::get_lane(laneID); // validate laneID
+        let mut vehIDs: Vec<String> = Vec::new();
+        for veh in MSNet::get_instance().m().get_insertion_control().get_pending_vehicles().iter() {
+            if veh.get_lane().as_raw() == l.as_raw() {
+                vehIDs.push(veh.get_id().to_string());
+            }
+        }
+        vehIDs
     }
 
     /// C++: `double Lane::getAngle(const std::string &, double)` [static]
@@ -392,7 +482,17 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(laneID: &str, relativePosition: f64) -> f64 {
-        todo!("port Lane::getAngle")
+        let angle: f64;
+        let lane = Self::get_lane(laneID);
+        if relativePosition == INVALID_DOUBLE_VALUE {
+            let shape = lane.get_shape(false);
+            let start = shape.front();
+            let end = shape.back();
+            angle = start.angle_to2d(end);
+        } else {
+            angle = lane.get_shape(false).rotation_at_offset(lane.interpolate_lane_pos_to_geometry_pos(relativePosition));
+        }
+        navi_degree(angle)
     }
 
     /// C++: `std::string Lane::getBidiLane(const std::string &)` [static]
@@ -403,7 +503,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_bidi_lane(laneID: &str) -> String {
-        todo!("port Lane::getBidiLane")
+        let bidi = Self::get_lane(laneID).get_bidi_lane();
+        if bidi.is_null() { String::new() } else { bidi.get_id().to_string() }
     }
 
     /// C++: `std::vector<std::string> Lane::getIDList()` [static]
@@ -416,7 +517,10 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Lane::getIDList")
+        let _ = MSNet::get_instance(); // just to check that we actually have a network
+        let mut ids: Vec<String> = Vec::new();
+        MSLane::insert_i_ds(&mut ids);
+        ids
     }
 
     /// C++: `int Lane::getIDCount()` [static]
@@ -426,7 +530,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Lane::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Lane::getParameter(const std::string &, const std::string &)` [static]
@@ -436,14 +540,14 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Lane::getParameter")
+        Self::get_lane(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Lane::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Lane)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Lane::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Lane::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -453,77 +557,78 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Lane::setParameter")
+        Self::get_lane(objectID).m().base2.set_parameter(key, value);
     }
 
     /// C++: `void Lane::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Lane::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_LANE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Lane::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Lane::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_LANE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Lane::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Lane::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_LANE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Lane::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Lane::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_LANE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Lane::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Lane::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Lane::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Lane::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Lane::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Lane::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Lane::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Lane::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Lane::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Lane::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Lane::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Lane::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Lane::domainID")
+        CMD_GET_LANE_VARIABLE
     }
 
     /// C++: `void Lane::setAllowed(const std::string &, std::string)` [static]
@@ -533,7 +638,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_allowed(laneID: &str, allowedClasses: String) {
-        todo!("port Lane::setAllowed")
+        Self::set_allowed_2(laneID, vec![allowedClasses]);
     }
 
     /// C++: `void Lane::setAllowed(const std::string &, std::vector<std::string>)` [static]
@@ -545,7 +650,10 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_allowed_2(laneID: &str, allowedClasses: Vec<String>) {
-        todo!("port Lane::setAllowed")
+        let l = Self::get_lane(laneID);
+        let perms = parse_vehicle_classes_vec(&allowedClasses).unwrap_or_else(|e| panic!("{}", e));
+        l.m().set_permissions(perms, MSLane_CHANGE_PERMISSIONS_PERMANENT);
+        l.get_edge().rebuild_allowed_lanes(false, true);
     }
 
     /// C++: `void Lane::setDisallowed(const std::string &, std::string)` [static]
@@ -555,7 +663,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_disallowed(laneID: &str, disallowedClasses: String) {
-        todo!("port Lane::setDisallowed")
+        Self::set_disallowed_2(laneID, vec![disallowedClasses]);
     }
 
     /// C++: `void Lane::setDisallowed(const std::string &, std::vector<std::string>)` [static]
@@ -567,7 +675,11 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_disallowed_2(laneID: &str, disallowedClasses: Vec<String>) {
-        todo!("port Lane::setDisallowed")
+        let l = Self::get_lane(laneID);
+        // negation yields allowed
+        let perms = invert_permissions(parse_vehicle_classes_vec(&disallowedClasses).unwrap_or_else(|e| panic!("{}", e)));
+        l.m().set_permissions(perms, MSLane_CHANGE_PERMISSIONS_PERMANENT);
+        l.get_edge().rebuild_allowed_lanes(false, true);
     }
 
     /// C++: `void Lane::setChangePermissions(const std::string &, std::vector<std::string>, const int)` [static]
@@ -584,7 +696,14 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_change_permissions(laneID: &str, allowedClasses: Vec<String>, direction: i32) {
-        todo!("port Lane::setChangePermissions")
+        let l = Self::get_lane(laneID);
+        if direction == LANECHANGE_LEFT {
+            l.m().set_change_left(parse_vehicle_classes_vec(&allowedClasses).unwrap_or_else(|e| panic!("{}", e)));
+        } else if direction == LANECHANGE_RIGHT {
+            l.m().set_change_right(parse_vehicle_classes_vec(&allowedClasses).unwrap_or_else(|e| panic!("{}", e)));
+        } else {
+            panic!("{}", format!("Invalid direction for change permission (must be {} or {}", LANECHANGE_LEFT, LANECHANGE_RIGHT));
+        }
     }
 
     /// C++: `void Lane::setMaxSpeed(const std::string &, double)` [static]
@@ -594,7 +713,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(laneID: &str, speed: f64) {
-        todo!("port Lane::setMaxSpeed")
+        // C++ passes `true` as the double jamThreshold argument, which converts to 1.0
+        Self::get_lane(laneID).m().set_max_speed(speed, false, 1.0);
     }
 
     /// C++: `void Lane::setLength(const std::string &, double)` [static]
@@ -604,7 +724,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_length(laneID: &str, length: f64) {
-        todo!("port Lane::setLength")
+        Self::get_lane(laneID).m().set_length(length);
     }
 
     /// C++: `void Lane::setFriction(const std::string &, double)` [static]
@@ -614,7 +734,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn set_friction(laneID: &str, friction: f64) {
-        todo!("port Lane::setFriction")
+        Self::get_lane(laneID).m().set_friction_coefficient(friction);
     }
 
     /// C++: `void Lane::storeShape(const std::string &, PositionVector &)` [static]
@@ -625,7 +745,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port Lane::storeShape")
+        *shape = Self::get_lane(id).get_shape(false).clone();
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Lane::makeWrapper()` [static]
@@ -635,7 +755,8 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Lane::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Lane::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Lane::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -718,7 +839,59 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Lane::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            LANE_LINK_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_link_number(objID)),
+            LANE_EDGE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_edge_id(objID)),
+            VAR_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_length(objID)),
+            VAR_MAXSPEED => wrapper.m().wrap_double(objID, variable, Self::get_max_speed(objID)),
+            VAR_FRICTION => wrapper.m().wrap_double(objID, variable, Self::get_friction(objID)),
+            LANE_ALLOWED => wrapper.m().wrap_string_list(objID, variable, &Self::get_allowed(objID)),
+            LANE_DISALLOWED => wrapper.m().wrap_string_list(objID, variable, &Self::get_disallowed(objID)),
+            LANE_CHANGES => {
+                let direction = StoHelp::read_typed_byte(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_change_permissions(objID, direction))
+            }
+            VAR_CO2EMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co2_emission(objID)),
+            VAR_COEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co_emission(objID)),
+            VAR_HCEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_hc_emission(objID)),
+            VAR_PMXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_p_mx_emission(objID)),
+            VAR_NOXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_n_ox_emission(objID)),
+            VAR_FUELCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_fuel_consumption(objID)),
+            VAR_NOISEEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_noise_emission(objID)),
+            VAR_ELECTRICITYCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_electricity_consumption(objID)),
+            LAST_STEP_VEHICLE_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_vehicle_number(objID)),
+            LAST_STEP_MEAN_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_step_mean_speed(objID)),
+            LAST_STEP_VEHICLE_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_step_vehicle_i_ds(objID)),
+            LAST_STEP_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_step_occupancy(objID)),
+            LAST_STEP_VEHICLE_HALTING_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_halting_number(objID)),
+            LAST_STEP_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_last_step_length(objID)),
+            VAR_WAITING_TIME => wrapper.m().wrap_double(objID, variable, Self::get_waiting_time(objID)),
+            VAR_CURRENT_TRAVELTIME => wrapper.m().wrap_double(objID, variable, Self::get_traveltime(objID)),
+            VAR_WIDTH => wrapper.m().wrap_double(objID, variable, Self::get_width(objID)),
+            VAR_SHAPE => wrapper.m().wrap_position_vector(objID, variable, &Self::get_shape(objID)),
+            VAR_PENDING_VEHICLES => wrapper.m().wrap_string_list(objID, variable, &Self::get_pending_vehicles(objID)),
+            VAR_ANGLE => {
+                let relPos = StoHelp::read_typed_double(paramData.m(), "");
+                wrapper.m().wrap_double(objID, variable, Self::get_angle(objID, relPos))
+            }
+            VAR_BIDI => wrapper.m().wrap_string(objID, variable, &Self::get_bidi_lane(objID)),
+            VAR_FOES => {
+                let toLane = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_foes(objID, &toLane))
+            }
+            LANE_LINKS => wrapper.m().wrap_connection_vector(objID, variable, &Self::get_links(objID)),
+            VAR_PARAMETER => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSLane * Lane::getLane(const std::string &)` [static, private]
@@ -732,7 +905,11 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_lane(id: &str) -> Ptr<MSLane> {
-        todo!("port Lane::getLane")
+        let lane = MSLane::dictionary_2(id);
+        if lane.is_null() {
+            panic!("{}", format!("Lane '{}' is not known", id));
+        }
+        lane
     }
 
     /// C++: `void Lane::Lane()` [private]
@@ -740,7 +917,7 @@ impl Lane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Lane::Lane")
+        panic!("libsumo::Lane cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
