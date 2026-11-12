@@ -649,13 +649,13 @@ impl MESegment {
                 let dw = MSDriveWay::get_departure_driveway(veh.cast::<SUMOVehicle>(), false);
                 let mut occupied: MSEdgeVector = Vec::new();
                 if dw.foe_drive_way_occupied(false, veh.cast::<SUMOVehicle>(), &mut occupied) || dw.siding_deadlock(veh.cast::<SUMOVehicle>()) {
-                    self.myEdge.get_lanes()[0].m().set_parameter(&format!("insertionBlocked:{}", veh.get_id()), dw.get_id());
+                    self.myEdge.get_lanes()[0].m().base2.set_parameter(&format!("insertionBlocked:{}", veh.get_id()), dw.m().base2.get_id());
                     return false;
                 }
             }
             self.receive(veh, qIdx, time, true, false, false);
             if isRail {
-                self.myEdge.get_lanes()[0].m().unset_parameter(&format!("insertionConstraint:{}", veh.get_id()));
+                self.myEdge.get_lanes()[0].m().base2.unset_parameter(&format!("insertionConstraint:{}", veh.get_id()));
                 //unsetParameter("insertionOrder:" + veh->getID());
                 //unsetParameter("insertionBlocked:" + veh->getID());
                 //// rail_signal (not traffic_light) requires approach information for
@@ -816,7 +816,8 @@ impl MESegment {
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self, useCache: bool) -> f64 {
         // C++ const method that updates the cache (mutable members): mutate through the Ptr
-        let this = Ptr::new(self).m();
+        let this_ptr = Ptr::new(self);
+        let this = this_ptr.m();
         let currentTime = MSNet::get_instance().get_current_time_step();
         if currentTime != this.myLastMeanSpeedUpdate || !useCache {
             this.myLastMeanSpeedUpdate = currentTime;
@@ -1073,7 +1074,7 @@ impl MESegment {
         if !lc.is_null() {
             lc.m().set_event_time(std::cmp::max(lc.get_event_time(), self.myQueues[qi].get_block_time()), true);
             let lcLink = self.get_link(lc, false);
-            MSGlobals::meso_net().m().add_leader_car(lc, lcLink, false);
+            meso_net().m().add_leader_car(lc, lcLink, false);
         }
     }
 
@@ -1221,7 +1222,7 @@ impl MESegment {
                         if !link.is_null() {
                             link.m().remove_approaching(car0.cast::<SUMOVehicle>());
                         }
-                        MSGlobals::meso_net().m().remove_leader_car(car0);
+                        meso_net().m().remove_leader_car(car0);
                         newLeader = veh;
                     }
                     self.myQueues[qi].myVehicles.insert(1, veh);
@@ -1257,10 +1258,10 @@ impl MESegment {
             veh.m().activate_reminders(MSMoveReminder_Notification::NOTIFICATION_SEGMENT, Ptr::null());
         }
         if veh.is_parking() {
-            MSGlobals::meso_net().m().add_leader_car(veh, Ptr::null(), false);
+            meso_net().m().add_leader_car(veh, Ptr::null(), false);
         } else if !newLeader.is_null() {
             let leaderLink = self.get_link(newLeader, false);
-            MSGlobals::meso_net().m().add_leader_car(newLeader, leaderLink, false);
+            meso_net().m().add_leader_car(newLeader, leaderLink, false);
         }
     }
 
@@ -1287,9 +1288,9 @@ impl MESegment {
             if q.size() > 0 {
                 for veh in q.get_vehicles().iter() {
                     if filter.vehicle_applies(&**veh) {
-                        MSGlobals::meso_net().m().remove_leader_car(*veh);
+                        meso_net().m().remove_leader_car(*veh);
                         // shortcut: C++ myVaporizationTarget static segment not ported, a null target is treated as invalid (same as isInvalid)
-                        MSGlobals::meso_net().m().change_segment(*veh, currentTime + 1, Ptr::null(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
+                        meso_net().m().change_segment(*veh, currentTime + 1, Ptr::null(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
                         return true;
                     }
                 }
@@ -1568,7 +1569,7 @@ impl MESegment {
             // !!! one question - what about the previously added vehicle? Is it stored twice?
             let veh = *self.myQueues[qi].get_vehicles().last().unwrap();
             let link = self.get_link(veh, false);
-            MSGlobals::meso_net().m().add_leader_car(veh, link, true);
+            meso_net().m().add_leader_car(veh, link, true);
         }
         self.myQueues[qi].set_block_time(blockTime);
         self.myQueues[qi].set_entry_block_time(entryBlockTime);
@@ -1848,10 +1849,10 @@ impl MESegment {
         oldEarliestExitTime = oldExit + self.tau_with_veh_length(self.myTau_ff, v.get_vehicle_type().get_length_with_gap(), v.get_vehicle_type().get_car_follow_model().get_headway_time());
         let mut newEvent = std::cmp::max(self.new_arrival(v, newSpeed, currentTime), blockTime);
         if v.get_event_time() != newEvent {
-            MSGlobals::meso_net().m().remove_leader_car(v);
+            meso_net().m().remove_leader_car(v);
             v.m().set_event_time(newEvent, true);
             let vLink = self.get_link(v, false);
-            MSGlobals::meso_net().m().add_leader_car(v, vLink, false);
+            meso_net().m().add_leader_car(v, vLink, false);
         }
         for i in vehs.iter().rev().skip(1) {
             let i = *i;
@@ -1985,8 +1986,9 @@ impl MESegment {
             return false;
         }
         // if the target segment of this link is not saturated junction control is disabled
-        let targetEdge = link.get_lane().get_edge();
-        let target = MSGlobals::meso_net().m().get_segment_for_edge(&*targetEdge, 0.);
+        let lane = link.get_lane();
+        let targetEdge = lane.get_edge();
+        let target = meso_net().m().get_segment_for_edge(&*targetEdge, 0.);
         (target.get_brutto_occupancy() * 2. < target.myJamThreshold) && !targetEdge.is_roundabout()
     }
 

@@ -113,7 +113,8 @@ impl MEVehicle {
     pub fn get_position_on_lane(&self) -> f64 {
         if MSGlobals::meso_interpolate_pos() {
             // interpolation may cause problems with arrivals and calibrators
-            let mesoPos = self.get_edge().get_meso_positions();
+            let edge = self.get_edge();
+            let mesoPos = edge.get_meso_positions();
             if let Some(p) = mesoPos.get(&Ptr::new(self)) {
                 return p.0;
             }
@@ -323,9 +324,9 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn on_removal_from_net(&mut self, reason: MSMoveReminder_Notification) {
-        MSGlobals::meso_net().m().remove_leader_car(Ptr::from_mut(self));
+        meso_net().m().remove_leader_car(Ptr::from_mut(self));
         let now = MSNet::get_instance().get_current_time_step();
-        MSGlobals::meso_net().m().change_segment(Ptr::from_mut(self), now, Ptr::null(), reason, false);
+        meso_net().m().change_segment(Ptr::from_mut(self), now, Ptr::null(), reason, false);
     }
 
     /// C++: `bool MEVehicle::moveRoutePointer()`
@@ -852,7 +853,7 @@ impl MEVehicle {
                 // if this is an aborted stop we need to change the event time of the vehicle
                 let isLeader = self.mySegment.get_queue(self.myQueIndex).last().copied() == Some(me);
                 if isLeader {
-                    let meso = MSGlobals::meso_net();
+                    let meso = meso_net();
                     meso.m().remove_leader_car(me);
                     self.myEventTime = now + 1;
                     meso.m().add_leader_car(me, Ptr::null(), false);
@@ -1500,7 +1501,7 @@ impl MEVehicle {
         // save parameters
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            dev.m().save_state(out);
+            dev.m().base2.save_state(out);
         }
         for item in self.myMoveReminders.iter() {
             item.0.m().save_reminder_state(out, &*self);
@@ -1651,7 +1652,7 @@ impl MEVehicle {
             }
             if segIndex >= 0 {
                 let curEdge = self.myRoute.index_op(self.myCurrEdge as i32);
-                let meso = MSGlobals::meso_net();
+                let meso = meso_net();
                 let mut seg = meso.m().get_segment_for_edge(&curEdge, 0.);
                 while seg.get_index() != segIndex {
                     seg = seg.get_next_segment();
@@ -1669,7 +1670,7 @@ impl MEVehicle {
                 // on teleport
                 self.set_segment(Ptr::null(), 0);
                 debug_assert!(self.myEventTime != SUMOTIME_MIN);
-                MSGlobals::meso_net().m().add_leader_car(me, Ptr::null(), true);
+                meso_net().m().add_leader_car(me, Ptr::null(), true);
             }
             // see MSBaseVehicle constructor
             if self.myParameter.was_set(VEHPARS_FORCE_REROUTE) {
