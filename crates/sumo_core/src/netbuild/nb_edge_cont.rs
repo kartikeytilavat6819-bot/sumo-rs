@@ -643,7 +643,7 @@ impl NBEdgeCont {
     //         return myEdges.end();
     //     }
     #[allow(unused_variables)]
-    pub fn end(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBEdge>> {
+    pub fn end(&self) -> std::iter::Skip<std::collections::btree_map::Iter<'_, String, Ptr<NBEdge>>> {
         // shortcut: C++ iterator pair cannot be compared in Rust, end() is an exhausted iterator; callers iterate begin() instead, upgrade if a caller needs the C++ iterator protocol
         self.myEdges.iter().skip(self.myEdges.len())
     }

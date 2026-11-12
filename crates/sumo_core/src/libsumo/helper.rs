@@ -1698,12 +1698,12 @@ impl Helper {
                 // Search vehs along this lane
                 // (Coverage info is collected per origin lane since lanes reached from neighboring lanes may have different distances
                 // and aborting at previously scanned when coming from a closer origin may prevent scanning of parts that should be included.)
-                let checkedLanes: Rc<LaneCoverageInfo> = Rc::new(LaneCoverageInfo::new());
+                let checkedLanes: Rc<std::cell::RefCell<LaneCoverageInfo>> = Rc::new(std::cell::RefCell::new(LaneCoverageInfo::new()));
                 let newVehs = lane.get_surrounding_vehicles(v.get_position_on_lane(), downstreamDist, upstreamDist + v.get_length(), checkedLanes.clone());
                 for nv in newVehs.iter() {
                     vehs.insert(nv.cast::<SUMOTrafficObject>());
                 }
-                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), checkedLanes);
+                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), Rc::new(checkedLanes.borrow().clone()));
             } else if !disregardOppositeDirection && offset > 0 {
                 // Check opposite edge, too
                 // index points beyond this edge
@@ -1720,7 +1720,7 @@ impl Helper {
                 }
                 lane = opposite.get_lanes()[ix_opposite as usize];
                 // Search vehs along opposite lanes (swap upstream and downstream distance)
-                let newVehs = lane.get_surrounding_vehicles(lane.get_length() - v.get_position_on_lane(), upstreamDist + v.get_length(), downstreamDist, Rc::new(LaneCoverageInfo::new()));
+                let newVehs = lane.get_surrounding_vehicles(lane.get_length() - v.get_position_on_lane(), upstreamDist + v.get_length(), downstreamDist, Rc::new(std::cell::RefCell::new(LaneCoverageInfo::new())));
                 for nv in newVehs.iter() {
                     vehs.insert(nv.cast::<SUMOTrafficObject>());
                 }

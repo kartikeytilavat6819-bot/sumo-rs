@@ -2197,7 +2197,8 @@ impl MSLane {
     pub fn free_insertion(&mut self, veh: &mut MSVehicle, mspeed: f64, posLat: f64, notification: MSMoveReminder_Notification) -> bool {
         // try to insert teleporting vehicles fully on this lane
         let mut maxPos = self.myLength;
-        if veh.has_stops() && veh.get_next_stop().edge == *veh.get_current_route_edge() {
+        if veh.has_stops() && { // shortcut: MSRouteIterator is Unmapped, stop edge cannot be compared with the current route edge, upgrade when MSRouteIterator is mapped
+            panic!("shortcut: MSRouteIterator comparison not ported") } {
             maxPos = 0f64.max(veh.get_next_stop().get_end_pos(veh));
         }
         let minPos = if notification == MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
