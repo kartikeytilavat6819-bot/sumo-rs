@@ -3,6 +3,19 @@
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{is_railway, SVCPermissions, SVC_ALL, SVC_BICYCLE, SVC_PASSENGER, SVC_PEDESTRIAN, SVC_RAIL, SVC_RAIL_ELECTRIC, SVC_RAIL_FAST, SVC_RAIL_URBAN, SVC_TRAM, SVC_UNSPECIFIED};
 use utils::common::to_string::to_string;
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::g_precision;
+use utils::common::string_utils::escape_xml;
+use utils::geom::geom_helper::{angle_diff, deg2rad};
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+
+/// C++ MAX2/MIN2 (StdDefs.h) with the same NaN behaviour as utils::geom::max2/min2
+fn max2_local(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min2_local(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
 
 /// C++ typedef `std::map<std::string, std::pair<std::set<int>, std::set<LinkDirection>>> NWWriter_OpenDrive::SignalLanes`
 pub type NWWriter_OpenDrive_SignalLanes = BTreeMap<String, (BTreeSet<i32>, BTreeSet<LinkDirection>)>;
@@ -2121,8 +2134,8 @@ impl NWWriter_OpenDrive {
                 let lanes: Vec<i32> = signalLanes[id].0.iter().cloned().collect();
                 for lane in lanes {
                     device.open_tag("validity");
-                    device.write_attr("fromLane", &s2x(lane, e.get_num_lanes()));
-                    device.write_attr("toLane", &s2x(lane, e.get_num_lanes()));
+                    device.write_attr("fromLane", &Self::s2x(lane, e.get_num_lanes()));
+                    device.write_attr("toLane", &Self::s2x(lane, e.get_num_lanes()));
                     device.close_tag("");
                 }
                 device.close_tag("");
