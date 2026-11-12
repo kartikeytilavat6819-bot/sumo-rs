@@ -2,8 +2,15 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
+const MSPMODEL_FORWARD: i32 = 1;
+const MSPMODEL_BACKWARD: i32 = -1;
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
+
 /// A stage performing walking on a sequence of edges. The real movements are part of the pedestrian model.
 /// C++ class `MSStageWalking` (microsim/transportables/MSStageWalking.h)
+#[repr(C)]
 pub struct MSStageWalking {
     /// C++ base class `MSStageMoving`
     pub base: MSStageMoving,
@@ -57,7 +64,22 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn new(personID: &str, route: &ConstMSEdgeVector, toStop: Ptr<MSStoppingPlace>, walkingTime: SUMOTime, speed: f64, departPos: f64, arrivalPos: f64, departPosLat: f64, departLane: i32, routeID: &str) -> Self {
-        todo!("port MSStageWalking::MSStageWalking")
+        let mut walk = MSStageWalking {
+            base: MSStageMoving::new(MSStageType::WALKING, route, routeID, toStop, speed, departPos, arrivalPos, departPosLat, departLane),
+            myWalkingTime: walkingTime,
+            myLastEdgeEntryTime: 0,
+            myMoveReminders: Vec::new(),
+            myExitTimes: Ptr::null(),
+            myInternalDistance: 0.,
+        };
+        let firstEdge = route[0];
+        let lastEdge = route[route.len() - 1];
+        walk.myDepartPos = SUMOVehicleParameter::interpret_edge_pos(departPos, firstEdge.get_length(), SUMO_ATTR_DEPARTPOS, &format!("person '{}' walking from edge '{}'", personID, firstEdge.get_id()), false);
+        walk.myArrivalPos = SUMOVehicleParameter::interpret_edge_pos(arrivalPos, lastEdge.get_length(), SUMO_ATTR_ARRIVALPOS, &format!("person '{}' walking to edge '{}'", personID, lastEdge.get_id()), false);
+        if walkingTime > 0 {
+            walk.mySpeed = walk.compute_average_speed();
+        }
+        walk
     }
 
     /// C++: `void MSStageWalking::~MSStageWalking() noexcept` [virtual]
@@ -67,7 +89,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStageWalking::~MSStageWalking")
+        // shortcut: C++ deletes myExitTimes here; ownership of the exit-times vector is not modelled yet
     }
 
     /// C++: `MSStage * MSStageWalking::clone() const` [const, virtual]
@@ -98,7 +120,16 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<MSStage> {
-        todo!("port MSStageWalking::clone")
+        // shortcut: the routeDistribution lookup (MSRoute::distDictionary/dictionary) is not ported, so the clone keeps the current route
+        let route = self.myRoute.clone();
+        let departPos = self.myDepartPos;
+        let arrivalPos = self.myArrivalPos;
+        let departLane = self.myDepartLane;
+        let routeID = self.myRouteID.clone();
+        let clon = MSStageWalking::new("dummyID", &route, self.myDestinationStop, self.myWalkingTime, self.mySpeed, departPos, arrivalPos, self.myDepartPosLat, departLane, &routeID);
+        let clonPtr = Ptr::from_mut(Box::leak(Box::new(clon))).cast::<MSStage>();
+        clonPtr.m().set_parameters(self);
+        clonPtr
     }
 
     /// C++: `bool MSStageWalking::proceed(MSNet *, MSTransportable *, SUMOTime, MSStage *)` [virtual]
@@ -138,7 +169,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn proceed(&mut self, net: Ptr<MSNet>, person: Ptr<MSTransportable>, now: SUMOTime, previous: Ptr<MSStage>) -> bool {
-        todo!("port MSStageWalking::proceed")
+        panic!("MSStageWalking::proceed needs the pedestrian movement model (MSTransportableControl::getMovementModel, MSPModel::add), which is not ported yet");
     }
 
     /// C++: `void MSStageWalking::abort(MSTransportable *)` [virtual]
@@ -149,7 +180,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn abort(&mut self, arg0: Ptr<MSTransportable>) {
-        todo!("port MSStageWalking::abort")
+        panic!("MSStageWalking::abort needs the pedestrian movement model (MSPModel::remove), which is not ported yet");
     }
 
     /// C++: `void MSStageWalking::setSpeed(double)` [virtual]
@@ -160,7 +191,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(&mut self, speed: f64) {
-        todo!("port MSStageWalking::setSpeed")
+        self.mySpeed = speed;
     }
 
     /// C++: `double MSStageWalking::getDistance() const` [const, virtual]
@@ -170,7 +201,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        todo!("port MSStageWalking::getDistance")
+        self.walk_distance(false)
     }
 
     /// C++: `int MSStageWalking::getRoutePosition() const` [const, virtual]
@@ -181,7 +212,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        todo!("port MSStageWalking::getRoutePosition")
+        panic!("MSStageWalking::getRoutePosition needs MSStageMoving::myRouteStep, which is Unmapped (std::vector iterator); not ported yet");
     }
 
     /// C++: `std::string MSStageWalking::getStageDescription(const bool) const` [const, virtual]
@@ -191,7 +222,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_stage_description(&self, isPerson: bool) -> String {
-        todo!("port MSStageWalking::getStageDescription")
+        "walking".to_string()
     }
 
     /// C++: `std::string MSStageWalking::getStageSummary(const bool) const` [const, virtual]
@@ -205,7 +236,14 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_stage_summary(&self, isPerson: bool) -> String {
-        todo!("port MSStageWalking::getStageSummary")
+        let dest = if self.get_destination_stop().is_null() {
+            format!(" edge '{}'", self.get_destination().get_id())
+        } else {
+            let stop = self.get_destination_stop();
+            let name = if stop.get_my_name() != "" { format!(" ({})", stop.get_my_name()) } else { String::new() };
+            format!(" stop '{}'{}", stop.get_id(), name)
+        };
+        format!("walking to {}", dest)
     }
 
     /// C++: `void MSStageWalking::saveState(std::ostringstream &, MSTransportable *)` [virtual]
@@ -224,8 +262,8 @@ impl MSStageWalking {
     //     myPState->saveState(out);
     // }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
-        todo!("port MSStageWalking::saveState")
+    pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
+        panic!("MSStageWalking::saveState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model state (saveState); not ported yet");
     }
 
     /// C++: `void MSStageWalking::loadState(MSTransportable *, std::istringstream &)` [virtual]
@@ -258,8 +296,8 @@ impl MSStageWalking {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut Unmapped /* std::istringstream */) {
-        todo!("port MSStageWalking::loadState")
+    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
+        panic!("MSStageWalking::loadState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model loadState; not ported yet");
     }
 
     /// C++: `void MSStageWalking::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual]
@@ -290,7 +328,28 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        todo!("port MSStageWalking::tripInfoOutput")
+        // shortcut: MSPModel::usingShortcuts() is assumed false (movement model not ported), so the invalid-tripinfo warning is never written
+        let distance = self.walk_distance(true);
+        let maxSpeed = self.get_max_speed(person);
+        let duration = self.myArrived - self.myDeparted;
+        let timeLoss = self.get_time_loss(person);
+        // shortcut: MSDevice_Tripinfo::addPedestrianData is not ported yet, so the pedestrian totals are not updated
+        os.open_tag("walk");
+        let depart = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
+        os.write_attr("depart", &depart);
+        os.write_attr("departPos", &self.myDepartPos);
+        let arrival = if self.myArrived >= 0 { time2string(self.myArrived) } else { "-1".to_string() };
+        os.write_attr("arrival", &arrival);
+        let arrivalPos = if self.myArrived >= 0 { f64_to_string_prec(self.myArrivalPos, g_precision()) } else { "-1".to_string() };
+        os.write_attr("arrivalPos", &arrivalPos);
+        let durationStr = if self.myDeparted < 0 { "-1".to_string() } else { time2string(if self.myArrived >= 0 { duration } else { MSNet::get_instance().get_current_time_step() - self.myDeparted }) };
+        os.write_attr("duration", &durationStr);
+        let routeLength = if self.myArrived >= 0 { f64_to_string_prec(distance, g_precision()) } else { "-1".to_string() };
+        os.write_attr("routeLength", &routeLength);
+        os.write_attr("timeLoss", &time2string(timeLoss));
+        os.write_attr("maxSpeed", &maxSpeed);
+        os.write_attr("waitingTime", &time2string(self.get_total_waiting_time()));
+        os.close_tag("");
     }
 
     /// C++: `void MSStageWalking::routeOutput(const bool, OutputDevice &, const bool, const MSStage *const, const bool, const bool) const` [const, virtual]
@@ -342,7 +401,52 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn route_output(&self, isPerson: bool, os: &mut OutputDevice, withRouteLength: bool, previous: Ptr<MSStage>, withTiming: bool, saveState: bool) {
-        todo!("port MSStageWalking::routeOutput")
+        os.open_tag("walk");
+        let edges: Vec<String> = self.myRoute.iter().map(|e| e.get_id().to_string()).collect();
+        os.write_attr(SUMO_ATTR_EDGES, &edges.join(" "));
+        let mut comment = String::new();
+        if !self.get_destination_stop().is_null() {
+            let stop = self.get_destination_stop();
+            os.write_attr(utils::xml::sumo_xml_definitions::Tags.get_string(stop.get_element()), stop.get_id());
+            if stop.get_my_name() != "" {
+                comment = format!(" <!-- {} -->", utils::common::string_utils::escape_xml(stop.get_my_name(), true));
+            }
+        } else if self.was_set(VEHPARS_ARRIVALPOS_SET) {
+            os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.myArrivalPos);
+        }
+        if self.myWalkingTime > 0 {
+            os.write_attr(SUMO_ATTR_DURATION, &time2string(self.myWalkingTime));
+        } else if self.mySpeed > 0. {
+            os.write_attr(SUMO_ATTR_SPEED, &self.mySpeed);
+        }
+        if withRouteLength {
+            if self.myDeparted >= 0 {
+                os.write_attr("routeLength", &self.walk_distance(true));
+            } else {
+                os.write_attr("routeLength", "-1");
+            }
+        }
+        if !self.myExitTimes.is_null() {
+            let mut exits: Vec<String> = self.myExitTimes.iter().map(|t| time2string(*t)).collect();
+            let missing = if self.myRoute.len() as i64 - self.myExitTimes.len() as i64 > 0 { self.myRoute.len() - self.myExitTimes.len() } else { 0 };
+            for _ in 0..missing {
+                exits.push("-1".to_string());
+            }
+            os.write_attr("exitTimes", &exits.join(" "));
+        }
+        if withTiming {
+            let started = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
+            os.write_attr(SUMO_ATTR_STARTED, &started);
+            let ended = if self.myArrived >= 0 { time2string(self.myArrived) } else { "-1".to_string() };
+            os.write_attr(SUMO_ATTR_ENDED, &ended);
+        }
+        if utils::options::options_cont::get_bool("vehroute-output.cost") {
+            os.write_attr(SUMO_ATTR_COST, &self.get_costs());
+        }
+        if saveState && self.get_total_waiting_time() > 0 {
+            os.write_attr("waitingTime", &time2string(self.get_total_waiting_time()));
+        }
+        os.close_tag(&comment);
     }
 
     /// C++: `bool MSStageWalking::moveToNextEdge(MSTransportable *, SUMOTime, int, MSEdge *, const bool)` [virtual]
@@ -399,7 +503,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, person: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
-        todo!("port MSStageWalking::moveToNextEdge")
+        panic!("MSStageWalking::moveToNextEdge needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model; not ported yet");
     }
 
     /// C++: `void MSStageWalking::activateEntryReminders(MSTransportable *, const bool)` [virtual]
@@ -434,7 +538,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_entry_reminders(&mut self, person: Ptr<MSTransportable>, isDepart: bool) {
-        todo!("port MSStageWalking::activateEntryReminders")
+        panic!("MSStageWalking::activateEntryReminders needs the MSMoveReminder notifyEnter API and MSTriggeredRerouter, which are not ported yet");
     }
 
     /// C++: `void MSStageWalking::activateMoveReminders(MSTransportable *, double, double, double)`
@@ -450,7 +554,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_move_reminders(&mut self, person: Ptr<MSTransportable>, oldPos: f64, newPos: f64, newSpeed: f64) {
-        todo!("port MSStageWalking::activateMoveReminders")
+        panic!("MSStageWalking::activateMoveReminders needs the MSMoveReminder notifyMove API, which is not ported yet");
     }
 
     /// C++: `void MSStageWalking::activateLeaveReminders(MSTransportable *, const MSLane *, double, SUMOTime, bool)`
@@ -468,7 +572,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_leave_reminders(&mut self, person: Ptr<MSTransportable>, lane: Ptr<MSLane>, lastPos: f64, t: SUMOTime, arrived: bool) {
-        todo!("port MSStageWalking::activateLeaveReminders")
+        panic!("MSStageWalking::activateLeaveReminders needs the MSMoveReminder updateDetector/notifyLeave API, which is not ported yet");
     }
 
     /// C++: `double MSStageWalking::getMaxSpeed(const MSTransportable *const) const` [const, virtual]
@@ -478,7 +582,13 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self, person: Ptr<MSTransportable>) -> f64 {
-        todo!("port MSStageWalking::getMaxSpeed")
+        if self.mySpeed >= 0. {
+            self.mySpeed
+        } else if !person.is_null() {
+            person.get_max_speed()
+        } else {
+            DEFAULT_PEDESTRIAN_SPEED
+        }
     }
 
     /// C++: `double MSStageWalking::getArrivalPos() const` [const, virtual]
@@ -487,7 +597,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self) -> f64 {
-        todo!("port MSStageWalking::getArrivalPos")
+        self.myArrivalPos
     }
 
     /// C++: `const MSEdge * MSStageWalking::getNextRouteEdge() const` [const, virtual]
@@ -496,7 +606,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStageWalking::getNextRouteEdge")
+        panic!("MSStageWalking::getNextRouteEdge needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
     }
 
     /// C++: `bool MSStageWalking::isWalk() const` [const, virtual]
@@ -506,7 +616,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn is_walk(&self) -> bool {
-        todo!("port MSStageWalking::isWalk")
+        true
     }
 
     /// C++: `SUMOTime MSStageWalking::getTimeLoss(const MSTransportable *) const` [const, virtual]
@@ -521,7 +631,12 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_time_loss(&self, transportable: Ptr<MSTransportable>) -> SUMOTime {
-        todo!("port MSStageWalking::getTimeLoss")
+        let timeLoss = if self.myArrived == -1 { 0 } else { self.get_duration() - time2steps(self.walk_distance(true) / self.get_max_speed(transportable)) };
+        if timeLoss < 0 && timeLoss > time2steps(-0.1) {
+            // avoid negative timeLoss due to rounding errors
+            return 0;
+        }
+        timeLoss
     }
 
     /// C++: `bool MSStageWalking::equals(const MSStage &) const` [const, virtual]
@@ -535,7 +650,12 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
-        todo!("port MSStageWalking::equals")
+        if !self.base.equals(s) {
+            return false;
+        }
+        // this is safe because MSStage already checked that the type fits
+        let sw = Ptr::new(s).cast::<MSStageWalking>();
+        self.myWalkingTime == sw.myWalkingTime
     }
 
     /// C++: `void MSStageWalking::setExitTimes(std::vector<SUMOTime> *)`
@@ -544,7 +664,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn set_exit_times(&mut self, exitTimes: Ptr<Vec<SUMOTime>>) {
-        todo!("port MSStageWalking::setExitTimes")
+        self.myExitTimes = exitTimes;
     }
 
     /// C++: `double MSStageWalking::walkDistance(bool) const` [const, private]
@@ -634,7 +754,42 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn walk_distance(&self, partial: bool) -> f64 {
-        todo!("port MSStageWalking::walkDistance")
+        // shortcut: the partial (current position) distance needs MSStageMoving::myRouteStep (Unmapped iterator), upgrade when it is ported
+        if partial && self.myArrived < 0 {
+            panic!("MSStageWalking::walkDistance(partial) needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
+        }
+        let mut length: f64 = 0.;
+        for e in self.myRoute.iter() {
+            length += e.get_length();
+        }
+        // shortcut: MSPModel::usingInternalLanes() is assumed false (movement model not ported), so walkingarea distances are not added
+        // determine walking direction for depart and arrival
+        let mut dummy: i32 = 0;
+        let departFwdArrivalDir = MSPModel::can_traverse(MSPMODEL_FORWARD, &self.myRoute, &mut dummy);
+        let departBwdArrivalDir = MSPModel::can_traverse(MSPMODEL_BACKWARD, &self.myRoute, &mut dummy);
+        let mayStartForward = departFwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
+        let mayStartBackward = departBwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
+        let arrivalPos = self.myArrivalPos;
+        let lastLength = self.myRoute[self.myRoute.len() - 1].get_length();
+        let firstLength = self.myRoute[0].get_length();
+        let lengthFwd = length - self.myDepartPos - (if departFwdArrivalDir == MSPMODEL_BACKWARD { arrivalPos } else { lastLength - arrivalPos });
+        let lengthBwd = length - (firstLength - self.myDepartPos) - (if departBwdArrivalDir == MSPMODEL_BACKWARD { arrivalPos } else { lastLength - arrivalPos });
+        if self.myRoute.len() == 1 {
+            if self.myDepartPos > self.myArrivalPos {
+                length = lengthBwd;
+            } else {
+                length = lengthFwd;
+            }
+        } else if mayStartForward && mayStartBackward {
+            length = if lengthFwd < lengthBwd { lengthFwd } else { lengthBwd };
+        } else if mayStartForward {
+            length = lengthFwd;
+        } else if mayStartBackward {
+            length = lengthBwd;
+        } else {
+            length = lengthFwd;
+        }
+        if POSITION_EPS > length { POSITION_EPS } else { length }
     }
 
     /// C++: `double MSStageWalking::computeAverageSpeed() const` [const, private]
@@ -644,7 +799,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn compute_average_speed(&self) -> f64 {
-        todo!("port MSStageWalking::computeAverageSpeed")
+        self.walk_distance(false) / steps2time(self.myWalkingTime + 1)
     }
 
     /// C++: `void MSStageWalking::MSStageWalking(const MSStageWalking &)` [private]
@@ -652,7 +807,7 @@ impl MSStageWalking {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSStageWalking) -> Self {
-        todo!("port MSStageWalking::MSStageWalking")
+        panic!("MSStageWalking copy constructor is invalidated in C++ (private)");
     }
 
     /// C++: `MSStageWalking & MSStageWalking::operator=(const MSStageWalking &)` [private]
@@ -660,7 +815,7 @@ impl MSStageWalking {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSStageWalking) -> &mut MSStageWalking {
-        todo!("port MSStageWalking::operator=")
+        panic!("MSStageWalking assignment operator is invalidated in C++ (private)");
     }
 
 }
