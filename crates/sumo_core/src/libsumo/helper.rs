@@ -651,7 +651,7 @@ impl Helper {
         let to = Ptr::from_mut(roadPos2.0.m().get_edge());
         // shortcut: the prohibitions map is Unmapped (), an empty map is passed
         let now = MSNet::get_instance().get_current_time_step();
-        MSNet::get_instance().get_router_tt(0, &()).compute(from, to, Ptr::null(), now, &mut newRoute, true);
+        MSNet::get_instance().get_router_tt(0, &Default::default()).compute(from, to, Ptr::null(), now, &mut newRoute, true);
         if newRoute.is_empty() {
             return INVALID_DOUBLE_VALUE;
         }

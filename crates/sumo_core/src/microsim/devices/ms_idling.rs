@@ -512,7 +512,7 @@ impl MSIdling_TaxiStand {
                         let mut stop = vehB.get_next_stop().pars.clone();
                         vehB.m().abort_next_stop(0);
                         let mut loopedRoute: ConstMSEdgeVector = Vec::new();
-                        let router = MSRoutingEngine::get_router_tt(vehB.get_rng_index(), vehB.get_v_class(), &());
+                        let router = MSRoutingEngine::get_router_tt(vehB.get_rng_index(), vehB.get_v_class(), &Default::default());
                         router.compute_looped(vehB.get_edge(), vehB.get_edge(), Ptr::from_mut(veh), now, &mut loopedRoute, false);
                         vehB.m().replace_route_edges(&mut loopedRoute, -1.0, 0.0, "taxi:idling_unblock", false, false, false, Ptr::default());
                         stop.index = 1;

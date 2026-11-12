@@ -654,9 +654,9 @@ impl MSTriggeredRerouter {
                 }
 
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &())
+                    net.get_router_tt(v.get_rng_index(), &Default::default())
                 };
                 let routeCost = router.recompute_costs(&newRoute, Ptr::from_mut(v), now, Ptr::default());
                 let routeEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
@@ -737,9 +737,9 @@ impl MSTriggeredRerouter {
                     return false;
                 }
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &())
+                    net.get_router_tt(v.get_rng_index(), &Default::default())
                 };
                 let mut newEdges: ConstMSEdgeVector = Vec::new();
                 newEdges.extend_from_slice(&oldEdges[pos..bestMainStart]);
@@ -815,9 +815,9 @@ impl MSTriggeredRerouter {
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &())
+                    net.get_router_tt(v.get_rng_index(), &Default::default())
                 };
                 let mut ok = false;
                 // C++ try { ... } catch (ProcessError&) {}: reroute() reports failure through its return value here
@@ -857,9 +857,9 @@ impl MSTriggeredRerouter {
             } else {
                 // person rerouting here
                 let router: &mut MSTransportableRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &())
+                    MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &Default::default())
                 } else {
-                    net.get_intermodal_router(tObject.get_rng_index(), 0, &())
+                    net.get_intermodal_router(tObject.get_rng_index(), 0, &Default::default())
                 };
                 let person = Ptr::from_raw(tObject as *mut SUMOTrafficObject as *mut MSPerson);
                 let success = router.compute(tObject.get_edge(), newEdge, tObject.get_position_on_lane(), "",
@@ -895,16 +895,16 @@ impl MSTriggeredRerouter {
                     edges.pop();
                 }
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &())
+                    net.get_router_tt(v.get_rng_index(), &Default::default())
                 };
                 router.compute(newEdge, lastEdge, Ptr::from_mut(v), now, &mut edges, false);
                 let routeCost = router.recompute_costs(&edges, Ptr::from_mut(v), now, Ptr::default());
                 if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &());
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default());
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &());
+                    net.get_router_tt(v.get_rng_index(), &Default::default());
                 } // reset closed edges
                 let useNewRoute = v.replace_route_edges(&mut edges, routeCost, 0.0, self.base.get_id(), false, false, false, Ptr::default());
                 if useNewRoute && newArrivalPos != -1.0 {
@@ -916,9 +916,9 @@ impl MSTriggeredRerouter {
                 let mut success = !items.is_empty();
                 if success {
                     let router: &mut MSTransportableRouter = if hasReroutingDevice {
-                        MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &())
+                        MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &Default::default())
                     } else {
-                        net.get_intermodal_router(tObject.get_rng_index(), 0, &())
+                        net.get_intermodal_router(tObject.get_rng_index(), 0, &Default::default())
                     };
                     success = router.compute(newEdge, lastEdge, newEdge.get_length() / 2., "",
                         tObject.get_parameter().arrivalPos, "",
@@ -1328,7 +1328,7 @@ impl MSTriggeredRerouter {
         let mut addInput: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t = BTreeMap::new();
         // shortcut: closed-edge prohibitions (rerouteDef->getClosed()) are not forwarded, since SUMOAbstractRouter_Prohibitions is still Unmapped (`()`); upgrade when that alias is ported
         let probs = rerouteDef.parkProbs.get_probs().to_vec();
-        let dest = self.base4.reroute_stopping_place(destStoppingPlace, &parks, &probs, veh, newDestination, newRoute, &mut addInput, &(), 0, true);
+        let dest = self.base4.reroute_stopping_place(destStoppingPlace, &parks, &probs, veh, newDestination, newRoute, &mut addInput, &Default::default(), 0, true);
         if !dest.is_null() && dest.get_element() == SUMO_TAG_PARKING_AREA {
             Ptr::from_raw(dest.as_raw() as *mut MSParkingArea)
         } else {
@@ -1674,7 +1674,7 @@ impl MSTriggeredRerouter {
         // @todo: consider future conflicts caused by rerouting
         // @todo: reject alternatives with large detour
         let egoVeh = Ptr::from_raw(ego as *mut MSBaseVehicle as *mut SUMOVehicle);
-        let alternative = self.base4.reroute_stopping_place(Ptr::default(), &def.stopAlternatives, &probs, egoVeh.m(), &mut newDestination, &mut newRoute, &mut scores, &(), 0, true);
+        let alternative = self.base4.reroute_stopping_place(Ptr::default(), &def.stopAlternatives, &probs, egoVeh.m(), &mut newDestination, &mut newRoute, &mut scores, &Default::default(), 0, true);
         if !alternative.is_null() {
             if newDestination && ego.get_parameter().arrivalPosProcedure != ArrivalPosDefinition::DEFAULT {
                 // update arrival parameters (C++ `new SUMOVehicleParameter`, owned by the vehicle)
@@ -2409,14 +2409,14 @@ impl MSTriggeredRerouter {
         // getRouterTT without prohibitions removes previous prohibitions (empty Prohibitions = `&()`)
         if o.is_vehicle() {
             if hasReroutingDevice {
-                MSRoutingEngine::get_router_tt(o.get_rng_index(), o.get_v_class(), &());
+                MSRoutingEngine::get_router_tt(o.get_rng_index(), o.get_v_class(), &Default::default());
             } else {
-                MSNet::get_instance().get_router_tt(o.get_rng_index(), &());
+                MSNet::get_instance().get_router_tt(o.get_rng_index(), &Default::default());
             }
         } else if hasReroutingDevice {
-            MSRoutingEngine::get_intermodal_router_tt(o.get_rng_index(), &());
+            MSRoutingEngine::get_intermodal_router_tt(o.get_rng_index(), &Default::default());
         } else {
-            MSNet::get_instance().get_intermodal_router(o.get_rng_index(), 0, &());
+            MSNet::get_instance().get_intermodal_router(o.get_rng_index(), 0, &Default::default());
         }
     }
 
