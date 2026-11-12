@@ -1239,7 +1239,7 @@ impl MSTLLogicControl_TLSLogicVariants {
                 &phases,
                 0,
                 now + delta_t(),
-                &(),
+                &ParameterisedMap::new(),
             ))) as *mut MSTrafficLightLogic);
             if self.add_logic(TRACI_PROGRAM, newLogic, true, true) {
                 MSNet::get_instance().m().create_tl_wrapper(newLogic);

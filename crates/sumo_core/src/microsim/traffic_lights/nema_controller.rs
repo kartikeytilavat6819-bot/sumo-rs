@@ -157,7 +157,7 @@ impl NEMALogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &BTreeMap<String, String>, basePath: &str) -> Self {
         let mut this = Self {
-            base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::NEMA, phases, step, delay, &()),
+            base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::NEMA, phases, step, delay, parameter),
             lightHeadPriority: String::new(),
             coordinateMode: false,
             coordinatePhaseObjs: [Ptr::null(); 2],
@@ -192,10 +192,6 @@ impl NEMALogic {
             myControllerType: NEMALogic_controllerType::Type170,
             myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
         };
-        // shortcut: base ctor still takes an Unmapped parameter map, so the NEMA parameters are copied in here, before the base logic reads them
-        for (k, v) in parameter {
-            this.base2.set_parameter(k.as_str(), v.as_str());
-        }
         this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
         this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
         let cycle_default = this.get_parameter("cycleTime", "60".to_string());
