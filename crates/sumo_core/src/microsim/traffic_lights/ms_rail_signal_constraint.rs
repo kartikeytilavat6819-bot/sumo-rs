@@ -933,3 +933,45 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// the tag / swapped type / insertion flag mapping of the constraint types
+    #[test]
+    fn constraint_type_mapping() {
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_INSERTION_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::FOE_INSERTION);
+        assert!(c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::FOE_INSERTION);
+        assert_eq!(c.get_tag(), SUMO_TAG_FOE_INSERTION);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::INSERTION_ORDER);
+        assert_eq!(c.get_tag(), SUMO_TAG_INSERTION_ORDER);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::INSERTION_ORDER);
+        assert!(c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_BIDI_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+    }
+
+    /// the trip id lookup table (C++ uses operator[], so unknown ids are inserted as empty)
+    #[test]
+    fn trip_id_lookup() {
+        MSRailSignalConstraint::store_trip_id("trip0", "veh0");
+        assert_eq!(MSRailSignalConstraint::lookup_veh_id("trip0"), "veh0");
+        assert_eq!(MSRailSignalConstraint::lookup_veh_id("unknown"), "");
+    }
+}
+

@@ -982,3 +982,20 @@ impl MSRailSignalControl_WaitRelation {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// the class filters derived from the signalized / moving-block classes
+    #[test]
+    fn signalized_classes() {
+        MSRailSignalControl::init_signalized(SVC_BUS, SVC_RAIL);
+        assert!(MSRailSignalControl::is_signalized(SVC_BUS));
+        assert!(!MSRailSignalControl::is_signalized(SVC_TRAM));
+        assert!(MSRailSignalControl::is_moving_block(SVC_RAIL));
+        assert!(!MSRailSignalControl::is_moving_block(SVC_TRAM));
+        assert!(MSRailSignalControl::is_using_drive_ways(SVC_BUS));
+        assert!(!MSRailSignalControl::is_using_drive_ways(SVC_TRAM));
+    }
+}
+
