@@ -74,7 +74,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     //
     // }
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut this = Self {
             base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters),
             inputLanes: BTreeSet::new(),

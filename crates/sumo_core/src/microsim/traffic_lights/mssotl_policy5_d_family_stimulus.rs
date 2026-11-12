@@ -102,7 +102,7 @@ impl MSSOTLPolicy5DFamilyStimulus {
     //
     // }
     #[allow(unused_variables)]
-    pub fn new(keyPrefix: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(keyPrefix: String, parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPolicy5DFamilyStimulus::MSSOTLPolicy5DFamilyStimulus")
     }
 

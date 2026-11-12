@@ -33,7 +33,7 @@ impl MSSOTLPlatoonPolicy {
     //     init();
     // }
     #[allow(unused_variables)]
-    pub fn new(parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy")
     }
 
@@ -56,7 +56,7 @@ impl MSSOTLPlatoonPolicy {
     //     init();
     // }
     #[allow(unused_variables)]
-    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy")
     }
 

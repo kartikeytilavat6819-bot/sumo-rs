@@ -29,7 +29,7 @@ impl MSSOTLCongestionPolicy {
     //     MSSOTLPolicy("Congestion", parameters) {
     // }
     #[allow(unused_variables)]
-    pub fn new(parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(parameters: &ParameterisedMap) -> Self {
         Self { base: MSSOTLPolicy::new("Congestion".to_string(), parameters) }
     }
 
@@ -55,7 +55,7 @@ impl MSSOTLCongestionPolicy {
     //
     // }
     #[allow(unused_variables)]
-    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         let mut base = MSSOTLPolicy::new_3("Congestion".to_string(), desirabilityAlgorithm, parameters);
         base.get_desirability_algorithm().m().set_key_prefix("CONGESTION".to_string());
         Self { base }

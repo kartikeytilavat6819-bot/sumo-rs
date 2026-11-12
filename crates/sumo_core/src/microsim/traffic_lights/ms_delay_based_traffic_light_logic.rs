@@ -53,7 +53,7 @@ impl MSDelayBasedTrafficLightLogic {
     /// Constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &Unmapped /* Parameterised::Map */, basePath: &str) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &ParameterisedMap, basePath: &str) -> Self {
         let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
         let myShowDetectors = utils::common::string_utils::to_bool(&base.get_parameter("show-detectors", "false".to_string())).unwrap();
         let myDetectionRange = utils::common::string_utils::to_double(&base.get_parameter("detectorRange", utils::common::to_string::to_string(&utils::options::options_cont::get_float("tls.delay_based.detector-range")))).unwrap();

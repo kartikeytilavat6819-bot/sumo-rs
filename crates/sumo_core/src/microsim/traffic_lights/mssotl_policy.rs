@@ -44,7 +44,7 @@ impl MSSOTLPolicy {
     //     theta_sensitivity = 0;
     // }
     #[allow(unused_variables)]
-    pub fn new(name: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(name: String, parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPolicy::MSSOTLPolicy")
     }
 
@@ -71,7 +71,7 @@ impl MSSOTLPolicy {
     //     theta_sensitivity = StringUtils::toDouble(getParameter("THETA_INIT", "0.5"));
     // }
     #[allow(unused_variables)]
-    pub fn new_3(name: String, desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new_3(name: String, desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         todo!("port MSSOTLPolicy::MSSOTLPolicy")
     }
 

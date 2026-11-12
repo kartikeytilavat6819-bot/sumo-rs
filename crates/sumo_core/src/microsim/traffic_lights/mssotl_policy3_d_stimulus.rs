@@ -32,7 +32,7 @@ impl MSSOTLPolicy3DStimulus {
     //     setStimCoxExpDispersionOutDefVal(0);
     // }
     #[allow(unused_variables)]
-    pub fn new(keyPrefix: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(keyPrefix: String, parameters: &ParameterisedMap) -> Self {
         let mut base = MSSOTLPolicy5DStimulus::new(keyPrefix, parameters);
         base.set_stim_cox_exp_dispersion_in_def_val(0.);
         base.set_stim_cox_exp_dispersion_out_def_val(0.);

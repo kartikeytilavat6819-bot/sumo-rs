@@ -57,7 +57,7 @@ impl MSSimpleTrafficLightLogic {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
+    pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, offset, logicType, delay, parameters);
         let myPhases: MSTrafficLightLogic_Phases = phases.clone();
         base.myDefaultCycleTime = base.compute_cycle_time(&myPhases);
