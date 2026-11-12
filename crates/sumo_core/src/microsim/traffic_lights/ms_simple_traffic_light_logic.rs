@@ -99,7 +99,7 @@ impl MSSimpleTrafficLightLogic {
 
     /// Applies the signals of the current phase to the controlled links (MSTrafficLightLogic::setTrafficLightSignals,
     /// with the phase taken from this subclass).
-    fn apply_phase_signals(&self, t: SUMOTime) {
+    pub fn apply_phase_signals(&self, t: SUMOTime) {
         let state = self.get_current_phase_def().get_state().to_string();
         for i in 0..self.base.myLinks.len() {
             let ls: LinkState = (state.as_bytes()[i] as i8) as LinkState;

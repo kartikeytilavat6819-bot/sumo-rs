@@ -3,10 +3,32 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::vector<std::tuple<std::string, std::string, std::string>> MSActuatedTrafficLightLogic::AssignmentMap`
-pub type MSActuatedTrafficLightLogic_AssignmentMap = Unmapped /* std::vector<std::tuple<std::string, std::string, std::string>> */;
+pub type MSActuatedTrafficLightLogic_AssignmentMap = Vec<(String, String, String)>;
 
 /// C++ typedef `Parameterised::Map MSActuatedTrafficLightLogic::ConditionMap`
-pub type MSActuatedTrafficLightLogic_ConditionMap = Unmapped /* Parameterised::Map */;
+pub type MSActuatedTrafficLightLogic_ConditionMap = utils::common::parameterised::ParameterisedMap;
+
+// C++ #define constants of MSActuatedTrafficLightLogic.cpp
+const DEFAULT_MAX_GAP: &str = "3.0";
+const DEFAULT_PASSING_TIME: &str = "1.9";
+const DEFAULT_DETECTOR_GAP: &str = "2.0";
+const DEFAULT_INACTIVE_THRESHOLD: &str = "180";
+const DEFAULT_CURRENT_PRIORITY: i32 = 10;
+const DEFAULT_CROSSING_PRIORITY: i32 = 100;
+const DEFAULT_LENGTH_WITH_GAP: f64 = 7.5;
+const DEFAULT_STATIC_MINDUR: SUMOTime = 0;
+const NO_DETECTOR: &str = "NO_DETECTOR";
+const DEFAULT_CONDITION: &str = "DEFAULT";
+use super::ms_phase_definition::OVERRIDE_DURATION;
+// C++ RGBColor::ORANGE / RGBColor::GREEN (the loop keeps a pointer to them, so they need statics)
+static RGB_ORANGE: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::ORANGE;
+static RGB_GREEN: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::GREEN;
+static RGB_RED: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::RED;
+
+/// C++ DEFAULT_BIKE_LENGTH_WITH_GAP: (getDefaultVehicleLength(SVC_BICYCLE) + 0.5)
+fn default_bike_length_with_gap() -> f64 {
+    get_default_vehicle_length(SVC_BICYCLE) + 0.5
+}
 
 /// C++ typedef `std::map<std::string, Function> MSActuatedTrafficLightLogic::FunctionMap`
 pub type MSActuatedTrafficLightLogic_FunctionMap = BTreeMap<String, MSActuatedTrafficLightLogic_Function>;
@@ -15,6 +37,7 @@ pub type MSActuatedTrafficLightLogic_FunctionMap = BTreeMap<String, MSActuatedTr
 pub type MSActuatedTrafficLightLogic_InductLoopMap = Vec<Vec<Ptr<MSActuatedTrafficLightLogic_InductLoopInfo>>>;
 
 /// C++ class `MSActuatedTrafficLightLogic::Function` (microsim/traffic_lights/MSActuatedTrafficLightLogic.h)
+#[derive(Clone)]
 pub struct MSActuatedTrafficLightLogic_Function {
     pub id: String,
     pub nArgs: i32,
@@ -27,7 +50,11 @@ impl MSActuatedTrafficLightLogic_Function {
     //             id(_id), nArgs(_nArgs) {}
     #[allow(unused_variables)]
     pub fn new(_id: &str, _nArgs: i32) -> Self {
-        todo!("port Function::Function")
+        MSActuatedTrafficLightLogic_Function {
+            id: _id.to_string(),
+            nArgs: _nArgs,
+            assignments: Vec::new(),
+        }
     }
 
 }
@@ -53,7 +80,14 @@ impl MSActuatedTrafficLightLogic_InductLoopInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new(_loop: Ptr<MSInductLoop>, _lane: Ptr<MSLane>, numPhases: i32, _maxGap: f64, _jamThreshold: f64) -> Self {
-        todo!("port InductLoopInfo::InductLoopInfo")
+        MSActuatedTrafficLightLogic_InductLoopInfo {
+            loop_: _loop,
+            lane: _lane,
+            lastGreenTime: 0,
+            servedPhase: vec![false; numPhases as usize],
+            maxGap: _maxGap,
+            jamThreshold: _jamThreshold,
+        }
     }
 
     /// C++: `bool InductLoopInfo::isJammed() const` [const]
@@ -62,7 +96,7 @@ impl MSActuatedTrafficLightLogic_InductLoopInfo {
     //         }
     #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        todo!("port InductLoopInfo::isJammed")
+        self.jamThreshold > 0.0 && self.loop_.get_occupancy_time() >= self.jamThreshold
     }
 
 }
@@ -148,7 +182,76 @@ impl MSActuatedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &Unmapped /* Parameterised::Map */, basePath: &str, conditions: &MSActuatedTrafficLightLogic_ConditionMap, assignments: &MSActuatedTrafficLightLogic_AssignmentMap, functions: &MSActuatedTrafficLightLogic_FunctionMap) -> Self {
-        todo!("port MSActuatedTrafficLightLogic::MSActuatedTrafficLightLogic")
+        let mut this = MSActuatedTrafficLightLogic {
+            base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::ACTUATED, phases, step, delay, parameter),
+            myInductLoopsForPhase: Vec::new(),
+            myCrossingsForPhase: Vec::new(),
+            myInductLoops: Vec::new(),
+            myExtraLoops: Vec::new(),
+            myExtraE2: Vec::new(),
+            myMaxGap: 0.0,
+            myJamThreshold: 0.0,
+            myPassingTime: 0.0,
+            myDetectorGap: 0.0,
+            myInactiveThreshold: 0,
+            myShowDetectors: false,
+            myBuildAllDetectors: false,
+            myHasMultiTarget: false,
+            myFile: String::new(),
+            myFreq: 0,
+            myVehicleTypes: String::new(),
+            myLastTrySwitchTime: 0,
+            myLinkGreenTimes: Vec::new(),
+            myLinkRedTimes: Vec::new(),
+            myLinkMaxGreenTimes: Vec::new(),
+            myLinkMinGreenTimes: Vec::new(),
+            myConditions: conditions.clone(),
+            myAssignments: assignments.clone(),
+            myFunctions: functions.clone(),
+            myStack: Vec::new(),
+            myListedConditions: BTreeSet::new(),
+            myTraCISwitch: false,
+            mySwitchingRules: Vec::new(),
+            myDetectorPrefix: format!("{}_{}_", id, programID),
+            myTargets: BTreeMap::new(),
+        };
+        let to_d = |s: String| utils::common::string_utils::to_double(&s).unwrap_or_else(|e| panic!("{}", e));
+        this.myMaxGap = to_d(this.get_parameter("max-gap", DEFAULT_MAX_GAP.to_string()));
+        this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_string("tls.actuated.jam-threshold")));
+        this.myPassingTime = to_d(this.get_parameter("passing-time", DEFAULT_PASSING_TIME.to_string()));
+        this.myDetectorGap = to_d(this.get_parameter("detector-gap", DEFAULT_DETECTOR_GAP.to_string()));
+        this.myInactiveThreshold = string2time(&this.get_parameter("inactive-threshold", DEFAULT_INACTIVE_THRESHOLD.to_string())).unwrap_or_else(|e| panic!("{}", e));
+        let showDetectorsDefault = utils::common::to_string::to_string(&utils::options::options_cont::get_bool("tls.actuated.show-detectors"));
+        this.myShowDetectors = utils::common::string_utils::to_bool(&this.get_parameter("show-detectors", showDetectorsDefault)).unwrap_or_else(|e| panic!("{}", e));
+        this.myBuildAllDetectors = utils::common::string_utils::to_bool(&this.get_parameter("build-all-detectors", "false".to_string())).unwrap_or_else(|e| panic!("{}", e));
+        this.myFile = utils::common::file_helpers::check_for_relativity(&this.get_parameter("file", "NUL".to_string()), basePath);
+        this.myFreq = time2steps(to_d(this.get_parameter("freq", "300".to_string())));
+        this.myVehicleTypes = this.get_parameter("vTypes", String::new());
+        if this.base2.has_parameter("hide-conditions") {
+            let hidden: Vec<String> = utils::common::string_tokenizer::StringTokenizer::new(&this.get_parameter("hide-conditions", String::new())).get_vector();
+            let hiddenSet: BTreeSet<String> = hidden.into_iter().collect();
+            let keys: Vec<String> = this.myConditions.keys().cloned().collect();
+            for item in keys {
+                if !hiddenSet.contains(&item) {
+                    this.myListedConditions.insert(item);
+                }
+            }
+        } else {
+            let showAll = this.get_parameter("show-conditions", String::new()) == "";
+            let shown: Vec<String> = utils::common::string_tokenizer::StringTokenizer::new(&this.get_parameter("show-conditions", String::new())).get_vector();
+            let shownSet: BTreeSet<String> = shown.into_iter().collect();
+            let keys: Vec<String> = this.myConditions.keys().cloned().collect();
+            for item in keys {
+                if showAll || shownSet.contains(&item) {
+                    this.myListedConditions.insert(item);
+                }
+            }
+        }
+        if this.base2.has_parameter("extra-detectors") {
+            // shortcut: retrieveDetExpression needs the typed detector containers (MSDetectorControl::getTypedDetectors is still Unmapped); extra-detectors are not resolved, upgrade when that container is mapped
+        }
+        this.myStack.push(BTreeMap::new());
+        this
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -532,7 +635,309 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSActuatedTrafficLightLogic::init")
+        self.base.base.init(nb);
+        self.init_attribute_override();
+        self.init_switching_rules();
+        for i in 0..self.myPhases.len() {
+            self.init_targets(i as i32);
+        }
+        if self.myLanes.len() == 0 {
+            // must be an older network
+            utils::write_warningf!("Traffic light '%' does not control any links", self.get_id());
+        }
+        let mut warn = true; // warn only once
+        let numLinks = self.myLinks.len();
+
+        // detector placement: the detector position is bounded by the road speed and minDur, see C++ comments above
+        let multiNextTargets: BTreeSet<i32> = self.get_multi_next_targets();
+        let mut laneInductLoopMap: BTreeMap<Ptr<MSLane>, Ptr<MSInductLoop>> = BTreeMap::new();
+        let mut inductLoopInfoMap: BTreeMap<Ptr<MSInductLoop>, i32> = BTreeMap::new();
+        let mut detEdgeIndex: i32 = -1;
+        let mut detLaneIndex: i32 = 0;
+        let detDefaultLength: f64 = utils::common::string_utils::to_double(&self.get_parameter("detector-length", utils::options::options_cont::get_string("tls.actuated.detector-length"))).unwrap_or_else(|e| panic!("{}", e));
+        let mut prevDetEdge: Ptr<MSEdge> = Ptr::null();
+        for lanes in self.myLanes.clone() {
+            for lane in lanes {
+                let customID: String = self.get_parameter(lane.get_id(), String::new());
+                if no_vehicles(lane.get_permissions()) && customID == "" {
+                    // do not build detectors on green verges or sidewalks
+                    continue;
+                }
+                if laneInductLoopMap.contains_key(&lane) {
+                    // only build one detector per lane
+                    continue;
+                }
+                let minDur: SUMOTime = self.get_minimum_min_duration(lane, &multiNextTargets);
+                if minDur == i64::MAX && customID == "" && !self.myBuildAllDetectors {
+                    // only build detector if this lane is relevant for an actuated phase
+                    continue;
+                }
+                let length: f64 = lane.get_length();
+                let mut ilpos: f64;
+                let mut inductLoopPosition: f64;
+                let mut loop_: Ptr<MSInductLoop> = Ptr::null();
+                let laneEdge: Ptr<MSEdge> = Ptr::from_mut(lane.get_edge());
+                if laneEdge != prevDetEdge {
+                    detEdgeIndex += 1;
+                    detLaneIndex = 0;
+                    prevDetEdge = laneEdge;
+                } else {
+                    detLaneIndex += 1;
+                }
+                let isBikeLane = (lane.get_permissions() & !SVC_PEDESTRIAN) == SVC_BICYCLE;
+                let defaultLength: f64 = if isBikeLane { default_bike_length_with_gap() } else { DEFAULT_LENGTH_WITH_GAP };
+                if customID == "" {
+                    let speed: f64 = if isBikeLane { DEFAULT_BICYCLE_SPEED } else { lane.get_speed_limit() };
+                    inductLoopPosition = f64::min(self.myDetectorGap * speed, (steps2time(minDur) / self.myPassingTime + 0.5) * defaultLength);
+                    // check whether the lane is long enough
+                    ilpos = length - inductLoopPosition;
+                    let mut placementLane: Ptr<MSLane> = lane;
+                    while ilpos < 0.0 && placementLane.get_incoming_lanes().len() == 1
+                        && !placementLane.get_logical_predecessor_lane().is_null()
+                        && placementLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null() {
+                        placementLane = placementLane.get_logical_predecessor_lane();
+                        ilpos += placementLane.get_length();
+                    }
+                    if ilpos < 0.0 {
+                        ilpos = 0.0;
+                    }
+                    // Build the induct loop and set it into the container
+                    let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
+                    let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
+                    loop_ = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true).cast::<MSInductLoop>();
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, loop_.cast::<MSDetectorFileOutput>(), &self.myFile, self.myFreq, 0);
+                } else if customID == NO_DETECTOR {
+                    continue;
+                } else {
+                    // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so custom induction loops cannot be looked up; upgrade when that container is mapped
+                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                }
+                let maxGap: f64 = self.base2.get_double(&format!("max-gap:{}", lane.get_id()), self.myMaxGap);
+                let jamThreshold: f64 = self.base2.get_double(&format!("jam-threshold:{}", lane.get_id()), self.myJamThreshold);
+                laneInductLoopMap.insert(lane, loop_);
+                inductLoopInfoMap.insert(loop_, self.myInductLoops.len() as i32);
+                let numPhases = self.myPhases.len() as i32;
+                self.myInductLoops.push(MSActuatedTrafficLightLogic_InductLoopInfo::new(loop_, lane, numPhases, maxGap, jamThreshold));
+                if warn && f64::floor(f64::floor(inductLoopPosition / defaultLength) * self.myPassingTime) > steps2time(minDur) {
+                    // warn if the minGap is insufficient to clear vehicles between stop line and detector
+                    utils::write_warningf!("At actuated tlLogic '%', minDur % is too short for a detector gap of %m.", self.get_id(), time2string(minDur), utils::common::to_string::to_string(&inductLoopPosition));
+                    warn = false;
+                }
+            }
+        }
+
+        // assign loops to phase index (myInductLoopsForPhase), see the C++ checks check1 / check2 above
+        // also assign loops to link index for validation
+        let motorized: SVCPermissions = !(SVC_PEDESTRIAN | SVC_BICYCLE);
+        let mut linkToLoops: BTreeMap<i32, BTreeSet<Ptr<MSInductLoop>>> = BTreeMap::new();
+        let mut actuatedLinks: BTreeSet<i32> = BTreeSet::new();
+
+        let mut neverMajor: Vec<bool> = vec![true; numLinks];
+        for phase in self.myPhases.clone() {
+            let state = phase.get_state().to_string();
+            for i in 0..numLinks {
+                if ((state.as_bytes()[i] as i8) as LinkState) == LINKSTATE_TL_GREEN_MAJOR {
+                    neverMajor[i] = false;
+                }
+            }
+        }
+        let mut oneLane: Vec<bool> = vec![false; numLinks];
+        let mut turnaround: Vec<bool> = vec![true; numLinks];
+        for i in 0..numLinks {
+            for lane in self.get_lanes_at(i as i32).clone() {
+                // only count motorized vehicle lanes
+                let mut numMotorized = 0;
+                for l in lane.get_edge().get_lanes().clone() {
+                    if (l.get_permissions() & motorized) != 0 {
+                        numMotorized += 1;
+                    }
+                }
+                if numMotorized == 1 {
+                    oneLane[i] = true;
+                    break;
+                }
+            }
+            for link in self.get_links_at(i as i32).clone() {
+                if !link.is_turnaround() {
+                    turnaround[i] = false;
+                    break;
+                }
+            }
+        }
+
+        let phases: MSTrafficLightLogic_Phases = self.myPhases.clone();
+        for phase in phases.iter() {
+            let phaseIndex: i32 = self.myInductLoopsForPhase.len() as i32;
+            let mut loops: BTreeSet<Ptr<MSInductLoop>> = BTreeSet::new();
+            if phase.is_actuated() || multiNextTargets.contains(&phaseIndex) {
+                let state = phase.get_state().to_string();
+                // collect indices of all green links for the phase
+                let mut greenLinks: BTreeSet<i32> = BTreeSet::new();
+                // green links that could jam
+                let mut greenLinksPermissive: BTreeSet<i32> = BTreeSet::new();
+                // collect green links for each induction loops (in this phase)
+                // determinism: C++ std::map is keyed by MSInductLoop* (address order); BTreeMap over Ptr keeps the same key order
+                let mut loopLinks: BTreeMap<Ptr<MSInductLoop>, BTreeSet<i32>> = BTreeMap::new();
+
+                for i in 0..numLinks {
+                    let s: LinkState = (state.as_bytes()[i] as i8) as LinkState;
+                    if s == LINKSTATE_TL_GREEN_MAJOR {
+                        greenLinks.insert(i as i32);
+                        if phase.is_actuated() {
+                            actuatedLinks.insert(i as i32);
+                        }
+                        for link in self.get_links_at(i as i32).clone() {
+                            if link.get_lane().is_crossing() {
+                                while self.myCrossingsForPhase.len() < self.myPhases.len() {
+                                    self.myCrossingsForPhase.push(Vec::new());
+                                }
+                                self.myCrossingsForPhase[phaseIndex as usize].push(link);
+                            }
+                        }
+                    } else if s == LINKSTATE_TL_GREEN_MINOR {
+                        if ((neverMajor[i] || turnaround[i]) && self.has_major(&state, self.get_lanes_at(i as i32))) // check1a, 1d, check1b
+                            || oneLane[i] // check1c
+                            || self.weak_conflict(i as i32, &state) { // check1e, check1f
+                            greenLinks.insert(i as i32);
+                            if !turnaround[i] && phase.is_actuated() {
+                                actuatedLinks.insert(i as i32);
+                            }
+                        } else {
+                            greenLinksPermissive.insert(i as i32);
+                        }
+                    }
+                    for lane in self.get_lanes_at(i as i32).clone() {
+                        if laneInductLoopMap.contains_key(&lane) {
+                            let loopPtr = laneInductLoopMap[&lane];
+                            loopLinks.entry(loopPtr).or_default().insert(i as i32);
+                        }
+                    }
+                }
+                // iterate like std::map: entries inserted during the walk (loopLinks[nextLoop] below) are visited if they follow the cursor
+                let mut cursor: Option<Ptr<MSInductLoop>> = None;
+                loop {
+                    let item: Option<(Ptr<MSInductLoop>, BTreeSet<i32>)> = match cursor {
+                        None => loopLinks.iter().next().map(|(k, v)| (*k, v.clone())),
+                        Some(c) => loopLinks
+                            .range((std::ops::Bound::Excluded(c), std::ops::Bound::Unbounded))
+                            .next()
+                            .map(|(k, v)| (*k, v.clone())),
+                    };
+                    let Some((loopKey, links)) = item else {
+                        break;
+                    };
+                    cursor = Some(loopKey);
+                    let info_idx = inductLoopInfoMap[&loopKey] as usize;
+                    let info_jam: f64 = self.myInductLoops[info_idx].jamThreshold;
+                    let loopLane: Ptr<MSLane> = self.myInductLoops[info_idx].lane;
+                    let mut usable = true;
+                    let mut foundUsable = false;
+                    // check1
+                    for j in links.iter().copied() {
+                        if !greenLinks.contains(&j) && (info_jam <= 0.0 || !greenLinksPermissive.contains(&j)) {
+                            usable = false;
+                        } else {
+                            foundUsable = true;
+                        }
+                    }
+                    if !usable && foundUsable && info_jam > 0.0 {
+                        // permit green even when the same lane has green and red links (if we have jamDetection)
+                        usable = true;
+                    }
+                    // check2 (skip if we have jam detection)
+                    if usable && info_jam <= 0.0 {
+                        for link in loopLane.get_link_cont().clone() {
+                            if link.is_turnaround() {
+                                continue;
+                            }
+                            let next: Ptr<MSLane> = link.get_lane();
+                            if laneInductLoopMap.contains_key(&next) {
+                                let nextLoop = laneInductLoopMap[&next];
+                                // loopLinks[nextLoop] (operator[] inserts an empty set when missing, as in C++)
+                                let nextLinks: BTreeSet<i32> = loopLinks.entry(nextLoop).or_default().clone();
+                                for j in nextLinks {
+                                    if !greenLinks.contains(&j) {
+                                        usable = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if usable {
+                        loops.insert(loopKey);
+                        for j in links.iter().copied() {
+                            linkToLoops.entry(j).or_default().insert(loopKey);
+                        }
+                    }
+                }
+                if loops.len() == 0 && phase.is_actuated() {
+                    utils::write_warningf!("At actuated tlLogic '%', actuated phase % has no controlling detector.", self.get_id(), phaseIndex);
+                }
+            }
+            let loopInfos: Vec<Ptr<MSActuatedTrafficLightLogic_InductLoopInfo>> = Vec::new();
+            self.myInductLoopsForPhase.push(loopInfos);
+            for loopKey in loops.iter() {
+                for idx in 0..self.myInductLoops.len() {
+                    if self.myInductLoops[idx].loop_ == *loopKey {
+                        let info = Ptr::from_mut(&mut self.myInductLoops[idx]);
+                        self.myInductLoopsForPhase.last_mut().unwrap().push(info);
+                        self.myInductLoops[idx].servedPhase[phaseIndex as usize] = true;
+                    }
+                }
+            }
+        }
+
+        let mut warnLinks: Vec<i32> = Vec::new();
+        for i in actuatedLinks.iter().copied() {
+            if linkToLoops.entry(i).or_default().is_empty() && self.myLinks[i as usize].len() > 0
+                && (self.myLinks[i as usize][0].get_lane_before().get_permissions() & motorized) != 0 {
+                let laneID: String = self.myLinks[i as usize][0].get_lane_before().get_id().to_string();
+                if self.get_parameter(&laneID, String::new()) != NO_DETECTOR {
+                    warnLinks.push(i);
+                }
+            }
+        }
+        if warnLinks.len() > 0 {
+            utils::write_warningf!("At actuated tlLogic '%', linkIndex % has no controlling detector.", self.get_id(), utils::common::to_string::join_to_string(&warnLinks, ","));
+        }
+
+        // parse maximum green times for each link (optional)
+        let parameterEntries: Vec<(String, String)> = self.base2.get_parameters_map().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        for (key, value) in parameterEntries {
+            if utils::common::string_utils::starts_with(&key, "linkMaxDur:") {
+                let link: i32 = utils::common::string_utils::to_int(&key[11..]).unwrap_or_else(|e| panic!("{}", e));
+                if link < 0 || link >= self.myNumLinks {
+                    utils::write_errorf!("Invalid link '%' given as linkMaxDur parameter for actuated tlLogic '%', program '%.", &key[11..], self.get_id(), self.get_program_id());
+                    continue;
+                }
+                if self.myLinkMaxGreenTimes.is_empty() {
+                    self.myLinkMaxGreenTimes = vec![i64::MAX; self.myNumLinks as usize];
+                }
+                self.myLinkMaxGreenTimes[link as usize] = string2time(&value).unwrap_or_else(|e| panic!("{}", e));
+            } else if utils::common::string_utils::starts_with(&key, "linkMinDur:") {
+                let link: i32 = utils::common::string_utils::to_int(&key[11..]).unwrap_or_else(|e| panic!("{}", e));
+                if link < 0 || link >= self.myNumLinks {
+                    utils::write_errorf!("Invalid link '%' given as linkMinDur parameter for actuated tlLogic '%', program '%.", &key[11..], self.get_id(), self.get_program_id());
+                    continue;
+                }
+                if self.myLinkMinGreenTimes.is_empty() {
+                    self.myLinkMinGreenTimes = vec![0; self.myNumLinks as usize];
+                }
+                self.myLinkMinGreenTimes[link as usize] = string2time(&value).unwrap_or_else(|e| panic!("{}", e));
+            }
+        }
+        let mut haveSwitchingRules = self.myConditions.len() > 0 || self.myAssignments.len() > 0 || self.myFunctions.len() > 0;
+        for sr in self.mySwitchingRules.iter() {
+            if sr.enabled {
+                haveSwitchingRules = true;
+                break;
+            }
+        }
+        if self.myLinkMaxGreenTimes.len() > 0 || self.myLinkMinGreenTimes.len() > 0 || haveSwitchingRules {
+            self.myLinkGreenTimes = vec![0; numLinks];
+            self.myLinkRedTimes = vec![0; numLinks];
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::~MSActuatedTrafficLightLogic() noexcept` [virtual]
@@ -540,7 +945,7 @@ impl MSActuatedTrafficLightLogic {
     // MSActuatedTrafficLightLogic::~MSActuatedTrafficLightLogic() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSActuatedTrafficLightLogic::~MSActuatedTrafficLightLogic")
+        // C++ destructor is empty
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::trySwitch()` [virtual]
@@ -648,7 +1053,91 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::trySwitch")
+        // checks if the actual phase should be continued
+        // @note any vehicles which arrived during the previous phases which are now waiting between the detector and the stop line are not
+        // considere here. RiLSA recommends to set minDuration in a way that lets all vehicles pass the detector
+        let now = MSNet::get_instance().get_current_time_step();
+        let assignments = self.myAssignments.clone();
+        let mut conditions = self.myConditions.clone();
+        self.execute_assignments(&assignments, &mut conditions, &BTreeMap::new());
+        self.myConditions = conditions;
+        if self.myLinkGreenTimes.len() > 0 {
+            // constraints exist, record green time durations for each link
+            let state = self.get_current_phase_def().get_state().to_string();
+            let lastDuration: SUMOTime = now - self.myLastTrySwitchTime;
+            for i in 0..self.myNumLinks as usize {
+                let c = state.as_bytes()[i] as char;
+                if c == 'G' || c == 'g' {
+                    self.myLinkGreenTimes[i] += lastDuration;
+                } else {
+                    self.myLinkGreenTimes[i] = 0;
+                }
+                if c == 'r' || c == 'u' {
+                    self.myLinkRedTimes[i] += lastDuration;
+                } else {
+                    self.myLinkRedTimes[i] = 0;
+                }
+            }
+        }
+        self.myLastTrySwitchTime = now;
+        // decide the next phase
+        let multiTarget = self.myPhases[self.myStep as usize].nextPhases.len() > 1 && self.myPhases[self.myStep as usize].nextPhases[0] >= 0;
+        let origStep = self.myStep;
+        let mut nextStep = self.myStep;
+        let mut actDuration: SUMOTime = now - self.myPhases[self.myStep as usize].myLastSwitch;
+        if self.mySwitchingRules[self.myStep as usize].enabled {
+            let mustSwitch = std::cmp::min(self.get_max_dur(-1) - actDuration, self.get_latest()) <= 0;
+            nextStep = self.decide_next_phase_custom(mustSwitch);
+        } else {
+            // default algorithm
+            let detectionGap = self.gap_control();
+            if detectionGap < f64::MAX && !multiTarget && !self.myTraCISwitch {
+                return self.duration(detectionGap);
+            }
+            if multiTarget {
+                nextStep = self.decide_next_phase();
+            } else {
+                if self.myPhases[self.myStep as usize].nextPhases.len() == 1 && self.myPhases[self.myStep as usize].nextPhases[0] >= 0 {
+                    nextStep = self.myPhases[self.myStep as usize].nextPhases[0];
+                } else {
+                    nextStep = (self.myStep + 1) % (self.myPhases.len() as i32);
+                }
+            }
+        }
+        self.myTraCISwitch = false;
+        if self.myLinkMinGreenTimes.len() > 0 {
+            let linkMinDur = self.get_link_min_duration(self.get_target(nextStep).0);
+            if linkMinDur > 0 {
+                // for multiTarget, the current phase must be extended but if another
+                // targer is chosen, earlier switching than linkMinDur is possible
+                return if multiTarget { time2steps(1.0) } else { linkMinDur };
+            }
+        }
+        self.myStep = nextStep;
+        assert!(self.myStep <= self.myPhases.len() as i32);
+        assert!(self.myStep >= 0);
+        // stores the time the phase started
+        let prevStart: SUMOTime = self.myPhases[self.myStep as usize].myLastSwitch;
+        if self.myStep != origStep {
+            self.myPhases[origStep as usize].m().myLastEnd = now;
+            self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+            actDuration = 0;
+        }
+        // activate coloring
+        if (self.myShowDetectors || self.myHasMultiTarget) && self.get_current_phase_def().is_green_phase() {
+            let infos: Vec<Ptr<MSActuatedTrafficLightLogic_InductLoopInfo>> = self.myInductLoopsForPhase[self.myStep as usize].clone();
+            for loopInfo in infos {
+                if loopInfo.is_jammed() {
+                    loopInfo.loop_.m().set_special_color(Ptr::new(&RGB_ORANGE));
+                } else {
+                    loopInfo.loop_.m().set_special_color(Ptr::new(&RGB_GREEN));
+                }
+                loopInfo.m().lastGreenTime = now;
+            }
+        }
+        // set the next event
+        let minRetry: SUMOTime = if self.myStep != origStep { 0 } else { time2steps(1.0) };
+        std::cmp::max(minRetry, std::cmp::max(self.get_min_dur(-1) - actDuration, self.get_earliest(prevStart)))
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getMinDur(int) const` [const, virtual]
@@ -663,7 +1152,13 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_min_dur(&self, step: i32) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getMinDur")
+        let step = if step < 0 { self.myStep } else { step };
+        let p = self.myPhases[step as usize];
+        if p.minDuration != OVERRIDE_DURATION {
+            p.minDuration
+        } else {
+            time2steps(self.eval_expression(self.myConditions.get(&format!("minDur:{}", step)).unwrap_or_else(|| panic!("missing condition minDur:{}", step))))
+        }
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getMaxDur(int) const` [const, virtual]
@@ -677,7 +1172,13 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_max_dur(&self, step: i32) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getMaxDur")
+        let step = if step < 0 { self.myStep } else { step };
+        let p = self.myPhases[step as usize];
+        if p.maxDuration != OVERRIDE_DURATION {
+            p.maxDuration
+        } else {
+            time2steps(self.eval_expression(self.myConditions.get(&format!("maxDur:{}", step)).unwrap_or_else(|| panic!("missing condition maxDur:{}", step))))
+        }
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getEarliestEnd(int) const` [const, virtual]
@@ -691,7 +1192,13 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_earliest_end(&self, step: i32) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getEarliestEnd")
+        let step = if step < 0 { self.myStep } else { step };
+        let p = self.myPhases[step as usize];
+        if p.earliestEnd != OVERRIDE_DURATION {
+            p.earliestEnd
+        } else {
+            time2steps(self.eval_expression(self.myConditions.get(&format!("earliestEnd:{}", step)).unwrap_or_else(|| panic!("missing condition earliestEnd:{}", step))))
+        }
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getLatestEnd(int) const` [const, virtual]
@@ -705,7 +1212,13 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_latest_end(&self, step: i32) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getLatestEnd")
+        let step = if step < 0 { self.myStep } else { step };
+        let p = self.myPhases[step as usize];
+        if p.latestEnd != OVERRIDE_DURATION {
+            p.latestEnd
+        } else {
+            time2steps(self.eval_expression(self.myConditions.get(&format!("latestEnd:{}", step)).unwrap_or_else(|| panic!("missing condition latestEnd:{}", step))))
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::changeStepAndDuration(MSTLLogicControl &, SUMOTime, int, SUMOTime)` [virtual]
@@ -730,7 +1243,23 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn change_step_and_duration(&mut self, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
-        todo!("port MSActuatedTrafficLightLogic::changeStepAndDuration")
+        // do not change timing if the phase changes
+        if step >= 0 && step != self.myStep {
+            self.myStep = step;
+            let now = MSNet::get_instance().get_current_time_step();
+            self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+            self.apply_phase_signals(simStep);
+            let id = self.get_id().to_string();
+            tlcontrol.get(&id).execute_on_switch_actions();
+        } else if step < 0 {
+            // TraCI requested new timing
+            let this = Ptr::from_mut(&mut self.base.base);
+            self.base.base.mySwitchCommand.deschedule(this);
+            self.base.base.mySwitchCommand = Ptr::from_raw(Box::into_raw(Box::new(MSTrafficLightLogic_SwitchCommand::new(tlcontrol, this, stepDuration + simStep))));
+            let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+            events.m().add_event(self.base.base.mySwitchCommand.cast::<()>(), stepDuration + simStep);
+            self.myTraCISwitch = true;
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::activateProgram()` [virtual]
@@ -744,7 +1273,10 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        todo!("port MSActuatedTrafficLightLogic::activateProgram")
+        self.base.base.activate_program();
+        for loopInfo in self.myInductLoops.iter() {
+            loopInfo.loop_.m().set_visible(self.myShowDetectors);
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::deactivateProgram()` [virtual]
@@ -757,7 +1289,10 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        todo!("port MSActuatedTrafficLightLogic::deactivateProgram")
+        self.base.base.deactivate_program();
+        for loopInfo in self.myInductLoops.iter() {
+            loopInfo.loop_.m().set_visible(false);
+        }
     }
 
     /// C++: `bool MSActuatedTrafficLightLogic::showDetectors() const` [const]
@@ -766,7 +1301,7 @@ impl MSActuatedTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn show_detectors(&self) -> bool {
-        todo!("port MSActuatedTrafficLightLogic::showDetectors")
+        self.myShowDetectors
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::setShowDetectors(bool)`
@@ -779,7 +1314,10 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_show_detectors(&mut self, show: bool) {
-        todo!("port MSActuatedTrafficLightLogic::setShowDetectors")
+        self.myShowDetectors = show;
+        for loopInfo in self.myInductLoops.iter() {
+            loopInfo.loop_.m().set_visible(self.myShowDetectors);
+        }
     }
 
     /// C++: `const std::string MSActuatedTrafficLightLogic::getParameter(const std::string &, const std::string) const` [const, virtual]
@@ -800,7 +1338,15 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str, defaultValue: String) -> String {
-        todo!("port MSActuatedTrafficLightLogic::getParameter")
+        if utils::common::string_utils::starts_with(key, "condition.") {
+            let cond = &key[10..];
+            match self.myConditions.get(cond) {
+                Some(c) => utils::common::to_string::to_string(&self.eval_expression(c)),
+                None => panic!("{}", ProcessError::InvalidArgument(format!("Unknown condition '{}' for actuated traffic light '{}'", cond, self.get_id()))),
+            }
+        } else {
+            self.base.get_parameter(key, defaultValue)
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::setParameter(const std::string &, const std::string &)` [virtual]
@@ -862,7 +1408,58 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSActuatedTrafficLightLogic::setParameter")
+        // some pre-defined parameters can be updated at runtime
+        if key == "detector-gap" || key == "passing-time" || key == "file" || key == "freq" || key == "vTypes"
+            || key == "build-all-detectors"
+            || utils::common::string_utils::starts_with(key, "linkMaxDur")
+            || utils::common::string_utils::starts_with(key, "linkMinDur") {
+            panic!("{}", ProcessError::InvalidArgument(format!("{} cannot be changed dynamically for actuated traffic light '{}'", key, self.get_id())));
+        } else if key == "max-gap" {
+            self.myMaxGap = utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+            // overwrite custom values
+            for loopInfo in self.myInductLoops.iter_mut() {
+                loopInfo.maxGap = self.myMaxGap;
+            }
+            self.base2.set_parameter(key, value);
+        } else if utils::common::string_utils::starts_with(key, "max-gap:") {
+            let laneID = &key[8..];
+            for idx in 0..self.myInductLoops.len() {
+                if self.myInductLoops[idx].lane.get_id() == laneID {
+                    self.myInductLoops[idx].maxGap = utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+                    self.base2.set_parameter(key, value);
+                    return;
+                }
+            }
+            panic!("{}", ProcessError::InvalidArgument(format!("Invalid lane '{}' in key '{}' for actuated traffic light '{}'", laneID, key, self.get_id())));
+        } else if key == "jam-threshold" {
+            self.myJamThreshold = utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+            // overwrite custom values
+            for loopInfo in self.myInductLoops.iter_mut() {
+                loopInfo.jamThreshold = self.myJamThreshold;
+            }
+            self.base2.set_parameter(key, value);
+        } else if utils::common::string_utils::starts_with(key, "jam-threshold:") {
+            let laneID = &key[14..];
+            for idx in 0..self.myInductLoops.len() {
+                if self.myInductLoops[idx].lane.get_id() == laneID {
+                    self.myInductLoops[idx].jamThreshold = utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+                    self.base2.set_parameter(key, value);
+                    return;
+                }
+            }
+            panic!("{}", ProcessError::InvalidArgument(format!("Invalid lane '{}' in key '{}' for actuated traffic light '{}'", laneID, key, self.get_id())));
+        } else if key == "show-detectors" {
+            self.myShowDetectors = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
+            self.base2.set_parameter(key, value);
+            for loopInfo in self.myInductLoops.iter() {
+                loopInfo.loop_.m().set_visible(self.myShowDetectors);
+            }
+        } else if key == "inactive-threshold" {
+            self.myInactiveThreshold = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            self.base2.set_parameter(key, value);
+        } else {
+            self.base.set_parameter(key, value);
+        }
     }
 
     /// C++: `std::map<std::string, double> MSActuatedTrafficLightLogic::getDetectorStates() const` [const, virtual]
@@ -883,7 +1480,17 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
-        todo!("port MSActuatedTrafficLightLogic::getDetectorStates")
+        let mut result: BTreeMap<String, f64> = BTreeMap::new();
+        for li in self.myInductLoops.iter() {
+            result.insert(li.loop_.get_id().to_string(), if li.loop_.get_occupancy() > 0.0 { 1.0 } else { 0.0 });
+        }
+        for loop_ in self.myExtraLoops.iter() {
+            result.insert(loop_.get_id().to_string(), if loop_.get_occupancy() > 0.0 { 1.0 } else { 0.0 });
+        }
+        for loop_ in self.myExtraE2.iter() {
+            result.insert(loop_.get_id().to_string(), loop_.get_current_vehicle_number() as f64);
+        }
+        result
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::getDetectorState(const std::string) const` [const, virtual]
@@ -901,7 +1508,14 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_state(&self, laneID: String) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::getDetectorState")
+        let mut result: f64 = 0.0;
+        for li in self.myInductLoops.iter() {
+            if li.lane.get_id() == laneID.as_str() {
+                result = if li.loop_.get_occupancy() > 0.0 { 1.0 } else { 0.0 };
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `std::map<std::string, double> MSActuatedTrafficLightLogic::getConditions() const` [const, virtual]
@@ -922,7 +1536,14 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_conditions(&self) -> BTreeMap<String, f64> {
-        todo!("port MSActuatedTrafficLightLogic::getConditions")
+        let mut result: BTreeMap<String, f64> = BTreeMap::new();
+        for (key, value) in self.myConditions.iter() {
+            if self.myListedConditions.contains(key) {
+                // shortcut: C++ catches the ProcessError of evalExpression and logs it; the Rust evalExpression panics instead, upgrade when it returns Result
+                result.insert(key.clone(), self.eval_expression(value));
+            }
+        }
+        result
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
@@ -942,7 +1563,20 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
-        todo!("port MSActuatedTrafficLightLogic::loadState")
+        self.base.base.myAmActive = active;
+        let lastSwitch: SUMOTime = t - spentDuration;
+        self.myStep = step;
+        self.myPhases[self.myStep as usize].m().myLastSwitch = lastSwitch;
+        let this = Ptr::from_mut(&mut self.base.base);
+        self.base.base.mySwitchCommand.deschedule(this);
+        self.base.base.mySwitchCommand = Ptr::from_raw(Box::into_raw(Box::new(MSTrafficLightLogic_SwitchCommand::new(tlcontrol, this, nextSwitch))));
+        let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+        events.m().add_event(self.base.base.mySwitchCommand.cast::<()>(), nextSwitch);
+        if self.base.base.myAmActive {
+            self.apply_phase_signals(lastSwitch);
+        }
+        let id = self.get_id().to_string();
+        tlcontrol.get(&id).execute_on_switch_actions();
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::initAttributeOverride()` [protected]
@@ -981,7 +1615,35 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init_attribute_override(&mut self) {
-        todo!("port MSActuatedTrafficLightLogic::initAttributeOverride")
+        let ovrd: SUMOTime = OVERRIDE_DURATION;
+        for i in 0..self.myPhases.len() {
+            let phase = self.myPhases[i];
+            let errorSuffix = format!("' for overriding attribute in phase {} of tlLogic '{}' in program '{}'.", i, self.get_id(), self.get_program_id());
+            if phase.minDuration == ovrd {
+                let cond = format!("minDur:{}", i);
+                if !self.myConditions.contains_key(&cond) {
+                    panic!("{}", ProcessError::new(format!("Missing condition '{}{}", cond, errorSuffix)));
+                }
+            }
+            if phase.maxDuration == ovrd {
+                let cond = format!("maxDur:{}", i);
+                if !self.myConditions.contains_key(&cond) {
+                    panic!("{}", ProcessError::new(format!("Missing condition '{}{}", cond, errorSuffix)));
+                }
+            }
+            if phase.earliestEnd == ovrd {
+                let cond = format!("earliestEnd:{}", i);
+                if !self.myConditions.contains_key(&cond) {
+                    panic!("{}", ProcessError::new(format!("Missing condition '{}{}", cond, errorSuffix)));
+                }
+            }
+            if phase.latestEnd == ovrd {
+                let cond = format!("latestEnd:{}", i);
+                if !self.myConditions.contains_key(&cond) {
+                    panic!("{}", ProcessError::new(format!("Missing condition '{}{}", cond, errorSuffix)));
+                }
+            }
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::initSwitchingRules()` [protected]
@@ -1011,7 +1673,27 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init_switching_rules(&mut self) {
-        todo!("port MSActuatedTrafficLightLogic::initSwitchingRules")
+        for i in 0..self.myPhases.len() {
+            let mut sr = MSActuatedTrafficLightLogic_SwitchingRules { enabled: false };
+            let phase = self.myPhases[i];
+            let mut nextPhases: Vec<i32> = phase.nextPhases.clone();
+            if nextPhases.len() == 0 {
+                nextPhases.push(((i + 1) % self.myPhases.len()) as i32);
+            } else if nextPhases.len() > 1 {
+                self.myHasMultiTarget = true;
+            }
+            for next in nextPhases.iter().copied() {
+                if next >= 0 && next < self.myPhases.len() as i32 {
+                    let nextPhase = self.myPhases[next as usize];
+                    if nextPhase.earlyTarget != "" || nextPhase.finalTarget != "" {
+                        sr.enabled = true;
+                    }
+                }
+            }
+            // simplifies later code
+            self.myPhases[i].m().nextPhases = nextPhases;
+            self.mySwitchingRules.push(sr);
+        }
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::duration(const double) const` [const, protected]
@@ -1036,7 +1718,21 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn duration(&self, detectionGap: f64) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::duration")
+        debug_assert!(self.get_current_phase_def().is_green_phase());
+        debug_assert!((self.myPhases.len() as i32) > self.myStep);
+        let actDuration: SUMOTime = MSNet::get_instance().get_current_time_step() - self.myPhases[self.myStep as usize].myLastSwitch;
+        // ensure that minimum duration is kept
+        let mut newDuration: SUMOTime = self.get_min_dur(-1) - actDuration;
+        // try to let the last detected vehicle pass the intersection (duration must be positive)
+        newDuration = std::cmp::max(std::cmp::max(newDuration, time2steps(self.myDetectorGap - detectionGap)), 1);
+        // cut the decimal places to ensure that phases always have integer duration
+        if newDuration % 1000 != 0 {
+            let totalDur: SUMOTime = newDuration + actDuration;
+            newDuration = (totalDur / 1000 + 1) * 1000 - actDuration;
+        }
+        // ensure that the maximum duration is not exceeded
+        newDuration = std::cmp::min(std::cmp::min(newDuration, self.get_max_dur(-1) - actDuration), self.get_latest());
+        newDuration
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getMinimumMinDuration(MSLane *, const std::set<int> &) const` [const, protected]
@@ -1065,7 +1761,26 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_minimum_min_duration(&self, lane: Ptr<MSLane>, multiNextTargets: &BTreeSet<i32>) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getMinimumMinDuration")
+        let mut result: SUMOTime = i64::MAX;
+        for pI in 0..self.myPhases.len() {
+            let phase = self.myPhases[pI];
+            let state: String = phase.get_state().to_string();
+            for i in 0..state.len() {
+                let s: LinkState = (state.as_bytes()[i] as i8) as LinkState;
+                if s == LINKSTATE_TL_GREEN_MAJOR || s == LINKSTATE_TL_GREEN_MINOR {
+                    for cand in self.get_lanes_at(i as i32).clone() {
+                        if lane == cand {
+                            if phase.is_actuated() {
+                                result = std::cmp::min(result, self.get_min_dur(pI as i32));
+                            } else if multiNextTargets.contains(&(pI as i32)) {
+                                result = std::cmp::min(result, DEFAULT_STATIC_MINDUR);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::gapControl()` [protected]
@@ -1118,7 +1833,41 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn gap_control(&mut self) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::gapControl")
+        //intergreen times should not be lengthend
+        debug_assert!((self.myPhases.len() as i32) > self.myStep);
+        let mut result: f64 = f64::MAX;
+        // switch off active colors
+        if self.myShowDetectors {
+            for loopInfo in self.myInductLoops.iter() {
+                if loopInfo.lastGreenTime < loopInfo.loop_.get_last_detection_time() {
+                    loopInfo.loop_.m().set_special_color(Ptr::new(&RGB_RED));
+                } else {
+                    loopInfo.loop_.m().set_special_color(Ptr::null());
+                }
+            }
+        }
+        if !self.get_current_phase_def().is_green_phase() {
+            return result; // end current phase
+        }
+        // Checks, if the maxDuration is kept. No phase should last longer than maxDuration.
+        let actDuration: SUMOTime = MSNet::get_instance().get_current_time_step() - self.myPhases[self.myStep as usize].myLastSwitch;
+        if actDuration >= self.get_current_phase_def().maxDuration || self.max_link_duration_reached() || self.get_latest() == 0 {
+            return result; // end current phase
+        }
+        // now the gapcontrol starts
+        for loopInfo in self.myInductLoopsForPhase[self.myStep as usize].clone() {
+            let loop_: Ptr<MSInductLoop> = loopInfo.loop_;
+            if loopInfo.is_jammed() {
+                loop_.m().set_special_color(Ptr::new(&RGB_ORANGE));
+            } else {
+                loop_.m().set_special_color(Ptr::new(&RGB_GREEN));
+            }
+            let actualGap: f64 = loop_.get_time_since_last_detection();
+            if actualGap < loopInfo.maxGap && !loopInfo.is_jammed() {
+                result = f64::min(result, actualGap);
+            }
+        }
+        result
     }
 
     /// C++: `bool MSActuatedTrafficLightLogic::hasMajor(const std::string &, const LaneVector &) const` [const, protected]
@@ -1140,7 +1889,18 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn has_major(&self, state: &str, lanes: &LaneVector) -> bool {
-        todo!("port MSActuatedTrafficLightLogic::hasMajor")
+        for i in 0..state.len() {
+            if ((state.as_bytes()[i] as i8) as LinkState) == LINKSTATE_TL_GREEN_MAJOR {
+                for cand in self.get_lanes_at(i as i32).clone() {
+                    for lane in lanes.iter() {
+                        if *lane == cand {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `int MSActuatedTrafficLightLogic::decideNextPhase()` [protected]
@@ -1186,7 +1946,35 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self) -> i32 {
-        todo!("port MSActuatedTrafficLightLogic::decideNextPhase")
+        let cands: Vec<i32> = self.myPhases[self.myStep as usize].nextPhases.clone();
+        // decide by priority
+        // first target is the default when there is no traffic
+        // @note: to keep the current phase, even when there is no traffic, it must be added to 'next' explicitly
+        let mut result: i32 = cands[0];
+        let mut maxPrio: i32 = 0;
+        let actDuration: SUMOTime = MSNet::get_instance().get_current_time_step() - self.myPhases[self.myStep as usize].myLastSwitch;
+        let canExtend = actDuration < self.get_current_phase_def().maxDuration && !self.max_link_duration_reached() && self.get_latest() > 0;
+        if canExtend {
+            // consider keeping the current phase until maxDur is reached
+            // (only when there is still traffic in that phase)
+            let currentPrio = self.get_phase_priority(self.myStep);
+            if currentPrio > maxPrio {
+                result = self.myStep;
+                maxPrio = currentPrio;
+            }
+        }
+        for step in cands.iter().copied() {
+            let mut prio: i32 = 0;
+            let targets: Vec<i32> = self.myTargets.entry(self.myStep).or_default().entry(step).or_default().clone();
+            for target in targets {
+                prio += self.get_phase_priority(target);
+            }
+            if prio > maxPrio && self.can_extend_link_green(self.get_target(step).0) {
+                maxPrio = prio;
+                result = step;
+            }
+        }
+        result
     }
 
     /// C++: `int MSActuatedTrafficLightLogic::decideNextPhaseCustom(bool)` [protected]
@@ -1217,7 +2005,25 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase_custom(&mut self, mustSwitch: bool) -> i32 {
-        todo!("port MSActuatedTrafficLightLogic::decideNextPhaseCustom")
+        for next in self.get_current_phase_def().nextPhases.clone() {
+            let phase = self.myPhases[next as usize];
+            let condition: String = if mustSwitch { phase.finalTarget.clone() } else { phase.earlyTarget.clone() };
+            if condition != "" {
+                // backward compatibility if a user redefined DEFAULT_CONDITION
+                if condition == DEFAULT_CONDITION && !self.myConditions.contains_key(DEFAULT_CONDITION) {
+                    if self.gap_control() == f64::MAX {
+                        return next;
+                    }
+                } else if self.eval_expression(&condition) != 0.0 {
+                    return next;
+                }
+            }
+        }
+        if mustSwitch {
+            *self.get_current_phase_def().nextPhases.last().unwrap()
+        } else {
+            self.myStep
+        }
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::evalExpression(const std::string &) const` [const, protected]
@@ -1567,7 +2373,28 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_priority(&self, loopInfo: &MSActuatedTrafficLightLogic_InductLoopInfo) -> i32 {
-        todo!("port MSActuatedTrafficLightLogic::getDetectorPriority")
+        let loop_: Ptr<MSInductLoop> = loopInfo.loop_;
+        let actualGap: f64 = loop_.get_time_since_last_detection();
+        if (actualGap < loopInfo.maxGap && !loopInfo.is_jammed()) || loopInfo.lastGreenTime < loop_.get_last_detection_time() {
+            let inactiveTime: SUMOTime = MSNet::get_instance().get_current_time_step() - loopInfo.lastGreenTime;
+            // @note. Inactive time could also be tracked regardless of current activity (to increase robustness in case of detection failure
+            if inactiveTime > self.myInactiveThreshold {
+                return steps2time(inactiveTime) as i32;
+            } else {
+                // give bonus to detectors that are currently served (if that phase can stil be extended)
+                if loopInfo.servedPhase[self.myStep as usize] {
+                    let actDuration: SUMOTime = MSNet::get_instance().get_current_time_step() - self.myPhases[self.myStep as usize].myLastSwitch;
+                    let canExtend = actDuration < self.get_current_phase_def().maxDuration && self.get_latest() > 0;
+                    if canExtend {
+                        return DEFAULT_CURRENT_PRIORITY;
+                    } else {
+                        return 0;
+                    }
+                }
+                return 1;
+            }
+        }
+        0
     }
 
     /// C++: `int MSActuatedTrafficLightLogic::getPhasePriority(int) const` [const, protected]
@@ -1590,7 +2417,19 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_priority(&self, step: i32) -> i32 {
-        todo!("port MSActuatedTrafficLightLogic::getPhasePriority")
+        let mut result: i32 = 0;
+        for loopInfo in self.myInductLoopsForPhase[step as usize].clone() {
+            result += self.get_detector_priority(&*loopInfo);
+        }
+        if self.myCrossingsForPhase.len() > 0 {
+            for crossingEntry in self.myCrossingsForPhase[step as usize].clone() {
+                let aPersons = crossingEntry.get_approaching_persons();
+                if !aPersons.is_null() && aPersons.len() > 0 {
+                    result += DEFAULT_CROSSING_PRIORITY;
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::pair<int, SUMOTime> MSActuatedTrafficLightLogic::getTarget(int) const` [const, protected]
@@ -1624,7 +2463,30 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_target(&self, step: i32) -> (i32, SUMOTime) {
-        todo!("port MSActuatedTrafficLightLogic::getTarget")
+        let mut seen: i32 = 0;
+        let origStep: i32 = step;
+        let mut step: i32 = step;
+        let mut dur: SUMOTime = 0;
+        // if step is a transition, find the upcoming green phase
+        while !self.myPhases[step as usize].is_green_phase() {
+            seen += 1;
+            dur += self.myPhases[step as usize].duration;
+            if self.myPhases[step as usize].nextPhases.len() > 0 && self.myPhases[step as usize].nextPhases[0] >= 0 {
+                for next in self.myPhases[step as usize].nextPhases.clone() {
+                    if next != step {
+                        step = next;
+                        break;
+                    }
+                }
+            } else {
+                step = (step + 1) % (self.myPhases.len() as i32);
+            }
+            if step == origStep || seen > self.myPhases.len() as i32 {
+                utils::common::msg_handler::write_warning(&format!("At actuated tlLogic '{}', infinite transition loop from phase {}", self.get_id(), origStep));
+                return (0, 0);
+            }
+        }
+        (step, dur)
     }
 
     /// C++: `bool MSActuatedTrafficLightLogic::maxLinkDurationReached()` [protected]
@@ -1644,7 +2506,15 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn max_link_duration_reached(&mut self) -> bool {
-        todo!("port MSActuatedTrafficLightLogic::maxLinkDurationReached")
+        if self.myLinkMaxGreenTimes.is_empty() {
+            return false;
+        }
+        for i in 0..self.myNumLinks as usize {
+            if self.myLinkGreenTimes[i] >= self.myLinkMaxGreenTimes[i] {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSActuatedTrafficLightLogic::canExtendLinkGreen(int)` [protected]
@@ -1666,7 +2536,17 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn can_extend_link_green(&mut self, target: i32) -> bool {
-        todo!("port MSActuatedTrafficLightLogic::canExtendLinkGreen")
+        if self.myLinkMaxGreenTimes.is_empty() {
+            return true;
+        }
+        let targetState: String = self.myPhases[target as usize].get_state().to_string();
+        for i in 0..self.myNumLinks as usize {
+            let c = targetState.as_bytes()[i] as char;
+            if self.myLinkGreenTimes[i] >= self.myLinkMaxGreenTimes[i] && (c == 'G' || c == 'g') {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `SUMOTime MSActuatedTrafficLightLogic::getLinkMinDuration(int) const` [const, protected]
@@ -1691,7 +2571,21 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_link_min_duration(&self, target: i32) -> SUMOTime {
-        todo!("port MSActuatedTrafficLightLogic::getLinkMinDuration")
+        let mut result: SUMOTime = 0;
+        if target != self.myStep && self.myLinkMinGreenTimes.len() > 0 {
+            let state: String = self.myPhases[self.myStep as usize].get_state().to_string();
+            let targetState: String = self.myPhases[target as usize].get_state().to_string();
+            for i in 0..self.myNumLinks as usize {
+                let c = state.as_bytes()[i] as char;
+                let tc = targetState.as_bytes()[i] as char;
+                if self.myLinkGreenTimes[i] < self.myLinkMinGreenTimes[i]
+                    && (c == 'G' || c == 'g')
+                    && !(tc == 'G' || tc == 'g') {
+                    result = std::cmp::max(result, self.myLinkMinGreenTimes[i] - self.myLinkGreenTimes[i]);
+                }
+            }
+        }
+        result
     }
 
     /// C++: `bool MSActuatedTrafficLightLogic::weakConflict(int, const std::string &) const` [const, protected]
@@ -1730,7 +2624,33 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn weak_conflict(&self, linkIndex: i32, state: &str) -> bool {
-        todo!("port MSActuatedTrafficLightLogic::weakConflict")
+        for link in self.get_links_at(tlIndex).clone() {
+            let linkIndex: i32 = link.get_index();
+            let junction: Ptr<MSJunction> = link.get_junction();
+            for i in 0..self.myLinks.len() {
+                if i as i32 == tlIndex {
+                    continue;
+                }
+                let s: LinkState = (state.as_bytes()[i] as i8) as LinkState;
+                if s == LINKSTATE_TL_GREEN_MAJOR || s == LINKSTATE_TL_GREEN_MINOR {
+                    for foe in self.get_links_at(i as i32).clone() {
+                        // junction logic is based on junction link index rather than tl index
+                        let foeIndex: i32 = foe.get_index();
+                        let junction2: Ptr<MSJunction> = foe.get_junction();
+                        if junction == junction2 {
+                            // shortcut: MSJunctionLogic::getFoesFor(linkIndex).test(foeIndex) is not usable yet (bitset Unmapped), so the junction foe relation is approximated by the MSLink foe links; upgrade when the junction logic bitsets are mapped
+                            let _ = (linkIndex, foeIndex);
+                            if link.get_foe_links().contains(&foe)
+                                && (foe.get_permissions() & !SVC_VULNERABLE) != 0 // check1e
+                                && Ptr::from_mut(foe.get_lane_before().get_edge()) != Ptr::from_mut(link.get_lane_before().get_edge()) { // check1f
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `const T * MSActuatedTrafficLightLogic::retrieveDetExpression(const std::string &, const std::string &, bool) const` [const, protected]
@@ -1772,7 +2692,16 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_multi_next_targets(&self) -> BTreeSet<i32> {
-        todo!("port MSActuatedTrafficLightLogic::getMultiNextTargets")
+        let mut result: BTreeSet<i32> = BTreeSet::new();
+        if self.myHasMultiTarget {
+            // find all phase that are the target green phase of a 'next' attribute
+            for p in self.myPhases.iter() {
+                for next in p.nextPhases.clone() {
+                    result.insert(self.get_target(next).0);
+                }
+            }
+        }
+        result
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::initTargets(int)` [protected]
@@ -1805,7 +2734,27 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init_targets(&mut self, step: i32) {
-        todo!("port MSActuatedTrafficLightLogic::initTargets")
+        // next -> target -> transitionTime starting from step
+        let mut reached: BTreeMap<i32, BTreeMap<i32, SUMOTime>> = BTreeMap::new();
+        let next: Vec<i32> = self.myPhases[step as usize].nextPhases.clone();
+        for n in next.iter().copied() {
+            self.find_targets(step, n, 0, reached.entry(n).or_default());
+        }
+        for target in 0..self.myPhases.len() as i32 {
+            let mut bestNext: i32 = next[0];
+            let mut bestTime: SUMOTime = SUMOTIME_MAX;
+            for (itemFirst, itemSecond) in reached.iter() {
+                if let Some(transitionTime) = itemSecond.get(&target) {
+                    if *transitionTime < bestTime {
+                        bestTime = *transitionTime;
+                        bestNext = *itemFirst;
+                    }
+                }
+            }
+            if bestTime != SUMOTIME_MAX {
+                self.myTargets.entry(step).or_default().entry(bestNext).or_default().push(target);
+            }
+        }
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::findTargets(int, int, SUMOTime, std::map<int, SUMOTime> &)` [protected]
@@ -1840,7 +2789,22 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn find_targets(&mut self, origStep: i32, n: i32, priorTransition: SUMOTime, found: &mut BTreeMap<i32, SUMOTime>) {
-        todo!("port MSActuatedTrafficLightLogic::findTargets")
+        let (target, dur) = self.get_target(n);
+        let transitionTime: SUMOTime = dur + priorTransition;
+        if target == origStep {
+            // full circle
+            return;
+        }
+        if let Some(existing) = found.get(&target) {
+            if *existing <= transitionTime {
+                // found the same target again
+                return;
+            }
+        }
+        found.insert(target, transitionTime);
+        for n2 in self.myPhases[target as usize].nextPhases.clone() {
+            self.find_targets(origStep, n2, transitionTime, found);
+        }
     }
 
 }
