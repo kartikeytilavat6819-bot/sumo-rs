@@ -1,9 +1,52 @@
-//! Port of traci-server/TraCIServer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of traci-server/TraCIServer.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use utils::common::sumo_vehicle_class::parse_vehicle_classes_vec;
+use utils::common::time::{SUMOTIME_MAX, delta_t, steps2time, string2time, time2steps};
 
 /// C++ typedef `bool (*)(TraCIServer &, tcpip::Storage &, tcpip::Storage &) TraCIServer::CmdExecutor`
-pub type TraCIServer_CmdExecutor = Unmapped /* bool (*)(TraCIServer &, tcpip::Storage &, tcpip::Storage &) */;
+pub type TraCIServer_CmdExecutor = fn(&mut TraCIServer, &mut Storage, &mut Storage) -> bool;
+
+// C++ static members of TraCIServer: `myInstance` and `myDoCloseConnection`
+static MY_INSTANCE: AtomicPtr<TraCIServer> = AtomicPtr::new(std::ptr::null_mut());
+static MY_DO_CLOSE_CONNECTION: AtomicBool = AtomicBool::new(false);
+
+fn my_instance() -> Ptr<TraCIServer> {
+    Ptr::from_raw(MY_INSTANCE.load(Ordering::Relaxed))
+}
+
+fn set_my_instance(p: Ptr<TraCIServer>) {
+    MY_INSTANCE.store(p.as_raw(), Ordering::Relaxed);
+}
+
+/// vehicle states that get a (possibly empty) change list, in the C++ initialisation order
+const VEHICLE_STATES: [MSNet_VehicleState; 13] = [
+    MSNet_VehicleState::BUILT,
+    MSNet_VehicleState::DEPARTED,
+    MSNet_VehicleState::STARTING_TELEPORT,
+    MSNet_VehicleState::ENDING_TELEPORT,
+    MSNet_VehicleState::ARRIVED,
+    MSNet_VehicleState::NEWROUTE,
+    MSNet_VehicleState::STARTING_PARKING,
+    MSNet_VehicleState::MANEUVERING,
+    MSNet_VehicleState::ENDING_PARKING,
+    MSNet_VehicleState::STARTING_STOP,
+    MSNet_VehicleState::ENDING_STOP,
+    MSNet_VehicleState::COLLISION,
+    MSNet_VehicleState::EMERGENCYSTOP,
+];
+
+/// transportable states that get a (possibly empty) change list, in the C++ initialisation order
+const TRANSPORTABLE_STATES: [MSNet_TransportableState; 4] = [
+    MSNet_TransportableState::PERSON_DEPARTED,
+    MSNet_TransportableState::PERSON_ARRIVED,
+    MSNet_TransportableState::CONTAINER_DEPARTED,
+    MSNet_TransportableState::CONTAINER_ARRIVED,
+];
+
+// shortcut: C++ VERSION_STRING comes from the generated version.h, which the port does not have yet; uses the fallback from config.h.cmake, upgrade when version info is ported
+const TRACI_SERVER_VERSION_STRING: &str = "1.28.0";
 
 /// C++ class `TraCIServer::SocketInfo` (traci-server/TraCIServer.h)
 pub struct TraCIServer_SocketInfo {
@@ -14,9 +57,9 @@ pub struct TraCIServer_SocketInfo {
     /// Socket object for this client
     pub socket: Ptr<Socket>,
     /// container for vehicle state changes since last step taken by this client
-    pub vehicleStateChanges: i32,
+    pub vehicleStateChanges: BTreeMap<MSNet_VehicleState, Vec<String>>,
     /// container for transportable state changes since last step taken by this client
-    pub transportableStateChanges: i32,
+    pub transportableStateChanges: BTreeMap<MSNet_TransportableState, Vec<String>>,
 }
 
 impl TraCIServer_SocketInfo {
@@ -26,7 +69,13 @@ impl TraCIServer_SocketInfo {
     //             : targetTime(t), socket(socket) {}
     #[allow(unused_variables)]
     pub fn new(socket: Ptr<Socket>, t: SUMOTime) -> Self {
-        todo!("port SocketInfo::SocketInfo")
+        TraCIServer_SocketInfo {
+            targetTime: t,
+            executeMove: false,
+            socket,
+            vehicleStateChanges: BTreeMap::new(),
+            transportableStateChanges: BTreeMap::new(),
+        }
     }
 
     /// C++: `void SocketInfo::~SocketInfo() noexcept`
@@ -36,33 +85,37 @@ impl TraCIServer_SocketInfo {
     //         }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SocketInfo::~SocketInfo")
+        if !self.socket.is_null() {
+            drop(unsafe { Box::from_raw(self.socket.as_raw()) });
+        }
     }
 
     /// C++: `void SocketInfo::SocketInfo(const SocketInfo &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &TraCIServer_SocketInfo) -> Self {
-        todo!("port SocketInfo::SocketInfo")
+        // C++ declares this copy constructor private and never defines it, so it cannot be used
+        panic!("TraCIServer::SocketInfo copy constructor is private and undefined in C++")
     }
 
 }
 
 /// TraCI server used to control sumo by a remote TraCI client
 /// C++ class `TraCIServer` (traci-server/TraCIServer.h)
+#[repr(C)]
 pub struct TraCIServer {
-    /// C++ base class `MSNet::VehicleStateListener`
+    /// C++ base class `MSNet::VehicleStateListener` (first field, so the struct can be cast to it)
     pub base: MSNet_VehicleStateListener,
     /// C++ base class `libsumo::VariableWrapper`
     pub base2: VariableWrapper,
     /// C++ base class `MSNet::TransportableStateListener`
     pub base3: MSNet_TransportableStateListener,
     /// The socket connections to the clients the first component (index) determines the client's order (lowest index's commands are processed first),
-    pub mySockets: i32,
+    pub mySockets: BTreeMap<i32, Ptr<TraCIServer_SocketInfo>>,
     /// This stores the setOrder(int) requests of the clients.
-    pub mySocketReorderRequests: i32,
-    /// The currently active client socket
-    pub myCurrentSocket: i32,
+    pub mySocketReorderRequests: BTreeMap<i32, Ptr<TraCIServer_SocketInfo>>,
+    /// The currently active client, as its key in mySockets (None = end())
+    pub myCurrentSocket: Option<i32>,
     /// The time step to reach until processing the next commands
     pub myTargetTime: SUMOTime,
     /// The storage to read from
@@ -74,18 +127,19 @@ pub struct TraCIServer {
     /// The last timestep's subscription results
     pub mySubscriptionCache: Storage,
     /// Map of commandIds -> their executors; applicable if the executor applies to the method footprint
-    pub myExecutors: i32,
+    pub myExecutors: BTreeMap<i32, TraCIServer_CmdExecutor>,
     /// Set of variables which have parameters
-    pub myParameterized: i32,
-    pub myLoadArgs: i32,
+    pub myParameterized: BTreeSet<(i32, i32)>,
+    /// Arguments of a load command
+    pub myLoadArgs: Vec<String>,
     /// The list of known, still valid subscriptions
-    pub mySubscriptions: i32,
+    pub mySubscriptions: Vec<Subscription>,
     /// The last modified context subscription (the one to add a filter to, see (), currently only for vehicle to vehicle context)
     pub myLastContextSubscription: Ptr<Subscription>,
     /// Changes in the states of simulated vehicles
-    pub myVehicleStateChanges: i32,
+    pub myVehicleStateChanges: BTreeMap<MSNet_VehicleState, Vec<String>>,
     /// Changes in the states of simulated transportables
-    pub myTransportableStateChanges: i32,
+    pub myTransportableStateChanges: BTreeMap<MSNet_TransportableState, Vec<String>>,
 }
 
 impl std::ops::Deref for TraCIServer {
@@ -105,13 +159,28 @@ impl std::ops::DerefMut for TraCIServer {
 //   static bool TraCIServer::myDoCloseConnection;
 
 impl TraCIServer {
+    /// C++ `myCurrentSocket->second`; only valid while the iterator is not end()
+    fn cur_socket(&self) -> &Ptr<TraCIServer_SocketInfo> {
+        &self.mySockets[&self.myCurrentSocket.unwrap()]
+    }
+
+    /// C++ `mySockets.begin()` as a key (None when there are no clients)
+    fn first_socket(&self) -> Option<i32> {
+        self.mySockets.keys().next().copied()
+    }
+
+    /// C++ `++it` on an iterator into mySockets, as a key (None = end())
+    fn socket_after(&self, key: i32) -> Option<i32> {
+        self.mySockets.range((std::ops::Bound::Excluded(key), std::ops::Bound::Unbounded)).next().map(|(k, _)| *k)
+    }
+
     /// C++: `SUMOTime TraCIServer::getTargetTime() const` [const]
     // SUMOTime getTargetTime() const {
     //         return myTargetTime;
     //     }
     #[allow(unused_variables)]
     pub fn get_target_time(&self) -> SUMOTime {
-        todo!("port TraCIServer::getTargetTime")
+        self.myTargetTime
     }
 
     /// C++: `TraCIServer * TraCIServer::getInstance()` [static]
@@ -120,7 +189,7 @@ impl TraCIServer {
     //     }
     #[allow(unused_variables)]
     pub fn get_instance() -> Ptr<TraCIServer> {
-        todo!("port TraCIServer::getInstance")
+        my_instance()
     }
 
     /// C++: `void TraCIServer::openSocket(const int &)` [static]
@@ -143,8 +212,27 @@ impl TraCIServer {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn open_socket(execs: &i32) {
-        todo!("port TraCIServer::openSocket")
+    pub fn open_socket(execs: &BTreeMap<i32, TraCIServer_CmdExecutor>) {
+        if my_instance().is_null() && !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) && utils::options::options_cont::get_int("remote-port") != 0 {
+            let server = TraCIServer::new(
+                string2time(&utils::options::options_cont::get_string("begin")).unwrap(),
+                utils::options::options_cont::get_int("remote-port"),
+                utils::options::options_cont::get_int("num-clients"),
+            );
+            let inst = Ptr::from_raw(Box::into_raw(Box::new(server)));
+            set_my_instance(inst);
+            for (k, v) in execs {
+                inst.m().myExecutors.insert(k.clone(), v.clone());
+            }
+        }
+        let inst = my_instance();
+        if !inst.is_null() {
+            // maybe net was deleted and built again
+            let net = MSNet::get_instance();
+            net.m().add_vehicle_state_listener(inst.cast::<MSNet_VehicleStateListener>());
+            net.m().add_transportable_state_listener(inst.cast::<MSNet_TransportableStateListener>());
+            inst.m().mySubscriptionCache.write_int(0);
+        }
     }
 
     /// C++: `void TraCIServer::close()` [static]
@@ -160,7 +248,15 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn close() {
-        todo!("port TraCIServer::close")
+        let inst = my_instance();
+        if inst.is_null() {
+            return;
+        }
+        // C++ `delete myInstance`: run the destructor, then free the object
+        inst.m().drop_();
+        drop(unsafe { Box::from_raw(inst.as_raw()) });
+        set_my_instance(Ptr::null());
+        MY_DO_CLOSE_CONNECTION.store(true, Ordering::Relaxed);
     }
 
     /// C++: `bool TraCIServer::wasClosed()` [static]
@@ -171,7 +267,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn was_closed() -> bool {
-        todo!("port TraCIServer::wasClosed")
+        MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed)
     }
 
     /// C++: `int TraCIServer::processCommands(const SUMOTime, const bool)`
@@ -296,7 +392,222 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn process_commands(&mut self, step: SUMOTime, afterMove: bool) -> i32 {
-        todo!("port TraCIServer::processCommands")
+        // shortcut: C++ catches std::invalid_argument, libsumo::TraCIException and tcpip::SocketException and rethrows ProcessError; this returns i32, so those errors panic, upgrade when the TraCI server returns Result
+        let mut finalCmd = 0;
+        let firstStep = self.myCurrentSocket.is_some();
+        // update client order if requested
+        self.process_reordering_requests();
+        if !firstStep && !afterMove {
+            // This is the entry point after performing a SUMO step (block is skipped before first SUMO step since then no simulation results have to be sent)
+            // update subscription results
+            self.post_process_simulation_step();
+            // Send out subscription results to clients which will act in this SUMO step (i.e. with client target time <= current sumo timestep end)
+            self.send_output_to_all();
+            self.myOutputStorage.reset();
+        }
+
+        // determine minimal next target time among clients
+        self.myTargetTime = self.next_target_time();
+
+        if step < self.myTargetTime {
+            return finalCmd;
+        }
+
+        // Simulation should run until
+        // 1. end time reached or
+        // 2. got libsumo::CMD_CLOSE or
+        // 3. got libsumo::CMD_LOAD or
+        // 4. Client closes socket connection
+        while !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) && self.myTargetTime <= MSNet::get_instance().get_current_time_step() && finalCmd != CMD_EXECUTEMOVE {
+            // Iterate over clients and process communication for the ones with target time == myTargetTime
+            self.myCurrentSocket = self.first_socket();
+            while let Some(cur) = self.myCurrentSocket {
+                if self.mySockets[&cur].m().targetTime > self.myTargetTime || (afterMove && !self.mySockets[&cur].m().executeMove) {
+                    // this client must wait
+                    self.myCurrentSocket = self.socket_after(cur);
+                    continue;
+                }
+                finalCmd = 0;
+                while finalCmd == 0 {
+                    if !self.myInputStorage.valid_pos() {
+                        // have read request completely, send response if adequate
+                        if self.myOutputStorage.size() > 0 {
+                            // send response to previous query
+                            self.cur_socket().socket.m().send_exact(&self.myOutputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+                            self.myOutputStorage.reset();
+                        }
+                        // Read next request
+                        self.myInputStorage.reset();
+                        let sock = self.cur_socket().socket;
+                        sock.m().receive_exact(&mut self.myInputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+                    }
+
+                    while self.myInputStorage.valid_pos() && !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) {
+                        let cmd = self.dispatch_command();
+                        if cmd == CMD_SIMSTEP || cmd == CMD_LOAD || cmd == CMD_EXECUTEMOVE || cmd == CMD_CLOSE {
+                            finalCmd = cmd;
+                        }
+                    }
+                }
+            }
+            if !self.myLoadArgs.is_empty() {
+                // Breaking loop to load new simulation.
+                break;
+            } else if MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) {
+                // Breaking loop because last client closed connection.
+                break;
+            }
+            let nextT = self.next_target_time();
+            // minimal target time among clients should have been increased during the last loop through mySockets
+            self.myTargetTime = nextT;
+        }
+        // All clients are done with the current time step
+        // Reset myVehicleStateChanges and myTransportableStateChanges
+        for item in self.myVehicleStateChanges.values_mut() {
+            item.clear();
+        }
+        for item in self.myTransportableStateChanges.values_mut() {
+            item.clear();
+        }
+        finalCmd
+    }
+
+    /// The switch of C++ processGet. Ok(false) is the C++ `return false` of the default case,
+    /// Err carries the message of a TraCIException that the C++ code throws inside the switch.
+    fn process_get_variable(&mut self, commandID: i32, variable: i32, id: &str, inputStorage: &mut Storage) -> Result<bool, String> {
+        let wrapper = Ptr::from_mut(&mut self.base2);
+        let params = Ptr::from_mut(inputStorage);
+        let hex = to_hex(variable as u64, 2, 0);
+        match commandID {
+            CMD_GET_INDUCTIONLOOP_VARIABLE => {
+                if !InductionLoop::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Induction Loop Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_MULTIENTRYEXIT_VARIABLE => {
+                if !MultiEntryExit::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Multi Entry Exit Detector Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_TL_VARIABLE => {
+                if !TrafficLight::handle_variable(id, variable, wrapper, params) {
+                    match variable {
+                        TL_CONSTRAINT_SWAP => {
+                            StorageHelper::read_compound(params.m(), 3, "A compound object of size 3 is needed for swapping constraints.");
+                            let tripId = StorageHelper::read_typed_string(params.m(), "The tripId must be given as a string.");
+                            let foeSignal = StorageHelper::read_typed_string(params.m(), "The foeSignal id must be given as a string.");
+                            let foeId = StorageHelper::read_typed_string(params.m(), "The foe tripId must be given as a string.");
+                            self.wrap_signal_constraint_vector(id, variable, &TrafficLight::swap_constraints(id, &tripId, &foeSignal, &foeId));
+                        }
+                        _ => {
+                            return Err(format!("Get TLS Variable: unsupported variable {} specified", hex));
+                        }
+                    }
+                }
+            }
+            CMD_GET_LANE_VARIABLE => {
+                if !Lane::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Lane Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_VEHICLE_VARIABLE => {
+                if !Vehicle::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Vehicle Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_VEHICLETYPE_VARIABLE => {
+                if !VehicleType::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Vehicle Type Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_ROUTE_VARIABLE => {
+                if !Route::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Route Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_POI_VARIABLE => {
+                if !POI::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get PoI Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_POLYGON_VARIABLE => {
+                if !Polygon::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Polygon Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_JUNCTION_VARIABLE => {
+                if !Junction::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Junction Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_EDGE_VARIABLE => {
+                if !Edge::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Edge Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_SIM_VARIABLE => {
+                if !TraCIServerAPI_Simulation::process_get(self, params.m(), id, variable) {
+                    return Err(format!("Get Simulation Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_LANEAREA_VARIABLE => {
+                if !LaneArea::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Lane Area Detector Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_PERSON_VARIABLE => {
+                if !Person::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Person Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_BUSSTOP_VARIABLE => {
+                if !BusStop::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get BusStop Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_PARKINGAREA_VARIABLE => {
+                if !ParkingArea::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get ParkingArea Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_CHARGINGSTATION_VARIABLE => {
+                if !ChargingStation::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get ChargingStation Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_ROUTEPROBE_VARIABLE => {
+                if !RouteProbe::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get RouteProbe Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_CALIBRATOR_VARIABLE => {
+                if !Calibrator::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Calibrator Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_REROUTER_VARIABLE => {
+                if !Rerouter::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get Rerouter Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_VARIABLESPEEDSIGN_VARIABLE => {
+                if !VariableSpeedSign::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get VariableSpeedSign Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_MEANDATA_VARIABLE => {
+                if !MeanData::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get MeanData Variable: unsupported variable {} specified", hex));
+                }
+            }
+            CMD_GET_OVERHEADWIRE_VARIABLE => {
+                if !OverheadWire::handle_variable(id, variable, wrapper, params) {
+                    return Err(format!("Get OverheadWire Variable: unsupported variable {} specified", hex));
+                }
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
     }
 
     /// C++: `bool TraCIServer::processGet(const int, tcpip::Storage &, tcpip::Storage &)`
@@ -446,7 +757,19 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn process_get(&mut self, commandID: i32, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServer::processGet")
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        let id = inputStorage.read_string().expect("readString");
+        self.init_wrapper(commandID + 0x10, variable, &id);
+        // C++ catches libsumo::TraCIException here and answers with writeErrorStatusCmd
+        match self.process_get_variable(commandID, variable, &id, inputStorage) {
+            Ok(true) => {}
+            Ok(false) => return false,
+            Err(e) => return self.write_error_status_cmd(commandID, &e, outputStorage),
+        }
+        self.write_status_cmd(commandID, RTYPE_OK, "", outputStorage);
+        let wrapper_storage = Ptr::from_mut(&mut self.myWrapperStorage);
+        self.write_response_with_length(outputStorage, wrapper_storage.m());
+        true
     }
 
     /// C++: `void TraCIServer::cleanup()`
@@ -472,7 +795,25 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn cleanup(&mut self) {
-        todo!("port TraCIServer::cleanup")
+        self.mySubscriptions.clear();
+        self.myTargetTime = string2time(&utils::options::options_cont::get_string("begin")).unwrap();
+        self.myCurrentSocket = self.first_socket();
+        while let Some(k) = self.myCurrentSocket {
+            let s = self.mySockets[&k];
+            s.m().targetTime = self.myTargetTime;
+            s.m().executeMove = false;
+            self.myCurrentSocket = self.socket_after(k);
+        }
+        self.myOutputStorage.reset();
+        self.myInputStorage.reset();
+        self.mySubscriptionCache.reset();
+        for (_, v) in self.myVehicleStateChanges.iter_mut() {
+            v.clear();
+        }
+        for (_, v) in self.myTransportableStateChanges.iter_mut() {
+            v.clear();
+        }
+        self.myCurrentSocket = self.first_socket();
     }
 
     /// C++: `void TraCIServer::vehicleStateChanged(const SUMOVehicle *const, MSNet::VehicleState, const std::string &)` [virtual]
@@ -487,7 +828,13 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_state_changed(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
-        todo!("port TraCIServer::vehicleStateChanged")
+        if !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) {
+            let id = vehicle.get_id().to_string();
+            self.myVehicleStateChanges.entry(to).or_default().push(id.clone());
+            for (_, s) in self.mySockets.iter() {
+                s.m().vehicleStateChanges.entry(to).or_default().push(id.clone());
+            }
+        }
     }
 
     /// C++: `void TraCIServer::transportableStateChanged(const MSTransportable *const, MSNet::TransportableState, const std::string &)` [virtual]
@@ -502,7 +849,13 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn transportable_state_changed(&mut self, transportable: Ptr<MSTransportable>, to: MSNet_TransportableState, info: &str) {
-        todo!("port TraCIServer::transportableStateChanged")
+        if !MY_DO_CLOSE_CONNECTION.load(Ordering::Relaxed) {
+            let id = transportable.get_id().to_string();
+            self.myTransportableStateChanges.entry(to).or_default().push(id.clone());
+            for (_, s) in self.mySockets.iter() {
+                s.m().transportableStateChanges.entry(to).or_default().push(id.clone());
+            }
+        }
     }
 
     /// C++: `void TraCIServer::writeStatusCmd(int, int, const std::string &, tcpip::Storage &)`
@@ -521,7 +874,15 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn write_status_cmd(&mut self, commandId: i32, status: i32, description: &str, outputStorage: &mut Storage) {
-        todo!("port TraCIServer::writeStatusCmd")
+        if status == RTYPE_ERR {
+            write_error(&format!("Answered with error to command {}: {}", to_hex(commandId as u64, 2, 0), description));
+        } else if status == RTYPE_NOTIMPLEMENTED {
+            write_error(&format!("Requested command not implemented ({}): {}", to_hex(commandId as u64, 2, 0), description));
+        }
+        outputStorage.write_unsigned_byte(1 + 1 + 1 + 4 + description.len() as i32).unwrap(); // command length
+        outputStorage.write_unsigned_byte(commandId).unwrap(); // command type
+        outputStorage.write_unsigned_byte(status).unwrap(); // status
+        outputStorage.write_string(description); // description
     }
 
     /// C++: `void TraCIServer::writeStatusCmd(int, int, const std::string &)`
@@ -532,7 +893,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn write_status_cmd_2(&mut self, commandId: i32, status: i32, description: &str) {
-        todo!("port TraCIServer::writeStatusCmd")
+        // C++ passes the member myOutputStorage by reference; a raw pointer keeps that aliasing
+        let out = Ptr::from_mut(&mut self.myOutputStorage);
+        self.write_status_cmd(commandId, status, description, out.m());
     }
 
     /// C++: `bool TraCIServer::writeErrorStatusCmd(int, const std::string &, tcpip::Storage &)`
@@ -544,7 +907,8 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn write_error_status_cmd(&mut self, commandId: i32, description: &str, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServer::writeErrorStatusCmd")
+        self.write_status_cmd(commandId, RTYPE_ERR, description, outputStorage);
+        false
     }
 
     /// C++: `const int & TraCIServer::getVehicleStateChanges() const` [const]
@@ -559,8 +923,14 @@ impl TraCIServer {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_vehicle_state_changes(&self) -> &i32 {
-        todo!("port TraCIServer::getVehicleStateChanges")
+    pub fn get_vehicle_state_changes(&self) -> &BTreeMap<MSNet_VehicleState, Vec<String>> {
+        if self.myCurrentSocket.is_none() {
+            // Requested in context of a subscription update
+            &self.myVehicleStateChanges
+        } else {
+            // Requested in the context of a custom query by active client
+            &self.cur_socket().m().vehicleStateChanges
+        }
     }
 
     /// C++: `const int & TraCIServer::getTransportableStateChanges() const` [const]
@@ -574,8 +944,14 @@ impl TraCIServer {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_transportable_state_changes(&self) -> &i32 {
-        todo!("port TraCIServer::getTransportableStateChanges")
+    pub fn get_transportable_state_changes(&self) -> &BTreeMap<MSNet_TransportableState, Vec<String>> {
+        if self.myCurrentSocket.is_none() {
+            // Requested in context of a subscription update
+            &self.myTransportableStateChanges
+        } else {
+            // Requested in the context of a custom query by active client
+            &self.cur_socket().m().transportableStateChanges
+        }
     }
 
     /// C++: `void TraCIServer::writeResponseWithLength(tcpip::Storage &, tcpip::Storage &)`
@@ -591,7 +967,13 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn write_response_with_length(&mut self, outputStorage: &mut Storage, tempMsg: &mut Storage) {
-        todo!("port TraCIServer::writeResponseWithLength")
+        if tempMsg.size() < 254 {
+            outputStorage.write_unsigned_byte(1 + tempMsg.size() as i32).unwrap(); // command length -> short
+        } else {
+            outputStorage.write_unsigned_byte(0).unwrap(); // command length -> extended
+            outputStorage.write_int(1 + 4 + tempMsg.size() as i32);
+        }
+        outputStorage.write_storage(tempMsg);
     }
 
     /// C++: `void TraCIServer::stateLoaded(SUMOTime)`
@@ -614,7 +996,20 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn state_loaded(&mut self, targetTime: SUMOTime) {
-        todo!("port TraCIServer::stateLoaded")
+        self.myTargetTime = targetTime;
+        for (_, s) in self.mySockets.iter() {
+            let s = s.m();
+            s.targetTime = targetTime;
+            s.executeMove = false;
+            for (_, v) in s.vehicleStateChanges.iter_mut() {
+                v.clear();
+            }
+            for (_, v) in s.transportableStateChanges.iter_mut() {
+                v.clear();
+            }
+        }
+        self.mySubscriptions.clear();
+        self.mySubscriptionCache.reset();
     }
 
     /// C++: `int & TraCIServer::getLoadArgs()`
@@ -622,8 +1017,8 @@ impl TraCIServer {
     //         return myLoadArgs;
     //     }
     #[allow(unused_variables)]
-    pub fn get_load_args(&mut self) -> &mut i32 {
-        todo!("port TraCIServer::getLoadArgs")
+    pub fn get_load_args(&mut self) -> &mut Vec<String> {
+        &mut self.myLoadArgs
     }
 
     /// C++: `void TraCIServer::initWrapper(const int, const int, const std::string &)`
@@ -637,7 +1032,10 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn init_wrapper(&mut self, domainID: i32, variable: i32, objID: &str) {
-        todo!("port TraCIServer::initWrapper")
+        self.myWrapperStorage.reset();
+        self.myWrapperStorage.write_unsigned_byte(domainID).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(variable).unwrap();
+        self.myWrapperStorage.write_string(objID);
     }
 
     /// C++: `bool TraCIServer::wrapConnectionVector(const std::string &, const int, const int &)`
@@ -658,8 +1056,21 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapConnectionVector")
+    pub fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &[TraCIConnection]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 8);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_typed_string(w, &c.approachedLane);
+            StorageHelper::write_typed_string(w, &c.approachedInternal);
+            StorageHelper::write_typed_unsigned_byte(w, c.hasPrio as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.isOpen as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.hasFoe as i32);
+            StorageHelper::write_typed_string(w, &c.state);
+            StorageHelper::write_typed_string(w, &c.direction);
+            StorageHelper::write_typed_double(w, c.length);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapDouble(const std::string &, const int, const double)` [virtual]
@@ -671,7 +1082,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
-        todo!("port TraCIServer::wrapDouble")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_DOUBLE).unwrap();
+        self.myWrapperStorage.write_double(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapInt(const std::string &, const int, const int)` [virtual]
@@ -683,7 +1096,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
-        todo!("port TraCIServer::wrapInt")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_INTEGER).unwrap();
+        self.myWrapperStorage.write_int(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapString(const std::string &, const int, const std::string &)` [virtual]
@@ -695,7 +1110,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
-        todo!("port TraCIServer::wrapString")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_STRING).unwrap();
+        self.myWrapperStorage.write_string(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringList(const std::string &, const int, const int &)`
@@ -706,8 +1123,10 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapStringList")
+    pub fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &[String]) -> bool {
+        self.myWrapperStorage.write_unsigned_byte(TYPE_STRINGLIST).unwrap();
+        self.myWrapperStorage.write_string_list(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapDoubleList(const std::string &, const int, const int &)`
@@ -718,8 +1137,10 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapDoubleList")
+    pub fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &[f64]) -> bool {
+        self.myWrapperStorage.write_unsigned_byte(TYPE_DOUBLELIST).unwrap();
+        self.myWrapperStorage.write_double_list(value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapPosition(const std::string &, const int, const libsumo::TraCIPosition &)` [virtual]
@@ -736,7 +1157,14 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
-        todo!("port TraCIServer::wrapPosition")
+        let include_z = variable == VAR_POSITION3D;
+        self.myWrapperStorage.write_unsigned_byte(if include_z { POSITION_3D } else { POSITION_2D }).unwrap();
+        self.myWrapperStorage.write_double(value.x);
+        self.myWrapperStorage.write_double(value.y);
+        if include_z {
+            self.myWrapperStorage.write_double(value.z);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapPositionVector(const std::string &, const int, const libsumo::TraCIPositionVector &)` [virtual]
@@ -757,7 +1185,18 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
-        todo!("port TraCIServer::wrapPositionVector")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_POLYGON).unwrap();
+        if value.value.len() < 256 {
+            self.myWrapperStorage.write_unsigned_byte(value.value.len() as i32).unwrap();
+        } else {
+            self.myWrapperStorage.write_unsigned_byte(0).unwrap();
+            self.myWrapperStorage.write_int(value.value.len() as i32);
+        }
+        for pos in &value.value {
+            self.myWrapperStorage.write_double(pos.x);
+            self.myWrapperStorage.write_double(pos.y);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapColor(const std::string &, const int, const libsumo::TraCIColor &)` [virtual]
@@ -772,7 +1211,12 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
-        todo!("port TraCIServer::wrapColor")
+        self.myWrapperStorage.write_unsigned_byte(TYPE_COLOR).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.r).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.g).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.b).unwrap();
+        self.myWrapperStorage.write_unsigned_byte(value.a).unwrap();
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringDoublePair(const std::string &, const int, const std::pair<std::string, double> &)` [virtual]
@@ -785,7 +1229,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
-        todo!("port TraCIServer::wrapStringDoublePair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_string(w, &value.0);
+        StorageHelper::write_typed_double(w, value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringDoublePairList(const std::string &, const int, const int &)`
@@ -799,8 +1247,14 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapStringDoublePairList")
+    pub fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &[(String, f64)]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for p in value {
+            w.write_string(&p.0);
+            w.write_double(p.1);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStringPair(const std::string &, const int, const std::pair<std::string, std::string> &)` [virtual]
@@ -813,7 +1267,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
-        todo!("port TraCIServer::wrapStringPair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_string(w, &value.0);
+        StorageHelper::write_typed_string(w, &value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapIntPair(const std::string &, const int, const std::pair<int, int> &)` [virtual]
@@ -826,7 +1284,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
-        todo!("port TraCIServer::wrapIntPair")
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 2);
+        StorageHelper::write_typed_int(w, value.0);
+        StorageHelper::write_typed_int(w, value.1);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapStage(const std::string &, const int, const libsumo::TraCIStage &)` [virtual]
@@ -837,7 +1299,8 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn wrap_stage(&mut self, objID: &str, variable: i32, value: &TraCIStage) -> bool {
-        todo!("port TraCIServer::wrapStage")
+        StorageHelper::write_stage(&mut self.myWrapperStorage, value);
+        true
     }
 
     /// C++: `bool TraCIServer::wrapReservationVector(const std::string &, const int, const int &)`
@@ -860,8 +1323,23 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapReservationVector")
+    pub fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &[TraCIReservation]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for r in value {
+            StorageHelper::write_compound(w, 10);
+            StorageHelper::write_typed_string(w, &r.id);
+            StorageHelper::write_typed_string_list(w, &r.persons);
+            StorageHelper::write_typed_string(w, &r.group);
+            StorageHelper::write_typed_string(w, &r.fromEdge);
+            StorageHelper::write_typed_string(w, &r.toEdge);
+            StorageHelper::write_typed_double(w, r.departPos);
+            StorageHelper::write_typed_double(w, r.arrivalPos);
+            StorageHelper::write_typed_double(w, r.depart);
+            StorageHelper::write_typed_double(w, r.reservationTime);
+            StorageHelper::write_typed_int(w, r.state);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapLogicVector(const std::string &, const int, const int &)`
@@ -894,8 +1372,33 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapLogicVector")
+    pub fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &[TraCILogic]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, value.len() as i32);
+        for logic in value {
+            StorageHelper::write_compound(w, 5);
+            StorageHelper::write_typed_string(w, &logic.programID);
+            StorageHelper::write_typed_int(w, logic.type_);
+            StorageHelper::write_typed_int(w, logic.currentPhaseIndex);
+            StorageHelper::write_compound(w, logic.phases.len() as i32);
+            for phase in &logic.phases {
+                StorageHelper::write_compound(w, 6);
+                StorageHelper::write_typed_double(w, phase.duration);
+                StorageHelper::write_typed_string(w, &phase.state);
+                StorageHelper::write_typed_double(w, phase.minDur);
+                StorageHelper::write_typed_double(w, phase.maxDur);
+                StorageHelper::write_compound(w, phase.next.len() as i32);
+                for n in &phase.next {
+                    StorageHelper::write_typed_int(w, *n);
+                }
+                StorageHelper::write_typed_string(w, &phase.name);
+            }
+            StorageHelper::write_compound(w, logic.subParameter.len() as i32);
+            for (k, v) in &logic.subParameter {
+                StorageHelper::write_typed_string_list(w, &vec![k.clone(), v.clone()]);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapLinkVectorVector(const std::string &, const int, const int &)`
@@ -916,8 +1419,21 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapLinkVectorVector")
+    pub fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &[Vec<TraCILink>]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        let mut cnt = 1;
+        for sublinks in value {
+            cnt += sublinks.len() as i32 + 1;
+        }
+        StorageHelper::write_compound(w, cnt);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for sublinks in value {
+            StorageHelper::write_typed_int(w, sublinks.len() as i32);
+            for link in sublinks {
+                StorageHelper::write_typed_string_list(w, &vec![link.fromLane.clone(), link.toLane.clone(), link.viaLane.clone()]);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapSignalConstraintVector(const std::string &, const int, const int &)`
@@ -931,8 +1447,14 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapSignalConstraintVector")
+    pub fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &[TraCISignalConstraint]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 5);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_constraint(w, c);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapJunctionFoeVector(const std::string &, const int, const int &)`
@@ -954,8 +1476,22 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapJunctionFoeVector")
+    pub fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &[TraCIJunctionFoe]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 9);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for c in value {
+            StorageHelper::write_typed_string(w, &c.foeId);
+            StorageHelper::write_typed_double(w, c.egoDist);
+            StorageHelper::write_typed_double(w, c.foeDist);
+            StorageHelper::write_typed_double(w, c.egoExitDist);
+            StorageHelper::write_typed_double(w, c.foeExitDist);
+            StorageHelper::write_typed_string(w, &c.egoLane);
+            StorageHelper::write_typed_string(w, &c.foeLane);
+            StorageHelper::write_typed_unsigned_byte(w, c.egoResponse as i32);
+            StorageHelper::write_typed_unsigned_byte(w, c.foeResponse as i32);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapNextStopDataVector(const std::string &, const int, const int &)`
@@ -988,8 +1524,33 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapNextStopDataVector")
+    pub fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextStopData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 4);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        let full = variable == VAR_NEXT_STOPS2;
+        for s in value {
+            let legacy_stop_flags = (s.stopFlags << 1) + if s.arrival >= 0.0 { 1 } else { 0 };
+            StorageHelper::write_typed_string(w, &s.lane);
+            StorageHelper::write_typed_double(w, s.endPos);
+            StorageHelper::write_typed_string(w, &s.stoppingPlaceID);
+            StorageHelper::write_typed_int(w, if full { s.stopFlags } else { legacy_stop_flags });
+            StorageHelper::write_typed_double(w, s.duration);
+            StorageHelper::write_typed_double(w, s.until);
+            if full {
+                StorageHelper::write_typed_double(w, s.startPos);
+                StorageHelper::write_typed_double(w, s.intendedArrival);
+                StorageHelper::write_typed_double(w, s.arrival);
+                StorageHelper::write_typed_double(w, s.depart);
+                StorageHelper::write_typed_string(w, &s.split);
+                StorageHelper::write_typed_string(w, &s.join);
+                StorageHelper::write_typed_string(w, &s.actType);
+                StorageHelper::write_typed_string(w, &s.tripId);
+                StorageHelper::write_typed_string(w, &s.line);
+                StorageHelper::write_typed_double(w, s.speed);
+            }
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapVehicleDataVector(const std::string &, const int, const int &)`
@@ -1007,8 +1568,18 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapVehicleDataVector")
+    pub fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIVehicleData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 5);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for vd in value {
+            StorageHelper::write_typed_string(w, &vd.id);
+            StorageHelper::write_typed_double(w, vd.length);
+            StorageHelper::write_typed_double(w, vd.entryTime);
+            StorageHelper::write_typed_double(w, vd.leaveTime);
+            StorageHelper::write_typed_string(w, &vd.typeID);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapBestLanesDataVector(const std::string &, const int, const int &)`
@@ -1027,8 +1598,19 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapBestLanesDataVector")
+    pub fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIBestLanesData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 6);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for bld in value {
+            StorageHelper::write_typed_string(w, &bld.laneID);
+            StorageHelper::write_typed_double(w, bld.length);
+            StorageHelper::write_typed_double(w, bld.occupation);
+            StorageHelper::write_typed_byte(w, bld.bestLaneOffset);
+            StorageHelper::write_typed_unsigned_byte(w, if bld.allowsContinuation { 1 } else { 0 });
+            StorageHelper::write_typed_string_list(w, &bld.continuationLanes);
+        }
+        true
     }
 
     /// C++: `bool TraCIServer::wrapNextTLSDataVector(const std::string &, const int, const int &)`
@@ -1045,8 +1627,17 @@ impl TraCIServer {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &i32) -> bool {
-        todo!("port TraCIServer::wrapNextTLSDataVector")
+    pub fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextTLSData]) -> bool {
+        let w = &mut self.myWrapperStorage;
+        StorageHelper::write_compound(w, 1 + value.len() as i32 * 4);
+        StorageHelper::write_typed_int(w, value.len() as i32);
+        for tlsd in value {
+            StorageHelper::write_typed_string(w, &tlsd.id);
+            StorageHelper::write_typed_int(w, tlsd.tlIndex);
+            StorageHelper::write_typed_double(w, tlsd.dist);
+            StorageHelper::write_typed_byte(w, tlsd.state as i32);
+        }
+        true
     }
 
     /// C++: `tcpip::Storage & TraCIServer::getWrapperStorage()`
@@ -1056,7 +1647,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn get_wrapper_storage(&mut self) -> &mut Storage {
-        todo!("port TraCIServer::getWrapperStorage")
+        &mut self.myWrapperStorage
     }
 
     /// C++: `void TraCIServer::TraCIServer(const SUMOTime, const int, const int)` [private]
@@ -1200,7 +1791,126 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn new(begin: SUMOTime, port: i32, numClients: i32) -> Self {
-        todo!("port TraCIServer::TraCIServer")
+        let mut s = TraCIServer {
+            base: MSNet_VehicleStateListener::new(),
+            base2: VariableWrapper::new(()),
+            base3: MSNet_TransportableStateListener::new(),
+            mySockets: BTreeMap::new(),
+            mySocketReorderRequests: BTreeMap::new(),
+            myCurrentSocket: None,
+            myTargetTime: begin,
+            myInputStorage: Storage::new(),
+            myOutputStorage: Storage::new(),
+            myWrapperStorage: Storage::new(),
+            mySubscriptionCache: Storage::new(),
+            myExecutors: BTreeMap::new(),
+            myParameterized: BTreeSet::new(),
+            myLoadArgs: Vec::new(),
+            mySubscriptions: Vec::new(),
+            myLastContextSubscription: Ptr::null(),
+            myVehicleStateChanges: BTreeMap::new(),
+            myTransportableStateChanges: BTreeMap::new(),
+        };
+        for st in VEHICLE_STATES {
+            s.myVehicleStateChanges.insert(st, Vec::new());
+        }
+        for st in TRANSPORTABLE_STATES {
+            s.myTransportableStateChanges.insert(st, Vec::new());
+        }
+
+        s.myExecutors.insert(CMD_SET_INDUCTIONLOOP_VARIABLE, TraCIServerAPI_InductionLoop::process_set);
+        s.myExecutors.insert(CMD_SET_LANEAREA_VARIABLE, TraCIServerAPI_LaneArea::process_set);
+        s.myExecutors.insert(CMD_SET_MULTIENTRYEXIT_VARIABLE, TraCIServerAPI_MultiEntryExit::process_set);
+
+        s.myExecutors.insert(CMD_SET_TL_VARIABLE, TraCIServerAPI_TrafficLight::process_set);
+        s.myExecutors.insert(CMD_SET_LANE_VARIABLE, TraCIServerAPI_Lane::process_set);
+        s.myExecutors.insert(CMD_SET_VEHICLE_VARIABLE, TraCIServerAPI_Vehicle::process_set);
+        s.myExecutors.insert(CMD_SET_VEHICLETYPE_VARIABLE, TraCIServerAPI_VehicleType::process_set);
+        s.myExecutors.insert(CMD_SET_ROUTE_VARIABLE, TraCIServerAPI_Route::process_set);
+        s.myExecutors.insert(CMD_SET_POI_VARIABLE, TraCIServerAPI_POI::process_set);
+        s.myExecutors.insert(CMD_SET_POLYGON_VARIABLE, TraCIServerAPI_Polygon::process_set);
+        s.myExecutors.insert(CMD_SET_JUNCTION_VARIABLE, TraCIServerAPI_Junction::process_set);
+        s.myExecutors.insert(CMD_SET_EDGE_VARIABLE, TraCIServerAPI_Edge::process_set);
+        s.myExecutors.insert(CMD_SET_SIM_VARIABLE, TraCIServerAPI_Simulation::process_set);
+        s.myExecutors.insert(CMD_SET_PERSON_VARIABLE, TraCIServerAPI_Person::process_set);
+        s.myExecutors.insert(CMD_SET_CALIBRATOR_VARIABLE, TraCIServerAPI_Calibrator::process_set);
+        s.myExecutors.insert(CMD_SET_BUSSTOP_VARIABLE, TraCIServerAPI_BusStop::process_set);
+        s.myExecutors.insert(CMD_SET_PARKINGAREA_VARIABLE, TraCIServerAPI_ParkingArea::process_set);
+        s.myExecutors.insert(CMD_SET_CHARGINGSTATION_VARIABLE, TraCIServerAPI_ChargingStation::process_set);
+        s.myExecutors.insert(CMD_SET_ROUTEPROBE_VARIABLE, TraCIServerAPI_RouteProbe::process_set);
+        s.myExecutors.insert(CMD_SET_REROUTER_VARIABLE, TraCIServerAPI_Rerouter::process_set);
+        s.myExecutors.insert(CMD_SET_VARIABLESPEEDSIGN_VARIABLE, TraCIServerAPI_VariableSpeedSign::process_set);
+        // myExecutors[libsumo::CMD_SET_MEANDATA_VARIABLE] is not registered in C++ either
+        s.myExecutors.insert(CMD_SET_OVERHEADWIRE_VARIABLE, TraCIServerAPI_OverheadWire::process_set);
+
+        s.myParameterized.insert((CMD_SUBSCRIBE_MEANDATA_VARIABLE, VAR_MEANDATA_LANE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_MEANDATA_VARIABLE, VAR_MEANDATA_VALUES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_EDGE_VARIABLE, VAR_EDGE_TRAVELTIME));
+        s.myParameterized.insert((CMD_SUBSCRIBE_EDGE_VARIABLE, VAR_EDGE_EFFORT));
+        s.myParameterized.insert((CMD_SUBSCRIBE_EDGE_VARIABLE, VAR_ANGLE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_LANE_VARIABLE, VAR_ANGLE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_LANE_VARIABLE, LANE_CHANGES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_LANE_VARIABLE, VAR_FOES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_PERSON_VARIABLE, DISTANCE_REQUEST));
+        s.myParameterized.insert((CMD_SUBSCRIBE_PERSON_VARIABLE, VAR_EDGES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_PERSON_VARIABLE, VAR_STAGE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_PERSON_VARIABLE, VAR_TAXI_RESERVATIONS));
+        s.myParameterized.insert((CMD_SUBSCRIBE_PERSON_VARIABLE, SPLIT_TAXI_RESERVATIONS));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, TL_BLOCKING_VEHICLES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, TL_RIVAL_VEHICLES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, TL_PRIORITY_VEHICLES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, TL_CONSTRAINT));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, TL_CONSTRAINT_BYFOE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_TL_VARIABLE, VAR_PERSON_NUMBER));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, DISTANCE_REQUEST));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_EDGE_TRAVELTIME));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_EDGE_EFFORT));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_FOLLOW_SPEED));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_SECURE_GAP));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_STOP_SPEED));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_FOES));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, CMD_CHANGELANE));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_LEADER));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_FOLLOWER));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_NEIGHBORS));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_STOP_PARAMETER));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_NEXT_STOPS)); // this is just a dummy to trigger an error
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_NEXT_STOPS2));
+        s.myParameterized.insert((CMD_SUBSCRIBE_VEHICLE_VARIABLE, VAR_TAXI_FLEET));
+        s.myParameterized.insert((0, VAR_PARAMETER));
+        s.myParameterized.insert((0, VAR_PARAMETER_WITH_KEY));
+
+        MY_DO_CLOSE_CONNECTION.store(false, Ordering::Relaxed);
+
+        // shortcut: C++ warns when internal lanes are off (MSGlobals::gUsingInternalLanes / gUseMesoSim), MSGlobals flags are not ported yet, so this warning is skipped
+        // shortcut: C++ rethrows socket errors as ProcessError, this constructor returns Self so socket errors panic instead, upgrade when the constructor returns Result
+        write_message(&format!("***Starting server on port {} ***", port));
+        let mut server_socket = Socket::new(port);
+        if numClients > 1 {
+            write_message(&format!("  waiting for {} clients...", numClients));
+        }
+        while (s.mySockets.len() as i32) < numClients {
+            let index = s.mySockets.len() as i32 + MAX_ORDER + 1;
+            let client = server_socket.accept(true).unwrap_or_else(|e| panic!("{}", e.0)).expect("accept(true) returns a client socket");
+            let info = Ptr::from_raw(Box::into_raw(Box::new(TraCIServer_SocketInfo::new(Ptr::from_raw(Box::into_raw(Box::new(client))), begin))));
+            s.mySockets.insert(index, info);
+            for st in VEHICLE_STATES {
+                info.m().vehicleStateChanges.insert(st, Vec::new());
+            }
+            for st in TRANSPORTABLE_STATES {
+                info.m().transportableStateChanges.insert(st, Vec::new());
+            }
+            if numClients > 1 {
+                write_message("  client connected");
+            }
+        }
+        // When got here, all clients have connected
+        if numClients > 1 {
+            s.check_client_ordering();
+        }
+        // set myCurrentSocket != mySockets.end() to indicate that this is the first step in processCommands()
+        s.myCurrentSocket = s.first_socket();
+        s
     }
 
     /// C++: `void TraCIServer::~TraCIServer()` [virtual, private]
@@ -1208,7 +1918,12 @@ impl TraCIServer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TraCIServer::~TraCIServer")
+        for socket in self.mySockets.values() {
+            let socket = *socket;
+            socket.m().drop_();
+            drop(unsafe { Box::from_raw(socket.as_raw()) });
+        }
+        // there is no point in calling cleanup() here, it does not free any pointers and will only modify members which get deleted anyway
     }
 
     /// C++: `bool TraCIServer::commandGetVersion()` [private]
@@ -1231,7 +1946,19 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn command_get_version(&mut self) -> bool {
-        todo!("port TraCIServer::commandGetVersion")
+        // Prepare response
+        let mut answer_tmp = Storage::new();
+        answer_tmp.write_int(TRACI_VERSION);
+        answer_tmp.write_string(&format!("SUMO {}", TRACI_SERVER_VERSION_STRING));
+        // When we get here, the response is stored in answerTmp -> put into myOutputStorage
+        self.write_status_cmd_2(CMD_GETVERSION, RTYPE_OK, "");
+        // command length
+        self.myOutputStorage.write_unsigned_byte(1 + 1 + answer_tmp.size() as i32).unwrap();
+        // command type
+        self.myOutputStorage.write_unsigned_byte(CMD_GETVERSION).unwrap();
+        // and the parameter dependant part
+        self.myOutputStorage.write_storage(&answer_tmp);
+        true
     }
 
     /// C++: `void TraCIServer::postProcessSimulationStep()` [private]
@@ -1296,7 +2023,48 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn post_process_simulation_step(&mut self) {
-        todo!("port TraCIServer::postProcessSimulationStep")
+        let t = MSNet::get_instance().get_current_time_step();
+        self.write_status_cmd_2(CMD_SIMSTEP, RTYPE_OK, "");
+        let mut no_active = 0;
+        let mut i = 0;
+        while i < self.mySubscriptions.len() {
+            let s = &self.mySubscriptions[i];
+            let is_arrived_vehicle = (s.commandId == CMD_SUBSCRIBE_VEHICLE_VARIABLE || s.commandId == CMD_SUBSCRIBE_VEHICLE_CONTEXT)
+                && self.myVehicleStateChanges.get(&MSNet_VehicleState::ARRIVED).map_or(false, |v| v.contains(&s.id));
+
+            let is_arrived_person = (s.commandId == CMD_SUBSCRIBE_PERSON_VARIABLE || s.commandId == CMD_SUBSCRIBE_PERSON_CONTEXT)
+                && MSNet::get_instance().m().get_person_control().get(&s.id).is_null();
+            if s.endTime < t || is_arrived_vehicle || is_arrived_person {
+                self.mySubscriptions.remove(i);
+                continue;
+            }
+            i += 1;
+            if s.beginTime > t {
+                continue;
+            }
+            no_active += 1;
+        }
+        self.mySubscriptionCache.reset();
+        self.mySubscriptionCache.write_int(no_active);
+        let mut i = 0;
+        while i < self.mySubscriptions.len() {
+            if self.mySubscriptions[i].beginTime > t {
+                i += 1;
+                continue;
+            }
+            // the subscription is only borrowed through a raw pointer, as the C++ code does, since processSingleSubscription needs &mut self
+            let s = Ptr::from_mut(&mut self.mySubscriptions[i]);
+            let mut into = Storage::new();
+            let mut errors = String::new();
+            let ok = self.process_single_subscription(s.m(), &mut into, &mut errors);
+            self.mySubscriptionCache.write_storage(&into);
+            if ok {
+                i += 1;
+            } else {
+                self.mySubscriptions.remove(i);
+            }
+        }
+        self.myOutputStorage.write_storage(&self.mySubscriptionCache);
     }
 
     /// C++: `int TraCIServer::readCommandID(int &, int &)` [private]
@@ -1319,7 +2087,12 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn read_command_id(&mut self, commandStart: &mut i32, commandLength: &mut i32) -> i32 {
-        todo!("port TraCIServer::readCommandID")
+        *commandStart = self.myInputStorage.position() as i32;
+        *commandLength = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if *commandLength == 0 {
+            *commandLength = self.myInputStorage.read_int().expect("readInt");
+        }
+        self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte")
     }
 
     /// C++: `int TraCIServer::dispatchCommand()` [private]
@@ -1513,7 +2286,181 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn dispatch_command(&mut self) -> i32 {
-        todo!("port TraCIServer::dispatchCommand")
+        let mut commandStart = 0;
+        let mut commandLength = 0;
+        let commandId = self.read_command_id(&mut commandStart, &mut commandLength);
+        // C++ passes the members by reference; raw pointers keep the same aliasing (the executors also write to myOutputStorage)
+        let inp = Ptr::from_mut(&mut self.myInputStorage);
+        let outp = Ptr::from_mut(&mut self.myOutputStorage);
+        let mut success = false;
+        // dispatch commands
+        if self.myExecutors.contains_key(&commandId) {
+            let exec = self.myExecutors[&commandId];
+            success = exec(self, inp.m(), outp.m());
+        } else if (commandId >= CMD_GET_INDUCTIONLOOP_VARIABLE && commandId <= CMD_GET_BUSSTOP_VARIABLE)
+            || (commandId >= CMD_GET_PARKINGAREA_VARIABLE && commandId <= CMD_GET_OVERHEADWIRE_VARIABLE)
+        {
+            if commandId == CMD_GET_GUI_VARIABLE {
+                self.write_status_cmd_2(commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo");
+            } else {
+                success = self.process_get(commandId, inp.m(), outp.m());
+            }
+        } else {
+            match commandId {
+                CMD_GETVERSION => {
+                    success = self.command_get_version();
+                }
+                CMD_LOAD => {
+                    // shortcut: C++ wraps the argument read in try/catch and answers with writeErrorStatusCmd; libsumo has no TraCIException mapping yet, so a bad argument panics here
+                    let args = StorageHelper::read_typed_string_list(inp.m(), "A load command needs a list of string arguments.");
+                    self.myLoadArgs = args;
+                    success = true;
+                    self.write_status_cmd_2(CMD_LOAD, RTYPE_OK, "");
+                    // XXX: This only cares for the client that issued the load command.
+                    // Multiclient-load functionality is still to be implemented. Refs #3146.
+                    self.cur_socket().socket.m().send_exact(outp.m()).unwrap_or_else(|e| panic!("{}", e.0));
+                    self.myCurrentSocket = None;
+                    outp.m().reset();
+                }
+                CMD_EXECUTEMOVE => {
+                    self.cur_socket().m().executeMove = true;
+                    self.myCurrentSocket = self.socket_after(self.myCurrentSocket.unwrap());
+                    success = true;
+                    self.write_status_cmd_2(CMD_EXECUTEMOVE, RTYPE_OK, "");
+                }
+                CMD_SIMSTEP => {
+                    let nextT = inp.m().read_double().expect("readDouble");
+                    if nextT == 0. {
+                        self.cur_socket().m().targetTime += delta_t();
+                    } else {
+                        self.cur_socket().m().targetTime = time2steps(nextT);
+                    }
+                    self.cur_socket().m().executeMove = false;
+                    if self.cur_socket().m().targetTime <= MSNet::get_instance().get_current_time_step() {
+                        // This is not the last TraCI simstep in the current SUMO simstep -> send single simstep response.
+                        // @note: In the other case the simstep results are sent to all after the SUMO step was performed, see entry point for processCommands()
+                        self.send_single_sim_step_response();
+                    }
+                    // Clear vehicleStateChanges and transportableStateChanges for this client
+                    // -> For subsequent TraCI stepping
+                    // that is performed within this SUMO step, no updates on vehicle states
+                    // belonging to the last SUMO simulation step will be received by this client.
+                    for item in self.cur_socket().m().vehicleStateChanges.values_mut() {
+                        item.clear();
+                    }
+                    for item in self.cur_socket().m().transportableStateChanges.values_mut() {
+                        item.clear();
+                    }
+                    self.myCurrentSocket = self.socket_after(self.myCurrentSocket.unwrap());
+                    return commandId;
+                }
+                CMD_CLOSE => {
+                    self.write_status_cmd_2(CMD_CLOSE, RTYPE_OK, "");
+                    self.cur_socket().socket.m().send_exact(outp.m()).unwrap_or_else(|e| panic!("{}", e.0));
+                    outp.m().reset();
+                    if self.mySockets.len() == 1 {
+                        // Last client has closed connection
+                        MY_DO_CLOSE_CONNECTION.store(true, Ordering::Relaxed);
+                    }
+                    // remove current socket and increment to next socket in ordering
+                    self.myCurrentSocket = self.remove_current_socket();
+                    success = true;
+                }
+                CMD_SETORDER => {
+                    let order = inp.m().read_int().expect("readInt");
+                    if order > MAX_ORDER {
+                        self.write_error_status_cmd(CMD_SETORDER, &format!("A set order command needs an int argument below {}.", MAX_ORDER), outp.m());
+                        return 0;
+                    }
+                    if self.mySockets.contains_key(&order) || self.mySocketReorderRequests.contains_key(&order) {
+                        self.write_error_status_cmd(CMD_SETORDER, &format!("Order '{}' is already taken.", order), outp.m());
+                        return 0;
+                    }
+                    // memorize reorder request (will only take effect in the next step)
+                    let cur = *self.cur_socket();
+                    self.mySocketReorderRequests.insert(order, cur);
+                    success = true;
+                    self.write_status_cmd_2(CMD_SETORDER, RTYPE_OK, "");
+                }
+                CMD_SUBSCRIBE_BUSSTOP_VARIABLE
+                | CMD_SUBSCRIBE_CALIBRATOR_VARIABLE
+                | CMD_SUBSCRIBE_CHARGINGSTATION_VARIABLE
+                | CMD_SUBSCRIBE_EDGE_VARIABLE
+                | CMD_SUBSCRIBE_GUI_VARIABLE
+                | CMD_SUBSCRIBE_INDUCTIONLOOP_VARIABLE
+                | CMD_SUBSCRIBE_JUNCTION_VARIABLE
+                | CMD_SUBSCRIBE_LANE_VARIABLE
+                | CMD_SUBSCRIBE_LANEAREA_VARIABLE
+                | CMD_SUBSCRIBE_MEANDATA_VARIABLE
+                | CMD_SUBSCRIBE_MULTIENTRYEXIT_VARIABLE
+                | CMD_SUBSCRIBE_OVERHEADWIRE_VARIABLE
+                | CMD_SUBSCRIBE_PARKINGAREA_VARIABLE
+                | CMD_SUBSCRIBE_PERSON_VARIABLE
+                | CMD_SUBSCRIBE_POI_VARIABLE
+                | CMD_SUBSCRIBE_POLYGON_VARIABLE
+                | CMD_SUBSCRIBE_REROUTER_VARIABLE
+                | CMD_SUBSCRIBE_ROUTE_VARIABLE
+                | CMD_SUBSCRIBE_ROUTEPROBE_VARIABLE
+                | CMD_SUBSCRIBE_SIM_VARIABLE
+                | CMD_SUBSCRIBE_TL_VARIABLE
+                | CMD_SUBSCRIBE_VARIABLESPEEDSIGN_VARIABLE
+                | CMD_SUBSCRIBE_VEHICLE_VARIABLE
+                | CMD_SUBSCRIBE_VEHICLETYPE_VARIABLE => {
+                    success = self.add_object_variable_subscription(commandId, false);
+                }
+                CMD_SUBSCRIBE_BUSSTOP_CONTEXT
+                | CMD_SUBSCRIBE_CALIBRATOR_CONTEXT
+                | CMD_SUBSCRIBE_CHARGINGSTATION_CONTEXT
+                | CMD_SUBSCRIBE_EDGE_CONTEXT
+                | CMD_SUBSCRIBE_GUI_CONTEXT
+                | CMD_SUBSCRIBE_INDUCTIONLOOP_CONTEXT
+                | CMD_SUBSCRIBE_JUNCTION_CONTEXT
+                | CMD_SUBSCRIBE_LANE_CONTEXT
+                | CMD_SUBSCRIBE_LANEAREA_CONTEXT
+                | CMD_SUBSCRIBE_MEANDATA_CONTEXT
+                | CMD_SUBSCRIBE_MULTIENTRYEXIT_CONTEXT
+                | CMD_SUBSCRIBE_OVERHEADWIRE_CONTEXT
+                | CMD_SUBSCRIBE_PARKINGAREA_CONTEXT
+                | CMD_SUBSCRIBE_PERSON_CONTEXT
+                | CMD_SUBSCRIBE_POI_CONTEXT
+                | CMD_SUBSCRIBE_POLYGON_CONTEXT
+                | CMD_SUBSCRIBE_REROUTER_CONTEXT
+                | CMD_SUBSCRIBE_ROUTE_CONTEXT
+                | CMD_SUBSCRIBE_ROUTEPROBE_CONTEXT
+                | CMD_SUBSCRIBE_SIM_CONTEXT
+                | CMD_SUBSCRIBE_TL_CONTEXT
+                | CMD_SUBSCRIBE_VARIABLESPEEDSIGN_CONTEXT
+                | CMD_SUBSCRIBE_VEHICLE_CONTEXT
+                | CMD_SUBSCRIBE_VEHICLETYPE_CONTEXT => {
+                    success = self.add_object_variable_subscription(commandId, true);
+                }
+                CMD_ADD_SUBSCRIPTION_FILTER => {
+                    success = self.add_subscription_filter();
+                }
+                CMD_SET_GUI_VARIABLE => {
+                    self.write_status_cmd_2(commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo");
+                }
+                _ => {
+                    self.write_status_cmd_2(commandId, RTYPE_NOTIMPLEMENTED, "Command not implemented in sumo");
+                }
+            }
+        }
+        if !success {
+            while inp.m().valid_pos() && (inp.m().position() as i32) < commandStart + commandLength {
+                inp.m().read_char().expect("readChar");
+            }
+        }
+        if (inp.m().position() as i32) != commandStart + commandLength {
+            let msg = format!(
+                "Wrong position in requestMessage after dispatching command {}. Expected command length was {} but {} Bytes were read.",
+                commandId,
+                commandLength,
+                inp.m().position() as i32 - commandStart
+            );
+            self.write_status_cmd_2(commandId, RTYPE_ERR, &msg);
+            MY_DO_CLOSE_CONNECTION.store(true, Ordering::Relaxed);
+        }
+        commandId
     }
 
     /// C++: `void TraCIServer::checkClientOrdering()` [private]
@@ -1578,7 +2525,48 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn check_client_ordering(&mut self) {
-        todo!("port TraCIServer::checkClientOrdering")
+        // check for SET_ORDER commands queued by connected clients
+        // In multiclient cas it is mandatory that SET_ORDER  is sent as the first command (or directly after GET_VERSION)
+        self.myCurrentSocket = self.first_socket();
+        while let Some(cur) = self.myCurrentSocket {
+            loop {
+                self.myInputStorage.reset();
+                let sock = self.cur_socket().socket;
+                sock.m().receive_exact(&mut self.myInputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+                let mut command_start = 0;
+                let mut command_length = 0;
+                let command_id = self.read_command_id(&mut command_start, &mut command_length);
+                // Whether the received command is a permitted command for the initialization phase.
+                // Currently, getVersion and setOrder are permitted.
+                let init_command = command_id == CMD_SETORDER || command_id == CMD_GETVERSION;
+                if init_command {
+                    // reset input storage to initial state before reading the commandId
+                    // (ugly, but we can't just reset the store's iter_ from here)
+                    // Giving the commandId to dispatch command didn't work either
+                    let mut tmp = Storage::new();
+                    tmp.write_storage(&self.myInputStorage);
+                    self.myInputStorage.reset();
+                    // we don't know whether the command was set with extended
+                    // length syntax or not so we hardcode the length here (#5037)
+                    self.myInputStorage.write_unsigned_byte(if command_id == CMD_SETORDER { 6 } else { 2 }).unwrap();
+                    self.myInputStorage.write_unsigned_byte(command_id).unwrap();
+                    self.myInputStorage.write_storage(&tmp);
+
+                    // Handle initialization command completely
+                    self.dispatch_command();
+                    self.cur_socket().socket.m().send_exact(&self.myOutputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+                    self.myOutputStorage.reset();
+                } else {
+                    // shortcut: C++ throws ProcessError here, this function returns nothing so the error panics, upgrade when the TraCI server returns Result
+                    panic!("Execution order (libsumo::CMD_SETORDER) was not set for all TraCI clients in pre-execution phase.");
+                }
+                if command_id == CMD_SETORDER {
+                    // This is what we have waited for.
+                    break;
+                }
+            }
+            self.myCurrentSocket = self.socket_after(cur);
+        }
     }
 
     /// C++: `void TraCIServer::processReorderingRequests()` [private]
@@ -1627,7 +2615,22 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn process_reordering_requests(&mut self) {
-        todo!("port TraCIServer::processReorderingRequests")
+        // Process reordering requests
+        if !self.mySocketReorderRequests.is_empty() {
+            // process reordering requests
+            let requests: Vec<(i32, Ptr<TraCIServer_SocketInfo>)> = self.mySocketReorderRequests.iter().map(|(k, v)| (*k, *v)).collect();
+            for (order, request) in requests {
+                let j = self
+                    .mySockets
+                    .iter()
+                    .find(|(_, s)| s.m().socket == request.m().socket)
+                    .map(|(k, _)| *k);
+                assert!(j.is_some());
+                self.mySockets.remove(&j.unwrap());
+                self.mySockets.insert(order, request);
+            }
+            self.mySocketReorderRequests.clear();
+        }
     }
 
     /// C++: `SUMOTime TraCIServer::nextTargetTime() const` [const, private]
@@ -1655,7 +2658,11 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn next_target_time(&self) -> SUMOTime {
-        todo!("port TraCIServer::nextTargetTime")
+        let mut target_time = SUMOTime::MAX;
+        for s in self.mySockets.values() {
+            target_time = target_time.min(s.targetTime);
+        }
+        target_time
     }
 
     /// C++: `void TraCIServer::sendOutputToAll() const` [const, private]
@@ -1682,7 +2689,12 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn send_output_to_all(&self) {
-        todo!("port TraCIServer::sendOutputToAll")
+        for s in self.mySockets.values() {
+            if s.targetTime <= MSNet::get_instance().get_current_time_step() {
+                // this client will become active before the next SUMO step. Provide subscription results.
+                s.socket.m().send_exact(&self.myOutputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+            }
+        }
     }
 
     /// C++: `void TraCIServer::sendSingleSimStepResponse()` [private]
@@ -1708,7 +2720,13 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn send_single_sim_step_response(&mut self) {
-        todo!("port TraCIServer::sendSingleSimStepResponse")
+        self.write_status_cmd_2(CMD_SIMSTEP, RTYPE_OK, "");
+
+        // NOTE: the commented code would send an empty response
+        self.myOutputStorage.write_storage(&self.mySubscriptionCache);
+        // send results to active client
+        self.cur_socket().socket.m().send_exact(&self.myOutputStorage).unwrap_or_else(|e| panic!("{}", e.0));
+        self.myOutputStorage.reset();
     }
 
     /// C++: `int TraCIServer::removeCurrentSocket()` [private]
@@ -1724,8 +2742,16 @@ impl TraCIServer {
     //     return myCurrentSocket;
     // }
     #[allow(unused_variables)]
-    pub fn remove_current_socket(&mut self) -> i32 {
-        todo!("port TraCIServer::removeCurrentSocket")
+    pub fn remove_current_socket(&mut self) -> Option<i32> {
+        let key = self.myCurrentSocket.unwrap();
+        // C++ `delete myCurrentSocket->second`
+        let s = self.mySockets[&key];
+        s.m().drop_();
+        drop(unsafe { Box::from_raw(s.as_raw()) });
+        self.mySockets.remove(&key);
+        // C++ `mySockets.erase(myCurrentSocket)` returns the successor
+        self.myCurrentSocket = self.socket_after(key);
+        self.myCurrentSocket
     }
 
     /// C++: `bool TraCIServer::addObjectVariableSubscription(const int, const bool)` [private]
@@ -1812,7 +2838,102 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_object_variable_subscription(&mut self, commandId: i32, hasContext: bool) -> bool {
-        todo!("port TraCIServer::addObjectVariableSubscription")
+        let beginTime = self.myInputStorage.read_double().expect("readDouble");
+        let endTime = self.myInputStorage.read_double().expect("readDouble");
+        let begin: SUMOTime = if beginTime == INVALID_DOUBLE_VALUE { 0 } else { time2steps(beginTime) };
+        let end: SUMOTime = if endTime == INVALID_DOUBLE_VALUE || endTime > steps2time(SUMOTIME_MAX) { SUMOTIME_MAX } else { time2steps(endTime) };
+        let id = self.myInputStorage.read_string().expect("readString");
+        let domain = if hasContext { self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte") } else { 0 };
+        let mut range = if hasContext { self.myInputStorage.read_double().expect("readDouble") } else { 0. };
+        if commandId == CMD_SUBSCRIBE_SIM_CONTEXT {
+            range = f64::MAX;
+        }
+        let num = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        let mut variables: Vec<i32> = Vec::new();
+        let mut parameters: Vec<Rc<Storage>> = Vec::new();
+        for _ in 0..num {
+            let varID = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+            variables.push(varID);
+            let mut param = Storage::new();
+            if self.myParameterized.contains(&(0, varID)) || self.myParameterized.contains(&(commandId, varID)) {
+                if !self.myInputStorage.valid_pos() {
+                    self.write_status_cmd_2(commandId, RTYPE_ERR, &format!("Missing parameter for subscription {}", to_hex(commandId as u64, 2, 0)));
+                    return false;
+                }
+                let mut count = 1;
+                while count > 0 {
+                    count -= 1;
+                    let parType = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                    param.write_unsigned_byte(parType).unwrap();
+                    if parType == TYPE_DOUBLE {
+                        let v = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(v);
+                    } else if parType == TYPE_INTEGER {
+                        let v = self.myInputStorage.read_int().expect("readInt");
+                        param.write_int(v);
+                    } else if parType == TYPE_STRING {
+                        let v = self.myInputStorage.read_string().expect("readString");
+                        param.write_string(&v);
+                    } else if parType == TYPE_BYTE {
+                        let v = self.myInputStorage.read_byte().expect("readByte");
+                        param.write_byte(v).unwrap();
+                    } else if parType == TYPE_UBYTE {
+                        let v = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                        param.write_unsigned_byte(v).unwrap();
+                    } else if parType == POSITION_2D {
+                        let x = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(x);
+                        let y = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(y);
+                        if varID == DISTANCE_REQUEST {
+                            let v = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                            param.write_unsigned_byte(v).unwrap();
+                            break;
+                        }
+                    } else if parType == POSITION_3D {
+                        let x = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(x);
+                        let y = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(y);
+                        let z = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(z);
+                        if varID == DISTANCE_REQUEST {
+                            let v = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                            param.write_unsigned_byte(v).unwrap();
+                            break;
+                        }
+                    } else if parType == POSITION_ROADMAP {
+                        let s = self.myInputStorage.read_string().expect("readString");
+                        param.write_string(&s);
+                        let d = self.myInputStorage.read_double().expect("readDouble");
+                        param.write_double(d);
+                        let edge_pos = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                        param.write_unsigned_byte(edge_pos).unwrap();
+                        if varID == DISTANCE_REQUEST {
+                            let v = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+                            param.write_unsigned_byte(v).unwrap();
+                            break;
+                        }
+                    } else if parType == TYPE_COMPOUND {
+                        count = self.myInputStorage.read_int().expect("readInt");
+                        param.write_int(count);
+                    } else {
+                        self.write_status_cmd_2(commandId, RTYPE_ERR, &format!("Invalid parameter for subscription {}", to_hex(commandId as u64, 2, 0)));
+                        return false;
+                    }
+                }
+            }
+            parameters.push(Rc::new(param));
+        }
+        // check subscribe/unsubscribe
+        if variables.is_empty() {
+            self.remove_subscription(commandId, &id, domain);
+            return true;
+        }
+        // process subscription
+        let mut s = Subscription::new(commandId, &id, &variables, &parameters, begin, end, domain, range);
+        self.initialise_subscription(&mut s);
+        true
     }
 
     /// C++: `void TraCIServer::initialiseSubscription(libsumo::Subscription &)` [private]
@@ -1862,7 +2983,46 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn initialise_subscription(&mut self, s: &mut Subscription) {
-        todo!("port TraCIServer::initialiseSubscription")
+        let mut writeInto = Storage::new();
+        let mut errors = String::new();
+        let mut modifiedSubscription: Ptr<Subscription> = Ptr::null();
+        // shortcut: C++ catches libsumo::TraCIException and answers with writeStatusCmd(RTYPE_ERR, e.what()); libsumo has no TraCIException mapping yet, so that catch is not reproduced
+        if self.process_single_subscription(s, &mut writeInto, &mut errors) {
+            if s.endTime < MSNet::get_instance().get_current_time_step() {
+                self.write_status_cmd_2(s.commandId, RTYPE_ERR, "Subscription has ended.");
+            } else {
+                if Helper::need_new_subscription(s, &mut self.mySubscriptions, &mut modifiedSubscription) {
+                    // Add new subscription to subscription cache (note: seems a bit inefficient)
+                    if s.beginTime < MSNet::get_instance().get_current_time_step() {
+                        // copy new subscription into cache
+                        let cached = if self.mySubscriptionCache.size() > 0 { self.mySubscriptionCache.read_int().expect("readInt") } else { 0 };
+                        let noActive = 1 + cached;
+                        let mut tmp = Storage::new();
+                        tmp.write_int(noActive);
+                        while self.mySubscriptionCache.valid_pos() {
+                            let b = self.mySubscriptionCache.read_byte().expect("readByte");
+                            tmp.write_byte(b).unwrap();
+                        }
+                        tmp.write_storage(&writeInto);
+                        self.mySubscriptionCache.reset();
+                        self.mySubscriptionCache.write_storage(&tmp);
+                    }
+                }
+                self.write_status_cmd_2(s.commandId, RTYPE_OK, "");
+            }
+            if !modifiedSubscription.is_null()
+                && (modifiedSubscription.m().is_vehicle_to_vehicle_context_subscription() || modifiedSubscription.m().is_vehicle_to_person_context_subscription())
+            {
+                // Set last modified vehicle context subscription active for filter modifications
+                self.myLastContextSubscription = modifiedSubscription;
+            } else {
+                // adding other subscriptions deactivates the activation for filter addition
+                self.myLastContextSubscription = Ptr::null();
+            }
+        } else {
+            self.write_status_cmd_2(s.commandId, RTYPE_ERR, &format!("Could not add subscription. {}", errors));
+        }
+        self.myOutputStorage.write_storage(&writeInto);
     }
 
     /// C++: `void TraCIServer::removeSubscription(int, const std::string &, int)` [private]
@@ -1891,7 +3051,26 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn remove_subscription(&mut self, commandId: i32, identity: &str, domain: i32) {
-        todo!("port TraCIServer::removeSubscription")
+        let mut found = false;
+        let mut j = 0;
+        while j < self.mySubscriptions.len() {
+            if self.mySubscriptions[j].id == identity && self.mySubscriptions[j].commandId == commandId && self.mySubscriptions[j].contextDomain == domain {
+                self.mySubscriptions.remove(j);
+                if j < self.mySubscriptions.len() && self.myLastContextSubscription == Ptr::from_mut(&mut self.mySubscriptions[j]) {
+                    // Remove also reference for filter additions
+                    self.myLastContextSubscription = Ptr::null();
+                }
+                found = true;
+                continue;
+            }
+            j += 1;
+        }
+        // try unsubscribe
+        if found {
+            self.write_status_cmd_2(commandId, RTYPE_OK, "");
+        } else {
+            self.write_status_cmd_2(commandId, RTYPE_ERR, "The subscription to remove was not found.");
+        }
     }
 
     /// C++: `bool TraCIServer::processSingleSubscription(const libsumo::Subscription &, tcpip::Storage &, std::string &)` [private]
@@ -2008,7 +3187,107 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn process_single_subscription(&mut self, s: &Subscription, writeInto: &mut Storage, errors: &mut String) -> bool {
-        todo!("port TraCIServer::processSingleSubscription")
+        let mut ok = true;
+        let mut outputStorage = Storage::new();
+        let getCommandId = if s.contextDomain > 0 { s.contextDomain } else { s.commandId - 0x30 };
+        let mut objIDs: BTreeSet<String> = BTreeSet::new();
+        if s.contextDomain > 0 {
+            if (s.activeFilters & SubscriptionFilterType::SUBS_FILTER_NO_RTREE as i32) == 0 {
+                let mut shape = PositionVector(Vec::new());
+                Helper::find_object_shape(s.commandId, &s.id, &mut shape);
+                Helper::collect_object_i_ds_in_range(s.contextDomain, &shape, s.range, &mut objIDs);
+            }
+            Helper::apply_subscription_filters(s, &mut objIDs);
+        } else {
+            objIDs.insert(s.id.clone());
+        }
+        let numVars: i32 = if s.contextDomain > 0 && s.variables.len() == 1 && s.variables[0] == TRACI_ID_LIST {
+            0
+        } else {
+            s.variables.len() as i32
+        };
+        let skipped = 0;
+        for j in &objIDs {
+            if s.contextDomain > 0 {
+                outputStorage.write_string(j);
+            }
+            if numVars > 0 {
+                for (i, k) in s.variables.iter().zip(s.parameters.iter()) {
+                    let mut message = Storage::new();
+                    message.write_unsigned_byte(*i).unwrap();
+                    message.write_string(j);
+                    for v in k.as_bytes() {
+                        message.write_char(*v);
+                    }
+                    let mut tmpOutput = Storage::new();
+                    // shortcut: C++ catches std::invalid_argument from the executor and answers "Unsupported command specified"; the executors here do not throw it, so that catch is not reproduced
+                    if self.myExecutors.contains_key(&getCommandId) {
+                        let exec = self.myExecutors[&getCommandId];
+                        ok &= exec(self, &mut message, &mut tmpOutput);
+                    } else if !self.process_get(getCommandId, &mut message, &mut tmpOutput) {
+                        if getCommandId == CMD_GET_GUI_VARIABLE {
+                            self.write_status_cmd(s.commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo", &mut tmpOutput);
+                        }
+                        ok = false;
+                    }
+                    if ok {
+                        let mut length = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        length -= 1;
+                        while length > 0 {
+                            tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                            length -= 1;
+                        }
+                        let mut lengthLength: i32 = 1;
+                        length = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        if length == 0 {
+                            lengthLength = 5;
+                            length = tmpOutput.read_int().expect("readInt");
+                        }
+                        tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        let variable = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        let id = tmpOutput.read_string().expect("readString");
+                        outputStorage.write_unsigned_byte(variable).unwrap();
+                        outputStorage.write_unsigned_byte(RTYPE_OK).unwrap();
+                        length -= lengthLength + 1 + 4 + id.len() as i32;
+                        length -= 1;
+                        while length > 0 {
+                            let b = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                            outputStorage.write_unsigned_byte(b).unwrap();
+                            length -= 1;
+                        }
+                    } else {
+                        tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
+                        let msg = tmpOutput.read_string().expect("readString");
+                        outputStorage.write_unsigned_byte(*i).unwrap();
+                        outputStorage.write_unsigned_byte(RTYPE_ERR).unwrap();
+                        outputStorage.write_unsigned_byte(TYPE_STRING).unwrap();
+                        outputStorage.write_string(&msg);
+                        errors.push_str(&msg);
+                    }
+                }
+            }
+        }
+        let mut length = (1 + 4) + 1 + (4 + s.id.len() as i32) + 1 + outputStorage.size() as i32;
+        if s.contextDomain > 0 {
+            length += 1 + 4; // context domain and number of objects
+        }
+        writeInto.write_unsigned_byte(0).unwrap(); // command length -> extended
+        writeInto.write_int(length);
+        writeInto.write_unsigned_byte(s.commandId + 0x10).unwrap();
+        writeInto.write_string(&s.id);
+        if s.contextDomain > 0 {
+            writeInto.write_unsigned_byte(s.contextDomain).unwrap();
+        }
+        writeInto.write_unsigned_byte(numVars).unwrap();
+        if s.contextDomain > 0 {
+            writeInto.write_int(objIDs.len() as i32 - skipped);
+        }
+        if s.contextDomain == 0 || !objIDs.is_empty() {
+            writeInto.write_storage(&outputStorage);
+        }
+        ok
     }
 
     /// C++: `bool TraCIServer::addSubscriptionFilter()` [private]
@@ -2108,7 +3387,89 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter(&mut self) -> bool {
-        todo!("port TraCIServer::addSubscriptionFilter")
+        let mut success = true;
+        // Read filter type
+        let filterType = self.myInputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if self.myLastContextSubscription.is_null() {
+            self.write_status_cmd_2(
+                CMD_ADD_SUBSCRIPTION_FILTER,
+                RTYPE_ERR,
+                &format!("No previous vehicle context subscription exists to apply filter type {}", to_hex(filterType as u64, 2, 0)),
+            );
+            return false;
+        }
+        // dispatch according to filter type
+        match filterType {
+            FILTER_TYPE_NONE => {
+                // Remove all filters
+                self.remove_filters();
+            }
+            FILTER_TYPE_LANES => {
+                // Read relative lanes to consider for context filter
+                let nrLanes = self.myInputStorage.read_byte().expect("readByte");
+                let mut lanes: Vec<i32> = Vec::new();
+                for _ in 0..nrLanes {
+                    lanes.push(self.myInputStorage.read_byte().expect("readByte"));
+                }
+                self.add_subscription_filter_lanes(lanes);
+            }
+            FILTER_TYPE_NOOPPOSITE => {
+                self.add_subscription_filter_no_opposite();
+            }
+            FILTER_TYPE_DOWNSTREAM_DIST => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type double
+                let dist = self.myInputStorage.read_double().expect("readDouble");
+                self.add_subscription_filter_downstream_distance(dist);
+            }
+            FILTER_TYPE_UPSTREAM_DIST => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type double
+                let dist = self.myInputStorage.read_double().expect("readDouble");
+                self.add_subscription_filter_upstream_distance(dist);
+            }
+            FILTER_TYPE_LEAD_FOLLOW => {
+                self.add_subscription_filter_lead_follow();
+            }
+            FILTER_TYPE_TURN => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type double
+                let dist = self.myInputStorage.read_double().expect("readDouble");
+                self.add_subscription_filter_turn(dist);
+            }
+            FILTER_TYPE_VCLASS => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type stringlist
+                let classes = self.myInputStorage.read_string_list().expect("readStringList");
+                // shortcut: the C++ overload can throw on unknown class names; the ported parser returns a Result, which is dropped here
+                let vClasses = parse_vehicle_classes_vec(&classes).ok().expect("parseVehicleClasses");
+                self.add_subscription_filter_v_class(vClasses);
+            }
+            FILTER_TYPE_VTYPE => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type stringlist
+                let vTypesVector = self.myInputStorage.read_string_list().expect("readStringList");
+                let vTypesSet: BTreeSet<String> = vTypesVector.into_iter().collect();
+                self.add_subscription_filter_v_type(vTypesSet);
+            }
+            FILTER_TYPE_FIELD_OF_VISION => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type double
+                let angle = self.myInputStorage.read_double().expect("readDouble");
+                self.add_subscription_filter_field_of_vision(angle);
+            }
+            FILTER_TYPE_LATERAL_DIST => {
+                self.myInputStorage.read_byte().expect("readByte"); // read type double
+                let dist = self.myInputStorage.read_double().expect("readDouble");
+                self.add_subscription_filter_lateral_distance(dist);
+            }
+            _ => {
+                self.write_status_cmd_2(
+                    CMD_ADD_SUBSCRIPTION_FILTER,
+                    RTYPE_NOTIMPLEMENTED,
+                    &format!("'{}' is no valid filter type code.", filterType),
+                );
+                success = false;
+            }
+        }
+        if success {
+            self.write_status_cmd_2(CMD_ADD_SUBSCRIPTION_FILTER, RTYPE_OK, "");
+        }
+        success
     }
 
     /// C++: `void TraCIServer::removeFilters()` [private]
@@ -2121,7 +3482,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn remove_filters(&mut self) {
-        todo!("port TraCIServer::removeFilters")
+        self.myLastContextSubscription.m().activeFilters = SubscriptionFilterType::SUBS_FILTER_NONE as i32;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterLanes(int)` [private]
@@ -2134,8 +3495,10 @@ impl TraCIServer {
     //     myLastContextSubscription->filterLanes = lanes;
     // }
     #[allow(unused_variables)]
-    pub fn add_subscription_filter_lanes(&mut self, lanes: i32) {
-        todo!("port TraCIServer::addSubscriptionFilterLanes")
+    pub fn add_subscription_filter_lanes(&mut self, lanes: Vec<i32>) {
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_LANES as i32;
+        s.filterLanes = lanes;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterNoOpposite()` [private]
@@ -2148,7 +3511,8 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_no_opposite(&mut self) {
-        todo!("port TraCIServer::addSubscriptionFilterNoOpposite")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_NOOPPOSITE as i32;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterDownstreamDistance(double)` [private]
@@ -2162,7 +3526,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_downstream_distance(&mut self, dist: f64) {
-        todo!("port TraCIServer::addSubscriptionFilterDownstreamDistance")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_DOWNSTREAM_DIST as i32;
+        s.filterDownstreamDist = dist;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterUpstreamDistance(double)` [private]
@@ -2176,7 +3542,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_upstream_distance(&mut self, dist: f64) {
-        todo!("port TraCIServer::addSubscriptionFilterUpstreamDistance")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_UPSTREAM_DIST as i32;
+        s.filterUpstreamDist = dist;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterLeadFollow()` [private]
@@ -2189,7 +3557,8 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lead_follow(&mut self) {
-        todo!("port TraCIServer::addSubscriptionFilterLeadFollow")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_LEAD_FOLLOW as i32;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterTurn(double)` [private]
@@ -2203,7 +3572,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_turn(&mut self, dist: f64) {
-        todo!("port TraCIServer::addSubscriptionFilterTurn")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_TURN as i32;
+        s.filterFoeDistToJunction = dist;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterVClass(SVCPermissions)` [private]
@@ -2217,7 +3588,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_v_class(&mut self, vClasses: SVCPermissions) {
-        todo!("port TraCIServer::addSubscriptionFilterVClass")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_VCLASS as i32;
+        s.filterVClasses = vClasses;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterVType(int)` [private]
@@ -2230,8 +3603,10 @@ impl TraCIServer {
     //     myLastContextSubscription->filterVTypes = vTypes;
     // }
     #[allow(unused_variables)]
-    pub fn add_subscription_filter_v_type(&mut self, vTypes: i32) {
-        todo!("port TraCIServer::addSubscriptionFilterVType")
+    pub fn add_subscription_filter_v_type(&mut self, vTypes: BTreeSet<String>) {
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_VTYPE as i32;
+        s.filterVTypes = vTypes;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterFieldOfVision(double)` [private]
@@ -2246,7 +3621,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_field_of_vision(&mut self, openingAngle: f64) {
-        todo!("port TraCIServer::addSubscriptionFilterFieldOfVision")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_FIELD_OF_VISION as i32;
+        s.filterFieldOfVisionOpeningAngle = openingAngle;
     }
 
     /// C++: `void TraCIServer::addSubscriptionFilterLateralDistance(double)` [private]
@@ -2261,7 +3638,9 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lateral_distance(&mut self, dist: f64) {
-        todo!("port TraCIServer::addSubscriptionFilterLateralDistance")
+        let s = self.myLastContextSubscription.m();
+        s.activeFilters = s.activeFilters | SubscriptionFilterType::SUBS_FILTER_LATERAL_DIST as i32;
+        s.filterLateralDist = dist;
     }
 
     /// C++: `bool TraCIServer::centralObject(const libsumo::Subscription &, const std::string &)` [private]
@@ -2272,7 +3651,7 @@ impl TraCIServer {
     // }
     #[allow(unused_variables)]
     pub fn central_object(&mut self, s: &Subscription, objID: &str) -> bool {
-        todo!("port TraCIServer::centralObject")
+        s.id == objID && s.commandId + 32 == s.contextDomain
     }
 
     /// C++: `TraCIServer & TraCIServer::operator=(const TraCIServer &)` [private]
