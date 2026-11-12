@@ -197,6 +197,7 @@ impl MSCriticalFollowerDistanceInfo {
 
 /// saves leader/follower vehicles and their distances relative to an ego vehicle
 /// C++ class `MSLeaderDistanceInfo` (microsim/MSLeaderInfo.h)
+#[derive(Clone)]
 pub struct MSLeaderDistanceInfo {
     /// C++ base class `MSLeaderInfo`
     pub base: MSLeaderInfo,
@@ -488,6 +489,7 @@ impl MSLeaderDistanceInfo {
 }
 
 /// C++ class `MSLeaderInfo` (microsim/MSLeaderInfo.h)
+#[derive(Clone)]
 pub struct MSLeaderInfo {
     pub myWidth: f64,
     /// an extra offset for shifting the interpretation of sublane borders (default [0,myWidth])

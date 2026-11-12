@@ -1,16 +1,25 @@
 //! Port of libsumo/LaneArea.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_error;
 
 /// C++ class `libsumo::LaneArea` (libsumo/LaneArea.h)
 pub struct LaneArea {
 }
 
+// shortcut: C++ throws TraCIException(msg) for unknown detectors (here panic!("{}", msg)), and libsumo functions are not Result-based yet; upgrade when they return Result
 // C++ static members of LaneArea (port as module-level statics, see AGENTS.md):
 //   static const int LaneArea::DOMAIN_ID;
 //   static NamedRTree * LaneArea::myTree;
 //   static SubscriptionResults LaneArea::mySubscriptionResults;
 //   static ContextSubscriptionResults LaneArea::myContextSubscriptionResults;
+
+thread_local! {
+    /// C++ static `LaneArea::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `LaneArea::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
 
 impl LaneArea {
     /// C++: `int LaneArea::getJamLengthVehicle(const std::string &)` [static]
@@ -20,7 +29,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_jam_length_vehicle(detID: &str) -> i32 {
-        todo!("port LaneArea::getJamLengthVehicle")
+        Self::get_detector(detID).get_current_jam_length_in_vehicles()
     }
 
     /// C++: `double LaneArea::getJamLengthMeters(const std::string &)` [static]
@@ -30,7 +39,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_jam_length_meters(detID: &str) -> f64 {
-        todo!("port LaneArea::getJamLengthMeters")
+        Self::get_detector(detID).get_current_jam_length_in_meters()
     }
 
     /// C++: `double LaneArea::getLastStepMeanSpeed(const std::string &)` [static]
@@ -40,7 +49,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_mean_speed(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastStepMeanSpeed")
+        Self::get_detector(detID).get_current_mean_speed()
     }
 
     /// C++: `std::vector<std::string> LaneArea::getLastStepVehicleIDs(const std::string &)` [static]
@@ -50,7 +59,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_i_ds(detID: &str) -> Vec<String> {
-        todo!("port LaneArea::getLastStepVehicleIDs")
+        Self::get_detector(detID).get_current_vehicle_i_ds()
     }
 
     /// C++: `double LaneArea::getLastStepOccupancy(const std::string &)` [static]
@@ -60,7 +69,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastStepOccupancy")
+        Self::get_detector(detID).get_current_occupancy()
     }
 
     /// C++: `double LaneArea::getPosition(const std::string &)` [static]
@@ -70,7 +79,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_position(detID: &str) -> f64 {
-        todo!("port LaneArea::getPosition")
+        Self::get_detector(detID).get_start_pos()
     }
 
     /// C++: `std::string LaneArea::getLaneID(const std::string &)` [static]
@@ -80,7 +89,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(detID: &str) -> String {
-        todo!("port LaneArea::getLaneID")
+        Self::get_detector(detID).get_lane().get_id().to_string()
     }
 
     /// C++: `double LaneArea::getLength(const std::string &)` [static]
@@ -91,7 +100,8 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_length(detID: &str) -> f64 {
-        todo!("port LaneArea::getLength")
+        let e2 = Self::get_detector(detID);
+        e2.get_length()
     }
 
     /// C++: `int LaneArea::getLastStepVehicleNumber(const std::string &)` [static]
@@ -101,7 +111,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_number(detID: &str) -> i32 {
-        todo!("port LaneArea::getLastStepVehicleNumber")
+        Self::get_detector(detID).get_current_vehicle_number()
     }
 
     /// C++: `int LaneArea::getLastStepHaltingNumber(const std::string &)` [static]
@@ -111,7 +121,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_halting_number(detID: &str) -> i32 {
-        todo!("port LaneArea::getLastStepHaltingNumber")
+        Self::get_detector(detID).get_current_halting_number()
     }
 
     /// C++: `double LaneArea::getIntervalOccupancy(const std::string &)` [static]
@@ -121,7 +131,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_occupancy(detID: &str) -> f64 {
-        todo!("port LaneArea::getIntervalOccupancy")
+        Self::get_detector(detID).get_interval_occupancy()
     }
 
     /// C++: `double LaneArea::getIntervalMeanSpeed(const std::string &)` [static]
@@ -131,7 +141,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_mean_speed(detID: &str) -> f64 {
-        todo!("port LaneArea::getIntervalMeanSpeed")
+        Self::get_detector(detID).get_interval_mean_speed()
     }
 
     /// C++: `double LaneArea::getIntervalMeanTimeLoss(const std::string &)` [static]
@@ -141,7 +151,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_mean_time_loss(detID: &str) -> f64 {
-        todo!("port LaneArea::getIntervalMeanTimeLoss")
+        Self::get_detector(detID).get_interval_mean_time_loss()
     }
 
     /// C++: `double LaneArea::getIntervalMaxJamLengthInMeters(const std::string &)` [static]
@@ -151,7 +161,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_max_jam_length_in_meters(detID: &str) -> f64 {
-        todo!("port LaneArea::getIntervalMaxJamLengthInMeters")
+        Self::get_detector(detID).get_interval_max_jam_length_in_meters()
     }
 
     /// C++: `int LaneArea::getIntervalVehicleNumber(const std::string &)` [static]
@@ -161,7 +171,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_vehicle_number(detID: &str) -> i32 {
-        todo!("port LaneArea::getIntervalVehicleNumber")
+        Self::get_detector(detID).get_interval_vehicle_number()
     }
 
     /// C++: `double LaneArea::getLastIntervalOccupancy(const std::string &)` [static]
@@ -171,7 +181,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_occupancy(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastIntervalOccupancy")
+        Self::get_detector(detID).get_last_interval_occupancy()
     }
 
     /// C++: `double LaneArea::getLastIntervalMeanSpeed(const std::string &)` [static]
@@ -181,7 +191,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_speed(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastIntervalMeanSpeed")
+        Self::get_detector(detID).get_last_interval_mean_speed()
     }
 
     /// C++: `double LaneArea::getLastIntervalMeanTimeLoss(const std::string &)` [static]
@@ -191,7 +201,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_time_loss(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastIntervalMeanTimeLoss")
+        Self::get_detector(detID).get_last_interval_mean_time_loss()
     }
 
     /// C++: `double LaneArea::getLastIntervalMaxJamLengthInMeters(const std::string &)` [static]
@@ -201,7 +211,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_max_jam_length_in_meters(detID: &str) -> f64 {
-        todo!("port LaneArea::getLastIntervalMaxJamLengthInMeters")
+        Self::get_detector(detID).get_last_interval_max_jam_length_in_meters()
     }
 
     /// C++: `int LaneArea::getLastIntervalVehicleNumber(const std::string &)` [static]
@@ -211,7 +221,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_vehicle_number(detID: &str) -> i32 {
-        todo!("port LaneArea::getLastIntervalVehicleNumber")
+        Self::get_detector(detID).get_last_interval_vehicle_number()
     }
 
     /// C++: `void LaneArea::overrideVehicleNumber(const std::string &, int)` [static]
@@ -221,7 +231,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn override_vehicle_number(detID: &str, vehNum: i32) {
-        todo!("port LaneArea::overrideVehicleNumber")
+        Self::get_detector(detID).m().override_vehicle_number(vehNum);
     }
 
     /// C++: `std::vector<std::string> LaneArea::getIDList()` [static]
@@ -233,7 +243,11 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port LaneArea::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int LaneArea::getIDCount()` [static]
@@ -244,7 +258,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port LaneArea::getIDCount")
+        MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).len() as i32
     }
 
     /// C++: `std::string LaneArea::getParameter(const std::string &, const std::string &)` [static]
@@ -253,15 +267,17 @@ impl LaneArea {
     //     return getDetector(detID)->getParameter(param, "");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port LaneArea::getParameter")
+    pub fn get_parameter(detID: &str, key: &str) -> String {
+        // shortcut: MSE2Collector has no ported getParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
+        let _ = (detID, key);
+        panic!("LaneArea::getParameter: detector parameters not ported")
     }
 
     /// C++: `const std::pair<std::string, std::string> LaneArea::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(LaneArea)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port LaneArea::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void LaneArea::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -270,78 +286,80 @@ impl LaneArea {
     //     getDetector(detID)->setParameter(name, value);
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port LaneArea::setParameter")
+    pub fn set_parameter(detID: &str, key: &str, value: &str) {
+        // shortcut: MSE2Collector has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
+        let _ = (detID, key, value);
+        panic!("LaneArea::setParameter: detector parameters not ported")
     }
 
     /// C++: `void LaneArea::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port LaneArea::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_LANEAREA_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void LaneArea::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port LaneArea::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_LANEAREA_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void LaneArea::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port LaneArea::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_LANEAREA_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void LaneArea::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port LaneArea::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_LANEAREA_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults LaneArea::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port LaneArea::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults LaneArea::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port LaneArea::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults LaneArea::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port LaneArea::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults LaneArea::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port LaneArea::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void LaneArea::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port LaneArea::subscribeParameterWithKey")
+        panic!("shortcut: LaneArea::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int LaneArea::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port LaneArea::domainID")
+        CMD_GET_LANEAREA_VARIABLE
     }
 
     /// C++: `NamedRTree * LaneArea::getTree()` [static]
@@ -363,7 +381,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        todo!("port LaneArea::getTree")
+        panic!("shortcut: LaneArea::getTree needs NamedRTree (unmapped)")
     }
 
     /// C++: `void LaneArea::cleanup()` [static]
@@ -374,7 +392,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port LaneArea::cleanup")
+        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
     }
 
     /// C++: `void LaneArea::storeShape(const std::string &, PositionVector &)` [static]
@@ -386,8 +404,11 @@ impl LaneArea {
     //     shape.push_back(det->getLanes().back()->getShape().positionAtOffset(det->getEndPos()));
     // }
     #[allow(unused_variables)]
-    pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port LaneArea::storeShape")
+    pub fn store_shape(detID: &str, shape: &mut PositionVector) {
+        let det = Self::get_detector(detID);
+        let lanes = det.m().get_lanes();
+        shape.push(lanes.first().unwrap().get_shape_2().position_at_offset(det.get_start_pos(), 0.0));
+        shape.push(lanes.last().unwrap().get_shape_2().position_at_offset(det.get_end_pos(), 0.0));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> LaneArea::makeWrapper()` [static]
@@ -397,7 +418,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port LaneArea::makeWrapper")
+        panic!("shortcut: LaneArea::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool LaneArea::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -460,7 +481,41 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port LaneArea::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            LAST_STEP_VEHICLE_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_vehicle_number(objID)),
+            LAST_STEP_MEAN_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_step_mean_speed(objID)),
+            LAST_STEP_VEHICLE_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_step_vehicle_i_ds(objID)),
+            LAST_STEP_VEHICLE_HALTING_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_halting_number(objID)),
+            JAM_LENGTH_VEHICLE => wrapper.m().wrap_int(objID, variable, Self::get_jam_length_vehicle(objID)),
+            JAM_LENGTH_METERS => wrapper.m().wrap_double(objID, variable, Self::get_jam_length_meters(objID)),
+            LAST_STEP_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_step_occupancy(objID)),
+            VAR_POSITION => wrapper.m().wrap_double(objID, variable, Self::get_position(objID)),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_length(objID)),
+            VAR_INTERVAL_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_interval_occupancy(objID)),
+            VAR_INTERVAL_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_interval_mean_speed(objID)),
+            VAR_INTERVAL_TIMELOSS => wrapper.m().wrap_double(objID, variable, Self::get_interval_mean_time_loss(objID)),
+            VAR_INTERVAL_MAX_JAM_LENGTH_METERS => wrapper.m().wrap_double(objID, variable, Self::get_interval_max_jam_length_in_meters(objID)),
+            VAR_INTERVAL_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_interval_vehicle_number(objID)),
+            VAR_LAST_INTERVAL_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_occupancy(objID)),
+            VAR_LAST_INTERVAL_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_mean_speed(objID)),
+            VAR_LAST_INTERVAL_TIMELOSS => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_mean_time_loss(objID)),
+            VAR_LAST_INTERVAL_MAX_JAM_LENGTH_METERS => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_max_jam_length_in_meters(objID)),
+            VAR_LAST_INTERVAL_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_interval_vehicle_number(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSE2Collector * LaneArea::getDetector(const std::string &)` [static, private]
@@ -474,7 +529,15 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_detector(detID: &str) -> Ptr<MSE2Collector> {
-        todo!("port LaneArea::getDetector")
+        // shortcut: C++ dynamic_cast<MSE2Collector*> cannot be checked at runtime; a non-MSE2Collector typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
+        let e2 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(detID).copied();
+        match e2 {
+            Some(d) => d.cast::<MSE2Collector>(),
+            None => {
+                let msg = format!("Lane area detector '{}' is not known", detID);
+                panic!("{}", msg);
+            }
+        }
     }
 
     /// C++: `void LaneArea::LaneArea()` [private]
@@ -482,7 +545,7 @@ impl LaneArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port LaneArea::LaneArea")
+        panic!("libsumo::LaneArea cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
