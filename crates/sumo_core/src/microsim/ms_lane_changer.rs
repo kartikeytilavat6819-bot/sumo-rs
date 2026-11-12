@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::microsim::cfmodels::mscf_model::traffic_object;
-use utils::geom::NUMERICAL_EPS;
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
 // C++ MIN2/MAX2 macros (argument order kept so ties resolve like the macro)
 fn min2(a: f64, b: f64) -> f64 {
@@ -1428,7 +1428,7 @@ impl MSLaneChanger {
             }
         }
         let preb = MSLaneChanger::get_best_lanes_opposite(vehicle, Ptr::null(), oppositeLength);
-        self.check_change_opposite(vehicle, direction, opposite, leader, neighLead, neighFollow, &preb)
+        self.check_change_opposite(vehicle, direction, opposite, &leader, &neighLead, &neighFollow, &preb)
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLaneChanger::getOncomingVehicle(const MSLane *, std::pair<MSVehicle *, double>, double, double &, const MSVehicle *, MSLane::MinorLinkMode)` [protected]
@@ -1472,7 +1472,7 @@ impl MSLaneChanger {
     #[allow(unused_variables)]
     pub fn get_oncoming_vehicle(&mut self, opposite: Ptr<MSLane>, neighOncoming: (Ptr<MSVehicle>, f64), searchDist: f64, vMax: &mut f64, overtaken: Ptr<MSVehicle>, mLinkMode: MSLane_MinorLinkMode) -> (Ptr<MSVehicle>, f64) {
         let mut opposite = opposite;
-        let mut oncoming = oncoming;
+        let mut oncoming = neighOncoming;
         let mut searchDist = searchDist;
         let mut gap = oncoming.1;
         while !oncoming.0.is_null() && (oncoming.0.get_lane_change_model_2().is_opposite() || oncoming.0.get_lane_change_model_2().get_shadow_lane() == opposite) {
@@ -3474,7 +3474,7 @@ impl MSLaneChanger {
             let target = preb[(laneIndex + 1) as usize].lane;
             neighLead = target.get_opposite_leader(vehicle, OPPOSITE_OVERTAKING_MAX_LOOKAHEAD, true, MSLane_MinorLinkMode::FOLLOW_NEVER);
             let neighFollow = target.get_opposite_follower(vehicle);
-            return self.check_change_opposite(vehicle, 1, target, leader, neighLead, neighFollow, &preb);
+            return self.check_change_opposite(vehicle, 1, target, &leader, &neighLead, &neighFollow, &preb);
         } else {
             return false;
         }
@@ -3633,7 +3633,7 @@ impl MSLaneChanger {
                     break;
                 }
             }
-            let leaderBGap = leader.0.get_brake_gap();
+            let leaderBGap = leader.0.get_brake_gap(false);
             let conts = vehicle.get_best_lanes_continuation().clone();
             let leaderFGap = leader.0.get_lane().get_leader(leader.0, leader.0.get_position_on_lane(), &conts, overtaken.1, true).1;
             let extraGap = max2(leaderBGap, leaderFGap);
