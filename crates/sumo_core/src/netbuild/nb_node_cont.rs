@@ -1180,7 +1180,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_self_loops(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tc: &mut NBTrafficLightLogicCont) -> i32 {
-        todo!("port NBNodeCont::removeSelfLoops")
+        let mut no = 0;
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            no += node.m().remove_self_loops(dc, ec, tc);
+        }
+        if no != 0 {
+            write_warning(&format!("{} self-looping edge(s) removed.", no));
+        }
+        no
     }
 
     /// C++: `void NBNodeCont::joinSimilarEdges(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, bool)`
@@ -1236,7 +1244,54 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_similar_edges(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont, removeDuplicates: bool) {
-        todo!("port NBNodeCont::joinSimilarEdges")
+        // magic values
+        let distanceThreshold = 7.; // don't merge edges further apart
+        let lengthThreshold = 0.10; // don't merge edges with higher relative length-difference
+
+        // determinism: C++ map<NBNode*, ...> is ordered by address; Ptr's Ord is used here
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            // count the edges to other nodes outgoing from the current node
+            let mut connectionCount: BTreeMap<Ptr<NBNode>, EdgeVector> = BTreeMap::new();
+            let outgoing: EdgeVector = node.get_outgoing_edges().clone();
+            for e in outgoing {
+                connectionCount.entry(e.get_to_node()).or_default().push(e);
+            }
+            // check whether more than a single edge connect another node and join them
+            for (_, ev) in connectionCount {
+                // possibly we do not have anything to join...
+                if ev.len() < 2 {
+                    continue;
+                }
+                // for the edges that seem to be a single street,
+                //  check whether the geometry is similar
+                let first = ev[0];
+                let mut jci = 1;
+                while jci < ev.len() {
+                    let cand = ev[jci];
+                    let relativeLengthDifference = (first.get_loaded_length() - cand.get_loaded_length()).abs() / first.get_loaded_length();
+                    if (!first.is_near_enough2_be_joined2(cand, distanceThreshold))
+                        || (relativeLengthDifference > lengthThreshold)
+                        || ((first.get_speed() - cand.get_speed()).abs() >= 0.01) // output accuracy
+                        || (first.get_permissions(-1) != cand.get_permissions(-1))
+                    {
+                        break;
+                    }
+                    jci += 1;
+                }
+                // @bug If there are 3 edges of which 2 can be joined, no joining will
+                //   take place with the current implementation
+                if jci == ev.len() {
+                    if removeDuplicates {
+                        for ei in 1..ev.len() {
+                            ec.extract(dc, ev[ei], true);
+                        }
+                    } else {
+                        ec.join_same_node_connecting_edges(dc, tlc, ev);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NBNodeCont::avoidOverlap()`
