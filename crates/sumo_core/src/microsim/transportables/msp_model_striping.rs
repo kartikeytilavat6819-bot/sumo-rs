@@ -1354,14 +1354,14 @@ impl MSPModel_Striping_MovePedestrians {
     // MovePedestrians(MSPModel_Striping* model) : myModel(model) {}
     #[allow(unused_variables)]
     pub fn new(model: Ptr<MSPModel_Striping>) -> Self {
-        todo!("port MovePedestrians::MovePedestrians")
+        MSPModel_Striping_MovePedestrians { base: (), myModel: model }
     }
 
     /// C++: `void MovePedestrians::~MovePedestrians() noexcept` [virtual]
     // ~MovePedestrians() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MovePedestrians::~MovePedestrians")
+        // C++ destructor has an empty body
     }
 
     /// C++: `SUMOTime MovePedestrians::execute(SUMOTime)` [virtual]
@@ -1391,17 +1391,28 @@ impl MSPModel_Striping_MovePedestrians {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MovePedestrians::execute")
+        let mut changedLane: BTreeSet<Ptr<MSPerson>> = BTreeSet::new();
+        self.myModel.m().move_in_direction(currentTime, &mut changedLane, MSPMODEL_FORWARD);
+        self.myModel.m().move_in_direction(currentTime, &mut changedLane, MSPMODEL_BACKWARD);
+        // shortcut: the C++ LOG_ALL debug dump (compile-time option, off by default) is not ported
+        utils::common::time::delta_t()
     }
 
     /// C++: `MovePedestrians & MovePedestrians::operator=(const MovePedestrians &)` [private]
     /// Invalidated assignment operator.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn assign_op(&mut self, arg0: &MSTransportableDevice_FCDReplay_MovePedestrians) -> &mut MSTransportableDevice_FCDReplay_MovePedestrians {
-        todo!("port MovePedestrians::operator=")
+    pub fn assign_op(&mut self, arg0: &MSPModel_Striping_MovePedestrians) -> &mut MSPModel_Striping_MovePedestrians {
+        // private and never defined in C++ (invalidated), so it must not be called
+        panic!("MSPModel_Striping::MovePedestrians::operator= is invalidated")
     }
 
+}
+
+impl crate::microsim::ms_event_control::Command for MSPModel_Striping_MovePedestrians {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSPModel_Striping_MovePedestrians::execute(self, currentTime)
+    }
 }
 
 /// C++ class `MSPModel_Striping::NextLaneInfo` (microsim/transportables/MSPModel_Striping.h)
@@ -1423,7 +1434,7 @@ impl MSPModel_Striping_NextLaneInfo {
     //         }
     #[allow(unused_variables)]
     pub fn new(_lane: Ptr<MSLane>, _link: Ptr<MSLink>, _dir: i32) -> Self {
-        todo!("port NextLaneInfo::NextLaneInfo")
+        MSPModel_Striping_NextLaneInfo { lane: _lane, link: _link, dir: _dir }
     }
 
     /// C++: `void NextLaneInfo::NextLaneInfo()`
@@ -1434,7 +1445,7 @@ impl MSPModel_Striping_NextLaneInfo {
     //         }
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port NextLaneInfo::NextLaneInfo")
+        MSPModel_Striping_NextLaneInfo { lane: Ptr::null(), link: Ptr::null(), dir: MSPMODEL_UNDEFINED_DIRECTION }
     }
 
 }
@@ -1468,7 +1479,14 @@ impl MSPModel_Striping_Obstacle {
     // }
     #[allow(unused_variables)]
     pub fn new(dir: i32, dist: f64) -> Self {
-        todo!("port Obstacle::Obstacle")
+        MSPModel_Striping_Obstacle {
+            xFwd: dir as f64 * dist, // by default, far away when seen in dir
+            xBack: dir as f64 * dist, // by default, far away when seen in dir
+            speed: 0.,
+            type_: MSPModel_Striping_ObstacleType::OBSTACLE_NONE,
+            description: String::new(),
+            vehicle: Ptr::null(),
+        }
     }
 
     /// C++: `void Obstacle::Obstacle(const PState &)`
@@ -1486,7 +1504,20 @@ impl MSPModel_Striping_Obstacle {
     // }
     #[allow(unused_variables)]
     pub fn new_2(ped: &MSPModel_Striping_PState) -> Self {
-        todo!("port Obstacle::Obstacle")
+        debug_assert!(!ped.is_waiting_to_enter());
+        let type_ = ped.get_o_type();
+        let mut vehicle: Ptr<SUMOVehicle> = Ptr::null();
+        if type_ == MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE {
+            vehicle = Ptr::new(ped).cast::<MSPModel_Striping_PStateVehicle>().get_vehicle().cast::<SUMOVehicle>();
+        }
+        MSPModel_Striping_Obstacle {
+            xFwd: ped.get_max_x(true),
+            xBack: ped.get_min_x(true),
+            speed: ped.get_direction() as f64 * ped.get_speed(),
+            type_,
+            description: ped.get_id().to_string(),
+            vehicle,
+        }
     }
 
     /// C++: `void Obstacle::Obstacle(double, double, ObstacleType, const std::string &, const double, const SUMOVehicle *)`
@@ -1495,7 +1526,14 @@ impl MSPModel_Striping_Obstacle {
     //             : xFwd(_x + width / 2.), xBack(_x - width / 2.), speed(_speed), type(_type), description(_description), vehicle(veh) {}
     #[allow(unused_variables)]
     pub fn new_3(_x: f64, _speed: f64, _type: MSPModel_Striping_ObstacleType, _description: &str, width: f64, veh: Ptr<SUMOVehicle>) -> Self {
-        todo!("port Obstacle::Obstacle")
+        MSPModel_Striping_Obstacle {
+            xFwd: _x + width / 2.,
+            xBack: _x - width / 2.,
+            speed: _speed,
+            type_: _type,
+            description: _description.to_string(),
+            vehicle: veh,
+        }
     }
 
     /// C++: `bool Obstacle::closer(const Obstacle &, int)`
@@ -1509,7 +1547,11 @@ impl MSPModel_Striping_Obstacle {
     // }
     #[allow(unused_variables)]
     pub fn closer(&mut self, o: &MSPModel_Striping_Obstacle, dir: i32) -> bool {
-        todo!("port Obstacle::closer")
+        if dir == MSPMODEL_FORWARD {
+            self.xBack <= o.xBack
+        } else {
+            self.xFwd >= o.xFwd
+        }
     }
 
 }
@@ -1777,7 +1819,11 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        todo!("port PState::getNextEdge")
+        if self.myNLI.lane.is_null() {
+            Ptr::null()
+        } else {
+            Ptr::from_mut(self.myNLI.lane.get_edge())
+        }
     }
 
     /// C++: `void PState::moveTo(MSPerson *, MSLane *, double, double, SUMOTime)` [virtual]
@@ -1976,7 +2022,10 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_min_x(&self, includeMinGap: bool) -> f64 {
-        todo!("port PState::getMinX")
+        if self.myDir == MSPMODEL_FORWARD {
+            return self.myEdgePos - self.get_length();
+        }
+        self.myEdgePos - (if includeMinGap { self.get_min_gap() } else { 0. })
     }
 
     /// C++: `double PState::getMaxX(const bool) const` [const, virtual]
@@ -1991,7 +2040,10 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_max_x(&self, includeMinGap: bool) -> f64 {
-        todo!("port PState::getMaxX")
+        if self.myDir == MSPMODEL_FORWARD {
+            return self.myEdgePos + (if includeMinGap { self.get_min_gap() } else { 0. });
+        }
+        self.myEdgePos + self.get_length()
     }
 
     /// C++: `double PState::getLength() const` [const]
@@ -2002,7 +2054,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port PState::getLength")
+        self.myPerson.get_vehicle_type().get_length()
     }
 
     /// C++: `double PState::getMinGap() const` [const]
@@ -2013,7 +2065,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_min_gap(&self) -> f64 {
-        todo!("port PState::getMinGap")
+        self.myPerson.get_vehicle_type().get_min_gap()
     }
 
     /// C++: `double PState::distToLaneEnd() const` [const]
@@ -2032,7 +2084,20 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn dist_to_lane_end(&self) -> f64 {
-        todo!("port PState::distToLaneEnd")
+        if self.myStage.get_next_route_edge().is_null() {
+            self.myDir as f64 * (self.myStage.get_arrival_pos() - self.myEdgePos) - utils::geom::POSITION_EPS - (
+                if self.myWaitingTime > utils::common::time::delta_t()
+                    && (self.myStage.get_destination_stop().is_null()
+                        || self.myStage.get_destination_stop().get_waiting_capacity() > self.myStage.get_destination_stop().get_num_waiting_persons())
+                {
+                    self.get_min_gap()
+                } else {
+                    0.
+                })
+        } else {
+            let length = if self.myWalkingAreaPath.is_null() { self.myLane.get_length() } else { self.myWalkingAreaPath.length };
+            if self.myDir == MSPMODEL_FORWARD { length - self.myEdgePos } else { self.myEdgePos }
+        }
     }
 
     /// C++: `bool PState::moveToNextLane(SUMOTime)`
@@ -2443,7 +2508,9 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_impatience(&self) -> f64 {
-        todo!("port PState::getImpatience")
+        let x = self.myPerson.get_vehicle_type().get_impatience() + utils::common::time::steps2time(self.myStage.get_waiting_time()) / MAX_WAIT_TOLERANCE;
+        let m = if 1. < x { 1. } else { x };
+        if 0. > m { 0. } else { m }
     }
 
     /// C++: `int PState::stripe() const` [const]
@@ -2613,7 +2680,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port PState::getWidth")
+        self.myPerson.get_vehicle_type().get_width()
     }
 
     /// C++: `ObstacleType PState::getOType() const` [const, virtual]
@@ -2622,7 +2689,7 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_o_type(&self) -> MSPModel_Striping_ObstacleType {
-        todo!("port PState::getOType")
+        MSPModel_Striping_ObstacleType::OBSTACLE_PED
     }
 
     /// C++: `bool PState::isRemoteControlled() const` [const]
@@ -2685,7 +2752,11 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_crossing(&self) -> Ptr<MSLane> {
-        todo!("port PState::getNextCrossing")
+        if !self.myNLI.lane.is_null() && self.myNLI.lane.is_crossing() {
+            self.myNLI.lane
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `double PState::getLatOffset() const` [const, virtual]
@@ -2695,7 +2766,7 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
-        todo!("port PState::getLatOffset")
+        Self::pos_lat_conversion(self.myPosLat, self.myLane.get_width())
     }
 
     /// C++: `double PState::getPosLat() const` [const]
@@ -2704,7 +2775,7 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_pos_lat(&self) -> f64 {
-        todo!("port PState::getPosLat")
+        self.myPosLat
     }
 
     /// C++: `double PState::getPathLength() const` [const, virtual]
@@ -2718,7 +2789,11 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_path_length(&self) -> f64 {
-        todo!("port PState::getPathLength")
+        if !self.myWalkingAreaPath.is_null() {
+            self.myWalkingAreaPath.length
+        } else {
+            0.
+        }
     }
 
     /// C++: `void PState::reverse(const double, const double)`
@@ -2800,7 +2875,18 @@ impl MSPModel_Striping_PStateVehicle {
     // }
     #[allow(unused_variables)]
     pub fn new(veh: Ptr<MSVehicle>, walkingarea: Ptr<MSLane>, relX: f64, relY: f64, xWidth: f64, yWidth: f64) -> Self {
-        todo!("port PStateVehicle::PStateVehicle")
+        let mut s = MSPModel_Striping_PStateVehicle {
+            base: MSPModel_Striping_PState::new_3(),
+            myVehicle: veh,
+            myXWidth: xWidth,
+            myYWidth: yWidth,
+        };
+        s.myLane = walkingarea; // to ensure correct limits when calling otherStripe()
+        // relX is the center but we want it to be the max value if the movement direction is forward
+        // and the min value otherwise (indicated by xWidth sign)
+        s.myEdgePos = relX + xWidth / 2.;
+        s.myPosLat = relY;
+        s
     }
 
     /// C++: `const std::string & PStateVehicle::getID() const` [const, virtual]
@@ -2810,7 +2896,7 @@ impl MSPModel_Striping_PStateVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port PStateVehicle::getID")
+        self.myVehicle.get_id()
     }
 
     /// C++: `double PStateVehicle::getMinX(const bool) const` [const, virtual]
@@ -2820,7 +2906,7 @@ impl MSPModel_Striping_PStateVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_min_x(&self, includeMinGap: bool) -> f64 {
-        todo!("port PStateVehicle::getMinX")
+        if self.myXWidth > 0. { self.myEdgePos - self.myXWidth } else { self.myEdgePos }
     }
 
     /// C++: `double PStateVehicle::getMaxX(const bool) const` [const, virtual]
@@ -2830,7 +2916,7 @@ impl MSPModel_Striping_PStateVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_max_x(&self, includeMinGap: bool) -> f64 {
-        todo!("port PStateVehicle::getMaxX")
+        if self.myXWidth > 0. { self.myEdgePos } else { self.myEdgePos - self.myXWidth }
     }
 
     /// C++: `double PStateVehicle::getWidth() const` [const, virtual]
@@ -2840,7 +2926,7 @@ impl MSPModel_Striping_PStateVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port PStateVehicle::getWidth")
+        self.myYWidth
     }
 
     /// C++: `ObstacleType PStateVehicle::getOType() const` [const, virtual]
@@ -2849,7 +2935,7 @@ impl MSPModel_Striping_PStateVehicle {
     //         }
     #[allow(unused_variables)]
     pub fn get_o_type(&self) -> MSPModel_Striping_ObstacleType {
-        todo!("port PStateVehicle::getOType")
+        MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE
     }
 
     /// C++: `const MSVehicle * PStateVehicle::getVehicle() const` [const]
@@ -2858,7 +2944,7 @@ impl MSPModel_Striping_PStateVehicle {
     //         }
     #[allow(unused_variables)]
     pub fn get_vehicle(&self) -> Ptr<MSVehicle> {
-        todo!("port PStateVehicle::getVehicle")
+        self.myVehicle
     }
 
 }
