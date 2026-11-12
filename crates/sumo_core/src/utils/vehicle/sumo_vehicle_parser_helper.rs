@@ -1,6 +1,56 @@
 //! Port of utils/vehicle/SUMOVehicleParserHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::sumo_vehicle_class::{DEFAULT_CONTAINERTYPE_ID, DEFAULT_PEDTYPE_ID};
+use utils::common::string_utils::to_double;
+use utils::common::time::{time2steps, SUMOTIME_MAX};
+use utils::xml::sumo_xml_definitions::{
+    is_valid_vehicle_id, Tags, SUMO_ATTR_BEGIN, SUMO_ATTR_CONTAINERSPERHOUR, SUMO_ATTR_END, SUMO_ATTR_ID,
+    SUMO_ATTR_NUMBER, SUMO_ATTR_PERHOUR, SUMO_ATTR_PERIOD, SUMO_ATTR_PERSONSPERHOUR, SUMO_ATTR_PROB,
+    SUMO_ATTR_VEHSPERHOUR, SUMO_TAG_CONTAINERFLOW, SUMO_TAG_PERSONFLOW,
+};
+
+// C++ #define values from utils/vehicle/SUMOVehicleParameter.h (private there, mirrored for the parametersSet bits)
+const VEHPARS_END_SET: i64 = 2 << 4;
+const VEHPARS_NUMBER_SET: i64 = 2 << 5;
+const VEHPARS_PERIOD_SET: i64 = 2 << 6;
+const VEHPARS_VPH_SET: i64 = 2 << 7;
+const VEHPARS_PROB_SET: i64 = 2 << 8;
+const VEHPARS_POISSON_SET: i64 = 2 << 9;
+
+/// C++ `throw ProcessError(msg)`: panics with the error so that `catch_process_error` can recover it
+fn throw_process_error(msg: String) -> ! {
+    std::panic::panic_any(ProcessError::new(msg))
+}
+
+/// C++ `try { f(); } catch (ProcessError& e) {...}`: returns the caught error, re-raises anything else
+fn catch_process_error(f: impl FnOnce()) -> Result<(), ProcessError> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+        Ok(()) => Ok(()),
+        Err(payload) => match payload.downcast::<ProcessError>() {
+            Ok(e) => Err(*e),
+            Err(other) => std::panic::resume_unwind(other),
+        },
+    }
+}
+
+/// C++ `flow[0] = (char)::toupper((char)flow[0])`
+fn upper_first(s: &str) -> String {
+    let mut out = s.to_string();
+    if let Some(c) = out.get_mut(0..1) {
+        c.make_ascii_uppercase();
+    }
+    out
+}
+
+/// C++ `std::string::substr(pos, n)`: n is clamped to the end; pos past the end throws std::out_of_range
+fn cpp_substr(s: &str, pos: usize, n: usize) -> &str {
+    if pos > s.len() {
+        panic!("basic_string::substr: __pos ({}) > this->size() ({})", pos, s.len());
+    }
+    &s[pos..pos.saturating_add(n).min(s.len())]
+}
 
 /// C++ typedef `int SUMOVehicleParserHelper::CFAttrMap`
 pub type SUMOVehicleParserHelper_CFAttrMap = i32;
@@ -297,7 +347,337 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_flow_attributes(tag: SumoXMLTag, attrs: &SUMOSAXAttributes, hardFail: bool, needID: bool, beginDefault: SUMOTime, endDefault: SUMOTime, allowInternalRoutes: bool) -> Ptr<SUMOVehicleParameter> {
-        todo!("port SUMOVehicleParserHelper::parseFlowAttributes")
+        // first parse ID
+        let id: String = if attrs.has_attribute(SUMO_ATTR_ID) { Self::parse_id(attrs, tag) } else { String::new() };
+        // check if ID is valid
+        if !needID || !id.is_empty() {
+            if needID && !is_valid_vehicle_id(&id) {
+                return Self::handle_vehicle_error(hardFail, Ptr::null(), format!("Invalid flow id '{}'.", id));
+            }
+            // declare flags
+            let hasPeriod = attrs.has_attribute(SUMO_ATTR_PERIOD);
+            let hasVPH = attrs.has_attribute(SUMO_ATTR_VEHSPERHOUR);
+            let hasPPH = attrs.has_attribute(SUMO_ATTR_PERSONSPERHOUR);
+            let hasCPH = attrs.has_attribute(SUMO_ATTR_CONTAINERSPERHOUR);
+            let hasPH = attrs.has_attribute(SUMO_ATTR_PERHOUR);
+            let hasXPH = hasVPH || hasPPH || hasCPH || hasPH;
+            let hasProb = attrs.has_attribute(SUMO_ATTR_PROB);
+            let hasNumber = attrs.has_attribute(SUMO_ATTR_NUMBER);
+            let hasBegin = attrs.has_attribute(SUMO_ATTR_BEGIN);
+            let hasEnd = attrs.has_attribute(SUMO_ATTR_END);
+            let mut PERHOUR = SUMO_ATTR_PERHOUR;
+            if hasVPH {
+                PERHOUR = SUMO_ATTR_VEHSPERHOUR;
+            }
+            if hasPPH {
+                PERHOUR = SUMO_ATTR_PERSONSPERHOUR;
+            }
+            if hasCPH {
+                PERHOUR = SUMO_ATTR_CONTAINERSPERHOUR;
+            }
+            if hasXPH && !(hasVPH ^ hasPPH ^ hasCPH ^ hasPH) {
+                return Self::handle_vehicle_error(
+                    hardFail,
+                    Ptr::null(),
+                    format!(
+                        "At most one of '{}', '{}', '{}' and '{}' has to be given in the definition of {} '{}'.",
+                        attrs.get_name(SUMO_ATTR_PERHOUR),
+                        attrs.get_name(SUMO_ATTR_VEHSPERHOUR),
+                        attrs.get_name(SUMO_ATTR_PERSONSPERHOUR),
+                        attrs.get_name(SUMO_ATTR_CONTAINERSPERHOUR),
+                        Tags.get_string(tag),
+                        id
+                    ),
+                );
+            }
+            if hasPeriod && hasXPH {
+                return Self::handle_vehicle_error(
+                    hardFail,
+                    Ptr::null(),
+                    format!(
+                        "At most one of '{}' and '{}' has to be given in the definition of {} '{}'.",
+                        attrs.get_name(SUMO_ATTR_PERIOD),
+                        attrs.get_name(PERHOUR),
+                        Tags.get_string(tag),
+                        id
+                    ),
+                );
+            }
+            if hasPeriod && hasProb {
+                return Self::handle_vehicle_error(
+                    hardFail,
+                    Ptr::null(),
+                    format!(
+                        "At most one of '{}' and '{}' has to be given in the definition of {} '{}'.",
+                        attrs.get_name(SUMO_ATTR_PERIOD),
+                        attrs.get_name(SUMO_ATTR_PROB),
+                        Tags.get_string(tag),
+                        id
+                    ),
+                );
+            }
+            if hasProb && hasXPH {
+                return Self::handle_vehicle_error(
+                    hardFail,
+                    Ptr::null(),
+                    format!(
+                        "At most one of '{}' and '{}' has to be given in the definition of {} '{}'.",
+                        attrs.get_name(SUMO_ATTR_PROB),
+                        attrs.get_name(PERHOUR),
+                        Tags.get_string(tag),
+                        id
+                    ),
+                );
+            }
+            if hasPeriod || hasXPH || hasProb {
+                if hasEnd && hasNumber {
+                    return Self::handle_vehicle_error(
+                        hardFail,
+                        Ptr::null(),
+                        format!(
+                            "If '{}', '{}', '{}', '{}', '{}' or '{}' are given at most one of '{}' and '{}' are allowed in {} '{}'.",
+                            attrs.get_name(SUMO_ATTR_PERIOD),
+                            attrs.get_name(SUMO_ATTR_VEHSPERHOUR),
+                            attrs.get_name(SUMO_ATTR_PERSONSPERHOUR),
+                            attrs.get_name(SUMO_ATTR_CONTAINERSPERHOUR),
+                            attrs.get_name(SUMO_ATTR_PERHOUR),
+                            attrs.get_name(SUMO_ATTR_PROB),
+                            attrs.get_name(SUMO_ATTR_END),
+                            attrs.get_name(SUMO_ATTR_NUMBER),
+                            Tags.get_string(tag),
+                            id
+                        ),
+                    );
+                }
+            } else if !hasNumber {
+                return Self::handle_vehicle_error(
+                    hardFail,
+                    Ptr::null(),
+                    format!(
+                        "At least one of '{}', '{}', '{}', '{}', '{}', '{}', and '{}' is needed in {} '{}'.",
+                        attrs.get_name(SUMO_ATTR_PERIOD),
+                        attrs.get_name(SUMO_ATTR_VEHSPERHOUR),
+                        attrs.get_name(SUMO_ATTR_PERSONSPERHOUR),
+                        attrs.get_name(SUMO_ATTR_CONTAINERSPERHOUR),
+                        attrs.get_name(SUMO_ATTR_PERHOUR),
+                        attrs.get_name(SUMO_ATTR_PROB),
+                        attrs.get_name(SUMO_ATTR_NUMBER),
+                        Tags.get_string(tag),
+                        id
+                    ),
+                );
+            }
+            // declare flow
+            let flowParameter: Ptr<SUMOVehicleParameter> = Ptr::from_raw(Box::into_raw(Box::new(SUMOVehicleParameter::new())));
+            let fp = flowParameter.m();
+            // set tag
+            fp.tag = tag;
+            // set id
+            fp.id = id.clone();
+            if tag == SUMO_TAG_PERSONFLOW {
+                fp.vtypeid = DEFAULT_PEDTYPE_ID.to_string();
+            }
+            if tag == SUMO_TAG_CONTAINERFLOW {
+                fp.vtypeid = DEFAULT_CONTAINERTYPE_ID.to_string();
+            }
+            // parse common vehicle attributes
+            if let Err(attributeError) = catch_process_error(|| Self::parse_common_attributes(attrs, flowParameter, tag, allowInternalRoutes)) {
+                // check if continue handling another vehicles or stop handling
+                if hardFail {
+                    throw_process_error(attributeError.to_string());
+                } else {
+                    return Ptr::null();
+                }
+            }
+            // parse period
+            let mut poissonFlow = false;
+            if hasPeriod {
+                let mut ok = true;
+                let description: String = attrs.get::<String>(SUMO_ATTR_PERIOD, &id, &mut ok, true);
+                let distName: &str = match description.find('(') {
+                    Some(i) => &description[..i],
+                    None => &description[..],
+                };
+                if distName == "exp" {
+                    // declare rate
+                    let mut rate: f64 = -1.0;
+                    // parse rate
+                    match to_double(cpp_substr(&description, distName.len() + 1, description.len().wrapping_sub(distName.len()).wrapping_sub(2))) {
+                        Ok(v) => rate = v,
+                        Err(attributeError) => {
+                            // check if continue handling another vehicles or stop handling
+                            if hardFail {
+                                throw_process_error(attributeError.to_string());
+                            } else {
+                                return Ptr::null();
+                            }
+                        }
+                    }
+                    if rate <= 0.0 {
+                        return Self::handle_vehicle_error(
+                            hardFail,
+                            flowParameter,
+                            format!("Invalid rate parameter for exponentially distributed period in the definition of {} '{}'.", Tags.get_string(tag), id),
+                        );
+                    }
+                    fp.poissonRate = rate;
+                    poissonFlow = true;
+                } else {
+                    fp.repetitionOffset = attrs.get_sumo_time_reporting(SUMO_ATTR_PERIOD, &id, &mut ok, true);
+                }
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else {
+                    fp.parametersSet |= VEHPARS_PERIOD_SET;
+                }
+            }
+            // parse vehicle/person/container/etc per hour
+            if hasXPH {
+                let mut ok = true;
+                let vph: f64 = attrs.get::<f64>(PERHOUR, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else if vph <= 0.0 {
+                    return Self::handle_vehicle_error(
+                        hardFail,
+                        flowParameter,
+                        format!("Invalid repetition rate in the definition of {} '{}'.", Tags.get_string(tag), id),
+                    );
+                } else {
+                    if vph != 0.0 {
+                        fp.repetitionOffset = time2steps(3600.0 / vph);
+                    }
+                    fp.parametersSet |= VEHPARS_VPH_SET;
+                }
+            }
+            // parse probability
+            if hasProb {
+                let mut ok = true;
+                fp.repetitionProbability = attrs.get::<f64>(SUMO_ATTR_PROB, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else if fp.repetitionProbability <= 0.0 || fp.repetitionProbability > 1.0 {
+                    return Self::handle_vehicle_error(
+                        hardFail,
+                        flowParameter,
+                        format!("Invalid repetition probability in the definition of {} '{}'.", Tags.get_string(tag), id),
+                    );
+                } else {
+                    fp.parametersSet |= VEHPARS_PROB_SET;
+                }
+            }
+            // set default begin
+            fp.depart = beginDefault;
+            // parse begin
+            if hasBegin {
+                // first get begin
+                let mut ok = true;
+                let begin: String = attrs.get::<String>(SUMO_ATTR_BEGIN, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else {
+                    // parse begin
+                    let mut errorMsg = String::new();
+                    if !SUMOVehicleParameter::parse_depart(&begin, Tags.get_string(tag), &id, &mut fp.depart, &mut fp.departProcedure, &mut errorMsg, "begin") {
+                        return Self::handle_vehicle_error(hardFail, flowParameter, errorMsg);
+                    }
+                }
+            }
+            if fp.depart < 0 {
+                return Self::handle_vehicle_error(hardFail, flowParameter, format!("Negative begin time in the definition of {} '{}'.", Tags.get_string(tag), id));
+            }
+            // set default end
+            fp.repetitionEnd = endDefault;
+            if fp.repetitionEnd < 0 {
+                fp.repetitionEnd = SUMOTIME_MAX;
+            }
+            // parse end
+            if hasEnd {
+                let mut ok = true;
+                fp.repetitionEnd = attrs.get_sumo_time_reporting(SUMO_ATTR_END, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else {
+                    fp.parametersSet |= VEHPARS_END_SET;
+                }
+            } else if matches!(fp.departProcedure, DepartDefinition::TRIGGERED) {
+                if !hasNumber {
+                    return Self::handle_vehicle_error(
+                        hardFail,
+                        flowParameter,
+                        format!("{} '{}' with triggered begin must define 'number'.", Tags.get_string(tag), id),
+                    );
+                } else {
+                    fp.repetitionEnd = fp.depart;
+                }
+            } else if (endDefault == SUMOTIME_MAX || endDefault < 0) && (!hasNumber || (!hasProb && !hasPeriod && !hasXPH)) {
+                write_warning(&format!("Undefined end for {} '{}', defaulting to 24hour duration.", Tags.get_string(tag), id));
+                fp.repetitionEnd = fp.depart + time2steps(24.0 * 3600.0);
+            }
+            if fp.repetitionEnd < fp.depart {
+                let flow = upper_first(Tags.get_string(tag));
+                return Self::handle_vehicle_error(hardFail, flowParameter, format!("{} '{}' ends before its begin time.", flow, id));
+            }
+            // parse number
+            if hasNumber {
+                let mut ok = true;
+                fp.repetitionNumber = attrs.get::<i64>(SUMO_ATTR_NUMBER, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, flowParameter, String::new());
+                } else {
+                    fp.parametersSet |= VEHPARS_NUMBER_SET;
+                    if fp.repetitionNumber == 0 {
+                        let flow = upper_first(Tags.get_string(tag));
+                        write_warning(&format!("{} '{}' has no instances; will skip it.", flow, id));
+                        fp.repetitionEnd = fp.depart;
+                    } else {
+                        if fp.repetitionNumber < 0 {
+                            return Self::handle_vehicle_error(
+                                hardFail,
+                                flowParameter,
+                                format!("Negative repetition number in the definition of {} '{}'.", Tags.get_string(tag), id),
+                            );
+                        }
+                        if fp.repetitionOffset < 0 && !hasProb {
+                            if poissonFlow {
+                                fp.repetitionEnd = SUMOTIME_MAX;
+                            } else {
+                                fp.repetitionOffset = (fp.repetitionEnd - fp.depart) / fp.repetitionNumber;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // interpret repetitionNumber
+                if fp.repetitionProbability > 0.0 {
+                    fp.repetitionNumber = i64::MAX;
+                } else {
+                    if fp.repetitionOffset <= 0 {
+                        if poissonFlow {
+                            // number is random but flow has a fixed end time
+                            fp.repetitionNumber = i64::MAX;
+                        } else {
+                            return Self::handle_vehicle_error(
+                                hardFail,
+                                flowParameter,
+                                format!("Invalid repetition rate in the definition of {} '{}'.", Tags.get_string(tag), id),
+                            );
+                        }
+                    } else {
+                        if fp.repetitionEnd == SUMOTIME_MAX {
+                            fp.repetitionNumber = i64::MAX;
+                        } else {
+                            let repLength = fp.repetitionEnd - fp.depart;
+                            fp.repetitionNumber = ((repLength as f64) / (fp.repetitionOffset as f64)).ceil() as i64;
+                        }
+                    }
+                }
+            }
+            // all ok, then return flow parameter
+            return flowParameter;
+        } else {
+            return Self::handle_vehicle_error(hardFail, Ptr::null(), format!("{} cannot be created", Tags.get_string(tag)));
+        }
     }
 
     /// C++: `SUMOVehicleParameter * SUMOVehicleParserHelper::parseVehicleAttributes(int, const SUMOSAXAttributes &, const bool, const bool, const bool, const bool)` [static]
@@ -361,7 +741,59 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_vehicle_attributes(element: i32, attrs: &SUMOSAXAttributes, hardFail: bool, optionalID: bool, skipDepart: bool, allowInternalRoutes: bool) -> Ptr<SUMOVehicleParameter> {
-        todo!("port SUMOVehicleParserHelper::parseVehicleAttributes")
+        // declare vehicle ID
+        let id: String;
+        // for certain vehicles, ID can be optional
+        if optionalID {
+            let mut ok = true;
+            id = attrs.get_opt::<String>(SUMO_ATTR_ID, "", &mut ok, String::new(), true);
+            if !ok {
+                return Self::handle_vehicle_error(hardFail, Ptr::null(), String::new());
+            }
+        } else {
+            // parse ID
+            id = Self::parse_id(attrs, element);
+        }
+        // only continue if id is valid, or if is optional
+        if optionalID || !id.is_empty() {
+            // declare vehicle parameter
+            let vehicleParameter: Ptr<SUMOVehicleParameter> = Ptr::from_raw(Box::into_raw(Box::new(SUMOVehicleParameter::new())));
+            let vp = vehicleParameter.m();
+            vp.id = id.clone();
+            if element == SUMO_TAG_PERSON {
+                vp.vtypeid = DEFAULT_PEDTYPE_ID.to_string();
+            } else if element == SUMO_TAG_CONTAINER {
+                vp.vtypeid = DEFAULT_CONTAINERTYPE_ID.to_string();
+            }
+            // parse common attributes
+            if let Err(attributeError) = catch_process_error(|| Self::parse_common_attributes(attrs, vehicleParameter, element, allowInternalRoutes)) {
+                // check if continue handling another vehicles or stop handling
+                if hardFail {
+                    throw_process_error(attributeError.to_string());
+                } else {
+                    return Ptr::null();
+                }
+            }
+            // check depart
+            if !skipDepart {
+                let mut ok = true;
+                let helper: String = attrs.get::<String>(SUMO_ATTR_DEPART, &vp.id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_error(hardFail, vehicleParameter, String::new());
+                }
+                // now parse depart
+                let mut departErrorMsg = String::new();
+                if !SUMOVehicleParameter::parse_depart(&helper, "vehicle", &vp.id, &mut vp.depart, &mut vp.departProcedure, &mut departErrorMsg, "departure") {
+                    return Self::handle_vehicle_error(hardFail, vehicleParameter, departErrorMsg);
+                }
+            }
+            // set tag
+            vp.tag = element;
+            // all ok, then return vehicleParameter
+            return vehicleParameter;
+        } else {
+            return Self::handle_vehicle_error(hardFail, Ptr::null(), format!("{} cannot be created", Tags.get_string(element)));
+        }
     }
 
     /// C++: `SUMOVTypeParameter * SUMOVehicleParserHelper::beginVTypeParsing(const SUMOSAXAttributes &, const bool, const std::string &, const SUMOVTypeParameter *const)` [static]
@@ -1180,7 +1612,33 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_vehicle_class(attrs: &SUMOSAXAttributes, id: &str) -> SUMOVehicleClass {
-        todo!("port SUMOVehicleParserHelper::parseVehicleClass")
+        let mut vclass = SVC_IGNORING;
+        let mut ok = true;
+        let vclassS = attrs.get_opt::<String>(SUMO_ATTR_VCLASS, id, &mut ok, String::new(), true);
+        if vclassS == "" {
+            return vclass;
+        }
+        let attempt = get_vehicle_class_id(&vclassS).and_then(|result| {
+            SUMO_VEHICLE_CLASS_STRINGS.get_string(result).map(|realName| (result, realName.to_string()))
+        });
+        match attempt {
+            Ok((result, realName)) => {
+                if realName != vclassS {
+                    write_warning(&format!(
+                        "The vehicle class '{}' for {} '{}' is deprecated, use '{}' instead.",
+                        vclassS,
+                        attrs.get_object_type(),
+                        id,
+                        realName
+                    ));
+                }
+                return result;
+            }
+            Err(_) => {
+                write_error(&format!("The vehicle class '{}' for {} '{}' is not known.", vclassS, attrs.get_object_type(), id));
+            }
+        }
+        vclass
     }
 
     /// C++: `SUMOVehicleShape SUMOVehicleParserHelper::parseGuiShape(const SUMOSAXAttributes &, const std::string &)` [static]
@@ -1203,7 +1661,19 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_gui_shape(attrs: &SUMOSAXAttributes, id: &str) -> SUMOVehicleShape {
-        todo!("port SUMOVehicleParserHelper::parseGuiShape")
+        let mut ok = true;
+        let vclassS = attrs.get_opt::<String>(SUMO_ATTR_GUISHAPE, id, &mut ok, String::new(), true);
+        if SUMO_VEHICLE_SHAPE_STRINGS.has_string(&vclassS) {
+            let result = SUMO_VEHICLE_SHAPE_STRINGS.get(&vclassS).unwrap_or_else(|e| throw_process_error(e.to_string()));
+            let realName = SUMO_VEHICLE_SHAPE_STRINGS.get_string(result).unwrap_or_else(|e| throw_process_error(e.to_string())).to_string();
+            if realName != vclassS {
+                write_warning(&format!("The shape '{}' for {} '{}' is deprecated, use '{}' instead.", vclassS, attrs.get_object_type(), id, realName));
+            }
+            return result;
+        } else {
+            write_error(&format!("The shape '{}' for {} '{}' is not known.", vclassS, attrs.get_object_type(), id));
+            return SUMOVehicleShape::UNKNOWN;
+        }
     }
 
     /// C++: `double SUMOVehicleParserHelper::parseWalkPos(SumoXMLAttr, const bool, const std::string &, double, const std::string &, SumoRNG *)` [static]
@@ -1228,7 +1698,23 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_walk_pos(attr: SumoXMLAttr, hardFail: bool, id: &str, maxPos: f64, val: &str, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port SUMOVehicleParserHelper::parseWalkPos")
+        let mut result: f64 = 0.0;
+        let mut error = String::new();
+        let mut proc_ = ArrivalPosDefinition::DEFAULT;
+        // only supports 'random' and 'max'
+        if !SUMOVehicleParameter::parse_arrival_pos(val, Tags.get_string(SUMO_TAG_WALK), id, &mut result, &mut proc_, &mut error) {
+            Self::handle_vehicle_error(hardFail, Ptr::null(), error);
+        }
+        if matches!(proc_, ArrivalPosDefinition::RANDOM) {
+            // RandHelper::rand(maxV, rng) = maxV * rand(rng); a null rng selects the default generator
+            let r = if rng.is_null() { utils::common::rand_helper::rand() } else { rng.m().rand() };
+            result = maxPos * r;
+        } else if matches!(proc_, ArrivalPosDefinition::CENTER) {
+            result = maxPos / 2.0;
+        } else if matches!(proc_, ArrivalPosDefinition::MAX) {
+            result = maxPos;
+        }
+        SUMOVehicleParameter::interpret_edge_pos(result, maxPos, attr, id, false)
     }
 
     /// C++: `SUMOTime SUMOVehicleParserHelper::processActionStepLength(double)` [static]
@@ -1253,7 +1739,26 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn process_action_step_length(given: f64) -> SUMOTime {
-        todo!("port SUMOVehicleParserHelper::processActionStepLength")
+        let defaultError = "The parameter action-step-length must be a non-negative multiple of the simulation step-length. ";
+        let mut result: SUMOTime = time2steps(given);
+        if result <= 0 {
+            if result < 0 {
+                write_warning(&format!("{}Ignoring given value (={} s.)", defaultError, utils::common::to_string::to_string(&steps2time(result))));
+            }
+            result = delta_t();
+        } else if result % delta_t() != 0 && utils::options::options_cont::exists("step-length") {
+            result = (delta_t() as f64 * (result as f64 / delta_t() as f64).floor()) as SUMOTime;
+            result = std::cmp::max(delta_t(), result);
+            if (given * 1000.0 - result as f64).abs() > NUMERICAL_EPS {
+                write_warning(&format!(
+                    "{}Parsing given value ({} s.) to the adjusted value {} s.",
+                    defaultError,
+                    utils::common::to_string::to_string(&given),
+                    utils::common::to_string::to_string(&steps2time(result))
+                ));
+            }
+        }
+        result
     }
 
     /// C++: `bool SUMOVehicleParserHelper::isInternalRouteID(const std::string &)` [static]
@@ -1264,7 +1769,7 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn is_internal_route_id(id: &str) -> bool {
-        todo!("port SUMOVehicleParserHelper::isInternalRouteID")
+        id.starts_with('!')
     }
 
     /// C++: `bool SUMOVehicleParserHelper::validProfile(SUMOVTypeParameter *, const std::string, const SumoXMLAttr)` [static]
@@ -1287,7 +1792,21 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn valid_profile(vtype: Ptr<SUMOVTypeParameter>, data: String, attr: SumoXMLAttr) -> bool {
-        todo!("port SUMOVehicleParserHelper::validProfile")
+        for value in StringTokenizer::new(&data).get_vector() {
+            match to_double(&value) {
+                Ok(v) => {
+                    if v < 0.0 {
+                        write_error(&format!("Invalid Car-Following-Model Attribute {}. An acceleration profile value cannot be negative", Attrs.get_string(attr)));
+                        return false;
+                    }
+                }
+                Err(_) => {
+                    write_error(&format!("Entry '{}' of {} table for vType '{}' cannot be parsed as 'double'", value, Attrs.get_string(attr), vtype.id));
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// C++: `int SUMOVehicleParserHelper::parseCarWalkTransfer(const OptionsCont &, const bool)` [static]
@@ -1341,7 +1860,51 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_car_walk_transfer(oc: &OptionsCont, hasTaxi: bool) -> i32 {
-        todo!("port SUMOVehicleParserHelper::parseCarWalkTransfer")
+        let mut carWalk: i32 = 0;
+        for opt in oc.get_string_vector("persontrip.transfer.car-walk").unwrap_or_else(|e| throw_process_error(e.to_string())).iter() {
+            if opt.as_str() == "parkingAreas" {
+                carWalk |= ModeChangeOptions::PARKING_AREAS as i32;
+            } else if opt.as_str() == "ptStops" {
+                carWalk |= ModeChangeOptions::PT_STOPS as i32;
+            } else if opt.as_str() == "allJunctions" {
+                carWalk |= ModeChangeOptions::ALL_JUNCTIONS as i32;
+            } else {
+                write_error(&format!("Invalid transfer option '{}'. Must be one of 'parkingAreas', 'ptStops' and 'allJunctions'", opt));
+            }
+        }
+        let taxiDropoff = oc.get_string_vector("persontrip.transfer.taxi-walk").unwrap_or_else(|e| throw_process_error(e.to_string()));
+        let taxiPickup = oc.get_string_vector("persontrip.transfer.walk-taxi").unwrap_or_else(|e| throw_process_error(e.to_string()));
+        if taxiDropoff.is_empty() && hasTaxi {
+            carWalk |= ModeChangeOptions::TAXI_DROPOFF_ANYWHERE as i32;
+        } else {
+            for opt in taxiDropoff.iter() {
+                if opt.as_str() == "parkingAreas" {
+                    carWalk |= ModeChangeOptions::TAXI_DROPOFF_PARKING_AREAS as i32;
+                } else if opt.as_str() == "ptStops" {
+                    carWalk |= ModeChangeOptions::TAXI_DROPOFF_PT as i32;
+                } else if opt.as_str() == "allJunctions" {
+                    carWalk |= ModeChangeOptions::TAXI_DROPOFF_ANYWHERE as i32;
+                } else {
+                    write_error(&format!("Invalid transfer option '{}'. Must be one of 'parkingAreas', 'ptStops' and 'allJunctions'", opt));
+                }
+            }
+        }
+        if taxiPickup.is_empty() && hasTaxi {
+            carWalk |= ModeChangeOptions::TAXI_PICKUP_ANYWHERE as i32;
+        } else {
+            for opt in taxiPickup.iter() {
+                if opt.as_str() == "parkingAreas" {
+                    carWalk |= ModeChangeOptions::TAXI_PICKUP_PARKING_AREAS as i32;
+                } else if opt.as_str() == "ptStops" {
+                    carWalk |= ModeChangeOptions::TAXI_PICKUP_PT as i32;
+                } else if opt.as_str() == "allJunctions" {
+                    carWalk |= ModeChangeOptions::TAXI_PICKUP_ANYWHERE as i32;
+                } else {
+                    write_error(&format!("Invalid transfer option '{}'. Must be one of 'parkingAreas', 'ptStops' and 'allJunctions'", opt));
+                }
+            }
+        }
+        carWalk
     }
 
     /// C++: `bool SUMOVehicleParserHelper::parseStopTag(const SUMOSAXAttributes &, const SUMOVehicleParameter::Stop *, SumoXMLTag &, std::string &)` [static]
@@ -1381,7 +1944,36 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_stop_tag(attrs: &SUMOSAXAttributes, stopParam: Ptr<SUMOVehicleParameter_Stop>, tag: &mut SumoXMLTag, id: &mut String) -> bool {
-        todo!("port SUMOVehicleParserHelper::parseStopTag")
+        let mut ok = true;
+        // dummy stop parameter to hold the attributes
+        let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
+        if !stopParam.is_null() {
+            stop = stopParam.m().clone();
+        } else {
+            stop.busstop = attrs.get_opt::<String>(SUMO_ATTR_BUS_STOP, "", &mut ok, String::new(), true);
+            stop.busstop = attrs.get_opt::<String>(SUMO_ATTR_TRAIN_STOP, "", &mut ok, stop.busstop.clone(), true); // alias
+            stop.chargingStation = attrs.get_opt::<String>(SUMO_ATTR_CHARGING_STATION, "", &mut ok, String::new(), true);
+            stop.overheadWireSegment = attrs.get_opt::<String>(SUMO_ATTR_OVERHEAD_WIRE_SEGMENT, "", &mut ok, String::new(), true);
+            stop.containerstop = attrs.get_opt::<String>(SUMO_ATTR_CONTAINER_STOP, "", &mut ok, String::new(), true);
+            stop.parkingarea = attrs.get_opt::<String>(SUMO_ATTR_PARKING_AREA, "", &mut ok, String::new(), true);
+        }
+        if stop.busstop != "" {
+            *tag = SUMO_TAG_BUS_STOP;
+            *id = stop.busstop.clone();
+        } else if stop.containerstop != "" {
+            *tag = SUMO_TAG_CONTAINER_STOP;
+            *id = stop.containerstop.clone();
+        } else if stop.parkingarea != "" {
+            *tag = SUMO_TAG_PARKING_AREA;
+            *id = stop.parkingarea.clone();
+        } else if stop.chargingStation != "" {
+            *tag = SUMO_TAG_CHARGING_STATION;
+            *id = stop.chargingStation.clone();
+        } else if stop.overheadWireSegment != "" {
+            *tag = SUMO_TAG_OVERHEAD_WIRE_SEGMENT;
+            *id = stop.overheadWireSegment.clone();
+        }
+        ok
     }
 
     /// C++: `std::string SUMOVehicleParserHelper::parseID(const SUMOSAXAttributes &, const SumoXMLTag)` [static, private]
@@ -1409,7 +2001,24 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_id(attrs: &SUMOSAXAttributes, element: SumoXMLTag) -> String {
-        todo!("port SUMOVehicleParserHelper::parseID")
+        let mut ok = true;
+        let mut id = String::new();
+        // first check if attrs contain an ID
+        if attrs.has_attribute(SUMO_ATTR_ID) {
+            id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+            if is_valid_vehicle_id(&id) {
+                return id;
+            } else if id.is_empty() {
+                // add extra information for empty IDs
+                write_error(&format!("Invalid {} id '{}'.", Tags.get_string(element), id));
+            } else {
+                write_error(&format!("Invalid {} id '{}'. Contains invalid characters.", Tags.get_string(element), id));
+            }
+        } else {
+            write_error(&format!("Attribute '{}' is missing in definition of {}", Attrs.get_string(SUMO_ATTR_ID), Tags.get_string(element)));
+        }
+        // return empty (invalid) ID
+        String::new()
     }
 
     /// C++: `void SUMOVehicleParserHelper::parseCommonAttributes(const SUMOSAXAttributes &, SUMOVehicleParameter *, SumoXMLTag, const bool)` [static, private]
@@ -1773,7 +2382,15 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn handle_vehicle_error(hardFail: bool, vehicleParameter: Ptr<SUMOVehicleParameter>, message: String) -> Ptr<SUMOVehicleParameter> {
-        todo!("port SUMOVehicleParserHelper::handleVehicleError")
+        if !vehicleParameter.is_null() {
+            drop(unsafe { Box::from_raw(vehicleParameter.as_raw()) });
+        }
+        if hardFail {
+            throw_process_error(message);
+        } else if message.len() > 0 {
+            write_error(&message);
+        }
+        Ptr::null()
     }
 
     /// C++: `SUMOVTypeParameter * SUMOVehicleParserHelper::handleVehicleTypeError(const bool, SUMOVTypeParameter *, const std::string)` [static, private]
@@ -1792,7 +2409,15 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn handle_vehicle_type_error(hardFail: bool, vehicleTypeParameter: Ptr<SUMOVTypeParameter>, message: String) -> Ptr<SUMOVTypeParameter> {
-        todo!("port SUMOVehicleParserHelper::handleVehicleTypeError")
+        if !vehicleTypeParameter.is_null() {
+            drop(unsafe { Box::from_raw(vehicleTypeParameter.as_raw()) });
+        }
+        if hardFail {
+            throw_process_error(message);
+        } else if message.len() > 0 {
+            write_error(&message);
+        }
+        Ptr::null()
     }
 
     /// C++: `const CFAttrMap & SUMOVehicleParserHelper::getAllowedCFModelAttrs()` [static, private]
