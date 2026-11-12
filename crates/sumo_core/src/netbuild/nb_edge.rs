@@ -50,6 +50,9 @@ pub const UNSPECIFIED_FRICTION: f64 = 1.0;
 pub const UNSPECIFIED_CONTPOS: f64 = -1.0;
 pub const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.0;
 pub const UNSPECIFIED_SIGNAL_OFFSET: f64 = -1.0;
+// C++ statics `NBNode::FORWARD` / `NBNode::BACKWARD` (NBNode.cpp); nb_node.rs has no port of them yet
+const NBNODE_FORWARD: i32 = 1;
+const NBNODE_BACKWARD: i32 = -1;
 pub const UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
 pub const ANGLE_LOOKAHEAD: f64 = 10.0;
 pub const UNSPECIFIED_INTERNAL_LANE_INDEX: i32 = -1;
@@ -1565,7 +1568,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_end_offset_2(&self, lane: i32) -> f64 {
-        todo!("port NBEdge::getEndOffset")
+        if self.myLanes[lane as usize].endOffset != UNSPECIFIED_OFFSET {
+            self.myLanes[lane as usize].endOffset
+        } else {
+            self.get_end_offset()
+        }
     }
 
     /// C++: `const StopOffset & NBEdge::getEdgeStopOffset() const` [const]
@@ -1576,7 +1583,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_stop_offset(&self) -> &StopOffset {
-        todo!("port NBEdge::getEdgeStopOffset")
+        &self.myEdgeStopOffset
     }
 
     /// C++: `const StopOffset & NBEdge::getLaneStopOffset(int) const` [const]
@@ -1591,7 +1598,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_stop_offset(&self, lane: i32) -> &StopOffset {
-        todo!("port NBEdge::getLaneStopOffset")
+        if lane == -1 {
+            &self.myEdgeStopOffset
+        } else {
+            &self.myLanes[lane as usize].laneStopOffset
+        }
     }
 
     /// C++: `double NBEdge::getSignalOffset() const` [const]
@@ -1609,7 +1620,16 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_signal_offset(&self) -> f64 {
-        todo!("port NBEdge::getSignalOffset")
+        if self.mySignalPosition == Position::INVALID {
+            return UNSPECIFIED_SIGNAL_OFFSET;
+        }
+        let laneEnd = if self.myLaneSpreadFunction == LaneSpreadFunction::RIGHT {
+            *self.myLanes.last().unwrap().shape.back()
+        } else {
+            *self.myLanes[(self.get_num_lanes() / 2) as usize].shape.back()
+        };
+        //std::cout << getID() << " signalPos=" << mySignalPosition << " laneEnd=" << laneEnd << " toShape=" << myTo->getShape() << " toBorder=" << myToBorder << "\n";
+        self.mySignalPosition.distance_to2d(&laneEnd)
     }
 
     /// C++: `const Position & NBEdge::getSignalPosition() const` [const]
@@ -1619,7 +1639,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_signal_position(&self) -> &Position {
-        todo!("port NBEdge::getSignalPosition")
+        &self.mySignalPosition
     }
 
     /// C++: `const NBNode * NBEdge::getSignalNode() const` [const]
@@ -1629,7 +1649,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_signal_node(&self) -> Ptr<NBNode> {
-        todo!("port NBEdge::getSignalNode")
+        self.mySignalNode
     }
 
     /// C++: `void NBEdge::setSignalPosition(const Position &, const NBNode *)`
@@ -1640,7 +1660,8 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_signal_position(&mut self, pos: &Position, signalNode: Ptr<NBNode>) {
-        todo!("port NBEdge::setSignalPosition")
+        self.mySignalPosition = *pos;
+        self.mySignalNode = signalNode;
     }
 
     /// C++: `const std::vector<NBEdge::Lane> & NBEdge::getLanes() const` [const]
@@ -1650,7 +1671,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_lanes(&self) -> &Vec<NBEdge_Lane> {
-        todo!("port NBEdge::getLanes")
+        &self.myLanes
     }
 
     /// C++: `int NBEdge::getFirstNonPedestrianLaneIndex(int, bool) const` [const]
@@ -1672,7 +1693,21 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_first_non_pedestrian_lane_index(&self, direction: i32, exclusive: bool) -> i32 {
-        todo!("port NBEdge::getFirstNonPedestrianLaneIndex")
+        assert!(direction == NBNODE_FORWARD || direction == NBNODE_BACKWARD);
+        let start = if direction == NBNODE_FORWARD { 0 } else { self.myLanes.len() as i32 - 1 };
+        let end = if direction == NBNODE_FORWARD { self.myLanes.len() as i32 } else { -1 };
+        let mut i = start;
+        while i != end {
+            // SVCAll, does not count as a sidewalk, green verges (permissions = 0) do not count as road
+            // in the exclusive case, lanes that allow pedestrians along with any other class also count as road
+            if (exclusive && self.myLanes[i as usize].permissions != SVC_PEDESTRIAN && self.myLanes[i as usize].permissions != 0)
+                || ((self.myLanes[i as usize].permissions & SVC_PEDESTRIAN) == 0 && self.myLanes[i as usize].permissions != 0)
+            {
+                return i;
+            }
+            i += direction;
+        }
+        -1
     }
 
     /// C++: `int NBEdge::getFirstNonPedestrianNonBicycleLaneIndex(int, bool) const` [const]
@@ -1695,7 +1730,22 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_first_non_pedestrian_non_bicycle_lane_index(&self, direction: i32, exclusive: bool) -> i32 {
-        todo!("port NBEdge::getFirstNonPedestrianNonBicycleLaneIndex")
+        assert!(direction == NBNODE_FORWARD || direction == NBNODE_BACKWARD);
+        let start = if direction == NBNODE_FORWARD { 0 } else { self.myLanes.len() as i32 - 1 };
+        let end = if direction == NBNODE_FORWARD { self.myLanes.len() as i32 } else { -1 };
+        let mut i = start;
+        while i != end {
+            // SVCAll, does not count as a sidewalk, green verges (permissions = 0) do not count as road
+            // in the exclusive case, lanes that allow pedestrians along with any other class also count as road
+            let p = self.myLanes[i as usize].permissions;
+            if (exclusive && p != SVC_PEDESTRIAN && p != SVC_BICYCLE && p != (SVC_PEDESTRIAN | SVC_BICYCLE) && p != 0)
+                || (p == SVC_ALL || ((p & (SVC_PEDESTRIAN | SVC_BICYCLE)) == 0 && p != 0))
+            {
+                return i;
+            }
+            i += direction;
+        }
+        -1
     }
 
     /// C++: `int NBEdge::getSpecialLane(SVCPermissions) const` [const]
@@ -1711,7 +1761,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_special_lane(&self, permissions: SVCPermissions) -> i32 {
-        todo!("port NBEdge::getSpecialLane")
+        for i in 0..self.myLanes.len() as i32 {
+            if self.myLanes[i as usize].permissions == permissions {
+                return i;
+            }
+        }
+        -1
     }
 
     /// C++: `int NBEdge::getFirstAllowedLaneIndex(int) const` [const]
@@ -1730,7 +1785,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_first_allowed_lane_index(&self, direction: i32) -> i32 {
-        todo!("port NBEdge::getFirstAllowedLaneIndex")
+        assert!(direction == NBNODE_FORWARD || direction == NBNODE_BACKWARD);
+        let start = if direction == NBNODE_FORWARD { 0 } else { self.myLanes.len() as i32 - 1 };
+        let end = if direction == NBNODE_FORWARD { self.myLanes.len() as i32 } else { -1 };
+        let mut i = start;
+        while i != end {
+            if self.myLanes[i as usize].permissions != 0 {
+                return i;
+            }
+            i += direction;
+        }
+        end - direction
     }
 
     /// C++: `NBEdge::Lane NBEdge::getFirstNonPedestrianLane(int) const` [const]
@@ -1745,7 +1810,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_first_non_pedestrian_lane(&self, direction: i32) -> NBEdge_Lane {
-        todo!("port NBEdge::getFirstNonPedestrianLane")
+        let index = self.get_first_non_pedestrian_lane_index(direction, false);
+        if index < 0 {
+            panic!("{}", ProcessError::new(utils::tlf!("Edge % allows pedestrians on all lanes", self.get_id())));
+        }
+        self.myLanes[index as usize].clone()
     }
 
     /// C++: `std::set<SVCPermissions> NBEdge::getPermissionVariants(int, int) const` [const]
@@ -1763,7 +1832,14 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_permission_variants(&self, iStart: i32, iEnd: i32) -> BTreeSet<SVCPermissions> {
-        todo!("port NBEdge::getPermissionVariants")
+        let mut result = BTreeSet::new();
+        if iStart < 0 || iStart >= self.get_num_lanes() || iEnd > self.get_num_lanes() {
+            panic!("{}", ProcessError::new(format!("invalid indices iStart {} iEnd {} for edge with {} lanes.", iStart, iEnd, self.get_num_lanes())));
+        }
+        for i in iStart..iEnd {
+            result.insert(self.get_permissions(i));
+        }
+        result
     }
 
     /// C++: `int NBEdge::getNumLanesThatAllow(SVCPermissions, bool) const` [const]
@@ -1780,7 +1856,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_num_lanes_that_allow(&self, permissions: SVCPermissions, allPermissions: bool) -> i32 {
-        todo!("port NBEdge::getNumLanesThatAllow")
+        let mut result = 0;
+        for lane in &self.myLanes {
+            if (allPermissions && (lane.permissions & permissions) == permissions)
+                || (!allPermissions && (lane.permissions & permissions) != 0)
+            {
+                result += 1;
+            }
+        }
+        result
     }
 
     /// C++: `bool NBEdge::allowsChangingLeft(int, SUMOVehicleClass) const` [const]
@@ -1792,7 +1876,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn allows_changing_left(&self, lane: i32, vclass: SUMOVehicleClass) -> bool {
-        todo!("port NBEdge::allowsChangingLeft")
+        assert!(lane >= 0 && lane < self.get_num_lanes());
+        if self.myLanes[lane as usize].changeLeft == SVC_UNSPECIFIED {
+            true
+        } else {
+            (self.myLanes[lane as usize].changeLeft & vclass) == vclass
+        }
     }
 
     /// C++: `bool NBEdge::allowsChangingRight(int, SUMOVehicleClass) const` [const]
@@ -1804,7 +1893,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn allows_changing_right(&self, lane: i32, vclass: SUMOVehicleClass) -> bool {
-        todo!("port NBEdge::allowsChangingRight")
+        assert!(lane >= 0 && lane < self.get_num_lanes());
+        if self.myLanes[lane as usize].changeRight == SVC_UNSPECIFIED {
+            true
+        } else {
+            (self.myLanes[lane as usize].changeRight & vclass) == vclass
+        }
     }
 
     /// C++: `double NBEdge::getCrossingAngle(NBNode *)`
