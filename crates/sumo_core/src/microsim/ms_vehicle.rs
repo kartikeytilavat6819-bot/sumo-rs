@@ -3653,7 +3653,7 @@ impl MSVehicle {
                         + (self.myLane.m().get_center_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_center_on_edge());
                 }
             }
-            panic!("{}", ProcessError::new(&format!("Request lateral pos of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get(), "NULL"))));
+            panic!("{}", ProcessError::new(&format!("Request lateral pos of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get().map(|l| &l.base), "NULL"))));
         }
     }
 
@@ -3796,7 +3796,7 @@ impl MSVehicle {
                 }
             }
             debug_assert!(false);
-            panic!("{}", ProcessError::new(&format!("Request lateral offset of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get(), "NULL"))));
+            panic!("{}", ProcessError::new(&format!("Request lateral offset of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get().map(|l| &l.base), "NULL"))));
         }
     }
 
@@ -3939,7 +3939,7 @@ impl MSVehicle {
         if self.is_parking() && self.get_stops().front().map_or(false, |s| !s.parkingarea.is_null()) {
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
             let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
-            return parkingArea.m().get_vehicle_slope(veh.get());
+            return parkingArea.m().get_vehicle_slope(self);
         }
         if self.myLane.is_null() {
             return 0.0;
@@ -4037,7 +4037,7 @@ impl MSVehicle {
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
             if !parkingArea.is_null() {
                 let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
-                return parkingArea.m().get_vehicle_position(veh.get());
+                return parkingArea.m().get_vehicle_position(self);
             } else {
                 // position beside the road
                 let mut shp = self.myLane.m().get_edge().get_lanes()[0].m().get_shape_2().clone();
@@ -5195,7 +5195,7 @@ impl MSVehicle {
         self.myLane = enteredLane;
         self.myCachedPosition = Position::INVALID;
         // need to update myCurrentLaneInBestLanes
-        self.update_best_lanes();
+        self.update_best_lanes(false, Ptr::null());
         // switch to and activate the new lane's reminders
         // keep OldLaneReminders
         for rem in enteredLane.get_move_reminders().iter() {
