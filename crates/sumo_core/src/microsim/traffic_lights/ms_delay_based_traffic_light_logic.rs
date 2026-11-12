@@ -2,6 +2,16 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `dynamic_cast<MSE2Collector*>(MSDetectorFileOutput*)`: MSDetectorFileOutput is the MSE2Collector base2 field,
+/// not its first base, so step back by the field offset.
+// shortcut: no runtime type check; relies on the lane-area detector map holding only MSE2Collector, upgrade with a type flag check
+fn e2_from_detector_file_output(det: Ptr<MSDetectorFileOutput>) -> Ptr<MSE2Collector> {
+    if det.is_null() {
+        return Ptr::null();
+    }
+    Ptr::from_raw((det.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector)
+}
+
 /// An actuated traffic light logic based on time delay of approaching vehicles
 /// C++ class `MSDelayBasedTrafficLightLogic` (microsim/traffic_lights/MSDelayBasedTrafficLightLogic.h)
 pub struct MSDelayBasedTrafficLightLogic {
@@ -43,7 +53,25 @@ impl MSDelayBasedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &Unmapped /* Parameterised::Map */, basePath: &str) -> Self {
-        todo!("port MSDelayBasedTrafficLightLogic::MSDelayBasedTrafficLightLogic")
+        let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
+        let myShowDetectors = utils::common::string_utils::to_bool(&base.get_parameter("show-detectors", "false".to_string())).unwrap();
+        let myDetectionRange = utils::common::string_utils::to_double(&base.get_parameter("detectorRange", utils::common::to_string::to_string(&utils::options::options_cont::get_float("tls.delay_based.detector-range")))).unwrap();
+        let myTimeLossThreshold = utils::common::string_utils::to_double(&base.get_parameter("minTimeloss", "1.0".to_string())).unwrap();
+        let myFile = utils::common::file_helpers::check_for_relativity(&base.get_parameter("file", "NUL".to_string()), basePath);
+        let myFreq = utils::common::time::time2steps(utils::common::string_utils::to_double(&base.get_parameter("freq", "300".to_string())).unwrap());
+        let myVehicleTypes = base.get_parameter("vTypes", String::new());
+        let myExtendMaxDur = utils::common::string_utils::to_bool(&base.get_parameter("extendMaxDur", "false".to_string())).unwrap();
+        Self {
+            base,
+            myLaneDetectors: BTreeMap::new(),
+            myDetectionRange,
+            myTimeLossThreshold,
+            myShowDetectors,
+            myFile,
+            myFreq,
+            myVehicleTypes,
+            myExtendMaxDur,
+        }
     }
 
     /// C++: `void MSDelayBasedTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -100,7 +128,55 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSDelayBasedTrafficLightLogic::init")
+        self.base.base.init(nb);
+        debug_assert!(self.base.base.myLanes.len() > 0);
+        let myId = self.get_id().to_string();
+        let myProgramID = self.get_program_id().to_string();
+        // build the E2 detectors
+        for lanes in self.base.base.myLanes.iter() {
+            for &lane in lanes.iter() {
+                if utils::common::sumo_vehicle_class::no_vehicles(lane.get_permissions()) {
+                    // do not build detectors on green verges or sidewalks
+                    continue;
+                }
+                // Build the detectors and register them at the detector control
+                if !self.myLaneDetectors.contains_key(&lane) {
+                    let mut det: Ptr<MSE2Collector>;
+                    let customID = self.base.get_parameter(lane.get_id(), String::new());
+                    if customID != "" {
+                        let found = MSNet::get_instance().m().get_detector_control().get_typed_detectors(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR).get(&customID).copied().unwrap_or(Ptr::null());
+                        det = e2_from_detector_file_output(found);
+                        if det.is_null() {
+                            utils::write_errorf!("Unknown laneAreaDetector '%' given as custom detector for delay_based tlLogic '%', program '%.", customID, myId, myProgramID);
+                            continue;
+                        }
+                        det.m().set_visible(self.myShowDetectors);
+                    } else {
+                        // check whether the lane (or unamibiguous lane sequence) is long enough and avoid overlapping detectors
+                        let mut length = lane.get_length();
+                        let mut firstLane = lane;
+                        while length < self.myDetectionRange
+                            && firstLane.get_incoming_lanes().len() == 1
+                            && !firstLane.get_logical_predecessor_lane().is_null()
+                            && firstLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null()
+                        {
+                            firstLane = firstLane.get_logical_predecessor_lane();
+                            if firstLane.get_link_cont().len() > 1 {
+                                break;
+                            }
+                            length += firstLane.get_length();
+                        }
+                        // MIN2(length, myDetectionRange)
+                        length = if length < self.myDetectionRange { length } else { self.myDetectionRange };
+
+                        let id = format!("TLS{}_{}_E2CollectorOn_{}", myId, myProgramID, lane.get_id());
+                        det = nb.create_e2_detector(&id, DetectorUsage::DU_TL_CONTROL, lane, f64::MAX, lane.get_length(), length, utils::common::time::time2steps(1.0), 5.0 / 3.6, 10.0, String::new(), &self.myVehicleTypes, "", PersonMode::NONE as i32, self.myShowDetectors);
+                        MSNet::get_instance().m().get_detector_control().add(utils::xml::sumo_xml_definitions::SUMO_TAG_LANE_AREA_DETECTOR, Ptr::from_mut(&mut det.m().base2), &self.myFile, self.myFreq, 0).unwrap();
+                    }
+                    self.myLaneDetectors.insert(lane, det);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDelayBasedTrafficLightLogic::~MSDelayBasedTrafficLightLogic() noexcept` [virtual]
@@ -108,7 +184,7 @@ impl MSDelayBasedTrafficLightLogic {
     // MSDelayBasedTrafficLightLogic::~MSDelayBasedTrafficLightLogic() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDelayBasedTrafficLightLogic::~MSDelayBasedTrafficLightLogic")
+        // C++ body is empty
     }
 
     /// C++: `SUMOTime MSDelayBasedTrafficLightLogic::trySwitch()` [virtual]
@@ -172,7 +248,42 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port MSDelayBasedTrafficLightLogic::trySwitch")
+        // check if the actual phase should be prolonged
+        let currentPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
+        let actDuration = MSNet::get_instance().get_current_time_step() - currentPhase.myLastSwitch;
+        // shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs), read the static once MSGlobals is ported
+        let useMesoSim = false;
+        // flag whether to prolong or not
+        if currentPhase.isGreenPhase() && !useMesoSim {
+            let mut othersEmpty = true; // whether no vehicles are present on concurrent approaches
+            let mut proposedProlongation = self.propose_prolongation(actDuration, currentPhase.maxDuration, &mut othersEmpty);
+            // assure minimal duration
+            proposedProlongation = std::cmp::max(std::cmp::max(0, proposedProlongation), currentPhase.minDuration - actDuration);
+            if othersEmpty {
+                // prolong by one second if no vehicles on other approaches
+                proposedProlongation = std::cmp::max(proposedProlongation, utils::common::time::time2steps(1.0));
+            } else {
+                // vehicles are present on other approaches -> prolong no further than the max green time
+                proposedProlongation = std::cmp::min(proposedProlongation, std::cmp::max(0, currentPhase.maxDuration - actDuration));
+            }
+            if !self.myExtendMaxDur {
+                proposedProlongation = std::cmp::min(proposedProlongation, std::cmp::max(0, currentPhase.maxDuration - actDuration));
+            }
+            if proposedProlongation > 0 {
+                // check again after the prolonged period (must be positive...)
+                return proposedProlongation;
+            }
+        }
+        // Don't prolong... switch to the next phase
+        let prevStart = self.myPhases[self.myStep as usize].myLastSwitch;
+        self.myStep = (self.myStep + 1) % (self.myPhases.len() as i32);
+        let now = MSNet::get_instance().get_current_time_step();
+        self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+        let newPhase = self.myPhases[self.myStep as usize];
+        //stores the time the phase started
+        newPhase.m().myLastSwitch = MSNet::get_instance().get_current_time_step();
+        // set the next event
+        std::cmp::max(newPhase.minDuration, self.get_earliest(prevStart))
     }
 
     /// C++: `bool MSDelayBasedTrafficLightLogic::showDetectors() const` [const]
@@ -182,7 +293,7 @@ impl MSDelayBasedTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn show_detectors(&self) -> bool {
-        todo!("port MSDelayBasedTrafficLightLogic::showDetectors")
+        self.myShowDetectors
     }
 
     /// C++: `void MSDelayBasedTrafficLightLogic::setShowDetectors(bool)`
@@ -195,7 +306,10 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_show_detectors(&mut self, show: bool) {
-        todo!("port MSDelayBasedTrafficLightLogic::setShowDetectors")
+        self.myShowDetectors = show;
+        for item in self.myLaneDetectors.values() {
+            item.m().set_visible(self.myShowDetectors);
+        }
     }
 
     /// C++: `std::map<std::string, double> MSDelayBasedTrafficLightLogic::getDetectorStates() const` [const, virtual]
@@ -210,7 +324,11 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
-        todo!("port MSDelayBasedTrafficLightLogic::getDetectorStates")
+        let mut result: BTreeMap<String, f64> = BTreeMap::new();
+        for item in self.myLaneDetectors.values() {
+            result.insert(item.get_id().to_string(), item.get_current_vehicle_number() as f64);
+        }
+        result
     }
 
     /// C++: `double MSDelayBasedTrafficLightLogic::getDetectorState(const std::string) const` [const, virtual]
@@ -218,7 +336,14 @@ impl MSDelayBasedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_detector_state(&self, laneID: String) -> f64 {
-        todo!("port MSDelayBasedTrafficLightLogic::getDetectorState")
+        let mut result: f64 = 0.0;
+        for (lane, det) in self.myLaneDetectors.iter() {
+            if lane.get_id() == laneID.as_str() {
+                result = det.get_current_vehicle_number() as f64;
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `double MSDelayBasedTrafficLightLogic::getTLQueueLength(const std::string) const` [const, virtual]
@@ -226,7 +351,14 @@ impl MSDelayBasedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_tl_queue_length(&self, laneID: String) -> f64 {
-        todo!("port MSDelayBasedTrafficLightLogic::getTLQueueLength")
+        let mut result: f64 = 0.0;
+        for (lane, det) in self.myLaneDetectors.iter() {
+            if lane.get_id() == laneID.as_str() {
+                result = det.get_estimate_queue_length();
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `SUMOTime MSDelayBasedTrafficLightLogic::checkForWaitingTime()` [protected]
@@ -234,7 +366,8 @@ impl MSDelayBasedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn check_for_waiting_time(&mut self) -> SUMOTime {
-        todo!("port MSDelayBasedTrafficLightLogic::checkForWaitingTime")
+        // declared in MSDelayBasedTrafficLightLogic.h but never defined in C++, and trySwitch never calls it
+        unreachable!("MSDelayBasedTrafficLightLogic::checkForWaitingTime has no C++ definition")
     }
 
     /// C++: `SUMOTime MSDelayBasedTrafficLightLogic::proposeProlongation(const SUMOTime, const SUMOTime, bool &)` [protected]
@@ -312,7 +445,47 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn propose_prolongation(&mut self, actDuration: SUMOTime, maxDuration: SUMOTime, othersEmpty: &mut bool) -> SUMOTime {
-        todo!("port MSDelayBasedTrafficLightLogic::proposeProlongation")
+        let mut prolongation: SUMOTime = 0;
+        let state = self.get_current_phase_def().get_state().to_string();
+        let stateBytes = state.as_bytes();
+        // iterate over green lanes, eventually increase the proposed prolongationTime to the estimated passing time for each lane.
+        for i in 0..state.len() {
+            // this lane index corresponds to a non-green time
+            let c = stateBytes[i] as i32;
+            let igreen = c == utils::xml::sumo_xml_definitions::LINKSTATE_TL_GREEN_MAJOR || c == utils::xml::sumo_xml_definitions::LINKSTATE_TL_GREEN_MINOR;
+            for &lane in self.get_lanes_at(i as i32).iter() {
+                // no detector for this lane (e.g. noVehicles allowed): skip
+                let it = match self.myLaneDetectors.get(&lane) {
+                    Some(d) => *d,
+                    None => continue,
+                };
+                let vehInfos = it.get_current_vehicles();
+                if igreen {
+                    // green phase
+                    for &iv in vehInfos.iter() {
+                        if iv.accumulatedTimeLoss > self.myTimeLossThreshold && iv.distToDetectorEnd > 0.0 {
+                            let estimatedTimeToJunction = utils::common::time::time2steps(iv.distToDetectorEnd / lane.get_speed_limit());
+                            if actDuration + estimatedTimeToJunction <= maxDuration && self.get_latest() > 0 {
+                                // only prolong if vehicle has a chance to pass until max duration is reached
+                                prolongation = std::cmp::max(prolongation, estimatedTimeToJunction);
+                            }
+                        }
+                    }
+                } else {
+                    // non-green phase
+                    if vehInfos.len() > 0 {
+                        // here is a car on a non-green approach
+                        *othersEmpty = false;
+                        if actDuration >= self.get_current_phase_def().maxDuration {
+                            // don't prolong
+                            return 0;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        prolongation
     }
 
 }
