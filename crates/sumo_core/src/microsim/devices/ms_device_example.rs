@@ -1,6 +1,9 @@
-//! Port of microsim/devices/MSDevice_Example.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/devices/MSDevice_Example.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::to_double;
+use utils::common::to_string::{f64_to_string_default, to_string};
+use utils::options::options_cont::get_float;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_Example` (microsim/devices/MSDevice_Example.h)
@@ -40,7 +43,11 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Example::insertOptions")
+        oc.add_option_sub_topic("Example Device");
+        MSDevice::insert_default_assignment_options("example", "Example Device", oc, false);
+
+        oc.do_register("device.example.parameter", SumoOption::float(0.0));
+        oc.add_description("device.example.parameter", "Example Device", "An exemplary parameter which can be used by all instances of the example device");
     }
 
     /// C++: `void MSDevice_Example::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -83,7 +90,36 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_Example::buildVehicleDevices")
+        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "example", v, false) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
+        if MSDevice::equipped_by_default_assignment_options() {
+            // get custom vehicle parameter
+            let mut customParameter2 = -1.0;
+            if v.get_parameter().has_parameter("example") {
+                let value = v.get_parameter().get_parameter("example", "-1");
+                match to_double(&value) {
+                    Ok(d) => customParameter2 = d,
+                    Err(_) => utils::write_warningf!("Invalid value '%' for vehicle parameter 'example'", value),
+                }
+            } else {
+                println!("vehicle '{}' does not supply vehicle parameter 'example'. Using default of {}", v.get_id(), f64_to_string_default(customParameter2));
+            }
+            // get custom vType parameter
+            let mut customParameter3 = -1.0;
+            if v.get_vehicle_type().get_parameter().has_parameter("example") {
+                let value = v.get_vehicle_type().get_parameter().get_parameter("example", "-1");
+                match to_double(&value) {
+                    Ok(d) => customParameter3 = d,
+                    Err(_) => utils::write_warningf!("Invalid value '%' for vType parameter 'example'", value),
+                }
+            } else {
+                println!("vehicle '{}' does not supply vType parameter 'example'. Using default of {}", v.get_id(), f64_to_string_default(customParameter3));
+            }
+            let id = format!("example_{}", v.get_id());
+            let customValue1 = get_float("device.example.parameter");
+            // the device is owned by the vehicle's device list for the rest of the run, as in C++
+            let device: &mut MSDevice_Example = Box::leak(Box::new(MSDevice_Example::new(v, &id, customValue1, customParameter2, customParameter3)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_Example::cleanup()` [static]
@@ -94,7 +130,8 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_Example::cleanup")
+        // C++ cleanup has no global state to reset
+
     }
 
     /// C++: `void MSDevice_Example::~MSDevice_Example() noexcept` [virtual]
@@ -103,7 +140,8 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Example::~MSDevice_Example")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `bool MSDevice_Example::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -124,7 +162,9 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Example::notifyMove")
+        println!("device '{}' notifyMove: newSpeed={}", self.get_id(), f64_to_string_default(newSpeed));
+        // shortcut: the C++ isVehicle() branch needs a static_cast to SUMOVehicle and MSDevice_Tripinfo lookup via getDevice(typeid(...)), which takes an Unmapped std::type_info, so only the speed line is printed; upgrade when SUMOTrafficObject can be downcast and getDevice takes a device name
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_Example::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -136,7 +176,8 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Example::notifyEnter")
+        println!("device '{}' notifyEnter: reason={} currentEdge={}", self.get_id(), reason as i32, veh.get_edge().get_id());
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_Example::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -148,7 +189,8 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Example::notifyLeave")
+        println!("device '{}' notifyLeave: reason={} currentEdge={}", self.get_id(), reason as i32, veh.get_edge().get_id());
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_Example::deviceName() const` [const, virtual]
@@ -158,7 +200,7 @@ impl MSDevice_Example {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Example::deviceName")
+        "example".to_string()
     }
 
     /// C++: `std::string MSDevice_Example::getParameter(const std::string &) const` [const, virtual]
@@ -176,7 +218,16 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Example::getParameter")
+        if key == "customValue1" {
+            to_string(&self.myCustomValue1)
+        } else if key == "customValue2" {
+            to_string(&self.myCustomValue2)
+        } else if key == "meaningOfLife" {
+            "42".to_string()
+        } else {
+            // shortcut: C++ throws InvalidArgument; this virtual returns String, so the same message is raised as a panic
+            panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0)
+        }
     }
 
     /// C++: `void MSDevice_Example::setParameter(const std::string &, const std::string &)` [virtual]
@@ -197,7 +248,16 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_Example::setParameter")
+        // shortcut: C++ throws InvalidArgument; this virtual returns (), so the same messages are raised as panics
+        let doubleValue = match to_double(value) {
+            Ok(d) => d,
+            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())).0),
+        };
+        if key == "customValue1" {
+            self.myCustomValue1 = doubleValue;
+        } else {
+            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0);
+        }
     }
 
     /// C++: `void MSDevice_Example::generateOutput(OutputDevice *) const` [const, virtual]
@@ -213,7 +273,13 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_Example::generateOutput")
+        if !tripinfoOut.is_null() {
+            let out = tripinfoOut.m();
+            out.open_tag("example_device");
+            out.write_attr("customValue1", to_string(&self.myCustomValue1).as_str());
+            out.write_attr("customValue2", to_string(&self.myCustomValue2).as_str());
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSDevice_Example::MSDevice_Example(SUMOVehicle &, const std::string &, double, double, double)` [private]
@@ -228,7 +294,13 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, customValue1: f64, customValue2: f64, customValue3: f64) -> Self {
-        todo!("port MSDevice_Example::MSDevice_Example")
+        println!("initialized device '{}' with myCustomValue1={}, myCustomValue2={}, myCustomValue3={}", id, f64_to_string_default(customValue1), f64_to_string_default(customValue2), f64_to_string_default(customValue3));
+        MSDevice_Example {
+            base: MSVehicleDevice::new(holder, id),
+            myCustomValue1: customValue1,
+            myCustomValue2: customValue2,
+            myCustomValue3: customValue3,
+        }
     }
 
     /// C++: `void MSDevice_Example::MSDevice_Example(const MSDevice_Example &)` [private]
@@ -236,7 +308,8 @@ impl MSDevice_Example {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Example) -> Self {
-        todo!("port MSDevice_Example::MSDevice_Example")
+        // the C++ copy constructor is private and has no definition, so it is never called
+        unreachable!("MSDevice_Example copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice_Example & MSDevice_Example::operator=(const MSDevice_Example &)` [private]
@@ -244,7 +317,8 @@ impl MSDevice_Example {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Example) -> &mut MSDevice_Example {
-        todo!("port MSDevice_Example::operator=")
+        // the C++ assignment operator is private and has no definition, so it is never called
+        unreachable!("MSDevice_Example assignment operator is private and undefined in C++")
     }
 
 }
