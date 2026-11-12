@@ -293,7 +293,7 @@ impl NWWriter_SUMO {
         if !oc.get_bool("no-internal-links").unwrap() {
             let mut hadAny = false;
             for node in nb.myNodeCont.myNodes.values() {
-                hadAny |= write_internal_edges(into, &nb.myEdgeCont, node.m());
+                hadAny |= Self::write_internal_edges(into, &nb.myEdgeCont, node.m());
             }
             if hadAny {
                 into.lf();
@@ -303,16 +303,16 @@ impl NWWriter_SUMO {
         // write edges with lanes and connected edges
         let noNames = !oc.get_bool("output.street-names").unwrap();
         for edge in nb.myEdgeCont.myEdges.values() {
-            write_edge(into, edge.m(), noNames, defaultSpread);
+            Self::write_edge(into, edge.m(), noNames, defaultSpread);
         }
         into.lf();
 
         // write tls logics
-        write_traffic_lights(into, &nb.myTLLCont, NWWriter_SUMO_ConnectionStyle::SUMONET);
+        Self::write_traffic_lights(into, &nb.myTLLCont, NWWriter_SUMO_ConnectionStyle::SUMONET);
 
         // write the nodes (junctions)
         for node in nb.myNodeCont.myNodes.values() {
-            write_junction(into, node.m());
+            Self::write_junction(into, node.m());
         }
         into.lf();
         let includeInternal = !oc.get_bool("no-internal-links").unwrap();
@@ -320,7 +320,7 @@ impl NWWriter_SUMO {
             // ... internal nodes if not unwanted
             let mut hadAny = false;
             for node in nb.myNodeCont.myNodes.values() {
-                hadAny |= write_internal_nodes(into, node.m());
+                hadAny |= Self::write_internal_nodes(into, node.m());
             }
             if hadAny {
                 into.lf();
@@ -334,7 +334,7 @@ impl NWWriter_SUMO {
             let connections = from_e.get_connections();
             numConnections += connections.len() as i32;
             for con in connections.iter() {
-                write_connection(into, from_e, con, includeInternal, NWWriter_SUMO_ConnectionStyle::SUMONET, false, false);
+                Self::write_connection(into, from_e, con, includeInternal, NWWriter_SUMO_ConnectionStyle::SUMONET, false, false);
             }
         }
         if numConnections > 0 {
@@ -344,7 +344,7 @@ impl NWWriter_SUMO {
             // ... internal successors if not unwanted
             let mut hadAny = false;
             for node in nb.myNodeCont.myNodes.values() {
-                hadAny |= write_internal_connections(into, node.m());
+                hadAny |= Self::write_internal_connections(into, node.m());
             }
             if hadAny {
                 into.lf();
@@ -355,7 +355,7 @@ impl NWWriter_SUMO {
             // write connections from pedestrian crossings
             let crossings = n.get_crossings();
             for c in crossings.iter() {
-                write_internal_connection(into, &c.id, &c.nextWalkingArea, 0, 0, "", LinkDirection::STRAIGHT, &c.tlID, c.tlLinkIndex2, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
+                Self::write_internal_connection(into, &c.id, &c.nextWalkingArea, 0, 0, "", LinkDirection::STRAIGHT, &c.tlID, c.tlLinkIndex2, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
             }
             // write connections from pedestrian walking areas
             for wa in n.get_walking_areas().iter() {
@@ -380,28 +380,28 @@ impl NWWriter_SUMO {
                 let mut laneIndex: i32 = 0;
                 for sw in wa.nextSidewalks.iter() {
                     NBHelpers::interpret_lane_id(sw, &mut edgeID, &mut laneIndex);
-                    write_internal_connection(into, &wa.id, &edgeID, 0, laneIndex, "", LinkDirection::STRAIGHT, "", -1, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
+                    Self::write_internal_connection(into, &wa.id, &edgeID, 0, laneIndex, "", LinkDirection::STRAIGHT, "", -1, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
                 }
                 for sw in wa.prevSidewalks.iter() {
                     NBHelpers::interpret_lane_id(sw, &mut edgeID, &mut laneIndex);
-                    write_internal_connection(into, &edgeID, &wa.id, laneIndex, 0, "", LinkDirection::STRAIGHT, "", -1, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
+                    Self::write_internal_connection(into, &edgeID, &wa.id, laneIndex, 0, "", LinkDirection::STRAIGHT, "", -1, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
                 }
             }
         }
 
         // write loaded prohibitions
         for node in nb.myNodeCont.myNodes.values() {
-            write_prohibitions(into, node.m().get_prohibitions(), &nb.myEdgeCont);
+            Self::write_prohibitions(into, node.m().get_prohibitions(), &nb.myEdgeCont);
         }
 
         // write roundabout information
-        write_roundabouts(into, &nb.myEdgeCont.get_roundabouts(), &nb.myEdgeCont);
+        Self::write_roundabouts(into, &nb.myEdgeCont.get_roundabouts(), &nb.myEdgeCont);
 
         // write the districts
         if nb.myDistrictCont.myDistricts.len() != 0 && oc.is_default("taz-output") {
             utils::common::msg_handler::write_warning("Embedding TAZ-data inside the network is deprecated. Use option --taz-output instead");
             for d in nb.myDistrictCont.myDistricts.values() {
-                write_district(into, d.m());
+                Self::write_district(into, d.m());
             }
             into.lf();
         }
@@ -497,7 +497,7 @@ impl NWWriter_SUMO {
             into.write_optional_attr(SUMO_ATTR_LENGTH, &c.customLength, c.customLength == NBEDGE_UNSPECIFIED_LOADED_LENGTH);
             let hasShape = c.customShape.len() != 0;
             let customShape = c.customShape.clone();
-            GeoConvHelper::with_final(|g| write_shape(into, g, customShape, SUMO_ATTR_SHAPE, useGeo, geoAccuracy, hasShape));
+            GeoConvHelper::with_final(|g| Self::write_shape(into, g, customShape, SUMO_ATTR_SHAPE, useGeo, geoAccuracy, hasShape));
             into.write_optional_attr(SUMO_ATTR_UNCONTROLLED, &c.uncontrolled, !c.uncontrolled);
             into.write_optional_attr(SUMO_ATTR_INDIRECT, &c.indirectLeft, !c.indirectLeft);
             into.write_optional_attr(SUMO_ATTR_TYPE, c.edgeType.as_str(), c.edgeType == "");
@@ -581,8 +581,8 @@ impl NWWriter_SUMO {
                     continue;
                 }
                 into.open_tag_id(SUMO_TAG_PROHIBITION);
-                into.write_attr(SUMO_ATTR_PROHIBITOR, prohibition_connection(prohibitor).as_str());
-                into.write_attr(SUMO_ATTR_PROHIBITED, prohibition_connection(prohibited).as_str());
+                into.write_attr(SUMO_ATTR_PROHIBITOR, Self::prohibition_connection(prohibitor).as_str());
+                into.write_attr(SUMO_ATTR_PROHIBITED, Self::prohibition_connection(prohibited).as_str());
                 into.close_tag("");
             }
         }
@@ -609,7 +609,7 @@ impl NWWriter_SUMO {
         let logics = tllCont.get_computed();
         for logic in logics.iter() {
             let def = tllCont.get_definition(logic.base.get_id(), logic.get_program_id());
-            write_traffic_light(into, *logic, def, style);
+            Self::write_traffic_light(into, *logic, def, style);
             // only raise warnings on write instead of on compute (to avoid cluttering netedit)
             def.m().final_checks();
         }
@@ -672,7 +672,7 @@ impl NWWriter_SUMO {
         into.write_attr(SUMO_ATTR_TYPE, &logic.get_type());
         into.write_attr(SUMO_ATTR_PROGRAMID, logic.get_program_id());
         let offset = logic.get_offset();
-        let offsetStr = if offset == SUMOTIME_MAX { "begin".to_string() } else { write_sumo_time(offset) };
+        let offsetStr = if offset == SUMOTIME_MAX { "begin".to_string() } else { Self::write_sumo_time(offset) };
         into.write_attr(SUMO_ATTR_OFFSET, offsetStr.as_str());
         if style == NWWriter_SUMO_ConnectionStyle::PLAIN_NAVTEQ {
             let nodeIDs: Vec<String> = def.get_nodes().iter().map(|n| n.get_id().to_string()).collect();
@@ -692,20 +692,20 @@ impl NWWriter_SUMO {
         let varPhaseLength = logic.get_type() != TrafficLightType::STATIC;
         for phase in logic.get_phases().iter() {
             into.open_tag_id(SUMO_TAG_PHASE);
-            into.write_attr(SUMO_ATTR_DURATION, write_sumo_time(phase.duration).as_str());
+            into.write_attr(SUMO_ATTR_DURATION, Self::write_sumo_time(phase.duration).as_str());
             if phase.duration < time2steps(10.0) {
                 into.write_padding(" ");
             }
             into.write_attr(SUMO_ATTR_STATE, phase.state.as_str());
             let unspec = NBTrafficLightDefinition_UNSPECIFIED_DURATION;
-            into.write_optional_attr(SUMO_ATTR_MINDURATION, &write_sumo_time(phase.minDur), !varPhaseLength || phase.minDur == unspec);
-            into.write_optional_attr(SUMO_ATTR_MAXDURATION, &write_sumo_time(phase.maxDur), !varPhaseLength || phase.maxDur == unspec);
-            into.write_optional_attr(SUMO_ATTR_EARLIEST_END, &write_sumo_time(phase.earliestEnd), !varPhaseLength || phase.earliestEnd == unspec);
-            into.write_optional_attr(SUMO_ATTR_LATEST_END, &write_sumo_time(phase.latestEnd), !varPhaseLength || phase.latestEnd == unspec);
+            into.write_optional_attr(SUMO_ATTR_MINDURATION, &Self::write_sumo_time(phase.minDur), !varPhaseLength || phase.minDur == unspec);
+            into.write_optional_attr(SUMO_ATTR_MAXDURATION, &Self::write_sumo_time(phase.maxDur), !varPhaseLength || phase.maxDur == unspec);
+            into.write_optional_attr(SUMO_ATTR_EARLIEST_END, &Self::write_sumo_time(phase.earliestEnd), !varPhaseLength || phase.earliestEnd == unspec);
+            into.write_optional_attr(SUMO_ATTR_LATEST_END, &Self::write_sumo_time(phase.latestEnd), !varPhaseLength || phase.latestEnd == unspec);
             // NEMA attributes
-            into.write_optional_attr(SUMO_ATTR_VEHICLEEXTENSION, &write_sumo_time(phase.vehExt), !varPhaseLength || phase.vehExt == unspec);
-            into.write_optional_attr(SUMO_ATTR_YELLOW, &write_sumo_time(phase.yellow), !varPhaseLength || phase.yellow == unspec);
-            into.write_optional_attr(SUMO_ATTR_RED, &write_sumo_time(phase.red), !varPhaseLength || phase.red == unspec);
+            into.write_optional_attr(SUMO_ATTR_VEHICLEEXTENSION, &Self::write_sumo_time(phase.vehExt), !varPhaseLength || phase.vehExt == unspec);
+            into.write_optional_attr(SUMO_ATTR_YELLOW, &Self::write_sumo_time(phase.yellow), !varPhaseLength || phase.yellow == unspec);
+            into.write_optional_attr(SUMO_ATTR_RED, &Self::write_sumo_time(phase.red), !varPhaseLength || phase.red == unspec);
 
             if phase.name != "" {
                 into.write_attr_escaped(SUMO_ATTR_NAME, &phase.name, true);
@@ -761,7 +761,7 @@ impl NWWriter_SUMO {
         edgeIDs.sort();
         //  write
         for i in edgeIDs.iter() {
-            write_roundabout(into, i, ec);
+            Self::write_roundabout(into, i, ec);
         }
         if roundabouts.len() != 0 {
             into.lf();
@@ -1069,7 +1069,7 @@ impl NWWriter_SUMO {
         for e in incoming.iter() {
             for c in e.get_connections().iter() {
                 let mut oppositeLength = 0.0;
-                let op = get_opposite_internal_id(ec, *e, c, &mut oppositeLength);
+                let op = Self::get_opposite_internal_id(ec, *e, c, &mut oppositeLength);
                 oppositeLaneID.insert(c.get_internal_lane_id(), op.clone());
                 if op != "" {
                     oppositeLengths.insert(c.id.clone(), oppositeLength);
@@ -1111,7 +1111,7 @@ impl NWWriter_SUMO {
                         }
                         bidiLength = -1.0;
                         if !e.get_bidi_edge().is_null() && !k.toEdge.get_bidi_edge().is_null() && *e != k.toEdge.get_turn_destination(true) {
-                            let bidiEdge = get_internal_bidi(*e, k, &mut bidiLength);
+                            let bidiEdge = Self::get_internal_bidi(*e, k, &mut bidiLength);
                             if bidiEdge != "" {
                                 into.write_attr(SUMO_ATTR_BIDI, bidiEdge.as_str());
                             }
@@ -1127,7 +1127,7 @@ impl NWWriter_SUMO {
                     let width = e.get_internal_lane_width(n, k, successor, false);
                     let length = if bidiLength > 0.0 { bidiLength } else { k.length };
                     let opp = oppositeLaneID.get(&k.get_internal_lane_id()).cloned().unwrap_or_default();
-                    write_lane(
+                    Self::write_lane(
                         into,
                         &k.get_internal_lane_id(),
                         k.vmax,
@@ -1181,7 +1181,7 @@ impl NWWriter_SUMO {
                         let successor = &k.toEdge.get_lanes()[k.toLane as usize];
                         let permissions = if k.permissions != SVC_UNSPECIFIED { k.permissions } else { successor.permissions & e.get_permissions(k.fromLane) };
                         let width = e.get_internal_lane_width(n, k, successor, true);
-                        write_lane(
+                        Self::write_lane(
                             into,
                             &k.get_internal_via_lane_id(),
                             k.vmax,
@@ -1215,7 +1215,7 @@ impl NWWriter_SUMO {
             into.open_tag_id(SUMO_TAG_EDGE).write_attr(SUMO_ATTR_ID, c.id.as_str()).write_attr(SUMO_ATTR_FUNCTION, &SumoXMLEdgeFunc::CROSSING);
             let edgeIDs: Vec<String> = c.edges.iter().map(|e| e.get_id().to_string()).collect();
             into.write_attr(SUMO_ATTR_CROSSING_EDGES, &edgeIDs);
-            write_lane(
+            Self::write_lane(
                 into,
                 &format!("{}_0", c.id),
                 crossingSpeed,
@@ -1244,7 +1244,7 @@ impl NWWriter_SUMO {
         let walkingareaSpeed = utils::options::options_cont::get_float("default.walkingarea-speed");
         for wa in n.get_walking_areas().iter() {
             into.open_tag_id(SUMO_TAG_EDGE).write_attr(SUMO_ATTR_ID, wa.id.as_str()).write_attr(SUMO_ATTR_FUNCTION, &SumoXMLEdgeFunc::WALKINGAREA);
-            write_lane(
+            Self::write_lane(
                 into,
                 &format!("{}_0", wa.id),
                 walkingareaSpeed,
@@ -1428,7 +1428,7 @@ impl NWWriter_SUMO {
             into.write_attr(SUMO_ATTR_SHAPE, e.get_geometry());
         }
         if e.get_edge_stop_offset().is_defined() {
-            write_stop_offsets(into, e.get_edge_stop_offset());
+            Self::write_stop_offsets(into, e.get_edge_stop_offset());
         }
         if !e.get_bidi_edge().is_null() {
             into.write_attr(SUMO_ATTR_BIDI, e.get_bidi_edge().get_id());
@@ -1443,14 +1443,14 @@ impl NWWriter_SUMO {
         if !e.get_bidi_edge().is_null() {
             length = (length + e.get_bidi_edge().get_final_length()) / 2.0;
         }
-        let startOffset = if e.is_bidi_rail() { e.get_turn_destination(true).get_end_offset() } else { 0.0 };
+        let startOffset = if e.is_bidi_rail(false) { e.get_turn_destination(true).get_end_offset() } else { 0.0 };
         for i in 0..lanes.len() {
             let l = &lanes[i];
             let mut stopOffset = StopOffset::default();
             if l.laneStopOffset != *e.get_edge_stop_offset() {
                 stopOffset = l.laneStopOffset;
             }
-            write_lane(
+            Self::write_lane(
                 into,
                 &e.get_lane_id(i as i32),
                 l.speed,
@@ -1603,7 +1603,7 @@ impl NWWriter_SUMO {
             into.write_attr(SUMO_ATTR_CHANGE_RIGHT, get_vehicle_class_names(changeRight, false).as_str());
         }
         if stopOffset.is_defined() {
-            write_stop_offsets(into, stopOffset);
+            Self::write_stop_offsets(into, stopOffset);
         }
         if outlineShape.len() != 0 {
             into.write_attr(SUMO_ATTR_OUTLINESHAPE, outlineShape);
@@ -1939,12 +1939,12 @@ impl NWWriter_SUMO {
                         tlID = c.tlID.clone();
                     }
                     let via = c.get_internal_via_lane_id();
-                    write_internal_connection(into, &c.id, c.toEdge.get_id(), c.internalLaneIndex, c.toLane, &via, dir, &tlID, linkIndex2, false, c.visibility);
+                    Self::write_internal_connection(into, &c.id, c.toEdge.get_id(), c.internalLaneIndex, c.toLane, &via, dir, &tlID, linkIndex2, false, c.visibility);
                     let minor = n.brake_for_crossing_on_exit(c.toEdge, dir, c.indirectLeft);
-                    write_internal_connection(into, &c.viaID, c.toEdge.get_id(), c.internalViaLaneIndex, c.toLane, "", dir, "", NBCONNECTION_INVALID_TL_INDEX, minor, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
+                    Self::write_internal_connection(into, &c.viaID, c.toEdge.get_id(), c.internalViaLaneIndex, c.toLane, "", dir, "", NBCONNECTION_INVALID_TL_INDEX, minor, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
                 } else {
                     // no internal split
-                    write_internal_connection(into, &c.id, c.toEdge.get_id(), c.internalLaneIndex, c.toLane, "", dir, "", NBCONNECTION_INVALID_TL_INDEX, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
+                    Self::write_internal_connection(into, &c.id, c.toEdge.get_id(), c.internalLaneIndex, c.toLane, "", dir, "", NBCONNECTION_INVALID_TL_INDEX, false, NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE);
                 }
                 ret = true;
             }
