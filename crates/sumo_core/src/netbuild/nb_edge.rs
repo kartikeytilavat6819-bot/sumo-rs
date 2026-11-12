@@ -6244,7 +6244,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, permissions: SVCPermissions, lane: i32) {
-        todo!("port NBEdge::setPermissions")
+        if lane < 0 {
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_permissions(permissions, i);
+            }
+        } else {
+            debug_assert!((lane as usize) < self.myLanes.len());
+            self.myLanes[lane as usize].permissions = permissions;
+        }
     }
 
     /// C++: `void NBEdge::setPreferredVehicleClass(SVCPermissions, int)`
@@ -6263,7 +6271,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_preferred_vehicle_class(&mut self, permissions: SVCPermissions, lane: i32) {
-        todo!("port NBEdge::setPreferredVehicleClass")
+        if lane < 0 {
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_preferred_vehicle_class(permissions, i);
+            }
+        } else {
+            debug_assert!((lane as usize) < self.myLanes.len());
+            self.myLanes[lane as usize].preferred = permissions;
+        }
     }
 
     /// C++: `void NBEdge::setPermittedChanging(int, SVCPermissions, SVCPermissions)`
@@ -6277,7 +6293,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_permitted_changing(&mut self, lane: i32, changeLeft: SVCPermissions, changeRight: SVCPermissions) {
-        todo!("port NBEdge::setPermittedChanging")
+        debug_assert!(lane >= 0);
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].changeLeft = changeLeft;
+        self.myLanes[lane as usize].changeRight = changeRight;
     }
 
     /// C++: `void NBEdge::allowVehicleClass(int, SUMOVehicleClass)`
@@ -6295,7 +6314,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn allow_vehicle_class(&mut self, lane: i32, vclass: SUMOVehicleClass) {
-        todo!("port NBEdge::allowVehicleClass")
+        if lane < 0 {
+            // all lanes are meant...
+            for i in 0..self.myLanes.len() as i32 {
+                self.allow_vehicle_class(i, vclass);
+            }
+        } else {
+            debug_assert!((lane as usize) < self.myLanes.len());
+            self.myLanes[lane as usize].permissions |= vclass;
+        }
     }
 
     /// C++: `void NBEdge::disallowVehicleClass(int, SUMOVehicleClass)`
@@ -6313,7 +6340,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn disallow_vehicle_class(&mut self, lane: i32, vclass: SUMOVehicleClass) {
-        todo!("port NBEdge::disallowVehicleClass")
+        if lane < 0 {
+            // all lanes are meant...
+            for i in 0..self.myLanes.len() as i32 {
+                self.disallow_vehicle_class(i, vclass);
+            }
+        } else {
+            debug_assert!((lane as usize) < self.myLanes.len());
+            self.myLanes[lane as usize].permissions &= !vclass;
+        }
     }
 
     /// C++: `void NBEdge::preferVehicleClass(int, SVCPermissions)`
@@ -6332,7 +6367,16 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn prefer_vehicle_class(&mut self, lane: i32, vclasses: SVCPermissions) {
-        todo!("port NBEdge::preferVehicleClass")
+        if lane < 0 {
+            // all lanes are meant...
+            for i in 0..self.myLanes.len() as i32 {
+                self.prefer_vehicle_class(i, vclasses);
+            }
+        } else {
+            debug_assert!((lane as usize) < self.myLanes.len());
+            self.myLanes[lane as usize].permissions |= vclasses;
+            self.myLanes[lane as usize].preferred |= vclasses;
+        }
     }
 
     /// C++: `void NBEdge::setLaneWidth(int, double)`
@@ -6353,7 +6397,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_width(&mut self, lane: i32, width: f64) {
-        todo!("port NBEdge::setLaneWidth")
+        if lane < 0 {
+            // all lanes are meant...
+            self.myLaneWidth = width;
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_lane_width(i, width);
+            }
+            return;
+        }
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].width = width;
     }
 
     /// C++: `void NBEdge::setLaneType(int, const std::string &)`
@@ -6372,7 +6426,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_type(&mut self, lane: i32, type_: &str) {
-        todo!("port NBEdge::setLaneType")
+        if lane < 0 {
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_lane_type(i, type_);
+            }
+            return;
+        }
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].type_ = type_.to_string();
     }
 
     /// C++: `void NBEdge::setEndOffset(int, double)`
@@ -6393,7 +6455,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_end_offset(&mut self, lane: i32, offset: f64) {
-        todo!("port NBEdge::setEndOffset")
+        if lane < 0 {
+            // all lanes are meant...
+            self.myEndOffset = offset;
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_end_offset(i, offset);
+            }
+            return;
+        }
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].endOffset = offset;
     }
 
     /// C++: `void NBEdge::setSpeed(int, double)`
@@ -6414,7 +6486,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(&mut self, lane: i32, speed: f64) {
-        todo!("port NBEdge::setSpeed")
+        if lane < 0 {
+            // all lanes are meant...
+            self.mySpeed = speed;
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_speed(i, speed);
+            }
+            return;
+        }
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].speed = speed;
     }
 
     /// C++: `void NBEdge::setFriction(int, double)`
@@ -6435,7 +6517,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_friction(&mut self, lane: i32, friction: f64) {
-        todo!("port NBEdge::setFriction")
+        if lane < 0 {
+            // all lanes are meant...
+            self.myFriction = friction;
+            for i in 0..self.myLanes.len() as i32 {
+                // ... do it for each lane
+                self.set_friction(i, friction);
+            }
+            return;
+        }
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].friction = friction;
     }
 
     /// C++: `bool NBEdge::setEdgeStopOffset(int, const StopOffset &, bool)`
@@ -6470,7 +6562,31 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_edge_stop_offset(&mut self, lane: i32, offset: &StopOffset, overwrite: bool) -> bool {
-        todo!("port NBEdge::setEdgeStopOffset")
+        if lane < 0 {
+            if !overwrite && self.myEdgeStopOffset.is_defined() {
+                return false;
+            }
+            // all lanes are meant...
+            if offset.get_offset() < 0.0 {
+                // Edge length unknown at parsing time, thus check here.
+                write_warningf!("Ignoring invalid stopOffset for edge '%' (negative offset).", self.get_id());
+                return false;
+            } else {
+                self.myEdgeStopOffset = *offset;
+            }
+        } else if (lane as usize) < self.myLanes.len() {
+            if !self.myLanes[lane as usize].laneStopOffset.is_defined() || overwrite {
+                if offset.get_offset() < 0.0 {
+                    // Edge length unknown at parsing time, thus check here.
+                    write_warningf!("Ignoring invalid stopOffset for lane '%' (negative offset).", self.get_lane_id(lane));
+                } else {
+                    self.myLanes[lane as usize].laneStopOffset = *offset;
+                }
+            }
+        } else {
+            write_warningf!("Ignoring invalid stopOffset for lane '%' (invalid lane index).", lane);
+        }
+        true
     }
 
     /// C++: `void NBEdge::setAcceleration(int, bool)`
@@ -6483,7 +6599,9 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_acceleration(&mut self, lane: i32, accelRamp: bool) {
-        todo!("port NBEdge::setAcceleration")
+        debug_assert!(lane >= 0);
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].accelRamp = accelRamp;
     }
 
     /// C++: `void NBEdge::markOffRamp(bool)`
@@ -6493,7 +6611,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn mark_off_ramp(&mut self, isOffRamp: bool) {
-        todo!("port NBEdge::markOffRamp")
+        self.myIsOffRamp = isOffRamp;
     }
 
     /// C++: `bool NBEdge::isOffRamp() const` [const]
@@ -6502,7 +6620,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_off_ramp(&self) -> bool {
-        todo!("port NBEdge::isOffRamp")
+        self.myIsOffRamp
     }
 
     /// C++: `void NBEdge::setLaneShape(int, const PositionVector &)`
@@ -6515,7 +6633,9 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_shape(&mut self, lane: i32, shape: &PositionVector) {
-        todo!("port NBEdge::setLaneShape")
+        debug_assert!(lane >= 0);
+        debug_assert!((lane as usize) < self.myLanes.len());
+        self.myLanes[lane as usize].customShape = shape.clone();
     }
 
     /// C++: `SVCPermissions NBEdge::getPermissions(int) const` [const]
@@ -7145,7 +7265,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_node_border(&self, node: Ptr<NBNode>) -> &PositionVector {
-        todo!("port NBEdge::getNodeBorder")
+        if node == self.myFrom {
+            &self.myFromBorder
+        } else {
+            debug_assert!(node == self.myTo);
+            &self.myToBorder
+        }
     }
 
     /// C++: `void NBEdge::resetNodeBorder(const NBNode *)`
@@ -7160,7 +7285,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reset_node_border(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBEdge::resetNodeBorder")
+        if node == self.myFrom {
+            self.myFromBorder.clear();
+        } else {
+            debug_assert!(node == self.myTo);
+            self.myToBorder.clear();
+        }
     }
 
     /// C++: `bool NBEdge::isBidiRail(bool) const` [const]
@@ -7177,7 +7307,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_rail(&self, ignoreSpread: bool) -> bool {
-        todo!("port NBEdge::isBidiRail")
+        utils::common::sumo_vehicle_class::is_railway(self.get_permissions(-1))
+            && (ignoreSpread || self.myLaneSpreadFunction == LaneSpreadFunction::CENTER)
+            && !self.myPossibleTurnDestination.is_null()
+            && self.myPossibleTurnDestination.myPossibleTurnDestination == Ptr::new(self)
+            && (ignoreSpread || self.myPossibleTurnDestination.get_lane_spread_function() == LaneSpreadFunction::CENTER)
+            && utils::common::sumo_vehicle_class::is_railway(self.myPossibleTurnDestination.get_permissions(-1))
+            && self.myPossibleTurnDestination.get_geometry().reverse() == *self.get_geometry()
     }
 
     /// C++: `bool NBEdge::isBidiEdge(bool) const` [const]
@@ -7200,7 +7336,18 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_edge(&self, checkPotential: bool) -> bool {
-        todo!("port NBEdge::isBidiEdge")
+        let pt = self.myPossibleTurnDestination;
+        !pt.is_null()
+            && pt.myPossibleTurnDestination == Ptr::new(self)
+            && (self.myIsBidi || pt.myIsBidi || checkPotential)
+            && pt.get_to_node() == self.get_from_node()
+            && pt.get_lane_spread_function() == self.myLaneSpreadFunction
+            // geometry check a) full overlap geometry
+            && ((self.myLaneSpreadFunction == LaneSpreadFunction::CENTER
+                && (pt.get_geometry().reverse() == *self.get_geometry()
+                    || (checkPotential && self.get_geometry().len() == 2 && pt.get_geometry().len() == 2)))
+                // b) TWLT (Two-Way-Left-Turn-lane)
+                || (self.myLanes.last().unwrap().shape.reverse().almost_same(&pt.myLanes.last().unwrap().shape, utils::geom::POSITION_EPS)))
     }
 
     /// C++: `bool NBEdge::isRailDeadEnd() const` [const]
@@ -7220,7 +7367,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_rail_dead_end(&self) -> bool {
-        todo!("port NBEdge::isRailDeadEnd")
+        if !utils::common::sumo_vehicle_class::is_railway(self.get_permissions(-1)) {
+            return false;
+        }
+        for out in self.myTo.get_outgoing_edges() {
+            if utils::common::sumo_vehicle_class::is_railway(out.get_permissions(-1)) && *out != self.get_turn_destination(true) {
+                return true;
+            }
+        }
+        true
     }
 
     /// C++: `void NBEdge::debugPrintConnections(bool, bool) const` [const]
@@ -7244,7 +7399,20 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn debug_print_connections(&self, outgoing: bool, incoming: bool) {
-        todo!("port NBEdge::debugPrintConnections")
+        if outgoing {
+            for c in &self.myConnections {
+                print!(" {}_{}->{}_{}\n", self.get_id(), c.fromLane, c.toEdge.get_id(), c.toLane);
+            }
+        }
+        if incoming {
+            for inc in self.myFrom.get_incoming_edges() {
+                for c in &inc.myConnections {
+                    if c.toEdge == Ptr::new(self) {
+                        print!(" {}_{}->{}_{}\n", inc.get_id(), c.fromLane, c.toEdge.get_id(), c.toLane);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `double NBEdge::firstIntersection(const PositionVector &, const PositionVector &, double, double, const std::string &, bool)` [static]
@@ -7426,7 +7594,11 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<NBEdge> {
-        todo!("port NBEdge::getBidiEdge")
+        if self.is_bidi_rail(false) || self.is_bidi_edge(false) {
+            self.myPossibleTurnDestination
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `const EdgeVector & NBEdge::getSuccessors(SUMOVehicleClass) const` [const]
@@ -7449,7 +7621,19 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &EdgeVector {
-        todo!("port NBEdge::getSuccessors")
+        // mySuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
+        let this = Ptr::new(self);
+        this.m().mySuccessors.clear();
+        for con in &self.myConnections {
+            if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
+                && (vClass == utils::common::sumo_vehicle_class::SVC_IGNORING
+                    || (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) != 0)
+                && !self.mySuccessors.contains(&con.toEdge)
+            {
+                this.m().mySuccessors.push(con.toEdge);
+            }
+        }
+        &self.mySuccessors
     }
 
     /// C++: `const ConstRouterEdgePairVector & NBEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -7477,7 +7661,27 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        todo!("port NBEdge::getViaSuccessors")
+        // myViaSuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
+        let this = Ptr::new(self);
+        this.m().myViaSuccessors.clear();
+        for con in &self.myConnections {
+            // NBEdge* -> NBRouterEdge* is the base3 subobject; Connection* -> NBRouterEdge* is base2
+            let to_router: Ptr<NBRouterEdge> = if con.toEdge.is_null() { Ptr::null() } else { Ptr::new(&con.toEdge.base3) };
+            let mut pair: (Ptr<NBRouterEdge>, Ptr<NBRouterEdge>) = (to_router, Ptr::null());
+            // special case for Persons in Netedit
+            if vClass == utils::common::sumo_vehicle_class::SVC_PEDESTRIAN {
+                this.m().myViaSuccessors.push(pair); // Pedestrians have complete freedom of movement in all successors
+            } else if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
+                && (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) == vClass
+            {
+                // ignore duplicates
+                if con.get_length() > 0.0 {
+                    pair.1 = Ptr::new(&con.base2);
+                }
+                this.m().myViaSuccessors.push(pair);
+            }
+        }
+        &self.myViaSuccessors
     }
 
     /// C++: `const std::string & NBEdge::getID() const` [const, virtual]
@@ -7486,7 +7690,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port NBEdge::getID")
+        self.base.get_id()
     }
 
     /// C++: `bool NBEdge::joinLanes(SVCPermissions)`
