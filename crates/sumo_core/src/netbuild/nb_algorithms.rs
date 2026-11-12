@@ -1394,7 +1394,17 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     // }
     #[allow(unused_variables)]
     pub fn new(node: Ptr<NBNode>, ordering: &EdgeVector) -> Self {
-        todo!("port crossing_by_junction_angle_sorter::crossing_by_junction_angle_sorter")
+        // reorder based on getAngleAtNodeToCenter
+        let mut myOrdering: EdgeVector = ordering.clone();
+        let centroid_sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(node);
+        sort_by_less(&mut myOrdering, |a, b| centroid_sorter.call_op(*a, *b));
+        // let the first edge remain the first
+        let mid = match ordering.first() {
+            Some(front) => myOrdering.iter().position(|e| e == front).unwrap_or(myOrdering.len()),
+            None => myOrdering.len(),
+        };
+        myOrdering.rotate_left(mid);
+        Self { myOrdering }
     }
 
     /// C++: `int crossing_by_junction_angle_sorter::operator()(const std::unique_ptr<NBNode::Crossing> &, const std::unique_ptr<NBNode::Crossing> &) const` [const]
@@ -1409,7 +1419,13 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: &Box<NBNode_Crossing>, c2: &Box<NBNode_Crossing>) -> i32 {
-        todo!("port crossing_by_junction_angle_sorter::operator()")
+        let r1 = self.get_min_rank(&c1.edges);
+        let r2 = self.get_min_rank(&c2.edges);
+        if r1 == r2 {
+            (c1.edges.len() > c2.edges.len()) as i32
+        } else {
+            (r1 < r2) as i32
+        }
     }
 
     /// C++: `int crossing_by_junction_angle_sorter::getMinRank(const EdgeVector &) const` [const, private]
@@ -1424,7 +1440,13 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn get_min_rank(&self, e: &EdgeVector) -> i32 {
-        todo!("port crossing_by_junction_angle_sorter::getMinRank")
+        let mut result = self.myOrdering.len() as i32;
+        for it in e.iter() {
+            // std::distance to end() when not found
+            let rank = self.myOrdering.iter().position(|x| x == it).unwrap_or(self.myOrdering.len()) as i32;
+            result = result.min(rank);
+        }
+        result
     }
 
 }
@@ -1441,7 +1463,7 @@ impl NBNodesEdgesSorter_edge_by_junction_angle_sorter {
     // explicit edge_by_junction_angle_sorter(NBNode* n) : myNode(n) {}
     #[allow(unused_variables)]
     pub fn new(n: Ptr<NBNode>) -> Self {
-        todo!("port edge_by_junction_angle_sorter::edge_by_junction_angle_sorter")
+        Self { myNode: n }
     }
 
     /// C++: `int edge_by_junction_angle_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -1452,7 +1474,9 @@ impl NBNodesEdgesSorter_edge_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_junction_angle_sorter::operator()")
+        let a1 = e1.get_angle_at_node_normalized(self.myNode);
+        let a2 = e2.get_angle_at_node_normalized(self.myNode);
+        (a1 < a2 || (a1 == a2 && e1.get_numerical_id() < e2.get_numerical_id())) as i32
     }
 
 }
