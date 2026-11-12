@@ -2,6 +2,18 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table.
+// shortcut: linear reverse lookup of the generated TAGS table, C++ uses a map; upgrade by generating a reverse map
+pub(crate) fn tag_str(tag: SumoXMLTag) -> String {
+    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, t)| *t == tag).map(|(n, _)| n.to_string()).unwrap_or_default()
+}
+
+/// C++ `toString(SumoXMLAttr)`: reverse lookup in the generated attribute table.
+// shortcut: linear reverse lookup of the generated ATTRS table, C++ uses a map; upgrade by generating a reverse map
+pub(crate) fn attr_str(attr: SumoXMLAttr) -> String {
+    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, a)| *a == attr).map(|(n, _)| n.to_string()).unwrap_or_default()
+}
+
 /// C++ class `CommonHandler` (utils/handlers/CommonHandler.h)
 pub struct CommonHandler {
     /// fileBucket
@@ -26,7 +38,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        todo!("port CommonHandler::CommonHandler")
+        Self { myFileBucket: fileBucket, myCommonXMLStructure: (), myErrorCreatingElement: false, myOverwriteElements: false, myRemainElements: false, myAbortLoading: false }
     }
 
     /// C++: `void CommonHandler::~CommonHandler() noexcept` [virtual]
@@ -34,7 +46,7 @@ impl CommonHandler {
     // CommonHandler::~CommonHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CommonHandler::~CommonHandler")
+        // C++ destructor has an empty body
     }
 
     /// C++: `void CommonHandler::forceOverwriteElements()`
@@ -45,7 +57,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn force_overwrite_elements(&mut self) {
-        todo!("port CommonHandler::forceOverwriteElements")
+        self.myOverwriteElements = true;
     }
 
     /// C++: `void CommonHandler::forceRemainElements()`
@@ -56,7 +68,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn force_remain_elements(&mut self) {
-        todo!("port CommonHandler::forceRemainElements")
+        self.myRemainElements = true;
     }
 
     /// C++: `void CommonHandler::abortLoading()`
@@ -67,7 +79,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn abort_loading(&mut self) {
-        todo!("port CommonHandler::abortLoading")
+        self.myAbortLoading = true;
     }
 
     /// C++: `bool CommonHandler::isErrorCreatingElement() const` [const]
@@ -78,7 +90,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_error_creating_element(&self) -> bool {
-        todo!("port CommonHandler::isErrorCreatingElement")
+        self.myErrorCreatingElement
     }
 
     /// C++: `bool CommonHandler::isForceOverwriteElements() const` [const]
@@ -89,7 +101,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_force_overwrite_elements(&self) -> bool {
-        todo!("port CommonHandler::isForceOverwriteElements")
+        self.myOverwriteElements
     }
 
     /// C++: `bool CommonHandler::isForceRemainElements() const` [const]
@@ -100,7 +112,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_force_remain_elements(&self) -> bool {
-        todo!("port CommonHandler::isForceRemainElements")
+        self.myRemainElements
     }
 
     /// C++: `bool CommonHandler::isAbortLoading() const` [const]
@@ -111,7 +123,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn is_abort_loading(&self) -> bool {
-        todo!("port CommonHandler::isAbortLoading")
+        self.myAbortLoading
     }
 
     /// C++: `void CommonHandler::parseParameters(const SUMOSAXAttributes &)` [protected]
@@ -216,7 +228,12 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_list_of_vehicle_types(&mut self, tag: SumoXMLTag, id: &str, vTypeIDs: &Vec<String>) -> bool {
-        todo!("port CommonHandler::checkListOfVehicleTypes")
+        for vTypeID in vTypeIDs.iter() {
+            if !utils::xml::sumo_xml_definitions::is_valid_type_id(vTypeID) {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; '{}' ist not a valid vType ID.", tag_str(tag), id, vTypeID));
+            }
+        }
+        true
     }
 
     /// C++: `bool CommonHandler::checkWithinDistribution(CommonXMLStructure::SumoBaseObject *)` [protected]
@@ -357,7 +374,19 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_negative(&mut self, tag: SumoXMLTag, id: &str, attribute: SumoXMLAttr, value: i32, canBeZero: bool) -> bool {
-        todo!("port CommonHandler::checkNegative")
+        if canBeZero {
+            if value < 0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} cannot be negative.", tag_str(tag), id, attr_str(attribute)));
+            } else {
+                return true;
+            }
+        } else {
+            if value <= 0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} must be greather than zero.", tag_str(tag), id, attr_str(attribute)));
+            } else {
+                return true;
+            }
+        }
     }
 
     /// C++: `bool CommonHandler::checkNegative(const SumoXMLTag, const std::string &, const SumoXMLAttr, const double, const bool)` [protected]
@@ -380,7 +409,19 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_negative_2(&mut self, tag: SumoXMLTag, id: &str, attribute: SumoXMLAttr, value: f64, canBeZero: bool) -> bool {
-        todo!("port CommonHandler::checkNegative")
+        if canBeZero {
+            if value < 0.0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} cannot be negative ({}).", tag_str(tag), id, attr_str(attribute), to_string(&value)));
+            } else {
+                return true;
+            }
+        } else {
+            if value <= 0.0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} must be greather than zero ({}).", tag_str(tag), id, attr_str(attribute), to_string(&value)));
+            } else {
+                return true;
+            }
+        }
     }
 
     /// C++: `bool CommonHandler::checkNegative(const SumoXMLTag, const std::string &, const SumoXMLAttr, const SUMOTime, const bool)` [protected]
@@ -403,7 +444,19 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_negative_3(&mut self, tag: SumoXMLTag, id: &str, attribute: SumoXMLAttr, value: SUMOTime, canBeZero: bool) -> bool {
-        todo!("port CommonHandler::checkNegative")
+        if canBeZero {
+            if value < 0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} cannot be negative ({}).", tag_str(tag), id, attr_str(attribute), time2string(value)));
+            } else {
+                return true;
+            }
+        } else {
+            if value <= 0 {
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} must be greather than zero ({}).", tag_str(tag), id, attr_str(attribute), time2string(value)));
+            } else {
+                return true;
+            }
+        }
     }
 
     /// C++: `bool CommonHandler::checkFileName(const SumoXMLTag, const std::string &, const SumoXMLAttr, const std::string &)` [protected]
@@ -418,7 +471,11 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_file_name(&mut self, tag: SumoXMLTag, id: &str, attribute: SumoXMLAttr, value: &str) -> bool {
-        todo!("port CommonHandler::checkFileName")
+        if utils::xml::sumo_xml_definitions::is_valid_filename(value) {
+            true
+        } else {
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; {} is invalid {} ()", tag_str(tag), id, attr_str(attribute), value))
+        }
     }
 
     /// C++: `bool CommonHandler::checkValidAdditionalID(const SumoXMLTag, const std::string &)` [protected]
@@ -435,7 +492,13 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_valid_additional_id(&mut self, tag: SumoXMLTag, value: &str) -> bool {
-        todo!("port CommonHandler::checkValidAdditionalID")
+        if value.is_empty() {
+            self.write_error(&format!("Could not build {}; ID cannot be empty", tag_str(tag)))
+        } else if !utils::xml::sumo_xml_definitions::is_valid_vehicle_id(value) {
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; ID contains invalid characters.", tag_str(tag), value))
+        } else {
+            true
+        }
     }
 
     /// C++: `bool CommonHandler::checkValidDetectorID(const SumoXMLTag, const std::string &)` [protected]
@@ -452,7 +515,13 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_valid_detector_id(&mut self, tag: SumoXMLTag, value: &str) -> bool {
-        todo!("port CommonHandler::checkValidDetectorID")
+        if value.is_empty() {
+            self.write_error(&format!("Could not build {}; ID cannot be empty", tag_str(tag)))
+        } else if !utils::xml::sumo_xml_definitions::is_valid_detector_id(value) {
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; detector ID contains invalid characters.", tag_str(tag), value))
+        } else {
+            true
+        }
     }
 
     /// C++: `bool CommonHandler::checkValidDemandElementID(const SumoXMLTag, const std::string &)` [protected]
@@ -469,7 +538,13 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_valid_demand_element_id(&mut self, tag: SumoXMLTag, value: &str) -> bool {
-        todo!("port CommonHandler::checkValidDemandElementID")
+        if value.is_empty() {
+            self.write_error(&format!("Could not build {}; ID cannot be empty", tag_str(tag)))
+        } else if !utils::xml::sumo_xml_definitions::is_valid_vehicle_id(value) {
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; ID contains invalid characters.", tag_str(tag), value))
+        } else {
+            true
+        }
     }
 
     /// C++: `void CommonHandler::writeWarningOverwriting(const SumoXMLTag, const std::string &)` [protected]
@@ -480,7 +555,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_warning_overwriting(&mut self, tag: SumoXMLTag, id: &str) {
-        todo!("port CommonHandler::writeWarningOverwriting")
+        utils::common::msg_handler::write_warning(&format!("Overwriting {} with ID '{}'", tag_str(tag), id));
     }
 
     /// C++: `bool CommonHandler::writeWarningDuplicated(const SumoXMLTag, const std::string &, const SumoXMLTag)` [protected]
@@ -492,7 +567,8 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_warning_duplicated(&mut self, tag: SumoXMLTag, id: &str, checkedTag: SumoXMLTag) -> bool {
-        todo!("port CommonHandler::writeWarningDuplicated")
+        utils::common::msg_handler::write_warning(&format!("Could not build {} with ID '{}' in netedit; Found another {} with the same ID.", tag_str(tag), id, tag_str(checkedTag)));
+        false
     }
 
     /// C++: `bool CommonHandler::writeError(const std::string &)` [protected]
@@ -505,7 +581,9 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error(&mut self, error: &str) -> bool {
-        todo!("port CommonHandler::writeError")
+        utils::common::msg_handler::write_error(error);
+        self.myErrorCreatingElement = true;
+        false
     }
 
     /// C++: `bool CommonHandler::writeErrorInvalidPosition(const SumoXMLTag, const std::string &)` [protected]
@@ -516,7 +594,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error_invalid_position(&mut self, tag: SumoXMLTag, id: &str) -> bool {
-        todo!("port CommonHandler::writeErrorInvalidPosition")
+        self.write_error(&format!("Could not build {} with ID '{}' in netedit; Invalid position over lane.", tag_str(tag), id))
     }
 
     /// C++: `bool CommonHandler::writeErrorInvalidLanes(const SumoXMLTag, const std::string &)` [protected]
@@ -527,7 +605,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error_invalid_lanes(&mut self, tag: SumoXMLTag, id: &str) -> bool {
-        todo!("port CommonHandler::writeErrorInvalidLanes")
+        self.write_error(&format!("Could not build {} with ID '{}' in netedit; List of lanes isn't valid.", tag_str(tag), id))
     }
 
     /// C++: `bool CommonHandler::writeErrorInvalidParent(const SumoXMLTag, const std::string &, const std::vector<SumoXMLTag>, const std::string &)` [protected]
@@ -542,7 +620,12 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error_invalid_parent(&mut self, tag: SumoXMLTag, id: &str, parentTags: Vec<SumoXMLTag>, parentID: &str) -> bool {
-        todo!("port CommonHandler::writeErrorInvalidParent")
+        if parentTags.len() == 1 {
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; {} parent with ID '{}' doesn't exist.", tag_str(tag), id, tag_str(parentTags[0]), parentID))
+        } else {
+            let parents = self.parse_parent_tags(parentTags);
+            self.write_error(&format!("Could not build {} with ID '{}' in netedit; {} parent with ID '{}' doesn't exist.", tag_str(tag), id, parents, parentID))
+        }
     }
 
     /// C++: `bool CommonHandler::writeErrorInvalidParent(const SumoXMLTag, const std::vector<SumoXMLTag>, const std::string &)` [protected]
@@ -557,7 +640,12 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error_invalid_parent_2(&mut self, tag: SumoXMLTag, parentTags: Vec<SumoXMLTag>, parentID: &str) -> bool {
-        todo!("port CommonHandler::writeErrorInvalidParent")
+        if parentTags.len() == 1 {
+            self.write_error(&format!("Could not build {} in netedit; {} parent with ID '{}' doesn't exist.", tag_str(tag), tag_str(parentTags[0]), parentID))
+        } else {
+            let parents = self.parse_parent_tags(parentTags);
+            self.write_error(&format!("Could not build {} in netedit; {} parent with ID '{}' doesn't exist.", tag_str(tag), parents, parentID))
+        }
     }
 
     /// C++: `bool CommonHandler::writeErrorInvalidParent(const SumoXMLTag, const std::vector<SumoXMLTag>)` [protected]
@@ -572,7 +660,12 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn write_error_invalid_parent_3(&mut self, tag: SumoXMLTag, parentTags: Vec<SumoXMLTag>) -> bool {
-        todo!("port CommonHandler::writeErrorInvalidParent")
+        if parentTags.len() == 1 {
+            self.write_error(&format!("Could not build {} in netedit; {} parent doesn't exist.", tag_str(tag), tag_str(parentTags[0])))
+        } else {
+            let parents = self.parse_parent_tags(parentTags);
+            self.write_error(&format!("Could not build {} in netedit; {} parent doesn't exist.", tag_str(tag), parents))
+        }
     }
 
     /// C++: `std::string CommonHandler::parseParentTags(std::vector<SumoXMLTag>) const` [const, private]
@@ -594,7 +687,20 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_parent_tags(&self, parentTags: Vec<SumoXMLTag>) -> String {
-        todo!("port CommonHandler::parseParentTags")
+        let mut result = String::new();
+        // Join all but the last with ", ", then add " or " + last
+        for i in 0..(parentTags.len() as i64 - 1) {
+            if i != 0 {
+                result.push_str(", ");
+            }
+            result.push_str(&tag_str(parentTags[i as usize]));
+        }
+        result.push_str(" or ");
+        // shortcut: C++ parentTags.back() on an empty vector is undefined; empty list yields no last tag here
+        if let Some(last) = parentTags.last() {
+            result.push_str(&tag_str(*last));
+        }
+        result
     }
 
     /// C++: `void CommonHandler::CommonHandler()` [private]
@@ -602,7 +708,7 @@ impl CommonHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port CommonHandler::CommonHandler")
+        panic!("CommonHandler() is private and never defined in C++")
     }
 
     /// C++: `void CommonHandler::CommonHandler(const CommonHandler &)` [private]
@@ -610,7 +716,7 @@ impl CommonHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &CommonHandler) -> Self {
-        todo!("port CommonHandler::CommonHandler")
+        panic!("CommonHandler(const CommonHandler&) is private and never defined in C++")
     }
 
     /// C++: `CommonHandler & CommonHandler::operator=(const CommonHandler &)` [private]
@@ -618,7 +724,7 @@ impl CommonHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &CommonHandler) -> &mut CommonHandler {
-        todo!("port CommonHandler::operator=")
+        panic!("CommonHandler::operator= is private and never defined in C++")
     }
 
 }
