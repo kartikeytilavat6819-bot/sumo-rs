@@ -57,7 +57,18 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, edge: Ptr<MSEdge>, distID: &str, lastID: &str, vTypes: &str) -> Self {
-        todo!("port MSRouteProbe::MSRouteProbe")
+        let base = MSDetectorFileOutput::new(id, vTypes, "", 0).unwrap_or_else(|e| panic!("{e}"));
+        let base2 = MSMoveReminder::new(id, Ptr::null(), true);
+        // shortcut: C++ registers `this` as a move reminder on the edge's lanes (or meso segments) here; a by-value constructor has no stable address, so the caller must register the boxed probe; upgrade when constructors return Box<Self>
+        MSRouteProbe {
+            base,
+            base2,
+            myDistID: distID.to_string(),
+            myLastID: lastID.to_string(),
+            myLastRouteDistribution: Ptr::null(),
+            myCurrentRouteDistribution: Ptr::null(),
+            myEdge: edge,
+        }
     }
 
     /// C++: `void MSRouteProbe::~MSRouteProbe() noexcept` [virtual]
@@ -66,7 +77,7 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRouteProbe::~MSRouteProbe")
+        // C++ destructor has an empty body; the members are released by Rust drop glue
     }
 
     /// C++: `bool MSRouteProbe::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -87,7 +98,18 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSRouteProbe::notifyEnter")
+        if !self.vehicle_applies(veh) {
+            return false;
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            // dynamic_cast<SUMOVehicle*>: isVehicle() is the type check
+            if veh.is_vehicle() {
+                let vehicle: Ptr<SUMOVehicle> = Ptr::from_mut(veh).cast::<SUMOVehicle>();
+                self.init_distributions();
+                self.myCurrentRouteDistribution.m().add(vehicle.get_route_ptr(), 1., true);
+            }
+        }
+        false
     }
 
     /// C++: `void MSRouteProbe::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual]
@@ -116,7 +138,25 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSRouteProbe::writeXMLOutput")
+        let cur = self.myCurrentRouteDistribution;
+        if !cur.is_null() && cur.get_overall_prob() > 0. {
+            dev.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_ID, &format!("{}_{}", self.get_id(), time2string_hr(startTime, false)));
+            let routes = cur.get_vals();
+            let probs = cur.get_probs();
+            for j in 0..routes.len() {
+                let edges: Vec<&str> = routes[j].get_edges().iter().map(|e| e.get_id()).collect();
+                dev.open_tag_id(SUMO_TAG_ROUTE).write_attr(SUMO_ATTR_ID, &format!("{}_{}", routes[j].get_id(), time2string_hr(startTime, false))).write_attr(SUMO_ATTR_EDGES, &edges.join(" ")).write_attr(SUMO_ATTR_PROB, &probs[j]).close_tag("");
+            }
+            dev.close_tag("");
+            if !self.myLastRouteDistribution.is_null() {
+                MSRoute::check_dist(&self.myLastID);
+            }
+            self.myLastRouteDistribution = cur;
+            self.myLastID = self.myDistID.clone();
+            self.myDistID = format!("{}_{}", self.get_id(), stopTime);
+            self.myCurrentRouteDistribution = Ptr::from_raw(Box::into_raw(Box::new(RandomDistributor::<ConstMSRoutePtr>::default())));
+            MSRoute::dictionary_2(&self.myDistID, self.myCurrentRouteDistribution, false);
+        }
     }
 
     /// C++: `void MSRouteProbe::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -127,7 +167,7 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSRouteProbe::writeXMLDetectorProlog")
+        dev.write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `ConstMSRoutePtr MSRouteProbe::sampleRoute(bool) const` [const]
@@ -142,8 +182,15 @@ impl MSRouteProbe {
     //     return myLastRouteDistribution->get();
     // }
     #[allow(unused_variables)]
-    pub fn sample_route(&self, last: bool) -> ConstMSRoutePtr {
-        todo!("port MSRouteProbe::sampleRoute")
+    pub fn sample_route(&self, last: bool) -> Option<ConstMSRoutePtr> {
+        // C++ returns nullptr when there is no distribution; ConstMSRoutePtr is an Rc, hence the Option
+        if self.myLastRouteDistribution.is_null() || !last {
+            if !self.myCurrentRouteDistribution.is_null() && self.myCurrentRouteDistribution.get_overall_prob() > 0. {
+                return Some((*self.myCurrentRouteDistribution).get(None).unwrap_or_else(|e| panic!("{e}")));
+            }
+            return None;
+        }
+        Some((*self.myLastRouteDistribution).get(None).unwrap_or_else(|e| panic!("{e}")))
     }
 
     /// C++: `const MSEdge * MSRouteProbe::getEdge()`
@@ -152,7 +199,7 @@ impl MSRouteProbe {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&mut self) -> Ptr<MSEdge> {
-        todo!("port MSRouteProbe::getEdge")
+        self.myEdge
     }
 
     /// C++: `void MSRouteProbe::clearState(SUMOTime)` [virtual]
@@ -164,7 +211,8 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime) {
-        todo!("port MSRouteProbe::clearState")
+        self.myCurrentRouteDistribution = Ptr::null();
+        self.myLastRouteDistribution = Ptr::null();
     }
 
     /// C++: `void MSRouteProbe::initDistributions()` [private]
@@ -181,7 +229,14 @@ impl MSRouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn init_distributions(&mut self) {
-        todo!("port MSRouteProbe::initDistributions")
+        if self.myCurrentRouteDistribution.is_null() {
+            self.myCurrentRouteDistribution = MSRoute::dist_dictionary(&self.myDistID);
+            if self.myCurrentRouteDistribution.is_null() {
+                self.myCurrentRouteDistribution = Ptr::from_raw(Box::into_raw(Box::new(RandomDistributor::<ConstMSRoutePtr>::default())));
+                MSRoute::dictionary_2(&self.myDistID, self.myCurrentRouteDistribution, false);
+            }
+            self.myLastRouteDistribution = MSRoute::dist_dictionary(&self.myLastID);
+        }
     }
 
     /// C++: `void MSRouteProbe::MSRouteProbe(const MSRouteProbe &)` [private]
@@ -189,7 +244,7 @@ impl MSRouteProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSRouteProbe) -> Self {
-        todo!("port MSRouteProbe::MSRouteProbe")
+        panic!("MSRouteProbe copy constructor is private and invalidated in SUMO")
     }
 
     /// C++: `MSRouteProbe & MSRouteProbe::operator=(const MSRouteProbe &)` [private]
@@ -197,7 +252,7 @@ impl MSRouteProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSRouteProbe) -> &mut MSRouteProbe {
-        todo!("port MSRouteProbe::operator=")
+        panic!("MSRouteProbe assignment operator is private and invalidated in SUMO")
     }
 
 }

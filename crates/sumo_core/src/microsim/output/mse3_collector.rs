@@ -2,8 +2,41 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `MSPModel::FORWARD`
+const MSP_FORWARD: i32 = 1;
+
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+/// C++ macro `SIMTIME`
+fn simtime() -> f64 {
+    steps2time(MSNet::get_instance().get_current_time_step())
+}
+fn current_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+/// C++ `getCategory()` of the traffic object kinds seen by E3 detectors
+// shortcut: SUMOTrafficObject::get_category is still todo!() in utils, so the category is derived from the kind flags, upgrade when it is ported
+fn category_of(veh: &SUMOTrafficObject) -> &'static str {
+    if veh.is_person() {
+        "person"
+    } else if veh.is_vehicle() {
+        "vehicle"
+    } else {
+        "container"
+    }
+}
+/// The port has no Clone for MSCrossSection; copy the list field by field
+fn copy_cross_sections(v: &CrossSectionVector) -> CrossSectionVector {
+    v.iter().map(|c| MSCrossSection::new(c.myLane, c.myPosition)).collect()
+}
+
 /// Internal storage for values from a vehicle
 /// C++ class `MSE3Collector::E3Values` (microsim/output/MSE3Collector.h)
+#[derive(Clone, Copy)]
 pub struct MSE3Collector_E3Values {
     /// The vehicle's entry time
     pub entryTime: f64,
@@ -117,7 +150,29 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, entries: &CrossSectionVector, exits: &CrossSectionVector, haltingSpeedThreshold: f64, haltingTimeThreshold: SUMOTime, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, openEntry: bool, expectArrival: bool) -> Self {
-        todo!("port MSE3Collector::MSE3Collector")
+        let mut s = MSE3Collector {
+            base: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| panic!("{e}")),
+            myName: name,
+            myEntries: copy_cross_sections(entries),
+            myExits: copy_cross_sections(exits),
+            myEntryReminders: Vec::new(),
+            myLeaveReminders: Vec::new(),
+            myHaltingTimeThreshold: haltingTimeThreshold,
+            myHaltingSpeedThreshold: haltingSpeedThreshold,
+            myEnteredContainer: BTreeMap::new(),
+            myLeftContainer: Vec::new(),
+            myCurrentMeanSpeed: 0.,
+            myCurrentHaltingsNumber: 0,
+            myLastMeanTravelTime: 0.,
+            myLastMeanHaltsPerVehicle: 0.,
+            myLastMeanTimeLoss: 0.,
+            myLastVehicleSum: 0,
+            myLastResetTime: -1,
+            myOpenEntry: openEntry,
+            myExpectArrival: expectArrival,
+        };
+        s.reset();
+        s
     }
 
     /// C++: `void MSE3Collector::~MSE3Collector() noexcept` [virtual]
@@ -132,7 +187,29 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSE3Collector::~MSE3Collector")
+        for r in self.myEntryReminders.drain(..) {
+            // C++ `delete *i`
+            unsafe { drop(Box::from_raw(r.as_raw())) };
+        }
+        for r in self.myLeaveReminders.drain(..) {
+            // C++ `delete *i`
+            unsafe { drop(Box::from_raw(r.as_raw())) };
+        }
+    }
+
+    /// Creates and registers the entry and exit reminders, owned by `this`. Callers must invoke this once the collector is boxed.
+    // shortcut: C++ creates these in the constructor, but a by-value Rust constructor has no stable address for the back-pointer, upgrade when constructors return Box<Self>
+    pub fn build_reminders(&mut self, this: Ptr<MSE3Collector>) {
+        for cs in self.myEntries.iter() {
+            let rem = Ptr::from_raw(Box::into_raw(Box::new(MSE3Collector_MSE3EntryReminder::new(cs, this.m()))));
+            cs.myLane.m().add_move_reminder(rem.cast::<MSMoveReminder>(), true);
+            self.myEntryReminders.push(rem);
+        }
+        for cs in self.myExits.iter() {
+            let rem = Ptr::from_raw(Box::into_raw(Box::new(MSE3Collector_MSE3LeaveReminder::new(cs, this.m()))));
+            cs.myLane.m().add_move_reminder(rem.cast::<MSMoveReminder>(), true);
+            self.myLeaveReminders.push(rem);
+        }
     }
 
     /// C++: `void MSE3Collector::reset()` [virtual]
@@ -143,7 +220,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port MSE3Collector::reset")
+        self.myLeftContainer.clear();
     }
 
     /// C++: `void MSE3Collector::enter(const SUMOTrafficObject &, const double, const double, MSE3EntryReminder *, bool)`
@@ -199,7 +276,40 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn enter(&mut self, veh: &SUMOTrafficObject, entryTimestep: f64, fractionTimeOnDet: f64, entryReminder: Ptr<MSE3Collector_MSE3EntryReminder>, isBackward: bool) {
-        todo!("port MSE3Collector::enter")
+        if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
+            // shortcut: C++ forwards to each person on the vehicle (dynamic_cast<const MSBaseVehicle&>), MSBaseVehicle is not #[repr(C)] so the cast is unavailable; persons riding in vehicles are skipped, upgrade when ms_base_vehicle.rs is #[repr(C)]
+            return;
+        }
+        if !self.vehicle_applies(veh) {
+            return;
+        }
+        // shortcut: C++ treats a person walking backwards over an entry detector as leaving; MSTransportable is not #[repr(C)] so its direction is not read here, upgrade when ms_transportable.rs is #[repr(C)]
+        let key = Ptr::new(veh);
+        if self.myEnteredContainer.contains_key(&key) {
+            write_warningf!("% '%' reentered % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+            return;
+        }
+        let speed_fraction = veh.get_speed() * fractionTimeOnDet;
+        let mut v = MSE3Collector_E3Values {
+            entryTime: entryTimestep,
+            frontLeaveTime: 0.,
+            backLeaveTime: 0.,
+            speedSum: speed_fraction,
+            haltings: 0,
+            haltingBegin: if veh.get_speed() < self.myHaltingSpeedThreshold { time2steps(entryTimestep) } else { -1 },
+            intervalSpeedSum: if entryTimestep >= steps2time(self.myLastResetTime) { speed_fraction } else { 0. },
+            intervalHaltings: 0,
+            timeLoss: 0,
+            intervalTimeLoss: 0,
+            hadUpdate: false,
+            entryReminder,
+        };
+        if veh.get_speed() < self.myHaltingSpeedThreshold && time2steps(fractionTimeOnDet) > self.myHaltingTimeThreshold {
+            v.haltings += 1;
+            v.intervalHaltings += 1;
+        }
+        // shortcut: C++ sets timeLoss from MSVehicle::getTimeLoss() for vehicles (dynamic_cast), MSVehicle is not #[repr(C)] so time loss stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
+        self.myEnteredContainer.insert(key, v);
     }
 
     /// C++: `void MSE3Collector::leaveFront(const SUMOTrafficObject &, const double)`
@@ -226,7 +336,21 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn leave_front(&mut self, veh: &SUMOTrafficObject, leaveTimestep: f64) {
-        todo!("port MSE3Collector::leaveFront")
+        if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
+            // shortcut: C++ forwards to each person on the vehicle, see enter
+            return;
+        }
+        if !self.vehicle_applies(veh) {
+            return;
+        }
+        let key = Ptr::new(veh);
+        if !self.myEnteredContainer.contains_key(&key) {
+            if !self.myOpenEntry && veh.is_vehicle() {
+                write_warningf!("% '%' left % '%' without entering it, time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+            }
+        } else {
+            self.myEnteredContainer.get_mut(&key).unwrap().frontLeaveTime = leaveTimestep;
+        }
     }
 
     /// C++: `void MSE3Collector::leave(const SUMOTrafficObject &, const double, const double, bool)`
@@ -279,7 +403,39 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn leave(&mut self, veh: &SUMOTrafficObject, leaveTimestep: f64, fractionTimeOnDet: f64, isBackward: bool) {
-        todo!("port MSE3Collector::leave")
+        if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
+            // shortcut: C++ forwards to each person on the vehicle, see enter
+            return;
+        }
+        if !self.vehicle_applies(veh) {
+            return;
+        }
+        // shortcut: C++ handles a person walking backwards over an exit detector as entering, see enter
+        let key = Ptr::new(veh);
+        if !self.myEnteredContainer.contains_key(&key) {
+            if !self.myOpenEntry && veh.is_vehicle() {
+                write_warningf!("% '%' left % '%' without entering it, time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+            }
+        } else {
+            let mut values = self.myEnteredContainer[&key];
+            values.backLeaveTime = leaveTimestep;
+            let speed_fraction = veh.get_speed() * (ts() - fractionTimeOnDet);
+            values.speedSum -= speed_fraction;
+            values.intervalSpeedSum -= speed_fraction;
+            if MSGlobals::use_meso_sim() || !veh.is_vehicle() {
+                // not yet supported
+                values.timeLoss = 0;
+                if isBackward {
+                    // leaveFront may not have been called
+                    values.frontLeaveTime = leaveTimestep;
+                }
+            } else {
+                // shortcut: C++ sets timeLoss = MSVehicle::getTimeLoss() - entry timeLoss, MSVehicle is not #[repr(C)] so it stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
+                values.timeLoss = 0;
+            }
+            self.myEnteredContainer.remove(&key);
+            self.myLeftContainer.push(values);
+        }
     }
 
     /// C++: `const CrossSectionVector & MSE3Collector::getEntries() const` [const]
@@ -290,7 +446,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_entries(&self) -> &CrossSectionVector {
-        todo!("port MSE3Collector::getEntries")
+        &self.myEntries
     }
 
     /// C++: `const CrossSectionVector & MSE3Collector::getExits() const` [const]
@@ -301,7 +457,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_exits(&self) -> &CrossSectionVector {
-        todo!("port MSE3Collector::getExits")
+        &self.myExits
     }
 
     /// C++: `double MSE3Collector::getCurrentMeanSpeed() const` [const]
@@ -312,7 +468,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_current_mean_speed(&self) -> f64 {
-        todo!("port MSE3Collector::getCurrentMeanSpeed")
+        self.myCurrentMeanSpeed
     }
 
     /// C++: `int MSE3Collector::getCurrentHaltingNumber() const` [const]
@@ -323,7 +479,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_current_halting_number(&self) -> i32 {
-        todo!("port MSE3Collector::getCurrentHaltingNumber")
+        self.myCurrentHaltingsNumber
     }
 
     /// C++: `int MSE3Collector::getVehiclesWithin() const` [const]
@@ -334,7 +490,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles_within(&self) -> i32 {
-        todo!("port MSE3Collector::getVehiclesWithin")
+        self.myEnteredContainer.len() as i32
     }
 
     /// C++: `std::vector<std::string> MSE3Collector::getCurrentVehicleIDs() const` [const]
@@ -350,7 +506,9 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn get_current_vehicle_i_ds(&self) -> Vec<String> {
-        todo!("port MSE3Collector::getCurrentVehicleIDs")
+        let mut ret: Vec<String> = self.myEnteredContainer.keys().map(|v| v.base.get_id().to_string()).collect();
+        ret.sort();
+        ret
     }
 
     /// C++: `double MSE3Collector::getLastIntervalMeanTravelTime() const` [const]
@@ -360,7 +518,7 @@ impl MSE3Collector {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_travel_time(&self) -> f64 {
-        todo!("port MSE3Collector::getLastIntervalMeanTravelTime")
+        self.myLastMeanTravelTime
     }
 
     /// C++: `double MSE3Collector::getLastIntervalMeanHaltsPerVehicle() const` [const]
@@ -369,7 +527,7 @@ impl MSE3Collector {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_halts_per_vehicle(&self) -> f64 {
-        todo!("port MSE3Collector::getLastIntervalMeanHaltsPerVehicle")
+        self.myLastMeanHaltsPerVehicle
     }
 
     /// C++: `double MSE3Collector::getLastIntervalMeanTimeLoss() const` [const]
@@ -378,7 +536,7 @@ impl MSE3Collector {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_time_loss(&self) -> f64 {
-        todo!("port MSE3Collector::getLastIntervalMeanTimeLoss")
+        self.myLastMeanTimeLoss
     }
 
     /// C++: `int MSE3Collector::getLastIntervalVehicleSum() const` [const]
@@ -387,7 +545,7 @@ impl MSE3Collector {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_interval_vehicle_sum(&self) -> i32 {
-        todo!("port MSE3Collector::getLastIntervalVehicleSum")
+        self.myLastVehicleSum
     }
 
     /// C++: `void MSE3Collector::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual]
@@ -481,7 +639,85 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSE3Collector::writeXMLOutput")
+        dev.open_tag_id(SUMO_TAG_INTERVAL).write_time(SUMO_ATTR_BEGIN, startTime).write_time(SUMO_ATTR_END, stopTime);
+        dev.write_attr(SUMO_ATTR_ID, self.base.base.get_id());
+        // collect values about vehicles that have left the area
+        self.myLastVehicleSum = self.myLeftContainer.len() as i32;
+        self.myLastMeanTravelTime = 0.;
+        let mut mean_overlap_travel_time = 0.;
+        let mut mean_speed = 0.;
+        self.myLastMeanHaltsPerVehicle = 0.;
+        self.myLastMeanTimeLoss = 0.;
+        for values in self.myLeftContainer.iter() {
+            self.myLastMeanHaltsPerVehicle += values.haltings as f64;
+            self.myLastMeanTravelTime += values.frontLeaveTime - values.entryTime;
+            let steps = values.backLeaveTime - values.entryTime;
+            mean_overlap_travel_time += steps;
+            mean_speed += values.speedSum / steps;
+            self.myLastMeanTimeLoss += steps2time(values.timeLoss);
+        }
+        let n = self.myLastVehicleSum;
+        let nf = n as f64;
+        self.myLastMeanTravelTime = if n != 0 { self.myLastMeanTravelTime / nf } else { -1. };
+        mean_overlap_travel_time = if n != 0 { mean_overlap_travel_time / nf } else { -1. };
+        mean_speed = if n != 0 { mean_speed / nf } else { -1. };
+        self.myLastMeanHaltsPerVehicle = if n != 0 { self.myLastMeanHaltsPerVehicle / nf } else { -1. };
+        self.myLastMeanTimeLoss = if n != 0 { self.myLastMeanTimeLoss / nf } else { -1. };
+        // clear container
+        self.myLeftContainer.clear();
+        // collect values about vehicles within the container
+        let vehicle_sum_within = self.myEnteredContainer.len() as i32;
+        let mut mean_speed_within = 0.;
+        let mut mean_duration_within = 0.;
+        let mut mean_halts_within = 0.;
+        let mut mean_interval_speed_within = 0.;
+        let mut mean_interval_halts_within = 0.;
+        let mut mean_interval_duration_within = 0.;
+        // shortcut: time loss within the area (C++ MSVehicle::getTimeLoss differences) is not tracked, stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
+        let mean_time_loss_within = 0.;
+        for values in self.myEnteredContainer.values_mut() {
+            mean_halts_within += values.haltings as f64;
+            mean_interval_halts_within += values.intervalHaltings as f64;
+            let end = if values.backLeaveTime == 0. { steps2time(stopTime) } else { values.backLeaveTime };
+            let time = end - values.entryTime;
+            let time_within = min2(time, end - steps2time(startTime));
+            if values.speedSum > 0. {
+                mean_speed_within += values.speedSum / time;
+            }
+            if values.intervalSpeedSum > 0. {
+                mean_interval_speed_within += values.intervalSpeedSum / time_within;
+            }
+            mean_duration_within += time;
+            mean_interval_duration_within += time_within;
+            // reset interval values
+            values.intervalHaltings = 0;
+            values.intervalSpeedSum = 0.;
+        }
+        self.myLastResetTime = stopTime;
+        let norm = |x: f64| if vehicle_sum_within != 0 { x / vehicle_sum_within as f64 } else { -1. };
+        let mean_speed_within = norm(mean_speed_within);
+        let mean_halts_within = norm(mean_halts_within);
+        let mean_duration_within = norm(mean_duration_within);
+        let mean_interval_speed_within = norm(mean_interval_speed_within);
+        let mean_interval_halts_within = norm(mean_interval_halts_within);
+        let mean_interval_duration_within = norm(mean_interval_duration_within);
+        let mean_time_loss_within = norm(mean_time_loss_within);
+        // write values
+        dev.write_attr("meanTravelTime", &self.myLastMeanTravelTime)
+            .write_attr("meanOverlapTravelTime", &mean_overlap_travel_time)
+            .write_attr("meanSpeed", &mean_speed)
+            .write_attr("meanHaltsPerVehicle", &self.myLastMeanHaltsPerVehicle)
+            .write_attr("meanTimeLoss", &self.myLastMeanTimeLoss)
+            .write_attr("vehicleSum", &self.myLastVehicleSum)
+            .write_attr("meanSpeedWithin", &mean_speed_within)
+            .write_attr("meanHaltsPerVehicleWithin", &mean_halts_within)
+            .write_attr("meanDurationWithin", &mean_duration_within)
+            .write_attr("vehicleSumWithin", &vehicle_sum_within)
+            .write_attr("meanIntervalSpeedWithin", &mean_interval_speed_within)
+            .write_attr("meanIntervalHaltsPerVehicleWithin", &mean_interval_halts_within)
+            .write_attr("meanIntervalDurationWithin", &mean_interval_duration_within)
+            .write_attr("meanTimeLossWithin", &mean_time_loss_within)
+            .close_tag("");
     }
 
     /// C++: `void MSE3Collector::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -492,7 +728,7 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSE3Collector::writeXMLDetectorProlog")
+        dev.write_xml_header("e3Detector", "det_e3_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `void MSE3Collector::detectorUpdate(const SUMOTime)` [virtual]
@@ -562,7 +798,58 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        todo!("port MSE3Collector::detectorUpdate")
+        if self.myDetectPersons != PersonMode::NONE as i32 {
+            for rem in self.myEntryReminders.clone() {
+                let lane = rem.get_lane();
+                if lane.has_pedestrians() {
+                    let persons: Vec<Ptr<MSTransportable>> = lane.get_edge().get_persons().iter().copied().collect();
+                    for p in persons {
+                        if p.get_lane() == lane && self.vehicle_applies(&p.base) {
+                            self.notify_move_person(p, rem.cast::<MSMoveReminder>(), rem.get_position(), p.get_direction(), p.get_position_on_lane());
+                        }
+                    }
+                }
+            }
+            for rem in self.myLeaveReminders.clone() {
+                let lane = rem.get_lane();
+                if lane.has_pedestrians() {
+                    let persons: Vec<Ptr<MSTransportable>> = lane.get_edge().get_persons().iter().copied().collect();
+                    for p in persons {
+                        if p.get_lane() == lane && self.vehicle_applies(&p.base) {
+                            self.notify_move_person(p, rem.cast::<MSMoveReminder>(), rem.get_position(), p.get_direction(), p.get_position_on_lane());
+                        }
+                    }
+                }
+            }
+        }
+
+        self.myCurrentMeanSpeed = 0.;
+        self.myCurrentHaltingsNumber = 0;
+        for (veh, values) in self.myEnteredContainer.iter_mut() {
+            let vehp = *veh;
+            self.myCurrentMeanSpeed += vehp.get_speed();
+            values.hadUpdate = true;
+            values.speedSum += vehp.get_speed() * ts();
+            values.intervalSpeedSum += vehp.get_speed() * ts();
+            if vehp.get_speed() < self.myHaltingSpeedThreshold {
+                if values.haltingBegin == -1 {
+                    values.haltingBegin = step;
+                }
+                let haltingDuration = step - values.haltingBegin;
+                if haltingDuration >= self.myHaltingTimeThreshold && haltingDuration < (self.myHaltingTimeThreshold + delta_t()) {
+                    values.haltings += 1;
+                    values.intervalHaltings += 1;
+                    self.myCurrentHaltingsNumber += 1;
+                }
+            } else {
+                values.haltingBegin = -1;
+            }
+        }
+        if self.myEnteredContainer.is_empty() {
+            self.myCurrentMeanSpeed = -1.;
+        } else {
+            self.myCurrentMeanSpeed /= self.myEnteredContainer.len() as f64;
+        }
     }
 
     /// C++: `void MSE3Collector::clearState(SUMOTime)` [virtual]
@@ -574,7 +861,8 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime) {
-        todo!("port MSE3Collector::clearState")
+        self.myEnteredContainer.clear();
+        self.myLeftContainer.clear();
     }
 
     /// C++: `void MSE3Collector::notifyMovePerson(MSTransportable *, MSMoveReminder *, double, int, double)` [protected]
@@ -594,7 +882,23 @@ impl MSE3Collector {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_person(&mut self, p: Ptr<MSTransportable>, rem: Ptr<MSMoveReminder>, detPos: f64, dir: i32, pos: f64) {
-        todo!("port MSE3Collector::notifyMovePerson")
+        if self.person_applies(&p, dir) {
+            let new_speed = p.get_speed();
+            let new_pos = if dir == MSP_FORWARD {
+                pos
+            } else {
+                // position relative to detector end position
+                detPos - (pos - detPos)
+            };
+            let old_pos = new_pos - speed2dist(new_speed);
+            if old_pos - p.get_vehicle_type().get_length() <= detPos {
+                if self.myEntryReminders.iter().any(|e| e.cast::<MSMoveReminder>() == rem) {
+                    rem.cast::<MSE3Collector_MSE3EntryReminder>().m().notify_move(&mut p.m().base, old_pos, new_pos, new_speed);
+                } else {
+                    rem.cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_move(&mut p.m().base, old_pos, new_pos, new_speed);
+                }
+            }
+        }
     }
 
     /// C++: `void MSE3Collector::MSE3Collector(const MSE3Collector &)` [private]
@@ -602,7 +906,7 @@ impl MSE3Collector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSE3Collector) -> Self {
-        todo!("port MSE3Collector::MSE3Collector")
+        panic!("MSE3Collector copy constructor is private and invalidated in SUMO")
     }
 
     /// C++: `MSE3Collector & MSE3Collector::operator=(const MSE3Collector &)` [private]
@@ -610,7 +914,7 @@ impl MSE3Collector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSE3Collector) -> &mut MSE3Collector {
-        todo!("port MSE3Collector::operator=")
+        panic!("MSE3Collector assignment operator is private and invalidated in SUMO")
     }
 
 }
@@ -649,7 +953,12 @@ impl MSE3Collector_MSE3EntryReminder {
     // }
     #[allow(unused_variables)]
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
-        todo!("port MSE3EntryReminder::MSE3EntryReminder")
+        // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
+        MSE3Collector_MSE3EntryReminder {
+            base: MSMoveReminder::new(&format!("{}_entry", collector.base.base.get_id()), crossSection.myLane, false),
+            myCollector: Ptr::from_mut(collector),
+            myPosition: crossSection.myPosition,
+        }
     }
 
     /// C++: `bool MSE3EntryReminder::notifyEnter(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -689,7 +998,21 @@ impl MSE3Collector_MSE3EntryReminder {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSE3EntryReminder::notifyEnter")
+        if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
+            let pos_on_lane = veh.get_back_position_on_lane(enteredLane) + veh.get_vehicle_type().get_length();
+            if self.myLane == enteredLane && pos_on_lane > self.myPosition {
+                let collector = self.myCollector;
+                let known_by_this = match collector.myEnteredContainer.get(&Ptr::new(veh)) {
+                    Some(v) => v.entryReminder == Ptr::from_mut(self),
+                    None => false,
+                };
+                if !known_by_this {
+                    // if the vehicle changes into a covered section we assume it was already registered on another lane
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// C++: `bool MSE3EntryReminder::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -745,8 +1068,27 @@ impl MSE3Collector_MSE3EntryReminder {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, arg1: f64, newPos: f64, arg3: f64) -> bool {
-        todo!("port MSE3EntryReminder::notifyMove")
+    pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+        let collector = self.myCollector;
+        // shortcut: C++ also matches a person walking backwards (MSTransportable direction), not readable until ms_transportable.rs is #[repr(C)]
+        if !collector.myEnteredContainer.contains_key(&Ptr::new(veh)) && newPos > self.myPosition {
+            if oldPos > self.myPosition {
+                // was behind the detector already in the last step
+                return false;
+            }
+            if veh.is_vehicle() && std::ptr::eq(&*veh.get_lane().get_edge(), &*self.myLane.get_edge()) && veh.get_lane() != self.myLane {
+                // the vehicle is on the wrong lane of the same edge
+                return true;
+            }
+            // entered in this step
+            let old_speed = veh.get_previous_speed();
+            let entry_time = steps2time(current_step());
+            debug_assert!(!MSGlobals::semi_implicit_euler_update() || newSpeed != 0.); // how could it move across the detector otherwise
+            let time_before_enter = MSCFModel::passing_time(oldPos, self.myPosition, newPos, old_speed, newSpeed);
+            let fraction_time_on_det = ts() - time_before_enter;
+            collector.m().enter(&*veh, entry_time - fraction_time_on_det, fraction_time_on_det, Ptr::from_mut(self), false);
+        }
+        true
     }
 
     /// C++: `bool MSE3EntryReminder::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -777,7 +1119,14 @@ impl MSE3Collector_MSE3EntryReminder {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSE3EntryReminder::notifyLeave")
+        if reason >= MSMoveReminder_Notification::NOTIFICATION_ARRIVED {
+            let collector = self.myCollector;
+            if collector.m().myEnteredContainer.remove(&Ptr::new(veh)).is_some() && !collector.myExpectArrival {
+                write_warningf!("% '%' arrived inside % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
+            }
+            return false;
+        }
+        true
     }
 
     /// C++: `double MSE3EntryReminder::getPosition() const` [const]
@@ -787,7 +1136,7 @@ impl MSE3Collector_MSE3EntryReminder {
     //         }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> f64 {
-        todo!("port MSE3EntryReminder::getPosition")
+        self.myPosition
     }
 
     /// C++: `void MSE3EntryReminder::MSE3EntryReminder(const MSE3EntryReminder &)` [private]
@@ -795,7 +1144,7 @@ impl MSE3Collector_MSE3EntryReminder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSE3Collector_MSE3EntryReminder) -> Self {
-        todo!("port MSE3EntryReminder::MSE3EntryReminder")
+        panic!("MSE3EntryReminder copy constructor is private and invalidated in SUMO")
     }
 
     /// C++: `MSE3EntryReminder & MSE3EntryReminder::operator=(const MSE3EntryReminder &)` [private]
@@ -803,7 +1152,7 @@ impl MSE3Collector_MSE3EntryReminder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSE3Collector_MSE3EntryReminder) -> &mut MSE3Collector_MSE3EntryReminder {
-        todo!("port MSE3EntryReminder::operator=")
+        panic!("MSE3EntryReminder assignment operator is private and invalidated in SUMO")
     }
 
 }
@@ -841,7 +1190,12 @@ impl MSE3Collector_MSE3LeaveReminder {
     //     myCollector(collector), myPosition(crossSection.myPosition) {}
     #[allow(unused_variables)]
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
-        todo!("port MSE3LeaveReminder::MSE3LeaveReminder")
+        // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
+        MSE3Collector_MSE3LeaveReminder {
+            base: MSMoveReminder::new(&format!("{}_exit", collector.base.base.get_id()), crossSection.myLane, false),
+            myCollector: Ptr::from_mut(collector),
+            myPosition: crossSection.myPosition,
+        }
     }
 
     /// C++: `bool MSE3LeaveReminder::notifyEnter(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -876,7 +1230,16 @@ impl MSE3Collector_MSE3LeaveReminder {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSE3LeaveReminder::notifyEnter")
+        // this method does not access containers, so no locking here
+        if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
+            let back_pos_on_lane = veh.get_back_position_on_lane(enteredLane);
+            if back_pos_on_lane > self.myPosition {
+                // if the vehicle changes into a covered section we assume it was already registered on another lane
+                // however, if it is not fully past the detector we still need to track it
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool MSE3LeaveReminder::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -933,8 +1296,31 @@ impl MSE3Collector_MSE3LeaveReminder {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, arg3: f64) -> bool {
-        todo!("port MSE3LeaveReminder::notifyMove")
+    pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+        if newPos < self.myPosition {
+            // crossSection not yet reached
+            return true;
+        }
+        let collector = self.myCollector;
+        let old_speed = veh.get_previous_speed();
+        if oldPos < self.myPosition {
+            debug_assert!(!MSGlobals::semi_implicit_euler_update() || newSpeed != 0.); // how could it move across the detector otherwise
+            let time_before_leave = MSCFModel::passing_time(oldPos, self.myPosition, newPos, old_speed, newSpeed);
+            let leave_time_front = simtime() - ts() + time_before_leave;
+            collector.m().leave_front(&*veh, leave_time_front);
+        }
+        let back_pos = newPos - veh.get_vehicle_type().get_length();
+        if back_pos < self.myPosition {
+            // crossSection not yet left
+            return true;
+        }
+        // crossSection left
+        let old_back_pos = oldPos - veh.get_vehicle_type().get_length();
+        let leave_step = simtime();
+        debug_assert!(!MSGlobals::semi_implicit_euler_update() || newSpeed != 0.); // how could it move across the detector otherwise
+        let time_before_leave = MSCFModel::passing_time(old_back_pos, self.myPosition, back_pos, old_speed, newSpeed);
+        collector.m().leave(&*veh, leave_step - ts() + time_before_leave, time_before_leave, false);
+        false
     }
 
     /// C++: `bool MSE3LeaveReminder::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -979,7 +1365,23 @@ impl MSE3Collector_MSE3LeaveReminder {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSE3LeaveReminder::notifyLeave")
+        if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE && std::ptr::eq(&*enteredLane.get_edge(), &*self.myLane.get_edge()) {
+            // keep the detector when changing while still on the exit detector but already on a new lane (#4803)
+            return false;
+        }
+        let collector = self.myCollector;
+        if reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
+            write_warningf!("% '%' teleported from % '%'.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id());
+            collector.m().myEnteredContainer.remove(&Ptr::new(veh));
+            return false;
+        }
+        if reason >= MSMoveReminder_Notification::NOTIFICATION_ARRIVED {
+            if collector.m().myEnteredContainer.remove(&Ptr::new(veh)).is_some() && !collector.myExpectArrival {
+                write_warningf!("% '%' arrived inside % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
+            }
+            return false;
+        }
+        true
     }
 
     /// C++: `double MSE3LeaveReminder::getPosition() const` [const]
@@ -988,7 +1390,7 @@ impl MSE3Collector_MSE3LeaveReminder {
     //         }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> f64 {
-        todo!("port MSE3LeaveReminder::getPosition")
+        self.myPosition
     }
 
     /// C++: `void MSE3LeaveReminder::MSE3LeaveReminder(const MSE3LeaveReminder &)` [private]
@@ -996,7 +1398,7 @@ impl MSE3Collector_MSE3LeaveReminder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSE3Collector_MSE3LeaveReminder) -> Self {
-        todo!("port MSE3LeaveReminder::MSE3LeaveReminder")
+        panic!("MSE3LeaveReminder copy constructor is private and invalidated in SUMO")
     }
 
     /// C++: `MSE3LeaveReminder & MSE3LeaveReminder::operator=(const MSE3LeaveReminder &)` [private]
@@ -1004,7 +1406,7 @@ impl MSE3Collector_MSE3LeaveReminder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSE3Collector_MSE3LeaveReminder) -> &mut MSE3Collector_MSE3LeaveReminder {
-        todo!("port MSE3LeaveReminder::operator=")
+        panic!("MSE3LeaveReminder assignment operator is private and invalidated in SUMO")
     }
 
 }
