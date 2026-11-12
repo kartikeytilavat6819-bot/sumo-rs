@@ -8223,7 +8223,60 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn unsafe_link_ahead(&self, lane: Ptr<MSLane>, zipperDist: f64) -> bool {
-        todo!("port MSVehicle::unsafeLinkAhead")
+        // the following links are unsafe:
+        // - zipper links if they are close enough and have approaching vehicles in the relevant time range
+        // - unprioritized links if the vehicle is currently approaching a prioritzed link and unable to stop in time
+        let mut seen = self.myLane.get_length() - self.get_position_on_lane();
+        let dist = max2(zipperDist, self.get_car_follow_model().brake_gap_2(self.get_speed(), self.get_car_follow_model().get_max_decel(), 0.0));
+        if seen < dist {
+            let bestLaneConts = self.get_best_lanes_continuation_2(lane);
+            let mut lane = lane;
+            let mut view: i32 = 1;
+            // link iterators are indices into lane.myLinks (the end is len())
+            let mut link: usize = MSLane::succ_link_sec(self, view, &*lane, bestLaneConts);
+            let mut di: usize = 0;
+            while !lane.is_link_end(&mut link) && seen <= dist {
+                let curLink: Ptr<MSLink> = lane.myLinks[link];
+                if (!lane.is_internal()
+                    && ((curLink.get_state() == LINKSTATE_ZIPPER && seen < curLink.get_foe_visibility_distance())
+                        || !curLink.have_priority()))
+                    || (lane.is_internal() && zipperDist > 0.0)
+                {
+                    // find the drive item corresponding to this link
+                    let mut found = false;
+                    while di != self.myLFLinkLanes.len() && !found {
+                        let diLink: Ptr<MSLink> = self.myLFLinkLanes[di].myLink;
+                        if !diLink.is_null() {
+                            let diPredLane: Ptr<MSLane> = diLink.get_lane_before();
+                            if !diPredLane.is_null() {
+                                if std::ptr::eq(diPredLane.get_edge(), lane.get_edge()) {
+                                    found = true;
+                                }
+                            }
+                        }
+                        if !found {
+                            di += 1;
+                        }
+                    }
+                    if found {
+                        let item = &self.myLFLinkLanes[di];
+                        let leaveTime = curLink.get_leave_time(item.myArrivalTime, item.myArrivalSpeed, item.get_leave_speed(), self.get_vehicle_type().get_length());
+                        let entry: Ptr<MSLink> = curLink.get_corresponding_entry_link();
+                        if entry.has_approaching_foe(item.myArrivalTime, leaveTime, item.myArrivalSpeed, self.get_car_follow_model().get_max_decel()) {
+                            return true;
+                        }
+                    }
+                    // no drive item is found if the vehicle aborts its request within dist
+                }
+                lane = curLink.get_via_lane_or_lane();
+                if !lane.get_edge().is_internal() {
+                    view += 1;
+                }
+                seen += lane.get_length();
+                link = MSLane::succ_link_sec(self, view, &*lane, bestLaneConts);
+            }
+        }
+        false
     }
 
     /// C++: `bool MSVehicle::passingMinor() const` [const]
@@ -8355,7 +8408,83 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_parking_area(&mut self, parkingAreaID: &str, errorMsg: &mut String) -> bool {
-        todo!("port MSVehicle::rerouteParkingArea")
+        // get vehicle params
+        let destParkArea: Ptr<MSParkingArea> = self.get_next_parking_area();
+        let lastEdge: Ptr<MSEdge> = self.get_route().get_last_edge();
+
+        if destParkArea.is_null() {
+            // not driving towards a parking area
+            *errorMsg = format!("Vehicle {} is not driving to a parking area so it cannot be rerouted.", self.get_id());
+            return false;
+        }
+
+        // if the current route ends at the parking area, the new route will also and at the new area
+        let newDestination = Ptr::new(destParkArea.get_lane().get_edge()) == lastEdge
+            && self.get_arrival_pos() >= destParkArea.get_begin_lane_position()
+            && self.get_arrival_pos() <= destParkArea.get_end_lane_position();
+
+        // retrieve info on the new parking area
+        let newParkingArea: Ptr<MSParkingArea> = MSNet::get_instance().get_stopping_place(parkingAreaID, SUMO_TAG_PARKING_AREA).cast::<MSParkingArea>();
+        if newParkingArea.is_null() {
+            *errorMsg = format!("Parking area ID {} not found in the network.", parkingAreaID);
+            return false;
+        }
+
+        let newEdge: Ptr<MSEdge> = Ptr::new(newParkingArea.get_lane().get_edge());
+
+        // Compute the route from the current edge to the parking area edge
+        let mut edgesToPark: Vec<Ptr<MSEdge>> = Vec::new();
+        self.get_router_tt().compute_2(
+            self.get_edge(),
+            self.get_position_on_lane(),
+            newEdge,
+            newParkingArea.get_end_lane_position(),
+            Ptr::new(self).cast::<SUMOVehicle>(),
+            MSNet::get_instance().get_current_time_step(),
+            &mut edgesToPark,
+            false,
+        );
+
+        // Compute the route from the parking area edge to the end of the route
+        let mut edgesFromPark: Vec<Ptr<MSEdge>> = Vec::new();
+        if !newDestination {
+            self.get_router_tt().compute(newEdge, lastEdge, Ptr::new(self).cast::<SUMOVehicle>(), MSNet::get_instance().get_current_time_step(), &mut edgesFromPark, false);
+        } else {
+            // adapt plans of any riders
+            let persons: Vec<Ptr<MSTransportable>> = self.get_persons().clone();
+            for p in persons {
+                let nextPA: Ptr<MSParkingArea> = self.get_next_parking_area();
+                p.m().reroute_parking_area(nextPA.cast::<MSStoppingPlace>(), newParkingArea.cast::<MSStoppingPlace>());
+            }
+        }
+
+        // we have a new destination, let's replace the vehicle route
+        let mut edges: Vec<Ptr<MSEdge>> = edgesToPark.clone();
+        if edgesFromPark.len() > 0 {
+            edges.extend_from_slice(&edgesFromPark[1..]);
+        }
+
+        if newDestination && self.myParameter.arrivalPosProcedure != ArrivalPosDefinition::DEFAULT {
+            let mut newParameter: SUMOVehicleParameter = self.get_parameter().clone();
+            newParameter.arrivalPosProcedure = ArrivalPosDefinition::GIVEN;
+            newParameter.arrivalPos = newParkingArea.get_end_lane_position();
+            // shortcut: C++ `new SUMOVehicleParameter` has no owner that frees it here, so the copy is leaked the same way
+            let newParameterPtr: Ptr<SUMOVehicleParameter> = Ptr::from_mut(Box::leak(Box::new(newParameter)));
+            self.replace_parameter(newParameterPtr);
+        }
+        let routeCost = self.get_router_tt().recompute_costs(&edges, Ptr::new(self).cast::<SUMOVehicle>(), MSNet::get_instance().get_current_time_step(), Ptr::default());
+        let prevEdges: Vec<Ptr<MSEdge>> = self.get_route().get_edges()[self.myCurrEdge..].to_vec();
+        let savings = self.get_router_tt().recompute_costs(&prevEdges, Ptr::new(self).cast::<SUMOVehicle>(), MSNet::get_instance().get_current_time_step(), Ptr::default());
+        if self.replace_parking_area(newParkingArea.cast::<MSParkingArea>(), errorMsg) {
+            let onInit = self.myLane.is_null();
+            let parkingAreaRerouteTag = utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == SUMO_TAG_PARKING_AREA_REROUTE).map(|(s, _)| s.to_string()).unwrap_or_default();
+            let info = format!("TraCI:{}", parkingAreaRerouteTag);
+            self.replace_route_edges(&mut edges, routeCost, savings, &info, onInit, false, false, Ptr::default());
+        } else {
+            utils::common::msg_handler::write_warning(&format!("Vehicle '{}' could not reroute to new parkingArea '{}' reason={}, time={}.", self.get_id(), newParkingArea.get_id(), errorMsg, time2string(MSNet::get_instance().get_current_time_step())));
+            return false;
+        }
+        true
     }
 
     /// C++: `bool MSVehicle::addTraciStop(SUMOVehicleParameter::Stop, std::string &)` [virtual]
@@ -8371,7 +8500,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_traci_stop(&mut self, stop: SUMOVehicleParameter_Stop, errorMsg: &mut String) -> bool {
-        todo!("port MSVehicle::addTraciStop")
+        let numStops = self.myStops.len() as i32;
+        let result = self.base.add_traci_stop(stop, errorMsg);
+        if !self.myLane.is_null() && numStops != self.myStops.len() as i32 {
+            self.update_best_lanes(true, Ptr::default());
+        }
+        result
     }
 
     /// C++: `bool MSVehicle::handleCollisionStop(MSStop &, const double)` [virtual]
@@ -8402,7 +8536,24 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
-        todo!("port MSVehicle::handleCollisionStop")
+        if self.myCurrEdge == stop.edge && distToStop + POSITION_EPS < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
+            if distToStop < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_emergency_decel(), 0.0) {
+                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, false);
+                self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
+                self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
+                self.myCachedPosition = Position::INVALID;
+                if self.myState.myPos < self.myType.get_length() {
+                    let lane = self.myLane;
+                    let pos = self.myState.myPos;
+                    self.compute_further_lanes(lane, pos, true);
+                    self.myAngle = self.compute_angle();
+                    if self.myLaneChangeModel.is_opposite() {
+                        self.myAngle += std::f64::consts::PI;
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `bool MSVehicle::resumeFromStopping()` [virtual]
