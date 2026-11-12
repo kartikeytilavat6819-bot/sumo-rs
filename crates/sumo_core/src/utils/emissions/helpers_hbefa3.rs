@@ -553,7 +553,7 @@ impl HelpersHBEFA3 {
     // }
     #[allow(unused_variables)]
     pub fn get_amitran_vehicle_class(&self, c: SUMOEmissionClass) -> String {
-        let name = self.myEmissionClassStrings.get_string(c);
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
         let vClass = if name.contains("Coach") {
             "Coach"
         } else if name.contains("Bus") {
@@ -581,7 +581,7 @@ impl HelpersHBEFA3 {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel(&self, c: SUMOEmissionClass) -> String {
-        let name = self.myEmissionClassStrings.get_string(c);
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
         let mut fuel = "Gasoline";
         if name.contains("_D_") {
             fuel = "Diesel";
@@ -611,7 +611,7 @@ impl HelpersHBEFA3 {
     // }
     #[allow(unused_variables)]
     pub fn get_euro_class(&self, c: SUMOEmissionClass) -> i32 {
-        let name = self.myEmissionClassStrings.get_string(c);
+        let name = self.myEmissionClassStrings.get_string(c).unwrap();
         if name.contains("_EU1") {
             1
         } else if name.contains("_EU2") {
