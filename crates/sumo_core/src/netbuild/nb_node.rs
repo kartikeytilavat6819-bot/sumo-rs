@@ -77,6 +77,34 @@ const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
 const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
+const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
+
+/// C++ `incoming->setConnection(lane, dest, destLane, type)` using the header defaults
+fn nbnode_set_connection_default(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<NBEdge>, destLane: i32, type_: NBEdge_Lane2LaneInfoType) -> bool {
+    incoming.m().set_connection(
+        lane,
+        dest,
+        destLane,
+        type_,
+        false,
+        false,
+        KeepClear::KEEPCLEAR_UNSPECIFIED,
+        NBEDGE_UNSPECIFIED_CONTPOS,
+        NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
+        NBEDGE_UNSPECIFIED_SPEED,
+        NBEDGE_UNSPECIFIED_FRICTION,
+        NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+        &PositionVector::default(),
+        NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
+        SVC_UNSPECIFIED,
+        false,
+        "",
+        SVC_UNSPECIFIED,
+        SVC_UNSPECIFIED,
+        false,
+    )
+}
+
 fn nbnode_validate_new(id: &str, position: &Position) {
     if !utils::xml::sumo_xml_definitions::is_valid_net_id(id) {
         panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
@@ -1644,7 +1672,250 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_lanes2_lanes(&mut self) {
-        todo!("port NBNode::computeLanes2Lanes")
+        // special case a):
+        //  one in, one out, the outgoing has more lanes
+        if self.myIncomingEdges.len() == 1 && self.myOutgoingEdges.len() == 1 {
+            let in_ = self.myIncomingEdges[0];
+            let out = self.myOutgoingEdges[0];
+            // check if it's not the turnaround
+            if in_.get_turn_destination(false) == out {
+                // will be added later or not...
+                return;
+            }
+            let (mut inOffset, mut inEnd, mut outOffset, mut outEnd, mut addedLanes) = (0, 0, 0, 0, 0);
+            self.get_reduction(out, in_, &mut outOffset, &mut outEnd, &mut inOffset, &mut inEnd, &mut addedLanes);
+            if in_.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES && addedLanes > 0 && in_.is_connected_to(out, false) {
+                let addedRight = self.added_lanes_right(out, addedLanes);
+                let addedLeft = addedLanes - addedRight;
+                // "straight" connections
+                for i in inOffset..inEnd {
+                    nbnode_set_connection_default(in_, i, out, i - inOffset + outOffset + addedRight, NBEdge_Lane2LaneInfoType::COMPUTED);
+                }
+                // connect extra lane on the right
+                for i in 0..addedRight {
+                    nbnode_set_connection_default(in_, inOffset, out, outOffset + i, NBEdge_Lane2LaneInfoType::COMPUTED);
+                }
+                // connect extra lane on the left
+                let inLeftMost = inEnd - 1;
+                let outOffset2 = outOffset + addedRight + inEnd - inOffset;
+                for i in 0..addedLeft {
+                    nbnode_set_connection_default(in_, inLeftMost, out, outOffset2 + i, NBEdge_Lane2LaneInfoType::COMPUTED);
+                }
+                if out.get_special_lane(SVC_BICYCLE) >= 0 {
+                    self.recheck_v_class_connections(out);
+                }
+                return;
+            }
+        }
+        // special case b):
+        //  two in, one out, the outgoing has the same number of lanes as the sum of the incoming
+        //  --> highway on-ramp
+        if self.myIncomingEdges.len() == 2 && self.myOutgoingEdges.len() == 1 {
+            let out = self.myOutgoingEdges[0];
+            let mut in1 = self.myIncomingEdges[0];
+            let mut in2 = self.myIncomingEdges[1];
+            let outOffset = std::cmp::max(0, out.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            let mut in1Offset = std::cmp::max(0, in1.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            let mut in2Offset = std::cmp::max(0, in2.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            if in1.get_num_lanes() + in2.get_num_lanes() - in1Offset - in2Offset == out.get_num_lanes() - outOffset
+                && (in1.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES)
+                && (in2.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES)
+                && in1 != out
+                && in2 != out
+                && in1.is_connected_to(out, false)
+                && in2.is_connected_to(out, false)
+                && in1.get_special_lane(SVC_BICYCLE) == -1
+                && in2.get_special_lane(SVC_BICYCLE) == -1
+                && out.get_special_lane(SVC_BICYCLE) == -1
+                && in1.get_special_lane(SVC_TRAM) == -1
+                && in2.get_special_lane(SVC_TRAM) == -1
+                && out.get_special_lane(SVC_TRAM) == -1
+                && NBNode::is_long_enough(out, NBNODE_MIN_WEAVE_LENGTH)
+            {
+                // for internal: check which one is the rightmost
+                let self_ptr = Ptr::from_mut(self);
+                let a1 = in1.get_angle_at_node(self_ptr);
+                let a2 = in2.get_angle_at_node(self_ptr);
+                let ccw = utils::geom::geom_helper::get_ccw_angle_diff(a1, a2);
+                let cw = utils::geom::geom_helper::get_cw_angle_diff(a1, a2);
+                if ccw > cw {
+                    std::mem::swap(&mut in1, &mut in2);
+                    std::mem::swap(&mut in1Offset, &mut in2Offset);
+                }
+                in1.m().add_lane2_lane_connections(in1Offset, out, outOffset, in1.get_num_lanes() - in1Offset, NBEdge_Lane2LaneInfoType::COMPUTED, true, false);
+                in2.m().add_lane2_lane_connections(in2Offset, out, in1.get_num_lanes() + outOffset - in1Offset, in2.get_num_lanes() - in2Offset, NBEdge_Lane2LaneInfoType::COMPUTED, true, false);
+                if out.get_special_lane(SVC_BICYCLE) >= 0 {
+                    self.recheck_v_class_connections(out);
+                }
+                return;
+            }
+        }
+        // special case c):
+        //  one in, two out, the incoming has the same number of lanes or only 1 lane less than the sum of the outgoing lanes
+        //  --> highway off-ramp
+        if self.myIncomingEdges.len() == 1 && self.myOutgoingEdges.len() == 2 {
+            let in_ = self.myIncomingEdges[0];
+            let mut out1 = self.myOutgoingEdges[0];
+            let mut out2 = self.myOutgoingEdges[1];
+            let inOffset = std::cmp::max(0, in_.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            let mut out1Offset = std::cmp::max(0, out1.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            let mut out2Offset = std::cmp::max(0, out2.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+            let deltaLaneSum = (out2.get_num_lanes() + out1.get_num_lanes() - out1Offset - out2Offset) - (in_.get_num_lanes() - inOffset);
+            if (deltaLaneSum == 0 || (deltaLaneSum == 1 && in_.get_permission_variants(inOffset, in_.get_num_lanes()).len() == 1))
+                && (in_.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES)
+                && in_ != out1
+                && in_ != out2
+                && in_.is_connected_to(out1, false)
+                && in_.is_connected_to(out2, false)
+                && !in_.is_turning_direction_at(out1)
+                && !in_.is_turning_direction_at(out2)
+            {
+                // for internal: check which one is the rightmost
+                if NBContHelper_relative_outgoing_edge_sorter::new(in_).call_op(out2, out1) {
+                    std::mem::swap(&mut out1, &mut out2);
+                    std::mem::swap(&mut out1Offset, &mut out2Offset);
+                }
+                in_.m().add_lane2_lane_connections(inOffset, out1, out1Offset, out1.get_num_lanes() - out1Offset, NBEdge_Lane2LaneInfoType::COMPUTED, true, false);
+                in_.m().add_lane2_lane_connections(out1.get_num_lanes() + inOffset - out1Offset - deltaLaneSum, out2, out2Offset, out2.get_num_lanes() - out2Offset, NBEdge_Lane2LaneInfoType::COMPUTED, false, false);
+                if in_.get_special_lane(SVC_BICYCLE) >= 0 {
+                    self.recheck_v_class_connections(out1);
+                    self.recheck_v_class_connections(out2);
+                }
+                return;
+            }
+        }
+        // special case d):
+        //  one in, one out, the outgoing has one lane less and node has type 'zipper'
+        if self.myIncomingEdges.len() == 1 && self.myOutgoingEdges.len() == 1 && self.myType == SumoXMLNodeType::ZIPPER {
+            let in_ = self.myIncomingEdges[0];
+            let out = self.myOutgoingEdges[0];
+            // check if it's not the turnaround
+            if in_.get_turn_destination(false) == out {
+                // will be added later or not...
+                return;
+            }
+            let inOffset = std::cmp::max(0, in_.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, true));
+            let outOffset = std::cmp::max(0, out.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, true));
+            if in_.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES
+                && in_.get_num_lanes() - inOffset == out.get_num_lanes() - outOffset + 1
+                && in_ != out
+                && in_.is_connected_to(out, false)
+            {
+                for i in inOffset..in_.get_num_lanes() {
+                    nbnode_set_connection_default(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED);
+                }
+                return;
+            }
+        }
+        // special case f):
+        //  one in, one out, out has reduced or same number of lanes
+        if self.myIncomingEdges.len() == 1 && self.myOutgoingEdges.len() == 1 {
+            let in_ = self.myIncomingEdges[0];
+            let out = self.myOutgoingEdges[0];
+            // check if it's not the turnaround
+            if in_.get_turn_destination(false) == out {
+                // will be added later or not...
+                return;
+            }
+            let (mut inOffset, mut inEnd, mut outOffset, mut outEnd, mut reduction) = (0, 0, 0, 0, 0);
+            self.get_reduction(in_, out, &mut inOffset, &mut inEnd, &mut outOffset, &mut outEnd, &mut reduction);
+            if in_.get_step() <= NBEdge_EdgeBuildingStep::LANES2EDGES && reduction >= 0 && in_ != out && in_.is_connected_to(out, false) {
+                // in case of reduced lane number, let the rightmost lanes end
+                inOffset += reduction;
+                for i in outOffset..outEnd {
+                    nbnode_set_connection_default(in_, i + inOffset - outOffset, out, i, NBEdge_Lane2LaneInfoType::COMPUTED);
+                }
+                self.recheck_v_class_connections(out);
+                return;
+            }
+        }
+
+        // go through this node's outgoing edges
+        //  for every outgoing edge, compute the distribution of the node's
+        //  incoming edges on this edge when approaching this edge
+        // the incoming edges' steps will then also be marked as LANE2LANE_RECHECK...
+        let mut approaching: EdgeVector = Vec::new();
+        for currentOutgoing in self.myOutgoingEdges.clone() {
+            // get the information about edges that do approach this edge
+            self.get_edges_that_approach(currentOutgoing, &mut approaching);
+            let numApproaching = approaching.len() as i32;
+            if numApproaching != 0 {
+                let mut divider = NBNode_ApproachingDivider::new(&approaching, currentOutgoing);
+                let numAvailable = divider.num_available_lanes();
+                utils::geom::bresenham::compute(|a, b| divider.execute(a, b), numApproaching, numAvailable);
+            }
+            self.recheck_v_class_connections(currentOutgoing);
+
+            // in case of lane change restrictions on the outgoing edge, ensure that
+            // all its lanes can be reached from each connected incoming edge
+            let mut targetProhibitsChange = false;
+            let nOut = currentOutgoing.get_num_lanes();
+            for i in 0..nOut {
+                let lane = &currentOutgoing.get_lanes()[i as usize];
+                if (lane.changeLeft != SVC_ALL && lane.changeLeft != SVC_IGNORING && i + 1 < nOut)
+                    || (lane.changeRight != SVC_ALL && lane.changeRight != SVC_IGNORING && i > 0)
+                {
+                    targetProhibitsChange = true;
+                    break;
+                }
+            }
+            if targetProhibitsChange {
+                for incoming in self.myIncomingEdges.clone() {
+                    if incoming.get_step() < NBEdge_EdgeBuildingStep::LANES2LANES_DONE {
+                        // std::map<int, int> outToIn: ordered by lane, last write wins
+                        let mut outToIn: std::collections::BTreeMap<i32, i32> = std::collections::BTreeMap::new();
+                        for c in incoming.get_connections().iter() {
+                            if c.toEdge == currentOutgoing {
+                                outToIn.insert(c.toLane, c.fromLane);
+                            }
+                        }
+                        for toLane in 0..nOut {
+                            if !outToIn.contains_key(&toLane) {
+                                let mut added = false;
+                                // find incoming lane for neighboring outgoing
+                                for i in 0..toLane {
+                                    if let Some(&fromLane) = outToIn.get(&i) {
+                                        nbnode_set_connection_default(incoming, fromLane, currentOutgoing, toLane, NBEdge_Lane2LaneInfoType::COMPUTED);
+                                        added = true;
+                                        break;
+                                    }
+                                }
+                                if !added {
+                                    for i in toLane..nOut {
+                                        if let Some(&fromLane) = outToIn.get(&i) {
+                                            nbnode_set_connection_default(incoming, fromLane, currentOutgoing, toLane, NBEdge_Lane2LaneInfoType::COMPUTED);
+                                            added = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // special case e) rail_crossing
+        // there should only be straight connections here
+        if self.myType == SumoXMLNodeType::RAIL_CROSSING {
+            for i in self.myIncomingEdges.clone() {
+                let cons: Vec<NBEdge_Connection> = i.get_connections().clone();
+                for k in cons.iter() {
+                    if self.get_direction(i, k.toEdge, false) == LinkDirection::TURN {
+                        i.m().remove_from_connections(k.toEdge, -1, -1, false, false, false);
+                    }
+                }
+            }
+        }
+
+        // ... but we may have the case that there are no outgoing edges
+        //  In this case, we have to mark the incoming edges as being in state
+        //   LANE2LANE( not RECHECK) by hand
+        if self.myOutgoingEdges.is_empty() {
+            for incoming in self.myIncomingEdges.clone() {
+                incoming.m().mark_as_in_lane2_lane_state();
+            }
+        }
     }
 
     /// C++: `void NBNode::computeLogic(const NBEdgeCont &)`
@@ -1777,7 +2048,30 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_keep_clear(&mut self) {
-        todo!("port NBNode::computeKeepClear")
+        if self.has_conflict() {
+            if !self.myKeepClear {
+                for incoming in self.myIncomingEdges.clone() {
+                    let connections = incoming.m().get_connections_2();
+                    for c in connections.iter_mut() {
+                        c.keepClear = KeepClear::KEEPCLEAR_FALSE;
+                    }
+                }
+            } else if self.geometry_like() && self.myCrossings.is_empty() && !self.is_tl_controlled() {
+                let mut linkIndex: i32 = 0;
+                for incoming in self.myIncomingEdges.clone() {
+                    let connections = incoming.m().get_connections_2();
+                    for c in connections.iter_mut() {
+                        if c.keepClear == KeepClear::KEEPCLEAR_UNSPECIFIED && self.myRequest.has_conflict_at_link(linkIndex) {
+                            let linkState = self.get_link_state(incoming, c.toEdge, c.fromLane, c.toLane, c.mayDefinitelyPass, &c.tlID);
+                            if linkState == LINKSTATE_MAJOR {
+                                c.keepClear = KeepClear::KEEPCLEAR_FALSE;
+                            }
+                        }
+                    }
+                    linkIndex += 1;
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNode::writeLogic(OutputDevice &) const` [const]
@@ -2125,7 +2419,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_sorted_link_foes(&mut self, mayDrive: &NBConnection, mustStop: &NBConnection) {
-        todo!("port NBNode::addSortedLinkFoes")
+        if mayDrive.get_from().is_null() || mayDrive.get_to().is_null() || mustStop.get_from().is_null() || mustStop.get_to().is_null() {
+            write_warning("Something went wrong during the building of a connection...");
+            return; // !!! mark to recompute connections
+        }
+        // C++ operator[] default-constructs the vector for a new key
+        let mut conn: NBConnectionVector = self.myBlockedConnections.get(mustStop).cloned().unwrap_or_default();
+        conn.push(mayDrive.clone());
+        self.myBlockedConnections.insert(mustStop.clone(), conn);
     }
 
     /// C++: `NBEdge * NBNode::getPossiblySplittedIncoming(const std::string &)`
@@ -2726,7 +3027,74 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_direction(&self, incoming: Ptr<NBEdge>, outgoing: Ptr<NBEdge>, leftHand: bool) -> LinkDirection {
-        todo!("port NBNode::getDirection")
+        // ok, no connection at all -> dead end
+        if outgoing.is_null() {
+            return LinkDirection::NODIR;
+        }
+        let self_ptr = Ptr::from_raw(self as *const NBNode as *mut NBNode);
+        let roundabout = NBEdge_JunctionPriority::ROUNDABOUT as i32;
+        if incoming.get_junction_priority(self_ptr) == roundabout && outgoing.get_junction_priority(self_ptr) == roundabout {
+            return LinkDirection::STRAIGHT;
+        }
+        // turning direction
+        if incoming.is_turning_direction_at(outgoing) {
+            if Self::is_explicit_rail_no_bidi(incoming, outgoing) {
+                return LinkDirection::STRAIGHT;
+            }
+            return if leftHand { LinkDirection::TURN_LEFTHAND } else { LinkDirection::TURN };
+        }
+        // get the angle between incoming/outgoing at the junction
+        let angle = NBHelpers::norm_rel_angle(incoming.get_angle_at_node(self_ptr), outgoing.get_angle_at_node(self_ptr));
+        // ok, should be a straight connection
+        let itOut = self.myAllEdges.iter().position(|e| *e == outgoing).unwrap_or(self.myAllEdges.len());
+        let mut vehPerm = incoming.get_permissions(-1) & outgoing.get_permissions(-1);
+        if vehPerm != SVC_PEDESTRIAN {
+            vehPerm &= !SVC_PEDESTRIAN;
+        }
+        let modeLanes = outgoing.get_num_lanes_that_allow(vehPerm, true);
+        if angle.abs() < 44. {
+            if angle.abs() > 6. {
+                if self.is_straighter(incoming, angle, vehPerm, modeLanes, self.get_next_compatible_outgoing(incoming, vehPerm, itOut, true)) {
+                    return if angle > 0. { LinkDirection::PARTRIGHT } else { LinkDirection::PARTLEFT };
+                }
+                if self.is_straighter(incoming, angle, vehPerm, modeLanes, self.get_next_compatible_outgoing(incoming, vehPerm, itOut, false)) {
+                    return if angle > 0. { LinkDirection::PARTRIGHT } else { LinkDirection::PARTLEFT };
+                }
+            }
+            if angle > 0. && incoming.get_junction_priority(self_ptr) == roundabout {
+                return if angle > 15. { LinkDirection::RIGHT } else { LinkDirection::PARTRIGHT };
+            }
+            return LinkDirection::STRAIGHT;
+        }
+
+        if angle > 0. {
+            // check whether any other edge goes further to the right
+            if angle > 90. + NUMERICAL_EPS {
+                return LinkDirection::RIGHT;
+            }
+            let outCW = self.get_next_compatible_outgoing(incoming, vehPerm, itOut, !leftHand);
+            if !outCW.is_null() {
+                return LinkDirection::PARTRIGHT;
+            } else {
+                return LinkDirection::RIGHT;
+            }
+        } else {
+            // check whether any other edge goes further to the left
+            if angle < -170. && incoming.get_geometry().reverse() == *outgoing.get_geometry() {
+                if Self::is_explicit_rail_no_bidi(incoming, outgoing) {
+                    return LinkDirection::STRAIGHT;
+                }
+                return if leftHand { LinkDirection::TURN_LEFTHAND } else { LinkDirection::TURN };
+            } else if angle < -(90. + NUMERICAL_EPS) {
+                return LinkDirection::LEFT;
+            }
+            let outCCW = self.get_next_compatible_outgoing(incoming, vehPerm, itOut, leftHand);
+            if !outCCW.is_null() {
+                return LinkDirection::PARTLEFT;
+            } else {
+                return LinkDirection::LEFT;
+            }
+        }
     }
 
     /// C++: `LinkState NBNode::getLinkState(const NBEdge *, const NBEdge *, int, int, bool, const std::string &) const` [const]
@@ -6821,7 +7189,34 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_simple_continuation(&self, checkLaneNumbers: bool, checkWidth: bool) -> bool {
-        todo!("port NBNode::isSimpleContinuation")
+        // one in, one out->continuation
+        if self.myIncomingEdges.len() == 1 && self.myOutgoingEdges.len() == 1 {
+            let in_ = self.myIncomingEdges[0];
+            let out = self.myOutgoingEdges[0];
+            // both must have the same number of lanes
+            return (!checkLaneNumbers || in_.get_num_lanes() == out.get_num_lanes()) && (!checkWidth || in_.get_total_width() == out.get_total_width());
+        }
+        // two in and two out and both in reverse direction
+        if self.myIncomingEdges.len() == 2 && self.myOutgoingEdges.len() == 2 {
+            for &in_ in self.myIncomingEdges.iter() {
+                let Some(mut opposite) = self.myOutgoingEdges.iter().position(|e| NBContHelper_opposite_finder::new(in_).call_op(*e)) else {
+                    // must have an opposite edge
+                    return false;
+                };
+                // both must have the same number of lanes
+                NBContHelper::next_cw(&self.myOutgoingEdges, &mut opposite);
+                let opp = self.myOutgoingEdges[opposite];
+                if checkLaneNumbers && in_.get_num_lanes() != opp.get_num_lanes() {
+                    return false;
+                }
+                if checkWidth && in_.get_total_width() != opp.get_total_width() {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // nope
+        false
     }
 
     /// C++: `void NBNode::markBentPriority(bool)`
@@ -6831,7 +7226,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn mark_bent_priority(&mut self, isBent: bool) {
-        todo!("port NBNode::markBentPriority")
+        self.myIsBentPriority = isBent;
     }
 
     /// C++: `bool NBNode::isBentPriority() const` [const]
@@ -6841,7 +7236,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn is_bent_priority(&self) -> bool {
-        todo!("port NBNode::isBentPriority")
+        self.myIsBentPriority
     }
 
     /// C++: `bool NBNode::typeWasGuessed() const` [const]
@@ -6851,7 +7246,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn type_was_guessed(&self) -> bool {
-        todo!("port NBNode::typeWasGuessed")
+        self.myTypeWasGuessed
     }
 
     /// C++: `bool NBNode::isConstantWidthTransition() const` [const]
@@ -6865,7 +7260,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_constant_width_transition(&self) -> bool {
-        todo!("port NBNode::isConstantWidthTransition")
+        self.myIncomingEdges.len() == 1
+            && self.myOutgoingEdges.len() == 1
+            && self.myIncomingEdges[0].get_num_lanes() != self.myOutgoingEdges[0].get_num_lanes()
+            && self.myIncomingEdges[0].get_total_width() == self.myOutgoingEdges[0].get_total_width()
     }
 
     /// C++: `std::vector<std::pair<Position, std::string>> NBNode::getEndPoints() const` [const]
@@ -7351,8 +7749,29 @@ impl NBNode {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_next_compatible_outgoing(&self, incoming: Ptr<NBEdge>, vehPerm: SVCPermissions, start: Unmapped /* EdgeVector::const_iterator */, clockwise: bool) -> Ptr<NBEdge> {
-        todo!("port NBNode::getNextCompatibleOutgoing")
+    pub fn get_next_compatible_outgoing(&self, incoming: Ptr<NBEdge>, vehPerm: SVCPermissions, start: usize, clockwise: bool) -> Ptr<NBEdge> {
+        // C++ iterator `start` is passed by value, so it is an index into myAllEdges here
+        let self_ptr = Ptr::from_raw(self as *const NBNode as *mut NBNode);
+        let mut i = start;
+        while self.myAllEdges[i] != incoming {
+            if clockwise {
+                NBContHelper::next_cw(&self.myAllEdges, &mut i);
+            } else {
+                NBContHelper::next_ccw(&self.myAllEdges, &mut i);
+            }
+            if self.myAllEdges[i].get_from_node() != self_ptr {
+                // only look for outgoing edges
+                // @note we use myAllEdges to stop at the incoming edge
+                continue;
+            }
+            if incoming.is_turning_direction_at(self.myAllEdges[i]) {
+                return Ptr::null();
+            }
+            if (vehPerm & self.myAllEdges[i].get_permissions(-1)) != 0 || vehPerm == 0 {
+                return self.myAllEdges[i];
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void NBNode::getReduction(const NBEdge *, const NBEdge *, int &, int &, int &, int &, int &) const` [const, private]
