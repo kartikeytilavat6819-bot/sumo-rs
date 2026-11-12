@@ -1,6 +1,9 @@
 //! Port of microsim/devices/MSTransportableDevice_FCDReplay.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+use utils::common::time::delta_t;
+use utils::geom::POSITION_EPS;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSTransportableDevice_FCDReplay` (microsim/devices/MSTransportableDevice_FCDReplay.h)
@@ -26,6 +29,7 @@ impl std::ops::DerefMut for MSTransportableDevice_FCDReplay {
 
 // C++ static members of MSTransportableDevice_FCDReplay (port as module-level statics, see AGENTS.md):
 //   static bool MSTransportableDevice_FCDReplay::myAmActive;
+static MY_AM_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 impl MSTransportableDevice_FCDReplay {
     /// C++: `void MSTransportableDevice_FCDReplay::insertOptions(OptionsCont &)` [static]
@@ -36,7 +40,7 @@ impl MSTransportableDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSTransportableDevice_FCDReplay::insertOptions")
+        MSDevice::insert_default_assignment_options("fcd-replay", "FCD Replay Device", oc, true);
     }
 
     /// C++: `void MSTransportableDevice_FCDReplay::buildDevices(MSTransportable &, std::vector<MSTransportableDevice *> &)` [static]
@@ -55,7 +59,23 @@ impl MSTransportableDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn build_devices(t: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
-        todo!("port MSTransportableDevice_FCDReplay::buildDevices")
+        let outputOptionSet = utils::options::options_cont::is_set("device.fcd-replay.files");
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "fcd-replay", t.get_id(), t.get_parameter(), t.get_vehicle_type().get_parameter(), outputOptionSet, true)
+        });
+        if equipped {
+            let id = format!("fcdReplay_{}", t.get_id());
+            // shortcut: device is leaked; the person's device list will own it once person device ownership is ported, upgrade then
+            let device: &mut MSTransportableDevice_FCDReplay = Box::leak(Box::new(MSTransportableDevice_FCDReplay::new(t, &id)));
+            into.push(Ptr::from_mut(&mut device.base));
+            if !MY_AM_ACTIVE.load(Ordering::Relaxed) {
+                // shortcut: the command is leaked and owned by the begin-of-timestep event control for the rest of the run
+                let cmd: &mut dyn Command = Box::leak(Box::new(MSTransportableDevice_FCDReplay_MovePedestrians::new()));
+                let execTime = MSNet::get_instance().m().get_current_time_step() + delta_t();
+                MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd), execTime);
+                MY_AM_ACTIVE.store(true, Ordering::Relaxed);
+            }
+        }
     }
 
     /// C++: `void MSTransportableDevice_FCDReplay::~MSTransportableDevice_FCDReplay() noexcept` [virtual]
@@ -64,7 +84,7 @@ impl MSTransportableDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableDevice_FCDReplay::~MSTransportableDevice_FCDReplay")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `const std::string MSTransportableDevice_FCDReplay::deviceName() const` [const, virtual]
@@ -74,7 +94,7 @@ impl MSTransportableDevice_FCDReplay {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSTransportableDevice_FCDReplay::deviceName")
+        "fcd-replay".to_string()
     }
 
     /// C++: `void MSTransportableDevice_FCDReplay::setTrajectory(MSDevice_FCDReplay::Trajectory *const)`
@@ -84,7 +104,8 @@ impl MSTransportableDevice_FCDReplay {
     //     }
     #[allow(unused_variables)]
     pub fn set_trajectory(&mut self, t: Ptr<MSDevice_FCDReplay_Trajectory>) {
-        todo!("port MSTransportableDevice_FCDReplay::setTrajectory")
+        self.myTrajectory = t;
+        self.myTrajectoryIndex = 1;
     }
 
     /// C++: `bool MSTransportableDevice_FCDReplay::move(SUMOTime)`
@@ -141,7 +162,57 @@ impl MSTransportableDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn move_(&mut self, currentTime: SUMOTime) -> bool {
-        todo!("port MSTransportableDevice_FCDReplay::move")
+        let holder = self.myHolder;
+        if !holder.m().has_departed() { // need to check this first for trajectories of size 1
+            return false;
+        }
+        if self.myTrajectory.is_null() || self.myTrajectoryIndex == self.myTrajectory.m().len() as i32 {
+            // removing person
+            return true;
+        }
+        let idx = self.myTrajectoryIndex as usize;
+        let (teTime, teEdge, tePos, teAngle, teLanePos, teSpeed) = {
+            let te = &self.myTrajectory.m()[idx];
+            (te.time, te.edgeOrLane.clone(), te.pos, te.angle, te.lanePos, te.speed)
+        };
+        // dynamic_cast<MSPerson*>: the person check is the is_person() type flag
+        if !holder.m().is_person() || teTime > currentTime {
+            return false;
+        }
+        if matches!(holder.m().get_current_stage_type(), MSStageType::DRIVING) {
+            if holder.m().get_vehicle().is_null() { // entering the vehicle
+                let edge = holder.m().get_edge();
+                for v in edge.m().get_vehicles() {
+                    if v.m().get_speed() == 0. && (v.m().get_position_on_lane() - teLanePos).abs() < POSITION_EPS {
+                        let lane = v.m().get_lane();
+                        lane.m().get_vehicles_secure(); // lock the lane
+                        let mut dummy: SUMOTime = -1; // boarding- and loading-time are not considered
+                        MSNet::get_instance().m().get_person_control().load_any_waiting(edge, v, &mut dummy, &mut dummy, holder);
+                        lane.m().release_vehicles(); // unlock the lane
+                    }
+                }
+            } else {
+                let v = holder.m().get_vehicle();
+                if teSpeed == 0. && (v.m().get_position_on_lane() - teLanePos).abs() >= POSITION_EPS { // leaving the vehicle
+                    let lane = v.m().get_lane();
+                    lane.m().get_vehicles_secure(); // lock the lane
+                    // shortcut: removeTransportable on v's MSDevice_Transportable is skipped, because the typeid device lookup is not ported (get_device returns null); upgrade with the device type ids
+                    holder.m().proceed(MSNet::get_instance(), currentTime, false);
+                    lane.m().release_vehicles(); // unlock the lane
+                }
+            }
+        }
+        if matches!(holder.m().get_current_stage_type(), MSStageType::WALKING) {
+            // shortcut: the libsumo::TraCIException catch (WRITE_WARNING) is not ported; move_to_xy panics on error instead
+            crate::libsumo::person::Person::move_to_xy(holder.m().get_id(), &teEdge, tePos.x(), tePos.y(), teAngle, 7, 0.1);
+            let walk: Ptr<MSStageWalking> = holder.m().get_current_stage().cast::<MSStageWalking>();
+            if self.myTrajectoryIndex > 0 && self.myTrajectory.m()[(self.myTrajectoryIndex - 1) as usize].edgeOrLane != teEdge {
+                walk.m().move_to_next_edge(holder, currentTime, 1, Ptr::null(), true);
+            }
+        }
+        // person->setPreviousSpeed(...) is commented out in C++
+        self.myTrajectoryIndex += 1;
+        false
     }
 
     /// C++: `void MSTransportableDevice_FCDReplay::MSTransportableDevice_FCDReplay(MSTransportable &, const std::string &)` [private]
@@ -151,7 +222,11 @@ impl MSTransportableDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str) -> Self {
-        todo!("port MSTransportableDevice_FCDReplay::MSTransportableDevice_FCDReplay")
+        MSTransportableDevice_FCDReplay {
+            base: MSTransportableDevice::new(holder, id),
+            myTrajectory: Ptr::null(),
+            myTrajectoryIndex: 0,
+        }
     }
 
     /// C++: `void MSTransportableDevice_FCDReplay::MSTransportableDevice_FCDReplay(const MSTransportableDevice_FCDReplay &)` [private]
@@ -159,7 +234,7 @@ impl MSTransportableDevice_FCDReplay {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportableDevice_FCDReplay) -> Self {
-        todo!("port MSTransportableDevice_FCDReplay::MSTransportableDevice_FCDReplay")
+        panic!("MSTransportableDevice_FCDReplay copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSTransportableDevice_FCDReplay & MSTransportableDevice_FCDReplay::operator=(const MSTransportableDevice_FCDReplay &)` [private]
@@ -167,7 +242,7 @@ impl MSTransportableDevice_FCDReplay {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice_FCDReplay) -> &mut MSTransportableDevice_FCDReplay {
-        todo!("port MSTransportableDevice_FCDReplay::operator=")
+        panic!("MSTransportableDevice_FCDReplay assignment operator is private and invalidated in C++")
     }
 
 }
@@ -199,7 +274,8 @@ impl MSTransportableDevice_FCDReplay_MovePedestrians {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MovePedestrians::MovePedestrians")
+        // priority = 1 is provided by the Command impl below
+        MSTransportableDevice_FCDReplay_MovePedestrians { base: () }
     }
 
     /// C++: `SUMOTime MovePedestrians::execute(SUMOTime)` [virtual]
@@ -222,7 +298,14 @@ impl MSTransportableDevice_FCDReplay_MovePedestrians {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MovePedestrians::execute")
+        // shortcut: the MSTransportableControl loadedBegin/loadedEnd iterator is Unmapped and get_device is a null shortcut, so no replay devices are collected; upgrade both together
+        let devices: Vec<Ptr<MSTransportableDevice_FCDReplay>> = Vec::new();
+        for d in devices {
+            if d.m().move_(currentTime) {
+                d.m().get_holder().remove_stage(0, false);
+            }
+        }
+        delta_t()
     }
 
     /// C++: `MovePedestrians & MovePedestrians::operator=(const MovePedestrians &)` [private]
@@ -230,8 +313,19 @@ impl MSTransportableDevice_FCDReplay_MovePedestrians {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice_FCDReplay_MovePedestrians) -> &mut MSTransportableDevice_FCDReplay_MovePedestrians {
-        todo!("port MovePedestrians::operator=")
+        panic!("MovePedestrians assignment operator is private and invalidated in C++")
     }
 
+}
+
+impl Command for MSTransportableDevice_FCDReplay_MovePedestrians {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSTransportableDevice_FCDReplay_MovePedestrians::execute(self, currentTime)
+    }
+
+    fn priority(&self) -> i32 {
+        // C++ ctor: higher than default command priority of 0
+        1
+    }
 }
 
