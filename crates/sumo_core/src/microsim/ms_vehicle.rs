@@ -12613,7 +12613,14 @@ impl MSVehicle_Manoeuvre {
     // MSVehicle::Manoeuvre::Manoeuvre() : myManoeuvreStop(""), myManoeuvreStartTime(0), myManoeuvreCompleteTime(0), myManoeuvreType(MSVehicle::MANOEUVRE_NONE), myGUIIncrement(0) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Manoeuvre::Manoeuvre")
+        MSVehicle_Manoeuvre {
+            myManoeuvreVehicleID: String::new(),
+            myManoeuvreStop: String::new(),
+            myManoeuvreStartTime: 0,
+            myManoeuvreCompleteTime: 0,
+            myManoeuvreType: MSVehicle_ManoeuvreType::MANOEUVRE_NONE,
+            myGUIIncrement: 0.0,
+        }
     }
 
     /// C++: `void Manoeuvre::Manoeuvre(const Manoeuvre &)`
@@ -12627,7 +12634,15 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn new_2(manoeuvre: &MSVehicle_Manoeuvre) -> Self {
-        todo!("port Manoeuvre::Manoeuvre")
+        // the C++ copy constructor does not copy myManoeuvreVehicleID (it is default-constructed)
+        MSVehicle_Manoeuvre {
+            myManoeuvreVehicleID: String::new(),
+            myManoeuvreStop: manoeuvre.myManoeuvreStop.clone(),
+            myManoeuvreStartTime: manoeuvre.myManoeuvreStartTime,
+            myManoeuvreCompleteTime: manoeuvre.myManoeuvreCompleteTime,
+            myManoeuvreType: manoeuvre.myManoeuvreType,
+            myGUIIncrement: manoeuvre.myGUIIncrement,
+        }
     }
 
     /// C++: `Manoeuvre & Manoeuvre::operator=(const Manoeuvre &)`
@@ -12635,7 +12650,14 @@ impl MSVehicle_Manoeuvre {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, manoeuvre: &MSVehicle_Manoeuvre) -> &mut MSVehicle_Manoeuvre {
-        todo!("port Manoeuvre::operator=")
+        // implicit copy assignment: copies every member
+        self.myManoeuvreVehicleID = manoeuvre.myManoeuvreVehicleID.clone();
+        self.myManoeuvreStop = manoeuvre.myManoeuvreStop.clone();
+        self.myManoeuvreStartTime = manoeuvre.myManoeuvreStartTime;
+        self.myManoeuvreCompleteTime = manoeuvre.myManoeuvreCompleteTime;
+        self.myManoeuvreType = manoeuvre.myManoeuvreType;
+        self.myGUIIncrement = manoeuvre.myGUIIncrement;
+        self
     }
 
     /// C++: `bool Manoeuvre::operator!=(const Manoeuvre &)`
@@ -12651,7 +12673,11 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn ne_op(&mut self, manoeuvre: &MSVehicle_Manoeuvre) -> bool {
-        todo!("port Manoeuvre::operator!=")
+        self.myManoeuvreStop != manoeuvre.myManoeuvreStop
+            || self.myManoeuvreStartTime != manoeuvre.myManoeuvreStartTime
+            || self.myManoeuvreCompleteTime != manoeuvre.myManoeuvreCompleteTime
+            || self.myManoeuvreType != manoeuvre.myManoeuvreType
+            || self.myGUIIncrement != manoeuvre.myGUIIncrement
     }
 
     /// C++: `bool Manoeuvre::configureEntryManoeuvre(MSVehicle *)`
@@ -12688,7 +12714,23 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn configure_entry_manoeuvre(&mut self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port Manoeuvre::configureEntryManoeuvre")
+        if !veh.has_stops() {
+            return false; // should never happen - checked before call
+        }
+        let currentTime = MSNet::get_instance().get_current_time_step();
+        let stop = veh.get_next_stop();
+        let manoeuverAngle = stop.parkingarea.get_last_free_lot_angle();
+        let mut GUIAngle = stop.parkingarea.get_last_free_lot_gui_angle();
+        if GUIAngle.abs() < 0.1 {
+            GUIAngle = -0.1; // Wiggle vehicle on parallel entry
+        }
+        self.myManoeuvreVehicleID = veh.get_id().to_string();
+        self.myManoeuvreStop = stop.parkingarea.get_id().to_string();
+        self.myManoeuvreType = MSVehicle_ManoeuvreType::MANOEUVRE_ENTRY;
+        self.myManoeuvreStartTime = currentTime;
+        self.myManoeuvreCompleteTime = currentTime + veh.get_vehicle_type().get_entry_manoeuvre_time(manoeuverAngle);
+        self.myGUIIncrement = GUIAngle / (utils::common::time::steps2time(self.myManoeuvreCompleteTime - self.myManoeuvreStartTime) / utils::common::time::ts());
+        true
     }
 
     /// C++: `bool Manoeuvre::configureExitManoeuvre(MSVehicle *)`
@@ -12736,7 +12778,33 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn configure_exit_manoeuvre(&mut self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port Manoeuvre::configureExitManoeuvre")
+        // At the moment we only want to set for parking areas
+        if !veh.has_stops() {
+            return true;
+        }
+        if veh.get_next_stop().parkingarea.is_null() {
+            return true;
+        }
+        if self.myManoeuvreType != MSVehicle_ManoeuvreType::MANOEUVRE_NONE {
+            return false;
+        }
+        let currentTime = MSNet::get_instance().get_current_time_step();
+        let parkingArea = veh.m().get_current_parking_area();
+        let manoeuverAngle = parkingArea.get_manoeuver_angle(&veh);
+        let mut GUIAngle = parkingArea.get_gui_angle(&veh);
+        if GUIAngle.abs() < 0.1 {
+            GUIAngle = 0.1; // Wiggle vehicle on parallel exit
+        }
+        self.myManoeuvreVehicleID = veh.get_id().to_string();
+        self.myManoeuvreStop = parkingArea.get_id().to_string();
+        self.myManoeuvreType = MSVehicle_ManoeuvreType::MANOEUVRE_EXIT;
+        self.myManoeuvreStartTime = currentTime;
+        self.myManoeuvreCompleteTime = currentTime + veh.get_vehicle_type().get_exit_manoeuvre_time(manoeuverAngle);
+        self.myGUIIncrement = -GUIAngle / (utils::common::time::steps2time(self.myManoeuvreCompleteTime - self.myManoeuvreStartTime) / utils::common::time::ts());
+        if veh.remaining_stop_duration() > 0 {
+            self.myManoeuvreCompleteTime += veh.remaining_stop_duration();
+        }
+        true
     }
 
     /// C++: `bool Manoeuvre::entryManoeuvreIsComplete(MSVehicle *)`
@@ -12766,7 +12834,28 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn entry_manoeuvre_is_complete(&mut self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port Manoeuvre::entryManoeuvreIsComplete")
+        // At the moment we only want to consider parking areas - need to check because we could be setting up a manoeuvre
+        if !veh.has_stops() {
+            return true;
+        }
+        let parkingArea = veh.myStops.front().unwrap().parkingarea;
+        if parkingArea.is_null() {
+            return true;
+        } else if parkingArea.get_id() != self.myManoeuvreStop.as_str() || MSVehicle_ManoeuvreType::MANOEUVRE_ENTRY != self.myManoeuvreType {
+            if self.configure_entry_manoeuvre(veh) {
+                MSNet::get_instance().m().inform_vehicle_state_listener(veh.cast::<SUMOVehicle>(), MSNet_VehicleState::MANEUVERING, "");
+                return false;
+            } else {
+                // cannot configure entry so stop trying
+                return true;
+            }
+        } else if MSNet::get_instance().get_current_time_step() < self.myManoeuvreCompleteTime {
+            return false;
+        } else {
+            // manoeuvre complete
+            self.myManoeuvreType = MSVehicle_ManoeuvreType::MANOEUVRE_NONE;
+            return true;
+        }
     }
 
     /// C++: `bool Manoeuvre::manoeuvreIsComplete(const ManoeuvreType) const` [const]
@@ -12785,7 +12874,14 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn manoeuvre_is_complete(&self, checkType: MSVehicle_ManoeuvreType) -> bool {
-        todo!("port Manoeuvre::manoeuvreIsComplete")
+        if checkType != self.myManoeuvreType {
+            return true; // we're not maneuvering / wrong manoeuvre
+        }
+        if MSNet::get_instance().get_current_time_step() < self.myManoeuvreCompleteTime {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /// C++: `bool Manoeuvre::manoeuvreIsComplete() const` [const]
@@ -12796,7 +12892,7 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn manoeuvre_is_complete_2(&self) -> bool {
-        todo!("port Manoeuvre::manoeuvreIsComplete")
+        MSNet::get_instance().get_current_time_step() >= self.myManoeuvreCompleteTime
     }
 
     /// C++: `double Manoeuvre::getGUIIncrement() const` [const]
@@ -12807,7 +12903,7 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn get_gui_increment(&self) -> f64 {
-        todo!("port Manoeuvre::getGUIIncrement")
+        self.myGUIIncrement
     }
 
     /// C++: `MSVehicle::ManoeuvreType Manoeuvre::getManoeuvreType() const` [const]
@@ -12818,7 +12914,7 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn get_manoeuvre_type(&self) -> MSVehicle_ManoeuvreType {
-        todo!("port Manoeuvre::getManoeuvreType")
+        self.myManoeuvreType
     }
 
     /// C++: `void Manoeuvre::setManoeuvreType(const MSVehicle::ManoeuvreType)`
@@ -12829,7 +12925,7 @@ impl MSVehicle_Manoeuvre {
     // }
     #[allow(unused_variables)]
     pub fn set_manoeuvre_type(&mut self, mType: MSVehicle_ManoeuvreType) {
-        todo!("port Manoeuvre::setManoeuvreType")
+        self.myManoeuvreType = mType;
     }
 
 }
