@@ -10,6 +10,11 @@ pub struct MSAmitranTrajectories {
 // C++ static members of MSAmitranTrajectories (port as module-level statics, see AGENTS.md):
 //   static int MSAmitranTrajectories::myWrittenTypes;
 //   static int MSAmitranTrajectories::myWrittenVehicles;
+// The header declares them as std::set<std::string> and std::map<std::string, int>, which is what the code uses.
+thread_local! {
+    static MY_WRITTEN_TYPES: std::cell::RefCell<BTreeSet<String>> = const { std::cell::RefCell::new(BTreeSet::new()) };
+    static MY_WRITTEN_VEHICLES: std::cell::RefCell<BTreeMap<String, i32>> = const { std::cell::RefCell::new(BTreeMap::new()) };
+}
 
 impl MSAmitranTrajectories {
     /// C++: `void MSAmitranTrajectories::write(OutputDevice &, const SUMOTime)` [static]
@@ -23,7 +28,12 @@ impl MSAmitranTrajectories {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, timestep: SUMOTime) {
-        todo!("port MSAmitranTrajectories::write")
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        // loadedVehBegin()/loadedVehEnd() are myVehicleDict.begin()/end()
+        for (_, v) in vc.myVehicleDict.iter() {
+            Self::write_vehicle(of, v.m(), timestep);
+        }
     }
 
     /// C++: `void MSAmitranTrajectories::writeVehicle(OutputDevice &, const SUMOVehicle &, const SUMOTime)` [static, private]
@@ -64,7 +74,36 @@ impl MSAmitranTrajectories {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicle(of: &mut OutputDevice, veh: &SUMOVehicle, timestep: SUMOTime) {
-        todo!("port MSAmitranTrajectories::writeVehicle")
+        if veh.is_on_road() {
+            let type_ = veh.get_vehicle_type().get_id().to_string();
+            if !MY_WRITTEN_TYPES.with_borrow(|s| s.contains(&type_)) {
+                of.open_tag_id(SUMO_TAG_ACTORCONFIG).write_attr(SUMO_ATTR_ID, &veh.get_vehicle_type().get_numerical_id());
+                let c = veh.get_vehicle_type().get_emission_class();
+                if c != 0 {
+                    // shortcut: PollutantsInterface (getAmitranVehicleClass, getFuel, getEuroClass, getWeight) is not ported, so the vehicleclass/fuel/emissionclass/weight attributes are skipped; upgrade when the pollutants interface is ported
+                }
+                of.write_attr(SUMO_ATTR_REF, type_.as_str()).close_tag("");
+                MY_WRITTEN_TYPES.with_borrow_mut(|s| s.insert(type_.clone()));
+            }
+            let vid = veh.get_id().to_string();
+            if !MY_WRITTEN_VEHICLES.with_borrow(|m| m.contains_key(&vid)) {
+                let index = MY_WRITTEN_VEHICLES.with_borrow(|m| m.len() as i32);
+                of.open_tag_id(SUMO_TAG_VEHICLE).write_attr(SUMO_ATTR_ID, &index)
+                    .write_attr(SUMO_ATTR_ACTORCONFIG, &veh.get_vehicle_type().get_numerical_id())
+                    .write_attr(SUMO_ATTR_STARTTIME, &veh.get_departure());
+                of.write_attr(SUMO_ATTR_REF, vid.as_str()).close_tag("");
+                MY_WRITTEN_VEHICLES.with_borrow_mut(|m| m.insert(vid.clone(), index));
+            }
+            let vehIndex = MY_WRITTEN_VEHICLES.with_borrow_mut(|m| *m.entry(vid.clone()).or_insert(0));
+            // int(...) truncates toward zero, as Rust's `as` does
+            let speed = (100. * veh.get_speed() + 0.5) as i32;
+            let acceleration = (1000. * veh.get_acceleration() + 0.5) as i32;
+            of.open_tag_id(SUMO_TAG_MOTIONSTATE).write_attr(SUMO_ATTR_VEHICLE, &vehIndex)
+                .write_attr(SUMO_ATTR_SPEED, &speed)
+                .write_attr(SUMO_ATTR_TIME, &timestep)
+                .write_attr(SUMO_ATTR_ACCELERATION, &acceleration);
+            of.close_tag("");
+        }
     }
 
     /// C++: `void MSAmitranTrajectories::MSAmitranTrajectories(const MSAmitranTrajectories &)` [private]
@@ -72,7 +111,7 @@ impl MSAmitranTrajectories {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSAmitranTrajectories) -> Self {
-        todo!("port MSAmitranTrajectories::MSAmitranTrajectories")
+        panic!("MSAmitranTrajectories copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSAmitranTrajectories & MSAmitranTrajectories::operator=(const MSAmitranTrajectories &)` [private]
@@ -80,7 +119,7 @@ impl MSAmitranTrajectories {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSAmitranTrajectories) -> &mut MSAmitranTrajectories {
-        todo!("port MSAmitranTrajectories::operator=")
+        panic!("MSAmitranTrajectories assignment operator is private and invalidated in C++")
     }
 
 }

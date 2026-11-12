@@ -18,7 +18,7 @@ pub type MSDetectorControl_IntervalsKey = (SUMOTime, SUMOTime);
 /// C++ class `MSDetectorControl` (microsim/output/MSDetectorControl.h)
 pub struct MSDetectorControl {
     /// The detectors map, first by detector type, then using NamedObjectCont (
-    pub myDetectors: BTreeMap<SumoXMLTag, Unmapped /* NamedObjectCont<MSDetectorFileOutput *> */>,
+    pub myDetectors: BTreeMap<SumoXMLTag, BTreeMap<String, Ptr<MSDetectorFileOutput>>>,
     /// Map that hold DetectorFileVec for given intervals
     pub myIntervals: MSDetectorControl_Intervals,
     /// The map that holds the last call for each sample interval
@@ -26,7 +26,7 @@ pub struct MSDetectorControl {
     /// List of meanData detectors
     pub myMeanData: BTreeMap<String, Vec<Ptr<MSMeanData>>>,
     /// An empty container to return in getTypedDetectors() if no detectors of the asked type exist
-    pub myEmptyContainer: Unmapped /* NamedObjectCont<MSDetectorFileOutput *> */,
+    pub myEmptyContainer: BTreeMap<String, Ptr<MSDetectorFileOutput>>,
     pub myReminders: BTreeMap<String, Ptr<MSMoveReminder>>,
 }
 
@@ -37,15 +37,36 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSDetectorControl::MSDetectorControl")
+        MSDetectorControl {
+            myDetectors: BTreeMap::new(),
+            myIntervals: BTreeMap::new(),
+            myLastCalls: BTreeMap::new(),
+            myMeanData: BTreeMap::new(),
+            myEmptyContainer: BTreeMap::new(),
+            myReminders: BTreeMap::new(),
+        }
     }
 
     /// C++: `void MSDetectorControl::~MSDetectorControl()`
     /// Destructor
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // MSDetectorControl::~MSDetectorControl() {
+    //     for (auto i = myDetectors.begin(); i != myDetectors.end(); ++i) {
+    //         (*i).second.clear();
+    //     }
+    //     for (auto item : myMeanData) {
+    //         for (MSMeanData* md : item.second) {
+    //             delete md;
+    //         }
+    //     }
+    //     myMeanData.clear();
+    // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDetectorControl::~MSDetectorControl")
+        for (_, dets) in self.myDetectors.iter_mut() {
+            dets.clear();
+        }
+        // shortcut: C++ `delete md` omitted, Ptr<MSMeanData> is non-owning; upgrade when the port settles on an ownership model
+        self.myMeanData.clear();
     }
 
     /// C++: `void MSDetectorControl::close(SUMOTime)`
@@ -59,7 +80,10 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn close(&mut self, step: SUMOTime) {
-        todo!("port MSDetectorControl::close")
+        // flush the last values
+        self.write_output(step, true);
+        // [...] files are closed on another place [...]
+        self.myIntervals.clear();
     }
 
     /// C++: `void MSDetectorControl::add(SumoXMLTag, MSDetectorFileOutput *, const std::string &, SUMOTime, SUMOTime)`
@@ -74,8 +98,10 @@ impl MSDetectorControl {
     //     addDetectorAndInterval(d, &OutputDevice::getDevice(device), interval, begin);
     // }
     #[allow(unused_variables)]
-    pub fn add(&mut self, type_: SumoXMLTag, d: Ptr<MSDetectorFileOutput>, device: &str, interval: SUMOTime, begin: SUMOTime) {
-        todo!("port MSDetectorControl::add")
+    pub fn add(&mut self, type_: SumoXMLTag, d: Ptr<MSDetectorFileOutput>, device: &str, interval: SUMOTime, begin: SUMOTime) -> Result<(), ProcessError> {
+        self.add_2(type_, d)?;
+        let dev = OutputDevice::get_device(device, true)?;
+        self.add_detector_and_interval(d, Ptr::from_raw(dev.as_ptr()), interval, begin)
     }
 
     /// C++: `void MSDetectorControl::add(SumoXMLTag, MSDetectorFileOutput *)`
@@ -89,8 +115,15 @@ impl MSDetectorControl {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add_2(&mut self, type_: SumoXMLTag, d: Ptr<MSDetectorFileOutput>) {
-        todo!("port MSDetectorControl::add")
+    pub fn add_2(&mut self, type_: SumoXMLTag, d: Ptr<MSDetectorFileOutput>) -> Result<(), ProcessError> {
+        let id = d.get_id().to_string();
+        let dets = self.myDetectors.entry(type_).or_default();
+        if dets.contains_key(&id) {
+            // shortcut: C++ `delete d` omitted, Ptr<MSDetectorFileOutput> is non-owning
+            return Err(ProcessError::new(format!("{} detector '{}' could not be built (declared twice?).", Tags.get_string(type_), id)));
+        }
+        dets.insert(id, d);
+        Ok(())
     }
 
     /// C++: `void MSDetectorControl::add(MSMeanData *, const std::string &, SUMOTime, SUMOTime)`
@@ -106,8 +139,15 @@ impl MSDetectorControl {
     //     MSGlobals::gHaveEmissions |= typeid(*md) == typeid(MSMeanData_Emissions);
     // }
     #[allow(unused_variables)]
-    pub fn add_3(&mut self, mn: Ptr<MSMeanData>, device: &str, frequency: SUMOTime, begin: SUMOTime) {
-        todo!("port MSDetectorControl::add")
+    pub fn add_3(&mut self, mn: Ptr<MSMeanData>, device: &str, frequency: SUMOTime, begin: SUMOTime) -> Result<(), ProcessError> {
+        self.myMeanData.entry(mn.get_id().to_string()).or_default().push(mn);
+        let dev = OutputDevice::get_device(device, true)?;
+        self.add_detector_and_interval(Ptr::from_raw(&mut mn.m().base as *mut MSDetectorFileOutput), Ptr::from_raw(dev.as_ptr()), frequency, begin)?;
+        if begin <= utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))? {
+            mn.m().init();
+        }
+        // shortcut: MSGlobals::gHaveEmissions |= typeid(*md) == typeid(MSMeanData_Emissions) needs RTTI and MSGlobals statics are not ported, set it once both exist
+        Ok(())
     }
 
     /// C++: `void MSDetectorControl::addDetectorAndInterval(MSDetectorFileOutput *, OutputDevice *, SUMOTime, SUMOTime)`
@@ -149,8 +189,32 @@ impl MSDetectorControl {
     //     det->writeXMLDetectorProlog(*device);
     // }
     #[allow(unused_variables)]
-    pub fn add_detector_and_interval(&mut self, det: Ptr<MSDetectorFileOutput>, device: Ptr<OutputDevice>, interval: SUMOTime, begin: SUMOTime) {
-        todo!("port MSDetectorControl::addDetectorAndInterval")
+    pub fn add_detector_and_interval(&mut self, det: Ptr<MSDetectorFileOutput>, device: Ptr<OutputDevice>, interval: SUMOTime, mut begin: SUMOTime) -> Result<(), ProcessError> {
+        let simBegin = utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))?;
+        if begin == -1 {
+            begin = simBegin;
+        }
+        let key = (interval, begin);
+        // Add command for given key only once to MSEventControl...
+        if let Some(detAndFileVec) = self.myIntervals.get_mut(&key) {
+            if !detAndFileVec.iter().any(|pair| pair.0 == det) {
+                detAndFileVec.push((det, device));
+            } else {
+                // detector already in container. Don't add several times
+                utils::common::msg_handler::write_warning("MSDetectorControl::addDetectorAndInterval: detector already in container. Ignoring.");
+                return Ok(());
+            }
+        } else {
+            self.myIntervals.insert(key, vec![(det, device)]);
+            let mut lastCall = begin;
+            if begin < simBegin {
+                let divRest = (simBegin - begin) % interval;
+                lastCall = simBegin - divRest;
+            }
+            self.myLastCalls.insert(key, lastCall);
+        }
+        det.m().write_xml_detector_prolog(device.m());
+        Ok(())
     }
 
     /// C++: `const std::vector<SumoXMLTag> MSDetectorControl::getAvailableTypes() const` [const]
@@ -165,7 +229,11 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn get_available_types(&self) -> Vec<SumoXMLTag> {
-        todo!("port MSDetectorControl::getAvailableTypes")
+        let mut result = Vec::new();
+        for i in self.myDetectors.keys() {
+            result.push(*i);
+        }
+        result
     }
 
     /// C++: `const NamedObjectCont<MSDetectorFileOutput *> & MSDetectorControl::getTypedDetectors(SumoXMLTag) const` [const]
@@ -178,8 +246,11 @@ impl MSDetectorControl {
     //     return myDetectors.find(type)->second;
     // }
     #[allow(unused_variables)]
-    pub fn get_typed_detectors(&self, type_: SumoXMLTag) -> &Unmapped /* NamedObjectCont<MSDetectorFileOutput *> */ {
-        todo!("port MSDetectorControl::getTypedDetectors")
+    pub fn get_typed_detectors(&self, type_: SumoXMLTag) -> &BTreeMap<String, Ptr<MSDetectorFileOutput>> {
+        match self.myDetectors.get(&type_) {
+            None => &self.myEmptyContainer,
+            Some(dets) => dets,
+        }
     }
 
     /// C++: `const std::map<std::string, std::vector<MSMeanData *>> & MSDetectorControl::getMeanData() const` [const]
@@ -188,7 +259,7 @@ impl MSDetectorControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_mean_data(&self) -> &BTreeMap<String, Vec<Ptr<MSMeanData>>> {
-        todo!("port MSDetectorControl::getMeanData")
+        &self.myMeanData
     }
 
     /// C++: `void MSDetectorControl::updateDetectors(const SUMOTime)`
@@ -208,7 +279,16 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn update_detectors(&mut self, step: SUMOTime) {
-        todo!("port MSDetectorControl::updateDetectors")
+        for type_ in self.get_available_types() {
+            for j in self.get_typed_detectors(type_).values() {
+                j.m().detector_update(step);
+            }
+        }
+        for (_, item) in self.myMeanData.iter() {
+            for md in item.iter() {
+                md.m().detector_update(step);
+            }
+        }
     }
 
     /// C++: `void MSDetectorControl::writeOutput(SUMOTime, bool)`
@@ -231,7 +311,17 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn write_output(&mut self, step: SUMOTime, closing: bool) {
-        todo!("port MSDetectorControl::writeOutput")
+        for (interval, dfVec) in self.myIntervals.iter() {
+            let last = *self.myLastCalls.entry(*interval).or_insert(0);
+            if last + interval.0 <= step || (closing && last < step) {
+                let startTime = last;
+                // check whether at the end the output was already generated
+                for (det, dev) in dfVec.iter() {
+                    det.m().write_xml_output(dev.m(), startTime, step);
+                }
+                self.myLastCalls.insert(*interval, step);
+            }
+        }
     }
 
     /// C++: `void MSDetectorControl::clearState(SUMOTime)`
@@ -247,7 +337,12 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime) {
-        todo!("port MSDetectorControl::clearState")
+        for type_ in self.get_available_types() {
+            for j in self.get_typed_detectors(type_).values() {
+                j.m().clear_state(step);
+            }
+        }
+        self.myReminders.clear();
     }
 
     /// C++: `void MSDetectorControl::saveState(OutputDevice &) const` [const]
@@ -262,7 +357,11 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDetectorControl::saveState")
+        for type_ in self.get_available_types() {
+            for j in self.get_typed_detectors(type_).values() {
+                j.m().save_state(out);
+            }
+        }
     }
 
     /// C++: `const std::map<std::string, MSMoveReminder *> & MSDetectorControl::getAllReminders()`
@@ -286,7 +385,20 @@ impl MSDetectorControl {
     // }
     #[allow(unused_variables)]
     pub fn get_all_reminders(&mut self) -> &BTreeMap<String, Ptr<MSMoveReminder>> {
-        todo!("port MSDetectorControl::getAllReminders")
+        if self.myReminders.is_empty() {
+            for (_, item) in self.myMeanData.iter() {
+                for md in item.iter() {
+                    for rem in md.get_reminders() {
+                        self.myReminders.insert(rem.get_description().to_string(), rem);
+                    }
+                }
+            }
+            if self.myReminders.is_empty() {
+                // ensure non-empty map
+                self.myReminders.insert(String::new(), Ptr::default());
+            }
+        }
+        &self.myReminders
     }
 
     /// C++: `void MSDetectorControl::MSDetectorControl(const MSDetectorControl &)` [private]
@@ -294,7 +406,7 @@ impl MSDetectorControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDetectorControl) -> Self {
-        todo!("port MSDetectorControl::MSDetectorControl")
+        panic!("MSDetectorControl copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSDetectorControl & MSDetectorControl::operator=(const MSDetectorControl &)` [private]
@@ -302,7 +414,7 @@ impl MSDetectorControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDetectorControl) -> &mut MSDetectorControl {
-        todo!("port MSDetectorControl::operator=")
+        panic!("MSDetectorControl assignment operator is private and invalidated in C++")
     }
 
 }
