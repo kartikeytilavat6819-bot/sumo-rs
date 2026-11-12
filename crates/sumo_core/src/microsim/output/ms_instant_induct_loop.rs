@@ -2,6 +2,11 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ macro `SIMTIME`: STEPS2TIME(MSNet::getInstance()->getCurrentTimeStep())
+fn simtime() -> f64 {
+    steps2time(MSNet::get_instance().get_current_time_step())
+}
+
 /// An instantaneous induction loop
 /// C++ class `MSInstantInductLoop` (microsim/output/MSInstantInductLoop.h)
 pub struct MSInstantInductLoop {
@@ -51,7 +56,19 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, od: &mut OutputDevice, lane: Ptr<MSLane>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
-        todo!("port MSInstantInductLoop::MSInstantInductLoop")
+        // shortcut: C++ MSMoveReminder(id, lane) registers this reminder with the lane (doAdd); new() returns by value, so the caller must call MSLane::add_move_reminder after placing it
+        let this = MSInstantInductLoop {
+            base: MSMoveReminder::new(id, lane, true),
+            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons),
+            myName: name,
+            myOutputDevice: Ptr::from_mut(od),
+            myPosition: positionInMeters,
+            myLastExitTime: -1.0,
+            myEntryTimes: BTreeMap::new(),
+        };
+        assert!(positionInMeters >= 0.0 && positionInMeters <= lane.get_length());
+        this.write_xml_detector_prolog(od);
+        this
     }
 
     /// C++: `void MSInstantInductLoop::~MSInstantInductLoop() noexcept` [virtual]
@@ -60,7 +77,8 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSInstantInductLoop::~MSInstantInductLoop")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `bool MSInstantInductLoop::notifyEnter(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -89,7 +107,27 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSInstantInductLoop::notifyEnter")
+        // vehicles must be kept if the "inductionloop" wants to detect passeengers
+        if !self.base2.vehicle_applies(veh) {
+            return false;
+        }
+        if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
+            // the junction case is handled in notifyMove
+            if veh.get_back_position_on_lane(self.base.myLane) >= self.myPosition {
+                return false;
+            }
+            if veh.get_position_on_lane() >= self.myPosition {
+                let entryTime = simtime();
+                let speed = veh.get_speed();
+                if self.myLastExitTime >= 0.0 {
+                    self.write("enter", entryTime, veh, speed, "gap", entryTime - self.myLastExitTime);
+                } else {
+                    self.write("enter", entryTime, veh, speed, "", 0.0);
+                }
+                self.myEntryTimes.insert(Ptr::from_mut(veh), entryTime);
+            }
+        }
+        true
     }
 
     /// C++: `bool MSInstantInductLoop::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -142,7 +180,47 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSInstantInductLoop::notifyMove")
+        if !self.base2.vehicle_applies(veh) {
+            return false;
+        }
+        if newPos < self.myPosition {
+            // detector not reached yet
+            return true;
+        }
+        // C++ ScopedLocker on myNotificationMutex: only relevant with HAVE_FOX and multiple sim threads
+
+        let oldSpeed = veh.get_previous_speed();
+        // NOTE: For the euler update, the vehicle is assumed to travel at constant speed for the whole time step
+        let mut enterSpeed = if crate::microsim::cfmodels::mscf_model::g_semi_implicit_euler_update() { newSpeed } else { oldSpeed };
+
+        if newPos >= self.myPosition && oldPos < self.myPosition {
+            let timeBeforeEnter = MSCFModel::passing_time(oldPos, self.myPosition, newPos, oldSpeed, newSpeed);
+            let entryTime = simtime() - ts() + timeBeforeEnter;
+            enterSpeed = MSCFModel::speed_after_time(timeBeforeEnter, oldSpeed, newPos - oldPos);
+            if self.myLastExitTime >= 0.0 {
+                self.write("enter", entryTime, veh, enterSpeed, "gap", entryTime - self.myLastExitTime);
+            } else {
+                self.write("enter", entryTime, veh, enterSpeed, "", 0.0);
+            }
+            self.myEntryTimes.insert(Ptr::from_mut(veh), entryTime);
+        }
+        let newBackPos = newPos - veh.get_vehicle_type().get_length();
+        let oldBackPos = oldPos - veh.get_vehicle_type().get_length();
+        if newBackPos > self.myPosition {
+            let key = Ptr::from_mut(veh);
+            if let Some(entry) = self.myEntryTimes.get(&key).copied() {
+                // vehicle passed the detector
+                let timeBeforeLeave = MSCFModel::passing_time(oldBackPos, self.myPosition, newBackPos, oldSpeed, newSpeed);
+                let leaveTime = simtime() - ts() + timeBeforeLeave;
+                self.write("leave", leaveTime, veh, newSpeed, "occupancy", leaveTime - entry);
+                self.myEntryTimes.remove(&key);
+                self.myLastExitTime = leaveTime;
+            }
+            return false;
+        }
+        // vehicle stays on the detector
+        self.write("stay", simtime(), veh, newSpeed, "", 0.0);
+        true
     }
 
     /// C++: `bool MSInstantInductLoop::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -163,7 +241,18 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSInstantInductLoop::notifyLeave")
+        if reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
+            // vehicle might have jumped over detector at the end of the lane. we need
+            // one more notifyMove to register it
+            return true;
+        }
+        let key = Ptr::from_mut(veh);
+        if self.myEntryTimes.contains_key(&key) {
+            let speed = veh.get_speed();
+            self.write("leave", simtime(), veh, speed, "", 0.0);
+            self.myEntryTimes.remove(&key);
+        }
+        false
     }
 
     /// C++: `void MSInstantInductLoop::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual]
@@ -176,7 +265,7 @@ impl MSInstantInductLoop {
     //     }
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MSInstantInductLoop::writeXMLOutput")
+        // C++ body is empty (UNUSED_PARAMETER only)
     }
 
     /// C++: `void MSInstantInductLoop::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -187,7 +276,7 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSInstantInductLoop::writeXMLDetectorProlog")
+        dev.write_xml_header("instantE1", "instant_e1_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `void MSInstantInductLoop::write(const char *, double, SUMOTrafficObject &, double, const char *, double)` [protected]
@@ -208,7 +297,22 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn write(&mut self, state: &str, t: f64, veh: &mut SUMOTrafficObject, speed: f64, add: &str, addValue: f64) {
-        todo!("port MSInstantInductLoop::write")
+        // an empty `add` stands for C++ add == nullptr (the 4-argument overload)
+        if !self.myOutputDevice.is_null() {
+            let dev = self.myOutputDevice.m();
+            dev.open_tag("instantOut")
+                .write_attr("id", self.base2.base.get_id())
+                .write_attr("time", &to_string(&t))
+                .write_attr("state", state)
+                .write_attr("vehID", veh.get_id())
+                .write_attr("speed", &to_string(&speed))
+                .write_attr("length", &to_string(&veh.get_vehicle_type().get_length()))
+                .write_attr("type", veh.get_vehicle_type().get_id());
+            if !add.is_empty() {
+                dev.write_attr(add, &to_string(&addValue));
+            }
+            dev.close_tag("");
+        }
     }
 
     /// C++: `void MSInstantInductLoop::MSInstantInductLoop(const MSInstantInductLoop &)` [private]
@@ -216,7 +320,7 @@ impl MSInstantInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSInstantInductLoop) -> Self {
-        todo!("port MSInstantInductLoop::MSInstantInductLoop")
+        panic!("MSInstantInductLoop copy constructor is declared private and never defined in C++")
     }
 
     /// C++: `MSInstantInductLoop & MSInstantInductLoop::operator=(const MSInstantInductLoop &)` [private]
@@ -224,7 +328,7 @@ impl MSInstantInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSInstantInductLoop) -> &mut MSInstantInductLoop {
-        todo!("port MSInstantInductLoop::operator=")
+        panic!("MSInstantInductLoop assignment operator is declared private and never defined in C++")
     }
 
 }
