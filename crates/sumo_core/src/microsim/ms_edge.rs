@@ -1,6 +1,18 @@
 //! Port of microsim/MSEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+
+// shortcut: MSGlobals is still an empty skeleton (ms_globals.rs), so the g* values used here are the
+// default-run values (lateral-resolution=-1, no-internal-links=false, no meso, zero penalties);
+// upgrade these to MSGlobals::g* reads once that module is ported.
+const G_LATERAL_RESOLUTION: f64 = -1.;
+const G_USING_INTERNAL_LANES: bool = true;
+const G_USE_MESO_SIM: bool = false;
+const G_TLS_PENALTY: f64 = 0.;
+const G_MINOR_PENALTY: f64 = 0.;
+const G_TURNAROUND_PENALTY: f64 = 0.;
+const G_LANE_CHANGE_DURATION: SUMOTime = 0;
 
 /// C++ typedef `std::map<const MSEdge *, AllowedLanesCont> MSEdge::AllowedLanesByTarget`
 pub type MSEdge_AllowedLanesByTarget = BTreeMap<Ptr<MSEdge>, MSEdge_AllowedLanesCont>;
@@ -124,6 +136,17 @@ impl std::ops::DerefMut for MSEdge {
     }
 }
 
+/// Runs a C++ `operator()(a, b)` comparator (returns int, nonzero = a before b) as a std::sort ordering.
+fn sort_by_sorter(less: impl Fn(Ptr<MSTransportable>, Ptr<MSTransportable>) -> i32, a: Ptr<MSTransportable>, b: Ptr<MSTransportable>) -> std::cmp::Ordering {
+    if less(a, b) != 0 {
+        std::cmp::Ordering::Less
+    } else if less(b, a) != 0 {
+        std::cmp::Ordering::Greater
+    } else {
+        std::cmp::Ordering::Equal
+    }
+}
+
 // C++ static members of MSEdge (port as module-level statics, see AGENTS.md):
 //   static DictType MSEdge::myDict;
 //   static std::unordered_map<std::string_view, MSEdge *> MSEdge::myHashDict;
@@ -164,7 +187,58 @@ impl MSEdge {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, numericalID: i32, function: SumoXMLEdgeFunc, streetName: &str, edgeType: &str, routingType: &str, priority: i32, distance: f64) -> Self {
-        todo!("port MSEdge::MSEdge")
+        Self {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myNumericalID: numericalID,
+            myLanes: Rc::new(Vec::new()), // C++ null shared_ptr until initialize()
+            myLaneChanger: Ptr::null(),
+            myFunction: function,
+            myVaporizationRequests: 0,
+            myLastFailedInsertionTime: -1,
+            myFailedInsertionMemory: BTreeSet::new(),
+            myCrossingEdges: Vec::new(),
+            mySuccessors: Vec::new(),
+            myViaSuccessors: Vec::new(),
+            myPredecessors: Vec::new(),
+            myFromJunction: Ptr::null(),
+            myToJunction: Ptr::null(),
+            myPersons: BTreeSet::new(),
+            myContainers: BTreeSet::new(),
+            myAllowed: Vec::new(),
+            myOrigAllowed: Vec::new(),
+            myAllowedTargets: BTreeMap::new(),
+            myOrigAllowedTargets: BTreeMap::new(),
+            myMinimumPermissions: SVC_ALL,
+            myCombinedPermissions: 0,
+            myOriginalMinimumPermissions: SVC_ALL,
+            myOriginalCombinedPermissions: SVC_ALL,
+            myHaveTransientPermissions: false,
+            myOtherTazConnector: Ptr::null(),
+            myStreetName: streetName.to_string(),
+            myEdgeType: edgeType.to_string(),
+            myRoutingType: routingType.to_string(),
+            myPriority: priority,
+            myDistance: distance,
+            myWidth: 0.,
+            myLength: 0.,
+            myEmptyTraveltime: 0.,
+            myTimePenalty: 0.,
+            myAmDelayed: false,
+            myAmRoundabout: false,
+            myAmFringe: true,
+            mySublaneSides: Vec::new(),
+            myClassesSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: BTreeMap::new(),
+            myOrigClassesViaSuccessorMap: BTreeMap::new(),
+            myBoundary: Boundary::default(),
+            myWaiting: Vec::new(),
+            myCachedMesoPos: BTreeMap::new(),
+            myLastCacheUpdate: -1,
+            myBidiEdge: Ptr::null(),
+            myReversedRoutingEdge: Ptr::null(),
+            myRailwayRoutingEdge: Ptr::null(),
+        }
     }
 
     /// C++: `void MSEdge::~MSEdge() noexcept` [virtual]
@@ -176,7 +250,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSEdge::~MSEdge")
+        // shortcut: myLaneChanger may be a MSLaneChangerSublane base pointer (only when lateral-resolution > 0, which MSGlobals shim never enables), freeing it here would be the wrong type
+        if !self.myLaneChanger.is_null() {
+            drop(unsafe { Box::from_raw(self.myLaneChanger.as_raw()) });
+        }
+        if !self.myReversedRoutingEdge.is_null() {
+            drop(unsafe { Box::from_raw(self.myReversedRoutingEdge.as_raw()) });
+        }
+        if !self.myRailwayRoutingEdge.is_null() {
+            drop(unsafe { Box::from_raw(self.myRailwayRoutingEdge.as_raw()) });
+        }
     }
 
     /// C++: `void MSEdge::initialize(const std::vector<MSLane *> *)`
@@ -199,7 +282,21 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn initialize(&mut self, lanes: Ptr<Vec<Ptr<MSLane>>>) {
-        todo!("port MSEdge::initialize")
+        assert!(!lanes.is_null());
+        // C++ takes ownership of the pointer; the Rust side keeps its own copy of the lane list.
+        self.myLanes = Rc::new(lanes.m().clone());
+        if self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
+            self.myCombinedPermissions = SVC_ALL;
+        }
+        let laneList = self.myLanes.clone();
+        for lane in laneList.iter() {
+            lane.m().set_right_side_on_edge(self.myWidth, self.mySublaneSides.len() as i32);
+            let ahead = MSLeaderInfo::new(lane.get_width(), Ptr::null(), 0.);
+            for j in 0..ahead.num_sublanes() {
+                self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+            }
+            self.myWidth += lane.get_width();
+        }
     }
 
     /// C++: `void MSEdge::recalcCache()`
@@ -266,7 +363,73 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn recalc_cache(&mut self) {
-        todo!("port MSEdge::recalcCache")
+        if self.myLanes.is_empty() {
+            return;
+        }
+        self.myLength = self.myLanes[0].get_length();
+        let speed = self.get_speed_limit();
+        // MAX2(getSpeedLimit(), NUMERICAL_EPS)
+        self.myEmptyTraveltime = self.myLength / (if speed > NUMERICAL_EPS { speed } else { NUMERICAL_EPS });
+        if self.is_normal() && (G_USE_MESO_SIM || G_TLS_PENALTY > 0.) {
+            let mut minorPenalty: SUMOTime = 0;
+            let mut haveTLSPenalty = G_TLS_PENALTY > 0.;
+            if G_USE_MESO_SIM {
+                let net = MSNet::get_instance();
+                let edgeType = net.m().get_meso_type(self.get_edge_type());
+                minorPenalty = edgeType.minorPenalty;
+                haveTLSPenalty = edgeType.tlsPenalty > 0.;
+            }
+            if haveTLSPenalty || minorPenalty > 0 {
+                // add tls penalties to the minimum travel time
+                let mut minPenalty: SUMOTime = -1;
+                for l in self.myLanes.iter() {
+                    for link in l.get_link_cont() {
+                        if link.get_lane().is_walking_area() && link.get_lane_before().is_normal() {
+                            continue;
+                        }
+                        let linkPenalty = if link.is_tls_controlled() {
+                            link.get_meso_tls_penalty()
+                        } else if link.have_priority() {
+                            0
+                        } else {
+                            minorPenalty
+                        };
+                        if minPenalty == -1 {
+                            minPenalty = linkPenalty;
+                        } else {
+                            minPenalty = std::cmp::min(minPenalty, linkPenalty);
+                        }
+                    }
+                }
+                if minPenalty > 0 {
+                    self.myEmptyTraveltime += steps2time(minPenalty);
+                    self.myTimePenalty = steps2time(minPenalty);
+                }
+            }
+        } else if self.is_crossing() && G_TLS_PENALTY > 0. {
+            // penalties are recorded for the entering link
+            for ili in self.myLanes[0].get_incoming_lanes() {
+                let mut penalty = steps2time(ili.viaLink.get_meso_tls_penalty());
+                if !ili.viaLink.have_off_priority() {
+                    penalty = if penalty > G_MINOR_PENALTY { penalty } else { G_MINOR_PENALTY };
+                }
+                if penalty > 0. {
+                    self.myEmptyTraveltime += penalty;
+                    self.myTimePenalty = penalty;
+                }
+            }
+        } else if self.is_internal() && G_USING_INTERNAL_LANES {
+            let link = self.myLanes[0].get_incoming_lanes()[0].viaLink;
+            if !link.is_tls_controlled() && !link.have_priority() {
+                if link.is_turnaround() {
+                    self.myEmptyTraveltime += G_TURNAROUND_PENALTY;
+                    self.myTimePenalty = G_TURNAROUND_PENALTY;
+                } else {
+                    self.myEmptyTraveltime += G_MINOR_PENALTY;
+                    self.myTimePenalty = G_MINOR_PENALTY;
+                }
+            }
+        }
     }
 
     /// C++: `void MSEdge::closeBuilding()` [virtual]
@@ -314,7 +477,53 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn close_building(&mut self) {
-        todo!("port MSEdge::closeBuilding")
+        let me = Ptr::from_mut(self);
+        let laneList = self.myLanes.clone();
+        for lane in laneList.iter() {
+            let links = lane.get_link_cont().clone();
+            for link in links.iter() {
+                link.m().init_parallel_links();
+                let toL = link.get_lane();
+                let viaL = link.get_via_lane();
+                if !toL.is_null() {
+                    let to = Ptr::from_mut(toL.get_edge());
+                    if !self.mySuccessors.contains(&to) {
+                        self.mySuccessors.push(to);
+                        let viaEdge = if viaL.is_null() { Ptr::null() } else { Ptr::from_mut(viaL.get_edge()) };
+                        self.myViaSuccessors.push((to, viaEdge));
+                    }
+                    if !to.m().myPredecessors.contains(&me) {
+                        to.m().myPredecessors.push(me);
+                    }
+                    if link.get_direction() != LinkDirection::TURN {
+                        self.myAmFringe = false;
+                    }
+                }
+                if !viaL.is_null() {
+                    let to = Ptr::from_mut(viaL.get_edge());
+                    if !to.m().myPredecessors.contains(&me) {
+                        to.m().myPredecessors.push(me);
+                    }
+                }
+            }
+            lane.m().check_buffer_type();
+        }
+        // determinism: numerical ids are unique, so the sort order is total
+        self.mySuccessors.sort_by_key(|e| e.get_numerical_id());
+        self.rebuild_allowed_lanes(true, false);
+        self.recalc_cache();
+
+        // extend lookup table for sublane model after all edges are read
+        let last = self.myLanes.last().copied();
+        if let Some(last) = last {
+            let opposite = last.get_opposite();
+            if !opposite.is_null() {
+                let ahead = MSLeaderInfo::new(opposite.get_width(), Ptr::null(), 0.);
+                for j in 0..ahead.num_sublanes() {
+                    self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+                }
+            }
+        }
     }
 
     /// C++: `void MSEdge::buildLaneChanger()`
@@ -339,7 +548,20 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn build_lane_changer(&mut self) {
-        todo!("port MSEdge::buildLaneChanger")
+        if !self.myLanes.is_empty() {
+            let allowChanging = self.allows_lane_changing();
+            let lanes = Ptr::new(self.myLanes.as_ref());
+            if G_LATERAL_RESOLUTION > 0. {
+                // may always initiate sublane-change
+                if !self.is_internal() || G_USING_INTERNAL_LANES {
+                    // shortcut: sublane changer is stored through its MSLaneChanger base pointer, only reachable when lateral-resolution > 0
+                    let sub = Box::into_raw(Box::new(MSLaneChangerSublane::new(lanes, allowChanging)));
+                    self.myLaneChanger = Ptr::from_raw(unsafe { &mut (*sub).base } as *mut MSLaneChanger);
+                }
+            } else if G_LANE_CHANGE_DURATION > 0 || self.myLanes.len() > 1 || self.can_change_to_opposite() {
+                self.myLaneChanger = Ptr::from_raw(Box::into_raw(Box::new(MSLaneChanger::new(lanes, allowChanging))));
+            }
+        }
     }
 
     /// C++: `bool MSEdge::allowsLaneChanging() const` [const]
@@ -365,7 +587,23 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allows_lane_changing(&self) -> bool {
-        todo!("port MSEdge::allowsLaneChanging")
+        if self.is_internal() && G_USING_INTERNAL_LANES {
+            // allow changing only if all links leading to this internal lane have priority
+            // or they are controlled by a traffic light
+            for lane in self.myLanes.iter() {
+                let link = lane.get_logical_predecessor_lane().get_link_to(*lane);
+                let state = link.get_state();
+                if (state == LINKSTATE_MINOR && lane.get_bidi_lane().is_null())
+                    || state == LINKSTATE_EQUAL
+                    || state == LINKSTATE_STOP
+                    || state == LINKSTATE_ALLWAY_STOP
+                    || state == LINKSTATE_DEADEND
+                {
+                    return false;
+                }
+            }
+        }
+        true
     }
 
     /// C++: `MSLane * MSEdge::leftLane(const MSLane *const) const` [const]
@@ -376,7 +614,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn left_lane(&self, lane: Ptr<MSLane>) -> Ptr<MSLane> {
-        todo!("port MSEdge::leftLane")
+        self.parallel_lane(lane, 1, true)
     }
 
     /// C++: `MSLane * MSEdge::rightLane(const MSLane *const) const` [const]
@@ -387,7 +625,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn right_lane(&self, lane: Ptr<MSLane>) -> Ptr<MSLane> {
-        todo!("port MSEdge::rightLane")
+        self.parallel_lane(lane, -1, true)
     }
 
     /// C++: `MSLane * MSEdge::parallelLane(const MSLane *const, int, bool) const` [const]
@@ -409,7 +647,18 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn parallel_lane(&self, lane: Ptr<MSLane>, offset: i32, includeOpposite: bool) -> Ptr<MSLane> {
-        todo!("port MSEdge::parallelLane")
+        let resultIndex = lane.get_index() + offset;
+        if resultIndex >= self.get_num_lanes() && includeOpposite {
+            let opposite = self.get_opposite_edge();
+            if !opposite.is_null() && resultIndex < self.get_num_lanes() + opposite.get_num_lanes() {
+                return opposite.get_lanes()[(opposite.get_num_lanes() + self.get_num_lanes() - resultIndex - 1) as usize];
+            }
+            return Ptr::null();
+        } else if resultIndex >= self.myLanes.len() as i32 || resultIndex < 0 {
+            return Ptr::null();
+        } else {
+            return self.myLanes[resultIndex as usize];
+        }
     }
 
     /// C++: `const std::vector<MSLane *> & MSEdge::getLanes() const` [const]
@@ -419,7 +668,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_lanes(&self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSEdge::getLanes")
+        &self.myLanes
     }
 
     /// C++: `int MSEdge::getNumLanes() const` [const]
@@ -428,7 +677,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_lanes(&self) -> i32 {
-        todo!("port MSEdge::getNumLanes")
+        self.myLanes.len() as i32
     }
 
     /// C++: `int MSEdge::getNumDrivingLanes() const` [const]
@@ -452,7 +701,20 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_num_driving_lanes(&self) -> i32 {
-        todo!("port MSEdge::getNumDrivingLanes")
+        let mut result = 0;
+        let mut filter: SVCPermissions = SVC_ALL;
+        if (self.myCombinedPermissions & !(SVC_PEDESTRIAN | SVC_WHEELCHAIR)) != 0 {
+            filter = !(SVC_PEDESTRIAN | SVC_WHEELCHAIR);
+        } else if (self.myCombinedPermissions & (SVC_PEDESTRIAN | SVC_WHEELCHAIR)) != 0 {
+            // filter out green verge
+            filter = SVC_PEDESTRIAN | SVC_WHEELCHAIR;
+        }
+        for l in self.myLanes.iter() {
+            if (l.get_permissions() & filter) != 0 {
+                result += 1;
+            }
+        }
+        result
     }
 
     /// C++: `int MSEdge::getVehicleNumber() const` [const]
@@ -463,7 +725,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_number(&self) -> i32 {
-        todo!("port MSEdge::getVehicleNumber")
+        self.get_vehicles().len() as i32
     }
 
     /// C++: `bool MSEdge::isEmpty() const` [const]
@@ -488,7 +750,13 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MSEdge::isEmpty")
+        // shortcut: meso branch (MSGlobals::gMesoNet segment walk) not ported, unreachable while G_USE_MESO_SIM is false
+        for lane in self.get_lanes() {
+            if lane.get_vehicle_number() > 0 {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `std::vector<const SUMOVehicle *> MSEdge::getVehicles() const` [const]
@@ -513,7 +781,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles(&self) -> Vec<Ptr<SUMOVehicle>> {
-        todo!("port MSEdge::getVehicles")
+        // shortcut: meso branch (MEVehicle segment lists) not ported, unreachable while G_USE_MESO_SIM is false
+        let mut result = Vec::new();
+        for lane in self.get_lanes() {
+            for veh in lane.get_vehicles_secure().iter() {
+                result.push(Ptr::from_mut(&mut veh.m().base.base));
+            }
+            lane.release_vehicles();
+        }
+        result
     }
 
     /// C++: `double MSEdge::getBruttoOccupancy() const` [const]
@@ -530,7 +806,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_brutto_occupancy(&self) -> f64 {
-        todo!("port MSEdge::getBruttoOccupancy")
+        if self.myLanes.len() == 0 {
+            return 0.;
+        }
+        // shortcut: only the meso segment walk is in C++ (gMesoNet is null in non-meso runs); meso segments not ported, upgrade with MESegment
+        0.
     }
 
     /// C++: `double MSEdge::getFlow() const` [const]
@@ -548,7 +828,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_flow(&self) -> f64 {
-        todo!("port MSEdge::getFlow")
+        if self.myLanes.len() == 0 {
+            return 0.;
+        }
+        // shortcut: only the meso segment walk is in C++ (gMesoNet is null in non-meso runs); meso segments not ported, upgrade with MESegment
+        0.
     }
 
     /// C++: `double MSEdge::getWaitingSeconds() const` [const]
@@ -569,7 +853,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_seconds(&self) -> f64 {
-        todo!("port MSEdge::getWaitingSeconds")
+        // shortcut: meso branch (MESegment::getWaitingSeconds) not ported, unreachable while G_USE_MESO_SIM is false
+        let mut wtime = 0.;
+        for lane in self.get_lanes() {
+            wtime += lane.get_waiting_seconds();
+        }
+        wtime
     }
 
     /// C++: `double MSEdge::getOccupancy() const` [const]
@@ -596,7 +885,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy(&self) -> f64 {
-        todo!("port MSEdge::getOccupancy")
+        if self.myLanes.len() == 0 {
+            return 0.;
+        }
+        // shortcut: meso branch (vehicle-type length sum) not ported, unreachable while G_USE_MESO_SIM is false
+        let mut sum = 0.;
+        for lane in self.get_lanes() {
+            sum += lane.get_netto_occupancy();
+        }
+        sum / (self.myLanes.len() as f64)
     }
 
     /// C++: `const std::set<MSTransportable *, ComparatorNumericalIdLess> & MSEdge::getPersons() const` [const]
@@ -606,7 +903,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_persons(&self) -> &BTreeSet<Ptr<MSTransportable>> {
-        todo!("port MSEdge::getPersons")
+        &self.myPersons
     }
 
     /// C++: `std::vector<MSTransportable *> MSEdge::getSortedPersons(SUMOTime, bool) const` [const]
@@ -629,7 +926,19 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_sorted_persons(&self, timestep: SUMOTime, includeRiding: bool) -> Vec<Ptr<MSTransportable>> {
-        todo!("port MSEdge::getSortedPersons")
+        let mut result: Vec<Ptr<MSTransportable>> = self.myPersons.iter().copied().collect();
+        if includeRiding {
+            for lane in self.myLanes.iter() {
+                for veh in lane.get_vehicles_secure().iter() {
+                    result.extend(veh.get_persons().iter().copied());
+                }
+                lane.release_vehicles();
+            }
+        }
+        // determinism: transportable ids are unique, so the position/id order is total
+        let sorter = MSEdge_transportable_by_position_sorter::new(timestep);
+        result.sort_by(|a, b| sort_by_sorter(|x, y| sorter.call_op(x, y), *a, *b));
+        result
     }
 
     /// C++: `std::vector<MSTransportable *> MSEdge::getSortedContainers(SUMOTime, bool) const` [const]
@@ -642,7 +951,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_sorted_containers(&self, timestep: SUMOTime, includeRiding: bool) -> Vec<Ptr<MSTransportable>> {
-        todo!("port MSEdge::getSortedContainers")
+        let mut result: Vec<Ptr<MSTransportable>> = self.myContainers.iter().copied().collect();
+        // determinism: transportable ids are unique, so the position/id order is total
+        let sorter = MSEdge_transportable_by_position_sorter::new(timestep);
+        result.sort_by(|a, b| sort_by_sorter(|x, y| sorter.call_op(x, y), *a, *b));
+        result
     }
 
     /// C++: `const std::vector<MSLane *> * MSEdge::allowedLanes(const MSEdge &, SUMOVehicleClass, bool) const` [const]
@@ -662,7 +975,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allowed_lanes(&self, destination: &MSEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> Ptr<Vec<Ptr<MSLane>>> {
-        todo!("port MSEdge::allowedLanes")
+        let targets = if ignoreTransientPermissions && self.myHaveTransientPermissions { &self.myOrigAllowedTargets } else { &self.myAllowedTargets };
+        if let Some(cont) = targets.get(&Ptr::new(destination)) {
+            for (allowed, lanes) in cont.iter() {
+                if (allowed & vclass) == vclass {
+                    return Ptr::new(&**lanes);
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `const std::vector<MSLane *> * MSEdge::allowedLanes(SUMOVehicleClass) const` [const]
@@ -684,7 +1005,18 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allowed_lanes_2(&self, vclass: SUMOVehicleClass) -> Ptr<Vec<Ptr<MSLane>>> {
-        todo!("port MSEdge::allowedLanes")
+        if (self.myMinimumPermissions & vclass) == vclass {
+            return Ptr::new(&*self.myLanes);
+        } else {
+            if (self.myCombinedPermissions & vclass) == vclass {
+                for (allowed, lanes) in self.myAllowed.iter() {
+                    if (allowed & vclass) == vclass {
+                        return Ptr::new(&**lanes);
+                    }
+                }
+            }
+            return Ptr::null();
+        }
     }
 
     /// C++: `const std::vector<MSLane *> * MSEdge::allowedLanes(SUMOVehicleClass, bool) const` [const]
@@ -708,7 +1040,21 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allowed_lanes_3(&self, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> Ptr<Vec<Ptr<MSLane>>> {
-        todo!("port MSEdge::allowedLanes")
+        let minP = if ignoreTransientPermissions { self.myOriginalMinimumPermissions } else { self.myMinimumPermissions };
+        if (minP & vclass) == vclass {
+            return Ptr::new(&*self.myLanes);
+        } else {
+            let comP = if ignoreTransientPermissions { self.myOriginalCombinedPermissions } else { self.myCombinedPermissions };
+            if (comP & vclass) == vclass {
+                let allowedCont = if ignoreTransientPermissions && self.myHaveTransientPermissions { &self.myOrigAllowed } else { &self.myAllowed };
+                for (allowed, lanes) in allowedCont.iter() {
+                    if (allowed & vclass) == vclass {
+                        return Ptr::new(&**lanes);
+                    }
+                }
+            }
+            return Ptr::null();
+        }
     }
 
     /// C++: `bool MSEdge::isConnectedTo(const MSEdge &, SUMOVehicleClass, bool) const` [const]
@@ -718,7 +1064,11 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_connected_to(&self, destination: &MSEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
-        todo!("port MSEdge::isConnectedTo")
+        let lanes = self.allowed_lanes(destination, vclass, ignoreTransientPermissions);
+        match lanes.get() {
+            Some(l) => !l.is_empty(),
+            None => false,
+        }
     }
 
     /// C++: `SumoXMLEdgeFunc MSEdge::getFunction() const` [const]
@@ -728,7 +1078,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_function(&self) -> SumoXMLEdgeFunc {
-        todo!("port MSEdge::getFunction")
+        self.myFunction
     }
 
     /// C++: `bool MSEdge::isNormal() const` [const]
@@ -738,7 +1088,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_normal(&self) -> bool {
-        todo!("port MSEdge::isNormal")
+        self.myFunction == SumoXMLEdgeFunc::NORMAL
     }
 
     /// C++: `bool MSEdge::isInternal() const` [const]
@@ -748,7 +1098,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port MSEdge::isInternal")
+        self.myFunction == SumoXMLEdgeFunc::INTERNAL
     }
 
     /// C++: `bool MSEdge::isCrossing() const` [const]
@@ -758,7 +1108,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_crossing(&self) -> bool {
-        todo!("port MSEdge::isCrossing")
+        self.myFunction == SumoXMLEdgeFunc::CROSSING
     }
 
     /// C++: `void MSEdge::checkAndRegisterBiDirEdge(const std::string &)`
@@ -793,7 +1143,36 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn check_and_register_bi_dir_edge(&mut self, bidiID: &str) {
-        todo!("port MSEdge::checkAndRegisterBiDirEdge")
+        if bidiID != "" {
+            self.myBidiEdge = MSEdge::dictionary_2(bidiID);
+            if self.myBidiEdge.is_null() {
+                write_error(&format!("Bidi-edge '{}' does not exist", bidiID));
+            }
+            self.set_bidi_lanes();
+            return;
+        }
+        if self.get_function() != SumoXMLEdgeFunc::NORMAL {
+            return;
+        }
+        // legacy networks (no bidi attribute)
+        let candidates = self.myToJunction.get_outgoing().clone();
+        for it in candidates.iter() {
+            if it.get_to_junction() == self.myFromJunction {
+                // reverse edge
+                if !self.myBidiEdge.is_null() && self.is_superposable(*it) {
+                    write_warning(&format!(
+                        "Ambiguous superposable edges between junction '{}' and '{}'.",
+                        self.myToJunction.get_id(),
+                        self.myFromJunction.get_id()
+                    ));
+                    break;
+                }
+                if self.is_superposable(*it) {
+                    self.myBidiEdge = *it;
+                    self.set_bidi_lanes();
+                }
+            }
+        }
     }
 
     /// C++: `const MSEdge * MSEdge::getBidiEdge() const` [const]
@@ -803,7 +1182,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getBidiEdge")
+        self.myBidiEdge
     }
 
     /// C++: `bool MSEdge::isWalkingArea() const` [const]
@@ -813,7 +1192,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_walking_area(&self) -> bool {
-        todo!("port MSEdge::isWalkingArea")
+        self.myFunction == SumoXMLEdgeFunc::WALKINGAREA
     }
 
     /// C++: `bool MSEdge::isTazConnector() const` [const]
@@ -822,7 +1201,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_taz_connector(&self) -> bool {
-        todo!("port MSEdge::isTazConnector")
+        self.myFunction == SumoXMLEdgeFunc::CONNECTOR
     }
 
     /// C++: `void MSEdge::setOtherTazConnector(const MSEdge *)`
@@ -831,7 +1210,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_other_taz_connector(&mut self, edge: Ptr<MSEdge>) {
-        todo!("port MSEdge::setOtherTazConnector")
+        self.myOtherTazConnector = edge;
     }
 
     /// C++: `const MSEdge * MSEdge::getOtherTazConnector() const` [const]
@@ -840,7 +1219,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_other_taz_connector(&self) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getOtherTazConnector")
+        self.myOtherTazConnector
     }
 
     /// C++: `int MSEdge::getNumericalID() const` [const]
@@ -850,7 +1229,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port MSEdge::getNumericalID")
+        self.myNumericalID
     }
 
     /// C++: `const std::string & MSEdge::getStreetName() const` [const]
@@ -860,7 +1239,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_street_name(&self) -> &str {
-        todo!("port MSEdge::getStreetName")
+        &self.myStreetName
     }
 
     /// C++: `const std::string & MSEdge::getEdgeType() const` [const]
@@ -870,7 +1249,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge_type(&self) -> &str {
-        todo!("port MSEdge::getEdgeType")
+        &self.myEdgeType
     }
 
     /// C++: `const std::string & MSEdge::getRoutingType() const` [const]
@@ -880,7 +1259,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_routing_type(&self) -> &str {
-        todo!("port MSEdge::getRoutingType")
+        if self.myRoutingType.is_empty() { &self.myEdgeType } else { &self.myRoutingType }
     }
 
     /// C++: `double MSEdge::getPreference(const SUMOVTypeParameter &) const` [const]
@@ -890,7 +1269,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_preference(&self, pars: &SUMOVTypeParameter) -> f64 {
-        todo!("port MSEdge::getPreference")
+        MSNet::get_instance().get_preference(self.get_routing_type(), pars)
     }
 
     /// C++: `void MSEdge::inferEdgeType()`
@@ -931,7 +1310,32 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn infer_edge_type(&mut self) {
-        todo!("port MSEdge::inferEdgeType")
+        // must be called after closeBuilding() to ensure successors and predecessors are set
+        if self.is_internal() && self.myEdgeType.is_empty() {
+            let typeBefore = self.get_normal_before().get_edge_type().to_string();
+            if !typeBefore.is_empty() {
+                let typeAfter = self.get_normal_successor().get_edge_type().to_string();
+                if typeBefore == typeAfter {
+                    self.myEdgeType = typeBefore;
+                } else if !typeAfter.is_empty() {
+                    let net = MSNet::get_instance();
+                    let resBefore = net.get_restrictions(&typeBefore);
+                    let resAfter = net.get_restrictions(&typeAfter);
+                    if !resBefore.is_null() && !resAfter.is_null() {
+                        // create new restrictions for this type-combination
+                        self.myEdgeType = format!("{}|{}", typeBefore, typeAfter);
+                        if net.get_restrictions(&self.myEdgeType).is_null() {
+                            for (svc, speed) in resBefore.iter() {
+                                if let Some(speed2) = resAfter.get(svc) {
+                                    let newSpeed = if net.has_junction_higher_speeds() { if *speed > *speed2 { *speed } else { *speed2 } } else { (speed + speed2) / 2. };
+                                    net.m().add_restriction(&self.myEdgeType, *svc, newSpeed);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `int MSEdge::getPriority() const` [const]
@@ -941,7 +1345,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_priority(&self) -> i32 {
-        todo!("port MSEdge::getPriority")
+        self.myPriority
     }
 
     /// C++: `double MSEdge::getDistance() const` [const]
@@ -951,7 +1355,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        todo!("port MSEdge::getDistance")
+        self.myDistance
     }
 
     /// C++: `double MSEdge::getDistanceAt(double) const` [const]
@@ -963,7 +1367,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_at(&self, pos: f64) -> f64 {
-        todo!("port MSEdge::getDistanceAt")
+        (self.myDistance + pos).abs()
     }
 
     /// C++: `bool MSEdge::hasDistance() const` [const]
@@ -972,7 +1376,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn has_distance(&self) -> bool {
-        todo!("port MSEdge::hasDistance")
+        self.myDistance != 0.
     }
 
     /// C++: `void MSEdge::setCrossingEdges(const std::vector<std::string> &)`
@@ -983,7 +1387,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_crossing_edges(&mut self, crossingEdges: &Vec<String>) {
-        todo!("port MSEdge::setCrossingEdges")
+        self.myCrossingEdges = crossingEdges.clone();
     }
 
     /// C++: `const std::vector<std::string> & MSEdge::getCrossingEdges() const` [const]
@@ -993,7 +1397,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_crossing_edges(&self) -> &Vec<String> {
-        todo!("port MSEdge::getCrossingEdges")
+        &self.myCrossingEdges
     }
 
     /// C++: `void MSEdge::addSuccessor(MSEdge *, const MSEdge *)`
@@ -1013,7 +1417,17 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, edge: Ptr<MSEdge>, via: Ptr<MSEdge>) {
-        todo!("port MSEdge::addSuccessor")
+        let me = Ptr::from_mut(self);
+        self.mySuccessors.push(edge);
+        self.myViaSuccessors.push((edge, via));
+        if self.is_taz_connector() && !edge.get_from_junction().is_null() {
+            self.myBoundary.add_pos(edge.get_from_junction().get_position(false));
+        }
+
+        edge.m().myPredecessors.push(me);
+        if edge.is_taz_connector() && !self.get_to_junction().is_null() {
+            edge.m().myBoundary.add_pos(self.get_to_junction().get_position(false));
+        }
     }
 
     /// C++: `void MSEdge::resetTAZ(MSJunction *)`
@@ -1041,7 +1455,26 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn reset_taz(&mut self, junction: Ptr<MSJunction>) {
-        todo!("port MSEdge::resetTAZ")
+        self.mySuccessors.clear();
+        self.myPredecessors.clear();
+        let me = Ptr::from_mut(self);
+        for edge in junction.get_incoming().iter() {
+            if !edge.is_internal() {
+                let e = edge.m();
+                let it = e.mySuccessors.iter().position(|x| *x == me);
+                let it2 = e.myViaSuccessors.iter().position(|x| *x == (me, Ptr::null()));
+                let it3 = e.myPredecessors.iter().position(|x| *x == me);
+                if let Some(i) = it {
+                    e.mySuccessors.remove(i);
+                    if let Some(i2) = it2 {
+                        e.myViaSuccessors.remove(i2);
+                    }
+                }
+                if let Some(i3) = it3 {
+                    e.myPredecessors.remove(i3);
+                }
+            }
+        }
     }
 
     /// C++: `int MSEdge::getNumSuccessors() const` [const]
@@ -1051,7 +1484,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_successors(&self) -> i32 {
-        todo!("port MSEdge::getNumSuccessors")
+        self.mySuccessors.len() as i32
     }
 
     /// C++: `const MSEdgeVector & MSEdge::getSuccessors(SUMOVehicleClass) const` [const]
@@ -1086,7 +1519,28 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &MSEdgeVector {
-        todo!("port MSEdge::getSuccessors")
+        if vClass == SVC_IGNORING || !MSNet::get_instance().has_permissions() || self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
+            return &self.mySuccessors;
+        }
+        // C++ caches into mutable maps; mutate through a raw handle as C++ does
+        let me = Ptr::new(self).get_mut().unwrap();
+        if !me.myClassesSuccessorMap.contains_key(&vClass) {
+            // this vClass is requested for the first time. rebuild all successors
+            let mut entry: MSEdgeVector = Vec::new();
+            for it in self.mySuccessors.iter() {
+                if it.is_taz_connector() {
+                    entry.push(*it);
+                } else {
+                    let allowed = self.allowed_lanes(&**it, vClass, false);
+                    if allowed.get().map_or(false, |a| !a.is_empty()) {
+                        entry.push(*it);
+                    }
+                }
+            }
+            me.myClassesSuccessorMap.insert(vClass, entry);
+        }
+        // can use cached value
+        me.myClassesSuccessorMap.get(&vClass).unwrap()
     }
 
     /// C++: `const MSConstEdgePairVector & MSEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -1121,7 +1575,32 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &MSConstEdgePairVector {
-        todo!("port MSEdge::getViaSuccessors")
+        if vClass == SVC_IGNORING || !MSNet::get_instance().has_permissions() || self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
+            return &self.myViaSuccessors;
+        }
+        // C++ caches into mutable maps; mutate through a raw handle as C++ does
+        let me = Ptr::new(self).get_mut().unwrap();
+        let viaMap = if ignoreTransientPermissions && self.myHaveTransientPermissions {
+            &mut me.myOrigClassesViaSuccessorMap
+        } else {
+            &mut me.myClassesViaSuccessorMap
+        };
+        if !viaMap.contains_key(&vClass) {
+            // this vClass is requested for the first time. rebuild all successors
+            let mut result: MSConstEdgePairVector = Vec::new();
+            for viaPair in self.myViaSuccessors.iter() {
+                if viaPair.0.is_taz_connector() {
+                    result.push(*viaPair);
+                } else {
+                    let allowed = self.allowed_lanes(&*viaPair.0, vClass, ignoreTransientPermissions);
+                    if allowed.get().map_or(false, |a| !a.is_empty()) {
+                        result.push(*viaPair);
+                    }
+                }
+            }
+            viaMap.insert(vClass, result);
+        }
+        viaMap.get(&vClass).unwrap()
     }
 
     /// C++: `int MSEdge::getNumPredecessors() const` [const]
@@ -1131,7 +1610,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_predecessors(&self) -> i32 {
-        todo!("port MSEdge::getNumPredecessors")
+        self.myPredecessors.len() as i32
     }
 
     /// C++: `const MSEdgeVector & MSEdge::getPredecessors() const` [const]
@@ -1141,7 +1620,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_predecessors(&self) -> &MSEdgeVector {
-        todo!("port MSEdge::getPredecessors")
+        &self.myPredecessors
     }
 
     /// C++: `const MSJunction * MSEdge::getFromJunction() const` [const]
@@ -1150,7 +1629,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSEdge::getFromJunction")
+        self.myFromJunction
     }
 
     /// C++: `const MSJunction * MSEdge::getToJunction() const` [const]
@@ -1159,7 +1638,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_to_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSEdge::getToJunction")
+        self.myToJunction
     }
 
     /// C++: `void MSEdge::setJunctions(MSJunction *, MSJunction *)`
@@ -1174,7 +1653,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_junctions(&mut self, from: Ptr<MSJunction>, to: Ptr<MSJunction>) {
-        todo!("port MSEdge::setJunctions")
+        self.myFromJunction = from;
+        self.myToJunction = to;
+        if !self.is_taz_connector() {
+            self.myBoundary.add_pos(from.get_position(false));
+            self.myBoundary.add_pos(to.get_position(false));
+        }
     }
 
     /// C++: `bool MSEdge::isVaporizing() const` [const]
@@ -1184,7 +1668,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_vaporizing(&self) -> bool {
-        todo!("port MSEdge::isVaporizing")
+        self.myVaporizationRequests > 0
     }
 
     /// C++: `SUMOTime MSEdge::incVaporization(SUMOTime)`
@@ -1196,7 +1680,8 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn inc_vaporization(&mut self, t: SUMOTime) -> SUMOTime {
-        todo!("port MSEdge::incVaporization")
+        self.myVaporizationRequests += 1;
+        0
     }
 
     /// C++: `SUMOTime MSEdge::decVaporization(SUMOTime)`
@@ -1208,7 +1693,8 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn dec_vaporization(&mut self, t: SUMOTime) -> SUMOTime {
-        todo!("port MSEdge::decVaporization")
+        self.myVaporizationRequests -= 1;
+        0
     }
 
     /// C++: `double MSEdge::getCurrentTravelTime(const double) const` [const]
@@ -1216,7 +1702,13 @@ impl MSEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_current_travel_time(&self, minSpeed: f64) -> f64 {
-        todo!("port MSEdge::getCurrentTravelTime")
+        assert!(minSpeed > 0.);
+        if !self.myAmDelayed {
+            return self.myEmptyTraveltime;
+        }
+        // MAX2(minSpeed, getMeanSpeed())
+        let meanSpeed = self.get_mean_speed();
+        self.get_length() / (if minSpeed > meanSpeed { minSpeed } else { meanSpeed })
     }
 
     /// C++: `double MSEdge::getMinimumTravelTime(const SUMOVehicle *const) const` [const]
@@ -1232,7 +1724,13 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_minimum_travel_time(&self, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSEdge::getMinimumTravelTime")
+        if self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
+            0.
+        } else if !veh.is_null() {
+            self.get_length() / self.get_vehicle_max_speed(Ptr::from_mut(&mut veh.m().base)) + self.myTimePenalty
+        } else {
+            self.myEmptyTraveltime
+        }
     }
 
     /// C++: `double MSEdge::getTimePenalty() const` [const]
@@ -1241,7 +1739,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_penalty(&self) -> f64 {
-        todo!("port MSEdge::getTimePenalty")
+        self.myTimePenalty
     }
 
     /// C++: `double MSEdge::getTravelTimeStatic(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -1251,7 +1749,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>, time: f64) -> f64 {
-        todo!("port MSEdge::getTravelTimeStatic")
+        MSNet::get_travel_time(edge, veh, time)
     }
 
     /// C++: `double MSEdge::getTravelTimeAggregated(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -1261,7 +1759,10 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>, time: f64) -> f64 {
-        todo!("port MSEdge::getTravelTimeAggregated")
+        // MIN2(getAssumedSpeed, veh->getMaxSpeed())
+        let assumed = MSRoutingEngine::get_assumed_speed(edge, veh);
+        let maxSpeed = veh.get_max_speed();
+        edge.get_length() / (if assumed < maxSpeed { assumed } else { maxSpeed })
     }
 
     /// C++: `double MSEdge::getRoutingSpeed() const` [const]
@@ -1272,7 +1773,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_routing_speed(&self) -> f64 {
-        todo!("port MSEdge::getRoutingSpeed")
+        MSRoutingEngine::get_assumed_speed(Ptr::new(self), Ptr::null())
     }
 
     /// C++: `bool MSEdge::insertVehicle(SUMOVehicle &, SUMOTime, const bool, const bool) const` [const]
@@ -1620,7 +2121,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_first_allowed(&self, vClass: SUMOVehicleClass, defaultFirst: bool, routingMode: i32) -> Ptr<MSLane> {
-        todo!("port MSEdge::getFirstAllowed")
+        for lane in self.myLanes.iter() {
+            if lane.allows_vehicle_class_2(vClass, routingMode) {
+                return *lane;
+            }
+        }
+        if defaultFirst && !self.myLanes.is_empty() {
+            self.myLanes[0]
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `MSLane * MSEdge::getDepartLaneMeso(SUMOVehicle &) const` [const]
@@ -1647,7 +2157,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_failed_insertion_time(&self) -> SUMOTime {
-        todo!("port MSEdge::getLastFailedInsertionTime")
+        self.myLastFailedInsertionTime
     }
 
     /// C++: `void MSEdge::setLastFailedInsertionTime(SUMOTime) const` [const]
@@ -1657,7 +2167,8 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_last_failed_insertion_time(&self, time: SUMOTime) {
-        todo!("port MSEdge::setLastFailedInsertionTime")
+        // C++ field is mutable; the setter is const
+        Ptr::new(self).m().myLastFailedInsertionTime = time;
     }
 
     /// C++: `void MSEdge::changeLanes(SUMOTime) const` [const]
@@ -1670,7 +2181,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn change_lanes(&self, t: SUMOTime) {
-        todo!("port MSEdge::changeLanes")
+        if !self.myLaneChanger.is_null() {
+            self.myLaneChanger.m().lane_change(t);
+        }
     }
 
     /// C++: `const MSEdge * MSEdge::getInternalFollowingEdge(const MSEdge *, SUMOVehicleClass) const` [const]
@@ -1696,7 +2209,22 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_following_edge(&self, followerAfterInternal: Ptr<MSEdge>, vClass: SUMOVehicleClass) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getInternalFollowingEdge")
+        for l in self.myLanes.iter() {
+            for link in l.get_link_cont() {
+                if Ptr::new(link.get_lane().get_edge()) == followerAfterInternal {
+                    if !link.get_via_lane().is_null() {
+                        if link.get_via_lane().allows_vehicle_class(vClass) {
+                            return Ptr::new(link.get_via_lane().get_edge());
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        return Ptr::null(); // network without internal links
+                    }
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `double MSEdge::getInternalFollowingLengthTo(const MSEdge *, SUMOVehicleClass) const` [const]
@@ -1716,7 +2244,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_following_length_to(&self, followerAfterInternal: Ptr<MSEdge>, vClass: SUMOVehicleClass) -> f64 {
-        todo!("port MSEdge::getInternalFollowingLengthTo")
+        assert!(!followerAfterInternal.is_null());
+        assert!(!followerAfterInternal.is_internal());
+        let mut dist = 0.;
+        let mut edge = self.get_internal_following_edge(followerAfterInternal, vClass);
+        // Take into account non-internal lengths until next non-internal edge
+        while !edge.is_null() && edge.is_internal() {
+            dist += edge.get_length();
+            edge = edge.get_internal_following_edge(followerAfterInternal, vClass);
+        }
+        dist
     }
 
     /// C++: `const MSEdge * MSEdge::getNormalBefore() const` [const]
@@ -1732,7 +2269,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_before(&self) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getNormalBefore")
+        let mut result = Ptr::new(self);
+        while result.is_internal() && G_USING_INTERNAL_LANES {
+            assert!(result.get_predecessors().len() == 1);
+            result = result.get_predecessors()[0];
+        }
+        result
     }
 
     /// C++: `const MSEdge * MSEdge::getNormalSuccessor() const` [const]
@@ -1748,7 +2290,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_successor(&self) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getNormalSuccessor")
+        let mut result = Ptr::new(self);
+        while result.is_internal() {
+            assert!(result.get_successors(SVC_IGNORING).len() == 1);
+            result = result.get_successors(SVC_IGNORING)[0];
+        }
+        result
     }
 
     /// C++: `bool MSEdge::prohibits(const SUMOVehicle *const) const` [const]
@@ -1764,7 +2311,15 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSEdge::prohibits")
+        if vehicle.is_null() {
+            return false;
+        }
+        let svc = vehicle.get_v_class();
+        if vehicle.ignore_transient_permissions() {
+            (self.myOriginalCombinedPermissions & svc) != svc
+        } else {
+            (self.myCombinedPermissions & svc) != svc
+        }
     }
 
     /// C++: `bool MSEdge::hasTransientPermissions() const` [const]
@@ -1774,7 +2329,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_transient_permissions(&self) -> bool {
-        todo!("port MSEdge::hasTransientPermissions")
+        self.myHaveTransientPermissions
     }
 
     /// C++: `bool MSEdge::restricts(const SUMOVehicle *const) const` [const]
@@ -1784,7 +2339,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, arg0: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSEdge::restricts")
+        false
     }
 
     /// C++: `SVCPermissions MSEdge::getPermissions() const` [const]
@@ -1794,7 +2349,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port MSEdge::getPermissions")
+        self.myCombinedPermissions
     }
 
     /// C++: `double MSEdge::getWidth() const` [const]
@@ -1804,7 +2359,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port MSEdge::getWidth")
+        self.myWidth
     }
 
     /// C++: `const std::vector<double> MSEdge::getSubLaneSides() const` [const]
@@ -1814,7 +2369,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_sub_lane_sides(&self) -> Vec<f64> {
-        todo!("port MSEdge::getSubLaneSides")
+        self.mySublaneSides.clone()
     }
 
     /// C++: `void MSEdge::rebuildAllowedLanes(const bool, bool)`
@@ -1913,7 +2468,87 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn rebuild_allowed_lanes(&mut self, onInit: bool, updateVehicles: bool) {
-        todo!("port MSEdge::rebuildAllowedLanes")
+        let me = Ptr::from_mut(self);
+        let oldMinimumPermissions = self.myMinimumPermissions;
+        let oldCombinedPermissions = self.myCombinedPermissions;
+        // rebuild myMinimumPermissions and myCombinedPermissions
+        self.myMinimumPermissions = SVC_ALL;
+        self.myCombinedPermissions = 0;
+        let mut lanesChangedPermission = false;
+        let laneList = self.myLanes.clone();
+        for lane in laneList.iter() {
+            // same dedicated lanes are ignored in meso to avoid capacity errors.
+            let allow = MSEdge::get_meso_permissions(lane.get_permissions(), SVC_PEDESTRIAN);
+            self.myMinimumPermissions &= allow;
+            self.myCombinedPermissions |= allow;
+            lanesChangedPermission |= lane.had_permission_changes();
+        }
+        if !onInit && !self.myHaveTransientPermissions && lanesChangedPermission {
+            self.myHaveTransientPermissions = true;
+            // backup original structures when first needed
+            self.myOrigAllowed = self.myAllowed.clone();
+            self.myOrigAllowedTargets = self.myAllowedTargets.clone();
+            self.myOrigClassesViaSuccessorMap = self.myClassesViaSuccessorMap.clone();
+        }
+        if !onInit && (lanesChangedPermission || self.myMinimumPermissions != oldMinimumPermissions || self.myCombinedPermissions != oldCombinedPermissions) {
+            // a runtime permission change must reach the CCH metric even though the speed table does not move
+            MSRoutingEngine::invalidate_cch_edge(me);
+        }
+        // rebuild myAllowed
+        let mut allowed: MSEdge_AllowedLanesCont = Vec::new();
+        if self.myCombinedPermissions != self.myMinimumPermissions {
+            allowed.push((SVC_IGNORING, Rc::clone(&self.myLanes)));
+            let mut vclass = SVC_PRIVATE;
+            while vclass <= SUMO_VEHICLE_CLASS_MAX {
+                if (self.myCombinedPermissions & vclass) == vclass {
+                    let mut allowedLanes: Vec<Ptr<MSLane>> = Vec::new();
+                    for lane in laneList.iter() {
+                        if lane.allows_vehicle_class(vclass) {
+                            allowedLanes.push(*lane);
+                        }
+                    }
+                    self.add_to_allowed(vclass, Rc::new(allowedLanes), &mut allowed);
+                }
+                vclass *= 2;
+            }
+        }
+        self.myAllowed = allowed;
+        if onInit {
+            self.myOriginalMinimumPermissions = self.myMinimumPermissions;
+            self.myOriginalCombinedPermissions = self.myCombinedPermissions;
+        } else {
+            self.rebuild_allowed_targets(updateVehicles);
+            let preds = self.myPredecessors.clone();
+            for pred in preds.iter() {
+                let p = pred.m();
+                if self.myHaveTransientPermissions && !p.myHaveTransientPermissions {
+                    p.myOrigAllowed = p.myAllowed.clone();
+                    p.myOrigAllowedTargets = p.myAllowedTargets.clone();
+                    p.myOrigClassesViaSuccessorMap = p.myClassesViaSuccessorMap.clone();
+                    p.myHaveTransientPermissions = true;
+                }
+                p.rebuild_allowed_targets(updateVehicles);
+            }
+            // shortcut: meso segment updatePermissions (MSGlobals::gMesoNet) not ported, unreachable while G_USE_MESO_SIM is false
+            for lane in laneList.iter() {
+                for link in lane.get_link_cont() {
+                    link.m().update_permissions();
+                }
+                for ili in lane.get_incoming_lanes() {
+                    ili.viaLink.m().update_permissions();
+                }
+            }
+            // permissions of links entering this edge also depend on its new permissions
+            for pred in preds.iter() {
+                for lane in pred.myLanes.iter() {
+                    for link in lane.get_link_cont() {
+                        if Ptr::new(link.get_lane().get_edge()) == me {
+                            link.m().update_permissions();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSEdge::rebuildAllowedTargets(const bool)`
@@ -1984,7 +2619,76 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn rebuild_allowed_targets(&mut self, updateVehicles: bool) {
-        todo!("port MSEdge::rebuildAllowedTargets")
+        self.myAllowedTargets.clear();
+        let succs = self.mySuccessors.clone();
+        let laneList = self.myLanes.clone();
+        for target in succs.iter() {
+            let target = *target;
+            let mut universalMap = true; // whether the mapping for SVC_IGNORING is also valid for all vehicle classes
+            let mut allLanes: Vec<Ptr<MSLane>> = Vec::new();
+            let mut cont: MSEdge_AllowedLanesCont = Vec::new();
+            // compute the mapping for SVC_IGNORING
+            for lane in laneList.iter() {
+                let mut combinedTargetPermissions: SVCPermissions = 0;
+                for link in lane.get_link_cont() {
+                    if Ptr::new(link.get_lane().get_edge()) == target {
+                        allLanes.push(*lane);
+                        combinedTargetPermissions |= link.get_lane().get_permissions();
+                        if !link.get_via_lane().is_null() && ((lane.get_permissions() & link.get_lane().get_permissions()) != link.get_via_lane().get_permissions()) {
+                            // custom connection permissions
+                            universalMap = false;
+                        }
+                    }
+                }
+                if combinedTargetPermissions == 0 || (lane.get_permissions() & combinedTargetPermissions) != lane.get_permissions() {
+                    universalMap = false;
+                }
+            }
+            if universalMap {
+                if self.myAllowed.is_empty() {
+                    // we have no lane specific permissions
+                    cont.push((self.myMinimumPermissions, Rc::clone(&self.myLanes)));
+                } else {
+                    for (perm, lanes) in self.myAllowed.iter() {
+                        self.add_to_allowed(*perm, Rc::clone(lanes), &mut cont);
+                    }
+                }
+            } else {
+                self.add_to_allowed(SVC_IGNORING, Rc::new(allLanes), &mut cont);
+                // compute the vclass specific mapping
+                let mut vclass = SVC_PRIVATE;
+                while vclass <= SUMO_VEHICLE_CLASS_MAX {
+                    if (self.myCombinedPermissions & vclass) == vclass {
+                        let mut allowedLanes: Vec<Ptr<MSLane>> = Vec::new();
+                        for lane in laneList.iter() {
+                            if lane.allows_vehicle_class(vclass) {
+                                for link in lane.get_link_cont() {
+                                    if link.get_lane().allows_vehicle_class(vclass)
+                                        && Ptr::new(link.get_lane().get_edge()) == target
+                                        && (link.get_via_lane().is_null() || link.get_via_lane().allows_vehicle_class(vclass))
+                                    {
+                                        allowedLanes.push(*lane);
+                                    }
+                                }
+                            }
+                        }
+                        self.add_to_allowed(vclass, Rc::new(allowedLanes), &mut cont);
+                    }
+                    vclass *= 2;
+                }
+            }
+            self.myAllowedTargets.insert(target, cont);
+        }
+        if updateVehicles {
+            for lane in laneList.iter() {
+                for veh in lane.get_vehicles_secure().iter() {
+                    veh.m().update_best_lanes(true, Ptr::null());
+                }
+                lane.release_vehicles();
+            }
+        }
+        self.myClassesSuccessorMap.clear();
+        self.myClassesViaSuccessorMap.clear();
     }
 
     /// C++: `double MSEdge::getDistanceTo(const MSEdge *, const bool) const` [const]
@@ -2534,7 +3238,7 @@ impl MSEdge {
     //     return it->second;
     // }
     #[allow(unused_variables)]
-    pub fn dictionary_2(id: &Unmapped /* std::string_view */) -> Ptr<MSEdge> {
+    pub fn dictionary_2(id: &str) -> Ptr<MSEdge> {
         todo!("port MSEdge::dictionary")
     }
 
@@ -2842,7 +3546,26 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_bidi_lanes(&mut self) {
-        todo!("port MSEdge::setBidiLanes")
+        let bidi = self.myBidiEdge;
+        if self.get_num_lanes() == 1 && bidi.get_num_lanes() == 1 {
+            // the other way round is set when this method runs for the bidiEdge
+            self.myLanes[0].m().set_bidi_lane(bidi.get_lanes()[0]);
+        } else {
+            // find lanes with matching reversed shapes
+            let mut numBidiLanes = 0;
+            for l1 in self.myLanes.iter() {
+                for l2 in bidi.get_lanes().iter() {
+                    if l1.get_shape_2().reverse().almost_same(l2.get_shape_2(), POSITION_EPS * 2.) {
+                        l1.m().set_bidi_lane(*l2);
+                        numBidiLanes += 1;
+                    }
+                }
+            }
+            // warn only once for each pair
+            if numBidiLanes == 0 && self.get_numerical_id() < bidi.get_numerical_id() {
+                write_warning(&format!("Edge '{}' and bidi edge '{}' have no matching bidi lanes", self.get_id(), bidi.get_id()));
+            }
+        }
     }
 
     /// C++: `bool MSEdge::isSuperposable(const MSEdge *)` [private]
@@ -2865,7 +3588,18 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_superposable(&mut self, other: Ptr<MSEdge>) -> bool {
-        todo!("port MSEdge::isSuperposable")
+        if other.is_null() || other.get_lanes().len() != self.myLanes.len() {
+            return false;
+        }
+        let n = self.myLanes.len();
+        let otherLanes = other.get_lanes();
+        for i in 0..n {
+            // it2 walks the other edge's lanes in reverse order
+            if self.myLanes[i].get_shape_2().reverse() != *otherLanes[n - 1 - i].get_shape_2() {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `void MSEdge::addToAllowed(const SVCPermissions, std::shared_ptr<const std::vector<MSLane *>>, AllowedLanesCont &) const` [const, private]
@@ -2884,7 +3618,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_to_allowed(&self, permissions: SVCPermissions, allowedLanes: Rc<Vec<Ptr<MSLane>>>, laneCont: &mut MSEdge_AllowedLanesCont) {
-        todo!("port MSEdge::addToAllowed")
+        if !allowedLanes.is_empty() {
+            // recheck whether we had this list to save memory
+            for allowed in laneCont.iter_mut() {
+                if *allowed.1 == *allowedLanes {
+                    allowed.0 |= permissions;
+                    return;
+                }
+            }
+            laneCont.push((permissions, allowedLanes));
+        }
     }
 
 }
@@ -2900,7 +3643,7 @@ impl MSEdge_by_id_sorter {
     // explicit by_id_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port by_id_sorter::by_id_sorter")
+        Self {}
     }
 
     /// C++: `int by_id_sorter::operator()(const MSEdge *const, const MSEdge *const) const` [const]
@@ -2910,7 +3653,7 @@ impl MSEdge_by_id_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<MSEdge>, e2: Ptr<MSEdge>) -> i32 {
-        todo!("port by_id_sorter::operator()")
+        (e1.get_numerical_id() < e2.get_numerical_id()) as i32
     }
 
 }
@@ -2927,7 +3670,7 @@ impl MSEdge_transportable_by_position_sorter {
     // explicit transportable_by_position_sorter(SUMOTime timestep): myTime(timestep) { }
     #[allow(unused_variables)]
     pub fn new(timestep: SUMOTime) -> Self {
-        todo!("port transportable_by_position_sorter::transportable_by_position_sorter")
+        Self { myTime: timestep }
     }
 
     /// C++: `int transportable_by_position_sorter::operator()(const MSTransportable *const, const MSTransportable *const) const` [const]
@@ -2943,7 +3686,12 @@ impl MSEdge_transportable_by_position_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: Ptr<MSTransportable>, c2: Ptr<MSTransportable>) -> i32 {
-        todo!("port transportable_by_position_sorter::operator()")
+        let pos1 = c1.get_current_stage().get_edge_pos(self.myTime);
+        let pos2 = c2.get_current_stage().get_edge_pos(self.myTime);
+        if pos1 != pos2 {
+            return (pos1 < pos2) as i32;
+        }
+        (c1.get_id() < c2.get_id()) as i32
     }
 
 }
