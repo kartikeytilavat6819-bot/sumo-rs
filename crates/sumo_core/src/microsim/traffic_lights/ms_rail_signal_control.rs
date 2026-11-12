@@ -1,6 +1,7 @@
 //! Port of microsim/traffic_lights/MSRailSignalControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::{Cell, RefCell};
 
 /// storage for loaded deadlocks
 /// C++ class `MSRailSignalControl::Deadlock` (microsim/traffic_lights/MSRailSignalControl.h)
@@ -505,7 +506,7 @@ impl MSRailSignalControl {
     #[allow(unused_variables)]
     pub fn load_deadlock_check(&mut self, signals: Vec<Ptr<MSRailSignal>>) {
         if MSDriveWay::have_drive_ways() {
-            utils::write_warning("Deadlocks should be loaded before any vehicles");
+            utils::common::msg_handler::write_warning("Deadlocks should be loaded before any vehicles");
         }
         let deadlock_index = self.myLoadedDeadlocks.len() as i32;
         self.myLoadedDeadlocks.push(MSRailSignalControl_Deadlock {

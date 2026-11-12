@@ -1,6 +1,7 @@
 //! Port of microsim/traffic_lights/MSRailSignalConstraint.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::RefCell;
 
 /// C++ enum `MSRailSignalConstraint::ConstraintType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -335,18 +336,29 @@ impl MSRailSignalConstraint {
     pub fn get_veh(tripID: &str, checkID: bool) -> Ptr<SUMOVehicle> {
         let veh_id = Self::lookup_veh_id(tripID);
         if veh_id != "" {
-            let veh = MSNet::get_instance().m().get_vehicle_control().get_vehicle(veh_id);
+            let veh = {
+                let control = MSNet::get_instance().m().get_vehicle_control();
+                control.get_vehicle(veh_id)
+            };
             if !veh.is_null() {
                 return veh;
             }
         }
-        let control = MSNet::get_instance().m().get_vehicle_control();
-        for veh in control.myVehicleDict.values() {
-            let base = veh.cast::<MSBaseVehicle>();
-            let trip_id = base.get_parameter().get_parameter("tripId", "");
-            if trip_id == tripID || (checkID && veh.get_id() == tripID) {
-                return *veh;
+        let found = {
+            let control = MSNet::get_instance().m().get_vehicle_control();
+            let mut result = Ptr::null();
+            for veh in control.myVehicleDict.values() {
+                let base = veh.cast::<MSBaseVehicle>();
+                let trip_id = base.get_parameter().get_parameter("tripId", "");
+                if trip_id == tripID || (checkID && veh.get_id() == tripID) {
+                    result = *veh;
+                    break;
+                }
             }
+            result
+        };
+        if !found.is_null() {
+            return found;
         }
         Ptr::null()
     }

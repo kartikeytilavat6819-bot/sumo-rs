@@ -1,6 +1,7 @@
 //! Port of microsim/traffic_lights/MSRailSignal.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::{Cell, RefCell};
 
 /// C++ typedef `std::pair<const SUMOVehicle *const, const MSLink::ApproachingVehicleInformation> MSRailSignal::Approaching`
 pub type MSRailSignal_Approaching = (Ptr<SUMOVehicle>, MSLink_ApproachingVehicleInformation);
@@ -28,7 +29,15 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn new(link: Ptr<MSLink>) -> Self {
-        todo!("port LinkInfo::LinkInfo")
+        let mut result = MSRailSignal_LinkInfo {
+            myLink: link,
+            myDriveways: Vec::new(),
+            myLastRerouteTime: 0,
+            myLastRerouteVehicle: Ptr::null(),
+            myControlled: false,
+        };
+        result.reset();
+        result
     }
 
     /// C++: `void LinkInfo::~LinkInfo()`
@@ -36,7 +45,10 @@ impl MSRailSignal_LinkInfo {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port LinkInfo::~LinkInfo")
+        for dw in &self.myDriveways {
+            unsafe { drop(Box::from_raw(dw.as_raw())) };
+        }
+        self.myDriveways.clear();
     }
 
     /// C++: `std::string LinkInfo::getID() const` [const]
@@ -47,7 +59,9 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> String {
-        todo!("port LinkInfo::getID")
+        self.myLink.get_tl_logic().get_id().to_string()
+            + "_"
+            + &utils::common::to_string::to_string(&self.myLink.get_tl_index())
     }
 
     /// C++: `MSDriveWay & LinkInfo::getDriveWay(const SUMOVehicle *, int)`
@@ -91,7 +105,58 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_drive_way(&mut self, arg0: Ptr<SUMOVehicle>, searchStart: i32) -> &mut MSDriveWay {
-        todo!("port LinkInfo::getDriveWay")
+        let veh = arg0.cast::<MSBaseVehicle>();
+        let first = self.myLink.get_lane().myEdge;
+        let edges = veh.get_route().get_edges();
+        let end = edges.len();
+        let search_start_it = if searchStart < 0 {
+            *veh.get_current_route_edge()
+        } else {
+            searchStart as usize
+        };
+        let mut first_it = edges[search_start_it.min(end)..]
+            .iter()
+            .position(|e| *e == first)
+            .map(|i| search_start_it.min(end) + i);
+        if first_it.is_none() {
+            // possibly the vehicle has already gone past the first edge (i.e.
+            // because first is short or the step-length is high)
+            // lets look backward along the route
+            // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
+            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10) + veh.get_length();
+            let mut route_index = veh.get_route_position() - 1;
+            while look_back > 0 && route_index > 0 {
+                let prev_edge = edges[route_index as usize];
+                if prev_edge == first {
+                    first_it = Some(route_index as usize);
+                    break;
+                }
+                look_back -= prev_edge.get_length();
+                route_index -= 1;
+            }
+        }
+        let rs: Ptr<MSRailSignal> = self.myLink.get_tl_logic().cast::<MSRailSignal>();
+        let first_it = match first_it {
+            Some(i) => i,
+            None => {
+                utils::common::msg_handler::write_warning(&format!(
+                    "Invalid approach information to rail signal {} after rerouting for vehicle '{}' first driveway edge '{}' time={}.",
+                    MSDriveWay::get_clickable_tl_link_id(self.myLink),
+                    arg0.get_id(),
+                    first.get_id(),
+                    utils::common::time::time2string(MSNet::get_instance().get_current_time_step())
+                ));
+                if self.myDriveways.is_empty() {
+                    let dummy_route: ConstMSEdgeVector = vec![self.myLink.get_lane().myEdge];
+                    let id = rs.m().get_new_driveway_id();
+                    let dw = MSDriveWay::build_drive_way(&id, self.myLink, 0, dummy_route.len());
+                    self.myDriveways.push(dw);
+                }
+                return self.myDriveways[0].get_mut().unwrap();
+            }
+        };
+        //std::cout << SIMTIME << " veh=" << veh->getID() << " rsl=" << getID() << " dws=" << myDriveways.size() << "\n";
+        self.get_drive_way_2(first_it, end, arg0.get_id())
     }
 
     /// C++: `MSDriveWay & LinkInfo::getDriveWay(MSRouteIterator, MSRouteIterator, const std::string &)`
@@ -118,7 +183,18 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_drive_way_2(&mut self, firstIt: MSRouteIterator, endIt: MSRouteIterator, info: &str) -> &mut MSDriveWay {
-        todo!("port LinkInfo::getDriveWay")
+        for i in 0..self.myDriveways.len() {
+            let dw = self.myDriveways[i];
+            if dw.match_(firstIt, endIt) {
+                return dw.get_mut().unwrap();
+            }
+        }
+        let rs: Ptr<MSRailSignal> = self.myLink.get_tl_logic().cast::<MSRailSignal>();
+        let id = rs.m().get_new_driveway_id();
+        let dw = MSDriveWay::build_drive_way(&id, self.myLink, firstIt, endIt);
+        dw.m().set_vehicle(info);
+        self.myDriveways.push(dw);
+        self.myDriveways.last().unwrap().get_mut().unwrap()
     }
 
     /// C++: `void LinkInfo::reroute(SUMOVehicle *, const MSEdgeVector &)`
@@ -160,7 +236,37 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, veh: Ptr<SUMOVehicle>, occupied: &MSEdgeVector) {
-        todo!("port LinkInfo::reroute")
+        // shortcut: MSBaseVehicle::getDevice needs a device-type key (typeid is not ported), so no
+        // routing device is ever found and the rerouting below is never triggered
+        let r_dev = veh.cast::<MSBaseVehicle>().get_device(&());
+        let now = MSNet::get_instance().get_current_time_step();
+        if !r_dev.is_null() {
+            let r_dev: Ptr<MSDevice_Routing> = r_dev.cast();
+            if r_dev.may_reroute_rail_signal()
+                && (self.myLastRerouteVehicle != veh
+                    // reroute each vehicle only once if no periodic routing is allowed,
+                    // otherwise with the specified period
+                    || (r_dev.get_period() > 0 && self.myLastRerouteTime + r_dev.get_period() <= now))
+            {
+                self.myLastRerouteVehicle = veh;
+                self.myLastRerouteTime = now;
+
+                let mut prohibited: SUMOAbstractRouter_Prohibitions = BTreeMap::new();
+                for e in occupied {
+                    // indefinite occupation because vehicles might be in deadlock on their current routes
+                    prohibited.insert(
+                        e.cast::<()>(),
+                        RouterProhibition {
+                            begin: 0.,
+                            end: f64::MAX,
+                            permissions: SVC_IGNORING,
+                        },
+                    );
+                }
+                let info = "railSignal:".to_string() + &self.get_id();
+                MSRoutingEngine::reroute(veh.m(), now, &info, false, true, &prohibited);
+            }
+        }
     }
 
     /// C++: `void LinkInfo::reset()`
@@ -174,7 +280,13 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port LinkInfo::reset")
+        self.myLastRerouteTime = -1;
+        self.myLastRerouteVehicle = Ptr::null();
+        self.myDriveways.clear();
+        self.myControlled = (self.myLink.get_via_lane_or_lane().get_permissions()
+            & self.myLink.get_lane().get_permissions()
+            & SVC_RAIL_CLASSES)
+            != 0;
     }
 
 }
@@ -224,6 +336,79 @@ impl std::ops::DerefMut for MSRailSignal {
 //   static std::vector<const MSDriveWay *> MSRailSignal::myBlockingDriveWays;
 //   static std::string MSRailSignal::myRequestedDriveWay;
 
+thread_local! {
+    // static int MSRailSignal::myRSIndex
+    static MY_RS_INDEX: Cell<i32> = const { Cell::new(0) };
+    // static bool MSRailSignal::myStoreVehicles
+    static MY_STORE_VEHICLES: Cell<bool> = const { Cell::new(false) };
+    // static VehicleVector MSRailSignal::myBlockingVehicles
+    static MY_BLOCKING_VEHICLES: RefCell<Ptr<MSVehicleContainer_VehicleVector>> =
+        RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+    // static VehicleVector MSRailSignal::myRivalVehicles
+    static MY_RIVAL_VEHICLES: RefCell<Ptr<MSVehicleContainer_VehicleVector>> =
+        RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+    // static VehicleVector MSRailSignal::myPriorityVehicles
+    static MY_PRIORITY_VEHICLES: RefCell<Ptr<MSVehicleContainer_VehicleVector>> =
+        RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+    // static std::string MSRailSignal::myConstraintInfo
+    static MY_CONSTRAINT_INFO: RefCell<Ptr<String>> = RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(String::new()))));
+    // static std::vector<const MSDriveWay *> MSRailSignal::myBlockingDriveWays
+    static MY_BLOCKING_DRIVE_WAYS: RefCell<Ptr<Vec<Ptr<MSDriveWay>>>> =
+        RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+    // static std::string MSRailSignal::myRequestedDriveWay
+    static MY_REQUESTED_DRIVE_WAY: RefCell<Ptr<String>> = RefCell::new(Ptr::from_raw(Box::into_raw(Box::new(String::new()))));
+}
+
+/// static bool MSRailSignal::myStoreVehicles
+fn my_store_vehicles() -> bool {
+    MY_STORE_VEHICLES.with(|c| c.get())
+}
+
+/// sets static bool MSRailSignal::myStoreVehicles
+fn set_my_store_vehicles(value: bool) {
+    MY_STORE_VEHICLES.with(|c| c.set(value));
+}
+
+/// static VehicleVector MSRailSignal::myBlockingVehicles
+fn my_blocking_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
+    unsafe { &mut *MY_BLOCKING_VEHICLES.with(|c| *c.borrow()).as_raw() }
+}
+
+/// static VehicleVector MSRailSignal::myRivalVehicles
+fn my_rival_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
+    unsafe { &mut *MY_RIVAL_VEHICLES.with(|c| *c.borrow()).as_raw() }
+}
+
+/// static VehicleVector MSRailSignal::myPriorityVehicles
+fn my_priority_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
+    unsafe { &mut *MY_PRIORITY_VEHICLES.with(|c| *c.borrow()).as_raw() }
+}
+
+/// static std::string MSRailSignal::myConstraintInfo
+fn my_constraint_info() -> &'static mut String {
+    unsafe { &mut *MY_CONSTRAINT_INFO.with(|c| *c.borrow()).as_raw() }
+}
+
+/// static std::vector<const MSDriveWay *> MSRailSignal::myBlockingDriveWays
+fn my_blocking_drive_ways() -> &'static mut Vec<Ptr<MSDriveWay>> {
+    unsafe { &mut *MY_BLOCKING_DRIVE_WAYS.with(|c| *c.borrow()).as_raw() }
+}
+
+/// static std::string MSRailSignal::myRequestedDriveWay
+fn my_requested_drive_way() -> &'static mut String {
+    unsafe { &mut *MY_REQUESTED_DRIVE_WAY.with(|c| *c.borrow()).as_raw() }
+}
+
+/// toString(VehicleVector): the vehicle ids joined by " "
+fn vehicle_vector_to_string(vehicles: &MSVehicleContainer_VehicleVector) -> String {
+    vehicles.iter().map(|v| v.get_id().to_string()).collect::<Vec<_>>().join(" ")
+}
+
+/// toString(std::vector<const MSDriveWay *>): the driveway ids joined by " "
+fn drive_way_vector_to_string(driveways: &Vec<Ptr<MSDriveWay>>) -> String {
+    driveways.iter().map(|d| d.get_id().to_string()).collect::<Vec<_>>().join(" ")
+}
+
 impl MSRailSignal {
     /// C++: `void MSRailSignal::MSRailSignal(MSTLLogicControl &, const std::string &, const std::string &, SUMOTime, const Parameterised::Map &)`
     /// Constructor
@@ -241,7 +426,34 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSRailSignal::MSRailSignal")
+        let base = MSTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_SIGNAL, delay, parameters);
+        let numerical_id = MY_RS_INDEX.with(|c| {
+            let value = c.get();
+            c.set(value + 1);
+            value
+        });
+        let mut result = MSRailSignal {
+            base,
+            myNumericalID: numerical_id,
+            myLinkInfos: Vec::new(),
+            myPhases: Vec::new(),
+            // dummy phase
+            myCurrentPhase: MSPhaseDefinition::new(
+                utils::common::time::delta_t(),
+                &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS),
+                "",
+            ),
+            myPhaseIndex: 0,
+            myMovingBlock: false,
+            myConstraints: BTreeMap::new(),
+            myDriveWayIndex: 0,
+        };
+        result.base.myDefaultCycleTime = utils::common::time::delta_t();
+        result.myMovingBlock = utils::options::options_cont::get_bool("railsignal-moving-block");
+        // shortcut: the C++ constructor deschedules the switch command created by the base class;
+        // the Rust base class does not create one (the caller must call schedule_switch_command),
+        // and a descheduled command behaves exactly like a missing one (getNextSwitchTime == -1)
+        result
     }
 
     /// C++: `void MSRailSignal::init(NLDetectorBuilder &)` [virtual]
@@ -268,7 +480,32 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSRailSignal::init")
+        if self.myLanes.is_empty() {
+            utils::write_warningf!("Rail signal at junction '%' does not control any links", self.get_id());
+        }
+        let mut outgoing_permissions: SVCPermissions = 0;
+        for links in self.myLinks.clone() {
+            //for every link index
+            if links.len() != 1 {
+                panic!(
+                    "{}",
+                    ProcessError::new(format!(
+                        "At railSignal '{}' found {} links controlled by index {}",
+                        self.get_id(),
+                        links.len(),
+                        utils::common::to_string::to_string(&links[0].get_tl_index())
+                    ))
+                );
+            }
+            self.myLinkInfos.push(MSRailSignal_LinkInfo::new(links[0]));
+            outgoing_permissions |= links[0].get_permissions();
+        }
+        self.update_current_phase();
+        let now = MSNet::get_instance().get_current_time_step();
+        self.set_traffic_light_signals(now);
+        self.base.myNumLinks = self.myLinks.len() as i32;
+        MSRailSignalControl::get_instance().add_signal(Ptr::new(&*self));
+        self.myMovingBlock |= MSRailSignalControl::is_moving_block(outgoing_permissions);
     }
 
     /// C++: `void MSRailSignal::~MSRailSignal() noexcept` [virtual]
@@ -278,7 +515,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRailSignal::~MSRailSignal")
+        self.remove_constraints();
     }
 
     /// C++: `int MSRailSignal::getNumericalID() const` [const]
@@ -287,7 +524,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port MSRailSignal::getNumericalID")
+        self.myNumericalID
     }
 
     /// C++: `void MSRailSignal::setParameter(const std::string &, const std::string &)` [virtual]
@@ -311,7 +548,21 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSRailSignal::setParameter")
+        // some pre-defined parameters can be updated at runtime
+        if key == "moving-block" {
+            let moving_block = utils::common::string_utils::to_bool(value).unwrap();
+            if moving_block != self.myMovingBlock {
+                // recompute driveways
+                self.myMovingBlock = moving_block;
+                for li in &mut self.myLinkInfos {
+                    li.reset();
+                }
+                self.update_current_phase();
+                let now = MSNet::get_instance().get_current_time_step();
+                self.set_traffic_light_signals(now);
+            }
+        }
+        self.base.base2.set_parameter(key, value);
     }
 
     /// C++: `void MSRailSignal::addLink(MSLink *, MSLane *, int)` [virtual]
@@ -324,7 +575,9 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
-        todo!("port MSRailSignal::addLink")
+        if pos >= 0 {
+            self.base.add_link(link, lane, pos);
+        } // ignore uncontrolled link
     }
 
     /// C++: `void MSRailSignal::adaptLinkInformationFrom(const MSTrafficLightLogic &)` [virtual]
@@ -336,7 +589,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn adapt_link_information_from(&mut self, logic: &MSTrafficLightLogic) {
-        todo!("port MSRailSignal::adaptLinkInformationFrom")
+        self.base.adapt_link_information_from(logic);
+        self.update_current_phase();
     }
 
     /// C++: `bool MSRailSignal::updateCurrentPhase()`
@@ -423,7 +677,62 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn update_current_phase(&mut self) -> bool {
-        todo!("port MSRailSignal::updateCurrentPhase")
+        let mut keep_active = false;
+        // green by default so vehicles can be inserted at the borders of the network
+        let mut state: Vec<char> = vec!['G'; self.myLinks.len()];
+        for i in 0..self.myLinkInfos.len() {
+            let (has_approaching, controlled, tl_index) = {
+                let li = &self.myLinkInfos[i];
+                (li.myLink.get_approaching_2().len() > 0, li.myControlled, li.myLink.get_tl_index())
+            };
+            if has_approaching && controlled {
+                keep_active = true;
+                let closest = self.myLinkInfos[i].myLink.get_closest();
+                //std::cout << SIMTIME << " signal=" << getTLLinkID(li.myLink) << " veh=" << closest.first->getID() << " dw:\n";
+                //driveway.writeBlocks(*OutputDevice_COUT::getDevice());
+                let must_wait = !self.constraints_allow(closest.0, true);
+                let mut occupied: MSEdgeVector = Vec::new();
+                let reserved = {
+                    let li = &mut self.myLinkInfos[i];
+                    li.get_drive_way(closest.0, -1).reserve(&closest, &mut occupied)
+                };
+                if must_wait || !reserved {
+                    state[tl_index as usize] = 'r';
+                    if occupied.len() > 0 {
+                        self.myLinkInfos[i].reroute(closest.0, &occupied);
+                    }
+                } else {
+                    state[tl_index as usize] = 'G';
+                }
+            } else if controlled {
+                if self.myLinkInfos[i].myDriveways.is_empty() {
+                    state[tl_index as usize] = 'r';
+                } else {
+                    let mut occupied: MSEdgeVector = Vec::new();
+                    let driveway = self.myLinkInfos[i].myDriveways[0];
+                    if driveway.foe_drive_way_occupied(true, Ptr::null(), &mut occupied)
+                        || driveway.foe_drive_way_approached()
+                    {
+                        keep_active = true;
+                        state[tl_index as usize] = 'r';
+                    }
+                }
+            } else {
+                state[tl_index as usize] = 'O';
+            }
+        }
+        let state: String = state.into_iter().collect();
+        if self.myCurrentPhase.get_state() != state {
+            self.myCurrentPhase.set_state(&state);
+            self.myPhaseIndex = 1 - self.myPhaseIndex;
+            // set link priorities
+            let now = MSNet::get_instance().get_current_time_step();
+            self.set_traffic_light_signals(now);
+            // execute switch actions (3D-gui)
+            //const MSTLLogicControl::TLSLogicVariants& vars = myTLControl.get(myTLLogic->getID());
+            //vars.executeOnSwitchActions();
+        }
+        keep_active
     }
 
     /// C++: `SUMOTime MSRailSignal::trySwitch()` [virtual]
@@ -436,7 +745,9 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port MSRailSignal::trySwitch")
+        // deschedule regular traffic light event,
+        // updateCurrentPhase is instead called from MSRailSignalControl::updateSignals
+        utils::common::time::SUMOTIME_MAX
     }
 
     /// C++: `int MSRailSignal::getPhaseNumber() const` [const, virtual]
@@ -447,7 +758,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_number(&self) -> i32 {
-        todo!("port MSRailSignal::getPhaseNumber")
+        0
     }
 
     /// C++: `const Phases & MSRailSignal::getPhases() const` [const, virtual]
@@ -455,7 +766,7 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_phases(&self) -> &MSTrafficLightLogic_Phases {
-        todo!("port MSRailSignal::getPhases")
+        &self.myPhases
     }
 
     /// C++: `const MSPhaseDefinition & MSRailSignal::getPhase(int) const` [const, virtual]
@@ -466,7 +777,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_phase(&self, givenstep: i32) -> &MSPhaseDefinition {
-        todo!("port MSRailSignal::getPhase")
+        &self.myCurrentPhase
     }
 
     /// C++: `bool MSRailSignal::getsMajorGreen(int) const` [const, virtual]
@@ -476,7 +787,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn gets_major_green(&self, arg0: i32) -> bool {
-        todo!("port MSRailSignal::getsMajorGreen")
+        true
     }
 
     /// C++: `int MSRailSignal::getCurrentPhaseIndex() const` [const, virtual]
@@ -487,7 +798,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_index(&self) -> i32 {
-        todo!("port MSRailSignal::getCurrentPhaseIndex")
+        self.myPhaseIndex
     }
 
     /// C++: `const MSPhaseDefinition & MSRailSignal::getCurrentPhaseDef() const` [const, virtual]
@@ -498,7 +809,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_def(&self) -> &MSPhaseDefinition {
-        todo!("port MSRailSignal::getCurrentPhaseDef")
+        &self.myCurrentPhase
     }
 
     /// C++: `void MSRailSignal::resetLastSwitch(SUMOTime)` [virtual]
@@ -509,7 +820,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn reset_last_switch(&mut self, t: SUMOTime) {
-        todo!("port MSRailSignal::resetLastSwitch")
+        self.myCurrentPhase.myLastSwitch = t;
     }
 
     /// C++: `SUMOTime MSRailSignal::getPhaseIndexAtTime(SUMOTime) const` [const, virtual]
@@ -520,7 +831,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_index_at_time(&self, simStep: SUMOTime) -> SUMOTime {
-        todo!("port MSRailSignal::getPhaseIndexAtTime")
+        0
     }
 
     /// C++: `SUMOTime MSRailSignal::getOffsetFromIndex(int) const` [const, virtual]
@@ -531,7 +842,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_offset_from_index(&self, index: i32) -> SUMOTime {
-        todo!("port MSRailSignal::getOffsetFromIndex")
+        0
     }
 
     /// C++: `int MSRailSignal::getIndexFromOffset(SUMOTime) const` [const, virtual]
@@ -542,7 +853,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_index_from_offset(&self, offset: SUMOTime) -> i32 {
-        todo!("port MSRailSignal::getIndexFromOffset")
+        0
     }
 
     /// C++: `void MSRailSignal::changeStepAndDuration(MSTLLogicControl &, SUMOTime, int, SUMOTime)` [virtual]
@@ -555,7 +866,8 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn change_step_and_duration(&mut self, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
-        todo!("port MSRailSignal::changeStepAndDuration")
+        // UNUSED_PARAMETER(tlcontrol); UNUSED_PARAMETER(simStep);
+        // UNUSED_PARAMETER(step); UNUSED_PARAMETER(stepDuration);
     }
 
     /// C++: `VehicleVector MSRailSignal::getBlockingVehicles(int)` [virtual]
@@ -563,7 +875,8 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_blocking_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::getBlockingVehicles")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_blocking_vehicles().clone()
     }
 
     /// C++: `std::string MSRailSignal::getBlockingVehicleIDs() const` [const]
@@ -582,7 +895,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_blocking_vehicle_i_ds(&self) -> String {
-        todo!("port MSRailSignal::getBlockingVehicleIDs")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            vehicle_vector_to_string(&rs.m().get_blocking_vehicles(0))
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {};", i, vehicle_vector_to_string(&rs.m().get_blocking_vehicles(i as i32)));
+            }
+            result
+        }
     }
 
     /// C++: `VehicleVector MSRailSignal::getBlockingVehicles(const MSDriveWay *)` [static]
@@ -590,7 +913,8 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_blocking_vehicles_2(dw: Ptr<MSDriveWay>) -> MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::getBlockingVehicles")
+        MSRailSignal::store_tra_ci_vehicles_2(dw);
+        my_blocking_vehicles().clone()
     }
 
     /// C++: `VehicleVector MSRailSignal::getRivalVehicles(int)` [virtual]
@@ -598,7 +922,8 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_rival_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::getRivalVehicles")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_rival_vehicles().clone()
     }
 
     /// C++: `std::string MSRailSignal::getRivalVehicleIDs() const` [const]
@@ -617,7 +942,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_rival_vehicle_i_ds(&self) -> String {
-        todo!("port MSRailSignal::getRivalVehicleIDs")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            vehicle_vector_to_string(&rs.m().get_rival_vehicles(0))
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {};", i, vehicle_vector_to_string(&rs.m().get_rival_vehicles(i as i32)));
+            }
+            result
+        }
     }
 
     /// C++: `VehicleVector MSRailSignal::getPriorityVehicles(int)` [virtual]
@@ -625,7 +960,8 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_priority_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::getPriorityVehicles")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_priority_vehicles().clone()
     }
 
     /// C++: `std::string MSRailSignal::getPriorityVehicleIDs() const` [const]
@@ -644,7 +980,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_priority_vehicle_i_ds(&self) -> String {
-        todo!("port MSRailSignal::getPriorityVehicleIDs")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            vehicle_vector_to_string(&rs.m().get_priority_vehicles(0))
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {};", i, vehicle_vector_to_string(&rs.m().get_priority_vehicles(i as i32)));
+            }
+            result
+        }
     }
 
     /// C++: `std::string MSRailSignal::getConstraintInfo(int)`
@@ -656,7 +1002,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_constraint_info(&mut self, linkIndex: i32) -> String {
-        todo!("port MSRailSignal::getConstraintInfo")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_constraint_info().clone()
     }
 
     /// C++: `std::string MSRailSignal::getConstraintInfo() const` [const]
@@ -675,7 +1022,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_constraint_info_2(&self) -> String {
-        todo!("port MSRailSignal::getConstraintInfo")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            rs.m().get_constraint_info(0)
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {}", i, rs.m().get_constraint_info(i as i32));
+            }
+            result
+        }
     }
 
     /// C++: `std::vector<const MSDriveWay *> MSRailSignal::getBlockingDriveWays(int)` [virtual]
@@ -686,7 +1043,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_blocking_drive_ways(&mut self, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
-        todo!("port MSRailSignal::getBlockingDriveWays")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_blocking_drive_ways().clone()
     }
 
     /// C++: `std::string MSRailSignal::getBlockingDriveWayIDs() const` [const]
@@ -705,7 +1063,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_blocking_drive_way_i_ds(&self) -> String {
-        todo!("port MSRailSignal::getBlockingDriveWayIDs")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            drive_way_vector_to_string(&rs.m().get_blocking_drive_ways(0))
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {};", i, drive_way_vector_to_string(&rs.m().get_blocking_drive_ways(i as i32)));
+            }
+            result
+        }
     }
 
     /// C++: `std::vector<const MSDriveWay *> MSRailSignal::getBlockingDriveWays(const MSDriveWay *)` [static]
@@ -717,7 +1085,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_blocking_drive_ways_2(dw: Ptr<MSDriveWay>) -> Vec<Ptr<MSDriveWay>> {
-        todo!("port MSRailSignal::getBlockingDriveWays")
+        MSRailSignal::store_tra_ci_vehicles_2(dw);
+        my_blocking_drive_ways().clone()
     }
 
     /// C++: `std::string MSRailSignal::getRequestedDriveWay(int)` [virtual]
@@ -728,7 +1097,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_requested_drive_way(&mut self, linkIndex: i32) -> String {
-        todo!("port MSRailSignal::getRequestedDriveWay")
+        self.store_tra_ci_vehicles(linkIndex);
+        my_requested_drive_way().clone()
     }
 
     /// C++: `std::string MSRailSignal::getRequestedDriveWay() const` [const]
@@ -747,7 +1117,17 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_requested_drive_way_2(&self) -> String {
-        todo!("port MSRailSignal::getRequestedDriveWay")
+        // the C++ code const_casts this to call the non-const getters
+        let rs = Ptr::new(self);
+        if self.myLinkInfos.len() == 1 {
+            rs.m().get_requested_drive_way(0)
+        } else {
+            let mut result = String::new();
+            for i in 0..self.myLinkInfos.len() {
+                result += &format!("{}: {};", i, rs.m().get_requested_drive_way(i as i32));
+            }
+            result
+        }
     }
 
     /// C++: `void MSRailSignal::writeBlocks(OutputDevice &, bool) const` [const]
@@ -775,7 +1155,24 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn write_blocks(&self, od: &mut OutputDevice, writeVehicles: bool) {
-        todo!("port MSRailSignal::writeBlocks")
+        od.open_tag("railSignal");
+        od.write_attr(SUMO_ATTR_ID, self.get_id());
+        for li in &self.myLinkInfos {
+            let link = li.myLink;
+            od.open_tag("link");
+            od.write_attr(SUMO_ATTR_TLLINKINDEX, &link.get_tl_index());
+            od.write_attr(SUMO_ATTR_FROM, link.get_lane_before().get_id());
+            od.write_attr(SUMO_ATTR_TO, link.get_via_lane_or_lane().get_id());
+            for dw in &li.myDriveways {
+                if writeVehicles {
+                    dw.write_block_vehicles(od);
+                } else {
+                    dw.write_blocks(od);
+                }
+            }
+            od.close_tag(""); // link
+        }
+        od.close_tag(""); // railSignal
     }
 
     /// C++: `void MSRailSignal::addConstraint(const std::string &, MSRailSignalConstraint *)`
@@ -786,7 +1183,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn add_constraint(&mut self, tripId: &str, constraint: Ptr<MSRailSignalConstraint>) {
-        todo!("port MSRailSignal::addConstraint")
+        self.myConstraints.entry(tripId.to_string()).or_default().push(constraint);
     }
 
     /// C++: `const std::map<std::string, std::vector<MSRailSignalConstraint *>> & MSRailSignal::getConstraints() const` [const]
@@ -796,7 +1193,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn get_constraints(&self) -> &BTreeMap<String, Vec<Ptr<MSRailSignalConstraint>>> {
-        todo!("port MSRailSignal::getConstraints")
+        &self.myConstraints
     }
 
     /// C++: `bool MSRailSignal::removeConstraint(const std::string &, MSRailSignalConstraint *)`
@@ -816,7 +1213,15 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn remove_constraint(&mut self, tripId: &str, constraint: Ptr<MSRailSignalConstraint>) -> bool {
-        todo!("port MSRailSignal::removeConstraint")
+        if let Some(constraints) = self.myConstraints.get_mut(tripId) {
+            if let Some(pos) = constraints.iter().position(|c| *c == constraint) {
+                // the C++ code deletes the constraint here
+                unsafe { drop(Box::from_raw(constraints[pos].as_raw())) };
+                constraints.remove(pos);
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSRailSignal::removeConstraints()`
@@ -831,7 +1236,13 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn remove_constraints(&mut self) {
-        todo!("port MSRailSignal::removeConstraints")
+        for item in self.myConstraints.values() {
+            for c in item {
+                // the C++ code deletes the constraints here
+                unsafe { drop(Box::from_raw(c.as_raw())) };
+            }
+        }
+        self.myConstraints.clear();
     }
 
     /// C++: `void MSRailSignal::updateDriveway(int)`
@@ -839,7 +1250,7 @@ impl MSRailSignal {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn update_driveway(&mut self, numericalID: i32) {
-        todo!("port MSRailSignal::updateDriveway")
+        // C++ declares this method but never defines nor calls it
     }
 
     /// C++: `bool MSRailSignal::hasInsertionConstraint(MSLink *, const MSVehicle *, std::string &, bool &)` [static]
@@ -876,7 +1287,33 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn has_insertion_constraint(link: Ptr<MSLink>, veh: Ptr<MSVehicle>, info: &mut String, isInsertionOrder: &mut bool) -> bool {
-        todo!("port MSRailSignal::hasInsertionConstraint")
+        let junction = link.get_junction();
+        if !junction.is_null() && junction.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+            // the link is controlled by a rail signal
+            let rs: Ptr<MSRailSignal> = link.get_tl_logic().cast::<MSRailSignal>();
+            if !rs.is_null() && rs.my_constraints.len() > 0 {
+                let trip_id = veh
+                    .cast::<MSBaseVehicle>()
+                    .get_parameter()
+                    .get_parameter("tripId", veh.get_id());
+                if let Some(constraints) = rs.my_constraints.get(&trip_id) {
+                    for c in constraints {
+                        if c.is_insertion_constraint() && !c.cleared() {
+                            *info = c.get_description();
+                            *isInsertionOrder = c.get_type() == MSRailSignalConstraint_ConstraintType::INSERTION_ORDER;
+                            if MSGlobals::time_to_teleport_rs_deadlock() > 0 {
+                                let foe = c.get_foe();
+                                if !foe.is_null() {
+                                    MSRailSignalControl::get_instance().add_wait_relation(veh, rs, foe, *c);
+                                }
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSRailSignal::initDriveWays(const SUMOVehicle *, bool)` [static]
@@ -963,7 +1400,97 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn init_drive_ways(ego: Ptr<SUMOVehicle>, update: bool) {
-        todo!("port MSRailSignal::initDriveWays")
+        let veh = ego.cast::<MSBaseVehicle>();
+        let edges = veh.get_route().get_edges();
+        let mut end_index = veh.get_parameter().arrivalEdge;
+        if end_index < 0 {
+            end_index = edges.len() as i32 - 1;
+        }
+        let mut depart_index = veh.get_parameter().departEdge;
+        let mut prev: Ptr<MSDriveWay> = Ptr::null();
+        if update && veh.has_departed() {
+            // find last rail signal on the route and obtain the driveway
+            let mut next = veh.get_edge();
+            let mut i = veh.get_route_position() - 1;
+            while i > depart_index {
+                let e = edges[i as usize];
+                if e.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                    let link = e.get_lanes().first().unwrap().get_link_to(next.get_lanes().first().unwrap());
+                    //std::cout << SIMTIME << " veh=" << ego->getID() << " rp=" << ego->getRoutePosition()
+                    //    << " i=" << i << " e=" << e->getID() << " next=" << next->getID() << " link=" << (link == nullptr ? "NUL" : link->getDescription()) << "\n";
+                    if !link.is_null() && link.is_tls_controlled() {
+                        let rs: Ptr<MSRailSignal> = link.get_tl_logic().cast::<MSRailSignal>();
+                        let driveway = rs.m().myLinkInfos[link.get_tl_index() as usize].get_drive_way(ego, i);
+                        prev = Ptr::new(driveway);
+                        depart_index = veh.get_route_position();
+                        break;
+                    }
+                }
+                next = e;
+                i -= 1;
+            }
+        }
+        if prev.is_null() {
+            prev = MSDriveWay::get_departure_drive_way(ego, true);
+        }
+        if update && veh.has_departed() {
+            let veh_ref: &mut MSBaseVehicle = veh.m();
+            if !prev.has_train(ego)
+                && prev.m().notify_enter(veh_ref, MSMoveReminder_Notification::NOTIFICATION_REROUTE, Ptr::null())
+                && !veh_ref.has_reminder(prev.cast::<MSMoveReminder>())
+            {
+                veh_ref.add_reminder(prev.cast::<MSMoveReminder>(), 1.);
+            }
+        }
+        for i in depart_index..end_index - 1 {
+            let e = edges[i as usize];
+            if e.is_normal() && e.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                let e2 = edges[(i + 1) as usize];
+                for lane in e.get_lanes() {
+                    for link in lane.get_link_cont() {
+                        if link.get_lane().myEdge == e2 {
+                            let rs: Ptr<MSRailSignal> = link.get_tl_logic().cast::<MSRailSignal>();
+                            if !rs.is_null() {
+                                // init driveway
+                                let driveway = rs.m().myLinkInfos[link.get_tl_index() as usize].get_drive_way(ego, i);
+                                let dw = Ptr::new(driveway);
+                                MSRailSignalControl::get_instance().add_driveway_follower(prev, dw);
+                                MSRailSignalControl::get_instance().add_dw_deadlock_checks(rs, prev);
+                                MSRailSignalControl::get_instance().notify_approach(link);
+                                prev = dw;
+                                if update && rs.is_active() {
+                                    // vehicle may have rerouted its intial trip
+                                    // after the states have been set
+                                    // @note: This is a hack because it could lead to invalid tls-output
+                                    // (it's still an improvement over switching based on default driveways)
+                                    if !veh.has_departed() {
+                                        rs.m().update_current_phase();
+                                        let now = MSNet::get_instance().get_current_time_step();
+                                        rs.m().set_traffic_light_signals(now);
+                                    } else if i <= veh.get_route_position() {
+                                        let veh_ref: &mut MSBaseVehicle = veh.m();
+                                        if !dw.has_train(ego)
+                                            && dw.m().notify_enter(veh_ref, MSMoveReminder_Notification::NOTIFICATION_REROUTE, Ptr::null())
+                                            && !veh_ref.has_reminder(dw.cast::<MSMoveReminder>())
+                                        {
+                                            veh_ref.add_reminder(dw.cast::<MSMoveReminder>(), 1.);
+                                            for sub in dw.get_sub_drive_ways() {
+                                                if !sub.has_train(ego)
+                                                    && sub.m().notify_enter(veh_ref, MSMoveReminder_Notification::NOTIFICATION_REROUTE, Ptr::null())
+                                                    && !veh_ref.has_reminder(sub.cast::<MSMoveReminder>())
+                                                {
+                                                    veh_ref.add_reminder(sub.cast::<MSMoveReminder>(), 1.);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `const MSDriveWay & MSRailSignal::retrieveDriveWay(int) const` [const]
@@ -980,7 +1507,21 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_drive_way(&self, numericalID: i32) -> &MSDriveWay {
-        todo!("port MSRailSignal::retrieveDriveWay")
+        for li in &self.myLinkInfos {
+            for dw in &li.myDriveways {
+                if dw.get_numerical_id() == numericalID {
+                    return dw.get().unwrap();
+                }
+            }
+        }
+        panic!(
+            "{}",
+            ProcessError::new(format!(
+                "Invalid driveway id {} at railSignal '{}'",
+                numericalID,
+                self.get_id()
+            ))
+        );
     }
 
     /// C++: `const MSDriveWay & MSRailSignal::retrieveDriveWayForVeh(int, const SUMOVehicle *)`
@@ -990,7 +1531,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_drive_way_for_veh(&mut self, tlIndex: i32, veh: Ptr<SUMOVehicle>) -> &MSDriveWay {
-        todo!("port MSRailSignal::retrieveDriveWayForVeh")
+        self.myLinkInfos[tlIndex as usize].get_drive_way(veh, -1)
     }
 
     /// C++: `const MSDriveWay & MSRailSignal::retrieveDriveWayForRoute(int, MSRouteIterator, MSRouteIterator)`
@@ -1000,7 +1541,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_drive_way_for_route(&mut self, tlIndex: i32, first: MSRouteIterator, end: MSRouteIterator) -> &MSDriveWay {
-        todo!("port MSRailSignal::retrieveDriveWayForRoute")
+        self.myLinkInfos[tlIndex as usize].get_drive_way_2(first, end, "")
     }
 
     /// C++: `const std::vector<MSDriveWay *> MSRailSignal::retrieveDriveWays(int) const` [const]
@@ -1010,7 +1551,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_drive_ways(&self, tlIndex: i32) -> Vec<Ptr<MSDriveWay>> {
-        todo!("port MSRailSignal::retrieveDriveWays")
+        self.myLinkInfos[tlIndex as usize].myDriveways.clone()
     }
 
     /// C++: `bool MSRailSignal::constraintsAllow(const SUMOVehicle *, bool) const` [const]
@@ -1050,7 +1591,39 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn constraints_allow(&self, veh: Ptr<SUMOVehicle>, storeWaitRelation: bool) -> bool {
-        todo!("port MSRailSignal::constraintsAllow")
+        if self.myConstraints.len() == 0 {
+            return true;
+        } else {
+            let trip_id = veh
+                .cast::<MSBaseVehicle>()
+                .get_parameter()
+                .get_parameter("tripId", veh.get_id());
+            if let Some(constraints) = self.myConstraints.get(&trip_id) {
+                for c in constraints {
+                    // ignore insertion constraints here
+                    if !c.is_insertion_constraint() && !c.cleared() {
+                        if storeWaitRelation
+                            && MSGlobals::time_to_teleport_rs_deadlock() > 0
+                            && veh.cast::<MSVehicle>().get_waiting_time(false)
+                                > veh.cast::<MSBaseVehicle>()
+                                    .get_vehicle_type()
+                                    .get_car_follow_model()
+                                    .get_startup_delay()
+                        {
+                            let foe = c.get_foe();
+                            if !foe.is_null() {
+                                MSRailSignalControl::get_instance().add_wait_relation(veh, Ptr::new(self), foe, *c);
+                            }
+                        }
+                        if my_store_vehicles() {
+                            *my_constraint_info() = c.get_description();
+                        }
+                        return false;
+                    }
+                }
+            }
+            true
+        }
     }
 
     /// C++: `bool MSRailSignal::isMovingBlock() const` [const]
@@ -1059,7 +1632,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn is_moving_block(&self) -> bool {
-        todo!("port MSRailSignal::isMovingBlock")
+        self.myMovingBlock
     }
 
     /// C++: `const MSJunction * MSRailSignal::getJunction() const` [const]
@@ -1070,7 +1643,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSRailSignal::getJunction")
+        self.myLinkInfos.first().unwrap().myLink.get_junction()
     }
 
     /// C++: `const MSDriveWay & MSRailSignal::getExistingDriveWay(const MSLink *, MSRouteIterator, MSRouteIterator)`
@@ -1084,7 +1657,10 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_existing_drive_way(&mut self, link: Ptr<MSLink>, firstIt: MSRouteIterator, endIt: MSRouteIterator) -> &MSDriveWay {
-        todo!("port MSRailSignal::getExistingDriveWay")
+        let cand = self.myLinkInfos[link.get_tl_index() as usize].get_drive_way_2(firstIt, endIt, "_tmp_");
+        // an existing driveway should be found
+        debug_assert!(cand.get_first_vehicle() != "_tmp_");
+        cand
     }
 
     /// C++: `bool MSRailSignal::storeVehicles()` [static]
@@ -1093,7 +1669,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn store_vehicles() -> bool {
-        todo!("port MSRailSignal::storeVehicles")
+        my_store_vehicles()
     }
 
     /// C++: `VehicleVector & MSRailSignal::blockingVehicles()` [static]
@@ -1102,7 +1678,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn blocking_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::blockingVehicles")
+        my_blocking_vehicles()
     }
 
     /// C++: `std::vector<const MSDriveWay *> & MSRailSignal::blockingDriveWays()` [static]
@@ -1111,7 +1687,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn blocking_drive_ways() -> &'static mut Vec<Ptr<MSDriveWay>> {
-        todo!("port MSRailSignal::blockingDriveWays")
+        my_blocking_drive_ways()
     }
 
     /// C++: `VehicleVector & MSRailSignal::rivalVehicles()` [static]
@@ -1120,7 +1696,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn rival_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::rivalVehicles")
+        my_rival_vehicles()
     }
 
     /// C++: `VehicleVector & MSRailSignal::priorityVehicles()` [static]
@@ -1129,7 +1705,7 @@ impl MSRailSignal {
     //     }
     #[allow(unused_variables)]
     pub fn priority_vehicles() -> &'static mut MSVehicleContainer_VehicleVector {
-        todo!("port MSRailSignal::priorityVehicles")
+        my_priority_vehicles()
     }
 
     /// C++: `std::string MSRailSignal::describeLinks(std::vector<MSLink *>)` [static]
@@ -1144,7 +1720,11 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn describe_links(links: Vec<Ptr<MSLink>>) -> String {
-        todo!("port MSRailSignal::describeLinks")
+        let mut result = String::new();
+        for link in links {
+            result += &link.get_description() + " ";
+        }
+        result
     }
 
     /// C++: `std::string MSRailSignal::getNewDrivewayID()` [protected]
@@ -1154,7 +1734,9 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_new_driveway_id(&mut self) -> String {
-        todo!("port MSRailSignal::getNewDrivewayID")
+        let result = self.get_id() + "." + &utils::common::to_string::to_string(&self.myDriveWayIndex);
+        self.myDriveWayIndex += 1;
+        result
     }
 
     /// C++: `void MSRailSignal::storeTraCIVehicles(int)` [protected]
@@ -1180,7 +1762,26 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn store_tra_ci_vehicles(&mut self, linkIndex: i32) {
-        todo!("port MSRailSignal::storeTraCIVehicles")
+        MSRailSignal::reset_stored();
+        set_my_store_vehicles(true);
+        let has_approaching = self.myLinkInfos[linkIndex as usize].myLink.get_approaching_2().len() > 0;
+        if has_approaching {
+            let closest = self.myLinkInfos[linkIndex as usize].myLink.get_closest();
+            let mut occupied: MSEdgeVector = Vec::new();
+            {
+                let li = &mut self.myLinkInfos[linkIndex as usize];
+                let driveway = li.get_drive_way(closest.0, -1);
+                *my_requested_drive_way() = driveway.get_id().to_string();
+                // call for side effects
+                driveway.reserve(&closest, &mut occupied);
+            }
+            self.constraints_allow(closest.0, false);
+        } else if !self.myLinkInfos[linkIndex as usize].myDriveways.is_empty() {
+            let driveway = self.myLinkInfos[linkIndex as usize].myDriveways[0];
+            driveway.conflict_lane_occupied(false, Ptr::null());
+            driveway.foe_drive_way_approached();
+        }
+        set_my_store_vehicles(false);
     }
 
     /// C++: `void MSRailSignal::storeTraCIVehicles(const MSDriveWay *)` [static, protected]
@@ -1195,7 +1796,12 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn store_tra_ci_vehicles_2(dw: Ptr<MSDriveWay>) {
-        todo!("port MSRailSignal::storeTraCIVehicles")
+        MSRailSignal::reset_stored();
+        set_my_store_vehicles(true);
+        let mut occupied: MSEdgeVector = Vec::new();
+        // call for side effects
+        dw.foe_drive_way_occupied(true, Ptr::null(), &mut occupied);
+        set_my_store_vehicles(false);
     }
 
     /// C++: `void MSRailSignal::resetStored()` [static, protected]
@@ -1211,7 +1817,12 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn reset_stored() {
-        todo!("port MSRailSignal::resetStored")
+        my_blocking_vehicles().clear();
+        my_rival_vehicles().clear();
+        my_priority_vehicles().clear();
+        *my_constraint_info() = String::new();
+        my_blocking_drive_ways().clear();
+        *my_requested_drive_way() = String::new();
     }
 
 }
