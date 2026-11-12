@@ -1,6 +1,7 @@
 //! Port of netbuild/NBNodeShapeComputer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
 /// C++ typedef `std::map<NBEdge *, PositionVector> NBNodeShapeComputer::GeomsMap`
 pub type NBNodeShapeComputer_GeomsMap = BTreeMap<Ptr<NBEdge>, PositionVector>;
@@ -18,6 +19,27 @@ pub struct NBNodeShapeComputer {
 
 // C++ static members of NBNodeShapeComputer (port as module-level statics, see AGENTS.md):
 //   static const SVCPermissions NBNodeShapeComputer::SVC_LARGE_TURN;
+
+/// C++ `#define EXT2 10.0` (netbuild/NBNodeShapeComputer.cpp)
+const EXT2: f64 = 10.0;
+
+/// C++ `NBNode::AVOID_WIDE_LEFT_TURN` (netbuild/NBNode.cpp), used as a shapeFlag for computeSmoothShape
+const NBNode_AVOID_WIDE_LEFT_TURN: i32 = 1;
+
+/// C++ `NBNodeShapeComputer::SVC_LARGE_TURN`: foot and bicycle paths, service roads and railways get no large junctions
+pub const SVC_LARGE_TURN: SVCPermissions = SVC_ALL & !(SVC_BICYCLE | SVC_PEDESTRIAN | SVC_DELIVERY | SVC_RAIL_CLASSES);
+
+// C++ MAX2/MIN2 (utils/common/StdDefs.h): `a > b ? a : b` / `a < b ? a : b`
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+// C++ MIN3(a, b, c) = MIN2(c, a < b ? a : b)
+fn min3(a: f64, b: f64, c: f64) -> f64 {
+    min2(c, if a < b { a } else { b })
+}
 
 impl NBNodeShapeComputer {
     /// C++: `void NBNodeShapeComputer::NBNodeShapeComputer(const NBNode &)`
@@ -564,7 +586,31 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_node_shape_small(&mut self) -> PositionVector {
-        todo!("port NBNodeShapeComputer::computeNodeShapeSmall")
+        let node = self.myNode;
+        let mut ret = PositionVector::new();
+        for &e in node.get_edges() {
+            // compute crossing with normal
+            let mut edgebound1 = e.get_ccw_boundary_line(&*node).get_subpart_by_index(0, 2);
+            let mut edgebound2 = e.get_cw_boundary_line(&*node).get_subpart_by_index(0, 2);
+            let mut delta = edgebound1[1] - edgebound1[0];
+            delta.set(-delta.y(), delta.x()); // rotate 90 degrees
+            let mut cross = PositionVector::from_line(*node.get_position(), *node.get_position() + delta);
+            cross.extrapolate2d(500.0, false);
+            edgebound1.extrapolate2d(500.0, false);
+            edgebound2.extrapolate2d(500.0, false);
+            if cross.intersects_pv(&edgebound1) {
+                let mut np = cross.intersection_position2d_pv(&edgebound1);
+                np.set3(np.x(), np.y(), node.get_position().z());
+                ret.push_back_no_double_pos(&np);
+            }
+            if cross.intersects_pv(&edgebound2) {
+                let mut np = cross.intersection_position2d_pv(&edgebound2);
+                np.set3(np.x(), np.y(), node.get_position().z());
+                ret.push_back_no_double_pos(&np);
+            }
+            e.m().reset_node_border(node);
+        }
+        ret
     }
 
     /// C++: `void NBNodeShapeComputer::computeEdgeBoundaries(const EdgeVector &, GeomsMap &, GeomsMap &)` [private]
@@ -617,7 +663,46 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_edge_boundaries(&mut self, edges: &EdgeVector, geomsCCW: &mut NBNodeShapeComputer_GeomsMap, geomsCW: &mut NBNodeShapeComputer_GeomsMap) {
-        todo!("port NBNodeShapeComputer::computeEdgeBoundaries")
+        let node = self.myNode;
+        let ext = self.EXT;
+        // compute boundary lines and extend it by EXT m
+        for &edge in edges {
+            // store current edge's boundary as current ccw/cw boundary
+            // shortcut: C++ try/catch(InvalidArgument) around getCCW/CWBoundaryLine is not ported, NBEdge boundary getters return no Result; upgrade when they can fail
+            let mut ccw = edge.get_ccw_boundary_line(&*node);
+            let mut cw = edge.get_cw_boundary_line(&*node);
+            // ensure the boundary is valid
+            if ccw.length2d() < NUMERICAL_EPS {
+                ccw = edge.get_geometry().clone();
+            }
+            if cw.length2d() < NUMERICAL_EPS {
+                cw = edge.get_geometry().clone();
+            }
+            // cut off all parts beyond EXT to avoid issues with curved-back roads
+            ccw = ccw.get_subpart2d(0.0, max2(ext, edge.get_total_width()));
+            cw = cw.get_subpart2d(0.0, max2(ext, edge.get_total_width()));
+            // extend the boundary by extrapolating it by EXT m towards the junction
+            ccw.extrapolate2d(ext, true);
+            cw.extrapolate2d(ext, true);
+            // ensure minimum length by extending it away from the junction
+            ccw.extrapolate(EXT2, false, true);
+            cw.extrapolate(EXT2, false, true);
+            if ccw.is_nan() || cw.is_nan() {
+                write_warning(&format!(
+                    "While computing intersection geometry at junction '{}': found invalid boundary line for edge '{}'.",
+                    node.get_id(),
+                    edge.get_id()
+                ));
+            }
+            if ccw.is_nan() {
+                ccw = edge.get_geometry().clone();
+            }
+            if cw.is_nan() {
+                cw = edge.get_geometry().clone();
+            }
+            geomsCCW.insert(edge, ccw);
+            geomsCW.insert(edge, cw);
+        }
     }
 
     /// C++: `void NBNodeShapeComputer::joinSameDirectionEdges(const EdgeVector &, std::map<NBEdge *, std::set<NBEdge *, ComparatorIdLess>> &, bool)` [private]
@@ -704,7 +789,68 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn join_same_direction_edges(&mut self, edges: &EdgeVector, same: &mut BTreeMap<Ptr<NBEdge>, BTreeSet<Ptr<NBEdge>>>, useEndpoints: bool) {
-        todo!("port NBNodeShapeComputer::joinSameDirectionEdges")
+        let node = self.myNode;
+        let ext = self.EXT;
+        // compute same (edges where an intersection doesn't work well
+        // (always check an edge and its cw neighbor)
+        let angleChangeLookahead: f64 = 35.0; // distance to look ahead for a misleading angle
+        let isXodr = utils::options::options_cont::exists("opendrive-files") && utils::options::options_cont::is_set("opendrive-files");
+        let mut foundOpposite: EdgeSet = EdgeSet::new();
+        for i in 0..edges.len() {
+            let j = if i == edges.len() - 1 { 0 } else { i + 1 };
+            let ei = edges[i];
+            let ej = edges[j];
+            if useEndpoints && !ei.has_default_geometry_endpoint_at_node(node) && !ej.has_default_geometry_endpoint_at_node(node) {
+                continue;
+            }
+            let incoming = ei.get_to_node() == node;
+            let incoming2 = ej.get_to_node() == node;
+            let differentDirs = incoming != incoming2;
+            let sameGeom = if differentDirs {
+                ei.get_geometry() == &ej.get_geometry().reverse()
+            } else {
+                ei.get_geometry() == ej.get_geometry()
+            };
+            let g1 = if incoming { ei.get_ccw_boundary_line(&*node) } else { ei.get_cw_boundary_line(&*node) };
+            let g2 = if incoming { ej.get_ccw_boundary_line(&*node) } else { ej.get_cw_boundary_line(&*node) };
+            let angle1further = if g1.len() > 2 && g1[0].distance_to2d(&g1[1]) < angleChangeLookahead { g1.angle_at2d(1) } else { g1.angle_at2d(0) };
+            let angle2further = if g2.len() > 2 && g2[0].distance_to2d(&g2[1]) < angleChangeLookahead { g2.angle_at2d(1) } else { g2.angle_at2d(0) };
+            let angleDiff = utils::geom::geom_helper::angle_diff(g1.angle_at2d(0), g2.angle_at2d(0));
+            let angleDiffFurther = utils::geom::geom_helper::angle_diff(angle1further, angle2further);
+            let ambiguousGeometry = (angleDiff > 0.0 && angleDiffFurther < 0.0) || (angleDiff < 0.0 && angleDiffFurther > 0.0);
+            //if (ambiguousGeometry) {
+            //    @todo: this warning would be helpful in many cases. However, if angle and angleFurther jump between 179 and -179 it is misleading
+            //    WRITE_WARNINGF(TL("Ambiguous angles at junction '%' for edges '%' and '%'."), myNode.getID(), (*i)->getID(), (*j)->getID());
+            //}
+            if sameGeom || angleDiff.abs() < utils::geom::geom_helper::deg2rad(20.0) {
+                let isOpposite = differentDirs && !foundOpposite.contains(&ei);
+                if isOpposite {
+                    foundOpposite.insert(ei);
+                    foundOpposite.insert(ej);
+                }
+                if isOpposite || ambiguousGeometry || (!isXodr && self.bad_intersection(ei, ej, ext)) {
+                    // determinism: C++ iterates the ComparatorIdLess sets in ID order; here the snapshot is in address order.
+                    // Only inserts happen in these loops, so the resulting sets do not depend on the iteration order.
+                    // maintain equivalence relation for all members of the equivalence class
+                    let si: Vec<Ptr<NBEdge>> = same.get(&ei).map(|s| s.iter().copied().collect()).unwrap_or_default();
+                    for k in si {
+                        if ej != k {
+                            same.entry(k).or_default().insert(ej);
+                            same.entry(ej).or_default().insert(k);
+                        }
+                    }
+                    let sj: Vec<Ptr<NBEdge>> = same.get(&ej).map(|s| s.iter().copied().collect()).unwrap_or_default();
+                    for k in sj {
+                        if ei != k {
+                            same.entry(k).or_default().insert(ei);
+                            same.entry(ei).or_default().insert(k);
+                        }
+                    }
+                    same.entry(ei).or_default().insert(ej);
+                    same.entry(ej).or_default().insert(ei);
+                }
+            }
+        }
     }
 
     /// C++: `EdgeVector NBNodeShapeComputer::computeUniqueDirectionList(const EdgeVector &, std::map<NBEdge *, std::set<NBEdge *, ComparatorIdLess>> &, GeomsMap &, GeomsMap &)` [private]
@@ -788,7 +934,62 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_unique_direction_list(&mut self, all: &EdgeVector, same: &mut BTreeMap<Ptr<NBEdge>, BTreeSet<Ptr<NBEdge>>>, geomsCCW: &mut NBNodeShapeComputer_GeomsMap, geomsCW: &mut NBNodeShapeComputer_GeomsMap) -> EdgeVector {
-        todo!("port NBNodeShapeComputer::computeUniqueDirectionList")
+        // store relationships
+        let mut newAll: EdgeVector = all.clone();
+        let n = all.len();
+        for &e1 in all {
+            // determine which of the edges marks the outer boundary
+            let e2NewAll = newAll.iter().position(|&x| x == e1);
+            if e2NewAll.is_none() {
+                continue;
+            }
+            // iterators into `all` are modelled as indices; `n` is `all.end()`
+            let e1It = all.iter().position(|&x| x == e1).unwrap_or(n);
+            let mut bestCCW = e1It;
+            let mut bestCW = e1It;
+            let mut changed = true;
+            // determinism: C++ visits same[e1] in ComparatorIdLess (ID) order, so the snapshot is sorted by ID
+            let mut sameE1: Vec<Ptr<NBEdge>> = same.get(&e1).map(|s| s.iter().copied().collect()).unwrap_or_default();
+            sameE1.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+            while changed {
+                changed = false;
+                for &e2 in &sameE1 {
+                    let e2It = all.iter().position(|&x| x == e2).unwrap_or(n);
+                    if e2It + 1 == bestCCW || (e2It == n - 1 && bestCCW == 0) {
+                        bestCCW = e2It;
+                        changed = true;
+                    } else if bestCW + 1 == e2It || (bestCW == n - 1 && e2It == 0) {
+                        bestCW = e2It;
+                        changed = true;
+                    }
+                }
+            }
+            if bestCW != e1It {
+                let v = geomsCW.entry(all[bestCW]).or_default().clone();
+                geomsCW.insert(e1, v);
+                let mut cw = geomsCW.entry(e1).or_default().clone();
+                let mut ccw = geomsCCW.entry(e1).or_default().clone();
+                self.compute_same_end(&mut cw, &mut ccw);
+                geomsCW.insert(e1, cw);
+                geomsCCW.insert(e1, ccw);
+            }
+            if bestCCW != e1It {
+                let v = geomsCCW.entry(all[bestCCW]).or_default().clone();
+                geomsCCW.insert(e1, v);
+                let mut cw = geomsCW.entry(e1).or_default().clone();
+                let mut ccw = geomsCCW.entry(e1).or_default().clone();
+                self.compute_same_end(&mut cw, &mut ccw);
+                geomsCW.insert(e1, cw);
+                geomsCCW.insert(e1, ccw);
+            }
+            // clean up
+            for e2 in sameE1 {
+                if let Some(pos) = newAll.iter().position(|&x| x == e2) {
+                    newAll.remove(pos);
+                }
+            }
+        }
+        newAll
     }
 
     /// C++: `PositionVector NBNodeShapeComputer::getSmoothCorner(PositionVector, PositionVector, const Position &, const Position &, int)` [private]
@@ -870,7 +1071,50 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_smooth_corner(&mut self, begShape: PositionVector, endShape: PositionVector, begPoint: &Position, endPoint: &Position, cornerDetail: i32) -> PositionVector {
-        todo!("port NBNodeShapeComputer::getSmoothCorner")
+        let node = self.myNode;
+        let mut ret = PositionVector::new();
+        if cornerDetail > 0 {
+            let mut begShape2 = begShape.reverse().get_subpart2d(EXT2, begShape.length());
+            let begSplit = begShape2.nearest_offset_to_point2d(begPoint, false);
+            if begSplit > POSITION_EPS && begSplit < begShape2.length2d() - POSITION_EPS {
+                begShape2 = begShape2.split_at(begSplit, true).unwrap().0;
+            } else {
+                return ret;
+            }
+            let mut endShape2 = endShape.get_subpart(0.0, endShape.length() - EXT2);
+            let endSplit = endShape2.nearest_offset_to_point2d(endPoint, false);
+            if endSplit > POSITION_EPS && endSplit < endShape2.length2d() - POSITION_EPS {
+                endShape2 = endShape2.split_at(endSplit, true).unwrap().1;
+            } else {
+                return ret;
+            }
+            // flatten z to junction z level
+            begShape2 = begShape2.interpolate_z(node.get_position().z(), node.get_position().z());
+            endShape2 = endShape2.interpolate_z(node.get_position().z(), node.get_position().z());
+            if begShape2.len() < 2 || endShape2.len() < 2 {
+                return ret;
+            }
+            let angle = utils::geom::geom_helper::angle_diff(begShape2.angle_at2d(-2), endShape2.angle_at2d(0));
+            // DEBUG_SMOOTH_CORNERS only sets recordError; the release path passes nullptr
+            let recordError: Ptr<NBNode> = Ptr::null();
+            // fill highly acute corners
+            //if (fabs(angle) > DEG2RAD(135)) {
+            //    return ret;
+            //}
+            let mut curve = node.compute_smooth_shape(&begShape2, &endShape2, cornerDetail + 2, false, 25.0, 25.0, recordError, NBNode_AVOID_WIDE_LEFT_TURN);
+            //PositionVector curve = myNode.computeSmoothShape(begShape2, endShape2, cornerDetail + 2, false, 25, 25, recordError, 0);
+            let curvature = curve.length2d() / max2(NUMERICAL_EPS, begPoint.distance_to2d(endPoint));
+            if curvature > 2.0 && angle > utils::geom::geom_helper::deg2rad(85.0) {
+                // simplify dubious inside corner shape
+                return ret;
+            }
+            if curve.len() > 2 {
+                curve.remove(0);
+                curve.pop();
+                ret = curve;
+            }
+        }
+        ret
     }
 
     /// C++: `void NBNodeShapeComputer::initNeighbors(const EdgeVector &, const EdgeVector::const_iterator &, GeomsMap &, GeomsMap &, EdgeVector::const_iterator &, EdgeVector::const_iterator &, double &, double &)` [static, private]
@@ -910,8 +1154,32 @@ impl NBNodeShapeComputer {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_neighbors(edges: &EdgeVector, current: &Unmapped /* EdgeVector::const_iterator */, geomsCW: &mut NBNodeShapeComputer_GeomsMap, geomsCCW: &mut NBNodeShapeComputer_GeomsMap, cwi: &mut Unmapped /* EdgeVector::const_iterator */, ccwi: &mut Unmapped /* EdgeVector::const_iterator */, cad: &mut f64, ccad: &mut f64) {
-        todo!("port NBNodeShapeComputer::initNeighbors")
+    pub fn init_neighbors(edges: &EdgeVector, current: usize, geomsCW: &mut NBNodeShapeComputer_GeomsMap, geomsCCW: &mut NBNodeShapeComputer_GeomsMap, cwi: &mut usize, ccwi: &mut usize, cad: &mut f64, ccad: &mut f64) {
+        // iterators into `edges` are modelled as indices (the C++ iterator arithmetic becomes index arithmetic)
+        let twoPI: f64 = 2.0 * std::f64::consts::PI;
+        *cwi = current;
+        *cwi += 1;
+        if *cwi == edges.len() {
+            *cwi = 0; // set to edges.begin();
+        }
+        *ccwi = current;
+        if *ccwi == 0 {
+            *ccwi = edges.len() - 1; // set to edges.end() - 1;
+        } else {
+            *ccwi -= 1;
+        }
+        let angleCurCCW = geomsCCW.entry(edges[current]).or_default().angle_at2d(0);
+        let angleCurCW = geomsCW.entry(edges[current]).or_default().angle_at2d(0);
+        let angleCCW = geomsCW.entry(edges[*ccwi]).or_default().angle_at2d(0);
+        let angleCW = geomsCCW.entry(edges[*cwi]).or_default().angle_at2d(0);
+        *ccad = angleCCW - angleCurCCW;
+        while *ccad < 0.0 {
+            *ccad += twoPI;
+        }
+        *cad = angleCurCW - angleCW;
+        while *cad < 0.0 {
+            *cad += twoPI;
+        }
     }
 
     /// C++: `bool NBNodeShapeComputer::badIntersection(const NBEdge *, const NBEdge *, double)` [private]
@@ -973,7 +1241,52 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn bad_intersection(&mut self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, distance: f64) -> bool {
-        todo!("port NBNodeShapeComputer::badIntersection")
+        let node = self.myNode;
+        let ext = self.EXT;
+        // check whether the two edges are on top of each other. In that case they should be joined
+        // also, if they never touch along their common length
+        let commonLength = min3(distance, e1.get_geometry().length(), e2.get_geometry().length());
+        let mut geom1 = e1.get_geometry().clone();
+        let mut geom2 = e2.get_geometry().clone();
+        // shift to make geom the centerline of the edge regardless of spreadtype
+        if e1.get_lane_spread_function() == LaneSpreadFunction::RIGHT {
+            geom1.move2side(e1.get_total_width() / 2.0, 100.0);
+        }
+        if e2.get_lane_spread_function() == LaneSpreadFunction::RIGHT {
+            geom2.move2side(e2.get_total_width() / 2.0, 100.0);
+        }
+        // always let geometry start at myNode
+        if e1.get_to_node() == node {
+            geom1 = geom1.reverse();
+        }
+        if e2.get_to_node() == node {
+            geom2 = geom2.reverse();
+        }
+        geom1 = geom1.get_subpart2d(0.0, commonLength);
+        geom2 = geom2.get_subpart2d(0.0, commonLength);
+        let mut endAngleDiff = 0.0;
+        if geom1.len() >= 2 && geom2.len() >= 2 {
+            endAngleDiff = utils::geom::geom_helper::rad2deg(utils::geom::geom_helper::angle_diff(
+                geom1.angle_at2d(geom1.len() as i32 - 2),
+                geom2.angle_at2d(geom2.len() as i32 - 2),
+            ))
+            .abs();
+        }
+        let minDistanceThreshold = (e1.get_total_width() + e2.get_total_width()) / 2.0 + POSITION_EPS;
+        let distances = geom1.distances(&geom2, true);
+        let distances2 = geom1.distances(&geom2, false);
+        // VectorHelper<double>::minValue / maxValue
+        let minDist = distances2.iter().fold(f64::MAX, |m, &x| if x < m { x } else { m });
+        let maxDist = distances.iter().fold(-f64::MAX, |m, &x| if x > m { x } else { m });
+        let curvingTowards = geom1[0].distance_to2d(&geom2[0]) > minDistanceThreshold && minDist < minDistanceThreshold;
+        let onTop = (maxDist - POSITION_EPS < minDistanceThreshold) && endAngleDiff < 30.0;
+        let bothDefault = e1.has_default_geometry_endpoint_at_node(node) && e2.has_default_geometry_endpoint_at_node(node);
+        let neverTouch = minDist > minDistanceThreshold * 2.0 && !bothDefault;
+        geom1.extrapolate2d(ext, false);
+        geom2.extrapolate2d(ext, false);
+        let intersect = geom1.intersection_position2d_pv(&geom2);
+        let intersects = intersect != Position::INVALID && geom1.distance2d(&intersect, false) < POSITION_EPS;
+        onTop || curvingTowards || !intersects || neverTouch
     }
 
     /// C++: `double NBNodeShapeComputer::closestIntersection(const PositionVector &, const PositionVector &, double)` [private]
@@ -991,7 +1304,14 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn closest_intersection(&mut self, geom1: &PositionVector, geom2: &PositionVector, offset: f64) -> f64 {
-        todo!("port NBNodeShapeComputer::closestIntersection")
+        let intersections = geom1.intersects_at_lengths2d_pv(geom2);
+        let mut result = intersections[0];
+        for &it in &intersections[1..] {
+            if (it - offset).abs() < (result - offset).abs() {
+                result = it;
+            }
+        }
+        result
     }
 
     /// C++: `bool NBNodeShapeComputer::needsLargeTurn(NBEdge *, NBEdge *, std::map<NBEdge *, std::set<NBEdge *, ComparatorIdLess>> &) const` [const, private]
@@ -1030,7 +1350,36 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn needs_large_turn(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, same: &mut BTreeMap<Ptr<NBEdge>, BTreeSet<Ptr<NBEdge>>>) -> bool {
-        todo!("port NBNodeShapeComputer::needsLargeTurn")
+        let p1 = e1.get_permissions(-1);
+        let p2 = e2.get_permissions(-1);
+        if (p1 & p2 & SVC_LARGE_TURN) != 0 {
+            // note: would could also check whether there is actually a connection
+            // between those edges
+            return true;
+        }
+        // maybe edges in the same direction need a large turn
+        // (only a boolean "any" is computed here, so the iteration order does not matter)
+        let same_e2: Vec<Ptr<NBEdge>> = same.get(&e2).map(|s| s.iter().copied().collect()).unwrap_or_default();
+        for e2s in same_e2 {
+            if (p1 & e2s.get_permissions(-1) & SVC_LARGE_TURN) != 0 && (e1.get_to_node() == e2s.get_from_node() || e2s.get_to_node() == e1.get_from_node()) {
+                return true;
+            }
+            let same_e1: Vec<Ptr<NBEdge>> = same.get(&e1).map(|s| s.iter().copied().collect()).unwrap_or_default();
+            for e1s in same_e1 {
+                if (e2s.get_permissions(-1) & e1s.get_permissions(-1) & SVC_LARGE_TURN) != 0
+                    && (e2s.get_to_node() == e1s.get_from_node() || e1s.get_to_node() == e2s.get_from_node())
+                {
+                    return true;
+                }
+            }
+        }
+        let same_e1: Vec<Ptr<NBEdge>> = same.get(&e1).map(|s| s.iter().copied().collect()).unwrap_or_default();
+        for e1s in same_e1 {
+            if (p2 & e1s.get_permissions(-1) & SVC_LARGE_TURN) != 0 && (e2.get_to_node() == e1s.get_from_node() || e1s.get_to_node() == e2.get_from_node()) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double NBNodeShapeComputer::getDefaultRadius(const OptionsCont &)` [private]
@@ -1151,7 +1500,93 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_default_radius(&mut self, oc: &OptionsCont) -> f64 {
-        todo!("port NBNodeShapeComputer::getDefaultRadius")
+        let node = self.myNode;
+        // look for incoming/outgoing edge pairs that do not go straight and allow wide vehicles
+        // (connection information is not available yet)
+        // @TODO compute the radius for each pair of neighboring edge intersections in computeNodeShapeDefault rather than use the maximum
+        let radius = oc.get_float("default.junctions.radius").unwrap();
+        let smallRadius = oc.get_float("junctions.small-radius").unwrap();
+        let mut maxRightAngle = 0.0; // rad
+        let mut extraWidthRight = 0.0; // m
+        let mut maxLeftAngle = 0.0; // rad
+        let mut extraWidthLeft = 0.0; // m
+        let mut laneDelta: i32 = 0;
+        let mut totalWideLanesIn: i32 = 0;
+        for &in_ in node.get_incoming_edges() {
+            let mut wideLanesIn: i32 = 0;
+            for i in 0..in_.get_num_lanes() {
+                if (in_.get_permissions(i) & SVC_LARGE_TURN) != 0 {
+                    wideLanesIn += 1;
+                }
+            }
+            totalWideLanesIn += wideLanesIn;
+            for &out in node.get_outgoing_edges() {
+                if (in_.get_permissions(-1) & out.get_permissions(-1) & SVC_LARGE_TURN) != 0 {
+                    if node.get_direction(in_, out, false) == LinkDirection::TURN {
+                        continue;
+                    }
+                    let angle = utils::geom::geom_helper::angle_diff(in_.get_geometry().angle_at2d(-2), out.get_geometry().angle_at2d(0));
+                    if angle < 0.0 {
+                        if maxRightAngle < -angle {
+                            maxRightAngle = -angle;
+                            extraWidthRight = max2(Self::get_extra_width(in_, SVC_LARGE_TURN), Self::get_extra_width(out, SVC_LARGE_TURN));
+                        }
+                    } else if maxLeftAngle < angle {
+                        maxLeftAngle = angle;
+                        // all edges clockwise between in and out count as extra width
+                        extraWidthLeft = 0.0;
+                        let edges = node.get_edges();
+                        let mut pIn = edges.iter().position(|&x| x == in_).unwrap_or(edges.len());
+                        // NBContHelper::nextCW inlined: its iterator signature is not ported yet
+                        pIn = if pIn + 1 == edges.len() { 0 } else { pIn + 1 };
+                        while edges[pIn] != out {
+                            extraWidthLeft += edges[pIn].get_total_width();
+                            pIn = if pIn + 1 == edges.len() { 0 } else { pIn + 1 };
+                        }
+                    }
+                    let mut wideLanesOut: i32 = 0;
+                    for i in 0..out.get_num_lanes() {
+                        if (out.get_permissions(i) & SVC_LARGE_TURN) != 0 {
+                            wideLanesOut += 1;
+                        }
+                    }
+                    laneDelta = std::cmp::max(laneDelta, (wideLanesOut - wideLanesIn).abs());
+                }
+            }
+        }
+        // special case: on/off-ramp
+        if node.get_outgoing_edges().len() == 1 || node.get_incoming_edges().len() == 1 {
+            let mut totalWideLanesOut: i32 = 0;
+            for &out in node.get_outgoing_edges() {
+                for i in 0..out.get_num_lanes() {
+                    if (out.get_permissions(i) & SVC_LARGE_TURN) != 0 {
+                        totalWideLanesOut += 1;
+                    }
+                }
+            }
+            if totalWideLanesIn == totalWideLanesOut {
+                // use total laneDelta instead of individual edge lane delta
+                laneDelta = 0;
+            }
+        }
+        // changing the number of wide-vehicle lanes on a straight segment requires a larger junction to allow for smooth driving
+        // otherwise we can reduce the radius according to the angle
+        let mut result = radius;
+        // left turns are assumed to cross additional edges and thus du not determine the required radius in most cases
+        let mut maxTurnAngle = maxRightAngle;
+        let mut extraWidth = extraWidthRight;
+        if maxRightAngle < utils::geom::geom_helper::deg2rad(5.0) {
+            maxTurnAngle = maxLeftAngle;
+            extraWidth = extraWidthLeft;
+        }
+        let minRadius = if maxTurnAngle >= utils::geom::geom_helper::deg2rad(30.0) { min2(smallRadius, radius) } else { smallRadius };
+        if laneDelta == 0 || maxTurnAngle >= utils::geom::geom_helper::deg2rad(30.0) || node.is_constant_width_transition() {
+            // subtract radius gained from extra lanes
+            // do not increase radius for turns that are sharper than a right angle
+            result = radius * (0.5 * min2(0.5 * std::f64::consts::PI, maxTurnAngle)).tan() - extraWidth;
+        }
+        result = max2(minRadius, result);
+        result
     }
 
     /// C++: `void NBNodeShapeComputer::computeSameEnd(PositionVector &, PositionVector &)` [private]
@@ -1178,7 +1613,27 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_same_end(&mut self, l1: &mut PositionVector, l2: &mut PositionVector) {
-        todo!("port NBNodeShapeComputer::computeSameEnd")
+        let ext = self.EXT;
+        // assert(l1[0].distanceTo2D(l1[1]) >= EXT) and the matching assert on l2 are debug-only checks
+        let mut tmp = PositionVector::new();
+        tmp.push(PositionVector::position_at_offset2d_seg(&l1[0], &l1[1], ext, 0.0, false));
+        tmp.push(l1[1]);
+        let t0 = tmp[0];
+        tmp[1].sub(&t0);
+        let (x1, y1) = (tmp[1].x(), tmp[1].y());
+        tmp[1].set(-y1, x1); // rotate 90 degrees
+        tmp[1].add(&t0);
+        tmp.extrapolate2d(ext, false);
+        if l2.intersects(&tmp[0], &tmp[1]) {
+            let offset = l2.intersects_at_lengths2d_pv(&tmp)[0];
+            if l2.length2d() - offset > POSITION_EPS {
+                let mut tl2 = l2.get_subpart2d(offset, l2.length2d());
+                tl2.extrapolate2d(ext, false);
+                let k = l2.len() - tl2.len();
+                l2.drain(..k);
+                l2[0] = tl2[0];
+            }
+        }
     }
 
     /// C++: `bool NBNodeShapeComputer::isDivided(const NBEdge *, std::set<NBEdge *, ComparatorIdLess>, const PositionVector &, const PositionVector &) const` [const, private]
@@ -1206,7 +1661,33 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn is_divided(&self, e: Ptr<NBEdge>, same: BTreeSet<Ptr<NBEdge>>, ccw: &PositionVector, cw: &PositionVector) -> bool {
-        todo!("port NBNodeShapeComputer::isDivided")
+        let node = self.myNode;
+        if same.len() < 2 {
+            return false;
+        }
+        // C++ std::set<Position>; Position has no Ord, so distinct end points are counted by equality
+        let mut endPoints: Vec<Position> = Vec::new();
+        let p = e.get_endpoint_at_node(node);
+        if !endPoints.contains(&p) {
+            endPoints.push(p);
+        }
+        for &s in &same {
+            let p = s.get_endpoint_at_node(node);
+            if !endPoints.contains(&p) {
+                endPoints.push(p);
+            }
+        }
+        if endPoints.len() > 1 {
+            let distances = ccw.distances(cw, true);
+            let mut width = e.get_total_width();
+            for &e2 in &same {
+                width += e2.get_total_width();
+            }
+            let maxDist = distances.iter().fold(-f64::MAX, |m, &x| if x > m { x } else { m }); // VectorHelper::maxValue
+            let maxDivider = maxDist - width;
+            return maxDivider >= 5.0;
+        }
+        false
     }
 
     /// C++: `double NBNodeShapeComputer::getExtraWidth(const NBEdge *, SVCPermissions)` [static, private]
@@ -1227,7 +1708,17 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_extra_width(e: Ptr<NBEdge>, exclude: SVCPermissions) -> f64 {
-        todo!("port NBNodeShapeComputer::getExtraWidth")
+        let mut result = 0.0;
+        let mut lane = 0;
+        while lane < e.get_num_lanes() && e.get_permissions(lane) == 0 {
+            // ignore forbidden lanes out the outside
+            lane += 1;
+        }
+        while lane < e.get_num_lanes() && (e.get_permissions(lane) & exclude) == 0 {
+            result += e.get_lane_width_2(lane);
+            lane += 1;
+        }
+        result
     }
 
     /// C++: `double NBNodeShapeComputer::divisionWidth(const NBEdge *, std::set<NBEdge *, ComparatorIdLess>, const Position &, const Position &)` [static, private]
@@ -1243,7 +1734,12 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn division_width(e: Ptr<NBEdge>, same: BTreeSet<Ptr<NBEdge>>, p: &Position, p2: &Position) -> f64 {
-        todo!("port NBNodeShapeComputer::divisionWidth")
+        let mut result = p.distance_to2d(p2);
+        result -= e.get_total_width();
+        for &e2 in &same {
+            result -= e2.get_total_width();
+        }
+        max2(0.0, result)
     }
 
     /// C++: `NBNodeShapeComputer & NBNodeShapeComputer::operator=(const NBNodeShapeComputer &)` [private]
@@ -1251,7 +1747,12 @@ impl NBNodeShapeComputer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBNodeShapeComputer) -> &mut NBNodeShapeComputer {
-        todo!("port NBNodeShapeComputer::operator=")
+        // C++ declares operator= private and never defines it (calling it is a link error);
+        // copying the fields keeps the Rust API total
+        self.myNode = s.myNode;
+        self.myRadius = s.myRadius;
+        self.EXT = s.EXT;
+        self
     }
 
 }
