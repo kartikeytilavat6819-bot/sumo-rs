@@ -3525,7 +3525,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MSVehicle::getSpeed")
+        self.myState.mySpeed
     }
 
     /// C++: `double MSVehicle::getPreviousSpeed() const` [const, virtual]
@@ -3535,7 +3535,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        todo!("port MSVehicle::getPreviousSpeed")
+        self.myState.myPreviousSpeed
     }
 
     /// C++: `void MSVehicle::setPreviousSpeed(double, double)`
@@ -3552,7 +3552,13 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_previous_speed(&mut self, prevSpeed: f64, prevAcceleration: f64) {
-        todo!("port MSVehicle::setPreviousSpeed")
+        self.myState.mySpeed = max2(0., prevSpeed);
+        // also retcon acceleration
+        if prevAcceleration != f64::MIN_POSITIVE {
+            self.myAcceleration = prevAcceleration;
+        } else {
+            self.myAcceleration = speed2accel(self.myState.mySpeed - self.myState.myPreviousSpeed);
+        }
     }
 
     /// C++: `double MSVehicle::getAcceleration() const` [const, virtual]
@@ -3562,7 +3568,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        todo!("port MSVehicle::getAcceleration")
+        self.myAcceleration
     }
 
     /// C++: `double MSVehicle::getCurrentApparentDecel() const` [const]
@@ -3574,7 +3580,8 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_current_apparent_decel(&self) -> f64 {
-        todo!("port MSVehicle::getCurrentApparentDecel")
+        //return MAX2(-myAcceleration, getCarFollowModel().getApparentDecel());
+        self.get_car_follow_model().get_apparent_decel()
     }
 
     /// C++: `SUMOTime MSVehicle::getActionStepLength() const` [const]
@@ -3584,7 +3591,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_action_step_length(&self) -> SUMOTime {
-        todo!("port MSVehicle::getActionStepLength")
+        self.myType.m().get_action_step_length()
     }
 
     /// C++: `double MSVehicle::getActionStepLengthSecs() const` [const]
@@ -3594,7 +3601,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_action_step_length_secs(&self) -> f64 {
-        todo!("port MSVehicle::getActionStepLengthSecs")
+        self.myType.m().get_action_step_length_secs()
     }
 
     /// C++: `SUMOTime MSVehicle::getLastActionTime() const` [const, virtual]
@@ -3604,7 +3611,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_action_time(&self) -> SUMOTime {
-        todo!("port MSVehicle::getLastActionTime")
+        self.myLastActionTime
     }
 
     /// C++: `double MSVehicle::getSlope() const` [const, virtual]
