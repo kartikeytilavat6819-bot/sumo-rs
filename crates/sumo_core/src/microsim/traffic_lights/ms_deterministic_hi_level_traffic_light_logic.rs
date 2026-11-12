@@ -219,7 +219,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
         let phaseMaxCTS = self.get_phase_index_with_max_cts();
         let thresholdPassed = self.is_threshold_passed();
         let pushButtonPressed = self.is_push_button_pressed();
-        let vehicleCount = self.count_vehicles(phase_copy(&curPhase));
+        let vehicleCount = self.count_vehicles(curPhase);
         policy.m().decide_next_phase(elapsed, curPhase, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
     }
 
@@ -241,7 +241,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
         let thresholdPassed = self.is_threshold_passed();
         let pushButtonPressed = self.is_push_button_pressed();
         let curPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
-        let vehicleCount = self.count_vehicles(phase_copy(&curPhase));
+        let vehicleCount = self.count_vehicles(curPhase);
         policy.m().can_release(elapsed, thresholdPassed, pushButtonPressed, curPhase, vehicleCount)
     }
 

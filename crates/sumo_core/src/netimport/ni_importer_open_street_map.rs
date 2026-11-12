@@ -11,6 +11,9 @@ use utils::common::string_utils::starts_with;
 use utils::common::to_string::join_to_string_prec;
 use utils::common::string_utils::{escape_xml, is_bool, to_bool, to_long};
 
+/// C++ `NBTrafficLightDefinition::OSM_DIRECTION`
+const OSM_DIRECTION: &str = "osm:direction";
+
 /// C++ `toString(LaneSpreadFunction)`: the first name in SUMOXMLDefinitions' table for the value
 fn lane_spread_str(l: LaneSpreadFunction) -> &'static str {
     match l {
@@ -2037,6 +2040,7 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
 }
 
 /// C++ class `RelationHandler::NIIPTPlatform` (netimport/NIImporter_OpenStreetMap.h)
+#[derive(Clone, Copy)]
 pub struct RelationHandler_NIIPTPlatform {
     pub ref_: i64,
     pub isWay: bool,
@@ -2518,10 +2522,10 @@ impl NIImporter_OpenStreetMap {
     pub fn load(&mut self, oc: &OptionsCont, nb: &mut NBNetBuilder) {
         use utils::common::msg_handler::*;
         use utils::options::options_cont as opt;
-        if !opt::is_set("osm-files") {
+        if !utils::options::options_cont::is_set("osm-files") {
             return;
         }
-        let files = opt::get_string_vector("osm-files");
+        let files = utils::options::options_cont::get_string_vector("osm-files");
         let mut readers: Vec<Option<SUMOSAXReader>> = Vec::new();
 
         self.myImportLaneAccess = oc.get_bool("osm.lane-access").unwrap();
@@ -2535,8 +2539,8 @@ impl NIImporter_OpenStreetMap {
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
-        myAllAttributes.with(|c| c.set(opt::get_bool("osm.all-attributes")));
-        let extra = opt::get_string_vector("osm.extra-attributes");
+        myAllAttributes.with(|c| c.set(utils::options::options_cont::get_bool("osm.all-attributes")));
+        let extra = utils::options::options_cont::get_string_vector("osm.extra-attributes");
         myExtraAttributes.with(|s| {
             s.borrow_mut().extend(extra.iter().cloned());
             if s.borrow().contains("all") {
@@ -2697,7 +2701,7 @@ impl NIImporter_OpenStreetMap {
             /* After edges are instantiated
              * nodes are parsed again to add pedestrian crossings to them
              * This is only executed if crossings are imported and not guessed */
-            let crossingWidth = opt::get_float("default.crossing-width");
+            let crossingWidth = utils::options::options_cont::get_float("default.crossing-width");
             for item in nodeUsage.keys() {
                 let osmNode = self.myOSMNodes[item];
                 if osmNode.pedestrianCrossing {
@@ -2770,7 +2774,7 @@ impl NIImporter_OpenStreetMap {
             }
         }
 
-        let layerElevation = opt::get_float("osm.layer-elevation");
+        let layerElevation = utils::options::options_cont::get_float("osm.layer-elevation");
         if layerElevation > 0.0 {
             self.reconstruct_layer_elevation(layerElevation, nb);
         }
@@ -3708,7 +3712,7 @@ impl NIImporter_OpenStreetMap {
                 // unless OSM specifies them
                 addSidewalk = false;
             } else {
-                sidewalkWidth = opt::get_float("default.sidewalk-width");
+                sidewalkWidth = utils::options::options_cont::get_float("default.sidewalk-width");
             }
         }
         let mut bikeLaneWidth = tc.get_edge_type_bike_lane_width(&type_);
@@ -3721,7 +3725,7 @@ impl NIImporter_OpenStreetMap {
             || (self.myImportBikeAccess && (((e.myCyclewayType & WAY_BOTH) != 0 || e.myExtraTags.contains_key("segregated"))
                 && !(e.myCyclewayType == WAY_BACKWARD && (e.myBuswayType & WAY_BOTH) != 0)));
         if addBikeLane && bikeLaneWidth == NBEDGE_UNSPECIFIED_WIDTH {
-            bikeLaneWidth = opt::get_float("default.bikelane-width");
+            bikeLaneWidth = utils::options::options_cont::get_float("default.bikelane-width");
         }
         // check directions
         let mut addForward = true;
@@ -3806,7 +3810,7 @@ impl NIImporter_OpenStreetMap {
         }
         // width is meant for raw lane count before adding sidewalks or cycleways
         let taggedLanes = (if addForward { numLanesForward } else { 0 }) + (if addBackward { numLanesBackward } else { 0 });
-        if e.myWidth > 0.0 && e.myWidthLanesForward.is_empty() && e.myWidthLanesBackward.is_empty() && taggedLanes != 0 && !opt::get_bool("ignore-widths") {
+        if e.myWidth > 0.0 && e.myWidthLanesForward.is_empty() && e.myWidthLanesBackward.is_empty() && taggedLanes != 0 && !utils::options::options_cont::get_bool("ignore-widths") {
             // width is tagged excluding sidewalks and cycleways
             forwardWidth = e.myWidth / taggedLanes as f64;
             backwardWidth = forwardWidth;
@@ -3918,7 +3922,7 @@ impl NIImporter_OpenStreetMap {
             } else {
                 let defaultPlacementWidth = if forwardWidth == NBEDGE_UNSPECIFIED_WIDTH || forwardWidth <= 0.0 { SUMO_CONST_LANE_WIDTH } else { forwardWidth };
                 let mut laneWidths: Vec<f64> = vec![defaultPlacementWidth; numLanesForward as usize];
-                if !opt::get_bool("ignore-widths") && e.myWidthLanesForward.len() as i32 == numLanesForward {
+                if !utils::options::options_cont::get_bool("ignore-widths") && e.myWidthLanesForward.len() as i32 == numLanesForward {
                     for i in 0..numLanesForward as usize {
                         laneWidths[i] = if e.myWidthLanesForward[i] > 0.0 { e.myWidthLanesForward[i] } else { defaultPlacementWidth };
                     }
@@ -3953,17 +3957,17 @@ impl NIImporter_OpenStreetMap {
             shape.move2side(placementOffset, 100.0);
         }
 
-        let origID = if opt::get_bool("output.original-names") { e.id.to_string() } else { String::new() };
-        let lefthand = opt::get_bool("lefthand");
+        let origID = if utils::options::options_cont::get_bool("output.original-names") { e.id.to_string() } else { String::new() };
+        let lefthand = utils::options::options_cont::get_bool("lefthand");
         let offsetFactor: i32 = if lefthand { -1 } else { 1 };
-        let mut lsf = if (addBackward || opt::get_bool("osm.oneway-spread-right"))
+        let mut lsf = if (addBackward || utils::options::options_cont::get_bool("osm.oneway-spread-right"))
             && (!is_railway(permissions) || (permissions == SVC_CABLE_CAR && e.myRailDirection as i64 == WAY_UNKNOWN))
         {
             LaneSpreadFunction::RIGHT
         } else {
             LaneSpreadFunction::CENTER
         };
-        if addBackward && lsf == LaneSpreadFunction::RIGHT && opt::get_string("default.spreadtype") == lane_spread_str(LaneSpreadFunction::ROADCENTER) {
+        if addBackward && lsf == LaneSpreadFunction::RIGHT && utils::options::options_cont::get_string("default.spreadtype") == lane_spread_str(LaneSpreadFunction::ROADCENTER) {
             lsf = LaneSpreadFunction::ROADCENTER;
         }
         if addForward && addBackward && lsf == LaneSpreadFunction::RIGHT && explicitOneWay {
@@ -3992,7 +3996,7 @@ impl NIImporter_OpenStreetMap {
                 forwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.clone(), lsf, &escape_xml(&streetName, false), &origID, true,
             ))));
             if markOSMDirection {
-                nbe.m().set_parameter(OSM_DIRECTION, "forward");
+                nbe.m().base2.set_parameter(OSM_DIRECTION, "forward");
             }
             nbe.m().set_permissions(forwardPermissions, -1);
             if (e.myBuswayType & WAY_FORWARD) != 0 {
@@ -4029,7 +4033,7 @@ impl NIImporter_OpenStreetMap {
 
             // process forward lanes width
             let numForwardLanesFromWidthKey = e.myWidthLanesForward.len() as i32;
-            if numForwardLanesFromWidthKey > 0 && !opt::get_bool("ignore-widths") {
+            if numForwardLanesFromWidthKey > 0 && !utils::options::options_cont::get_bool("ignore-widths") {
                 if nbe.get_lanes().len() as i32 != numForwardLanesFromWidthKey {
                     write_warningf!(
                         "Forward lanes count for edge '%' ('%') is not matching the number of lanes defined in width:lanes:forward key ('%'). Using default width values.",
@@ -4063,7 +4067,7 @@ impl NIImporter_OpenStreetMap {
                 backwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.reverse(), lsf, &escape_xml(&streetName, false), &origID, true,
             ))));
             if markOSMDirection {
-                nbe.m().set_parameter(OSM_DIRECTION, "backward");
+                nbe.m().base2.set_parameter(OSM_DIRECTION, "backward");
             }
             nbe.m().set_permissions(backwardPermissions, -1);
             if (e.myBuswayType & WAY_BACKWARD) != 0 {
@@ -4095,7 +4099,7 @@ impl NIImporter_OpenStreetMap {
 
             // process backward lanes width
             let numBackwardLanesFromWidthKey = e.myWidthLanesBackward.len() as i32;
-            if numBackwardLanesFromWidthKey > 0 && !opt::get_bool("ignore-widths") {
+            if numBackwardLanesFromWidthKey > 0 && !utils::options::options_cont::get_bool("ignore-widths") {
                 if nbe.get_lanes().len() as i32 != numBackwardLanesFromWidthKey {
                     write_warningf!(
                         "Backward lanes count for edge '%' ('%') is not matching the number of lanes defined in width:lanes:backward key ('%'). Using default width values.",
@@ -4122,7 +4126,7 @@ impl NIImporter_OpenStreetMap {
                 panic!("{}", ProcessError::new(format!("Could not add edge '-{id}'.")));
             }
         }
-        if (e.myParkingType & PARKING_BOTH) != 0 && opt::is_set("parking-output") {
+        if (e.myParkingType & PARKING_BOTH) != 0 && utils::options::options_cont::is_set("parking-output") {
             if (e.myParkingType & PARKING_RIGHT) != 0 {
                 if addForward {
                     nb.get_parking_cont().push(NBParking::new(&id, &id, ""));
@@ -4186,7 +4190,7 @@ impl NIImporter_OpenStreetMap {
             }
             knownEleMax.insert(*it, eleMax);
         }
-        let gradeThreshold = opt::get_float("osm.layer-elevation.max-grade") / 100.0;
+        let gradeThreshold = utils::options::options_cont::get_float("osm.layer-elevation.max-grade") / 100.0;
         let mut changed = true;
         while changed {
             changed = false;
@@ -4546,7 +4550,7 @@ impl NIImporter_OpenStreetMap {
             }
             // ensure pedestrians don't run into trains
             if sidewalkWidth == NBEDGE_UNSPECIFIED_WIDTH && (permissions & SVC_PEDESTRIAN) != 0 && (permissions & SVC_RAIL_CLASSES) != 0 {
-                sidewalkWidth = opt::get_float("default.sidewalk-width");
+                sidewalkWidth = utils::options::options_cont::get_float("default.sidewalk-width");
             }
 
             write_messagef!("Adding new type '%' (first occurrence for edge '%').", type_, id);
@@ -4780,7 +4784,7 @@ impl NIImporter_OpenStreetMap {
     pub fn apply_lane_use(&mut self, e: Ptr<NBEdge>, nie: Ptr<NIImporter_OpenStreetMap_Edge>, forward: bool) {
         if self.myImportLaneAccess {
             let numLanes = e.get_num_lanes();
-            let lefthand = opt::get_bool("lefthand");
+            let lefthand = utils::options::options_cont::get_bool("lefthand");
             let designated: &Vec<bool> = if forward { &nie.myDesignatedLaneForward } else { &nie.myDesignatedLaneBackward };
             let allowed: &Vec<SVCPermissions> = if forward { &nie.myAllowedLaneForward } else { &nie.myAllowedLaneBackward };
             let disallowed: &Vec<SVCPermissions> = if forward { &nie.myDisallowedLaneForward } else { &nie.myDisallowedLaneBackward };
@@ -5756,7 +5760,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                 if memberType == "way" {
                     self.myWays.push(ref_);
                 } else if memberType == "node" {
-                    let hasRailwayRef = self.myOSMNodes.get(&ref_).is_some_and(|n| n.has_parameter("railway:ref"));
+                    let hasRailwayRef = (*self.myOSMNodes).get(&ref_).is_some_and(|n| n.has_parameter("railway:ref"));
                     if hasRailwayRef {
                         self.myStation = ref_;
                     } else {
@@ -6107,13 +6111,13 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                             if !NBNetBuilder::transform_coordinate(&mut platformPos, true, Ptr::null()) {
                                 write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
                             }
-                            let platform = NBPTPlatform::new(platformPos, opt::get_float("osm.stop-output.length"));
+                            let platform = NBPTPlatform::new(platformPos, utils::options::options_cont::get_float("osm.stop-output.length"));
                             pt_stop_mut(&ptStop).add_platform_cand(platform);
                         }
                     }
                     pt_stop_mut(&ptStop).set_is_multiple_stop_positions(self.myStops.len() > 1, self.myCurrentRelation);
                     if self.myStation != INVALID_ID {
-                        if let Some(station) = self.myOSMNodes.get(&self.myStation) {
+                        if let Some(station) = (*self.myOSMNodes).get(&self.myStation) {
                             if station.has_parameter("railway:ref") {
                                 let stationRef = station.get_parameter("railway:ref", "");
                                 pt_stop_mut(&ptStop).set_parameter("stationRef", &stationRef);
@@ -6130,7 +6134,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                 let mut missingBefore: i32 = 0;
                 let mut missingAfter: i32 = 0;
                 for ref_ in self.myStops.clone() {
-                    let Some(n) = self.myOSMNodes.get(&ref_).copied() else {
+                    let Some(n) = (*self.myOSMNodes).get(&ref_).copied() else {
                         if ptLine.m().get_stops().is_empty() {
                             missingBefore += 1;
                         } else {
@@ -6172,7 +6176,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                     ptLine.m().add_pt_stop(ptStop.unwrap());
                 }
                 for myWay in self.myWays.clone() {
-                    if let Some(edge) = self.myOSMEdges.get(&myWay).copied() {
+                    if let Some(edge) = (*self.myOSMEdges).get(&myWay).copied() {
                         for myCurrentNode in edge.myCurrentNodes.iter() {
                             ptLine.m().add_way_node(myWay, *myCurrentNode);
                         }
