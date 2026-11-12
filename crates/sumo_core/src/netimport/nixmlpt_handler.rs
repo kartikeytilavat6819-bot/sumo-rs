@@ -1,6 +1,31 @@
 //! Port of netimport/NIXMLPTHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_message, write_warning};
+use utils::common::rgb_color::RGBColor;
+use utils::common::string_tokenizer::StringTokenizer;
+use utils::common::string_utils::{to_double, to_int};
+use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_SHIP, SVC_TAXI, get_vehicle_class_id, is_railway};
+use utils::options::options_cont::get_bool;
+use utils::xml::sumo_xml_definitions::get_edge_id_from_lane;
+
+/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
+#[allow(clippy::mut_from_ref)]
+fn stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
+
+/// shortcut: SUMOSAXAttributes has no FromAttr impl for RGBColor, so getOpt<RGBColor> is emulated here, upgrade when utils implements FromAttr for RGBColor
+fn get_opt_color(attrs: &SUMOSAXAttributes, attr: i32, objectid: &str, ok: &mut bool) -> RGBColor {
+    if !attrs.has_attribute(attr) {
+        return RGBColor::new_valid(false);
+    }
+    let value = attrs.get_string(attr);
+    match RGBColor::parse_color(&value) {
+        Ok(c) => c,
+        Err(_) => RGBColor::parse_color_reporting(&value, attrs.get_object_type(), Some(objectid), true, ok).unwrap_or_default(),
+    }
+}
 
 /// Importer for network edges stored in XML
 /// C++ class `NIXMLPTHandler` (netimport/NIXMLPTHandler.h)
@@ -13,8 +38,8 @@ pub struct NIXMLPTHandler {
     pub myStopCont: Ptr<NBPTStopCont>,
     /// The line container (for loading of lines)
     pub myLineCont: Ptr<NBPTLineCont>,
-    /// The currently processed stop
-    pub myCurrentStop: Rc<NBPTStop>,
+    /// The currently processed stop (None == C++ nullptr; Rc cannot be null)
+    pub myCurrentStop: Option<Rc<NBPTStop>>,
     /// The currently processed line
     pub myCurrentLine: Ptr<NBPTLine>,
     /// The currently processed stand-alone route
@@ -61,7 +86,23 @@ impl NIXMLPTHandler {
     // { }
     #[allow(unused_variables)]
     pub fn new(ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, lc: &mut NBPTLineCont) -> Self {
-        todo!("port NIXMLPTHandler::NIXMLPTHandler")
+        NIXMLPTHandler {
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "public transport - file", ""),
+            myEdgeCont: Ptr::from_mut(ec),
+            myStopCont: Ptr::from_mut(sc),
+            myLineCont: Ptr::from_mut(lc),
+            myCurrentStop: None,
+            myCurrentLine: Ptr::null(),
+            myCurrentRouteID: String::new(),
+            myCurrentCompletion: 0.,
+            myLastParameterised: Vec::new(),
+            myRouteStops: BTreeMap::new(),
+            myRouteEdges: BTreeMap::new(),
+            myCurrentStopWasIgnored: false,
+            myWarnOnly: get_bool("ignore-errors"),
+            myMissingBefore: 0,
+            myMissingAfter: 0,
+        }
     }
 
     /// C++: `void NIXMLPTHandler::~NIXMLPTHandler() noexcept` [virtual]
@@ -69,7 +110,8 @@ impl NIXMLPTHandler {
     // NIXMLPTHandler::~NIXMLPTHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLPTHandler::~NIXMLPTHandler")
+        // C++ destructor body is empty ({}); members are released by their own destructors
+        // (myCurrentStop is an Rc and is dropped with the struct)
     }
 
     /// C++: `void NIXMLPTHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -131,7 +173,53 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::myStartElement")
+        match element {
+            SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP | SUMO_TAG_STOP => {
+                if self.myCurrentRouteID != "" {
+                    self.add_route_stop(attrs);
+                } else if self.myCurrentLine.is_null() {
+                    self.add_pt_stop(element, attrs);
+                } else {
+                    self.add_pt_line_stop(attrs);
+                }
+            }
+            SUMO_TAG_ACCESS => {
+                self.add_access(attrs);
+            }
+            SUMO_TAG_PT_LINE => {
+                self.add_pt_line(attrs);
+            }
+            SUMO_TAG_ROUTE => {
+                if self.myCurrentLine.is_null() {
+                    self.add_route(attrs);
+                } else {
+                    self.add_pt_line_route(attrs);
+                }
+            }
+            SUMO_TAG_FLOW | SUMO_TAG_TRIP => {
+                self.add_pt_line_from_flow(attrs);
+            }
+            SUMO_TAG_PARAM => {
+                let mut ok = true;
+                let key: String = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut ok, true);
+                if !self.myCurrentLine.is_null() {
+                    if key == "completeness" {
+                        self.myCurrentCompletion = attrs.get::<f64>(SUMO_ATTR_VALUE, "", &mut ok, true);
+                    } else if key == "name" {
+                        let value: String = attrs.get::<String>(SUMO_ATTR_VALUE, "", &mut ok, true);
+                        self.myCurrentLine.m().set_name(&value);
+                    } else if key == "missingBefore" {
+                        self.myMissingBefore = attrs.get::<i32>(SUMO_ATTR_VALUE, "", &mut ok, true);
+                    } else if key == "missingAfter" {
+                        self.myMissingAfter = attrs.get::<i32>(SUMO_ATTR_VALUE, "", &mut ok, true);
+                    }
+                } else if let Some(stop) = &self.myCurrentStop {
+                    let val: String = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+                    stop_mut(stop).set_parameter(&key, &val);
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NIXMLPTHandler::myEndElement(int)` [virtual, protected]
@@ -161,7 +249,24 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIXMLPTHandler::myEndElement")
+        match element {
+            SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP => {
+                self.myCurrentStop = None;
+                self.myCurrentStopWasIgnored = false;
+            }
+            SUMO_TAG_PT_LINE | SUMO_TAG_FLOW | SUMO_TAG_TRIP => {
+                if !self.myCurrentLine.is_null() {
+                    let size = self.myCurrentLine.m().get_stops().len();
+                    let numOfStops = ((size as f64) / self.myCurrentCompletion) as i32;
+                    self.myCurrentLine.m().set_num_of_stops(numOfStops, self.myMissingBefore, self.myMissingAfter);
+                }
+                self.myCurrentLine = Ptr::null();
+            }
+            SUMO_TAG_ROUTE => {
+                self.myCurrentRouteID = String::new();
+            }
+            _ => {}
+        }
     }
 
     /// C++: `PositionVector NIXMLPTHandler::tryGetShape(const SUMOSAXAttributes &)` [private]
@@ -169,7 +274,9 @@ impl NIXMLPTHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn try_get_shape(&mut self, attrs: &SUMOSAXAttributes) -> PositionVector {
-        todo!("port NIXMLPTHandler::tryGetShape")
+        // declared private in NIXMLPTHandler.h but never defined in NIXMLPTHandler.cpp (the body lives in NIXMLEdgesHandler.cpp);
+        // C++ would fail at link time if called, so this panics instead of silently returning a value
+        panic!("NIXMLPTHandler::tryGetShape is declared but not defined in NIXMLPTHandler.cpp")
     }
 
     /// C++: `LaneSpreadFunction NIXMLPTHandler::tryGetLaneSpread(const SUMOSAXAttributes &)` [private]
@@ -177,7 +284,9 @@ impl NIXMLPTHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn try_get_lane_spread(&mut self, attrs: &SUMOSAXAttributes) -> LaneSpreadFunction {
-        todo!("port NIXMLPTHandler::tryGetLaneSpread")
+        // declared private in NIXMLPTHandler.h but never defined in NIXMLPTHandler.cpp (the body lives in NIXMLEdgesHandler.cpp);
+        // C++ would fail at link time if called, so this panics instead of silently returning a value
+        panic!("NIXMLPTHandler::tryGetLaneSpread is declared but not defined in NIXMLPTHandler.cpp")
     }
 
     /// C++: `bool NIXMLPTHandler::setNodes(const SUMOSAXAttributes &)` [private]
@@ -185,7 +294,9 @@ impl NIXMLPTHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_nodes(&mut self, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port NIXMLPTHandler::setNodes")
+        // declared private in NIXMLPTHandler.h but never defined in NIXMLPTHandler.cpp (the body lives in NIXMLEdgesHandler.cpp);
+        // C++ would fail at link time if called, so this panics instead of silently returning a value
+        panic!("NIXMLPTHandler::setNodes is declared but not defined in NIXMLPTHandler.cpp")
     }
 
     /// C++: `void NIXMLPTHandler::addPTStop(int, const SUMOSAXAttributes &)` [private]
