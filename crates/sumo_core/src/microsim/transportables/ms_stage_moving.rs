@@ -2,8 +2,49 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+use utils::common::msg_handler::write_warning;
+use utils::options::options_cont;
+
+// C++ constant MSPModel::UNDEFINED_DIRECTION (MSPModel.h)
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+
+/// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h), specialised here
+/// because the generic intermodal_edge.rs version is still a stub.
+fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    if edge.is_null() {
+        return Ptr::null();
+    }
+    let lanes = edge.get_lanes();
+    // prefer lanes that are exclusive to pedestrians
+    for lane in lanes.iter() {
+        if lane.get_permissions() == svc as SVCPermissions {
+            return *lane;
+        }
+    }
+    for lane in lanes.iter() {
+        if lane.allows_vehicle_class(svc) {
+            return *lane;
+        }
+    }
+    if svc != SVC_PEDESTRIAN {
+        // persons should always be able to use the sidewalk
+        for lane in lanes.iter() {
+            if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
+                return *lane;
+            }
+        }
+        for lane in lanes.iter() {
+            if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
+                return *lane;
+            }
+        }
+    }
+    Ptr::null()
+}
+
 /// An abstract stage providing additional interface for the movement models
 /// C++ class `MSStageMoving` (microsim/transportables/MSStageMoving.h)
+#[repr(C)]
 pub struct MSStageMoving {
     /// C++ base class `MSStage`
     pub base: MSStage,
@@ -14,7 +55,7 @@ pub struct MSStageMoving {
     /// The original route id
     pub myRouteID: String,
     /// current step
-    pub myRouteStep: Unmapped /* std::vector<const MSEdge *>::iterator */,
+    pub myRouteStep: usize, // C++ iterator into myRoute, stored as an index (== myRoute.len() means end())
     /// The current internal edge this transportable is on or nullptr
     pub myCurrentInternalEdge: Ptr<MSEdge>,
     /// the speed of the transportable
@@ -53,7 +94,20 @@ impl MSStageMoving {
     //     {}
     #[allow(unused_variables)]
     pub fn new(type_: MSStageType, route: &Vec<Ptr<MSEdge>>, routeID: &str, toStop: Ptr<MSStoppingPlace>, speed: f64, departPos: f64, arrivalPos: f64, departPosLat: f64, departLane: i32) -> Self {
-        todo!("port MSStageMoving::MSStageMoving")
+        let m = MSStageMoving {
+            base: MSStage::new(type_, *route.last().unwrap(), toStop, arrivalPos, 0., ""),
+            myPState: Ptr::null(),
+            myRoute: route.clone(),
+            myRouteID: routeID.to_string(),
+            myRouteStep: 0,
+            myCurrentInternalEdge: Ptr::null(),
+            mySpeed: speed,
+            myDepartPos: departPos,
+            myDepartPosLat: departPosLat,
+            myDepartLane: departLane,
+            myLoadedWaitingTime: 0,
+        };
+        m
     }
 
     /// C++: `void MSStageMoving::~MSStageMoving() noexcept` [virtual]
@@ -65,14 +119,14 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStageMoving::~MSStageMoving")
+        // shortcut: C++ deletes a finished myPState; the state adapter is owned by MSPModel here, so it is not freed
     }
 
     /// C++: `const MSEdge * MSStageMoving::getNextRouteEdge() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStageMoving::getNextRouteEdge")
+        panic!("MSStageMoving::getNextRouteEdge is pure virtual; subclasses must provide it")
     }
 
     /// C++: `MSTransportableStateAdapter * MSStageMoving::getPState() const` [const]
@@ -81,7 +135,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_p_state(&self) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSStageMoving::getPState")
+        self.myPState
     }
 
     /// C++: `void MSStageMoving::setPState(MSTransportableStateAdapter *)`
@@ -90,7 +144,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn set_p_state(&mut self, pstate: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSStageMoving::setPState")
+        self.myPState = pstate;
     }
 
     /// C++: `const MSEdge * MSStageMoving::getEdge() const` [const, virtual]
@@ -105,7 +159,13 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStageMoving::getEdge")
+        if !self.myCurrentInternalEdge.is_null() {
+            self.myCurrentInternalEdge
+        } else if self.myRouteStep >= self.myRoute.len() {
+            Ptr::null()
+        } else {
+            self.myRoute[self.myRouteStep]
+        }
     }
 
     /// C++: `const MSLane * MSStageMoving::getLane() const` [const, virtual]
@@ -116,7 +176,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSStageMoving::getLane")
+        if self.myPState.is_null() {
+            Ptr::null()
+        } else {
+            self.myPState.get_lane()
+        }
     }
 
     /// C++: `const MSEdge * MSStageMoving::getFromEdge() const` [const, virtual]
@@ -127,7 +191,7 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_from_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStageMoving::getFromEdge")
+        self.myRoute[0]
     }
 
     /// C++: `ConstMSEdgeVector MSStageMoving::getEdges() const` [const, virtual]
@@ -138,7 +202,7 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> ConstMSEdgeVector {
-        todo!("port MSStageMoving::getEdges")
+        self.myRoute.clone()
     }
 
     /// C++: `double MSStageMoving::getEdgePos(SUMOTime) const` [const, virtual]
@@ -149,7 +213,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        todo!("port MSStageMoving::getEdgePos")
+        if self.myPState.is_null() {
+            self.myDepartPos
+        } else {
+            self.myPState.get_edge_pos(now)
+        }
     }
 
     /// C++: `int MSStageMoving::getDirection() const` [const, virtual]
@@ -160,7 +228,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        todo!("port MSStageMoving::getDirection")
+        if self.myPState.is_null() {
+            MSPMODEL_UNDEFINED_DIRECTION
+        } else {
+            self.myPState.get_direction()
+        }
     }
 
     /// C++: `Position MSStageMoving::getPosition(SUMOTime) const` [const, virtual]
@@ -171,7 +243,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, now: SUMOTime) -> Position {
-        todo!("port MSStageMoving::getPosition")
+        if self.myPState.is_null() {
+            Position::INVALID
+        } else {
+            self.myPState.get_position(self, now)
+        }
     }
 
     /// C++: `double MSStageMoving::getAngle(SUMOTime) const` [const, virtual]
@@ -182,7 +258,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, now: SUMOTime) -> f64 {
-        todo!("port MSStageMoving::getAngle")
+        if self.myPState.is_null() {
+            0.
+        } else {
+            self.myPState.get_angle(self, now)
+        }
     }
 
     /// C++: `SUMOTime MSStageMoving::getWaitingTime() const` [const, virtual]
@@ -193,7 +273,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        todo!("port MSStageMoving::getWaitingTime")
+        if self.myPState.is_null() {
+            0
+        } else {
+            self.myPState.get_waiting_time()
+        }
     }
 
     /// C++: `SUMOTime MSStageMoving::getTotalWaitingTime() const` [const, virtual]
@@ -204,7 +288,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_total_waiting_time(&self) -> SUMOTime {
-        todo!("port MSStageMoving::getTotalWaitingTime")
+        if self.myPState.is_null() {
+            self.myLoadedWaitingTime
+        } else {
+            self.myPState.get_total_waiting_time()
+        }
     }
 
     /// C++: `void MSStageMoving::setTotalWaitingTime(SUMOTime)`
@@ -214,7 +302,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn set_total_waiting_time(&mut self, t: SUMOTime) {
-        todo!("port MSStageMoving::setTotalWaitingTime")
+        self.myLoadedWaitingTime = t;
     }
 
     /// C++: `double MSStageMoving::getSpeed() const` [const, virtual]
@@ -225,7 +313,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MSStageMoving::getSpeed")
+        if self.myPState.is_null() {
+            0.
+        } else {
+            self.myPState.get_speed(self)
+        }
     }
 
     /// C++: `double MSStageMoving::getConfiguredSpeed() const` [const]
@@ -235,7 +327,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_configured_speed(&self) -> f64 {
-        todo!("port MSStageMoving::getConfiguredSpeed")
+        self.mySpeed
     }
 
     /// C++: `double MSStageMoving::getMaxSpeed(const MSTransportable *const) const` [const, virtual, pure virtual]
@@ -243,7 +335,7 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_speed(&self, transportable: Ptr<MSTransportable>) -> f64 {
-        todo!("port MSStageMoving::getMaxSpeed")
+        panic!("MSStageMoving::getMaxSpeed is pure virtual; subclasses must provide it")
     }
 
     /// C++: `bool MSStageMoving::moveToNextEdge(MSTransportable *, SUMOTime, int, MSEdge *, const bool)` [virtual, pure virtual]
@@ -251,7 +343,7 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, transportable: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
-        todo!("port MSStageMoving::moveToNextEdge")
+        panic!("MSStageMoving::moveToNextEdge is pure virtual; subclasses must provide it")
     }
 
     /// C++: `void MSStageMoving::activateEntryReminders(MSTransportable *, const bool)` [virtual]
@@ -262,7 +354,8 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn activate_entry_reminders(&mut self, person: Ptr<MSTransportable>, isDepart: bool) {
-        todo!("port MSStageMoving::activateEntryReminders")
+        // C++ default body is empty (parameters unused)
+        let _ = (person, isDepart);
     }
 
     /// C++: `void MSStageMoving::setRouteIndex(MSTransportable *const, int)` [virtual]
@@ -277,7 +370,11 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn set_route_index(&mut self, transportable: Ptr<MSTransportable>, routeOffset: i32) {
-        todo!("port MSStageMoving::setRouteIndex")
+        assert!(routeOffset >= 0);
+        assert!((routeOffset as usize) < self.myRoute.len());
+        self.get_edge().remove_transportable(transportable);
+        self.myRouteStep = routeOffset as usize;
+        self.get_edge().add_transportable(transportable);
     }
 
     /// C++: `void MSStageMoving::replaceRoute(MSTransportable *const, const ConstMSEdgeVector &, int)` [virtual]
@@ -292,7 +389,12 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, transportable: Ptr<MSTransportable>, edges: &ConstMSEdgeVector, routeOffset: i32) {
-        todo!("port MSStageMoving::replaceRoute")
+        assert!(routeOffset >= 0);
+        assert!((routeOffset as usize) < edges.len());
+        self.get_edge().remove_transportable(transportable);
+        self.myRoute = edges.clone();
+        self.myRouteStep = routeOffset as usize;
+        self.get_edge().add_transportable(transportable);
     }
 
     /// C++: `const std::vector<const MSEdge *> & MSStageMoving::getRoute() const` [const]
@@ -301,7 +403,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_route(&self) -> &Vec<Ptr<MSEdge>> {
-        todo!("port MSStageMoving::getRoute")
+        &self.myRoute
     }
 
     /// C++: `const std::vector<const MSEdge *>::iterator MSStageMoving::getRouteStep() const` [const]
@@ -309,8 +411,8 @@ impl MSStageMoving {
     //         return myRouteStep;
     //     }
     #[allow(unused_variables)]
-    pub fn get_route_step(&self) -> Unmapped /* std::vector<const MSEdge *>::iterator */ {
-        todo!("port MSStageMoving::getRouteStep")
+    pub fn get_route_step(&self) -> usize {
+        self.myRouteStep
     }
 
     /// C++: `double MSStageMoving::getDepartPos() const` [const]
@@ -319,7 +421,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_depart_pos(&self) -> f64 {
-        todo!("port MSStageMoving::getDepartPos")
+        self.myDepartPos
     }
 
     /// C++: `void MSStageMoving::setDepartPos(const double)`
@@ -328,7 +430,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn set_depart_pos(&mut self, pos: f64) {
-        todo!("port MSStageMoving::setDepartPos")
+        self.myDepartPos = pos;
     }
 
     /// C++: `double MSStageMoving::getDepartPosLat() const` [const]
@@ -337,7 +439,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_depart_pos_lat(&self) -> f64 {
-        todo!("port MSStageMoving::getDepartPosLat")
+        self.myDepartPosLat
     }
 
     /// C++: `int MSStageMoving::getDepartLane() const` [const]
@@ -346,7 +448,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn get_depart_lane(&self) -> i32 {
-        todo!("port MSStageMoving::getDepartLane")
+        self.myDepartLane
     }
 
     /// C++: `const MSLane * MSStageMoving::checkDepartLane(const MSEdge *, SUMOVehicleClass, int, const std::string &)` [static]
@@ -372,7 +474,22 @@ impl MSStageMoving {
     // }
     #[allow(unused_variables)]
     pub fn check_depart_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass, laneIndex: i32, id: &str) -> Ptr<MSLane> {
-        todo!("port MSStageMoving::checkDepartLane")
+        let mut lane = get_sidewalk_lane(edge, svc);
+        if laneIndex > 0 {
+            let departLanes = edge.get_lanes();
+            if departLanes.len() as i32 <= laneIndex || !departLanes[laneIndex as usize].allows_vehicle_class(svc) {
+                let error = format!("Invalid departLane '{}' for person '{}'", laneIndex, id);
+                if options_cont::get_bool("ignore-route-errors") {
+                    write_warning(&error);
+                    return Ptr::null();
+                } else {
+                    panic!("{}", ProcessError::new(&error));
+                }
+            } else {
+                lane = departLanes[laneIndex as usize];
+            }
+        }
+        lane
     }
 
     /// C++: `bool MSStageMoving::equals(const MSStage &) const` [const, virtual]
@@ -391,7 +508,17 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
-        todo!("port MSStageMoving::equals")
+        if !self.base.equals(s) {
+            return false;
+        }
+        // this is safe because MSStage already checked that the type fits
+        let sm = Ptr::new(s).cast::<MSStageMoving>();
+        self.myRoute == sm.myRoute
+            && self.myRouteID == sm.myRouteID
+            && self.mySpeed == sm.mySpeed
+            && self.myDepartPos == sm.myDepartPos
+            && self.myDepartPosLat == sm.myDepartPosLat
+            && self.myDepartLane == sm.myDepartLane
     }
 
 }
