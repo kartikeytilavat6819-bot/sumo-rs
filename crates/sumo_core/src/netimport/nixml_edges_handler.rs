@@ -972,14 +972,14 @@ impl NIXMLEdgesHandler {
         } else {
             // the edge must be allocated in dependence to whether a shape is given
             if self.myShape.len() == 0 {
-                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
+                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(NBEdge::new(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
                     self.myCurrentLaneNo, self.myCurrentPriority, self.myCurrentWidth, self.myCurrentEndOffset,
-                    self.myLanesSpread, &self.myCurrentStreetName))));
+                    self.myLanesSpread, &self.myCurrentStreetName)));
             } else {
-                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
+                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(NBEdge::new_2(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
                     self.myCurrentLaneNo, self.myCurrentPriority, self.myCurrentWidth, self.myCurrentEndOffset,
                     self.myShape.clone(), self.myLanesSpread, &self.myCurrentStreetName, "",
-                    self.myKeepEdgeShape))));
+                    self.myKeepEdgeShape)));
             }
         }
         self.myCurrentEdge.m().set_loaded_length(self.myLength);

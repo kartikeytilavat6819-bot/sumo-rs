@@ -343,7 +343,7 @@ impl NIImporter_MATSim_EdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn insert_edge(&mut self, id: &str, fromNode: Ptr<NBNode>, toNode: Ptr<NBNode>, freeSpeed: f64, numLanes: i32, capacity: f64, length: f64, perm: SVCPermissions) {
-        let edge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(
+        let edge = Ptr::from_raw(Box::into_raw(NBEdge::new(
             id,
             fromNode,
             toNode,
@@ -356,7 +356,7 @@ impl NIImporter_MATSim_EdgesHandler {
             NBEDGE_UNSPECIFIED_OFFSET,
             LaneSpreadFunction::RIGHT,
             "",
-        ))));
+        )));
         edge.m().base2.set_parameter("capacity", &utils::common::to_string::to_string(&capacity));
         edge.m().set_permissions(perm, -1);
         if self.myKeepEdgeLengths {

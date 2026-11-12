@@ -1302,7 +1302,7 @@ impl NIImporter_SUMO {
             }
             // build and insert the edge
             // always use tryIgnoreNodePositions to keep original shape
-            let e = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(
+            let e = Ptr::from_raw(Box::into_raw(NBEdge::new_2(
                 &edm.id,
                 from,
                 to,
@@ -1318,7 +1318,7 @@ impl NIImporter_SUMO {
                 &edm.streetName,
                 "",
                 true,
-            ))));
+            )));
             e.m().set_loaded_length(edm.length);
             e.m().base2.update_parameters(edm.get_parameters_map());
             e.m().set_distance(edm.distance);

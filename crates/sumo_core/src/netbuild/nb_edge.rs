@@ -2121,7 +2121,8 @@ impl NBEdge {
         if index >= 0 {
             self.myGeom.insert(index as usize, *p);
         } else {
-            self.myGeom.insert((self.myGeom.len() as i32 + index) as usize, *p);
+            let idx = (self.myGeom.len() as i32 + index) as usize;
+            self.myGeom.insert(idx, *p);
         }
     }
 
@@ -6961,8 +6962,10 @@ impl NBEdge {
         // avoid degeneration of near-0-length geometrie when shifting later
         self.myGeom.ensure_min_length(utils::common::std_defs::g_precision());
         //
-        self.myFrom.m().add_outgoing_edge(Ptr::from_mut(self));
-        self.myTo.m().add_incoming_edge(Ptr::from_mut(self));
+        let from = self.myFrom;
+        let to = self.myTo;
+        from.m().add_outgoing_edge(Ptr::from_mut(self));
+        to.m().add_incoming_edge(Ptr::from_mut(self));
         // prepare container
         assert!(self.myGeom.len() >= 2);
         self.myLength = self.myGeom.length();

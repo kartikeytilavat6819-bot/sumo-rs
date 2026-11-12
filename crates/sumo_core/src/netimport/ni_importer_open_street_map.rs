@@ -3993,10 +3993,10 @@ impl NIImporter_OpenStreetMap {
         let markOSMDirection = from.get_type() == SumoXMLNodeType::RAIL_SIGNAL || to.get_type() == SumoXMLNodeType::RAIL_SIGNAL;
         if addForward {
             assert!(numLanesForward > 0);
-            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(
+            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(NBEdge::new_2(
                 &id, from, to, type_.clone(), speed, NBEDGE_UNSPECIFIED_FRICTION, numLanesForward, tc.get_edge_type_priority(&type_),
                 forwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.clone(), lsf, &escape_xml(&streetName, false), &origID, true,
-            ))));
+            )));
             if markOSMDirection {
                 nbe.m().base2.set_parameter(OSM_DIRECTION, "forward");
             }
@@ -4064,10 +4064,10 @@ impl NIImporter_OpenStreetMap {
         }
         if addBackward {
             assert!(numLanesBackward > 0);
-            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(
+            let nbe: Ptr<NBEdge> = Ptr::from_raw(Box::into_raw(NBEdge::new_2(
                 &reverseID, to, from, type_.clone(), speedBackward, NBEDGE_UNSPECIFIED_FRICTION, numLanesBackward, tc.get_edge_type_priority(&type_),
                 backwardWidth, NBEDGE_UNSPECIFIED_OFFSET, shape.reverse(), lsf, &escape_xml(&streetName, false), &origID, true,
-            ))));
+            )));
             if markOSMDirection {
                 nbe.m().base2.set_parameter(OSM_DIRECTION, "backward");
             }
