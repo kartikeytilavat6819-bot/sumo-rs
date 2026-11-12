@@ -1,6 +1,13 @@
 //! Port of utils/handlers/DataHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::xml::generic_sax_handler::SaxHandler;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::xml::sumo_xml_definitions::{
+    ATTRS, SUMO_ATTR_BEGIN, SUMO_ATTR_END, SUMO_ATTR_FROM, SUMO_ATTR_ID, SUMO_ATTR_TO, SUMO_TAG_EDGE, SUMO_TAG_EDGEREL, SUMO_TAG_ERROR, SUMO_TAG_INTERVAL,
+    SUMO_TAG_PARAM, SUMO_TAG_ROOTFILE, SUMO_TAG_TAZREL, TAGS,
+};
+use utils::common::time::steps2time;
 
 /// The XML-Handler for network loading
 /// C++ class `DataHandler` (utils/handlers/DataHandler.h)
@@ -8,7 +15,17 @@ pub struct DataHandler {
     /// C++ base class `CommonHandler`
     pub base: CommonHandler,
     /// C++ base class `SUMOSAXHandler`
-    pub base2: Unmapped /* SUMOSAXHandler */,
+    pub base2: GenericSAXHandler,
+}
+
+/// C++ `toString(SumoXMLTag)`: the XML name of a tag (first table entry with that value)
+fn tag_name(tag: SumoXMLTag) -> &'static str {
+    TAGS.iter().find(|(_, v)| *v == tag).map(|(n, _)| *n).unwrap_or("")
+}
+
+/// C++ `toString(SumoXMLAttr)`: the XML name of an attribute (first table entry with that value)
+fn attr_name(attr: SumoXMLAttr) -> &'static str {
+    ATTRS.iter().find(|(_, v)| *v == attr).map(|(n, _)| *n).unwrap_or("")
 }
 
 impl std::ops::Deref for DataHandler {
@@ -32,7 +49,11 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        todo!("port DataHandler::DataHandler")
+        // shortcut: FileBucket is not ported, so getFilename() is unavailable and SUMOSAXHandler gets "", upgrade when FileBucket is ported
+        Self {
+            base: CommonHandler::new(fileBucket),
+            base2: utils::xml::sumo_sax_handler::new("", ""),
+        }
     }
 
     /// C++: `void DataHandler::~DataHandler() noexcept` [virtual]
@@ -40,7 +61,7 @@ impl DataHandler {
     // DataHandler::~DataHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port DataHandler::~DataHandler")
+        // C++ destructor body is empty; Rust drops the fields.
     }
 
     /// C++: `bool DataHandler::parse()`
@@ -52,7 +73,12 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse(&mut self) -> bool {
-        todo!("port DataHandler::parse")
+        // run parser and return result
+        let file = self.base2.get_file_name().to_string();
+        utils::xml::xml_sub_sys::run_parser(self, &file, false, false, false, true).unwrap_or_else(|e| {
+            write_error(&e.to_string());
+            false
+        })
     }
 
     /// C++: `void DataHandler::parseSumoBaseObject(CommonXMLStructure::SumoBaseObject *)`
@@ -107,7 +133,10 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_sumo_base_object(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) {
-        todo!("port DataHandler::parseSumoBaseObject")
+        // shortcut: CommonXMLStructure::SumoBaseObject is not ported (CommonHandler.myCommonXMLStructure is Unmapped), so the tag switch and child recursion cannot run; upgrade when CommonXMLStructure is ported
+        if !self.myAbortLoading {
+            let _ = obj;
+        }
     }
 
     /// C++: `bool DataHandler::buildDataInterval(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double, const double)` [virtual, pure virtual]
@@ -115,7 +144,8 @@ impl DataHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_data_interval(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, dataSetID: &str, begin: f64, end: f64) -> bool {
-        todo!("port DataHandler::buildDataInterval")
+        // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
+        false
     }
 
     /// C++: `bool DataHandler::buildEdgeData(const CommonXMLStructure::SumoBaseObject *, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -123,7 +153,8 @@ impl DataHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_edge_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, edgeID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port DataHandler::buildEdgeData")
+        // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
+        false
     }
 
     /// C++: `bool DataHandler::buildEdgeRelationData(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -131,7 +162,8 @@ impl DataHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_edge_relation_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, fromEdgeID: &str, toEdgeID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port DataHandler::buildEdgeRelationData")
+        // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
+        false
     }
 
     /// C++: `bool DataHandler::buildTAZRelationData(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -139,7 +171,8 @@ impl DataHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_taz_relation_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, fromTAZID: &str, toTAZID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port DataHandler::buildTAZRelationData")
+        // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
+        false
     }
 
     /// C++: `void DataHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, private]
@@ -182,7 +215,24 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port DataHandler::myStartElement")
+        // obtain tag
+        let tag = if element == 0 { SUMO_TAG_ROOTFILE } else { element };
+        // shortcut: myCommonXMLStructure.openSUMOBaseOBject()/abortSUMOBaseOBject() not ported (CommonXMLStructure is Unmapped), upgrade when CommonXMLStructure is ported
+        // check tag
+        // (C++ catches InvalidArgument and calls writeError(e.what()); the parse_* helpers here use get<T>, which does not throw)
+        match tag {
+            // interval
+            SUMO_TAG_INTERVAL => self.parse_interval(attrs),
+            // datas
+            SUMO_TAG_EDGE => self.parse_edge_data(attrs),
+            SUMO_TAG_EDGEREL => self.parse_edge_relation_data(attrs),
+            SUMO_TAG_TAZREL => self.parse_taz_relation_data(attrs),
+            SUMO_TAG_PARAM => {
+                write_warning("Data elements cannot load attributes as params");
+            }
+            // tag cannot be parsed in routeHandler
+            _ => {}
+        }
     }
 
     /// C++: `void DataHandler::myEndElement(int)` [virtual, private]
@@ -212,7 +262,10 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port DataHandler::myEndElement")
+        // obtain tag
+        let tag = element;
+        // shortcut: myCommonXMLStructure.getCurrentSumoBaseObject()/closeSUMOBaseOBject() not ported (CommonXMLStructure is Unmapped), so the closed object is unavailable and the INTERVAL parse + delete cannot run; upgrade when CommonXMLStructure is ported
+        let _ = tag;
     }
 
     /// C++: `void DataHandler::parseInterval(const SUMOSAXAttributes &)` [private]
@@ -239,7 +292,15 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_interval(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port DataHandler::parseInterval")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
+        let begin = steps2time(attrs.get_sumo_time_reporting(SUMO_ATTR_BEGIN, "", &mut parsedOk, true));
+        let end = steps2time(attrs.get_sumo_time_reporting(SUMO_ATTR_END, "", &mut parsedOk, true));
+        // continue if flag is ok
+        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/add*Attribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
+        let _ = (id, begin, end, parsedOk);
     }
 
     /// C++: `void DataHandler::parseEdgeData(const SUMOSAXAttributes &)` [private]
@@ -264,7 +325,15 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_edge_data(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port DataHandler::parseEdgeData")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut parsedOk, true);
+        // fill attributes
+        self.get_attributes(attrs, vec![SUMO_ATTR_ID]);
+        // continue if flag is ok
+        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
+        let _ = (id, parsedOk);
     }
 
     /// C++: `void DataHandler::parseEdgeRelationData(const SUMOSAXAttributes &)` [private]
@@ -291,7 +360,16 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_edge_relation_data(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port DataHandler::parseEdgeRelationData")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let from = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut parsedOk, true);
+        let to = attrs.get::<String>(SUMO_ATTR_TO, "", &mut parsedOk, true);
+        // fill attributes
+        self.get_attributes(attrs, vec![SUMO_ATTR_FROM, SUMO_ATTR_TO]);
+        // continue if flag is ok
+        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
+        let _ = (from, to, parsedOk);
     }
 
     /// C++: `void DataHandler::parseTAZRelationData(const SUMOSAXAttributes &)` [private]
@@ -318,7 +396,16 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_taz_relation_data(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port DataHandler::parseTAZRelationData")
+        // declare Ok Flag
+        let mut parsedOk = true;
+        // needed attributes
+        let from = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut parsedOk, true);
+        let to = attrs.get::<String>(SUMO_ATTR_TO, "", &mut parsedOk, true);
+        // fill attributes
+        self.get_attributes(attrs, vec![SUMO_ATTR_FROM, SUMO_ATTR_TO]);
+        // continue if flag is ok
+        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
+        let _ = (from, to, parsedOk);
     }
 
     /// C++: `void DataHandler::getAttributes(const SUMOSAXAttributes &, const std::vector<SumoXMLAttr>) const` [const, private]
@@ -339,7 +426,16 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_attributes(&self, attrs: &SUMOSAXAttributes, avoidAttributes: Vec<SumoXMLAttr>) {
-        todo!("port DataHandler::getAttributes")
+        // transform avoidAttributes to strings
+        let avoidAttributesStr: Vec<&str> = avoidAttributes.iter().map(|a| attr_name(*a)).collect();
+        // iterate over attributes and fill parameters map
+        for attribute in attrs.get_attribute_names() {
+            if !avoidAttributesStr.contains(&attribute.as_str()) {
+                let value = attrs.get_string_secure_name(&attribute, "");
+                // shortcut: addParameter on CommonXMLStructure::SumoBaseObject not ported (CommonHandler.myCommonXMLStructure is Unmapped), upgrade when CommonXMLStructure is ported
+                let _ = value;
+            }
+        }
     }
 
     /// C++: `void DataHandler::checkParent(const SumoXMLTag, const SumoXMLTag, bool &)` [private]
@@ -355,7 +451,8 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_parent(&mut self, currentTag: SumoXMLTag, parentTag: SumoXMLTag, ok: &mut bool) {
-        todo!("port DataHandler::checkParent")
+        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->getParentSumoBaseObject() not ported, so the parent tag cannot be checked and no error is written; upgrade when CommonXMLStructure is ported
+        let _ = (currentTag, parentTag, ok);
     }
 
     /// C++: `void DataHandler::DataHandler()` [private]
@@ -363,7 +460,7 @@ impl DataHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port DataHandler::DataHandler")
+        panic!("DataHandler() is deleted in C++ (private, invalidated)")
     }
 
     /// C++: `void DataHandler::DataHandler(const DataHandler &)` [private]
@@ -371,7 +468,7 @@ impl DataHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &DataHandler) -> Self {
-        todo!("port DataHandler::DataHandler")
+        panic!("DataHandler(const DataHandler&) is deleted in C++ (private, invalidated)")
     }
 
     /// C++: `DataHandler & DataHandler::operator=(const DataHandler &)` [private]
@@ -379,8 +476,23 @@ impl DataHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &DataHandler) -> &mut DataHandler {
-        todo!("port DataHandler::operator=")
+        panic!("DataHandler::operator= is deleted in C++ (private, invalidated)")
     }
 
+}
+
+/// C++: `DataHandler` is a `SUMOSAXHandler`, so the XML reader can drive it (XMLSubSys::runParser(*this, ...)).
+impl SaxHandler for DataHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base2
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        DataHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        DataHandler::my_end_element(self, element);
+        Ok(())
+    }
 }
 
