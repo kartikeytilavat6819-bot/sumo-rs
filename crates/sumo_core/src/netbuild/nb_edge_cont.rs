@@ -1808,7 +1808,15 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn guess_opposites(&mut self) {
-        todo!("port NBEdgeCont::guessOpposites")
+        //@todo magic values
+        let fixOppositeLengths = utils::options::options_cont::get_bool("opposites.guess.fix-lengths");
+        // ensure consistency of loaded values before starting to guess
+        for edge in self.myEdges.values() {
+            edge.m().recheck_opposite(&*self, fixOppositeLengths);
+        }
+        for edge in self.myEdges.values() {
+            edge.m().guess_opposite(false);
+        }
     }
 
     /// C++: `void NBEdgeCont::recheckLaneSpread()`
@@ -1827,7 +1835,16 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn recheck_lane_spread(&mut self) {
-        todo!("port NBEdgeCont::recheckLaneSpread")
+        let items: Vec<(String, Ptr<NBEdge>)> = self.myEdges.iter().map(|(k, v)| (k.clone(), *v)).collect();
+        for (id, edge) in items {
+            let opposite = self.get_opposite_by_id(&id);
+            if !opposite.is_null() {
+                edge.m().set_lane_spread_function(LaneSpreadFunction::RIGHT);
+                opposite.m().set_lane_spread_function(LaneSpreadFunction::RIGHT);
+            } else {
+                edge.m().set_lane_spread_function(LaneSpreadFunction::CENTER);
+            }
+        }
     }
 
     /// C++: `NBEdge * NBEdgeCont::getOppositeByID(const std::string &) const` [const]
@@ -1840,7 +1857,11 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_by_id(&self, edgeID: &str) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::getOppositeByID")
+        let oppositeID = if edgeID.starts_with('-') { edgeID[1..].to_string() } else { format!("-{}", edgeID) };
+        match self.myEdges.get(&oppositeID) {
+            Some(e) => *e,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `NBEdge * NBEdgeCont::getByID(const std::string &) const` [const]
