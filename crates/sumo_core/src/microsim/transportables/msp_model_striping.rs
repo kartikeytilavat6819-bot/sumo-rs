@@ -564,8 +564,8 @@ impl MSPModel_Striping {
             //std::cout << SIMTIME << ">>> lane=" << lane->getID() << " numPeds=" << pedestrians.size() << "\n";
             if lane.is_walking_area() {
                 let lateral_offset = (lane.get_width() - stripe_width()) * 0.5;
-                let minY = stripe_width() * -0.5 + NUMERICAL_EPS;
-                let maxY = stripe_width() * (Self::num_stripes(lane) as f64 - 0.5) - NUMERICAL_EPS;
+                let minY = stripe_width() * -0.5 + utils::geom::NUMERICAL_EPS;
+                let maxY = stripe_width() * (Self::num_stripes(lane) as f64 - 0.5) - utils::geom::NUMERICAL_EPS;
                 // need to handle each walkingAreaPath separately and transform
                 // coordinates beforehand
                 // determinism: std::set ordered by walkingarea_path_sorter (numerical IDs of from/to), first insertion wins
@@ -582,7 +582,7 @@ impl MSPModel_Striping {
                 let pathList: Vec<Ptr<MSPModel_Striping_WalkingAreaPath>> = paths.values().copied().collect();
                 for path in pathList {
                     // owners of the PState copies (C++ `delete` after the path is processed)
-                    let mut owned: Vec<Box<MSPModel_Striping_PState>> = Vec::new();
+                    let mut owned: Vec<Box<dyn std::any::Any>> = Vec::new();
                     let mut toDelete: MSPModel_Interacting_Pedestrians = Vec::new();
                     let mut transformedPeds: MSPModel_Interacting_Pedestrians = Vec::with_capacity(pedestrians.len());
                     for it_p in pedestrians.iter() {
@@ -655,8 +655,8 @@ impl MSPModel_Striping {
                                 let xCenter = relCorners.get_center().x();
                                 let yMinPos = Position::new(xCenter, vehYmin);
                                 let yMaxPos = Position::new(xCenter, vehYmax);
-                                let addFront = Self::add_vehicle_foe(veh, lane, &yMinPos, dir as f64 * xWidth, 0., lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds);
-                                let addBack = Self::add_vehicle_foe(veh, lane, &yMaxPos, dir as f64 * xWidth, 0., lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds);
+                                let addFront = Self::add_vehicle_foe(veh, lane, &yMinPos, dir as f64 * xWidth, 0., lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds, &mut owned);
+                                let addBack = Self::add_vehicle_foe(veh, lane, &yMaxPos, dir as f64 * xWidth, 0., lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds, &mut owned);
                                 if addFront && addBack {
                                     // add in-between positions
                                     let yDist = vehYmax - vehYmin;
@@ -664,7 +664,7 @@ impl MSPModel_Striping {
                                     while dist < yDist {
                                         let relDist = dist / yDist;
                                         let between = (yMinPos * relDist) + (yMaxPos * (1. - relDist));
-                                        Self::add_vehicle_foe(veh, lane, &between, dir as f64 * xWidth, stripe_width(), lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds);
+                                        Self::add_vehicle_foe(veh, lane, &between, dir as f64 * xWidth, stripe_width(), lateral_offset, minY, maxY, &mut toDelete, &mut transformedPeds, &mut owned);
                                         dist += stripe_width();
                                     }
                                 }
@@ -937,7 +937,7 @@ impl MSPModel_Striping {
                     || p.stop_for_yellow(link))
             {
                 // prevent movement passed a closed link
-                let closedLink = MSPModel_Striping_Obstacle::new_3(p.get_edge_pos(0) + dir as f64 * (dist - NUMERICAL_EPS), 0., MSPModel_Striping_ObstacleType::OBSTACLE_LINKCLOSED, &format!("closedLink_{}", link.get_via_lane_or_lane().get_id()), 0., Ptr::null());
+                let closedLink = MSPModel_Striping_Obstacle::new_3(p.get_edge_pos(0) + dir as f64 * (dist - utils::geom::NUMERICAL_EPS), 0., MSPModel_Striping_ObstacleType::OBSTACLE_LINKCLOSED, &format!("closedLink_{}", link.get_via_lane_or_lane().get_id()), 0., Ptr::null());
                 let closedLinkObs: MSPModel_Striping_Obstacles = vec![closedLink; stripes as usize];
                 p.m().merge_obstacles(&mut currentObs, &closedLinkObs);
                 // consider rerouting over another crossing
@@ -1836,7 +1836,27 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn transform_to_current_lane_positions(o: &mut MSPModel_Striping_Obstacles, currentDir: i32, nextDir: i32, currentLength: f64, nextLength: f64) {
-        todo!("port MSPModel_Striping::transformToCurrentLanePositions")
+        for obs in o.iter_mut() {
+            if currentDir == MSPMODEL_FORWARD {
+                if nextDir == MSPMODEL_FORWARD {
+                    obs.xFwd += currentLength;
+                    obs.xBack += currentLength;
+                } else {
+                    let tmp = obs.xFwd;
+                    obs.xFwd = currentLength + nextLength - obs.xBack;
+                    obs.xBack = currentLength + nextLength - tmp;
+                }
+            } else {
+                if nextDir == MSPMODEL_FORWARD {
+                    let tmp = obs.xFwd;
+                    obs.xFwd = -obs.xBack;
+                    obs.xBack = -tmp;
+                } else {
+                    obs.xFwd -= nextLength;
+                    obs.xBack -= nextLength;
+                }
+            }
+        }
     }
 
     /// C++: `void MSPModel_Striping::addCloserObstacle(Obstacles &, double, int, int, const std::string &, double, int, ObstacleType)` [static, private]
@@ -1850,7 +1870,12 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn add_closer_obstacle(obs: &mut MSPModel_Striping_Obstacles, x: f64, stripe: i32, numStripes: i32, id: &str, width: f64, dir: i32, type_: MSPModel_Striping_ObstacleType) {
-        todo!("port MSPModel_Striping::addCloserObstacle")
+        if stripe >= 0 && stripe < numStripes {
+            let s = stripe as usize;
+            if (dir == MSPMODEL_FORWARD && x - width / 2. < obs[s].xBack) || (dir == MSPMODEL_BACKWARD && x + width / 2. > obs[s].xFwd) {
+                obs[s] = MSPModel_Striping_Obstacle::new_3(x, 0., type_, id, width, Ptr::null());
+            }
+        }
     }
 
     /// C++: `int MSPModel_Striping::getStripeOffset(int, int, bool)` [static, private]
@@ -1864,7 +1889,11 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn get_stripe_offset(origStripes: i32, destStripes: i32, addRemainder: bool) -> i32 {
-        todo!("port MSPModel_Striping::getStripeOffset")
+        let mut offset = (destStripes - origStripes) / 2;
+        if addRemainder {
+            offset += (destStripes - origStripes) % 2;
+        }
+        offset
     }
 
     /// C++: `bool MSPModel_Striping::addCrossingVehs(const MSLane *, int, double, int, Obstacles &, bool, bool)` [static, private]
@@ -1981,7 +2010,67 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn add_crossing_vehs(crossing: Ptr<MSLane>, stripes: i32, lateral_offset: f64, dir: i32, crossingVehs: &mut MSPModel_Striping_Obstacles, prio: bool, flipY: bool) -> bool {
-        todo!("port MSPModel_Striping::addCrossingVehs")
+        let mut hasCrossingVehObs = false;
+        let crossingExitLink = crossing.get_link_cont()[0];
+        // shortcut: gDebugFlag1 / DEBUGCOND2 (lane isSelected, GUI-only) debug output is not ported
+        let linkLeaders = crossingExitLink.get_leader_info(Ptr::null(), crossing.get_length(), Ptr::null(), false);
+        if linkLeaders.len() > 0 {
+            for it in linkLeaders.iter() {
+                // the vehicle to enter the junction first has priority
+                let veh = it.vehAndGap.0;
+                if !veh.is_null() {
+                    let vo = MSPModel_Striping_Obstacle::new_3(it.distToCrossing, 0., MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE, veh.get_id(),
+                        veh.get_vehicle_type().get_width() + 2. * min_gap_to_vehicle(), veh.cast::<SUMOVehicle>());
+                    // block entry to the crossing in walking direction but allow leaving it
+                    let mut voBlock = vo.clone();
+                    if dir == MSPMODEL_FORWARD {
+                        voBlock.xBack = utils::geom::NUMERICAL_EPS;
+                    } else {
+                        voBlock.xFwd = crossing.get_length() - utils::geom::NUMERICAL_EPS;
+                    }
+                    // when approaching a priority crossings, vehicles must be able
+                    // to brake, otherwise the person must be able to cross in time
+                    let distToCrossBeforeVeh = if dir == MSPMODEL_FORWARD { vo.xFwd } else { crossing.get_length() - vo.xBack };
+                    let bGap = if prio {
+                        veh.get_car_follow_model().brake_gap_2(veh.get_speed(), veh.get_car_follow_model().get_max_decel(), 0.)
+                    } else {
+                        veh.get_speed() * distToCrossBeforeVeh // walking 1m/s
+                    };
+                    let mut vehYmin: f64;
+                    let mut vehYmax: f64;
+                    // relY increases from left to right (the other way around from vehicles)
+                    if it.from_left() {
+                        vehYmin = -it.vehAndGap.1 + lateral_offset; // vehicle back
+                        vehYmax = vehYmin + veh.get_vehicle_type().get_length() + bGap + min_gap_to_vehicle();
+                        vehYmin -= min_gap_to_vehicle();
+                    } else {
+                        vehYmax = crossing.get_width() + it.vehAndGap.1 - lateral_offset; // vehicle back
+                        vehYmin = vehYmax - veh.get_vehicle_type().get_length() - bGap - min_gap_to_vehicle();
+                        vehYmax += min_gap_to_vehicle();
+                    }
+                    let sEnd = std::cmp::min(MSPModel_Striping_PState::stripe_2(vehYmax), stripes);
+                    for s in std::cmp::max(0, MSPModel_Striping_PState::stripe_2(vehYmin))..sEnd {
+                        let su = s as usize;
+                        if (dir == MSPMODEL_FORWARD && crossingVehs[su].xBack > vo.xBack) || (dir == MSPMODEL_BACKWARD && crossingVehs[su].xFwd < vo.xFwd) {
+                            if !prio && veh.get_speed() > utils::common::std_defs::SUMO_CONST_HALTING_SPEED {
+                                // do not enter the crossing
+                                crossingVehs[su] = voBlock.clone();
+                            } else {
+                                crossingVehs[su] = vo.clone();
+                            }
+                            hasCrossingVehObs = true;
+                        }
+                    }
+                    if flipY {
+                        let tmp = crossingVehs.clone();
+                        for i in 0..crossingVehs.len() {
+                            crossingVehs[i] = tmp[crossingVehs.len() - 1 - i].clone();
+                        }
+                    }
+                }
+            }
+        }
+        hasCrossingVehObs
     }
 
     /// C++: `Obstacles MSPModel_Striping::getVehicleObstacles(const MSLane *, int, PState *)` [static, private]
@@ -1989,7 +2078,99 @@ impl MSPModel_Striping {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_vehicle_obstacles(lane: Ptr<MSLane>, dir: i32, ped: Ptr<MSPModel_Striping_PState>) -> MSPModel_Striping_Obstacles {
-        todo!("port MSPModel_Striping::getVehicleObstacles")
+        // shortcut: debug output (DEBUGCOND / DEBUGCOND2, GUI-only) is not ported
+        let stripes = Self::num_stripes(lane);
+        let mut vehObs: MSPModel_Striping_Obstacles = (0..stripes).map(|_| MSPModel_Striping_Obstacle::new(dir, DIST_FAR_AWAY)).collect();
+        let mut current: i32 = -1;
+        let mut minX = 0.;
+        let mut maxX = 0.;
+        let mut pRelY = -1.;
+        let mut pWidth = 0.;
+        if !ped.is_null() {
+            current = ped.stripe();
+            minX = ped.get_min_x(true);
+            maxX = ped.get_max_x(true);
+            pRelY = ped.get_pos_lat();
+            pWidth = ped.get_person().get_vehicle_type().get_width();
+        } else if dir == MSPMODEL_BACKWARD {
+            // checking vehicles on the next lane. Use entry point as reference
+            minX = lane.get_length();
+            maxX = lane.get_length();
+        }
+
+        let (begin, end) = if dir == MSPMODEL_FORWARD {
+            (lane.any_vehicles_upstream_begin(), lane.any_vehicles_upstream_end())
+        } else {
+            (lane.any_vehicles_begin(), lane.any_vehicles_end())
+        };
+        let mut it = begin;
+        while it.ne_op(&end) {
+            let veh = it.mul_op();
+            let bidi = veh.get_lane() == lane.get_bidi_lane();
+            let vehBack = veh.get_back_position_on_lane(lane);
+            let mut vehFront = vehBack + veh.get_vehicle_type().get_length();
+            // ensure that vehicles are not blocked
+            let vehNextSpeed = if veh.get_waiting_time(false) > utils::common::time::delta_t() { 0. } else { f64::max(veh.get_speed(), 1.0) };
+            let clearance = SAFETY_GAP + vehNextSpeed * LOOKAHEAD_SAMEDIR;
+            // boundaries for range checking
+            let vehXMax: f64;
+            let vehXMin: f64;
+            let vehXMaxCheck: f64;
+            let vehXMinCheck: f64;
+            if bidi {
+                vehFront = vehBack - veh.get_vehicle_type().get_length();
+                vehXMax = vehBack + SAFETY_GAP;
+                vehXMin = vehFront - clearance;
+                if dir == MSPMODEL_FORWARD {
+                    vehXMaxCheck = vehBack + utils::geom::NUMERICAL_EPS;
+                    vehXMinCheck = vehFront - LOOKAROUND_VEHICLES;
+                } else {
+                    vehXMaxCheck = vehBack + LOOKAHEAD_SAMEDIR;
+                    vehXMinCheck = vehFront - clearance;
+                }
+            } else {
+                vehXMax = vehFront + clearance;
+                vehXMin = vehBack - SAFETY_GAP;
+                if dir == MSPMODEL_FORWARD {
+                    vehXMaxCheck = vehFront + clearance;
+                    vehXMinCheck = vehBack - LOOKAHEAD_SAMEDIR;
+                } else {
+                    vehXMaxCheck = vehFront + LOOKAROUND_VEHICLES;
+                    vehXMinCheck = vehBack - utils::geom::NUMERICAL_EPS;
+                }
+            }
+            // C++ tests the double vehXMinCheck as a bool (non-zero is true)
+            if vehXMaxCheck > minX && vehXMinCheck != 0. && vehXMinCheck <= maxX {
+                let mut vo = MSPModel_Striping_Obstacle::new_3(vehBack, veh.get_speed() * if bidi { -1. } else { 1. }, MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE,
+                    veh.get_id(), 0., veh.cast::<SUMOVehicle>());
+                // moving vehicles block space along their path
+                vo.xFwd = vehXMax;
+                vo.xBack = vehXMin;
+                // relY increases from left to right (the other way around from vehicles)
+                // XXX lateral offset for partial vehicles
+                let posLat = veh.get_lateral_position_on_lane() * if bidi { -1. } else { 1. };
+                let vehYmax = 0.5 * (lane.get_width() + veh.get_vehicle_type().get_width() - stripe_width()) - posLat;
+                let vehYmin = vehYmax - veh.get_vehicle_type().get_width();
+                let sEnd = std::cmp::min(MSPModel_Striping_PState::stripe_2(vehYmax) + 1, stripes);
+                for s in std::cmp::max(0, MSPModel_Striping_PState::stripe_2(vehYmin))..sEnd {
+                    let su = s as usize;
+                    let prior = vehObs[su].clone();
+                    vehObs[su] = vo.clone();
+                    if s == current && vehFront + SAFETY_GAP < minX {
+                        // ignore if already overlapping while vehicle is still behind
+                        if pRelY - pWidth < vehYmax && pRelY + pWidth > vehYmin && dir == MSPMODEL_FORWARD {
+                            if dir == MSPMODEL_FORWARD {
+                                vehObs[su] = prior;
+                            } else {
+                                vehObs[su].xFwd = f64::min(vo.xFwd, vehFront + SAFETY_GAP);
+                            }
+                        }
+                    }
+                }
+            }
+            it.op__2();
+        }
+        vehObs
     }
 
     /// C++: `bool MSPModel_Striping::addVehicleFoe(const MSVehicle *, const MSLane *, const Position &, double, double, double, double, double, Pedestrians &, Pedestrians &)` [static, private]
@@ -2010,8 +2191,22 @@ impl MSPModel_Striping {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add_vehicle_foe(veh: Ptr<MSVehicle>, walkingarea: Ptr<MSLane>, relPos: &Position, xWidth: f64, yWidth: f64, lateral_offset: f64, minY: f64, maxY: f64, toDelete: &mut MSPModel_Interacting_Pedestrians, transformedPeds: &mut MSPModel_Interacting_Pedestrians) -> bool {
-        todo!("port MSPModel_Striping::addVehicleFoe")
+    pub fn add_vehicle_foe(veh: Ptr<MSVehicle>, walkingarea: Ptr<MSLane>, relPos: &Position, xWidth: f64, yWidth: f64, lateral_offset: f64, minY: f64, maxY: f64, toDelete: &mut MSPModel_Interacting_Pedestrians, transformedPeds: &mut MSPModel_Interacting_Pedestrians, owned: &mut Vec<Box<dyn std::any::Any>>) -> bool {
+        // `owned` keeps the PStateVehicle alive; C++ allocates it with new and deletes it via toDelete
+        if *relPos != Position::INVALID {
+            let newY = relPos.y() + lateral_offset;
+            if newY >= minY && newY <= maxY {
+                let mut tp = Box::new(MSPModel_Striping_PStateVehicle::new(veh, walkingarea, relPos.x(), newY, xWidth, yWidth));
+                //std::cout << SIMTIME << " addVehicleFoe=" << veh->getID() << " rx=" << relPos.x() << " ry=" << newY << " s=" << tp->stripe() << " o=" << tp->otherStripe() << "\n";
+                let tpp = Ptr::from_mut(&mut *tp).cast::<MSPModel_InteractingState>();
+                owned.push(tp);
+                toDelete.push(tpp);
+                transformedPeds.push(tpp);
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `int MSPModel_Striping::getReserved(int, double)` [static, private]
@@ -2023,7 +2218,7 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn get_reserved(stripes: i32, factor: f64) -> i32 {
-        todo!("port MSPModel_Striping::getReserved")
+        std::cmp::min((stripes as f64 * factor).floor() as i32, (reserve_for_oncoming_max() / stripe_width()).floor() as i32)
     }
 
     /// C++: `void MSPModel_Striping::registerCrossingApproach(const PState &, const MSLane *, const MSLane *)` [static, private]
@@ -2044,7 +2239,15 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn register_crossing_approach(ped: &MSPModel_Striping_PState, crossing: Ptr<MSLane>, beforeWA: Ptr<MSLane>) {
-        todo!("port MSPModel_Striping::registerCrossingApproach")
+        // person has entered the walkingarea
+        let mut arrivalTime: SUMOTime = MSNet::get_instance().get_current_time_step();
+        debug_assert!(ped.get_lane().is_walking_area());
+        let wa = Self::get_walking_area_path(Ptr::from_mut(ped.get_lane().get_edge()), beforeWA, crossing);
+        let speed = ped.get_stage().get_max_speed(ped.get_person().cast::<MSTransportable>()) * (1. - dawdling() / 2.);
+        arrivalTime += utils::common::time::time2steps(wa.length / speed);
+        let leavingTime = arrivalTime + utils::common::time::time2steps(crossing.get_length() / speed);
+        crossing.get_incoming_lanes()[0].viaLink.m().set_approaching_person(ped.get_person(), arrivalTime, leavingTime);
+        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
     }
 
 }
