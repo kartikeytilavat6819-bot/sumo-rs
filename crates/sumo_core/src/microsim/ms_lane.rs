@@ -2786,7 +2786,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_friction_coefficient(&self) -> f64 {
-        todo!("port MSLane::getFrictionCoefficient")
+        self.myFrictionCoefficient
     }
 
     /// C++: `double MSLane::getLength() const` [const]
@@ -2796,7 +2796,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSLane::getLength")
+        self.myLength
     }
 
     /// C++: `SVCPermissions MSLane::getPermissions() const` [const]
@@ -2806,7 +2806,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port MSLane::getPermissions")
+        self.myPermissions
     }
 
     /// C++: `SVCPermissions MSLane::getChangeLeft() const` [const]
@@ -2816,7 +2816,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_change_left(&self) -> SVCPermissions {
-        todo!("port MSLane::getChangeLeft")
+        self.myChangeLeft
     }
 
     /// C++: `SVCPermissions MSLane::getChangeRight() const` [const]
@@ -2826,7 +2826,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_change_right(&self) -> SVCPermissions {
-        todo!("port MSLane::getChangeRight")
+        self.myChangeRight
     }
 
     /// C++: `double MSLane::getWidth() const` [const]
@@ -2836,7 +2836,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port MSLane::getWidth")
+        self.myWidth
     }
 
     /// C++: `int MSLane::getIndex() const` [const]
@@ -2846,7 +2846,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_index(&self) -> i32 {
-        todo!("port MSLane::getIndex")
+        self.myIndex
     }
 
     /// C++: `int MSLane::getCrossingIndex() const` [const]
@@ -2862,7 +2862,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_crossing_index(&self) -> i32 {
-        todo!("port MSLane::getCrossingIndex")
+        for (i, link) in self.myLinks.iter().enumerate() {
+            if link.get_lane().is_crossing() {
+                return i as i32;
+            }
+        }
+        -1
     }
 
     /// C++: `void MSLane::planMovements(const SUMOTime)` [virtual]
@@ -2883,7 +2888,9 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_junction_approaches(&self) {
-        todo!("port MSLane::setJunctionApproaches")
+        for veh in self.myVehicles.iter() {
+            veh.m().set_approaching_for_all_links();
+        }
     }
 
     /// C++: `void MSLane::updateLeaderInfo(const MSVehicle *, VehCont::reverse_iterator &, VehCont::reverse_iterator &, MSLeaderInfo &) const` [const]
