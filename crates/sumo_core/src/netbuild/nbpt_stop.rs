@@ -2,6 +2,14 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ MAX2/MIN2 (utils/common/StdDefs.h): same comparison order as the macros
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
 /// The representation of a single pt stop
 /// C++ class `NBPTStop` (netbuild/NBPTStop.h)
 pub struct NBPTStop {
@@ -22,10 +30,10 @@ pub struct NBPTStop {
     pub myStartPos: f64,
     pub myEndPos: f64,
     /// laneId, lanePos, accessLength
-    pub myAccesses: Vec<Unmapped /* std::tuple<std::string, double, double> */>,
+    pub myAccesses: Vec<(String, f64, f64)>,
     /// list of public transport lines (for displaying)
     pub myLines: Vec<String>,
-    pub myBidiStop: Unmapped /* std::weak_ptr<NBPTStop> */,
+    pub myBidiStop: std::rc::Weak<NBPTStop>,
     /// whether the stop was not part of the road network and must be mapped
     pub myIsLoose: bool,
     /// whether this stop was build from a platform position
@@ -74,7 +82,33 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn new(tag: SumoXMLTag, ptStopId: String, position: Position, edgeId: String, origEdgeId: String, length: f64, name: String, svcPermissions: SVCPermissions, parkingLength: f64, color: RGBColor, givenStartPos: f64) -> Self {
-        todo!("port NBPTStop::NBPTStop")
+                let is_loose = origEdgeId.is_empty();
+        Self {
+            base: Parameterised::new(),
+            myTag: tag,
+            myPTStopId: ptStopId,
+            myPosition: position,
+            myEdgeId: edgeId,
+            myAdditionalEdgeCandidates: BTreeMap::new(),
+            myOrigEdgeId: origEdgeId,
+            myPTStopLength: length,
+            myName: name,
+            myParkingLength: parkingLength,
+            myColor: color,
+            myLaneId: String::new(),
+            myPermissions: svcPermissions,
+            myStartPos: 0.0,
+            myEndPos: 0.0,
+            myAccesses: Vec::new(),
+            myLines: Vec::new(),
+            myBidiStop: std::rc::Weak::new(),
+            myIsLoose: is_loose,
+            myIsPlatform: false,
+            myPlatformCands: Vec::new(),
+            myIsMultipleStopPositions: false,
+            myAreaID: -1,
+            myGivenStartPos: givenStartPos,
+        }
     }
 
     /// C++: `void NBPTStop::~NBPTStop() noexcept` [virtual]
@@ -82,7 +116,7 @@ impl NBPTStop {
     // virtual ~NBPTStop() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBPTStop::~NBPTStop")
+                // C++ virtual destructor with an empty body; nothing to release here.
     }
 
     /// C++: `std::string NBPTStop::getID() const` [const]
@@ -92,7 +126,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> String {
-        todo!("port NBPTStop::getID")
+                self.myPTStopId.clone()
     }
 
     /// C++: `SumoXMLTag NBPTStop::getElement() const` [const]
@@ -101,7 +135,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_element(&self) -> SumoXMLTag {
-        todo!("port NBPTStop::getElement")
+                self.myTag
     }
 
     /// C++: `const std::string & NBPTStop::getEdgeId() const` [const]
@@ -111,7 +145,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(&self) -> &str {
-        todo!("port NBPTStop::getEdgeId")
+                &self.myEdgeId
     }
 
     /// C++: `const std::string & NBPTStop::getLaneId() const` [const]
@@ -120,7 +154,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_id(&self) -> &str {
-        todo!("port NBPTStop::getLaneId")
+                &self.myLaneId
     }
 
     /// C++: `const std::string NBPTStop::getOrigEdgeId() const` [const]
@@ -130,7 +164,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_orig_edge_id(&self) -> String {
-        todo!("port NBPTStop::getOrigEdgeId")
+                self.myOrigEdgeId.clone()
     }
 
     /// C++: `const std::string NBPTStop::getName() const` [const]
@@ -140,7 +174,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> String {
-        todo!("port NBPTStop::getName")
+                self.myName.clone()
     }
 
     /// C++: `const Position & NBPTStop::getPosition() const` [const]
@@ -150,7 +184,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port NBPTStop::getPosition")
+                &self.myPosition
     }
 
     /// C++: `SVCPermissions NBPTStop::getPermissions() const` [const]
@@ -160,7 +194,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port NBPTStop::getPermissions")
+                self.myPermissions
     }
 
     /// C++: `long long NBPTStop::getAreaID() const` [const]
@@ -169,7 +203,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_area_id(&self) -> i64 {
-        todo!("port NBPTStop::getAreaID")
+                self.myAreaID
     }
 
     /// C++: `void NBPTStop::write(OutputDevice &)`
@@ -209,7 +243,48 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn write(&mut self, device: &mut OutputDevice) {
-        todo!("port NBPTStop::write")
+                device.open_tag_id(self.myTag);
+        device.write_attr(SUMO_ATTR_ID, &self.myPTStopId);
+        if !self.myName.is_empty() {
+            device.write_attr(SUMO_ATTR_NAME, &utils::common::string_utils::escape_xml(&self.myName, false));
+        }
+        device.write_attr(SUMO_ATTR_LANE, &self.myLaneId);
+        device.write_attr(SUMO_ATTR_STARTPOS, &self.myStartPos);
+        device.write_attr(SUMO_ATTR_ENDPOS, &self.myEndPos);
+        device.write_attr(SUMO_ATTR_FRIENDLY_POS, "true");
+        if self.myLines.len() > 0 {
+            // toString(std::vector<std::string>) joins with spaces
+            device.write_attr(SUMO_ATTR_LINES, &self.myLines.join(" "));
+        }
+        if self.myParkingLength > 0.0 {
+            device.write_attr(SUMO_ATTR_PARKING_LENGTH, &self.myParkingLength);
+        }
+        if self.myColor.is_valid() {
+            device.write_attr(SUMO_ATTR_COLOR, &self.myColor.to_string());
+        }
+        if !self.myAccesses.is_empty() {
+            self.myAccesses.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+                    .then(a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
+            });
+            for (lane, pos, len) in &self.myAccesses {
+                device.open_tag_id(SUMO_TAG_ACCESS);
+                device.write_attr(SUMO_ATTR_LANE, lane);
+                device.write_attr(SUMO_ATTR_POSITION, pos);
+                device.write_attr(SUMO_ATTR_LENGTH, len);
+                device.write_attr(SUMO_ATTR_FRIENDLY_POS, &true);
+                device.close_tag("");
+            }
+        }
+        // Parameterised::writeParams(device), inlined (not ported as a Rust method yet)
+        for (key, value) in self.base.get_parameters_map() {
+            device.open_tag_id(SUMO_TAG_PARAM);
+            device.write_attr_escaped(SUMO_ATTR_KEY, key, true);
+            device.write_attr_escaped(SUMO_ATTR_VALUE, value, true);
+            device.close_tag("");
+        }
+        device.close_tag("");
     }
 
     /// C++: `void NBPTStop::reshiftPosition(const double, const double)`
@@ -222,7 +297,10 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, offsetX: f64, offsetY: f64) {
-        todo!("port NBPTStop::reshiftPosition")
+                self.myPosition.add_xyz(offsetX, offsetY, 0.0);
+        for platformCand in self.myPlatformCands.iter_mut() {
+            platformCand.reshift_position(offsetX, offsetY);
+        }
     }
 
     /// C++: `const std::vector<NBPTPlatform> & NBPTStop::getPlatformCands()`
@@ -232,7 +310,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_platform_cands(&mut self) -> &Vec<NBPTPlatform> {
-        todo!("port NBPTStop::getPlatformCands")
+                &self.myPlatformCands
     }
 
     /// C++: `bool NBPTStop::getIsMultipleStopPositions() const` [const]
@@ -242,7 +320,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_is_multiple_stop_positions(&self) -> bool {
-        todo!("port NBPTStop::getIsMultipleStopPositions")
+                self.myIsMultipleStopPositions
     }
 
     /// C++: `void NBPTStop::setIsMultipleStopPositions(bool, long long)`
@@ -253,7 +331,8 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn set_is_multiple_stop_positions(&mut self, multipleStopPositions: bool, areaID: i64) {
-        todo!("port NBPTStop::setIsMultipleStopPositions")
+                self.myIsMultipleStopPositions = multipleStopPositions;
+        self.myAreaID = areaID;
     }
 
     /// C++: `double NBPTStop::getLength() const` [const]
@@ -263,7 +342,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port NBPTStop::getLength")
+                self.myPTStopLength
     }
 
     /// C++: `bool NBPTStop::setEdgeId(std::string, const NBEdgeCont &)`
@@ -274,7 +353,8 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn set_edge_id(&mut self, edgeId: String, ec: &NBEdgeCont) -> bool {
-        todo!("port NBPTStop::setEdgeId")
+                self.myEdgeId = edgeId;
+        self.find_lane_and_compute_bus_stop_extent(ec)
     }
 
     /// C++: `void NBPTStop::registerAdditionalEdge(std::string, std::string)`
@@ -284,7 +364,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn register_additional_edge(&mut self, wayId: String, edgeId: String) {
-        todo!("port NBPTStop::registerAdditionalEdge")
+                self.myAdditionalEdgeCandidates.insert(wayId, edgeId);
     }
 
     /// C++: `void NBPTStop::addPlatformCand(NBPTPlatform)`
@@ -294,7 +374,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn add_platform_cand(&mut self, platform: NBPTPlatform) {
-        todo!("port NBPTStop::addPlatformCand")
+                self.myPlatformCands.push(platform);
     }
 
     /// C++: `bool NBPTStop::findLaneAndComputeBusStopExtent(const NBEdgeCont &)`
@@ -305,7 +385,8 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn find_lane_and_compute_bus_stop_extent(&mut self, ec: &NBEdgeCont) -> bool {
-        todo!("port NBPTStop::findLaneAndComputeBusStopExtent")
+                let edge = ec.get_by_id(&self.myEdgeId);
+        self.find_lane_and_compute_bus_stop_extent_2(edge)
     }
 
     /// C++: `bool NBPTStop::findLaneAndComputeBusStopExtent(const NBEdge *)`
@@ -345,7 +426,39 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn find_lane_and_compute_bus_stop_extent_2(&mut self, edge: Ptr<NBEdge>) -> bool {
-        todo!("port NBPTStop::findLaneAndComputeBusStopExtent")
+                if !edge.is_null() {
+            self.myEdgeId = edge.get_id().to_string();
+            // same loop as C++: laneNr ends at the last lane when none matches (kept on purpose)
+            let mut laneNr: i32 = -1;
+            for it in edge.get_lanes() {
+                if (it.permissions & self.get_permissions()) == self.get_permissions() {
+                    laneNr += 1;
+                    break;
+                }
+                laneNr += 1;
+            }
+            if laneNr != -1 {
+                self.myLaneId = edge.get_lane_id(laneNr);
+                let shape = edge.get_lane_shape(laneNr);
+                let mut offset = shape.nearest_offset_to_point2d(self.get_position(), false);
+                let edgeLength = edge.get_final_length();
+                offset *= edgeLength / shape.length2d();
+                if self.was_loaded() {
+                    self.myStartPos = self.myGivenStartPos;
+                    self.myEndPos = self.myStartPos + self.myPTStopLength;
+                } else {
+                    self.myStartPos = max2(0.0, offset - self.myPTStopLength / 2.0);
+                    self.myEndPos = min2(self.myStartPos + self.myPTStopLength, edgeLength);
+                    let missing = self.myPTStopLength - (self.myEndPos - self.myStartPos);
+                    if missing > 0.0 {
+                        self.myStartPos = max2(0.0, self.myStartPos - missing);
+                    }
+                }
+                return true;
+            }
+        }
+        // loose stop: try again later when processing lines
+        self.myEdgeId.is_empty()
     }
 
     /// C++: `void NBPTStop::setPTStopId(std::string)`
@@ -354,7 +467,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn set_pt_stop_id(&mut self, id: String) {
-        todo!("port NBPTStop::setPTStopId")
+                self.myPTStopId = id;
     }
 
     /// C++: `bool NBPTStop::wasLoaded() const` [const]
@@ -363,7 +476,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn was_loaded(&self) -> bool {
-        todo!("port NBPTStop::wasLoaded")
+                self.myGivenStartPos >= 0.0
     }
 
     /// C++: `void NBPTStop::resetLoaded()`
@@ -372,7 +485,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn reset_loaded(&mut self) {
-        todo!("port NBPTStop::resetLoaded")
+                self.myGivenStartPos = -1.0;
     }
 
     /// C++: `void NBPTStop::setIsPlatform()`
@@ -381,7 +494,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn set_is_platform(&mut self) {
-        todo!("port NBPTStop::setIsPlatform")
+                self.myIsPlatform = true;
     }
 
     /// C++: `bool NBPTStop::isPlatform() const` [const]
@@ -390,7 +503,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn is_platform(&self) -> bool {
-        todo!("port NBPTStop::isPlatform")
+                self.myIsPlatform
     }
 
     /// C++: `void NBPTStop::addAccess(std::string, double, double)`
@@ -409,7 +522,10 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn add_access(&mut self, laneID: String, offset: f64, length: f64) {
-        todo!("port NBPTStop::addAccess")
+                let newEdgeID = utils::xml::sumo_xml_definitions::get_edge_id_from_lane(&laneID);
+        // avoid duplicate access
+        self.myAccesses.retain(|it| utils::xml::sumo_xml_definitions::get_edge_id_from_lane(&it.0) != newEdgeID);
+        self.myAccesses.push((laneID, offset, length));
     }
 
     /// C++: `void NBPTStop::clearAccess()`
@@ -420,7 +536,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn clear_access(&mut self) {
-        todo!("port NBPTStop::clearAccess")
+                self.myAccesses.clear();
     }
 
     /// C++: `void NBPTStop::addLine(const std::string &)`
@@ -434,7 +550,10 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn add_line(&mut self, line: &str) {
-        todo!("port NBPTStop::addLine")
+                let l = utils::common::string_utils::escape_xml(line, false);
+        if !self.myLines.contains(&l) {
+            self.myLines.push(l);
+        }
     }
 
     /// C++: `void NBPTStop::setBidiStop(std::shared_ptr<NBPTStop>)`
@@ -443,7 +562,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn set_bidi_stop(&mut self, bidiStop: Rc<NBPTStop>) {
-        todo!("port NBPTStop::setBidiStop")
+                self.myBidiStop = Rc::downgrade(&bidiStop);
     }
 
     /// C++: `std::shared_ptr<NBPTStop> NBPTStop::getBidiStop() const` [const]
@@ -451,8 +570,8 @@ impl NBPTStop {
     //         return myBidiStop.lock();
     //     }
     #[allow(unused_variables)]
-    pub fn get_bidi_stop(&self) -> Rc<NBPTStop> {
-        todo!("port NBPTStop::getBidiStop")
+    pub fn get_bidi_stop(&self) -> Option<Rc<NBPTStop>> {
+                self.myBidiStop.upgrade()
     }
 
     /// C++: `bool NBPTStop::isLoose() const` [const]
@@ -461,7 +580,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn is_loose(&self) -> bool {
-        todo!("port NBPTStop::isLoose")
+                self.myIsLoose
     }
 
     /// C++: `double NBPTStop::getStartPos() const` [const]
@@ -470,7 +589,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
-        todo!("port NBPTStop::getStartPos")
+                self.myStartPos
     }
 
     /// C++: `double NBPTStop::getEndPos() const` [const]
@@ -479,7 +598,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
-        todo!("port NBPTStop::getEndPos")
+                self.myEndPos
     }
 
     /// C++: `const std::vector<std::string> & NBPTStop::getLines() const` [const]
@@ -488,7 +607,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_lines(&self) -> &Vec<String> {
-        todo!("port NBPTStop::getLines")
+                &self.myLines
     }
 
     /// C++: `void NBPTStop::mirrorX()`
@@ -499,7 +618,7 @@ impl NBPTStop {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBPTStop::mirrorX")
+                self.myPosition.mul_xy(1.0, -1.0);
     }
 
     /// C++: `bool NBPTStop::replaceEdge(const std::string &, const std::vector<NBEdge *> &)`
@@ -507,7 +626,29 @@ impl NBPTStop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn replace_edge(&mut self, edgeID: &str, replacement: &Vec<Ptr<NBEdge>>) -> bool {
-        todo!("port NBPTStop::replaceEdge")
+                if self.myEdgeId == edgeID {
+            // find best edge among replacement edges
+            let mut bestDist = f64::MAX;
+            let mut bestEdge: Ptr<NBEdge> = Ptr::null();
+            for cand in replacement {
+                if self.myPermissions == 0 || (cand.get_permissions(-1) & self.myPermissions) != 0 {
+                    let dist = cand.get_geometry().distance2d(&self.myPosition, false) + max2(0.0, self.myPTStopLength - cand.get_loaded_length());
+                    if dist < bestDist {
+                        bestDist = dist;
+                        bestEdge = *cand;
+                    }
+                }
+            }
+            if !bestEdge.is_null() {
+                if (bestEdge.get_permissions(-1) & SVC_PEDESTRIAN) != 0 {
+                    // no need for access
+                    self.clear_access();
+                }
+                return self.find_lane_and_compute_bus_stop_extent_2(bestEdge);
+            }
+            return false;
+        }
+        true
     }
 
     /// C++: `const std::map<std::string, std::string> & NBPTStop::getAdditionalEdgeCandidates() const` [const]
@@ -516,7 +657,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn get_additional_edge_candidates(&self) -> &BTreeMap<String, String> {
-        todo!("port NBPTStop::getAdditionalEdgeCandidates")
+                &self.myAdditionalEdgeCandidates
     }
 
     /// C++: `void NBPTStop::setOrigEdgeId(const std::string &)`
@@ -525,7 +666,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn set_orig_edge_id(&mut self, origEdgeId: &str) {
-        todo!("port NBPTStop::setOrigEdgeId")
+                self.myOrigEdgeId = origEdgeId.to_string();
     }
 
     /// C++: `void NBPTStop::setPTStopLength(double)`
@@ -534,7 +675,7 @@ impl NBPTStop {
     //     }
     #[allow(unused_variables)]
     pub fn set_pt_stop_length(&mut self, ptStopLength: f64) {
-        todo!("port NBPTStop::setPTStopLength")
+                self.myPTStopLength = ptStopLength;
     }
 
     /// C++: `NBPTStop & NBPTStop::operator=(const NBPTStop &)` [private]
@@ -542,7 +683,8 @@ impl NBPTStop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NBPTStop) -> &mut NBPTStop {
-        todo!("port NBPTStop::operator=")
+                // C++ declares the assignment operator private and never defines it, so no caller can use it.
+        panic!("NBPTStop::operator= is private and undefined in C++ (NBPTStop.h)")
     }
 
 }
