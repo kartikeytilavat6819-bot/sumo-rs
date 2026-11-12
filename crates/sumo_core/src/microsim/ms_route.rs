@@ -325,7 +325,37 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dict_save_state(out: &mut OutputDevice) {
-        todo!("port MSRoute::dict_saveState")
+        MY_DICT.with(|d| {
+            let d = d.borrow();
+            for (_id, r) in d.iter() {
+                out.open_tag_id(SUMO_TAG_ROUTE);
+                out.write_attr(SUMO_ATTR_ID, r.get_id());
+                out.write_attr(SUMO_ATTR_STATE, &r.myAmPermanent);
+                let edges: Vec<&str> = r.myEdges.iter().map(|e| e.get_id()).collect();
+                out.write_attr(SUMO_ATTR_EDGES, &edges.join(" "));
+                if !r.myColor.is_null() {
+                    out.write_attr(SUMO_ATTR_COLOR, &(*r.myColor).to_string());
+                }
+                for stop in r.get_stops().iter() {
+                    stop.write(out, true, true);
+                }
+                out.close_tag("");
+            }
+        });
+        MY_DIST_DICT.with(|d| {
+            let d = d.borrow();
+            for (id, item) in d.iter() {
+                let (dist, permanent) = item;
+                if !dist.get_vals().is_empty() {
+                    out.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_ID, id);
+                    out.write_attr(SUMO_ATTR_STATE, permanent);
+                    let routesStr = dist.get_vals().iter().map(|route| route.get_id()).collect::<Vec<_>>().join(" ");
+                    out.write_attr(SUMO_ATTR_ROUTES, &routesStr);
+                    out.write_attr(SUMO_ATTR_PROBS, &utils::common::to_string::to_string(dist.get_probs()));
+                    out.close_tag("");
+                }
+            }
+        });
     }
 
     /// C++: `void MSRoute::dict_clearState()` [static]
@@ -405,7 +435,50 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_between(&self, fromPos: f64, toPos: f64, fromLane: Ptr<MSLane>, toLane: Ptr<MSLane>, routePosition: i32) -> f64 {
-        todo!("port MSRoute::getDistanceBetween")
+        debug_assert!(fromPos >= 0. && fromPos <= fromLane.get_length());
+        debug_assert!(toPos >= 0. && toPos <= toLane.get_length());
+        debug_assert!(routePosition >= 0 && routePosition < self.myEdges.len() as i32);
+        debug_assert!(routePosition == 0 || !self.myEdges.first().unwrap().is_internal());
+        let fromEdge = Ptr::new(fromLane.get_edge());
+        let toEdge = Ptr::new(toLane.get_edge());
+        if fromEdge == toEdge && fromPos <= toPos {
+            return toPos - fromPos;
+        }
+        // TODO If fromEdge and toEdge are identical or both are internal and directly connected,
+        // the code does not check whether they are in any relation to the route.
+        if fromEdge.is_internal() {
+            let mut minDist = f64::MAX;
+            for via in fromEdge.get_via_successors(SVC_IGNORING, false) {
+                let succ = if via.1.is_null() { via.0 } else { via.1 };
+                debug_assert!(!succ.is_null());
+                // std::cout << "  recurse fromSucc=" << succ->getID() << "\n";
+                let d = self.get_distance_between(0., toPos, succ.get_lanes()[0], toLane, routePosition);
+                if d != f64::MAX && fromLane.get_length() - fromPos + d < minDist {
+                    minDist = fromLane.get_length() - fromPos + d;
+                }
+            }
+            return minDist;
+        }
+        if toEdge.is_internal() {
+            let pred = toEdge.get_predecessors()[0];
+            debug_assert!(!pred.is_null());
+            // std::cout << "  recurse toPred=" << pred->getID() << "\n";
+            let d = self.get_distance_between(fromPos, pred.get_length(), fromLane, pred.get_lanes()[0], routePosition);
+            return if d == f64::MAX { d } else { toPos + d };
+        }
+        let fromIt = self.myEdges.iter().skip(routePosition as usize).position(|e| *e == fromEdge);
+        let Some(fromIt) = fromIt else {
+            // start not contained in route
+            return f64::MAX;
+        };
+        let fromIt = fromIt + routePosition as usize;
+        let toIt = self.myEdges.iter().skip(fromIt + 1).position(|e| *e == toEdge);
+        let Some(toIt) = toIt else {
+            // destination not contained in route
+            return f64::MAX;
+        };
+        let toIt = toIt + fromIt + 1;
+        self.get_distance_between_2(fromPos, toPos, &fromIt, &toIt, true)
     }
 
     /// C++: `double MSRoute::getDistanceBetween(double, double, const MSRouteIterator &, const MSRouteIterator &, bool) const` [const]
@@ -445,7 +518,36 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_between_2(&self, fromPos: f64, toPos: f64, fromEdge: &MSRouteIterator, toEdge: &MSRouteIterator, includeInternal: bool) -> f64 {
-        todo!("port MSRoute::getDistanceBetween")
+        let mut isFirstIteration = true;
+        let mut distance = -fromPos;
+        let mut it = *fromEdge;
+        if fromEdge == toEdge {
+            // destination position is on start edge
+            if fromPos <= toPos {
+                return toPos - fromPos;
+            } else {
+                // we cannot go backwards. Something is wrong here
+                return f64::MAX;
+            }
+        } else if *fromEdge > *toEdge {
+            // we don't visit the edge again
+            return f64::MAX;
+        }
+        while it != self.end() {
+            if it == *toEdge && !isFirstIteration {
+                distance += toPos;
+                break;
+            } else {
+                distance += self.myEdges[it].get_length();
+                if includeInternal && it + 1 != self.end() {
+                    // XXX the length may be wrong if there are parallel internal edges for different vClasses
+                    distance += self.myEdges[it].get_internal_following_length_to(self.myEdges[it + 1], SVC_IGNORING);
+                }
+            }
+            isFirstIteration = false;
+            it += 1;
+        }
+        distance
     }
 
     /// C++: `const RGBColor & MSRoute::getColor() const` [const]
