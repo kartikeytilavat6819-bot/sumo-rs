@@ -2583,7 +2583,91 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, lane: Ptr<MSLane>) -> Self {
-        todo!("port PState::PState")
+        // MSPModel_InteractingState(person, stage, lane) inlined: its ctor is still todo!() in msp_model_interacting.rs
+        let mut s = MSPModel_Striping_PState {
+            base: MSPModel_InteractingState {
+                base: MSTransportableStateAdapter {},
+                myPerson: person,
+                myStage: stage,
+                myLane: lane,
+                myEdgePos: if !stage.is_null() { stage.get_depart_pos() } else { 0. },
+                myPosLat: if !stage.is_null() { stage.get_depart_pos_lat() } else { 0. },
+                myDir: MSPMODEL_UNDEFINED_DIRECTION,
+                mySpeed: 0.,
+                mySpeedLat: 0.,
+                myWaitingToEnter: !person.is_null(),
+                myWaitingTime: 0,
+                myTotalWaitingTime: 0,
+                myAmJammed: false,
+                myRemoteXYPos: Position::INVALID,
+                myAngle: f64::MAX,
+            },
+            myNLI: MSPModel_Striping_NextLaneInfo::new_2(),
+            myWalkingAreaPath: Ptr::null(),
+        };
+        let currentEdge = Ptr::from_mut(lane.get_edge());
+        let route = stage.get_route();
+        debug_assert!(!route.is_empty());
+        s.myDir = MSPMODEL_FORWARD;
+        if route.len() == 1 {
+            // only a single edge, move towards end pos
+            s.myDir = if s.myEdgePos <= stage.get_arrival_pos() { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+        } else if route[0].get_function() != SumoXMLEdgeFunc::NORMAL {
+            // start on an intersection
+            if route[0].is_walking_area() {
+                s.myWalkingAreaPath = MSPModel_Striping::get_arbitrary_path(route[0]);
+            }
+        } else {
+            let mut passedFwd = 0;
+            let mut passedBwd = 0;
+            let mayStartForward = MSPModel::can_traverse(MSPMODEL_FORWARD, route, &mut passedFwd) != MSPMODEL_UNDEFINED_DIRECTION;
+            let mayStartBackward = MSPModel::can_traverse(MSPMODEL_BACKWARD, route, &mut passedBwd) != MSPMODEL_UNDEFINED_DIRECTION;
+            if mayStartForward && mayStartBackward {
+                // figure out the best direction via routing
+                let mut crossingRoute: Vec<Ptr<MSEdge>> = Vec::new();
+                MSNet::get_instance().get_pedestrian_router(0, &MSNet_Prohibitions::new()).compute(currentEdge, *route.last().unwrap(), s.myEdgePos, stage.get_arrival_pos(),
+                    stage.get_max_speed(person.cast::<MSTransportable>()), 0, Ptr::null(), person.get_v_type_parameter(), &mut crossingRoute, true);
+                if crossingRoute.len() > 1 {
+                    // route found
+                    let nextEdge = crossingRoute[1];
+                    if nextEdge.get_from_junction() == currentEdge.get_from_junction() || nextEdge.get_to_junction() == currentEdge.get_from_junction() {
+                        s.myDir = MSPMODEL_BACKWARD;
+                    }
+                }
+            } else if !mayStartForward && !mayStartBackward {
+                let lastDisconnect = (if passedFwd >= passedBwd { passedFwd } else { passedBwd }) as usize;
+                let mut dLoc = String::new();
+                if route.len() > 2 {
+                    dLoc = utils::tlf!(" between edge '%' and edge '%'", route[lastDisconnect - 1].get_id(), route[lastDisconnect].get_id());
+                }
+                utils::write_warningf!("Person '%' walking from edge '%' to edge '%' has a disconnect%, time=%.", person.get_id(), route[0].get_id(),
+                    route[route.len() - 1].get_id(), dLoc.as_str(), MSNet::get_instance().get_current_time_step());
+                s.myDir = if passedFwd >= passedBwd { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+            } else {
+                s.myDir = if !mayStartBackward { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+            }
+        }
+        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        if s.myPosLat == UNSPECIFIED_POS_LAT || my_legacy_pos_lat() {
+            if s.myPosLat == UNSPECIFIED_POS_LAT {
+                s.myPosLat = 0.;
+            }
+            if lane.get_vehicle_number_with_partials() > 0 && s.myPosLat == 0. {
+                // better start next to the road if nothing was specified
+                s.myPosLat -= stripe_width();
+            }
+            if s.myDir == MSPMODEL_FORWARD || lane.get_permissions() != SVC_PEDESTRIAN {
+                // start at the right side of the sidewalk on shared roads
+                s.myPosLat = stripe_width() * (MSPModel_Striping::num_stripes(lane) - 1) as f64 - s.myPosLat;
+            }
+        } else if s.myPosLat == RANDOM_POS_LAT {
+            s.myPosLat = utils::common::rand_helper::rand() * stripe_width() * (MSPModel_Striping::num_stripes(lane) - 1) as f64;
+        } else {
+            // vehicle to striping coordinate system
+            s.myPosLat = MSPModel_Striping::pos_lat_conversion(s.myPosLat, lane.get_width());
+        }
+        s.myNLI = MSPModel_Striping::get_next_lane(&s, lane, Ptr::null());
+        s
     }
 
     /// C++: `void PState::PState(MSPerson *, MSStageMoving *, std::istringstream *)`
@@ -2657,7 +2741,9 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn new_2(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
-        todo!("port PState::PState")
+        // shortcut: std::istringstream is Unmapped (= ()), so the saved PState fields cannot be parsed yet; fail loudly instead of loading a wrong state, upgrade when istringstream is mapped
+        let _ = (person, stage, in_);
+        panic!("PState loading from a stream is not supported yet (istringstream unmapped)");
     }
 
     /// C++: `void PState::~PState() noexcept` [virtual]
