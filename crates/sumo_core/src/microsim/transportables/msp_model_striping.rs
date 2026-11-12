@@ -3408,7 +3408,96 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn move_to_next_lane(&mut self, currentTime: SUMOTime) -> bool {
-        todo!("port PState::moveToNextLane")
+        let mut dist = self.dist_to_lane_end();
+        let person = self.myPerson.cast::<MSTransportable>();
+        if dist <= 0. {
+            let oldDir = self.myDir;
+            let oldLane = self.myLane;
+            self.myLane = self.myNLI.lane;
+            self.myDir = self.myNLI.dir;
+            let normalLane = self.myLane.is_null()
+                || self.myLane.get_edge().get_function() == SumoXMLEdgeFunc::NORMAL
+                || Ptr::from_mut(self.myLane.get_edge()) == self.myStage.get_next_route_edge();
+            if self.myLane.is_null() {
+                self.myEdgePos = self.myStage.get_arrival_pos();
+            }
+            // moveToNextEdge might destroy the person and thus mess up the heap. Better check first
+            if self.myStage.get_route_step() == self.myStage.get_route().len() - 1 {
+                self.myLane = Ptr::null();
+            } else {
+                let nextInternal = if normalLane { Ptr::null() } else { Ptr::from_mut(self.myLane.get_edge()) };
+                let arrived = self.myStage.m().move_to_next_edge(person, currentTime, oldDir, nextInternal, false);
+                debug_assert!(!arrived);
+                debug_assert!(self.myDir != MSPMODEL_UNDEFINED_DIRECTION);
+                let nli = MSPModel_Striping::get_next_lane(&*self, self.myLane, oldLane);
+                self.myNLI = nli;
+                debug_assert!(self.myNLI.lane != oldLane); // do not turn around
+                if self.myLane.is_walking_area() {
+                    if self.myNLI.dir != MSPMODEL_UNDEFINED_DIRECTION {
+                        self.myWalkingAreaPath = MSPModel_Striping::get_walking_area_path(Ptr::from_mut(self.myLane.get_edge()), oldLane, self.myNLI.lane);
+                        debug_assert!(self.myWalkingAreaPath.shape.len() >= 2);
+                    } else if !self.myNLI.link.is_null() {
+                        // using direct connection (instead of using walkingarea)
+                        self.myLane = self.myNLI.lane;
+                        debug_assert!(!self.myLane.is_walking_area());
+                        let nextInternal = Ptr::from_mut(self.myLane.get_edge());
+                        self.myStage.m().move_to_next_edge(person, currentTime, self.myDir, nextInternal, false);
+                        self.myWalkingAreaPath = Ptr::null();
+                        let nli = MSPModel_Striping::get_next_lane(&*self, self.myLane, oldLane);
+                        self.myNLI = nli;
+                    } else {
+                        // disconnected route. move to the next edge
+                        if utils::options::options_cont::get_bool("ignore-route-errors") {
+                            // try to determine direction from topology, otherwise maintain current direction
+                            let currRouteEdge = self.myStage.get_route()[self.myStage.get_route_step()];
+                            let nextRouteEdge = self.myStage.get_next_route_edge();
+                            if nextRouteEdge.get_to_junction() == currRouteEdge.get_from_junction() || nextRouteEdge.get_to_junction() == currRouteEdge.get_to_junction() {
+                                self.myDir = MSPMODEL_BACKWARD;
+                            } else if nextRouteEdge.get_from_junction() == currRouteEdge.get_from_junction() || nextRouteEdge.get_from_junction() == currRouteEdge.get_to_junction() {
+                                self.myDir = MSPMODEL_FORWARD;
+                            }
+                            self.myStage.m().move_to_next_edge(person, currentTime, oldDir, Ptr::null(), false);
+                            self.myLane = self.myNLI.lane;
+                            debug_assert!(!self.myLane.is_null());
+                            debug_assert!(self.myLane.get_edge().get_function() == SumoXMLEdgeFunc::NORMAL);
+                            let nli = MSPModel_Striping::get_next_lane(&*self, self.myLane, oldLane);
+                            self.myNLI = nli;
+                            self.myWalkingAreaPath = Ptr::null();
+                        } else {
+                            panic!("{}", utils::tlf!("Disconnected walk for person '%'.", self.myPerson.get_id()));
+                        }
+                    }
+                } else {
+                    self.myWalkingAreaPath = Ptr::null();
+                }
+                // adapt x to fit onto the new lane
+                // (make sure we do not move past the end of the new lane since that
+                // lane was not checked for obstacles)
+                let newLength = if self.myWalkingAreaPath.is_null() { self.myLane.get_length() } else { self.myWalkingAreaPath.length };
+                if -dist > newLength {
+                    // should not happen because the end of myLane should have been an obstacle as well
+                    // (only when the route is broken)
+                    dist = -newLength;
+                }
+                if self.myDir == MSPMODEL_BACKWARD {
+                    self.myEdgePos = newLength + dist;
+                } else {
+                    self.myEdgePos = -dist;
+                }
+                // adjust to change in direction
+                if self.myDir != oldDir {
+                    self.myPosLat = (MSPModel_Striping::num_stripes(oldLane) - 1) as f64 * stripe_width() - self.myPosLat;
+                }
+                // adjust to differences in sidewalk width
+                let offset = MSPModel_Striping::get_stripe_offset(MSPModel_Striping::num_stripes(oldLane), MSPModel_Striping::num_stripes(self.myLane),
+                    oldDir != self.myDir && MSPModel_Striping::num_stripes(self.myLane) < MSPModel_Striping::num_stripes(oldLane));
+                self.myPosLat += offset as f64 * stripe_width();
+            }
+            self.myAngle = f64::MAX; // see #9014
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void PState::walk(const Obstacles &)`
@@ -3672,7 +3761,219 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn walk(&mut self, obs: &MSPModel_Striping_Obstacles) {
-        todo!("port PState::walk")
+        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        let stripes = obs.len() as i32;
+        let sMax = stripes - 1;
+        debug_assert!(stripes == MSPModel_Striping::num_stripes(self.myLane));
+        // account stage-specific max speed but also for normal lane speed limit
+        // (speed limits on crossings and walkingareas ignored due to #11527)
+        let vMax = if self.myStage.get_configured_speed() >= 0. {
+            self.myStage.get_configured_speed()
+        } else if use_net_speeds() || self.myLane.is_normal() || self.myLane.is_internal() {
+            self.myLane.get_vehicle_max_speed(self.myPerson.cast::<SUMOTrafficObject>())
+        } else {
+            self.myStage.get_max_speed(self.myPerson.cast::<MSTransportable>())
+        };
+        // ultimate goal is to choose the preferred stripe (chosen)
+        let current = self.stripe();
+        let other = self.other_stripe();
+        // compute distances
+        let mut distance: Vec<f64> = Vec::with_capacity(stripes as usize);
+        for i in 0..stripes as usize {
+            distance.push(self.distance_to(&obs[i], obs[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED));
+        }
+        // compute utility for all stripes
+        let mut utility: Vec<f64> = vec![0.; stripes as usize];
+        // forbid stripes which are blocked and also all stripes behind them
+        for i in 0..stripes {
+            let iu = i as usize;
+            if distance[iu] == DIST_OVERLAP {
+                if i == current && (!self.is_waiting_to_enter() || self.stripe() != Self::stripe_2(self.myPosLat)) {
+                    utility[iu] += OBSTRUCTED_PENALTY;
+                }
+                if i < current {
+                    for j in 0..=i {
+                        utility[j as usize] += OBSTRUCTED_PENALTY;
+                    }
+                }
+                if i > current {
+                    for j in i..stripes {
+                        utility[j as usize] += OBSTRUCTED_PENALTY;
+                    }
+                }
+            }
+        }
+        // forbid a portion of the leftmost stripes (in walking direction).
+        // lanes with stripes less than 1 / RESERVE_FOR_ONCOMING_FACTOR
+        // may still deadlock in heavy pedestrian traffic
+        let onJunction = self.myLane.is_walking_area() || self.myLane.is_crossing();
+        let reserved = MSPModel_Striping::get_reserved(stripes, if onJunction { reserve_for_oncoming_factor_junctions() } else { reserve_for_oncoming_factor() });
+        if self.myDir == MSPMODEL_FORWARD {
+            for i in 0..reserved {
+                utility[i as usize] += INAPPROPRIATE_PENALTY * (if i == current { 0.5 } else { 1. });
+            }
+        } else {
+            let mut i = sMax;
+            while i > sMax - reserved {
+                utility[i as usize] += INAPPROPRIATE_PENALTY * (if i == current { 0.5 } else { 1. });
+                i -= 1;
+            }
+        }
+        // adapt utility based on obstacles
+        for i in 0..stripes {
+            let iu = i as usize;
+            if obs[iu].speed * self.myDir as f64 < 0. {
+                // penalize evasion to the left unless the obstacle is a vehicle
+                if (self.myDir == MSPMODEL_FORWARD || obs[iu].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE) && i > 0 {
+                    utility[iu - 1] -= 0.5;
+                } else if self.myDir == MSPMODEL_BACKWARD && i < sMax {
+                    utility[iu + 1] -= 0.5;
+                }
+            }
+            // compute expected distance achievable by staying on this stripe for a time horizon
+            let walkDist = f64::max(0., distance[iu]); // disregard special distance flags
+            let lookAhead = if obs[iu].speed * self.myDir as f64 >= 0. { LOOKAHEAD_SAMEDIR } else { LOOKAHEAD_ONCOMING };
+            let expectedDist = f64::min(vMax * LOOKAHEAD_SAMEDIR, walkDist + obs[iu].speed * self.myDir as f64 * lookAhead);
+            if expectedDist >= 0. {
+                utility[iu] += expectedDist;
+            } else {
+                // let only the distance count
+                utility[iu] += ONCOMING_CONFLICT_PENALTY + distance[iu];
+            }
+        }
+        // discourage use of the leftmost stripe (in walking direction) if there are oncoming
+        if self.myDir == MSPMODEL_FORWARD && obs[0].speed < 0. {
+            utility[0] += ONCOMING_CONFLICT_PENALTY;
+        } else if self.myDir == MSPMODEL_BACKWARD && obs[sMax as usize].speed > 0. {
+            utility[sMax as usize] += ONCOMING_CONFLICT_PENALTY;
+        }
+        // penalize lateral movement (if the current stripe permits walking)
+        if distance[current as usize] > 0. && self.myWaitingTime == 0 {
+            for i in 0..stripes {
+                utility[i as usize] += (i - current).abs() as f64 * LATERAL_PENALTY;
+            }
+        }
+        // walk on the right side on shared space
+        if self.myLane.get_permissions() != SVC_PEDESTRIAN && self.myDir == MSPMODEL_BACKWARD {
+            for i in 0..stripes {
+                if i <= current {
+                    utility[i as usize] += (sMax - i + 1) as f64 * LATERAL_PENALTY;
+                }
+            }
+        }
+        // select best stripe
+        let mut chosen = current;
+        for i in 0..stripes {
+            if utility[i as usize] > utility[chosen as usize] && utility[i as usize] >= INAPPROPRIATE_PENALTY * 0.5 {
+                chosen = i;
+            }
+        }
+        // compute speed components along both axes
+        let next = if chosen == current {
+            current
+        } else if chosen < current {
+            current - 1
+        } else {
+            current + 1
+        };
+        let mut xDist = f64::min(f64::min(distance[current as usize], distance[other as usize]), distance[next as usize]);
+        if next != chosen {
+            // ensure that we do not collide with an obstacle in the stripe beyond
+            // next as this might become the 'other' stripe in the next step
+            let nextOther = if chosen < current { current - 2 } else { current + 2 };
+            xDist = f64::min(xDist, distance[nextOther as usize]);
+        }
+        // XXX preferred gap differs between approaching a standing obstacle or a moving obstacle
+        let preferredGap = utils::geom::NUMERICAL_EPS;
+        let mut xSpeed = f64::min(vMax, f64::max(0., utils::common::time::dist2speed(xDist - preferredGap)));
+        if xSpeed < utils::geom::NUMERICAL_EPS {
+            xSpeed = 0.;
+        }
+        // avoid tiny steps
+        // XXX pressure from behind?
+        if self.mySpeed == 0. && xDist < MIN_STARTUP_DIST
+            // unless walking towards a short lane
+            && !((xDist == distance[current as usize] && obs[current as usize].type_ >= MSPModel_Striping_ObstacleType::OBSTACLE_END)
+                || (xDist == distance[other as usize] && obs[other as usize].type_ >= MSPModel_Striping_ObstacleType::OBSTACLE_END)
+                || (xDist == distance[next as usize] && obs[next as usize].type_ >= MSPModel_Striping_ObstacleType::OBSTACLE_END))
+        {
+            xSpeed = 0.;
+        }
+        if xSpeed == 0. {
+            let sharedWA = MY_WALKING_AREA_FOES.with(|m| m.borrow().contains_key(&Ptr::from_mut(self.myLane.get_edge())));
+            let jamTimeHere = if self.myLane.is_crossing()
+                // treat shared walkingarea like a crossing to avoid deadlocking vehicles
+                || (self.myLane.is_walking_area()
+                    && !obs[current as usize].vehicle.is_null()
+                    && obs[current as usize].vehicle.cast::<MSVehicle>().get_waiting_time(false) > jam_time_crossing()
+                    && sharedWA)
+            {
+                jam_time_crossing()
+            } else {
+                jam_time()
+            };
+            if self.myWaitingTime > jamTimeHere
+                || (sMax == 0 && obs[0].speed * self.myDir as f64 < 0. && self.myWaitingTime > jam_time_narrow())
+                || self.myAmJammed
+            {
+                // squeeze slowly through the crowd ignoring others
+                if !self.myAmJammed {
+                    MSNet::get_instance().m().get_person_control().register_jammed();
+                    utils::write_warningf!("Person '%' is jammed on edge '%', time=%.", self.myPerson.get_id(), self.myStage.get_edge().get_id(),
+                        utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+                    self.myAmJammed = true;
+                }
+                xSpeed = vMax * jam_factor();
+            }
+        } else if self.myAmJammed && Self::stripe_2(self.myPosLat) >= 0 && Self::stripe_2(self.myPosLat) <= sMax && xDist >= MIN_STARTUP_DIST {
+            self.myAmJammed = false;
+        }
+        // dawdling
+        let dawdle = f64::min(xSpeed, utils::common::rand_helper::rand() * vMax * dawdling());
+        xSpeed -= dawdle;
+        // XXX ensure that diagonal speed <= vMax
+        let maxYSpeed = f64::min(f64::max(vMax * LATERAL_SPEED_FACTOR, vMax - xSpeed), stripe_width());
+        let mut ySpeed = 0.;
+        let mut yDist = 0.;
+        if utility[next as usize] > OBSTRUCTION_THRESHOLD && utility[chosen as usize] > OBSTRUCTION_THRESHOLD {
+            // don't move laterally if the stripes are blocked
+            yDist = (chosen as f64 * stripe_width()) - self.myPosLat;
+            if yDist.abs() > utils::geom::NUMERICAL_EPS {
+                ySpeed = if yDist > 0. {
+                    f64::min(maxYSpeed, utils::common::time::dist2speed(yDist))
+                } else {
+                    f64::max(-maxYSpeed, utils::common::time::dist2speed(yDist))
+                };
+            }
+        } else if utility[next as usize] <= OBSTRUCTION_THRESHOLD
+            && obs[next as usize].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE
+            // still on the road
+            && self.stripe() == Self::stripe_2(self.myPosLat)
+            // only when the vehicle is moving on the same lane
+            && !(self.myLane.is_crossing() || self.myLane.is_walking_area())
+        {
+            // step aside to let the vehicle pass
+            let mut stepAsideDir = self.myDir;
+            if self.myLane.get_edge().get_lanes().len() > 1 || current > sMax / 2 {
+                // always step to the right on multi-lane edges or when closer to
+                // the right side
+                stepAsideDir = MSPMODEL_FORWARD;
+            }
+            self.myAmJammed = true; // ignore pedestrian-pedestrian collisions
+            ySpeed = stepAsideDir as f64 * vMax;
+        }
+        self.myEdgePos += utils::common::time::speed2dist(xSpeed * self.myDir as f64);
+        self.myPosLat += utils::common::time::speed2dist(ySpeed);
+        self.mySpeedLat = ySpeed;
+        self.mySpeed = xSpeed;
+        if xSpeed >= utils::common::std_defs::SUMO_CONST_HALTING_SPEED {
+            self.myWaitingToEnter = false;
+            self.myWaitingTime = 0;
+        } else {
+            self.myWaitingTime += utils::common::time::delta_t();
+            self.myTotalWaitingTime += utils::common::time::delta_t();
+        }
+        self.myAngle = f64::MAX; // set on first access or via remote control
     }
 
     /// C++: `double PState::getImpatience() const` [const]
@@ -3985,7 +4286,9 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        todo!("port PState::saveState")
+        // shortcut: std::ostringstream is Unmapped (= ()), so the state line (lane, edgePos, posLat, dir, speeds, walkingAreaPath, nextLaneInfo) cannot be written yet; fail loudly instead of silently saving nothing, upgrade when ostringstream is mapped
+        let _ = out;
+        panic!("PState::saveState is not supported yet (ostringstream unmapped)");
     }
 
     /// C++: `const MSLane * PState::getNextCrossing() const` [const, virtual]
@@ -4108,7 +4411,9 @@ impl MSPModel_Striping_PState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSPModel_Striping_PState) -> &mut MSPModel_Striping_PState {
-        todo!("port PState::operator=")
+        // C++ declares this private and never defines it (never used); behaves like the implicit copy
+        *self = copy_pstate(arg0);
+        self
     }
 
 }
