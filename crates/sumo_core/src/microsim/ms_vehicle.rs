@@ -8721,7 +8721,63 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_further_lanes(&mut self, furtherLanes: &mut Vec<Ptr<MSLane>>, furtherLanesPosLat: &mut Vec<f64>, passedLanes: &Vec<Ptr<MSLane>>) -> f64 {
-        todo!("port MSVehicle::updateFurtherLanes")
+        use utils::common::sumo_vehicle_class::{is_railway, SVC_RAIL_CLASSES};
+        let this = Ptr::from_mut(self);
+        for further in furtherLanes.iter() {
+            further.m().reset_partial_occupation(this);
+            if !further.get_bidi_lane().is_null() && (!is_railway(self.get_v_class()) || (further.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                further.get_bidi_lane().m().reset_partial_occupation(this);
+            }
+        }
+
+        let mut newFurther: Vec<Ptr<MSLane>> = Vec::new();
+        let mut newFurtherPosLat: Vec<f64> = Vec::new();
+        let mut backPosOnPreviousLane = self.myState.myPos - self.get_length();
+        let widthShift = self.myFurtherLanesPosLat.len() > self.myFurtherLanes.len();
+        if passedLanes.len() > 1 {
+            // There are candidates for further lanes. (passedLanes[-1] is the current lane, or current shadow lane in context of updateShadowLanes())
+            let mut fi: usize = 0;
+            let mut fpi: usize = 0;
+            for pi in (0..passedLanes.len() - 1).rev() {
+                if !(backPosOnPreviousLane < 0.) {
+                    break;
+                }
+                // As long as vehicle back reaches into passed lane, add it to the further lanes
+                let further = passedLanes[pi];
+                newFurther.push(further);
+                backPosOnPreviousLane += further.m().set_partial_occupation(this);
+                if !further.get_bidi_lane().is_null() && (!is_railway(self.get_v_class()) || (further.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                    further.get_bidi_lane().m().set_partial_occupation(this);
+                }
+                if fi < furtherLanes.len() && further == furtherLanes[fi] {
+                    // Lateral position on this lane is already known. Assume constant and use old value.
+                    newFurtherPosLat.push(furtherLanesPosLat[fpi]);
+                    fi += 1;
+                    fpi += 1;
+                } else {
+                    // The lane *pi was not in furtherLanes before.
+                    // If it is downstream, we assume as lateral position the current position
+                    // If it is a new lane upstream (can appear as shadow further in case of LC-maneuvering, e.g.)
+                    // we assign the last known lateral position.
+                    if newFurtherPosLat.len() == 0 {
+                        if widthShift {
+                            newFurtherPosLat.push(*self.myFurtherLanesPosLat.last().unwrap());
+                        } else {
+                            newFurtherPosLat.push(self.myState.myPosLat);
+                        }
+                    } else {
+                        let last = *newFurtherPosLat.last().unwrap();
+                        newFurtherPosLat.push(last);
+                    }
+                }
+            }
+            *furtherLanes = newFurther;
+            *furtherLanesPosLat = newFurtherPosLat;
+        } else {
+            furtherLanes.clear();
+            furtherLanesPosLat.clear();
+        }
+        backPosOnPreviousLane
     }
 
     /// C++: `PositionVector MSVehicle::getBoundingBox(double) const` [const, virtual]
@@ -8765,7 +8821,34 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_box(&self, offset: f64) -> PositionVector {
-        todo!("port MSVehicle::getBoundingBox")
+        use utils::common::sumo_vehicle_class::SUMOVehicleShape;
+        let mut centerLine = PositionVector::new();
+        let pos = self.get_position(0.);
+        centerLine.push(pos);
+        match self.get_vehicle_type().get_gui_shape() {
+            SUMOVehicleShape::BusFlexible | SUMOVehicleShape::Rail | SUMOVehicleShape::RailCar | SUMOVehicleShape::RailCargo | SUMOVehicleShape::TruckSemitrailer | SUMOVehicleShape::Truck1Trailer => {
+                for lane in self.myFurtherLanes.iter() {
+                    centerLine.push(*lane.get_shape().back());
+                }
+            }
+            _ => {}
+        }
+        let l = self.get_length();
+        let mut backPos = self.get_back_position();
+        if pos.distance_to2d(&backPos) > l + utils::geom::NUMERICAL_EPS {
+            // getBackPosition may not match the visual back in networks without internal lanes
+            let a = self.get_angle() + std::f64::consts::PI; // angle pointing backwards
+            backPos = pos + Position::new(l * a.cos(), l * a.sin());
+        }
+        centerLine.push(backPos);
+        if offset != 0. {
+            centerLine.extrapolate2d(offset, false);
+        }
+        let mut result = centerLine.clone();
+        result.move2side(max2(0.0, 0.5 * self.get_vehicle_type().get_width() + offset), 100.);
+        centerLine.move2side(min2(0.0, -0.5 * self.get_vehicle_type().get_width() - offset), 100.);
+        result.append(&centerLine.reverse(), utils::geom::POSITION_EPS);
+        result
     }
 
     /// C++: `PositionVector MSVehicle::getBoundingPoly(double) const` [const]
@@ -8809,7 +8892,37 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_poly(&self, offset: f64) -> PositionVector {
-        todo!("port MSVehicle::getBoundingPoly")
+        use utils::common::sumo_vehicle_class::SUMOVehicleShape;
+        match self.get_vehicle_type().get_gui_shape() {
+            SUMOVehicleShape::Passenger | SUMOVehicleShape::PassengerSedan | SUMOVehicleShape::PassengerHatchback | SUMOVehicleShape::PassengerWagon | SUMOVehicleShape::PassengerVan => {
+                // box with corners cut off
+                let mut result = PositionVector::new();
+                let mut centerLine = PositionVector::new();
+                centerLine.push(self.get_position(0.));
+                centerLine.push(self.get_back_position());
+                if offset != 0. {
+                    centerLine.extrapolate2d(offset, false);
+                }
+                let mut line1 = centerLine.clone();
+                let mut line2 = centerLine.clone();
+                let w = self.get_vehicle_type().get_width();
+                line1.move2side(max2(0.0, 0.3 * w + offset), 100.);
+                line2.move2side(max2(0.0, 0.5 * w + offset), 100.);
+                line2.scale_relative(0.8);
+                result.push(line1[0]);
+                result.push(line2[0]);
+                result.push(line2[1]);
+                result.push(line1[1]);
+                line1.move2side(min2(0.0, -0.6 * w - offset), 100.);
+                line2.move2side(min2(0.0, -1.0 * w - offset), 100.);
+                result.push(line1[1]);
+                result.push(line2[1]);
+                result.push(line2[0]);
+                result.push(line1[0]);
+                result
+            }
+            _ => self.get_bounding_box(0.),
+        }
     }
 
     /// C++: `bool MSVehicle::setExitManoeuvre()`
@@ -9113,7 +9226,102 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_leader(&self, link: Ptr<MSLink>, veh: Ptr<MSVehicle>, gap: f64) -> bool {
-        todo!("port MSVehicle::isLeader")
+        if veh.is_null() {
+            return false;
+        }
+        if !self.myLane.is_internal() || self.myLane.get_edge().get_to_junction() != link.get_junction() {
+            // if this vehicle is not yet on the junction, every vehicle is a leader
+            return true;
+        }
+        if veh.m().get_lane_change_model().has_blue_light() {
+            // blue light device automatically gets right of way
+            return true;
+        }
+        let foeLane = veh.get_lane();
+        if foeLane.is_internal() {
+            if foeLane.get_edge().get_from_junction() == link.get_junction() {
+                let mut egoET = self.myJunctionConflictEntryTime;
+                let mut foeET = veh.myJunctionEntryTime;
+                // check relationship between link and foeLane
+                if foeLane.get_normal_predecessor_lane() == link.get_internal_lane_before().get_normal_predecessor_lane() {
+                    // we are entering the junction from the same lane
+                    egoET = self.myJunctionEntryTimeNeverYield;
+                    foeET = veh.myJunctionEntryTimeNeverYield;
+                    if link.is_exit_link_after_internal_junction() && link.get_internal_lane_before().get_logical_predecessor_lane().get_entry_link().is_indirect() {
+                        egoET = self.myJunctionConflictEntryTime;
+                    }
+                } else {
+                    let foeLink = foeLane.get_incoming_lanes()[0].viaLink;
+                    let logic = link.get_junction().get_logic();
+                    // determine who has right of way
+                    let mut response: bool;
+                    let mut response2: bool;
+                    // attempt 1: tlLinkState
+                    let entry = link.get_corresponding_entry_link();
+                    let foeEntry = foeLink.get_corresponding_entry_link();
+                    if entry.have_red() || foeEntry.have_red() {
+                        // ensure that vehicles which are stuck on the intersection may exit
+                        if !foeEntry.have_red() && veh.get_speed() > SUMO_const_haltingSpeed && gap < 0. {
+                            // foe might be oncoming, don't drive unless foe can still brake safely
+                            let foeNextSpeed = veh.get_speed() + accel2speed(veh.get_car_follow_model().get_max_accel());
+                            let foeBrakeGap = veh.get_car_follow_model().brake_gap_2(foeNextSpeed, veh.get_car_follow_model().get_max_decel(), veh.get_car_follow_model().get_headway_time());
+                            // the minGap was subtracted from gap in MSLink::getLeaderInfo (enlarging the negative gap)
+                            // so the -2* makes it point in the right direction
+                            let foeGap = -gap - veh.get_length() - 2. * self.get_vehicle_type().get_min_gap();
+                            if foeGap < foeBrakeGap {
+                                response = true;
+                                response2 = false;
+                            } else {
+                                response = false;
+                                response2 = true;
+                            }
+                        } else {
+                            // let conflict entry time decide
+                            response = true;
+                            response2 = true;
+                        }
+                    } else if entry.have_priority() != foeEntry.have_priority() {
+                        response = !entry.have_priority();
+                        response2 = !foeEntry.have_priority();
+                    } else if entry.have_yellow() && foeEntry.have_yellow() {
+                        // let the faster vehicle keep moving
+                        response = veh.get_speed() >= self.get_speed();
+                        response2 = self.get_speed() >= veh.get_speed();
+                    } else {
+                        // fallback if pedestrian crossings are involved
+                        response = logic.get_response_for(link.get_index()).test(foeLink.get_index() as usize);
+                        response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index() as usize);
+                    }
+                    if !response {
+                        // if we have right of way over the foe, entryTime does not matter
+                        foeET = veh.myJunctionConflictEntryTime;
+                        egoET = self.myJunctionEntryTime;
+                    } else if response && response2 {
+                        // in a mutual conflict scenario, use entry time to avoid deadlock
+                        foeET = veh.myJunctionConflictEntryTime;
+                        egoET = self.myJunctionConflictEntryTime;
+                    }
+                }
+                if egoET == foeET {
+                    // try to use speed as tie braker
+                    if self.get_speed() == veh.get_speed() {
+                        // use ID as tie braker
+                        return self.get_id() < veh.get_id();
+                    } else {
+                        return self.get_speed() < veh.get_speed();
+                    }
+                } else {
+                    // leader was on the junction first
+                    return egoET > foeET;
+                }
+            } else {
+                // vehicle can only be partially on the junction. Must be a leader
+                return true;
+            }
+        } else {
+            // vehicle can only be partially on the junction. Must be a leader
+            return true;
+        }
     }
 
     /// C++: `const Position MSVehicle::getBackPosition() const` [const]
