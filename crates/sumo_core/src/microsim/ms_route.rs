@@ -3,7 +3,8 @@
 use crate::prelude::*;
 
 /// C++ typedef `ConstMSEdgeVector::const_iterator MSRouteIterator`
-pub type MSRouteIterator = Unmapped /* ConstMSEdgeVector::const_iterator */;
+/// C++ ConstMSEdgeVector::const_iterator: an index into the route's edge vector (end() == len()).
+pub type MSRouteIterator = usize;
 
 /// C++ typedef `std::map<std::string, ConstMSRoutePtr> MSRoute::RouteDict`
 pub type MSRoute_RouteDict = BTreeMap<String, ConstMSRoutePtr>;

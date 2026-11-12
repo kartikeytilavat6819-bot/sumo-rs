@@ -67,8 +67,7 @@ impl MSStop {
     #[allow(unused_variables)]
     pub fn new(par: &SUMOVehicleParameter_Stop) -> Self {
         MSStop {
-            // shortcut: MSRouteIterator is an Unmapped placeholder (C++ const_iterator), edge is left unset until it is ported
-            edge: (),
+            edge: 0, // C++ leaves the iterator default-constructed until the stop is assigned to the route
             lane: Ptr::null(),
             segment: Ptr::null(),
             busstop: Ptr::null(),

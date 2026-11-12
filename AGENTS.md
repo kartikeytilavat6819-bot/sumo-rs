@@ -86,6 +86,10 @@ All structs whose first field is `pub base:` already carry `#[repr(C)]` (lead sw
 - dynamic_cast's runtime type check is not available: only cast where the C++ logic guarantees the
   type (e.g. after checking a type flag / id prefix); otherwise leave a `// shortcut:` note.
 
+### Route iterators
+
+- `MSRouteIterator` (C++ `ConstMSEdgeVector::const_iterator`) is a `usize` index into the route's edge vector; `end()` is `len()`. Use indices, never a placeholder.
+
 ### MSGlobals
 
 - C++ `MSGlobals::gComputeLC` -> `MSGlobals::compute_lc()` (setter `MSGlobals::set_compute_lc(v)`): every

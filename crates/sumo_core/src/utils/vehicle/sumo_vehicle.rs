@@ -94,7 +94,7 @@ impl SUMOVehicle {
     /// Returns the starting point for reroutes (usually the current edge)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn get_reroute_origin(&self) -> Unmapped /* ConstMSEdgeVector::const_iterator */ {
+    pub fn get_reroute_origin(&self) -> crate::microsim::ms_route::MSRouteIterator {
         todo!("port SUMOVehicle::getRerouteOrigin")
     }
 
@@ -150,7 +150,7 @@ impl SUMOVehicle {
     /// Returns an iterator pointing to the current edge in this vehicles route
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn get_current_route_edge(&self) -> &Unmapped /* ConstMSEdgeVector::const_iterator */ {
+    pub fn get_current_route_edge(&self) -> &crate::microsim::ms_route::MSRouteIterator {
         todo!("port SUMOVehicle::getCurrentRouteEdge")
     }
 
@@ -374,7 +374,7 @@ impl SUMOVehicle {
     /// Adds a stop
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<Unmapped /* ConstMSEdgeVector::const_iterator */>) -> bool {
+    pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<crate::microsim::ms_route::MSRouteIterator>) -> bool {
         todo!("port SUMOVehicle::addStop")
     }
 
