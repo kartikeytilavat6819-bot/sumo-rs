@@ -636,11 +636,11 @@ impl MSPModel_Striping {
                                 let relBack = path.shape.transform_to_vector_coordinates(&veh.get_back_position(), true);
                                 if relFront == Position::INVALID {
                                     utils::write_warningf!("Could not vehicle '%' front position % onto walkingarea '%' path=%, time=%.",
-                                        veh.get_id(), veh.get_position(0.), lane.get_id(), path.shape, utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+                                        veh.get_id(), veh.get_position(0.), lane.get_id(), path.shape.to_string(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
                                 }
                                 if relBack == Position::INVALID {
                                     utils::write_warningf!("Could not vehicle '%' back position % onto walkingarea '%' path=%, time=%.",
-                                        veh.get_id(), veh.get_back_position(), lane.get_id(), path.shape, utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+                                        veh.get_id(), veh.get_back_position(), lane.get_id(), path.shape.to_string(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
                                 }
                                 let mut relCenter = PositionVector::new();
                                 relCenter.push(relFront);
@@ -3822,7 +3822,7 @@ impl MSPModel_Striping_PState {
         // adapt utility based on obstacles
         for i in 0..stripes {
             let iu = i as usize;
-            if obs[iu].speed * self.myDir as f64 < 0. {
+            if obs[iu].speed * (self.myDir as f64) < 0. {
                 // penalize evasion to the left unless the obstacle is a vehicle
                 if (self.myDir == MSPMODEL_FORWARD || obs[iu].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE) && i > 0 {
                     utility[iu - 1] -= 0.5;
@@ -3913,7 +3913,7 @@ impl MSPModel_Striping_PState {
                 jam_time()
             };
             if self.myWaitingTime > jamTimeHere
-                || (sMax == 0 && obs[0].speed * self.myDir as f64 < 0. && self.myWaitingTime > jam_time_narrow())
+                || (sMax == 0 && obs[0].speed * (self.myDir as f64) < 0. && self.myWaitingTime > jam_time_narrow())
                 || self.myAmJammed
             {
                 // squeeze slowly through the crowd ignoring others
@@ -4312,7 +4312,7 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
-        Self::pos_lat_conversion(self.myPosLat, self.myLane.get_width())
+        MSPModel_Striping::pos_lat_conversion(self.myPosLat, self.myLane.get_width())
     }
 
     /// C++: `double PState::getPosLat() const` [const]

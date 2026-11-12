@@ -5,6 +5,7 @@ use crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper;
 use crate::microsim::ms_base_vehicle::VEHPARS_FORCE_REROUTE;
 use utils::common::util_exceptions::ProcessError;
 use utils::common::msg_handler::write_error;
+use utils::common::std_defs::INVALID_DOUBLE;
 use crate::prelude::*;
 
 /// C++ enum `SUMORouteHandler::StopPos`

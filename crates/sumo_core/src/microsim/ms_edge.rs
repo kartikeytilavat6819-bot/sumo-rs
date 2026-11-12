@@ -2036,7 +2036,7 @@ impl MSEdge {
         let success = insertionLane.m().insert_vehicle(vp.cast::<MSVehicle>().m());
         if !success {
             // constraints may enforce explicit re-ordering so we need to try other vehicles after failure
-            if !insertionLane.has_parameter(&format!("insertionOrder{}", vp.m().get_id())) {
+            if !insertionLane.base2.has_parameter(&format!("insertionOrder{}", vp.m().get_id())) {
                 me.m().myFailedInsertionMemory.insert(insertionLane.get_index());
             }
         }
