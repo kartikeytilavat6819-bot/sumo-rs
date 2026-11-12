@@ -4882,7 +4882,10 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_tentative_lane_and_position(&mut self, lane: Ptr<MSLane>, pos: f64, posLat: f64) {
-        todo!("port MSVehicle::setTentativeLaneAndPosition")
+        self.myLane = lane;
+        self.myState.myPos = pos;
+        self.myState.myPosLat = posLat;
+        self.myState.myBackPos = pos - self.get_vehicle_type().get_length();
     }
 
     /// C++: `void MSVehicle::enterLaneAtLaneChange(MSLane *)`
