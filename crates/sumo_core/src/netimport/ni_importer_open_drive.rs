@@ -3715,7 +3715,21 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_line(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromLine")
+        let mut ret = PositionVector::default();
+        let start = Position::new(g.x, g.y);
+        let end = Self::calculate_straight_end_point(g.hdg, g.length, &start);
+        if resolution > 0.0 && g.length > 0.0 {
+            let numPoints: i32 = (g.length / resolution).ceil() as i32 + 1;
+            let dx = (end.x() - start.x()) / ((numPoints - 1) as f64);
+            let dy = (end.y() - start.y()) / ((numPoints - 1) as f64);
+            for i in 0..numPoints {
+                ret.0.push(Position::new(g.x + (i as f64) * dx, g.y + (i as f64) * dy));
+            }
+        } else {
+            ret.0.push(start);
+            ret.0.push(end);
+        }
+        ret
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromSpiral(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
