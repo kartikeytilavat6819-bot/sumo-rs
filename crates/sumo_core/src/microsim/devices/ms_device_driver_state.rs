@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The ToC Device controls transition of control between automated and manual driving.
 /// C++ class `MSDevice_DriverState` (microsim/devices/MSDevice_DriverState.h)
+#[repr(C)]
 pub struct MSDevice_DriverState {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

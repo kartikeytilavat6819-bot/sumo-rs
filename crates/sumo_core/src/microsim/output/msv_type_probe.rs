@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes positions of vehicles that have a certain (named) type
 /// C++ class `MSVTypeProbe` (microsim/output/MSVTypeProbe.h)
+#[repr(C)]
 pub struct MSVTypeProbe {
     /// C++ base class `Named`
     pub base: Named,

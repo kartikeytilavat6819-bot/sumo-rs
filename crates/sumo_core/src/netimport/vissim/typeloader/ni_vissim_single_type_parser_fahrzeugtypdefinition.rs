@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Fahrzeugtypdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Fahrzeugtypdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Fahrzeugtypdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -14,6 +14,7 @@ fn e2_from_detector_file_output(det: Ptr<MSDetectorFileOutput>) -> Ptr<MSE2Colle
 
 /// An actuated traffic light logic based on time delay of approaching vehicles
 /// C++ class `MSDelayBasedTrafficLightLogic` (microsim/traffic_lights/MSDelayBasedTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSDelayBasedTrafficLightLogic {
     /// C++ base class `MSSimpleTrafficLightLogic`
     pub base: MSSimpleTrafficLightLogic,

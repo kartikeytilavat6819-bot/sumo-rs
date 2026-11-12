@@ -49,6 +49,7 @@ pub type MSInductLoop_VehicleDataCont = VecDeque<MSInductLoop_VehicleData>;
 
 /// An unextended detector measuring at a fixed position on a fixed lane.
 /// C++ class `MSInductLoop` (microsim/output/MSInductLoop.h)
+#[repr(C)]
 pub struct MSInductLoop {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

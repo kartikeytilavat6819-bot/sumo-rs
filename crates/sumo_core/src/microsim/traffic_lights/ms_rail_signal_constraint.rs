@@ -15,6 +15,7 @@ pub enum MSRailSignalConstraint_ConstraintType {
 
 /// A base class for constraints
 /// C++ class `MSRailSignalConstraint` (microsim/traffic_lights/MSRailSignalConstraint.h)
+#[repr(C)]
 pub struct MSRailSignalConstraint {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -263,6 +264,7 @@ impl MSRailSignalConstraint {
 }
 
 /// C++ class `MSRailSignalConstraint_Predecessor` (microsim/traffic_lights/MSRailSignalConstraint.h)
+#[repr(C)]
 pub struct MSRailSignalConstraint_Predecessor {
     /// C++ base class `MSRailSignalConstraint`
     pub base: MSRailSignalConstraint,
@@ -509,6 +511,7 @@ impl MSRailSignalConstraint_Predecessor {
 }
 
 /// C++ class `MSRailSignalConstraint_Predecessor::PassedTracker` (microsim/traffic_lights/MSRailSignalConstraint.h)
+#[repr(C)]
 pub struct MSRailSignalConstraint_Predecessor_PassedTracker {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

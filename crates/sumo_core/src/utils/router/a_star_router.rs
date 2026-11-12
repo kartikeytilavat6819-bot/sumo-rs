@@ -13,6 +13,7 @@ pub type AStarRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
 
 /// Computes the shortest path through a network using the A* algorithm.
 /// C++ class `AStarRouter` (utils/router/AStarRouter.h)
+#[repr(C)]
 pub struct AStarRouter<E, V, M> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

@@ -16,6 +16,7 @@ pub type PedestrianRouter__InternalRouter = DijkstraRouter<AccessEdge__Intermoda
 
 /// The router for pedestrians (on a bidirectional network of sidewalks and crossings)
 /// C++ class `PedestrianRouter` (utils/router/PedestrianRouter.h)
+#[repr(C)]
 pub struct PedestrianRouter<E, L, N, V> {
     /// C++ base class `SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>`
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,

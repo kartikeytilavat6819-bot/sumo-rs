@@ -35,6 +35,7 @@ impl MSIdling {
 }
 
 /// C++ class `MSIdling_RandomCircling` (microsim/devices/MSIdling.h)
+#[repr(C)]
 pub struct MSIdling_RandomCircling {
     /// C++ base class `MSIdling`
     pub base: MSIdling,
@@ -124,6 +125,7 @@ impl MSIdling_RandomCircling {
 }
 
 /// C++ class `MSIdling_Stop` (microsim/devices/MSIdling.h)
+#[repr(C)]
 pub struct MSIdling_Stop {
     /// C++ base class `MSIdling`
     pub base: MSIdling,
@@ -238,6 +240,7 @@ impl MSIdling_Stop {
 }
 
 /// C++ class `MSIdling_TaxiStand` (microsim/devices/MSIdling.h)
+#[repr(C)]
 pub struct MSIdling_TaxiStand {
     /// C++ base class `MSIdling`
     pub base: MSIdling,

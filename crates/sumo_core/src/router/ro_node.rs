@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Base class for nodes used by the router
 /// C++ class `RONode` (router/RONode.h)
+#[repr(C)]
 pub struct RONode {
     /// C++ base class `Named`
     pub base: Named,

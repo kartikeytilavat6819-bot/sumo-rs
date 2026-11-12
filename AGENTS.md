@@ -78,6 +78,8 @@ same output text, same floating-point results.
 - Fixer agents (told explicitly in their prompt): use your own target dir as instructed there.
 
 ### Downcasts (C++ static_cast / dynamic_cast to a subclass)
+All structs whose first field is `pub base:` already carry `#[repr(C)]` (lead sweep); new derived structs must too.
+
 
 - Add `#[repr(C)]` to the derived struct in your file (its `base` field must stay first), then
   `let v: Ptr<MSVehicle> = sumo_vehicle_ptr.cast::<MSVehicle>();`. Same for upcasts.

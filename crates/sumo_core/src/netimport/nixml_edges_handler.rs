@@ -18,6 +18,7 @@ const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 
 /// Importer for network edges stored in XML
 /// C++ class `NIXMLEdgesHandler` (netimport/NIXMLEdgesHandler.h)
+#[repr(C)]
 pub struct NIXMLEdgesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

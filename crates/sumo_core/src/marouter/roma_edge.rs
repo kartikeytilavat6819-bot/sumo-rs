@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A basic edge for routing applications
 /// C++ class `ROMAEdge` (marouter/ROMAEdge.h)
+#[repr(C)]
 pub struct ROMAEdge {
     /// C++ base class `ROEdge`
     pub base: ROEdge,

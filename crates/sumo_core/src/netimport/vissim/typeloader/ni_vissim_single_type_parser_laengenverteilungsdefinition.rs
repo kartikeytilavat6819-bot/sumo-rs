@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Laengenverteilungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Laengenverteilungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Laengenverteilungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

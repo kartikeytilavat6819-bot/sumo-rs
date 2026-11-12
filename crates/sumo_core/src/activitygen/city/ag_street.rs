@@ -108,6 +108,7 @@ impl AGStreet {
 }
 
 /// C++ class `AGStreet::Builder` (activitygen/city/AGStreet.h)
+#[repr(C)]
 pub struct AGStreet_Builder {
     /// C++ base class `ROAbstractEdgeBuilder`
     pub base: ROAbstractEdgeBuilder,

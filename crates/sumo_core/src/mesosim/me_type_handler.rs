@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The XML-Handler for meso edge type loading
 /// C++ class `METypeHandler` (mesosim/METypeHandler.h)
+#[repr(C)]
 pub struct METypeHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

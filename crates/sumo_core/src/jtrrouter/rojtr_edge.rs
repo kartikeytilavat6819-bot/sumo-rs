@@ -7,6 +7,7 @@ pub type ROJTREdge_FollowerUsageCont = Unmapped /* std::map<ROJTREdge *, ValueTi
 
 /// An edge the jtr-router may route through
 /// C++ class `ROJTREdge` (jtrrouter/ROJTREdge.h)
+#[repr(C)]
 pub struct ROJTREdge {
     /// C++ base class `ROEdge`
     pub base: ROEdge,

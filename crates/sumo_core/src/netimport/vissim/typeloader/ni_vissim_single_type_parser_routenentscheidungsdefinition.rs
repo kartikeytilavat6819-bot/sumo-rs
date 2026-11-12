@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Routenentscheidungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Routenentscheidungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Routenentscheidungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

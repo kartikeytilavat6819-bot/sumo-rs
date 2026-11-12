@@ -14,6 +14,7 @@ pub enum SUMORouteHandler_StopPos {
 
 /// Parser for routes during their loading
 /// C++ class `SUMORouteHandler` (utils/vehicle/SUMORouteHandler.h)
+#[repr(C)]
 pub struct SUMORouteHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

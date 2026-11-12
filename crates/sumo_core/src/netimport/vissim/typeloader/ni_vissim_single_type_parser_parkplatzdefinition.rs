@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Parkplatzdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Parkplatzdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Parkplatzdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

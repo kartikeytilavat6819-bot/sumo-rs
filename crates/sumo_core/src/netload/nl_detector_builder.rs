@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Holds the incoming definitions of an e3 detector unless the detector is build.
 /// C++ class `NLDetectorBuilder::E3DetectorDefinition` (netload/NLDetectorBuilder.h)
+#[repr(C)]
 pub struct NLDetectorBuilder_E3DetectorDefinition {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

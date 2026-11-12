@@ -31,6 +31,7 @@ fn get_opt_color(attrs: &SUMOSAXAttributes, attr: i32, objectid: &str, ok: &mut 
 
 /// Importer for network edges stored in XML
 /// C++ class `NIXMLPTHandler` (netimport/NIXMLPTHandler.h)
+#[repr(C)]
 pub struct NIXMLPTHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

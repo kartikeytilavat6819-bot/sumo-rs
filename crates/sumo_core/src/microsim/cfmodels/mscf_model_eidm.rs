@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The Extended Intelligent Driver Model (EIDM) car-following model
 /// C++ class `MSCFModel_EIDM` (microsim/cfmodels/MSCFModel_EIDM.h)
+#[repr(C)]
 pub struct MSCFModel_EIDM {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -1404,6 +1405,7 @@ impl MSCFModel_EIDM {
 }
 
 /// C++ class `MSCFModel_EIDM::VehicleVariables` (microsim/cfmodels/MSCFModel_EIDM.h)
+#[repr(C)]
 pub struct MSCFModel_EIDM_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

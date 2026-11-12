@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Interface for building instances of jtrrouter-edges
 /// C++ class `ROJTREdgeBuilder` (jtrrouter/ROJTREdgeBuilder.h)
+#[repr(C)]
 pub struct ROJTREdgeBuilder {
     /// C++ base class `ROAbstractEdgeBuilder`
     pub base: ROAbstractEdgeBuilder,

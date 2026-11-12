@@ -12,6 +12,7 @@ pub type MSRoute_RouteDict = BTreeMap<String, ConstMSRoutePtr>;
 pub type MSRoute_RouteDistDict = BTreeMap<String, (Ptr<RandomDistributor<ConstMSRoutePtr>>, bool)>;
 
 /// C++ class `MSRoute` (microsim/MSRoute.h)
+#[repr(C)]
 pub struct MSRoute {
     /// C++ base class `Named`
     pub base: Named,

@@ -321,6 +321,7 @@ impl MSDevice_SSM_FoeInfo {
 }
 
 /// C++ class `MSDevice_SSM` (microsim/devices/MSDevice_SSM.h)
+#[repr(C)]
 pub struct MSDevice_SSM {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

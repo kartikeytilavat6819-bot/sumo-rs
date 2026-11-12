@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// This class determines the stimulus of a MSSOTLPolicy when used in combination with a high level policy. The stimulus function is calculated as follows: stimulus = cox * exp(-pow(pheroIn - offsetIn, 2)/divisor -pow(pheroOut - offsetOut, 2)/divisor)
 /// C++ class `MSSOTLPolicy5DFamilyStimulus` (microsim/traffic_lights/MSSOTLPolicy5DFamilyStimulus.h)
+#[repr(C)]
 pub struct MSSOTLPolicy5DFamilyStimulus {
     /// C++ base class `MSSOTLPolicyDesirability`
     pub base: MSSOTLPolicyDesirability,

@@ -22,6 +22,7 @@ pub type CCHRouter_ResetHook = Unmapped /* void (*)(const V *) */;
 
 /// Contraction-hierarchy router over the edge graph mapped by GRAPH.
 /// C++ class `CCHRouter` (utils/router/CCHRouter.h)
+#[repr(C)]
 pub struct CCHRouter<E, V, GRAPH> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

@@ -422,6 +422,7 @@ impl Influencer_GapControlState {
 
 /// A static instance of this class in GapControlState deactivates gap control for vehicles whose reference vehicle is removed from the road network
 /// C++ class `Influencer::GapControlVehStateListener` (microsim/MSVehicle.h)
+#[repr(C)]
 pub struct Influencer_GapControlVehStateListener {
     /// C++ base class `MSNet::VehicleStateListener`
     pub base: MSNet_VehicleStateListener,
@@ -491,6 +492,7 @@ impl Influencer_GapControlVehStateListener {
 
 /// Changes the wished vehicle speed / lanes
 /// C++ class `MSVehicle::Influencer` (microsim/MSVehicle.h)
+#[repr(C)]
 pub struct MSVehicle_Influencer {
     /// C++ base class `BaseInfluencer`
     pub base: MSBaseVehicle_BaseInfluencer,

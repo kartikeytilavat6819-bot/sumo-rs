@@ -13,6 +13,7 @@ pub type PCLoaderOSM_RelationsMap = BTreeMap<i64, Ptr<PCLoaderOSM_PCOSMRelation>
 
 /// A class which extracts OSM-edges from a parsed OSM-file
 /// C++ class `PCLoaderOSM::EdgesHandler` (polyconvert/PCLoaderOSM.h)
+#[repr(C)]
 pub struct PCLoaderOSM_EdgesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,
@@ -176,6 +177,7 @@ impl PCLoaderOSM_EdgesHandler {
 
 /// A class which extracts OSM-nodes from a parsed OSM-file
 /// C++ class `PCLoaderOSM::NodesHandler` (polyconvert/PCLoaderOSM.h)
+#[repr(C)]
 pub struct PCLoaderOSM_NodesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,
@@ -308,6 +310,7 @@ impl PCLoaderOSM_NodesHandler {
 
 /// A reader of pois and polygons stored in OSM-format
 /// C++ class `PCLoaderOSM` (polyconvert/PCLoaderOSM.h)
+#[repr(C)]
 pub struct PCLoaderOSM {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,
@@ -824,6 +827,7 @@ impl PCLoaderOSM_PCOSMRelation {
 
 /// A class which extracts relevant way-ids from relations in a parsed OSM-file
 /// C++ class `PCLoaderOSM::RelationsHandler` (polyconvert/PCLoaderOSM.h)
+#[repr(C)]
 pub struct PCLoaderOSM_RelationsHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

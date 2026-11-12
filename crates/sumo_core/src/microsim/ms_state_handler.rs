@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Parser and output filter for routes and vehicles state saving and loading
 /// C++ class `MSStateHandler` (microsim/MSStateHandler.h)
+#[repr(C)]
 pub struct MSStateHandler {
     /// C++ base class `MSRouteHandler`
     pub base: MSRouteHandler,
@@ -746,6 +747,7 @@ impl MSStateHandler {
 
 /// handler to read only the simulation time from a state
 /// C++ class `MSStateHandler::MSStateTimeHandler` (microsim/MSStateHandler.h)
+#[repr(C)]
 pub struct MSStateHandler_MSStateTimeHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimNodeDef_Edges` (netimport/vissim/tempstructs/NIVissimNodeDef_Edges.h)
+#[repr(C)]
 pub struct NIVissimNodeDef_Edges {
     /// C++ base class `NIVissimNodeDef`
     pub base: NIVissimNodeDef,

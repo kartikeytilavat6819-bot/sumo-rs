@@ -24,6 +24,7 @@ pub enum MSCFModel_CACC_VehicleMode {
 }
 
 /// C++ class `MSCFModel_CACC::CACCVehicleVariables` (microsim/cfmodels/MSCFModel_CACC.h)
+#[repr(C)]
 pub struct MSCFModel_CACC_CACCVehicleVariables {
     /// C++ base class `MSCFModel_ACC::ACCVehicleVariables`
     pub base: MSCFModel_ACC_ACCVehicleVariables,
@@ -93,6 +94,7 @@ impl MSCFModel_CACC_CACCVehicleVariables {
 
 /// The CACC car-following model
 /// C++ class `MSCFModel_CACC` (microsim/cfmodels/MSCFModel_CACC.h)
+#[repr(C)]
 pub struct MSCFModel_CACC {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,

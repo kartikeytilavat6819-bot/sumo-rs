@@ -5,6 +5,7 @@ use crate::utils::router::fare_zones::{fare_zone_to_rep, get_overlay_zone};
 
 /// The fare modul responsible for calculating prices
 /// C++ class `FareModul` (utils/router/FareModul.h)
+#[repr(C)]
 pub struct FareModul {
     /// C++ base class `EffortCalculator`
     pub base: EffortCalculator,

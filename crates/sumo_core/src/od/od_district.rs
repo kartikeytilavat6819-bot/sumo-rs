@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A district (origin/destination)
 /// C++ class `ODDistrict` (od/ODDistrict.h)
+#[repr(C)]
 pub struct ODDistrict {
     /// C++ base class `Named`
     pub base: Named,

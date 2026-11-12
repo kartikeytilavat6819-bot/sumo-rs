@@ -16,6 +16,7 @@ fn loaded_tl_def(_def: Ptr<NBTrafficLightDefinition>) -> Ptr<NBLoadedSUMOTLDef> 
 
 /// Importer for edge connections stored in XML
 /// C++ class `NIXMLTrafficLightsHandler` (netimport/NIXMLTrafficLightsHandler.h)
+#[repr(C)]
 pub struct NIXMLTrafficLightsHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

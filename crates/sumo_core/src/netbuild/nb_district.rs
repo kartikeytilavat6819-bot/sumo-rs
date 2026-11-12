@@ -7,6 +7,7 @@ pub type NBDistrict_WeightsCont = Vec<f64>;
 
 /// A class representing a single district
 /// C++ class `NBDistrict` (netbuild/NBDistrict.h)
+#[repr(C)]
 pub struct NBDistrict {
     /// C++ base class `Named`
     pub base: Named,

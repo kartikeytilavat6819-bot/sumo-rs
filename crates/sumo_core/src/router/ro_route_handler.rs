@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Parser and container for routes during their loading
 /// C++ class `RORouteHandler` (router/RORouteHandler.h)
+#[repr(C)]
 pub struct RORouteHandler {
     /// C++ base class `SUMORouteHandler`
     pub base: SUMORouteHandler,

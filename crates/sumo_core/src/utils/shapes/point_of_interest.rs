@@ -5,6 +5,7 @@ use super::shape::{DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_HEIGHT, DEFAULT_
 
 /// A point-of-interest
 /// C++ class `PointOfInterest` (utils/shapes/PointOfInterest.h)
+#[repr(C)]
 pub struct PointOfInterest {
     /// C++ base class `Shape`
     pub base: Shape,

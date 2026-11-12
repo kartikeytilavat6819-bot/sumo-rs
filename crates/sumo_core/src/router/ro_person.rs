@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A planItem can be a Trip which contains multiple tripItems
 /// C++ class `ROPerson::PersonTrip` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_PersonTrip {
     /// C++ base class `PlanItem`
     pub base: ROPerson_PlanItem,
@@ -357,6 +358,7 @@ impl ROPerson_PersonTrip {
 
 /// Every person has a plan comprising of multiple planItems
 /// C++ class `ROPerson::PlanItem` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_PlanItem {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -484,6 +486,7 @@ impl ROPerson_PlanItem {
 
 /// A person as used by router
 /// C++ class `ROPerson` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson {
     /// C++ base class `RORoutable`
     pub base: RORoutable,
@@ -845,6 +848,7 @@ impl ROPerson {
 
 /// A ride is part of a trip, e.g., go from here to here by car or bus
 /// C++ class `ROPerson::Ride` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_Ride {
     /// C++ base class `TripItem`
     pub base: IntermodalRouter_TripItem,
@@ -991,6 +995,7 @@ impl ROPerson_Ride {
 
 /// A planItem can be a Stop
 /// C++ class `ROPerson::Stop` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_Stop {
     /// C++ base class `PlanItem`
     pub base: ROPerson_PlanItem,
@@ -1213,6 +1218,7 @@ impl ROPerson_TripItem {
 
 /// A walk is part of a trip, e.g., go from here to here by foot
 /// C++ class `ROPerson::Walk` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_Walk {
     /// C++ base class `TripItem`
     pub base: IntermodalRouter_TripItem,

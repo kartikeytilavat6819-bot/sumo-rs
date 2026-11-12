@@ -105,6 +105,7 @@ impl MSActuatedTrafficLightLogic_InductLoopInfo {
 
 /// An actuated (adaptive) traffic light logic
 /// C++ class `MSActuatedTrafficLightLogic` (microsim/traffic_lights/MSActuatedTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSActuatedTrafficLightLogic {
     /// C++ base class `MSSimpleTrafficLightLogic`
     pub base: MSSimpleTrafficLightLogic,

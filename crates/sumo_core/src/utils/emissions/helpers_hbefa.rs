@@ -5,6 +5,7 @@ use utils::geom::geom_helper::{rad2deg, GRAVITY};
 
 /// Helper methods for HBEFA-based emission computation
 /// C++ class `HelpersHBEFA` (utils/emissions/HelpersHBEFA.h)
+#[repr(C)]
 pub struct HelpersHBEFA {
     /// C++ base class `PollutantsInterface::Helper`
     pub base: PollutantsInterface_Helper,

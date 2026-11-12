@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A signal for rails
 /// C++ class `MSRailCrossing` (microsim/traffic_lights/MSRailCrossing.h)
+#[repr(C)]
 pub struct MSRailCrossing {
     /// C++ base class `MSSimpleTrafficLightLogic`
     pub base: MSSimpleTrafficLightLogic,

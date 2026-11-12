@@ -147,6 +147,7 @@ impl MSNet_Collision {
 
 /// The simulated network and simulation perfomer
 /// C++ class `MSNet` (microsim/MSNet.h)
+#[repr(C)]
 pub struct MSNet {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

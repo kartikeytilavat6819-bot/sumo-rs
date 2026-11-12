@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A complete router's route
 /// C++ class `RORoute` (router/RORoute.h)
+#[repr(C)]
 pub struct RORoute {
     /// C++ base class `Named`
     pub base: Named,

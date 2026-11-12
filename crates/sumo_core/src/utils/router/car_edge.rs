@@ -7,6 +7,7 @@ pub type CarEdge__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
 
 /// the car edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `CarEdge` (utils/router/CarEdge.h)
+#[repr(C)]
 pub struct CarEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,

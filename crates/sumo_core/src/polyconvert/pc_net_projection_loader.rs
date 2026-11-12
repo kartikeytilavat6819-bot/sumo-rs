@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A reader for a SUMO network's projection description
 /// C++ class `PCNetProjectionLoader` (polyconvert/PCNetProjectionLoader.h)
+#[repr(C)]
 pub struct PCNetProjectionLoader {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

@@ -7,6 +7,7 @@ pub type Node2EdgeRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
 
 /// Computes shortest paths from a node to one edge (using A*) or to all edges (using Dijkstra's algorithm)
 /// C++ class `Node2EdgeRouter` (utils/router/Node2EdgeRouter.h)
+#[repr(C)]
 pub struct Node2EdgeRouter<E, N, V, M> {
     /// C++ base class `AStarRouter<E, V, M>`
     pub base: AStarRouter<E, V, M>,

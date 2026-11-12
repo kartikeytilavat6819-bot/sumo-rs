@@ -7,6 +7,7 @@ pub type MSLCM_LC2013_Info = (f64, i32);
 
 /// A lane change model developed by D. Krajzewicz, J. Erdmann et al. between 2004 and 2013
 /// C++ class `MSLCM_LC2013` (microsim/lcmodels/MSLCM_LC2013.h)
+#[repr(C)]
 pub struct MSLCM_LC2013 {
     /// C++ base class `MSAbstractLaneChangeModel`
     pub base: MSAbstractLaneChangeModel,

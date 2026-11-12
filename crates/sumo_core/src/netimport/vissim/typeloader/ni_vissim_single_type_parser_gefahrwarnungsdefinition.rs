@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Gefahrwarnungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Gefahrwarnungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Gefahrwarnungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

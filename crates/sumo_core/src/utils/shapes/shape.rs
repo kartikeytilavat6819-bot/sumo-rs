@@ -16,6 +16,7 @@ pub const DEFAULT_NAME: &str = "";
 
 /// A 2D- or 3D-Shape
 /// C++ class `Shape` (utils/shapes/Shape.h)
+#[repr(C)]
 pub struct Shape {
     /// C++ base class `Named`
     pub base: Named,

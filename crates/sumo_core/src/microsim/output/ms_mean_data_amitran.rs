@@ -224,6 +224,7 @@ impl MSMeanData_Amitran_MSLaneMeanDataValues {
 
 /// Network state mean data collector for edges/lanes
 /// C++ class `MSMeanData_Amitran` (microsim/output/MSMeanData_Amitran.h)
+#[repr(C)]
 pub struct MSMeanData_Amitran {
     /// C++ base class `MSMeanData`
     pub base: MSMeanData,

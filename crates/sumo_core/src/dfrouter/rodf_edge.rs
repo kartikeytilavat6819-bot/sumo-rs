@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `RODFEdge` (dfrouter/RODFEdge.h)
+#[repr(C)]
 pub struct RODFEdge {
     /// C++ base class `ROEdge`
     pub base: ROEdge,

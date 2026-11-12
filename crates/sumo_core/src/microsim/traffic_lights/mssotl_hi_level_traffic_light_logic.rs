@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A self-organizing high-level traffic light logic
 /// C++ class `MSSOTLHiLevelTrafficLightLogic` (microsim/traffic_lights/MSSOTLHiLevelTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSOTLHiLevelTrafficLightLogic {
     /// C++ base class `MSSOTLTrafficLightLogic`
     pub base: MSSOTLTrafficLightLogic,

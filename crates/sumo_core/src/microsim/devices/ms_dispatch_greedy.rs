@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
 /// C++ class `MSDispatch_Greedy` (microsim/devices/MSDispatch_Greedy.h)
+#[repr(C)]
 pub struct MSDispatch_Greedy {
     /// C++ base class `MSDispatch`
     pub base: MSDispatch,
@@ -169,6 +170,7 @@ impl MSDispatch_Greedy {
 
 /// A dispatch algorithm that services the reservations with the shortest traveltime-to-pickup first
 /// C++ class `MSDispatch_GreedyClosest` (microsim/devices/MSDispatch_Greedy.h)
+#[repr(C)]
 pub struct MSDispatch_GreedyClosest {
     /// C++ base class `MSDispatch_Greedy`
     pub base: MSDispatch_Greedy,

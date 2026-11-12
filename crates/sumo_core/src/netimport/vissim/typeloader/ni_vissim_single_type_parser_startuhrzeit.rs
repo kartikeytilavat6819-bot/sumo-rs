@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Startuhrzeit` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Startuhrzeit.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Startuhrzeit {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

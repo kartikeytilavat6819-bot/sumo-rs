@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Streckendefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Streckendefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Streckendefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -7,6 +7,7 @@ pub type MESegment_SearchedMap = BTreeMap<(Ptr<MSEdge>, Vec<i32>), Vec<(f64, i32
 
 /// A single mesoscopic segment (cell)
 /// C++ class `MESegment` (mesosim/MESegment.h)
+#[repr(C)]
 pub struct MESegment {
     /// C++ base class `Named`
     pub base: Named,

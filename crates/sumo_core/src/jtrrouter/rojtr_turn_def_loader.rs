@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Loader for the of turning percentages and source/sink definitions
 /// C++ class `ROJTRTurnDefLoader` (jtrrouter/ROJTRTurnDefLoader.h)
+#[repr(C)]
 pub struct ROJTRTurnDefLoader {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

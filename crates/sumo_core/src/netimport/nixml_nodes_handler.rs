@@ -6,6 +6,7 @@ use utils::common::msg_handler::{write_error, write_warning};
 
 /// Importer for network nodes stored in XML
 /// C++ class `NIXMLNodesHandler` (netimport/NIXMLNodesHandler.h)
+#[repr(C)]
 pub struct NIXMLNodesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

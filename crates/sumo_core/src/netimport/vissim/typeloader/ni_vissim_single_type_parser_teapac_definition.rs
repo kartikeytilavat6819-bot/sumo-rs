@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_TEAPACDefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_TEAPACDefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_TEAPACDefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

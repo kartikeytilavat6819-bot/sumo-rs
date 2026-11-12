@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub type NIVissimDisturbance_DictType = BTreeMap<i32, Ptr<NIVissimDisturbance>>;
 
 /// C++ class `NIVissimDisturbance` (netimport/vissim/tempstructs/NIVissimDisturbance.h)
+#[repr(C)]
 pub struct NIVissimDisturbance {
     /// C++ base class `NIVissimBoundedClusterObject`
     pub base: NIVissimBoundedClusterObject,

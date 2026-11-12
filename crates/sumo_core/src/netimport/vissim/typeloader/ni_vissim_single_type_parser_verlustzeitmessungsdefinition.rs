@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Verlustzeitmessungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Verlustzeitmessungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Verlustzeitmessungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

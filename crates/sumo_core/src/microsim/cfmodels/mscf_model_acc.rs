@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSCFModel_ACC::ACCVehicleVariables` (microsim/cfmodels/MSCFModel_ACC.h)
+#[repr(C)]
 pub struct MSCFModel_ACC_ACCVehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,
@@ -70,6 +71,7 @@ impl MSCFModel_ACC_ACCVehicleVariables {
 
 /// The ACC car-following model
 /// C++ class `MSCFModel_ACC` (microsim/cfmodels/MSCFModel_ACC.h)
+#[repr(C)]
 pub struct MSCFModel_ACC {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,

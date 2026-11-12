@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Base class for a vehicle's route definition
 /// C++ class `RORouteDef` (router/RORouteDef.h)
+#[repr(C)]
 pub struct RORouteDef {
     /// C++ base class `Named`
     pub base: Named,

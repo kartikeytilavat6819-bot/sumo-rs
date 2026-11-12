@@ -59,6 +59,7 @@ pub enum MSDevice_StationFinder_SearchState {
 
 /// A device which triggers rerouting to nearby charging stations
 /// C++ class `MSDevice_StationFinder` (microsim/devices/MSDevice_StationFinder.h)
+#[repr(C)]
 pub struct MSDevice_StationFinder {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

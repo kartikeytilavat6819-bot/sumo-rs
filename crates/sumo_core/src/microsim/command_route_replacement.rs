@@ -6,6 +6,7 @@ use utils::options::options_cont;
 
 /// Writes the state of the tls to a file (in each second)
 /// C++ class `Command_RouteReplacement` (microsim/Command_RouteReplacement.h)
+#[repr(C)]
 pub struct Command_RouteReplacement {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

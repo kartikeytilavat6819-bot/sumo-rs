@@ -36,6 +36,7 @@ impl MSE3Collector_E3Values {
 
 /// A detector of vehicles passing an area between entry/exit points
 /// C++ class `MSE3Collector` (microsim/output/MSE3Collector.h)
+#[repr(C)]
 pub struct MSE3Collector {
     /// C++ base class `MSDetectorFileOutput`
     pub base: MSDetectorFileOutput,
@@ -616,6 +617,7 @@ impl MSE3Collector {
 
 /// A place on the road net (at a certain lane and position on it) where the E3 area begins
 /// C++ class `MSE3Collector::MSE3EntryReminder` (microsim/output/MSE3Collector.h)
+#[repr(C)]
 pub struct MSE3Collector_MSE3EntryReminder {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,
@@ -808,6 +810,7 @@ impl MSE3Collector_MSE3EntryReminder {
 
 /// A place on the road net (at a certain lane and position on it) where the E3 area ends
 /// C++ class `MSE3Collector::MSE3LeaveReminder` (microsim/output/MSE3Collector.h)
+#[repr(C)]
 pub struct MSE3Collector_MSE3LeaveReminder {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSTransportableDevice_FCDReplay` (microsim/devices/MSTransportableDevice_FCDReplay.h)
+#[repr(C)]
 pub struct MSTransportableDevice_FCDReplay {
     /// C++ base class `MSTransportableDevice`
     pub base: MSTransportableDevice,
@@ -172,6 +173,7 @@ impl MSTransportableDevice_FCDReplay {
 }
 
 /// C++ class `MSTransportableDevice_FCDReplay::MovePedestrians` (microsim/devices/MSTransportableDevice_FCDReplay.h)
+#[repr(C)]
 pub struct MSTransportableDevice_FCDReplay_MovePedestrians {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

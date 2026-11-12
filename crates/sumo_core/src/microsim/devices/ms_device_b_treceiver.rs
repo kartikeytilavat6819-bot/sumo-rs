@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A global update performer
 /// C++ class `MSDevice_BTreceiver::BTreceiverUpdate` (microsim/devices/MSDevice_BTreceiver.h)
+#[repr(C)]
 pub struct MSDevice_BTreceiver_BTreceiverUpdate {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -412,6 +413,7 @@ impl MSDevice_BTreceiver {
 }
 
 /// C++ class `MSTransportableDevice_BTreceiver` (microsim/devices/MSDevice_BTreceiver.h)
+#[repr(C)]
 pub struct MSTransportableDevice_BTreceiver {
     /// C++ base class `MSDevice_BTreceiver`
     pub base: MSDevice_BTreceiver,
@@ -501,6 +503,7 @@ impl MSTransportableDevice_BTreceiver {
 }
 
 /// C++ class `MSVehicleDevice_BTreceiver` (microsim/devices/MSDevice_BTreceiver.h)
+#[repr(C)]
 pub struct MSVehicleDevice_BTreceiver {
     /// C++ base class `MSDevice_BTreceiver`
     pub base: MSDevice_BTreceiver,
@@ -696,6 +699,7 @@ impl MSDevice_BTreceiver_SeenDevice {
 
 /// Stores the information of a vehicle
 /// C++ class `MSDevice_BTreceiver::VehicleInformation` (microsim/devices/MSDevice_BTreceiver.h)
+#[repr(C)]
 pub struct MSDevice_BTreceiver_VehicleInformation {
     /// C++ base class `MSDevice_BTsender::VehicleInformation`
     pub base: MSDevice_BTsender_VehicleInformation,

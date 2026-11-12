@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `AGFreeTime` (activitygen/activities/AGFreeTime.h)
+#[repr(C)]
 pub struct AGFreeTime {
     /// C++ base class `AGActivity`
     pub base: AGActivity,

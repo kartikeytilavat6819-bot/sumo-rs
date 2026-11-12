@@ -8,6 +8,7 @@ use utils::geom::geom_helper::{deg2rad, GRAVITY};
 
 /// Helper methods for energy-based electricity consumption computation based on the battery device
 /// C++ class `HelpersEnergy` (utils/emissions/HelpersEnergy.h)
+#[repr(C)]
 pub struct HelpersEnergy {
     /// C++ base class `PollutantsInterface::Helper`
     pub base: PollutantsInterface_Helper,

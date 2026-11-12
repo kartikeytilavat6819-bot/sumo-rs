@@ -163,6 +163,7 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
 
 /// Noise data collector for edges/lanes
 /// C++ class `MSMeanData_Harmonoise` (microsim/output/MSMeanData_Harmonoise.h)
+#[repr(C)]
 pub struct MSMeanData_Harmonoise {
     /// C++ base class `MSMeanData`
     pub base: MSMeanData,

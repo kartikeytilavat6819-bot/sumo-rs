@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A junction with right-of-way - rules
 /// C++ class `MSRightOfWayJunction` (microsim/MSRightOfWayJunction.h)
+#[repr(C)]
 pub struct MSRightOfWayJunction {
     /// C++ base class `MSLogicJunction`
     pub base: MSLogicJunction,

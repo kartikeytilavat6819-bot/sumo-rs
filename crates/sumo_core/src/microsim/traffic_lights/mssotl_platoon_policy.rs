@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Class for low-level platoon policy.
 /// C++ class `MSSOTLPlatoonPolicy` (microsim/traffic_lights/MSSOTLPlatoonPolicy.h)
+#[repr(C)]
 pub struct MSSOTLPlatoonPolicy {
     /// C++ base class `MSSOTLPolicy`
     pub base: MSSOTLPolicy,

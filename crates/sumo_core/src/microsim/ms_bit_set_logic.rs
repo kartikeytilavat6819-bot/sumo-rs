@@ -14,6 +14,7 @@ pub type MSBitsetLogic = Unmapped /* MSBitSetLogic<256> */;
 
 /// N is sum of the number of links of the junction's inLanes.
 /// C++ class `MSBitSetLogic` (microsim/MSBitSetLogic.h)
+#[repr(C)]
 pub struct MSBitSetLogic<const N: usize> {
     /// C++ base class `MSJunctionLogic`
     pub base: MSJunctionLogic,

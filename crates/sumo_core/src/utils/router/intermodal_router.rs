@@ -31,6 +31,7 @@ pub type IntermodalRouter__Prohibitions = SUMOAbstractRouter_Prohibitions;
 
 /// The router for pedestrians (on a bidirectional network of sidewalks and crossings)
 /// C++ class `IntermodalRouter` (utils/router/IntermodalRouter.h)
+#[repr(C)]
 pub struct IntermodalRouter<E, L, N, V> {
     /// C++ base class `SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>`
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,

@@ -7,6 +7,7 @@ pub type MSLogicJunction_LinkBits = Unmapped /* std::bitset<256> */;
 
 /// A junction which may not let all vehicles through, but must perform any kind of an operation to determine which cars are allowed to drive in this step.
 /// C++ class `MSLogicJunction` (microsim/MSLogicJunction.h)
+#[repr(C)]
 pub struct MSLogicJunction {
     /// C++ base class `MSJunction`
     pub base: MSJunction,

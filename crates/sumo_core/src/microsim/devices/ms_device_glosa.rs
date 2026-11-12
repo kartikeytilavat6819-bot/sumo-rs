@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_GLOSA` (microsim/devices/MSDevice_GLOSA.h)
+#[repr(C)]
 pub struct MSDevice_GLOSA {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

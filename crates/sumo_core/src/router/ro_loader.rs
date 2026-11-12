@@ -30,6 +30,7 @@ fn run_weights_parser_unwired(optionName: &str) {
 
 /// Obtains edge travel times from a weights handler and stores them within the edges
 /// C++ class `ROLoader::EdgeFloatTimeLineRetriever_EdgeTravelTime` (router/ROLoader.h)
+#[repr(C)]
 pub struct ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     /// C++ base class `SAXWeightsHandler::EdgeFloatTimeLineRetriever`
     pub base: Unmapped /* SAXWeightsHandler::EdgeFloatTimeLineRetriever */,
@@ -105,6 +106,7 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
 
 /// Obtains edge weights from a weights handler and stores them within the edges
 /// C++ class `ROLoader::EdgeFloatTimeLineRetriever_EdgeWeight` (router/ROLoader.h)
+#[repr(C)]
 pub struct ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
     /// C++ base class `SAXWeightsHandler::EdgeFloatTimeLineRetriever`
     pub base: Unmapped /* SAXWeightsHandler::EdgeFloatTimeLineRetriever */,

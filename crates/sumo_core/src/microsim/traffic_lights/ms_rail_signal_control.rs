@@ -15,6 +15,7 @@ impl MSRailSignalControl_Deadlock {
 
 /// A signal for rails
 /// C++ class `MSRailSignalControl` (microsim/traffic_lights/MSRailSignalControl.h)
+#[repr(C)]
 pub struct MSRailSignalControl {
     /// C++ base class `MSNet::VehicleStateListener`
     pub base: MSNet_VehicleStateListener,

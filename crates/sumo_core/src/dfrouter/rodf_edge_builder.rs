@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Interface for building instances of dfrouter-edges
 /// C++ class `RODFEdgeBuilder` (dfrouter/RODFEdgeBuilder.h)
+#[repr(C)]
 pub struct RODFEdgeBuilder {
     /// C++ base class `ROAbstractEdgeBuilder`
     pub base: ROAbstractEdgeBuilder,

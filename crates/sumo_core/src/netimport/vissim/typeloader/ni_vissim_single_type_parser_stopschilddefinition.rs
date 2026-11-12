@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Stopschilddefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Stopschilddefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Stopschilddefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

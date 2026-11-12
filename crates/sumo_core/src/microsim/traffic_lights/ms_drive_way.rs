@@ -12,6 +12,7 @@ pub type MSDriveWay_LaneSet = BTreeSet<Ptr<MSLane>>;
 pub type MSDriveWay_LaneVisitedMap = BTreeMap<Ptr<MSLane>, i32>;
 
 /// C++ class `MSDriveWay` (microsim/traffic_lights/MSDriveWay.h)
+#[repr(C)]
 pub struct MSDriveWay {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

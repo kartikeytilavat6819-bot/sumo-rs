@@ -8,6 +8,7 @@ const FOLM_PAR_DT: &str = "dt_s";
 
 /// This model models actuation lags using a first order lag, i.e., a first order low pass filter with a time constant tau
 /// C++ class `FirstOrderLagModel` (microsim/engine/FirstOrderLagModel.h)
+#[repr(C)]
 pub struct FirstOrderLagModel {
     /// C++ base class `GenericEngineModel`
     pub base: GenericEngineModel,

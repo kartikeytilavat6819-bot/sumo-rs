@@ -789,6 +789,7 @@ impl MSPerson_MSPersonStage_Access {
 }
 
 /// C++ class `MSPersonStage_Access::ProceedCmd` (microsim/transportables/MSPerson.h)
+#[repr(C)]
 pub struct MSPersonStage_Access_ProceedCmd {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

@@ -44,6 +44,7 @@ fn as_tracker(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMeanData_MeanDataValue
 
 /// Data collector for edges/lanes
 /// C++ class `MSMeanData` (microsim/output/MSMeanData.h)
+#[repr(C)]
 pub struct MSMeanData {
     /// C++ base class `MSDetectorFileOutput`
     pub base: MSDetectorFileOutput,

@@ -35,6 +35,7 @@ fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
 }
 
 /// C++ class `MSDeterministicHiLevelTrafficLightLogic` (microsim/traffic_lights/MSDeterministicHiLevelTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSDeterministicHiLevelTrafficLightLogic {
     /// C++ base class `MSSOTLHiLevelTrafficLightLogic`
     pub base: MSSOTLHiLevelTrafficLightLogic,

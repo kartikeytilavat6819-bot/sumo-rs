@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// the public transport edge type connecting the stop edges
 /// C++ class `PublicTransportEdge` (utils/router/PublicTransportEdge.h)
+#[repr(C)]
 pub struct PublicTransportEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,

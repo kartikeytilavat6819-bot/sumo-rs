@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_SimRate` (netimport/vissim/typeloader/NIVissimSingleTypeParser_SimRate.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_SimRate {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

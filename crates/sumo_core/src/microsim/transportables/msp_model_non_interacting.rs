@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
+#[repr(C)]
 pub struct MSPModel_NonInteracting_CState {
     /// C++ base class `PState`
     pub base: MSPModel_Striping_PState,
@@ -88,6 +89,7 @@ impl MSPModel_NonInteracting_CState {
 
 /// The pedestrian following model
 /// C++ class `MSPModel_NonInteracting` (microsim/transportables/MSPModel_NonInteracting.h)
+#[repr(C)]
 pub struct MSPModel_NonInteracting {
     /// C++ base class `MSPModel`
     pub base: MSPModel,
@@ -216,6 +218,7 @@ impl MSPModel_NonInteracting {
 }
 
 /// C++ class `MSPModel_NonInteracting::MoveToNextEdge` (microsim/transportables/MSPModel_NonInteracting.h)
+#[repr(C)]
 pub struct MSPModel_NonInteracting_MoveToNextEdge {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -300,6 +303,7 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
 
 /// implementation of callbacks to retrieve various state information from the model
 /// C++ class `MSPModel_NonInteracting::PState` (microsim/transportables/MSPModel_NonInteracting.h)
+#[repr(C)]
 pub struct MSPModel_NonInteracting_PState {
     /// C++ base class `MSTransportableStateAdapter`
     pub base: MSTransportableStateAdapter,

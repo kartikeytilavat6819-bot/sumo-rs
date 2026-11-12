@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `AGActivityGenHandler` (activitygen/AGActivityGenHandler.h)
+#[repr(C)]
 pub struct AGActivityGenHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

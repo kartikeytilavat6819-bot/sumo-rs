@@ -10,6 +10,7 @@ pub type CHRouter_Meeting = (Ptr<SUMOAbstractRouter_EdgeInfo>, Ptr<SUMOAbstractR
 
 /// Computes the shortest path through a contracted network
 /// C++ class `CHRouter` (utils/router/CHRouter.h)
+#[repr(C)]
 pub struct CHRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

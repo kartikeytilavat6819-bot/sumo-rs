@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Class for low-level request policy.
 /// C++ class `MSSOTLRequestPolicy` (microsim/traffic_lights/MSSOTLRequestPolicy.h)
+#[repr(C)]
 pub struct MSSOTLRequestPolicy {
     /// C++ base class `MSSOTLPolicy`
     pub base: MSSOTLPolicy,

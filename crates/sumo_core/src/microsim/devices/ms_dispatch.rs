@@ -23,6 +23,7 @@ pub enum Reservation_ReservationState {
 
 /// An algorithm that performs distpach for a taxi fleet
 /// C++ class `MSDispatch` (microsim/devices/MSDispatch.h)
+#[repr(C)]
 pub struct MSDispatch {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

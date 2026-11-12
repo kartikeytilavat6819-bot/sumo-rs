@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A SAX-Handler for loading options
 /// C++ class `TemplateHandler` (utils/handlers/TemplateHandler.h)
+#[repr(C)]
 pub struct TemplateHandler {
     /// C++ base class `xercesc_3_2::HandlerBase`
     pub base: Unmapped /* xercesc_3_2::HandlerBase */,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes e2 state of a link for the time the link has yellow/red
 /// C++ class `Command_SaveTLCoupledLaneDet` (microsim/actions/Command_SaveTLCoupledLaneDet.h)
+#[repr(C)]
 pub struct Command_SaveTLCoupledLaneDet {
     /// C++ base class `Command_SaveTLCoupledDet`
     pub base: Command_SaveTLCoupledDet,

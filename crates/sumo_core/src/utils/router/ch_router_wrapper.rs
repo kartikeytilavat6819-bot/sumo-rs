@@ -10,6 +10,7 @@ pub type CHRouterWrapper_RouterMap = i32;
 
 /// Computes the shortest path through a contracted network
 /// C++ class `CHRouterWrapper` (utils/router/CHRouterWrapper.h)
+#[repr(C)]
 pub struct CHRouterWrapper<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

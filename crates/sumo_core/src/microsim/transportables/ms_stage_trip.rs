@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A "placeholder" stage storing routing info which will result in real stages when routed
 /// C++ class `MSStageTrip` (microsim/transportables/MSStageTrip.h)
+#[repr(C)]
 pub struct MSStageTrip {
     /// C++ base class `MSStage`
     pub base: MSStage,

@@ -564,6 +564,7 @@ impl NIImporter_Vissim {
 
 /// A class which extracts VISSIM-ConflictAreas from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_ConflictArea` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -645,6 +646,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
 
 /// A class which extracts VISSIM-Fahrzeugklassen from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Fahrzeugklassendefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -773,6 +775,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
 
 /// A class which extracts VISSIM-Geschwindigkeitsverteilung from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -886,6 +889,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
 
 /// A class which extracts VISSIM-Parkplätze from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Parkplatzdefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -979,6 +983,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
 
 /// A class which extracts VISSIM-Routes from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Routenentscheidungsdefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -1081,6 +1086,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
 
 /// A class which extracts VISSIM-Strecken from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Streckendefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -1320,6 +1326,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
 
 /// A class which extracts VISSIM-VWunschentscheidungen from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_VWunschentscheidungsdefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -1413,6 +1420,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
 
 /// A class which extracts VISSIM-Zuflüsse from a parsed VISSIM-file
 /// C++ class `NIImporter_Vissim::NIVissimXMLHandler_Zuflussdefinition` (netimport/vissim/NIImporter_Vissim.h)
+#[repr(C)]
 pub struct NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,

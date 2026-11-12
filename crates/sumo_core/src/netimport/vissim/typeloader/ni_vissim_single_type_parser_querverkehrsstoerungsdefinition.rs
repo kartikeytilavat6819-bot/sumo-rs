@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

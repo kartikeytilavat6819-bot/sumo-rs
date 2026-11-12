@@ -16,6 +16,7 @@ pub type RailwayRouter__RailEdge = Unmapped /* RailEdge<E, V> */;
 
 /// The router for rail vehicles for track networks where some sections may be used in both directions and trains may reverse depending on location and train length
 /// C++ class `RailwayRouter` (utils/router/RailwayRouter.h)
+#[repr(C)]
 pub struct RailwayRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

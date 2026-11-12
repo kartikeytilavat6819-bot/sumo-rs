@@ -28,6 +28,7 @@ pub type MSEdge_DictType = BTreeMap<String, Ptr<MSEdge>>;
 pub type MSConstEdgePairVector = Vec<(Ptr<MSEdge>, Ptr<MSEdge>)>;
 
 /// C++ class `MSEdge` (microsim/MSEdge.h)
+#[repr(C)]
 pub struct MSEdge {
     /// C++ base class `Named`
     pub base: Named,

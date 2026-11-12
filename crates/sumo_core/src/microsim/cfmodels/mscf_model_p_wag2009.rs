@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Scalable model based on Krauss by Peter Wagner
 /// C++ class `MSCFModel_PWag2009` (microsim/cfmodels/MSCFModel_PWag2009.h)
+#[repr(C)]
 pub struct MSCFModel_PWag2009 {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -197,6 +198,7 @@ impl MSCFModel_PWag2009 {
 }
 
 /// C++ class `MSCFModel_PWag2009::VehicleVariables` (microsim/cfmodels/MSCFModel_PWag2009.h)
+#[repr(C)]
 pub struct MSCFModel_PWag2009_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

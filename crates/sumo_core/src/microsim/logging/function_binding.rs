@@ -9,6 +9,7 @@ pub type FunctionBinding_Operation = Unmapped /* R (T::*)() */;
 pub type FunctionBindingString_Operation = Unmapped /* int (T::*)() */;
 
 /// C++ class `FunctionBinding` (microsim/logging/FunctionBinding.h)
+#[repr(C)]
 pub struct FunctionBinding<T, R> {
     /// C++ base class `ValueSource<R>`
     pub base: Unmapped /* ValueSource<R> */,

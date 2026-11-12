@@ -52,6 +52,7 @@ impl MSChargingStation_Charge {
 
 /// Definition of charging stations
 /// C++ class `MSChargingStation` (microsim/trigger/MSChargingStation.h)
+#[repr(C)]
 pub struct MSChargingStation {
     /// C++ base class `MSStoppingPlace`
     pub base: MSStoppingPlace,

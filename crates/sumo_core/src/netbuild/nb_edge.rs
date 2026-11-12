@@ -44,6 +44,7 @@ pub enum NBEdge_Lane2LaneInfoType {
 
 /// A structure which describes a connection between edges or lanes
 /// C++ class `NBEdge::Connection` (netbuild/NBEdge.h)
+#[repr(C)]
 pub struct NBEdge_Connection {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -247,6 +248,7 @@ impl NBEdge_Connection {
 
 /// An (internal) definition of a single lane of an edge
 /// C++ class `NBEdge::Lane` (netbuild/NBEdge.h)
+#[repr(C)]
 pub struct NBEdge_Lane {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -449,6 +451,7 @@ impl NBEdge_MainDirections {
 
 /// The representation of a single edge during network building
 /// C++ class `NBEdge` (netbuild/NBEdge.h)
+#[repr(C)]
 pub struct NBEdge {
     /// C++ base class `Named`
     pub base: Named,
@@ -6829,6 +6832,7 @@ impl NBRouterEdge {
 
 /// A class that being a bresenham-callback assigns the incoming lanes to the edges
 /// C++ class `NBEdge::ToEdgeConnectionsAdder` (netbuild/NBEdge.h)
+#[repr(C)]
 pub struct NBEdge_ToEdgeConnectionsAdder {
     /// C++ base class `Bresenham::BresenhamCallBack`
     pub base: Unmapped /* Bresenham::BresenhamCallBack */,

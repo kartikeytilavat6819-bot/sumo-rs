@@ -9,6 +9,7 @@ const HELPER_ZERO_SPEED_ACCURACY: f64 = 0.5;
 
 /// Helper methods for HBEFA3-based emission computation
 /// C++ class `HelpersHBEFA3` (utils/emissions/HelpersHBEFA3.h)
+#[repr(C)]
 pub struct HelpersHBEFA3 {
     /// C++ base class `PollutantsInterface::Helper`
     pub base: PollutantsInterface_Helper,

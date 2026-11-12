@@ -271,6 +271,7 @@ impl NIImporter_OpenStreetMap_CompareNodes {
 
 /// An internal definition of a loaded edge
 /// C++ class `NIImporter_OpenStreetMap::Edge` (netimport/NIImporter_OpenStreetMap.h)
+#[repr(C)]
 pub struct NIImporter_OpenStreetMap_Edge {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -442,6 +443,7 @@ impl NIImporter_OpenStreetMap_Edge {
 
 /// A class which extracts OSM-edges from a parsed OSM-file
 /// C++ class `NIImporter_OpenStreetMap::EdgesHandler` (netimport/NIImporter_OpenStreetMap.h)
+#[repr(C)]
 pub struct NIImporter_OpenStreetMap_EdgesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,
@@ -4867,6 +4869,7 @@ impl NIImporter_OpenStreetMap {
 
 /// An internal representation of an OSM-node
 /// C++ class `NIImporter_OpenStreetMap::NIOSMNode` (netimport/NIImporter_OpenStreetMap.h)
+#[repr(C)]
 pub struct NIImporter_OpenStreetMap_NIOSMNode {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -4970,6 +4973,7 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
 
 /// A class which extracts OSM-nodes from a parsed OSM-file
 /// C++ class `NIImporter_OpenStreetMap::NodesHandler` (netimport/NIImporter_OpenStreetMap.h)
+#[repr(C)]
 pub struct NIImporter_OpenStreetMap_NodesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,
@@ -5411,6 +5415,7 @@ impl NIImporter_OpenStreetMap_NodesHandler {
 
 /// A class which extracts relevant relation information from a parsed OSM-file - turn restrictions
 /// C++ class `NIImporter_OpenStreetMap::RelationHandler` (netimport/NIImporter_OpenStreetMap.h)
+#[repr(C)]
 pub struct NIImporter_OpenStreetMap_RelationHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Startzufallszahl` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Startzufallszahl.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Startzufallszahl {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

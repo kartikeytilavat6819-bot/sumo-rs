@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Computes routes using junction turning percentages
 /// C++ class `ROJTRRouter` (jtrrouter/ROJTRRouter.h)
+#[repr(C)]
 pub struct ROJTRRouter {
     /// C++ base class `SUMOAbstractRouter<ROEdge, ROVehicle>`
     pub base: SUMOAbstractRouter<ROEdge, ROVehicle>,

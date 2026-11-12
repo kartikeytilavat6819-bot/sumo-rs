@@ -16,6 +16,7 @@ pub const SECONDS_PER_HOUR: f64 = 3600.;
 
 /// Helper methods for PHEMlight-based emission computation
 /// C++ class `HelpersPHEMlight5` (utils/emissions/HelpersPHEMlight5.h)
+#[repr(C)]
 pub struct HelpersPHEMlight5 {
     /// C++ base class `HelpersPHEMlight`
     pub base: HelpersPHEMlight,

@@ -7510,6 +7510,7 @@ use super::pollutants_interface::HEAVY_BIT;
 
 /// Helper methods for HBEFA4-based emission computation
 /// C++ class `HelpersHBEFA4` (utils/emissions/HelpersHBEFA4.h)
+#[repr(C)]
 pub struct HelpersHBEFA4 {
     /// C++ base class `PollutantsInterface::Helper`
     pub base: PollutantsInterface_Helper,

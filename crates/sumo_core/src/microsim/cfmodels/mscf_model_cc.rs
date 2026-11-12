@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A set of automatic Cruise Controllers, including classic Cruise Control (CC), Adaptive Cruise Control (ACC) and Cooperative Adaptive Cruise Control (CACC). Take as references the chapters 5, 6 and 7 of the Rajamani's book "Vehicle dynamics and control" (2011). This model is meant to be used for simulation of platooning systems in mixed scenarios, so with automatic and driver controlled vehicles. The platooning manager is a distributed application implemented for veins (so for omnet++) supported by a 802.11p based communication protocol, which will determine the actions to be performed (such as switching on the automatic controller, or the lane to move to) and communicate them to this car following models via TraCI
 /// C++ class `MSCFModel_CC` (microsim/cfmodels/MSCFModel_CC.h)
+#[repr(C)]
 pub struct MSCFModel_CC {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,

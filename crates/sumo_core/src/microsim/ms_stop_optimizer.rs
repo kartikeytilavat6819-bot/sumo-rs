@@ -233,6 +233,7 @@ impl MSStopOptimizer {
 
 /// information used during skip/alternative optimization
 /// C++ class `MSStopOptimizer::StopPathNode` (microsim/MSStopOptimizer.h)
+#[repr(C)]
 pub struct MSStopOptimizer_StopPathNode {
     /// C++ base class `StopEdgeInfo`
     pub base: StopEdgeInfo,

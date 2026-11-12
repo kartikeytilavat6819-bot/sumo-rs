@@ -21,6 +21,7 @@ impl MSVehicleDevice_ComparatorNumericalVehicleIdLess {
 
 /// Abstract in-vehicle device
 /// C++ class `MSVehicleDevice` (microsim/devices/MSVehicleDevice.h)
+#[repr(C)]
 pub struct MSVehicleDevice {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A "real" stage performing the tranship of a container A container is in this stage if it gets transhiped between two stops that are assumed to be connected.
 /// C++ class `MSStageTranship` (microsim/transportables/MSStageTranship.h)
+#[repr(C)]
 pub struct MSStageTranship {
     /// C++ base class `MSStageMoving`
     pub base: MSStageMoving,

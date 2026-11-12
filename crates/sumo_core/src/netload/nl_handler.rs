@@ -10,6 +10,7 @@ pub type NLHandler_LaneVector = i32;
 
 /// The XML-Handler for network loading
 /// C++ class `NLHandler` (netload/NLHandler.h)
+#[repr(C)]
 pub struct NLHandler {
     /// C++ base class `MSRouteHandler`
     pub base: MSRouteHandler,
@@ -2143,6 +2144,7 @@ impl NLHandler {
 
 /// The XML-Handler for shapes loading network loading
 /// C++ class `NLShapeHandler` (netload/NLHandler.h)
+#[repr(C)]
 pub struct NLShapeHandler {
     /// C++ base class `ShapeHandler`
     pub base: ShapeHandler,

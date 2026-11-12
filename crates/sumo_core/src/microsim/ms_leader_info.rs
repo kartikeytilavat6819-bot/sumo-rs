@@ -31,6 +31,7 @@ pub type CLeaderDist = (Ptr<MSVehicle>, f64);
 pub type LeaderDist = (Ptr<MSVehicle>, f64);
 
 /// C++ class `MSCriticalFollowerDistanceInfo` (microsim/MSLeaderInfo.h)
+#[repr(C)]
 pub struct MSCriticalFollowerDistanceInfo {
     /// C++ base class `MSLeaderDistanceInfo`
     pub base: MSLeaderDistanceInfo,
@@ -297,6 +298,7 @@ impl MSCriticalFollowerDistanceInfo {
 /// saves leader/follower vehicles and their distances relative to an ego vehicle
 /// C++ class `MSLeaderDistanceInfo` (microsim/MSLeaderInfo.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct MSLeaderDistanceInfo {
     /// C++ base class `MSLeaderInfo`
     pub base: MSLeaderInfo,

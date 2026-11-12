@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An O/D (origin/destination) matrix
 /// C++ class `ODMatrix` (od/ODMatrix.h)
+#[repr(C)]
 pub struct ODMatrix {
     /// C++ base class `SAXWeightsHandler::EdgeFloatTimeLineRetriever`
     pub base: Unmapped /* SAXWeightsHandler::EdgeFloatTimeLineRetriever */,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Cost calculation with c-logit or logit method.
 /// C++ class `LogitCalculator` (utils/router/LogitCalculator.h)
+#[repr(C)]
 pub struct LogitCalculator<R, E, V> {
     /// C++ base class `RouteCostCalculator<R, E, V>`
     pub base: RouteCostCalculator<R, E, V>,

@@ -7,6 +7,7 @@ use super::shape::{gch_using_geo_projection, gch_x2cartesian, DEFAULT_ANGLE, DEF
 
 /// The XML-Handler for network loading
 /// C++ class `ShapeHandler` (utils/shapes/ShapeHandler.h)
+#[repr(C)]
 pub struct ShapeHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */, // shortcut: SUMOSAXHandler not ported yet, placeholder base

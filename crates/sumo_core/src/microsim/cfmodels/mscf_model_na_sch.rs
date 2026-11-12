@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The Nagel-Schreckenberg (1992) cellular automaton car-following model
 /// C++ class `MSCFModel_NaSch` (microsim/cfmodels/MSCFModel_NaSch.h)
+#[repr(C)]
 pub struct MSCFModel_NaSch {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,

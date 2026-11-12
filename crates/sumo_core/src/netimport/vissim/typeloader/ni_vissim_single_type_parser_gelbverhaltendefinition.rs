@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Gelbverhaltendefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Gelbverhaltendefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Gelbverhaltendefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

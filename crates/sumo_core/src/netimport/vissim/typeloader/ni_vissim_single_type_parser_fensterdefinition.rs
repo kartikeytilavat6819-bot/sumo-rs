@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Fensterdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Fensterdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Fensterdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -7,6 +7,7 @@ pub type NGNodeList = VecDeque<Ptr<NGNode>>;
 
 /// A netgen-representation of a node
 /// C++ class `NGNode` (netgen/NGNode.h)
+#[repr(C)]
 pub struct NGNode {
     /// C++ base class `Named`
     pub base: Named,

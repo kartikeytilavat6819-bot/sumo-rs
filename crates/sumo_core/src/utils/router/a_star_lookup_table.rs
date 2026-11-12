@@ -35,6 +35,7 @@ impl<E, V> AbstractLookupTable<E, V> {
 }
 
 /// C++ class `FullLookupTable` (utils/router/AStarLookupTable.h)
+#[repr(C)]
 pub struct FullLookupTable<E, V> {
     /// C++ base class `AbstractLookupTable<E, V>`
     pub base: AbstractLookupTable<E, V>,
@@ -101,6 +102,7 @@ impl<E, V> FullLookupTable<E, V> {
 }
 
 /// C++ class `LandmarkLookupTable` (utils/router/AStarLookupTable.h)
+#[repr(C)]
 pub struct LandmarkLookupTable<E, V, M> {
     /// C++ base class `AbstractLookupTable<E, V>`
     pub base: AbstractLookupTable<E, V>,

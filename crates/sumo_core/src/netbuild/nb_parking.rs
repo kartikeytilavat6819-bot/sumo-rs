@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The representation of an imported parking area
 /// C++ class `NBParking` (netbuild/NBParking.h)
+#[repr(C)]
 pub struct NBParking {
     /// C++ base class `Named`
     pub base: Named,
@@ -123,6 +124,7 @@ impl NBParking {
 }
 
 /// C++ class `NBParkingCont` (netbuild/NBParking.h)
+#[repr(C)]
 pub struct NBParkingCont {
     /// C++ base class `std::vector<NBParking>`
     pub base: Vec<NBParking>,

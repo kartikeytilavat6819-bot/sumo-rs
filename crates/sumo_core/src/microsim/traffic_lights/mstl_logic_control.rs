@@ -744,6 +744,7 @@ impl WAUTSwitchProcedure_Stretch_StretchRange {
 
 /// This event-class is used to initialise a WAUT switch at a certain time.
 /// C++ class `MSTLLogicControl::SwitchInitCommand` (microsim/traffic_lights/MSTLLogicControl.h)
+#[repr(C)]
 pub struct MSTLLogicControl_SwitchInitCommand {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -1514,6 +1515,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure {
 
 /// This class switches using the GSP algorithm.
 /// C++ class `MSTLLogicControl::WAUTSwitchProcedure_GSP` (microsim/traffic_lights/MSTLLogicControl.h)
+#[repr(C)]
 pub struct MSTLLogicControl_WAUTSwitchProcedure_GSP {
     /// C++ base class `WAUTSwitchProcedure`
     pub base: MSTLLogicControl_WAUTSwitchProcedure,
@@ -1576,6 +1578,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_GSP {
 
 /// This class simply switches to the next program
 /// C++ class `MSTLLogicControl::WAUTSwitchProcedure_JustSwitch` (microsim/traffic_lights/MSTLLogicControl.h)
+#[repr(C)]
 pub struct MSTLLogicControl_WAUTSwitchProcedure_JustSwitch {
     /// C++ base class `WAUTSwitchProcedure`
     pub base: MSTLLogicControl_WAUTSwitchProcedure,
@@ -1630,6 +1633,7 @@ impl MSTLLogicControl_WAUTSwitchProcedure_JustSwitch {
 
 /// This class switches using the Stretch algorithm.
 /// C++ class `MSTLLogicControl::WAUTSwitchProcedure_Stretch` (microsim/traffic_lights/MSTLLogicControl.h)
+#[repr(C)]
 pub struct MSTLLogicControl_WAUTSwitchProcedure_Stretch {
     /// C++ base class `WAUTSwitchProcedure`
     pub base: MSTLLogicControl_WAUTSwitchProcedure,

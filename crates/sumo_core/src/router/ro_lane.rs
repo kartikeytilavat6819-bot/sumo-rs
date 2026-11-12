@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A single lane the router may use
 /// C++ class `ROLane` (router/ROLane.h)
+#[repr(C)]
 pub struct ROLane {
     /// C++ base class `Named`
     pub base: Named,

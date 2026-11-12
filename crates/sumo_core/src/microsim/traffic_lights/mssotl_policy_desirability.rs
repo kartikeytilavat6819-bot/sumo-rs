@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// This class determines the desirability algorithm of a MSSOTLPolicy when used in combination with a high level policy
 /// C++ class `MSSOTLPolicyDesirability` (microsim/traffic_lights/MSSOTLPolicyDesirability.h)
+#[repr(C)]
 pub struct MSSOTLPolicyDesirability {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

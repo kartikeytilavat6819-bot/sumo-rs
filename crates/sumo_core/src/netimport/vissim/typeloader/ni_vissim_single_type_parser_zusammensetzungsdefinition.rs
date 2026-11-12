@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Zusammensetzungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Zusammensetzungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Zusammensetzungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -21,6 +21,7 @@ pub type NBTrafficLightDefinition_NeedsContRelation = BTreeSet<NBTrafficLightDef
 
 /// The base class for traffic light logic definitions
 /// C++ class `NBTrafficLightDefinition` (netbuild/NBTrafficLightDefinition.h)
+#[repr(C)]
 pub struct NBTrafficLightDefinition {
     /// C++ base class `Named`
     pub base: Named,

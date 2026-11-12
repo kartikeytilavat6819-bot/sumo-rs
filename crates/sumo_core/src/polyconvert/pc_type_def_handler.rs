@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A handler for loading polygon type maps
 /// C++ class `PCTypeDefHandler` (polyconvert/PCTypeDefHandler.h)
+#[repr(C)]
 pub struct PCTypeDefHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

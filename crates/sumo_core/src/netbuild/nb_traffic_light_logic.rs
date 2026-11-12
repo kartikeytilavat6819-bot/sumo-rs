@@ -7,6 +7,7 @@ pub type NBTrafficLightLogic_PhaseDefinitionVector = Vec<NBTrafficLightLogic_Pha
 
 /// A SUMO-compliant built logic for a traffic light
 /// C++ class `NBTrafficLightLogic` (netbuild/NBTrafficLightLogic.h)
+#[repr(C)]
 pub struct NBTrafficLightLogic {
     /// C++ base class `Named`
     pub base: Named,

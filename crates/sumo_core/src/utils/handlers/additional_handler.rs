@@ -4,6 +4,7 @@ use crate::prelude::*;
 use super::common_handler::{attr_str, tag_str};
 
 /// C++ class `AdditionalHandler` (utils/handlers/AdditionalHandler.h)
+#[repr(C)]
 pub struct AdditionalHandler {
     /// C++ base class `CommonHandler`
     pub base: CommonHandler,

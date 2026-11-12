@@ -5,6 +5,7 @@ use utils::common::msg_handler::write_message;
 
 /// A self-organizing traffic light logic based on a particular policy
 /// C++ class `MSSOTLPolicyBasedTrafficLightLogic` (microsim/traffic_lights/MSSOTLPolicyBasedTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSOTLPolicyBasedTrafficLightLogic {
     /// C++ base class `MSSOTLTrafficLightLogic`
     pub base: MSSOTLTrafficLightLogic,

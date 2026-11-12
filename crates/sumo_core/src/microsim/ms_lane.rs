@@ -269,6 +269,7 @@ impl MSLane_IncomingLaneInfo {
 
 /// Representation of a lane in the micro simulation
 /// C++ class `MSLane` (microsim/MSLane.h)
+#[repr(C)]
 pub struct MSLane {
     /// C++ base class `Named`
     pub base: Named,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A "real" stage performing a waiting over the specified time
 /// C++ class `MSStageWaiting` (microsim/transportables/MSStageWaiting.h)
+#[repr(C)]
 pub struct MSStageWaiting {
     /// C++ base class `MSStage`
     pub base: MSStage,

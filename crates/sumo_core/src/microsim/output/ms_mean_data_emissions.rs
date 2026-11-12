@@ -280,6 +280,7 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
 
 /// Emission data collector for edges/lanes
 /// C++ class `MSMeanData_Emissions` (microsim/output/MSMeanData_Emissions.h)
+#[repr(C)]
 pub struct MSMeanData_Emissions {
     /// C++ base class `MSMeanData`
     pub base: MSMeanData,

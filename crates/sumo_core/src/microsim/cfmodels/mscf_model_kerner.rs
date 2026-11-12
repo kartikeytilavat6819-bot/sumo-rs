@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// car-following model by B. Kerner
 /// C++ class `MSCFModel_Kerner` (microsim/cfmodels/MSCFModel_Kerner.h)
+#[repr(C)]
 pub struct MSCFModel_Kerner {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -146,6 +147,7 @@ impl MSCFModel_Kerner {
 }
 
 /// C++ class `MSCFModel_Kerner::VehicleVariables` (microsim/cfmodels/MSCFModel_Kerner.h)
+#[repr(C)]
 pub struct MSCFModel_Kerner_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

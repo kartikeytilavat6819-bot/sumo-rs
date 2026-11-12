@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An abstract stage providing additional interface for the movement models
 /// C++ class `MSStageMoving` (microsim/transportables/MSStageMoving.h)
+#[repr(C)]
 pub struct MSStageMoving {
     /// C++ base class `MSStage`
     pub base: MSStage,

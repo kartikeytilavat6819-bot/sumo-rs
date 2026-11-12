@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub type NIVissimConnection_DictType = BTreeMap<i32, Ptr<NIVissimConnection>>;
 
 /// C++ class `NIVissimConnection` (netimport/vissim/tempstructs/NIVissimConnection.h)
+#[repr(C)]
 pub struct NIVissimConnection {
     /// C++ base class `NIVissimBoundedClusterObject`
     pub base: NIVissimBoundedClusterObject,

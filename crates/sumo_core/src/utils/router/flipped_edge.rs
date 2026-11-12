@@ -7,6 +7,7 @@ pub type FlippedEdge_ConstFlippedEdgePairVector = Unmapped /* std::vector<std::p
 
 /// The edge type representing backward edges with flipped nodes
 /// C++ class `FlippedEdge` (utils/router/FlippedEdge.h)
+#[repr(C)]
 pub struct FlippedEdge<E, N, V> {
     /// C++ base class `ReversedEdge<E, V>`
     pub base: ReversedEdge<E, V>,

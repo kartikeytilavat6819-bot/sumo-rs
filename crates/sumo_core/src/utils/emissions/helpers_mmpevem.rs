@@ -8,6 +8,7 @@ pub const MMPEVEM_BASE: i32 = 5 << 16;
 
 /// This helper class allows the PollutantsInterface to load and use different MMPEVEMs.
 /// C++ class `HelpersMMPEVEM` (utils/emissions/HelpersMMPEVEM.h)
+#[repr(C)]
 pub struct HelpersMMPEVEM {
     /// C++ base class `PollutantsInterface::Helper`
     pub base: PollutantsInterface_Helper,

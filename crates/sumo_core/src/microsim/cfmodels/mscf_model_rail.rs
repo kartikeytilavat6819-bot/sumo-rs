@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSCFModel_Rail` (microsim/cfmodels/MSCFModel_Rail.h)
+#[repr(C)]
 pub struct MSCFModel_Rail {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -1309,6 +1310,7 @@ impl MSCFModel_Rail {
 }
 
 /// C++ class `MSCFModel_Rail::RailVehicleVariables` (microsim/cfmodels/MSCFModel_Rail.h)
+#[repr(C)]
 pub struct MSCFModel_Rail_RailVehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

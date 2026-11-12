@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Signalgruppendefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Signalgruppendefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Signalgruppendefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

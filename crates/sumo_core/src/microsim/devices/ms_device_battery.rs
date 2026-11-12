@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Battery device for electric vehicles
 /// C++ class `MSDevice_Battery` (microsim/devices/MSDevice_Battery.h)
+#[repr(C)]
 pub struct MSDevice_Battery {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

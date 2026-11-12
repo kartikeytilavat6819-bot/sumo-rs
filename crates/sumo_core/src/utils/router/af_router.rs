@@ -16,6 +16,7 @@ pub type AFRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
 
 /// Computes the shortest path through a network with an arc flag routing algorithm (Hilger et al.) in its multi-level variant (also called "stripped SHARC" by Delling et al.)
 /// C++ class `AFRouter` (utils/router/AFRouter.h)
+#[repr(C)]
 pub struct AFRouter<E, N, V, M> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

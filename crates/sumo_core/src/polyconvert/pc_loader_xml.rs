@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A reader for polygons and pois stored in XML-format
 /// C++ class `PCLoaderXML` (polyconvert/PCLoaderXML.h)
+#[repr(C)]
 pub struct PCLoaderXML {
     /// C++ base class `ShapeHandler`
     pub base: ShapeHandler,

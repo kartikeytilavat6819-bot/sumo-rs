@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A fixed traffic light logic
 /// C++ class `MSSimpleTrafficLightLogic` (microsim/traffic_lights/MSSimpleTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSimpleTrafficLightLogic {
     /// C++ base class `MSTrafficLightLogic`
     pub base: MSTrafficLightLogic,

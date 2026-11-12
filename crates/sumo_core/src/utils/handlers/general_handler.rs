@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `GeneralHandler` (utils/handlers/GeneralHandler.h)
+#[repr(C)]
 pub struct GeneralHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

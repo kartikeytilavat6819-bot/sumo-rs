@@ -112,6 +112,7 @@ pub enum NIImporter_ITSUMO_ItsumoXMLTag {
 
 /// A class which parses an ITSUMO file
 /// C++ class `NIImporter_ITSUMO::Handler` (netimport/NIImporter_ITSUMO.h)
+#[repr(C)]
 pub struct NIImporter_ITSUMO_Handler {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,

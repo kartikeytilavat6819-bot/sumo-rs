@@ -52,6 +52,7 @@ fn get_crossing_by_edges(node: Ptr<NBNode>, edges: &EdgeVector) -> Ptr<NBNode_Cr
 
 /// Importer for edge connections stored in XML
 /// C++ class `NIXMLConnectionsHandler` (netimport/NIXMLConnectionsHandler.h)
+#[repr(C)]
 pub struct NIXMLConnectionsHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

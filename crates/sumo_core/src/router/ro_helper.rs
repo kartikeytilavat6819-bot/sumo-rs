@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A function for sorting vehicles by their departure time
 /// C++ class `ROVehicleByDepartureComperator` (router/ROHelper.h)
+#[repr(C)]
 pub struct ROVehicleByDepartureComperator {
     /// C++ base class `std::less<ROVehicle *>`
     pub base: Unmapped /* std::less<ROVehicle *> */,

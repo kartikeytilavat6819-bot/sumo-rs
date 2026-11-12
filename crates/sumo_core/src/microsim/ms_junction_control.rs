@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Container for junctions; performs operations on all stored junctions
 /// C++ class `MSJunctionControl` (microsim/MSJunctionControl.h)
+#[repr(C)]
 pub struct MSJunctionControl {
     /// C++ base class `NamedObjectCont<MSJunction *>` (its std::map<std::string, T> IDMap, ported as an ordered map)
     pub base: BTreeMap<String, Ptr<MSJunction>>,

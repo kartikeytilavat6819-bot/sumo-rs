@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser__XVerteilungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser__XVerteilungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser__XVerteilungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

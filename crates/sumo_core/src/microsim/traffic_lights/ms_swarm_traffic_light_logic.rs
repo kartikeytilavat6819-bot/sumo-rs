@@ -222,6 +222,7 @@ impl<T> CircularBuffer<T> {
 }
 
 /// C++ class `MSSwarmTrafficLightLogic` (microsim/traffic_lights/MSSwarmTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSwarmTrafficLightLogic {
     /// C++ base class `MSSOTLHiLevelTrafficLightLogic`
     pub base: MSSOTLHiLevelTrafficLightLogic,

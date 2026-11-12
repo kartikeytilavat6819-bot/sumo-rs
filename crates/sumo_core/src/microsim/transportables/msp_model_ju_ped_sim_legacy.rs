@@ -30,6 +30,7 @@ impl MSPModel_JuPedSim_legacy_AreaData {
 }
 
 /// C++ class `MSPModel_JuPedSim_legacy::Event` (microsim/transportables/MSPModel_JuPedSim_legacy.h)
+#[repr(C)]
 pub struct MSPModel_JuPedSim_legacy_Event {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -70,6 +71,7 @@ impl MSPModel_JuPedSim_legacy_Event {
 
 /// A pedestrian following model that acts as a proxy for pedestrian models provided by the JuPedSim third-party simulation framework.
 /// C++ class `MSPModel_JuPedSim_legacy` (microsim/transportables/MSPModel_JuPedSim_legacy.h)
+#[repr(C)]
 pub struct MSPModel_JuPedSim_legacy {
     /// C++ base class `MSPModel_Interacting`
     pub base: MSPModel_Interacting,
@@ -1515,6 +1517,7 @@ impl MSPModel_JuPedSim_legacy {
 
 /// Holds pedestrian state and performs updates
 /// C++ class `MSPModel_JuPedSim_legacy::PState` (microsim/transportables/MSPModel_JuPedSim_legacy.h)
+#[repr(C)]
 pub struct MSPModel_JuPedSim_legacy_PState {
     /// C++ base class `MSPModel_InteractingState`
     pub base: MSPModel_InteractingState,

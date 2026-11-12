@@ -14,6 +14,7 @@ pub enum DetectorUsage {
 
 /// Base of value-generating classes (detectors)
 /// C++ class `MSDetectorFileOutput` (microsim/output/MSDetectorFileOutput.h)
+#[repr(C)]
 pub struct MSDetectorFileOutput {
     /// C++ base class `Named`
     pub base: Named,

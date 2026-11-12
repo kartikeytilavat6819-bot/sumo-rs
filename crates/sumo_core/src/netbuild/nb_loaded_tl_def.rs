@@ -7,6 +7,7 @@ pub type NBLoadedTLDef_SignalGroupCont = BTreeMap<String, Ptr<NBLoadedTLDef_Sign
 
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedTLDef` (netbuild/NBLoadedTLDef.h)
+#[repr(C)]
 pub struct NBLoadedTLDef {
     /// C++ base class `NBTrafficLightDefinition`
     pub base: NBTrafficLightDefinition,
@@ -548,6 +549,7 @@ impl SignalGroup_PhaseDef {
 
 /// A single signal group, may control several connections
 /// C++ class `NBLoadedTLDef::SignalGroup` (netbuild/NBLoadedTLDef.h)
+#[repr(C)]
 pub struct NBLoadedTLDef_SignalGroup {
     /// C++ base class `Named`
     pub base: Named,

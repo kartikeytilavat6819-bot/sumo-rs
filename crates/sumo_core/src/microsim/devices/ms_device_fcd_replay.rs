@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub type MSDevice_FCDReplay_Trajectory = Vec<MSDevice_FCDReplay_TrajectoryEntry>;
 
 /// C++ class `MSDevice_FCDReplay::FCDHandler` (microsim/devices/MSDevice_FCDReplay.h)
+#[repr(C)]
 pub struct MSDevice_FCDReplay_FCDHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,
@@ -380,6 +381,7 @@ impl MSDevice_FCDReplay_FCDHandler {
 
 /// A device which replays a vehicle trajectory from an fcd file
 /// C++ class `MSDevice_FCDReplay` (microsim/devices/MSDevice_FCDReplay.h)
+#[repr(C)]
 pub struct MSDevice_FCDReplay {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,
@@ -617,6 +619,7 @@ impl MSDevice_FCDReplay {
 }
 
 /// C++ class `MSDevice_FCDReplay::MoveVehicles` (microsim/devices/MSDevice_FCDReplay.h)
+#[repr(C)]
 pub struct MSDevice_FCDReplay_MoveVehicles {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

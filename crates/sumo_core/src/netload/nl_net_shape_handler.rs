@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The XML-Handler for network loading
 /// C++ class `NLNetShapeHandler` (netload/NLNetShapeHandler.h)
+#[repr(C)]
 pub struct NLNetShapeHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

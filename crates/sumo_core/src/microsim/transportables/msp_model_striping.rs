@@ -29,6 +29,7 @@ pub type MSPModel_Striping_WalkingAreaPaths = BTreeMap<(Ptr<MSLane>, Ptr<MSLane>
 
 /// The pedestrian movement model using stripes on sidewalks
 /// C++ class `MSPModel_Striping` (microsim/transportables/MSPModel_Striping.h)
+#[repr(C)]
 pub struct MSPModel_Striping {
     /// C++ base class `MSPModel_Interacting`
     pub base: MSPModel_Interacting,
@@ -1056,6 +1057,7 @@ impl MSPModel_Striping {
 }
 
 /// C++ class `MSPModel_Striping::MovePedestrians` (microsim/transportables/MSPModel_Striping.h)
+#[repr(C)]
 pub struct MSPModel_Striping_MovePedestrians {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -1241,6 +1243,7 @@ impl MSPModel_Striping_Obstacle {
 
 /// Container for pedestrian state and individual position update function
 /// C++ class `MSPModel_Striping::PState` (microsim/transportables/MSPModel_Striping.h)
+#[repr(C)]
 pub struct MSPModel_Striping_PState {
     /// C++ base class `MSPModel_InteractingState`
     pub base: MSPModel_InteractingState,
@@ -2493,6 +2496,7 @@ impl MSPModel_Striping_PState {
 }
 
 /// C++ class `MSPModel_Striping::PStateVehicle` (microsim/transportables/MSPModel_Striping.h)
+#[repr(C)]
 pub struct MSPModel_Striping_PStateVehicle {
     /// C++ base class `PState`
     pub base: MSPModel_Striping_PState,

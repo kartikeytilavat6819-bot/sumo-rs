@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSSOTLWaveTrafficLightLogic` (microsim/traffic_lights/MSSOTLWaveTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSOTLWaveTrafficLightLogic {
     /// C++ base class `MSSOTLTrafficLightLogic`
     pub base: MSSOTLTrafficLightLogic,

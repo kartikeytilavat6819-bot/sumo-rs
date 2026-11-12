@@ -25,6 +25,7 @@ impl MSStoppingPlace_Access {
 
 /// A lane area vehicles can halt at
 /// C++ class `MSStoppingPlace` (microsim/MSStoppingPlace.h)
+#[repr(C)]
 pub struct MSStoppingPlace {
     /// C++ base class `Named`
     pub base: Named,

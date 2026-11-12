@@ -7,6 +7,7 @@ use utils::options::options_cont::get_float;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_Example` (microsim/devices/MSDevice_Example.h)
+#[repr(C)]
 pub struct MSDevice_Example {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

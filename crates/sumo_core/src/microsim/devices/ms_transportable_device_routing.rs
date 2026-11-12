@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A device that performs person rerouting based on current edge speeds
 /// C++ class `MSTransportableDevice_Routing` (microsim/devices/MSTransportableDevice_Routing.h)
+#[repr(C)]
 pub struct MSTransportableDevice_Routing {
     /// C++ base class `MSTransportableDevice`
     pub base: MSTransportableDevice,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A traffic lights logic which represents a tls in an off-mode
 /// C++ class `MSOffTrafficLightLogic` (microsim/traffic_lights/MSOffTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSOffTrafficLightLogic {
     /// C++ base class `MSTrafficLightLogic`
     pub base: MSTrafficLightLogic,

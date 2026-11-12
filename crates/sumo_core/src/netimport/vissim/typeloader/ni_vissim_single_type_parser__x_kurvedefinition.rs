@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser__XKurvedefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser__XKurvedefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser__XKurvedefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

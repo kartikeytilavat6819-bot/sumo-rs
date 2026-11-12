@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MeanDataHandler` (utils/handlers/MeanDataHandler.h)
+#[repr(C)]
 pub struct MeanDataHandler {
     /// C++ base class `CommonHandler`
     pub base: CommonHandler,

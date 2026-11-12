@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

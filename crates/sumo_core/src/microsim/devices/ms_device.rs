@@ -20,6 +20,7 @@ impl MSDevice_DefaultAssignment {
 
 /// Abstract in-vehicle / in-person device
 /// C++ class `MSDevice` (microsim/devices/MSDevice.h)
+#[repr(C)]
 pub struct MSDevice {
     /// C++ base class `Named`
     pub base: Named,

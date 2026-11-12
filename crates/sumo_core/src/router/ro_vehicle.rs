@@ -25,6 +25,7 @@ impl ROVehicle_Mandatory {
 
 /// A vehicle as used by router
 /// C++ class `ROVehicle` (router/ROVehicle.h)
+#[repr(C)]
 pub struct ROVehicle {
     /// C++ base class `RORoutable`
     pub base: RORoutable,

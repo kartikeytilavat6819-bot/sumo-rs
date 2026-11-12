@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Computes lane-2-lane connections
 /// C++ class `NBNode::ApproachingDivider` (netbuild/NBNode.h)
+#[repr(C)]
 pub struct NBNode_ApproachingDivider {
     /// C++ base class `Bresenham::BresenhamCallBack`
     pub base: Unmapped /* Bresenham::BresenhamCallBack */,
@@ -253,6 +254,7 @@ impl NBNode_ApproachingDivider {
 
 /// A definition of a pedestrian crossing
 /// C++ class `NBNode::Crossing` (netbuild/NBNode.h)
+#[repr(C)]
 pub struct NBNode_Crossing {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -328,6 +330,7 @@ impl NBNode_Crossing {
 
 /// Represents a single node (junction) during network building
 /// C++ class `NBNode` (netbuild/NBNode.h)
+#[repr(C)]
 pub struct NBNode {
     /// C++ base class `Named`
     pub base: Named,

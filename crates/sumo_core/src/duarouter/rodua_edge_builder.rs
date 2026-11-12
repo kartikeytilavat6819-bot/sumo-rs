@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Interface for building instances of duarouter-edges
 /// C++ class `RODUAEdgeBuilder` (duarouter/RODUAEdgeBuilder.h)
+#[repr(C)]
 pub struct RODUAEdgeBuilder {
     /// C++ base class `ROAbstractEdgeBuilder`
     pub base: ROAbstractEdgeBuilder,

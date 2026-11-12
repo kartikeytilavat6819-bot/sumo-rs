@@ -10,6 +10,7 @@ pub type ROEdgeVector = Vec<Ptr<ROEdge>>;
 
 /// A basic edge for routing applications
 /// C++ class `ROEdge` (router/ROEdge.h)
+#[repr(C)]
 pub struct ROEdge {
     /// C++ base class `Named`
     pub base: Named,

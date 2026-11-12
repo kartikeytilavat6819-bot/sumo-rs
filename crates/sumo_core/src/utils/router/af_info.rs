@@ -12,6 +12,7 @@ impl<E> AFInfo<E> {
 
 /// Derived from ArcInfoBase. Therefore it tholds a pointer to the associated edge, flag information for arc flag routing, a key for sorting the heap, a flag indicating whether the edge has already been touched. Additionally, it has labels for holding (tentative/final) distances to the boundary nodes
 /// C++ class `AFInfo::ArcInfo` (utils/router/AFInfo.h)
+#[repr(C)]
 pub struct AFInfo_ArcInfo {
     /// C++ base class `ArcInfoBase`
     pub base: AFInfo_ArcInfoBase,
@@ -80,6 +81,7 @@ impl AFInfo_ArcInfo {
 
 /// Derived from FlagInfo. Therefore holds a pointer to the associated edge, and flag information for arc flag routing. Additionally, it holds a key for sorting the heap, and a flag indicating whether the edge has already been touched
 /// C++ class `AFInfo::ArcInfoBase` (utils/router/AFInfo.h)
+#[repr(C)]
 pub struct AFInfo_ArcInfoBase {
     /// C++ base class `FlagInfo`
     pub base: AFInfo_FlagInfo,

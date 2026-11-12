@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Linksverkehr` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Linksverkehr.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Linksverkehr {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Rautedefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Rautedefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Rautedefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

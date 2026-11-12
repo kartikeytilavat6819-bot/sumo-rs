@@ -201,6 +201,7 @@ impl NIVisumTL {
 
 /// A phase
 /// C++ class `NIVisumTL::Phase` (netimport/NIVisumTL.h)
+#[repr(C)]
 pub struct NIVisumTL_Phase {
     /// C++ base class `TimePeriod`
     pub base: NIVisumTL_TimePeriod,
@@ -239,6 +240,7 @@ impl NIVisumTL_Phase {
 
 /// A signal group can be defined either by a time period or by phases
 /// C++ class `NIVisumTL::SignalGroup` (netimport/NIVisumTL.h)
+#[repr(C)]
 pub struct NIVisumTL_SignalGroup {
     /// C++ base class `TimePeriod`
     pub base: NIVisumTL_TimePeriod,

@@ -32,6 +32,7 @@ fn special_dest_terminate_route() -> Ptr<MSEdge> {
 
 /// Reroutes traffic objects passing an edge
 /// C++ class `MSTriggeredRerouter` (microsim/trigger/MSTriggeredRerouter.h)
+#[repr(C)]
 pub struct MSTriggeredRerouter {
     /// C++ base class `Named`
     pub base: Named,

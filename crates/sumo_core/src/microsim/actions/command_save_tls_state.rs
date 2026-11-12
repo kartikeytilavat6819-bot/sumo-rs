@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes the state of the tls to a file (in each second)
 /// C++ class `Command_SaveTLSState` (microsim/actions/Command_SaveTLSState.h)
+#[repr(C)]
 pub struct Command_SaveTLSState {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

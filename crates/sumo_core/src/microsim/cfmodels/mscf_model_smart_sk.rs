@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The original Krauss (1998) car-following model and parameter
 /// C++ class `MSCFModel_SmartSK` (microsim/cfmodels/MSCFModel_SmartSK.h)
+#[repr(C)]
 pub struct MSCFModel_SmartSK {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -304,6 +305,7 @@ impl MSCFModel_SmartSK {
 }
 
 /// C++ class `MSCFModel_SmartSK::SSKVehicleVariables` (microsim/cfmodels/MSCFModel_SmartSK.h)
+#[repr(C)]
 pub struct MSCFModel_SmartSK_SSKVehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

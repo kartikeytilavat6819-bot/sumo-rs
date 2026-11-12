@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Stauzaehlerdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Stauzaehlerdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Stauzaehlerdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

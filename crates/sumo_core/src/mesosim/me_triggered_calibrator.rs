@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Calibrates the flow on a segment to a specified one
 /// C++ class `METriggeredCalibrator` (mesosim/METriggeredCalibrator.h)
+#[repr(C)]
 pub struct METriggeredCalibrator {
     /// C++ base class `MSCalibrator`
     pub base: MSCalibrator,

@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Verkehrszusammensetzungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Verkehrszusammensetzungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Verkehrszusammensetzungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

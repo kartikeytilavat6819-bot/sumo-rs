@@ -14,6 +14,7 @@ thread_local! {
 
 /// A device which collects vehicular emissions
 /// C++ class `MSDevice_Emissions` (microsim/devices/MSDevice_Emissions.h)
+#[repr(C)]
 pub struct MSDevice_Emissions {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

@@ -7,6 +7,7 @@ pub type MSDispatch_RouteExtension_EdgePosVector = Vec<(Ptr<MSEdge>, f64)>;
 
 /// A dispatch algorithm that services customers in reservation order but also tries to do ride sharing by extending or reusing the existing route
 /// C++ class `MSDispatch_RouteExtension` (microsim/devices/MSDispatch_RouteExtension.h)
+#[repr(C)]
 pub struct MSDispatch_RouteExtension {
     /// C++ base class `MSDispatch_Greedy`
     pub base: MSDispatch_Greedy,

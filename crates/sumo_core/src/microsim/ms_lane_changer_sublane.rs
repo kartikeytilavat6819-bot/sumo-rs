@@ -8,6 +8,7 @@ pub type MSLaneChangerSublane_StateAndDist = MSAbstractLaneChangeModel_StateAndD
 
 /// Performs lane changing of vehicles
 /// C++ class `MSLaneChangerSublane` (microsim/MSLaneChangerSublane.h)
+#[repr(C)]
 pub struct MSLaneChangerSublane {
     /// C++ base class `MSLaneChanger`
     pub base: MSLaneChanger,

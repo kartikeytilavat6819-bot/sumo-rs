@@ -10,6 +10,7 @@ pub type NIVissimEdge_DictType = BTreeMap<i32, Ptr<NIVissimEdge>>;
 
 /// A temporary storage for edges imported from Vissim
 /// C++ class `NIVissimEdge` (netimport/vissim/tempstructs/NIVissimEdge.h)
+#[repr(C)]
 pub struct NIVissimEdge {
     /// C++ base class `NIVissimAbstractEdge`
     pub base: NIVissimAbstractEdge,

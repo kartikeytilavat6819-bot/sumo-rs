@@ -10,6 +10,7 @@ pub type MSPModel_Interacting_Pedestrians = Vec<Ptr<MSPModel_InteractingState>>;
 
 /// The abstract superclass for pedestrian models which actually interact with vehicles
 /// C++ class `MSPModel_Interacting` (microsim/transportables/MSPModel_Interacting.h)
+#[repr(C)]
 pub struct MSPModel_Interacting {
     /// C++ base class `MSPModel`
     pub base: MSPModel,
@@ -248,6 +249,7 @@ impl MSPModel_Interacting {
 
 /// Container for pedestrian state and individual position update function
 /// C++ class `MSPModel_InteractingState` (microsim/transportables/MSPModel_Interacting.h)
+#[repr(C)]
 pub struct MSPModel_InteractingState {
     /// C++ base class `MSTransportableStateAdapter`
     pub base: MSTransportableStateAdapter,

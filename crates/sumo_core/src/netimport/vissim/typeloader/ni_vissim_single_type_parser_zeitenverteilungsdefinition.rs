@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Zeitenverteilungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Zeitenverteilungsdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Zeitenverteilungsdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A device which collects info on current friction Coefficient on the road
 /// C++ class `MSDevice_Friction` (microsim/devices/MSDevice_Friction.h)
+#[repr(C)]
 pub struct MSDevice_Friction {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

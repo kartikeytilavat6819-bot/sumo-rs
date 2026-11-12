@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Cost calculation with Gawron's method.
 /// C++ class `GawronCalculator` (utils/router/GawronCalculator.h)
+#[repr(C)]
 pub struct GawronCalculator<R, E, V> {
     /// C++ base class `RouteCostCalculator<R, E, V>`
     pub base: RouteCostCalculator<R, E, V>,

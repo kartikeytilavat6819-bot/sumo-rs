@@ -88,6 +88,7 @@ pub enum NIImporter_MATSim_MatsimXMLTag {
 
 /// A class which extracts MATSIM-edges from a parsed MATSIM-file
 /// C++ class `NIImporter_MATSim::EdgesHandler` (netimport/NIImporter_MATSim.h)
+#[repr(C)]
 pub struct NIImporter_MATSim_EdgesHandler {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,
@@ -532,6 +533,7 @@ impl NIImporter_MATSim {
 
 /// A class which extracts MATSIM-nodes from a parsed MATSIM-file
 /// C++ class `NIImporter_MATSim::NodesHandler` (netimport/NIImporter_MATSim.h)
+#[repr(C)]
 pub struct NIImporter_MATSim_NodesHandler {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,

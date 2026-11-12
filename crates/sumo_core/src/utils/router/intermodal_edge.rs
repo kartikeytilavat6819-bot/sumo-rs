@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalEdge` (utils/router/IntermodalEdge.h)
+#[repr(C)]
 pub struct IntermodalEdge<E, L, N, V> {
     /// C++ base class `Named`
     pub base: Named,

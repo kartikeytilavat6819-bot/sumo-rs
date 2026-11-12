@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// SAX2-Handler for loading DFROUTER-detector definitions
 /// C++ class `RODFDetectorHandler` (dfrouter/RODFDetectorHandler.h)
+#[repr(C)]
 pub struct RODFDetectorHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

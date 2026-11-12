@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Obtains edge efforts from a weights handler and stores them within the edges
 /// C++ class `NLBuilder::EdgeFloatTimeLineRetriever_EdgeEffort` (netload/NLBuilder.h)
+#[repr(C)]
 pub struct NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     /// C++ base class `SAXWeightsHandler::EdgeFloatTimeLineRetriever`
     pub base: Unmapped /* SAXWeightsHandler::EdgeFloatTimeLineRetriever */,
@@ -61,6 +62,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
 
 /// Obtains edge travel times from a weights handler and stores them within the edges
 /// C++ class `NLBuilder::EdgeFloatTimeLineRetriever_EdgeTravelTime` (netload/NLBuilder.h)
+#[repr(C)]
 pub struct NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     /// C++ base class `SAXWeightsHandler::EdgeFloatTimeLineRetriever`
     pub base: Unmapped /* SAXWeightsHandler::EdgeFloatTimeLineRetriever */,

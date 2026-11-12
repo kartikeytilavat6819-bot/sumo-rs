@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The base class for an intersection
 /// C++ class `MSJunction` (microsim/MSJunction.h)
+#[repr(C)]
 pub struct MSJunction {
     /// C++ base class `Named`
     pub base: Named,

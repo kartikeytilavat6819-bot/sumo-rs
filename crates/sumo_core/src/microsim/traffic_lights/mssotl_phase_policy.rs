@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Class for low-level phase policy.
 /// C++ class `MSSOTLPhasePolicy` (microsim/traffic_lights/MSSOTLPhasePolicy.h)
+#[repr(C)]
 pub struct MSSOTLPhasePolicy {
     /// C++ base class `MSSOTLPolicy`
     pub base: MSSOTLPolicy,

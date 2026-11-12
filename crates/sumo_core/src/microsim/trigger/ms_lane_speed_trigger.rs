@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Changes the speed allowed on a set of lanes
 /// C++ class `MSLaneSpeedTrigger` (microsim/trigger/MSLaneSpeedTrigger.h)
+#[repr(C)]
 pub struct MSLaneSpeedTrigger {
     /// C++ base class `Named`
     pub base: Named,

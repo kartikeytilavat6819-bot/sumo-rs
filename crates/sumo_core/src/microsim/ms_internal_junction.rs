@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A class which realises junctions that do regard any kind of a right-of-way. The rules for the right-of-way themselves are stored within the associated "MSJunctionLogic" - structure.
 /// C++ class `MSInternalJunction` (microsim/MSInternalJunction.h)
+#[repr(C)]
 pub struct MSInternalJunction {
     /// C++ base class `MSLogicJunction`
     pub base: MSLogicJunction,

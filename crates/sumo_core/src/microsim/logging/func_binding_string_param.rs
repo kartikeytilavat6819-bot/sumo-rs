@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub type FuncBinding_StringParam_Operation = Unmapped /* R (T::*)(const int &) */;
 
 /// C++ class `FuncBinding_StringParam` (microsim/logging/FuncBinding_StringParam.h)
+#[repr(C)]
 pub struct FuncBinding_StringParam<T, R> {
     /// C++ base class `ValueSource<R>`
     pub base: Unmapped /* ValueSource<R> */,

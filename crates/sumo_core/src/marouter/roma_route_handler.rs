@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Parser and container for routes during their loading
 /// C++ class `ROMARouteHandler` (marouter/ROMARouteHandler.h)
+#[repr(C)]
 pub struct ROMARouteHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

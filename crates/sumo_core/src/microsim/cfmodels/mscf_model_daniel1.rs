@@ -12,6 +12,7 @@ fn max2(a: f64, b: f64) -> f64 {
 
 /// The original Krauss (1998) car-following model and parameter
 /// C++ class `MSCFModel_Daniel1` (microsim/cfmodels/MSCFModel_Daniel1.h)
+#[repr(C)]
 pub struct MSCFModel_Daniel1 {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,

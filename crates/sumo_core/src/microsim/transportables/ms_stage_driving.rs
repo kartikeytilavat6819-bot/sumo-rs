@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSStageDriving::BookReservation` (microsim/transportables/MSStageDriving.h)
+#[repr(C)]
 pub struct MSStageDriving_BookReservation {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -49,6 +50,7 @@ impl MSStageDriving_BookReservation {
 
 /// A "real" stage performing the travelling by a transport system The given route will be chosen. The travel time is computed by the simulation
 /// C++ class `MSStageDriving` (microsim/transportables/MSStageDriving.h)
+#[repr(C)]
 pub struct MSStageDriving {
     /// C++ base class `MSStage`
     pub base: MSStage,

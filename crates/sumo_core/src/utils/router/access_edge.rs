@@ -7,6 +7,7 @@ pub type AccessEdge__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
 
 /// the access edge connecting different modes that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `AccessEdge` (utils/router/AccessEdge.h)
+#[repr(C)]
 pub struct AccessEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,

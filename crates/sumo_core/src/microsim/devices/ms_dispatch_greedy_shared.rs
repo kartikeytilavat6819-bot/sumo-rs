@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A dispatch algorithm that services customers in reservation order but also tries to do ride sharing
 /// C++ class `MSDispatch_GreedyShared` (microsim/devices/MSDispatch_GreedyShared.h)
+#[repr(C)]
 pub struct MSDispatch_GreedyShared {
     /// C++ base class `MSDispatch_Greedy`
     pub base: MSDispatch_Greedy,

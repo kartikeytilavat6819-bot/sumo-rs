@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A lane change model developed by D. Krajzewicz, J. Erdmann et al. between 2004 and 2013, extended for atomic lane change for platoons
 /// C++ class `MSLCM_LC2013_CC` (microsim/lcmodels/MSLCM_LC2013_CC.h)
+#[repr(C)]
 pub struct MSLCM_LC2013_CC {
     /// C++ base class `MSLCM_LC2013`
     pub base: MSLCM_LC2013,

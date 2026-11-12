@@ -10,6 +10,7 @@ fn simtime() -> f64 {
 
 /// An instantaneous induction loop
 /// C++ class `MSInstantInductLoop` (microsim/output/MSInstantInductLoop.h)
+#[repr(C)]
 pub struct MSInstantInductLoop {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

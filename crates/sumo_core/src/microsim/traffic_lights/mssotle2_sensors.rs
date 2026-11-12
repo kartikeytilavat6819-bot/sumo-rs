@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `MSSOTLE2Sensors` (microsim/traffic_lights/MSSOTLE2Sensors.h)
+#[repr(C)]
 pub struct MSSOTLE2Sensors {
     /// C++ base class `MSSOTLSensors`
     pub base: MSSOTLSensors,

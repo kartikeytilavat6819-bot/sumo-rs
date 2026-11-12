@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes routes of vehicles passing a certain edge
 /// C++ class `MSRouteProbe` (microsim/output/MSRouteProbe.h)
+#[repr(C)]
 pub struct MSRouteProbe {
     /// C++ base class `MSDetectorFileOutput`
     pub base: MSDetectorFileOutput,

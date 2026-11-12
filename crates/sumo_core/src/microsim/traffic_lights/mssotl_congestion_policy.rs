@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Class for low-level congestion policy.
 /// C++ class `MSSOTLCongestionPolicy` (microsim/traffic_lights/MSSOTLCongestionPolicy.h)
+#[repr(C)]
 pub struct MSSOTLCongestionPolicy {
     /// C++ base class `MSSOTLPolicy`
     pub base: MSSOTLPolicy,

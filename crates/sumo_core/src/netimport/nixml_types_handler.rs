@@ -11,6 +11,7 @@ fn throw<T>(r: Result<T, ProcessError>) -> T {
 
 /// Importer for edge type information stored in XML
 /// C++ class `NIXMLTypesHandler` (netimport/NIXMLTypesHandler.h)
+#[repr(C)]
 pub struct NIXMLTypesHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

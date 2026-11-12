@@ -65,6 +65,7 @@ pub type MSVehicleControl_constVehIt = Unmapped /* std::map<std::string, SUMOVeh
 
 /// @}
 /// C++ class `MSVehicleControl::DeleteKeptVehicle` (microsim/MSVehicleControl.h)
+#[repr(C)]
 pub struct MSVehicleControl_DeleteKeptVehicle {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

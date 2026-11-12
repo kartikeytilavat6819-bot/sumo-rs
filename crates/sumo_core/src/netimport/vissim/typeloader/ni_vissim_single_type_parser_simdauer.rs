@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Simdauer` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Simdauer.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Simdauer {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

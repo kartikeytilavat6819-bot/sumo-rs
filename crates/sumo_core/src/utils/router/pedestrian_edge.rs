@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// the pedestrian edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `PedestrianEdge` (utils/router/PedestrianEdge.h)
+#[repr(C)]
 pub struct PedestrianEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,

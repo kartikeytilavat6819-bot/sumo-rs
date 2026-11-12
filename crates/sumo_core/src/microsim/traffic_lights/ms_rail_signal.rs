@@ -181,6 +181,7 @@ impl MSRailSignal_LinkInfo {
 
 /// A signal for rails
 /// C++ class `MSRailSignal` (microsim/traffic_lights/MSRailSignal.h)
+#[repr(C)]
 pub struct MSRailSignal {
     /// C++ base class `MSTrafficLightLogic`
     pub base: MSTrafficLightLogic,

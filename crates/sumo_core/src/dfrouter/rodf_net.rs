@@ -46,6 +46,7 @@ impl RODFNet_IterationEdge {
 
 /// A DFROUTER-network
 /// C++ class `RODFNet` (dfrouter/RODFNet.h)
+#[repr(C)]
 pub struct RODFNet {
     /// C++ base class `RONet`
     pub base: RONet,

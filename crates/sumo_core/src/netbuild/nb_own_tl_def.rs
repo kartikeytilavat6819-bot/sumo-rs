@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A traffic light logics which must be computed (only nodes/edges are given)
 /// C++ class `NBOwnTLDef` (netbuild/NBOwnTLDef.h)
+#[repr(C)]
 pub struct NBOwnTLDef {
     /// C++ base class `NBTrafficLightDefinition`
     pub base: NBTrafficLightDefinition,

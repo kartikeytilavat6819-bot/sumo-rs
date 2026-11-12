@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Computes the shortest path through a network using the Dijkstra algorithm.
 /// C++ class `DijkstraRouter` (utils/router/DijkstraRouter.h)
+#[repr(C)]
 pub struct DijkstraRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,

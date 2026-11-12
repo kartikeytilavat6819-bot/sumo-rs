@@ -25,6 +25,7 @@ const MY_EMPTY_LANE_VECTOR: &MSTrafficLightLogic_LaneVector = &Vec::new();
 
 /// The parent class for traffic light logics
 /// C++ class `MSTrafficLightLogic` (microsim/traffic_lights/MSTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSTrafficLightLogic {
     /// C++ base class `Named`
     pub base: Named,
@@ -1408,6 +1409,7 @@ impl MSTrafficLightLogic {
 
 /// Class realising the switch between the traffic light phases
 /// C++ class `MSTrafficLightLogic::SwitchCommand` (microsim/traffic_lights/MSTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSTrafficLightLogic_SwitchCommand {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

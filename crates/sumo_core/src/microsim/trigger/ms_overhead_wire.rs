@@ -42,6 +42,7 @@ impl MSOverheadWire_Charge {
 
 /// Definition of overhead wire segment
 /// C++ class `MSOverheadWire` (microsim/trigger/MSOverheadWire.h)
+#[repr(C)]
 pub struct MSOverheadWire {
     /// C++ base class `MSStoppingPlace`
     pub base: MSStoppingPlace,
@@ -507,6 +508,7 @@ impl MSOverheadWire {
 
 /// Traction substation powering one or more overhead wire sections
 /// C++ class `MSTractionSubstation` (microsim/trigger/MSOverheadWire.h)
+#[repr(C)]
 pub struct MSTractionSubstation {
     /// C++ base class `Named`
     pub base: Named,

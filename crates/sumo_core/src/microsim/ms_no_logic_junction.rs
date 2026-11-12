@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// This junctions let all vehicles past through so they only should be used on junctions where incoming vehicles are no foes to each other (may drive simultaneously).
 /// C++ class `MSNoLogicJunction` (microsim/MSNoLogicJunction.h)
+#[repr(C)]
 pub struct MSNoLogicJunction {
     /// C++ base class `MSJunction`
     pub base: MSJunction,

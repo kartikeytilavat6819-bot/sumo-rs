@@ -3788,6 +3788,7 @@ impl Helper_SubscriptionWrapper {
 }
 
 /// C++ class `libsumo::Helper::TransportableStateListener` (libsumo/Helper.h)
+#[repr(C)]
 pub struct Helper_TransportableStateListener {
     /// C++ base class `MSNet::TransportableStateListener`
     pub base: MSNet_TransportableStateListener,
@@ -3821,6 +3822,7 @@ impl Helper_TransportableStateListener {
 }
 
 /// C++ class `libsumo::Helper::VehicleStateListener` (libsumo/Helper.h)
+#[repr(C)]
 pub struct Helper_VehicleStateListener {
     /// C++ base class `MSNet::VehicleStateListener`
     pub base: MSNet_VehicleStateListener,

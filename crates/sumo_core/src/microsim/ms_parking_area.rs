@@ -132,6 +132,7 @@ impl MSParkingArea_LotSpaceDefinition {
 
 /// A lane area vehicles can halt at
 /// C++ class `MSParkingArea` (microsim/MSParkingArea.h)
+#[repr(C)]
 pub struct MSParkingArea {
     /// C++ base class `MSStoppingPlace`
     pub base: MSStoppingPlace,

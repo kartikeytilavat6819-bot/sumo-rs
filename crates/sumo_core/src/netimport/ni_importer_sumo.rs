@@ -24,6 +24,7 @@ fn loaded_tl_def(def: Ptr<NBTrafficLightDefinition>) -> Ptr<NBLoadedSUMOTLDef> {
 
 /// A connection description.
 /// C++ class `NIImporter_SUMO::Connection` (netimport/NIImporter_SUMO.h)
+#[repr(C)]
 pub struct NIImporter_SUMO_Connection {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -82,6 +83,7 @@ impl NIImporter_SUMO_Connection {
 
 /// Describes a pedestrian crossing
 /// C++ class `NIImporter_SUMO::Crossing` (netimport/NIImporter_SUMO.h)
+#[repr(C)]
 pub struct NIImporter_SUMO_Crossing {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -129,6 +131,7 @@ impl NIImporter_SUMO_Crossing {
 
 /// Describes the values found in an edge's definition and this edge's lanes
 /// C++ class `NIImporter_SUMO::EdgeAttrs` (netimport/NIImporter_SUMO.h)
+#[repr(C)]
 pub struct NIImporter_SUMO_EdgeAttrs {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -195,6 +198,7 @@ impl NIImporter_SUMO_JunctionAttrs {
 
 /// Describes the values found in a lane's definition
 /// C++ class `NIImporter_SUMO::LaneAttrs` (netimport/NIImporter_SUMO.h)
+#[repr(C)]
 pub struct NIImporter_SUMO_LaneAttrs {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -247,6 +251,7 @@ impl NIImporter_SUMO_LaneAttrs {
 
 /// Importer for networks stored in SUMO format
 /// C++ class `NIImporter_SUMO` (netimport/NIImporter_SUMO.h)
+#[repr(C)]
 pub struct NIImporter_SUMO {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,

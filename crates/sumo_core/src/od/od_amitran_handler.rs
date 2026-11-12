@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An XML-Handler for districts
 /// C++ class `ODAmitranHandler` (od/ODAmitranHandler.h)
+#[repr(C)]
 pub struct ODAmitranHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

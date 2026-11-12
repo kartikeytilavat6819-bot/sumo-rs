@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes e2 state on each tls switch
 /// C++ class `Command_SaveTLCoupledDet` (microsim/actions/Command_SaveTLCoupledDet.h)
+#[repr(C)]
 pub struct Command_SaveTLCoupledDet {
     /// C++ base class `MSTLLogicControl::OnSwitchAction`
     pub base: MSTLLogicControl_OnSwitchAction,

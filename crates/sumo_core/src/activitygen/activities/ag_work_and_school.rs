@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `AGWorkAndSchool` (activitygen/activities/AGWorkAndSchool.h)
+#[repr(C)]
 pub struct AGWorkAndSchool {
     /// C++ base class `AGActivity`
     pub base: AGActivity,

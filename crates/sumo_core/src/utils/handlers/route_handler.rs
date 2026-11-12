@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `RouteHandler` (utils/handlers/RouteHandler.h)
+#[repr(C)]
 pub struct RouteHandler {
     /// C++ base class `CommonHandler`
     pub base: CommonHandler,

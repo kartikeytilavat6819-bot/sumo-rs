@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes the switch times of a tls into a file when the tls switches
 /// C++ class `Command_SaveTLSProgram` (microsim/actions/Command_SaveTLSProgram.h)
+#[repr(C)]
 pub struct Command_SaveTLSProgram {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

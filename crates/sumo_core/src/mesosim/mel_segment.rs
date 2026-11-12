@@ -7,6 +7,7 @@ pub type MELSegment_GapTimes = Vec<SUMOTime>;
 
 /// A single mesoscopic segment (cell)
 /// C++ class `MELSegment` (mesosim/MELSegment.h)
+#[repr(C)]
 pub struct MELSegment {
     /// C++ base class `MESegment`
     pub base: MESegment,

@@ -6,6 +6,7 @@ use crate::prelude::*;
 pub type CastingFunctionBinding_Operation = Unmapped /* O (T::*)() */;
 
 /// C++ class `CastingFunctionBinding` (microsim/logging/CastingFunctionBinding.h)
+#[repr(C)]
 pub struct CastingFunctionBinding<T, R, O> {
     /// C++ base class `ValueSource<R>`
     pub base: Unmapped /* ValueSource<R> */,

@@ -5,6 +5,7 @@ use utils::common::msg_handler::{write_error, write_warning};
 
 /// The XML-Handler for shapes loading network loading
 /// C++ class `NIXMLShapeHandler` (netimport/NIXMLShapeHandler.h)
+#[repr(C)]
 pub struct NIXMLShapeHandler {
     /// C++ base class `ShapeHandler`
     pub base: ShapeHandler,

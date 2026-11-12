@@ -12,6 +12,7 @@ fn min2(a: f64, b: f64) -> f64 {
 
 /// The representation of a single pt stop
 /// C++ class `NBPTStop` (netbuild/NBPTStop.h)
+#[repr(C)]
 pub struct NBPTStop {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

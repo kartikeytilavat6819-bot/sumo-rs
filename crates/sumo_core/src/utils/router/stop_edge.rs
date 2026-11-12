@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// the stop edge type representing bus and train stops
 /// C++ class `StopEdge` (utils/router/StopEdge.h)
+#[repr(C)]
 pub struct StopEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,

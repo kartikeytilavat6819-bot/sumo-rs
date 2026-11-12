@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An XML-Handler for districts
 /// C++ class `ODDistrictHandler` (od/ODDistrictHandler.h)
+#[repr(C)]
 pub struct ODDistrictHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An induction loop for mesoscopic simulation
 /// C++ class `MEInductLoop` (mesosim/MEInductLoop.h)
+#[repr(C)]
 pub struct MEInductLoop {
     /// C++ base class `MSDetectorFileOutput`
     pub base: MSDetectorFileOutput,

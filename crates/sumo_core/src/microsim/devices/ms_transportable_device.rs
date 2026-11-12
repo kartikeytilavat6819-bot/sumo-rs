@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Abstract in-person device
 /// C++ class `MSTransportableDevice` (microsim/devices/MSTransportableDevice.h)
+#[repr(C)]
 pub struct MSTransportableDevice {
     /// C++ base class `MSDevice`
     pub base: MSDevice,

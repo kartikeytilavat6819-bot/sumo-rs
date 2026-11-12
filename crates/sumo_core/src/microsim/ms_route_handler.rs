@@ -95,6 +95,7 @@ fn tag_to_string(tag: SumoXMLTag) -> String {
 
 /// Parser and container for routes during their loading
 /// C++ class `MSRouteHandler` (microsim/MSRouteHandler.h)
+#[repr(C)]
 pub struct MSRouteHandler {
     /// C++ base class `SUMORouteHandler`
     pub base: SUMORouteHandler,

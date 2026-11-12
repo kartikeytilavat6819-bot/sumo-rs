@@ -379,6 +379,7 @@ fn lane_sorter_ordering(sorter: &NIImporter_OpenDrive_LaneSorter, a: &NIImporter
 
 /// Importer for networks stored in openDrive format
 /// C++ class `NIImporter_OpenDrive` (netimport/NIImporter_OpenDrive.h)
+#[repr(C)]
 pub struct NIImporter_OpenDrive {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,

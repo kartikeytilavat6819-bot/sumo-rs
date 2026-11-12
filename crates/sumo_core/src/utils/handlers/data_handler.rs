@@ -11,6 +11,7 @@ use utils::common::time::steps2time;
 
 /// The XML-Handler for network loading
 /// C++ class `DataHandler` (utils/handlers/DataHandler.h)
+#[repr(C)]
 pub struct DataHandler {
     /// C++ base class `CommonHandler`
     pub base: CommonHandler,

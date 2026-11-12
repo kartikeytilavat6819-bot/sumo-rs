@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
 /// C++ class `MSDispatch_TraCI` (microsim/devices/MSDispatch_TraCI.h)
+#[repr(C)]
 pub struct MSDispatch_TraCI {
     /// C++ base class `MSDispatch`
     pub base: MSDispatch,

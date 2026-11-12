@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// An adult person who can have a job.
 /// C++ class `AGAdult` (activitygen/city/AGAdult.h)
+#[repr(C)]
 pub struct AGAdult {
     /// C++ base class `AGPerson`
     pub base: AGPerson,

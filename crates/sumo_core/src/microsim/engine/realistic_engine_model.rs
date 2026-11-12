@@ -5,6 +5,7 @@ use utils::xml::xml_sub_sys::run_parser;
 
 /// This class implements a detailed engine and braking model which takes into account engine characteristics, gear ratios, external forces due to air drag, etc. This class uses a particular notation for variables to take into account both name and unit, to avoid confusion and mistakes. We write the name in camel case, then an underscore, then the unit of measure. For example, engine force in newton (kg * m / s^2) we use
 /// C++ class `RealisticEngineModel` (microsim/engine/RealisticEngineModel.h)
+#[repr(C)]
 pub struct RealisticEngineModel {
     /// C++ base class `GenericEngineModel`
     pub base: GenericEngineModel,

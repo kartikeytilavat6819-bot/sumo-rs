@@ -57,6 +57,7 @@ pub enum VehicleEngineHandler_EngineXMLTag {
 
 /// SAX handler used to parse engine parameters
 /// C++ class `VehicleEngineHandler` (microsim/engine/VehicleEngineHandler.h)
+#[repr(C)]
 pub struct VehicleEngineHandler {
     /// C++ base class `GenericSAXHandler`
     pub base: GenericSAXHandler,

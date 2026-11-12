@@ -7,6 +7,7 @@ pub type NGEdgeList = VecDeque<Ptr<NGEdge>>;
 
 /// A netgen-representation of an edge
 /// C++ class `NGEdge` (netgen/NGEdge.h)
+#[repr(C)]
 pub struct NGEdge {
     /// C++ base class `Named`
     pub base: Named,

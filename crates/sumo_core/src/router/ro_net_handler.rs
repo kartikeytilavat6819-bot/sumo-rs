@@ -7,6 +7,7 @@ use utils::common::sumo_vehicle_class::{SVC_ALL, SVC_PEDESTRIAN};
 
 /// The handler that parses a SUMO-network for its usage in a router
 /// C++ class `RONetHandler` (router/RONetHandler.h)
+#[repr(C)]
 pub struct RONetHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: Unmapped /* SUMOSAXHandler */,

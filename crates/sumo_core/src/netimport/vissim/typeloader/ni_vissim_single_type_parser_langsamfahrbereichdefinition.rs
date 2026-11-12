@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `NIVissimSingleTypeParser_Langsamfahrbereichdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Langsamfahrbereichdefinition.h)
+#[repr(C)]
 pub struct NIVissimSingleTypeParser_Langsamfahrbereichdefinition {
     /// C++ base class `NIImporter_Vissim::VissimSingleTypeParser`
     pub base: NIImporter_Vissim_VissimSingleTypeParser,

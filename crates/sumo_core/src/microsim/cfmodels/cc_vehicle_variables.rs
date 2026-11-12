@@ -27,6 +27,7 @@ const DEFAULT_B: [f64; 8] = [1800., 1800., 1800., 1800., 1800., 1800., 1800., 18
 const DEFAULT_H: [f64; 8] = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8];
 
 /// C++ class `CC_VehicleVariables` (microsim/cfmodels/CC_VehicleVariables.h)
+#[repr(C)]
 pub struct CC_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,

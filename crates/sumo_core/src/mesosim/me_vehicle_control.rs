@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The class responsible for building and deletion of vehicles (gui-version)
 /// C++ class `MEVehicleControl` (mesosim/MEVehicleControl.h)
+#[repr(C)]
 pub struct MEVehicleControl {
     /// C++ base class `MSVehicleControl`
     pub base: MSVehicleControl,

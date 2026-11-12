@@ -9,6 +9,7 @@ pub type MSSOTLTrafficLightLogic_PhasePushButtons = BTreeMap<String, Vec<Ptr<MSP
 
 /// A self-organizing traffic light logic
 /// C++ class `MSSOTLTrafficLightLogic` (microsim/traffic_lights/MSSOTLTrafficLightLogic.h)
+#[repr(C)]
 pub struct MSSOTLTrafficLightLogic {
     /// C++ base class `MSSimpleTrafficLightLogic`
     pub base: MSSimpleTrafficLightLogic,

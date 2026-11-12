@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Ensures that dynamic shapes tracking traffic objects are removed when the objects are removed.
 /// C++ class `MSDynamicShapeUpdater` (microsim/MSDynamicShapeUpdater.h)
+#[repr(C)]
 pub struct MSDynamicShapeUpdater {
     /// C++ base class `MSNet::VehicleStateListener`
     pub base: MSNet_VehicleStateListener,

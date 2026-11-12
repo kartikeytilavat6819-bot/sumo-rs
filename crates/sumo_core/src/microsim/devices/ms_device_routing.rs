@@ -11,6 +11,7 @@ const INVALID_DOUBLE: f64 = f64::MAX;
 
 /// A device that performs vehicle rerouting based on current edge speeds
 /// C++ class `MSDevice_Routing` (microsim/devices/MSDevice_Routing.h)
+#[repr(C)]
 pub struct MSDevice_Routing {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,

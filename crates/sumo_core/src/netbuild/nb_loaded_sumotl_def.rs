@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedSUMOTLDef` (netbuild/NBLoadedSUMOTLDef.h)
+#[repr(C)]
 pub struct NBLoadedSUMOTLDef {
     /// C++ base class `NBTrafficLightDefinition`
     pub base: NBTrafficLightDefinition,

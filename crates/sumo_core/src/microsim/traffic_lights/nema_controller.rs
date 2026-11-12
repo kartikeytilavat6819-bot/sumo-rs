@@ -74,6 +74,7 @@ impl NEMALogic_DetectorInfo {
 
 /// A NEMA (adaptive) traffic light logic based on E2Detector
 /// C++ class `NEMALogic` (microsim/traffic_lights/NEMAController.h)
+#[repr(C)]
 pub struct NEMALogic {
     /// C++ base class `MSSimpleTrafficLightLogic`
     pub base: MSSimpleTrafficLightLogic,

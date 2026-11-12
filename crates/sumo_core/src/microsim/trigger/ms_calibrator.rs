@@ -22,6 +22,7 @@ impl MSCalibrator_AspiredState {
 }
 
 /// C++ class `MSCalibrator::CalibratorCommand` (microsim/trigger/MSCalibrator.h)
+#[repr(C)]
 pub struct MSCalibrator_CalibratorCommand {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,
@@ -77,6 +78,7 @@ impl MSCalibrator_CalibratorCommand {
 
 /// Calibrates the flow on a segment to a specified one
 /// C++ class `MSCalibrator` (microsim/trigger/MSCalibrator.h)
+#[repr(C)]
 pub struct MSCalibrator {
     /// C++ base class `MSRouteHandler`
     pub base: MSRouteHandler,
@@ -985,6 +987,7 @@ impl MSCalibrator {
 }
 
 /// C++ class `MSCalibrator::VehicleRemover` (microsim/trigger/MSCalibrator.h)
+#[repr(C)]
 pub struct MSCalibrator_VehicleRemover {
     /// C++ base class `MSMoveReminder`
     pub base: MSMoveReminder,

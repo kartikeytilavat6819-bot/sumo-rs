@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Writes information about the green durations of a tls
 /// C++ class `Command_SaveTLSSwitches` (microsim/actions/Command_SaveTLSSwitches.h)
+#[repr(C)]
 pub struct Command_SaveTLSSwitches {
     /// C++ base class `Command`
     pub base: Unmapped /* Command */,

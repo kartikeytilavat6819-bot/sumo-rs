@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// A vehicle from the mesoscopic point of view
 /// C++ class `MEVehicle` (mesosim/MEVehicle.h)
+#[repr(C)]
 pub struct MEVehicle {
     /// C++ base class `MSBaseVehicle`
     pub base: MSBaseVehicle,

@@ -45,6 +45,7 @@ impl PCPolyContainer_LanePos {
 
 /// A storage for loaded polygons and pois
 /// C++ class `PCPolyContainer` (polyconvert/PCPolyContainer.h)
+#[repr(C)]
 pub struct PCPolyContainer {
     /// C++ base class `ShapeContainer`
     pub base: ShapeContainer,

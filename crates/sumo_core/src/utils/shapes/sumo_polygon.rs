@@ -5,6 +5,7 @@ use super::shape::{DEFAULT_ANGLE, DEFAULT_HEIGHT, DEFAULT_IMG_FILE, DEFAULT_LINE
 
 /// A 2D- or 3D-polygon
 /// C++ class `SUMOPolygon` (utils/shapes/SUMOPolygon.h)
+#[repr(C)]
 pub struct SUMOPolygon {
     /// C++ base class `Shape`
     pub base: Shape,

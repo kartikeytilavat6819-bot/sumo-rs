@@ -136,6 +136,7 @@ impl MSDevice_BTsender {
 }
 
 /// C++ class `MSTransportableDevice_BTsender` (microsim/devices/MSDevice_BTsender.h)
+#[repr(C)]
 pub struct MSTransportableDevice_BTsender {
     /// C++ base class `MSDevice_BTsender`
     pub base: MSDevice_BTsender,
@@ -225,6 +226,7 @@ impl MSTransportableDevice_BTsender {
 }
 
 /// C++ class `MSVehicleDevice_BTsender` (microsim/devices/MSDevice_BTsender.h)
+#[repr(C)]
 pub struct MSVehicleDevice_BTsender {
     /// C++ base class `MSDevice_BTsender`
     pub base: MSDevice_BTsender,
@@ -315,6 +317,7 @@ impl MSVehicleDevice_BTsender {
 
 /// Stores the information of a vehicle
 /// C++ class `MSDevice_BTsender::VehicleInformation` (microsim/devices/MSDevice_BTsender.h)
+#[repr(C)]
 pub struct MSDevice_BTsender_VehicleInformation {
     /// C++ base class `Named`
     pub base: Named,

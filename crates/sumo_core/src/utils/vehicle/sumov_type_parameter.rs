@@ -21,6 +21,7 @@ pub type SUMOVTypeParameter_SubParams = BTreeMap<SumoXMLAttr, String>;
 
 /// Structure representing possible vehicle parameter
 /// C++ class `SUMOVTypeParameter` (utils/vehicle/SUMOVTypeParameter.h)
+#[repr(C)]
 pub struct SUMOVTypeParameter {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

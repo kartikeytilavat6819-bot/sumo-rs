@@ -15,6 +15,7 @@ pub enum RODFDetectorType {
 
 /// Class representing a detector within the DFROUTER
 /// C++ class `RODFDetector` (dfrouter/RODFDetector.h)
+#[repr(C)]
 pub struct RODFDetector {
     /// C++ base class `Named`
     pub base: Named,

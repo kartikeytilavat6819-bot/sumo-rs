@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Class for low-level marching policy.
 /// C++ class `MSSOTLMarchingPolicy` (microsim/traffic_lights/MSSOTLMarchingPolicy.h)
+#[repr(C)]
 pub struct MSSOTLMarchingPolicy {
     /// C++ base class `MSSOTLPolicy`
     pub base: MSSOTLPolicy,

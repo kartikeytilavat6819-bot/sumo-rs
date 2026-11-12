@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The Intelligent Driver Model (IDM) car-following model
 /// C++ class `MSCFModel_IDM` (microsim/cfmodels/MSCFModel_IDM.h)
+#[repr(C)]
 pub struct MSCFModel_IDM {
     /// C++ base class `MSCFModel`
     pub base: MSCFModel,
@@ -355,6 +356,7 @@ impl MSCFModel_IDM {
 }
 
 /// C++ class `MSCFModel_IDM::VehicleVariables` (microsim/cfmodels/MSCFModel_IDM.h)
+#[repr(C)]
 pub struct MSCFModel_IDM_VehicleVariables {
     /// C++ base class `MSCFModel::VehicleVariables`
     pub base: MSCFModel_VehicleVariables,
