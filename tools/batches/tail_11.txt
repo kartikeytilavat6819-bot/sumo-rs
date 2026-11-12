@@ -1,0 +1,6 @@
+crates/sumo_core/src/utils/router/cch_router.rs
+crates/sumo_core/src/utils/router/ch_builder.rs
+crates/sumo_core/src/utils/router/ch_router.rs
+crates/sumo_core/src/utils/router/ch_router_wrapper.rs
+crates/sumo_core/src/utils/router/dijkstra_router.rs
+crates/sumo_core/src/utils/router/fare_modul.rs

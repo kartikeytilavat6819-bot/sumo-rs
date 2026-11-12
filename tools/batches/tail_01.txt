@@ -1,0 +1,8 @@
+crates/sumo_core/src/activitygen/activities/ag_free_time.rs
+crates/sumo_core/src/activitygen/activities/ag_work_and_school.rs
+crates/sumo_core/src/activitygen/activitygen_main.rs
+crates/sumo_core/src/activitygen/ag_activity_gen_handler.rs
+crates/sumo_core/src/activitygen/ag_activity_trip_writer.rs
+crates/sumo_core/src/activitygen/ag_frame.rs
+crates/sumo_core/src/activitygen/city/ag_city.rs
+crates/sumo_core/src/activitygen/city/ag_data_and_statistics.rs
