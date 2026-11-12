@@ -3993,7 +3993,48 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn compute_edge2_edges(&mut self, noLeftMovers: bool) -> bool {
-        todo!("port NBEdge::computeEdge2Edges")
+        // return if this relationship has been build in previous steps or
+        //  during the import
+        if self.myStep >= NBEdge_EdgeBuildingStep::EDGE2EDGES {
+            return true;
+        }
+        let fromRail = is_railway(self.get_permissions(-1));
+        let this = Ptr::from_mut(&mut *self);
+        let myTo = self.myTo;
+        let outgoing = myTo.get_outgoing_edges().clone();
+        for out in outgoing {
+            if noLeftMovers && myTo.is_left_mover(this, out) {
+                continue;
+            }
+            // avoid sharp railway turns
+            if fromRail && is_railway(out.get_permissions(-1)) {
+                let angle = NBHelpers::norm_rel_angle(this.get_angle_at_node(myTo), out.get_angle_at_node(myTo)).abs();
+                if angle > 150.0 {
+                    continue;
+                } else if angle > 90.0 {
+                    // possibly the junction is large enough to achieve a plausible radius:
+                    let fromShape = this.myLanes.first().unwrap().shape.clone();
+                    let toShape = out.get_lanes().first().unwrap().shape.clone();
+                    let shape = myTo.compute_smooth_shape(&fromShape, &toShape, 5, this.get_turn_destination(false) == out, 5.0, 5.0, Ptr::default(), 0);
+                    let radius = shape.length2d() / utils::geom::geom_helper::deg2rad(angle);
+                    let minRadius = if (this.get_permissions(-1) & SVC_TRAM) != 0 { 20.0 } else { 80.0 };
+                    if radius < minRadius {
+                        continue;
+                    }
+                }
+            }
+            if out == this.myTurnDestination {
+                // will be added by appendTurnaround
+                continue;
+            }
+            if (this.get_permissions(-1) & out.get_permissions(-1) & !SVC_PEDESTRIAN) == 0 {
+                // no common permissions
+                continue;
+            }
+            this.m().myConnections.push(NBEdge_Connection::new(-1, out, -1, false));
+        }
+        self.myStep = NBEdge_EdgeBuildingStep::EDGE2EDGES;
+        true
     }
 
     /// C++: `bool NBEdge::computeLanes2Edges()`
@@ -4043,7 +4084,35 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn compute_lanes2_edges(&mut self) -> bool {
-        todo!("port NBEdge::computeLanes2Edges")
+        // return if this relationship has been build in previous steps or
+        //  during the import
+        if self.myStep >= NBEdge_EdgeBuildingStep::LANES2EDGES {
+            if self.myStep == NBEdge_EdgeBuildingStep::LANES2LANES_USER && self.myConnections.len() > 1 {
+                let mut i = 0;
+                while i < self.myConnections.len() {
+                    if self.myConnections[i].toEdge.is_null() {
+                        utils::common::msg_handler::write_warning(&format!("Inconsistent connection definitions at edge '{}'.", self.get_id()));
+                        self.myConnections.remove(i);
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+            return true;
+        }
+        assert!(self.myStep == NBEdge_EdgeBuildingStep::EDGE2EDGES);
+        // get list of possible outgoing edges sorted by direction clockwise
+        //  the edge in the backward direction (turnaround) is not in the list
+        let edges = self.get_connected_sorted();
+        if !self.myConnections.is_empty() && edges.is_empty() {
+            // dead end per definition!?
+            self.myConnections.clear();
+        } else {
+            // divide the lanes on reachable edges
+            self.divide_on_edges(edges);
+        }
+        self.myStep = NBEdge_EdgeBuildingStep::LANES2EDGES;
+        true
     }
 
     /// C++: `bool NBEdge::recheckLanes()`
@@ -5528,7 +5597,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_permissions(&self, lane: i32) -> SVCPermissions {
-        todo!("port NBEdge::getPermissions")
+        if lane < 0 {
+            let mut result: SVCPermissions = 0;
+            for i in 0..self.myLanes.len() as i32 {
+                result |= self.get_permissions(i);
+            }
+            result
+        } else {
+            self.myLanes[lane as usize].permissions
+        }
     }
 
     /// C++: `void NBEdge::setOrigID(const std::string, const bool, const int)`
