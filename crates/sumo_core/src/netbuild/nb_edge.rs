@@ -4569,7 +4569,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn try_get_node_at_position(&self, pos: f64, tolerance: f64) -> Ptr<NBNode> {
-        todo!("port NBEdge::tryGetNodeAtPosition")
+        // return the from-node when the position is at the begin of the edge
+        if pos < tolerance {
+            return self.myFrom;
+        }
+        // return the to-node when the position is at the end of the edge
+        if pos > self.myLength - tolerance {
+            return self.myTo;
+        }
+        Ptr::default()
     }
 
     /// C++: `double NBEdge::getMaxLaneOffset()`
@@ -4580,7 +4588,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_max_lane_offset(&mut self) -> f64 {
-        todo!("port NBEdge::getMaxLaneOffset")
+        utils::common::std_defs::SUMO_CONST_LANE_WIDTH * (self.myLanes.len() as f64)
     }
 
     /// C++: `bool NBEdge::lanesWereAssigned() const` [const]
@@ -4591,7 +4599,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn lanes_were_assigned(&self) -> bool {
-        todo!("port NBEdge::lanesWereAssigned")
+        self.myStep == NBEdge_EdgeBuildingStep::LANES2LANES_DONE || self.myStep == NBEdge_EdgeBuildingStep::LANES2LANES_USER
     }
 
     /// C++: `bool NBEdge::mayBeTLSControlled(int, NBEdge *, int) const` [const]
@@ -4607,7 +4615,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn may_be_tls_controlled(&self, fromLane: i32, toEdge: Ptr<NBEdge>, toLane: i32) -> bool {
-        todo!("port NBEdge::mayBeTLSControlled")
+        for c in self.myConnections.iter() {
+            if c.fromLane == fromLane && c.toEdge == toEdge && c.toLane == toLane && c.uncontrolled {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool NBEdge::setControllingTLInformation(const NBConnection &, const std::string &)`
