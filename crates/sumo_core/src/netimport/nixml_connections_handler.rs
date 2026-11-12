@@ -365,7 +365,149 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_lane_bound(&mut self, attrs: &SUMOSAXAttributes, from: Ptr<NBEdge>, to: Ptr<NBEdge>) {
-        todo!("port NIXMLConnectionsHandler::parseLaneBound")
+        if to.is_null() {
+            // do nothing if it's a dead end
+            return;
+        }
+        let mut ok = true;
+        // get the begin and the end lane
+        let mut fromLane: i32 = 0;
+        let mut toLane: i32 = 0;
+        // shortcut: the C++ try/catch(NumberFormatException) is not reproduced; get() reports bad numbers itself and clears ok, so the "not numeric" inform is not emitted
+        if !self.parse_lane_info(attrs, from, to, Ptr::from_mut(&mut fromLane), Ptr::from_mut(&mut toLane)) {
+            return;
+        }
+        if fromLane < 0 {
+            self.myErrorMsgHandler.m().inform(
+                &format!(
+                    "Invalid value '{}' for {} in connection from '{}' to '{}'.",
+                    fromLane,
+                    attr_name(SUMO_ATTR_FROM_LANE),
+                    from.get_id(),
+                    to.get_id()
+                ),
+                true,
+            );
+            return;
+        }
+        if toLane < 0 {
+            self.myErrorMsgHandler.m().inform(
+                &format!(
+                    "Invalid value '{}' for {} in connection from '{}' to '{}'.",
+                    toLane,
+                    attr_name(SUMO_ATTR_TO_LANE),
+                    from.get_id(),
+                    to.get_id()
+                ),
+                true,
+            );
+            return;
+        }
+
+        let mut defaultCon = NBEdge_Connection::new(fromLane, to, toLane, false);
+        if from.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_USER {
+            // maybe we are patching an existing connection
+            // shortcut: NBEdge::getConnectionsFromLane is still todo!() and returns CHBuilder_Connection, not NBEdge_Connection; panics here until nb_edge.rs types myConnections as Vec<NBEdge_Connection>
+            let existing: Vec<NBEdge_Connection> = panic!("shortcut: NBEdge::getConnectionsFromLane not ported");
+            if existing.len() > 0 {
+                assert!(existing.len() == 1);
+                defaultCon = existing[0].clone();
+                // remove the original so we can insert the replacement
+                from.m().remove_from_connections_2(&defaultCon);
+            } else {
+                from.get_to_node().m().invalidate_tls(self.myTLLogicCont.m(), true, false);
+            }
+        }
+        if utils::options::options_cont::is_set("default.connection.cont-pos") {
+            defaultCon.contPos = utils::options::options_cont::get_float("default.connection.cont-pos");
+        }
+        let mayDefinitelyPass = attrs.get_opt::<bool>(SUMO_ATTR_PASS, "", &mut ok, defaultCon.mayDefinitelyPass, true);
+        let mut keepClear = defaultCon.keepClear;
+        if attrs.has_attribute(SUMO_ATTR_KEEP_CLEAR) {
+            keepClear = if attrs.get::<bool>(SUMO_ATTR_KEEP_CLEAR, "", &mut ok, true) { KeepClear::KEEPCLEAR_TRUE } else { KeepClear::KEEPCLEAR_FALSE };
+        }
+        let contPos = attrs.get_opt::<f64>(SUMO_ATTR_CONTPOS, "", &mut ok, defaultCon.contPos, true);
+        let visibility = attrs.get_opt::<f64>(SUMO_ATTR_VISIBILITY_DISTANCE, "", &mut ok, defaultCon.visibility, true);
+        let speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut ok, defaultCon.speed, true);
+        let friction = attrs.get_opt::<f64>(SUMO_ATTR_FRICTION, "", &mut ok, defaultCon.friction, true);
+        let length = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, "", &mut ok, defaultCon.customLength, true);
+        let uncontrolled = attrs.get_opt::<bool>(SUMO_ATTR_UNCONTROLLED, "", &mut ok, defaultCon.uncontrolled, true);
+        let indirectLeft = attrs.get_opt::<bool>(SUMO_ATTR_INDIRECT, "", &mut ok, false, true);
+        let edgeType = attrs.get_opt::<String>(SUMO_ATTR_TYPE, "", &mut ok, String::new(), true);
+        let mut customShape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, defaultCon.customShape.clone(), true);
+        let allow = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, "", &mut ok, String::new(), true);
+        let disallow = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, "", &mut ok, String::new(), true);
+        let permissions: SVCPermissions = if allow == "" && disallow == "" {
+            SVC_UNSPECIFIED
+        } else {
+            parse_vehicle_classes_allow_disallow(&allow, &disallow, NETWORK_VERSION)
+        };
+        let mut changeLeft: SVCPermissions = SVC_UNSPECIFIED;
+        let mut changeRight: SVCPermissions = SVC_UNSPECIFIED;
+        if attrs.has_attribute(SUMO_ATTR_CHANGE_LEFT) {
+            changeLeft = parse_vehicle_classes_allow_disallow(&attrs.get::<String>(SUMO_ATTR_CHANGE_LEFT, "", &mut ok, true), "", NETWORK_VERSION);
+        }
+        if attrs.has_attribute(SUMO_ATTR_CHANGE_RIGHT) {
+            changeRight = parse_vehicle_classes_allow_disallow(&attrs.get::<String>(SUMO_ATTR_CHANGE_RIGHT, "", &mut ok, true), "", NETWORK_VERSION);
+        }
+        if attrs.has_attribute(SUMO_ATTR_SHAPE) && !NBNetBuilder::transform_coordinates(&mut customShape, true, self.myLocation) {
+            write_error(&tlf!("Unable to project shape for connection from edge '%' to edge '%'.", from.get_id(), to.get_id()));
+        }
+        if !ok {
+            return;
+        }
+        if !from.m().add_lane2_lane_connection(
+            fromLane,
+            to,
+            toLane,
+            NBEdge_Lane2LaneInfoType::USER,
+            true,
+            mayDefinitelyPass,
+            keepClear,
+            contPos,
+            visibility,
+            speed,
+            friction,
+            length,
+            &customShape,
+            uncontrolled,
+            permissions,
+            indirectLeft,
+            &edgeType,
+            changeLeft,
+            changeRight,
+            false,
+        ) {
+            if utils::options::options_cont::get_bool("show-errors.connections-first-try") {
+                write_warning(&tlf!(
+                    "Could not set loaded connection from lane '%' to lane '%'.",
+                    from.get_lane_id(fromLane),
+                    to.get_lane_id(toLane)
+                ));
+            }
+            // set as to be re-applied after network processing
+            self.myEdgeCont.m().add_post_process_connection(
+                from.get_id(),
+                fromLane,
+                to.get_id(),
+                toLane,
+                mayDefinitelyPass,
+                keepClear,
+                contPos,
+                visibility,
+                speed,
+                friction,
+                length,
+                &customShape,
+                uncontrolled,
+                false,
+                permissions,
+                indirectLeft,
+                &edgeType,
+                changeLeft,
+                changeRight,
+            );
+        }
     }
 
     /// C++: `bool NIXMLConnectionsHandler::parseLaneInfo(const SUMOSAXAttributes &, NBEdge *, NBEdge *, int *, int *)` [private]
@@ -381,7 +523,11 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_lane_info(&mut self, attributes: &SUMOSAXAttributes, fromEdge: Ptr<NBEdge>, toEdge: Ptr<NBEdge>, fromLane: Ptr<i32>, toLane: Ptr<i32>) -> bool {
-        todo!("port NIXMLConnectionsHandler::parseLaneInfo")
+        if attributes.has_attribute(SUMO_ATTR_LANE) {
+            self.parse_deprecated_lane_definition(attributes, fromEdge, toEdge, fromLane, toLane)
+        } else {
+            self.parse_lane_definition(attributes, fromLane, toLane)
+        }
     }
 
     /// C++: `bool NIXMLConnectionsHandler::parseDeprecatedLaneDefinition(const SUMOSAXAttributes &, NBEdge *, NBEdge *, int *, int *)` [private]
@@ -413,7 +559,36 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_deprecated_lane_definition(&mut self, attributes: &SUMOSAXAttributes, fromEdge: Ptr<NBEdge>, toEdge: Ptr<NBEdge>, fromLane: Ptr<i32>, toLane: Ptr<i32>) -> bool {
-        todo!("port NIXMLConnectionsHandler::parseDeprecatedLaneDefinition")
+        let mut ok = true;
+        if !self.myHaveWarnedAboutDeprecatedLanes {
+            self.myHaveWarnedAboutDeprecatedLanes = true;
+            write_warning(&format!(
+                "'{}' is deprecated, please use '{}' and '{}' instead.",
+                attr_name(SUMO_ATTR_LANE),
+                attr_name(SUMO_ATTR_FROM_LANE),
+                attr_name(SUMO_ATTR_TO_LANE)
+            ));
+        }
+
+        let laneConn = attributes.get::<String>(SUMO_ATTR_LANE, "", &mut ok, true);
+        let st = StringTokenizer::with_token(&laneConn, ":", false).get_vector();
+        if !ok || st.len() != 2 {
+            self.myErrorMsgHandler.m().inform(
+                &format!("Invalid lane to lane connection from '{}' to '{}'.", fromEdge.get_id(), toEdge.get_id()),
+                true,
+            );
+            return false; // There was an error.
+        }
+
+        // shortcut: NumberFormatException from toIntSecure is mapped to the catch-all failure of parseLaneBound (not reproduced); toIntSecure errors return false here
+        let (Ok(fl), Ok(tl)) = (to_int_secure(&st[0], -1), to_int_secure(&st[1], -1)) else {
+            self.myErrorMsgHandler.m().inform("At least one of the defined lanes was not numeric", true);
+            return false;
+        };
+        fromLane.m().clone_from(&fl);
+        toLane.m().clone_from(&tl);
+
+        true // We succeeded.
     }
 
     /// C++: `bool NIXMLConnectionsHandler::parseLaneDefinition(const SUMOSAXAttributes &, int *, int *)` [private]
