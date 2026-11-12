@@ -1898,7 +1898,7 @@ impl NBEdgeCont {
         if joinEdges {
             speed /= edges.len() as f64;
             // build the new edge
-            let newEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(&id, from, to, String::new(), speed, UNSPECIFIED_FRICTION, nolanes, priority,
+            let newEdge = Ptr::from_raw(Box::into_raw(NBEdge::new(&id, from, to, String::new(), speed, UNSPECIFIED_FRICTION, nolanes, priority,
                 UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET,
                 tpledge.m().myLaneSpreadFunction, tpledge.m().get_street_name()))));
             // copy lane attributes
@@ -2353,10 +2353,10 @@ impl NBEdgeCont {
                 if angle >= 90. {
                     let edgeAngle = NBHelpers::rel_angle(e.m().get_start_angle(), e.m().get_end_angle()).abs();
                     let edgeAngle2 = NBHelpers::rel_angle(left.m().get_start_angle(), left.m().get_end_angle()).abs();
-                    let edgeRadius = e.m().get_geometry().length2d() / deg2rad(edgeAngle);
-                    let edgeRadius2 = left.m().get_geometry().length2d() / deg2rad(edgeAngle2);
+                    let edgeRadius = e.m().get_geometry().length2d() / utils::geom::geom_helper::deg2rad(edgeAngle);
+                    let edgeRadius2 = left.m().get_geometry().length2d() / utils::geom::geom_helper::deg2rad(edgeAngle2);
                     let avgRadius = 0.5 * (edgeRadius + edgeRadius2);
-                    let junctionRadius = e.m().get_lane_shape(0).back().distance_to2d(left.m().get_lane_shape(0).front()) / deg2rad(angle);
+                    let junctionRadius = e.m().get_lane_shape(0).back().distance_to2d(left.m().get_lane_shape(0).front()) / utils::geom::geom_helper::deg2rad(angle);
                     if junctionRadius < 0.8 * avgRadius {
                         doLoop = false;
                         break;
@@ -4508,8 +4508,8 @@ impl NBEdgeCont {
         let mut numSplit: i32 = 0;
         let mut node2edge: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for (key, edge) in self.myEdges.iter() {
-            if edge.m().has_parameter(SUMO_PARAM_REMOVED_NODES) {
-                let mut tok = utils::common::string_tokenizer::StringTokenizer::new(&edge.m().get_parameter(SUMO_PARAM_REMOVED_NODES, ""));
+            if edge.m().base2.has_parameter(SUMO_PARAM_REMOVED_NODES) {
+                let mut tok = utils::common::string_tokenizer::StringTokenizer::new(&edge.m().base2.get_parameter(SUMO_PARAM_REMOVED_NODES, ""));
                 for nodeID in tok.get_vector() {
                     node2edge.entry(nodeID).or_default().push(key.clone());
                 }
@@ -4541,7 +4541,7 @@ impl NBEdgeCont {
                             rebuildConnections = true;
                             numSplit += 1;
                             let secondEdge = self.retrieve(eID, false); // original was extracted on splitting
-                            let mut tok = utils::common::string_tokenizer::StringTokenizer::new(&secondEdge.m().get_parameter(SUMO_PARAM_REMOVED_NODES, ""));
+                            let mut tok = utils::common::string_tokenizer::StringTokenizer::new(&secondEdge.m().base2.get_parameter(SUMO_PARAM_REMOVED_NODES, ""));
                             for nodeID in tok.get_vector() {
                                 node2edge.entry(nodeID).or_default().push(idAfter.clone());
                             }

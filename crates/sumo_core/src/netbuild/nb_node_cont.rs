@@ -16,6 +16,7 @@ use utils::common::msg_handler::{write_message, write_warning};
 use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
 use utils::geom::POSITION_EPS;
 use super::nb_cont::KeepClear;
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
 
 // C++ NBEdge::UNSPECIFIED_SIGNAL_OFFSET (NBEdge.cpp)
 const UNSPECIFIED_SIGNAL_OFFSET: f64 = -1.;
