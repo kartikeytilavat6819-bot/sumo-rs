@@ -1,15 +1,38 @@
 //! Port of microsim/MSLaneChanger.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::cfmodels::mscf_model::traffic_object;
+use utils::geom::NUMERICAL_EPS;
+
+// C++ MIN2/MAX2 macros (argument order kept so ties resolve like the macro)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+// C++ #define constants from MSLaneChanger.cpp
+const OPPOSITE_OVERTAKING_SAFE_TIMEGAP: f64 = 0.0;
+const OPPOSITE_OVERTAKING_SAFETYGAP_HEADWAY_FACTOR: f64 = 0.0;
+const OPPOSITE_OVERTAKING_SAFETY_FACTOR: f64 = 1.2;
+const OPPOSITE_OVERTAKING_MAX_LOOKAHEAD: f64 = 150.0;
+const OPPOSITE_OVERTAKING_MAX_LOOKAHEAD_EMERGENCY: f64 = 1000.0;
+const OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD: f64 = 1000.0;
+const OPPOSITE_OVERTAKING_MAX_SPACE_TO_OVERTAKE: f64 = 1000.0;
+const OPPOSITE_OVERTAKING_HILLTOP_THRESHOHOLD: f64 = 5.0;
+const OPPOSITE_OVERTAKING_DEADLOCK_WAIT: f64 = 1.0;
 
 /// C++ typedef `std::vector<ChangeElem> MSLaneChanger::Changer`
 pub type MSLaneChanger_Changer = Vec<MSLaneChanger_ChangeElem>;
 
 /// C++ typedef `Changer::iterator MSLaneChanger::ChangerIt`
-pub type MSLaneChanger_ChangerIt = Unmapped /* Changer::iterator */;
+/// shortcut-free: C++ iterator modelled as an index into MSLaneChanger_Changer (end() == len())
+pub type MSLaneChanger_ChangerIt = usize;
 
 /// C++ typedef `Changer::const_iterator MSLaneChanger::ConstChangerIt`
-pub type MSLaneChanger_ConstChangerIt = Unmapped /* Changer::const_iterator */;
+/// index into MSLaneChanger_Changer (see MSLaneChanger_ChangerIt)
+pub type MSLaneChanger_ConstChangerIt = usize;
 
 /// Structure used for lane-change. For every lane you have to know four vehicles, the change-candidate veh and its follower and leader. Further, information about the last vehicle that changed into this lane is needed
 /// C++ class `MSLaneChanger::ChangeElem` (microsim/MSLaneChanger.h)
@@ -78,7 +101,40 @@ impl MSLaneChanger_ChangeElem {
     // }
     #[allow(unused_variables)]
     pub fn new(_lane: Ptr<MSLane>) -> Self {
-        todo!("port ChangeElem::ChangeElem")
+        let lane = _lane;
+        let mut elem = MSLaneChanger_ChangeElem {
+            lead: Ptr::null(),
+            lane,
+            hoppedVeh: Ptr::null(),
+            lastBlocked: Ptr::null(),
+            firstBlocked: Ptr::null(),
+            lastStopped: Ptr::null(),
+            dens: 0.0,
+            mayChangeRight: false,
+            mayChangeLeft: false,
+            siblings: Vec::new(),
+            ahead: MSLeaderInfo::new(lane.get_width(), Ptr::null(), 0.0),
+            aheadNext: MSLeaderDistanceInfo::new(lane.get_width(), Ptr::null(), 0.0),
+            outsideBounds: Vec::new(),
+            zipperDist: 0.0,
+            lastBlockedBackPos: -1.0,
+            lastBlockedWaitingTime: -1,
+        };
+        if lane.is_internal() {
+            for ili in lane.get_incoming_lanes() {
+                if ili.viaLink.get_state() == LINKSTATE_ZIPPER {
+                    elem.zipperDist = lane.get_length();
+                    break;
+                }
+            }
+        } else {
+            for link in lane.get_link_cont() {
+                if link.get_state() == LINKSTATE_ZIPPER {
+                    elem.zipperDist = max2(elem.zipperDist, link.get_foe_visibility_distance());
+                }
+            }
+        }
+        elem
     }
 
     /// C++: `void ChangeElem::registerHop(MSVehicle *)`
@@ -92,7 +148,10 @@ impl MSLaneChanger_ChangeElem {
     // }
     #[allow(unused_variables)]
     pub fn register_hop(&mut self, vehicle: Ptr<MSVehicle>) {
-        todo!("port ChangeElem::registerHop")
+        //std::cout << SIMTIME << " registerHop lane=" << lane->getID() << " veh=" << vehicle->getID() << "\n";
+        self.lane.m().myTmpVehicles.insert(0, vehicle);
+        self.dens += vehicle.get_vehicle_type().get_length_with_gap();
+        self.hoppedVeh = vehicle;
     }
 
 }
@@ -145,7 +204,40 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn new(lanes: Ptr<Vec<Ptr<MSLane>>>, allowChanging: bool) -> Self {
-        todo!("port MSLaneChanger::MSLaneChanger")
+        let mut changer = MSLaneChanger {
+            myChanger: Vec::with_capacity(lanes.len()),
+            myCandi: 0,
+            myAllowsChanging: allowChanging,
+            myChangeToOpposite: lanes[0].get_edge().can_change_to_opposite(),
+            checkOpened: false,
+        };
+        // Fill the changer with the lane-data.
+        for i in 0..lanes.len() {
+            let lane = lanes[i];
+            let mut mayChangeRight = i != 0;
+            let mut mayChangeLeft = i + 1 != lanes.len();
+            if lane.is_internal() {
+                // avoid changing on internal sibling lane
+                if mayChangeRight && lane.get_logical_predecessor_lane() == lanes[i - 1].get_logical_predecessor_lane() {
+                    mayChangeRight = false;
+                }
+                if mayChangeLeft && lane.get_logical_predecessor_lane() == lanes[i + 1].get_logical_predecessor_lane() {
+                    mayChangeLeft = false;
+                }
+                // avoid changing if lanes have different lengths
+                if mayChangeRight && lane.get_length() != lanes[i - 1].get_length() {
+                    mayChangeRight = false;
+                }
+                if mayChangeLeft && lane.get_length() != lanes[i + 1].get_length() {
+                    mayChangeLeft = false;
+                }
+            }
+            let mut elem = MSLaneChanger_ChangeElem::new(lane);
+            elem.mayChangeRight = mayChangeRight;
+            elem.mayChangeLeft = mayChangeLeft;
+            changer.myChanger.push(elem);
+        }
+        changer
     }
 
     /// C++: `void MSLaneChanger::~MSLaneChanger() noexcept` [virtual]
@@ -154,7 +246,7 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneChanger::~MSLaneChanger")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSLaneChanger::laneChange(SUMOTime)`
@@ -182,7 +274,13 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn lane_change(&mut self, t: SUMOTime) {
-        todo!("port MSLaneChanger::laneChange")
+        // shortcut: C++ try/catch releases lane vehicle locks on ProcessError; no exception path exists in this port's signatures, so the cleanup is not run; upgrade when change() can return ProcessError
+        self.init_changer();
+        while self.veh_in_changer() {
+            let haveChanged = self.change();
+            self.update_changer(haveChanged);
+        }
+        self.update_lanes(t);
     }
 
     /// C++: `Changer & MSLaneChanger::getChanger()`
@@ -192,7 +290,7 @@ impl MSLaneChanger {
     //     }
     #[allow(unused_variables)]
     pub fn get_changer(&mut self) -> &mut MSLaneChanger_Changer {
-        todo!("port MSLaneChanger::getChanger")
+        &mut self.myChanger
     }
 
     /// C++: `std::pair<double, SUMOTime> MSLaneChanger::getLastBlocked(int) const` [const]
@@ -210,7 +308,11 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_last_blocked(&self, index: i32) -> (f64, SUMOTime) {
-        todo!("port MSLaneChanger::getLastBlocked")
+        if self.myChanger[index as usize].lane.empty() {
+            (-1.0, -1)
+        } else {
+            (self.myChanger[index as usize].lastBlockedBackPos, self.myChanger[index as usize].lastBlockedWaitingTime)
+        }
     }
 
     /// C++: `void MSLaneChanger::postloadInitLC()`
@@ -244,7 +346,32 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn postload_init_lc(&mut self) {
-        todo!("port MSLaneChanger::postloadInitLC")
+        self.checkOpened = false;
+        for ce in self.myChanger.iter() {
+            let lane = ce.lane;
+            for link in lane.get_link_cont() {
+                if !link.get_tl_logic().is_null() || link.have_priority() {
+                    continue;
+                }
+                for ce2 in self.myChanger.iter() {
+                    let lane2 = ce2.lane;
+                    if lane == lane2 {
+                        continue;
+                    }
+                    for link2 in lane2.get_link_cont() {
+                        if (link.get_lane().get_edge() as *const MSEdge) == (link2.get_lane().get_edge() as *const MSEdge)
+                            && link.get_lane() != link2.get_lane()
+                            && (lane.get_permissions() & lane2.get_permissions() & link.get_lane().get_permissions() & link2.get_lane().get_permissions()
+                                & link.get_via_lane_or_lane().get_permissions() & link2.get_via_lane_or_lane().get_permissions() & !(SVC_PEDESTRIAN | SVC_BICYCLE)) != 0
+                            && !std::ptr::eq(link.get_foe_links(), link2.get_foe_links())
+                        {
+                            self.checkOpened = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSLaneChanger::initChanger()` [virtual, protected]
@@ -268,7 +395,18 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn init_changer(&mut self) {
-        todo!("port MSLaneChanger::initChanger")
+        // Prepare myChanger with a safe state.
+        for ce in self.myChanger.iter_mut() {
+            ce.lead = Ptr::null();
+            ce.hoppedVeh = Ptr::null();
+            ce.lastBlocked = Ptr::null();
+            ce.firstBlocked = Ptr::null();
+            ce.lastStopped = Ptr::null();
+            ce.dens = 0.0;
+            ce.lastBlockedBackPos = -1.0;
+            ce.lastBlockedWaitingTime = -1;
+            let _ = ce.lane.get_vehicles_secure();
+        }
     }
 
     /// C++: `bool MSLaneChanger::vehInChanger() const` [const, protected]
@@ -285,7 +423,14 @@ impl MSLaneChanger {
     //     }
     #[allow(unused_variables)]
     pub fn veh_in_changer(&self) -> bool {
-        todo!("port MSLaneChanger::vehInChanger")
+        // If there is at least one valid vehicle under the veh's in myChanger
+        // return true.
+        for ce in 0..self.myChanger.len() {
+            if !self.veh(ce).is_null() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `MSVehicle * MSLaneChanger::veh(ConstChangerIt) const` [const, protected]
@@ -300,7 +445,13 @@ impl MSLaneChanger {
     //     }
     #[allow(unused_variables)]
     pub fn veh(&self, ce: MSLaneChanger_ConstChangerIt) -> Ptr<MSVehicle> {
-        todo!("port MSLaneChanger::veh")
+        // If ce has a valid vehicle, return it. Otherwise return 0.
+        let lane = self.myChanger[ce].lane;
+        if !lane.myVehicles.is_empty() {
+            *lane.myVehicles.last().unwrap()
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `bool MSLaneChanger::change()` [virtual, protected]
@@ -424,7 +575,124 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn change(&mut self) -> bool {
-        todo!("port MSLaneChanger::change")
+        // Find change-candidate. If it is on an allowed lane, try to change
+        // to the right (there is a rule in Germany that you have to change
+        // to the right, unless you are overtaking). If change to the right
+        // isn't possible, check if there is a possibility to overtake (on the
+        // left.
+        // If candidate isn't on an allowed lane, changing to an allowed has
+        // priority.
+        self.myCandi = self.find_candidate();
+        let vehicle = self.veh(self.myCandi);
+        vehicle.m().get_lane_change_model().clear_neighbors();
+
+        if vehicle.m().get_lane_change_model().is_changing_lanes() && !vehicle.m().get_lane_change_model().already_changed() {
+            let mut from = self.myCandi;
+            let ret = self.continue_change(vehicle, &mut from);
+            self.myCandi = from;
+            return ret;
+        }
+        if !self.myAllowsChanging || vehicle.m().get_lane_change_model().already_changed() || vehicle.is_stopped_on_lane() {
+            self.register_unchanged(vehicle);
+            if vehicle.is_stopped_on_lane() {
+                let c = self.myCandi;
+                self.myChanger[c].lastStopped = vehicle;
+            }
+            return false;
+        }
+
+        if !vehicle.is_active() {
+            let mut changed = false;
+            let oldstate = vehicle.m().get_lane_change_model().get_own_state();
+            // let TraCI influence the wish to change lanes during non-actionsteps
+            self.check_tra_ci_commands(vehicle);
+            if oldstate != vehicle.m().get_lane_change_model().get_own_state() {
+                changed = self.apply_tra_ci_commands(vehicle);
+            }
+            if !changed {
+                self.register_unchanged(vehicle);
+            }
+            return changed;
+        }
+
+        // Check for changes to the opposite lane if vehicle is active
+        let mut leader = self.get_real_leader(&self.myCandi);
+        if self.myChanger.len() == 1 || vehicle.m().get_lane_change_model().is_opposite() || (!self.may_change(-1) && !self.may_change(1)) {
+            let last_stopped = self.myChanger[self.myCandi].lastStopped;
+            if self.change_opposite(vehicle, leader, last_stopped) {
+                return true;
+            }
+            self.register_unchanged(vehicle);
+            return false;
+        }
+
+        vehicle.m().update_best_lanes(false, Ptr::null()); // needed?
+        for i in 0..self.myChanger.len() {
+            let dens = self.myChanger[i].dens;
+            vehicle.m().adapt_best_lanes_occupation(i as i32, dens);
+        }
+
+        let preb = vehicle.get_best_lanes();
+        // check whether the vehicle wants and is able to change to right lane
+        let mut stateRight: i32 = 0;
+        if self.may_change(-1) {
+            stateRight = self.check_change_within_edge(-1, &leader, preb);
+            // change if the vehicle wants to and is allowed to change
+            if (stateRight & LCA_RIGHT) != 0 && (stateRight & LCA_BLOCKED) == 0 {
+                vehicle.m().get_lane_change_model().set_own_state(stateRight);
+                let mut from = self.myCandi;
+                let ret = self.start_change(vehicle, &mut from, -1);
+                self.myCandi = from;
+                return ret;
+            }
+            if (stateRight & LCA_RIGHT) != 0 && (stateRight & LCA_URGENT) != 0 {
+                let idx = self.myCandi - 1;
+                self.myChanger[idx].lastBlocked = vehicle;
+                if self.myChanger[idx].firstBlocked.is_null() {
+                    self.myChanger[idx].firstBlocked = vehicle;
+                }
+            }
+        }
+
+        // check whether the vehicle wants and is able to change to left lane
+        let mut stateLeft: i32 = 0;
+        if self.may_change(1) {
+            stateLeft = self.check_change_within_edge(1, &leader, preb);
+            // change if the vehicle wants to and is allowed to change
+            if (stateLeft & LCA_LEFT) != 0 && (stateLeft & LCA_BLOCKED) == 0 {
+                vehicle.m().get_lane_change_model().set_own_state(stateLeft);
+                let mut from = self.myCandi;
+                let ret = self.start_change(vehicle, &mut from, 1);
+                self.myCandi = from;
+                return ret;
+            }
+            if (stateLeft & LCA_LEFT) != 0 && (stateLeft & LCA_URGENT) != 0 {
+                let idx = self.myCandi + 1;
+                self.myChanger[idx].lastBlocked = vehicle;
+                if self.myChanger[idx].firstBlocked.is_null() {
+                    self.myChanger[idx].firstBlocked = vehicle;
+                }
+            }
+        }
+
+        if (stateRight & LCA_URGENT) != 0 && (stateLeft & LCA_URGENT) != 0 {
+            // ... wants to go to the left AND to the right
+            // just let them go to the right lane...
+            stateLeft = 0;
+        }
+        vehicle.m().get_lane_change_model().set_own_state(stateRight | stateLeft);
+
+        // only emergency vehicles should change to the opposite side on a
+        // multi-lane road (or vehicles that need to stop on the opposite side)
+        if vehicle.get_v_class() == SVC_EMERGENCY || MSLaneChanger::has_opposite_stop(vehicle) {
+            let last_stopped = self.myChanger[self.myCandi].lastStopped;
+            if self.change_opposite(vehicle, leader, last_stopped) {
+                return true;
+            }
+        }
+
+        self.register_unchanged(vehicle);
+        false
     }
 
     /// C++: `bool MSLaneChanger::changeOpposite(MSVehicle *, std::pair<MSVehicle *, double>, MSVehicle *)` [protected]
@@ -871,7 +1139,296 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn change_opposite(&mut self, vehicle: Ptr<MSVehicle>, leader: (Ptr<MSVehicle>, f64), lastStopped: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLaneChanger::changeOpposite")
+        // Evaluate lane-changing between opposite direction lanes
+        if !self.myChangeToOpposite {
+            return false;
+        }
+        let mut leader = leader;
+        let isOpposite = vehicle.get_lane_change_model_2().is_opposite();
+        let source = vehicle.get_mutable_lane();
+        let opposite = if isOpposite { source.get_parallel_lane(1, true) } else { source.get_opposite() };
+
+        //There is no lane for opposite driving
+        if opposite.is_null() {
+            return false;
+        }
+        if vehicle.is_stopped() {
+            // stopped vehicles obviously should not change lanes. Usually this is
+            // prevent by appropriate bestLane distances
+            return false;
+        }
+        let mut ret: i32 = 0;
+        ret = vehicle.m().influence_change_decision(ret);
+        let mut oppositeChangeByTraci = false;
+        // Check whether a lane change to the opposite direction was requested via TraCI
+        if (ret & (LCA_TRACI)) != 0 {
+            if isOpposite && (ret & LCA_LEFT) != 0 {
+                // stay on the opposite side
+                return false;
+            }
+            oppositeChangeByTraci = true;
+        }
+        if !isOpposite && !oppositeChangeByTraci && !source.allows_changing_left(vehicle.get_v_class()) {
+            // lane changing explicitly forbidden from this lane
+            return false;
+        }
+
+        //lane for opposite driving is not permitted
+        if !opposite.allows_vehicle_class(vehicle.get_v_class()) {
+            return false;
+        }
+
+        let oncomingLane = if isOpposite { source } else { opposite };
+        // changing into the opposite direction is always to the left (XXX except for left-hand networkds)
+        let direction: i32 = if isOpposite { -1 } else { 1 };
+        let mut neighLead: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.0);
+
+        // distance that can safely be driven on the opposite side
+        let mut surplusGap: f64 = f64::MAX;
+
+        let mut overtaken: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.0);
+        // oncoming vehicle that is driving in the "correct" direction
+        let mut oncoming: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.0);
+        // oncoming vehicle that is driving against the flow
+        let mut oncomingOpposite: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.0);
+        // the maximum speed while overtaking (may be lowered if slow vehicles are
+        // currently overtaking ahead of vehicle)
+        let mut vMax: f64 = vehicle.get_lane().get_vehicle_max_speed(traffic_object(vehicle));
+        let mut oncomingSpeed: f64 = oncomingLane.get_speed_limit();
+        let isEmergency = vehicle.get_v_class() == SVC_EMERGENCY;
+
+        // check for opposite direction stop
+        if !oppositeChangeByTraci && MSLaneChanger::has_opposite_stop(vehicle) {
+            return self.check_opposite_stop(vehicle, oncomingLane, opposite, leader);
+        }
+
+        if !isOpposite && leader.0.is_null() && !oppositeChangeByTraci {
+            // no reason to change unless there is a leader
+            // or we are changing back to the propper direction
+            // XXX also check whether the leader is so far away as to be irrelevant
+            return false;
+        }
+        if !isOpposite && !oppositeChangeByTraci && !isEmergency && !leader.0.is_null() {
+            // shortcut: MSGlobals::gLefthand is not ported; right-hand traffic is assumed
+            let signal = MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32;
+            if leader.0.signal_set(signal) {
+                // do not try to overtake a vehicle that is about to turn left or wants
+                // to change left itself
+                if !lastStopped.is_null() && vehicle.get_waiting_seconds() >= OPPOSITE_OVERTAKING_DEADLOCK_WAIT {
+                    neighLead = oncomingLane.get_opposite_leader(vehicle, OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD, true, MSLane_MinorLinkMode::FOLLOW_ONCOMING);
+                    let lastStoppedGap = lastStopped.get_back_position_on_lane_2() - vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_min_gap();
+                    self.resolve_deadlock(vehicle, leader, neighLead, (lastStopped, lastStoppedGap));
+                }
+                return false;
+            } else if leader.1 < 0.0 {
+                // leaders is either a junction leader (that cannot be overtaken) or something else is wrong
+                return false;
+            }
+        }
+
+        // checks for overtaking space
+        let mut timeToOvertake: f64 = f64::MAX;
+        let mut spaceToOvertake: f64 = f64::MAX;
+        let mut maxSpaceToOvertake: f64 = 0.0;
+
+        if oppositeChangeByTraci {
+            timeToOvertake = steps2time(vehicle.m().get_influencer().get_lane_time_line_duration());//todo discuss concept
+            spaceToOvertake = timeToOvertake * vehicle.get_lane().get_vehicle_max_speed(traffic_object(vehicle));
+        } else {
+            if isOpposite {
+                // -1 will use getMaximumBrakeDist() as look-ahead distance
+                neighLead = opposite.get_opposite_leader(vehicle, -1.0, false, MSLane_MinorLinkMode::FOLLOW_NEVER);
+                // make sure that overlapping vehicles on the neighboring lane are found by starting search at the back position
+                overtaken = opposite.get_leader(vehicle, opposite.get_opposite_pos(vehicle.get_back_position_on_lane_2()), vehicle.get_best_lanes_continuation_2(opposite), -1.0, false);
+                overtaken.1 -= vehicle.get_vehicle_type().get_length();
+                if overtaken.0.is_null() && !neighLead.0.is_null() {
+                    overtaken = neighLead;
+                }
+                if !overtaken.0.is_null() {
+                    overtaken = MSLaneChanger::get_columnleader(&mut maxSpaceToOvertake, vehicle, overtaken, f64::MAX);
+                }
+            } else {
+                overtaken = MSLaneChanger::get_columnleader(&mut maxSpaceToOvertake, vehicle, leader, f64::MAX);
+            }
+
+            if overtaken.0.is_null() {
+                if !isOpposite {
+                    // no reason to change to the opposite side
+                    if vehicle.get_waiting_seconds() >= OPPOSITE_OVERTAKING_DEADLOCK_WAIT {
+                        neighLead = oncomingLane.get_opposite_leader(vehicle, OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD, true, MSLane_MinorLinkMode::FOLLOW_ONCOMING);
+                        self.resolve_deadlock(vehicle, leader, neighLead, (Ptr::null(), leader.1));
+                    }
+                    return false;
+                }
+            } else {
+                // if we have limited space to overtake, we may have to limit our maximum maneuver speed
+                vMax = min2(vMax, MSLaneChanger::get_max_overtaking_speed(vehicle, maxSpaceToOvertake));
+                // there might be leader vehicles on the opposite side that also drive
+                // against the flow which are slower than ego (must be factored into
+                // overtaking time)
+                MSLaneChanger::compute_overtaking_time(vehicle, vMax, overtaken.0, overtaken.1, &mut timeToOvertake, &mut spaceToOvertake);
+
+                if !isOpposite && spaceToOvertake > OPPOSITE_OVERTAKING_MAX_SPACE_TO_OVERTAKE {
+                    neighLead = oncomingLane.get_opposite_leader(vehicle, OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD, true, MSLane_MinorLinkMode::FOLLOW_ONCOMING);
+                    let mut wait = false;
+                    if vehicle.get_waiting_seconds() >= OPPOSITE_OVERTAKING_DEADLOCK_WAIT {
+                        wait = self.resolve_deadlock(vehicle, leader, neighLead, overtaken);
+                    }
+                    if !wait && !lastStopped.is_null() {
+                        let lastStoppedGap = lastStopped.get_back_position_on_lane_2() - vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_min_gap();
+                        self.avoid_deadlock(vehicle, neighLead, (lastStopped, lastStoppedGap), leader);
+                    }
+                    return false;
+                }
+            }
+
+            // if we have a leader vehicle that is driving in the opposite
+            // direction, it may slow us down (update vMax)
+            if !isOpposite {
+                // we keep neighLead distinct from oncoming because it determines blocking on the neigh lane
+                // but also look for an oncoming leader to compute safety constraint
+                let searchDist = timeToOvertake * oncomingLane.get_speed_limit() * 2.0 + spaceToOvertake;
+                neighLead = oncomingLane.get_opposite_leader(vehicle, searchDist, true, MSLane_MinorLinkMode::FOLLOW_ONCOMING);
+                oncoming = self.get_oncoming_vehicle(oncomingLane, neighLead, searchDist, &mut vMax, overtaken.0, MSLane_MinorLinkMode::FOLLOW_ONCOMING);
+                oncomingOpposite = self.get_oncoming_opposite_vehicle(vehicle, overtaken, searchDist);
+            } else {
+                let searchDist = OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD;
+                oncoming = oncomingLane.get_opposite_leader(vehicle, searchDist, true, MSLane_MinorLinkMode::FOLLOW_NEVER);
+                oncoming = self.get_oncoming_vehicle(oncomingLane, oncoming, searchDist, &mut vMax, overtaken.0, MSLane_MinorLinkMode::FOLLOW_NEVER);
+                oncomingOpposite = self.get_oncoming_opposite_vehicle(vehicle, overtaken, searchDist);
+            }
+            if !oncoming.0.is_null() && (oncoming.0.is_stopped() || oncoming.0.get_waiting_seconds() >= OPPOSITE_OVERTAKING_DEADLOCK_WAIT) {
+                // finish overtaking within the available space
+                let oncomingGap = oncoming.1 - oncoming.0.get_vehicle_type().get_min_gap();
+                if oncomingGap > 0.0 {
+                    vMax = min2(vMax, MSLaneChanger::get_max_overtaking_speed(vehicle, oncomingGap));
+                }
+            }
+            if !overtaken.0.is_null() && vMax != vehicle.get_lane().get_vehicle_max_speed(traffic_object(vehicle)) {
+                // recompute overtaking time with slow opposite leader
+                MSLaneChanger::compute_overtaking_time(vehicle, vMax, overtaken.0, overtaken.1, &mut timeToOvertake, &mut spaceToOvertake);
+            }
+
+            if !isOpposite {
+                if spaceToOvertake > OPPOSITE_OVERTAKING_MAX_SPACE_TO_OVERTAKE {
+                    self.resolve_deadlock(vehicle, leader, neighLead, overtaken);
+                    return false;
+                }
+                // check for upcoming stops
+                if vehicle.next_stop_dist() < spaceToOvertake {
+                    return false;
+                }
+            }
+
+            // check for dangerous oncoming leader
+            surplusGap = MSLaneChanger::compute_surplus_gap(vehicle, opposite, oncoming, timeToOvertake, spaceToOvertake, &mut oncomingSpeed, false);
+            if !oncomingOpposite.0.is_null() {
+                let mut oncomingSpeed2: f64 = 0.0;
+                let conservativeTime = (timeToOvertake / ts()).ceil() * ts();
+                let conservativeSpace = conservativeTime * vehicle.get_lane().get_vehicle_max_speed(traffic_object(vehicle));
+                let surplusGap2 = MSLaneChanger::compute_surplus_gap(vehicle, opposite, oncomingOpposite, conservativeTime, conservativeSpace, &mut oncomingSpeed2, true);
+                surplusGap = min2(surplusGap, surplusGap2);
+                oncomingSpeed = max2(oncomingSpeed, oncomingSpeed2);
+                if !isOpposite && surplusGap >= 0.0 && !oncoming.0.is_null() && oncoming.0.is_stopped() && oncomingOpposite.1 > oncoming.1 {
+                    // even if ego can change back and forth successfully, we have to
+                    // make sure that the oncoming vehicle can also finish its lane
+                    // change in time
+                    let oSpeed = max2(oncomingOpposite.0.get_speed(), NUMERICAL_EPS);
+                    // conservative estimate
+                    let closingSpeed = vehicle.get_lane().get_vehicle_max_speed(traffic_object(vehicle)) + oncomingOpposite.0.get_lane().get_vehicle_max_speed(traffic_object(oncomingOpposite.0));
+                    let ooSTO = oncomingOpposite.1 - oncoming.1 + oncomingOpposite.0.get_vehicle_type().get_length_with_gap();
+                    let mut ooTTO = ooSTO / oSpeed;
+                    // round to multiples of step length (TS)
+                    ooTTO = (ooTTO / ts()).ceil() * ts();
+                    let surplusGap3 = oncomingOpposite.1 - ooTTO * closingSpeed;
+                    surplusGap = min2(surplusGap, surplusGap3);
+                }
+            }
+            if !isOpposite && surplusGap < 0.0 {
+                self.avoid_deadlock(vehicle, neighLead, overtaken, leader);
+                return false;
+            }
+        }
+        // compute remaining space on the opposite side
+        // 1. the part that remains on the current lane
+        let mut usableDist: f64 = if isOpposite { vehicle.get_position_on_lane() } else { source.get_length() - vehicle.get_position_on_lane() };
+
+        if usableDist < spaceToOvertake {
+            // look forward along the next lanes
+            let bestLaneConts = vehicle.get_best_lanes_continuation();
+            let mut it: usize = 1;
+            while usableDist < spaceToOvertake && it < bestLaneConts.len() {
+                let cur = bestLaneConts[it];
+                let oppLane = cur.get_opposite();
+                if (oppLane.is_null() && !isEmergency) || (!oppLane.is_null() && !oppLane.allows_vehicle_class(vehicle.get_v_class())) {
+                    // opposite lane ends
+                    break;
+                }
+                // do not overtake past a minor link or turn
+                let prev = bestLaneConts[it - 1];
+                if !prev.is_null() {
+                    let link = prev.get_link_to(cur);
+                    if link.is_null()
+                        || link.get_state() == LINKSTATE_ZIPPER
+                        || (link.get_direction() != LinkDirection::STRAIGHT && !isEmergency)
+                        || (!link.have_priority()
+                            // consider traci-influence
+                            && (!vehicle.has_influencer() || vehicle.m().get_influencer().get_respect_junction_priority())
+                            // consider junction model parameters
+                            && ((!link.have_red() && !link.have_yellow()) || !vehicle.ignore_red(link, true)))
+                    {
+                        break;
+                    }
+                }
+                usableDist += cur.get_length();
+                it += 1;
+            }
+        }
+
+        if !isOpposite && usableDist < spaceToOvertake {
+            return false;
+        }
+
+        if !isOpposite && MSNet::get_instance().has_elevation() && !overtaken.0.is_stopped() {
+            // do not overtake before the top of a hill
+            let searchDist = timeToOvertake * oncomingLane.get_speed_limit() * 1.5 * vehicle.get_lane_change_model_2().get_opposite_safety_factor() + spaceToOvertake;
+            let view: i32 = if vehicle.get_lane().is_internal() { 1 } else { 0 };
+            let foundHill = vehicle.get_slope() > 0.0;
+            if MSLaneChanger::found_hilltop(vehicle, foundHill, searchDist, vehicle.get_best_lanes_continuation(), view, vehicle.get_position_on_lane(), vehicle.get_position(0.0).z(), OPPOSITE_OVERTAKING_HILLTOP_THRESHOHOLD) {
+                return false;
+            }
+        }
+
+        // compute wish to change
+        let neighFollow = opposite.get_opposite_follower(vehicle);
+        let mut oppositeLength: f64 = vehicle.get_best_lanes().last().unwrap().length;
+        if isOpposite {
+            let canOvertake = spaceToOvertake <= OPPOSITE_OVERTAKING_MAX_SPACE_TO_OVERTAKE;
+            oppositeLength = self.compute_safe_opposite_length(vehicle, oppositeLength, source, usableDist, oncoming, vMax, oncomingSpeed, neighLead, overtaken, neighFollow, surplusGap, opposite, canOvertake);
+            leader.0 = Ptr::null();
+            if !neighLead.0.is_null() && neighLead.0.get_lane_change_model_2().is_opposite() {
+                // ignore oncoming vehicle on the target lane (it might even change back in this step)
+                neighLead.0 = Ptr::null();
+            }
+        } else {
+            if !leader.0.is_null() && !neighLead.0.is_null() && leader.0.get_waiting_seconds() >= OPPOSITE_OVERTAKING_DEADLOCK_WAIT && !isEmergency {
+                return false;
+            }
+            if !neighLead.0.is_null() && neighLead.0.is_stopped() {
+                // do not start overtaking if the opposite side has been waitin for longer
+                if self.yield_to_opposite_waiting(vehicle, neighLead.0, 10.0, 0) {
+                    return false;
+                }
+            }
+            if !oncoming.0.is_null() && oncoming.0 != neighLead.0 && oncoming.0.is_stopped() {
+                // only abort the current column of overtaking vehicles if the opposite side has been waiting long enough
+                if self.yield_to_opposite_waiting(vehicle, oncoming.0, 10.0, time2steps(60.0)) {
+                    return false;
+                }
+            }
+        }
+        let preb = MSLaneChanger::get_best_lanes_opposite(vehicle, Ptr::null(), oppositeLength);
+        self.check_change_opposite(vehicle, direction, opposite, leader, neighLead, neighFollow, &preb)
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLaneChanger::getOncomingVehicle(const MSLane *, std::pair<MSVehicle *, double>, double, double &, const MSVehicle *, MSLane::MinorLinkMode)` [protected]
@@ -914,7 +1471,31 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_oncoming_vehicle(&mut self, opposite: Ptr<MSLane>, neighOncoming: (Ptr<MSVehicle>, f64), searchDist: f64, vMax: &mut f64, overtaken: Ptr<MSVehicle>, mLinkMode: MSLane_MinorLinkMode) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLaneChanger::getOncomingVehicle")
+        let mut opposite = opposite;
+        let mut oncoming = oncoming;
+        let mut searchDist = searchDist;
+        let mut gap = oncoming.1;
+        while !oncoming.0.is_null() && (oncoming.0.get_lane_change_model_2().is_opposite() || oncoming.0.get_lane_change_model_2().get_shadow_lane() == opposite) {
+            searchDist -= oncoming.0.get_vehicle_type().get_length_with_gap() + max2(0.0, oncoming.1);
+            // leader is itself overtaking through the opposite side. find real oncoming vehicle
+            gap += oncoming.0.get_vehicle_type().get_length_with_gap();
+            if oncoming.0 != overtaken {
+                *vMax = min2(*vMax, oncoming.0.get_speed());
+            } // else: might be the case if we are overtaking a vehicle that is stopped on the opposite side
+            if searchDist < 0.0 {
+                break;
+            }
+            // getOppositeLeader resets the search postion by ego length and may thus create cycles
+            if oncoming.0.get_lane_change_model_2().get_shadow_lane() != opposite {
+                opposite = oncoming.0.get_lane();
+            }
+            oncoming = opposite.get_follower(oncoming.0, oncoming.0.get_position_on_lane_2(opposite), searchDist, mLinkMode, true);
+            if !oncoming.0.is_null() {
+                gap += oncoming.1 + oncoming.0.get_vehicle_type().get_length();
+            }
+        }
+        oncoming.1 = gap;
+        oncoming
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLaneChanger::getOncomingOppositeVehicle(const MSVehicle *, std::pair<MSVehicle *, double>, double)` [protected]
@@ -963,7 +1544,35 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_oncoming_opposite_vehicle(&mut self, vehicle: Ptr<MSVehicle>, overtaken: (Ptr<MSVehicle>, f64), searchDist: f64) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLaneChanger::getOncomingOppositeVehicle")
+        let mut gap: f64 = 0.0;
+        let front: Ptr<MSVehicle>;
+        if !overtaken.0.is_null() {
+            gap += overtaken.1 + overtaken.0.get_vehicle_type().get_length_with_gap();
+            front = overtaken.0;
+        } else {
+            // only for special situations (i.e. traci-triggered)
+            front = vehicle;
+        }
+        // we only need to look for the next leader: If it's driving in the forward
+        // direction, it "protects" from oncoming opposite vehicles.
+        // all leader vehicles on the current laneChanger edge are already moved into MSLane::myTmpVehicles
+        let checkTmpVehicles = front.get_lane() == vehicle.get_lane();
+        let mut conts: Vec<Ptr<MSLane>> = vehicle.get_best_lanes_continuation().clone();
+        while !conts.is_empty() && conts[0] != front.get_lane() {
+            conts.remove(0);
+        }
+        let mut oncoming = front.get_lane().get_leader(front, front.get_position_on_lane(), &conts, searchDist, checkTmpVehicles);
+        if !oncoming.0.is_null() {
+            let isOpposite = oncoming.0.get_lane_change_model_2().is_opposite();
+            let shadowLane = oncoming.0.get_lane_change_model_2().get_shadow_lane();
+            if isOpposite && shadowLane != front.get_lane() {
+                // distance was to back position (but the vehicle is oncoming)
+                oncoming.1 -= oncoming.0.get_vehicle_type().get_length();
+                oncoming.1 += gap;
+                return oncoming;
+            }
+        }
+        (Ptr::null(), -1.0)
     }
 
     /// C++: `void MSLaneChanger::registerUnchanged(MSVehicle *)` [protected]
@@ -977,7 +1586,11 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn register_unchanged(&mut self, vehicle: Ptr<MSVehicle>) {
-        todo!("port MSLaneChanger::registerUnchanged")
+        let idx = self.myCandi;
+        let candi_veh = self.veh(idx);
+        self.myChanger[idx].lane.m().myTmpVehicles.insert(0, candi_veh);
+        self.myChanger[idx].dens += vehicle.get_vehicle_type().get_length_with_gap();
+        vehicle.m().get_lane_change_model().unchanged();
     }
 
     /// C++: `void MSLaneChanger::checkTraCICommands(MSVehicle *)` [protected]
@@ -1003,7 +1616,7 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn check_tra_ci_commands(&mut self, vehicle: Ptr<MSVehicle>) {
-        todo!("port MSLaneChanger::checkTraCICommands")
+        vehicle.m().get_lane_change_model().check_tra_ci_commands();
     }
 
     /// C++: `bool MSLaneChanger::applyTraCICommands(MSVehicle *)` [protected]
@@ -1030,7 +1643,27 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn apply_tra_ci_commands(&mut self, vehicle: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLaneChanger::applyTraCICommands")
+        // Execute request if not blocked
+        let mut changed = false;
+        let state = vehicle.m().get_lane_change_model().get_own_state();
+        let dir: i32 = if (state & LCA_RIGHT) != 0 { -1 } else if (state & LCA_LEFT) != 0 { 1 } else { 0 };
+        let execute = dir != 0 && ((state & LCA_BLOCKED) == 0);
+        if execute {
+            let to = (self.myCandi as i32 + dir) as usize;
+            let source = self.myChanger[self.myCandi].lane;
+            let target = self.myChanger[to].lane;
+            let continuous = vehicle.m().get_lane_change_model().start_lane_change_maneuver(source, target, dir);
+            if continuous {
+                let mut from = self.myCandi;
+                changed = self.continue_change(vehicle, &mut from);
+                self.myCandi = from;
+            } else {
+                // insert vehicle into target lane
+                self.myChanger[to].register_hop(vehicle);
+                changed = true;
+            }
+        }
+        changed
     }
 
     /// C++: `void MSLaneChanger::updateChanger(bool)` [virtual, protected]
@@ -1053,7 +1686,19 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn update_changer(&mut self, vehHasChanged: bool) {
-        todo!("port MSLaneChanger::updateChanger")
+        debug_assert!(!self.veh(self.myCandi).is_null());
+
+        // "Push" the vehicles to the back, i.e. follower becomes vehicle,
+        // vehicle becomes leader, and leader becomes predecessor of vehicle,
+        // if it exists.
+        if !vehHasChanged {
+            let v = self.veh(self.myCandi);
+            let c = self.myCandi;
+            self.myChanger[c].lead = v;
+        }
+
+        let c = self.myCandi;
+        self.myChanger[c].lane.m().myVehicles.pop();
     }
 
     /// C++: `void MSLaneChanger::updateLanes(SUMOTime)` [protected]
@@ -1080,7 +1725,14 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn update_lanes(&mut self, t: SUMOTime) {
-        todo!("port MSLaneChanger::updateLanes")
+        for ce in self.myChanger.iter_mut() {
+            ce.lane.m().swap_after_lane_change(t);
+            ce.lane.release_vehicles();
+            if !ce.firstBlocked.is_null() {
+                ce.lastBlockedBackPos = ce.firstBlocked.get_back_position_on_lane_2();
+                ce.lastBlockedWaitingTime = ce.firstBlocked.get_waiting_time(false);
+            }
+        }
     }
 
     /// C++: `ChangerIt MSLaneChanger::findCandidate()` [protected]
@@ -1088,7 +1740,25 @@ impl MSLaneChanger {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_candidate(&mut self) -> MSLaneChanger_ChangerIt {
-        todo!("port MSLaneChanger::findCandidate")
+        // Find the vehicle in myChanger with the largest position. If there
+        // is no vehicle in myChanger (shouldn't happen) , return myChanger.end().
+        let mut max: usize = self.myChanger.len();
+        for ce in 0..self.myChanger.len() {
+            if self.veh(ce).is_null() {
+                continue;
+            }
+            if max == self.myChanger.len() {
+                max = ce;
+                continue;
+            }
+            debug_assert!(!self.veh(ce).is_null());
+            debug_assert!(!self.veh(max).is_null());
+            if self.veh(max).get_position_on_lane() < self.veh(ce).get_position_on_lane() {
+                max = ce;
+            }
+        }
+        debug_assert!(max != self.myChanger.len());
+        max
     }
 
     /// C++: `int MSLaneChanger::checkChangeWithinEdge(int, const std::pair<MSVehicle *const, double> &, const std::vector<MSVehicle::LaneQ> &) const` [const, protected]
@@ -1111,7 +1781,17 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn check_change_within_edge(&self, laneOffset: i32, leader: &(Ptr<MSVehicle>, f64), preb: &Vec<MSVehicle_LaneQ>) -> i32 {
-        todo!("port MSLaneChanger::checkChangeWithinEdge")
+        let follower = self.get_real_follower(&self.myCandi);
+        let target = (self.myCandi as i32 + laneOffset) as usize;
+        let neighLead = self.get_real_leader(&target);
+        let mut neighFollow = self.get_real_follower(&target);
+        if !neighLead.0.is_null() && neighLead.0 == neighFollow.0 {
+            // vehicles should not be leader and follower at the same time to avoid
+            // contradictory behavior
+            neighFollow.0 = Ptr::null();
+        }
+        let targetLane = self.myChanger[target].lane;
+        self.check_change(laneOffset, targetLane, leader, &follower, &neighLead, &neighFollow, preb)
     }
 
     /// C++: `int MSLaneChanger::checkChange(int, const MSLane *, const std::pair<MSVehicle *const, double> &, const std::pair<MSVehicle *const, double> &, const std::pair<MSVehicle *const, double> &, const std::pair<MSVehicle *const, double> &, const std::vector<MSVehicle::LaneQ> &) const` [const, protected]
@@ -1558,7 +2238,26 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn start_change(&mut self, vehicle: Ptr<MSVehicle>, from: &mut MSLaneChanger_ChangerIt, direction: i32) -> bool {
-        todo!("port MSLaneChanger::startChange")
+        if vehicle.is_remote_controlled() {
+            self.register_unchanged(vehicle);
+            return false;
+        }
+        let to = ((*from) as i32 + direction) as usize;
+        let from_lane = self.myChanger[(*from)].lane;
+        let to_lane = self.myChanger[to].lane;
+        // @todo delay entering the target lane until the vehicle intersects it
+        //       physically (considering lane width and vehicle width)
+        let continuous = vehicle.m().get_lane_change_model().start_lane_change_maneuver(from_lane, to_lane, direction);
+        if continuous {
+            let mut cur = self.myCandi;
+            let ret = self.continue_change(vehicle, &mut cur);
+            self.myCandi = cur;
+            return ret;
+        } else {
+            self.myChanger[to].register_hop(vehicle);
+            to_lane.m().require_collision_check();
+            return true;
+        }
     }
 
     /// C++: `bool MSLaneChanger::continueChange(MSVehicle *, ChangerIt &)` [protected]
@@ -1620,7 +2319,44 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn continue_change(&mut self, vehicle: Ptr<MSVehicle>, from: &mut MSLaneChanger_ChangerIt) -> bool {
-        todo!("port MSLaneChanger::continueChange")
+        let lcm = vehicle.m().get_lane_change_model();
+        let direction: i32 = if lcm.is_opposite() { -lcm.get_lane_change_direction() } else { lcm.get_lane_change_direction() };
+        let pastMidpoint = lcm.update_completion(); // computes lcm.mySpeedLat as a side effect
+        let speedLat = if lcm.is_opposite() { -lcm.get_speed_lat() } else { lcm.get_speed_lat() };
+        vehicle.m().myState.myPosLat += speed2dist(speedLat);
+        vehicle.m().myCachedPosition = Position::INVALID;
+        if pastMidpoint {
+            let source = self.myChanger[self.myCandi].lane;
+            let target = source.get_parallel_lane(direction, true);
+            vehicle.m().myState.myPosLat -= (direction as f64) * 0.5 * (source.get_width() + target.get_width());
+            vehicle.m().get_lane_change_model().primary_lane_changed(source, target, direction);
+            if (source.get_edge() as *const MSEdge) == (target.get_edge() as *const MSEdge) {
+                let to = ((*from) as i32 + direction) as usize;
+                self.myChanger[to].register_hop(vehicle);
+            }
+            target.m().require_collision_check();
+        } else {
+            let f = (*from);
+            self.myChanger[f].register_hop(vehicle);
+            self.myChanger[f].lane.m().require_collision_check();
+        }
+        if !vehicle.m().get_lane_change_model().is_changing_lanes() {
+            vehicle.m().myState.myPosLat = 0.0;
+            vehicle.m().get_lane_change_model().end_lane_change_maneuver(MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE);
+        }
+        vehicle.m().get_lane_change_model().update_shadow_lane();
+        let shadow = vehicle.m().get_lane_change_model().get_shadow_lane();
+        if !shadow.is_null() && (shadow.get_edge() as *const MSEdge) == (vehicle.get_lane().get_edge() as *const MSEdge) {
+            // set as hoppedVeh on the shadow lane so it is found as leader on both lanes
+            let idx = shadow.get_index() as usize;
+            self.myChanger[idx].hoppedVeh = vehicle;
+            shadow.m().require_collision_check();
+        }
+        vehicle.m().myAngle = vehicle.compute_angle();
+        if vehicle.m().get_lane_change_model().is_opposite() {
+            vehicle.m().myAngle += std::f64::consts::PI;
+        }
+        return pastMidpoint && vehicle.m().get_lane_change_model().get_shadow_lane().is_null();
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLaneChanger::getRealFollower(const ChangerIt &) const` [const, protected]
@@ -1702,7 +2438,30 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_real_follower(&self, target: &MSLaneChanger_ChangerIt) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLaneChanger::getRealFollower")
+        let vehicle = self.veh(self.myCandi);
+        let t = *target;
+        let candiPos = vehicle.get_position_on_lane();
+        let mut neighFollow: Ptr<MSVehicle> = Ptr::null();
+        if t != self.myCandi {
+            neighFollow = self.veh(t);
+        } else {
+            // veh(target) would return the ego vehicle so we use its predecessor instead
+            let lane = self.myChanger[t].lane;
+            if lane.myVehicles.len() > 1 {
+                neighFollow = lane.myVehicles[lane.myVehicles.len() - 2];
+            }
+        }
+        // check whether the hopped vehicle became the follower
+        neighFollow = MSLaneChanger::get_closer_follower(candiPos, neighFollow, self.myChanger[t].hoppedVeh);
+        let targetLane = self.myChanger[t].lane;
+        // or a follower which is partially lapping into the target lane
+        neighFollow = MSLaneChanger::get_closer_follower(candiPos, neighFollow, targetLane.get_partial_behind(vehicle));
+        if neighFollow.is_null() {
+            let consecutiveFollower = targetLane.get_followers_on_consecutive(vehicle, vehicle.get_back_position_on_lane_2(), true, -1.0, MSLane_MinorLinkMode::FOLLOW_NEVER, false).index_op(0);
+            return (consecutiveFollower.0, consecutiveFollower.1);
+        } else {
+            return (neighFollow, vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_length() - neighFollow.get_position_on_lane() - neighFollow.get_vehicle_type().get_min_gap());
+        }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLaneChanger::getRealLeader(const ChangerIt &) const` [const, protected]
@@ -1815,7 +2574,61 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_real_leader(&self, target: &MSLaneChanger_ChangerIt) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLaneChanger::getRealLeader")
+        let vehicle = self.veh(self.myCandi);
+        let t = *target;
+        // get the leading vehicle on the lane to change to
+        let mut neighLead = self.myChanger[t].lead;
+        // check whether the hopped vehicle became the leader
+        if !self.myChanger[t].hoppedVeh.is_null() {
+            let hoppedPos = self.myChanger[t].hoppedVeh.get_position_on_lane();
+            if hoppedPos > vehicle.get_position_on_lane() && (neighLead.is_null() || neighLead.get_position_on_lane() > hoppedPos) {
+                neighLead = self.myChanger[t].hoppedVeh;
+            }
+        }
+        // extra check for shared lane
+        let targetLane = self.myChanger[t].lane;
+        let checkBidi = !targetLane.get_bidi_lane().is_null() && targetLane.get_bidi_lane().get_vehicle_number_with_partials() > 0;
+        if neighLead.is_null() || checkBidi {
+            // There's no leader on the target lane. Look for leaders on consecutive lanes.
+            // (there might also be partial leaders due to continuous lane changing or bidiLane)
+            let egoBack = vehicle.get_back_position_on_lane_2();
+            let mut leaderBack = targetLane.get_length();
+            if !neighLead.is_null() {
+                leaderBack = neighLead.get_back_position_on_lane(targetLane);
+            }
+            for pl in targetLane.myPartialVehicles.iter() {
+                let pl = *pl;
+                let mut plBack = pl.get_back_position_on_lane(targetLane);
+                if pl.is_bidi_on(targetLane) {
+                    plBack -= pl.get_vehicle_type().get_length_with_gap();
+                }
+                let plPos = plBack + pl.get_vehicle_type().get_length();
+                if plBack < leaderBack && plPos + pl.get_vehicle_type().get_min_gap() >= egoBack {
+                    neighLead = pl;
+                    leaderBack = plBack;
+                }
+            }
+            if !neighLead.is_null() {
+                let gap = leaderBack - vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_min_gap();
+                return (neighLead, gap);
+            }
+            let egoLane = self.myChanger[self.myCandi].lane;
+            let seen = egoLane.get_length() - vehicle.get_position_on_lane();
+            let speed = vehicle.get_speed();
+            let mut dist = vehicle.get_car_follow_model().brake_gap(speed) + vehicle.get_vehicle_type().get_min_gap();
+            if !targetLane.get_bidi_lane().is_null() {
+                dist += targetLane.get_bidi_lane().get_maximum_brake_dist();
+            }
+            // always check for link leaders while on an internal lane
+            if seen > dist && !egoLane.is_internal() {
+                return (Ptr::null(), -1.0);
+            }
+            let bestLaneConts = vehicle.get_best_lanes_continuation_2(targetLane);
+            let result = targetLane.get_leader_on_consecutive(dist, seen, speed, &vehicle, bestLaneConts, true);
+            return result;
+        } else {
+            return (neighLead, neighLead.get_back_position_on_lane(targetLane) - vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_min_gap());
+        }
     }
 
     /// C++: `bool MSLaneChanger::mayChange(int) const` [const, protected]
@@ -1839,7 +2652,21 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn may_change(&self, direction: i32) -> bool {
-        todo!("port MSLaneChanger::mayChange")
+        if direction == 0 {
+            return true;
+        }
+        if !self.myAllowsChanging {
+            return false;
+        }
+        let c = self.myCandi;
+        let svc = self.veh(c).get_v_class();
+        if direction == -1 {
+            self.myChanger[c].mayChangeRight && self.myChanger[c - 1].lane.allows_vehicle_class(svc) && self.myChanger[c].lane.allows_changing_right(svc)
+        } else if direction == 1 {
+            self.myChanger[c].mayChangeLeft && self.myChanger[c + 1].lane.allows_vehicle_class(svc) && self.myChanger[c].lane.allows_changing_left(svc)
+        } else {
+            false
+        }
     }
 
     /// C++: `MSVehicle * MSLaneChanger::getCloserFollower(const double, MSVehicle *, MSVehicle *)` [static, protected]
@@ -1860,7 +2687,15 @@ impl MSLaneChanger {
     // }
     #[allow(unused_variables)]
     pub fn get_closer_follower(maxPos: f64, follow1: Ptr<MSVehicle>, follow2: Ptr<MSVehicle>) -> Ptr<MSVehicle> {
-        todo!("port MSLaneChanger::getCloserFollower")
+        if follow1.is_null() || follow1.get_position_on_lane() > maxPos {
+            follow2
+        } else if follow2.is_null() || follow2.get_position_on_lane() > maxPos {
+            follow1
+        } else if follow1.get_position_on_lane() > follow2.get_position_on_lane() {
+            follow1
+        } else {
+            follow2
+        }
     }
 
     /// C++: `void MSLaneChanger::computeOvertakingTime(const MSVehicle *, double, const MSVehicle *, double, double &, double &)` [static, protected]
