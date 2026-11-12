@@ -1,6 +1,7 @@
-//! Port of utils/shapes/PointOfInterest.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of utils/shapes/PointOfInterest.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::shape::{DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_HEIGHT, DEFAULT_IMG_WIDTH};
 
 /// A point-of-interest
 /// C++ class `PointOfInterest` (utils/shapes/PointOfInterest.h)
@@ -61,8 +62,20 @@ impl PointOfInterest {
     //     myHalfImgHeight(height / 2.0) {
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, type_: &str, color: &RGBColor, pos: &Position, geo: bool, lane: &str, posOverLane: f64, friendlyPos: bool, posLat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port PointOfInterest::PointOfInterest")
+    pub fn new(id: &str, type_: &str, color: &RGBColor, pos: &Position, geo: bool, lane: &str, posOverLane: f64, friendlyPos: bool, posLat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, name: &str, parameters: &BTreeMap<String, String>) -> Self {
+        PointOfInterest {
+            base: Shape::new_2(id, type_, color, layer, angle, imgFile, name),
+            base2: pos.clone(),
+            base3: Parameterised::from_map(parameters),
+            myGeo: geo,
+            myLane: lane.to_string(),
+            myPosOverLane: posOverLane,
+            myFriendlyPos: friendlyPos,
+            myPosLat: posLat,
+            myIcon: POIIcons.get(icon),
+            myHalfImgWidth: width / 2.0,
+            myHalfImgHeight: height / 2.0,
+        }
     }
 
     /// C++: `void PointOfInterest::~PointOfInterest() noexcept` [virtual]
@@ -70,7 +83,7 @@ impl PointOfInterest {
     // PointOfInterest::~PointOfInterest() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PointOfInterest::~PointOfInterest")
+        // C++ destructor body is empty
     }
 
     /// C++: `POIIcon PointOfInterest::getIcon() const` [const]
@@ -81,7 +94,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_icon(&self) -> POIIcon {
-        todo!("port PointOfInterest::getIcon")
+        self.myIcon
     }
 
     /// C++: `const std::string & PointOfInterest::getIconStr() const` [const]
@@ -92,7 +105,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_icon_str(&self) -> &str {
-        todo!("port PointOfInterest::getIconStr")
+        POIIcons.get_string(self.myIcon).unwrap()
     }
 
     /// C++: `double PointOfInterest::getWidth() const` [const]
@@ -103,7 +116,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port PointOfInterest::getWidth")
+        self.myHalfImgWidth * 2.0
     }
 
     /// C++: `double PointOfInterest::getHeight() const` [const]
@@ -114,7 +127,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_height(&self) -> f64 {
-        todo!("port PointOfInterest::getHeight")
+        self.myHalfImgHeight * 2.0
     }
 
     /// C++: `Position PointOfInterest::getCenter() const` [const]
@@ -125,7 +138,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_center(&self) -> Position {
-        todo!("port PointOfInterest::getCenter")
+        Position::new(self.base2.x() + self.myHalfImgWidth, self.base2.y() + self.myHalfImgHeight)
     }
 
     /// C++: `bool PointOfInterest::getFriendlyPos() const` [const]
@@ -136,7 +149,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_friendly_pos(&self) -> bool {
-        todo!("port PointOfInterest::getFriendlyPos")
+        self.myFriendlyPos
     }
 
     /// C++: `void PointOfInterest::setIcon(const std::string &)`
@@ -147,7 +160,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn set_icon(&mut self, icon: &str) {
-        todo!("port PointOfInterest::setIcon")
+        self.myIcon = POIIcons.get(icon);
     }
 
     /// C++: `void PointOfInterest::setWidth(double)`
@@ -158,7 +171,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn set_width(&mut self, width: f64) {
-        todo!("port PointOfInterest::setWidth")
+        self.myHalfImgWidth = width / 2.0;
     }
 
     /// C++: `void PointOfInterest::setHeight(double)`
@@ -169,7 +182,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn set_height(&mut self, height: f64) {
-        todo!("port PointOfInterest::setHeight")
+        self.myHalfImgHeight = height / 2.0;
     }
 
     /// C++: `void PointOfInterest::setFriendlyPos(const bool)`
@@ -180,7 +193,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn set_friendly_pos(&mut self, friendlyPos: bool) {
-        todo!("port PointOfInterest::setFriendlyPos")
+        self.myFriendlyPos = friendlyPos;
     }
 
     /// C++: `void PointOfInterest::writeXML(OutputDevice &, const bool, const double, const std::string, const double, const bool, const double) const` [const]
@@ -242,7 +255,58 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool, zOffset: f64, laneID: String, pos: f64, friendlyPos: bool, posLat: f64) {
-        todo!("port PointOfInterest::writeXML")
+        out.open_tag_id(SUMO_TAG_POI);
+        out.write_attr(SUMO_ATTR_ID, &StringUtils::escape_xml(self.get_id()));
+        if !self.get_shape_type().is_empty() {
+            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escape_xml(self.get_shape_type()));
+        }
+        if self.myIcon != POIIcon::NONE {
+            out.write_attr(SUMO_ATTR_ICON, POIIcons.get_string(self.myIcon).unwrap());
+        }
+        out.write_attr(SUMO_ATTR_COLOR, self.get_shape_color());
+        out.write_attr(SUMO_ATTR_LAYER, &(self.get_shape_layer() + zOffset));
+        if !self.get_shape_name().is_empty() {
+            out.write_attr(SUMO_ATTR_NAME, self.get_shape_name());
+        }
+        if laneID != "" {
+            out.write_attr(SUMO_ATTR_LANE, laneID.as_str());
+            out.write_attr(SUMO_ATTR_POSITION, &pos);
+            if posLat != 0.0 {
+                out.write_attr(SUMO_ATTR_POSITION_LAT, &posLat);
+            }
+            if friendlyPos {
+                out.write_attr(SUMO_ATTR_FRIENDLY_POS, &friendlyPos);
+            }
+        } else {
+            if geo {
+                let mut POICartesianPos: Position = self.base2.clone();
+                GeoConvHelper::get_final().cartesian2geo(&mut POICartesianPos);
+                out.set_precision(Some(gPrecisionGeo));
+                out.write_attr(SUMO_ATTR_LON, &POICartesianPos.x());
+                out.write_attr(SUMO_ATTR_LAT, &POICartesianPos.y());
+                out.set_precision(None); // C++ setPrecision() without argument
+            } else {
+                out.write_attr(SUMO_ATTR_X, &self.base2.x());
+                out.write_attr(SUMO_ATTR_Y, &self.base2.y());
+            }
+            if self.base2.z() != 0.0 {
+                out.write_attr(SUMO_ATTR_Z, &self.base2.z());
+            }
+        }
+        if self.get_shape_navi_degree() != DEFAULT_ANGLE {
+            out.write_attr(SUMO_ATTR_ANGLE, &self.get_shape_navi_degree());
+        }
+        if self.get_shape_img_file() != DEFAULT_IMG_FILE {
+            out.write_attr(SUMO_ATTR_IMGFILE, self.get_shape_img_file());
+        }
+        if self.get_width() != DEFAULT_IMG_WIDTH {
+            out.write_attr(SUMO_ATTR_WIDTH, &self.get_width());
+        }
+        if self.get_height() != DEFAULT_IMG_HEIGHT {
+            out.write_attr(SUMO_ATTR_HEIGHT, &self.get_height());
+        }
+        self.base3.write_params(out);
+        out.close_tag("");
     }
 
 }
