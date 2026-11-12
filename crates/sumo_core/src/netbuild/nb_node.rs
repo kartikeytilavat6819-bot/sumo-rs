@@ -2517,7 +2517,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port NBNode::getShape")
+        &self.myPoly
     }
 
     /// C++: `void NBNode::setCustomShape(const PositionVector &)`
@@ -2534,7 +2534,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_custom_shape(&mut self, shape: &PositionVector) {
-        todo!("port NBNode::setCustomShape")
+        self.myPoly = shape.clone();
+        self.myHaveCustomPoly = self.myPoly.len() > 1;
+        if self.myHaveCustomPoly {
+            let me = Ptr::from_mut(self);
+            for i in self.myAllEdges.iter() {
+                i.m().reset_node_border(me);
+            }
+        }
     }
 
     /// C++: `void NBNode::resetShape()`
@@ -2544,7 +2551,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn reset_shape(&mut self) {
-        todo!("port NBNode::resetShape")
+        self.myPoly.clear();
     }
 
     /// C++: `void NBNode::setRadius(double)`
@@ -2554,7 +2561,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_radius(&mut self, radius: f64) {
-        todo!("port NBNode::setRadius")
+        self.myRadius = radius;
     }
 
     /// C++: `void NBNode::setKeepClear(bool)`
@@ -2564,7 +2571,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_keep_clear(&mut self, keepClear: bool) {
-        todo!("port NBNode::setKeepClear")
+        self.myKeepClear = keepClear;
     }
 
     /// C++: `void NBNode::setRightOfWay(RightOfWay)`
@@ -2574,7 +2581,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_right_of_way(&mut self, rightOfWay: RightOfWay) {
-        todo!("port NBNode::setRightOfWay")
+        self.myRightOfWay = rightOfWay;
     }
 
     /// C++: `void NBNode::setFringeType(FringeType)`
@@ -2584,7 +2591,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_fringe_type(&mut self, fringeType: FringeType) {
-        todo!("port NBNode::setFringeType")
+        self.myFringeType = fringeType;
     }
 
     /// C++: `void NBNode::setRoundaboutType(RoundaboutType)`
@@ -2594,7 +2601,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_roundabout_type(&mut self, roundaboutType: RoundaboutType) {
-        todo!("port NBNode::setRoundaboutType")
+        self.myRoundaboutType = roundaboutType;
     }
 
     /// C++: `void NBNode::setName(const std::string &)`
@@ -2604,7 +2611,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_name(&mut self, name: &str) {
-        todo!("port NBNode::setName")
+        self.myName = name.to_string();
     }
 
     /// C++: `bool NBNode::hasCustomShape() const` [const]
@@ -2614,7 +2621,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn has_custom_shape(&self) -> bool {
-        todo!("port NBNode::hasCustomShape")
+        self.myHaveCustomPoly
     }
 
     /// C++: `bool NBNode::checkIsRemovable() const` [const]
