@@ -2,6 +2,13 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: NBEdge::getConnections()/getConnectionsFromLane() are typed Vec<CHBuilder_Connection> in nb_edge.rs but C++ returns NBEdge::Connection (toEdge/toLane/vmax/length); all connection access in this file goes through these two helpers, upgrade: change nb_edge.rs accessors to Vec<NBEdge_Connection> and drop the clone
+fn all_connections(e: Ptr<NBEdge>) -> Vec<NBEdge_Connection> {
+    e.get_connections().clone()
+}
+fn connections_from_lane(e: Ptr<NBEdge>, lane: i32) -> Vec<NBEdge_Connection> {
+    e.get_connections_from_lane(lane, Ptr::default(), -1)
+}
 // C++ std::string::operator[] semantics for reads past the end: '\0'
 fn byte_at(s: &[u8], i: usize) -> u8 {
     s.get(i).copied().unwrap_or(0)
@@ -1782,7 +1789,66 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn compute_unblocked_weighted_stream_number(&mut self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> f64 {
-        todo!("port NBOwnTLDef::computeUnblockedWeightedStreamNumber")
+        let mut val: f64 = 0.0;
+        for e1l in 0..e1.get_num_lanes() {
+            let approached1 = connections_from_lane(e1, e1l);
+            for e2l in 0..e2.get_num_lanes() {
+                let approached2 = connections_from_lane(e2, e2l);
+                for e1c in approached1.iter() {
+                    if e1.get_turn_destination(false) == e1c.toEdge {
+                        continue;
+                    }
+                    for e2c in approached2.iter() {
+                        if e2.get_turn_destination(false) == e2c.toEdge {
+                            continue;
+                        }
+                        let sign: f64 = if self.forbids(e1, e1c.toEdge, e2, e2c.toEdge, true, false)
+                            || self.forbids(e2, e2c.toEdge, e1, e1c.toEdge, true, false)
+                        {
+                            -1.0
+                        } else {
+                            1.0
+                        };
+                        let mut w1: f64;
+                        let mut w2: f64;
+                        let prio1 = e1.get_junction_priority(e1.get_to_node());
+                        let prio2 = e2.get_junction_priority(e2.get_to_node());
+                        if prio1 == prio2 {
+                            w1 = self.get_directional_weight(e1.get_to_node().get_direction(e1, e1c.toEdge, false));
+                            w2 = self.get_directional_weight(e2.get_to_node().get_direction(e2, e2c.toEdge, false));
+                        } else {
+                            if prio1 > prio2 {
+                                w1 = 2.0;
+                                w2 = 0.5;
+                            } else {
+                                w1 = 0.5;
+                                w2 = 2.0;
+                            }
+                            if sign == -1.0 {
+                                // extra penalty if edges with different junction priority are in conflict
+                                w1 *= 2.0;
+                                w2 *= 2.0;
+                            }
+                        }
+                        if utils::common::sumo_vehicle_class::is_railway(e1.get_permissions(-1))
+                            != utils::common::sumo_vehicle_class::is_railway(e2.get_permissions(-1))
+                        {
+                            w1 *= 0.1;
+                            w2 *= 0.1;
+                        }
+                        if (e1.get_permissions(-1) & SVC_PASSENGER) == 0 {
+                            w1 *= 0.1;
+                        }
+                        if (e2.get_permissions(-1) & SVC_PASSENGER) == 0 {
+                            w2 *= 0.1;
+                        }
+                        val += sign * w1;
+                        val += sign * w2;
+                    }
+                }
+            }
+        }
+        val
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NBOwnTLDef::getBestCombination(const EdgeVector &)` [protected]
@@ -1826,7 +1892,42 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_best_combination(&mut self, edges: &EdgeVector) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NBOwnTLDef::getBestCombination")
+        let mut bestPair: (Ptr<NBEdge>, Ptr<NBEdge>) = (Ptr::default(), Ptr::default());
+        let mut bestValue: f64 = -f64::MAX;
+        for i in 0..edges.len() {
+            for j in (i + 1)..edges.len() {
+                let value = self.compute_unblocked_weighted_stream_number(edges[i], edges[j]);
+                if value > bestValue {
+                    bestValue = value;
+                    bestPair = (edges[i], edges[j]);
+                } else if value == bestValue {
+                    let ca = utils::geom::geom_helper::get_min_angle_diff(
+                        edges[i].get_angle_at_node(edges[i].get_to_node()),
+                        edges[j].get_angle_at_node(edges[j].get_to_node()),
+                    );
+                    let oa = utils::geom::geom_helper::get_min_angle_diff(
+                        bestPair.0.get_angle_at_node(bestPair.0.get_to_node()),
+                        bestPair.1.get_angle_at_node(bestPair.1.get_to_node()),
+                    );
+                    if (oa - ca).abs() < utils::geom::NUMERICAL_EPS {
+                        // break ties by id
+                        if bestPair.0.get_id() < edges[i].get_id() {
+                            bestPair = (edges[i], edges[j]);
+                        }
+                    } else if oa < ca {
+                        bestPair = (edges[i], edges[j]);
+                    }
+                }
+            }
+        }
+        if bestValue < 0.0 || (bestValue == 0.0 && !self.has_straight_connection(bestPair.0) && !self.has_straight_connection(bestPair.1)) {
+            // do not group edges
+            if bestPair.0.get_priority() < bestPair.1.get_priority() {
+                bestPair = (bestPair.1, bestPair.0);
+            }
+            bestPair.1 = Ptr::default();
+        }
+        bestPair
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NBOwnTLDef::getBestPair(EdgeVector &)` [protected]
@@ -1868,7 +1969,47 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_best_pair(&mut self, incoming: &mut EdgeVector) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NBOwnTLDef::getBestPair")
+        if incoming.len() == 1 {
+            // only one there - return the one
+            let ret = (incoming[0], Ptr::default());
+            incoming.clear();
+            return ret;
+        }
+        // determine the best combination
+        //  by priority, first
+        let mut used: EdgeVector = Vec::new();
+        let sorter = NBOwnTLDef_edge_by_incoming_priority_sorter {};
+        incoming.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        used.push(incoming[0]); // the first will definitely be used
+        // get the ones with the same priority
+        let prio = self.get_to_prio(used[0]);
+        let mut i = 1;
+        while i < incoming.len() && prio == self.get_to_prio(incoming[i]) {
+            used.push(incoming[i]);
+            i += 1;
+        }
+        //  if there only lower priorised, use these, too
+        if used.len() < 2 {
+            used = incoming.clone();
+        }
+        let ret = self.get_best_combination(&used);
+        if let Some(p) = incoming.iter().position(|e| *e == ret.0) {
+            incoming.remove(p);
+        }
+        if !ret.1.is_null() {
+            if let Some(p) = incoming.iter().position(|e| *e == ret.1) {
+                incoming.remove(p);
+            }
+        }
+        ret
     }
 
     /// C++: `bool NBOwnTLDef::hasCrossing(const NBEdge *, const NBEdge *, const std::vector<NBNode::Crossing *> &)` [static, protected]
@@ -1892,7 +2033,18 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn has_crossing(from: Ptr<NBEdge>, to: Ptr<NBEdge>, crossings: &Vec<Ptr<NBNode_Crossing>>) -> bool {
-        todo!("port NBOwnTLDef::hasCrossing")
+        assert!(!to.is_null());
+        for cross in crossings.iter() {
+            // only check connections at this crossings node
+            if to.get_from_node() == cross.node {
+                for edge in cross.edges.iter() {
+                    if *edge == from || *edge == to {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `EdgeVector NBOwnTLDef::getConnectedOuterEdges(const EdgeVector &)` [static, protected]
@@ -1911,7 +2063,9 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_connected_outer_edges(incoming: &EdgeVector) -> EdgeVector {
-        todo!("port NBOwnTLDef::getConnectedOuterEdges")
+        let mut result: EdgeVector = incoming.clone();
+        result.retain(|e| !(e.get_connections().len() == 0 || e.is_inside_tls()));
+        result
     }
 
     /// C++: `std::string NBOwnTLDef::allowCompatible(std::string, const EdgeVector &, const EdgeVector &, const std::vector<int> &, const std::vector<int> &)` [protected]
@@ -1943,7 +2097,12 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_compatible(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, fromLanes: &Vec<i32>, toLanes: &Vec<i32>) -> String {
-        todo!("port NBOwnTLDef::allowCompatible")
+        let mut state = self.allow_single_edge(state, fromEdges);
+        if self.myControlledNodes.len() > 1 {
+            state = self.allow_followers(state, fromEdges, toEdges);
+            state = self.allow_predecessors(state, fromEdges, toEdges, fromLanes, toLanes);
+        }
+        state
     }
 
     /// C++: `std::string NBOwnTLDef::allowSingleEdge(std::string, const EdgeVector &)` [protected]
@@ -1972,7 +2131,27 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_single_edge(&mut self, state: String, fromEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::allowSingleEdge")
+        // if only one edge has green, ensure sure that all connections from that edge are green
+        let mut st: Vec<u8> = state.into_bytes();
+        let size = fromEdges.len();
+        let mut greenEdge: Ptr<NBEdge> = Ptr::default();
+        for i1 in 0..size {
+            if st[i1] == b'G' {
+                if greenEdge.is_null() {
+                    greenEdge = fromEdges[i1];
+                } else if greenEdge != fromEdges[i1] {
+                    return String::from_utf8(st).unwrap();
+                }
+            }
+        }
+        if !greenEdge.is_null() {
+            for i1 in 0..size {
+                if fromEdges[i1] == greenEdge {
+                    st[i1] = b'G';
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowFollowers(std::string, const EdgeVector &, const EdgeVector &)` [protected]
@@ -2006,7 +2185,33 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_followers(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector) -> String {
-        todo!("port NBOwnTLDef::allowFollowers")
+        // check continuation within joined traffic lights
+        let mut st: Vec<u8> = state.into_bytes();
+        let mut check = true;
+        while check {
+            check = false;
+            for i1 in 0..fromEdges.len() {
+                if st[i1] == b'G' {
+                    continue;
+                }
+                let cur = String::from_utf8(st.clone()).unwrap();
+                if self.forbidden(&cur, i1 as i32, fromEdges, toEdges, true) {
+                    continue;
+                }
+                let mut followsChosen = false;
+                for i2 in 0..fromEdges.len() {
+                    if st[i2] == b'G' && fromEdges[i1] == toEdges[i2] {
+                        followsChosen = true;
+                        break;
+                    }
+                }
+                if followsChosen {
+                    st[i1] = b'G';
+                    check = true;
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowPredecessors(std::string, const EdgeVector &, const EdgeVector &, const std::vector<int> &, const std::vector<int> &)` [protected]
@@ -2043,7 +2248,34 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_predecessors(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, fromLanes: &Vec<i32>, toLanes: &Vec<i32>) -> String {
-        todo!("port NBOwnTLDef::allowPredecessors")
+        // also allow predecessors of chosen edges if the lanes match and there is no conflict
+        // (must be done after the followers are done because followers are less specific)
+        let mut st: Vec<u8> = state.into_bytes();
+        let mut check = true;
+        while check {
+            check = false;
+            for i1 in 0..fromEdges.len() {
+                if st[i1] == b'G' {
+                    continue;
+                }
+                let cur = String::from_utf8(st.clone()).unwrap();
+                if self.forbidden(&cur, i1 as i32, fromEdges, toEdges, false) {
+                    continue;
+                }
+                let mut preceedsChosen = false;
+                for i2 in 0..fromEdges.len() {
+                    if st[i2] == b'G' && fromEdges[i2] == toEdges[i1] && fromLanes[i2] == toLanes[i1] {
+                        preceedsChosen = true;
+                        break;
+                    }
+                }
+                if preceedsChosen {
+                    st[i1] = b'G';
+                    check = true;
+                }
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowUnrelated(std::string, const EdgeVector &, const EdgeVector &, const std::vector<bool> &, const std::vector<NBNode::Crossing *> &)` [protected]
@@ -2071,7 +2303,27 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_unrelated(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, isTurnaround: &Vec<bool>, crossings: &Vec<Ptr<NBNode_Crossing>>) -> String {
-        todo!("port NBOwnTLDef::allowUnrelated")
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            if st[i1] == b'G' {
+                continue;
+            }
+            let mut isForbidden = false;
+            for i2 in 0..fromEdges.len() {
+                if st[i2] == b'G'
+                    && !isTurnaround[i2]
+                    && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
+                        || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
+                {
+                    isForbidden = true;
+                    break;
+                }
+            }
+            if !isForbidden && !Self::has_crossing(fromEdges[i1], toEdges[i1], crossings) {
+                st[i1] = b'G';
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `std::string NBOwnTLDef::allowByVClass(std::string, const EdgeVector &, const EdgeVector &, SVCPermissions)` [protected]
@@ -2087,7 +2339,14 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn allow_by_v_class(&mut self, state: String, fromEdges: &EdgeVector, toEdges: &EdgeVector, perm: SVCPermissions) -> String {
-        todo!("port NBOwnTLDef::allowByVClass")
+        let mut st: Vec<u8> = state.into_bytes();
+        for i1 in 0..fromEdges.len() {
+            let linkPerm: SVCPermissions = fromEdges[i1].get_permissions(-1) & toEdges[i1].get_permissions(-1);
+            if (linkPerm & !perm) == 0 {
+                st[i1] = b'G';
+            }
+        }
+        String::from_utf8(st).unwrap()
     }
 
     /// C++: `bool NBOwnTLDef::forbidden(const std::string &, int, const EdgeVector &, const EdgeVector &, bool)` [protected]
@@ -2107,7 +2366,19 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn forbidden(&mut self, state: &str, index: i32, fromEdges: &EdgeVector, toEdges: &EdgeVector, allowCont: bool) -> bool {
-        todo!("port NBOwnTLDef::forbidden")
+        let sb = state.as_bytes();
+        let idx = index as usize;
+        for i2 in 0..fromEdges.len() {
+            if byte_at(sb, i2) == b'G' && self.foes(fromEdges[i2], toEdges[i2], fromEdges[idx], toEdges[idx]) {
+                if !allowCont
+                    || (!self.needs_cont(fromEdges[i2], toEdges[i2], fromEdges[idx], toEdges[idx])
+                        && !self.needs_cont(fromEdges[idx], toEdges[idx], fromEdges[i2], toEdges[i2]))
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `std::string NBOwnTLDef::correctConflicting(std::string, const EdgeVector &, const EdgeVector &, const std::vector<bool> &, const std::vector<int> &, const std::vector<int> &, const std::vector<bool> &, bool &, std::vector<bool> &, std::vector<bool> &)` [protected]
@@ -2347,7 +2618,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn has_straight_connection(&mut self, fromEdge: Ptr<NBEdge>) -> bool {
-        todo!("port NBOwnTLDef::hasStraightConnection")
+        for c in all_connections(fromEdge) {
+            let dir = fromEdge.get_to_node().get_direction(fromEdge, c.toEdge, false);
+            if dir == LinkDirection::STRAIGHT {
+                return true;
+            }
+        }
+        false
     }
 
 }
@@ -2368,7 +2645,10 @@ impl NBOwnTLDef_edge_by_incoming_priority_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_incoming_priority_sorter::operator()")
+        if e1.get_junction_priority(e1.get_to_node()) != e2.get_junction_priority(e2.get_to_node()) {
+            return (e1.get_junction_priority(e1.get_to_node()) > e2.get_junction_priority(e2.get_to_node())) as i32;
+        }
+        (e1.get_id() > e2.get_id()) as i32
     }
 
 }
