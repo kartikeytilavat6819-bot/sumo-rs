@@ -76,6 +76,15 @@ macro_rules! ms_global {
         pub fn $set(v: $ty) {
             $static_name.store(v, Ordering::Relaxed)
         }
+        // also reachable as MSGlobals::name(), mirroring C++ MSGlobals::gName
+        impl MSGlobals {
+            pub fn $get() -> $ty {
+                $get()
+            }
+            pub fn $set(v: $ty) {
+                $set(v)
+            }
+        }
     };
 }
 
@@ -88,6 +97,14 @@ macro_rules! ms_global_f64 {
         }
         pub fn $set(v: f64) {
             $static_name.store(v.to_bits(), Ordering::Relaxed)
+        }
+        impl MSGlobals {
+            pub fn $get() -> f64 {
+                $get()
+            }
+            pub fn $set(v: f64) {
+                $set(v)
+            }
         }
     };
 }

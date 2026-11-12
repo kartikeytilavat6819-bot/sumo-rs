@@ -5213,7 +5213,7 @@ impl MSLane {
                 }
                 nextLane = bestLaneConts[view as usize];
             } else {
-                let mut link: usize = MSLane::succ_link_sec(ego, view, &nextLane, bestLaneConts);
+                let mut link: usize = MSLane::succ_link_sec(&ego, view, &nextLane, bestLaneConts);
                 if nextLane.is_link_end(&mut link) {
                     break;
                 }
