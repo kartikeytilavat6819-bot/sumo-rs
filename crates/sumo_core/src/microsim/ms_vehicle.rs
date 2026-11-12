@@ -13,6 +13,8 @@ fn max2(a: f64, b: f64) -> f64 {
 }
 
 // shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
+const SPEED_EPS: f64 = 0.01; // config.h.cmake
+
 #[allow(dead_code)]
 fn semi_implicit_euler_update() -> bool {
     false
@@ -1926,7 +1928,7 @@ pub struct MSVehicle {
     pub myLastBestLanesEdge: Ptr<MSEdge>,
     pub myLastBestLanesInternalLane: Ptr<MSLane>,
     pub myBestLanes: Vec<Vec<MSVehicle_LaneQ>>,
-    pub myCurrentLaneInBestLanes: Unmapped /* std::vector<LaneQ>::iterator */,
+    pub myCurrentLaneInBestLanes: usize, // index into the current myBestLanes[] vector (C++ iterator)
     /// The current acceleration after dawdling in m/s
     pub myAcceleration: f64,
     /// the upcoming turn for the vehicle
@@ -1967,7 +1969,7 @@ pub struct MSVehicle {
     /// planned speeds from the previous step for un-registering from junctions after the new container is filled
     pub myLFLinkLanesPrev: MSVehicle_DriveItemVector,
     /// iterator pointing to the next item in myLFLinkLanes
-    pub myNextDriveItem: Unmapped /* DriveItemVector::iterator */,
+    pub myNextDriveItem: usize, // index into myLFLinkLanes (C++ iterator)
     /// The per vehicle variables of the car following model
     pub myCFVariables: Ptr<MSCFModel_VehicleVariables>,
     /// An instance of a velocity/lane influencing instance; built in "getInfluencer"
@@ -2030,7 +2032,52 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, speedFactor: f64) -> Self {
-        todo!("port MSVehicle::MSVehicle")
+        let mut v = Self {
+            base: MSBaseVehicle::new(pars, route, type_, speedFactor),
+            myManoeuvre: MSVehicle_Manoeuvre::new(),
+            myWaitingTime: 0,
+            // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used
+            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(300 * 1000),
+            myTimeLoss: 0.0,
+            myState: MSVehicle_State::new(0.0, 0.0, 0.0, 0.0, 0.0),
+            myDriverState: Ptr::null(),
+            myFrictionDevice: Ptr::null(),
+            myActionStep: true,
+            myLastActionTime: 0,
+            myLane: Ptr::null(),
+            myLaneChangeModel: Ptr::null(),
+            myLastBestLanesEdge: Ptr::null(),
+            myLastBestLanesInternalLane: Ptr::null(),
+            myBestLanes: Vec::new(),
+            myCurrentLaneInBestLanes: 0,
+            myAcceleration: 0.0,
+            myNextTurn: (0.0, Ptr::null()),
+            myFurtherLanes: Vec::new(),
+            myFurtherLanesPosLat: Vec::new(),
+            mySignals: 0,
+            myAmOnNet: false,
+            myAmIdling: false,
+            myHaveToWaitOnNextLink: false,
+            myAngle: 0.0,
+            myRawAngle: 0.0,
+            myLastAngle: utils::common::std_defs::INVALID_DOUBLE,
+            myStopDist: f64::MAX,
+            myStopSpeed: f64::MAX,
+            myCollisionImmunity: -1,
+            myCachedPosition: Position::INVALID,
+            myJunctionEntryTime: SUMOTIME_MAX,
+            myJunctionEntryTimeNeverYield: SUMOTIME_MAX,
+            myJunctionConflictEntryTime: SUMOTIME_MAX,
+            myTimeSinceStartup: time2steps(3600.0 * 24.0),
+            myHaveStoppedFor: Ptr::null(),
+            myLFLinkLanes: Vec::new(),
+            myLFLinkLanesPrev: Vec::new(),
+            myNextDriveItem: 0,
+            myCFVariables: Ptr::null(),
+            myInfluencer: Ptr::null(),
+        };
+        v.myCFVariables = type_.get_car_follow_model().create_vehicle_variables();
+        v
     }
 
     /// C++: `void MSVehicle::~MSVehicle() noexcept` [virtual]
@@ -2047,7 +2094,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicle::~MSVehicle")
+        self.cleanup_parking_reservation();
+        self.cleanup_further_lanes();
+        // shortcut: delete myLaneChangeModel, delete myInfluencer and delete myCFVariables are not performed, the raw owners are not modelled yet
+        if self.myType.is_vehicle_specific() {
+            MSNet::get_instance().get_vehicle_control().remove_v_type(self.myType);
+        }
     }
 
     /// C++: `void MSVehicle::initDevices()` [virtual]
@@ -2060,7 +2112,10 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_devices(&mut self) {
-        todo!("port MSVehicle::initDevices")
+        self.base.init_devices();
+        self.myLaneChangeModel = MSAbstractLaneChangeModel::build(self.myType.get_lane_change_model(), self);
+        self.myDriverState = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped, the first device is taken
+        self.myFrictionDevice = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped
     }
 
     /// C++: `bool MSVehicle::hasValidRouteStart(std::string &)` [virtual]
@@ -2098,7 +2153,43 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_valid_route_start(&mut self, msg: &mut String) -> bool {
-        todo!("port MSVehicle::hasValidRouteStart")
+        // note: not a const method because getDepartLane may call updateBestLanes
+        if !self.get_edge().is_taz_connector() {
+            if self.myParameter.departLaneProcedure == DepartLaneDefinition::GIVEN
+                || (self.myParameter.departLaneProcedure == DepartLaneDefinition::DEFAULT && *MSEdge::get_default_depart_lane_definition() == DepartLaneDefinition::GIVEN)
+            {
+                if self.get_edge().get_depart_lane(self).is_null() {
+                    *msg = format!("Invalid departLane definition for vehicle '{}'.", self.get_id());
+                    if self.myParameter.departLane >= self.get_edge().get_lanes().len() as i32 {
+                        self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_LANE as i32;
+                    } else {
+                        self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i32;
+                    }
+                    return false;
+                }
+            } else {
+                if self.get_edge().allowed_lanes_3(self.get_v_class(), self.ignore_transient_permissions()).is_null() {
+                    *msg = format!(
+                        "Vehicle '{}' is not allowed to depart on any lane of edge '{}'.",
+                        self.get_id(),
+                        self.get_edge().get_id()
+                    );
+                    self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i32;
+                    return false;
+                }
+            }
+            if self.myParameter.departSpeedProcedure == DepartSpeedDefinition::GIVEN && self.myParameter.departSpeed > self.myType.get_max_speed() + SPEED_EPS {
+                *msg = format!(
+                    "Departure speed for vehicle '{}' is too high for the vehicle type '{}'.",
+                    self.get_id(),
+                    self.myType.get_id()
+                );
+                self.myRouteValidity |= MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_LANE as i32;
+                return false;
+            }
+        }
+        self.myRouteValidity &= !(MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_LANE as i32 | MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i32);
+        true
     }
 
     /// C++: `void MSVehicle::onRemovalFromNet(const MSMoveReminder::Notification)` [virtual]
@@ -2119,7 +2210,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn on_removal_from_net(&mut self, reason: MSMoveReminder_Notification) {
-        todo!("port MSVehicle::onRemovalFromNet")
+        MSVehicleTransfer::get_instance().m().remove(Ptr::from_mut(self));
+        self.remove_approaching_information(&self.myLFLinkLanes);
+        self.leave_lane(reason, Ptr::null());
+        if reason == MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION {
+            self.cleanup_further_lanes();
+        }
     }
 
     /// C++: `bool MSVehicle::hasArrived() const` [const, virtual]
@@ -2130,7 +2226,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_arrived(&self) -> bool {
-        todo!("port MSVehicle::hasArrived")
+        self.has_arrived_internal(false)
     }
 
     /// C++: `bool MSVehicle::replaceRoute(ConstMSRoutePtr, const std::string &, bool, int, bool, bool, std::string *)` [virtual]
@@ -10554,7 +10650,7 @@ impl MSVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port MSVehicle::MSVehicle")
+        panic!("MSVehicle copy/default constructor is deleted in C++ (invalidated)")
     }
 
     /// C++: `void MSVehicle::MSVehicle(const MSVehicle &)` [private]
@@ -10562,7 +10658,7 @@ impl MSVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &MSVehicle) -> Self {
-        todo!("port MSVehicle::MSVehicle")
+        panic!("MSVehicle copy/default constructor is deleted in C++ (invalidated)")
     }
 
     /// C++: `MSVehicle & MSVehicle::operator=(const MSVehicle &)` [private]
