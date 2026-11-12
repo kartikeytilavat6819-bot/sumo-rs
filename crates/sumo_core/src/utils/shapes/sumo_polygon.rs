@@ -236,9 +236,9 @@ impl SUMOPolygon {
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool) {
         out.open_tag_id(SUMO_TAG_POLY);
-        out.write_attr(SUMO_ATTR_ID, &StringUtils::escape_xml(self.get_id()));
+        out.write_attr(SUMO_ATTR_ID, &StringUtils::escapeXML(self.get_id()));
         if !self.get_shape_type().is_empty() {
-            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escape_xml(self.get_shape_type()));
+            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escapeXML(self.get_shape_type()));
         }
         out.write_attr(SUMO_ATTR_COLOR, self.get_shape_color());
         out.write_attr(SUMO_ATTR_FILL, &self.get_fill());
@@ -256,7 +256,7 @@ impl SUMOPolygon {
         if geo {
             out.write_attr(SUMO_ATTR_GEO, &true);
             for i in 0..shape.size() {
-                GeoConvHelper::get_final().cartesian2geo(&mut shape[i]);
+                GeoConvHelper::getFinal().cartesian2geo(&mut shape[i]);
             }
         }
         out.set_precision(Some(gPrecisionGeo));

@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub const DEFAULT_TYPE: &str = "";
 pub const DEFAULT_LAYER: f64 = 0.0;
 pub const DEFAULT_LINEWIDTH: f64 = 1.0;
-// shortcut: DEFAULT_LAYER_POI = (double)GLO_POI is not ported, add once GLO_POI is available in prelude
+pub const DEFAULT_LAYER_POI: f64 = 202.0; // (double)GLO_POI
 pub const DEFAULT_ANGLE: f64 = 0.0;
 pub const DEFAULT_IMG_FILE: &str = "";
 pub const DEFAULT_IMG_WIDTH: f64 = 2.6;
@@ -132,7 +132,7 @@ impl Shape {
         }
         // type
         if self.myType != DEFAULT_TYPE {
-            device.write_attr(SUMO_ATTR_TYPE, StringUtils::escape_xml(&self.myType).as_str());
+            device.write_attr(SUMO_ATTR_TYPE, StringUtils::escapeXML(&self.myType).as_str());
         }
         // color
         if self.myColor != *defaultColor {

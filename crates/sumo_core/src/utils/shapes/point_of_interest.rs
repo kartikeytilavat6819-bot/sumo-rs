@@ -256,9 +256,9 @@ impl PointOfInterest {
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool, zOffset: f64, laneID: String, pos: f64, friendlyPos: bool, posLat: f64) {
         out.open_tag_id(SUMO_TAG_POI);
-        out.write_attr(SUMO_ATTR_ID, &StringUtils::escape_xml(self.get_id()));
+        out.write_attr(SUMO_ATTR_ID, &StringUtils::escapeXML(self.get_id()));
         if !self.get_shape_type().is_empty() {
-            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escape_xml(self.get_shape_type()));
+            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escapeXML(self.get_shape_type()));
         }
         if self.myIcon != POIIcon::NONE {
             out.write_attr(SUMO_ATTR_ICON, POIIcons.get_string(self.myIcon).unwrap());
@@ -280,7 +280,7 @@ impl PointOfInterest {
         } else {
             if geo {
                 let mut POICartesianPos: Position = self.base2.clone();
-                GeoConvHelper::get_final().cartesian2geo(&mut POICartesianPos);
+                GeoConvHelper::getFinal().cartesian2geo(&mut POICartesianPos);
                 out.set_precision(Some(gPrecisionGeo));
                 out.write_attr(SUMO_ATTR_LON, &POICartesianPos.x());
                 out.write_attr(SUMO_ATTR_LAT, &POICartesianPos.y());
