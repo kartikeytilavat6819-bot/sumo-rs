@@ -15,6 +15,8 @@ fn max2(a: f64, b: f64) -> f64 {
 
 // shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
+const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
+const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
 
 /// C++ implicit upcast MSVehicle& -> SUMOTrafficObject& (MSVehicle derives from SUMOVehicle, which derives from SUMOTrafficObject)
 #[allow(dead_code)]
@@ -8700,7 +8702,29 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_back_position(&self) -> Position {
-        todo!("port MSVehicle::getBackPosition")
+        let lefthand = crate::microsim::ms_globals::lefthand();
+        let posLat = if lefthand { self.myState.myPosLat } else { -self.myState.myPosLat };
+        let vlen = self.myType.get_length();
+        let mut result: Position;
+        if self.myState.myPos >= vlen {
+            // vehicle is fully on the new lane
+            result = self.myLane.geometry_position_at_offset(self.myState.myPos - vlen, posLat);
+        } else if self.myLaneChangeModel.is_changing_lanes() && !self.myFurtherLanes.is_empty() && self.myLaneChangeModel.get_shadow_lane_2(*self.myFurtherLanes.last().unwrap()).is_null() {
+            // special case where the target lane has no predecessor
+            result = self.myLane.geometry_position_at_offset(0.0, posLat);
+        } else if !self.myFurtherLanes.is_empty() && !self.myLaneChangeModel.is_changing_lanes() {
+            // truncate to 0 if vehicle starts on an edge that is shorter than its length
+            let lastLane = *self.myFurtherLanes.last().unwrap();
+            let backPos = max2(0.0, self.get_back_position_on_lane(lastLane));
+            let lastLat = *self.myFurtherLanesPosLat.last().unwrap();
+            result = lastLane.geometry_position_at_offset(backPos, -lastLat * (if lefthand { -1.0 } else { 1.0 }));
+        } else {
+            result = self.myLane.geometry_position_at_offset(0.0, posLat);
+        }
+        if MSNet::get_instance().has_elevation() && crate::microsim::ms_globals::sublane() {
+            self.interpolate_lateral_z(&mut result, self.myState.myPos - vlen, posLat);
+        }
+        result
     }
 
     /// C++: `bool MSVehicle::ignoreCollision() const` [const]
@@ -8711,7 +8735,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn ignore_collision(&self) -> bool {
-        todo!("port MSVehicle::ignoreCollision")
+        self.myCollisionImmunity > 0
     }
 
     /// C++: `void MSVehicle::updateParkingState()`
@@ -8745,7 +8769,9 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        todo!("port MSVehicle::replaceVehicleType")
+        self.base.replace_vehicle_type(type_);
+        // the old myCFVariables is dropped by the C++ delete; the Rust pointer is simply replaced
+        self.myCFVariables = type_.get_car_follow_model().create_vehicle_variables();
     }
 
     /// C++: `double MSVehicle::getBrakeGap(bool) const` [const, virtual]
@@ -8756,7 +8782,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_brake_gap(&self, delayed: bool) -> f64 {
-        todo!("port MSVehicle::getBrakeGap")
+        self.get_car_follow_model().brake_gap_2(self.get_speed(), self.get_car_follow_model().get_max_decel(), if delayed { self.get_car_follow_model().get_headway_time() } else { 0.0 })
     }
 
     /// C++: `void MSVehicle::saveState(OutputDevice &)` [virtual]
@@ -9256,7 +9282,188 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_link_approaches(&mut self, vSafe: &mut f64, vSafeMin: &mut f64, vSafeMinDist: &mut f64) {
-        todo!("port MSVehicle::processLinkApproaches")
+        let TS = ts();
+        // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
+        let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
+        let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+        // Speed limit due to zipper merging
+        let mut vSafeZipper: f64 = f64::MAX;
+
+        self.myHaveToWaitOnNextLink = false;
+        let mut canBrakeVSafeMin = false;
+
+        // Get safe velocities from DriveProcessItems.
+        assert!(self.myLFLinkLanes.len() != 0 || self.is_remote_controlled());
+        for i in 0..self.myLFLinkLanes.len() {
+            // copy the item fields used below so that &mut self calls remain possible
+            let (link, dSetRequest, dVLinkPass, dVLinkWait, dDistance, dArrivalTime, dArrivalSpeed, dLeaveSpeed) = {
+                let dpi = &self.myLFLinkLanes[i];
+                (dpi.myLink, dpi.mySetRequest, dpi.myVLinkPass, dpi.myVLinkWait, dpi.myDistance, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.get_leave_speed())
+            };
+
+            // the vehicle must change the lane on one of the next lanes (XXX: refs to code further below???, Leo)
+            if !link.is_null() && dSetRequest {
+                let ls = link.get_state();
+                // vehicles should brake when running onto a yellow light if the distance allows to halt in front
+                let yellow = link.have_yellow();
+                let canBrake = dDistance > cfModel.brake_gap_2(self.myState.mySpeed, cfModel.get_max_decel(), 0.0) || (semi_implicit_euler_update() && self.myState.mySpeed < accel2speed(cfModel.get_max_decel()));
+                assert!(!link.get_lane_before().is_null());
+                let beyondStopLine = dDistance < link.get_lane_before().get_vehicle_stop_offset(this);
+                let ignoreRedLink = self.ignore_red(link, canBrake) || beyondStopLine;
+                if yellow && canBrake && !ignoreRedLink {
+                    *vSafe = dVLinkWait;
+                    self.myHaveToWaitOnNextLink = true;
+                    break;
+                }
+                let influencerPrio = !self.myInfluencer.is_null() && !self.myInfluencer.get_respect_junction_priority();
+                let mut collectFoes: MSLink_BlockingFoes = Vec::new();
+                let mut opened = yellow
+                    || influencerPrio
+                    || link.opened(
+                        dArrivalTime,
+                        dArrivalSpeed,
+                        dLeaveSpeed,
+                        self.get_vehicle_type().get_length(),
+                        if canBrake { self.get_impatience() } else { 1.0 },
+                        cfModel.get_max_decel(),
+                        self.get_waiting_time_for(link),
+                        self.get_lateral_position_on_lane(),
+                        if ls == LINKSTATE_ZIPPER { Ptr::from_mut(&mut collectFoes) } else { Ptr::null() },
+                        ignoreRedLink,
+                        this.cast::<SUMOTrafficObject>(),
+                        dDistance,
+                    );
+                if opened && !self.myLaneChangeModel.m().get_shadow_lane().is_null() {
+                    let parallelLink = link.get_parallel_link(self.myLaneChangeModel.m().get_shadow_direction());
+                    if !parallelLink.is_null() {
+                        let shadowLatPos = self.get_lateral_position_on_lane()
+                            - (self.myLaneChangeModel.m().get_shadow_direction() as f64) * 0.5 * (self.myLane.get_width() + self.myLaneChangeModel.m().get_shadow_lane().get_width());
+                        opened = yellow
+                            || influencerPrio
+                            || (opened
+                                && parallelLink.opened(
+                                    dArrivalTime,
+                                    dArrivalSpeed,
+                                    dLeaveSpeed,
+                                    self.get_vehicle_type().get_length(),
+                                    if canBrake { self.get_impatience() } else { 1.0 },
+                                    cfModel.get_max_decel(),
+                                    self.get_waiting_time_for(link),
+                                    shadowLatPos,
+                                    Ptr::null(),
+                                    ignoreRedLink,
+                                    this.cast::<SUMOTrafficObject>(),
+                                    dDistance,
+                                ));
+                    }
+                }
+                // vehicles should decelerate when approaching a minor link
+                let visibilityDistance = link.get_foe_visibility_distance();
+                let determinedFoePresence = dDistance <= visibilityDistance;
+                if opened && !influencerPrio && !link.have_priority() && !link.last_was_cont_major() && !link.is_cont() && !ignoreRedLink {
+                    if !determinedFoePresence && (canBrake || !yellow) {
+                        *vSafe = dVLinkWait;
+                        self.myHaveToWaitOnNextLink = true;
+                        break;
+                    } else {
+                        // past the point of no return. we need to drive fast enough
+                        // to make it across the link. However, minor slowdowns
+                        // should be permissible to follow leading traffic safely
+                        // basically, this code prevents dawdling
+                        // (it's harder to do this later using
+                        // SUMO_ATTR_JM_SIGMA_MINOR because we don't know whether the
+                        // vehicle is already too close to stop at that part of the code)
+                        //
+                        // XXX: There is a problem in subsecond simulation: If we cannot
+                        // make it across the minor link in one step, new traffic
+                        // could appear on a major foe link and cause a collision. Refs. #1845, #2123
+                        *vSafeMinDist = dDistance; // distance that must be covered
+                        if semi_implicit_euler_update() {
+                            *vSafeMin = min2(min2((*vSafeMinDist + POSITION_EPS) / TS, dVLinkPass), cfModel.max_next_safe_min(self.get_speed(), this));
+                        } else {
+                            *vSafeMin = min2(min2((2.0 * *vSafeMinDist + utils::geom::NUMERICAL_EPS) / TS - self.get_speed(), dVLinkPass), cfModel.max_next_safe_min(self.get_speed(), this));
+                        }
+                        canBrakeVSafeMin = canBrake;
+                    }
+                }
+                // have waited; may pass if opened...
+                if opened {
+                    *vSafe = dVLinkPass;
+                    if *vSafe < cfModel.get_max_decel() && *vSafe <= dVLinkWait && *vSafe < cfModel.max_next_speed(self.get_speed(), this) {
+                        // this vehicle is probably not gonna drive across the next junction (heuristic)
+                        self.myHaveToWaitOnNextLink = true;
+                    }
+                    if link.must_stop() && determinedFoePresence && self.myHaveStoppedFor.is_null() {
+                        self.myHaveStoppedFor = link;
+                    }
+                } else if ls == LINKSTATE_ZIPPER {
+                    vSafeZipper = min2(vSafeZipper, link.get_zipper_speed(this, dDistance, dVLinkPass, dArrivalTime, Ptr::from_mut(&mut collectFoes)));
+                } else if !canBrake
+                    // always brake hard for traffic lights (since an emergency stop is necessary anyway)
+                    && link.get_tl_logic().is_null()
+                    // cannot brake even with emergency deceleration
+                    && dDistance < cfModel.brake_gap_2(self.myState.mySpeed, cfModel.get_emergency_decel(), 0.0)
+                {
+                    *vSafe = dVLinkPass;
+                } else {
+                    *vSafe = dVLinkWait;
+                    self.myHaveToWaitOnNextLink = true;
+                    break;
+                }
+                if self.myLane.is_internal() && self.myJunctionEntryTime == SUMOTIME_MAX {
+                    // request was renewed, restoring entry time
+                    // @note: using myJunctionEntryTimeNeverYield could lead to inconsistencies with other vehicles already on the junction
+                    self.myJunctionEntryTime = MSNet::get_instance().get_current_time_step();
+                }
+            } else {
+                if !link.is_null() && !link.get_internal_lane_before().is_null() && self.myLane.is_internal() && link.get_junction() == self.myLane.get_edge().get_to_junction() {
+                    // blocked on the junction. yield request so other vehicles may
+                    // become junction leader
+                    self.myJunctionEntryTime = SUMOTIME_MAX;
+                    self.myJunctionConflictEntryTime = SUMOTIME_MAX;
+                }
+                // we have: i->link == 0 || !i->setRequest
+                *vSafe = dVLinkWait;
+                if !link.is_null() || self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) {
+                    if *vSafe < self.get_speed() {
+                        self.myHaveToWaitOnNextLink = true;
+                    } else if *vSafe < utils::common::std_defs::SUMO_CONST_HALTING_SPEED {
+                        self.myHaveToWaitOnNextLink = true;
+                    }
+                }
+                if link.is_null() && self.myLFLinkLanes.len() == 1 && self.get_best_lanes_continuation().len() > 1 && self.get_best_lanes_continuation()[1].had_permission_changes() && self.myLane.get_first_any_vehicle() == this {
+                    // temporal lane closing without notification, visible to the
+                    // vehicle at the front of the queue
+                    self.update_best_lanes(true, Ptr::null());
+                }
+                break;
+            }
+        }
+
+        if (semi_implicit_euler_update() && *vSafe + utils::geom::NUMERICAL_EPS < *vSafeMin) || (!semi_implicit_euler_update() && (*vSafe + utils::geom::NUMERICAL_EPS < *vSafeMin && *vSafeMin != 0.0)) {
+            // XXX: (Leo) This often called stopSpeed with vSafeMinDist==0 (for the ballistic update), since vSafe can become negative
+            //      For the Euler update the term '+ NUMERICAL_EPS' prevented a call here... Recheck, consider of -INVALID_SPEED instead of 0 to indicate absence of vSafeMin restrictions. Refs. #2577
+            if canBrakeVSafeMin && *vSafe < self.get_speed() {
+                // cannot drive across a link so we need to stop before it
+                *vSafe = min2(*vSafe, max2(cfModel.min_next_speed(self.get_speed(), this), cfModel.stop_speed(this, self.get_speed(), *vSafeMinDist, MSCFModel_CalcReason::CURRENT)));
+                *vSafeMin = 0.0;
+                self.myHaveToWaitOnNextLink = true;
+            } else {
+                // if the link is yellow or visibility distance is large
+                // then we might not make it across the link in one step anyway..
+                // Possibly, the lane after the intersection has a lower speed limit so
+                // we really need to drive slower already
+                // -> keep driving without dawdling
+                *vSafeMin = *vSafe;
+            }
+        }
+
+        // vehicles inside a roundabout should maintain their requests
+        if self.myLane.get_edge().is_roundabout() {
+            self.myHaveToWaitOnNextLink = false;
+        }
+
+        *vSafe = min2(*vSafe, vSafeZipper);
     }
 
     /// C++: `void MSVehicle::processLaneAdvances(std::vector<MSLane *> &, std::string &)` [protected]
@@ -9424,7 +9631,137 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_lane_advances(&mut self, passedLanes: &mut Vec<Ptr<MSLane>>, emergencyReason: &mut String) {
-        todo!("port MSVehicle::processLaneAdvances")
+        let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+        for i in self.myFurtherLanes.iter().rev() {
+            passedLanes.push(*i);
+        }
+        if passedLanes.len() == 0 || passedLanes[passedLanes.len() - 1] != self.myLane {
+            passedLanes.push(self.myLane);
+        }
+
+        // let trains reverse direction
+        let mut reverseTrain = false;
+        self.check_reversal(&mut reverseTrain, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, 0.0);
+        if reverseTrain {
+            // Train is 'reversing' so toggle the logical state
+            self.myAmReversed = !self.myAmReversed;
+            // add some slack to ensure that the back of train does appear looped
+            self.myState.myPos += 2.0 * (self.myLane.get_length() - self.myState.myPos) + self.myType.get_length() + utils::geom::NUMERICAL_EPS;
+            self.myState.mySpeed = 0.0;
+        }
+
+        // move on lane(s)
+        if self.myState.myPos > self.myLane.get_length() {
+            // The vehicle has moved at least to the next lane (maybe it passed even more than one)
+            if self.myCurrEdge + 1 != self.myRoute.size() as usize {
+                let mut approachedLane: Ptr<MSLane> = self.myLane;
+                // move the vehicle forward
+                self.myNextDriveItem = 0;
+                while self.myNextDriveItem < self.myLFLinkLanes.len() && !approachedLane.is_null() && self.myState.myPos > approachedLane.get_length() {
+                    let mut link: Ptr<MSLink> = self.myLFLinkLanes[self.myNextDriveItem].myLink;
+                    let linkDist = self.myLFLinkLanes[self.myNextDriveItem].myDistance;
+                    self.myNextDriveItem += 1;
+                    // check whether the vehicle was allowed to enter lane
+                    //  otherwise it is decelerated and we do not need to test for it's
+                    //  approach on the following lanes when a lane changing is performed
+                    // proceed to the next lane
+                    if approachedLane.must_check_junction_collisions() {
+                        // vehicle moves past approachedLane within a single step, collision checking must still be done
+                        MSNet::get_instance().m().get_edge_control().check_collision_for_inactive(approachedLane);
+                    }
+                    if !link.is_null() {
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && !self.myLane.is_internal() && !self.myLane.get_bidi_lane().is_null() && link.get_lane().get_bidi_lane() == self.myLane && !reverseTrain {
+                            *emergencyReason = " because it must reverse direction".to_string();
+                            approachedLane = Ptr::null();
+                            break;
+                        }
+                        // shortcut: MSStop.edge is still an unmapped route iterator, so the rail double-stop check against myCurrEdge is skipped until MSRouteIterator is mapped
+                        let nextStopIsCurrEdge = false;
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && nextStopIsCurrEdge {
+                            // avoid skipping stop due to numerical instability
+                            // this is a special case for rail vehicles because they
+                            // continue myLFLinkLanes past stops
+                            approachedLane = self.myLane;
+                            self.myState.myPos = self.myLane.get_length();
+                            break;
+                        }
+                        approachedLane = link.get_via_lane_or_lane();
+                        if self.myInfluencer.is_null() || self.myInfluencer.get_emergency_brake_red_light() {
+                            let beyondStopLine = linkDist < link.get_lane_before().get_vehicle_stop_offset(this);
+                            if link.have_red() && !self.ignore_red(link, false) && !beyondStopLine && !reverseTrain {
+                                *emergencyReason = " because of a red traffic light".to_string();
+                                break;
+                            }
+                        }
+                        if reverseTrain && approachedLane.is_internal() {
+                            // avoid getting stuck on a slow turn-around internal lane
+                            self.myState.myPos += approachedLane.get_length();
+                        }
+                    } else if self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS {
+                        // avoid warning due to numerical instability
+                        approachedLane = self.myLane;
+                        self.myState.myPos = self.myLane.get_length();
+                    } else if reverseTrain {
+                        approachedLane = self.myRoute.get_edges()[self.myCurrEdge + 1].get_lanes()[0];
+                        link = self.myLane.get_link_to(approachedLane);
+                        assert!(!link.is_null());
+                        while !link.get_via_lane().is_null() {
+                            link = link.get_via_lane().get_link_cont()[0];
+                        }
+                        self.myNextDriveItem -= 1;
+                    } else {
+                        *emergencyReason = " because there is no connection to the next edge".to_string();
+                        approachedLane = Ptr::null();
+                        break;
+                    }
+                    if approachedLane != self.myLane && !approachedLane.is_null() {
+                        self.leave_lane(MSMoveReminder_Notification::NOTIFICATION_JUNCTION, approachedLane);
+                        self.myState.myPos -= self.myLane.get_length();
+                        assert!(self.myState.myPos > 0.0);
+                        self.enter_lane_at_move(approachedLane, false);
+                        if link.is_entry_link() {
+                            self.myJunctionEntryTime = MSNet::get_instance().get_current_time_step();
+                            self.myJunctionEntryTimeNeverYield = self.myJunctionEntryTime;
+                            self.myHaveStoppedFor = Ptr::null();
+                        }
+                        if link.is_conflict_entry_link() {
+                            self.myJunctionConflictEntryTime = MSNet::get_instance().get_current_time_step();
+                            // renew yielded request
+                            self.myJunctionEntryTime = self.myJunctionEntryTimeNeverYield;
+                        }
+                        if link.is_exit_link() {
+                            // passed junction, reset for approaching the next one
+                            self.myJunctionEntryTime = SUMOTIME_MAX;
+                            self.myJunctionEntryTimeNeverYield = SUMOTIME_MAX;
+                            self.myJunctionConflictEntryTime = SUMOTIME_MAX;
+                        }
+                        if self.has_arrived_internal(true) {
+                            break;
+                        }
+                        if self.myLaneChangeModel.m().is_changing_lanes() {
+                            if link.get_direction() == LinkDirection::LEFT || link.get_direction() == LinkDirection::RIGHT {
+                                // abort lane change
+                                utils::common::msg_handler::write_warning(&format!(
+                                    "Vehicle '{}' could not finish continuous lane change (turn lane) time={}.",
+                                    self.get_id(),
+                                    time2string(MSNet::get_instance().get_current_time_step())
+                                ));
+                                self.myLaneChangeModel.m().end_lane_change_maneuver(MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE);
+                            }
+                        }
+                        if approachedLane.get_edge().is_vaporizing() {
+                            self.leave_lane(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_VAPORIZER, Ptr::null());
+                            break;
+                        }
+                        passedLanes.push(approachedLane);
+                    }
+                }
+                // NOTE: Passed drive items will be erased in the next simstep's planMove()
+            } else if !self.has_arrived_internal(true) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS {
+                // avoid warning due to numerical instability when stopping at the end of the route
+                self.myState.myPos = self.myLane.get_length();
+            }
+        }
     }
 
     /// C++: `double MSVehicle::processTraCISpeedControl(double, double)` [protected]
@@ -9462,7 +9799,25 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_tra_ci_speed_control(&mut self, vSafe: f64, vNext: f64) -> f64 {
-        todo!("port MSVehicle::processTraCISpeedControl")
+        let mut vNext = vNext;
+        if !self.myInfluencer.is_null() {
+            let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+            self.myInfluencer.m().set_original_speed(vNext);
+            if self.myInfluencer.is_remote_controlled() {
+                vNext = self.myInfluencer.m().implicit_speed_remote(this, self.myState.mySpeed);
+            }
+            let vMax = self.get_vehicle_type().get_car_follow_model().max_next_speed(self.myState.mySpeed, this);
+            let mut vMin = self.get_vehicle_type().get_car_follow_model().min_next_speed(self.myState.mySpeed, this);
+            if semi_implicit_euler_update() {
+                vMin = max2(0.0, vMin);
+            }
+            vNext = self.myInfluencer.m().influence_speed(MSNet::get_instance().get_current_time_step(), vNext, vSafe, vMin, vMax);
+            if self.keep_stopping(false) && self.myStops.front().unwrap().get_speed() == 0.0 {
+                // avoid driving while stopped (unless it's actually a waypoint
+                vNext = self.myInfluencer.m().get_original_speed();
+            }
+        }
+        vNext
     }
 
     /// C++: `void MSVehicle::removePassedDriveItems()` [protected]
@@ -9521,7 +9876,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_passed_drive_items(&mut self) {
-        todo!("port MSVehicle::removePassedDriveItems")
+        let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+        let n = self.myNextDriveItem;
+        for j in 0..n {
+            let link = self.myLFLinkLanes[j].myLink;
+            if !link.is_null() {
+                link.m().remove_approaching(this.cast::<SUMOVehicle>());
+            }
+        }
+        self.myLFLinkLanes.drain(0..n);
+        self.myNextDriveItem = 0;
     }
 
     /// C++: `void MSVehicle::updateWaitingTime(double)` [protected]
@@ -9541,7 +9905,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_waiting_time(&mut self, vNext: f64) {
-        todo!("port MSVehicle::updateWaitingTime")
+        if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED && (!self.is_stopped() || self.is_idling()) && self.myAcceleration <= self.accel_threshold_for_waiting() {
+            self.myWaitingTime += delta_t();
+            self.myWaitingTimeCollector.pass_time(delta_t(), true);
+        } else {
+            self.myWaitingTime = 0;
+            self.myWaitingTimeCollector.pass_time(delta_t(), false);
+            if self.has_influencer() {
+                self.get_influencer().set_extra_impatience(0.0);
+            }
+        }
     }
 
     /// C++: `void MSVehicle::updateTimeLoss(double)` [protected]
@@ -9559,7 +9932,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_time_loss(&mut self, vNext: f64) {
-        todo!("port MSVehicle::updateTimeLoss")
+        let TS = ts();
+        // update time loss (depends on the updated edge)
+        if !self.is_stopped() {
+            // some cfModels (i.e. EIDM may drive faster than predicted by maxNextSpeed)
+            let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+            let vmax = min2(self.myLane.get_vehicle_max_speed(this.cast::<SUMOTrafficObject>()), max2(self.myStopSpeed, vNext));
+            if vmax > 0.0 {
+                self.myTimeLoss += TS * (vmax - vNext) / vmax;
+            }
+        }
     }
 
     /// C++: `double MSVehicle::checkReversal(bool &, double, double) const` [const, protected]
@@ -9713,7 +10095,84 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_reversal(&self, canReverse: &mut bool, speedThreshold: f64, seen: f64) -> f64 {
-        todo!("port MSVehicle::checkReversal")
+        let stopOk = self.myStops.is_empty()
+            || self.myStops.front().unwrap().edge != self.myCurrEdge
+            || (self.myStops.front().unwrap().get_speed() > 0.0 && self.myState.myPos > self.myStops.front().unwrap().pars.endPos - 2.0 * POSITION_EPS);
+        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class())
+            && self.get_previous_speed() <= speedThreshold
+            && self.myState.myPos <= self.myLane.get_length()
+            && !self.myLane.is_internal()
+            && self.myCurrEdge + 1 != self.myRoute.size() as usize
+            && self.myLane.get_edge().get_bidi_edge() == self.get_next_edge_ptr()
+            // ensure there are no further stops on this edge
+            && stopOk
+        {
+            // ensure that the vehicle is fully on bidi edges that allow reversal
+            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
+                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
+            } else {
+                self.myFurtherLanes.len() as f64
+            }) as i32;
+            let remainingRoute = (self.myRoute.size() as i32 - self.myCurrEdge as i32) - 1;
+            if remainingRoute < neededFutureRoute {
+                return self.get_max_speed();
+            }
+            // ensure that the turn-around connection exists from the current edge to its bidi-edge
+            let succ = self.myLane.get_edge().get_successors(SVC_IGNORING);
+            if !succ.contains(&self.myLane.get_edge().get_bidi_edge()) {
+                return self.get_max_speed();
+            }
+            // ensure that the vehicle front will not move past a stop on the bidi edge of the current edge
+            if !self.myStops.is_empty() && self.myStops.front().unwrap().edge == self.myCurrEdge + 1 {
+                let stopPos = self.myStops.front().unwrap().get_end_pos(self);
+                let brakeDist = self.get_car_follow_model().brake_gap_2(self.get_speed(), self.get_car_follow_model().get_max_decel(), 0.0);
+                let newPos = self.myLane.get_length() - (self.get_back_position_on_lane_2() + brakeDist);
+                if newPos > stopPos {
+                    if seen > max2(brakeDist, 1.0) {
+                        return self.get_max_speed();
+                    }
+                }
+            }
+            // ensure that bidi-edges exist for all further edges
+            // and that no stops will be skipped when reversing
+            // and that the train will not be on top of a red rail signal after reversal
+            let mut bidi: Ptr<MSLane> = self.myLane.get_bidi_lane();
+            let mut view: usize = 2;
+            for further in self.myFurtherLanes.iter() {
+                if !further.get_edge().is_internal() {
+                    if further.get_edge().get_bidi_edge() != self.myRoute.index_op((self.myCurrEdge + view) as i32) {
+                        return self.get_max_speed();
+                    }
+                    let nextBidi = further.get_bidi_lane();
+                    let toNext = bidi.get_link_to(nextBidi);
+                    if toNext.is_null() {
+                        // can only happen if the route is invalid
+                        return self.get_max_speed();
+                    }
+                    if toNext.have_red() {
+                        return self.get_max_speed();
+                    }
+                    bidi = nextBidi;
+                    if !self.myStops.is_empty() && self.myStops.front().unwrap().edge == self.myCurrEdge + view {
+                        let brakeDist = self.get_car_follow_model().brake_gap_2(self.get_speed(), self.get_car_follow_model().get_max_decel(), 0.0);
+                        let stopPos = self.myStops.front().unwrap().get_end_pos(self);
+                        let newPos = further.get_length() - (self.get_back_position_on_lane(*further) + brakeDist);
+                        if newPos > stopPos {
+                            if seen > max2(brakeDist, 1.0) {
+                                *canReverse = false;
+                                return self.get_max_speed();
+                            }
+                        }
+                    }
+                    view += 1;
+                }
+            }
+            // reverse as soon as comfortably possible
+            let vMinComfortable = self.get_car_follow_model().min_next_speed(self.get_speed(), Ptr::new(self));
+            *canReverse = true;
+            return vMinComfortable;
+        }
+        self.get_max_speed()
     }
 
     /// C++: `void MSVehicle::setBrakingSignals(double)` [protected]
@@ -9804,7 +10263,70 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_blinker_information(&mut self) {
-        todo!("port MSVehicle::setBlinkerInformation")
+        let sig = |s: MSVehicle_Signalling| s as i32;
+        self.switch_off_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT) | sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT));
+        let state: i32 = self.myLaneChangeModel.get_own_state();
+        // do not set blinker for sublane changes or when blocked from changing to the right
+        let blinkerManoeuvre = ((state & LCA_SUBLANE) == 0) && ((state & LCA_KEEPRIGHT) == 0 || (state & LCA_BLOCKED) == 0);
+        let mut left = MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT;
+        let mut right = MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT;
+        if crate::microsim::ms_globals::lefthand() {
+            // lane indices increase from left to right
+            std::mem::swap(&mut left, &mut right);
+        }
+        if (state & LCA_LEFT) != 0 && blinkerManoeuvre {
+            self.switch_on_signal(sig(left));
+        } else if (state & LCA_RIGHT) != 0 && blinkerManoeuvre {
+            self.switch_on_signal(sig(right));
+        } else if self.myLaneChangeModel.is_changing_lanes() {
+            if self.myLaneChangeModel.get_lane_change_direction() == 1 {
+                self.switch_on_signal(sig(left));
+            } else {
+                self.switch_on_signal(sig(right));
+            }
+        } else {
+            let lane = self.get_lane();
+            let mut link: usize = MSLane::succ_link_sec(self, 1, &lane, self.get_best_lanes_continuation());
+            if !lane.is_link_end(&mut link) && lane.get_length() - self.get_position_on_lane() < lane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()) * 7.0 {
+                let dir = lane.get_link_cont()[link].get_direction();
+                match dir {
+                    LinkDirection::TURN | LinkDirection::LEFT | LinkDirection::PARTLEFT => {
+                        self.switch_on_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT));
+                    }
+                    LinkDirection::RIGHT | LinkDirection::PARTRIGHT => {
+                        self.switch_on_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT));
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // stopping related signals
+        if self.has_stops() {
+            let (reached, notStoppingRight, offroadNotReached) = {
+                let front = self.myStops.front().unwrap();
+                let brakeGap = self.get_car_follow_model().brake_gap_2(self.myLane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()), self.get_car_follow_model().get_max_decel(), 3.0);
+                let nearStop = front.reached || (self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) && self.myStopDist < brakeGap);
+                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, false).allows_vehicle_class(self.get_v_class());
+                (nearStop, notStoppingRight, !front.reached && front.pars.parking == ParkingType::OFFROAD)
+            };
+            if reached {
+                if notStoppingRight {
+                    // not stopping on the right. Activate emergency blinkers
+                    self.switch_on_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT) | sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT));
+                } else if offroadNotReached {
+                    // signal upcoming parking stop on the current lane when within braking distance (~2 seconds before braking)
+                    if crate::microsim::ms_globals::lefthand() {
+                        self.switch_on_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT));
+                    } else {
+                        self.switch_on_signal(sig(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT));
+                    }
+                }
+            }
+        }
+        if !self.myInfluencer.is_null() && self.myInfluencer.get_signals() >= 0 {
+            self.mySignals = self.myInfluencer.get_signals();
+            self.myInfluencer.m().set_signals(-1); // overwrite computed signals only once
+        }
     }
 
     /// C++: `void MSVehicle::setEmergencyBlueLight(SUMOTime)` [protected]
@@ -10193,7 +10715,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn interpolate_lateral_z(&self, pos: &mut Position, offset: f64, posLat: f64) {
-        todo!("port MSVehicle::interpolateLateralZ")
+        let shadow = self.myLaneChangeModel.get_shadow_lane();
+        if !shadow.is_null() && *pos != Position::INVALID {
+            // ignore negative offset
+            let shadowPos = shadow.geometry_position_at_offset(max2(0.0, offset), 0.0);
+            if shadowPos != Position::INVALID && pos.z() != shadowPos.z() {
+                let centerDist = (self.myLane.get_width() + shadow.get_width()) * 0.5;
+                let relOffset = posLat.abs() / centerDist;
+                let newZ = (1.0 - relOffset) * pos.z() + relOffset * shadowPos.z();
+                pos.setz(newZ);
+            }
+        }
     }
 
     /// C++: `double MSVehicle::getDistanceToLeaveJunction() const` [const, protected]
@@ -10224,7 +10756,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_angle_diff(&self) -> f64 {
-        todo!("port MSVehicle::getAngleDiff")
+        if self.myLastAngle == utils::common::std_defs::INVALID_DOUBLE { 0.0 } else { utils::geom::geom_helper::angle_diff(self.myLastAngle, self.myAngle) }
     }
 
     /// C++: `void MSVehicle::planMoveInternal(const SUMOTime, MSLeaderInfo, DriveItemVector &, double &, double &, std::pair<double, const MSLink *> &) const` [const, protected]
@@ -11080,7 +11612,668 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn plan_move_internal(&self, t: SUMOTime, ahead: &MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
-        todo!("port MSVehicle::planMoveInternal")
+        // shortcut: DEBUG_PLAN_MOVE output is not ported
+        const CRLL_LOOK_AHEAD: f64 = 5.0;
+        const DIST_TO_STOPLINE_EXPECT_PRIORITY: f64 = 1.0;
+        const SUMO_const_haltingSpeed: f64 = 0.1;
+        const MSPMODEL_SAFETY_GAP_LOCAL: f64 = 1.0;
+        let TS = ts();
+        let DELTA_T = delta_t();
+        let NUMERICAL_EPS_SPEED = 0.1 * utils::geom::NUMERICAL_EPS * TS;
+        let mut ahead: MSLeaderInfo = ahead.clone();
+        lfLinks.clear();
+        *myStopDist = f64::MAX;
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        let cfModel: &MSCFModel = self.get_car_follow_model();
+        let vehicleLength = self.get_vehicle_type().get_length();
+        let maxV = cfModel.max_next_speed(self.myState.mySpeed, me);
+        let maxVD = max2(self.get_max_speed(), min2(maxV, self.get_desired_max_speed()));
+        let opposite = self.myLaneChangeModel.is_opposite();
+        // maxVD is possibly higher than vType-maxSpeed and in this case laneMaxV may be higher as well
+        let mut laneMaxV = self.myLane.get_vehicle_max_speed_2(me.cast::<SUMOTrafficObject>(), maxVD);
+        let vMinComfortable = cfModel.min_next_speed(self.get_speed(), me);
+        let mut lateralShift = 0.0;
+        if self.is_rail() {
+            // speed limits must hold for the whole length of the train
+            for l in self.myFurtherLanes.iter() {
+                laneMaxV = min2(laneMaxV, l.get_vehicle_max_speed_2(me.cast::<SUMOTrafficObject>(), maxVD));
+            }
+        }
+        //  speed limits are not emergencies (e.g. when the limit changes suddenly due to TraCI or a variableSpeedSignal)
+        laneMaxV = max2(laneMaxV, vMinComfortable);
+        if !self.myInfluencer.is_null() && !self.myInfluencer.consider_speed_limit() {
+            laneMaxV = f64::MAX;
+        }
+        // v is the initial maximum velocity of this vehicle in this step
+        let mut v = cfModel.maximum_lane_speed_cf(me, maxV, laneMaxV);
+        // if we are modelling parking then we dawdle until the manoeuvre is complete - by setting a very low max speed
+        //   in practice this only applies to exit manoeuvre because entry manoeuvre just delays setting stop.reached - when the vehicle is virtually stopped
+        if crate::microsim::ms_globals::model_parking_manoeuver() && !self.manoeuvre_is_complete() {
+            v = NUMERICAL_EPS_SPEED;
+        }
+
+        if !self.myInfluencer.is_null() {
+            let vMin = max2(0.0, cfModel.min_next_speed(self.myState.mySpeed, me));
+            v = self.myInfluencer.m().influence_speed(t, v, v, vMin, maxV);
+            v = self.myInfluencer.m().gap_control_speed(t, me.cast::<SUMOVehicle>(), v, v, vMin, maxV);
+        }
+        // all links within dist are taken into account (potentially)
+        let dist = speed2dist(maxV) + cfModel.brake_gap(maxV);
+
+        let bestLaneConts = self.get_best_lanes_continuation();
+        assert!(!bestLaneConts.is_empty());
+        let mut hadNonInternal = false;
+        // the distance already "seen"; in the following always up to the end of the current "lane"
+        let mut seen = if opposite { self.myState.myPos } else { self.myLane.get_length() - self.myState.myPos };
+        myNextTurn.0 = seen;
+        myNextTurn.1 = Ptr::null();
+        let mut encounteredTurn = crate::microsim::ms_globals::lateral_resolution() <= 0.0; // next turn is only needed for sublane
+        let mut seenNonInternal = 0.0;
+        let mut seenInternal = if self.myLane.is_internal() { seen } else { 0.0 };
+        let mut vLinkPass = min2(cfModel.estimate_speed_after_distance(seen, v, cfModel.get_max_accel()), laneMaxV); // upper bound
+        let mut view: usize = 0;
+        let mut lastLink: Ptr<MSVehicle_DriveProcessItem> = Ptr::null();
+        let mut slowedDownForMinor = false; // whether the vehicle already had to slow down on approach to a minor link
+        let mut mustSeeBeforeReversal = 0.0;
+        // iterator over subsequent lanes and fill lfLinks until stopping distance or stopped
+        let mut lane: Ptr<MSLane> = if opposite { self.myLane.get_parallel_opposite() } else { self.myLane };
+        assert!(!lane.is_null());
+        let mut leaderLane: Ptr<MSLane> = self.myLane;
+        let mut foundRailSignal = !self.is_rail();
+        let mut planningToStop = false;
+
+        // optionally slow down to match arrival time
+        let sfp = self.get_vehicle_type().get_parameter().speedFactorPremature;
+        if v > vMinComfortable && self.has_stops() && self.myStops.front().unwrap().pars.arrival >= 0 && sfp > 0.0
+            && v > self.myLane.get_speed_limit() * sfp
+            && !self.myStops.front().unwrap().reached
+        {
+            let vSlowDown = self.slow_down_for_schedule(vMinComfortable);
+            v = min2(v, vSlowDown);
+        }
+        let mut stopIt: usize = 0;
+        loop {
+            // check leader on lane
+            //  leader is given for the first edge only
+            if opposite && (leaderLane.get_vehicle_number_with_partials() > 1 || (leaderLane != self.myLane && leaderLane.get_vehicle_number() > 0)) {
+                ahead.clear();
+                // find opposite-driving leader that must be respected on the currently looked at lane
+                // (only looking at one lane at a time)
+                let backOffset = if leaderLane == self.myLane { self.get_position_on_lane() } else { leaderLane.get_length() };
+                let gapOffset = if leaderLane == self.myLane { 0.0 } else { seen - leaderLane.get_length() };
+                let cands = leaderLane.get_followers_on_consecutive(me, backOffset, true, backOffset, MSLane_MinorLinkMode::FOLLOW_NEVER, false);
+                let mut oppositeLeaders = MSLeaderDistanceInfo::new(leaderLane.get_width(), me, 0.0);
+                let minTimeToLeaveLane = if crate::microsim::ms_globals::sublane() {
+                    max2(TS, (0.5 * self.myLane.get_width() - self.get_lateral_position_on_lane()) / self.get_vehicle_type().get_max_speed_lat())
+                } else {
+                    TS
+                };
+                for i in 0..cands.num_sublanes() {
+                    let cand = cands.index_op(i);
+                    if !cand.0.is_null() {
+                        if (cand.0.myLaneChangeModel.is_opposite() && cand.0.get_lane_change_model_2().get_shadow_lane() != leaderLane)
+                            || (!cand.0.myLaneChangeModel.is_opposite() && cand.0.get_lane_change_model_2().get_shadow_lane() == leaderLane)
+                        {
+                            // respect leaders that also drive in the opposite direction (fully or with some overlap)
+                            oppositeLeaders.add_leader(cand.0, cand.1 + gapOffset - self.get_vehicle_type().get_min_gap() + cand.0.get_vehicle_type().get_min_gap() - cand.0.get_vehicle_type().get_length(), 0.0, -1);
+                        } else {
+                            // avoid frontal collision
+                            let assumeStopped = cand.0.is_stopped() || cand.0.get_waiting_seconds() > 1.0;
+                            let predMaxDist = cand.0.get_speed() + (if assumeStopped { 0.0 } else { cand.0.get_car_follow_model().get_max_accel() }) * minTimeToLeaveLane;
+                            if cand.1 >= 0.0 && (cand.1 - v * minTimeToLeaveLane - predMaxDist < 0.0 || assumeStopped) {
+                                oppositeLeaders.add_leader(cand.0, cand.1 + gapOffset - predMaxDist - self.get_vehicle_type().get_min_gap(), 0.0, -1);
+                            }
+                        }
+                    }
+                }
+                self.adapt_to_leader_distance(&oppositeLeaders, 0.0, seen, lastLink, &mut v, &mut vLinkPass);
+            } else {
+                if crate::microsim::ms_globals::lateral_resolution() > 0.0 && self.myLaneChangeModel.get_shadow_lane().is_null() {
+                    let rightOL = self.get_right_side_on_lane_2(lane) + lateralShift;
+                    let leftOL = self.get_left_side_on_lane_2(lane) + lateralShift;
+                    let outsideLeft = leftOL > lane.get_width();
+                    if rightOL < 0.0 || outsideLeft {
+                        let mut outsideLeaders = MSLeaderInfo::new(lane.get_width(), Ptr::null(), 0.0);
+                        // if ego is driving outside lane bounds we must consider
+                        // potential leaders that are also outside bounds
+                        let sublaneOffset: i32 = if outsideLeft {
+                            min2(-1.0, -((leftOL - lane.get_width()) / crate::microsim::ms_globals::lateral_resolution()).ceil()) as i32
+                        } else {
+                            max2(1.0, ((-rightOL) / crate::microsim::ms_globals::lateral_resolution()).ceil()) as i32
+                        };
+                        outsideLeaders.set_sublane_offset(sublaneOffset);
+                        for cand in lane.get_vehicles_secure().iter() {
+                            let cand: Ptr<MSVehicle> = *cand;
+                            if (lane != self.myLane || cand.get_position_on_lane() > self.get_position_on_lane())
+                                && ((!outsideLeft && cand.get_left_side_on_edge(Ptr::null()) < 0.0)
+                                    || (outsideLeft && cand.get_left_side_on_edge(Ptr::null()) > lane.get_edge().get_width()))
+                            {
+                                outsideLeaders.add_leader(cand, true, 0.0);
+                            }
+                        }
+                        lane.release_vehicles();
+                        if outsideLeaders.has_vehicles() {
+                            self.adapt_to_leaders(&outsideLeaders, lateralShift, seen, lastLink, leaderLane, &mut v, &mut vLinkPass);
+                        }
+                    }
+                }
+                self.adapt_to_leaders(&ahead, lateralShift, seen, lastLink, leaderLane, &mut v, &mut vLinkPass);
+            }
+            if !lastLink.is_null() {
+                lastLink.m().myVLinkWait = min2(lastLink.m().myVLinkWait, v);
+            }
+            // XXX efficiently adapt to shadow leaders using neighAhead by iteration over the whole edge in parallel (lanechanger-style)
+            if !self.myLaneChangeModel.get_shadow_lane().is_null() {
+                // also slow down for leaders on the shadowLane relative to the current lane
+                let shadowLane = self.myLaneChangeModel.get_shadow_lane_2(leaderLane);
+                if !shadowLane.is_null()
+                    && (crate::microsim::ms_globals::lateral_resolution() > 0.0
+                        || self.get_lateral_overlap() > POSITION_EPS
+                        // continous lane change cannot be stopped so we must adapt to the leader on the target lane
+                        || self.myLaneChangeModel.get_lane_change_completion() < 0.5)
+                {
+                    if std::ptr::eq(shadowLane.get_edge(), leaderLane.get_edge()) || self.myLaneChangeModel.is_opposite() {
+                        let mut latOffset = self.get_lane().get_right_side_on_edge() - self.myLaneChangeModel.get_shadow_lane().get_right_side_on_edge();
+                        if self.myLaneChangeModel.is_opposite() {
+                            // ego posLat is added when retrieving sublanes but it
+                            // should be negated (subtract twice to compensate)
+                            latOffset = (self.myLane.get_width() + shadowLane.get_width()) * 0.5 - 2.0 * self.get_lateral_position_on_lane();
+                        }
+                        let mut shadowLeaders = shadowLane.get_last_vehicle_information(me, latOffset, leaderLane.get_length() - seen, true, Ptr::null());
+                        if self.myLaneChangeModel.is_opposite() {
+                            // ignore oncoming vehicles on the shadow lane
+                            shadowLeaders.remove_opposite(shadowLane);
+                        }
+                        let turningDifference = max2(0.0, leaderLane.get_length() - shadowLane.get_length());
+                        self.adapt_to_leaders(&shadowLeaders, latOffset, seen - turningDifference, lastLink, shadowLane, &mut v, &mut vLinkPass);
+                    } else if shadowLane == self.myLaneChangeModel.get_shadow_lane() && leaderLane == self.myLane {
+                        // check for leader vehicles driving in the opposite direction on the opposite-direction shadow lane
+                        // (and thus in the same direction as ego)
+                        let mut shadowLeaders = shadowLane.get_followers_on_consecutive(me, self.myLane.get_opposite_pos(self.get_position_on_lane()), true, -1.0, MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+                        let latOffset = 0.0;
+                        shadowLeaders.fix_opposite_gaps(true);
+                        self.adapt_to_leader_distance(&shadowLeaders, latOffset, seen, lastLink, &mut v, &mut vLinkPass);
+                    }
+                }
+            }
+            // adapt to pedestrians on the same lane
+            if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {
+                let relativePos = lane.get_length() - seen;
+                let stopTime = max2(1.0, (self.get_speed() / cfModel.get_max_decel()).ceil());
+                let leader = lane.next_blocking(relativePos, self.get_right_side_on_lane_2(lane), self.get_right_side_on_lane_2(lane) + self.get_vehicle_type().get_width(), stopTime, false);
+                if !leader.0.is_null() {
+                    let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
+                    v = min2(v, stopSpeed);
+                }
+            }
+            if !lane.get_bidi_lane().is_null() {
+                // adapt to pedestrians on the bidi lane
+                let bidiLane = lane.get_bidi_lane();
+                if bidiLane.get_edge().get_persons().len() > 0 && bidiLane.has_pedestrians() {
+                    let relativePos = seen;
+                    let stopTime = (self.get_speed() / cfModel.get_max_decel()).ceil();
+                    let leftSideOnLane = bidiLane.get_width() - self.get_right_side_on_lane_2(lane);
+                    let leader = bidiLane.next_blocking(relativePos, leftSideOnLane - self.get_vehicle_type().get_width(), leftSideOnLane, stopTime, true);
+                    if !leader.0.is_null() {
+                        let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
+                        v = min2(v, stopSpeed);
+                    }
+                }
+            }
+            // adapt to vehicles blocked from (urgent) lane-changing
+            if !opposite && lane.get_edge().has_lane_changer() {
+                let vHelp = self.myLaneChangeModel.get_cooperative_help_speed(lane, seen);
+                v = min2(v, vHelp);
+            }
+
+            // process all stops and waypoints on the current edge
+            let mut foundRealStop = false;
+            while stopIt < self.myStops.len()
+                && ((std::ptr::eq(self.myStops[stopIt].lane.get_edge(), lane.get_edge()))
+                    || (self.myStops[stopIt].isOpposite && self.myStops[stopIt].lane.get_edge().get_opposite_edge() == Ptr::new(lane.get_edge())))
+                // ignore stops that occur later in a looped route
+                && self.myStops[stopIt].edge == self.myCurrEdge + view
+            {
+                let mut stopDist = f64::MAX;
+                let stop_idx = stopIt;
+                let stop: &MSStop = &self.myStops[stop_idx];
+                let isFirstStop = stop_idx == 0;
+                stopIt += 1;
+                if !stop.reached || (stop.get_speed() > 0.0 && self.keep_stopping(false)) {
+                    // we are approaching a stop on the edge; must not drive further
+                    let isWaypoint = stop.get_speed() > 0.0;
+                    let mut endPos = stop.get_end_pos(self) + utils::geom::NUMERICAL_EPS;
+                    if !stop.parkingarea.is_null() {
+                        // leave enough space so parking vehicles can exit
+                        let brakePos = self.get_brake_gap(false) + lane.get_length() - seen;
+                        endPos = stop.parkingarea.m().get_last_free_pos_with_reservation(t, self, brakePos);
+                    } else if isWaypoint && !stop.reached {
+                        endPos = stop.pars.startPos;
+                    }
+                    stopDist = seen + endPos - lane.get_length();
+                    let mut stopSpeed = laneMaxV;
+                    if isWaypoint {
+                        let mut waypointWithStop = false;
+                        if stop.get_until() > t {
+                            // check if we have to slow down or even stop
+                            let time2end: SUMOTime = if stop.reached {
+                                time2steps((stop.pars.endPos - self.myState.myPos) / stop.get_speed())
+                            } else {
+                                time2steps(
+                                    // time to reach waypoint start
+                                    stopDist / ((self.get_speed() + stop.get_speed()) / 2.0)
+                                    // time to reach waypoint end
+                                    + (stop.pars.endPos - stop.pars.startPos) / stop.get_speed(),
+                                )
+                            };
+                            if stop.get_until() > t + time2end {
+                                // we need to stop
+                                let mut distToEnd = stopDist;
+                                if !stop.reached {
+                                    distToEnd += stop.pars.endPos - stop.pars.startPos;
+                                }
+                                stopSpeed = max2(cfModel.stop_speed(me, self.get_speed(), distToEnd, MSCFModel_CalcReason::CURRENT), vMinComfortable);
+                                waypointWithStop = true;
+                                if stopSpeed <= SUMO_const_haltingSpeed {
+                                    // const_cast in C++
+                                    me.m().myStops[stop_idx].waypointWithStop = true;
+                                }
+                            }
+                        }
+                        if stop.reached {
+                            stopSpeed = min2(stop.get_speed(), stopSpeed);
+                            if self.myState.myPos >= stop.pars.endPos && !waypointWithStop {
+                                stopDist = f64::MAX;
+                            }
+                        } else {
+                            stopSpeed = min2(max2(cfModel.free_speed(me, self.get_speed(), stopDist, stop.get_speed(), false, MSCFModel_CalcReason::CURRENT), vMinComfortable), stopSpeed);
+                            if !stop.reached {
+                                stopDist += stop.pars.endPos - stop.pars.startPos;
+                            }
+                            if !lastLink.is_null() {
+                                lastLink.m().adapt_leave_speed(cfModel.free_speed(me, vLinkPass, endPos, stop.get_speed(), false, MSCFModel_CalcReason::FUTURE));
+                            }
+                        }
+                    } else {
+                        stopSpeed = cfModel.stop_speed(me, self.get_speed(), stopDist, MSCFModel_CalcReason::CURRENT);
+                        if !self.instant_stopping() {
+                            // regular stops are not emergencies
+                            stopSpeed = max2(stopSpeed, vMinComfortable);
+                        } else if !self.myInfluencer.is_null() && !self.myInfluencer.has_speed_time_line(MSNet::get_instance().get_current_time_step()) {
+                            let simstep = MSNet::get_instance().get_current_time_step();
+                            let speedTimeLine: Vec<(SUMOTime, f64)> = vec![(simstep, self.get_speed()), (simstep + DELTA_T, stopSpeed)];
+                            self.myInfluencer.m().set_speed_time_line(&speedTimeLine);
+                        }
+                        if !lastLink.is_null() {
+                            lastLink.m().adapt_leave_speed(cfModel.stop_speed(me, vLinkPass, endPos, MSCFModel_CalcReason::FUTURE));
+                        }
+                    }
+                    if stopSpeed < self.get_speed() && self.get_speed() > SUMO_const_haltingSpeed {
+                        // only discount braking-for-stop timeLoss if we are actually braking
+                        *newStopSpeed = min2(*newStopSpeed, stopSpeed);
+                    } else if self.get_speed() < SUMO_const_haltingSpeed {
+                        // blocked from entering a stop
+                        *newStopSpeed = f64::MAX;
+                    }
+                    v = min2(v, stopSpeed);
+                    if lane.is_internal() {
+                        let mut exitLink: usize = MSLane::succ_link_sec(self, (view + 1) as i32, &lane, bestLaneConts);
+                        debug_assert!(!lane.is_link_end(&mut exitLink));
+                        let mut dummySetRequest = false;
+                        let mut dummyVLinkWait = 0.0;
+                        let exitLinkP = lane.get_link_cont()[exitLink];
+                        self.check_link_leader_current_and_parallel(exitLinkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut dummyVLinkWait, &mut dummySetRequest);
+                    }
+
+                    if isFirstStop {
+                        *myStopDist = stopDist;
+                        // if the vehicle is going to stop we don't need to look further
+                        // (except for trains that make use of further link-approach registration for safety purposes)
+                        if !isWaypoint {
+                            planningToStop = true;
+                            if !self.is_rail() {
+                                lfLinks.push(MSVehicle_DriveProcessItem::new_2(v, stopDist, 0.0));
+                                foundRealStop = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if foundRealStop {
+                break;
+            }
+
+            // move to next lane
+            //  get the next link used
+            let mut link: usize = MSLane::succ_link_sec(self, (view + 1) as i32, &lane, bestLaneConts);
+            if lane.is_link_end(&mut link) && self.myLaneChangeModel.has_blue_light() && self.myCurrEdge + 1 != self.myRoute.size() as usize {
+                // emergency vehicle is on the wrong lane. Obtain the link that it would use from the correct turning lane
+                let currentIndex = lane.get_index();
+                let mut bestJump: Ptr<MSLane> = Ptr::null();
+                for preb in self.get_best_lanes().iter() {
+                    if preb.allowsContinuation && (bestJump.is_null() || (currentIndex - preb.lane.get_index()).abs() < (currentIndex - bestJump.get_index()).abs()) {
+                        bestJump = preb.lane;
+                    }
+                }
+                if !bestJump.is_null() {
+                    let nextEdge = self.get_next_edge_ptr();
+                    for (i, cand) in bestJump.get_link_cont().iter().enumerate() {
+                        if Ptr::new(cand.get_lane().get_edge()) == nextEdge {
+                            link = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Check whether this is a turn (to save info about the next upcoming turn)
+            if !encounteredTurn && !lane.is_link_end(&mut link) && lane.get_link_cont().len() > 1 {
+                let linkDir = lane.get_link_cont()[link].get_direction();
+                if linkDir != LinkDirection::STRAIGHT && linkDir != LinkDirection::NODIR {
+                    myNextTurn.0 = seen;
+                    myNextTurn.1 = lane.get_link_cont()[link];
+                    encounteredTurn = true;
+                }
+            }
+
+            //  check whether the vehicle is on its final edge
+            if self.myCurrEdge + view + 1 == self.myRoute.size() as usize
+                || (self.myParameter.arrivalEdge >= 0 && self.get_route_position() + view as i32 == self.myParameter.arrivalEdge)
+            {
+                let arrivalSpeed = if self.myParameter.arrivalSpeedProcedure == ArrivalSpeedDefinition::GIVEN { self.myParameter.arrivalSpeed } else { laneMaxV };
+                // subtract the arrival speed from the remaining distance so we get one additional driving step with arrival speed
+                // XXX: This does not work for ballistic update refs #2579
+                let distToArrival = seen + self.myArrivalPos - lane.get_length() - speed2dist(arrivalSpeed);
+                let va = max2(utils::geom::NUMERICAL_EPS, cfModel.free_speed(me, self.get_speed(), distToArrival, arrivalSpeed, false, MSCFModel_CalcReason::CURRENT));
+                v = min2(v, va);
+                if !lastLink.is_null() {
+                    lastLink.m().adapt_leave_speed(va);
+                }
+                lfLinks.push(MSVehicle_DriveProcessItem::new_2(v, seen, if lane.get_edge().is_fringe() { 1000.0 } else { 0.0 }));
+                break;
+            }
+            // check whether the lane or the shadowLane is a dead end (allow some leeway on intersections)
+            if lane.is_link_end(&mut link)
+                || (crate::microsim::ms_globals::sublane() && self.brake_for_overlap(lane.get_link_cont()[link], lane))
+                || (opposite && lane.get_link_cont()[link].get_via_lane_or_lane().get_parallel_opposite().is_null() && !self.myLaneChangeModel.has_blue_light())
+            {
+                let va = cfModel.stop_speed(me, self.get_speed(), seen, MSCFModel_CalcReason::CURRENT);
+                if !lastLink.is_null() {
+                    lastLink.m().adapt_leave_speed(va);
+                }
+                if self.myLaneChangeModel.get_committed_speed() > 0.0 {
+                    v = min2(self.myLaneChangeModel.get_committed_speed(), v);
+                } else {
+                    v = min2(va, v);
+                }
+                if lane.is_link_end(&mut link) {
+                    lfLinks.push(MSVehicle_DriveProcessItem::new_2(v, seen, 0.0));
+                    break;
+                }
+            }
+            let linkP: Ptr<MSLink> = lane.get_link_cont()[link];
+            lateralShift += linkP.get_lateral_shift();
+            let yellowOrRed = linkP.have_red() || linkP.have_yellow();
+            // We distinguish 3 cases when determining the point at which a vehicle stops:
+            // - allway_stop: the vehicle should stop close to the stop line but may stop at larger distance
+            // - red/yellow light: here the vehicle 'knows' that it will have priority eventually and does not need to stop on a precise spot
+            // - other types of minor links: the vehicle needs to stop as close to the junction as necessary
+            //   to minimize the time window for passing the junction. If the
+            //   vehicle 'decides' to accelerate and cannot enter the junction in
+            //   the next step, new foes may appear and cause a collision (see #1096)
+            // - major links: stopping point is irrelevant
+            let mut laneStopOffset: f64;
+            let majorStopOffset = max2(self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPLINE_GAP, DIST_TO_STOPLINE_EXPECT_PRIORITY), lane.get_vehicle_stop_offset(me));
+            // override low desired decel at yellow and red
+            let stopDecel = if yellowOrRed && !self.is_rail() {
+                max2(min2(crate::microsim::ms_globals::tls_yellow_min_decel(), cfModel.get_emergency_decel()), cfModel.get_max_decel())
+            } else {
+                cfModel.get_max_decel()
+            };
+            let brakeDist = cfModel.brake_gap_2(self.myState.mySpeed, stopDecel, 0.0);
+            let canBrakeBeforeLaneEnd = seen >= brakeDist;
+            let canBrakeBeforeStopLine = seen - lane.get_vehicle_stop_offset(me) >= brakeDist;
+            if yellowOrRed {
+                // Wait at red traffic light with full distance if possible
+                laneStopOffset = majorStopOffset;
+            } else if linkP.have_priority() {
+                // On priority link, we should never stop below visibility distance
+                laneStopOffset = min2(linkP.get_foe_visibility_distance() - POSITION_EPS, majorStopOffset);
+            } else {
+                let mut minorStopOffset = max2(
+                    lane.get_vehicle_stop_offset(me),
+                    self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPLINE_CROSSING_GAP, MSPMODEL_SAFETY_GAP_LOCAL) - linkP.get_dist_to_foe_ped_crossing(),
+                );
+                if linkP.get_state() == LINKSTATE_ALLWAY_STOP {
+                    minorStopOffset = max2(minorStopOffset, self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPLINE_GAP, 0.0));
+                } else {
+                    minorStopOffset = max2(minorStopOffset, self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPLINE_GAP_MINOR, 0.0));
+                }
+                // On minor link, we should likewise never stop below visibility distance
+                laneStopOffset = min2(linkP.get_foe_visibility_distance() - POSITION_EPS, minorStopOffset);
+            }
+            if canBrakeBeforeLaneEnd {
+                // avoid emergency braking if possible
+                laneStopOffset = min2(laneStopOffset, seen - brakeDist);
+            }
+            laneStopOffset = max2(POSITION_EPS, laneStopOffset);
+            let mut stopDist = max2(0.0, seen - laneStopOffset);
+            // getDevice(typeid(MSDevice_GLOSA)): typeid is not available, so the device type is matched by its
+            // id prefix ("glosa_" + vehID, see MSDevice_GLOSA::buildVehicleDevices)
+            let glosaOverride = yellowOrRed && {
+                let glosa: Ptr<MSDevice_GLOSA> = self
+                    .get_devices()
+                    .iter()
+                    .find(|dev| MSDevice::get_device_name(dev.base2.get_id()) == "glosa")
+                    .map(|dev| dev.cast::<MSDevice_GLOSA>())
+                    .unwrap_or_default();
+                !glosa.is_null() && glosa.get_override_safety() && glosa.is_speed_advice_active()
+            };
+            if glosaOverride {
+                stopDist = f64::MAX;
+            }
+            if *myStopDist != f64::MAX {
+                stopDist = max2(stopDist, *myStopDist);
+            }
+            if self.is_rail() && !lane.is_internal() {
+                // check for train direction reversal
+                if !lane.get_bidi_lane().is_null() && linkP.get_lane().get_bidi_lane() == lane {
+                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - utils::geom::NUMERICAL_EPS, MSCFModel_CalcReason::CURRENT);
+                    if seen < 1.0 {
+                        mustSeeBeforeReversal = 2.0 * seen + self.get_length();
+                    }
+                    v = min2(v, vMustReverse);
+                }
+                // signal that is passed in the current step does not count
+                foundRailSignal |= !linkP.get_tl_logic().is_null()
+                    && linkP.get_tl_logic().get_logic_type() == TrafficLightType::RAIL_SIGNAL
+                    && seen > speed2dist(v);
+            }
+
+            if !planningToStop {
+                // no need to slow down for reversal if we are alrady slowing down for a stop
+                let mut canReverseEventually = false;
+                let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+                v = min2(v, vReverse);
+            }
+
+            // check whether we need to slow down in order to finish a continuous lane change
+            if self.myLaneChangeModel.is_changing_lanes() {
+                if
+                // slow down to finish lane change before a turn lane
+                (linkP.get_direction() == LinkDirection::LEFT || linkP.get_direction() == LinkDirection::RIGHT)
+                    ||
+                    // slow down to finish lane change before the shadow lane ends
+                    (!self.myLaneChangeModel.get_shadow_lane().is_null()
+                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), false).is_null())
+                {
+                    // XXX maybe this is too harsh. Vehicles could cut some corners here
+                    let timeRemaining = steps2time(self.myLaneChangeModel.remaining_time());
+                    debug_assert!(timeRemaining != 0.0);
+                    // XXX: Euler-logic (#860), but I couldn't identify problems from this yet (Leo). Refs. #2575
+                    let va = max2(cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT), (seen - POSITION_EPS) / timeRemaining);
+                    v = min2(va, v);
+                }
+            }
+
+            // - always issue a request to leave the intersection we are currently on
+            let leavingCurrentIntersection = self.myLane.get_edge().is_internal() && lastLink.is_null();
+            // - do not issue a request to enter an intersection after we already slowed down for an earlier one
+            let abortRequestAfterMinor = slowedDownForMinor && linkP.get_internal_lane_before().is_null();
+            // - even if red, if we cannot break we should issue a request
+            let mut setRequest = (v > NUMERICAL_EPS_SPEED && !abortRequestAfterMinor) || leavingCurrentIntersection;
+
+            let stopSpeed = cfModel.stop_speed_2(me, self.get_speed(), stopDist, stopDecel, MSCFModel_CalcReason::CURRENT_WAIT);
+            let mut vLinkWait = min2(v, stopSpeed);
+
+            if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
+                if lane.is_internal() {
+                    self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
+                }
+                // arrivalSpeed / arrivalTime when braking for red light is only relevent for rail signal switching
+                let arrivalTime = self.get_arrival_time(t, seen, v, vLinkPass);
+                // the vehicle is able to brake in front of a yellow/red traffic light
+                lfLinks.push(MSVehicle_DriveProcessItem::new(linkP, v, vLinkWait, false, arrivalTime, vLinkWait, 0.0, seen, -1.0));
+                break;
+            }
+
+            let entryLink: Ptr<MSLink> = linkP.get_corresponding_entry_link();
+            if entryLink.have_red() && self.ignore_red(linkP, canBrakeBeforeStopLine) && steps2time(t - entryLink.get_last_state_change()) > 2.0 {
+                // restrict speed when ignoring a red light
+                let redSpeed = min2(v, self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_RED_SPEED, v));
+                let va = max2(redSpeed, cfModel.free_speed(me, self.get_speed(), seen, redSpeed, false, MSCFModel_CalcReason::CURRENT));
+                v = min2(va, v);
+            }
+
+            self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
+
+            if !lastLink.is_null() {
+                lastLink.m().adapt_leave_speed(laneMaxV);
+            }
+            let mut arrivalSpeed = vLinkPass;
+            // vehicles should decelerate when approaching a minor link
+            // - unless they are close enough to have clear visibility of all relevant foe lanes and may start to accelerate again
+            // - and unless they are so close that stopping is impossible (i.e. when a green light turns to yellow when close to the junction)
+
+            // whether the vehicle/driver is close enough to the link to see all possible foes #2123
+            let visibilityDistance = linkP.get_foe_visibility_distance();
+            let determinedFoePresence = seen <= visibilityDistance;
+
+            let couldBrakeForMinor = !linkP.have_priority() && brakeDist < seen && !linkP.last_was_cont_major();
+            if couldBrakeForMinor && !determinedFoePresence {
+                // vehicle decelerates just enough to be able to stop if necessary and then accelerates
+                let maxSpeedAtVisibilityDist = cfModel.maximum_safe_stop_speed(visibilityDistance, cfModel.get_max_decel(), self.myState.mySpeed, false, 0.0, false);
+                // XXX: estimateSpeedAfterDistance does not use euler-logic (thus returns a lower value than possible here...)
+                let maxArrivalSpeed = cfModel.estimate_speed_after_distance(visibilityDistance, maxSpeedAtVisibilityDist, cfModel.get_max_accel());
+                arrivalSpeed = min2(vLinkPass, maxArrivalSpeed);
+                slowedDownForMinor = true;
+            } else if linkP.get_state() == LINKSTATE_EQUAL && self.myWaitingTime > 0 {
+                // check for deadlock (circular yielding)
+                let mut blocker: (Ptr<SUMOVehicle>, Ptr<MSLink>) = linkP.get_first_approaching_foe(linkP);
+                let mut n = 100;
+                while !blocker.1.is_null() && blocker.1 != linkP && n > 0 {
+                    blocker = blocker.1.get_first_approaching_foe(linkP);
+                    n -= 1;
+                }
+                if n == 0 {
+                    utils::common::msg_handler::write_warning(&format!("Suspicious right_before_left junction '{}'.", lane.get_edge().get_to_junction().get_id()));
+                }
+                if blocker.1 == linkP {
+                    let threshold = if linkP.get_direction() == LinkDirection::STRAIGHT { 0.25 } else { 0.75 };
+                    let rng = self.get_rng();
+                    if rng.m().rand() < threshold {
+                        setRequest = false;
+                    }
+                }
+            }
+
+            // compute arrival speed and arrival time if vehicle starts braking now
+            let arrivalTime = self.get_arrival_time(t, seen, v, arrivalSpeed);
+            if couldBrakeForMinor && determinedFoePresence && linkP.get_lane().get_edge().is_roundabout() {
+                let wasOpened = linkP.opened(
+                    arrivalTime,
+                    arrivalSpeed,
+                    arrivalSpeed,
+                    self.get_length(),
+                    self.get_impatience(),
+                    cfModel.get_max_decel(),
+                    self.get_waiting_time(false),
+                    self.get_lateral_position_on_lane(),
+                    Ptr::null(),
+                    false,
+                    me.cast::<SUMOTrafficObject>(),
+                    -1.0,
+                );
+                if !wasOpened {
+                    slowedDownForMinor = true;
+                }
+            }
+
+            // compute arrival speed and arrival time if vehicle starts braking now
+            // if stopping is possible, arrivalTime can be arbitrarily large. A small value keeps fractional times (impatience) meaningful
+            let mut arrivalSpeedBraking = 0.0;
+            let bGap = cfModel.brake_gap(v);
+            if seen < bGap && !self.is_stopped() && !planningToStop {
+                // XXX: should this use the current speed (at least for the ballistic case)? (Leo) Refs. #2575
+                // vehicle cannot come to a complete stop in time
+                if crate::microsim::ms_globals::semi_implicit_euler_update() {
+                    arrivalSpeedBraking = cfModel.get_minimal_arrival_speed_euler(seen, v);
+                    // due to discrete/continuous mismatch (when using Euler update) we have to ensure that braking actually helps
+                    arrivalSpeedBraking = min2(arrivalSpeedBraking, arrivalSpeed);
+                } else {
+                    arrivalSpeedBraking = cfModel.get_minimal_arrival_speed(seen, self.myState.mySpeed);
+                }
+            }
+
+            // estimate leave speed for passing time computation
+            // l=linkLength, a=accel, t=continuousTime, v=vLeave
+            // l=v*t + 0.5*a*t^2, solve for t and multiply with a, then add v
+            let estimatedLeaveSpeed = min2(
+                linkP.get_via_lane_or_lane().get_vehicle_max_speed_2(me.cast::<SUMOTrafficObject>(), maxVD),
+                cfModel.estimate_speed_after_distance(linkP.get_length(), arrivalSpeed, self.get_vehicle_type().get_car_follow_model().get_max_accel()),
+            );
+            lfLinks.push(MSVehicle_DriveProcessItem::new(linkP, v, vLinkWait, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, seen, estimatedLeaveSpeed));
+            if linkP.get_via_lane().is_null() {
+                hadNonInternal = true;
+                view += 1;
+            }
+
+            // we need to look ahead far enough to see available space for checkRewindLinkLanes
+            if (!setRequest || v <= 0.0 || seen > dist) && hadNonInternal && seenNonInternal > max2(vehicleLength * CRLL_LOOK_AHEAD, vehicleLength + seenInternal) && foundRailSignal {
+                break;
+            }
+            // get the following lane
+            lane = linkP.get_via_lane_or_lane();
+            laneMaxV = lane.get_vehicle_max_speed_2(me.cast::<SUMOTrafficObject>(), maxVD);
+            if !self.myInfluencer.is_null() && !self.myInfluencer.consider_speed_limit() {
+                laneMaxV = f64::MAX;
+            }
+            // the link was passed
+            // compute the velocity to use when the link is not blocked by other vehicles
+            //  the vehicle shall be not faster when reaching the next lane than allowed
+            //  speed limits are not emergencies (e.g. when the limit changes suddenly due to TraCI or a variableSpeedSignal)
+            let va = max2(cfModel.free_speed(me, self.get_speed(), seen, laneMaxV, false, MSCFModel_CalcReason::CURRENT), vMinComfortable - utils::geom::NUMERICAL_EPS);
+            v = min2(va, v);
+            if lane.get_edge().is_internal() {
+                seenInternal += lane.get_length();
+            } else {
+                seenNonInternal += lane.get_length();
+            }
+            // do not restrict results to the current vehicle to allow caching for the current time step
+            leaderLane = if opposite { lane.get_parallel_opposite() } else { lane };
+            if leaderLane.is_null() {
+                break;
+            }
+            ahead = if opposite {
+                MSLeaderInfo::new(leaderLane.get_width(), Ptr::null(), 0.0)
+            } else {
+                leaderLane.get_last_vehicle_information(Ptr::null(), 0.0, 0.0, true, Ptr::null())
+            };
+            seen += lane.get_length();
+            vLinkPass = min2(cfModel.estimate_speed_after_distance(lane.get_length(), v, cfModel.get_max_accel()), laneMaxV); // upper bound
+            lastLink = Ptr::from_mut(lfLinks.last_mut().unwrap());
+        }
     }
 
     /// C++: `void MSVehicle::checkRewindLinkLanes(const double, DriveItemVector &) const` [const, protected]
@@ -11436,7 +12629,54 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_to_leader(&self, leaderInfo: (Ptr<MSVehicle>, f64), seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64) {
-        todo!("port MSVehicle::adaptToLeader")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        if !leaderInfo.0.is_null() {
+            if self.ignore_foe(leaderInfo.0.cast::<SUMOTrafficObject>()) {
+                return;
+            }
+            let cfModel = self.get_car_follow_model();
+            let mut vsafeLeader = 0.0;
+            if !crate::microsim::ms_globals::semi_implicit_euler_update() {
+                vsafeLeader = -f64::MAX;
+            }
+            let mut backOnRoute = true;
+            if leaderInfo.1 < 0.0 && !lastLink.is_null() && !lastLink.myLink.is_null() {
+                backOnRoute = false;
+                // this can either be
+                // a) a merging situation (leader back is is not our route) or
+                // b) a minGap violation / collision
+                let current = lastLink.myLink.get_via_lane_or_lane();
+                if leaderInfo.0.get_back_lane() == current {
+                    backOnRoute = true;
+                } else {
+                    for lane in self.get_best_lanes_continuation().iter() {
+                        if *lane == current {
+                            break;
+                        }
+                        if leaderInfo.0.get_back_lane() == *lane {
+                            backOnRoute = true;
+                        }
+                    }
+                }
+                if !backOnRoute {
+                    let mut stopDist = seen - current.get_length() - POSITION_EPS;
+                    if !lastLink.myLink.get_internal_lane_before().is_null() {
+                        // do not drive onto the junction conflict area
+                        stopDist -= lastLink.myLink.get_internal_lane_before().get_length();
+                    }
+                    vsafeLeader = cfModel.stop_speed(me, self.get_speed(), stopDist, MSCFModel_CalcReason::CURRENT);
+                }
+            }
+            if backOnRoute {
+                vsafeLeader = cfModel.follow_speed(me, self.get_speed(), leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::CURRENT);
+            }
+            if !lastLink.is_null() {
+                let futureVSafe = cfModel.follow_speed(me, lastLink.accelV, leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::FUTURE);
+                lastLink.m().adapt_leave_speed(futureVSafe);
+            }
+            *v = min2(*v, vsafeLeader);
+            *vLinkPass = min2(*vLinkPass, vsafeLeader);
+        }
     }
 
     /// C++: `bool MSVehicle::brakeForOverlap(const MSLink *, const MSLane *) const` [const, protected]
@@ -11483,7 +12723,28 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn brake_for_overlap(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSVehicle::brakeForOverlap")
+        // @review needed
+        //const double futurePosLat = getLateralPositionOnLane() + link->getLateralShift();
+        let futurePosLat = self.get_lateral_position_on_lane() + (if lane != self.myLane && lane.is_internal() { lane.get_incoming_lanes()[0].viaLink.get_lateral_shift() } else { 0.0 });
+        let overlap = self.get_lateral_overlap_3(futurePosLat, lane);
+        let edgeWidth = lane.get_edge().get_width();
+        let result = overlap > POSITION_EPS
+            // do not get stuck on narrow edges
+            && self.get_vehicle_type().get_width() <= edgeWidth
+            && link.get_via_lane().is_null()
+            // this is the exit link of a junction. The normal edge should support the shadow
+            && ((self.myLaneChangeModel.get_shadow_lane_2(link.get_lane()).is_null())
+                // the shadow lane must be permitted
+                || !self.myLaneChangeModel.get_shadow_lane_2(link.get_lane()).allows_vehicle_class(self.get_v_class())
+                // the internal lane after an internal junction has no parallel lane. make sure there is no shadow before continuing
+                || (lane.get_edge().is_internal() && lane.get_incoming_lanes()[0].lane.get_edge().is_internal()))
+            // ignore situations where the shadow lane is part of a double-connection with the current lane
+            && (self.myLaneChangeModel.get_shadow_lane().is_null()
+                || self.myLaneChangeModel.get_shadow_lane().get_link_cont().len() == 0
+                || self.myLaneChangeModel.get_shadow_lane().get_link_cont()[0].get_lane() != link.get_lane())
+            // emergency vehicles may do some crazy stuff
+            && !self.myLaneChangeModel.has_blue_light();
+        result
     }
 
     /// C++: `void MSVehicle::adaptToJunctionLeader(const std::pair<const MSVehicle *, double>, const double, DriveProcessItem *const, const MSLane *const, double &, double &, double) const` [const]
@@ -11601,7 +12862,59 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_to_junction_leader(&self, leaderInfo: (Ptr<MSVehicle>, f64), seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, lane: Ptr<MSLane>, v: &mut f64, vLinkPass: &mut f64, distToCrossing: f64) {
-        todo!("port MSVehicle::adaptToJunctionLeader")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        if !leaderInfo.0.is_null() {
+            if self.ignore_foe(leaderInfo.0.cast::<SUMOTrafficObject>()) {
+                return;
+            }
+            let cfModel = self.get_car_follow_model();
+            let mut vsafeLeader = 0.0;
+            if !crate::microsim::ms_globals::semi_implicit_euler_update() {
+                vsafeLeader = -f64::MAX;
+            }
+            if leaderInfo.1 >= 0.0 {
+                if self.has_departed() {
+                    vsafeLeader = cfModel.follow_speed(me, self.get_speed(), leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::CURRENT);
+                } else {
+                    // called in the context of MSLane::isInsertionSuccess
+                    vsafeLeader = cfModel.insertion_follow_speed(me, self.get_speed(), leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0);
+                }
+            } else if leaderInfo.0 != me {
+                // the leading, in-lapping vehicle is occupying the complete next lane
+                // stop before entering this lane
+                vsafeLeader = cfModel.stop_speed(me, self.get_speed(), seen - lane.get_length() - POSITION_EPS, MSCFModel_CalcReason::CURRENT);
+            }
+            if distToCrossing >= 0.0 {
+                // can the leader still stop in the way?
+                let vStop = cfModel.stop_speed(me, self.get_speed(), distToCrossing - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
+                if leaderInfo.0 == me {
+                    // braking for pedestrian
+                    let vStopCrossing = cfModel.stop_speed(me, self.get_speed(), distToCrossing, MSCFModel_CalcReason::CURRENT);
+                    vsafeLeader = vStopCrossing;
+                    if !lastLink.is_null() {
+                        lastLink.m().adapt_stop_speed(vsafeLeader);
+                    }
+                } else if leaderInfo.1 == -f64::MAX {
+                    // drive up to the crossing point and stop
+                    vsafeLeader = max2(vsafeLeader, vStop);
+                } else {
+                    let leaderDistToCrossing = distToCrossing - leaderInfo.1;
+                    // estimate the time at which the leader has gone past the crossing point
+                    let leaderPastCPTime = leaderDistToCrossing / max2(leaderInfo.0.get_speed(), SUMO_const_haltingSpeed);
+                    // reach distToCrossing after that time
+                    // avgSpeed * leaderPastCPTime = distToCrossing
+                    // ballistic: avgSpeed = (getSpeed + vFinal) / 2
+                    let vFinal = max2(self.get_speed(), 2.0 * (distToCrossing - self.get_vehicle_type().get_min_gap()) / leaderPastCPTime - self.get_speed());
+                    let v2 = self.get_speed() + accel2speed((vFinal - self.get_speed()) / leaderPastCPTime);
+                    vsafeLeader = max2(vsafeLeader, min2(v2, vStop));
+                }
+            }
+            if !lastLink.is_null() {
+                lastLink.m().adapt_leave_speed(vsafeLeader);
+            }
+            *v = min2(*v, vsafeLeader);
+            *vLinkPass = min2(*vLinkPass, vsafeLeader);
+        }
     }
 
     /// C++: `void MSVehicle::adaptToOncomingLeader(const std::pair<const MSVehicle *, double>, DriveProcessItem *const, double &, double &) const` [const]
@@ -11673,7 +12986,40 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_to_oncoming_leader(&self, leaderInfo: (Ptr<MSVehicle>, f64), lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64) {
-        todo!("port MSVehicle::adaptToOncomingLeader")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        if !leaderInfo.0.is_null() {
+            if self.ignore_foe(leaderInfo.0.cast::<SUMOTrafficObject>()) {
+                return;
+            }
+            let cfModel = self.get_car_follow_model();
+            let lead: Ptr<MSVehicle> = leaderInfo.0;
+            let cfModelL = lead.get_car_follow_model();
+            // assume the leader reacts symmetrically (neither stopping instantly nor ignoring ego)
+            let leaderBrakeGap = cfModelL.brake_gap_2(lead.get_speed(), cfModelL.get_max_decel(), 0.0);
+            let egoBrakeGap = cfModel.brake_gap_2(self.get_speed(), cfModel.get_max_decel(), 0.0);
+            let gapSum = leaderBrakeGap + egoBrakeGap;
+            // ensure that both vehicles can leave an intersection if they are currently on it
+            let mut egoExit = self.get_distance_to_leave_junction();
+            let leaderExit = lead.get_distance_to_leave_junction();
+            let mut gap = leaderInfo.1;
+            if egoExit + leaderExit < gap {
+                gap -= egoExit + leaderExit;
+            } else {
+                egoExit = 0.0;
+            }
+            // split any distance in excess of brakeGaps evenly
+            let freeGap = max2(0.0, gap - gapSum);
+            let splitGap = min2(gap, gapSum);
+            // assume remaining distance is allocated in proportion to braking distance
+            let gapRatio = if gapSum > 0.0 { egoBrakeGap / gapSum } else { 0.5 };
+            let vsafeLeader = cfModel.stop_speed(me, self.get_speed(), splitGap * gapRatio + egoExit + 0.5 * freeGap, MSCFModel_CalcReason::CURRENT);
+            if !lastLink.is_null() {
+                let futureVSafe = cfModel.stop_speed(me, lastLink.accelV, leaderInfo.1, MSCFModel_CalcReason::FUTURE);
+                lastLink.m().adapt_leave_speed(futureVSafe);
+            }
+            *v = min2(*v, vsafeLeader);
+            *vLinkPass = min2(*vLinkPass, vsafeLeader);
+        }
     }
 
     /// C++: `bool MSVehicle::ignoreRed(const MSLink *, bool) const` [const]
@@ -11722,7 +13068,18 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn ignore_red(&self, link: Ptr<MSLink>, canBrake: bool) -> bool {
-        todo!("port MSVehicle::ignoreRed")
+        let ignoreRedTime = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME, -1.0);
+        if ignoreRedTime < 0.0 {
+            // always drive at yellow when ignoring red
+            return true;
+        } else if link.have_red() {
+            debug_assert!(!link.get_tl_logic().is_null());
+            let redDuration = steps2time(MSNet::get_instance().get_current_time_step() - link.get_last_state_change());
+            // when activating ignoreRed behavior, vehicles will always drive if they cannot brake
+            return !canBrake || ignoreRedTime > redDuration;
+        } else {
+            return false;
+        }
     }
 
     /// C++: `bool MSVehicle::ignoreFoe(const SUMOTrafficObject *) const` [const]
@@ -11746,7 +13103,22 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn ignore_foe(&self, foe: Ptr<SUMOTrafficObject>) -> bool {
-        todo!("port MSVehicle::ignoreFoe")
+        if !self.get_parameter().was_set(VEHPARS_CFMODEL_PARAMS_SET) {
+            return false;
+        }
+        // shortcut: foe is always an MSVehicle here (SUMOTrafficObject::getVehicleType is not ported), the cast reads the vehicle type of the vehicle
+        let foeType = foe.cast::<MSBaseVehicle>().get_vehicle_type().get_id().to_string();
+        for typeID in StringTokenizer::new(&self.get_parameter().get_parameter("carFollowModel.ignoreTypes", "")).get_vector() {
+            if typeID == foeType {
+                return true;
+            }
+        }
+        for id in StringTokenizer::new(&self.get_parameter().get_parameter("carFollowModel.ignoreIDs", "")).get_vector() {
+            if id == foe.get_id() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double MSVehicle::accelThresholdForWaiting() const` [const]
@@ -11756,7 +13128,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn accel_threshold_for_waiting(&self) -> f64 {
-        todo!("port MSVehicle::accelThresholdForWaiting")
+        0.5 * self.get_car_follow_model().get_max_accel()
     }
 
     /// C++: `const MSLane * MSVehicle::getPreviousLane(const MSLane *, int &) const` [const]
@@ -11957,7 +13329,63 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_link_leader(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64, vLinkWait: &mut f64, setRequest: &mut bool, isShadowLink: bool) {
-        todo!("port MSVehicle::checkLinkLeader")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        let linkLeaders = link.get_leader_info(me, seen, Ptr::null(), isShadowLink);
+        for it in linkLeaders.iter() {
+            // the vehicle to enter the junction first has priority
+            let leader: Ptr<MSVehicle> = it.vehAndGap.0;
+            if leader.is_null() {
+                // leader is a pedestrian. Passing 'this' as a dummy.
+                let ignoreProb = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB, 0.0);
+                if ignoreProb > 0.0 && ignoreProb >= self.get_rng().m().rand() {
+                    continue;
+                }
+                self.adapt_to_junction_leader((me, -1.0), seen, lastLink, lane, v, vLinkPass, it.distToCrossing);
+                // if blocked by a pedestrian for too long we must yield our request
+                if *v < SUMO_const_haltingSpeed && self.get_waiting_time(false) > time2steps(JUNCTION_BLOCKAGE_TIME) {
+                    *setRequest = false;
+                }
+            } else if self.is_leader(link, leader, it.vehAndGap.1) || it.in_the_way() {
+                let ignoreProb = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB, 0.0);
+                if ignoreProb > 0.0 && ignoreProb >= self.get_rng().m().rand() {
+                    continue;
+                }
+                if crate::microsim::ms_globals::lateral_resolution() > 0.0
+                    // sibling link (XXX: could also be partial occupator where this check fails)
+                    && std::ptr::eq(leader.get_lane().get_edge(), lane.get_edge())
+                {
+                    // check for sublane obstruction (trivial for sibling link leaders)
+                    let conflictLane = link.get_internal_lane_before();
+                    let mut linkLeadersAhead = MSLeaderInfo::new(conflictLane.get_width(), Ptr::null(), 0.0);
+                    linkLeadersAhead.add_leader(leader, false, 0.0); // assume sibling lane has the same geometry as the leader lane
+                    let latOffset = if isShadowLink { self.get_lane().get_right_side_on_edge() - self.myLaneChangeModel.get_shadow_lane().get_right_side_on_edge() } else { 0.0 };
+                    // leader is neither on lane nor conflictLane (the conflict is only established geometrically)
+                    self.adapt_to_leaders(&linkLeadersAhead, latOffset, seen, lastLink, leader.get_lane(), v, vLinkPass);
+                } else {
+                    self.adapt_to_junction_leader(it.vehAndGap, seen, lastLink, lane, v, vLinkPass, it.distToCrossing);
+                }
+                if !lastLink.is_null() {
+                    // we are not yet on the junction with this linkLeader.
+                    // at least we can drive up to the previous link and stop there
+                    *v = max2(*v, lastLink.myVLinkWait);
+                }
+                // if blocked by a leader from the same or next lane we must yield our request
+                // also, if blocked by a stopped or blocked leader
+                if *v < SUMO_const_haltingSpeed
+                    && (leader.get_lane().get_logical_predecessor_lane() == self.myLane.get_logical_predecessor_lane()
+                        || leader.get_lane().get_logical_predecessor_lane() == self.myLane
+                        || leader.is_stopped()
+                        || leader.get_waiting_time(false) > time2steps(JUNCTION_BLOCKAGE_TIME))
+                {
+                    *setRequest = false;
+                    if !lastLink.is_null() && leader.get_lane().get_logical_predecessor_lane() == self.myLane {
+                        // we are not yet on the junction so must abort that request as well
+                        // (or maybe we are already on the junction and the leader is a partial occupator beyond)
+                        lastLink.m().mySetRequest = false;
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::adaptToLeaders(const MSLeaderInfo &, double, const double, DriveProcessItem *const, const MSLane *const, double &, double &) const` [const, protected]
@@ -12042,7 +13470,45 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_to_leaders(&self, ahead: &MSLeaderInfo, latOffset: f64, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, lane: Ptr<MSLane>, v: &mut f64, vLinkPass: &mut f64) {
-        todo!("port MSVehicle::adaptToLeaders")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        let mut rightmost: i32 = 0;
+        let mut leftmost: i32 = 0;
+        ahead.get_sub_lanes(me, latOffset, &mut rightmost, &mut leftmost);
+        for sublane in rightmost..=leftmost {
+            let pred: Ptr<MSVehicle> = ahead.index_op(sublane);
+            if !pred.is_null() && pred != me {
+                // @todo avoid multiple adaptations to the same leader
+                let predBack = pred.get_back_position_on_lane(lane);
+                let minGap = self.get_vehicle_type().get_min_gap();
+                let mut gap = if lastLink.is_null() { predBack - self.myState.myPos - minGap } else { predBack + seen - lane.get_length() - minGap };
+                let mut oncoming = false;
+                if self.myLaneChangeModel.is_opposite() {
+                    if pred.myLaneChangeModel.is_opposite() || lane == pred.get_lane_change_model_2().get_shadow_lane() {
+                        // ego might and leader are driving against lane
+                        gap = if lastLink.is_null() { self.myState.myPos - predBack - minGap } else { predBack + seen - lane.get_length() - minGap };
+                    } else {
+                        // ego and leader are driving in the same direction as lane (shadowlane for ego)
+                        gap = if lastLink.is_null() { predBack - (self.myLane.get_length() - self.myState.myPos) - minGap } else { predBack + seen - lane.get_length() - minGap };
+                    }
+                } else if pred.myLaneChangeModel.is_opposite() && pred.get_lane_change_model_2().get_shadow_lane() != lane {
+                    // must react to stopped / dangerous oncoming vehicles
+                    gap += -pred.get_vehicle_type().get_length() + minGap - max2(minGap, pred.get_vehicle_type().get_min_gap());
+                    // try to avoid collision in the next second
+                    let predMaxDist = pred.get_speed() + pred.get_car_follow_model().get_max_accel();
+                    if gap < predMaxDist + self.get_speed() || pred.get_lane() == lane.get_bidi_lane() {
+                        gap -= predMaxDist;
+                    }
+                } else if pred.get_lane() == lane.get_bidi_lane() {
+                    gap -= pred.get_vehicle_type().get_length_with_gap();
+                    oncoming = true;
+                }
+                if oncoming && gap >= 0.0 {
+                    self.adapt_to_oncoming_leader((pred, gap), lastLink, v, vLinkPass);
+                } else {
+                    self.adapt_to_leader((pred, gap), seen, lastLink, v, vLinkPass);
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::adaptToLeaderDistance(const MSLeaderDistanceInfo &, double, double, DriveProcessItem *const, double &, double &) const` [const, protected]
@@ -12078,7 +13544,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_to_leader_distance(&self, ahead: &MSLeaderDistanceInfo, latOffset: f64, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64) {
-        todo!("port MSVehicle::adaptToLeaderDistance")
+        let me: Ptr<MSVehicle> = Ptr::new(self);
+        let mut rightmost: i32 = 0;
+        let mut leftmost: i32 = 0;
+        ahead.get_sub_lanes(me, latOffset, &mut rightmost, &mut leftmost);
+        for sublane in rightmost..=leftmost {
+            let predDist: CLeaderDist = ahead.index_op(sublane);
+            let pred: Ptr<MSVehicle> = predDist.0;
+            if !pred.is_null() && pred != me {
+                self.adapt_to_leader(predDist, seen, lastLink, v, vLinkPass);
+            }
+        }
     }
 
     /// C++: `void MSVehicle::checkLinkLeaderCurrentAndParallel(const MSLink *, const MSLane *, double, DriveProcessItem *const, double &, double &, double &, bool &) const` [const, protected]
@@ -12100,7 +13576,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_link_leader_current_and_parallel(&self, link: Ptr<MSLink>, lane: Ptr<MSLane>, seen: f64, lastLink: Ptr<MSVehicle_DriveProcessItem>, v: &mut f64, vLinkPass: &mut f64, vLinkWait: &mut f64, setRequest: &mut bool) {
-        todo!("port MSVehicle::checkLinkLeaderCurrentAndParallel")
+        if crate::microsim::ms_globals::using_internal_lanes() && (self.myInfluencer.is_null() || self.myInfluencer.get_respect_junction_leader_priority()) {
+            // we want to pass the link but need to check for foes on internal lanes
+            self.check_link_leader(link, lane, seen, lastLink, v, vLinkPass, vLinkWait, setRequest, false);
+            if !self.myLaneChangeModel.get_shadow_lane().is_null() {
+                let parallelLink = link.get_parallel_link(self.myLaneChangeModel.get_shadow_direction());
+                if !parallelLink.is_null() {
+                    self.check_link_leader(parallelLink, lane, seen, lastLink, v, vLinkPass, vLinkWait, setRequest, true);
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::updateState(double, bool)` [protected]
@@ -12391,7 +13876,80 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane_3(&self, lane: Ptr<MSLane>, calledByGetPosition: bool) -> f64 {
-        todo!("port MSVehicle::getBackPositionOnLane")
+        let vlen = self.get_vehicle_type().get_length();
+        let sign = if calledByGetPosition { -1.0 } else { 1.0 };
+        if lane == self.myLane || lane == self.myLaneChangeModel.get_shadow_lane() || lane == self.myLaneChangeModel.get_target_lane() {
+            if self.myLaneChangeModel.is_opposite() {
+                if lane == self.myLaneChangeModel.get_shadow_lane() {
+                    return lane.get_length() - self.myState.myPos - vlen;
+                } else {
+                    return self.myState.myPos + sign * vlen;
+                }
+            } else if !std::ptr::eq(lane.get_edge(), self.myLane.get_edge()) {
+                return lane.get_length() - self.myState.myPos + sign * vlen;
+            } else {
+                // account for parallel lanes of different lengths in the most conservative manner (i.e. while turning)
+                return self.myState.myPos - vlen + min2(0.0, lane.get_length() - self.myLane.get_length());
+            }
+        } else if lane == self.myLane.get_bidi_lane() {
+            return lane.get_length() - self.myState.myPos + vlen * sign;
+        } else if !self.myFurtherLanes.is_empty() && lane == *self.myFurtherLanes.last().unwrap() {
+            return self.myState.myBackPos;
+        } else if (!self.myLaneChangeModel.get_shadow_further_lanes().is_empty() && lane == *self.myLaneChangeModel.get_shadow_further_lanes().last().unwrap())
+            || (!self.myLaneChangeModel.get_further_target_lanes().is_empty() && lane == *self.myLaneChangeModel.get_further_target_lanes().last().unwrap())
+        {
+            assert!(!self.myFurtherLanes.is_empty());
+            let lastFurther = *self.myFurtherLanes.last().unwrap();
+            if lane.get_length() == lastFurther.get_length() {
+                return self.myState.myBackPos;
+            } else {
+                // interpolate
+                return self.myState.myBackPos / lastFurther.get_length() * lane.get_length();
+            }
+        } else {
+            let bonus = if calledByGetPosition { 2.0 * vlen } else { 0.0 };
+            // the three loops below walk the further lanes of the vehicle, its shadow and its target lanes
+            let furtherLanes: Vec<Ptr<MSLane>> = self.get_further_lanes().clone();
+            let shadowFurther: Vec<Ptr<MSLane>> = self.myLaneChangeModel.get_shadow_further_lanes().clone();
+            let furtherTargetLanes: Vec<Ptr<MSLane>> = self.myLaneChangeModel.get_further_target_lanes().clone();
+            let mut leftLength = vlen - self.myState.myPos;
+            let mut i = 0usize;
+            while leftLength > 0.0 && i < furtherLanes.len() {
+                leftLength -= furtherLanes[i].get_length();
+                if furtherLanes[i] == lane {
+                    return -leftLength;
+                } else if furtherLanes[i] == lane.get_bidi_lane() {
+                    return lane.get_length() + leftLength - bonus;
+                }
+                i += 1;
+            }
+            leftLength = vlen - self.myState.myPos;
+            i = 0;
+            while leftLength > 0.0 && i < shadowFurther.len() {
+                leftLength -= shadowFurther[i].get_length();
+                if shadowFurther[i] == lane {
+                    return -leftLength;
+                } else if shadowFurther[i] == lane.get_bidi_lane() {
+                    return lane.get_length() + leftLength - bonus;
+                }
+                i += 1;
+            }
+            leftLength = vlen - self.myState.myPos;
+            let mut j = 0usize;
+            while leftLength > 0.0 && j < furtherTargetLanes.len() {
+                leftLength -= furtherLanes[j].get_length();
+                if furtherTargetLanes[j] == lane {
+                    return -leftLength;
+                } else if furtherTargetLanes[j] == lane.get_bidi_lane() {
+                    return lane.get_length() + leftLength - bonus;
+                }
+                j += 1;
+            }
+            let laneName = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
+            utils::common::msg_handler::write_warning(&format!("Request backPos of vehicle '{}' for invalid lane '{}' time={}.", self.get_id(), laneName, utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+            // shortcut: SOFT_ASSERT(false) is not ported, it is a debug-only check
+            self.myState.myBackPos
+        }
     }
 
     /// C++: `bool MSVehicle::hasArrivedInternal(bool) const` [const, protected]
@@ -12405,7 +13963,10 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_arrived_internal(&self, oppositeTransformed: bool) -> bool {
-        todo!("port MSVehicle::hasArrivedInternal")
+        return ((self.myCurrEdge == self.myRoute.size() as usize - 1 || (self.myParameter.arrivalEdge >= 0 && self.get_route_position() >= self.myParameter.arrivalEdge))
+            && (self.myStops.is_empty() || self.myStops.front().unwrap().edge != self.myCurrEdge || self.myStops.front().unwrap().get_speed() > 0.0)
+            && (if self.myLaneChangeModel.is_opposite() && !oppositeTransformed { self.myLane.get_length() - self.myState.myPos } else { self.myState.myPos }) > min2(self.myLane.get_length(), self.myArrivalPos) - POSITION_EPS
+            && !self.is_remote_controlled());
     }
 
     /// C++: `SUMOTime MSVehicle::getArrivalTime(SUMOTime, double, double, double) const` [const, protected]
@@ -12428,7 +13989,20 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_time(&self, t: SUMOTime, seen: f64, v: f64, arrivalSpeed: f64) -> SUMOTime {
-        todo!("port MSVehicle::getArrivalTime")
+        let cfModel = self.get_car_follow_model();
+        let mut arrivalTime: SUMOTime;
+        if crate::microsim::ms_globals::semi_implicit_euler_update() {
+            // @note intuitively it would make sense to compare arrivalSpeed with getSpeed() instead of v
+            // however, due to the current position update rule (ticket #860) the vehicle moves with v in this step
+            // subtract DELTA_T because t is the time at the end of this step and the movement is not carried out yet
+            arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, v, arrivalSpeed);
+        } else {
+            arrivalTime = t - delta_t() + cfModel.get_minimal_arrival_time(seen, self.myState.mySpeed, arrivalSpeed);
+        }
+        if self.is_stopped() {
+            arrivalTime += std::cmp::max(0, self.myStops.front().unwrap().duration);
+        }
+        arrivalTime
     }
 
     /// C++: `bool MSVehicle::isOppositeLane(const MSLane *) const` [const, protected]
@@ -12562,7 +14136,23 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn reset_approach_on_reroute(&mut self) {
-        todo!("port MSVehicle::resetApproachOnReroute")
+        let mut diverged = false;
+        let mut ri: i32 = self.get_route_position();
+        for dpi in self.myLFLinkLanes.iter() {
+            if !dpi.myLink.is_null() {
+                if !diverged {
+                    let next: Ptr<MSEdge> = self.myRoute.index_op(ri + 1);
+                    if Ptr::new(dpi.myLink.get_lane().get_edge()) != next {
+                        diverged = true;
+                    } else if dpi.myLink.get_via_lane().is_null() {
+                        ri += 1;
+                    }
+                }
+                if diverged {
+                    dpi.myLink.m().remove_approaching(Ptr::new(self).cast::<SUMOVehicle>());
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::MSVehicle()` [private]
