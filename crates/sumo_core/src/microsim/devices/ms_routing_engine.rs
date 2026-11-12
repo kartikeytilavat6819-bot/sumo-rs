@@ -194,7 +194,7 @@ impl MSRoutingEngine {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_cached_route(key: &(Ptr<MSEdge>, Ptr<MSEdge>)) -> ConstMSRoutePtr {
+    pub fn get_cached_route(key: &(Ptr<MSEdge>, Ptr<MSEdge>)) -> Option<ConstMSRoutePtr> {
         todo!("port MSRoutingEngine::getCachedRoute")
     }
 

@@ -115,7 +115,7 @@ pub struct MSDevice_StationFinder {
     /// The distance in meters to the original stop replaced by the charging stop (models charging close to the activity location) - used as well for opportunistic charging
     pub myDistanceToOriginalStop: f64,
     /// The type of charging permitted by the battery (charging, bidirectional, battery exchange)
-    pub myChargeType: ChargeType,
+    pub myChargeType: MSDevice_StationFinder_ChargeType,
     /// The chosen charging strategy
     pub myChargingStrategy: MSDevice_StationFinder_ChargingStrategy,
     /// What to do when the state of charge gets very low
@@ -181,7 +181,7 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        insert_default_assignment_options("stationfinder", "Battery", oc, false);
+        MSDevice::insert_default_assignment_options("stationfinder", "Battery", oc, false);
         oc.do_register("device.stationfinder.rescueTime", SumoOption::string_typed("1800", "TIME"));
         oc.add_description("device.stationfinder.rescueTime", "Battery", "Time to wait for a rescue vehicle on the road side when the battery is empty");
         oc.do_register("device.stationfinder.rescueAction", SumoOption::string_with("remove"));
@@ -229,7 +229,8 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        let equip = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "stationfinder", v, false, false));
+        // shortcut: equippedByDefaultAssignmentOptions needs the holder parameter and vtype parameter (SUMOVehicle exposes no Parameterised yet), so it cannot be evaluated; upgrade when SUMOVehicle implements Parameterised
+        let equip: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions(oc, \"stationfinder\", v, ...) needs holder parameters that SUMOVehicle does not expose yet");
         if equip {
             into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_StationFinder::new(v))) as *mut MSVehicleDevice));
         }
@@ -336,7 +337,7 @@ impl MSDevice_StationFinder {
             myOpportunitySoC: 0.,
             myReplacePlannedStop: 0.,
             myDistanceToOriginalStop: 0.,
-            myChargeType: ChargeType::CHARGETYPE_CHARGING,
+            myChargeType: MSDevice_StationFinder_ChargeType::CHARGETYPE_CHARGING,
             myChargingStrategy: MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE,
             myRescueAction: MSDevice_StationFinder_RescueAction::RESCUEACTION_NONE,
             mySearchState: MSDevice_StationFinder_SearchState::SEARCHSTATE_NONE,
@@ -369,7 +370,7 @@ impl MSDevice_StationFinder {
         dev.myRadius = holder.get_time_param("device.stationfinder.radius", false, SUMOTIME_MIN);
         dev.myMaxEuclideanDistance = holder.get_float_param("device.stationfinder.maxEuclideanDistance", false, INVALID_DOUBLE, true);
         dev.myRepeatInterval = holder.get_time_param("device.stationfinder.repeat", false, SUMOTIME_MIN);
-        dev.myChargeType = ChargeType::CHARGETYPE_CHARGING;
+        dev.myChargeType = MSDevice_StationFinder_ChargeType::CHARGETYPE_CHARGING;
         dev.myWaitForCharge = holder.get_time_param("device.stationfinder.waitForCharge", false, SUMOTIME_MIN);
         dev.myMinOpportunisticTime = holder.get_time_param("device.stationfinder.minOpportunityDuration", false, SUMOTIME_MIN);
         dev.myTargetSoC = holder.get_float_param("device.stationfinder.saturatedChargeLevel", false, INVALID_DOUBLE, true).min(1.).max(0.);
@@ -526,7 +527,8 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        let battery = self.myBattery.m();
+        let batteryPtr = self.myBattery;
+        let battery = batteryPtr.m();
         if battery.get_energy_charged() > 0. && !self.myChargingStation.is_null() {
             self.myArrivalAtChargingStation = -1;
             self.myChargingStation = Ptr::default();
@@ -640,7 +642,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
         out.open_tag_id(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, &self.base.get_id());
+        out.write_attr(SUMO_ATTR_ID, &self.base.base2.base.get_id());
         let mut internals: Vec<String> = Vec::new();
         internals.push(format!("{}", self.myLastChargeCheck));
         internals.push(to_string(&self.myUpdateSoC));
@@ -653,7 +655,7 @@ impl MSDevice_StationFinder {
         internals.push(to_string(&self.myReserveFactor));
         internals.push(format!("{}", self.mySearchState as i64));
         internals.push(format!("{}", self.myArrivalAtChargingStation));
-        internals.push(if self.myChargingStation.is_null() { "NULL".to_string() } else { self.myChargingStation.get_id() });
+        internals.push(if self.myChargingStation.is_null() { "NULL".to_string() } else { self.myChargingStation.get_id().to_string() });
         internals.push(format!("{}", self.myChargeLimits.len()));
         for (t, limit) in &self.myChargeLimits {
             internals.push(format!("{}", t));
@@ -828,7 +830,7 @@ impl MSDevice_StationFinder {
     pub fn get_parameter(&self, key: &str) -> String {
         if key == "chargingStation" {
             // eventually abstract with enum
-            if self.myChargingStation.is_null() { String::new() } else { self.myChargingStation.get_id() }
+            if self.myChargingStation.is_null() { String::new() } else { self.myChargingStation.get_id().to_string() }
         } else if key == "batteryNeed" {
             to_string(&(self.estimate_consumption(Ptr::default(), true, 0.) * self.myReserveFactor))
         } else if key == "needToChargeLevel" {
@@ -845,7 +847,7 @@ impl MSDevice_StationFinder {
             to_string(&self.myReserveFactor)
         } else {
             // C++ throws InvalidArgument
-            panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
+            panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
         }
     }
 
@@ -880,7 +882,7 @@ impl MSDevice_StationFinder {
         let doubleValue: f64 = match value.parse::<f64>() {
             Ok(v) => v,
             // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.deviceName())),
+            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
         };
         if key == "needToChargeLevel" {
             self.mySearchSoC = doubleValue.min(1.).max(0.);
@@ -895,7 +897,7 @@ impl MSDevice_StationFinder {
         } else if key == "reserveFactor" {
             self.myReserveFactor = doubleValue.max(1.);
         } else {
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
+            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
         }
     }
 
@@ -921,7 +923,7 @@ impl MSDevice_StationFinder {
         // estimated waiting time and charging time
         let cs = as_charging_station(alternative);
         let parkingCapacity = if !cs.get_parking_area().is_null() {
-            cs.get_parking_area().get_capacity()
+            cs.get_parking_area().get_capacity() as f64
         } else {
             (cs.get_end_lane_position() - cs.get_begin_lane_position()) / veh.get_vehicle_type().get_parameter().length
         };
@@ -983,7 +985,7 @@ impl MSDevice_StationFinder {
     pub fn get_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
         let cs = as_charging_station(stoppingPlace);
         if !cs.get_parking_area().is_null() {
-            return cs.get_parking_area().get_occupancy();
+            return cs.get_parking_area().get_occupancy() as f64;
         }
         (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
@@ -1002,7 +1004,7 @@ impl MSDevice_StationFinder {
     pub fn get_last_step_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
         let cs = as_charging_station(stoppingPlace);
         if !cs.get_parking_area().is_null() {
-            return cs.get_parking_area().get_last_step_occupancy();
+            return cs.get_parking_area().get_last_step_occupancy() as f64;
         }
         (cs.get_end_lane_position() - cs.get_last_free_pos(self.myHolder.m(), 0.)) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
@@ -1021,7 +1023,7 @@ impl MSDevice_StationFinder {
     pub fn get_stopping_place_capacity(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> f64 {
         let cs = as_charging_station(stoppingPlace);
         if !cs.get_parking_area().is_null() {
-            return cs.get_parking_area().get_capacity();
+            return cs.get_parking_area().get_capacity() as f64;
         }
         (cs.get_end_lane_position() - cs.get_begin_lane_position()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
     }
@@ -1160,19 +1162,20 @@ impl MSDevice_StationFinder {
     //     return minStation;
     // }
     #[allow(unused_variables)]
-    pub fn find_charging_station(&mut self, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, expectedConsumption: f64, scores: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, constrainTT: bool, skipVisited: bool, skipOccupied: bool, visible: bool) -> Ptr<MSChargingStation> {
+    pub fn find_charging_station(&mut self, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, expectedConsumption: f64, scores: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, constrainTT: bool, mut skipVisited: bool, skipOccupied: bool, visible: bool) -> Ptr<MSChargingStation> {
         let mut minStation: Ptr<MSChargingStation> = Ptr::default();
         let mut candidates: Vec<MSStoppingPlaceRerouter_StoppingPlaceVisible> = Vec::new();
-        let chargingMemory = self.myVeh.m().get_charging_memory();
+        let myVehPtr = self.myVeh;
+        let chargingMemory = myVehPtr.m().get_charging_memory();
         if chargingMemory.is_null() {
             skipVisited = false;
         }
-        let stoppingPlaceMemory = time2steps(self.base2.get_weight(self.myHolder.m(), "memory".to_string(), 600., true));
+        let holderPtr = self.myHolder;
+        let stoppingPlaceMemory = time2steps(self.base2.get_weight(holderPtr.m(), "memory".to_string(), 600., true));
         let now = MSNet::get_instance().m().get_current_time_step();
                 // shortcut: MSNet::get_stopping_places returns an unmapped container, so no candidates are collected until it is ported
         let stopping_places: Vec<Ptr<MSStoppingPlace>> = Vec::new();
         for cs in stopping_places.iter() {
-            let cs = as_charging_station(*cs);
             let cs = as_charging_station(*cs);
             if cs.get_efficency() < utils::geom::NUMERICAL_EPS || cs.get_charging_power(false) < utils::geom::NUMERICAL_EPS {
                 continue;
@@ -1187,25 +1190,25 @@ impl MSDevice_StationFinder {
             if skipOccupied && self.free_space_at_charging_station(cs) < 1. {
                 continue;
             }
-            if skipVisited && chargingMemory.saw_blocked_stopping_place(cs, false) > 0 && now - chargingMemory.saw_blocked_stopping_place(cs, false) < stoppingPlaceMemory {
+            if skipVisited && chargingMemory.saw_blocked_stopping_place(Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace), false) > 0 && now - chargingMemory.saw_blocked_stopping_place(Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace), false) < stoppingPlaceMemory {
                 // skip recently visited
                 continue;
             }
-            if constrainTT && self.myMaxEuclideanDistance > 0. && cs.get_lane().geometry_position_at_offset(cs.get_begin_lane_position()).distance_to_2d(self.myHolder.m().get_position()) > self.myMaxEuclideanDistance {
+            if constrainTT && self.myMaxEuclideanDistance > 0. && cs.get_lane().geometry_position_at_offset(cs.get_begin_lane_position(), 0.).distance_to2d(&self.myHolder.m().get_position(0.)) > self.myMaxEuclideanDistance {
                 // skip probably too distant charging stations
                 continue;
             }
-            if visible && self.myHolder.m().get_edge() != cs.get_lane().get_edge() {
+            if visible && self.myHolder.m().get_edge() != Ptr::from_mut(cs.get_lane().get_edge()) {
                 continue;
             }
-            candidates.push(MSStoppingPlaceRerouter_StoppingPlaceVisible { place: Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace), blocked: false });
+            candidates.push((Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace), false));
         }
         scores.insert("expectedConsumption".to_string(), expectedConsumption);
         let probs: Vec<f64> = vec![1.; candidates.len()];
         let mut newDestination = false;
         let mut newRoute: ConstMSEdgeVector = Default::default();
         self.base2.myCheckValidity = constrainTT;
-        let bestCandidate = self.base2.reroute_stopping_place(Ptr::default(), &candidates, &probs, self.myHolder.m(), &mut newDestination, &mut newRoute, scores);
+        let bestCandidate = self.base2.reroute_stopping_place(Ptr::default(), &candidates, &probs, holderPtr.m(), &mut newDestination, &mut newRoute, scores, &Default::default(), 0, true);
         self.base2.myCheckValidity = true;
         minStation = as_charging_station(bestCandidate);
         minStation
@@ -1384,7 +1387,7 @@ impl MSDevice_StationFinder {
         if self.myHolder.m().has_stops() && capacityDelta > 0. {
             let now = MSNet::get_instance().m().get_current_time_step();
             let nextStop = self.myHolder.m().get_next_stop();
-            if self.myHolder.m().is_stopped() || !self.myHolder.m().get_next_stop_parameter().chargingStation.is_empty() || self.myHolder.m().get_current_route_edge() != self.myHolder.m().get_next_stop_parameter().edge || nextStop.get_min_duration(now) < self.myMinOpportunisticTime {
+            if self.myHolder.m().is_stopped() || !nextStop.chargingStation.is_null() || self.myHolder.m().get_current_route_edge() != &nextStop.edge || nextStop.get_min_duration(now) < self.myMinOpportunisticTime {
                 return false;
             }
             // find charging station on same edge
@@ -1554,7 +1557,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn free_space_at_charging_station(&self, cs: Ptr<MSChargingStation>) -> f64 {
         if !cs.get_parking_area().is_null() {
-            cs.get_parking_area().get_capacity() - cs.get_parking_area().get_occupancy()
+            (cs.get_parking_area().get_capacity() - cs.get_parking_area().get_occupancy()) as f64
         } else {
             (cs.get_last_free_pos(self.myHolder.m(), 0.) - cs.get_begin_lane_position()) / (self.myHolder.m().get_length() + self.myHolder.m().get_vehicle_type().get_min_gap())
         }

@@ -125,7 +125,7 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        insert_default_assignment_options("rerouting", "Routing", oc, false);
+        MSDevice::insert_default_assignment_options("rerouting", "Routing", oc, false);
 
         oc.do_register("device.rerouting.period", SumoOption::string_typed("0", "TIME"));
         oc.add_synonyme("device.rerouting.period", "device.routing.period", true);
@@ -274,7 +274,8 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        let equip = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "rerouting", v, false, false));
+        // shortcut: equippedByDefaultAssignmentOptions needs the holder parameter and vtype parameter (SUMOVehicle exposes no Parameterised yet), so it cannot be evaluated; upgrade when SUMOVehicle implements Parameterised
+        let equip: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions(oc, \"rerouting\", v, ...) needs holder parameters that SUMOVehicle does not expose yet");
         if v.get_parameter().was_set(VEHPARS_FORCE_REROUTE) || equip {
             // route computation is enabled
             // for implicitly equipped vehicles (trips, flows), option probability
@@ -399,7 +400,7 @@ impl MSDevice_Routing {
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
         out.open_tag_id(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, &self.base.get_id());
+        out.write_attr(SUMO_ATTR_ID, &self.base.base2.base.get_id());
         let internals = vec![format!("{}", self.myPeriod), format!("{}", self.myLastRouting)];
         out.write_attr(SUMO_ATTR_STATE, &internals.join(" "));
         out.close_tag("");
@@ -495,7 +496,8 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, currentTime: SUMOTime, onInit: bool) {
-        let holder = self.myHolder.m();
+        let holderPtr = self.myHolder;
+        let holder = holderPtr.m();
         MSRoutingEngine::init_edge_weights(holder.get_v_class(), -1, -1);
         //check whether the weights did change since the last reroute
         if self.myLastRouting > MSRoutingEngine::get_last_adaptation() || !self.myActive {
@@ -554,17 +556,17 @@ impl MSDevice_Routing {
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
         if let Some(edgeID) = key.strip_prefix("edge:") {
-            let edge = MSEdge::dictionary(edgeID);
+            let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
                 // C++ throws InvalidArgument
-                panic!("{}", format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.deviceName()));
+                panic!("{}", format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.device_name()));
             }
             return to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.));
         } else if key == "period" {
             return time2string(self.myPeriod);
         }
         // C++ throws InvalidArgument
-        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
+        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
     }
 
     /// C++: `void MSDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -597,12 +599,12 @@ impl MSDevice_Routing {
         let doubleValue: f64 = match value.parse::<f64>() {
             Ok(v) => v,
             // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.deviceName())),
+            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
         };
         if let Some(edgeID) = key.strip_prefix("edge:") {
-            let edge = MSEdge::dictionary(edgeID);
+            let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
-                panic!("{}", format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.deviceName()));
+                panic!("{}", format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.device_name()));
             }
             MSRoutingEngine::set_edge_travel_time(edge, doubleValue);
         } else if key == "period" {
@@ -611,7 +613,7 @@ impl MSDevice_Routing {
             let now = MSNet::get_instance().m().get_current_time_step();
             self.rebuild_reroute_command(now + self.myPeriod);
         } else {
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.deviceName()));
+            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
         }
     }
 
@@ -737,12 +739,13 @@ impl MSDevice_Routing {
             // the event will deschedule and destroy itself so it does not need to be stored
             self.myRerouteCommand = Ptr::default();
         }
-        let holder = self.myHolder.m();
+        let holderPtr = self.myHolder;
+        let holder = holderPtr.m();
         let source = holder.get_route().get_first_edge();
         let dest = holder.get_route().get_last_edge();
         if source.is_taz_connector() && dest.is_taz_connector() {
             let cached = MSRoutingEngine::get_cached_route(&(source, dest));
-            if !cached.is_null() && cached.size() > 2 {
+            if let Some(cached) = cached.filter(|c| c.size() > 2) {
                 holder.replace_route(cached, "device.rerouting", true, 0, true, true, Ptr::default());
                 return self.myPreInsertionPeriod;
             }
