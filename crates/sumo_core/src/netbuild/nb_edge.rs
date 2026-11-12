@@ -741,7 +741,59 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, spread: LaneSpreadFunction, streetName: &str) -> Self {
-        todo!("port NBEdge::NBEdge")
+        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
+        let mut e = NBEdge::new_base(id, from, to, type_, speed, friction, priority, PositionVector::new(), spread, endOffset, width, streetName);
+        e.init(nolanes, false, "");
+        e
+    }
+
+    /// Member-initialiser list shared by the constructors (C++ `Named(...)`, `myStep(...)`, ... before the body).
+    fn new_base(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, priority: i32, geom: PositionVector, spread: LaneSpreadFunction, endOffset: f64, laneWidth: f64, streetName: &str) -> NBEdge {
+        NBEdge {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            base2: Parameterised::new(),
+            base3: NBRouterEdge {},
+            myStep: NBEdge_EdgeBuildingStep::INIT,
+            myType: utils::common::string_utils::convert_umlaute(&type_),
+            myTurnSignTarget: String::new(),
+            myLength: 0.0,
+            myFrom: from,
+            myTo: to,
+            myStartAngle: 0.0,
+            myEndAngle: 0.0,
+            myTotalAngle: 0.0,
+            myPriority: priority,
+            mySpeed: speed,
+            myFriction: friction,
+            myDistance: 0.0,
+            myConnections: Vec::new(),
+            myConnectionsToDelete: Vec::new(),
+            myTurnDestination: Ptr::default(),
+            myPossibleTurnDestination: Ptr::default(),
+            myFromJunctionPriority: -1,
+            myToJunctionPriority: -1,
+            myGeom: geom,
+            myLaneSpreadFunction: spread,
+            myEndOffset: endOffset,
+            myEdgeStopOffset: StopOffset::default(),
+            myLaneWidth: laneWidth,
+            myLanes: Vec::new(),
+            myLoadedLength: UNSPECIFIED_LOADED_LENGTH,
+            myAmInTLS: false,
+            myAmMacroscopicConnector: false,
+            myStreetName: streetName.to_string(),
+            mySigns: Vec::new(),
+            mySignalPosition: Position::INVALID,
+            mySignalNode: Ptr::default(),
+            myFromBorder: PositionVector::new(),
+            myToBorder: PositionVector::new(),
+            myIsOffRamp: false,
+            myIsBidi: false,
+            myRoutingType: String::new(),
+            myIndex: -1,
+            mySuccessors: Vec::new(),
+            myViaSuccessors: Vec::new(),
+        }
     }
 
     /// C++: `void NBEdge::NBEdge(const std::string &, NBNode *, NBNode *, std::string, double, double, int, int, double, double, PositionVector, LaneSpreadFunction, const std::string &, const std::string &, bool)`
@@ -778,7 +830,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, geom: PositionVector, spread: LaneSpreadFunction, streetName: &str, origID: &str, tryIgnoreNodePositions: bool) -> Self {
-        todo!("port NBEdge::NBEdge")
+        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
+        let mut e = NBEdge::new_base(id, from, to, type_, speed, friction, priority, geom, spread, endOffset, width, streetName);
+        e.init(nolanes, tryIgnoreNodePositions, origID);
+        e
     }
 
     /// C++: `void NBEdge::NBEdge(const std::string &, NBNode *, NBNode *, const NBEdge *, const PositionVector &, int)`
@@ -830,7 +885,34 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, tpl: Ptr<NBEdge>, geom: &PositionVector, numLanes: i32) -> Self {
-        todo!("port NBEdge::NBEdge")
+        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
+        let mut e = NBEdge::new_base(id, from, to, tpl.get_type_id().to_string(), tpl.get_speed(), tpl.get_friction(), tpl.get_priority(), geom.clone(), tpl.get_lane_spread_function(), tpl.get_end_offset(), tpl.get_lane_width(), tpl.get_street_name());
+        if to == tpl.myTo {
+            e.mySignalPosition = tpl.mySignalPosition;
+            e.mySignalNode = tpl.mySignalNode;
+        }
+        e.myIsBidi = tpl.myIsBidi;
+        let n = if numLanes > 0 { numLanes } else { tpl.get_num_lanes() };
+        let ignore = e.myGeom.len() > 0;
+        e.init(n, ignore, "");
+        for i in 0..e.get_num_lanes() {
+            let tplIndex = std::cmp::min(i, tpl.get_num_lanes() - 1);
+            e.set_speed(i, tpl.get_lane_speed(tplIndex));
+            e.set_friction(i, tpl.get_lane_friction(tplIndex));
+            e.set_permissions(tpl.get_permissions(tplIndex), i);
+            e.set_lane_width(i, tpl.myLanes[tplIndex as usize].width);
+            e.set_lane_type(i, &tpl.myLanes[tplIndex as usize].type_);
+            e.myLanes[i as usize].base.update_parameters(tpl.myLanes[tplIndex as usize].base.get_parameters_map());
+            if to == tpl.myTo {
+                e.set_end_offset(i, tpl.myLanes[tplIndex as usize].endOffset);
+                e.set_edge_stop_offset(i, &tpl.myLanes[tplIndex as usize].laneStopOffset, false);
+            }
+        }
+        if tpl.myLoadedLength > 0.0 && to == tpl.get_from_node() && from == tpl.get_to_node() && *geom == tpl.get_geometry().reverse() {
+            e.myLoadedLength = tpl.myLoadedLength;
+        }
+        e.base2.update_parameters(tpl.base2.get_parameters_map());
+        e
     }
 
     /// C++: `void NBEdge::~NBEdge() noexcept` [virtual]
@@ -1278,7 +1360,27 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_final_length(&self) -> f64 {
-        todo!("port NBEdge::getFinalLength")
+        let mut result = self.get_loaded_length();
+        if utils::options::options_cont::get_bool("no-internal-links") && !self.has_loaded_length() {
+            // use length to junction center even if a modified geometry was given
+            let mut geom = self.cut_at_intersection(&self.myGeom);
+            let to_center = self.get_to_node().get_center();
+            geom.push_back_no_double_pos(&to_center);
+            let from_center = self.get_from_node().get_center();
+            geom.push_front_no_double_pos(&from_center);
+            result = geom.length();
+        }
+        let mut avgEndOffset = 0.0;
+        for lane in &self.myLanes {
+            avgEndOffset += lane.endOffset;
+        }
+        if self.is_bidi_rail(false) {
+            avgEndOffset += self.myPossibleTurnDestination.get_end_offset();
+        }
+        avgEndOffset /= self.myLanes.len() as f64;
+        // MAX2(a, b) as in C++: a > b ? a : b
+        let v = result - avgEndOffset;
+        if v > utils::geom::POSITION_EPS { v } else { utils::geom::POSITION_EPS }
     }
 
     /// C++: `bool NBEdge::hasLoadedLength() const` [const]
@@ -1369,7 +1471,18 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_lane_width(&self, node: &NBNode, connection: &NBEdge_Connection, successor: &NBEdge_Lane, isVia: bool) -> f64 {
-        todo!("port NBEdge::getInternalLaneWidth")
+        if !isVia && node.is_constant_width_transition() && self.get_num_lanes() > connection.toEdge.get_num_lanes() {
+            return self.get_lane_width_2(connection.fromLane);
+        }
+
+        if utils::common::sumo_vehicle_class::is_bikepath(self.get_permissions(connection.fromLane))
+            && (self.get_lane_width_2(connection.fromLane) < successor.width || successor.width == UNSPECIFIED_WIDTH)
+        {
+            // getLaneWidth(connection.fromLane) never returns -1 (UNSPECIFIED_WIDTH)
+            self.myLanes[connection.fromLane as usize].width
+        } else {
+            successor.width
+        }
     }
 
     /// C++: `double NBEdge::getTotalWidth() const` [const]
@@ -1384,7 +1497,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_total_width(&self) -> f64 {
-        todo!("port NBEdge::getTotalWidth")
+        let mut result = 0.0;
+        for i in 0..self.myLanes.len() as i32 {
+            result += self.get_lane_width_2(i);
+        }
+        result
     }
 
     /// C++: `const std::string & NBEdge::getStreetName() const` [const]
@@ -1394,7 +1511,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_street_name(&self) -> &str {
-        todo!("port NBEdge::getStreetName")
+        &self.myStreetName
     }
 
     /// C++: `void NBEdge::setStreetName(const std::string &)`
@@ -1404,7 +1521,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_street_name(&mut self, name: &str) {
-        todo!("port NBEdge::setStreetName")
+        self.myStreetName = name.to_string();
     }
 
     /// C++: `double NBEdge::getDistance() const` [const]
@@ -1414,7 +1531,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        todo!("port NBEdge::getDistance")
+        self.myDistance
     }
 
     /// C++: `double NBEdge::getDistancAt(double) const` [const]
@@ -1426,7 +1543,8 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_distanc_at(&self, pos: f64) -> f64 {
-        todo!("port NBEdge::getDistancAt")
+        // negative values of myDistances indicate descending kilometrage
+        (self.myDistance + pos).abs()
     }
 
     /// C++: `double NBEdge::getEndOffset() const` [const]
@@ -1436,7 +1554,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_offset(&self) -> f64 {
-        todo!("port NBEdge::getEndOffset")
+        self.myEndOffset
     }
 
     /// C++: `double NBEdge::getEndOffset(int) const` [const]
@@ -5930,7 +6048,81 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, noLanes: i32, tryIgnoreNodePositions: bool, origID: &str) {
-        todo!("port NBEdge::init")
+        if noLanes == 0 {
+            panic!("{}", ProcessError::new(utils::tlf!("Edge '%' needs at least one lane.", self.get_id())));
+        }
+        if self.myFrom.is_null() || self.myTo.is_null() {
+            panic!("{}", ProcessError::new(utils::tlf!("At least one of edge's '%' nodes is not known.", self.get_id())));
+        }
+        if !utils::xml::sumo_xml_definitions::is_valid_net_id(self.get_id()) {
+            panic!("{}", ProcessError::new(utils::tlf!("Invalid edge id '%'.", self.get_id())));
+        }
+        // revisit geometry
+        //  should have at least two points at the end...
+        //  and in dome cases, the node positions must be added
+        // attempt symmetrical removal for forward and backward direction
+        // (very important for bidiRail)
+        if self.myFrom.get_id() < self.myTo.get_id() {
+            let mut reverse = self.myGeom.reverse();
+            reverse.remove_double_points(utils::geom::POSITION_EPS, true, 0, 0, false);
+            self.myGeom = reverse.reverse();
+        } else {
+            self.myGeom.remove_double_points(utils::geom::POSITION_EPS, true, 0, 0, false);
+        }
+
+        if !tryIgnoreNodePositions || self.myGeom.len() < 2 {
+            if self.myGeom.len() == 0 {
+                let from_pos = *self.myFrom.get_position();
+                let to_pos = *self.myTo.get_position();
+                self.myGeom.push(from_pos);
+                self.myGeom.push(to_pos);
+            } else {
+                let to_pos = *self.myTo.get_position();
+                self.myGeom.push_back_no_double_pos(&to_pos);
+                let from_pos = *self.myFrom.get_position();
+                self.myGeom.push_front_no_double_pos(&from_pos);
+            }
+        }
+        if self.myGeom.len() < 2 {
+            self.myGeom.clear();
+            let from_pos = *self.myFrom.get_position();
+            let to_pos = *self.myTo.get_position();
+            self.myGeom.push(from_pos);
+            self.myGeom.push(to_pos);
+        }
+        if self.myGeom.len() == 2 && self.myGeom[0] == self.myGeom[1] {
+            write_warningf!("Edge's '%' from- and to-node are at the same position.", self.get_id());
+            let patchIndex = if self.myFrom.get_id() < self.myTo.get_id() { 1 } else { 0 };
+            self.myGeom[patchIndex].add(&Position::new(utils::geom::POSITION_EPS, utils::geom::POSITION_EPS));
+        }
+        // avoid degeneration of near-0-length geometrie when shifting later
+        self.myGeom.ensure_min_length(utils::common::std_defs::g_precision());
+        //
+        self.myFrom.m().add_outgoing_edge(Ptr::from_mut(self));
+        self.myTo.m().add_incoming_edge(Ptr::from_mut(self));
+        // prepare container
+        assert!(self.myGeom.len() >= 2);
+        self.myLength = self.myGeom.length();
+        if (self.myLanes.len() as i32) > noLanes {
+            // remove connections starting at the removed lanes
+            for lane in noLanes..(self.myLanes.len() as i32) {
+                self.remove_from_connections(Ptr::default(), lane, -1, false, false, false);
+            }
+            // remove connections targeting the removed lanes
+            let incoming: EdgeVector = self.myFrom.get_incoming_edges().clone();
+            for i in incoming {
+                for lane in noLanes..(self.myLanes.len() as i32) {
+                    i.m().remove_from_connections(Ptr::from_mut(self), -1, lane, false, false, false);
+                }
+            }
+        }
+        self.myLanes.clear();
+        for _ in 0..noLanes {
+            let lane = NBEdge_Lane::new(Ptr::from_mut(self), origID);
+            self.myLanes.push(lane);
+        }
+        self.compute_lane_shapes();
+        self.compute_angle();
     }
 
     /// C++: `void NBEdge::divideOnEdges(const EdgeVector *)` [private]
