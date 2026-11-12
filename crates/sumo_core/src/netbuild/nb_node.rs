@@ -24,6 +24,46 @@ const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
 // C++ utils/common/StdDefs.h SUMO_const_laneWidth
 const NBNODE_SUMO_CONST_LANE_WIDTH: f64 = 3.2;
 
+// C++ MAX2 / MIN2 macros (utils/common/StdDefs.h): `(a) > (b) ? (a) : (b)` and `(a) < (b) ? (a) : (b)`
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `std::sort(v, less)` on an EdgeVector. determinism: std::sort is unstable, sort_by is stable.
+fn sort_edges_by(v: &mut EdgeVector, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
+    v.sort_by(|a, b| {
+        if less(*a, *b) {
+            std::cmp::Ordering::Less
+        } else if less(*b, *a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
+}
+
+/// C++ `rotate(begin, std::find(begin, end, first), end)`; a missing or absent element leaves the vector unchanged
+fn rotate_edges_to_front(v: &mut EdgeVector, first: Option<Ptr<NBEdge>>) {
+    if let Some(f) = first {
+        if let Some(pos) = v.iter().position(|e| *e == f) {
+            v.rotate_left(pos);
+        }
+    }
+}
+
+/// C++ `std::pair<NBEdge*, NBEdge::Lane>` as used by NBNode::buildWalkingAreas (only the lane
+/// fields that function reads are kept; NBEdge_Lane itself is not Clone).
+#[derive(Clone)]
+struct NBNodeWaLane {
+    edge: Ptr<NBEdge>,
+    permissions: SVCPermissions,
+    shape: PositionVector,
+    width: f64,
+}
+
 // C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
 // nb_edge.rs / nb_node.rs expose them as statics).
 // shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
@@ -124,7 +164,56 @@ impl NBNode_ApproachingDivider {
     // }
     #[allow(unused_variables)]
     pub fn new(approaching: &EdgeVector, currentOutgoing: Ptr<NBEdge>) -> Self {
-        todo!("port ApproachingDivider::ApproachingDivider")
+        use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_BUS, SVC_VULNERABLE, is_forbidden};
+        let myIsBikeEdge = currentOutgoing.get_permissions(-1) == SVC_BICYCLE;
+        let myIsBusEdge = (currentOutgoing.get_permissions(-1) & SVC_BUS) != 0
+            && (currentOutgoing.get_permissions(-1) & !(SVC_BUS | SVC_VULNERABLE)) == 0;
+        let mut me = NBNode_ApproachingDivider {
+            base: (),
+            myApproaching: Ptr::new(approaching),
+            myCurrentOutgoing: currentOutgoing,
+            myAvailableLanes: Vec::new(),
+            myDirections: Vec::new(),
+            myNumStraight: 0,
+            myIsBikeEdge,
+            myIsBusEdge,
+        };
+        // collect lanes which are expliclity targeted
+        let mut approachedLanes: BTreeSet<i32> = BTreeSet::new();
+        let mut hasIncomingBusLane = false;
+        for approachingEdge in approaching.iter() {
+            let approachingEdge = *approachingEdge;
+            for con in approachingEdge.get_connections() {
+                if con.toEdge == currentOutgoing {
+                    approachedLanes.insert(con.toLane);
+                }
+            }
+            let dir = approachingEdge.get_to_node().get_direction(approachingEdge, currentOutgoing, false);
+            me.myDirections.push(dir);
+            if dir == LinkDirection::STRAIGHT {
+                me.myNumStraight += 1;
+            }
+            hasIncomingBusLane |= approachingEdge.get_special_lane(SVC_BUS) != -1;
+        }
+        // compute the indices of lanes that should be targeted (excluding pedestrian
+        // lanes that will be connected from walkingAreas and forbidden lanes)
+        // if the lane is targeted by an explicitly set connection we need
+        // to make it available anyway
+        for i in 0..currentOutgoing.get_num_lanes() {
+            let lp = currentOutgoing.get_permissions(i);
+            if (lp == SVC_PEDESTRIAN
+                // don't consider bicycle lanes as targets unless the target
+                // edge is exclusively for bicycles
+                || (lp == SVC_BICYCLE && !myIsBikeEdge)
+                || (lp == SVC_BUS && hasIncomingBusLane)
+                || is_forbidden(lp))
+                && !approachedLanes.contains(&i)
+            {
+                continue;
+            }
+            me.myAvailableLanes.push(i);
+        }
+        me
     }
 
     /// C++: `void ApproachingDivider::~ApproachingDivider() noexcept` [virtual]
@@ -4979,7 +5068,445 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_walking_areas(&mut self, cornerDetail: i32, joinMinDist: f64) {
-        todo!("port NBNode::buildWalkingAreas")
+        use utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES;
+        let me = Ptr::from_mut(self);
+        let mut index: i32 = 0;
+        self.myWalkingAreas.clear();
+        if self.myAllEdges.is_empty() {
+            return;
+        }
+        let allEdges = self.get_edges_sorted_by_angle_at_node_center();
+        // shapes are all pointing away from the intersection
+        let mut normalizedLanes: Vec<NBNodeWaLane> = Vec::new();
+        for &edge in allEdges.iter() {
+            let lanes = edge.get_lanes();
+            let mut tmp: Vec<NBNodeWaLane> = Vec::new();
+            let mut hadSidewalk = false;
+            let mut hadNonSidewalk = false;
+            for i in 0..lanes.len() {
+                let l = &lanes[i];
+                let sidewalk = (l.permissions & SVC_PEDESTRIAN) != 0;
+                if sidewalk {
+                    if hadSidewalk && hadNonSidewalk {
+                        if edge.get_from_node() == me {
+                            write_warning(&format!("Ignoring additional sidewalk lane {} on edge '{}' for walkingareas.", i, edge.get_id()));
+                        }
+                        continue;
+                    }
+                    hadSidewalk = true;
+                } else {
+                    hadNonSidewalk = true;
+                }
+                tmp.push(NBNodeWaLane { edge, permissions: l.permissions, shape: l.shape.clone(), width: l.width });
+            }
+            if edge.get_from_node() == me {
+                tmp.reverse();
+            } else {
+                for l in tmp.iter_mut() {
+                    l.shape = l.shape.reverse();
+                }
+            }
+            for mut l in tmp {
+                l.shape = l.shape.get_subpart_by_index(0, 2);
+                l.width = if l.width == NBEDGE_UNSPECIFIED_WIDTH { NBNODE_SUMO_CONST_LANE_WIDTH } else { l.width };
+                normalizedLanes.push(l);
+            }
+        }
+        if normalizedLanes.is_empty() {
+            // shortcut-free: C++ reads normalizedLanes.back() unconditionally (UB when empty); nothing can be built anyway
+            return;
+        }
+        let nlSize = normalizedLanes.len() as i32;
+        // collect [start,count[ indices in normalizedLanes that belong to a walkingArea
+        let mut waIndices: Vec<(i32, i32)> = Vec::new();
+        let mut start: i32 = -1;
+        let mut prevEdge = normalizedLanes[normalizedLanes.len() - 1].edge;
+        for i in 0..nlSize {
+            let edge = normalizedLanes[i as usize].edge;
+            let perm = normalizedLanes[i as usize].permissions;
+            if start == -1 {
+                if (perm & SVC_PEDESTRIAN) != 0 {
+                    start = i;
+                }
+            } else if (perm & SVC_PEDESTRIAN) == 0
+                || self.crossing_between(edge, prevEdge)
+                || self.already_connected_paths(edge, prevEdge, joinMinDist)
+                || self.crosses_fringe(edge, prevEdge)
+            {
+                waIndices.push((start, i - start));
+                if (perm & SVC_PEDESTRIAN) != 0 {
+                    start = i;
+                } else {
+                    start = -1;
+                }
+            }
+            prevEdge = edge;
+        }
+        // deal with wrap-around issues
+        if start != -1 {
+            let waNumLanes = nlSize - start;
+            if waIndices.is_empty() {
+                waIndices.push((start, waNumLanes));
+            } else if waIndices[0].0 == 0 {
+                let edge = normalizedLanes[0].edge;
+                let lastEdge = normalizedLanes[normalizedLanes.len() - 1].edge;
+                if self.crossing_between(edge, lastEdge) || self.crosses_fringe(edge, lastEdge) {
+                    // do not wrap-around (see above)
+                    waIndices.push((start, waNumLanes));
+                } else {
+                    // first walkingArea wraps around
+                    waIndices[0].0 = start;
+                    waIndices[0].1 = waNumLanes + waIndices[0].1;
+                }
+            } else {
+                // last walkingArea ends at the wrap-around
+                waIndices.push((start, waNumLanes));
+            }
+        }
+        // build walking areas connected to a sidewalk
+        for wi in 0..waIndices.len() {
+            let buildExtensions = waIndices[wi].1 != nlSize;
+            let mut startIdx = waIndices[wi].0;
+            let prev = if startIdx > 0 { startIdx - 1 } else { nlSize - 1 };
+            let count = waIndices[wi].1;
+            let end = (startIdx + count) % nlSize;
+            let mut lastIdx = (startIdx + count - 1) % nlSize;
+
+            let mut wa = NBNode_WalkingArea::new(&format!(":{}_w{}", self.get_id(), index), 1.);
+            index += 1;
+            let mut endCrossingWidth: f64 = 0.;
+            let mut startCrossingWidth: f64 = 0.;
+            let mut endCrossingShape = PositionVector::default();
+            let mut startCrossingShape = PositionVector::default();
+            // check for connected crossings
+            let mut connectsCrossing = false;
+            let mut crossingNearSidewalk = false;
+            let mut numCrossings: i32 = 0;
+            let mut connectedPoints: Vec<Position> = Vec::new();
+            for cp in self.get_crossings() {
+                let c = cp.m();
+                if c.edges.last().copied() == Some(normalizedLanes[end as usize].edge)
+                    && (normalizedLanes[end as usize].permissions & SVC_PEDESTRIAN) == 0
+                {
+                    // crossing ends
+                    if c.nextWalkingArea != "" {
+                        write_warning(&format!(
+                            "Invalid pedestrian topology at junction '{}'; crossing '{}' targets '{}' and '{}'.",
+                            self.get_id(), c.id, c.nextWalkingArea, wa.id
+                        ));
+                        c.valid = false;
+                    }
+                    c.nextWalkingArea = wa.id.clone();
+                    wa.prevCrossings.push(c.id.clone());
+                    if (c.edges.len() as i32) < wa.minPrevCrossingEdges {
+                        // if there are multiple crossings, use the shape of the one that crosses fewer edges
+                        endCrossingWidth = c.width;
+                        endCrossingShape = c.shape.clone();
+                        wa.width = max2(wa.width, endCrossingWidth);
+                        connectsCrossing = true;
+                        connectedPoints.push(*c.shape.back());
+                        wa.minPrevCrossingEdges = c.edges.len() as i32;
+                        numCrossings += 1;
+                        if normalizedLanes[lastIdx as usize].shape.at(0).distance_to2d(connectedPoints.last().unwrap()) < endCrossingWidth {
+                            crossingNearSidewalk = true;
+                        }
+                    }
+                }
+                if c.edges.first().copied() == Some(normalizedLanes[prev as usize].edge)
+                    && (normalizedLanes[prev as usize].permissions & SVC_PEDESTRIAN) == 0
+                {
+                    // crossing starts
+                    if c.prevWalkingArea != "" {
+                        write_warning(&format!(
+                            "Invalid pedestrian topology at junction '{}'; crossing '{}' is targeted by '{}' and '{}'.",
+                            self.get_id(), c.id, c.prevWalkingArea, wa.id
+                        ));
+                        c.valid = false;
+                    }
+                    if c.valid && wa.prevCrossings.contains(&c.id) {
+                        write_warning(&format!(
+                            "Invalid pedestrian topology at junction '{}'; crossing '{}' starts and ends at walkingarea '{}'.",
+                            self.get_id(), c.id, wa.id
+                        ));
+                        c.valid = false;
+                    }
+                    c.prevWalkingArea = wa.id.clone();
+                    wa.nextCrossings.push(c.id.clone());
+                    if (c.edges.len() as i32) < wa.minNextCrossingEdges {
+                        // if there are multiple crossings, use the shape of the one that crosses fewer edges
+                        startCrossingWidth = c.width;
+                        startCrossingShape = c.shape.clone();
+                        wa.width = max2(wa.width, startCrossingWidth);
+                        connectsCrossing = true;
+                        connectedPoints.push(*c.shape.at(0));
+                        wa.minNextCrossingEdges = c.edges.len() as i32;
+                        numCrossings += 1;
+                        if normalizedLanes[startIdx as usize].shape.at(0).distance_to2d(connectedPoints.last().unwrap()) < startCrossingWidth {
+                            crossingNearSidewalk = true;
+                        }
+                    }
+                }
+            }
+            if count < 2 && !connectsCrossing {
+                // not relevant for walking
+                continue;
+            }
+            // build shape and connections
+            // determinism: C++ std::set<const NBEdge*, ComparatorIdLess> orders by edge ID; BTreeSet<Ptr<NBEdge>> orders by address
+            for j in 0..count {
+                let nlI = ((startIdx + j) % nlSize) as usize;
+                let edge = normalizedLanes[nlI].edge;
+                let mut l = normalizedLanes[nlI].clone();
+                wa.width = max2(wa.width, l.width);
+                if !wa.refEdges.contains(&edge) {
+                    if edge.get_from_node() == me {
+                        wa.nextSidewalks.push(edge.m().get_sidewalk_id());
+                        connectedPoints.push(*edge.get_lane_shape(0).at(0));
+                    } else {
+                        wa.prevSidewalks.push(edge.m().get_sidewalk_id());
+                        connectedPoints.push(*edge.get_lane_shape(0).at(-1));
+                    }
+                    wa.refEdges.insert(edge);
+                }
+                l.shape.move2side(-l.width / 2., 100.);
+                wa.shape.push_back_no_double_pos(l.shape.at(0));
+                l.shape.move2side(l.width, 100.);
+                wa.shape.push(*l.shape.at(0));
+            }
+            if buildExtensions {
+                // extension at starting crossing
+                if startCrossingShape.len() > 0 {
+                    startCrossingShape.move2side(startCrossingWidth / 2., 100.);
+                    wa.shape.push_front_no_double_pos(startCrossingShape.at(0)); // right corner
+                    startCrossingShape.move2side(-startCrossingWidth, 100.);
+                    wa.shape.push_front_no_double_pos(startCrossingShape.at(0)); // left corner goes first
+                }
+                // extension at ending crossing
+                if endCrossingShape.len() > 0 {
+                    endCrossingShape.move2side(endCrossingWidth / 2., 100.);
+                    wa.shape.push_back_no_double_pos(endCrossingShape.at(-1));
+                    endCrossingShape.move2side(-endCrossingWidth, 100.);
+                    wa.shape.push_back_no_double_pos(endCrossingShape.at(-1));
+                }
+            }
+            if wa.refEdges.len() == 2 && !connectsCrossing && wa.nextSidewalks.len() == 1 && wa.prevSidewalks.len() == 1 && nlSize == 2 {
+                // do not build a walkingArea since a normal connection exists
+                let mut it = wa.refEdges.iter();
+                let e1 = *it.next().unwrap();
+                let e2 = *it.next().unwrap();
+                if e1.has_connection_to(e2, 0, 0) || e2.has_connection_to(e1, 0, 0) {
+                    continue;
+                }
+            }
+            if count == nlSize {
+                // junction is covered by the whole walkingarea
+                wa.shape = self.myPoly.clone();
+                // increase walking width if the walkingare is wider than a single lane
+                for inE in self.myIncomingEdges.iter() {
+                    for outE in self.myOutgoingEdges.iter() {
+                        if inE.get_from_node() == outE.get_to_node()
+                            && inE.get_inner_geometry().reverse() == outE.get_inner_geometry()
+                            && (inE.get_permissions(-1) & SVC_PEDESTRIAN) != 0
+                            && (outE.get_permissions(-1) & SVC_PEDESTRIAN) != 0
+                        {
+                            // doesn't catch all cases but probably most
+                            wa.width = max2(wa.width, inE.get_total_width() + outE.get_total_width());
+                        }
+                    }
+                }
+            } else if cornerDetail > 0 {
+                // build smooth inner curve (optional)
+                let mut smoothEnd = end;
+                let mut smoothPrev = prev;
+                // extend to green verge
+                if endCrossingWidth > 0. && normalizedLanes[smoothEnd as usize].permissions == 0 {
+                    smoothEnd = (smoothEnd + 1) % nlSize;
+                }
+                if startCrossingWidth > 0. && normalizedLanes[smoothPrev as usize].permissions == 0 {
+                    if smoothPrev == 0 {
+                        smoothPrev = nlSize - 1;
+                    } else {
+                        smoothPrev -= 1;
+                    }
+                }
+                let mut begShape = normalizedLanes[smoothEnd as usize].shape.clone();
+                begShape = begShape.reverse();
+                let mut shiftBegExtra: f64 = 0.;
+                let mut shiftEndExtra: f64 = 0.;
+                if lastIdx == startIdx {
+                    lastIdx = (startIdx + 1) % nlSize;
+                    if normalizedLanes[startIdx as usize].edge == normalizedLanes[lastIdx as usize].edge {
+                        lastIdx = startIdx;
+                        startIdx -= 1;
+                        if startIdx < 0 {
+                            startIdx = nlSize - 1;
+                        }
+                        shiftEndExtra += utils::options::options_cont::get_float("default.sidewalk-width");
+                    } else {
+                        shiftBegExtra += utils::options::options_cont::get_float("default.sidewalk-width");
+                    }
+                }
+                let mut begShapeOuter = normalizedLanes[lastIdx as usize].shape.clone();
+                begShapeOuter = begShapeOuter.reverse();
+                begShape.move2side(normalizedLanes[smoothEnd as usize].width / 2., 100.);
+                begShapeOuter.move2side(normalizedLanes[lastIdx as usize].width / 2. + shiftBegExtra, 100.);
+                let mut endShape = normalizedLanes[smoothPrev as usize].shape.clone();
+                let mut endShapeOuter = normalizedLanes[startIdx as usize].shape.clone();
+                endShape.move2side(normalizedLanes[smoothPrev as usize].width / 2., 100.);
+                endShapeOuter.move2side(normalizedLanes[startIdx as usize].width / 2. + shiftEndExtra, 100.);
+                let mut curve = PositionVector::default();
+                if count != nlSize || count == 2 {
+                    let angle = angle_diff(begShape.angle_at2d(-2), endShape.angle_at2d(0));
+                    if count == 1 && angle > 0. && crossingNearSidewalk && numCrossings < 2 {
+                        // do not build smooth shape for an unconnected left turn
+                        // (the walkingArea would get bigger without a reason to
+                        // walk there)
+                    } else if (normalizedLanes[smoothEnd as usize].edge.get_permissions(-1)
+                        & normalizedLanes[smoothPrev as usize].edge.get_permissions(-1)
+                        & !(SVC_PEDESTRIAN | SVC_RAIL_CLASSES))
+                        != 0
+                    {
+                        // traffic curve (debug recordError is nullptr since gDebugFlag1 is off)
+                        curve = self.compute_smooth_shape(&begShape, &endShape, cornerDetail + 2, false, 25., 25., Ptr::null(), 0);
+                        if curve.length2d() - begShape.back().distance_to2d(endShape.front()) > 5. {
+                            curve = self.compute_smooth_shape(
+                                &begShape,
+                                &endShape,
+                                cornerDetail + 2,
+                                false,
+                                25.,
+                                25.,
+                                Ptr::null(),
+                                NBNODE_AVOID_WIDE_LEFT_TURN | NBNODE_AVOID_INTERSECTING_LEFT_TURNS,
+                            );
+                        }
+                    } else {
+                        // nonTraffic curve
+                        let extend = min2(10.0, begShape.back().distance_to2d(endShape.front()) / 2.);
+                        curve = self.compute_smooth_shape(&begShape, &endShape, cornerDetail + 2, false, extend, extend, Ptr::null(), NBNODE_FOUR_CONTROL_POINTS);
+                    }
+                    if curve.len() > 2 {
+                        curve.remove(0);
+                        curve.pop();
+                        if endCrossingWidth > 0. {
+                            wa.shape.pop();
+                        }
+                        if startCrossingWidth > 0. {
+                            wa.shape.remove(0);
+                        }
+                        if count == nlSize {
+                            curve = curve.reverse();
+                        }
+                        wa.shape.append(&curve, 0.);
+                    }
+                }
+                if curve.len() > 2 && (count == 2 || (count == 1 && numCrossings > 0)) {
+                    let innerDist = begShape.back().distance_to2d(endShape.at(0));
+                    let outerDist = begShapeOuter.back().distance_to2d(endShapeOuter.at(0));
+                    if outerDist > innerDist {
+                        // we also need a rounded outer curve (unless we have only a single walkingarea)
+                        let extend = min2(10.0, begShapeOuter.back().distance_to2d(endShapeOuter.front()) / 2.);
+                        curve = self.compute_smooth_shape(&begShapeOuter, &endShapeOuter, cornerDetail + 2, false, extend, extend, Ptr::null(), 0);
+                        if curve.length2d() - begShapeOuter.back().distance_to2d(endShapeOuter.front()) > 5. {
+                            curve = self.compute_smooth_shape(
+                                &begShapeOuter,
+                                &endShapeOuter,
+                                cornerDetail + 2,
+                                false,
+                                25.,
+                                25.,
+                                Ptr::null(),
+                                NBNODE_AVOID_WIDE_LEFT_TURN | NBNODE_AVOID_INTERSECTING_LEFT_TURNS,
+                            );
+                        }
+                        curve = curve.reverse();
+                        // keep the points in case of extraShift
+                        if shiftBegExtra != 0. {
+                            curve.push_front_no_double_pos(wa.shape.at(1));
+                            curve.push_back_no_double_pos(wa.shape.at(2));
+                        } else if shiftEndExtra != 0. {
+                            curve.push_back_no_double_pos(wa.shape.at(1));
+                            curve.push_back_no_double_pos(wa.shape.at(2));
+                        }
+                        wa.shape.drain(1..3);
+                        wa.shape.splice(1..1, curve.iter().cloned());
+                    }
+                }
+            }
+            // apply custom shapes
+            for wacs in self.myWalkingAreaCustomShapes.iter() {
+                // every edge in wasc.edges must be part of connected
+                if (wacs.shape.len() != 0 || wacs.width != NBEDGE_UNSPECIFIED_WIDTH) && NBNode::includes(&wa.refEdges, &wacs.edges) {
+                    if wacs.shape.len() != 0 {
+                        wa.shape = wacs.shape.clone();
+                    }
+                    if wacs.width != NBEDGE_UNSPECIFIED_WIDTH {
+                        wa.width = wacs.width;
+                    }
+                    wa.hasCustomShape = true;
+                }
+            }
+            // determine length (average of all possible connections)
+            let mut lengthSum: f64 = 0.;
+            let mut combinations: i32 = 0;
+            for p1 in connectedPoints.iter() {
+                for p2 in connectedPoints.iter() {
+                    if p1 != p2 {
+                        lengthSum += p1.distance_to2d(p2);
+                        combinations += 1;
+                    }
+                }
+            }
+            wa.length = POSITION_EPS;
+            if combinations > 0 {
+                wa.length = max2(POSITION_EPS, lengthSum / combinations as f64);
+            }
+            self.myWalkingAreas.push(wa);
+        }
+        // build walkingAreas between split crossings
+        let validCrossings = self.get_crossings();
+        for it in 0..validCrossings.len() {
+            let prevC = validCrossings[it].m();
+            let nextC = if it != 0 { validCrossings[it - 1].m() } else { validCrossings[validCrossings.len() - 1].m() };
+            if prevC.nextWalkingArea == "" {
+                if nextC.prevWalkingArea != "" || validCrossings[it] == validCrossings[if it != 0 { it - 1 } else { validCrossings.len() - 1 }] {
+                    let prevEdgeIds = prevC.edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>().join(" ");
+                    write_warning(&format!("Invalid pedestrian topology: crossing '{}' across [{}] has no target.", prevC.id, prevEdgeIds));
+                    prevC.valid = false;
+                    continue;
+                }
+                let mut wa = NBNode_WalkingArea::new(&format!(":{}_w{}", self.get_id(), index), prevC.width);
+                index += 1;
+                prevC.nextWalkingArea = wa.id.clone();
+                wa.nextCrossings.push(nextC.id.clone());
+                nextC.prevWalkingArea = wa.id.clone();
+                // back of previous crossing
+                let mut tmp = prevC.shape.clone();
+                tmp.move2side(-prevC.width / 2., 100.);
+                wa.shape.push(*tmp.at(-1));
+                tmp.move2side(prevC.width, 100.);
+                wa.shape.push(*tmp.at(-1));
+                // front of next crossing
+                tmp = nextC.shape.clone();
+                tmp.move2side(prevC.width / 2., 100.);
+                wa.shape.push(*tmp.at(0));
+                tmp.move2side(-prevC.width, 100.);
+                wa.shape.push(*tmp.at(0));
+                wa.refEdges.extend(prevC.edges.iter().cloned());
+                wa.refEdges.extend(nextC.edges.iter().cloned());
+                // apply custom shapes
+                for wacs in self.myWalkingAreaCustomShapes.iter() {
+                    // every edge in wacs.edges must be part of crossed
+                    if wacs.shape.len() != 0 && wacs.edges.len() > 1 && NBNode::includes(&wa.refEdges, &wacs.edges) {
+                        wa.shape = wacs.shape.clone();
+                        wa.hasCustomShape = true;
+                    }
+                }
+                // length (special case)
+                wa.length = max2(POSITION_EPS, prevC.shape.back().distance_to2d(nextC.shape.front()));
+                self.myWalkingAreas.push(wa);
+            }
+        }
     }
 
     /// C++: `void NBNode::buildCrossingOutlines()`
@@ -5838,7 +6365,74 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn sort_edges(&mut self, useNodeShape: bool) {
-        todo!("port NBNode::sortEdges")
+        if self.myAllEdges.is_empty() {
+            return;
+        }
+        let me = Ptr::from_mut(self);
+        let allEdgesOriginal = self.myAllEdges.clone();
+
+        // sort the edges by angle (this is the canonical sorting)
+        let byJunctionAngle = NBNodesEdgesSorter_edge_by_junction_angle_sorter::new(me);
+        sort_edges_by(&mut self.myAllEdges, |a, b| byJunctionAngle.call_op(a, b) != 0);
+        sort_edges_by(&mut self.myIncomingEdges, |a, b| byJunctionAngle.call_op(a, b) != 0);
+        sort_edges_by(&mut self.myOutgoingEdges, |a, b| byJunctionAngle.call_op(a, b) != 0);
+        let n = self.myAllEdges.len();
+        for j in 0..n.saturating_sub(1) {
+            NBNodesEdgesSorter::swap_when_reversed(me, &mut self.myAllEdges, j, j + 1);
+        }
+        if n > 1 {
+            NBNodesEdgesSorter::swap_when_reversed(me, &mut self.myAllEdges, n - 1, 0);
+        }
+
+        // sort again using additional geometry information
+        let firstOfAll = self.myAllEdges[0];
+        let firstOfIncoming: Option<Ptr<NBEdge>> = self.myIncomingEdges.first().copied();
+        let firstOfOutgoing: Option<Ptr<NBEdge>> = self.myOutgoingEdges.first().copied();
+        // sort by the angle between the node shape center and the point where the edge meets the node shape
+        let byCentroid = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(me);
+        sort_edges_by(&mut self.myAllEdges, |a, b| byCentroid.call_op(a, b));
+        sort_edges_by(&mut self.myIncomingEdges, |a, b| byCentroid.call_op(a, b));
+        sort_edges_by(&mut self.myOutgoingEdges, |a, b| byCentroid.call_op(a, b));
+        // let the first edge remain the first
+        rotate_edges_to_front(&mut self.myAllEdges, Some(firstOfAll));
+        rotate_edges_to_front(&mut self.myIncomingEdges, firstOfIncoming);
+        rotate_edges_to_front(&mut self.myOutgoingEdges, firstOfOutgoing);
+
+        // fixing some pathological all edges orderings
+        // if every of the edges a,b,c has a turning edge a',b',c' the all edges ordering should be a,a',b,b',c,c'
+        if self.myIncomingEdges.len() == self.myOutgoingEdges.len() && self.myIncomingEdges.first() == self.myAllEdges.first() {
+            let mut allTmp: EdgeVector = Vec::new();
+            for (inE, outE) in self.myIncomingEdges.iter().zip(self.myOutgoingEdges.iter()) {
+                if inE.is_turning_direction_at(*outE) {
+                    allTmp.push(*inE);
+                    allTmp.push(*outE);
+                } else {
+                    break;
+                }
+            }
+            if allTmp.len() == self.myAllEdges.len() {
+                self.myAllEdges = allTmp;
+            }
+        }
+        // sort the crossings
+        let crossingSorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(me, &self.myAllEdges);
+        self.myCrossings.sort_by(|a, b| {
+            if crossingSorter.call_op(a, b) != 0 {
+                std::cmp::Ordering::Less
+            } else if crossingSorter.call_op(b, a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+
+        if useNodeShape && self.myAllEdges != allEdgesOriginal {
+            // sorting order changed after node shape was computed.
+            self.compute_node_shape(-1.);
+            for e in self.myAllEdges.iter() {
+                e.m().compute_edge_shape(-1.);
+            }
+        }
     }
 
     /// C++: `int NBNode::getConnectionIndex(const NBEdge *, const NBEdge::Connection &) const` [const]
@@ -5858,7 +6452,17 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_connection_index(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection) -> i32 {
-        todo!("port NBNode::getConnectionIndex")
+        let mut result: i32 = 0;
+        for e in self.myIncomingEdges.iter() {
+            let e = *e;
+            for cand in e.get_connections() {
+                if e == from && cand.fromLane == con.fromLane && cand.toLane == con.toLane && cand.toEdge == con.toEdge {
+                    return result;
+                }
+                result += 1;
+            }
+        }
+        -1
     }
 
     /// C++: `bool NBNode::isTrafficLight(SumoXMLNodeType)` [static]
