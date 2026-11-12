@@ -35,7 +35,11 @@ impl MSInternalJunction {
     //     : MSLogicJunction(id, type, position, shape, "", incoming, internal) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, type_: SumoXMLNodeType, position: &Position, shape: &PositionVector, incoming: Vec<Ptr<MSLane>>, internal: Vec<Ptr<MSLane>>) -> Self {
-        todo!("port MSInternalJunction::MSInternalJunction")
+        MSInternalJunction {
+            base: MSLogicJunction::new(id, type_, position, shape, "", incoming, internal),
+            myInternalLinkFoes: Vec::new(),
+            myInternalLaneFoes: Vec::new(),
+        }
     }
 
     /// C++: `void MSInternalJunction::~MSInternalJunction() noexcept` [virtual]
@@ -43,7 +47,7 @@ impl MSInternalJunction {
     // MSInternalJunction::~MSInternalJunction() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSInternalJunction::~MSInternalJunction")
+        // C++ destructor body is empty; the members are dropped automatically.
     }
 
     /// C++: `void MSInternalJunction::postloadInit()` [virtual]
@@ -127,7 +131,96 @@ impl MSInternalJunction {
     // }
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        todo!("port MSInternalJunction::postloadInit")
+        if self.base.myIncomingLanes.is_empty() {
+            // shortcut: C++ throws ProcessError here; postloadInit returns nothing yet, so panic with the same text
+            panic!("Internal junction {} has no incoming lanes", self.get_id());
+        }
+        // the first lane in the list of incoming lanes is special. It defines the
+        // link that needs to do all the checking for this internal junction
+        let specialLane = self.base.myIncomingLanes[0];
+        assert!(specialLane.get_link_cont().len() == 1);
+        let thisLink = specialLane.get_link_cont()[0];
+        let parent = specialLane.get_edge().get_to_junction();
+        // shortcut: C++ dynamic_cast<const MSRightOfWayJunction*> needs RTTI, which is not ported. Approximated by the
+        // parent's node type (the junction kinds built without logic count as "not right-of-way"). Upgrade with a junction
+        // kind tag, then also use the parent's MSRightOfWayJunction logic instead of the empty response below.
+        if parent.is_null()
+            || matches!(
+                parent.get_type(),
+                SumoXMLNodeType::NOJUNCTION | SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED | SumoXMLNodeType::DISTRICT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION
+            )
+        {
+            // parent has no right-of-way logic
+            return;
+        }
+        let ownLinkIndex = specialLane.get_incoming_lanes()[0].viaLink.get_index();
+        // inform links where they have to report approaching vehicles to
+        for lane in self.base.myInternalLanes.iter().copied() {
+            for link in lane.get_link_cont().iter().copied() {
+                if !link.get_via_lane().is_null() {
+                    let foeIndex = lane.get_incoming_lanes()[0].viaLink.get_index();
+                    // only respect vehicles before internal junctions if they
+                    // have priority (see the analogous foeLinks.test() when
+                    // initializing myLinkFoeInternalLanes in MSRightOfWayJunction
+                    // Indirect left turns for bicycles are a special case
+                    // because they both intersect on their second part with the first part of the other one
+                    // and only one of them has priority
+                    if response_test(foeIndex) || self.indirect_bicycle_turn(specialLane, thisLink, lane, link) {
+                        self.myInternalLaneFoes.push(lane);
+                    }
+                    if !self.myInternalLaneFoes.contains(&link.get_via_lane()) {
+                        self.myInternalLaneFoes.push(link.get_via_lane());
+                    }
+                } else if !self.myInternalLaneFoes.contains(&lane) {
+                    self.myInternalLaneFoes.push(lane);
+                    if lane.is_crossing() {
+                        // also add to myInternalLinkFoes (the origin
+                        // walkingArea is not part of myIncomingLanes)
+                        self.myInternalLinkFoes.push(lane.get_incoming_lanes()[0].viaLink);
+                    }
+                }
+            }
+        }
+        for i in self.base.myIncomingLanes.iter().skip(1).copied() {
+            for link in i.get_link_cont().iter().copied() {
+                // link indices of internal junctions may not be initialized yet
+                let linkIndex = link.get_corresponding_entry_link().get_index();
+                // links that target a shared walkingarea always have index -1
+                if linkIndex != -1 && response_test(linkIndex) {
+                    self.myInternalLinkFoes.push(link);
+                    let via = link.get_via_lane();
+                    if !via.is_null() && !via.get_link_cont()[0].get_via_lane().is_null() {
+                        // we added the entry link, also use the internalJunctionLink that follows
+                        self.myInternalLinkFoes.push(via.get_link_cont()[0]);
+                    }
+                }
+            }
+        }
+        // thisLinks is itself an exitLink of the preceding internal lane
+        thisLink.m().set_request_information(
+            ownLinkIndex,
+            true,
+            false,
+            &self.myInternalLinkFoes,
+            &self.myInternalLaneFoes,
+            thisLink.get_via_lane().get_logical_predecessor_lane(),
+        );
+        assert!(thisLink.get_via_lane().get_link_cont().len() == 1);
+        let exitLink = thisLink.get_via_lane().get_link_cont()[0];
+        exitLink.m().set_request_information(
+            ownLinkIndex,
+            false,
+            false,
+            &Vec::new(),
+            &self.myInternalLaneFoes,
+            thisLink.get_via_lane(),
+        );
+        for ili in exitLink.get_lane().get_incoming_lanes() {
+            if ili.lane.is_walking_area() {
+                exitLink.m().add_walking_area_foe_exit(ili.lane);
+                break;
+            }
+        }
     }
 
     /// C++: `const std::vector<MSLink *> & MSInternalJunction::getFoeLinks(const MSLink *const) const` [const, virtual]
@@ -137,7 +230,7 @@ impl MSInternalJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_links(&self, srcLink: Ptr<MSLink>) -> &Vec<Ptr<MSLink>> {
-        todo!("port MSInternalJunction::getFoeLinks")
+        &self.myInternalLinkFoes
     }
 
     /// C++: `const std::vector<MSLane *> & MSInternalJunction::getFoeInternalLanes(const MSLink *const) const` [const, virtual]
@@ -147,7 +240,7 @@ impl MSInternalJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_internal_lanes(&self, srcLink: Ptr<MSLink>) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSInternalJunction::getFoeInternalLanes")
+        &self.myInternalLaneFoes
     }
 
     /// C++: `bool MSInternalJunction::indirectBicycleTurn(const MSLane *, const MSLink *, const MSLane *, const MSLink *) const` [const, private]
@@ -164,7 +257,17 @@ impl MSInternalJunction {
     // }
     #[allow(unused_variables)]
     pub fn indirect_bicycle_turn(&self, specialLane: Ptr<MSLane>, thisLink: Ptr<MSLink>, foeFirstPart: Ptr<MSLane>, foeLink: Ptr<MSLink>) -> bool {
-        todo!("port MSInternalJunction::indirectBicycleTurn")
+        if specialLane.get_permissions() == utils::common::sumo_vehicle_class::SVC_BICYCLE
+            && foeFirstPart.get_permissions() == utils::common::sumo_vehicle_class::SVC_BICYCLE
+            && thisLink.get_direction() == LinkDirection::LEFT
+            && foeLink.get_direction() == LinkDirection::LEFT
+            && !thisLink.get_via_lane().is_null()
+            && thisLink.get_via_lane().get_shape_2().intersects_pv(foeFirstPart.get_shape_2())
+        {
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void MSInternalJunction::MSInternalJunction(const MSInternalJunction &)` [private]
@@ -172,7 +275,7 @@ impl MSInternalJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSInternalJunction) -> Self {
-        todo!("port MSInternalJunction::MSInternalJunction")
+        panic!("MSInternalJunction copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `MSInternalJunction & MSInternalJunction::operator=(const MSInternalJunction &)` [private]
@@ -180,8 +283,15 @@ impl MSInternalJunction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSInternalJunction) -> &mut MSInternalJunction {
-        todo!("port MSInternalJunction::operator=")
+        panic!("MSInternalJunction assignment operator is private and undefined in C++; it cannot be called")
     }
 
+}
+
+// shortcut: C++ bitset test on MSRightOfWayJunction::getLogic()->getResponseFor(i); the LinkBits bitset
+// (MSLogicJunction::LinkBits) and the downcast are not ported, so no response bit is ever set here.
+// Upgrade when ms_logic_junction and the right-of-way junction logic are ported.
+fn response_test(_index: i32) -> bool {
+    false
 }
 

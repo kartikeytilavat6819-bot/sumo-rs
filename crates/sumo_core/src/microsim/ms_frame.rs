@@ -7,6 +7,69 @@ use crate::prelude::*;
 pub struct MSFrame {
 }
 
+// ----- helpers for MSFrame::checkOptions (the OptionsCont is only reachable inside with_options) -----
+
+fn or_panic<T>(r: Result<T, utils::common::util_exceptions::ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+fn opt_bool(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    or_panic(oc.get_bool(name))
+}
+
+fn opt_float(oc: &utils::options::options_cont::OptionsCont, name: &str) -> f64 {
+    or_panic(oc.get_float(name))
+}
+
+fn opt_int(oc: &utils::options::options_cont::OptionsCont, name: &str) -> i32 {
+    or_panic(oc.get_int(name))
+}
+
+fn opt_str(oc: &utils::options::options_cont::OptionsCont, name: &str) -> String {
+    or_panic(oc.get_string(name))
+}
+
+fn opt_strs(oc: &utils::options::options_cont::OptionsCont, name: &str) -> Vec<String> {
+    or_panic(oc.get_string_vector(name)).clone()
+}
+
+fn opt_is_set(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    or_panic(oc.is_set(name, true))
+}
+
+fn opt_is_default(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
+    oc.is_default(name)
+}
+
+/// C++ string2time(...) that throws ProcessError
+fn st(s: &str) -> utils::common::time::SUMOTime {
+    or_panic(utils::common::time::string2time(s))
+}
+
+/// C++ checkStepLengthMultiple (utils/common/SUMOTime.cpp); only emits warnings, its C++ return value is always false
+// shortcut: this function lives in utils/common/SUMOTime.cpp and is not ported there yet, so it is local to MSFrame
+fn check_step_length_multiple(t: utils::common::time::SUMOTime, error: &str, delta_t: utils::common::time::SUMOTime, begin: utils::common::time::SUMOTime) {
+    use utils::common::time::time2string;
+    if begin % delta_t == 0 {
+        if t % delta_t != 0 {
+            utils::common::msg_handler::write_warning(&format!(
+                "The given time value {} is not a multiple of the step length {}{}.",
+                time2string(t),
+                time2string(delta_t),
+                error
+            ));
+        }
+    } else if (t - begin) % delta_t != 0 {
+        utils::common::msg_handler::write_warning(&format!(
+            "The given time value {} is not reached with step length {} and begin time {}{}.",
+            time2string(t),
+            time2string(delta_t),
+            time2string(begin),
+            error
+        ));
+    }
+}
+
 impl MSFrame {
     /// C++: `void MSFrame::fillOptions()` [static]
     /// Inserts options used by the simulation into the OptionsCont-singleton
@@ -851,7 +914,580 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn fill_options() {
-        todo!("port MSFrame::fillOptions")
+        utils::options::options_cont::with_options(|oc| {
+            oc.add_call_example("-b 0 -e 1000 -n net.xml -r routes.xml", "start a simulation from time 0 to 1000 with given net and routes");
+            oc.add_call_example("-c munich_config.cfg", "start with a configuration file");
+            oc.add_call_example("--help", "print help");
+            // shortcut: C++ SystemFrame::addConfigurationOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            oc.add_option_sub_topic("Input");
+            oc.add_option_sub_topic("Output");
+            oc.add_option_sub_topic("Time");
+            oc.add_option_sub_topic("Processing");
+            oc.add_option_sub_topic("Routing");
+            oc.add_option_sub_topic("Persons");
+            oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
+            oc.add_synonyme("net-file", "net", false);
+            oc.add_description("net-file", "Input", "Load road network description from FILE");
+            oc.add_xml_default("net-file", "net");
+            oc.do_register_abbr("route-files", 'r', SumoOption::file_name());
+            oc.add_synonyme("route-files", "routes", false);
+            oc.add_description("route-files", "Input", "Load routes descriptions from FILE(s)");
+            oc.do_register("ignore.routeelements", SumoOption::bool(false));
+            oc.add_description("ignore.routeelements", "Input", "Ignore route elements during loading of sumo-configs");
+            oc.do_register_abbr("additional-files", 'a', SumoOption::file_name());
+            oc.add_synonyme("additional-files", "additional", false);
+            oc.add_description("additional-files", "Input", "Load further descriptions from FILE(s)");
+            oc.do_register("ignore.additionalelements", SumoOption::bool(false));
+            oc.add_description("ignore.additionalelements", "Input", "Ignore additional elements during loading of sumo-configs");
+            oc.do_register_abbr("weight-files", 'w', SumoOption::file_name());
+            oc.add_synonyme("weight-files", "weights", false);
+            oc.add_description("weight-files", "Input", "Load edge/lane weights for online rerouting from FILE");
+            oc.do_register_abbr("weight-attribute", 'x', SumoOption::string_with("traveltime"));
+            oc.add_synonyme("weight-attribute", "measure", true);
+            oc.add_description("weight-attribute", "Input", "Name of the xml attribute which gives the edge weight");
+            oc.do_register("load-state", SumoOption::file_name());
+            oc.add_description("load-state", "Input", "Loads a network state from FILE");
+            oc.do_register("load-state.offset", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("load-state.offset", "Input", "Shifts all times loaded from a saved state by the given offset");
+            oc.do_register("load-state.remove-vehicles", SumoOption::string_vector_with(Vec::new()));
+            oc.add_description("load-state.remove-vehicles", "Input", "Removes vehicles with the given IDs from the loaded state");
+            oc.do_register("junction-taz", SumoOption::bool(false));
+            oc.add_description("junction-taz", "Input", "Initialize a TAZ for every junction to use attributes toJunction and fromJunction");
+            // shortcut: C++ SystemFrame::addReportOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            oc.do_register("netstate-dump", SumoOption::file_name());
+            oc.add_synonyme("netstate-dump", "ndump", false);
+            oc.add_synonyme("netstate-dump", "netstate", false);
+            oc.add_synonyme("netstate-dump", "netstate-output", false);
+            oc.add_description("netstate-dump", "Output", "Save complete network states into FILE");
+            oc.do_register("netstate-dump.empty-edges", SumoOption::bool(false));
+            oc.add_synonyme("netstate-dump.empty-edges", "netstate.empty-edges", false);
+            oc.add_synonyme("netstate-dump.empty-edges", "netstate-output.empty-edges", false);
+            oc.add_synonyme("netstate-dump.empty-edges", "dump-empty-edges", true);
+            oc.add_description("netstate-dump.empty-edges", "Output", "Write also empty edges completely when dumping");
+            oc.do_register("netstate-dump.precision", SumoOption::integer(2));
+            oc.add_synonyme("netstate-dump.precision", "netstate.precision", false);
+            oc.add_synonyme("netstate-dump.precision", "netstate-output.precision", false);
+            oc.add_synonyme("netstate-dump.precision", "dump-precision", true);
+            oc.add_description("netstate-dump.precision", "Output", "Write positions and speeds with the given precision (default 2)");
+            oc.do_register("emission-output", SumoOption::file_name());
+            oc.add_description("emission-output", "Output", "Save the emission values of each vehicle");
+            oc.do_register("emission-output.precision", SumoOption::integer(2));
+            oc.add_description("emission-output.precision", "Output", "Write emission values with the given precision (default 2)");
+            oc.do_register("emission-output.geo", SumoOption::bool(false));
+            oc.add_description("emission-output.geo", "Output", "Save the positions in emission output using geo-coordinates (lon/lat)");
+            oc.do_register("emission-output.step-scaled", SumoOption::bool(false));
+            oc.add_description("emission-output.step-scaled", "Output", "Write emission values scaled to the step length rather than as per-second values");
+            oc.do_register("emission-output.attributes", SumoOption::string_vector());
+            oc.add_description("emission-output.attributes", "Output", "List attributes that should be included in the emission output");
+            oc.do_register("battery-output", SumoOption::file_name());
+            oc.add_description("battery-output", "Output", "Save the battery values of each vehicle");
+            oc.do_register("battery-output.precision", SumoOption::integer(2));
+            oc.add_description("battery-output.precision", "Output", "Write battery values with the given precision (default 2)");
+            oc.do_register("elechybrid-output", SumoOption::file_name());
+            oc.add_description("elechybrid-output", "Output", "Save the elecHybrid values of each vehicle");
+            oc.do_register("elechybrid-output.precision", SumoOption::integer(2));
+            oc.add_description("elechybrid-output.precision", "Output", "Write elecHybrid values with the given precision (default 2)");
+            oc.do_register("elechybrid-output.aggregated", SumoOption::bool(false));
+            oc.add_description("elechybrid-output.aggregated", "Output", "Write elecHybrid values into one aggregated file");
+            oc.do_register("chargingstations-output", SumoOption::file_name());
+            oc.add_description("chargingstations-output", "Output", "Write data of charging stations");
+            oc.do_register("chargingstations-output.aggregated", SumoOption::bool(false));
+            oc.add_description("chargingstations-output.aggregated", "Output", "Write aggregated charging event data instead of single time steps");
+            oc.do_register("chargingstations-output.aggregated.write-unfinished", SumoOption::bool(false));
+            oc.add_description("chargingstations-output.aggregated.write-unfinished", "Output", "Write aggregated charging event data for vehicles which have not arrived at simulation end");
+            oc.do_register("overheadwiresegments-output", SumoOption::file_name());
+            oc.add_description("overheadwiresegments-output", "Output", "Write data of overhead wire segments");
+            oc.do_register("substations-output", SumoOption::file_name());
+            oc.add_description("substations-output", "Output", "Write data of electrical substation stations");
+            oc.do_register("substations-output.precision", SumoOption::integer(2));
+            oc.add_description("substations-output.precision", "Output", "Write substation values with the given precision (default 2)");
+            oc.do_register("fcd-output", SumoOption::file_name());
+            oc.add_description("fcd-output", "Output", "Save the Floating Car Data");
+            oc.do_register("fcd-output.geo", SumoOption::bool(false));
+            oc.add_description("fcd-output.geo", "Output", "Save the Floating Car Data using geo-coordinates (lon/lat)");
+            oc.do_register("fcd-output.utm", SumoOption::bool(false));
+            oc.add_description("fcd-output.utm", "Output", "Save the Floating Car Data using utm/unshifted coordinates (x/y)");
+            oc.do_register("fcd-output.signals", SumoOption::bool(false));
+            oc.add_description("fcd-output.signals", "Output", "Add the vehicle signal state to the FCD output (brake lights etc.)");
+            oc.do_register("fcd-output.distance", SumoOption::bool(false));
+            oc.add_description("fcd-output.distance", "Output", "Add kilometrage to the FCD output (linear referencing)");
+            oc.do_register("fcd-output.acceleration", SumoOption::bool(false));
+            oc.add_description("fcd-output.acceleration", "Output", "Add acceleration to the FCD output");
+            oc.do_register("fcd-output.speed-relative", SumoOption::bool(false));
+            oc.add_description("fcd-output.speed-relative", "Output", "Add relative speed (vehicle speed / edge speed limit) to the FCD output");
+            oc.do_register("fcd-output.max-leader-distance", SumoOption::float(-1.0));
+            oc.add_description("fcd-output.max-leader-distance", "Output", "Add leader vehicle information to the FCD output (within the given distance)");
+            oc.do_register("fcd-output.params", SumoOption::string_vector());
+            oc.add_description("fcd-output.params", "Output", "Add generic parameter values to the FCD output");
+            oc.do_register("fcd-output.filter-edges.input-file", SumoOption::file_name());
+            oc.add_description("fcd-output.filter-edges.input-file", "Output", "Restrict fcd output to the edge selection from the given input file");
+            oc.do_register("fcd-output.attributes", SumoOption::string_vector());
+            oc.add_description("fcd-output.attributes", "Output", "List attributes that should be included in the FCD output");
+            oc.do_register("fcd-output.filter-shapes", SumoOption::string_vector());
+            oc.add_description("fcd-output.filter-shapes", "Output", "List shape names that should be used to filter the FCD output");
+            oc.do_register("fcd-output.skip-empty", SumoOption::bool(false));
+            oc.add_description("fcd-output.skip-empty", "Output", "Do not save data for time steps which have no vehicles / transportables");
+            oc.do_register("person-fcd-output", SumoOption::file_name());
+            oc.add_synonyme("person-fcd-output", "person-fcd", false);
+            oc.add_description("person-fcd-output", "Output", "Save fcd for persons and container to separate FILE");
+            oc.do_register("device.ssm.filter-edges.input-file", SumoOption::file_name());
+            oc.add_description("device.ssm.filter-edges.input-file", "Output", "Restrict SSM device output to the edge selection from the given input file");
+            oc.do_register("full-output", SumoOption::file_name());
+            oc.add_description("full-output", "Output", "Save a lot of information for each timestep (very redundant)");
+            oc.do_register("queue-output", SumoOption::file_name());
+            oc.add_description("queue-output", "Output", "Save the vehicle queues at the junctions (experimental)");
+            oc.do_register("queue-output.period", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("queue-output.period", "Output", "Save vehicle queues with the given period");
+            oc.do_register("queue-output.aggregation", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("queue-output.aggregation", "Output", "Write aggregated queue length statistics (max, median, 95th percentile) per edge for the given period (e.g. a traffic light cycle) instead of per-timestep data");
+            oc.do_register("queue-output.speed-threshold", SumoOption::float(5.0 / 3.6));
+            oc.add_description("queue-output.speed-threshold", "Output", "Maximum speed for counting a vehicle as queued");
+            oc.do_register("queue-output.percentile", SumoOption::float(95.0));
+            oc.add_description("queue-output.percentile", "Output", "The percentile (0-100) to report as percentileQueueLength in aggregated queue output");
+            oc.do_register("queue-output.skip-empty", SumoOption::bool(false));
+            oc.add_description("queue-output.skip-empty", "Output", "Do not save data for time steps / intervals which have no queue (required for column based output formats)");
+            oc.do_register("vtk-output", SumoOption::file_name());
+            oc.add_description("vtk-output", "Output", "Save complete vehicle positions inclusive speed values in the VTK Format (usage: /path/out will produce /path/out_$TIMESTEP$.vtp files)");
+            oc.do_register("amitran-output", SumoOption::file_name());
+            oc.add_description("amitran-output", "Output", "Save the vehicle trajectories in the Amitran format");
+            oc.do_register("summary-output", SumoOption::file_name());
+            oc.add_synonyme("summary-output", "summary", false);
+            oc.add_description("summary-output", "Output", "Save aggregated vehicle departure info into FILE");
+            oc.do_register("summary-output.period", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("summary-output.period", "Output", "Save summary-output with the given period");
+            oc.do_register("person-summary-output", SumoOption::file_name());
+            oc.add_description("person-summary-output", "Output", "Save aggregated person counts into FILE");
+            oc.do_register("tripinfo-output", SumoOption::file_name());
+            oc.add_synonyme("tripinfo-output", "tripinfo", false);
+            oc.add_description("tripinfo-output", "Output", "Save single vehicle trip info into FILE");
+            oc.do_register("tripinfo-output.write-unfinished", SumoOption::bool(false));
+            oc.add_description("tripinfo-output.write-unfinished", "Output", "Write tripinfo output for vehicles which have not arrived at simulation end");
+            oc.do_register("tripinfo-output.write-undeparted", SumoOption::bool(false));
+            oc.add_description("tripinfo-output.write-undeparted", "Output", "Write tripinfo output for vehicles which have not departed at simulation end because of depart delay");
+            oc.do_register("personinfo-output", SumoOption::file_name());
+            oc.add_synonyme("personinfo-output", "personinfo", false);
+            oc.add_description("personinfo-output", "Output", "Save personinfo and containerinfo to separate FILE");
+            oc.do_register("vehroute-output", SumoOption::file_name());
+            oc.add_synonyme("vehroute-output", "vehroutes", false);
+            oc.add_description("vehroute-output", "Output", "Save single vehicle route info into FILE");
+            oc.do_register("vehroute-output.exit-times", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.exit-times", "vehroutes.exit-times", false);
+            oc.add_description("vehroute-output.exit-times", "Output", "Write the exit times for all edges");
+            oc.do_register("vehroute-output.last-route", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.last-route", "vehroutes.last-route", false);
+            oc.add_description("vehroute-output.last-route", "Output", "Write the last route only");
+            oc.do_register("vehroute-output.sorted", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.sorted", "vehroutes.sorted", false);
+            oc.add_description("vehroute-output.sorted", "Output", "Sorts the output by departure time");
+            oc.do_register("vehroute-output.dua", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.dua", "vehroutes.dua", false);
+            oc.add_description("vehroute-output.dua", "Output", "Write the output in the duarouter alternatives style");
+            oc.do_register("vehroute-output.cost", SumoOption::bool(false));
+            oc.add_description("vehroute-output.cost", "Output", "Write costs for all routes");
+            oc.do_register("vehroute-output.intended-depart", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.intended-depart", "vehroutes.intended-depart", false);
+            oc.add_description("vehroute-output.intended-depart", "Output", "Write the output with the intended instead of the real departure time");
+            oc.do_register("vehroute-output.route-length", SumoOption::bool(false));
+            oc.add_synonyme("vehroute-output.route-length", "vehroutes.route-length", false);
+            oc.add_description("vehroute-output.route-length", "Output", "Include total route length in the output");
+            oc.do_register("vehroute-output.write-unfinished", SumoOption::bool(false));
+            oc.add_description("vehroute-output.write-unfinished", "Output", "Write vehroute output for vehicles which have not arrived at simulation end");
+            oc.do_register("vehroute-output.skip-ptlines", SumoOption::bool(false));
+            oc.add_description("vehroute-output.skip-ptlines", "Output", "Skip vehroute output for public transport vehicles");
+            oc.do_register("vehroute-output.incomplete", SumoOption::bool(false));
+            oc.add_description("vehroute-output.incomplete", "Output", "Include invalid routes and route stubs in vehroute output");
+            oc.do_register("vehroute-output.stop-edges", SumoOption::bool(false));
+            oc.add_description("vehroute-output.stop-edges", "Output", "Include information about edges between stops");
+            oc.do_register("vehroute-output.speedfactor", SumoOption::bool(false));
+            oc.add_description("vehroute-output.speedfactor", "Output", "Write the vehicle speedFactor (defaults to 'true' if departSpeed is written)");
+            oc.do_register("vehroute-output.internal", SumoOption::bool(false));
+            oc.add_description("vehroute-output.internal", "Output", "Include internal edges in the output");
+            oc.do_register("personroute-output", SumoOption::file_name());
+            oc.add_synonyme("personroute-output", "personroutes", false);
+            oc.add_description("personroute-output", "Output", "Save person and container routes to separate FILE");
+            oc.do_register("link-output", SumoOption::file_name());
+            oc.add_description("link-output", "Output", "Save links states into FILE");
+            oc.do_register("railsignal-block-output", SumoOption::file_name());
+            oc.add_description("railsignal-block-output", "Output", "Save railsignal-blocks into FILE");
+            oc.do_register("railsignal-vehicle-output", SumoOption::file_name());
+            oc.add_description("railsignal-vehicle-output", "Output", "Record entry and exit times of vehicles for railsignal blocks into FILE");
+            oc.do_register("bt-output", SumoOption::file_name());
+            oc.add_description("bt-output", "Output", "Save bluetooth visibilities into FILE (in conjunction with device.btreceiver and device.btsender)");
+            oc.do_register("lanechange-output", SumoOption::file_name());
+            oc.add_description("lanechange-output", "Output", "Record lane changes and their motivations for all vehicles into FILE");
+            oc.do_register("lanechange-output.started", SumoOption::bool(false));
+            oc.add_description("lanechange-output.started", "Output", "Record start of lane change manoeuvres");
+            oc.do_register("lanechange-output.ended", SumoOption::bool(false));
+            oc.add_description("lanechange-output.ended", "Output", "Record end of lane change manoeuvres");
+            oc.do_register("lanechange-output.xy", SumoOption::bool(false));
+            oc.add_description("lanechange-output.xy", "Output", "Record coordinates of lane change manoeuvres");
+            oc.do_register("stop-output", SumoOption::file_name());
+            oc.add_description("stop-output", "Output", "Record stops and loading/unloading of passenger and containers for all vehicles into FILE");
+            oc.do_register("stop-output.write-unfinished", SumoOption::bool(false));
+            oc.add_description("stop-output.write-unfinished", "Output", "Write stop output for stops which have not ended at simulation end");
+            oc.do_register("collision-output", SumoOption::file_name());
+            oc.add_description("collision-output", "Output", "Write collision information into FILE");
+            oc.do_register("edgedata-output", SumoOption::file_name());
+            oc.add_description("edgedata-output", "Output", "Write aggregated traffic statistics for all edges into FILE");
+            oc.do_register("lanedata-output", SumoOption::file_name());
+            oc.add_description("lanedata-output", "Output", "Write aggregated traffic statistics for all lanes into FILE");
+            oc.do_register("statistic-output", SumoOption::file_name());
+            oc.add_synonyme("statistic-output", "statistics-output", false);
+            oc.add_description("statistic-output", "Output", "Write overall statistics into FILE");
+            oc.do_register("deadlock-output", SumoOption::file_name());
+            oc.add_description("deadlock-output", "Output", "Write reports on deadlocks FILE");
+            oc.do_register("save-state.times", SumoOption::string_vector());
+            oc.add_description("save-state.times", "Output", "Use TIME[] as times at which a network state written");
+            oc.do_register("save-state.period", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("save-state.period", "Output", "save state repeatedly after TIME period");
+            oc.do_register("save-state.period.keep", SumoOption::integer(0));
+            oc.add_description("save-state.period.keep", "Output", "Keep only the last INT periodic state files");
+            oc.do_register("save-state.prefix", SumoOption::file_name_with(vec!["state".to_string()]));
+            oc.add_description("save-state.prefix", "Output", "Prefix for network states");
+            oc.do_register("save-state.suffix", SumoOption::string_with(".xml.gz"));
+            oc.add_description("save-state.suffix", "Output", "Suffix for network states (.xml.gz or .xml)");
+            oc.do_register("save-state.files", SumoOption::file_name());
+            oc.add_description("save-state.files", "Output", "Files for network states");
+            oc.do_register("save-state.rng", SumoOption::bool(false));
+            oc.add_description("save-state.rng", "Output", "Save random number generator states");
+            oc.do_register("save-state.transportables", SumoOption::bool(false));
+            oc.add_description("save-state.transportables", "Output", "Save person and container states (experimental)");
+            oc.do_register("save-state.constraints", SumoOption::bool(false));
+            oc.add_description("save-state.constraints", "Output", "Save rail signal constraints");
+            oc.do_register("save-state.precision", SumoOption::integer(2));
+            oc.add_description("save-state.precision", "Output", "Write internal state values with the given precision (default 2)");
+            oc.do_register_abbr("begin", 'b', SumoOption::string_typed("0", "TIME"));
+            oc.add_description("begin", "Time", "Defines the begin time in seconds; The simulation starts at this time");
+            oc.do_register_abbr("end", 'e', SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("end", "Time", "Defines the end time in seconds; The simulation ends at this time");
+            oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
+            oc.add_description("step-length", "Time", "Defines the step duration in seconds");
+            oc.do_register("step-method.ballistic", SumoOption::bool(false));
+            oc.add_description("step-method.ballistic", "Processing", "Whether to use ballistic method for the positional update of vehicles (default is a semi-implicit Euler method).");
+            oc.do_register("extrapolate-departpos", SumoOption::bool(false));
+            oc.add_description("extrapolate-departpos", "Processing", "Whether vehicles that depart between simulation steps should extrapolate the depart position");
+            oc.do_register("threads", SumoOption::integer(1));
+            oc.add_description("threads", "Processing", "Defines the number of threads for parallel simulation");
+            oc.do_register("lateral-resolution", SumoOption::float(-1.0));
+            oc.add_description("lateral-resolution", "Processing", "Defines the resolution in m when handling lateral positioning within a lane (with -1 all vehicles drive at the center of their lane");
+            oc.do_register_abbr("route-steps", 's', SumoOption::string_typed("200", "TIME"));
+            oc.add_description("route-steps", "Processing", "Load routes for the next number of seconds ahead");
+            oc.do_register("no-internal-links", SumoOption::bool(false));
+            oc.add_description("no-internal-links", "Processing", "Disable (junction) internal links");
+            oc.do_register("ignore-junction-blocker", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("ignore-junction-blocker", "Processing", "Ignore vehicles which block the junction after they have been standing for SECONDS (-1 means never ignore)");
+            oc.do_register("ignore-route-errors", SumoOption::bool(false));
+            oc.add_description("ignore-route-errors", "Processing", "Do not check whether routes are connected");
+            oc.do_register("ignore-accidents", SumoOption::bool(false));
+            oc.add_description("ignore-accidents", "Processing", "Do not check whether accidents occur");
+            oc.do_register("collision.action", SumoOption::string_with("teleport"));
+            oc.add_description("collision.action", "Processing", "How to deal with collisions: [none,warn,teleport,remove]");
+            oc.do_register("intermodal-collision.action", SumoOption::string_with("warn"));
+            oc.add_description("intermodal-collision.action", "Processing", "How to deal with collisions between vehicle and pedestrian: [none,warn,teleport,remove]");
+            oc.do_register("collision.stoptime", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("collision.stoptime", "Processing", "Let vehicle stop for TIME before performing collision.action (except for action 'none')");
+            oc.do_register("intermodal-collision.stoptime", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("intermodal-collision.stoptime", "Processing", "Let vehicle stop for TIME before performing intermodal-collision.action (except for action 'none')");
+            oc.do_register("collision.check-junctions", SumoOption::bool(false));
+            oc.add_description("collision.check-junctions", "Processing", "Enables collisions checks on junctions");
+            oc.do_register("collision.check-junctions.mingap", SumoOption::float(0.0));
+            oc.add_description("collision.check-junctions.mingap", "Processing", "Increase or decrease sensitivity for junction collision check");
+            oc.do_register("collision.mingap-factor", SumoOption::float(-1.0));
+            oc.add_description("collision.mingap-factor", "Processing", "Sets the fraction of minGap that must be maintained to avoid collision detection. If a negative value is given, the carFollowModel parameter is used");
+            oc.do_register("keep-after-arrival", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("keep-after-arrival", "Processing", "After a vehicle arrives, keep it in memory for the given TIME (for TraCI access)");
+            oc.do_register("max-num-vehicles", SumoOption::integer(-1));
+            oc.add_description("max-num-vehicles", "Processing", "Delay vehicle insertion to stay within the given maximum number");
+            oc.do_register("max-num-persons", SumoOption::integer(-1));
+            oc.add_description("max-num-persons", "Persons", "Delay person insertion to stay within the given maximum number");
+            oc.do_register("max-num-teleports", SumoOption::integer(-1));
+            oc.add_description("max-num-teleports", "Processing", "Abort the simulation if the given maximum number of teleports is exceeded");
+            oc.do_register("scale", SumoOption::float(1.0));
+            oc.add_description("scale", "Processing", "Scale demand by the given factor (by discarding or duplicating vehicles)");
+            oc.do_register("scale-suffix", SumoOption::string_with("."));
+            oc.add_description("scale-suffix", "Processing", "Suffix to be added when creating ids for cloned vehicles");
+            oc.do_register("time-to-teleport", SumoOption::string_typed("300", "TIME"));
+            oc.add_description("time-to-teleport", "Processing", "Specify how long a vehicle may wait until being teleported, defaults to 300, non-positive values disable teleporting");
+            oc.do_register("time-to-teleport.highways", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("time-to-teleport.highways", "Processing", "The waiting time after which vehicles on a fast road (speed > 69km/h) are teleported if they are on a non-continuing lane");
+            oc.do_register("time-to-teleport.highways.min-speed", SumoOption::float(69.0 / 3.6));
+            oc.add_description("time-to-teleport.highways.min-speed", "Processing", "The waiting time after which vehicles on a fast road (default: speed > 69km/h) are teleported if they are on a non-continuing lane");
+            oc.do_register("time-to-teleport.disconnected", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("time-to-teleport.disconnected", "Processing", "The waiting time after which vehicles with a disconnected route are teleported. Negative values disable teleporting");
+            oc.do_register("time-to-teleport.remove", SumoOption::bool(false));
+            oc.add_description("time-to-teleport.remove", "Processing", "Whether vehicles shall be removed after waiting too long instead of being teleported");
+            oc.do_register("time-to-teleport.remove-constraint", SumoOption::bool(false));
+            oc.add_description("time-to-teleport.remove-constraint", "Processing", "Whether rail-signal-constraint based deadlocks shall be cleared by removing a constraint");
+            oc.do_register("time-to-teleport.ride", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("time-to-teleport.ride", "Persons", "The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting");
+            oc.do_register("time-to-teleport.bidi", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("time-to-teleport.bidi", "Processing", "The waiting time after which vehicles on bidirectional edges are teleported");
+            oc.do_register("time-to-teleport.railsignal-deadlock", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("time-to-teleport.railsignal-deadlock", "Processing", "The waiting time after which vehicles in a rail-signal based deadlock are teleported");
+            oc.do_register("waiting-time-memory", SumoOption::string_typed("100", "TIME"));
+            oc.add_description("waiting-time-memory", "Processing", "Length of time interval, over which accumulated waiting time is taken into account (default is 100s.)");
+            oc.do_register("startup-wait-threshold", SumoOption::string_typed("2", "TIME"));
+            oc.add_description("startup-wait-threshold", "Processing", "Minimum consecutive waiting time before applying startupDelay");
+            oc.do_register("max-depart-delay", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("max-depart-delay", "Processing", "How long vehicles wait for departure before being skipped, defaults to -1 which means vehicles are never skipped");
+            oc.do_register("sloppy-insert", SumoOption::bool(false));
+            oc.add_description("sloppy-insert", "Processing", "Whether insertion on an edge shall not be repeated in same step once failed");
+            oc.do_register("eager-insert", SumoOption::bool(false));
+            oc.add_description("eager-insert", "Processing", "Whether each vehicle is checked separately for insertion on an edge");
+            oc.do_register("emergency-insert", SumoOption::bool(false));
+            oc.add_description("emergency-insert", "Processing", "Allow inserting a vehicle in a situation which requires emergency braking");
+            oc.do_register("insertion-checks", SumoOption::string_with("all"));
+            oc.add_description("insertion-checks", "Processing", "Override default value for vehicle attribute insertionChecks");
+            oc.do_register("random-depart-offset", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("random-depart-offset", "Processing", "Each vehicle receives a random offset to its depart value drawn uniformly from [0, TIME]");
+            oc.do_register("lanechange.duration", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("lanechange.duration", "Processing", "Duration of a lane change maneuver (default 0)");
+            oc.do_register("lanechange.overtake-right", SumoOption::bool(false));
+            oc.add_description("lanechange.overtake-right", "Processing", "Whether overtaking on the right on motorways is permitted");
+            oc.do_register("tls.all-off", SumoOption::bool(false));
+            oc.add_description("tls.all-off", "Processing", "Switches off all traffic lights.");
+            oc.do_register("tls.actuated.show-detectors", SumoOption::bool(false));
+            oc.add_description("tls.actuated.show-detectors", "Processing", "Sets default visibility for actuation detectors");
+            oc.do_register("tls.actuated.jam-threshold", SumoOption::float(-1.0));
+            oc.add_description("tls.actuated.jam-threshold", "Processing", "Sets default jam-threshold parameter for all actuation detectors");
+            oc.do_register("tls.actuated.detector-length", SumoOption::float(0.0));
+            oc.add_description("tls.actuated.detector-length", "Processing", "Sets default detector length parameter for all actuation detectors");
+            oc.do_register("tls.delay_based.detector-range", SumoOption::float(100.0));
+            oc.add_description("tls.delay_based.detector-range", "Processing", "Sets default range for detecting delayed vehicles");
+            oc.do_register("tls.yellow.min-decel", SumoOption::float(3.0));
+            oc.add_description("tls.yellow.min-decel", "Processing", "Minimum deceleration when braking at yellow");
+            oc.do_register("railsignal-moving-block", SumoOption::bool(false));
+            oc.add_description("railsignal-moving-block", "Processing", "Let railsignals operate in moving-block mode by default");
+            oc.add_synonyme("railsignal-moving-block", "railsignal.moving-block", false);
+            oc.do_register("railsignal.moving-block.default-classes", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
+            oc.add_description("railsignal.moving-block.default-classes", "Processing", "List vehicle classes that default to moving-block operations");
+            oc.do_register("railsignal.moving-block.max-dist", SumoOption::float(200.0));
+            oc.add_description("railsignal.moving-block.max-dist", "Processing", "Maximum signal distance above which zipper conflicts are ignored");
+            oc.do_register("railsignal.max-block-length", SumoOption::float(2e4));
+            oc.add_description("railsignal.max-block-length", "Processing", "Do not build blocks longer than FLOAT and issue a warning instead");
+            oc.do_register("railsignal.default-classes", SumoOption::string_vector_with(vec!["rail".to_string(), "rail_fast".to_string(), "rail_electric".to_string(), "rail_urban".to_string(), "subway".to_string()]));
+            oc.add_description("railsignal.default-classes", "Processing", "List vehicle classes that uses block-based insertion checks even when the network has no rail signals for them");
+            oc.do_register("slope-centered", SumoOption::bool(false));
+            oc.add_description("slope-centered", "Processing", "Compute slope at the vehicle center of mass instead of integrating over front and back");
+            oc.do_register("time-to-impatience", SumoOption::string_typed("180", "TIME"));
+            oc.add_description("time-to-impatience", "Processing", "Specify how long a vehicle may wait until impatience grows from 0 to 1, defaults to 300, non-positive values disable impatience growth");
+            oc.do_register("default.departspeed", SumoOption::string_with("avg"));
+            oc.add_description("default.departspeed", "Processing", "Select default depart speed");
+            oc.do_register("default.departlane", SumoOption::string_with("best_prob"));
+            oc.add_description("default.departlane", "Processing", "Select default depart lane");
+            oc.do_register("default.action-step-length", SumoOption::float(0.0));
+            oc.add_description("default.action-step-length", "Processing", "Length of the default interval length between action points for the car-following and lane-change models (in seconds). If not specified, the simulation step-length is used per default. Vehicle- or VType-specific settings override the default. Must be a multiple of the simulation step-length.");
+            oc.do_register("default.carfollowmodel", SumoOption::string_with("Krauss"));
+            oc.add_description("default.carfollowmodel", "Processing", "Select default car following model (Krauss, IDM, ...)");
+            oc.add_synonyme("default.carfollowmodel", "carfollow.model", false);
+            oc.do_register("default.speeddev", SumoOption::float(-1.0));
+            oc.add_description("default.speeddev", "Processing", "Select default speed deviation. A negative value implies vClass specific defaults (0.1 for the default passenger class)");
+            oc.do_register("default.emergencydecel", SumoOption::string_with("default"));
+            oc.add_description("default.emergencydecel", "Processing", "Select default emergencyDecel value among ('decel', 'default', FLOAT) which sets the value either to the same as the deceleration value, a vClass-class specific default or the given FLOAT in m/s^2");
+            oc.do_register("overhead-wire.solver", SumoOption::bool(true));
+            oc.add_description("overhead-wire.solver", "Processing", "Use Kirchhoff's laws for solving overhead wire circuit");
+            oc.do_register("overhead-wire.recuperation", SumoOption::bool(true));
+            oc.add_description("overhead-wire.recuperation", "Processing", "Enable recuperation from the vehicle equipped with elecHybrid device into the overhead wire.");
+            oc.do_register("overhead-wire.substation-current-limits", SumoOption::bool(true));
+            oc.add_description("overhead-wire.substation-current-limits", "Processing", "Enable current limits of traction substation during solving the overhead wire electrical circuit.");
+            oc.do_register("emergencydecel.warning-threshold", SumoOption::float(1.0));
+            oc.add_description("emergencydecel.warning-threshold", "Processing", "Sets the fraction of emergency decel capability that must be used to trigger a warning.");
+            oc.do_register("parking.maneuver", SumoOption::bool(false));
+            oc.add_description("parking.maneuver", "Processing", "Whether parking simulation includes maneuvering time and associated lane blocking");
+            oc.do_register("use-stop-ended", SumoOption::bool(false));
+            oc.add_description("use-stop-ended", "Processing", "Override stop until times with stop ended times when given");
+            oc.do_register("use-stop-started", SumoOption::bool(false));
+            oc.add_description("use-stop-started", "Processing", "Override stop arrival times with stop started times when given");
+            oc.do_register("pedestrian.model", SumoOption::string_with("striping"));
+            oc.add_description("pedestrian.model", "Persons", "Select among pedestrian models ['nonInteracting', 'striping', 'jupedsim']");
+            oc.do_register("pedestrian.timegap-crossing", SumoOption::float(2.0));
+            oc.add_description("pedestrian.timegap-crossing", "Persons", "Minimal acceptable gap (in seconds) between two vehicles before starting to cross");
+            oc.do_register("pedestrian.striping.stripe-width", SumoOption::float(0.64));
+            oc.add_description("pedestrian.striping.stripe-width", "Persons", "Width of parallel stripes for segmenting a sidewalk (meters) for use with model 'striping'");
+            oc.do_register("pedestrian.striping.dawdling", SumoOption::float(0.2));
+            oc.add_description("pedestrian.striping.dawdling", "Persons", "Factor for random slow-downs [0,1] for use with model 'striping'");
+            oc.do_register("pedestrian.striping.mingap-to-vehicle", SumoOption::float(0.25));
+            oc.add_description("pedestrian.striping.mingap-to-vehicle", "Persons", "Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model 'striping'");
+            oc.do_register("pedestrian.striping.jamtime", SumoOption::string_typed("300", "TIME"));
+            oc.add_description("pedestrian.striping.jamtime", "Persons", "Time in seconds after which pedestrians start squeezing through a jam when using model 'striping' (non-positive values disable squeezing)");
+            oc.do_register("pedestrian.striping.jamtime.crossing", SumoOption::string_typed("10", "TIME"));
+            oc.add_description("pedestrian.striping.jamtime.crossing", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model 'striping' (non-positive values disable squeezing)");
+            oc.do_register("pedestrian.striping.jamtime.narrow", SumoOption::string_typed("1", "TIME"));
+            oc.add_description("pedestrian.striping.jamtime.narrow", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model 'striping'");
+            oc.do_register("pedestrian.striping.jamfactor", SumoOption::float(0.25));
+            oc.add_description("pedestrian.striping.jamfactor", "Persons", "Factor for reducing speed of pedestrian in jammed state");
+            oc.do_register("pedestrian.striping.reserve-oncoming", SumoOption::float(0.0));
+            oc.add_description("pedestrian.striping.reserve-oncoming", "Persons", "Fraction of stripes to reserve for oncoming pedestrians");
+            oc.do_register("pedestrian.striping.reserve-oncoming.junctions", SumoOption::float(0.34));
+            oc.add_description("pedestrian.striping.reserve-oncoming.junctions", "Persons", "Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas");
+            oc.do_register("pedestrian.striping.reserve-oncoming.max", SumoOption::float(1.28));
+            oc.add_description("pedestrian.striping.reserve-oncoming.max", "Persons", "Maximum width in m to reserve for oncoming pedestrians");
+            oc.do_register("pedestrian.striping.legacy-departposlat", SumoOption::bool(false));
+            oc.add_description("pedestrian.striping.legacy-departposlat", "Persons", "Interpret departPosLat for walks in legacy style");
+            oc.do_register("pedestrian.striping.walkingarea-detail", SumoOption::integer(4));
+            oc.add_description("pedestrian.striping.walkingarea-detail", "Persons", "Generate INT intermediate points to smooth out lanes within the walkingarea");
+            oc.do_register("ride.stop-tolerance", SumoOption::float(10.0));
+            oc.add_description("ride.stop-tolerance", "Persons", "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops");
+            oc.do_register("mapmatch.distance", SumoOption::float(100.0));
+            oc.add_description("mapmatch.distance", "Processing", "Maximum distance when mapping input coordinates (fromXY etc.) to the road network");
+            oc.do_register("mapmatch.junctions", SumoOption::bool(false));
+            oc.add_description("mapmatch.junctions", "Processing", "Match positions to junctions instead of edges");
+            oc.do_register("mapmatch.taz", SumoOption::bool(false));
+            oc.add_description("mapmatch.taz", "Processing", "Match positions to taz instead of edges");
+            oc.do_register("routing-algorithm", SumoOption::string_with("dijkstra"));
+            oc.add_description("routing-algorithm", "Routing", "Select among routing algorithms ['dijkstra', 'astar', 'CH', 'CHWrapper', 'CCH']");
+            oc.do_register("weights.random-factor", SumoOption::float(1.0));
+            oc.add_description("weights.random-factor", "Routing", "Edge weights for routing are dynamically disturbed by a random factor drawn uniformly from [1,FLOAT)");
+            oc.do_register("weights.random-factor.dynamic", SumoOption::bool(false));
+            oc.add_description("weights.random-factor.dynamic", "Routing", "When using option --weights.random-factor, vary the randomness over time");
+            oc.do_register("weights.minor-penalty", SumoOption::float(1.5));
+            oc.add_description("weights.minor-penalty", "Routing", "Apply the given time penalty when computing minimum routing costs for minor-link internal lanes");
+            oc.do_register("weights.tls-penalty", SumoOption::float(0.0));
+            oc.add_description("weights.tls-penalty", "Routing", "Apply scaled travel time penalties based on green split when computing minimum routing costs for internal lanes at traffic lights");
+            oc.do_register("weights.turnaround-penalty", SumoOption::float(5.0));
+            oc.add_description("weights.turnaround-penalty", "Processing", "Apply the given time penalty when computing routing costs for turnaround internal lanes");
+            oc.do_register("weights.reversal-penalty", SumoOption::float(60.0));
+            oc.add_description("weights.reversal-penalty", "Processing", "Apply the given time penalty when computing routing costs for train reversal. Negative values disable reversal");
+            oc.do_register("weights.priority-factor", SumoOption::float(0.0));
+            oc.add_description("weights.priority-factor", "Routing", "Consider edge priorities in addition to travel times, weighted by factor");
+            oc.do_register("weights.separate-turns", SumoOption::float(0.0));
+            oc.add_description("weights.separate-turns", "Routing", "Distinguish travel time by turn direction and shift a fraction of the estimated time loss ahead of the intersection onto the internal edges");
+            oc.do_register("astar.all-distances", SumoOption::file_name());
+            oc.add_description("astar.all-distances", "Routing", "Initialize lookup table for astar from the given file (generated by marouter --all-pairs-output)");
+            oc.do_register("astar.landmark-distances", SumoOption::file_name());
+            oc.add_description("astar.landmark-distances", "Routing", "Initialize lookup table for astar ALT-variant from the given file");
+            oc.do_register("persontrip.walkfactor", SumoOption::float(0.75));
+            oc.add_description("persontrip.walkfactor", "Persons", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
+            oc.do_register("persontrip.walk-opposite-factor", SumoOption::float(1.0));
+            oc.add_description("persontrip.walk-opposite-factor", "Persons", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
+            oc.do_register("persontrip.transfer.car-walk", SumoOption::string_vector_with(vec!["parkingAreas".to_string()]));
+            oc.add_description("persontrip.transfer.car-walk", "Persons", "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
+            oc.do_register("persontrip.transfer.taxi-walk", SumoOption::string_vector());
+            oc.add_description("persontrip.transfer.taxi-walk", "Persons", "Where taxis can drop off customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.do_register("persontrip.transfer.walk-taxi", SumoOption::string_vector());
+            oc.add_description("persontrip.transfer.walk-taxi", "Persons", "Where taxis can pick up customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.do_register("persontrip.default.group", SumoOption::string());
+            oc.add_description("persontrip.default.group", "Persons", "When set, trips between the same origin and destination will share a taxi by default");
+            oc.do_register("persontrip.taxi.waiting-time", SumoOption::string_typed("300", "TIME"));
+            oc.add_description("persontrip.taxi.waiting-time", "Persons", "Estimated time for taxi pickup");
+            oc.do_register("persontrip.ride-public-line", SumoOption::bool(false));
+            oc.add_description("persontrip.ride-public-line", "Persons", "Only use the intended public transport line rather than any alternative line that stops at the destination");
+            oc.do_register("railway.max-train-length", SumoOption::float(1000.0));
+            oc.add_description("railway.max-train-length", "Routing", "Use FLOAT as a maximum train length when initializing the railway router");
+            oc.do_register("replay-rerouting", SumoOption::bool(false));
+            oc.add_description("replay-rerouting", "Routing", "Replay exact rerouting sequence from vehroute-output");
+            oc.add_option_sub_topic("Emissions");
+            oc.do_register("emissions.volumetric-fuel", SumoOption::bool(false));
+            oc.add_description("emissions.volumetric-fuel", "Emissions", "Return fuel consumption values in (legacy) unit l instead of mg");
+            oc.do_register("phemlight-path", SumoOption::file_name_with(vec!["./PHEMlight/".to_string()]));
+            oc.add_description("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from");
+            oc.do_register("phemlight-year", SumoOption::integer(0));
+            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modeling with the given reference year in PHEMlight5");
+            oc.do_register("phemlight-temperature", SumoOption::float(f64::MAX));
+            oc.add_description("phemlight-temperature", "Emissions", "Set ambient temperature to correct NOx emissions in PHEMlight5");
+            oc.add_option_sub_topic("Communication");
+            oc.add_option_sub_topic("Battery");
+            crate::microsim::devices::ms_device::MSDevice::insert_options(oc);
+            oc.do_register("duration-log.disable", SumoOption::bool(false));
+            oc.add_synonyme("duration-log.disable", "no-duration-log", false);
+            oc.add_description("duration-log.disable", "Report", "Disable performance reports for individual simulation steps");
+            oc.do_register_abbr("duration-log.statistics", 't', SumoOption::bool(false));
+            oc.add_description("duration-log.statistics", "Report", "Enable statistics on vehicle trips");
+            oc.do_register("no-step-log", SumoOption::bool(false));
+            oc.add_description("no-step-log", "Report", "Disable console output of current simulation step");
+            oc.do_register("step-log.period", SumoOption::integer(100));
+            oc.add_description("step-log.period", "Report", "Number of simulation steps between step-log outputs");
+            oc.add_option_sub_topic("TraCI Server");
+            oc.do_register("remote-port", SumoOption::integer(0));
+            oc.add_description("remote-port", "TraCI Server", "Enables TraCI Server if set");
+            oc.do_register("num-clients", SumoOption::integer(1));
+            oc.add_description("num-clients", "TraCI Server", "Expected number of connecting clients");
+            oc.add_option_sub_topic("Mesoscopic");
+            oc.do_register("mesosim", SumoOption::bool(false));
+            oc.add_description("mesosim", "Mesoscopic", "Enables mesoscopic simulation");
+            oc.do_register("meso-ltm", SumoOption::bool(false));
+            oc.add_description("meso-ltm", "Mesoscopic", "Enables the meso-LTM (LIFT) model");
+            oc.do_register("meso-edgelength", SumoOption::float(98.0));
+            oc.add_description("meso-edgelength", "Mesoscopic", "Length of an edge segment in mesoscopic simulation");
+            oc.do_register("meso-tauff", SumoOption::string_typed("1.13", "TIME"));
+            oc.add_description("meso-tauff", "Mesoscopic", "Factor for calculating the net free-free headway time");
+            oc.do_register("meso-taufj", SumoOption::string_typed("1.13", "TIME"));
+            oc.add_description("meso-taufj", "Mesoscopic", "Factor for calculating the net free-jam headway time");
+            oc.do_register("meso-taujf", SumoOption::string_typed("1.73", "TIME"));
+            oc.add_description("meso-taujf", "Mesoscopic", "Factor for calculating the jam-free headway time");
+            oc.do_register("meso-taujj", SumoOption::string_typed("1.4", "TIME"));
+            oc.add_description("meso-taujj", "Mesoscopic", "Factor for calculating the jam-jam headway time");
+            oc.do_register("meso-jam-threshold", SumoOption::float(-1.0));
+            oc.add_description("meso-jam-threshold", "Mesoscopic", "Minimum percentage of occupied space to consider a segment jammed. A negative argument causes thresholds to be computed based on edge speed and tauff (default)");
+            oc.do_register("meso-multi-queue", SumoOption::bool(true));
+            oc.add_description("meso-multi-queue", "Mesoscopic", "Enable multiple queues at edge ends");
+            oc.do_register("meso-lane-queue", SumoOption::bool(false));
+            oc.add_description("meso-lane-queue", "Mesoscopic", "Enable separate queues for every lane");
+            oc.do_register("meso-lookahead", SumoOption::float(0.0));
+            oc.add_description("meso-lookahead", "Mesoscopic", "Choose lane queues by the route of the vehicle at all turns up to FLOAT m ahead");
+            oc.do_register("meso-ignore-lanes-by-vclass", SumoOption::string_vector_with(vec!["pedestrian".to_string(), "bicycle".to_string()]));
+            oc.add_description("meso-ignore-lanes-by-vclass", "Mesoscopic", "Do not build queues (or reduce capacity) for lanes allowing only the given vclasses");
+            oc.add_synonyme("meso-ignore-lanes-by-vclass", "meso.ignore-lanes.by-vclass", false);
+            oc.do_register("meso-junction-control", SumoOption::bool(false));
+            oc.add_description("meso-junction-control", "Mesoscopic", "Enable mesoscopic traffic light and priority junction handling");
+            oc.do_register("meso-junction-control.limited", SumoOption::bool(false));
+            oc.add_description("meso-junction-control.limited", "Mesoscopic", "Enable mesoscopic traffic light and priority junction handling for saturated links. This prevents faulty traffic lights from hindering flow in low-traffic situations");
+            oc.do_register("meso-tls-penalty", SumoOption::float(0.0));
+            oc.add_description("meso-tls-penalty", "Mesoscopic", "Apply scaled travel time penalties when driving across tls controlled junctions based on green split instead of checking actual phases");
+            oc.do_register("meso-tls-flow-penalty", SumoOption::float(0.0));
+            oc.add_description("meso-tls-flow-penalty", "Mesoscopic", "Apply scaled headway penalties when driving across tls controlled junctions based on green split instead of checking actual phases");
+            oc.do_register("meso-minor-penalty", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("meso-minor-penalty", "Mesoscopic", "Apply fixed time penalty when driving across a minor link. When using --meso-junction-control.limited, the penalty is not applied whenever limited control is active.");
+            oc.do_register("meso-overtaking", SumoOption::bool(false));
+            oc.add_description("meso-overtaking", "Mesoscopic", "Enable mesoscopic overtaking");
+            oc.do_register("meso-recheck", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("meso-recheck", "Mesoscopic", "Time interval for rechecking insertion into the next segment after failure");
+            oc.do_register("meso-interpolate-pos", SumoOption::bool(false));
+            oc.add_description("meso-interpolate-pos", "Mesoscopic", "Enable mesoscopic position interpolation");
+            // shortcut: C++ RandHelper::insertRandOptions is not ported, so the rand options are not registered here; upgrade when rand_helper registers them
+            oc.do_register("thread-rngs", SumoOption::integer(64));
+            oc.add_description("thread-rngs", "Random Number", "Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).");
+            oc.add_option_sub_topic("GUI Only");
+            oc.do_register_abbr("gui-settings-file", 'g', SumoOption::file_name());
+            oc.add_description("gui-settings-file", "GUI Only", "Load visualization settings from FILE");
+            oc.do_register_abbr("quit-on-end", 'Q', SumoOption::bool(false));
+            oc.add_description("quit-on-end", "GUI Only", "Quits the GUI when the simulation stops");
+            oc.do_register_abbr("game", 'G', SumoOption::bool(false));
+            oc.add_description("game", "GUI Only", "Start the GUI in gaming mode");
+            oc.do_register("game.mode", SumoOption::string_with("tls"));
+            oc.add_description("game.mode", "GUI Only", "Select the game type ('tls', 'drt')");
+            oc.do_register_abbr("start", 'S', SumoOption::bool(false));
+            oc.add_description("start", "GUI Only", "Start the simulation after loading");
+            oc.do_register_abbr("delay", 'd', SumoOption::float(0.0));
+            oc.add_description("delay", "GUI Only", "Use FLOAT in ms as delay between simulation steps");
+            oc.do_register_abbr("breakpoints", 'B', SumoOption::string_vector());
+            oc.add_description("breakpoints", "GUI Only", "Use TIME[] as times when the simulation should halt");
+            oc.do_register_abbr("edgedata-files", 'm', SumoOption::file_name());
+            oc.add_synonyme("edgedata-files", "data-files", false);
+            oc.add_description("edgedata-files", "GUI Only", "Load edge/lane weights for visualization from FILE");
+            oc.do_register_abbr("alternative-net-file", 'N', SumoOption::file_name());
+            oc.add_description("alternative-net-file", "GUI Only", "Load a secondary road network for abstract visualization from FILE");
+            oc.do_register("selection-file", SumoOption::file_name());
+            oc.add_description("selection-file", "GUI Only", "Load pre-selected elements from FILE");
+            oc.do_register_abbr("demo", 'D', SumoOption::bool(false));
+            oc.add_description("demo", "GUI Only", "Restart the simulation after ending (demo mode)");
+            oc.do_register_abbr("disable-textures", 'T', SumoOption::bool(false));
+            oc.add_description("disable-textures", "GUI Only", "Do not load background pictures");
+            oc.do_register("registry-viewport", SumoOption::bool(false));
+            oc.add_description("registry-viewport", "GUI Only", "Load current viewport from registry");
+            oc.do_register("window-size", SumoOption::string_vector());
+            oc.add_description("window-size", "GUI Only", "Create initial window with the given x,y size");
+            oc.do_register("window-pos", SumoOption::string_vector());
+            oc.add_description("window-pos", "GUI Only", "Create initial window at the given x,y position");
+            oc.do_register("tracker-interval", SumoOption::string_typed("1", "TIME"));
+            oc.add_description("tracker-interval", "GUI Only", "The aggregation period for value tracker windows");
+            oc.do_register("gui-testing", SumoOption::bool(false));
+            oc.add_description("gui-testing", "GUI Only", "Enable overlay for screen recognition");
+            oc.do_register("gui-testing-debug", SumoOption::bool(false));
+            oc.add_description("gui-testing-debug", "GUI Only", "Enable output messages during GUI-Testing");
+            oc.do_register("gui-testing.setting-output", SumoOption::file_name());
+            oc.add_description("gui-testing.setting-output", "GUI Only", "Save gui settings in the given settings output file");
+        });
     }
 
     /// C++: `void MSFrame::buildStreams()` [static]
@@ -903,7 +1539,59 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn build_streams() {
-        todo!("port MSFrame::buildStreams")
+        // C++ OutputDevice::createDeviceByOption defaults: rootElement "", schemaFile "", maximumDepth 2
+        let create = |option: &str, root: &str, schema: &str, depth: i32| -> bool {
+            utils::iodevices::output_device::OutputDevice::create_device_by_option(option, root, schema, depth).unwrap_or_else(|e| panic!("{e}"))
+        };
+        // standard outputs
+        if create("netstate-dump", "netstate", "netstate_file.xsd", 2) {
+            utils::common::msg_handler::write_warning("Raw netstate dumps are deprecated. Use fcd-output instead.");
+        }
+        create("summary-output", "summary", "summary_file.xsd", 2);
+        create("person-summary-output", "personSummary", "person_summary_file.xsd", 2);
+        create("tripinfo-output", "tripinfos", "tripinfo_file.xsd", 2);
+
+        //extended
+        create("fcd-output", "fcd-export", "fcd_file.xsd", 2);
+        create("person-fcd-output", "fcd-export", "fcd_file.xsd", 2);
+        create("emission-output", "emission-export", "emission_file.xsd", 2);
+        create("battery-output", "battery-export", "battery_file.xsd", 2);
+        if utils::options::options_cont::get_bool("elechybrid-output.aggregated") {
+            // RICE_TODO: Add path to elechybrid-output.aggregated xsd file
+            create(
+                "elechybrid-output",
+                "elecHybrid-export-aggregated",
+                &format!("\" recuperationEnabled=\"{}", utils::common::to_string::to_string(&crate::microsim::ms_globals::overhead_wire_recuperation())),
+                2,
+            );
+        }
+        //OutputDevice::createDeviceByOption("elecHybrid-output", "elecHybrid-export");
+        create("chargingstations-output", "chargingstations-export", "", 2);
+        create("overheadwiresegments-output", "overheadWireSegments-export", "", 2);
+        create("substations-output", "substations-export", "", 2);
+        create("full-output", "full-export", "full_file.xsd", 2);
+        create("queue-output", "queue-export", "queue_file.xsd", 3);
+        create(
+            "amitran-output",
+            "trajectories",
+            &format!("amitran/trajectories.xsd\" timeStepSize=\"{}", utils::common::to_string::to_string(&utils::common::time::delta_t())),
+            2,
+        );
+
+        //OutputDevice::createDeviceByOption("vtk-output", "vtk-export");
+        create("link-output", "link-output", "", 2);
+        create("railsignal-block-output", "railsignal-block-output", "", 2);
+        create("railsignal-vehicle-output", "railsignal-vehicle-output", "", 2);
+        create("bt-output", "bt-output", "", 2);
+        create("lanechange-output", "lanechanges", "", 2);
+        create("stop-output", "stops", "stopinfo_file.xsd", 2);
+        create("collision-output", "collisions", "collision_file.xsd", 2);
+        create("statistic-output", "statistics", "statistic_file.xsd", 2);
+        create("deadlock-output", "additional", "additional_file.xsd", 2);
+        // shortcut: C++ creates the "movereminder-output" device only under _DEBUG; not created in this release-style port
+
+        crate::microsim::devices::ms_device_vehroutes::MSDevice_Vehroutes::init();
+        crate::microsim::output::ms_stop_out::MSStopOut::init();
     }
 
     /// C++: `bool MSFrame::checkOptions()` [static]
@@ -1141,7 +1829,226 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options() -> bool {
-        todo!("port MSFrame::checkOptions")
+        utils::options::options_cont::with_options(|oc| {
+            let mut ok = true;
+            if opt_bool(oc, "ignore.routeelements") {
+                or_panic(oc.reset_writable_name("route-files"));
+                or_panic(oc.reset_default_name("route-files"));
+            }
+            if opt_bool(oc, "ignore.additionalelements") {
+                or_panic(oc.reset_writable_name("additional-files"));
+                or_panic(oc.reset_default_name("additional-files"));
+            }
+            if !opt_is_set(oc, "net-file") && opt_is_default(oc, "remote-port") {
+                utils::common::msg_handler::write_error("No network file (-n) specified.");
+                ok = false;
+            }
+            if opt_float(oc, "scale") < 0. {
+                utils::common::msg_handler::write_error("Invalid scaling factor.");
+                ok = false;
+            }
+            if opt_bool(oc, "vehroute-output.exit-times") && !opt_is_set(oc, "vehroute-output") {
+                utils::common::msg_handler::write_error("A vehroute-output file is needed for exit times.");
+                ok = false;
+            }
+            if opt_is_set(oc, "gui-settings-file") && opt_str(oc, "gui-settings-file") != "" && !or_panic(oc.is_usable_file_list("gui-settings-file")) {
+                ok = false;
+            }
+            if opt_bool(oc, "demo") && opt_is_default(oc, "start") {
+                or_panic(oc.set_default("start", "true"));
+            }
+            if opt_bool(oc, "demo") && opt_bool(oc, "quit-on-end") {
+                utils::common::msg_handler::write_error("You can either restart or quit on end.");
+                ok = false;
+            }
+            if opt_bool(oc, "meso-junction-control.limited") && !opt_bool(oc, "meso-junction-control") {
+                if !opt_is_default(oc, "meso-junction-control") {
+                    utils::common::msg_handler::write_warning("The option 'meso-junction-control.limited' implies 'meso-junction-control'.");
+                }
+                or_panic(oc.set_default("meso-junction-control", "true"));
+            }
+            if opt_bool(oc, "meso-ltm") && opt_is_default(oc, "mesosim") {
+                or_panic(oc.set_default("mesosim", "true"));
+            }
+            if opt_bool(oc, "mesosim") && opt_is_default(oc, "pedestrian.model") {
+                or_panic(oc.set_default("pedestrian.model", "nonInteracting"));
+            }
+            if st(&opt_str(oc, "device.fcd.begin")) < 0 {
+                let v = opt_str(oc, "begin");
+                or_panic(oc.set_default("device.fcd.begin", &v));
+            }
+            if st(&opt_str(oc, "device.emissions.begin")) < 0 {
+                let v = opt_str(oc, "begin");
+                or_panic(oc.set_default("device.emissions.begin", &v));
+            }
+            let begin = st(&opt_str(oc, "begin"));
+            let end = st(&opt_str(oc, "end"));
+            if begin < 0 {
+                utils::common::msg_handler::write_error("The begin time should not be negative.");
+                ok = false;
+            }
+            // DELTA_T not yet initialized
+            let deltaT = std::cmp::max(1, st(&opt_str(oc, "step-length")));
+            if begin < utils::common::time::time2steps(1.0) {
+                check_step_length_multiple(begin, " for begin", deltaT, 0);
+            }
+            if end != st("-1") && end < begin {
+                utils::common::msg_handler::write_error("The end time should be after the begin time.");
+                ok = false;
+            }
+            if st(&opt_str(oc, "step-length")) <= 0 {
+                utils::common::msg_handler::write_error("the minimum step-length is 0.001.");
+                ok = false;
+            }
+            let period = st(&opt_str(oc, "device.fcd.period"));
+            if period > 0 {
+                check_step_length_multiple(period, " for device.fcd.period", deltaT, 0);
+            }
+            let statePeriod = st(&opt_str(oc, "save-state.period"));
+            if statePeriod > 0 {
+                check_step_length_multiple(statePeriod, " for save-state.period", deltaT, 0);
+            }
+            for timeStr in opt_strs(oc, "save-state.times") {
+                match utils::common::time::string2time(&timeStr) {
+                    Ok(saveT) => {
+                        if end > 0 && saveT >= end {
+                            utils::common::msg_handler::write_warning(&format!(
+                                "The save-state time={} will not be used before simulation end at {}.",
+                                timeStr,
+                                utils::common::time::time2string(end)
+                            ));
+                        } else {
+                            check_step_length_multiple(saveT, " for save-state.times", deltaT, begin);
+                        }
+                    }
+                    Err(e) => {
+                        utils::common::msg_handler::write_error(&format!("Invalid time '{}' for option 'save-state.times'. {}", timeStr, e));
+                        ok = false;
+                    }
+                }
+            }
+            // shortcut: C++ movereminder-output check is only compiled under _DEBUG; not checked in this port
+            if opt_bool(oc, "sloppy-insert") {
+                utils::common::msg_handler::write_warning("The option 'sloppy-insert' is deprecated, because it is now activated by default, see the new option 'eager-insert'.");
+            }
+            if st(&opt_str(oc, "lanechange.duration")) > 0 && opt_float(oc, "lateral-resolution") > 0. {
+                utils::common::msg_handler::write_error("Only one of the options 'lanechange.duration' or 'lateral-resolution' may be given.");
+                ok = false;
+            }
+            if opt_bool(oc, "mesosim") && (opt_float(oc, "lateral-resolution") > 0. || st(&opt_str(oc, "lanechange.duration")) > 0) {
+                utils::common::msg_handler::write_error("Sublane dynamics are not supported by mesoscopic simulation.");
+                ok = false;
+            }
+            if opt_bool(oc, "ignore-accidents") {
+                utils::common::msg_handler::write_warning("The option 'ignore-accidents' is deprecated. Use 'collision.action none' instead.");
+            }
+            if opt_bool(oc, "duration-log.statistics") && opt_is_default(oc, "verbose") {
+                or_panic(oc.set_default("verbose", "true"));
+            }
+            if opt_is_default(oc, "precision") && st(&opt_str(oc, "step-length")) % 10 != 0 {
+                or_panic(oc.set_default("precision", "3"));
+            }
+            if opt_is_default(oc, "tracker-interval") && !opt_is_default(oc, "step-length") {
+                let v = opt_str(oc, "step-length");
+                or_panic(oc.set_default("tracker-interval", &v));
+            }
+            if opt_bool(oc, "tripinfo-output.write-undeparted") {
+                if !opt_is_default(oc, "tripinfo-output.write-unfinished") && !opt_bool(oc, "tripinfo-output.write-unfinished") {
+                    utils::common::msg_handler::write_warning("The option tripinfo-output.write-undeparted implies tripinfo-output.write-unfinished.");
+                }
+                or_panic(oc.set_default("tripinfo-output.write-unfinished", "true"));
+            }
+            if opt_int(oc, "precision") > 2 {
+                for name in [
+                    "netstate-dump.precision",
+                    "emission-output.precision",
+                    "battery-output.precision",
+                    "elechybrid-output.precision",
+                    "substations-output.precision",
+                ] {
+                    if opt_is_default(oc, name) {
+                        let v = opt_int(oc, "precision").to_string();
+                        or_panic(oc.set_default(name, &v));
+                    }
+                }
+            }
+            let carFollowModel = opt_str(oc, "carfollow.model");
+            if !utils::xml::sumo_xml_definitions_gen::CarFollowModels.has_string(&carFollowModel) {
+                utils::common::msg_handler::write_error(&format!("Unknown model '{}' for option 'carfollow.model'.", carFollowModel));
+                ok = false;
+            }
+            if opt_is_set(oc, "default.emergencydecel") {
+                let val = opt_str(oc, "default.emergencydecel");
+                if val != "default" && val != "decel" && utils::common::string_utils::to_double(&val).is_err() {
+                    utils::common::msg_handler::write_error(&format!(
+                        "Invalid value '{}' for option 'default.emergencydecel'. Must be a FLOAT or 'default' or 'decel'.",
+                        val
+                    ));
+                    ok = false;
+                }
+            }
+            if opt_is_set(oc, "time-to-teleport.railsignal-deadlock") {
+                let t1 = st(&opt_str(oc, "time-to-teleport"));
+                let t2 = st(&opt_str(oc, "time-to-teleport.railsignal-deadlock"));
+                if t1 > 0 && t2 > 0 && t1 <= t2 {
+                    utils::common::msg_handler::write_warning(&format!(
+                        "Railsignal-deadlock will not be detected because time-to-teleport ({}) is lower than time-to-teleport.railsignal-deadlock ({}).",
+                        utils::common::time::time2string(t1),
+                        utils::common::time::time2string(t2)
+                    ));
+                }
+            }
+            oc.do_register("", utils::options::option::SumoOption::string_typed("-1", "TIME"));
+            if opt_float(oc, "delay") < 0.0 {
+                utils::common::msg_handler::write_error("You need a non-negative delay.");
+                ok = false;
+            }
+            for val in opt_strs(oc, "breakpoints") {
+                if let Err(e) = utils::common::time::string2time(&val) {
+                    utils::common::msg_handler::write_error(&format!("Invalid time '{}' for option 'breakpoints'. {}", val, e));
+                    ok = false;
+                }
+            }
+            // shortcut: the C++ #ifndef HAVE_FOX check is applied because this port is built without Fox
+            if opt_int(oc, "threads") > 1 {
+                utils::common::msg_handler::write_error("Parallel simulation is only possible when compiled with Fox.");
+                ok = false;
+            }
+            if opt_int(oc, "threads") < 1 {
+                utils::common::msg_handler::write_error("You need at least one thread.");
+                ok = false;
+            }
+            if opt_int(oc, "threads") > opt_int(oc, "thread-rngs") {
+                utils::common::msg_handler::write_warning("Number of threads exceeds number of thread-rngs. Simulation runs with the same seed may produce different results.");
+            }
+            if opt_str(oc, "game.mode") != "tls" && opt_str(oc, "game.mode") != "drt" {
+                utils::common::msg_handler::write_error("game.mode must be one of ['tls', 'drt']");
+                ok = false;
+            }
+            if opt_is_set(oc, "persontrip.transfer.car-walk") {
+                for opt in opt_strs(oc, "persontrip.transfer.car-walk") {
+                    if opt != "parkingAreas" && opt != "ptStops" && opt != "allJunctions" {
+                        utils::common::msg_handler::write_error(&format!(
+                            "Invalid transfer option '{}'. Must be one of 'parkingAreas', 'ptStops' or 'allJunctions'.",
+                            opt
+                        ));
+                        ok = false;
+                    }
+                }
+            }
+            if !opt_is_default(oc, "weights.random-factor") && (opt_is_set(oc, "astar.all-distances") || opt_is_set(oc, "astar.landmark-distances")) {
+                utils::common::msg_handler::write_warning("The option --weights.random-factor should not be used together with astar and precomputed distances.");
+            }
+            if opt_int(oc, "threads") > 1 {
+                utils::common::msg_handler::write_warning("The option --threads has known problems and does NOT provide meaningful speedup at this time (https://github.com/eclipse-sumo/sumo/issues/4767). Using it is not recommended!");
+            }
+            if opt_bool(oc, "mapmatch.junctions") && opt_is_default(oc, "junction-taz") {
+                or_panic(oc.set_default("junction-taz", "true"));
+            }
+            ok &= crate::microsim::devices::ms_device::MSDevice::check_options(oc);
+            // shortcut: C++ SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here
+            ok
+        })
     }
 
     /// C++: `void MSFrame::setMSGlobals(OptionsCont &)` [static]
@@ -1258,7 +2165,116 @@ impl MSFrame {
     // }
     #[allow(unused_variables)]
     pub fn set_ms_globals(oc: &mut OptionsCont) {
-        todo!("port MSFrame::setMSGlobals")
+        use crate::microsim::ms_globals as g;
+        // pre-initialise the network
+        // set whether empty edges shall be printed on dump
+        g::set_omit_empty_edges_on_dump(!opt_bool(oc, "netstate-dump.empty-edges"));
+        // set whether internal lanes shall be used
+        g::set_using_internal_lanes(!opt_bool(oc, "no-internal-links"));
+        let ignoreJunctionBlocker = st(&opt_str(oc, "ignore-junction-blocker"));
+        g::set_ignore_junction_blocker(if ignoreJunctionBlocker < 0 { i64::MAX } else { ignoreJunctionBlocker });
+        // set the grid lock time
+        let timeToTeleport = st(&opt_str(oc, "time-to-teleport"));
+        g::set_time_to_gridlock(if timeToTeleport < 0 { 0 } else { timeToTeleport });
+        g::set_time_to_impatience(st(&opt_str(oc, "time-to-impatience")));
+        let timeToTeleportHighways = st(&opt_str(oc, "time-to-teleport.highways"));
+        g::set_time_to_gridlock_highways(if timeToTeleportHighways < 0 { 0 } else { timeToTeleportHighways });
+        g::set_gridlock_highways_speed(opt_float(oc, "time-to-teleport.highways.min-speed"));
+        g::set_time_to_teleport_disconnected(st(&opt_str(oc, "time-to-teleport.disconnected")));
+        g::set_time_to_teleport_bidi(st(&opt_str(oc, "time-to-teleport.bidi")));
+        g::set_time_to_teleport_rs_deadlock(st(&opt_str(oc, "time-to-teleport.railsignal-deadlock")));
+        g::set_remove_gridlocked(opt_bool(oc, "time-to-teleport.remove"));
+        g::set_check4_accidents(!opt_bool(oc, "ignore-accidents"));
+        g::set_check_routes(!opt_bool(oc, "ignore-route-errors"));
+        g::set_emergency_insert(opt_bool(oc, "emergency-insert"));
+        g::set_weights_separate_turns(opt_float(oc, "weights.separate-turns"));
+        g::set_startup_wait_threshold(st(&opt_str(oc, "startup-wait-threshold")));
+        g::set_lane_change_duration(st(&opt_str(oc, "lanechange.duration")));
+        g::set_lateral_resolution(opt_float(oc, "lateral-resolution"));
+        g::set_sublane(g::lane_change_duration() > 0 || g::lateral_resolution() > 0.);
+        g::set_state_loaded(opt_is_set(oc, "load-state"));
+        g::set_use_meso_sim(opt_bool(oc, "mesosim"));
+        g::set_meso_limited_junction_control(opt_bool(oc, "meso-junction-control.limited"));
+        g::set_meso_interpolate_pos(opt_bool(oc, "meso-interpolate-pos"));
+        g::set_waiting_time_memory(st(&opt_str(oc, "waiting-time-memory")));
+        crate::microsim::lcmodels::ms_abstract_lane_change_model::MSAbstractLaneChangeModel::init_global_options(oc);
+        g::set_overhead_wire_solver(opt_bool(oc, "overhead-wire.solver"));
+        g::set_overhead_wire_recuperation(opt_bool(oc, "overhead-wire.recuperation"));
+        Circuit::enforce_current_limits(opt_bool(oc, "overhead-wire.substation-current-limits"));
+        g::set_insertion_checks(crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_insertion_checks(&opt_str(oc, "insertion-checks")));
+        g::set_max_rail_signal_block_length(opt_float(oc, "railsignal.max-block-length"));
+        crate::microsim::ms_lane::MSLane::init_collision_options(oc);
+        utils::common::time::set_delta_t(st(&opt_str(oc, "step-length")));
+        let integrationMethodSet = !opt_is_default(oc, "step-method.ballistic");
+        let actionStepLengthSet = !opt_is_default(oc, "default.action-step-length");
+        g::set_semi_implicit_euler_update(!opt_bool(oc, "step-method.ballistic"));
+        // Init default value for gActionStepLength
+        if g::semi_implicit_euler_update() && actionStepLengthSet && !integrationMethodSet {
+            utils::common::msg_handler::write_message("Integration method was set to 'ballistic', since a default action step length was specified.");
+            g::set_semi_implicit_euler_update(false);
+        }
+        let givenDefaultActionStepLength = opt_float(oc, "default.action-step-length");
+        g::set_action_step_length(crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::process_action_step_length(givenDefaultActionStepLength));
+        let defaultEmergencyDecelOption = opt_str(oc, "default.emergencydecel");
+        if defaultEmergencyDecelOption == "default" {
+            // VTYPEPARS_DEFAULT_EMERGENCYDECEL_DEFAULT (SUMOVTypeParameter.h)
+            g::set_default_emergency_decel(-1.0);
+        } else if defaultEmergencyDecelOption == "decel" {
+            // VTYPEPARS_DEFAULT_EMERGENCYDECEL_DECEL (SUMOVTypeParameter.h)
+            g::set_default_emergency_decel(-2.0);
+        } else {
+            // value already checked in checkOptions()
+            g::set_default_emergency_decel(or_panic(utils::common::string_utils::to_double(&defaultEmergencyDecelOption)));
+        }
+        g::set_num_sim_threads(opt_int(oc, "threads"));
+        g::set_num_threads(std::cmp::max(g::num_sim_threads(), opt_int(oc, "device.rerouting.threads")));
+        g::set_emergency_decel_warning_threshold(opt_float(oc, "emergencydecel.warning-threshold"));
+        g::set_minor_penalty(opt_float(oc, "weights.minor-penalty"));
+        g::set_tls_penalty(opt_float(oc, "weights.tls-penalty"));
+        g::set_turnaround_penalty(opt_float(oc, "weights.turnaround-penalty"));
+        g::set_model_parking_manoeuver(opt_bool(oc, "parking.maneuver"));
+        g::set_stop_tolerance(opt_float(oc, "ride.stop-tolerance"));
+        g::set_tls_yellow_min_decel(opt_float(oc, "tls.yellow.min-decel"));
+        g::set_use_stop_ended(opt_bool(oc, "use-stop-ended"));
+        g::set_use_stop_started(opt_bool(oc, "use-stop-started"));
+        g::set_slope_centered(opt_bool(oc, "slope-centered"));
+        let mut defaultClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "railsignal.default-classes") {
+            defaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        let mut mBdefaultClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "railsignal.moving-block.default-classes") {
+            mBdefaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::init_signalized(defaultClasses, mBdefaultClasses);
+        // shortcut: gTaxiClasses is SVCPermissions (i64) in C++, but the utils global is i32, so the high bits are dropped
+        let mut taxiClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
+        for vClassName in opt_strs(oc, "device.taxi.vclasses") {
+            taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
+        }
+        utils::common::std_defs::set_g_taxi_classes(taxiClasses as i32);
+        let mut error = String::new();
+        if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_lane(
+            &opt_str(oc, "default.departlane"),
+            "options",
+            "",
+            crate::microsim::ms_edge::MSEdge::get_default_depart_lane(),
+            crate::microsim::ms_edge::MSEdge::get_default_depart_lane_definition(),
+            &mut error,
+        ) {
+            utils::common::msg_handler::write_error(&error);
+        }
+        if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_speed(
+            &opt_str(oc, "default.departspeed"),
+            "options",
+            "",
+            crate::microsim::ms_lane::MSLane::get_default_depart_speed(),
+            crate::microsim::ms_lane::MSLane::get_default_depart_speed_definition(),
+            &mut error,
+        ) {
+            utils::common::msg_handler::write_error(&error);
+        }
+        // shortcut: the C++ _DEBUG-only movereminder-output initialisation (MSBaseVehicle::initMoveReminderOutput) is not ported
     }
 
 }

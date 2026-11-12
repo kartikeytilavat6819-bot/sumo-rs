@@ -1,6 +1,11 @@
 //! Port of microsim/MSInsertionControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::rand_helper::init_rand;
+use utils::common::string_utils::to_bool;
+use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
+use utils::common::time::{delta_t, steps2time, ts, SUMOTIME_MIN};
+use utils::options::options_cont::{get_bool, get_int, with_options};
 
 /// Definition of vehicle flow with the current index for vehicle numbering
 /// C++ class `MSInsertionControl::Flow` (microsim/MSInsertionControl.h)
@@ -67,7 +72,26 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn new(vc: &mut MSVehicleControl, maxDepartDelay: SUMOTime, checkEdgesOnce: bool, maxVehicleNumber: i32, randomDepartOffset: SUMOTime) -> Self {
-        todo!("port MSInsertionControl::MSInsertionControl")
+        let mut ret = MSInsertionControl {
+            myVehicleControl: Ptr::from_mut(vc),
+            myAllVeh: MSVehicleContainer::new(10),
+            myPendingEmits: Vec::new(),
+            myEmitCandidates: BTreeSet::new(),
+            myAbortedEmits: BTreeSet::new(),
+            myFlows: Vec::new(),
+            myFlowIDs: BTreeMap::new(),
+            myMaxDepartDelay: maxDepartDelay,
+            myEagerInsertionCheck: checkEdgesOnce,
+            myMaxVehicleNumber: maxVehicleNumber,
+            myPendingEmitsUpdateTime: SUMOTIME_MIN,
+            myPendingEmitsForLane: BTreeMap::new(),
+            myMaxRandomDepartOffset: 0,
+            myFlowRNG: SumoRNG::new("flow"),
+        };
+        ret.myMaxRandomDepartOffset = randomDepartOffset;
+        // RandHelper::initRandGlobal(&myFlowRNG)
+        init_rand(Some(&mut ret.myFlowRNG), get_bool("random"), get_int("seed"));
+        ret
     }
 
     /// C++: `void MSInsertionControl::~MSInsertionControl()`
@@ -75,7 +99,7 @@ impl MSInsertionControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSInsertionControl::~MSInsertionControl")
+        // implicit C++ destructor: the members are released by Rust drop glue, no extra work
     }
 
     /// C++: `int MSInsertionControl::emitVehicles(SUMOTime)`
@@ -111,7 +135,34 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn emit_vehicles(&mut self, time: SUMOTime) -> i32 {
-        todo!("port MSInsertionControl::emitVehicles")
+        // check whether any vehicles shall be emitted within this time step
+        let havePreChecked = MSRoutingEngine::is_enabled();
+        if self.myPendingEmits.is_empty() || (havePreChecked && self.myEmitCandidates.is_empty()) {
+            return 0;
+        }
+        let mut numEmitted: i32 = 0;
+        // we use buffering for the refused emits to save time
+        //  for this, we have two lists; one contains previously refused emits, the second
+        //  will be used to append those vehicles that will not be able to depart in this
+        //  time step
+        let mut refusedEmits: MSVehicleContainer_VehicleVector = Vec::new();
+
+        // go through the list of previously refused vehicles, first
+        let net = MSNet::get_instance();
+        net.lock_pending_emits();
+        // tryInsert never modifies myPendingEmits, so iterating over a snapshot matches the C++ iterator loop
+        let pending = self.myPendingEmits.clone();
+        for veh in pending {
+            if havePreChecked && !self.myEmitCandidates.contains(&veh) {
+                refusedEmits.push(veh);
+            } else {
+                numEmitted += self.try_insert(time, veh, &mut refusedEmits);
+            }
+        }
+        self.myEmitCandidates.clear();
+        self.myPendingEmits = refusedEmits;
+        net.unlock_pending_emits();
+        numEmitted
     }
 
     /// C++: `void MSInsertionControl::add(SUMOVehicle *)`
@@ -122,7 +173,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSInsertionControl::add")
+        self.myAllVeh.add(veh);
     }
 
     /// C++: `bool MSInsertionControl::addFlow(SUMOVehicleParameter *const, int)`
@@ -145,7 +196,24 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn add_flow(&mut self, pars: Ptr<SUMOVehicleParameter>, index: i32) -> bool {
-        todo!("port MSInsertionControl::addFlow")
+        if self.myFlowIDs.contains_key(&pars.id) {
+            return false;
+        }
+        let loadingFromState = index >= 0;
+        let mut flow = MSInsertionControl_Flow {
+            pars,
+            index: if loadingFromState { index } else { 0 },
+            scale: Self::init_scale(pars.vtypeid.clone()),
+        };
+        if !loadingFromState && pars.repetitionProbability < 0.0 && pars.repetitionOffset < 0 {
+            // init poisson flow (but only the timing)
+            flow.pars.m().increment_flow(flow.scale, Ptr::from_mut(&mut self.myFlowRNG));
+            flow.pars.m().repetitionsDone -= 1;
+        }
+        let flowIndex = flow.index;
+        self.myFlows.push(flow);
+        self.myFlowIDs.entry(pars.id.clone()).or_insert(flowIndex);
+        true
     }
 
     /// C++: `int MSInsertionControl::getWaitingVehicleNo() const` [const]
@@ -156,7 +224,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_vehicle_no(&self) -> i32 {
-        todo!("port MSInsertionControl::getWaitingVehicleNo")
+        self.myPendingEmits.len() as i32
     }
 
     /// C++: `const MSVehicleContainer::VehicleVector & MSInsertionControl::getPendingVehicles() const` [const]
@@ -166,7 +234,7 @@ impl MSInsertionControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_pending_vehicles(&self) -> &MSVehicleContainer_VehicleVector {
-        todo!("port MSInsertionControl::getPendingVehicles")
+        &self.myPendingEmits
     }
 
     /// C++: `int MSInsertionControl::getPendingFlowCount() const` [const]
@@ -177,7 +245,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn get_pending_flow_count(&self) -> i32 {
-        todo!("port MSInsertionControl::getPendingFlowCount")
+        self.myFlows.len() as i32
     }
 
     /// C++: `void MSInsertionControl::alreadyDeparted(SUMOVehicle *)`
@@ -189,7 +257,8 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn already_departed(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSInsertionControl::alreadyDeparted")
+        self.myPendingEmits.retain(|v| *v != veh);
+        self.myAllVeh.remove(veh);
     }
 
     /// C++: `void MSInsertionControl::descheduleDeparture(const SUMOVehicle *)`
@@ -200,7 +269,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn deschedule_departure(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSInsertionControl::descheduleDeparture")
+        self.myAbortedEmits.insert(veh);
     }
 
     /// C++: `void MSInsertionControl::retractDescheduleDeparture(const SUMOVehicle *)`
@@ -211,7 +280,7 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn retract_deschedule_departure(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSInsertionControl::retractDescheduleDeparture")
+        self.myAbortedEmits.remove(&veh);
     }
 
     /// C++: `void MSInsertionControl::clearPendingVehicles(const std::string &)`
@@ -231,7 +300,17 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_pending_vehicles(&mut self, route: &str) {
-        todo!("port MSInsertionControl::clearPendingVehicles")
+        // clear out the refused vehicle list, deleting the vehicles entirely
+        let mut idx: usize = 0;
+        while idx < self.myPendingEmits.len() {
+            let veh = self.myPendingEmits[idx];
+            if veh.get_route().get_id() == route || route == "" {
+                self.myVehicleControl.m().delete_vehicle(veh, true, false);
+                self.myPendingEmits.remove(idx);
+            } else {
+                idx += 1;
+            }
+        }
     }
 
     /// C++: `void MSInsertionControl::determineCandidates(SUMOTime)`
@@ -322,7 +401,116 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn determine_candidates(&mut self, time: SUMOTime) {
-        todo!("port MSInsertionControl::determineCandidates")
+        let net = MSNet::get_instance();
+        let vehControl = net.m().get_vehicle_control();
+        // for equidistant vehicles, up-scaling is done via repetitionOffset
+        let mut i: usize = 0;
+        while i < self.myFlows.len() {
+            let mut vtype: Ptr<MSVehicleType> = Ptr::null();
+            let pars: Ptr<SUMOVehicleParameter> = self.myFlows[i].pars;
+            let mut typeScale: f64 = self.myFlows[i].scale;
+            if typeScale < 0.0 {
+                // must sample from distribution to determine scale value
+                vtype = vehControl.get_v_type(&pars.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
+                typeScale = vtype.get_parameter().scale;
+            }
+            let scale: f64 = vehControl.get_scale() * typeScale;
+            let scaledRepetitions: i64 = if pars.repetitionNumber == i64::MAX {
+                i64::MAX
+            } else {
+                (pars.repetitionNumber as f64 * scale + 0.5) as i64
+            };
+            let mut tryEmitByProb: bool = pars.repetitionProbability > 0.0;
+            while scale > 0.0
+                && ((pars.repetitionProbability < 0.0
+                    && pars.repetitionsDone < scaledRepetitions
+                    && pars.depart + pars.repetitionTotalOffset <= time)
+                    || (tryEmitByProb
+                        && pars.depart <= time
+                        && pars.repetitionEnd > time
+                        // only call rand if all other conditions are met
+                        && self.myFlowRNG.rand() < (pars.repetitionProbability * ts())))
+            {
+                tryEmitByProb = false; // only emit one per step
+                let newPars: Ptr<SUMOVehicleParameter> = Ptr::from_raw(Box::into_raw(Box::new(copy_vehicle_parameter(&pars))));
+                newPars.m().id = format!("{}.{}", pars.id, self.myFlows[i].index);
+                newPars.m().depart = if pars.repetitionProbability > 0.0 {
+                    time
+                } else {
+                    pars.depart + pars.repetitionTotalOffset + self.compute_random_depart_offset()
+                };
+                pars.m().increment_flow(scale, Ptr::from_mut(&mut self.myFlowRNG));
+                self.myFlowIDs.insert(pars.id.clone(), self.myFlows[i].index);
+                //std::cout << SIMTIME << " flow=" << pars->id << " done=" << pars->repetitionsDone << " totalOffset=" << STEPS2TIME(pars->repetitionTotalOffset) << "\n";
+                // try to build the vehicle
+                if vehControl.get_vehicle(&newPars.id).is_null() {
+                    let route: ConstMSRoutePtr = MSRoute::dictionary_3(&pars.routeid, Ptr::null());
+                    if vtype.is_null() {
+                        vtype = vehControl.get_v_type(&pars.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
+                    }
+                    let vehicle: Ptr<SUMOVehicle> = vehControl.build_vehicle(
+                        newPars,
+                        route.clone(),
+                        vtype,
+                        !check_routes(),
+                        MSVehicleControl_VehicleDefinitionSource::ROUTEFILE,
+                        true,
+                    );
+                    // for equidistant vehicles, all scaling is done via repetitionOffset (to avoid artefacts, #11441)
+                    // for probabilistic vehicles, we use the quota
+                    let mut quota: i32 = if pars.repetitionProbability < 0.0 { 1 } else { vehControl.get_quota(scale, -1) };
+                    if quota > 0 {
+                        vehControl.add_vehicle(&newPars.id, vehicle);
+                        if pars.departProcedure == DepartDefinition::GIVEN || pars.departProcedure == DepartDefinition::BEGIN {
+                            self.add(vehicle);
+                        }
+                        self.myFlows[i].index += 1;
+                        quota -= 1;
+                        while quota > 0 {
+                            let quotaPars: Ptr<SUMOVehicleParameter> = Ptr::from_raw(Box::into_raw(Box::new(copy_vehicle_parameter(&pars))));
+                            quotaPars.m().id = format!("{}.{}", pars.id, self.myFlows[i].index);
+                            quotaPars.m().depart = if pars.repetitionProbability > 0.0 {
+                                time
+                            } else {
+                                pars.depart + pars.repetitionsDone * pars.repetitionTotalOffset + self.compute_random_depart_offset()
+                            };
+                            let quotaVehicle: Ptr<SUMOVehicle> = vehControl.build_vehicle(
+                                quotaPars,
+                                route.clone(),
+                                vtype,
+                                !check_routes(),
+                                MSVehicleControl_VehicleDefinitionSource::ROUTEFILE,
+                                true,
+                            );
+                            vehControl.add_vehicle(&quotaPars.id, quotaVehicle);
+                            if pars.departProcedure == DepartDefinition::GIVEN || pars.departProcedure == DepartDefinition::BEGIN {
+                                self.add(quotaVehicle);
+                            }
+                            pars.m().repetitionsDone += 1;
+                            self.myFlows[i].index += 1;
+                            quota -= 1;
+                        }
+                    } else {
+                        vehControl.delete_vehicle(vehicle, true, false);
+                    }
+                } else {
+                    if state_loaded() {
+                        /// @note probably obsolete since flows save their state
+                        break;
+                    }
+                    panic!("{}", ProcessError::Process(tlf!("Another vehicle with the id '%' exists.", newPars.id)));
+                }
+                vtype = Ptr::null();
+            }
+            if time >= pars.repetitionEnd || pars.repetitionsDone >= scaledRepetitions {
+                self.myFlows.remove(i);
+                MSRoute::check_dist(&pars.routeid);
+                drop(unsafe { Box::from_raw(pars.as_raw()) });
+            } else {
+                i += 1;
+            }
+        }
+        self.check_candidates(time, MSRoutingEngine::is_enabled());
     }
 
     /// C++: `int MSInsertionControl::getPendingEmits(const MSLane *)`
@@ -353,7 +541,28 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn get_pending_emits(&mut self, lane: Ptr<MSLane>) -> i32 {
-        todo!("port MSInsertionControl::getPendingEmits")
+        let net = MSNet::get_instance();
+        if net.get_current_time_step() != self.myPendingEmitsUpdateTime {
+            net.lock_pending_emits();
+            // updated pending emits (only once per time step)
+            self.myPendingEmitsForLane.clear();
+            for veh in self.myPendingEmits.iter() {
+                let vlane = veh.get_lane();
+                if !vlane.is_null() {
+                    *self.myPendingEmitsForLane.entry(vlane).or_insert(0) += 1;
+                } else {
+                    // no (tentative) departLane was set, increase count for all
+                    // lanes of the depart edge
+                    let edge = veh.get_edge();
+                    for l in edge.get_lanes() {
+                        *self.myPendingEmitsForLane.entry(*l).or_insert(0) += 1;
+                    }
+                }
+            }
+            self.myPendingEmitsUpdateTime = net.get_current_time_step();
+            net.unlock_pending_emits();
+        }
+        *self.myPendingEmitsForLane.entry(lane).or_insert(0)
     }
 
     /// C++: `void MSInsertionControl::adaptIntermodalRouter(MSTransportableRouter &) const` [const]
@@ -369,7 +578,21 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn adapt_intermodal_router(&self, router: &mut MSTransportableRouter) {
-        todo!("port MSInsertionControl::adaptIntermodalRouter")
+        // fill the public transport router with pre-parsed public transport lines
+        for f in &self.myFlows {
+            if !f.pars.line.is_empty() {
+                let route: Option<ConstMSRoutePtr> = if MSRoute::has_route(&f.pars.routeid) {
+                    Some(MSRoute::dictionary_3(&f.pars.routeid, Ptr::null()))
+                } else {
+                    None
+                };
+                let stops: Ptr<StopParVector> = match &route {
+                    Some(r) => Ptr::new(r.get_stops()),
+                    None => Ptr::null(),
+                };
+                router.get_network().m().add_schedule(&f.pars, stops);
+            }
+        }
     }
 
     /// C++: `SUMOTime MSInsertionControl::computeRandomDepartOffset() const` [const]
@@ -384,7 +607,12 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn compute_random_depart_offset(&self) -> SUMOTime {
-        todo!("port MSInsertionControl::computeRandomDepartOffset")
+        if self.myMaxRandomDepartOffset > 0 {
+            // round to the closest usable simulation step
+            let rng = SUMORouteHandler::get_parsing_rng();
+            return delta_t() * ((rng.m().rand_i64(self.myMaxRandomDepartOffset) + delta_t() / 2) / delta_t());
+        }
+        0
     }
 
     /// C++: `void MSInsertionControl::saveState(OutputDevice &)`
@@ -412,7 +640,31 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSInsertionControl::saveState")
+        // save flow states
+        for flow in &self.myFlows {
+            let pars = flow.pars;
+            with_options(|oc| {
+                pars.write(
+                    out,
+                    oc,
+                    SUMO_TAG_FLOWSTATE,
+                    if pars.vtypeid == DEFAULT_VTYPE_ID { "" } else { pars.vtypeid.as_str() },
+                )
+            });
+            if pars.repetitionProbability <= 0.0 {
+                out.write_attr(SUMO_ATTR_NEXT, &steps2time(pars.repetitionTotalOffset));
+            }
+            out.write_attr(SUMO_ATTR_ROUTE, pars.routeid.as_str());
+            out.write_attr(SUMO_ATTR_DONE, &pars.repetitionsDone);
+            out.write_attr(SUMO_ATTR_INDEX, &flow.index);
+            if pars.was_set(VEHPARS_FORCE_REROUTE) {
+                out.write_attr(SUMO_ATTR_REROUTE, &true);
+            }
+            for stop in pars.stops.iter() {
+                stop.write(out, true, true);
+            }
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSInsertionControl::clearState()`
@@ -432,7 +684,16 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSInsertionControl::clearState")
+        for f in &self.myFlows {
+            drop(unsafe { Box::from_raw(f.pars.as_raw()) });
+        }
+        self.myFlows.clear();
+        self.myFlowIDs.clear();
+        self.myAllVeh.clear_state();
+        self.myPendingEmits.clear();
+        self.myEmitCandidates.clear();
+        self.myAbortedEmits.clear();
+        // myPendingEmitsForLane must not be cleared since it updates itself on the next call
     }
 
     /// C++: `SumoRNG * MSInsertionControl::getFlowRNG()`
@@ -442,7 +703,7 @@ impl MSInsertionControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_flow_rng(&mut self) -> Ptr<SumoRNG> {
-        todo!("port MSInsertionControl::getFlowRNG")
+        Ptr::from_mut(&mut self.myFlowRNG)
     }
 
     /// C++: `bool MSInsertionControl::hasFlow(const std::string &) const` [const]
@@ -452,7 +713,7 @@ impl MSInsertionControl {
     //     }
     #[allow(unused_variables)]
     pub fn has_flow(&self, id: &str) -> bool {
-        todo!("port MSInsertionControl::hasFlow")
+        self.myFlowIDs.contains_key(id)
     }
 
     /// C++: `const SUMOVehicleParameter * MSInsertionControl::getFlowPars(const std::string &) const` [const]
@@ -470,7 +731,14 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn get_flow_pars(&self, id: &str) -> Ptr<SUMOVehicleParameter> {
-        todo!("port MSInsertionControl::getFlowPars")
+        if self.has_flow(id) {
+            for f in &self.myFlows {
+                if f.pars.id == id {
+                    return f.pars;
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `SUMOVehicle * MSInsertionControl::getLastFlowVehicle(const std::string &) const` [const]
@@ -486,7 +754,12 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn get_last_flow_vehicle(&self, id: &str) -> Ptr<SUMOVehicle> {
-        todo!("port MSInsertionControl::getLastFlowVehicle")
+        if let Some(idx) = self.myFlowIDs.get(id) {
+            let vehID = format!("{}.{}", id, idx);
+            let net = MSNet::get_instance();
+            return net.m().get_vehicle_control().get_vehicle(&vehID);
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSInsertionControl::updateScale(const std::string)`
@@ -501,7 +774,11 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn update_scale(&mut self, vtypeid: String) {
-        todo!("port MSInsertionControl::updateScale")
+        for f in self.myFlows.iter_mut() {
+            if f.pars.vtypeid == vtypeid {
+                f.scale = Self::init_scale(vtypeid.clone());
+            }
+        }
     }
 
     /// C++: `bool MSInsertionControl::hasTaxiFlow() const` [const]
@@ -519,7 +796,16 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn has_taxi_flow(&self) -> bool {
-        todo!("port MSInsertionControl::hasTaxiFlow")
+        let mut tmp = SumoRNG::new("tmp");
+        for flow in &self.myFlows {
+            if flow.scale != 0.0
+                && (to_bool_or_throw(&flow.pars.get_parameter("has.taxi.device", "false"))
+                    || Self::has_taxi_device_type(&flow.pars.vtypeid, &mut tmp))
+            {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `int MSInsertionControl::tryInsert(SUMOTime, SUMOVehicle *, MSVehicleContainer::VehicleVector &)` [private]
@@ -560,7 +846,45 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn try_insert(&mut self, time: SUMOTime, veh: Ptr<SUMOVehicle>, refusedEmits: &mut MSVehicleContainer_VehicleVector) -> i32 {
-        todo!("port MSInsertionControl::tryInsert")
+        debug_assert!(veh.get_parameter().depart <= time);
+        let edge = veh.get_edge();
+        if veh.is_on_road() {
+            return 1;
+        }
+        let net = MSNet::get_instance();
+        if (self.myMaxVehicleNumber < 0 || net.m().get_vehicle_control().get_running_vehicle_no() < self.myMaxVehicleNumber)
+            && edge.insert_vehicle(
+                veh.m(),
+                time,
+                false,
+                self.myEagerInsertionCheck || veh.get_parameter().departProcedure == DepartDefinition::SPLIT,
+            )
+        {
+            // Successful insertion
+            return 1;
+        }
+        if self.myMaxDepartDelay >= 0 && time - veh.get_parameter().depart > self.myMaxDepartDelay {
+            // remove vehicles waiting too long for departure
+            self.myVehicleControl.m().delete_vehicle(veh, true, false);
+        } else if edge.is_vaporizing() {
+            // remove vehicles if the edge shall be empty
+            self.myVehicleControl.m().delete_vehicle(veh, true, false);
+        } else if self.myAbortedEmits.contains(&veh) {
+            // remove vehicles which shall not be inserted for some reason
+            self.myAbortedEmits.remove(&veh);
+            self.myVehicleControl.m().delete_vehicle(veh, true, false);
+        } else if (veh.m().get_route_validity(false, false, Ptr::null()) as i64
+            & (MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_LANE as i64
+                | MSBaseVehicle_RouteValidity::ROUTE_START_INVALID_PERMISSIONS as i64))
+            != 0
+        {
+            self.myVehicleControl.m().delete_vehicle(veh, true, false);
+        } else {
+            // let the vehicle wait one step, we'll retry then
+            refusedEmits.push(veh);
+        }
+        edge.set_last_failed_insertion_time(time);
+        0
     }
 
     /// C++: `void MSInsertionControl::checkCandidates(SUMOTime, const bool)` [private]
@@ -602,7 +926,36 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn check_candidates(&mut self, time: SUMOTime, preCheck: bool) {
-        todo!("port MSInsertionControl::checkCandidates")
+        if self.myMaxDepartDelay >= 0 {
+            let mut idx: usize = 0;
+            while idx < self.myPendingEmits.len() {
+                let veh = self.myPendingEmits[idx];
+                if time - veh.get_parameter().depart > self.myMaxDepartDelay {
+                    // remove vehicles waiting too long for departure
+                    self.myVehicleControl.m().delete_vehicle(veh, true, false);
+                    self.myPendingEmits.remove(idx);
+                } else {
+                    idx += 1;
+                }
+            }
+        }
+        while self.myAllVeh.any_waiting_before(time) {
+            let top = self.myAllVeh.top().clone();
+            self.myPendingEmits.extend(top);
+            self.myAllVeh.pop();
+        }
+        if preCheck {
+            for veh in self.myPendingEmits.iter() {
+                let v = *veh;
+                let edge = v.get_edge();
+                if edge.insert_vehicle(v.m(), time, true, self.myEagerInsertionCheck) {
+                    self.myEmitCandidates.insert(v);
+                } else {
+                    // shortcut: static_cast<MSDevice_Routing*>(v->getDevice(typeid(MSDevice_Routing))) needs a typed device
+                    // lookup and a downcast, neither is ported, so dev->skipRouting(time) is not called, upgrade when both exist
+                }
+            }
+        }
     }
 
     /// C++: `double MSInsertionControl::initScale(const std::string)` [static, private]
@@ -629,7 +982,24 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn init_scale(vtypeid: String) -> f64 {
-        todo!("port MSInsertionControl::initScale")
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        if vc.has_v_type_distribution(&vtypeid) {
+            let mut result: f64 = -1.0;
+            let dist = vc.get_v_type_distribution(&vtypeid);
+            for t in dist.get_vals() {
+                if result == -1.0 {
+                    result = t.get_parameter().scale;
+                } else if result != t.get_parameter().scale {
+                    // unequal scales in distribution
+                    return -1.0;
+                }
+            }
+            result
+        } else {
+            // rng is not used since vtypeid is not a distribution
+            vc.get_v_type(&vtypeid, Ptr::null(), true).get_parameter().scale
+        }
     }
 
     /// C++: `bool MSInsertionControl::hasTaxiDeviceType(const std::string &, SumoRNG &)` [static, private]
@@ -641,7 +1011,10 @@ impl MSInsertionControl {
     // }
     #[allow(unused_variables)]
     pub fn has_taxi_device_type(vtypeId: &str, rng: &mut SumoRNG) -> bool {
-        todo!("port MSInsertionControl::hasTaxiDeviceType")
+        let net = MSNet::get_instance();
+        let vehControl = net.m().get_vehicle_control();
+        let vtype = vehControl.get_v_type(vtypeId, Ptr::from_mut(rng), false);
+        to_bool_or_throw(&vtype.get_parameter().get_parameter("has.taxi.device", "false"))
     }
 
     /// C++: `void MSInsertionControl::MSInsertionControl(const MSInsertionControl &)` [private]
@@ -649,7 +1022,8 @@ impl MSInsertionControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSInsertionControl) -> Self {
-        todo!("port MSInsertionControl::MSInsertionControl")
+        // invalidated in C++ (private, never defined): using it is a programming error
+        panic!("MSInsertionControl copy constructor is private and invalidated")
     }
 
     /// C++: `MSInsertionControl & MSInsertionControl::operator=(const MSInsertionControl &)` [private]
@@ -657,8 +1031,121 @@ impl MSInsertionControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSInsertionControl) -> &mut MSInsertionControl {
-        todo!("port MSInsertionControl::operator=")
+        // invalidated in C++ (private, never defined): using it is a programming error
+        panic!("MSInsertionControl::operator= is private and invalidated")
     }
 
+}
+
+/// C++ `#define`d flag `VEHPARS_FORCE_REROUTE` (utils/vehicle/SUMOVehicleParameter.cpp), not exported by the port yet
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+
+/// C++ `StringUtils::toBool` throws on malformed input; `string_utils::to_bool` returns a Result
+fn to_bool_or_throw(s: &str) -> bool {
+    to_bool(s).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// C++ implicit copy constructor `SUMOVehicleParameter(const SUMOVehicleParameter&)` (used for `new SUMOVehicleParameter(*pars)`)
+fn copy_vehicle_parameter(p: &SUMOVehicleParameter) -> SUMOVehicleParameter {
+    SUMOVehicleParameter {
+        base: p.base.clone(),
+        tag: p.tag,
+        id: p.id.clone(),
+        routeid: p.routeid.clone(),
+        vtypeid: p.vtypeid.clone(),
+        color: p.color,
+        depart: p.depart,
+        departProcedure: p.departProcedure,
+        departLane: p.departLane,
+        departLaneProcedure: p.departLaneProcedure,
+        departPos: p.departPos,
+        departPosProcedure: p.departPosProcedure,
+        departPosLat: p.departPosLat,
+        departPosLatProcedure: p.departPosLatProcedure,
+        departSpeed: p.departSpeed,
+        departSpeedProcedure: p.departSpeedProcedure,
+        departEdge: p.departEdge,
+        departEdgeProcedure: p.departEdgeProcedure,
+        arrivalLane: p.arrivalLane,
+        arrivalLaneProcedure: p.arrivalLaneProcedure,
+        arrivalPos: p.arrivalPos,
+        arrivalPosProcedure: p.arrivalPosProcedure,
+        arrivalPosLat: p.arrivalPosLat,
+        arrivalPosLatProcedure: p.arrivalPosLatProcedure,
+        arrivalSpeed: p.arrivalSpeed,
+        arrivalSpeedProcedure: p.arrivalSpeedProcedure,
+        arrivalEdge: p.arrivalEdge,
+        arrivalEdgeProcedure: p.arrivalEdgeProcedure,
+        repetitionNumber: p.repetitionNumber,
+        repetitionsDone: p.repetitionsDone,
+        repetitionOffset: p.repetitionOffset,
+        repetitionTotalOffset: p.repetitionTotalOffset,
+        repetitionProbability: p.repetitionProbability,
+        poissonRate: p.poissonRate,
+        repetitionEnd: p.repetitionEnd,
+        line: p.line.clone(),
+        fromTaz: p.fromTaz.clone(),
+        toTaz: p.toTaz.clone(),
+        stops: p.stops.iter().map(copy_stop).collect(),
+        via: p.via.clone(),
+        parkingBadges: p.parkingBadges.clone(),
+        modes: p.modes,
+        vTypes: p.vTypes.clone(),
+        personNumber: p.personNumber,
+        containerNumber: p.containerNumber,
+        speedFactor: p.speedFactor,
+        calibratorSpeed: p.calibratorSpeed,
+        insertionChecks: p.insertionChecks,
+        parametersSet: p.parametersSet,
+    }
+}
+
+/// C++ implicit copy constructor `SUMOVehicleParameter::Stop(const Stop&)`
+fn copy_stop(s: &SUMOVehicleParameter_Stop) -> SUMOVehicleParameter_Stop {
+    SUMOVehicleParameter_Stop {
+        base: s.base.clone(),
+        edge: s.edge.clone(),
+        lane: s.lane.clone(),
+        busstop: s.busstop.clone(),
+        containerstop: s.containerstop.clone(),
+        parkingarea: s.parkingarea.clone(),
+        chargingStation: s.chargingStation.clone(),
+        overheadWireSegment: s.overheadWireSegment.clone(),
+        startPos: s.startPos,
+        endPos: s.endPos,
+        arrival: s.arrival,
+        duration: s.duration,
+        durationDist: s.durationDist.clone(),
+        until: s.until,
+        extension: s.extension,
+        waitUntil: s.waitUntil,
+        triggered: s.triggered,
+        containerTriggered: s.containerTriggered,
+        joinTriggered: s.joinTriggered,
+        parking: s.parking,
+        awaitedPersons: s.awaitedPersons.clone(),
+        permitted: s.permitted.clone(),
+        awaitedContainers: s.awaitedContainers.clone(),
+        friendlyPos: s.friendlyPos,
+        actType: s.actType.clone(),
+        tripId: s.tripId.clone(),
+        line: s.line.clone(),
+        split: s.split.clone(),
+        join: s.join.clone(),
+        speed: s.speed,
+        posLat: s.posLat,
+        onDemand: s.onDemand,
+        priority: s.priority,
+        jump: s.jump,
+        jumpUntil: s.jumpUntil,
+        started: s.started,
+        ended: s.ended,
+        accessPos: s.accessPos.clone(),
+        index: s.index,
+        routeIndex: s.routeIndex,
+        parametersSet: s.parametersSet,
+        collision: s.collision,
+        breakDown: s.breakDown,
+    }
 }
 
