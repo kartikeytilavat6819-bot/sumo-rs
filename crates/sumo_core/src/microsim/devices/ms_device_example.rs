@@ -162,7 +162,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        println!("device '{}' notifyMove: newSpeed={}", self.get_id(), f64_to_string_default(newSpeed));
+        println!("device '{}' notifyMove: newSpeed={}", self.base.base2.get_id(), f64_to_string_default(newSpeed));
         // shortcut: the C++ isVehicle() branch needs a static_cast to SUMOVehicle and MSDevice_Tripinfo lookup via getDevice(typeid(...)), which takes an Unmapped std::type_info, so only the speed line is printed; upgrade when SUMOTrafficObject can be downcast and getDevice takes a device name
         true // keep the device
     }
@@ -176,7 +176,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        println!("device '{}' notifyEnter: reason={} currentEdge={}", self.get_id(), reason as i32, veh.get_edge().get_id());
+        println!("device '{}' notifyEnter: reason={} currentEdge={}", self.base.base2.get_id(), reason as i32, veh.get_edge().get_id());
         true // keep the device
     }
 
@@ -189,7 +189,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        println!("device '{}' notifyLeave: reason={} currentEdge={}", self.get_id(), reason as i32, veh.get_edge().get_id());
+        println!("device '{}' notifyLeave: reason={} currentEdge={}", self.base.base2.get_id(), reason as i32, veh.get_edge().get_id());
         true // keep the device
     }
 
