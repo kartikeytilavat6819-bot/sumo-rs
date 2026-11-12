@@ -1,6 +1,28 @@
 //! Port of microsim/MSLeaderInfo.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::delta_t;
+use utils::common::to_string::f64_to_string_prec;
+use utils::common::util_exceptions::ProcessError;
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+
+// shortcut: MSGlobals::gLateralResolution is a static that is not ported yet (ms_globals.rs has no statics), this stub returns the C++ default -1 (unit-test default, sublane model off), upgrade when MSGlobals statics are ported
+pub fn g_lateral_resolution() -> f64 {
+    -1.
+}
+
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// Named::getIDSecure(veh) for a possibly null vehicle pointer
+fn get_id_secure_veh(veh: Ptr<MSVehicle>) -> String {
+    veh.get().map_or_else(|| "NULL".to_string(), |v| v.get_id().to_string())
+}
 
 /// C++ typedef `std::pair<const MSVehicle *, double> CLeaderDist`
 pub type CLeaderDist = (Ptr<MSVehicle>, f64);
@@ -38,7 +60,9 @@ impl MSCriticalFollowerDistanceInfo {
     // { }
     #[allow(unused_variables)]
     pub fn new(laneWidth: f64, ego: Ptr<MSVehicle>, latOffset: f64, haveOppositeLeaders: bool) -> Self {
-        todo!("port MSCriticalFollowerDistanceInfo::MSCriticalFollowerDistanceInfo")
+        let base = MSLeaderDistanceInfo::new(laneWidth, ego, latOffset);
+        let n = base.myVehicles.len();
+        MSCriticalFollowerDistanceInfo { base, myMissingGaps: vec![-f64::MAX; n], myHaveOppositeLeaders: haveOppositeLeaders }
     }
 
     /// C++: `void MSCriticalFollowerDistanceInfo::~MSCriticalFollowerDistanceInfo() noexcept` [virtual]
@@ -46,7 +70,7 @@ impl MSCriticalFollowerDistanceInfo {
     // MSCriticalFollowerDistanceInfo::~MSCriticalFollowerDistanceInfo() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCriticalFollowerDistanceInfo::~MSCriticalFollowerDistanceInfo")
+        // C++ destructor body is empty
     }
 
     /// C++: `int MSCriticalFollowerDistanceInfo::addFollower(const MSVehicle *, const MSVehicle *, double, double, int)`
@@ -127,7 +151,65 @@ impl MSCriticalFollowerDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn add_follower(&mut self, veh: Ptr<MSVehicle>, ego: Ptr<MSVehicle>, gap: f64, latOffset: f64, sublane: i32) -> i32 {
-        todo!("port MSCriticalFollowerDistanceInfo::addFollower")
+        if veh.is_null() {
+            return self.myFreeSublanes;
+        }
+        let mut sublane = sublane;
+        let requiredGap = if self.myHaveOppositeLeaders {
+            0.0
+        } else {
+            veh.get_car_follow_model().get_secure_gap(veh, ego, veh.get_speed(), ego.get_speed(), ego.get_car_follow_model().get_max_decel())
+        };
+        let missingGap = requiredGap - gap;
+        if self.myVehicles.len() == 1 {
+            // speedup for the simple case
+            sublane = 0;
+        }
+        if sublane >= 0 && sublane < self.myVehicles.len() as i32 {
+            // sublane is already given
+            // overlapping vehicles are stored preferably
+            // among those vehicles with missing gap, closer ones are preferred
+            let s = sublane as usize;
+            if (missingGap > self.myMissingGaps[s]
+                || (missingGap > 0.0 && gap < self.myDistances[s])
+                || (gap < 0.0 && self.myDistances[s] > 0.0))
+                && !(gap > 0.0 && self.myDistances[s] < 0.0)
+                && !(self.myMissingGaps[s] > 0.0 && self.myDistances[s] < gap)
+            {
+                if self.myVehicles[s].is_null() {
+                    self.myFreeSublanes -= 1;
+                }
+                self.myVehicles[s] = veh;
+                self.myDistances[s] = gap;
+                self.myMissingGaps[s] = missingGap;
+                self.myHasVehicles = true;
+            }
+            return self.myFreeSublanes;
+        }
+        let mut rightmost = 0;
+        let mut leftmost = 0;
+        self.get_sub_lanes(veh, latOffset, &mut rightmost, &mut leftmost);
+        for sublaneIdx in rightmost..=leftmost {
+            let s = sublaneIdx as usize;
+            if (self.egoRightMost < 0 || (self.egoRightMost <= sublaneIdx && sublaneIdx <= self.egoLeftMost))
+                // overlapping vehicles are stored preferably
+                // among those vehicles with missing gap, closer ones are preferred
+                && (missingGap > self.myMissingGaps[s]
+                    || (missingGap > 0.0 && gap < self.myDistances[s])
+                    || (gap < 0.0 && self.myDistances[s] > 0.0))
+                && !(gap > 0.0 && self.myDistances[s] < 0.0)
+                && !(self.myMissingGaps[s] > 0.0 && self.myDistances[s] < gap)
+            {
+                if self.myVehicles[s].is_null() {
+                    self.myFreeSublanes -= 1;
+                }
+                self.myVehicles[s] = veh;
+                self.myDistances[s] = gap;
+                self.myMissingGaps[s] = missingGap;
+                self.myHasVehicles = true;
+            }
+        }
+        self.myFreeSublanes
     }
 
     /// C++: `int MSCriticalFollowerDistanceInfo::addLeader(const MSVehicle *, double, double, int)` [virtual]
@@ -140,7 +222,7 @@ impl MSCriticalFollowerDistanceInfo {
     //     }
     #[allow(unused_variables)]
     pub fn add_leader(&mut self, veh: Ptr<MSVehicle>, gap: f64, latOffset: f64, sublane: i32) -> i32 {
-        todo!("port MSCriticalFollowerDistanceInfo::addLeader")
+        panic!("{}", ProcessError::new("Method not supported"))
     }
 
     /// C++: `int MSCriticalFollowerDistanceInfo::addLeader(const MSVehicle *, bool, double)` [virtual]
@@ -152,7 +234,7 @@ impl MSCriticalFollowerDistanceInfo {
     //     }
     #[allow(unused_variables)]
     pub fn add_leader_2(&mut self, veh: Ptr<MSVehicle>, beyond: bool, latOffset: f64) -> i32 {
-        todo!("port MSCriticalFollowerDistanceInfo::addLeader")
+        panic!("{}", ProcessError::new("Method not supported"))
     }
 
     /// C++: `void MSCriticalFollowerDistanceInfo::clear()` [virtual]
@@ -164,7 +246,8 @@ impl MSCriticalFollowerDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port MSCriticalFollowerDistanceInfo::clear")
+        self.base.clear();
+        self.myMissingGaps = vec![-f64::MAX; self.myVehicles.len()];
     }
 
     /// C++: `std::string MSCriticalFollowerDistanceInfo::toString() const` [const, virtual]
@@ -190,7 +273,23 @@ impl MSCriticalFollowerDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn to_string(&self) -> String {
-        todo!("port MSCriticalFollowerDistanceInfo::toString")
+        let mut oss = String::new();
+        for i in 0..self.myVehicles.len() {
+            oss.push_str(&get_id_secure_veh(self.myVehicles[i]));
+            oss.push(':');
+            if self.myVehicles[i].is_null() {
+                oss.push_str("inf:-inf");
+            } else {
+                oss.push_str(&f64_to_string_prec(self.myDistances[i], 2));
+                oss.push(':');
+                oss.push_str(&f64_to_string_prec(self.myMissingGaps[i], 2));
+            }
+            if i + 1 < self.myVehicles.len() {
+                oss.push_str(", ");
+            }
+        }
+        oss.push_str(&format!(" free={}", self.myFreeSublanes));
+        oss
     }
 
 }
@@ -225,7 +324,9 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn new(laneWidth: f64, ego: Ptr<MSVehicle>, latOffset: f64) -> Self {
-        todo!("port MSLeaderDistanceInfo::MSLeaderDistanceInfo")
+        let base = MSLeaderInfo::new(laneWidth, ego, latOffset);
+        let n = base.myVehicles.len();
+        MSLeaderDistanceInfo { base, myDistances: vec![f64::MAX; n] }
     }
 
     /// C++: `void MSLeaderDistanceInfo::MSLeaderDistanceInfo(const CLeaderDist &, const double)`
@@ -239,7 +340,10 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn new_2(cLeaderDist: &CLeaderDist, laneWidth: f64) -> Self {
-        todo!("port MSLeaderDistanceInfo::MSLeaderDistanceInfo")
+        let mut base = MSLeaderInfo::new(laneWidth, Ptr::null(), 0.0);
+        base.myVehicles[0] = cLeaderDist.0;
+        base.myHasVehicles = !cLeaderDist.0.is_null();
+        MSLeaderDistanceInfo { base, myDistances: vec![cLeaderDist.1] }
     }
 
     /// C++: `void MSLeaderDistanceInfo::~MSLeaderDistanceInfo() noexcept` [virtual]
@@ -247,7 +351,7 @@ impl MSLeaderDistanceInfo {
     // MSLeaderDistanceInfo::~MSLeaderDistanceInfo() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLeaderDistanceInfo::~MSLeaderDistanceInfo")
+        // C++ destructor body is empty
     }
 
     /// C++: `int MSLeaderDistanceInfo::addLeader(const MSVehicle *, double, double, int)` [virtual]
@@ -296,7 +400,44 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn add_leader(&mut self, veh: Ptr<MSVehicle>, gap: f64, latOffset: f64, sublane: i32) -> i32 {
-        todo!("port MSLeaderDistanceInfo::addLeader")
+        let mut sublane = sublane;
+        if veh.is_null() {
+            return self.myFreeSublanes;
+        }
+        if self.myVehicles.len() == 1 {
+            // speedup for the simple case
+            sublane = 0;
+        }
+        if sublane >= 0 && sublane < self.myVehicles.len() as i32 {
+            // sublane is already given
+            let s = sublane as usize;
+            if gap < self.myDistances[s] {
+                if self.myVehicles[s].is_null() {
+                    self.myFreeSublanes -= 1;
+                }
+                self.myVehicles[s] = veh;
+                self.myDistances[s] = gap;
+                self.myHasVehicles = true;
+            }
+            return self.myFreeSublanes;
+        }
+        let mut rightmost = 0;
+        let mut leftmost = 0;
+        self.get_sub_lanes(veh, latOffset, &mut rightmost, &mut leftmost);
+        for sublaneIdx in rightmost..=leftmost {
+            let s = sublaneIdx as usize;
+            if (self.egoRightMost < 0 || (self.egoRightMost <= sublaneIdx && sublaneIdx <= self.egoLeftMost))
+                && gap < self.myDistances[s]
+            {
+                if self.myVehicles[s].is_null() {
+                    self.myFreeSublanes -= 1;
+                }
+                self.myVehicles[s] = veh;
+                self.myDistances[s] = gap;
+                self.myHasVehicles = true;
+            }
+        }
+        self.myFreeSublanes
     }
 
     /// C++: `int MSLeaderDistanceInfo::addLeader(const MSVehicle *, bool, double)` [virtual]
@@ -308,7 +449,7 @@ impl MSLeaderDistanceInfo {
     //     }
     #[allow(unused_variables)]
     pub fn add_leader_2(&mut self, veh: Ptr<MSVehicle>, beyond: bool, latOffset: f64) -> i32 {
-        todo!("port MSLeaderDistanceInfo::addLeader")
+        panic!("{}", ProcessError::new("Method not supported"))
     }
 
     /// C++: `void MSLeaderDistanceInfo::addLeaders(MSLeaderDistanceInfo &)` [virtual]
@@ -326,7 +467,11 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn add_leaders(&mut self, other: &mut MSLeaderDistanceInfo) {
-        todo!("port MSLeaderDistanceInfo::addLeaders")
+        let maxSubLane = self.num_sublanes().min(other.num_sublanes());
+        for i in 0..maxSubLane {
+            let (veh, dist) = other.index_op(i);
+            self.add_leader(veh, dist, 0.0, i);
+        }
     }
 
     /// C++: `void MSLeaderDistanceInfo::clear()` [virtual]
@@ -338,7 +483,8 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port MSLeaderDistanceInfo::clear")
+        self.base.clear();
+        self.myDistances = vec![f64::MAX; self.myVehicles.len()];
     }
 
     /// C++: `CLeaderDist MSLeaderDistanceInfo::operator[](int) const` [const]
@@ -351,7 +497,8 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn index_op(&self, sublane: i32) -> CLeaderDist {
-        todo!("port MSLeaderDistanceInfo::operator[]")
+        let s = sublane as usize;
+        (self.myVehicles[s], self.myDistances[s])
     }
 
     /// C++: `std::string MSLeaderDistanceInfo::toString() const` [const, virtual]
@@ -377,7 +524,21 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn to_string(&self) -> String {
-        todo!("port MSLeaderDistanceInfo::toString")
+        let mut oss = String::new();
+        for i in 0..self.myVehicles.len() {
+            oss.push_str(&get_id_secure_veh(self.myVehicles[i]));
+            oss.push(':');
+            if self.myVehicles[i].is_null() {
+                oss.push_str("inf");
+            } else {
+                oss.push_str(&f64_to_string_prec(self.myDistances[i], 2));
+            }
+            if i + 1 < self.myVehicles.len() {
+                oss.push_str(", ");
+            }
+        }
+        oss.push_str(&format!(" free={}", self.myFreeSublanes));
+        oss
     }
 
     /// C++: `const std::vector<double> & MSLeaderDistanceInfo::getDistances() const` [const]
@@ -386,7 +547,7 @@ impl MSLeaderDistanceInfo {
     //     }
     #[allow(unused_variables)]
     pub fn get_distances(&self) -> &Vec<f64> {
-        todo!("port MSLeaderDistanceInfo::getDistances")
+        &self.myDistances
     }
 
     /// C++: `void MSLeaderDistanceInfo::fixOppositeGaps(bool)`
@@ -407,7 +568,18 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn fix_opposite_gaps(&mut self, isFollower: bool) {
-        todo!("port MSLeaderDistanceInfo::fixOppositeGaps")
+        for i in 0..self.myVehicles.len() {
+            if !self.myVehicles[i].is_null() {
+                if self.myVehicles[i].get_lane_change_model_2().is_opposite() {
+                    let length = self.myVehicles[i].get_vehicle_type().get_length();
+                    self.myDistances[i] -= length;
+                } else if isFollower && self.myDistances[i] > POSITION_EPS {
+                    // can ignore oncoming followers once they are past
+                    self.myVehicles[i] = Ptr::null();
+                    self.myDistances[i] = -1.0;
+                }
+            }
+        }
     }
 
     /// C++: `void MSLeaderDistanceInfo::patchGaps(double)`
@@ -422,7 +594,11 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn patch_gaps(&mut self, amount: f64) {
-        todo!("port MSLeaderDistanceInfo::patchGaps")
+        for i in 0..self.myVehicles.len() {
+            if !self.myVehicles[i].is_null() {
+                self.myDistances[i] += amount;
+            }
+        }
     }
 
     /// C++: `CLeaderDist MSLeaderDistanceInfo::getClosest() const` [const]
@@ -444,7 +620,18 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_closest(&self) -> CLeaderDist {
-        todo!("port MSLeaderDistanceInfo::getClosest")
+        let mut minGap = -1.0;
+        let mut veh: Ptr<MSVehicle> = Ptr::null();
+        if self.has_vehicles() {
+            minGap = f64::MAX;
+            for i in 0..self.myVehicles.len() {
+                if !self.myVehicles[i].is_null() && self.myDistances[i] < minGap {
+                    minGap = self.myDistances[i];
+                    veh = self.myVehicles[i];
+                }
+            }
+        }
+        (veh, minGap)
     }
 
     /// C++: `void MSLeaderDistanceInfo::moveSamePosTo(const MSVehicle *, MSLeaderDistanceInfo &)`
@@ -463,7 +650,19 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn move_same_pos_to(&mut self, ego: Ptr<MSVehicle>, other: &mut MSLeaderDistanceInfo) {
-        todo!("port MSLeaderDistanceInfo::moveSamePosTo")
+        let pos = ego.get_position_on_lane();
+        for i in 0..self.myVehicles.len() {
+            if !self.myVehicles[i].is_null()
+                && self.myDistances[i] < 0.0
+                && self.myVehicles[i].get_position_on_lane() == pos
+                && std::ptr::eq(self.myVehicles[i].get_lane().get_edge(), ego.get_lane().get_edge())
+            {
+                other.myVehicles[i] = self.myVehicles[i];
+                other.myDistances[i] = self.myDistances[i];
+                self.myVehicles[i] = Ptr::null();
+                self.myDistances[i] = -1.0;
+            }
+        }
     }
 
     /// C++: `double MSLeaderDistanceInfo::getMinDistToStopped() const` [const]
@@ -483,7 +682,16 @@ impl MSLeaderDistanceInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_min_dist_to_stopped(&self) -> f64 {
-        todo!("port MSLeaderDistanceInfo::getMinDistToStopped")
+        let mut result = f64::MAX;
+        if !self.myHasVehicles {
+            return result;
+        }
+        for i in 0..self.myVehicles.len() {
+            if !self.myVehicles[i].is_null() && self.myVehicles[i].is_stopped() {
+                result = min2(result, self.myDistances[i]);
+            }
+        }
+        result
     }
 
 }
@@ -523,7 +731,27 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn new(laneWidth: f64, ego: Ptr<MSVehicle>, latOffset: f64) -> Self {
-        todo!("port MSLeaderInfo::MSLeaderInfo")
+        let n = std::cmp::max(1, (laneWidth / g_lateral_resolution()).ceil() as i32);
+        let mut s = MSLeaderInfo {
+            myWidth: laneWidth,
+            myOffset: 0,
+            myVehicles: vec![Ptr::null(); n as usize],
+            myFreeSublanes: n,
+            egoRightMost: -1,
+            egoLeftMost: -1,
+            myHasVehicles: false,
+        };
+        if !ego.is_null() {
+            let mut egoRightMost = -1;
+            let mut egoLeftMost = -1;
+            s.get_sub_lanes(ego, latOffset, &mut egoRightMost, &mut egoLeftMost);
+            s.egoRightMost = egoRightMost;
+            s.egoLeftMost = egoLeftMost;
+            // filter out sublanes not of interest to ego
+            s.myFreeSublanes -= s.egoRightMost;
+            s.myFreeSublanes -= s.myVehicles.len() as i32 - 1 - s.egoLeftMost;
+        }
+        s
     }
 
     /// C++: `void MSLeaderInfo::~MSLeaderInfo() noexcept` [virtual]
@@ -531,7 +759,7 @@ impl MSLeaderInfo {
     // MSLeaderInfo::~MSLeaderInfo() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLeaderInfo::~MSLeaderInfo")
+        // C++ destructor body is empty
     }
 
     /// C++: `int MSLeaderInfo::addLeader(const MSVehicle *, bool, double)` [virtual]
@@ -570,7 +798,35 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn add_leader(&mut self, veh: Ptr<MSVehicle>, beyond: bool, latOffset: f64) -> i32 {
-        todo!("port MSLeaderInfo::addLeader")
+        if veh.is_null() {
+            return self.myFreeSublanes;
+        }
+        if self.myVehicles.len() == 1 {
+            // speedup for the simple case
+            if !beyond || self.myVehicles[0].is_null() {
+                self.myVehicles[0] = veh;
+                self.myFreeSublanes = 0;
+                self.myHasVehicles = true;
+            }
+            return self.myFreeSublanes;
+        }
+        // map center-line based coordinates into [0, myWidth] coordinates
+        let mut rightmost = 0;
+        let mut leftmost = 0;
+        self.get_sub_lanes(veh, latOffset, &mut rightmost, &mut leftmost);
+        for sublane in rightmost..=leftmost {
+            let s = sublane as usize;
+            if (self.egoRightMost < 0 || (self.egoRightMost <= sublane && sublane <= self.egoLeftMost))
+                && (!beyond || self.myVehicles[s].is_null())
+            {
+                if self.myVehicles[s].is_null() {
+                    self.myFreeSublanes -= 1;
+                }
+                self.myVehicles[s] = veh;
+                self.myHasVehicles = true;
+            }
+        }
+        self.myFreeSublanes
     }
 
     /// C++: `void MSLeaderInfo::clear()` [virtual]
@@ -586,7 +842,14 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port MSLeaderInfo::clear")
+        for v in self.myVehicles.iter_mut() {
+            *v = Ptr::null();
+        }
+        self.myFreeSublanes = self.myVehicles.len() as i32;
+        if self.egoRightMost >= 0 {
+            self.myFreeSublanes -= self.egoRightMost;
+            self.myFreeSublanes -= self.myVehicles.len() as i32 - 1 - self.egoLeftMost;
+        }
     }
 
     /// C++: `void MSLeaderInfo::getSubLanes(const MSVehicle *, double, int &, int &) const` [const]
@@ -639,7 +902,48 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_sub_lanes(&self, veh: Ptr<MSVehicle>, latOffset: f64, rightmost: &mut i32, leftmost: &mut i32) {
-        todo!("port MSLeaderInfo::getSubLanes")
+        if self.myVehicles.len() == 1 {
+            // speedup for the simple case
+            *rightmost = 0;
+            *leftmost = 0;
+            return;
+        }
+        let res = g_lateral_resolution();
+        // map center-line based coordinates into [0, myWidth] coordinates
+        let vehCenter = veh.get_lateral_position_on_lane() + 0.5 * self.myWidth + latOffset + self.myOffset as f64 * res;
+        let vehHalfWidth = 0.5 * veh.get_vehicle_type().get_width();
+        let mut rightVehSide = vehCenter - vehHalfWidth;
+        let mut leftVehSide = vehCenter + vehHalfWidth;
+        // Reserve some additional space if the vehicle is performing a maneuver continuation.
+        if veh.get_action_step_length() != delta_t() {
+            if veh.get_lane_change_model_2().get_maneuver_dist() < 0. || veh.get_lane_change_model_2().get_speed_lat() < 0. {
+                let maneuverDist = min2(
+                    veh.get_vehicle_type().get_max_speed_lat() * veh.get_action_step_length_secs(),
+                    -min2(0., veh.get_lane_change_model_2().get_maneuver_dist()),
+                );
+                rightVehSide -= maneuverDist;
+            }
+            if veh.get_lane_change_model_2().get_maneuver_dist() > 0. || veh.get_lane_change_model_2().get_speed_lat() > 0. {
+                let maneuverDist = min2(
+                    veh.get_vehicle_type().get_max_speed_lat() * veh.get_action_step_length_secs(),
+                    max2(0., veh.get_lane_change_model_2().get_maneuver_dist()),
+                );
+                leftVehSide += maneuverDist;
+            }
+        }
+        if rightVehSide > self.myWidth || leftVehSide < 0. {
+            // vehicle does not touch this lane
+            // set the values so that an iteration
+            // for (i = rightmost; i  <= leftmost; i++) stops immediately
+            *rightmost = -1000;
+            *leftmost = -2000;
+        } else {
+            *rightmost = std::cmp::max(0, ((rightVehSide + NUMERICAL_EPS) / res).floor() as i32);
+            *leftmost = std::cmp::min(
+                self.myVehicles.len() as i32 - 1,
+                (max2(0.0, leftVehSide - NUMERICAL_EPS) / res).floor() as i32,
+            );
+        }
     }
 
     /// C++: `void MSLeaderInfo::getSublaneBorders(int, double, double &, double &) const` [const]
@@ -653,7 +957,9 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_sublane_borders(&self, sublane: i32, latOffset: f64, rightSide: &mut f64, leftSide: &mut f64) {
-        todo!("port MSLeaderInfo::getSublaneBorders")
+        let res = if g_lateral_resolution() > 0. { g_lateral_resolution() } else { self.myWidth };
+        *rightSide = sublane as f64 * res + latOffset - self.myOffset as f64 * g_lateral_resolution();
+        *leftSide = min2((sublane + 1) as f64 * res, self.myWidth) + latOffset - self.myOffset as f64 * g_lateral_resolution();
     }
 
     /// C++: `const MSVehicle * MSLeaderInfo::operator[](int) const` [const]
@@ -666,7 +972,7 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn index_op(&self, sublane: i32) -> Ptr<MSVehicle> {
-        todo!("port MSLeaderInfo::operator[]")
+        self.myVehicles[sublane as usize]
     }
 
     /// C++: `int MSLeaderInfo::numSublanes() const` [const]
@@ -675,7 +981,7 @@ impl MSLeaderInfo {
     //     }
     #[allow(unused_variables)]
     pub fn num_sublanes(&self) -> i32 {
-        todo!("port MSLeaderInfo::numSublanes")
+        self.myVehicles.len() as i32
     }
 
     /// C++: `int MSLeaderInfo::numFreeSublanes() const` [const]
@@ -684,7 +990,7 @@ impl MSLeaderInfo {
     //     }
     #[allow(unused_variables)]
     pub fn num_free_sublanes(&self) -> i32 {
-        todo!("port MSLeaderInfo::numFreeSublanes")
+        self.myFreeSublanes
     }
 
     /// C++: `bool MSLeaderInfo::hasVehicles() const` [const]
@@ -693,7 +999,7 @@ impl MSLeaderInfo {
     //     }
     #[allow(unused_variables)]
     pub fn has_vehicles(&self) -> bool {
-        todo!("port MSLeaderInfo::hasVehicles")
+        self.myHasVehicles
     }
 
     /// C++: `const std::vector<const MSVehicle *> & MSLeaderInfo::getVehicles() const` [const]
@@ -702,7 +1008,7 @@ impl MSLeaderInfo {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicles(&self) -> &Vec<Ptr<MSVehicle>> {
-        todo!("port MSLeaderInfo::getVehicles")
+        &self.myVehicles
     }
 
     /// C++: `int MSLeaderInfo::getSublaneOffset() const` [const]
@@ -711,7 +1017,7 @@ impl MSLeaderInfo {
     //     }
     #[allow(unused_variables)]
     pub fn get_sublane_offset(&self) -> i32 {
-        todo!("port MSLeaderInfo::getSublaneOffset")
+        self.myOffset
     }
 
     /// C++: `void MSLeaderInfo::setSublaneOffset(int)`
@@ -723,7 +1029,8 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn set_sublane_offset(&mut self, offset: i32) {
-        todo!("port MSLeaderInfo::setSublaneOffset")
+        // C++ asserts gLateralResolution > 0; not checked while gLateralResolution is a stub
+        self.myOffset = offset;
     }
 
     /// C++: `bool MSLeaderInfo::hasStoppedVehicle() const` [const]
@@ -742,7 +1049,15 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn has_stopped_vehicle(&self) -> bool {
-        todo!("port MSLeaderInfo::hasStoppedVehicle")
+        if !self.myHasVehicles {
+            return false;
+        }
+        for &v in self.myVehicles.iter() {
+            if !v.is_null() && v.is_stopped() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSLeaderInfo::hasVehicle(const MSVehicle *) const` [const]
@@ -761,7 +1076,15 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn has_vehicle(&self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLeaderInfo::hasVehicle")
+        if !self.myHasVehicles {
+            return false;
+        }
+        for &v in self.myVehicles.iter() {
+            if v == veh {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSLeaderInfo::removeOpposite(const MSLane *)`
@@ -779,7 +1102,14 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn remove_opposite(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSLeaderInfo::removeOpposite")
+        for i in 0..self.myVehicles.len() {
+            let veh = self.myVehicles[i];
+            if !veh.is_null()
+                && (veh.get_lane_change_model_2().is_opposite() || !std::ptr::eq(lane.get_edge(), veh.get_lane().get_edge()))
+            {
+                self.myVehicles[i] = Ptr::null();
+            }
+        }
     }
 
     /// C++: `std::string MSLeaderInfo::toString() const` [const, virtual]
@@ -800,7 +1130,15 @@ impl MSLeaderInfo {
     // }
     #[allow(unused_variables)]
     pub fn to_string(&self) -> String {
-        todo!("port MSLeaderInfo::toString")
+        let mut oss = String::new();
+        for i in 0..self.myVehicles.len() {
+            oss.push_str(&get_id_secure_veh(self.myVehicles[i]));
+            if i + 1 < self.myVehicles.len() {
+                oss.push_str(", ");
+            }
+        }
+        oss.push_str(&format!(" free={}", self.myFreeSublanes));
+        oss
     }
 
 }

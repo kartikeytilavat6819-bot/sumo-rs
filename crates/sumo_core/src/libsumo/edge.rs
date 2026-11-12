@@ -1,6 +1,10 @@
 //! Port of libsumo/Edge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::NUMERICAL_EPS;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+use utils::common::sumo_vehicle_class::{invert_permissions, parse_vehicle_classes, parse_vehicle_classes_vec};
+// shortcut: C++ `throw TraCIException(msg)` is mapped to `panic!("{}", msg)` (unwinds where C++ throws), upgrade when libsumo has a typed TraCI error that callers can catch
 
 /// C++ class `libsumo::Edge` (libsumo/Edge.h)
 pub struct Edge {
@@ -10,6 +14,13 @@ pub struct Edge {
 //   static const int Edge::DOMAIN_ID;
 //   static SubscriptionResults Edge::mySubscriptionResults;
 //   static ContextSubscriptionResults Edge::myContextSubscriptionResults;
+
+thread_local! {
+    /// C++ static `Edge::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Edge::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
 
 impl Edge {
     /// C++: `double Edge::getAdaptedTraveltime(const std::string &, double)` [static]
@@ -24,7 +35,12 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_adapted_traveltime(edgeID: &str, time: f64) -> f64 {
-        todo!("port Edge::getAdaptedTraveltime")
+        let e = Self::get_edge(edgeID);
+        let mut value: f64 = 0.0;
+        if !MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, time, &mut value) {
+            return -1.0;
+        }
+        value
     }
 
     /// C++: `double Edge::getEffort(const std::string &, double)` [static]
@@ -39,7 +55,12 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_effort(edgeID: &str, time: f64) -> f64 {
-        todo!("port Edge::getEffort")
+        let e = Self::get_edge(edgeID);
+        let mut value: f64 = 0.0;
+        if !MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, time, &mut value) {
+            return -1.0;
+        }
+        value
     }
 
     /// C++: `double Edge::getTraveltime(const std::string &)` [static]
@@ -49,7 +70,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_traveltime(edgeID: &str) -> f64 {
-        todo!("port Edge::getTraveltime")
+        Self::get_edge(edgeID).get_current_travel_time(NUMERICAL_EPS)
     }
 
     /// C++: `double Edge::getWaitingTime(const std::string &)` [static]
@@ -59,7 +80,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(edgeID: &str) -> f64 {
-        todo!("port Edge::getWaitingTime")
+        Self::get_edge(edgeID).get_waiting_seconds()
     }
 
     /// C++: `const std::vector<std::string> Edge::getLastStepPersonIDs(const std::string &)` [static]
@@ -75,7 +96,13 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_person_i_ds(edgeID: &str) -> Vec<String> {
-        todo!("port Edge::getLastStepPersonIDs")
+        let mut personIDs: Vec<String> = Vec::new();
+        let persons = Self::get_edge(edgeID).get_sorted_persons(MSNet::get_instance().get_current_time_step(), true);
+        personIDs.reserve(persons.len());
+        for p in persons.iter() {
+            personIDs.push(p.get_id().to_string());
+        }
+        personIDs
     }
 
     /// C++: `const std::vector<std::string> Edge::getLastStepVehicleIDs(const std::string &)` [static]
@@ -89,7 +116,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_i_ds(edgeID: &str) -> Vec<String> {
-        todo!("port Edge::getLastStepVehicleIDs")
+        let mut vehIDs: Vec<String> = Vec::new();
+        for veh in Self::get_edge(edgeID).get_vehicles().iter() {
+            vehIDs.push(veh.get_id().to_string());
+        }
+        vehIDs
     }
 
     /// C++: `double Edge::getCO2Emission(const std::string &)` [static]
@@ -103,7 +134,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getCO2Emission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO2>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getCO2Emission needs MSLane::getEmissions<CO2>")
     }
 
     /// C++: `double Edge::getCOEmission(const std::string &)` [static]
@@ -117,7 +149,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getCOEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getCOEmission needs MSLane::getEmissions<CO>")
     }
 
     /// C++: `double Edge::getHCEmission(const std::string &)` [static]
@@ -131,7 +164,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getHCEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::HC>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getHCEmission needs MSLane::getEmissions<HC>")
     }
 
     /// C++: `double Edge::getPMxEmission(const std::string &)` [static]
@@ -145,7 +179,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getPMxEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::PM_X>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getPMxEmission needs MSLane::getEmissions<PM_X>")
     }
 
     /// C++: `double Edge::getNOxEmission(const std::string &)` [static]
@@ -159,7 +194,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getNOxEmission")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::NO_X>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getNOxEmission needs MSLane::getEmissions<NO_X>")
     }
 
     /// C++: `double Edge::getFuelConsumption(const std::string &)` [static]
@@ -173,7 +209,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(edgeID: &str) -> f64 {
-        todo!("port Edge::getFuelConsumption")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::FUEL>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getFuelConsumption needs MSLane::getEmissions<FUEL>")
     }
 
     /// C++: `double Edge::getNoiseEmission(const std::string &)` [static]
@@ -190,7 +227,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(edgeID: &str) -> f64 {
-        todo!("port Edge::getNoiseEmission")
+        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
+        panic!("shortcut: Edge::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
     }
 
     /// C++: `double Edge::getElectricityConsumption(const std::string &)` [static]
@@ -204,7 +242,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(edgeID: &str) -> f64 {
-        todo!("port Edge::getElectricityConsumption")
+        // shortcut: needs MSLane::getEmissions<PollutantsInterface::ELEC>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
+        panic!("shortcut: Edge::getElectricityConsumption needs MSLane::getEmissions<ELEC>")
     }
 
     /// C++: `int Edge::getLastStepVehicleNumber(const std::string &)` [static]
@@ -214,7 +253,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_number(edgeID: &str) -> i32 {
-        todo!("port Edge::getLastStepVehicleNumber")
+        Self::get_edge(edgeID).get_vehicle_number()
     }
 
     /// C++: `double Edge::getLastStepMeanSpeed(const std::string &)` [static]
@@ -224,7 +263,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_mean_speed(edgeID: &str) -> f64 {
-        todo!("port Edge::getLastStepMeanSpeed")
+        Self::get_edge(edgeID).get_mean_speed()
     }
 
     /// C++: `double Edge::getMeanFriction(const std::string &)` [static]
@@ -234,7 +273,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_friction(edgeID: &str) -> f64 {
-        todo!("port Edge::getMeanFriction")
+        Self::get_edge(edgeID).get_mean_friction()
     }
 
     /// C++: `double Edge::getMaxSpeed(const std::string &)` [static]
@@ -244,7 +283,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(edgeID: &str) -> f64 {
-        todo!("port Edge::getMaxSpeed")
+        Self::get_edge(edgeID).get_speed_limit()
     }
 
     /// C++: `double Edge::getLastStepOccupancy(const std::string &)` [static]
@@ -254,7 +293,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy(edgeID: &str) -> f64 {
-        todo!("port Edge::getLastStepOccupancy")
+        Self::get_edge(edgeID).get_occupancy()
     }
 
     /// C++: `int Edge::getLastStepHaltingNumber(const std::string &)` [static]
@@ -270,7 +309,13 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_halting_number(edgeID: &str) -> i32 {
-        todo!("port Edge::getLastStepHaltingNumber")
+        let mut result: i32 = 0;
+        for veh in Self::get_edge(edgeID).get_vehicles().iter() {
+            if veh.get_speed() < SUMO_CONST_HALTING_SPEED {
+                result += 1;
+            }
+        }
+        result
     }
 
     /// C++: `double Edge::getLastStepLength(const std::string &)` [static]
@@ -289,7 +334,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_length(edgeID: &str) -> f64 {
-        todo!("port Edge::getLastStepLength")
+        // shortcut: C++ dynamic_cast<const MSBaseVehicle*> from SUMOVehicle needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
+        panic!("shortcut: Edge::getLastStepLength needs dynamic_cast to MSBaseVehicle")
     }
 
     /// C++: `int Edge::getLaneNumber(const std::string &)` [static]
@@ -299,7 +345,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_number(edgeID: &str) -> i32 {
-        todo!("port Edge::getLaneNumber")
+        Self::get_edge(edgeID).get_lanes().len() as i32
     }
 
     /// C++: `std::string Edge::getStreetName(const std::string &)` [static]
@@ -309,7 +355,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_street_name(edgeID: &str) -> String {
-        todo!("port Edge::getStreetName")
+        Self::get_edge(edgeID).get_street_name().to_string()
     }
 
     /// C++: `const std::vector<std::string> Edge::getPendingVehicles(const std::string &)` [static]
@@ -326,7 +372,14 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_pending_vehicles(edgeID: &str) -> Vec<String> {
-        todo!("port Edge::getPendingVehicles")
+        Self::get_edge(edgeID); // validate edgeID
+        let mut vehIDs: Vec<String> = Vec::new();
+        for veh in MSNet::get_instance().m().get_insertion_control().get_pending_vehicles().iter() {
+            if veh.get_edge().get_id() == edgeID {
+                vehIDs.push(veh.get_id().to_string());
+            }
+        }
+        vehIDs
     }
 
     /// C++: `double Edge::getAngle(const std::string &, double)` [static]
@@ -337,7 +390,9 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(edgeID: &str, relativePosition: f64) -> f64 {
-        todo!("port Edge::getAngle")
+        let e = Self::get_edge(edgeID);
+        let lanes = e.get_lanes();
+        if lanes.is_empty() { INVALID_DOUBLE_VALUE } else { Lane::get_angle(lanes[0].get_id(), relativePosition) }
     }
 
     /// C++: `std::string Edge::getFromJunction(const std::string &)` [static]
@@ -347,7 +402,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_from_junction(edgeID: &str) -> String {
-        todo!("port Edge::getFromJunction")
+        Self::get_edge(edgeID).get_from_junction().get_id().to_string()
     }
 
     /// C++: `std::string Edge::getToJunction(const std::string &)` [static]
@@ -357,7 +412,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_to_junction(edgeID: &str) -> String {
-        todo!("port Edge::getToJunction")
+        Self::get_edge(edgeID).get_to_junction().get_id().to_string()
     }
 
     /// C++: `std::string Edge::getBidiEdge(const std::string &)` [static]
@@ -368,7 +423,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(edgeID: &str) -> String {
-        todo!("port Edge::getBidiEdge")
+        let bidi = Self::get_edge(edgeID).get_bidi_edge();
+        if bidi.is_null() { String::new() } else { bidi.get_id().to_string() }
     }
 
     /// C++: `std::vector<std::string> Edge::getIDList()` [static]
@@ -381,7 +437,10 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Edge::getIDList")
+        let _ = MSNet::get_instance(); // just to check that we actually have a network
+        let mut ids: Vec<String> = Vec::new();
+        MSEdge::insert_i_ds(&mut ids);
+        ids
     }
 
     /// C++: `int Edge::getIDCount()` [static]
@@ -391,7 +450,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Edge::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Edge::getParameter(const std::string &, const std::string &)` [static]
@@ -401,14 +460,14 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Edge::getParameter")
+        Self::get_edge(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Edge::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Edge)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Edge::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Edge::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -418,77 +477,78 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Edge::setParameter")
+        Self::get_edge(objectID).m().base2.set_parameter(key, value);
     }
 
     /// C++: `void Edge::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Edge::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_EDGE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Edge::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Edge::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_EDGE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Edge::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Edge::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_EDGE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Edge::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Edge::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_EDGE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Edge::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Edge::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Edge::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Edge::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Edge::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Edge::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Edge::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Edge::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Edge::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Edge::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: Edge::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int Edge::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Edge::domainID")
+        CMD_GET_EDGE_VARIABLE
     }
 
     /// C++: `void Edge::setAllowed(const std::string &, std::string)` [static]
@@ -498,7 +558,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_allowed(edgeID: &str, allowedClasses: String) {
-        todo!("port Edge::setAllowed")
+        Self::set_allowed_svc_permissions(edgeID, parse_vehicle_classes(&allowedClasses));
     }
 
     /// C++: `void Edge::setAllowed(const std::string &, std::vector<std::string>)` [static]
@@ -508,7 +568,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_allowed_2(edgeID: &str, allowedClasses: Vec<String>) {
-        todo!("port Edge::setAllowed")
+        Self::set_allowed_svc_permissions(edgeID, parse_vehicle_classes_vec(&allowedClasses).unwrap_or_else(|e| panic!("{}", e)));
     }
 
     /// C++: `void Edge::setDisallowed(const std::string &, std::string)` [static]
@@ -518,7 +578,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_disallowed(edgeID: &str, disallowedClasses: String) {
-        todo!("port Edge::setDisallowed")
+        Self::set_allowed_svc_permissions(edgeID, invert_permissions(parse_vehicle_classes(&disallowedClasses)));
     }
 
     /// C++: `void Edge::setDisallowed(const std::string &, std::vector<std::string>)` [static]
@@ -528,7 +588,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_disallowed_2(edgeID: &str, disallowedClasses: Vec<String>) {
-        todo!("port Edge::setDisallowed")
+        Self::set_allowed_svc_permissions(edgeID, invert_permissions(parse_vehicle_classes_vec(&disallowedClasses).unwrap_or_else(|e| panic!("{}", e))));
     }
 
     /// C++: `void Edge::adaptTraveltime(const std::string &, double, double, double)` [static]
@@ -538,7 +598,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn adapt_traveltime(edgeID: &str, time: f64, beginSeconds: f64, endSeconds: f64) {
-        todo!("port Edge::adaptTraveltime")
+        let e = Self::get_edge(edgeID);
+        MSNet::get_instance().m().get_weights_storage().add_travel_time(e, beginSeconds, endSeconds, time);
     }
 
     /// C++: `void Edge::setEffort(const std::string &, double, double, double)` [static]
@@ -548,7 +609,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_effort(edgeID: &str, effort: f64, beginSeconds: f64, endSeconds: f64) {
-        todo!("port Edge::setEffort")
+        let e = Self::get_edge(edgeID);
+        MSNet::get_instance().m().get_weights_storage().add_effort(e, beginSeconds, endSeconds, effort);
     }
 
     /// C++: `void Edge::setMaxSpeed(const std::string &, double)` [static]
@@ -558,7 +620,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(edgeID: &str, speed: f64) {
-        todo!("port Edge::setMaxSpeed")
+        // C++ default arguments: modified = true, jamThreshold = -1
+        Self::get_edge(edgeID).m().set_max_speed(speed, true, -1.0);
     }
 
     /// C++: `void Edge::setFriction(const std::string &, double)` [static]
@@ -570,7 +633,10 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_friction(edgeID: &str, friction: f64) {
-        todo!("port Edge::setFriction")
+        let e = Self::get_edge(edgeID);
+        for lane in e.get_lanes().iter() {
+            lane.m().set_friction_coefficient(friction);
+        }
     }
 
     /// C++: `void Edge::storeShape(const std::string &, PositionVector &)` [static]
@@ -584,7 +650,12 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(edgeID: &str, shape: &mut PositionVector) {
-        todo!("port Edge::storeShape")
+        let e = Self::get_edge(edgeID);
+        for lane in e.get_lanes().iter() {
+            for p in lane.get_shape(false).iter() {
+                shape.0.push(p.clone());
+            }
+        }
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Edge::makeWrapper()` [static]
@@ -594,7 +665,8 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Edge::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: Edge::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool Edge::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -671,7 +743,56 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Edge::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_EDGE_TRAVELTIME => {
+                let t = StoHelp::read_typed_double(paramData.m(), "");
+                wrapper.m().wrap_double(objID, variable, Self::get_adapted_traveltime(objID, t))
+            }
+            VAR_EDGE_EFFORT => {
+                let t = StoHelp::read_typed_double(paramData.m(), "");
+                wrapper.m().wrap_double(objID, variable, Self::get_effort(objID, t))
+            }
+            VAR_CURRENT_TRAVELTIME => wrapper.m().wrap_double(objID, variable, Self::get_traveltime(objID)),
+            VAR_WAITING_TIME => wrapper.m().wrap_double(objID, variable, Self::get_waiting_time(objID)),
+            LAST_STEP_PERSON_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_step_person_i_ds(objID)),
+            LAST_STEP_VEHICLE_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_step_vehicle_i_ds(objID)),
+            VAR_CO2EMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co2_emission(objID)),
+            VAR_COEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co_emission(objID)),
+            VAR_HCEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_hc_emission(objID)),
+            VAR_PMXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_p_mx_emission(objID)),
+            VAR_NOXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_n_ox_emission(objID)),
+            VAR_FUELCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_fuel_consumption(objID)),
+            VAR_NOISEEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_noise_emission(objID)),
+            VAR_ELECTRICITYCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_electricity_consumption(objID)),
+            LAST_STEP_VEHICLE_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_vehicle_number(objID)),
+            LAST_STEP_MEAN_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_step_mean_speed(objID)),
+            VAR_MAXSPEED => wrapper.m().wrap_double(objID, variable, Self::get_max_speed(objID)),
+            VAR_FRICTION => wrapper.m().wrap_double(objID, variable, Self::get_mean_friction(objID)),
+            LAST_STEP_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_step_occupancy(objID)),
+            LAST_STEP_VEHICLE_HALTING_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_halting_number(objID)),
+            LAST_STEP_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_last_step_length(objID)),
+            VAR_LANE_INDEX => wrapper.m().wrap_int(objID, variable, Self::get_lane_number(objID)),
+            VAR_NAME => wrapper.m().wrap_string(objID, variable, &Self::get_street_name(objID)),
+            VAR_PENDING_VEHICLES => wrapper.m().wrap_string_list(objID, variable, &Self::get_pending_vehicles(objID)),
+            VAR_ANGLE => {
+                let relPos = StoHelp::read_typed_double(paramData.m(), "");
+                wrapper.m().wrap_double(objID, variable, Self::get_angle(objID, relPos))
+            }
+            FROM_JUNCTION => wrapper.m().wrap_string(objID, variable, &Self::get_from_junction(objID)),
+            TO_JUNCTION => wrapper.m().wrap_string(objID, variable, &Self::get_to_junction(objID)),
+            VAR_BIDI => wrapper.m().wrap_string(objID, variable, &Self::get_bidi_edge(objID)),
+            VAR_PARAMETER => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `void Edge::setAllowedSVCPermissions(const std::string &, long long)` [static, private]
@@ -685,7 +806,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn set_allowed_svc_permissions(edgeID: &str, permissions: i64) {
-        todo!("port Edge::setAllowedSVCPermissions")
+        let e = Self::get_edge(edgeID);
+        for lane in e.get_lanes().iter() {
+            lane.m().set_permissions(permissions, MSLane_CHANGE_PERMISSIONS_PERMANENT);
+        }
+        e.m().rebuild_allowed_lanes(false, true);
     }
 
     /// C++: `MSEdge * Edge::getEdge(const std::string &)` [static, private]
@@ -699,7 +824,13 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(edgeID: &str) -> Ptr<MSEdge> {
-        todo!("port Edge::getEdge")
+        // shortcut: MSEdge::dictionary_2 takes an Unmapped std::string_view, so the id is looked up by a linear scan over MSEdgeControl::get_edges (normal edges only), upgrade when dictionary_2 takes &str
+        for e in MSNet::get_instance().m().get_edge_control().get_edges().iter() {
+            if e.get_id() == edgeID {
+                return *e;
+            }
+        }
+        panic!("{}", format!("Edge '{}' is not known", edgeID));
     }
 
     /// C++: `void Edge::Edge()` [private]
@@ -707,7 +838,7 @@ impl Edge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Edge::Edge")
+        panic!("libsumo::Edge cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

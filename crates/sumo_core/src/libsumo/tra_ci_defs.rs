@@ -43,6 +43,7 @@ impl FatalTraCIError {
 }
 
 /// C++ class `libsumo::TraCIBestLanesData` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIBestLanesData {
     /// The id of the lane
     pub laneID: String,
@@ -78,6 +79,7 @@ impl TraCIBestLanesData {
 }
 
 /// C++ class `libsumo::TraCIBestLanesDataVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIBestLanesDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -115,6 +117,7 @@ impl TraCIBestLanesDataVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCICollision` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCICollision {
     /// The ids of the participating vehicles and persons
     pub collider: String,
@@ -146,6 +149,7 @@ impl TraCICollision {
 }
 
 /// C++ class `libsumo::TraCICollisionVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCICollisionVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -184,6 +188,7 @@ impl TraCICollisionVectorWrapped {
 
 /// A color
 /// C++ class `libsumo::TraCIColor` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIColor {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -234,6 +239,7 @@ impl TraCIColor {
 }
 
 /// C++ class `libsumo::TraCIConnection` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIConnection {
     pub approachedLane: String,
     pub hasPrio: bool,
@@ -278,6 +284,7 @@ impl TraCIConnection {
 }
 
 /// C++ class `libsumo::TraCIConnectionVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIConnectionVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -315,6 +322,7 @@ impl TraCIConnectionVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCIDouble` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIDouble {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -364,6 +372,7 @@ impl TraCIDouble {
 }
 
 /// C++ class `libsumo::TraCIDoubleList` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIDoubleList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -402,6 +411,7 @@ impl TraCIDoubleList {
 
 /// An error which allows to continue
 /// C++ class `libsumo::TraCIException` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIException {
     /// C++ base class `std::runtime_error`
     pub base: Unmapped /* std::runtime_error */,
@@ -432,6 +442,7 @@ impl TraCIException {
 }
 
 /// C++ class `libsumo::TraCIInt` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIInt {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -482,6 +493,7 @@ impl TraCIInt {
 }
 
 /// C++ class `libsumo::TraCIIntList` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIIntList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -519,6 +531,7 @@ impl TraCIIntList {
 }
 
 /// C++ class `libsumo::TraCIJunctionFoe` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIJunctionFoe {
     /// the id of the vehicle with intersecting trajectory
     pub foeId: String,
@@ -547,6 +560,7 @@ impl TraCIJunctionFoe {
 }
 
 /// C++ class `libsumo::TraCIJunctionFoeVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIJunctionFoeVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -584,6 +598,7 @@ impl TraCIJunctionFoeVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCILink` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCILink {
     pub fromLane: String,
     pub viaLane: String,
@@ -620,6 +635,7 @@ impl TraCILink {
 }
 
 /// C++ class `libsumo::TraCILinkVectorVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCILinkVectorVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -660,6 +676,7 @@ impl TraCILinkVectorVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCILogic` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCILogic {
     pub programID: String,
     pub type_: i32,
@@ -699,6 +716,7 @@ impl TraCILogic {
 }
 
 /// C++ class `libsumo::TraCILogicVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCILogicVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -736,6 +754,7 @@ impl TraCILogicVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCINextStopData` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCINextStopData {
     /// The lane to stop at
     pub lane: String,
@@ -828,6 +847,7 @@ impl TraCINextStopData {
 
 /// A list of vehicle stops
 /// C++ class `libsumo::TraCINextStopDataVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCINextStopDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -865,6 +885,7 @@ impl TraCINextStopDataVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCINextTLSData` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCINextTLSData {
     /// The id of the next tls
     pub id: String,
@@ -892,6 +913,7 @@ impl TraCINextTLSData {
 }
 
 /// C++ class `libsumo::TraCINextTLSDataVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCINextTLSDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -929,6 +951,7 @@ impl TraCINextTLSDataVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCIPhase` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIPhase {
     pub duration: f64,
     pub state: String,
@@ -963,6 +986,7 @@ impl TraCIPhase {
 
 /// A 2D or 3D-position, for 2D positions z == INVALID_DOUBLE_VALUE
 /// C++ class `libsumo::TraCIPosition` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIPosition {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1012,6 +1036,7 @@ impl TraCIPosition {
 
 /// A list of positions
 /// C++ class `libsumo::TraCIPositionVector` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIPositionVector {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1049,6 +1074,7 @@ impl TraCIPositionVector {
 }
 
 /// C++ class `libsumo::TraCIReservation` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIReservation {
     /// The id of the taxi reservation (usable for traci.vehicle.dispatchTaxi)
     pub id: String,
@@ -1112,6 +1138,7 @@ impl TraCIReservation {
 }
 
 /// C++ class `libsumo::TraCIReservationVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIReservationVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1150,6 +1177,7 @@ impl TraCIReservationVectorWrapped {
 
 /// @{
 /// C++ class `libsumo::TraCIResult` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIResult {
 }
 
@@ -1204,6 +1232,7 @@ impl TraCIResult {
 
 /// An edgeId, position and laneIndex
 /// C++ class `libsumo::TraCIRoadPosition` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIRoadPosition {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1255,6 +1284,7 @@ impl TraCIRoadPosition {
 }
 
 /// C++ class `libsumo::TraCISignalConstraint` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCISignalConstraint {
     /// the idea of the rail signal where this constraint is active
     pub signalId: String,
@@ -1291,6 +1321,7 @@ impl TraCISignalConstraint {
 }
 
 /// C++ class `libsumo::TraCISignalConstraintVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCISignalConstraintVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1328,6 +1359,7 @@ impl TraCISignalConstraintVectorWrapped {
 }
 
 /// C++ class `libsumo::TraCIStage` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIStage {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1388,6 +1420,7 @@ impl TraCIStage {
 }
 
 /// C++ class `libsumo::TraCIString` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIString {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1435,6 +1468,7 @@ impl TraCIString {
 }
 
 /// C++ class `libsumo::TraCIStringDoublePairList` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIStringDoublePairList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1472,6 +1506,7 @@ impl TraCIStringDoublePairList {
 }
 
 /// C++ class `libsumo::TraCIStringList` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIStringList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1510,6 +1545,7 @@ impl TraCIStringList {
 
 /// mirrors MSInductLoop::VehicleData
 /// C++ class `libsumo::TraCIVehicleData` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIVehicleData {
     /// The id of the vehicle
     pub id: String,
@@ -1539,6 +1575,7 @@ impl TraCIVehicleData {
 }
 
 /// C++ class `libsumo::TraCIVehicleDataVectorWrapped` (libsumo/TraCIDefs.h)
+#[derive(Clone)]
 pub struct TraCIVehicleDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,

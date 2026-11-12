@@ -2,6 +2,10 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: STOP_*_SET belong to SUMOVehicleParameter.h, not ported yet, move them there
+const STOP_STARTED_SET: i32 = 1;
+const STOP_END_SET: i32 = 2;
+
 /// Definition of vehicle stop (position and duration)
 /// C++ class `MSStop` (microsim/MSStop.h)
 pub struct MSStop {
@@ -62,7 +66,34 @@ impl MSStop {
     // MSStop(const SUMOVehicleParameter::Stop& par) : pars(par) {}
     #[allow(unused_variables)]
     pub fn new(par: &SUMOVehicleParameter_Stop) -> Self {
-        todo!("port MSStop::MSStop")
+        MSStop {
+            // shortcut: MSRouteIterator is an Unmapped placeholder (C++ const_iterator), edge is left unset until it is ported
+            edge: (),
+            lane: Ptr::null(),
+            segment: Ptr::null(),
+            busstop: Ptr::null(),
+            containerstop: Ptr::null(),
+            parkingarea: Ptr::null(),
+            chargingStation: Ptr::null(),
+            overheadWireSegment: Ptr::null(),
+            pars: par.clone(),
+            duration: -1,
+            triggered: false,
+            containerTriggered: false,
+            joinTriggered: false,
+            reached: false,
+            numExpectedPerson: 0,
+            numExpectedContainer: 0,
+            timeToBoardNextPerson: 0,
+            timeToLoadNextContainer: 0,
+            endBoarding: i64::MAX,
+            isOpposite: false,
+            skipOnDemand: false,
+            startedFromState: false,
+            waypointWithStop: false,
+            skips: Vec::new(),
+            entryPos: -1.0,
+        }
     }
 
     /// C++: `void MSStop::write(OutputDevice &) const` [const]
@@ -89,7 +120,23 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice) {
-        todo!("port MSStop::write")
+        let mut tmp = self.pars.clone();
+        tmp.duration = self.duration;
+        if !self.triggered && !self.containerTriggered {
+            // we are writing in the context of saveState. All required
+            // transportables have entered and we must prevent the trigger condition
+            // to be renewed on loading
+            tmp.triggered = false;
+            tmp.containerTriggered = false;
+        }
+        tmp.write(dev, false, true);
+        // if the stop has already started but hasn't ended yet we are writing it in
+        // the context of saveState (but we do not want to write the attribute twice
+        if self.pars.started >= 0 && (self.pars.parametersSet & STOP_STARTED_SET) == 0 {
+            dev.write_attr(SUMO_ATTR_STARTED, &time2string(self.pars.started));
+        }
+        self.pars.write_params(dev);
+        dev.close_tag("");
     }
 
     /// C++: `double MSStop::getEndPos(const SUMOVehicle &) const` [const]
@@ -114,7 +161,25 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self, veh: &SUMOVehicle) -> f64 {
-        todo!("port MSStop::getEndPos")
+        let brakePos = if veh.get_edge() == self.get_edge() {
+            veh.get_position_on_lane() + veh.get_brake_gap(false)
+        } else {
+            0.0
+        };
+        if (self.pars.parametersSet & STOP_END_SET) != 0 {
+            return self.pars.endPos;
+        } else if !self.busstop.is_null() {
+            return self.busstop.get_last_free_pos(veh, brakePos);
+        } else if !self.containerstop.is_null() {
+            return self.containerstop.get_last_free_pos(veh, brakePos);
+        } else if !self.parkingarea.is_null() {
+            return self.parkingarea.get_last_free_pos(veh, brakePos);
+        } else if !self.chargingStation.is_null() {
+            return self.chargingStation.get_last_free_pos(veh, 0.0);
+        } else if !self.overheadWireSegment.is_null() {
+            return self.overheadWireSegment.get_last_free_pos(veh, 0.0);
+        }
+        self.pars.endPos
     }
 
     /// C++: `double MSStop::getReachedThreshold() const` [const]
@@ -125,7 +190,11 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_reached_threshold(&self) -> f64 {
-        todo!("port MSStop::getReachedThreshold")
+        if self.isOpposite {
+            self.lane.get_opposite_pos(self.pars.endPos) - (self.pars.endPos - self.pars.startPos)
+        } else {
+            self.pars.startPos
+        }
     }
 
     /// C++: `std::string MSStop::getDescription(bool) const` [const]
@@ -171,7 +240,42 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_description(&self, nameOnly: bool) -> String {
-        todo!("port MSStop::getDescription")
+        let mut result: String;
+        if !self.parkingarea.is_null() {
+            if nameOnly {
+                return self.parkingarea.get_id().to_string();
+            }
+            result = format!("parkingArea:{}", self.parkingarea.get_id());
+        } else if !self.containerstop.is_null() {
+            if nameOnly {
+                return self.containerstop.get_id().to_string();
+            }
+            result = format!("containerStop:{}", self.containerstop.get_id());
+        } else if !self.busstop.is_null() {
+            if nameOnly {
+                return self.busstop.get_id().to_string();
+            }
+            result = format!("busStop:{}", self.busstop.get_id());
+        } else if !self.chargingStation.is_null() {
+            if nameOnly {
+                return self.chargingStation.get_id().to_string();
+            }
+            result = format!("chargingStation:{}", self.chargingStation.get_id());
+        } else if !self.overheadWireSegment.is_null() {
+            if nameOnly {
+                return self.overheadWireSegment.get_id().to_string();
+            }
+            result = format!("overheadWireSegment:{}", self.overheadWireSegment.get_id());
+        } else {
+            if nameOnly {
+                return String::new();
+            }
+            result = format!("lane:{} pos:{}", self.lane.get_id(), utils::common::to_string::f64_to_string(self.pars.endPos));
+        }
+        if self.pars.actType != "" {
+            result += &format!(" actType:{}", self.pars.actType);
+        }
+        result
     }
 
     /// C++: `std::pair<std::string, SumoXMLTag> MSStop::getStoppingPlaceName() const` [const]
@@ -193,7 +297,18 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_place_name(&self) -> (String, SumoXMLTag) {
-        todo!("port MSStop::getStoppingPlaceName")
+        if !self.busstop.is_null() && !self.busstop.get_my_name().is_empty() {
+            return (self.busstop.get_my_name().to_string(), SUMO_TAG_BUS_STOP);
+        } else if !self.containerstop.is_null() && !self.containerstop.get_my_name().is_empty() {
+            return (self.containerstop.get_my_name().to_string(), SUMO_TAG_CONTAINER_STOP);
+        } else if !self.parkingarea.is_null() && !self.parkingarea.get_my_name().is_empty() {
+            return (self.parkingarea.get_my_name().to_string(), SUMO_TAG_PARKING_AREA);
+        } else if !self.chargingStation.is_null() && !self.chargingStation.get_my_name().is_empty() {
+            return (self.chargingStation.get_my_name().to_string(), SUMO_TAG_CHARGING_STATION);
+        } else if !self.overheadWireSegment.is_null() && !self.overheadWireSegment.get_my_name().is_empty() {
+            return (self.overheadWireSegment.get_my_name().to_string(), SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        }
+        (String::new(), SUMO_TAG_NOTHING)
     }
 
     /// C++: `void MSStop::initPars(const SUMOVehicleParameter::Stop &)`
@@ -214,7 +329,20 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn init_pars(&mut self, stopPar: &SUMOVehicleParameter_Stop) {
-        todo!("port MSStop::initPars")
+        let net = MSNet::get_instance();
+        self.busstop = net.m().get_stopping_place(&stopPar.busstop, SUMO_TAG_BUS_STOP);
+        self.containerstop = net.m().get_stopping_place(&stopPar.containerstop, SUMO_TAG_CONTAINER_STOP);
+        // shortcut: static_cast<MSParkingArea*> of a stopping place is a pointer cast until a checked downcast exists
+        self.parkingarea = Ptr::from_raw(net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).as_raw() as *mut MSParkingArea);
+        self.chargingStation = net.m().get_stopping_place(&stopPar.chargingStation, SUMO_TAG_CHARGING_STATION);
+        self.overheadWireSegment = net.m().get_stopping_place(&stopPar.overheadWireSegment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        // shortcut: stopPar.durationDist (Distribution_Parameterized) is not ported, the fixed duration is always used
+        self.duration = stopPar.duration;
+        self.triggered = stopPar.triggered;
+        self.containerTriggered = stopPar.containerTriggered;
+        self.joinTriggered = stopPar.joinTriggered || stopPar.join != "";
+        self.numExpectedPerson = stopPar.awaitedPersons.len() as i32;
+        self.numExpectedContainer = stopPar.awaitedContainers.len() as i32;
     }
 
     /// C++: `const MSEdge * MSStop::getEdge() const` [const]
@@ -229,7 +357,13 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStop::getEdge")
+        if !self.lane.is_null() {
+            Ptr::from_mut(self.lane.m().get_edge())
+        } else if !self.segment.is_null() {
+            Ptr::new(self.segment.get().unwrap().get_edge())
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `int MSStop::getStateFlagsOld() const` [const]
@@ -240,14 +374,14 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_state_flags_old(&self) -> i32 {
-        todo!("port MSStop::getStateFlagsOld")
+        (if self.reached { 1 } else { 0 }) + 2 * self.pars.get_flags()
     }
 
     /// C++: `SUMOTime MSStop::getMinDuration(SUMOTime) const` [const]
     /// return minimum stop duration when starting stop at time
     // SUMOTime
     // MSStop::getMinDuration(SUMOTime time) const {
-    //     if (MSGlobals::gUseStopEnded && pars.ended >= 0) {
+    //     if (use_stop_ended() && pars.ended >= 0) {
     //         return pars.ended - time;
     //     }
     //     if (pars.until >= 0) {
@@ -262,29 +396,48 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_min_duration(&self, time: SUMOTime) -> SUMOTime {
-        todo!("port MSStop::getMinDuration")
+        if use_stop_ended() && self.pars.ended >= 0 {
+            return self.pars.ended - time;
+        }
+        if self.pars.until >= 0 {
+            if self.duration == -1 {
+                return self.pars.until - time;
+            } else {
+                return std::cmp::max(self.duration, self.pars.until - time);
+            }
+        } else {
+            self.duration
+        }
     }
 
     /// C++: `SUMOTime MSStop::getUntil() const` [const]
     /// return until / ended time
     // SUMOTime
     // MSStop::getUntil() const {
-    //     return MSGlobals::gUseStopEnded && pars.ended >= 0 ? pars.ended : pars.until;
+    //     return use_stop_ended() && pars.ended >= 0 ? pars.ended : pars.until;
     // }
     #[allow(unused_variables)]
     pub fn get_until(&self) -> SUMOTime {
-        todo!("port MSStop::getUntil")
+        if use_stop_ended() && self.pars.ended >= 0 {
+            self.pars.ended
+        } else {
+            self.pars.until
+        }
     }
 
     /// C++: `SUMOTime MSStop::getArrival() const` [const]
     /// return arrival / started time
     // SUMOTime
     // MSStop::getArrival() const {
-    //     return MSGlobals::gUseStopStarted && pars.started >= 0 ? pars.started : pars.arrival;
+    //     return use_stop_started() && pars.started >= 0 ? pars.started : pars.arrival;
     // }
     #[allow(unused_variables)]
     pub fn get_arrival(&self) -> SUMOTime {
-        todo!("port MSStop::getArrival")
+        if use_stop_started() && self.pars.started >= 0 {
+            self.pars.started
+        } else {
+            self.pars.arrival
+        }
     }
 
     /// C++: `SUMOTime MSStop::getArrivalFallback() const` [const]
@@ -302,7 +455,14 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_fallback(&self) -> SUMOTime {
-        todo!("port MSStop::getArrivalFallback")
+        let mut result = self.get_arrival();
+        if result < 0 {
+            result = self.get_until();
+            if result >= 0 && self.pars.duration >= 0 {
+                result -= self.pars.duration;
+            }
+        }
+        result
     }
 
     /// C++: `double MSStop::getSpeed() const` [const]
@@ -313,7 +473,11 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MSStop::getSpeed")
+        if self.skipOnDemand {
+            f64::MAX
+        } else {
+            self.pars.speed
+        }
     }
 
     /// C++: `bool MSStop::isInRange(const double, const double) const` [const]
@@ -324,7 +488,7 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn is_in_range(&self, pos: f64, tolerance: f64) -> bool {
-        todo!("port MSStop::isInRange")
+        self.pars.startPos - tolerance <= pos && self.pars.endPos + tolerance >= pos
     }
 
     /// C++: `std::vector<MSStoppingPlace *> MSStop::getPlaces() const` [const]
@@ -351,7 +515,23 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_places(&self) -> Vec<Ptr<MSStoppingPlace>> {
-        todo!("port MSStop::getPlaces")
+        let mut result: Vec<Ptr<MSStoppingPlace>> = Vec::new();
+        if !self.busstop.is_null() {
+            result.push(self.busstop);
+        }
+        if !self.containerstop.is_null() {
+            result.push(self.containerstop);
+        }
+        if !self.parkingarea.is_null() {
+            result.push(Ptr::from_raw(self.parkingarea.as_raw() as *mut MSStoppingPlace));
+        }
+        if !self.chargingStation.is_null() {
+            result.push(self.chargingStation);
+        }
+        if !self.overheadWireSegment.is_null() {
+            result.push(self.overheadWireSegment);
+        }
+        result
     }
 
     /// C++: `void MSStop::replaceStoppingPlace(MSStoppingPlace *)`
@@ -366,8 +546,8 @@ impl MSStop {
     //     ncPars.lane = lane->getID();
     //     ncPars.startPos = sp->getBeginLanePosition();
     //     ncPars.endPos = sp->getEndLanePosition();
-    //     if (MSGlobals::gUseMesoSim) {
-    //         segment = MSGlobals::gMesoNet->getSegmentForEdge(lane->getEdge(), sp->getEndLanePosition());
+    //     if (use_meso_sim()) {
+    //         segment = meso_net()->getSegmentForEdge(lane->getEdge(), sp->getEndLanePosition());
     //     }
     //     switch (sp->getElement()) {
     //         case SUMO_TAG_BUS_STOP:
@@ -398,7 +578,43 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn replace_stopping_place(&mut self, sp: Ptr<MSStoppingPlace>) {
-        todo!("port MSStop::replaceStoppingPlace")
+        // @note: assume iterator edge is handled elsewhere
+        self.lane = Ptr::new(sp.get_lane());
+        let lane = self.lane;
+        self.pars.edge = lane.get_edge().get_id().to_string();
+        self.pars.lane = lane.get_id().to_string();
+        self.pars.startPos = sp.get_begin_lane_position();
+        self.pars.endPos = sp.get_end_lane_position();
+        if use_meso_sim() {
+            self.segment = meso_net().m().get_segment_for_edge(lane.get_edge(), sp.get_end_lane_position());
+        }
+        match sp.get_element() {
+            SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP => {
+                self.busstop = sp;
+                self.pars.busstop = sp.get_id().to_string();
+            }
+            SUMO_TAG_CONTAINER_STOP => {
+                self.containerstop = sp;
+                self.pars.containerstop = sp.get_id().to_string();
+            }
+            SUMO_TAG_PARKING_AREA => {
+                // shortcut: dynamic_cast<MSParkingArea*> is a pointer cast until a checked downcast exists
+                self.parkingarea = Ptr::from_raw(sp.as_raw() as *mut MSParkingArea);
+                self.pars.parkingarea = sp.get_id().to_string();
+            }
+            SUMO_TAG_CHARGING_STATION => {
+                self.chargingStation = sp;
+                self.pars.chargingStation = sp.get_id().to_string();
+            }
+            SUMO_TAG_OVERHEAD_WIRE_SEGMENT => {
+                self.overheadWireSegment = sp;
+                self.pars.overheadWireSegment = sp.get_id().to_string();
+            }
+            _ => {
+                // should not happen
+                debug_assert!(false);
+            }
+        }
     }
 
 }

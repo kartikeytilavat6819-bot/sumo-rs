@@ -2,6 +2,44 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+const DOMAIN_ID: i32 = CMD_GET_SIM_VARIABLE; // C++ `const int Simulation::DOMAIN_ID`
+// shortcut: C++ `#define VERSION_STRING` comes from config.h.cmake (1.28.0 here), no Rust const exists yet
+const VERSION_STRING: &str = "1.28.0";
+
+fn leak<T>(v: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(v)))
+}
+
+thread_local! {
+    // static SubscriptionResults Simulation::mySubscriptionResults (never freed, like the C++ static)
+    static MY_SUBSCRIPTION_RESULTS: Ptr<SubscriptionResults> = leak(BTreeMap::new());
+    // static ContextSubscriptionResults Simulation::myContextSubscriptionResults
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: Ptr<ContextSubscriptionResults> = leak(BTreeMap::new());
+}
+
+fn my_subscription_results() -> &'static mut SubscriptionResults {
+    unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|p| p.as_raw()) }
+}
+fn my_context_subscription_results() -> &'static mut ContextSubscriptionResults {
+    unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|p| p.as_raw()) }
+}
+
+/// C++ `std::shared_ptr<VariableWrapper>` built from the SubscriptionWrapper subclass (base first)
+// shortcut: relies on #[repr(C)] with `base` first on Helper_SubscriptionWrapper (helper.rs)
+fn as_variable_wrapper(v: Helper_SubscriptionWrapper) -> Rc<VariableWrapper> {
+    let p = Rc::into_raw(Rc::new(v)) as *const VariableWrapper;
+    unsafe { Rc::from_raw(p) }
+}
+
+/// C++ `std::shared_ptr<TraCIResult>` built from a subclass (base first)
+// shortcut: relies on #[repr(C)] with `base` first on the TraCIResult subclasses in tra_ci_defs.rs
+fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
+    let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
+    unsafe { Rc::from_raw(p) }
+}
+
+/// shortcut: C++ `throw TraCIException(msg)` is `panic!("{}", msg)` in this file (the TraCI server catches panics per command).
+
 /// C++ TraCI client API implementation
 /// C++ class `libsumo::Simulation` (libsumo/Simulation.h)
 pub struct Simulation {
@@ -20,14 +58,18 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn init(port: i32, numRetries: i32, host: &str, label: &str, pipe: Ptr<Unmapped /* FILE */>) -> (i32, String) {
-        todo!("port Simulation::init")
+        panic!("Multi client support (including connection switching) is not implemented in libsumo.");
     }
 
     /// C++: `std::pair<int, std::string> Simulation::start(const std::vector<std::string> &, int, int, const std::string &, const bool, const std::string &, bool, void *)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn start(cmd: &Vec<String>, port: i32, numRetries: i32, label: &str, verbose: bool, traceFile: &str, traceGetters: bool, _stdout: Ptr<()>) -> (i32, String) {
-        todo!("port Simulation::start")
+        if cmd.is_empty() {
+            panic!("Simulation::start needs the command to start");
+        }
+        Simulation::load(&cmd[1..].to_vec());
+        Simulation::get_version()
     }
 
     /// C++: `bool Simulation::isLibsumo()` [static]
@@ -37,7 +79,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn is_libsumo() -> bool {
-        todo!("port Simulation::isLibsumo")
+        true
     }
 
     /// C++: `void Simulation::switchConnection(const std::string &)` [static]
@@ -47,7 +89,8 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn switch_connection(label: &str) {
-        todo!("port Simulation::switchConnection")
+        let _ = label;
+        panic!("Multi client support (including connection switching) is not implemented in libsumo.");
     }
 
     /// C++: `const std::string & Simulation::getLabel()` [static]
@@ -57,7 +100,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_label() -> &'static str {
-        todo!("port Simulation::getLabel")
+        panic!("Multi client support (including connection switching) is not implemented in libsumo.");
     }
 
     /// C++: `void Simulation::setOrder(int)` [static]
@@ -67,7 +110,8 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn set_order(order: i32) {
-        todo!("port Simulation::setOrder")
+        let _ = order;
+        panic!("Multi client support (including connection switching) is not implemented in libsumo.");
     }
 
     /// C++: `void Simulation::load(const std::vector<std::string> &)` [static]
@@ -75,7 +119,11 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn load(args: &Vec<String>) {
-        todo!("port Simulation::load")
+        // the GUI branch is not compiled into this build (HAVE_LIBSUMOGUI is off)
+        Simulation::close("Libsumo issued load command.");
+        // shortcut: XMLSubSys::init, OptionsIO::setArgs and NLBuilder::init are not wired into libsumo yet, so no simulation can be built here
+        let _ = args;
+        panic!("shortcut: Simulation::load needs NLBuilder::init (XMLSubSys, OptionsIO) which is not ported yet");
     }
 
     /// C++: `bool Simulation::hasGUI()` [static]
@@ -90,7 +138,8 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn has_gui() -> bool {
-        todo!("port Simulation::hasGUI")
+        // HAVE_LIBSUMOGUI is not defined for this build
+        false
     }
 
     /// C++: `bool Simulation::isLoaded()` [static]
@@ -101,7 +150,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn is_loaded() -> bool {
-        todo!("port Simulation::isLoaded")
+        MSNet::has_instance()
     }
 
     /// C++: `void Simulation::step(const double)` [static]
@@ -130,7 +179,17 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn step(time: f64) {
-        todo!("port Simulation::step")
+        // C++ FXMutexLock for HAVE_FOX is not used in this build
+        Helper::clear_state_changes();
+        let t = time2steps(time);
+        if t == 0 {
+            MSNet::get_instance().m().simulation_step(false);
+        } else {
+            while MSNet::get_instance().get_current_time_step() < t {
+                MSNet::get_instance().m().simulation_step(false);
+            }
+        }
+        Helper::handle_subscriptions(MSNet::get_instance().get_current_time_step());
     }
 
     /// C++: `void Simulation::executeMove()` [static]
@@ -141,7 +200,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn execute_move() {
-        todo!("port Simulation::executeMove")
+        MSNet::get_instance().m().simulation_step(true);
     }
 
     /// C++: `void Simulation::close(const std::string &)` [static]
@@ -161,7 +220,11 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn close(reason: &str) {
-        todo!("port Simulation::close")
+        Helper::clear_subscriptions();
+        if MSNet::has_instance() {
+            MSNet::get_instance().m().close_simulation(0, reason);
+            // shortcut: C++ then deletes the MSNet instance and calls SystemFrame::close(), not ported yet
+        }
     }
 
     /// C++: `std::pair<int, std::string> Simulation::getVersion()` [static]
@@ -172,7 +235,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_version() -> (i32, String) {
-        todo!("port Simulation::getVersion")
+        (TRACI_VERSION, format!("SUMO {}", VERSION_STRING))
     }
 
     /// C++: `std::string Simulation::getOption(const std::string &)` [static]
@@ -187,7 +250,10 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_option(option: &str) -> String {
-        todo!("port Simulation::getOption")
+        if !utils::options::options_cont::exists(option) {
+            panic!("The option {} is unknown.", option);
+        }
+        utils::options::options_cont::with_options(|oc| oc.get_value_string(option).unwrap().to_string())
     }
 
     /// C++: `int Simulation::getCurrentTime()` [static]
@@ -197,7 +263,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_current_time() -> i32 {
-        todo!("port Simulation::getCurrentTime")
+        MSNet::get_instance().get_current_time_step() as i32
     }
 
     /// C++: `double Simulation::getTime()` [static]
@@ -207,7 +273,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_time() -> f64 {
-        todo!("port Simulation::getTime")
+        steps2time(MSNet::get_instance().get_current_time_step())
     }
 
     /// C++: `double Simulation::getEndTime()` [static]
@@ -218,7 +284,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_end_time() -> f64 {
-        todo!("port Simulation::getEndTime")
+        steps2time(string2time(&utils::options::options_cont::get_string("end")).unwrap())
     }
 
     /// C++: `int Simulation::getLoadedNumber()` [static]
@@ -228,14 +294,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_loaded_number() -> i32 {
-        todo!("port Simulation::getLoadedNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::BUILT).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getLoadedIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_loaded_id_list() -> Vec<String> {
-        todo!("port Simulation::getLoadedIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::BUILT).clone()
     }
 
     /// C++: `int Simulation::getDepartedNumber()` [static]
@@ -245,14 +311,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_departed_number() -> i32 {
-        todo!("port Simulation::getDepartedNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::DEPARTED).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getDepartedIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_departed_id_list() -> Vec<String> {
-        todo!("port Simulation::getDepartedIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::DEPARTED).clone()
     }
 
     /// C++: `int Simulation::getArrivedNumber()` [static]
@@ -262,14 +328,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_arrived_number() -> i32 {
-        todo!("port Simulation::getArrivedNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ARRIVED).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getArrivedIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_arrived_id_list() -> Vec<String> {
-        todo!("port Simulation::getArrivedIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ARRIVED).clone()
     }
 
     /// C++: `int Simulation::getParkingStartingVehiclesNumber()` [static]
@@ -279,14 +345,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_parking_starting_vehicles_number() -> i32 {
-        todo!("port Simulation::getParkingStartingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_PARKING).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getParkingStartingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_parking_starting_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getParkingStartingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_PARKING).clone()
     }
 
     /// C++: `int Simulation::getParkingEndingVehiclesNumber()` [static]
@@ -296,14 +362,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_parking_ending_vehicles_number() -> i32 {
-        todo!("port Simulation::getParkingEndingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_PARKING).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getParkingEndingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_parking_ending_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getParkingEndingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_PARKING).clone()
     }
 
     /// C++: `int Simulation::getStopStartingVehiclesNumber()` [static]
@@ -313,14 +379,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_starting_vehicles_number() -> i32 {
-        todo!("port Simulation::getStopStartingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_STOP).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getStopStartingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stop_starting_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getStopStartingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_STOP).clone()
     }
 
     /// C++: `int Simulation::getStopEndingVehiclesNumber()` [static]
@@ -330,14 +396,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_ending_vehicles_number() -> i32 {
-        todo!("port Simulation::getStopEndingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_STOP).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getStopEndingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stop_ending_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getStopEndingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_STOP).clone()
     }
 
     /// C++: `int Simulation::getCollidingVehiclesNumber()` [static]
@@ -347,14 +413,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_colliding_vehicles_number() -> i32 {
-        todo!("port Simulation::getCollidingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::COLLISION).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getCollidingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_colliding_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getCollidingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::COLLISION).clone()
     }
 
     /// C++: `int Simulation::getEmergencyStoppingVehiclesNumber()` [static]
@@ -364,14 +430,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_emergency_stopping_vehicles_number() -> i32 {
-        todo!("port Simulation::getEmergencyStoppingVehiclesNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::EMERGENCYSTOP).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getEmergencyStoppingVehiclesIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_emergency_stopping_vehicles_id_list() -> Vec<String> {
-        todo!("port Simulation::getEmergencyStoppingVehiclesIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::EMERGENCYSTOP).clone()
     }
 
     /// C++: `int Simulation::getStartingTeleportNumber()` [static]
@@ -381,14 +447,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_starting_teleport_number() -> i32 {
-        todo!("port Simulation::getStartingTeleportNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_TELEPORT).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getStartingTeleportIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_starting_teleport_id_list() -> Vec<String> {
-        todo!("port Simulation::getStartingTeleportIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::STARTING_TELEPORT).clone()
     }
 
     /// C++: `int Simulation::getEndingTeleportNumber()` [static]
@@ -398,14 +464,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_ending_teleport_number() -> i32 {
-        todo!("port Simulation::getEndingTeleportNumber")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_TELEPORT).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getEndingTeleportIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_ending_teleport_id_list() -> Vec<String> {
-        todo!("port Simulation::getEndingTeleportIDList")
+        Helper::get_vehicle_state_changes(MSNet_VehicleState::ENDING_TELEPORT).clone()
     }
 
     /// C++: `int Simulation::getDepartedPersonNumber()` [static]
@@ -415,14 +481,14 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_departed_person_number() -> i32 {
-        todo!("port Simulation::getDepartedPersonNumber")
+        Helper::get_transportable_state_changes(MSNet_TransportableState::PERSON_DEPARTED).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getDepartedPersonIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_departed_person_id_list() -> Vec<String> {
-        todo!("port Simulation::getDepartedPersonIDList")
+        Helper::get_transportable_state_changes(MSNet_TransportableState::PERSON_DEPARTED).clone()
     }
 
     /// C++: `int Simulation::getArrivedPersonNumber()` [static]
@@ -432,21 +498,22 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_arrived_person_number() -> i32 {
-        todo!("port Simulation::getArrivedPersonNumber")
+        Helper::get_transportable_state_changes(MSNet_TransportableState::PERSON_ARRIVED).len() as i32
     }
 
     /// C++: `std::vector<std::string> Simulation::getArrivedPersonIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_arrived_person_id_list() -> Vec<String> {
-        todo!("port Simulation::getArrivedPersonIDList")
+        Helper::get_transportable_state_changes(MSNet_TransportableState::PERSON_ARRIVED).clone()
     }
 
     /// C++: `std::vector<std::string> Simulation::getBusStopIDList()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_bus_stop_id_list() -> Vec<String> {
-        todo!("port Simulation::getBusStopIDList")
+        // shortcut: MSNet::getStoppingPlaces returns Unmapped (NamedObjectCont), its keys cannot be listed yet
+        panic!("shortcut: MSNet::getStoppingPlaces is not mapped yet, cannot list bus stops");
     }
 
     /// C++: `int Simulation::getBusStopWaiting(const std::string &)` [static]
@@ -460,7 +527,11 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_bus_stop_waiting(stopID: &str) -> i32 {
-        todo!("port Simulation::getBusStopWaiting")
+        let s = MSNet::get_instance().get_stopping_place(stopID, SUMO_TAG_BUS_STOP);
+        if s.is_null() {
+            panic!("Unknown bus stop '{}'.", stopID);
+        }
+        s.get_transportable_number()
     }
 
     /// C++: `std::vector<std::string> Simulation::getBusStopWaitingIDList(const std::string &)` [static]
@@ -468,21 +539,34 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_bus_stop_waiting_id_list(stopID: &str) -> Vec<String> {
-        todo!("port Simulation::getBusStopWaitingIDList")
+        let s = MSNet::get_instance().get_stopping_place(stopID, SUMO_TAG_BUS_STOP);
+        if s.is_null() {
+            panic!("Unknown bus stop '{}'.", stopID);
+        }
+        let mut result: Vec<String> = Vec::new();
+        for t in s.get_transportables().iter() {
+            result.push(t.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> Simulation::getPendingVehicles()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_pending_vehicles() -> Vec<String> {
-        todo!("port Simulation::getPendingVehicles")
+        let mut result: Vec<String> = Vec::new();
+        for veh in MSNet::get_instance().m().get_insertion_control().get_pending_vehicles().iter() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCICollision> Simulation::getCollisions()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_collisions() -> Vec<TraCICollision> {
-        todo!("port Simulation::getCollisions")
+        // shortcut: MSNet::getCollisions() (the collision map of MSNet::Collision records) is not ported yet
+        panic!("shortcut: MSNet::getCollisions is not mapped yet, cannot list collisions");
     }
 
     /// C++: `double Simulation::getScale()` [static]
@@ -492,7 +576,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_scale() -> f64 {
-        todo!("port Simulation::getScale")
+        MSNet::get_instance().m().get_vehicle_control().get_scale()
     }
 
     /// C++: `double Simulation::getDeltaT()` [static]
@@ -502,14 +586,20 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_delta_t() -> f64 {
-        todo!("port Simulation::getDeltaT")
+        ts()
     }
 
     /// C++: `libsumo::TraCIPositionVector Simulation::getNetBoundary()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_net_boundary() -> TraCIPositionVector {
-        todo!("port Simulation::getNetBoundary")
+        let b: Boundary = GeoConvHelper::with_final(|g| g.get_conv_boundary().clone());
+        let mut tb = TraCIPositionVector { base: TraCIResult {}, value: Vec::new() };
+        let minV = TraCIPosition { base: TraCIResult {}, x: b.xmin(), y: b.ymin(), z: b.zmin() };
+        let maxV = TraCIPosition { base: TraCIResult {}, x: b.xmax(), y: b.ymax(), z: b.zmax() };
+        tb.value.push(minV);
+        tb.value.push(maxV);
+        tb
     }
 
     /// C++: `int Simulation::getMinExpectedNumber()` [static]
@@ -524,35 +614,73 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_min_expected_number() -> i32 {
-        todo!("port Simulation::getMinExpectedNumber")
+        let net_ptr = MSNet::get_instance();
+        let net = net_ptr.m();
+        net.get_vehicle_control().get_active_vehicle_count()
+            + net.get_insertion_control().get_pending_flow_count()
+            + (if net.has_persons() { net.get_person_control().get_active_count() } else { 0 })
+            + (if net.has_containers() { net.get_container_control().get_active_count() } else { 0 })
+            + (if MSDevice_Taxi::has_servable_reservations() { 1 } else { 0 })
     }
 
     /// C++: `libsumo::TraCIPosition Simulation::convert2D(const std::string &, double, int, bool)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn convert2_d(edgeID: &str, pos: f64, laneIndex: i32, toGeo: bool) -> TraCIPosition {
-        todo!("port Simulation::convert2D")
+        let mut result = Helper::get_lane_checking(edgeID, laneIndex, pos).geometry_position_at_offset(pos, 0.0);
+        if toGeo {
+            GeoConvHelper::with_final(|g| g.cartesian2geo(&mut result));
+        }
+        result.setz(0.);
+        Helper::make_tra_ci_position(&result, false)
     }
 
     /// C++: `libsumo::TraCIPosition Simulation::convert3D(const std::string &, double, int, bool)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn convert3_d(edgeID: &str, pos: f64, laneIndex: i32, toGeo: bool) -> TraCIPosition {
-        todo!("port Simulation::convert3D")
+        let mut result = Helper::get_lane_checking(edgeID, laneIndex, pos).geometry_position_at_offset(pos, 0.0);
+        if toGeo {
+            GeoConvHelper::with_final(|g| g.cartesian2geo(&mut result));
+        }
+        Helper::make_tra_ci_position(&result, true)
     }
 
     /// C++: `libsumo::TraCIRoadPosition Simulation::convertRoad(double, double, bool, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn convert_road(x: f64, y: f64, isGeo: bool, vClass: &str) -> TraCIRoadPosition {
-        todo!("port Simulation::convertRoad")
+        let mut pos = Position::new(x, y);
+        if isGeo {
+            GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos));
+        }
+        if SUMO_VEHICLE_CLASS_STRINGS.get(vClass).is_err() {
+            panic!("Unknown vehicle class '{}'.", vClass);
+        }
+        let vc: SUMOVehicleClass = SUMO_VEHICLE_CLASS_STRINGS.get(vClass).unwrap();
+        let (lane, laneDist) = Helper::convert_cartesian_to_road_map(&pos, vc);
+        if lane.is_null() {
+            panic!("Cannot convert position to road.");
+        }
+        TraCIRoadPosition {
+            base: TraCIResult {},
+            edgeID: lane.get_edge().get_id().to_string(),
+            laneIndex: lane.get_index(),
+            pos: laneDist,
+        }
     }
 
     /// C++: `libsumo::TraCIPosition Simulation::convertGeo(double, double, bool)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn convert_geo(x: f64, y: f64, fromGeo: bool) -> TraCIPosition {
-        todo!("port Simulation::convertGeo")
+        let mut pos = Position::new(x, y);
+        if fromGeo {
+            GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos));
+        } else {
+            GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
+        }
+        Helper::make_tra_ci_position(&pos, false)
     }
 
     /// C++: `double Simulation::getDistance2D(double, double, double, double, bool, bool)` [static]
@@ -574,7 +702,19 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_distance2_d(x1: f64, y1: f64, x2: f64, y2: f64, isGeo: bool, isDriving: bool) -> f64 {
-        todo!("port Simulation::getDistance2D")
+        let mut pos1 = Position::new(x1, y1);
+        let mut pos2 = Position::new(x2, y2);
+        if isGeo {
+            GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos1));
+            GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos2));
+        }
+        if isDriving {
+            let mut roadPos1 = Helper::convert_cartesian_to_road_map(&pos1, SVC_IGNORING);
+            let mut roadPos2 = Helper::convert_cartesian_to_road_map(&pos2, SVC_IGNORING);
+            Helper::get_driving_distance(&mut roadPos1, &mut roadPos2)
+        } else {
+            pos1.distance_to(&pos2)
+        }
     }
 
     /// C++: `double Simulation::getDistanceRoad(const std::string &, double, const std::string &, double, bool)` [static]
@@ -592,21 +732,31 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_road(edgeID1: &str, pos1: f64, edgeID2: &str, pos2: f64, isDriving: bool) -> f64 {
-        todo!("port Simulation::getDistanceRoad")
+        let mut roadPos1: (Ptr<MSLane>, f64) = (Helper::get_lane_checking(edgeID1, 0, pos1), pos1);
+        let mut roadPos2: (Ptr<MSLane>, f64) = (Helper::get_lane_checking(edgeID2, 0, pos2), pos2);
+        if isDriving {
+            Helper::get_driving_distance(&mut roadPos1, &mut roadPos2)
+        } else {
+            let p1 = roadPos1.0.geometry_position_at_offset(roadPos1.1, 0.0);
+            let p2 = roadPos2.0.geometry_position_at_offset(roadPos2.1, 0.0);
+            p1.distance_to(&p2)
+        }
     }
 
     /// C++: `libsumo::TraCIStage Simulation::findRoute(const std::string &, const std::string &, const std::string &, double, int, double, double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_route(fromEdge: &str, toEdge: &str, vType: &str, depart: f64, routingMode: i32, departPos: f64, arrivalPos: f64) -> TraCIStage {
-        todo!("port Simulation::findRoute")
+        // shortcut: findRoute needs MSVehicleControl::buildVehicle, MSRoutingEngine::getRouterTT and vehicle route checks, not ported yet
+        panic!("shortcut: Simulation::findRoute needs MSVehicleControl::buildVehicle and MSRoutingEngine, not ported yet");
     }
 
     /// C++: `std::vector<libsumo::TraCIStage> Simulation::findIntermodalRoute(const std::string &, const std::string &, const std::string &, double, const int, double, double, double, double, const double, const std::string &, const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_intermodal_route(fromEdge: &str, toEdge: &str, modes: &str, depart: f64, routingMode: i32, speed: f64, walkFactor: f64, departPos: f64, arrivalPos: f64, departPosLat: f64, pType: &str, vType: &str, destStop: &str) -> Vec<TraCIStage> {
-        todo!("port Simulation::findIntermodalRoute")
+        // shortcut: findIntermodalRoute needs the intermodal router (MSNet intermodal routing), not ported yet
+        panic!("shortcut: Simulation::findIntermodalRoute needs the intermodal router, not ported yet");
     }
 
     /// C++: `std::string Simulation::getParameter(const std::string &, const std::string &)` [static]
@@ -767,14 +917,18 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Simulation::getParameter")
+        // shortcut: only the generic network parameters (empty objectID, no prefix) are ported; the prefixed chargingStation./overheadWire./net./stats./parkingArea./busStop./device.tripinfo./buildConfig. branches need their owning classes
+        if objectID == "" && !key.starts_with("chargingStation.") && !key.starts_with("overheadWire.") && !key.starts_with("net.") && !key.starts_with("stats.") && !key.starts_with("parkingArea.") && !key.starts_with("busStop.") && !key.starts_with("device.tripinfo.") && !key.starts_with("buildConfig.") {
+            return panic!("shortcut: MSNet generic parameters not ported, upgrade when MSNet is Parameterised");
+        }
+        panic!("shortcut: Simulation::getParameter branch for '{}' is not ported yet", key);
     }
 
     /// C++: `const std::pair<std::string, std::string> Simulation::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Simulation)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Simulation::getParameterWithKey")
+        (key.to_string(), Simulation::get_parameter(objectID, key))
     }
 
     /// C++: `void Simulation::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -788,7 +942,11 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Simulation::setParameter")
+        if objectID == "" {
+            MSNet::get_instance().m().set_parameter(key, value);
+        } else {
+            panic!("Setting simulation parameter '{}' is not supported for object id '{}'. Use empty id for generic network parameters", key, objectID);
+        }
     }
 
     /// C++: `void Simulation::setScale(double)` [static]
@@ -798,7 +956,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn set_scale(value: f64) {
-        todo!("port Simulation::setScale")
+        MSNet::get_instance().m().get_vehicle_control().set_scale(value);
     }
 
     /// C++: `void Simulation::clearPending(const std::string &)` [static]
@@ -808,7 +966,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn clear_pending(routeID: &str) {
-        todo!("port Simulation::clearPending")
+        MSNet::get_instance().m().get_insertion_control().clear_pending_vehicles(routeID);
     }
 
     /// C++: `void Simulation::saveState(const std::string &)` [static]
@@ -818,7 +976,9 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn save_state(fileName: &str) {
-        todo!("port Simulation::saveState")
+        // shortcut: MSStateHandler::saveState is not ported yet
+        let _ = fileName;
+        panic!("shortcut: MSStateHandler::saveState is not ported yet");
     }
 
     /// C++: `double Simulation::loadState(const std::string &)` [static]
@@ -840,7 +1000,9 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn load_state(fileName: &str) -> f64 {
-        todo!("port Simulation::loadState")
+        // shortcut: MSNet::loadState and the IOError/ProcessError rethrow are not ported yet
+        let _ = fileName;
+        panic!("shortcut: MSNet::loadState is not ported yet");
     }
 
     /// C++: `void Simulation::writeMessage(const std::string &)` [static]
@@ -850,91 +1012,93 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn write_message(msg: &str) {
-        todo!("port Simulation::writeMessage")
+        utils::write_messagef!("%", msg);
     }
 
     /// C++: `void Simulation::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Simulation::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void Simulation::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Simulation::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void Simulation::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Simulation::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Simulation::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Simulation::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Simulation::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Simulation::getAllSubscriptionResults")
+        my_subscription_results().clone()
     }
 
     /// C++: `const libsumo::TraCIResults Simulation::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Simulation::getSubscriptionResults")
+        my_subscription_results().entry(objectID.to_string()).or_default().clone()
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Simulation::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Simulation::getAllContextSubscriptionResults")
+        my_context_subscription_results().clone()
     }
 
     /// C++: `const libsumo::SubscriptionResults Simulation::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Simulation::getContextSubscriptionResults")
+        my_context_subscription_results().entry(objectID.to_string()).or_default().clone()
     }
 
     /// C++: `void Simulation::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Simulation, SIM)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Simulation::subscribeParameterWithKey")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, as_traci_result(TraCIString { base: TraCIResult {}, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Simulation::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Simulation::domainID")
+        DOMAIN_ID
     }
 
     /// C++: `void Simulation::subscribe(const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_2(varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Simulation::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_SIM_VARIABLE, "", varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `const libsumo::TraCIResults Simulation::getSubscriptionResults()` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_subscription_results_2() -> TraCIResults {
-        todo!("port Simulation::getSubscriptionResults")
+        my_subscription_results().entry(String::new()).or_default().clone()
     }
 
     /// C++: `void Simulation::storeShape(PositionVector &)` [static]
@@ -944,7 +1108,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(shape: &mut PositionVector) {
-        todo!("port Simulation::storeShape")
+        *shape = GeoConvHelper::with_final(|g| g.get_conv_boundary().get_shape(true));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Simulation::makeWrapper()` [static]
@@ -954,7 +1118,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Simulation::makeWrapper")
+        as_variable_wrapper(Helper_SubscriptionWrapper::new((), my_subscription_results(), my_context_subscription_results()))
     }
 
     /// C++: `bool Simulation::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -1045,7 +1209,56 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Simulation::handleVariable")
+        // the wrapper is always the Helper::SubscriptionWrapper built by Simulation::makeWrapper
+        let w: Ptr<Helper_SubscriptionWrapper> = wrapper.cast::<Helper_SubscriptionWrapper>();
+        match variable {
+            VAR_TIME => w.m().wrap_double(objID, variable, Simulation::get_time()),
+            VAR_TIME_STEP => w.m().wrap_int(objID, variable, Simulation::get_current_time()),
+            VAR_END => w.m().wrap_double(objID, variable, Simulation::get_end_time()),
+            VAR_LOADED_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_loaded_number()),
+            VAR_LOADED_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_loaded_id_list()),
+            VAR_DEPARTED_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_departed_number()),
+            VAR_DEPARTED_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_departed_id_list()),
+            VAR_TELEPORT_STARTING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_starting_teleport_number()),
+            VAR_TELEPORT_STARTING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_starting_teleport_id_list()),
+            VAR_TELEPORT_ENDING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_ending_teleport_number()),
+            VAR_TELEPORT_ENDING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_ending_teleport_id_list()),
+            VAR_ARRIVED_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_arrived_number()),
+            VAR_ARRIVED_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_arrived_id_list()),
+            VAR_PARKING_STARTING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_parking_starting_vehicles_number()),
+            VAR_PARKING_STARTING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_parking_starting_vehicles_id_list()),
+            VAR_PARKING_ENDING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_parking_ending_vehicles_number()),
+            VAR_PARKING_ENDING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_parking_ending_vehicles_id_list()),
+            VAR_STOP_STARTING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_stop_starting_vehicles_number()),
+            VAR_STOP_STARTING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_stop_starting_vehicles_id_list()),
+            VAR_STOP_ENDING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_stop_ending_vehicles_number()),
+            VAR_STOP_ENDING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_stop_ending_vehicles_id_list()),
+            VAR_COLLIDING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_colliding_vehicles_number()),
+            VAR_COLLIDING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_colliding_vehicles_id_list()),
+            VAR_EMERGENCYSTOPPING_VEHICLES_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_emergency_stopping_vehicles_number()),
+            VAR_EMERGENCYSTOPPING_VEHICLES_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_emergency_stopping_vehicles_id_list()),
+            VAR_DEPARTED_PERSONS_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_departed_person_number()),
+            VAR_DEPARTED_PERSONS_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_departed_person_id_list()),
+            VAR_ARRIVED_PERSONS_NUMBER => w.m().wrap_int(objID, variable, Simulation::get_arrived_person_number()),
+            VAR_ARRIVED_PERSONS_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_arrived_person_id_list()),
+            VAR_SCALE => w.m().wrap_double(objID, variable, Simulation::get_scale()),
+            VAR_DELTA_T => w.m().wrap_double(objID, variable, Simulation::get_delta_t()),
+            VAR_OPTION => w.m().wrap_string(objID, variable, &Simulation::get_option(objID)),
+            VAR_MIN_EXPECTED_VEHICLES => w.m().wrap_int(objID, variable, Simulation::get_min_expected_number()),
+            VAR_BUS_STOP_ID_LIST => w.m().wrap_string_list(objID, variable, &Simulation::get_bus_stop_id_list()),
+            VAR_BUS_STOP_WAITING => w.m().wrap_int(objID, variable, Simulation::get_bus_stop_waiting(objID)),
+            VAR_BUS_STOP_WAITING_IDS => w.m().wrap_string_list(objID, variable, &Simulation::get_bus_stop_waiting_id_list(objID)),
+            VAR_PENDING_VEHICLES => w.m().wrap_string_list(objID, variable, &Simulation::get_pending_vehicles()),
+            VAR_PARAMETER => {
+                let key = StorageHelper::read_typed_string(paramData.m(), "");
+                w.m().wrap_string(objID, variable, &Simulation::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StorageHelper::read_typed_string(paramData.m(), "");
+                w.m().wrap_string_pair(objID, variable, &Simulation::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `void Simulation::Simulation()` [private]
@@ -1053,7 +1266,7 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Simulation::Simulation")
+        Simulation {}
     }
 
 }

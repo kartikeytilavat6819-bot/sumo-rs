@@ -1,6 +1,54 @@
 //! Port of netimport/NIXMLConnectionsHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{MsgType, with_instance, write_error, write_warning};
+use utils::common::std_defs::NETWORK_VERSION;
+use utils::common::string_utils::to_int_secure;
+
+/// NBEdge::UNSPECIFIED_WIDTH (NBEdge.cpp:69); no Rust const exists in nb_edge.rs yet
+const UNSPECIFIED_WIDTH: f64 = -1.0;
+
+/// C++ `NBConnection::InvalidConnection`
+fn invalid_connection() -> NBConnection {
+    NBConnection::new_3("invalidFrom", Ptr::null(), "invalidTo", Ptr::null())
+}
+
+/// MsgHandler::getWarningInstance() / getErrorInstance(). The singletons live in a Mutex-guarded
+/// static that is only reset in cleanup_on_end, so the pointer stays valid while parsing.
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    with_instance(if warning { MsgType::Warning } else { MsgType::Error }, |h| Ptr::from_mut(h))
+}
+
+/// The name toString(SUMO_ATTR_X) gives for an attribute id
+fn attr_name(id: i32) -> &'static str {
+    ATTRS.iter().find(|(_, v)| *v == id).map(|(n, _)| *n).unwrap_or("")
+}
+
+/// delete on a GeoConvHelper* allocated with Box::into_raw; null is a no-op
+fn delete_geo_conv_helper(p: Ptr<GeoConvHelper>) {
+    if !p.is_null() {
+        drop(unsafe { Box::from_raw(p.as_raw()) });
+    }
+}
+
+/// toString(EdgeVector): the edge ids separated by spaces (ToString.h, vector<V*> overload)
+fn edges_to_string(edges: &EdgeVector) -> String {
+    edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>().join(" ")
+}
+
+/// NBNode::getCrossing(const EdgeVector&, bool hardFail = true) (NBNode.cpp:4129). The Rust NBNode
+/// only has the id overload, so the edge-set lookup is done here over myCrossings.
+fn get_crossing_by_edges(node: Ptr<NBNode>, edges: &EdgeVector) -> Ptr<NBNode_Crossing> {
+    // determinism: EdgeSet is a std::set<NBEdge*>; only set equality is used, so BTreeSet order does not matter
+    let edge_set: BTreeSet<Ptr<NBEdge>> = edges.iter().copied().collect();
+    for crossing in node.myCrossings.iter() {
+        let edge_set2: BTreeSet<Ptr<NBEdge>> = crossing.edges.iter().copied().collect();
+        if edge_set == edge_set2 {
+            return Ptr::new(&**crossing);
+        }
+    }
+    panic!("{}", ProcessError::new("Request for unknown crossing for the given Edges"))
+}
 
 /// Importer for edge connections stored in XML
 /// C++ class `NIXMLConnectionsHandler` (netimport/NIXMLConnectionsHandler.h)
@@ -51,7 +99,16 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(ec: &mut NBEdgeCont, nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont) -> Self {
-        todo!("port NIXMLConnectionsHandler::NIXMLConnectionsHandler")
+        NIXMLConnectionsHandler {
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "xml-connection-description", ""),
+            myEdgeCont: Ptr::from_mut(ec),
+            myNodeCont: Ptr::from_mut(nc),
+            myTLLogicCont: Ptr::from_mut(tlc),
+            myHaveWarnedAboutDeprecatedLanes: false,
+            myErrorMsgHandler: msg_instance(utils::options::options_cont::get_bool("ignore-errors.connections")),
+            myLocation: Ptr::null(),
+            myLastParameterised: Ptr::null(),
+        }
     }
 
     /// C++: `void NIXMLConnectionsHandler::~NIXMLConnectionsHandler() noexcept` [virtual]
@@ -61,7 +118,7 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLConnectionsHandler::~NIXMLConnectionsHandler")
+        delete_geo_conv_helper(self.myLocation);
     }
 
     /// C++: `void NIXMLConnectionsHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -108,7 +165,35 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::myStartElement")
+        match element {
+            SUMO_TAG_CONNECTIONS => {
+                // infer location for legacy networks that don't have location information
+                let loaded = GeoConvHelper::get_loaded_plain(self.get_file_name(), ".con.xml");
+                self.myLocation = match loaded {
+                    Some(g) => Ptr::from_raw(Box::into_raw(Box::new(g))),
+                    None => Ptr::null(),
+                };
+            }
+            SUMO_TAG_LOCATION => {
+                delete_geo_conv_helper(self.myLocation);
+                self.myLocation = NIImporter_SUMO::load_location(attrs, false);
+            }
+            SUMO_TAG_DEL => self.del_connection(attrs),
+            SUMO_TAG_CONNECTION => self.parse_connection(attrs),
+            SUMO_TAG_PROHIBITION => self.add_prohibition(attrs),
+            SUMO_TAG_CROSSING => self.add_crossing(attrs),
+            SUMO_TAG_WALKINGAREA => self.add_walking_area(attrs),
+            SUMO_TAG_PARAM => {
+                if !self.myLastParameterised.is_null() {
+                    let mut ok = true;
+                    let key = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut ok, true);
+                    // circumventing empty string test
+                    let val = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+                    self.myLastParameterised.m().set_parameter(&key, &val);
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NIXMLConnectionsHandler::myEndElement(int)` [virtual, protected]
@@ -126,7 +211,12 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIXMLConnectionsHandler::myEndElement")
+        match element {
+            SUMO_TAG_CONNECTION | SUMO_TAG_CROSSING => {
+                self.myLastParameterised = Ptr::null();
+            }
+            _ => {}
+        }
     }
 
     /// C++: `NBConnection NIXMLConnectionsHandler::parseConnectionDef(const std::string &, const std::string &)` [private]
@@ -158,7 +248,27 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_connection_def(&mut self, defRole: &str, def: &str) -> NBConnection {
-        todo!("port NIXMLConnectionsHandler::parseConnectionDef")
+        // split from/to
+        let Some(div) = def.find("->") else {
+            self.myErrorMsgHandler.m().inform(&format!("Missing connection divider in {defRole} '{def}'"), true);
+            return invalid_connection();
+        };
+        let fromDef = &def[..div];
+        let toDef = &def[div + 2..];
+
+        // retrieve them now
+        let fromE = self.myEdgeCont.retrieve(fromDef, false);
+        let toE = self.myEdgeCont.retrieve(toDef, false);
+        // check
+        if fromE.is_null() {
+            self.myErrorMsgHandler.m().inform(&format!("Could not find edge '{fromDef}' in {defRole} '{def}'"), true);
+            return invalid_connection();
+        }
+        if toE.is_null() {
+            self.myErrorMsgHandler.m().inform(&format!("Could not find edge '{toDef}' in {defRole} '{def}'"), true);
+            return invalid_connection();
+        }
+        NBConnection::new(fromE, toE)
     }
 
     /// C++: `void NIXMLConnectionsHandler::parseLaneBound(const SUMOSAXAttributes &, NBEdge *, NBEdge *)` [private]

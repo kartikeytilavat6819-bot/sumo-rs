@@ -30,7 +30,7 @@ pub struct MSStateHandler {
     /// the last object that potentially carries parameters
     pub myLastParameterised: Ptr<Parameterised>,
     /// vehicles that shall be removed when loading state
-    pub myVehiclesToRemove: i32,
+    pub myVehiclesToRemove: BTreeSet<String>,
     /// vehicles that were removed when loading state
     pub myRemoved: i32,
     /// the loaded counter of meso leader events (-1 if not given)
@@ -79,7 +79,32 @@ impl MSStateHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, offset: SUMOTime) -> Self {
-        todo!("port MSStateHandler::MSStateHandler")
+        let mut sh = MSStateHandler {
+            base: MSRouteHandler::new(file, true),
+            myOffset: offset,
+            myTime: 0,
+            mySegment: Ptr::null(),
+            myCurrentLane: Ptr::null(),
+            myCurrentLink: Ptr::null(),
+            myQueIndex: 0,
+            myAttrs: Ptr::null(),
+            myVCAttrs: Ptr::null(),
+            myDeviceAttrs: 0,
+            myReminderAttrs: 0,
+            myCFMAttrs: Ptr::null(),
+            myLastParameterised: Ptr::null(),
+            myVehiclesToRemove: utils::options::options_cont::get_string_vector("load-state.remove-vehicles")
+                .into_iter()
+                .collect(),
+            myRemoved: 0,
+            myMesoEventCounter: -1,
+            myFlowIndex: -1,
+            myConstrainedSignal: Ptr::null(),
+            myArrived: 0,
+        };
+        sh.myAmLoadingState = true;
+        sh.myAllowInternalRoutes = true;
+        sh
     }
 
     /// C++: `void MSStateHandler::~MSStateHandler()` [virtual]
@@ -87,7 +112,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStateHandler::~MSStateHandler")
+        // C++ body only frees the attribute holders (myDeviceAttrs, myReminderAttrs, myAttrs); not owned here yet
+        // shortcut: the attribute holders are i32 placeholders in the skeleton, so nothing is freed until they are typed
     }
 
     /// C++: `void MSStateHandler::saveState(const std::string &, SUMOTime, bool)` [static]
@@ -102,8 +128,8 @@ impl MSStateHandler {
     //     std::map<SumoXMLAttr, std::string> attrs;
     //     attrs[SUMO_ATTR_VERSION] = VERSION_STRING;
     //     attrs[SUMO_ATTR_TIME] = time2string(step);
-    //     attrs[SUMO_ATTR_TYPE] = MSGlobals::gUseMesoSim ? "meso" : "micro";
-    //     if (MSGlobals::gUseMesoSim) {
+    //     attrs[SUMO_ATTR_TYPE] = use_meso_sim() ? "meso" : "micro";
+    //     if (use_meso_sim()) {
     //         attrs[SUMO_ATTR_COUNT] = toString(MELoop::getEventCounter());
     //     }
     //     if (OptionsCont::getOptions().getBool("save-state.constraints")) {
@@ -115,7 +141,7 @@ impl MSStateHandler {
     //     out.writeXMLHeader("snapshot", "state_file.xsd", attrs);
     //     if (OptionsCont::getOptions().getBool("save-state.rng")) {
     //         saveRNGs(out);
-    //         if (!MSGlobals::gUseMesoSim) {
+    //         if (!use_meso_sim()) {
     //             MSNet::getInstance()->getEdgeControl().saveState(out);
     //         }
     //     }
@@ -141,8 +167,8 @@ impl MSStateHandler {
     //     }
     //     MSVehicleTransfer::getInstance()->saveState(out);
     //     for (MSEdge* const edge : MSEdge::getAllEdges()) {
-    //         if (MSGlobals::gUseMesoSim) {
-    //             for (MESegment* s = MSGlobals::gMesoNet->getSegmentForEdge(*edge); s != nullptr; s = s->getNextSegment()) {
+    //         if (use_meso_sim()) {
+    //             for (MESegment* s = meso_net()->getSegmentForEdge(*edge); s != nullptr; s = s->getNextSegment()) {
     //                 s->saveState(out);
     //             }
     //         } else {
@@ -169,7 +195,7 @@ impl MSStateHandler {
     //     }
     #[allow(unused_variables)]
     pub fn get_time(&self) -> SUMOTime {
-        todo!("port MSStateHandler::getTime")
+        self.myTime
     }
 
     /// C++: `void MSStateHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -251,9 +277,9 @@ impl MSStateHandler {
     //             if (OptionsCont::getOptions().getBool("device.rerouting.bike-speeds")) {
     //                 MSRoutingEngine::initEdgeWeights(SVC_BICYCLE);
     //             }
-    //             if (MSGlobals::gUseMesoSim) {
+    //             if (use_meso_sim()) {
     //                 for (const MSEdge* e : MSEdge::getAllEdges()) {
-    //                     for (MESegment* segment = MSGlobals::gMesoNet->getSegmentForEdge(*e); segment != nullptr; segment = segment->getNextSegment()) {
+    //                     for (MESegment* segment = meso_net()->getSegmentForEdge(*e); segment != nullptr; segment = segment->getNextSegment()) {
     //                         segment->resetCachedSpeeds();
     //                     }
     //                 }
@@ -313,7 +339,7 @@ impl MSStateHandler {
     //             const std::string& segmentID = attrs.getString(SUMO_ATTR_ID);
     //             const MSEdge* const edge = MSEdge::dictionary(segmentID.substr(0, segmentID.rfind(":")));
     //             int idx = StringUtils::toInt(segmentID.substr(segmentID.rfind(":") + 1));
-    //             mySegment = MSGlobals::gMesoNet->getSegmentForEdge(*edge);
+    //             mySegment = meso_net()->getSegmentForEdge(*edge);
     //             while (idx-- > 0 && mySegment != nullptr) {
     //                 mySegment = mySegment->getNextSegment();
     //             }
@@ -344,7 +370,7 @@ impl MSStateHandler {
     //                     myArrived.erase(v);
     //                 }
     //             }
-    //             if (MSGlobals::gUseMesoSim) {
+    //             if (use_meso_sim()) {
     //                 if (myQueIndex >= mySegment->numQueues()) {
     //                     throw ProcessError(TLF("Invalid queue index '%' on segment '%'. Check for consistency of lane numbers and queue options.", myQueIndex, mySegment->getID()));
     //                 }
@@ -387,7 +413,7 @@ impl MSStateHandler {
     //             const double latOffset = attrs.getOpt<double>(SUMO_ATTR_POSITION_LAT, nullptr, ok, 0);
     //             SUMOVehicle* veh = vc.getVehicle(vehID);
     //             myCurrentLink->setApproaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, latOffset);
-    //             if (!MSGlobals::gUseMesoSim) {
+    //             if (!use_meso_sim()) {
     //                 MSVehicle* microVeh = dynamic_cast<MSVehicle*>(veh);
     //                 microVeh->loadPreviousApproaching(myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
     //             }
@@ -535,7 +561,7 @@ impl MSStateHandler {
     //                 // state was created with active option --keep-after-arrival
     //                 vc.deleteKeptVehicle(v);
     //             }
-    //             if (!MSGlobals::gUseMesoSim) {
+    //             if (!use_meso_sim()) {
     //                 for (MSVehicleControl::constVehIt i = vc.loadedVehBegin(); i != vc.loadedVehEnd(); ++i) {
     //                     MSVehicle* microVeh = dynamic_cast<MSVehicle*>((*i).second);
     //                     if (microVeh->hasDeparted() && microVeh->getLane() != nullptr) {
@@ -544,7 +570,7 @@ impl MSStateHandler {
     //                     }
     //                 }
     //             }
-    //             if (MSGlobals::gUseMesoSim && myMesoEventCounter >= 0) {
+    //             if (use_meso_sim() && myMesoEventCounter >= 0) {
     //                 MELoop::setEventCounter(myMesoEventCounter);
     //             }
     //             MSDevice_Taxi::finalizeLoadState();
@@ -638,7 +664,7 @@ impl MSStateHandler {
     //             myReminderAttrs.pop_back();
     //         }
     //         if (myCFMAttrs != nullptr) {
-    //             assert(!MSGlobals::gUseMesoSim);
+    //             assert(!use_meso_sim());
     //             MSVehicle* microVeh = dynamic_cast<MSVehicle*>(v);
     //             const MSCFModel::VehicleVariables* vars = microVeh->getCarFollowVariables();
     //             if (vars != nullptr) {
@@ -691,7 +717,11 @@ impl MSStateHandler {
     // }
     #[allow(unused_variables)]
     pub fn save_rn_gs(out: &mut OutputDevice) {
-        todo!("port MSStateHandler::saveRNGs")
+        out.open_tag_id(SUMO_TAG_RNGSTATE);
+        out.write_attr(SUMO_ATTR_DEFAULT, &utils::common::rand_helper::with_default(|rng| rng.save_state()));
+        out.write_attr(SUMO_ATTR_RNG_ROUTEHANDLER, &SUMORouteHandler::get_parsing_rng().m().save_state());
+        // shortcut: FlowRNG (MSInsertionControl::getFlowRNG), MSDevice/BTreceiver/OUProcess/ToC RNGs and MSLane::saveRNGStates are not ported, their states are not written yet
+        out.close_tag("");
     }
 
     /// C++: `void MSStateHandler::MSStateHandler(const MSStateHandler &)` [private]
@@ -699,7 +729,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &MSStateHandler) -> Self {
-        todo!("port MSStateHandler::MSStateHandler")
+        // C++ copy constructor is deleted ("Invalidated"), copying is a programming error
+        panic!("MSStateHandler copy constructor is invalidated in C++ and must not be used");
     }
 
     /// C++: `MSStateHandler & MSStateHandler::operator=(const MSStateHandler &)` [private]
@@ -707,7 +738,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSStateHandler) -> &mut MSStateHandler {
-        todo!("port MSStateHandler::operator=")
+        // C++ assignment operator is deleted ("Invalidated"), assignment is a programming error
+        panic!("MSStateHandler assignment operator is invalidated in C++ and must not be used");
     }
 
 }
@@ -775,7 +807,10 @@ impl MSStateHandler_MSStateTimeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port MSStateTimeHandler::myStartElement")
+        if element == SUMO_TAG_SNAPSHOT {
+            self.myTime = utils::common::time::string2time(&attrs.get_string(SUMO_ATTR_TIME))
+                .unwrap_or_else(|e| std::panic::panic_any(e));
+        }
     }
 
 }

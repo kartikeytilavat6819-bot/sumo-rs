@@ -112,7 +112,38 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, element: SumoXMLTag, lines: &Vec<String>, lane: &mut MSLane, begPos: f64, endPos: f64, name: String, capacity: i32, parkingLength: f64, color: &RGBColor, angle: f64) -> Self {
-        todo!("port MSStoppingPlace::MSStoppingPlace")
+        let mut sp = MSStoppingPlace {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myElement: element,
+            myLines: lines.clone(),
+            myEndPositions: BTreeMap::new(),
+            myLane: Ptr::from_mut(lane),
+            myBegPos: begPos,
+            myEndPos: endPos,
+            myLastFreePos: endPos,
+            myLastParking: Ptr::null(),
+            myName: name,
+            myTransportableCapacity: capacity,
+            myParkingFactor: if parkingLength <= 0.0 { 1.0 } else { (endPos - begPos) / parkingLength },
+            myColor: color.clone(),
+            myAngle: angle * std::f64::consts::PI / 180.0,
+            // see MSVehicleControl defContainerType
+            myTransportableDepth: if element == SUMO_TAG_CONTAINER_STOP {
+                utils::common::std_defs::SUMO_CONST_WAITING_CONTAINER_DEPTH
+            } else {
+                utils::common::std_defs::SUMO_CONST_WAITING_PERSON_DEPTH
+            },
+            myTransportableWidth: MSStoppingPlace::get_default_transportable_width(element),
+            myWaitingTransportables: BTreeMap::new(),
+            myWaitingSpots: BTreeSet::new(),
+            myAccessPos: Vec::new(),
+        };
+        sp.compute_last_free_pos();
+        for i in 0..capacity {
+            sp.myWaitingSpots.insert(i);
+        }
+        sp
     }
 
     /// C++: `void MSStoppingPlace::~MSStoppingPlace() noexcept` [virtual]
@@ -120,7 +151,7 @@ impl MSStoppingPlace {
     // MSStoppingPlace::~MSStoppingPlace() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStoppingPlace::~MSStoppingPlace")
+        // C++ destructor is empty
     }
 
     /// C++: `const MSLane & MSStoppingPlace::getLane() const` [const]
@@ -131,7 +162,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> &MSLane {
-        todo!("port MSStoppingPlace::getLane")
+        self.myLane.get().unwrap()
     }
 
     /// C++: `double MSStoppingPlace::getBeginLanePosition() const` [const]
@@ -142,7 +173,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_begin_lane_position(&self) -> f64 {
-        todo!("port MSStoppingPlace::getBeginLanePosition")
+        self.myBegPos
     }
 
     /// C++: `double MSStoppingPlace::getEndLanePosition() const` [const]
@@ -153,7 +184,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_end_lane_position(&self) -> f64 {
-        todo!("port MSStoppingPlace::getEndLanePosition")
+        self.myEndPos
     }
 
     /// C++: `double MSStoppingPlace::getAngle() const` [const]
@@ -162,7 +193,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port MSStoppingPlace::getAngle")
+        self.myAngle
     }
 
     /// C++: `Position MSStoppingPlace::getCenterPos() const` [const]
@@ -174,7 +205,11 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_center_pos(&self) -> Position {
-        todo!("port MSStoppingPlace::getCenterPos")
+        let lane = self.myLane;
+        lane.get_shape(false).position_at_offset(
+            lane.interpolate_lane_pos_to_geometry_pos((self.myBegPos + self.myEndPos) / 2.0),
+            lane.get_width() / 2.0 + 0.5,
+        )
     }
 
     /// C++: `void MSStoppingPlace::enter(SUMOVehicle *, const bool)` [virtual]
@@ -188,7 +223,11 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn enter(&mut self, veh: Ptr<SUMOVehicle>, parking: bool) {
-        todo!("port MSStoppingPlace::enter")
+        let factor = if parking { self.myParkingFactor } else { 1.0 };
+        let beg = veh.get_position_on_lane() + veh.get_vehicle_type().get_min_gap() * factor;
+        let end = beg - veh.get_vehicle_type().get_length_with_gap() * factor;
+        self.myEndPositions.insert(veh, (beg, end));
+        self.compute_last_free_pos();
     }
 
     /// C++: `void MSStoppingPlace::leaveFrom(SUMOVehicle *)` [virtual]
@@ -201,7 +240,8 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn leave_from(&mut self, what: Ptr<SUMOVehicle>) {
-        todo!("port MSStoppingPlace::leaveFrom")
+        self.myEndPositions.remove(&what);
+        self.compute_last_free_pos();
     }
 
     /// C++: `double MSStoppingPlace::getLastFreePos(const SUMOVehicle &, double) const` [const, virtual]
@@ -250,7 +290,55 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_last_free_pos(&self, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
-        todo!("port MSStoppingPlace::getLastFreePos")
+        if self.get_stopped_vehicle_number() > 0 {
+            let vehGap = forVehicle.get_vehicle_type().get_min_gap();
+            let mut pos = self.myLastFreePos - vehGap - utils::geom::NUMERICAL_EPS;
+            if self.myParkingFactor < 1.0
+                && !self.myLastParking.is_null()
+                && forVehicle.has_stops()
+                && forVehicle.get_stops().front().unwrap().pars.parking == ParkingType::ONROAD
+                && self.myLastParking.remaining_stop_duration()
+                    < forVehicle.get_stops().front().unwrap().get_min_duration(MSNet::get_instance().m().get_current_time_step())
+            {
+                // stop far back enough so that the previous parking vehicle can leave (even if this vehicle fits, it will
+                // be a blocker because it stops on the road)
+                pos = f64::min(
+                    pos,
+                    self.myLastParking.get_position_on_lane() - self.myLastParking.get_length() - vehGap - utils::geom::NUMERICAL_EPS,
+                );
+            }
+            if !self.fits(pos, forVehicle) {
+                // try to find a place ahead of the waiting vehicles
+                let vehLength = forVehicle.get_vehicle_type().get_length() * self.myParkingFactor;
+                let mut spaces: Vec<(f64, (f64, Ptr<SUMOVehicle>))> = self
+                    .myEndPositions
+                    .iter()
+                    .map(|(veh, (beg, end))| (*beg, (*end, *veh)))
+                    .collect();
+                // sorted from myEndPos towars myBegPos
+                spaces.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                spaces.reverse();
+                let mut prev = self.myEndPos;
+                for it in spaces.iter() {
+                    let (begin, (end, veh)) = (it.0, it.1);
+                    if prev - begin + utils::geom::NUMERICAL_EPS >= vehLength
+                        && (veh.is_parking() || veh.remaining_stop_duration() > utils::common::time::time2steps(10.0))
+                    {
+                        return prev;
+                    }
+                    prev = end - vehGap;
+                }
+                if self.myParkingFactor < 1.0 && !self.myLastParking.is_null() {
+                    // stop far back enough so that the previous vehicle can leave
+                    pos = f64::min(
+                        pos,
+                        self.myLastParking.get_position_on_lane() - self.myLastParking.get_length() - vehGap - utils::geom::NUMERICAL_EPS,
+                    );
+                }
+            }
+            return pos;
+        }
+        self.myLastFreePos
     }
 
     /// C++: `bool MSStoppingPlace::accepts(SUMOVehicle *) const` [const, virtual]
@@ -259,7 +347,8 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn accepts(&self, arg0: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSStoppingPlace::accepts")
+        let _ = arg0;
+        true
     }
 
     /// C++: `bool MSStoppingPlace::fits(double, const SUMOVehicle &) const` [const]
@@ -272,7 +361,10 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn fits(&self, pos: f64, veh: &SUMOVehicle) -> bool {
-        todo!("port MSStoppingPlace::fits")
+        // always fit at the default position or if at least half the vehicle length
+        // is within the stop range (debatable)
+        pos + utils::geom::POSITION_EPS >= self.myEndPos
+            || (pos - self.myBegPos >= veh.get_vehicle_type().get_length() * self.myParkingFactor / 2.0)
     }
 
     /// C++: `Position MSStoppingPlace::getWaitPosition(MSTransportable *) const` [const]
@@ -290,13 +382,29 @@ impl MSStoppingPlace {
     //             row = 1 + myTransportableCapacity / getTransportablesAbreast();
     //         }
     //     }
-    //     const double lefthandSign = (MSGlobals::gLefthand ? -1 : 1);
+    //     const double lefthandSign = (lefthand() ? -1 : 1);
     //     return myLane.getShape().positionAtOffset(myLane.interpolateLanePosToGeometryPos(lanePos),
     //             lefthandSign * (myLane.getWidth() / 2 + row * myTransportableDepth + fabs(cos(myAngle)) * myTransportableWidth / 2));
     // }
     #[allow(unused_variables)]
     pub fn get_wait_position(&self, person: Ptr<MSTransportable>) -> Position {
-        todo!("port MSStoppingPlace::getWaitPosition")
+        let lanePos = self.get_waiting_position_on_lane(person);
+        let mut row: i32 = 0;
+        if let Some(&spot) = self.myWaitingTransportables.get(&person) {
+            if spot >= 0 {
+                row = spot / self.get_transportables_abreast();
+            } else {
+                // invalid position, draw outside bounds
+                row = 1 + self.myTransportableCapacity / self.get_transportables_abreast();
+            }
+        }
+        let lefthandSign = if lefthand() { -1.0 } else { 1.0 };
+        let lane = self.myLane;
+        lane.get_shape(false).position_at_offset(
+            lane.interpolate_lane_pos_to_geometry_pos(lanePos),
+            lefthandSign
+                * (lane.get_width() / 2.0 + row as f64 * self.myTransportableDepth + self.myAngle.cos().abs() * self.myTransportableWidth / 2.0),
+        )
     }
 
     /// C++: `double MSStoppingPlace::getWaitingPositionOnLane(MSTransportable *) const` [const]
@@ -312,7 +420,12 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_position_on_lane(&self, t: Ptr<MSTransportable>) -> f64 {
-        todo!("port MSStoppingPlace::getWaitingPositionOnLane")
+        if let Some(&spot) = self.myWaitingTransportables.get(&t) {
+            if spot >= 0 {
+                return self.myEndPos - (0.5 + (spot % self.get_transportables_abreast()) as f64) * self.myTransportableWidth;
+            }
+        }
+        (self.myEndPos + self.myBegPos) / 2.0
     }
 
     /// C++: `double MSStoppingPlace::getStoppingPosition(const SUMOVehicle *) const` [const]
@@ -328,7 +441,10 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_position(&self, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSStoppingPlace::getStoppingPosition")
+        if let Some((_, end)) = self.myEndPositions.get(&veh) {
+            return *end;
+        }
+        self.get_last_free_pos(&veh, 0.0)
     }
 
     /// C++: `int MSStoppingPlace::getTransportableNumber() const` [const]
@@ -338,7 +454,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_transportable_number(&self) -> i32 {
-        todo!("port MSStoppingPlace::getTransportableNumber")
+        self.myWaitingTransportables.len() as i32
     }
 
     /// C++: `std::vector<const MSTransportable *> MSStoppingPlace::getTransportables() const` [const]
@@ -353,7 +469,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_transportables(&self) -> Vec<Ptr<MSTransportable>> {
-        todo!("port MSStoppingPlace::getTransportables")
+        self.myWaitingTransportables.keys().copied().collect()
     }
 
     /// C++: `int MSStoppingPlace::getStoppedVehicleNumber() const` [const]
@@ -363,7 +479,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_stopped_vehicle_number(&self) -> i32 {
-        todo!("port MSStoppingPlace::getStoppedVehicleNumber")
+        self.myEndPositions.len() as i32
     }
 
     /// C++: `double MSStoppingPlace::getLastFreePos() const` [const]
@@ -372,7 +488,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_free_pos_2(&self) -> f64 {
-        todo!("port MSStoppingPlace::getLastFreePos")
+        self.myLastFreePos
     }
 
     /// C++: `bool MSStoppingPlace::hasSpaceForTransportable() const` [const]
@@ -383,7 +499,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn has_space_for_transportable(&self) -> bool {
-        todo!("port MSStoppingPlace::hasSpaceForTransportable")
+        !self.myWaitingSpots.is_empty()
     }
 
     /// C++: `bool MSStoppingPlace::addTransportable(const MSTransportable *, int)`
@@ -402,7 +518,16 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, p: Ptr<MSTransportable>, spot: i32) -> bool {
-        todo!("port MSStoppingPlace::addTransportable")
+        let mut spot = spot;
+        if spot < 0 && !self.has_space_for_transportable() {
+            return false;
+        }
+        if spot < 0 {
+            spot = *self.myWaitingSpots.iter().next().unwrap();
+        }
+        self.myWaitingSpots.remove(&spot);
+        self.myWaitingTransportables.insert(p, spot);
+        true
     }
 
     /// C++: `void MSStoppingPlace::removeTransportable(const MSTransportable *)`
@@ -419,7 +544,12 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&mut self, p: Ptr<MSTransportable>) {
-        todo!("port MSStoppingPlace::removeTransportable")
+        if let Some(&spot) = self.myWaitingTransportables.get(&p) {
+            if spot >= 0 {
+                self.myWaitingSpots.insert(spot);
+            }
+            self.myWaitingTransportables.remove(&p);
+        }
     }
 
     /// C++: `int MSStoppingPlace::checkWaitingSpot(const MSTransportable *) const` [const]
@@ -434,7 +564,10 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn check_waiting_spot(&self, p: Ptr<MSTransportable>) -> i32 {
-        todo!("port MSStoppingPlace::checkWaitingSpot")
+        match self.myWaitingTransportables.get(&p) {
+            Some(&spot) => spot,
+            None => -1,
+        }
     }
 
     /// C++: `bool MSStoppingPlace::addAccess(MSLane *const, const double, const double, double, const MSStoppingPlace::AccessExit)` [virtual]
@@ -457,7 +590,26 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn add_access(&mut self, lane: Ptr<MSLane>, startPos: f64, endPos: f64, length: f64, exit: MSStoppingPlace_AccessExit) -> bool {
-        todo!("port MSStoppingPlace::addAccess")
+        // prevent multiple accesses on the same lane
+        for access in self.myAccessPos.iter() {
+            if lane == access.lane {
+                return false;
+            }
+        }
+        let mut length = length;
+        if length < 0.0 {
+            let accPos = lane.geometry_position_at_offset((startPos + endPos) / 2.0, 0.);
+            let stopPos = self.myLane.geometry_position_at_offset((self.myBegPos + self.myEndPos) / 2.0, 0.);
+            length = accPos.distance_to(&stopPos);
+        }
+        self.myAccessPos.push(MSStoppingPlace_Access {
+            lane,
+            startPos,
+            endPos,
+            length,
+            exit,
+        });
+        true
     }
 
     /// C++: `const std::vector<Access> & MSStoppingPlace::getAllAccessPos() const` [const]
@@ -467,7 +619,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_all_access_pos(&self) -> &Vec<MSStoppingPlace_Access> {
-        todo!("port MSStoppingPlace::getAllAccessPos")
+        &self.myAccessPos
     }
 
     /// C++: `double MSStoppingPlace::getAccessPos(const MSEdge *, SumoRNG *) const` [const]
@@ -489,7 +641,18 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_access_pos(&self, edge: Ptr<MSEdge>, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port MSStoppingPlace::getAccessPos")
+        if edge == Ptr::from_mut(self.myLane.m().get_edge()) {
+            return (self.myBegPos + self.myEndPos) / 2.0;
+        }
+        for access in self.myAccessPos.iter() {
+            if edge == Ptr::from_mut(access.lane.m().get_edge()) {
+                if rng.is_null() || access.startPos == access.endPos {
+                    return access.endPos;
+                }
+                return rng.m().rand_range(access.startPos, access.endPos);
+            }
+        }
+        -1.0
     }
 
     /// C++: `const Access * MSStoppingPlace::getAccess(const MSEdge *) const` [const]
@@ -497,7 +660,13 @@ impl MSStoppingPlace {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_access(&self, edge: Ptr<MSEdge>) -> Ptr<MSStoppingPlace_Access> {
-        todo!("port MSStoppingPlace::getAccess")
+        // C++ getAccess is declared in the header only (no .cpp body); same lookup as getAccessPos
+        for access in self.myAccessPos.iter() {
+            if edge == Ptr::from_mut(access.lane.m().get_edge()) {
+                return Ptr::new(access);
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `const std::string & MSStoppingPlace::getMyName() const` [const]
@@ -507,7 +676,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_my_name(&self) -> &str {
-        todo!("port MSStoppingPlace::getMyName")
+        &self.myName
     }
 
     /// C++: `SumoXMLTag MSStoppingPlace::getElement() const` [const]
@@ -517,7 +686,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_element(&self) -> SumoXMLTag {
-        todo!("port MSStoppingPlace::getElement")
+        self.myElement
     }
 
     /// C++: `const RGBColor & MSStoppingPlace::getColor() const` [const]
@@ -527,7 +696,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_color(&self) -> &RGBColor {
-        todo!("port MSStoppingPlace::getColor")
+        &self.myColor
     }
 
     /// C++: `int MSStoppingPlace::getDefaultTransportablesAbreast(double, SumoXMLTag)` [static]
@@ -537,7 +706,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_default_transportables_abreast(length: f64, element: SumoXMLTag) -> i32 {
-        todo!("port MSStoppingPlace::getDefaultTransportablesAbreast")
+        std::cmp::max(1, (length / MSStoppingPlace::get_default_transportable_width(element)).floor() as i32)
     }
 
     /// C++: `std::vector<const SUMOVehicle *> MSStoppingPlace::getStoppedVehicles() const` [const]
@@ -552,7 +721,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_stopped_vehicles(&self) -> Vec<Ptr<SUMOVehicle>> {
-        todo!("port MSStoppingPlace::getStoppedVehicles")
+        self.myEndPositions.keys().copied().collect()
     }
 
     /// C++: `int MSStoppingPlace::getNumWaitingPersons() const` [const]
@@ -562,7 +731,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_waiting_persons(&self) -> i32 {
-        todo!("port MSStoppingPlace::getNumWaitingPersons")
+        self.myWaitingTransportables.len() as i32
     }
 
     /// C++: `int MSStoppingPlace::getWaitingCapacity() const` [const]
@@ -572,7 +741,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_capacity(&self) -> i32 {
-        todo!("port MSStoppingPlace::getWaitingCapacity")
+        self.myTransportableCapacity
     }
 
     /// C++: `double MSStoppingPlace::getParkingLength() const` [const]
@@ -581,7 +750,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn get_parking_length(&self) -> f64 {
-        todo!("port MSStoppingPlace::getParkingLength")
+        (self.myEndPos - self.myBegPos) / self.myParkingFactor
     }
 
     /// C++: `void MSStoppingPlace::getWaitingPersonIDs(std::vector<std::string> &) const` [const]
@@ -595,7 +764,10 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_person_i_ds(&self, into: &mut Vec<String>) {
-        todo!("port MSStoppingPlace::getWaitingPersonIDs")
+        for item in self.myWaitingTransportables.keys() {
+            into.push(item.get_id().to_string());
+        }
+        into.sort();
     }
 
     /// C++: `bool MSStoppingPlace::checkPersonCapacity() const` [const]
@@ -604,7 +776,7 @@ impl MSStoppingPlace {
     //     }
     #[allow(unused_variables)]
     pub fn check_person_capacity(&self) -> bool {
-        todo!("port MSStoppingPlace::checkPersonCapacity")
+        self.myElement == SUMO_TAG_BUS_STOP || self.myElement == SUMO_TAG_TRAIN_STOP
     }
 
     /// C++: `void MSStoppingPlace::finishedLoading()` [virtual]
@@ -630,7 +802,21 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn finished_loading(&mut self) {
-        todo!("port MSStoppingPlace::finishedLoading")
+        let waitingWidth = self.base2.get_parameter("waitingWidth", "");
+        if waitingWidth != "" {
+            match utils::common::string_utils::to_double(&waitingWidth) {
+                Ok(v) => self.myTransportableWidth = v,
+                Err(e) => write_warningf!("Could not load waitingWidth (m) '%' (%)", waitingWidth, e.to_string()),
+            }
+        }
+        let waitingDepth = self.base2.get_parameter("waitingDepth", "");
+        if waitingDepth != "" {
+            match utils::common::string_utils::to_double(&waitingDepth) {
+                Ok(v) => self.myTransportableDepth = v,
+                // the C++ message prints waitingWidth here, kept identical
+                Err(e) => write_warningf!("Could not load waitingDepth (m) '%' (%)", waitingWidth, e.to_string()),
+            }
+        }
     }
 
     /// C++: `void MSStoppingPlace::clearState()`
@@ -643,7 +829,9 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSStoppingPlace::clearState")
+        self.myEndPositions.clear();
+        self.myWaitingTransportables.clear();
+        self.compute_last_free_pos();
     }
 
     /// C++: `void MSStoppingPlace::computeLastFreePos()` [protected]
@@ -664,7 +852,17 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn compute_last_free_pos(&mut self) {
-        todo!("port MSStoppingPlace::computeLastFreePos")
+        self.myLastFreePos = self.myEndPos;
+        self.myLastParking = Ptr::null();
+        for (veh, (_beg, end)) in self.myEndPositions.iter() {
+            // vehicle might be stopped beyond myEndPos
+            if self.myLastFreePos >= *end || self.myLastFreePos == self.myEndPos {
+                self.myLastFreePos = *end;
+                if veh.is_stopped_parking() {
+                    self.myLastParking = *veh;
+                }
+            }
+        }
     }
 
     /// C++: `int MSStoppingPlace::getTransportablesAbreast() const` [const, protected]
@@ -674,7 +872,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_transportables_abreast(&self) -> i32 {
-        todo!("port MSStoppingPlace::getTransportablesAbreast")
+        std::cmp::max(1, ((self.myEndPos - self.myBegPos) / self.myTransportableWidth).floor() as i32)
     }
 
     /// C++: `double MSStoppingPlace::getDefaultTransportableWidth(SumoXMLTag)` [static, protected]
@@ -687,7 +885,11 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_default_transportable_width(element: SumoXMLTag) -> f64 {
-        todo!("port MSStoppingPlace::getDefaultTransportableWidth")
+        if element == SUMO_TAG_CONTAINER_STOP {
+            utils::common::std_defs::SUMO_CONST_WAITING_CONTAINER_WIDTH
+        } else {
+            utils::common::std_defs::SUMO_CONST_WAITING_PERSON_WIDTH
+        }
     }
 
     /// C++: `void MSStoppingPlace::MSStoppingPlace(const MSStoppingPlace &)` [private]
@@ -695,7 +897,8 @@ impl MSStoppingPlace {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSStoppingPlace) -> Self {
-        todo!("port MSStoppingPlace::MSStoppingPlace")
+        // C++ copy constructor is deleted ("Invalidated"), copying is a programming error
+        panic!("MSStoppingPlace copy constructor is invalidated in C++ and must not be used");
     }
 
     /// C++: `MSStoppingPlace & MSStoppingPlace::operator=(const MSStoppingPlace &)` [private]
@@ -703,7 +906,8 @@ impl MSStoppingPlace {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSStoppingPlace) -> &mut MSStoppingPlace {
-        todo!("port MSStoppingPlace::operator=")
+        // C++ assignment operator is deleted ("Invalidated"), assignment is a programming error
+        panic!("MSStoppingPlace assignment operator is invalidated in C++ and must not be used");
     }
 
 }
