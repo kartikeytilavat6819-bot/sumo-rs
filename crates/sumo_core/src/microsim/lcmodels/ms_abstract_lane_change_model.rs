@@ -20,10 +20,11 @@ pub struct MSAbstractLaneChangeModel {
     pub myCanceledStateCenter: i32,
     pub myCanceledStateLeft: i32,
     /// Cached info on lc-relevant neighboring vehicles @{
-    pub myLeftFollowers: Rc<MSLeaderDistanceInfo>,
-    pub myLeftLeaders: Rc<MSLeaderDistanceInfo>,
-    pub myRightFollowers: Rc<MSLeaderDistanceInfo>,
-    pub myRightLeaders: Rc<MSLeaderDistanceInfo>,
+    /// None models a C++ nullptr shared_ptr
+    pub myLeftFollowers: Option<Rc<MSLeaderDistanceInfo>>,
+    pub myLeftLeaders: Option<Rc<MSLeaderDistanceInfo>>,
+    pub myRightFollowers: Option<Rc<MSLeaderDistanceInfo>>,
+    pub myRightLeaders: Option<Rc<MSLeaderDistanceInfo>>,
     /// the current lateral speed
     pub mySpeedLat: f64,
     /// the current lateral acceleration
@@ -103,6 +104,31 @@ pub struct MSAbstractLaneChangeModel {
 //   static bool MSAbstractLaneChangeModel::myLCEndedOutput;
 //   static bool MSAbstractLaneChangeModel::myLCXYOutput;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use utils::common::time::{delta_t, dist2speed, speed2accel, speed2dist, steps2time, time2steps};
+use utils::geom::NUMERICAL_EPS;
+use utils::options::options_cont::{get_bool, is_set};
+
+/// C++ SUMO_const_haltingSpeed (utils/common/StdDefs.h)
+const SUMO_const_haltingSpeed: f64 = 0.1;
+/// C++ VTYPEPARS_MAXSPEED_LAT_SET (utils/vehicle/SUMOVTypeParameter.h), private in ms_vehicle_type.rs
+const VTYPEPARS_MAXSPEED_LAT_SET: i64 = 1 << 20;
+
+/// C++ MSAbstractLaneChangeModel::NO_NEIGHBOR (std::numeric_limits<double>::max())
+pub const NO_NEIGHBOR: f64 = f64::MAX;
+/// C++ MSAbstractLaneChangeModel::UNDEFINED_LOOKAHEAD
+pub const UNDEFINED_LOOKAHEAD: f64 = -1.0;
+/// C++ MSAbstractLaneChangeModel::myAllowOvertakingRight
+pub static MY_ALLOW_OVERTAKING_RIGHT: AtomicBool = AtomicBool::new(false);
+/// C++ MSAbstractLaneChangeModel::myLCOutput
+pub static MY_LC_OUTPUT: AtomicBool = AtomicBool::new(false);
+/// C++ MSAbstractLaneChangeModel::myLCStartedOutput
+pub static MY_LC_STARTED_OUTPUT: AtomicBool = AtomicBool::new(false);
+/// C++ MSAbstractLaneChangeModel::myLCEndedOutput
+pub static MY_LC_ENDED_OUTPUT: AtomicBool = AtomicBool::new(false);
+/// C++ MSAbstractLaneChangeModel::myLCXYOutput
+pub static MY_LC_XY_OUTPUT: AtomicBool = AtomicBool::new(false);
+
 impl MSAbstractLaneChangeModel {
     /// C++: `void MSAbstractLaneChangeModel::initGlobalOptions(const OptionsCont &)` [static]
     /// init global model parameters
@@ -116,7 +142,11 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn init_global_options(oc: &OptionsCont) {
-        todo!("port MSAbstractLaneChangeModel::initGlobalOptions")
+        MY_ALLOW_OVERTAKING_RIGHT.store(get_bool("lanechange.overtake-right"), Ordering::Relaxed);
+        MY_LC_OUTPUT.store(is_set("lanechange-output"), Ordering::Relaxed);
+        MY_LC_STARTED_OUTPUT.store(get_bool("lanechange-output.started"), Ordering::Relaxed);
+        MY_LC_ENDED_OUTPUT.store(get_bool("lanechange-output.ended"), Ordering::Relaxed);
+        MY_LC_XY_OUTPUT.store(get_bool("lanechange-output.xy"), Ordering::Relaxed);
     }
 
     /// C++: `MSAbstractLaneChangeModel * MSAbstractLaneChangeModel::build(LaneChangeModel, MSVehicle &)` [static]
@@ -147,7 +177,51 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn build(lcm: LaneChangeModel, vehicle: &mut MSVehicle) -> Ptr<MSAbstractLaneChangeModel> {
-        todo!("port MSAbstractLaneChangeModel::build")
+        if MSGlobals::lateral_resolution() > 0. && lcm != LaneChangeModel::SL2015 && lcm != LaneChangeModel::DEFAULT {
+            panic!(
+                "{}",
+                ProcessError::Process(utils::tlf!(
+                    "Lane change model '%' is not compatible with sublane simulation",
+                    LaneChangeModels.get_string(lcm)
+                ))
+            );
+        }
+        // C++ `new` yields an owned pointer; the object is leaked into a raw pointer like C++ ownership.
+        // The base pointer is taken from the `base` field, so no layout assumption is needed.
+        match lcm {
+            LaneChangeModel::DK2008 => {
+                let raw: *mut MSLCM_DK2008 = Box::into_raw(Box::new(MSLCM_DK2008::new(vehicle)));
+                Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) })
+            }
+            LaneChangeModel::LC2013 => {
+                let raw: *mut MSLCM_LC2013 = Box::into_raw(Box::new(MSLCM_LC2013::new(vehicle)));
+                Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) })
+            }
+            LaneChangeModel::LC2013_CC => {
+                let raw: *mut MSLCM_LC2013_CC = Box::into_raw(Box::new(MSLCM_LC2013_CC::new(vehicle)));
+                Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) })
+            }
+            LaneChangeModel::SL2015 => {
+                let raw: *mut MSLCM_SL2015 = Box::into_raw(Box::new(MSLCM_SL2015::new(vehicle)));
+                Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) })
+            }
+            LaneChangeModel::DEFAULT => {
+                if MSGlobals::lateral_resolution() <= 0. {
+                    let raw: *mut MSLCM_LC2013 = Box::into_raw(Box::new(MSLCM_LC2013::new(vehicle)));
+                    Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) })
+                } else {
+                    let raw: *mut MSLCM_SL2015 = Box::into_raw(Box::new(MSLCM_SL2015::new(vehicle)));
+                    Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) })
+                }
+            }
+            _ => panic!(
+                "{}",
+                ProcessError::Process(utils::tlf!(
+                    "Lane change model '%' not implemented",
+                    LaneChangeModels.get_string(lcm)
+                ))
+            ),
+        }
     }
 
     /// C++: `LaneChangeModel MSAbstractLaneChangeModel::getModelID() const` [const, virtual, pure virtual]
@@ -155,7 +229,8 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        todo!("port MSAbstractLaneChangeModel::getModelID")
+        // shortcut: pure virtual in C++ (no base body); the field holds the model this object was built with, which is what every subclass returns
+        self.myModel
     }
 
     /// C++: `int MSAbstractLaneChangeModel::checkChangeBeforeCommitting(const MSVehicle *, int) const` [const, virtual]
@@ -167,7 +242,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::checkChangeBeforeCommitting")
+        0
     }
 
     /// C++: `void MSAbstractLaneChangeModel::saveState(OutputDevice &) const` [const, virtual]
@@ -188,7 +263,17 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSAbstractLaneChangeModel::saveState")
+        let mut lc_state: Vec<f64> = vec![self.myOwnState as f64];
+        for item in &self.myLCAccelerationAdvices {
+            lc_state.push(item.0);
+            lc_state.push(item.1 as f64);
+        }
+        out.write_attr(SUMO_ATTR_LCSTATE_BASE, &lc_state);
+
+        if MSGlobals::lane_change_duration() > 0 {
+            let lc = vec![self.mySpeedLat, self.myLaneChangeCompletion, self.myLaneChangeDirection as f64];
+            out.write_attr(SUMO_ATTR_LCSTATE, &lc);
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -218,7 +303,34 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSAbstractLaneChangeModel::loadState")
+        if attrs.has_attribute(SUMO_ATTR_LCSTATE_BASE) {
+            let s = attrs.get_string(SUMO_ATTR_LCSTATE_BASE);
+            // istringstream >> double: a failed read yields 0 (C++11) and ends the stream
+            let mut toks = s.split_whitespace().map_while(|t| t.parse::<f64>().ok());
+            let token = toks.next().unwrap_or(0.0);
+            self.myOwnState = token as i32; // double is sufficiently precise
+            let mut prev = f64::MAX;
+            for token in toks {
+                if prev != f64::MAX {
+                    self.myLCAccelerationAdvices.push((prev, token as i32));
+                    prev = f64::MAX;
+                }
+                prev = token;
+            }
+        }
+        if attrs.has_attribute(SUMO_ATTR_LCSTATE) {
+            let s = attrs.get_string(SUMO_ATTR_LCSTATE);
+            let mut toks = s.split_whitespace();
+            if let Some(t) = toks.next() {
+                self.mySpeedLat = t.parse::<f64>().unwrap_or(0.0);
+                if let Some(t) = toks.next() {
+                    self.myLaneChangeCompletion = t.parse::<f64>().unwrap_or(0.0);
+                    if let Some(t) = toks.next() {
+                        self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::haveLCOutput()` [static]
@@ -228,7 +340,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn have_lc_output() -> bool {
-        todo!("port MSAbstractLaneChangeModel::haveLCOutput")
+        MY_LC_OUTPUT.load(Ordering::Relaxed)
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::enabledOutputLCStarted()` [static]
@@ -238,7 +350,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn enabled_output_lc_started() -> bool {
-        todo!("port MSAbstractLaneChangeModel::enabledOutputLCStarted")
+        MY_LC_STARTED_OUTPUT.load(Ordering::Relaxed)
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::enabledOutputLCEnded()` [static]
@@ -248,7 +360,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn enabled_output_lc_ended() -> bool {
-        todo!("port MSAbstractLaneChangeModel::enabledOutputLCEnded")
+        MY_LC_ENDED_OUTPUT.load(Ordering::Relaxed)
     }
 
     /// C++: `void MSAbstractLaneChangeModel::MSAbstractLaneChangeModel(MSVehicle &, const LaneChangeModel)`
@@ -307,7 +419,81 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle, model: LaneChangeModel) -> Self {
-        todo!("port MSAbstractLaneChangeModel::MSAbstractLaneChangeModel")
+        let myVehicle = Ptr::from_mut(v);
+        let vt = v.get_vehicle_type();
+        let p = vt.get_parameter();
+        let max_speed_lat = vt.get_max_speed_lat();
+        let mut s = MSAbstractLaneChangeModel {
+            myVehicle,
+            myOwnState: 0,
+            myPreviousState: 0,
+            myPreviousState2: 0,
+            mySavedStateRight: (0, 0),
+            mySavedStateCenter: (0, 0),
+            mySavedStateLeft: (0, 0),
+            myCanceledStateRight: LCA_NONE,
+            myCanceledStateCenter: LCA_NONE,
+            myCanceledStateLeft: LCA_NONE,
+            myLeftFollowers: None,
+            myLeftLeaders: None,
+            myRightFollowers: None,
+            myRightLeaders: None,
+            mySpeedLat: 0.,
+            myAccelerationLat: 0.,
+            myAngleOffset: 0.,
+            myPreviousAngleOffset: 0.,
+            myCommittedSpeed: 0.,
+            myLaneChangeCompletion: 1.0,
+            myLaneChangeDirection: 0,
+            myAlreadyChanged: false,
+            myShadowLane: Ptr::default(),
+            myShadowFurtherLanes: Vec::new(),
+            myShadowFurtherLanesPosLat: Vec::new(),
+            myTargetLane: Ptr::default(),
+            myFurtherTargetLanes: Vec::new(),
+            myModel: model,
+            myPartiallyOccupatedByShadow: Vec::new(),
+            myNoPartiallyOccupatedByShadow: Vec::new(),
+            myLastLateralGapLeft: 0.,
+            myLastLateralGapRight: 0.,
+            myLastLeaderGap: 0.,
+            myLastFollowerGap: 0.,
+            myLastLeaderSecureGap: 0.,
+            myLastFollowerSecureGap: 0.,
+            myLastOrigLeaderGap: 0.,
+            myLastOrigLeaderSecureGap: 0.,
+            myLastLeaderSpeed: 0.,
+            myLastFollowerSpeed: 0.,
+            myLastOrigLeaderSpeed: 0.,
+            myDontResetLCGaps: false,
+            myStrategicLookahead: p.get_lc_param(SUMO_ATTR_LCA_STRATEGIC_LOOKAHEAD, UNDEFINED_LOOKAHEAD),
+            myMaxSpeedLatStanding: p.get_lc_param(SUMO_ATTR_LCA_MAXSPEEDLATSTANDING, max_speed_lat),
+            myMaxSpeedLatFactor: p.get_lc_param(SUMO_ATTR_LCA_MAXSPEEDLATFACTOR, 1.),
+            // prevent lateral sliding for cars but permit for two-wheelers due to better maneuverability
+            myMaxDistLatStanding: p.get_lc_param(
+                SUMO_ATTR_LCA_MAXDISTLATSTANDING,
+                if (v.get_v_class() & (SVC_BICYCLE | SVC_MOTORCYCLE | SVC_MOPED)) != 0 { f64::MAX } else { 1.6 },
+            ),
+            mySigma: p.get_lc_param(SUMO_ATTR_LCA_SIGMA, 0.0),
+            myOvertakeRightParam: p.get_lc_param(SUMO_ATTR_LCA_OVERTAKE_RIGHT, 0.),
+            myAssertive: p.get_lc_param(SUMO_ATTR_LCA_ASSERTIVE, 1.),
+            myCooperativeHelpTime: time2steps(p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_HELPTIME, 60.)),
+            myCooperativeHelpThreshold: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_HELPTHRESHOLD, -1.),
+            myCooperativeMinSpeed: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_MINSPEED, 0.),
+            // see MSVehicle::initDevices
+            // shortcut: get_device(typeid) matches no device yet, so the blue light flag is always false until the device type key is ported
+            myHaveBlueLight: !v.get_device(&()).is_null(),
+            myLCAccelerationAdvices: Vec::new(),
+            myLastLaneChangeOffset: 0,
+            myApproachedByShadow: Vec::new(),
+            myAmOpposite: false,
+            myManeuverDist: 0.,
+            myPreviousManeuverDist: 0.,
+        };
+        s.save_lc_state(-1, LCA_UNKNOWN, LCA_UNKNOWN);
+        s.save_lc_state(0, LCA_UNKNOWN, LCA_UNKNOWN);
+        s.save_lc_state(1, LCA_UNKNOWN, LCA_UNKNOWN);
+        s
     }
 
     /// C++: `void MSAbstractLaneChangeModel::~MSAbstractLaneChangeModel()` [virtual]
@@ -315,7 +501,7 @@ impl MSAbstractLaneChangeModel {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::~MSAbstractLaneChangeModel")
+        // C++ destructor body is empty; Rust drops the fields itself
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getOwnState() const` [const]
@@ -324,7 +510,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_own_state(&self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getOwnState")
+        self.myOwnState
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getPrevState() const` [const]
@@ -334,7 +520,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_prev_state(&self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getPrevState")
+        // at the time of this call myPreviousState already holds the new value
+        self.myPreviousState2
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setOwnState(const int)` [virtual]
@@ -346,7 +533,9 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_own_state(&mut self, state: i32) {
-        todo!("port MSAbstractLaneChangeModel::setOwnState")
+        self.myPreviousState2 = self.myPreviousState;
+        self.myOwnState = state;
+        self.myPreviousState = state; // myOwnState is modified in prepareStep so we make a backup
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setManeuverDist(const double)`
@@ -367,7 +556,9 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_maneuver_dist(&mut self, dist: f64) {
-        todo!("port MSAbstractLaneChangeModel::setManeuverDist")
+        self.myManeuverDist = if dist.abs() < NUMERICAL_EPS { 0. } else { dist };
+        // store value which may be modified by the model during the next step
+        self.myPreviousManeuverDist = self.myManeuverDist;
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getManeuverDist() const` [const]
@@ -378,7 +569,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_maneuver_dist(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getManeuverDist")
+        self.myManeuverDist
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getPreviousManeuverDist() const` [const]
@@ -388,7 +579,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_previous_maneuver_dist(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getPreviousManeuverDist")
+        self.myPreviousManeuverDist
     }
 
     /// C++: `void MSAbstractLaneChangeModel::updateSafeLatDist(const double)` [virtual]
@@ -399,7 +590,8 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_safe_lat_dist(&mut self, travelledLatDist: f64) {
-        todo!("port MSAbstractLaneChangeModel::updateSafeLatDist")
+        // C++ base body is empty (UNUSED_PARAMETER only); subclasses override
+
     }
 
     /// C++: `const std::pair<int, int> & MSAbstractLaneChangeModel::getSavedState(const int) const` [const]
@@ -414,7 +606,13 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_saved_state(&self, dir: i32) -> &(i32, i32) {
-        todo!("port MSAbstractLaneChangeModel::getSavedState")
+        if dir == -1 {
+            &self.mySavedStateRight
+        } else if dir == 0 {
+            &self.mySavedStateCenter
+        } else {
+            &self.mySavedStateLeft
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::saveLCState(const int, int, const int)`
@@ -434,8 +632,20 @@ impl MSAbstractLaneChangeModel {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn save_lc_state(&mut self, dir: i32, stateWithoutTraCI: i32, state: i32) {
-        todo!("port MSAbstractLaneChangeModel::saveLCState")
+    pub fn save_lc_state(&mut self, dir: i32, mut stateWithoutTraCI: i32, state: i32) {
+        let canceledStrategic = *self.get_canceled_state(dir);
+        // avoid conflicting directions
+        if (canceledStrategic & LCA_WANTS_LANECHANGE_OR_STAY) != 0 {
+            stateWithoutTraCI = canceledStrategic;
+        }
+        let pair = (stateWithoutTraCI, state);
+        if dir == -1 {
+            self.mySavedStateRight = pair;
+        } else if dir == 0 {
+            self.mySavedStateCenter = pair;
+        } else {
+            self.mySavedStateLeft = pair;
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::saveNeighbors(const int, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &)`
@@ -455,7 +665,16 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn save_neighbors(&mut self, dir: i32, followers: &MSLeaderDistanceInfo, leaders: &MSLeaderDistanceInfo) {
-        todo!("port MSAbstractLaneChangeModel::saveNeighbors")
+        if dir == -1 {
+            self.myLeftFollowers = Some(Rc::new(followers.clone()));
+            self.myLeftLeaders = Some(Rc::new(leaders.clone()));
+        } else if dir == 1 {
+            self.myRightFollowers = Some(Rc::new(followers.clone()));
+            self.myRightLeaders = Some(Rc::new(leaders.clone()));
+        } else {
+            // dir \in {-1,1} !
+            debug_assert!(false);
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::saveNeighbors(const int, const std::pair<MSVehicle *const, double> &, const std::pair<MSVehicle *const, double> &)`
@@ -475,7 +694,17 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn save_neighbors_2(&mut self, dir: i32, follower: &(Ptr<MSVehicle>, f64), leader: &(Ptr<MSVehicle>, f64)) {
-        todo!("port MSAbstractLaneChangeModel::saveNeighbors")
+        let width = self.myVehicle.get_lane().get_width();
+        if dir == -1 {
+            self.myLeftFollowers = Some(Rc::new(MSLeaderDistanceInfo::new_2(follower, width)));
+            self.myLeftLeaders = Some(Rc::new(MSLeaderDistanceInfo::new_2(leader, width)));
+        } else if dir == 1 {
+            self.myRightFollowers = Some(Rc::new(MSLeaderDistanceInfo::new_2(follower, width)));
+            self.myRightLeaders = Some(Rc::new(MSLeaderDistanceInfo::new_2(leader, width)));
+        } else {
+            // dir \in {-1,1} !
+            debug_assert!(false);
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::clearNeighbors()`
@@ -489,7 +718,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn clear_neighbors(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::clearNeighbors")
+        self.myLeftFollowers = None;
+        self.myLeftLeaders = None;
+        self.myRightFollowers = None;
+        self.myRightLeaders = None;
     }
 
     /// C++: `const std::shared_ptr<MSLeaderDistanceInfo> MSAbstractLaneChangeModel::getFollowers(const int)`
@@ -507,8 +739,16 @@ impl MSAbstractLaneChangeModel {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_followers(&mut self, dir: i32) -> Rc<MSLeaderDistanceInfo> {
-        todo!("port MSAbstractLaneChangeModel::getFollowers")
+    pub fn get_followers(&mut self, dir: i32) -> Option<Rc<MSLeaderDistanceInfo>> {
+        if dir == -1 {
+            return self.myLeftFollowers.clone();
+        } else if dir == 1 {
+            return self.myRightFollowers.clone();
+        } else {
+            // dir \in {-1,1} !
+            debug_assert!(false);
+        }
+        None
     }
 
     /// C++: `const std::shared_ptr<MSLeaderDistanceInfo> MSAbstractLaneChangeModel::getLeaders(const int)`
@@ -526,8 +766,16 @@ impl MSAbstractLaneChangeModel {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_leaders(&mut self, dir: i32) -> Rc<MSLeaderDistanceInfo> {
-        todo!("port MSAbstractLaneChangeModel::getLeaders")
+    pub fn get_leaders(&mut self, dir: i32) -> Option<Rc<MSLeaderDistanceInfo>> {
+        if dir == -1 {
+            return self.myLeftLeaders.clone();
+        } else if dir == 1 {
+            return self.myRightLeaders.clone();
+        } else {
+            // dir \in {-1,1} !
+            debug_assert!(false);
+        }
+        None
     }
 
     /// C++: `int & MSAbstractLaneChangeModel::getCanceledState(const int)`
@@ -542,7 +790,13 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_canceled_state(&mut self, dir: i32) -> &mut i32 {
-        todo!("port MSAbstractLaneChangeModel::getCanceledState")
+        if dir == -1 {
+            &mut self.myCanceledStateRight
+        } else if dir == 0 {
+            &mut self.myCanceledStateCenter
+        } else {
+            &mut self.myCanceledStateLeft
+        }
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::isStrategicBlocked() const` [const]
@@ -567,7 +821,15 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn is_strategic_blocked(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::isStrategicBlocked")
+        let stateRight = self.mySavedStateRight.1;
+        if (stateRight & LCA_STRATEGIC) != 0 && (stateRight & LCA_RIGHT) != 0 && (stateRight & LCA_BLOCKED) != 0 {
+            return true;
+        }
+        let stateLeft = self.mySavedStateLeft.1;
+        if (stateLeft & LCA_STRATEGIC) != 0 && (stateLeft & LCA_LEFT) != 0 && (stateLeft & LCA_BLOCKED) != 0 {
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setFollowerGaps(CLeaderDist, double)`
@@ -581,7 +843,11 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_follower_gaps(&mut self, follower: CLeaderDist, secGap: f64) {
-        todo!("port MSAbstractLaneChangeModel::setFollowerGaps")
+        if !follower.0.is_null() {
+            self.myLastFollowerGap = follower.1 + follower.0.get_vehicle_type().get_min_gap();
+            self.myLastFollowerSecureGap = secGap;
+            self.myLastFollowerSpeed = follower.0.get_speed();
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setLeaderGaps(CLeaderDist, double)`
@@ -595,7 +861,11 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_leader_gaps(&mut self, arg0: CLeaderDist, secGap: f64) {
-        todo!("port MSAbstractLaneChangeModel::setLeaderGaps")
+        if !arg0.0.is_null() {
+            self.myLastLeaderGap = arg0.1 + self.myVehicle.get_vehicle_type().get_min_gap();
+            self.myLastLeaderSecureGap = secGap;
+            self.myLastLeaderSpeed = arg0.0.get_speed();
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setOrigLeaderGaps(CLeaderDist, double)`
@@ -609,7 +879,11 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_orig_leader_gaps(&mut self, arg0: CLeaderDist, secGap: f64) {
-        todo!("port MSAbstractLaneChangeModel::setOrigLeaderGaps")
+        if !arg0.0.is_null() {
+            self.myLastOrigLeaderGap = arg0.1 + self.myVehicle.get_vehicle_type().get_min_gap();
+            self.myLastOrigLeaderSecureGap = secGap;
+            self.myLastOrigLeaderSpeed = arg0.0.get_speed();
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setFollowerGaps(const MSLeaderDistanceInfo &)`
@@ -634,7 +908,28 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_follower_gaps_2(&mut self, vehicles: &MSLeaderDistanceInfo) {
-        todo!("port MSAbstractLaneChangeModel::setFollowerGaps")
+        let mut rightmost: i32 = 0;
+        let mut leftmost: i32 = 0;
+        vehicles.get_sub_lanes(self.myVehicle, 0., &mut rightmost, &mut leftmost);
+        for i in rightmost..=leftmost {
+            let vehDist = vehicles.index_op(i);
+            if !vehDist.0.is_null() {
+                let leader = self.myVehicle;
+                let follower = vehDist.0;
+                let netGap = vehDist.1 + follower.get_vehicle_type().get_min_gap();
+                if netGap < self.myLastFollowerGap && netGap >= 0. {
+                    self.myLastFollowerGap = netGap;
+                    self.myLastFollowerSecureGap = follower.get_car_follow_model().get_secure_gap(
+                        follower,
+                        leader,
+                        follower.get_speed(),
+                        leader.get_speed(),
+                        leader.get_car_follow_model().get_max_decel(),
+                    );
+                    self.myLastFollowerSpeed = follower.get_speed();
+                }
+            }
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setLeaderGaps(const MSLeaderDistanceInfo &)`
@@ -659,7 +954,28 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_leader_gaps_2(&mut self, vehicles: &MSLeaderDistanceInfo) {
-        todo!("port MSAbstractLaneChangeModel::setLeaderGaps")
+        let mut rightmost: i32 = 0;
+        let mut leftmost: i32 = 0;
+        vehicles.get_sub_lanes(self.myVehicle, 0., &mut rightmost, &mut leftmost);
+        for i in rightmost..=leftmost {
+            let vehDist = vehicles.index_op(i);
+            if !vehDist.0.is_null() {
+                let leader = vehDist.0;
+                let follower = self.myVehicle;
+                let netGap = vehDist.1 + follower.get_vehicle_type().get_min_gap();
+                if netGap < self.myLastLeaderGap && netGap >= 0. {
+                    self.myLastLeaderGap = netGap;
+                    self.myLastLeaderSecureGap = follower.get_car_follow_model().get_secure_gap(
+                        follower,
+                        leader,
+                        follower.get_speed(),
+                        leader.get_speed(),
+                        leader.get_car_follow_model().get_max_decel(),
+                    );
+                    self.myLastLeaderSpeed = leader.get_speed();
+                }
+            }
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setOrigLeaderGaps(const MSLeaderDistanceInfo &)`
@@ -684,7 +1000,28 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_orig_leader_gaps_2(&mut self, vehicles: &MSLeaderDistanceInfo) {
-        todo!("port MSAbstractLaneChangeModel::setOrigLeaderGaps")
+        let mut rightmost: i32 = 0;
+        let mut leftmost: i32 = 0;
+        vehicles.get_sub_lanes(self.myVehicle, 0., &mut rightmost, &mut leftmost);
+        for i in rightmost..=leftmost {
+            let vehDist = vehicles.index_op(i);
+            if !vehDist.0.is_null() {
+                let leader = vehDist.0;
+                let follower = self.myVehicle;
+                let netGap = vehDist.1 + follower.get_vehicle_type().get_min_gap();
+                if netGap < self.myLastOrigLeaderGap && netGap >= 0. {
+                    self.myLastOrigLeaderGap = netGap;
+                    self.myLastOrigLeaderSecureGap = follower.get_car_follow_model().get_secure_gap(
+                        follower,
+                        leader,
+                        follower.get_speed(),
+                        leader.get_speed(),
+                        leader.get_car_follow_model().get_max_decel(),
+                    );
+                    self.myLastOrigLeaderSpeed = leader.get_speed();
+                }
+            }
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::prepareStep()` [virtual]
@@ -713,7 +1050,26 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::prepareStep")
+        *self.get_canceled_state(-1) = LCA_NONE;
+        *self.get_canceled_state(0) = LCA_NONE;
+        *self.get_canceled_state(1) = LCA_NONE;
+        self.save_lc_state(-1, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.save_lc_state(0, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.save_lc_state(1, LCA_UNKNOWN, LCA_UNKNOWN);
+        self.myLastLateralGapRight = NO_NEIGHBOR;
+        self.myLastLateralGapLeft = NO_NEIGHBOR;
+        if !self.myDontResetLCGaps {
+            self.myLastLeaderGap = NO_NEIGHBOR;
+            self.myLastLeaderSecureGap = NO_NEIGHBOR;
+            self.myLastFollowerGap = NO_NEIGHBOR;
+            self.myLastFollowerSecureGap = NO_NEIGHBOR;
+            self.myLastOrigLeaderGap = NO_NEIGHBOR;
+            self.myLastOrigLeaderSecureGap = NO_NEIGHBOR;
+            self.myLastLeaderSpeed = NO_NEIGHBOR;
+            self.myLastFollowerSpeed = NO_NEIGHBOR;
+            self.myLastOrigLeaderSpeed = NO_NEIGHBOR;
+        }
+        self.myCommittedSpeed = 0.;
     }
 
     /// C++: `int MSAbstractLaneChangeModel::wantsChange(int, MSAbstractLaneChangeModel::MSLCMessager &, int, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const std::pair<MSVehicle *, double> &, const MSLane &, const std::vector<MSVehicle::LaneQ> &, MSVehicle **, MSVehicle **)` [virtual]
@@ -744,7 +1100,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::wantsChange")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `int MSAbstractLaneChangeModel::wantsChangeSublane(int, LaneChangeAction, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLane &, const std::vector<MSVehicle::LaneQ> &, MSVehicle **, MSVehicle **, double &, double &, int &)` [virtual]
@@ -781,7 +1140,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change_sublane(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, targetDistLat: &mut f64, blocked: &mut i32) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::wantsChangeSublane")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `void MSAbstractLaneChangeModel::updateExpectedSublaneSpeeds(const MSLeaderDistanceInfo &, int, int)` [virtual]
@@ -794,7 +1156,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn update_expected_sublane_speeds(&mut self, ahead: &MSLeaderDistanceInfo, sublaneOffset: i32, laneIndex: i32) {
-        todo!("port MSAbstractLaneChangeModel::updateExpectedSublaneSpeeds")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `StateAndDist MSAbstractLaneChangeModel::decideDirection(StateAndDist, StateAndDist) const` [const, virtual]
@@ -806,7 +1171,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn decide_direction(&self, sd1: MSAbstractLaneChangeModel_StateAndDist, sd2: MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
-        todo!("port MSAbstractLaneChangeModel::decideDirection")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        )
     }
 
     /// C++: `void * MSAbstractLaneChangeModel::inform(void *, MSVehicle *)` [virtual, pure virtual]
@@ -835,7 +1203,8 @@ impl MSAbstractLaneChangeModel {
     // virtual void resetState() {}
     #[allow(unused_variables)]
     pub fn reset_state(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::resetState")
+        // C++ base body is empty; subclasses override
+
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getSafetyFactor() const` [const, virtual]
@@ -845,7 +1214,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_safety_factor(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getSafetyFactor")
+        1.0
+
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getOppositeSafetyFactor() const` [const, virtual]
@@ -855,7 +1225,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_opposite_safety_factor(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getOppositeSafetyFactor")
+        1.0
+
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::debugVehicle() const` [const, virtual]
@@ -865,7 +1236,8 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn debug_vehicle(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::debugVehicle")
+        false
+
     }
 
     /// C++: `void MSAbstractLaneChangeModel::changedToOpposite()`
@@ -877,7 +1249,8 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn changed_to_opposite(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::changedToOpposite")
+        self.myAmOpposite = !self.myAmOpposite;
+        self.myAlreadyChanged = true;
     }
 
     /// C++: `void MSAbstractLaneChangeModel::unchanged()`
@@ -890,7 +1263,11 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn unchanged(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::unchanged")
+        if self.myLastLaneChangeOffset > 0 {
+            self.myLastLaneChangeOffset += delta_t();
+        } else if self.myLastLaneChangeOffset < 0 {
+            self.myLastLaneChangeOffset -= delta_t();
+        }
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::getShadowLane() const` [const]
@@ -900,7 +1277,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_shadow_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::getShadowLane")
+        self.myShadowLane
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::getShadowLane(const MSLane *) const` [const]
@@ -911,7 +1288,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_shadow_lane_2(&self, lane: Ptr<MSLane>) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::getShadowLane")
+        self.get_shadow_lane_3(lane, self.myVehicle.get_lateral_position_on_lane())
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::getShadowLane(const MSLane *, double) const` [const]
@@ -944,7 +1321,24 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_shadow_lane_3(&self, lane: Ptr<MSLane>, posLat: f64) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::getShadowLane")
+        if !self.myNoPartiallyOccupatedByShadow.contains(&lane) {
+            // initialize shadow lane
+            let overlap = self.myVehicle.get_lateral_overlap_3(posLat, lane);
+            if self.myAmOpposite {
+                // return the neigh-lane in forward direction
+                lane.get_parallel_lane(1, true)
+            } else if overlap > NUMERICAL_EPS {
+                let shadowDirection: i32 = if posLat < 0. { -1 } else { 1 };
+                lane.get_parallel_lane(shadowDirection, true)
+            } else if self.is_changing_lanes() && self.myLaneChangeCompletion < 0.5 {
+                // "reserve" target lane even when there is no overlap yet
+                lane.get_parallel_lane(self.myLaneChangeDirection, true)
+            } else {
+                Ptr::null()
+            }
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `const std::vector<MSLane *> & MSAbstractLaneChangeModel::getShadowFurtherLanes() const` [const]
@@ -953,7 +1347,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_shadow_further_lanes(&self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSAbstractLaneChangeModel::getShadowFurtherLanes")
+        &self.myShadowFurtherLanes
     }
 
     /// C++: `const std::vector<double> & MSAbstractLaneChangeModel::getShadowFurtherLanesPosLat() const` [const]
@@ -962,7 +1356,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_shadow_further_lanes_pos_lat(&self) -> &Vec<f64> {
-        todo!("port MSAbstractLaneChangeModel::getShadowFurtherLanesPosLat")
+        &self.myShadowFurtherLanesPosLat
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::getTargetLane() const` [const]
@@ -972,7 +1366,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_target_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::getTargetLane")
+        self.myTargetLane
     }
 
     /// C++: `const std::vector<MSLane *> & MSAbstractLaneChangeModel::getFurtherTargetLanes() const` [const]
@@ -981,7 +1375,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_further_target_lanes(&self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSAbstractLaneChangeModel::getFurtherTargetLanes")
+        &self.myFurtherTargetLanes
     }
 
     /// C++: `SUMOTime MSAbstractLaneChangeModel::getLastLaneChangeOffset() const` [const]
@@ -990,7 +1384,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_lane_change_offset(&self) -> SUMOTime {
-        todo!("port MSAbstractLaneChangeModel::getLastLaneChangeOffset")
+        self.myLastLaneChangeOffset
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::pastMidpoint() const` [const]
@@ -1000,7 +1394,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn past_midpoint(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::pastMidpoint")
+        self.myLaneChangeCompletion >= 0.5
     }
 
     /// C++: `SUMOTime MSAbstractLaneChangeModel::remainingTime() const` [const]
@@ -1024,7 +1418,23 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn remaining_time(&self) -> SUMOTime {
-        todo!("port MSAbstractLaneChangeModel::remainingTime")
+        debug_assert!(self.is_changing_lanes()); // Only to be called during ongoing lane change
+        let lcParams = &self.myVehicle.get_vehicle_type().get_parameter().lcParameter;
+        if !lcParams.contains_key(&SUMO_ATTR_LCA_MAXSPEEDLATSTANDING) && !lcParams.contains_key(&SUMO_ATTR_LCA_MAXSPEEDLATFACTOR) {
+            if self.myVehicle.get_vehicle_type().was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
+                return time2steps((1. - self.myLaneChangeCompletion) * self.myManeuverDist / self.myVehicle.get_vehicle_type().get_max_speed_lat());
+            } else {
+                return ((1. - self.myLaneChangeCompletion) * MSGlobals::lane_change_duration() as f64) as SUMOTime;
+            }
+        }
+        // Using maxSpeedLat(Factor/Standing)
+        let urgent = (self.myOwnState & LCA_URGENT) != 0;
+        time2steps(self.estimate_lc_duration(
+            self.myVehicle.get_speed(),
+            (self.myManeuverDist * (1. - self.myLaneChangeCompletion)).abs(),
+            self.myVehicle.get_car_follow_model().get_max_decel(),
+            urgent,
+        ))
     }
 
     /// C++: `double MSAbstractLaneChangeModel::estimateLCDuration(const double, const double, const double, bool) const` [const, virtual]
@@ -1137,7 +1547,108 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn estimate_lc_duration(&self, speed: f64, remainingManeuverDist: f64, decel: f64, urgent: bool) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::estimateLCDuration")
+        let lcParams = &self.myVehicle.get_vehicle_type().get_parameter().lcParameter;
+        if !lcParams.contains_key(&SUMO_ATTR_LCA_MAXSPEEDLATSTANDING) && !lcParams.contains_key(&SUMO_ATTR_LCA_MAXSPEEDLATFACTOR) {
+            if !self.myVehicle.get_vehicle_type().was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
+                // no dependency of lateral speed on longitudinal speed. (Only called prior to LC initialization to determine whether it could be completed)
+                return steps2time(MSGlobals::lane_change_duration());
+            } else {
+                return remainingManeuverDist / self.myVehicle.get_vehicle_type().get_max_speed_lat();
+            }
+        }
+
+        if remainingManeuverDist == 0. {
+            return 0.;
+        }
+
+        // Check argument assumptions
+        debug_assert!(speed >= 0.);
+        debug_assert!(remainingManeuverDist >= 0.);
+        debug_assert!(decel > 0.);
+        debug_assert!(self.myVehicle.get_vehicle_type().get_max_speed_lat() > 0.);
+        debug_assert!(self.myMaxSpeedLatStanding <= self.myVehicle.get_vehicle_type().get_max_speed_lat());
+        debug_assert!(self.myMaxSpeedLatStanding >= 0.);
+
+        // for brevity
+        let v0 = speed;
+        let D = remainingManeuverDist;
+        let b = decel;
+        let wmin = self.myMaxSpeedLatStanding;
+        let f = self.myMaxSpeedLatFactor;
+        let wmax = self.myVehicle.get_vehicle_type().get_max_speed_lat();
+
+        /* Here's the approach for the calculation of the required time for the LC:
+         * To obtain the maximal LC-duration, for v(t) we assume that v(t)=max(0, v0-b*t),
+         * Where v(t)=0 <=> t >= ts:=v0/b
+         * For the lateral speed w(t) this gives:
+         * w(t) = min(wmax, wmin + f*v(t))
+         * The lateral distance covered until t is
+         * d(t) = int_0^t w(s) ds
+         * We distinguish three possibilities for the solution d(T)=D, where T is the time of the LC completion.
+         * 1) w(T) = wmax, i.e. v(T)>(wmax-wmin)/f
+         * 2) wmin < w(T) < wmax, i.e. (wmax-wmin)/f > v(T) > 0
+         * 3) w(T) = wmin, i.e., v(T)=0
+         */
+        let vm = (wmax - wmin) / f;
+        let mut distSoFar = 0.;
+        let mut timeSoFar = 0.;
+        let mut v = v0;
+        if v > vm {
+            let wmaxTime = (v0 - vm) / b;
+            let d1 = wmax * wmaxTime;
+            if d1 >= D {
+                return D / wmax;
+            } else {
+                distSoFar += d1;
+                timeSoFar += wmaxTime;
+                v = vm;
+            }
+        }
+        if v > 0. {
+            /* Here, w(t1+t) = wmin + f*v(t1+t) = wmin + f*(v - b*t)
+             * Thus, the additional lateral distance covered after time t is:
+             * d2 = (wmin + f*v)*t - 0.5*f*b*t^2
+             * and the additional lateral distance covered until v=0 at t=v/b is:
+             * d2 = (wmin + 0.5*f*v)*t
+             */
+            let t = v / b; // stop time
+            let d2 = (wmin + 0.5 * f * v) * t; // lateral distance covered until stop
+            debug_assert!(d2 > 0.);
+            if distSoFar + d2 >= D {
+                // LC is completed during this phase
+                let x = 0.5 * f * b;
+                let y = wmin + f * v;
+                /* Solve D - distSoFar = y*t - x*t^2.
+                 * 0 = x*t^2 - y*t/x + (D - distSoFar)/x
+                 */
+                let p = 0.5 * y / x;
+                let q = (D - distSoFar) / x;
+                debug_assert!(p * p - q > 0.);
+                let t2 = p + (p * p - q).sqrt();
+                return timeSoFar + t2;
+            } else {
+                distSoFar += d2;
+                timeSoFar += t;
+                //v = 0;
+            }
+        }
+        // If we didn't return yet this means the LC was not completed until the vehicle stops (if braking with rate b)
+        if wmin == 0. {
+            // LC won't be completed if vehicle stands
+            let mut maneuverDist = remainingManeuverDist;
+            let vModel = self.compute_speed_lat(maneuverDist, &mut maneuverDist, urgent);
+            let result = D / vModel;
+            // make sure that the vehicle isn't braking to a stop during the manuever
+            if vModel > SUMO_const_haltingSpeed && (vModel + self.myVehicle.get_acceleration() * result) > SUMO_const_haltingSpeed {
+                // unless the model tells us something different
+                return result;
+            } else {
+                return -1.;
+            }
+        } else {
+            // complete LC with lateral speed wmin
+            return timeSoFar + (D - distSoFar) / wmin;
+        }
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::isChangingLanes() const` [const]
@@ -1147,7 +1658,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn is_changing_lanes(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::isChangingLanes")
+        self.myLaneChangeCompletion < (1. - NUMERICAL_EPS)
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getLaneChangeCompletion() const` [const]
@@ -1157,7 +1668,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_change_completion(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getLaneChangeCompletion")
+        self.myLaneChangeCompletion
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getLaneChangeDirection() const` [const]
@@ -1167,7 +1678,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_change_direction(&self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getLaneChangeDirection")
+        self.myLaneChangeDirection
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getShadowDirection() const` [const]
@@ -1194,7 +1705,23 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_shadow_direction(&self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getShadowDirection")
+        if self.is_changing_lanes() {
+            if self.past_midpoint() {
+                -self.myLaneChangeDirection
+            } else {
+                self.myLaneChangeDirection
+            }
+        } else if self.myShadowLane.is_null() {
+            0
+        } else if self.myAmOpposite {
+            // return neigh-lane in forward direction
+            1
+        } else if std::ptr::eq(self.myShadowLane.get_edge(), self.myVehicle.get_lane().get_edge()) {
+            self.myShadowLane.get_index() - self.myVehicle.get_lane().get_index()
+        } else {
+            // overlap with opposite direction lane
+            1
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::calcAngleOffset()`
@@ -1215,7 +1742,22 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn calc_angle_offset(&mut self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::calcAngleOffset")
+        let mut result = 0.;
+        if !(self.mySpeedLat.abs() < NUMERICAL_EPS && (self.myPreviousAngleOffset * 180. / std::f64::consts::PI).abs() < NUMERICAL_EPS) {
+            let speed = self.myVehicle.get_speed();
+            if self.myVehicle.get_length() < (speed2dist(self.mySpeedLat) * speed2dist(self.mySpeedLat) + speed2dist(speed) * speed2dist(speed)).sqrt() {
+                result = self.mySpeedLat.atan2(speed);
+            } else {
+                result = self.myPreviousAngleOffset
+                    + ((std::f64::consts::PI / 2. - self.myPreviousAngleOffset).sin()
+                        * (speed2dist(self.mySpeedLat) - self.myPreviousAngleOffset.tan() * speed2dist(speed))
+                        / self.myVehicle.get_length())
+                    .asin();
+            }
+        }
+
+        self.myAngleOffset = result;
+        result
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getAngleOffset() const` [const]
@@ -1225,7 +1767,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_angle_offset(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getAngleOffset")
+        self.myAngleOffset
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setAngleOffset(const double)`
@@ -1235,7 +1777,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_angle_offset(&mut self, angleOffset: f64) {
-        todo!("port MSAbstractLaneChangeModel::setAngleOffset")
+        self.myAngleOffset = angleOffset;
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setPreviousAngleOffset(const double)`
@@ -1245,7 +1787,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_previous_angle_offset(&mut self, angleOffset: f64) {
-        todo!("port MSAbstractLaneChangeModel::setPreviousAngleOffset")
+        self.myPreviousAngleOffset = angleOffset;
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::alreadyChanged() const` [const]
@@ -1255,7 +1797,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn already_changed(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::alreadyChanged")
+        self.myAlreadyChanged
     }
 
     /// C++: `void MSAbstractLaneChangeModel::resetChanged()`
@@ -1265,7 +1807,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn reset_changed(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::resetChanged")
+        self.myAlreadyChanged = false;
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::startLaneChangeManeuver(MSLane *, MSLane *, int)`
@@ -1289,7 +1831,25 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn start_lane_change_maneuver(&mut self, source: Ptr<MSLane>, target: Ptr<MSLane>, direction: i32) -> bool {
-        todo!("port MSAbstractLaneChangeModel::startLaneChangeManeuver")
+        if MSGlobals::lane_change_duration() > delta_t() {
+            self.myLaneChangeCompletion = 0.;
+            self.myLaneChangeDirection = direction;
+            self.set_maneuver_dist((target.get_width() + source.get_width()) * 0.5 * direction as f64);
+            self.myVehicle.m().switch_off_signal(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 | MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32);
+            let signal = if (direction == 1) != MSGlobals::lefthand() {
+                MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32
+            } else {
+                MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32
+            };
+            self.myVehicle.m().switch_on_signal(signal);
+            if MY_LC_OUTPUT.load(Ordering::Relaxed) {
+                self.memorize_gaps_at_lc_init();
+            }
+            true
+        } else {
+            self.primary_lane_changed(source, target, direction);
+            false
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::memorizeGapsAtLCInit()`
@@ -1300,7 +1860,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn memorize_gaps_at_lc_init(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::memorizeGapsAtLCInit")
+        self.myDontResetLCGaps = true;
     }
 
     /// C++: `void MSAbstractLaneChangeModel::clearGapsAtLCInit()`
@@ -1310,7 +1870,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn clear_gaps_at_lc_init(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::clearGapsAtLCInit")
+        self.myDontResetLCGaps = false;
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::updateCompletion()`
@@ -1325,7 +1885,13 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_completion(&mut self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::updateCompletion")
+        let pastBefore = self.past_midpoint();
+        // maneuverDist is not updated in the context of continuous lane changing but represents the full LC distance
+        let mut maneuverDist = self.get_maneuver_dist();
+        let speedLat = self.compute_speed_lat(0., &mut maneuverDist, (self.myOwnState & LCA_URGENT) != 0);
+        self.set_speed_lat(speedLat);
+        self.myLaneChangeCompletion += speed2dist(self.mySpeedLat) / self.myManeuverDist;
+        !pastBefore && self.past_midpoint()
     }
 
     /// C++: `void MSAbstractLaneChangeModel::updateShadowLane()`
@@ -1442,7 +2008,33 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_target_lane(&mut self) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::updateTargetLane")
+        if !self.myTargetLane.is_null() {
+            self.myTargetLane.m().reset_maneuver_reservation(self.myVehicle);
+        }
+        // Clear old further target lanes
+        for &oldTargetLane in self.myFurtherTargetLanes.iter() {
+            if !oldTargetLane.is_null() {
+                oldTargetLane.m().reset_maneuver_reservation(self.myVehicle);
+            }
+        }
+        self.myFurtherTargetLanes.clear();
+
+        // Get new target lanes and issue a maneuver reservation.
+        let mut targetDir: i32 = 0;
+        self.myTargetLane = self.determine_target_lane(&mut targetDir);
+        if !self.myTargetLane.is_null() {
+            self.myTargetLane.m().set_maneuver_reservation(self.myVehicle);
+            // further targets are just the target lanes corresponding to the vehicle's further lanes
+            // @note In a neglectable amount of situations we might add a reservation for a shadow further lane.
+            for &furtherLane in self.myVehicle.get_further_lanes().iter() {
+                let furtherTargetLane = furtherLane.get_parallel_lane(targetDir, true);
+                self.myFurtherTargetLanes.push(furtherTargetLane);
+                if !furtherTargetLane.is_null() {
+                    furtherTargetLane.m().set_maneuver_reservation(self.myVehicle);
+                }
+            }
+        }
+        self.myTargetLane
     }
 
     /// C++: `MSLane * MSAbstractLaneChangeModel::determineTargetLane(int &) const` [const]
@@ -1477,7 +2069,32 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn determine_target_lane(&self, targetDir: &mut i32) -> Ptr<MSLane> {
-        todo!("port MSAbstractLaneChangeModel::determineTargetLane")
+        *targetDir = 0;
+        if self.myManeuverDist == 0. {
+            return Ptr::null();
+        }
+        // Current lateral boundaries of the vehicle
+        let vehRight = self.myVehicle.get_lateral_position_on_lane() - 0.5 * self.myVehicle.get_width();
+        let vehLeft = self.myVehicle.get_lateral_position_on_lane() + 0.5 * self.myVehicle.get_width();
+        let halfLaneWidth = 0.5 * self.myVehicle.get_lane().get_width();
+
+        if vehRight + self.myManeuverDist < -halfLaneWidth {
+            // Vehicle intends to traverse the right lane boundary
+            *targetDir = -1;
+        } else if vehLeft + self.myManeuverDist > halfLaneWidth {
+            // Vehicle intends to traverse the left lane boundary
+            *targetDir = 1;
+        }
+        if *targetDir == 0 {
+            // Presently, no maneuvering into another lane is begun.
+            return Ptr::null();
+        }
+        let target = self.myVehicle.get_lane().get_parallel_lane(*targetDir, true);
+        if target.is_null() || target == self.myShadowLane {
+            Ptr::null()
+        } else {
+            target
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::endLaneChangeManeuver(const MSMoveReminder::Notification)`
@@ -1506,7 +2123,21 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn end_lane_change_maneuver(&mut self, reason: MSMoveReminder_Notification) {
-        todo!("port MSAbstractLaneChangeModel::endLaneChangeManeuver")
+        // UNUSED_PARAMETER(reason);
+        self.myLaneChangeCompletion = 1.;
+        self.cleanup_shadow_lane();
+        self.cleanup_target_lane();
+        self.myNoPartiallyOccupatedByShadow.clear();
+        self.myVehicle.m().switch_off_signal(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 | MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32);
+        self.myVehicle.m().fix_position();
+        if self.myAmOpposite && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
+            if reason == MSMoveReminder_Notification::NOTIFICATION_PARKING && self.myVehicle.get_next_stop().isOpposite {
+                // opposite driving continues after parking
+            } else {
+                // aborted maneuver
+                self.changed_to_opposite();
+            }
+        }
     }
 
     /// C++: `void MSAbstractLaneChangeModel::cleanupShadowLane()`
@@ -1533,7 +2164,18 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_shadow_lane(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::cleanupShadowLane")
+        if !self.myShadowLane.is_null() {
+            self.myShadowLane.m().reset_partial_occupation(self.myVehicle);
+            self.myShadowLane = Ptr::null();
+        }
+        for &further in self.myShadowFurtherLanes.iter() {
+            further.m().reset_partial_occupation(self.myVehicle);
+            if !further.get_bidi_lane().is_null() {
+                further.get_bidi_lane().m().reset_partial_occupation(self.myVehicle);
+            }
+        }
+        self.myShadowFurtherLanes.clear();
+        self.myNoPartiallyOccupatedByShadow.clear();
     }
 
     /// C++: `void MSAbstractLaneChangeModel::cleanupTargetLane()`
@@ -1559,7 +2201,16 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_target_lane(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::cleanupTargetLane")
+        if !self.myTargetLane.is_null() {
+            self.myTargetLane.m().reset_maneuver_reservation(self.myVehicle);
+            self.myTargetLane = Ptr::null();
+        }
+        for &further in self.myFurtherTargetLanes.iter() {
+            if !further.is_null() {
+                further.m().reset_maneuver_reservation(self.myVehicle);
+            }
+        }
+        self.myFurtherTargetLanes.clear();
     }
 
     /// C++: `bool MSAbstractLaneChangeModel::saveBlockerLength(double, double)` [virtual]
@@ -1569,7 +2220,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn save_blocker_length(&mut self, arg0: f64, arg1: f64) -> bool {
-        todo!("port MSAbstractLaneChangeModel::saveBlockerLength")
+        true
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setShadowPartialOccupator(MSLane *)`
@@ -1578,7 +2229,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_shadow_partial_occupator(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSAbstractLaneChangeModel::setShadowPartialOccupator")
+        self.myPartiallyOccupatedByShadow.push(lane);
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setNoShadowPartialOccupator(MSLane *)`
@@ -1587,7 +2238,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_no_shadow_partial_occupator(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSAbstractLaneChangeModel::setNoShadowPartialOccupator")
+        self.myNoPartiallyOccupatedByShadow.push(lane);
     }
 
     /// C++: `void MSAbstractLaneChangeModel::primaryLaneChanged(MSLane *, MSLane *, int)`
@@ -1693,7 +2344,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn sublane_change_completed(&self, latDist: f64) -> bool {
-        todo!("port MSAbstractLaneChangeModel::sublaneChangeCompleted")
+        panic!(
+            "{}",
+            ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
+        );
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setShadowApproachingInformation(MSLink *) const` [const]
@@ -1728,7 +2382,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn is_opposite(&self) -> bool {
-        todo!("port MSAbstractLaneChangeModel::isOpposite")
+        self.myAmOpposite
     }
 
     /// C++: `int MSAbstractLaneChangeModel::getNormalizedLaneIndex()`
@@ -1744,7 +2398,12 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_normalized_lane_index(&mut self) -> i32 {
-        todo!("port MSAbstractLaneChangeModel::getNormalizedLaneIndex")
+        let i = self.myVehicle.get_lane().get_index();
+        if self.myAmOpposite {
+            self.myVehicle.get_lane().get_parallel_opposite().get_edge().get_num_lanes() + self.myVehicle.get_lane().get_edge().get_num_lanes() - 1 - i
+        } else {
+            i
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getCommittedSpeed() const` [const]
@@ -1753,7 +2412,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_committed_speed(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getCommittedSpeed")
+        self.myCommittedSpeed
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getSpeedLat() const` [const]
@@ -1763,7 +2422,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_lat(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getSpeedLat")
+        self.mySpeedLat
     }
 
     /// C++: `void MSAbstractLaneChangeModel::resetSpeedLat()` [virtual]
@@ -1775,7 +2434,9 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn reset_speed_lat(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::resetSpeedLat")
+        if MSGlobals::lane_change_duration() > 0 && !self.is_changing_lanes() {
+            self.set_speed_lat(0.);
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getAccelerationLat() const` [const]
@@ -1785,7 +2446,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_acceleration_lat(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getAccelerationLat")
+        self.myAccelerationLat
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getStrategicLookahead() const` [const]
@@ -1794,7 +2455,7 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_strategic_lookahead(&self) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::getStrategicLookahead")
+        self.myStrategicLookahead
     }
 
     /// C++: `void MSAbstractLaneChangeModel::setSpeedLat(double)`
@@ -1806,7 +2467,8 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_lat(&mut self, speedLat: f64) {
-        todo!("port MSAbstractLaneChangeModel::setSpeedLat")
+        self.myAccelerationLat = speed2accel(speedLat - self.mySpeedLat);
+        self.mySpeedLat = speedLat;
     }
 
     /// C++: `double MSAbstractLaneChangeModel::computeSpeedLat(double, double &, bool) const` [const, virtual]
@@ -1822,7 +2484,12 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::computeSpeedLat")
+        if self.myVehicle.get_vehicle_type().was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
+            let stepsToChange = (maneuverDist.abs() / speed2dist(self.myVehicle.get_vehicle_type().get_max_speed_lat())).ceil() as i32;
+            dist2speed(*maneuverDist / stepsToChange as f64)
+        } else {
+            *maneuverDist / steps2time(MSGlobals::lane_change_duration())
+        }
     }
 
     /// C++: `double MSAbstractLaneChangeModel::getAssumedDecelForLaneChangeDuration() const` [const, virtual]
