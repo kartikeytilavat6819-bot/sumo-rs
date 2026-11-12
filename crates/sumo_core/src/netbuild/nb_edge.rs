@@ -2579,7 +2579,30 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_edge2_edge_connection(&mut self, dest: Ptr<NBEdge>, overrideRemoval: bool, permission: SVCPermissions) -> bool {
-        todo!("port NBEdge::addEdge2EdgeConnection")
+        if self.myStep == NBEdge_EdgeBuildingStep::INIT_REJECT_CONNECTIONS {
+            return true;
+        }
+        // check whether the node was merged and now a connection between
+        //  not matching edges is tried to be added
+        if !dest.is_null() && self.myTo != dest.myFrom {
+            return false;
+        }
+        if dest.is_null() {
+            self.invalidate_connections(false);
+            self.myConnections.push(NBEdge_Connection::new(-1, dest, -1, false));
+            self.myStep = NBEdge_EdgeBuildingStep::LANES2LANES_USER;
+        } else if !self.myConnections.iter().any(|c| NBEdge_connections_toedge_finder::new(dest, false).call_op(c)) {
+            self.myConnections.push(NBEdge_Connection::new(-1, dest, -1, false));
+            self.myConnections.last_mut().unwrap().permissions = permission;
+        }
+        if overrideRemoval {
+            // override earlier delete decision
+            self.myConnectionsToDelete.retain(|c| c.toEdge != dest);
+        }
+        if self.myStep < NBEdge_EdgeBuildingStep::EDGE2EDGES {
+            self.myStep = NBEdge_EdgeBuildingStep::EDGE2EDGES;
+        }
+        true
     }
 
     /// C++: `bool NBEdge::addLane2LaneConnection(int, NBEdge *, int, Lane2LaneInfoType, bool, bool, KeepClear, double, double, double, double, double, const PositionVector &, const bool, SVCPermissions, const bool, const std::string &, SVCPermissions, SVCPermissions, bool)`
@@ -2587,7 +2610,19 @@ impl NBEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_lane2_lane_connection(&mut self, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, type_: NBEdge_Lane2LaneInfoType, mayUseSameDestination: bool, mayDefinitelyPass: bool, keepClear: KeepClear, contPos: f64, visibility: f64, speed: f64, friction: f64, length: f64, customShape: &PositionVector, uncontrolled: bool, permissions: SVCPermissions, indirectLeft: bool, edgeType: &str, changeLeft: SVCPermissions, changeRight: SVCPermissions, postProcess: bool) -> bool {
-        todo!("port NBEdge::addLane2LaneConnection")
+        if self.myStep == NBEdge_EdgeBuildingStep::INIT_REJECT_CONNECTIONS {
+            return true;
+        }
+        // check whether the node was merged and now a connection between
+        //  not matching edges is tried to be added
+        //  This happens f.e. within the ptv VISSIM-example "Beijing"
+        if self.myTo != dest.myFrom {
+            return false;
+        }
+        if !self.add_edge2_edge_connection(dest, false, SVC_UNSPECIFIED) {
+            return false;
+        }
+        self.set_connection(fromLane, dest, toLane, type_, mayUseSameDestination, mayDefinitelyPass, keepClear, contPos, visibility, speed, friction, length, customShape, uncontrolled, permissions, indirectLeft, edgeType, changeLeft, changeRight, postProcess)
     }
 
     /// C++: `bool NBEdge::addLane2LaneConnections(int, NBEdge *, int, int, Lane2LaneInfoType, bool, bool)`
@@ -2609,15 +2644,91 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_lane2_lane_connections(&mut self, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, no: i32, type_: NBEdge_Lane2LaneInfoType, invalidatePrevious: bool, mayDefinitelyPass: bool) -> bool {
-        todo!("port NBEdge::addLane2LaneConnections")
+        if invalidatePrevious {
+            self.invalidate_connections(true);
+        }
+        let mut ok = true;
+        let mut i = 0;
+        while i < no && ok {
+            // header defaults of addLane2LaneConnection for the arguments the C++ call omits
+            ok &= self.add_lane2_lane_connection(fromLane + i, dest, toLane + i, type_, false, mayDefinitelyPass, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, my_default_connection_length(), &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+            i += 1;
+        }
+        ok
     }
 
     /// C++: `bool NBEdge::setConnection(int, NBEdge *, int, Lane2LaneInfoType, bool, bool, KeepClear, double, double, double, double, double, const PositionVector &, const bool, SVCPermissions, bool, const std::string &, SVCPermissions, SVCPermissions, bool)`
     /// Adds a connection to a certain lane of a certain edge
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn set_connection(&mut self, lane: i32, destEdge: Ptr<NBEdge>, destLane: i32, type_: NBEdge_Lane2LaneInfoType, mayUseSameDestination: bool, mayDefinitelyPass: bool, keepClear: KeepClear, contPos: f64, visibility: f64, speed: f64, friction: f64, length: f64, customShape: &PositionVector, uncontrolled: bool, permissions: SVCPermissions, indirectLeft: bool, edgeType: &str, changeLeft: SVCPermissions, changeRight: SVCPermissions, postProcess: bool) -> bool {
-        todo!("port NBEdge::setConnection")
+    pub fn set_connection(&mut self, lane: i32, destEdge: Ptr<NBEdge>, destLane: i32, type_: NBEdge_Lane2LaneInfoType, mayUseSameDestination: bool, mayDefinitelyPass: bool, keepClear: KeepClear, contPos: f64, visibility: f64, speed: f64, friction: f64, length: f64, customShape: &PositionVector, uncontrolled: bool, mut permissions: SVCPermissions, indirectLeft: bool, edgeType: &str, changeLeft: SVCPermissions, changeRight: SVCPermissions, postProcess: bool) -> bool {
+        if self.myStep == NBEdge_EdgeBuildingStep::INIT_REJECT_CONNECTIONS {
+            return false;
+        }
+        // some kind of a misbehavior which may occur when the junction's outgoing
+        //  edge priorities were not properly computed: a single lane may be set to
+        //  be approached more than once by one of our lanes. We refuse such a connection.
+        if !mayUseSameDestination && self.has_connection_to(destEdge, destLane, -1) {
+            return false;
+        }
+        if self.myConnections.iter().any(|c| NBEdge_connections_finder::new(lane, destEdge, destLane, false).call_op(c)) {
+            return true;
+        }
+        if (self.myLanes.len() as i32) <= lane || destEdge.get_num_lanes() <= destLane {
+            // problem might be corrigible in post-processing
+            write_warningf!("Could not set connection from '%' to '%'.", self.get_lane_id(lane), destEdge.get_lane_id(destLane));
+            return false;
+        }
+        let mut i = 0;
+        while i < self.myConnections.len() {
+            if self.myConnections[i].toEdge == destEdge && (self.myConnections[i].fromLane == -1 || self.myConnections[i].toLane == -1) {
+                if permissions == SVC_UNSPECIFIED {
+                    // @note: in case we were to add multiple connections from the
+                    // same lane the second one wouldn't get the special permissions!
+                    permissions = self.myConnections[i].permissions;
+                }
+                self.myConnections.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        self.myConnections.push(NBEdge_Connection::new(lane, destEdge, destLane, false));
+        let last = self.myConnections.last_mut().unwrap();
+        if mayDefinitelyPass {
+            last.mayDefinitelyPass = true;
+        }
+        last.keepClear = keepClear;
+        last.contPos = contPos;
+        last.visibility = visibility;
+        last.permissions = permissions;
+        last.indirectLeft = indirectLeft;
+        last.edgeType = edgeType.to_string();
+        last.changeLeft = changeLeft;
+        last.changeRight = changeRight;
+        last.speed = speed;
+        last.friction = friction;
+        last.customLength = length;
+        last.customShape = customShape.clone();
+        last.uncontrolled = uncontrolled;
+        if type_ == NBEdge_Lane2LaneInfoType::USER {
+            self.myStep = NBEdge_EdgeBuildingStep::LANES2LANES_USER;
+        } else {
+            // check whether we have to take another look at it later
+            if type_ == NBEdge_Lane2LaneInfoType::COMPUTED {
+                // yes, the connection was set using an algorithm which requires a recheck
+                self.myStep = NBEdge_EdgeBuildingStep::LANES2LANES_RECHECK;
+            } else if self.myStep != NBEdge_EdgeBuildingStep::LANES2LANES_RECHECK {
+                // ok, we only skip the recheck if we did not add something that has to be rechecked
+                self.myStep = NBEdge_EdgeBuildingStep::LANES2LANES_DONE;
+            }
+        }
+        if postProcess {
+            // override earlier delete decision
+            self.myConnectionsToDelete.retain(|it| {
+                !((it.fromLane < 0 || it.fromLane == lane) && (it.toEdge.is_null() || it.toEdge == destEdge) && (it.toLane < 0 || it.toLane == destLane))
+            });
+        }
+        true
     }
 
     /// C++: `std::vector<Connection> NBEdge::getConnectionsFromLane(int, const NBEdge *, int) const` [const]
@@ -2680,7 +2791,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_connected_to(&self, e: Ptr<NBEdge>, ignoreTurnaround: bool) -> bool {
-        todo!("port NBEdge::isConnectedTo")
+        if !ignoreTurnaround && (e == self.myTurnDestination) {
+            return true;
+        }
+        self.myConnections.iter().any(|c| NBEdge_connections_toedge_finder::new(e, false).call_op(c))
     }
 
     /// C++: `const std::vector<Connection> & NBEdge::getConnections() const` [const]
@@ -2690,7 +2804,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_connections(&self) -> &Vec<NBEdge_Connection> {
-        todo!("port NBEdge::getConnections")
+        &self.myConnections
     }
 
     /// C++: `std::vector<Connection> & NBEdge::getConnections()`
@@ -2700,7 +2814,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_connections_2(&mut self) -> &mut Vec<NBEdge_Connection> {
-        todo!("port NBEdge::getConnections")
+        &mut self.myConnections
     }
 
     /// C++: `const EdgeVector * NBEdge::getConnectedSorted()`
@@ -2742,7 +2856,44 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_connected_sorted(&mut self) -> Ptr<EdgeVector> {
-        todo!("port NBEdge::getConnectedSorted")
+        // check whether connections exist and if not, use edges from the node
+        let mut outgoing: EdgeVector = Vec::new();
+        if self.myConnections.is_empty() {
+            outgoing = self.myTo.get_outgoing_edges().clone();
+        } else {
+            for c in self.myConnections.iter() {
+                if !outgoing.contains(&c.toEdge) {
+                    outgoing.push(c.toEdge);
+                }
+            }
+        }
+        for it in self.myConnectionsToDelete.iter() {
+            if it.fromLane < 0 && it.toLane < 0 {
+                // found an edge that shall not be connected
+                if let Some(forbidden) = outgoing.iter().position(|e| *e == it.toEdge) {
+                    outgoing.remove(forbidden);
+                }
+            }
+        }
+        // allocate the sorted container (C++ `new EdgeVector`: ownership goes to the caller)
+        let mut edges: EdgeVector = Vec::with_capacity(outgoing.len());
+        for outedge in outgoing.iter() {
+            if !outedge.is_null() && *outedge != self.myTurnDestination {
+                edges.push(*outedge);
+            }
+        }
+        let sorter = NBContHelper_relative_outgoing_edge_sorter::new(Ptr::from_mut(self));
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
+        edges.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        Ptr::from_raw(Box::into_raw(Box::new(edges)))
     }
 
     /// C++: `EdgeVector NBEdge::getConnectedEdges() const` [const]
@@ -2759,7 +2910,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_connected_edges(&self) -> EdgeVector {
-        todo!("port NBEdge::getConnectedEdges")
+        let mut ret: EdgeVector = Vec::new();
+        for c in self.myConnections.iter() {
+            if !ret.contains(&c.toEdge) {
+                ret.push(c.toEdge);
+            }
+        }
+        ret
     }
 
     /// C++: `EdgeVector NBEdge::getIncomingEdges() const` [const]
@@ -2777,7 +2934,14 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_edges(&self) -> EdgeVector {
-        todo!("port NBEdge::getIncomingEdges")
+        let mut ret: EdgeVector = Vec::new();
+        let candidates = self.myFrom.get_incoming_edges();
+        for e in candidates.iter() {
+            if e.is_connected_to(Ptr::new(self), false) {
+                ret.push(*e);
+            }
+        }
+        ret
     }
 
     /// C++: `std::vector<int> NBEdge::getConnectionLanes(NBEdge *, bool, bool) const` [const]
@@ -2798,7 +2962,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_connection_lanes(&self, currentOutgoing: Ptr<NBEdge>, withBikes: bool, withBusLanes: bool) -> Vec<i32> {
-        todo!("port NBEdge::getConnectionLanes")
+        let mut ret: Vec<i32> = Vec::new();
+        if currentOutgoing != self.myTurnDestination {
+            for c in self.myConnections.iter() {
+                if c.toEdge == currentOutgoing && (withBikes || self.get_permissions(c.fromLane) != SVC_BICYCLE) && (withBusLanes || self.get_permissions(c.fromLane) != SVC_BUS) {
+                    ret.push(c.fromLane);
+                }
+            }
+        }
+        ret
     }
 
     /// C++: `void NBEdge::sortOutgoingConnectionsByAngle()`
@@ -2809,7 +2981,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_angle(&mut self) {
-        todo!("port NBEdge::sortOutgoingConnectionsByAngle")
+        let sorter = NBEdge_connections_relative_edgelane_sorter::new(Ptr::from_mut(self));
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
+        self.myConnections.sort_by(|a, b| {
+            if sorter.call_op(a, b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(b, a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
     }
 
     /// C++: `void NBEdge::sortOutgoingConnectionsByIndex()`
@@ -2820,7 +3002,16 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_index(&mut self) {
-        todo!("port NBEdge::sortOutgoingConnectionsByIndex")
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
+        self.myConnections.sort_by(|a, b| {
+            if NBEdge::connections_sorter(a, b) {
+                std::cmp::Ordering::Less
+            } else if NBEdge::connections_sorter(b, a) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
     }
 
     /// C++: `void NBEdge::remapConnections(const EdgeVector &)`
@@ -2949,7 +3140,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_connections(&mut self, reallowSetting: bool) {
-        todo!("port NBEdge::invalidateConnections")
+        self.myTurnDestination = Ptr::default();
+        self.myConnections.clear();
+        if reallowSetting {
+            self.myStep = NBEdge_EdgeBuildingStep::INIT;
+        } else {
+            self.myStep = NBEdge_EdgeBuildingStep::INIT_REJECT_CONNECTIONS;
+        }
     }
 
     /// C++: `void NBEdge::replaceInConnections(NBEdge *, NBEdge *, int)`
@@ -3123,7 +3320,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_turning_destination(&mut self, e: Ptr<NBEdge>, onlyPossible: bool) {
-        todo!("port NBEdge::setTurningDestination")
+        if !onlyPossible {
+            self.myTurnDestination = e;
+        }
+        self.myPossibleTurnDestination = e;
     }
 
     /// C++: `void NBEdge::setAsMacroscopicConnector()`
@@ -3133,7 +3333,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_as_macroscopic_connector(&mut self) {
-        todo!("port NBEdge::setAsMacroscopicConnector")
+        self.myAmMacroscopicConnector = true;
     }
 
     /// C++: `bool NBEdge::isMacroscopicConnector() const` [const]
@@ -3143,7 +3343,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_macroscopic_connector(&self) -> bool {
-        todo!("port NBEdge::isMacroscopicConnector")
+        self.myAmMacroscopicConnector
     }
 
     /// C++: `void NBEdge::setInsideTLS(bool)`
@@ -3153,7 +3353,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_inside_tls(&mut self, inside: bool) {
-        todo!("port NBEdge::setInsideTLS")
+        self.myAmInTLS = inside;
     }
 
     /// C++: `bool NBEdge::isInsideTLS() const` [const]
@@ -3163,7 +3363,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_inside_tls(&self) -> bool {
-        todo!("port NBEdge::isInsideTLS")
+        self.myAmInTLS
     }
 
     /// C++: `void NBEdge::setJunctionPriority(const NBNode *const, int)`
@@ -3184,7 +3384,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_junction_priority(&mut self, node: Ptr<NBNode>, prio: i32) {
-        todo!("port NBEdge::setJunctionPriority")
+        // DEBUG_JUNCTIONPRIO setParameter calls are compiled out in C++ and omitted here
+        if node == self.myFrom {
+            self.myFromJunctionPriority = prio;
+        } else {
+            self.myToJunctionPriority = prio;
+        }
     }
 
     /// C++: `int NBEdge::getJunctionPriority(const NBNode *const) const` [const]
@@ -3199,7 +3404,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_junction_priority(&self, node: Ptr<NBNode>) -> i32 {
-        todo!("port NBEdge::getJunctionPriority")
+        if node == self.myFrom {
+            self.myFromJunctionPriority
+        } else {
+            self.myToJunctionPriority
+        }
     }
 
     /// C++: `void NBEdge::setLoadedLength(double)`
@@ -3210,7 +3419,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_loaded_length(&mut self, val: f64) {
-        todo!("port NBEdge::setLoadedLength")
+        self.myLoadedLength = val;
     }
 
     /// C++: `void NBEdge::setAverageLengthWithOpposite(double)`
@@ -3221,7 +3430,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_average_length_with_opposite(&mut self, val: f64) {
-        todo!("port NBEdge::setAverageLengthWithOpposite")
+        self.myLength = val;
     }
 
     /// C++: `void NBEdge::dismissVehicleClassInformation()`
@@ -3235,7 +3444,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn dismiss_vehicle_class_information(&mut self) {
-        todo!("port NBEdge::dismissVehicleClassInformation")
+        for lane in self.myLanes.iter_mut() {
+            lane.permissions = SVC_ALL;
+            lane.preferred = 0;
+        }
     }
 
     /// C++: `const std::string & NBEdge::getTypeID() const` [const]
@@ -3245,7 +3457,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_type_id(&self) -> &str {
-        todo!("port NBEdge::getTypeID")
+        &self.myType
     }
 
     /// C++: `bool NBEdge::needsLaneSpecificOutput() const` [const]
@@ -7436,7 +7648,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn connections_sorter(c1: &NBEdge_Connection, c2: &NBEdge_Connection) -> bool {
-        todo!("port NBEdge::connections_sorter")
+        if c1.fromLane != c2.fromLane {
+            return c1.fromLane < c2.fromLane;
+        }
+        if c1.toEdge != c2.toEdge {
+            return false; // do not change ordering among toEdges as this is determined by angle in an earlier step
+        }
+        c1.toLane < c2.toLane
     }
 
     /// C++: `void NBEdge::NBEdge(const NBEdge &)` [private]
@@ -7733,7 +7951,7 @@ impl NBEdge_connections_finder {
     //             myFromLane(fromLane), myEdge2Find(edge2find), myLane2Find(lane2find), myInvertEdge2find(invertEdge2find) { }
     #[allow(unused_variables)]
     pub fn new(fromLane: i32, edge2find: Ptr<NBEdge>, lane2find: i32, invertEdge2find: bool) -> Self {
-        todo!("port connections_finder::connections_finder")
+        NBEdge_connections_finder { myFromLane: fromLane, myEdge2Find: edge2find, myLane2Find: lane2find, myInvertEdge2find: invertEdge2find }
     }
 
     /// C++: `bool connections_finder::operator()(const Connection &) const` [const]
@@ -7745,7 +7963,9 @@ impl NBEdge_connections_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
-        todo!("port connections_finder::operator()")
+        (c.fromLane == self.myFromLane || self.myFromLane == -1)
+            && ((!self.myInvertEdge2find && c.toEdge == self.myEdge2Find) || (self.myInvertEdge2find && c.toEdge != self.myEdge2Find))
+            && (c.toLane == self.myLane2Find || self.myLane2Find == -1)
     }
 
 }
@@ -7797,7 +8017,7 @@ impl NBEdge_connections_relative_edgelane_sorter {
     // explicit connections_relative_edgelane_sorter(NBEdge* e) : myEdge(e) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>) -> Self {
-        todo!("port connections_relative_edgelane_sorter::connections_relative_edgelane_sorter")
+        NBEdge_connections_relative_edgelane_sorter { myEdge: e }
     }
 
     /// C++: `int connections_relative_edgelane_sorter::operator()(const Connection &, const Connection &) const` [const]
@@ -7811,7 +8031,10 @@ impl NBEdge_connections_relative_edgelane_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: &NBEdge_Connection, c2: &NBEdge_Connection) -> i32 {
-        todo!("port connections_relative_edgelane_sorter::operator()")
+        if c1.toEdge != c2.toEdge {
+            return NBContHelper_relative_outgoing_edge_sorter::new(self.myEdge).call_op(c1.toEdge, c2.toEdge) as i32;
+        }
+        (c1.toLane < c2.toLane) as i32
     }
 
 }
