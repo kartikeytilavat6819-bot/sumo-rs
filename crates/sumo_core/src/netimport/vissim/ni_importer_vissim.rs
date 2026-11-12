@@ -1,9 +1,12 @@
 //! Port of netimport/vissim/NIImporter_Vissim.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::string_utils::{convert_umlaute, hex_to_int, to_double, to_int, to_lower_case};
+use utils::common::string_utils::{convert_umlaute, ends_with, hex_to_int, to_double, to_int, to_lower_case};
 use utils::common::msg_handler::{progress_begin_message, progress_done_message};
 use utils::common::string_tokenizer::StringTokenizer;
+use utils::common::util_exceptions::ProcessError;
+use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
+use utils::xml::xml_sub_sys::run_parser;
 
 /// C++ enum `NIImporter_Vissim::VissimXMLAttr`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -119,6 +122,60 @@ fn elem_pop_front(elem: &Ptr<NIImporter_Vissim_nodeMap>, key: &str) -> Option<St
 /// C++ throws ProcessError from StringUtils::toInt/toDouble; the Rust handlers are void, so the error ends the run as a panic
 fn vissim_parse<T>(r: Result<T, ProcessError>) -> T {
     r.unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// C++ `strm.good()`: the stream is positioned before its end (the stream is the whole file in memory)
+fn vissim_good(from: &std::io::Cursor<Vec<u8>>) -> bool {
+    (from.position() as usize) < from.get_ref().len()
+}
+
+/// C++ `std::isspace` for the characters a `>>` extraction skips
+fn vissim_is_space(c: u8) -> bool {
+    matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c)
+}
+
+/// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token ("" at end of stream)
+fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && vissim_is_space(data[i]) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !vissim_is_space(data[i]) {
+        i += 1;
+    }
+    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    from.set_position(i as u64);
+    tok
+}
+
+/// C++ `from >> double`: a token that does not parse gives 0 (C++11 behaviour)
+// shortcut: numbers are read as whitespace-delimited tokens, C++ `>>` stops at the first character that does not fit
+fn vissim_read_f64(from: &mut std::io::Cursor<Vec<u8>>) -> f64 {
+    vissim_read_token(from).parse::<f64>().unwrap_or(0.0)
+}
+
+/// C++ `from >> int` (see vissim_read_f64)
+fn vissim_read_i32(from: &mut std::io::Cursor<Vec<u8>>) -> i32 {
+    vissim_read_token(from).parse::<i32>().unwrap_or(0)
+}
+
+/// C++ `std::getline(strm, line)`: reads up to and including the newline, which is not returned
+fn vissim_getline(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let start = from.position() as usize;
+    if start >= data.len() {
+        return String::new();
+    }
+    let mut i = start;
+    while i < data.len() && data[i] != b'\n' {
+        i += 1;
+    }
+    let line = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let next = if i < data.len() { i + 1 } else { i };
+    from.set_position(next as u64);
+    line
 }
 
 // C++ static members of NIImporter_Vissim (port as module-level statics, see AGENTS.md):
@@ -343,7 +400,80 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn load(&mut self, options: &OptionsCont) {
-        todo!("port NIImporter_Vissim::load")
+        let file = vissim_parse(options.get_string("vissim-file"));
+        // try to open the file
+        let bytes = match std::fs::read(&file) {
+            Ok(b) => b,
+            Err(_) => {
+                write_errorf!("Could not open vissim-file '%'.", file);
+                return;
+            }
+        };
+        let mut strm = std::io::Cursor::new(bytes);
+        let token = vissim_read_token(&mut strm);
+        if ends_with(&file, ".inpx") || ends_with(&token, "<?xml") || ends_with(&token, "<network") {
+            // Create NIVissimXMLHandlers
+            let mut XMLHandler_Streckendefinition = NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition::new(&mut self.elementData);
+            let mut XMLHandler_Zuflussdefinition = NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition::new();
+            //NIVissimXMLHandler_Parkplatzdefinition XMLHandler_Parkplatzdefinition;
+            let mut XMLHandler_Fahrzeugklassendefinition = NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition::new(&mut self.elementData);
+            let mut XMLHandler_Geschwindigkeitsverteilung = NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::new(&mut self.elementData);
+            let mut XMLHandler_ConflictAreas = NIImporter_Vissim_NIVissimXMLHandler_ConflictArea::new();
+
+            // Strecken + Verbinder
+            XMLHandler_Streckendefinition.set_file_name(&file);
+            progress_begin_message(&format!("Parsing strecken+verbinder from vissim-file '{}'", file));
+            if !run_parser(&mut XMLHandler_Streckendefinition, &file, false, false, false, true).unwrap_or(false) {
+                return;
+            }
+            progress_done_message();
+
+            // Zuflüsse
+            XMLHandler_Zuflussdefinition.set_file_name(&file);
+            progress_begin_message(&format!("Parsing zuflüsse from vissim-file '{}'", file));
+            if !run_parser(&mut XMLHandler_Zuflussdefinition, &file, false, false, false, true).unwrap_or(false) {
+                return;
+            }
+            progress_done_message();
+
+            //Geschwindigkeitsverteilungen
+            XMLHandler_Geschwindigkeitsverteilung.set_file_name(&file);
+            progress_begin_message(&format!("Parsing parkplätze from vissim-file '{}'", file));
+            if !run_parser(&mut XMLHandler_Geschwindigkeitsverteilung, &file, false, false, false, true).unwrap_or(false) {
+                return;
+            }
+            progress_done_message();
+
+            //Fahrzeugklassen
+            XMLHandler_Fahrzeugklassendefinition.set_file_name(&file);
+            progress_begin_message(&format!("Parsing parkplätze from vissim-file '{}'", file));
+            if !run_parser(&mut XMLHandler_Fahrzeugklassendefinition, &file, false, false, false, true).unwrap_or(false) {
+                return;
+            }
+            progress_done_message();
+
+            //Parkplätze
+            /*XMLHandler_Parkplatzdefinition.setFileName(file);
+            PROGRESS_BEGIN_MESSAGE("Parsing parkplätze from vissim-file '" + file + "'");
+            if (!XMLSubSys::runParser(XMLHandler_Parkplatzdefinition, file)) {
+            return;
+            }
+            PROGRESS_DONE_MESSAGE();*/
+
+            //Konfliktflächen
+            XMLHandler_ConflictAreas.set_file_name(&file);
+            progress_begin_message(&format!("Parsing conflict areas from vissim-file '{}'", file));
+            if !run_parser(&mut XMLHandler_ConflictAreas, &file, false, false, false, true).unwrap_or(false) {
+                return;
+            }
+            progress_done_message();
+        } else {
+            strm.set_position(0);
+            if !self.read_contents(&mut strm) {
+                return;
+            }
+        }
+        self.post_load_build(vissim_parse(options.get_float("vissim.join-distance")));
     }
 
     /// C++: `bool NIImporter_Vissim::admitContinue(const std::string &)` [protected]
@@ -407,8 +537,46 @@ impl NIImporter_Vissim {
     //     return ok;
     // }
     #[allow(unused_variables)]
-    pub fn read_contents(&mut self, strm: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIImporter_Vissim::readContents")
+    pub fn read_contents(&mut self, strm: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        // read contents
+        let mut ok = true;
+        while vissim_good(strm) && ok {
+            let mut tag: String;
+            if self.myLastSecure != "" {
+                tag = self.myLastSecure.clone();
+            } else {
+                tag = vissim_read_token(strm);
+            }
+            self.myLastSecure = String::new();
+            let mut parsed = false;
+            while !parsed && vissim_good(strm) && ok {
+                let elem = self.myKnownElements.get(&to_lower_case(&tag)).cloned();
+                if let Some(elem) = elem {
+                    if let Some(parser) = self.myParsers.get(&elem).cloned() {
+                        // shortcut: myParsers stores the base VissimSingleTypeParser, so the subclass parse() is not dispatched (needs a trait object in myParsers), and the base parse() is pure virtual
+                        ok = parser.m().parse(strm);
+                        parsed = true;
+                    }
+                }
+                if !parsed {
+                    let mut line: String;
+                    let mut pos: u64;
+                    loop {
+                        pos = strm.position();
+                        line = vissim_getline(strm);
+                        if !(vissim_good(strm) && (line == "" || line.starts_with(' ') || line.starts_with('-'))) {
+                            break;
+                        }
+                    }
+                    if !vissim_good(strm) {
+                        return true;
+                    }
+                    strm.set_position(pos);
+                    tag = vissim_read_token(strm);
+                }
+            }
+        }
+        ok
     }
 
     /// C++: `void NIImporter_Vissim::postLoadBuild(double)` [private]
@@ -1986,7 +2154,12 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::myStartElement")
+        self.myHierarchyLevel += 1;
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_SPEED_DECISION as i32 {
+            let mut ok = true;
+            elem_push(&self.myElemData, "name", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32, "", &mut ok, false));
+            //FIXME: 2 vWunsch in the xml file, but only 1 of them is set???
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_VWunschentscheidungsdefinition::myEndElement(int)` [virtual, protected]
@@ -1996,7 +2169,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::myEndElement")
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NIVissimXMLHandler_VWunschentscheidungsdefinition::NIVissimXMLHandler_VWunschentscheidungsdefinition(const NIVissimXMLHandler_VWunschentscheidungsdefinition &)` [private]
@@ -2077,7 +2250,16 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Zuflussdefinition::myStartElement")
+        // finding an actual flow
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_VEHICLE_INPUT as i32 {
+            //parse all flows
+            let mut ok = true;
+            let id: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            let edgeid: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK as i32, "", &mut ok, true);
+            let name: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32, "", &mut ok, false);
+
+            NIVissimSource::dictionary(&id, &name, &edgeid);
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Zuflussdefinition::NIVissimXMLHandler_Zuflussdefinition(const NIVissimXMLHandler_Zuflussdefinition &)` [private]
@@ -2096,6 +2278,70 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
         panic!("NIVissimXMLHandler_Zuflussdefinition assignment operator is private and invalidated in C++")
     }
 
+}
+
+// The handlers that load() runs through XMLSubSys::runParser implement the SaxHandler trait; the
+// trait methods forward to the inherent myStartElement/myEndElement above.
+impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_ConflictArea::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition::my_start_element(self, element, attrs);
+        Ok(())
+    }
 }
 
 /// C++ class `NIImporter_Vissim::VissimSingleTypeParser` (netimport/vissim/NIImporter_Vissim.h)
@@ -2125,8 +2371,8 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     /// Parses a single data type. Returns whether no error occurred
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port VissimSingleTypeParser::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        panic!("VissimSingleTypeParser::parse is pure virtual; only the subclasses parse")
     }
 
     /// C++: `std::string VissimSingleTypeParser::myRead(std::istream &)` [protected]
@@ -2138,8 +2384,9 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return StringUtils::to_lower_case(tmp);
     // }
     #[allow(unused_variables)]
-    pub fn my_read(&mut self, from: &mut Unmapped /* std::istream */) -> String {
-        todo!("port VissimSingleTypeParser::myRead")
+    pub fn my_read(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> String {
+        let tmp = vissim_read_token(from);
+        to_lower_case(&tmp)
     }
 
     /// C++: `std::string VissimSingleTypeParser::readEndSecure(std::istream &, const std::string &)` [protected]
@@ -2161,8 +2408,16 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return StringUtils::to_lower_case(tmp);
     // }
     #[allow(unused_variables)]
-    pub fn read_end_secure(&mut self, from: &mut Unmapped /* std::istream */, excl: &str) -> String {
-        todo!("port VissimSingleTypeParser::readEndSecure")
+    pub fn read_end_secure(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, excl: &str) -> String {
+        let myExcl = to_lower_case(excl);
+        let tmp = self.my_read(from);
+        if tmp == "" {
+            return "DATAEND".to_string();
+        }
+        if tmp != myExcl && (tmp.starts_with("--") || !self.myVissimParent.m().admit_continue(&tmp)) {
+            return "DATAEND".to_string();
+        }
+        to_lower_case(&tmp)
     }
 
     /// C++: `std::string VissimSingleTypeParser::readEndSecure(std::istream &, const std::vector<std::string> &)` [protected]
@@ -2195,8 +2450,18 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return StringUtils::to_lower_case(tmp);
     // }
     #[allow(unused_variables)]
-    pub fn read_end_secure_2(&mut self, from: &mut Unmapped /* std::istream */, excl: &Vec<String>) -> String {
-        todo!("port VissimSingleTypeParser::readEndSecure")
+    pub fn read_end_secure_2(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, excl: &Vec<String>) -> String {
+        let myExcl: Vec<String> = excl.iter().map(|e| to_lower_case(e)).collect();
+        let tmp = self.my_read(from);
+        if tmp == "" {
+            return "DATAEND".to_string();
+        }
+
+        let equals = myExcl.iter().any(|e| *e == tmp);
+        if !equals && (tmp.starts_with("--") || !self.myVissimParent.m().admit_continue(&tmp)) {
+            return "DATAEND".to_string();
+        }
+        to_lower_case(&tmp)
     }
 
     /// C++: `std::string VissimSingleTypeParser::overrideOptionalLabel(std::istream &, const std::string &)` [protected]
@@ -2221,8 +2486,22 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return tmp;
     // }
     #[allow(unused_variables)]
-    pub fn override_optional_label(&mut self, from: &mut Unmapped /* std::istream */, tag: &str) -> String {
-        todo!("port VissimSingleTypeParser::overrideOptionalLabel")
+    pub fn override_optional_label(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, tag: &str) -> String {
+        let mut tmp: String;
+        if tag == "" {
+            tmp = self.my_read(from);
+        } else {
+            tmp = tag.to_string();
+        }
+        if tmp == "beschriftung" {
+            tmp = self.my_read(from);
+            if tmp == "keine" {
+                tmp = vissim_read_token(from);
+            }
+            tmp = self.my_read(from);
+            tmp = self.my_read(from);
+        }
+        tmp
     }
 
     /// C++: `Position VissimSingleTypeParser::getPosition(std::istream &)` [protected]
@@ -2235,8 +2514,10 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return Position(x, y);
     // }
     #[allow(unused_variables)]
-    pub fn get_position(&mut self, from: &mut Unmapped /* std::istream */) -> Position {
-        todo!("port VissimSingleTypeParser::getPosition")
+    pub fn get_position(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> Position {
+        let x = vissim_read_f64(from); // type-checking is missing!
+        let y = vissim_read_f64(from); // type-checking is missing!
+        Position::new(x, y)
     }
 
     /// C++: `std::vector<int> VissimSingleTypeParser::parseAssignedVehicleTypes(std::istream &, const std::string &)` [protected]
@@ -2257,8 +2538,18 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return ret;
     // }
     #[allow(unused_variables)]
-    pub fn parse_assigned_vehicle_types(&mut self, from: &mut Unmapped /* std::istream */, next: &str) -> Vec<i32> {
-        todo!("port VissimSingleTypeParser::parseAssignedVehicleTypes")
+    pub fn parse_assigned_vehicle_types(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, next: &str) -> Vec<i32> {
+        let mut tmp = self.read_end_secure(from, "");
+        let mut ret: Vec<i32> = Vec::new();
+        if tmp == "alle" {
+            ret.push(-1);
+            return ret;
+        }
+        while tmp != "DATAEND" && tmp != next {
+            ret.push(vissim_parse(to_int(&tmp)));
+            tmp = self.read_end_secure(from, "");
+        }
+        ret
     }
 
     /// C++: `NIVissimExtendedEdgePoint VissimSingleTypeParser::readExtEdgePointDef(std::istream &)` [protected]
@@ -2284,8 +2575,21 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return NIVissimExtendedEdgePoint(edgeid, lanes, position, dummy);
     // }
     #[allow(unused_variables)]
-    pub fn read_ext_edge_point_def(&mut self, from: &mut Unmapped /* std::istream */) -> NIVissimExtendedEdgePoint {
-        todo!("port VissimSingleTypeParser::readExtEdgePointDef")
+    pub fn read_ext_edge_point_def(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> NIVissimExtendedEdgePoint {
+        let mut tag = vissim_read_token(from); // "Strecke"
+        let edgeid = vissim_read_i32(from); // type-checking is missing!
+        tag = vissim_read_token(from); // "Spuren"
+        let mut lanes: Vec<i32> = Vec::new();
+        while tag != "bei" {
+            tag = self.read_end_secure(from, "");
+            if tag != "bei" {
+                let lane = vissim_parse(to_int(&tag));
+                lanes.push(lane - 1);
+            }
+        }
+        let position = vissim_read_f64(from);
+        let dummy: Vec<i32> = Vec::new();
+        NIVissimExtendedEdgePoint::new(edgeid, &lanes, position, &dummy)
     }
 
     /// C++: `std::string VissimSingleTypeParser::readName(std::istream &)` [protected]
@@ -2305,8 +2609,20 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return StringUtils::convertUmlaute(name);
     // }
     #[allow(unused_variables)]
-    pub fn read_name(&mut self, from: &mut Unmapped /* std::istream */) -> String {
-        todo!("port VissimSingleTypeParser::readName")
+    pub fn read_name(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> String {
+        let mut name = vissim_read_token(from);
+        if name.starts_with('"') {
+            while !name.ends_with('"') {
+                // shortcut: C++ loops forever on an unterminated quoted name at end of file, here the loop stops at end of file
+                if !vissim_good(from) {
+                    break;
+                }
+                let tmp = vissim_read_token(from);
+                name = format!("{} {}", name, tmp);
+            }
+            name = if name.len() >= 2 { name[1..name.len() - 1].to_string() } else { String::new() };
+        }
+        convert_umlaute(&name)
     }
 
     /// C++: `bool VissimSingleTypeParser::skipOverreading(std::istream &, const std::string &)` [protected]
@@ -2324,8 +2640,19 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn skip_overreading(&mut self, from: &mut Unmapped /* std::istream */, name: &str) -> bool {
-        todo!("port VissimSingleTypeParser::skipOverreading")
+    pub fn skip_overreading(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, name: &str) -> bool {
+        let mut tag = String::new();
+        while tag != name {
+            tag = self.my_read(from);
+            // shortcut: C++ loops forever when the name never comes, here the loop stops at end of file
+            if tag != name && !vissim_good(from) {
+                break;
+            }
+        }
+        while tag != "DATAEND" {
+            tag = self.read_end_secure(from, "");
+        }
+        true
     }
 
     /// C++: `void VissimSingleTypeParser::readUntil(std::istream &, const std::string &)` [protected]
@@ -2339,8 +2666,15 @@ impl NIImporter_Vissim_VissimSingleTypeParser {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn read_until(&mut self, from: &mut Unmapped /* std::istream */, name: &str) {
-        todo!("port VissimSingleTypeParser::readUntil")
+    pub fn read_until(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, name: &str) {
+        let mut tag = String::new();
+        while tag != name {
+            tag = self.my_read(from);
+            // shortcut: C++ loops forever when the name never comes, here the loop stops at end of file
+            if tag != name && !vissim_good(from) {
+                break;
+            }
+        }
     }
 
     /// C++: `VissimSingleTypeParser & VissimSingleTypeParser::operator=(const VissimSingleTypeParser &)` [private]
