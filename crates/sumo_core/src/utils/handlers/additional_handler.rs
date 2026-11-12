@@ -1,6 +1,7 @@
 //! Port of utils/handlers/AdditionalHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::common_handler::{attr_str, tag_str};
 
 /// C++ class `AdditionalHandler` (utils/handlers/AdditionalHandler.h)
 pub struct AdditionalHandler {
@@ -28,7 +29,7 @@ impl AdditionalHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        todo!("port AdditionalHandler::AdditionalHandler")
+        Self { base: CommonHandler::new(fileBucket) }
     }
 
     /// C++: `void AdditionalHandler::~AdditionalHandler() noexcept` [virtual]
@@ -36,7 +37,7 @@ impl AdditionalHandler {
     // AdditionalHandler::~AdditionalHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AdditionalHandler::~AdditionalHandler")
+        // C++ destructor has an empty body
     }
 
     /// C++: `bool AdditionalHandler::beginParseAttributes(SumoXMLTag, const SUMOSAXAttributes &)`
@@ -825,7 +826,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_bus_stop(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, startPos: f64, endPos: f64, name: &str, lines: &Vec<String>, personCapacity: i32, parkingLength: f64, color: &RGBColor, friendlyPosition: bool, angle: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildBusStop")
+        panic!("AdditionalHandler::buildBusStop is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildTrainStop(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const double, const std::string &, const std::vector<std::string> &, const int, const double, const RGBColor &, const bool, const double, const Parameterised::Map &)` [virtual, pure virtual]
@@ -833,7 +834,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_train_stop(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, startPos: f64, endPos: f64, name: &str, lines: &Vec<String>, personCapacity: i32, parkingLength: f64, color: &RGBColor, friendlyPosition: bool, angle: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildTrainStop")
+        panic!("AdditionalHandler::buildTrainStop is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildAccess(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -841,7 +842,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_access(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, laneID: &str, pos: &str, length: f64, friendlyPos: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildAccess")
+        panic!("AdditionalHandler::buildAccess is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildContainerStop(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const double, const std::string &, const std::vector<std::string> &, const int, const double, const RGBColor &, const bool, const double, const Parameterised::Map &)` [virtual, pure virtual]
@@ -849,7 +850,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_container_stop(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, startPos: f64, endPos: f64, name: &str, lines: &Vec<String>, containerCapacity: i32, parkingLength: f64, color: &RGBColor, friendlyPosition: bool, angle: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildContainerStop")
+        panic!("AdditionalHandler::buildContainerStop is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildChargingStation(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const double, const std::string &, const double, const double, const double, const bool, const SUMOTime, const std::string &, const SUMOTime, const bool, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -857,7 +858,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_charging_station(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, startPos: f64, endPos: f64, name: &str, chargingPower: f64, totalPower: f64, efficiency: f64, chargeInTransit: bool, chargeDelay: SUMOTime, chargeType: &str, waitingTime: SUMOTime, friendlyPosition: bool, parkingAreaID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildChargingStation")
+        panic!("AdditionalHandler::buildChargingStation is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildParkingArea(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const double, const std::string &, const std::string &, const std::vector<std::string> &, const bool, const int, const bool, const double, const double, const double, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -865,7 +866,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_parking_area(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, startPos: f64, endPos: f64, departPos: &str, name: &str, lines: &Vec<String>, friendlyPosition: bool, roadSideCapacity: i32, onRoad: bool, width: f64, length: f64, angle: f64, lefthand: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildParkingArea")
+        panic!("AdditionalHandler::buildParkingArea is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildParkingSpace(const CommonXMLStructure::SumoBaseObject *, const double, const double, const double, const std::string &, const std::string &, const std::string &, const std::string &, const double, const Parameterised::Map &)` [virtual, pure virtual]
@@ -873,7 +874,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_parking_space(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, x: f64, y: f64, z: f64, name: &str, width: &str, length: &str, angle: &str, slope: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildParkingSpace")
+        panic!("AdditionalHandler::buildParkingSpace is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildE1Detector(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const SUMOTime, const std::string &, const std::vector<std::string> &, const std::vector<std::string> &, const std::string &, const std::string &, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -881,7 +882,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_e1_detector(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, position: f64, period: SUMOTime, file: &str, vehicleTypes: &Vec<String>, nextEdges: &Vec<String>, detectPersons: &str, name: &str, friendlyPos: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildE1Detector")
+        panic!("AdditionalHandler::buildE1Detector is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildSingleLaneDetectorE2(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const double, const SUMOTime, const std::string &, const std::string &, const std::vector<std::string> &, const std::vector<std::string> &, const std::string &, const std::string &, const SUMOTime, const double, const double, const bool, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -889,7 +890,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_single_lane_detector_e2(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, pos: f64, length: f64, period: SUMOTime, trafficLight: &str, filename: &str, vehicleTypes: &Vec<String>, nextEdges: &Vec<String>, detectPersons: &str, name: &str, timeThreshold: SUMOTime, speedThreshold: f64, jamThreshold: f64, friendlyPos: bool, show: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildSingleLaneDetectorE2")
+        panic!("AdditionalHandler::buildSingleLaneDetectorE2 is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildMultiLaneDetectorE2(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::vector<std::string> &, const double, const double, const SUMOTime, const std::string &, const std::string &, const std::vector<std::string> &, const std::vector<std::string> &, const std::string &, const std::string &, const SUMOTime, const double, const double, const bool, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -897,7 +898,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_multi_lane_detector_e2(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneIDs: &Vec<String>, pos: f64, endPos: f64, period: SUMOTime, trafficLight: &str, filename: &str, vehicleTypes: &Vec<String>, nextEdges: &Vec<String>, detectPersons: &str, name: &str, timeThreshold: SUMOTime, speedThreshold: f64, jamThreshold: f64, friendlyPos: bool, show: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildMultiLaneDetectorE2")
+        panic!("AdditionalHandler::buildMultiLaneDetectorE2 is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildDetectorE3(const CommonXMLStructure::SumoBaseObject *, const std::string &, const Position &, const SUMOTime, const std::string &, const std::vector<std::string> &, const std::vector<std::string> &, const std::string &, const std::string &, const SUMOTime, const double, const bool, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -905,7 +906,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_detector_e3(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, pos: &Position, period: SUMOTime, filename: &str, vehicleTypes: &Vec<String>, nextEdges: &Vec<String>, detectPersons: &str, name: &str, timeThreshold: SUMOTime, speedThreshold: f64, openEntry: bool, expectedArrival: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildDetectorE3")
+        panic!("AdditionalHandler::buildDetectorE3 is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildDetectorEntry(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -913,7 +914,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_detector_entry(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, laneID: &str, pos: f64, friendlyPos: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildDetectorEntry")
+        panic!("AdditionalHandler::buildDetectorEntry is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildDetectorExit(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -921,7 +922,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_detector_exit(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, laneID: &str, pos: f64, friendlyPos: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildDetectorExit")
+        panic!("AdditionalHandler::buildDetectorExit is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildDetectorE1Instant(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const std::string &, const std::vector<std::string> &, const std::vector<std::string> &, const std::string &, const std::string &, const bool, const Parameterised::Map &)` [virtual, pure virtual]
@@ -929,7 +930,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_detector_e1_instant(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, pos: f64, filename: &str, vehicleTypes: &Vec<String>, nextEdges: &Vec<String>, detectPersons: &str, name: &str, friendlyPos: bool, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildDetectorE1Instant")
+        panic!("AdditionalHandler::buildDetectorE1Instant is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildLaneCalibrator(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const std::string &, const std::string &, const SUMOTime, const std::string &, const double, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -937,7 +938,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_lane_calibrator(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, laneID: &str, pos: f64, name: &str, outfile: &str, period: SUMOTime, routeprobe: &str, jamThreshold: f64, vTypes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildLaneCalibrator")
+        panic!("AdditionalHandler::buildLaneCalibrator is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildEdgeCalibrator(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const double, const std::string &, const std::string &, const SUMOTime, const std::string &, const double, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -945,7 +946,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_edge_calibrator(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, edgeID: &str, pos: f64, name: &str, outfile: &str, period: SUMOTime, routeprobe: &str, jamThreshold: f64, vTypes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildEdgeCalibrator")
+        panic!("AdditionalHandler::buildEdgeCalibrator is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildCalibratorFlow(const CommonXMLStructure::SumoBaseObject *, const SUMOVehicleParameter &)` [virtual, pure virtual]
@@ -953,7 +954,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_calibrator_flow(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, vehicleParameter: &SUMOVehicleParameter) -> bool {
-        todo!("port AdditionalHandler::buildCalibratorFlow")
+        panic!("AdditionalHandler::buildCalibratorFlow is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildRerouter(const CommonXMLStructure::SumoBaseObject *, const std::string &, const Position &, const std::vector<std::string> &, const double, const std::string &, const bool, const bool, const SUMOTime, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -961,7 +962,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_rerouter(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, pos: &Position, edgeIDs: &Vec<String>, prob: f64, name: &str, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildRerouter")
+        panic!("AdditionalHandler::buildRerouter is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildRerouterInterval(const CommonXMLStructure::SumoBaseObject *, const SUMOTime, const SUMOTime)` [virtual, pure virtual]
@@ -969,7 +970,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_rerouter_interval(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, begin: SUMOTime, end: SUMOTime) -> bool {
-        todo!("port AdditionalHandler::buildRerouterInterval")
+        panic!("AdditionalHandler::buildRerouterInterval is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildClosingLaneReroute(const CommonXMLStructure::SumoBaseObject *, const std::string &, SVCPermissions)` [virtual, pure virtual]
@@ -977,7 +978,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_closing_lane_reroute(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, closedLane: &str, permissions: SVCPermissions) -> bool {
-        todo!("port AdditionalHandler::buildClosingLaneReroute")
+        panic!("AdditionalHandler::buildClosingLaneReroute is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildClosingReroute(const CommonXMLStructure::SumoBaseObject *, const std::string &, SVCPermissions)` [virtual, pure virtual]
@@ -985,7 +986,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_closing_reroute(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, closedEdgeID: &str, permissions: SVCPermissions) -> bool {
-        todo!("port AdditionalHandler::buildClosingReroute")
+        panic!("AdditionalHandler::buildClosingReroute is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildDestProbReroute(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
@@ -993,7 +994,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_dest_prob_reroute(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, newEdgeDestinationID: &str, probability: f64) -> bool {
-        todo!("port AdditionalHandler::buildDestProbReroute")
+        panic!("AdditionalHandler::buildDestProbReroute is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildParkingAreaReroute(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double, const bool)` [virtual, pure virtual]
@@ -1001,7 +1002,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_parking_area_reroute(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, newParkignAreaID: &str, probability: f64, visible: bool) -> bool {
-        todo!("port AdditionalHandler::buildParkingAreaReroute")
+        panic!("AdditionalHandler::buildParkingAreaReroute is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildRouteProbReroute(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
@@ -1009,7 +1010,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_route_prob_reroute(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, newRouteID: &str, probability: f64) -> bool {
-        todo!("port AdditionalHandler::buildRouteProbReroute")
+        panic!("AdditionalHandler::buildRouteProbReroute is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildRouteProbe(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const SUMOTime, const std::string &, const std::string &, const SUMOTime, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1017,7 +1018,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_route_probe(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, edgeID: &str, period: SUMOTime, name: &str, file: &str, begin: SUMOTime, vTypes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildRouteProbe")
+        panic!("AdditionalHandler::buildRouteProbe is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildVariableSpeedSign(const CommonXMLStructure::SumoBaseObject *, const std::string &, const Position &, const std::vector<std::string> &, const std::string &, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1025,7 +1026,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_variable_speed_sign(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, pos: &Position, laneIDs: &Vec<String>, name: &str, vTypes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildVariableSpeedSign")
+        panic!("AdditionalHandler::buildVariableSpeedSign is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildVariableSpeedSignStep(const CommonXMLStructure::SumoBaseObject *, const SUMOTime, const double)` [virtual, pure virtual]
@@ -1033,7 +1034,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_variable_speed_sign_step(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, time: SUMOTime, speed: f64) -> bool {
-        todo!("port AdditionalHandler::buildVariableSpeedSignStep")
+        panic!("AdditionalHandler::buildVariableSpeedSignStep is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildVaporizer(const CommonXMLStructure::SumoBaseObject *, const std::string &, const SUMOTime, const SUMOTime, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1041,7 +1042,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_vaporizer(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, edgeID: &str, from: SUMOTime, endTime: SUMOTime, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildVaporizer")
+        panic!("AdditionalHandler::buildVaporizer is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildTAZ(const CommonXMLStructure::SumoBaseObject *, const std::string &, const PositionVector &, const Position &, const bool, const RGBColor &, const std::vector<std::string> &, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1049,7 +1050,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_taz(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, shape: &PositionVector, center: &Position, fill: bool, color: &RGBColor, edgeIDs: &Vec<String>, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildTAZ")
+        panic!("AdditionalHandler::buildTAZ is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildTAZSource(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
@@ -1057,7 +1058,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_taz_source(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, edgeID: &str, departWeight: f64) -> bool {
-        todo!("port AdditionalHandler::buildTAZSource")
+        panic!("AdditionalHandler::buildTAZSource is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildTAZSink(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double)` [virtual, pure virtual]
@@ -1065,7 +1066,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_taz_sink(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, edgeID: &str, arrivalWeight: f64) -> bool {
-        todo!("port AdditionalHandler::buildTAZSink")
+        panic!("AdditionalHandler::buildTAZSink is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildTractionSubstation(const CommonXMLStructure::SumoBaseObject *, const std::string &, const Position &, const double, const double, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1073,7 +1074,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_traction_substation(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, pos: &Position, voltage: f64, currentLimit: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildTractionSubstation")
+        panic!("AdditionalHandler::buildTractionSubstation is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildOverheadWire(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const std::vector<std::string> &, const double, const double, const bool, const std::vector<std::string> &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1081,7 +1082,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_overhead_wire(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, substationId: &str, laneIDs: &Vec<String>, startPos: f64, endPos: f64, friendlyPos: bool, forbiddenInnerLanes: &Vec<String>, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildOverheadWire")
+        panic!("AdditionalHandler::buildOverheadWire is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildOverheadWireClamp(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1089,7 +1090,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_overhead_wire_clamp(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, overheadWireIDStartClamp: &str, laneIDStartClamp: &str, overheadWireIDEndClamp: &str, laneIDEndClamp: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildOverheadWireClamp")
+        panic!("AdditionalHandler::buildOverheadWireClamp is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildPolygon(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const RGBColor &, const double, const double, const std::string &, const PositionVector &, const bool, const bool, const double, const std::string &, const double, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1097,7 +1098,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_polygon(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, type_: &str, color: &RGBColor, layer: f64, angle: f64, imgFile: &str, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, name: &str, height: f64, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildPolygon")
+        panic!("AdditionalHandler::buildPolygon is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildPOI(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const RGBColor &, const double, const double, const std::string &, const double, const double, const std::string &, const double, const double, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1105,7 +1106,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_poi(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, type_: &str, color: &RGBColor, x: f64, y: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildPOI")
+        panic!("AdditionalHandler::buildPOI is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildPOILane(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const RGBColor &, const std::string &, const double, const bool, const double, const std::string &, const double, const double, const std::string &, const double, const double, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1113,7 +1114,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_poi_lane(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, type_: &str, color: &RGBColor, laneID: &str, posOverLane: f64, friendlyPosition: bool, posLat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildPOILane")
+        panic!("AdditionalHandler::buildPOILane is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildPOIGeo(const CommonXMLStructure::SumoBaseObject *, const std::string &, const std::string &, const RGBColor &, const double, const double, const std::string &, const double, const double, const std::string &, const double, const double, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1121,7 +1122,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_poi_geo(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, type_: &str, color: &RGBColor, lon: f64, lat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildPOIGeo")
+        panic!("AdditionalHandler::buildPOIGeo is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildJpsWalkableArea(const CommonXMLStructure::SumoBaseObject *, const std::string &, const PositionVector &, bool, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1129,7 +1130,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_jps_walkable_area(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, shape: &PositionVector, geo: bool, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildJpsWalkableArea")
+        panic!("AdditionalHandler::buildJpsWalkableArea is pure virtual in C++")
     }
 
     /// C++: `bool AdditionalHandler::buildJpsObstacle(const CommonXMLStructure::SumoBaseObject *, const std::string &, const PositionVector &, bool, const std::string &, const Parameterised::Map &)` [virtual, pure virtual]
@@ -1137,7 +1138,7 @@ impl AdditionalHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_jps_obstacle(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, id: &str, shape: &PositionVector, geo: bool, name: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
-        todo!("port AdditionalHandler::buildJpsObstacle")
+        panic!("AdditionalHandler::buildJpsObstacle is pure virtual in C++")
     }
 
     /// C++: `void AdditionalHandler::parseBusStopAttributes(const SUMOSAXAttributes &)` [private]
@@ -2591,7 +2592,12 @@ impl AdditionalHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_detect_persons(&mut self, currentTag: SumoXMLTag, id: &str, detectPersons: &str) -> bool {
-        todo!("port AdditionalHandler::checkDetectPersons")
+        if detectPersons.is_empty() || utils::xml::sumo_xml_definitions::personModeValuesInitializer.iter().any(|(k, _)| *k == detectPersons) {
+            true
+        } else {
+            self.write_error(&format!("Attribute '{}' defined in {} with id '{}' doesn't have a valid value (given '{}').", attr_str(utils::xml::sumo_xml_definitions::SUMO_ATTR_DETECT_PERSONS), tag_str(currentTag), id, detectPersons));
+            false
+        }
     }
 
     /// C++: `void AdditionalHandler::AdditionalHandler()` [private]
@@ -2599,7 +2605,7 @@ impl AdditionalHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port AdditionalHandler::AdditionalHandler")
+        panic!("AdditionalHandler() is private and never defined in C++")
     }
 
     /// C++: `void AdditionalHandler::AdditionalHandler(const AdditionalHandler &)` [private]
@@ -2607,7 +2613,7 @@ impl AdditionalHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &AdditionalHandler) -> Self {
-        todo!("port AdditionalHandler::AdditionalHandler")
+        panic!("AdditionalHandler(const AdditionalHandler&) is private and never defined in C++")
     }
 
     /// C++: `AdditionalHandler & AdditionalHandler::operator=(const AdditionalHandler &)` [private]
@@ -2615,7 +2621,7 @@ impl AdditionalHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &AdditionalHandler) -> &mut AdditionalHandler {
-        todo!("port AdditionalHandler::operator=")
+        panic!("AdditionalHandler::operator= is private and never defined in C++")
     }
 
 }
