@@ -82,8 +82,20 @@ impl MSRoute {
     // {}
     #[allow(unused_variables)]
     pub fn new(id: &str, edges: &ConstMSEdgeVector, isPermanent: bool, c: Ptr<RGBColor>, stops: &StopParVector, replacedTime: SUMOTime, replacedIndex: i32) -> Self {
-        // blocked: StopParVector copy needs SUMOVehicleParameter_Stop: Clone (not derived yet in utils/vehicle/sumo_vehicle_parameter.rs)
-        todo!("port MSRoute::MSRoute")
+        MSRoute {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myEdges: edges.clone(),
+            myAmPermanent: isPermanent,
+            myColor: c,
+            myPeriod: 0,
+            myCosts: -1.0,
+            mySavings: 0.0,
+            myReroute: false,
+            myStops: stops.clone(),
+            myReplacedTime: replacedTime,
+            myReplacedIndex: replacedIndex,
+        }
     }
 
     /// C++: `void MSRoute::~MSRoute() noexcept` [virtual]
@@ -107,7 +119,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn begin(&self) -> MSRouteIterator {
-        todo!("port MSRoute::begin")
+        0
     }
 
     /// C++: `MSRouteIterator MSRoute::end() const` [const]
@@ -118,7 +130,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn end(&self) -> MSRouteIterator {
-        todo!("port MSRoute::end")
+        self.myEdges.len()
     }
 
     /// C++: `int MSRoute::size() const` [const]
@@ -208,7 +220,32 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn write_edge_i_ds(&self, os: &mut OutputDevice, firstIndex: i32, lastIndex: i32, withInternal: bool, svc: SUMOVehicleClass) -> i32 {
-        todo!("port MSRoute::writeEdgeIDs")
+        let mut lastIndex = lastIndex;
+        if lastIndex < 0 {
+            lastIndex = self.myEdges.len() as i32;
+        }
+        let mut internal = 0;
+        // collect the ids first, writing them to the stream one by one is slow
+        let mut ids = String::new();
+        let mut i = firstIndex;
+        while i < lastIndex {
+            ids.push_str(self.myEdges[i as usize].get_id());
+            ids.push(' ');
+            if withInternal && i + 1 < lastIndex {
+                let next = self.myEdges[(i + 1) as usize];
+                let mut edge = self.myEdges[i as usize].get_internal_following_edge(next, svc);
+                // Take into account non-internal lengths until next non-internal edge
+                while !edge.is_null() && edge.is_internal() {
+                    ids.push_str(edge.get_id());
+                    ids.push(' ');
+                    internal += 1;
+                    edge = edge.get_internal_following_edge(next, svc);
+                }
+            }
+            i += 1;
+        }
+        os.write(&ids);
+        internal + lastIndex - firstIndex
     }
 
     /// C++: `bool MSRoute::contains(const MSEdge *const) const` [const]
