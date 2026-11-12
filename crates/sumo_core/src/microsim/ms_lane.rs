@@ -289,7 +289,7 @@ pub struct MSLane {
     /// Container for lane-changing vehicles. After completion of lane-change- process, the containers will be swapped with myVehicles.
     pub myTmpVehicles: MSLane_VehCont,
     /// Buffer for vehicles that moved from their previous lane onto this one. Integrated after all vehicles executed their moves
-    pub myVehBuffer: Unmapped /* MFXSynchQue<MSVehicle *, std::vector<MSVehicle *>> */,
+    pub myVehBuffer: Vec<Ptr<MSVehicle>> /* MFXSynchQue<MSVehicle *, std::vector<MSVehicle *>> */,
     /// The vehicles which registered maneuvering into the lane within their current action step. This is currently only relevant for sublane simulation, since continuous lanechanging uses the partial vehicle mechanism.
     pub myManeuverReservations: MSLane_VehCont,
     pub myParkingVehicles: BTreeSet<Ptr<MSBaseVehicle>>,
@@ -494,7 +494,7 @@ impl MSLane {
             myVehicles: Vec::new(),
             myPartialVehicles: Vec::new(),
             myTmpVehicles: Vec::new(),
-            myVehBuffer: (),
+            myVehBuffer: Vec::new(),
             myManeuverReservations: Vec::new(),
             myParkingVehicles: BTreeSet::new(),
             myLength: length,
@@ -3253,7 +3253,40 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn integrate_new_vehicles(&mut self) {
-        todo!("port MSLane::integrateNewVehicles")
+        self.myNeedsCollisionCheck = true;
+        let sorter = MSLane_vehicle_position_sorter::new(Ptr::new(self));
+        // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+        self.myVehBuffer.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        for veh in self.myVehBuffer.iter() {
+            // assert(veh->getLane() == this)
+            self.myVehicles.insert(0, *veh);
+            self.myBruttoVehicleLengthSum += veh.get_vehicle_type().get_length_with_gap();
+            self.myNettoVehicleLengthSum += veh.get_vehicle_type().get_length();
+            self.myEdge.mark_delayed();
+        }
+        self.myVehBuffer.clear();
+        if g_lateral_resolution() > 0. || !self.myOpposite.is_null() {
+            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
+            self.myVehicles.sort_by(|a, b| {
+                if natSorter.call_op(*a, *b) != 0 {
+                    std::cmp::Ordering::Less
+                } else if natSorter.call_op(*b, *a) != 0 {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+        }
+        self.sort_partial_vehicles();
     }
 
     /// C++: `void MSLane::markRecalculateBruttoSum()`
@@ -3264,7 +3297,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn mark_recalculate_brutto_sum(&mut self) {
-        todo!("port MSLane::markRecalculateBruttoSum")
+        self.myRecalculateBruttoSum = true;
     }
 
     /// C++: `void MSLane::updateLengthSum()`
@@ -3289,7 +3322,21 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn update_length_sum(&mut self) {
-        todo!("port MSLane::updateLengthSum")
+        self.myBruttoVehicleLengthSum -= self.myBruttoVehicleLengthSumToRemove;
+        self.myNettoVehicleLengthSum -= self.myNettoVehicleLengthSumToRemove;
+        self.myBruttoVehicleLengthSumToRemove = 0.;
+        self.myNettoVehicleLengthSumToRemove = 0.;
+        if self.myVehicles.is_empty() {
+            // avoid numerical instability
+            self.myBruttoVehicleLengthSum = 0.;
+            self.myNettoVehicleLengthSum = 0.;
+        } else if self.myRecalculateBruttoSum {
+            self.myBruttoVehicleLengthSum = 0.;
+            for veh in self.myVehicles.iter() {
+                self.myBruttoVehicleLengthSum += veh.get_vehicle_type().get_length_with_gap();
+            }
+            self.myRecalculateBruttoSum = false;
+        }
     }
 
     /// C++: `bool MSLane::needsCollisionCheck() const` [const]
@@ -3299,7 +3346,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn needs_collision_check(&self) -> bool {
-        todo!("port MSLane::needsCollisionCheck")
+        self.myNeedsCollisionCheck
     }
 
     /// C++: `void MSLane::requireCollisionCheck()`
@@ -3309,7 +3356,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn require_collision_check(&mut self) {
-        todo!("port MSLane::requireCollisionCheck")
+        self.myNeedsCollisionCheck = true;
     }
 
     /// C++: `void MSLane::detectCollisions(SUMOTime, const std::string &)` [virtual]
@@ -8248,7 +8295,7 @@ impl MSLane_vehicle_natural_position_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>) -> Self {
-        todo!("port vehicle_natural_position_sorter::vehicle_natural_position_sorter")
+        MSLane_vehicle_natural_position_sorter { myLane: lane }
     }
 
     /// C++: `int vehicle_natural_position_sorter::operator()(MSVehicle *, MSVehicle *) const` [const]
@@ -8265,7 +8312,13 @@ impl MSLane_vehicle_natural_position_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, v1: Ptr<MSVehicle>, v2: Ptr<MSVehicle>) -> i32 {
-        todo!("port vehicle_natural_position_sorter::operator()")
+        let pos1 = v1.get_back_position_on_lane(self.myLane);
+        let pos2 = v2.get_back_position_on_lane(self.myLane);
+        if pos1 != pos2 {
+            (pos1 < pos2) as i32
+        } else {
+            (v1.get_lateral_position_on_lane() < v2.get_lateral_position_on_lane()) as i32
+        }
     }
 
 }
@@ -8284,7 +8337,7 @@ impl MSLane_vehicle_position_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>) -> Self {
-        todo!("port vehicle_position_sorter::vehicle_position_sorter")
+        MSLane_vehicle_position_sorter { myLane: lane }
     }
 
     /// C++: `int vehicle_position_sorter::operator()(MSVehicle *, MSVehicle *) const` [const]
@@ -8301,7 +8354,13 @@ impl MSLane_vehicle_position_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, v1: Ptr<MSVehicle>, v2: Ptr<MSVehicle>) -> i32 {
-        todo!("port vehicle_position_sorter::operator()")
+        let pos1 = v1.get_back_position_on_lane(self.myLane);
+        let pos2 = v2.get_back_position_on_lane(self.myLane);
+        if pos1 != pos2 {
+            (pos1 > pos2) as i32
+        } else {
+            (v1.get_numerical_id() > v2.get_numerical_id()) as i32
+        }
     }
 
 }
