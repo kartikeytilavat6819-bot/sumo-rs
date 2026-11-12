@@ -261,8 +261,8 @@ impl NBNodeCont {
     //         return myNodes.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn begin(&self) -> Unmapped /* std::map<std::string, NBNode *>::const_iterator */ {
-        todo!("port NBNodeCont::begin")
+    pub fn begin(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBNode>> {
+        self.myNodes.iter()
     }
 
     /// C++: `std::map<std::string, NBNode *>::const_iterator NBNodeCont::end() const` [const]
@@ -271,8 +271,9 @@ impl NBNodeCont {
     //         return myNodes.end();
     //     }
     #[allow(unused_variables)]
-    pub fn end(&self) -> Unmapped /* std::map<std::string, NBNode *>::const_iterator */ {
-        todo!("port NBNodeCont::end")
+    pub fn end(&self) -> std::iter::Skip<std::collections::btree_map::Iter<'_, String, Ptr<NBNode>>> {
+        // shortcut: C++ iterator pair cannot be compared in Rust, end() is an exhausted iterator; callers iterate begin() instead, upgrade if a caller needs the C++ iterator protocol
+        self.myNodes.iter().skip(self.myNodes.len())
     }
 
     /// C++: `void NBNodeCont::addJoinExclusion(const std::vector<std::string> &)`
@@ -2133,7 +2134,18 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn recheck_tls_threshold(&mut self, node: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeCont::recheckTLSThreshold")
+        if !node.is_tl_controlled() {
+            return false;
+        }
+        let first = *node.get_controlling_tls().iter().next().unwrap();
+        if first.get_nodes().len() != 1 {
+            // unable to perform check for a joined tls
+            return true;
+        }
+        let mut c: NodeSet = BTreeSet::new();
+        c.insert(node);
+        let laneSpeedThreshold = utils::options::options_cont::get_float("tls.guess.threshold");
+        self.should_be_tls_controlled(&c, laneSpeedThreshold, true)
     }
 
     /// C++: `void NBNodeCont::computeKeepClear()`
@@ -2146,7 +2158,9 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn compute_keep_clear(&mut self) {
-        todo!("port NBNodeCont::computeKeepClear")
+        for item in self.myNodes.values() {
+            item.m().compute_keep_clear();
+        }
     }
 
     /// C++: `void NBNodeCont::joinTLS(NBTrafficLightLogicCont &, double)`
@@ -2223,7 +2237,14 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn set_as_tl_controlled(&mut self, node: Ptr<NBNode>, tlc: &mut NBTrafficLightLogicCont, type_: TrafficLightType, id: String) {
-        todo!("port NBNodeCont::setAsTLControlled")
+        let id = if id == "" { node.get_id().to_string() } else { id };
+        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&id, node, 0, type_)));
+        let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+        if !tlc.insert(tlDef, false) {
+            // actually, nothing should fail here
+            write_warning(&format!("Building a tl-logic for junction '{}' twice is not possible.", id));
+            drop(unsafe { Box::from_raw(raw) });
+        }
     }
 
     /// C++: `bool NBNodeCont::wasRemoved(std::string) const` [const]
@@ -2250,7 +2271,13 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_prefix(&mut self, prefix: &str) {
-        todo!("port NBNodeCont::addPrefix")
+        // make a copy of node containers
+        let nodeContainerCopy = self.myNodes.clone();
+        self.myNodes.clear();
+        for node in nodeContainerCopy.values() {
+            node.m().base.set_id(&format!("{}{}", prefix, node.get_id()));
+            self.myNodes.insert(node.get_id().to_string(), *node);
+        }
     }
 
     /// C++: `void NBNodeCont::rename(NBNode *, const std::string &)`
@@ -2266,7 +2293,13 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn rename(&mut self, node: Ptr<NBNode>, newID: &str) {
-        todo!("port NBNodeCont::rename")
+        if self.myNodes.contains_key(newID) {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(&format!("Attempt to rename node using existing id '{}'", newID)));
+        }
+        let oldID = node.get_id().to_string();
+        self.myNodes.remove(&oldID);
+        node.m().base.set_id(newID);
+        self.myNodes.insert(newID.to_string(), node);
     }
 
     /// C++: `void NBNodeCont::computeLanes2Lanes()`
@@ -2279,7 +2312,9 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn compute_lanes2_lanes(&mut self) {
-        todo!("port NBNodeCont::computeLanes2Lanes")
+        for node in self.myNodes.values() {
+            node.m().compute_lanes2_lanes();
+        }
     }
 
     /// C++: `void NBNodeCont::computeLogics(const NBEdgeCont &)`
@@ -2292,7 +2327,9 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn compute_logics(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBNodeCont::computeLogics")
+        for node in self.myNodes.values() {
+            node.m().compute_logic(ec);
+        }
     }
 
     /// C++: `void NBNodeCont::computeLogics2(const NBEdgeCont &, OptionsCont &)`
@@ -2849,7 +2886,22 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_conditional_defaults(&mut self) {
-        todo!("port NBNodeCont::applyConditionalDefaults")
+        for item in self.myNodes.values() {
+            let n = *item;
+            if n.m().is_tl_controlled() && n.m().get_right_of_way() == RightOfWay::DEFAULT {
+                let mut hasNEMA = false;
+                for tl in n.m().get_controlling_tls().iter() {
+                    if tl.get_type() == TrafficLightType::NEMA {
+                        hasNEMA = true;
+                        break;
+                    }
+                }
+                if hasNEMA {
+                    // NEMA controller defaults to allway_stop behavior when switched off
+                    n.m().set_right_of_way(RightOfWay::ALLWAYSTOP);
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNodeCont::resetNodeShapes()`
@@ -2867,7 +2919,14 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn reset_node_shapes(&mut self) -> bool {
-        todo!("port NBNodeCont::resetNodeShapes")
+        let mut hadShapes = false;
+        for item in self.myNodes.values() {
+            if item.m().get_shape().len() > 0 && !item.m().has_custom_shape() {
+                hadShapes = true;
+                item.m().reset_shape();
+            }
+        }
+        hadShapes
     }
 
     /// C++: `void NBNodeCont::generateNodeClusters(double, NodeClusters &) const` [const, private]
@@ -3194,7 +3253,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_diameter(cluster: &NodeSet) -> f64 {
-        todo!("port NBNodeCont::getDiameter")
+        let mut result: f64 = 0.;
+        for n1 in cluster.iter() {
+            for n2 in cluster.iter() {
+                // MAX2(result, distance)
+                let d = n1.get_position().distance_to2d(n2.get_position());
+                result = if result > d { result } else { d };
+            }
+        }
+        result
     }
 
     /// C++: `bool NBNodeCont::geometryLikeForClass(const NBNode *, SVCPermissions)` [static, private]
