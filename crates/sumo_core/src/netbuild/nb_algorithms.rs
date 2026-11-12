@@ -4,6 +4,18 @@ use crate::prelude::*;
 
 // determinism: C++ std::sort is unstable and Rust sort_by is stable, so edges that compare equal may end up in a different order.
 // Converts a C++ strict-weak-order comparator (returns bool) into the ordering std::sort would use.
+fn sort_by_less<T>(v: &mut Vec<T>, less: impl Fn(&T, &T) -> bool) {
+    v.sort_by(|a, b| {
+        if less(a, b) {
+            std::cmp::Ordering::Less
+        } else if less(b, a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
+}
+
 fn sort_edges_by(v: &mut Vec<Ptr<NBEdge>>, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
     v.sort_by(|a, b| {
         if less(*a, *b) {
@@ -945,7 +957,9 @@ impl NBNodesEdgesSorter {
     // }
     #[allow(unused_variables)]
     pub fn sort_nodes_edges(nc: &mut NBNodeCont, useNodeShape: bool) {
-        todo!("port NBNodesEdgesSorter::sortNodesEdges")
+        for node in nc.myNodes.values().copied() {
+            node.m().sort_edges(useNodeShape);
+        }
     }
 
     /// C++: `void NBNodesEdgesSorter::swapWhenReversed(const NBNode *const, const std::vector<NBEdge *>::iterator &, const std::vector<NBEdge *>::iterator &)` [static]
@@ -965,8 +979,17 @@ impl NBNodesEdgesSorter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn swap_when_reversed(n: Ptr<NBNode>, i1: &Unmapped /* std::vector<NBEdge *>::iterator */, i2: &Unmapped /* std::vector<NBEdge *>::iterator */) {
-        todo!("port NBNodesEdgesSorter::swapWhenReversed")
+    pub fn swap_when_reversed(n: Ptr<NBNode>, edges: &mut EdgeVector, i1: usize, i2: usize) {
+        // the C++ iterators are positions in `edges`, so they are passed as indices
+        let e1 = edges[i1];
+        let e2 = edges[i2];
+        // @todo: The difference between "isTurningDirectionAt" and "isTurnaround"
+        //  is not nice. Maybe we could get rid of it if we would always mark edges
+        //  as turnarounds, even if they do not have to be added, as mentioned in
+        //  notes on NBTurningDirectionsComputer::computeTurnDirectionsForNode
+        if e2.get_to_node() == n && e2.is_turning_direction_at(e1) {
+            edges.swap(i1, i2);
+        }
     }
 
 }
@@ -986,7 +1009,9 @@ impl NBTurningDirectionsComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_turn_directions(nc: &mut NBNodeCont, warn: bool) {
-        todo!("port NBTurningDirectionsComputer::computeTurnDirections")
+        for node in nc.myNodes.values().copied() {
+            Self::compute_turn_directions_for_node(node, warn);
+        }
     }
 
     /// C++: `void NBTurningDirectionsComputer::computeTurnDirectionsForNode(NBNode *, bool)` [static]
@@ -1106,8 +1131,85 @@ impl NBTurningDirectionsComputer {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn compute_turn_directions_for_node(node: Ptr<NBNode>, warn: bool) {
-        todo!("port NBTurningDirectionsComputer::computeTurnDirectionsForNode")
+    pub fn compute_turn_directions_for_node(node: Ptr<NBNode>, mut warn: bool) {
+        let incoming: EdgeVector = node.get_incoming_edges().clone();
+        let outgoing: EdgeVector = node.get_outgoing_edges().clone();
+        // reset turning directions since this may be called multiple times
+        for k in incoming.iter() {
+            k.m().set_turning_destination(Ptr::null(), false);
+        }
+        let mut combinations: Vec<NBTurningDirectionsComputer_Combination> = Vec::new();
+        let geometryLike = node.geometry_like();
+        for outedge in outgoing.iter().copied() {
+            for e in incoming.iter().copied() {
+                // @todo: check whether NBHelpers::relAngle is properly defined and whether it should really be used, here
+                let signedAngle = crate::netbuild::nb_helpers::NBHelpers::norm_rel_angle(e.get_angle_at_node(node), outedge.get_angle_at_node(node));
+                if signedAngle > 0.0 && signedAngle < 177.0 && e.get_geometry().back().distance_to2d(outedge.get_geometry().front()) < utils::geom::POSITION_EPS {
+                    // backwards curving edges can only be turnaround when there are
+                    // non-default endpoints
+                    continue;
+                }
+                let mut angle = signedAngle.abs();
+                let badPermissions = (outedge.get_permissions(-1) & e.get_permissions(-1) & !SVC_PEDESTRIAN) == 0
+                    && !geometryLike
+                    && outedge.get_permissions(-1) != e.get_permissions(-1);
+                if e.get_from_node() == outedge.get_to_node()
+                    && (angle > 120.0 || e.get_from_node().get_position() == e.get_to_node().get_position())
+                    && !badPermissions
+                {
+                    // they connect the same nodes; should be the turnaround direction
+                    // we'll assign a maximum number
+                    //
+                    // @todo: indeed, we have observed some pathological intersections
+                    //  see "294831560" in OSM/adlershof. Here, several edges are connecting
+                    //  same nodes. We have to do the angle check before...
+                    //
+                    // @todo: and well, there are some other as well, see plain import
+                    //  of delphi_muenchen (elmar), intersection "59534191". Not that it would
+                    //  be realistic in any means; we will warn, here.
+                    angle += 360.0;
+                }
+                if angle < 160.0 {
+                    if angle > 135.0 {
+                        // could be a turnaround with a green median island, look at
+                        // angle further away from the junction
+                        let inFA = Self::get_far_angle_at_node(e, node, 50.0);
+                        let outFA = Self::get_far_angle_at_node(outedge, node, 50.0);
+                        let signedFarAngle = crate::netbuild::nb_helpers::NBHelpers::norm_rel_angle(inFA, outFA);
+                        if signedFarAngle > -160.0 {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                if badPermissions {
+                    // penalty
+                    angle -= 90.0;
+                }
+                combinations.push(NBTurningDirectionsComputer_Combination { from: e, to: outedge, angle });
+            }
+        }
+        // sort combinations so that the ones with the highest angle are at the begin
+        let comb_sorter = NBTurningDirectionsComputer_combination_by_angle_sorter::new();
+        sort_by_less(&mut combinations, |a, b| comb_sorter.call_op(a, b) != 0);
+        let mut seen: HashSet<Ptr<NBEdge>> = HashSet::new();
+        for j in combinations.iter() {
+            if seen.contains(&j.from) || seen.contains(&j.to) {
+                // do not regard already set edges
+                if j.angle > 360.0 && warn {
+                    write_warningf!("Ambiguity in turnarounds computation at junction '%'.", node.get_id());
+                    warn = false;
+                }
+                continue;
+            }
+            // mark as seen
+            seen.insert(j.from);
+            seen.insert(j.to);
+            // set turnaround information
+            let onlyPossible = j.from.get_connections().len() != 0 && !j.from.is_connected_to(j.to, false);
+            j.from.m().set_turning_destination(j.to, onlyPossible);
+        }
     }
 
     /// C++: `double NBTurningDirectionsComputer::getFarAngleAtNode(const NBEdge *, const NBNode *, double)` [static]
@@ -1162,8 +1264,51 @@ impl NBTurningDirectionsComputer {
     //     return GeomHelper::legacyDegree(angle);
     // }
     #[allow(unused_variables)]
-    pub fn get_far_angle_at_node(e: Ptr<NBEdge>, n: Ptr<NBNode>, dist: f64) -> f64 {
-        todo!("port NBTurningDirectionsComputer::getFarAngleAtNode")
+    pub fn get_far_angle_at_node(e: Ptr<NBEdge>, n: Ptr<NBNode>, mut dist: f64) -> f64 {
+        let mut atNode: Position = Position::default();
+        let mut far: Position = Position::default();
+        let mut angle: f64;
+        let mut next: Ptr<NBEdge> = e;
+        if e.get_to_node() == n {
+            // search upstream
+            atNode = *e.get_geometry().back();
+            while dist > 0.0 {
+                let length = next.get_geometry().length();
+                if dist <= length {
+                    far = next.get_geometry().position_at_offset(length - dist, 0.0);
+                    break;
+                } else {
+                    far = *next.get_geometry().front();
+                    dist -= length;
+                    if next.get_to_node().get_incoming_edges().len() == 1 {
+                        next = next.get_to_node().get_incoming_edges()[0];
+                    } else {
+                        break;
+                    }
+                }
+            }
+            angle = far.angle_to2d(&atNode);
+        } else {
+            // search downstream
+            atNode = *e.get_geometry().front();
+            while dist > 0.0 {
+                let length = next.get_geometry().length();
+                if dist <= length {
+                    far = next.get_geometry().position_at_offset(dist, 0.0);
+                    break;
+                } else {
+                    far = *next.get_geometry().back();
+                    dist -= length;
+                    if next.get_to_node().get_outgoing_edges().len() == 1 {
+                        next = next.get_to_node().get_outgoing_edges()[0];
+                    } else {
+                        break;
+                    }
+                }
+            }
+            angle = atNode.angle_to2d(&far);
+        }
+        utils::geom::geom_helper::legacy_degree(angle, false)
     }
 
 }
@@ -1178,7 +1323,7 @@ impl NBTurningDirectionsComputer_combination_by_angle_sorter {
     // explicit combination_by_angle_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port combination_by_angle_sorter::combination_by_angle_sorter")
+        Self {}
     }
 
     /// C++: `int combination_by_angle_sorter::operator()(const Combination &, const Combination &) const` [const]
@@ -1207,7 +1352,27 @@ impl NBTurningDirectionsComputer_combination_by_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: &NBTurningDirectionsComputer_Combination, c2: &NBTurningDirectionsComputer_Combination) -> i32 {
-        todo!("port combination_by_angle_sorter::operator()")
+        if c1.angle != c2.angle {
+            return (c1.angle > c2.angle) as i32;
+        }
+        if c1.from != c2.from {
+            if c1.to == c2.to && c1.from.get_permissions(-1) != c2.from.get_permissions(-1) {
+                if c1.from.get_permissions(-1) == c1.to.get_permissions(-1) {
+                    return 1;
+                } else if c2.from.get_permissions(-1) == c1.to.get_permissions(-1) {
+                    return 0;
+                }
+            }
+            return (c1.from.get_id() < c2.from.get_id()) as i32;
+        }
+        if c1.to.get_permissions(-1) != c2.to.get_permissions(-1) {
+            if c1.to.get_permissions(-1) == c1.from.get_permissions(-1) {
+                return 1;
+            } else if c2.to.get_permissions(-1) == c1.from.get_permissions(-1) {
+                return 0;
+            }
+        }
+        (c1.to.get_id() < c2.to.get_id()) as i32
     }
 
 }
