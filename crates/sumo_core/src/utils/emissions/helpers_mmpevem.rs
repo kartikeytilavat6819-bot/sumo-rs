@@ -1,6 +1,10 @@
 //! Port of utils/emissions/HelpersMMPEVEM.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::geom_helper::deg2rad;
+
+/// C++ `HelpersMMPEVEM::MMPEVEM_BASE` (5 << 16)
+pub const MMPEVEM_BASE: i32 = 5 << 16;
 
 /// This helper class allows the PollutantsInterface to load and use different MMPEVEMs.
 /// C++ class `HelpersMMPEVEM` (utils/emissions/HelpersMMPEVEM.h)
@@ -32,7 +36,7 @@ impl HelpersMMPEVEM {
     // { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port HelpersMMPEVEM::HelpersMMPEVEM")
+        Self { base: PollutantsInterface_Helper::new("MMPEVEM".to_string(), MMPEVEM_BASE, MMPEVEM_BASE + 1) }
     }
 
     /// C++: `std::string HelpersMMPEVEM::getFuel(const SUMOEmissionClass) const` [const, virtual]
@@ -42,7 +46,7 @@ impl HelpersMMPEVEM {
     //     }
     #[allow(unused_variables)]
     pub fn get_fuel(&self, arg0: SUMOEmissionClass) -> String {
-        todo!("port HelpersMMPEVEM::getFuel")
+        "Electricity".to_string()
     }
 
     /// C++: `double HelpersMMPEVEM::getWeight(const SUMOEmissionClass) const` [const, virtual]
@@ -52,7 +56,7 @@ impl HelpersMMPEVEM {
     //     }
     #[allow(unused_variables)]
     pub fn get_weight(&self, arg0: SUMOEmissionClass) -> f64 {
-        todo!("port HelpersMMPEVEM::getWeight")
+        1794.
     }
 
     /// C++: `double HelpersMMPEVEM::compute(const SUMOEmissionClass, const PollutantsInterface::EmissionType, const double, const double, const double, const EnergyParams *) const` [const, virtual]
@@ -111,8 +115,56 @@ impl HelpersMMPEVEM {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn compute(&self, arg0: SUMOEmissionClass, e: PollutantsInterface_EmissionType, v: f64, a: f64, slope: f64, ptr_energyParams: Ptr<EnergyParams>) -> f64 {
-        todo!("port HelpersMMPEVEM::compute")
+    pub fn compute(&self, c: SUMOEmissionClass, e: PollutantsInterface_EmissionType, v: f64, a: f64, slope: f64, ptr_energyParams: Ptr<EnergyParams>) -> f64 {
+        if e != PollutantsInterface_EmissionType::ELEC {
+            return 0.0;
+        }
+        // Extract all required parameters, default values taken from the VW_ID3
+        let p = ptr_energyParams.m();
+        // Vehicle mass [kg]
+        let m = p.get_total_mass(self.get_weight(c), 0.);
+        // Wheel radius [m]
+        let r_wheel = p.get_double_optional(SUMO_ATTR_WHEELRADIUS, 0.3588);
+        // Internal moment of inertia [kgm^2]
+        let Theta = p.get_double_optional(SUMO_ATTR_INTERNALMOMENTOFINERTIA, 12.5);
+        // Rolling resistance coefficient
+        let c_rr = p.get_double_optional(SUMO_ATTR_ROLLDRAGCOEFFICIENT, 0.007);
+        // Air drag coefficient
+        let c_d = p.get_double_optional(SUMO_ATTR_AIRDRAGCOEFFICIENT, 0.26);
+        // Cross-sectional area of the front of the car [m^2]
+        let A_front = p.get_double_optional(SUMO_ATTR_FRONTSURFACEAREA, 2.36);
+        // Gear ratio [1]
+        let i_gear = p.get_double_optional(SUMO_ATTR_GEARRATIO, 10.);
+        // Gearbox efficiency [1]
+        let eta_gear = p.get_double_optional(SUMO_ATTR_GEAREFFICIENCY, 0.96);
+        // Maximum torque [Nm]
+        let M_max = p.get_double_optional(SUMO_ATTR_MAXIMUMTORQUE, 310.);
+        // Maximum power [W]
+        let P_max = p.get_double_optional(SUMO_ATTR_MAXIMUMPOWER, 107000.);
+        // Maximum recuperation torque [Nm]
+        let M_recup_max = p.get_double_optional(SUMO_ATTR_MAXIMUMRECUPERATIONTORQUE, 95.5);
+        // Maximum recuperation power [W]
+        let P_recup_max = p.get_double_optional(SUMO_ATTR_MAXIMUMRECUPERATIONPOWER, 42800.);
+        // Internal battery resistance [Ohm]
+        let R_battery = p.get_double_optional(SUMO_ATTR_INTERNALBATTERYRESISTANCE, 0.1142);
+        // Nominal battery voltage [V]
+        let U_battery_0 = p.get_double_optional(SUMO_ATTR_NOMINALBATTERYVOLTAGE, 396.);
+        // Constant power consumption [W]
+        let P_const = p.get_double_optional(SUMO_ATTR_CONSTANTPOWERINTAKE, 360.);
+        // Power loss map
+        let ref_powerLossMap = p.get_characteristic_map(SUMO_ATTR_POWERLOSSMAP);
+
+        let mut P = 0.0; // [W]
+        let b_stateValid = calc_power_consumption(m, r_wheel, Theta, c_rr, c_d,
+                            A_front, i_gear, eta_gear, M_max, P_max, M_recup_max, P_recup_max,
+                            R_battery, U_battery_0, P_const, ref_powerLossMap, utils::common::time::ts(), v, a, slope, &mut P);
+        P /= 3600.0; // [Wh/s]
+
+        if b_stateValid {
+            P
+        } else {
+            f64::NAN
+        }
     }
 
 }
@@ -214,6 +266,90 @@ impl HelpersMMPEVEM {
 // }
 #[allow(unused_variables)]
 pub fn calc_power_consumption(m: f64, r_wheel: f64, Theta: f64, c_rr: f64, c_d: f64, A_front: f64, i_gear: f64, eta_gear: f64, M_max: f64, P_max: f64, M_recup_max: f64, P_recup_max: f64, R_battery: f64, U_battery_0: f64, P_const: f64, ref_powerLossMap: &CharacteristicMap, dt: f64, v: f64, a: f64, alpha: f64, ref_powerConsumption: &mut f64) -> bool {
-    todo!("port calcPowerConsumption")
+    let EPS = 1e-6;
+    let RHO_AIR = 1.204; // Air density [kg/m^3]
+    let mut b_stateValid = true;
+
+    // Mass factor [1]
+    let e_i = 1.0 + Theta / (m * r_wheel * r_wheel);
+    // Average speed during the previous timestep
+    let v_mean = v - 0.5 * a * dt;
+
+    // Force required for the desired acceleration [N]
+    let mut F_a = m * a * e_i;
+    // Grade resistance [N]
+    let F_gr = m * utils::geom::geom_helper::GRAVITY * deg2rad(alpha).sin();
+    // Rolling resistance [N]
+    let mut F_rr = m * utils::geom::geom_helper::GRAVITY * deg2rad(alpha).cos() * c_rr;
+    if v_mean.abs() <= EPS {
+        F_rr = 0.;
+    }
+    // Drag [N]
+    let F_d = 0.5 * c_d * A_front * RHO_AIR * v_mean * v_mean;
+    // Tractive force [N]
+    let F_tractive = F_a + F_gr + F_rr + F_d;
+
+    // Speed of the motor [rpm]
+    let n_motor = v_mean / (2. * utils::geom::geom_helper::M_PI * r_wheel) * 60. * i_gear;
+    // Angular velocity of the motor [1/s]
+    let mut omega_motor = 2. * utils::geom::geom_helper::M_PI * n_motor / 60.;
+    if omega_motor == 0. {
+        omega_motor = EPS;
+    }
+
+    // Torque at the motor [Nm]. Please note that this model, like most real EVs,
+    // utilizes the EM to hold the vehicle on an incline rather than the brakes.
+    let mut M_motor = F_tractive * r_wheel / i_gear;
+    if F_tractive < 0. {
+        M_motor *= eta_gear;
+    } else {
+        M_motor /= eta_gear;
+    }
+    // Engine power [W]
+    let mut P_motor = M_motor * omega_motor;
+
+    // Cap torque or power if necessary
+    // Accelerating
+    if M_motor >= 0. {
+        if M_motor > M_max {
+            M_motor = M_max;
+            P_motor = M_motor * omega_motor;
+            b_stateValid = false;
+        }
+        if P_motor > P_max {
+            P_motor = P_max;
+            M_motor = P_motor / omega_motor;
+            b_stateValid = false;
+        }
+    }
+    // Recuperating
+    else {
+        // Even when capping, the state is still valid here because the extra energy
+        // is assumed to go to the brakes
+        if M_motor < -M_recup_max {
+            M_motor = -M_recup_max;
+            P_motor = M_motor * omega_motor;
+        }
+        if P_motor < -P_recup_max {
+            P_motor = -P_recup_max;
+            M_motor = P_motor / omega_motor;
+        }
+    }
+
+    // Power loss in the electric motor + inverter [W]
+    let mut P_loss_motor = ref_powerLossMap.eval(&vec![n_motor, M_motor], 1e-6)[0];
+    if P_loss_motor.is_nan() {
+        P_loss_motor = 0.0;
+        b_stateValid = false;
+    }
+
+    // Power demand at the battery [W]
+    let P_battery = P_motor + P_loss_motor + P_const;
+    // Total power demand (including the power loss in the battery) [W]
+    let P_total = (U_battery_0 * U_battery_0) / (2.0 * R_battery)
+        - U_battery_0 * ((U_battery_0 * U_battery_0 - 4.0 * R_battery * P_battery) / (4.0 * R_battery * R_battery)).sqrt();
+
+    *ref_powerConsumption = P_total;
+    b_stateValid
 }
 

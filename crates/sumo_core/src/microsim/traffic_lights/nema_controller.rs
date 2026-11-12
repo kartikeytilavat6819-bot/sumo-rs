@@ -2,6 +2,11 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so E2 detectors cannot be looked up by id yet; upgrade when detector control is ported
+fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
+    panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
+}
+
 /// C++ enum `LightState`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i64)]
@@ -58,7 +63,11 @@ impl NEMALogic_DetectorInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new(_det: Ptr<MSE2Collector>, numPhases: i32) -> Self {
-        todo!("port DetectorInfo::DetectorInfo")
+        Self {
+            det: _det,
+            lastGreenTime: 0,
+            servedPhase: vec![false; numPhases as usize],
+        }
     }
 
 }
@@ -73,7 +82,7 @@ pub struct NEMALogic {
     /// whether the controller is in coordinated mode or not
     pub coordinateMode: bool,
     /// a store of the coordinated phase objects. Only used meaningfully when the controller is in coordinated mode
-    pub coordinatePhaseObjs: Unmapped /* PhasePtr[2] */,
+    pub coordinatePhaseObjs: [NEMALogic_PhasePtr; 2],
     /// flag to keep track of whether a timing change has been requested via traci
     pub queuedTraciChanges: bool,
     /// the controller's offset
@@ -91,11 +100,11 @@ pub struct NEMALogic {
     /// stores the length of phase string for the controller "GGrrrrs" = 6. Must be the same length for all phases
     pub myPhaseStrLen: i32,
     /// variable to store the active phases
-    pub myActivePhaseObjs: Unmapped /* PhasePtr[2] */,
+    pub myActivePhaseObjs: [NEMALogic_PhasePtr; 2],
     /// a vector that stores a pointer to the instantiated NEMAPhase objects
     pub myPhaseObjs: Vec<NEMALogic_PhasePtr>,
     /// an array to store the phases located at a barrier for each ring
-    pub defaultBarrierPhases: Unmapped /* PhasePtr[2][2] */,
+    pub defaultBarrierPhases: [[NEMALogic_PhasePtr; 2]; 2],
     pub myDetectorForPhase: NEMALogic_detectorMap,
     /// storing the detector info in a vector
     pub myDetectorInfoVector: Vec<NEMALogic_DetectorInfo>,
@@ -146,7 +155,69 @@ impl NEMALogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &BTreeMap<String, String>, basePath: &str) -> Self {
-        todo!("port NEMALogic::NEMALogic")
+        let mut this = Self {
+            base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::NEMA, phases, step, delay, &()),
+            lightHeadPriority: String::new(),
+            coordinateMode: false,
+            coordinatePhaseObjs: [Ptr::null(); 2],
+            queuedTraciChanges: false,
+            offset: 0,
+            myNextOffset: 0,
+            myCycleLength: 0,
+            myNextCycleLength: 0,
+            simTime: 0,
+            myNumberRings: 2,
+            myPhaseStrLen: -1,
+            myActivePhaseObjs: [Ptr::null(); 2],
+            myPhaseObjs: Vec::new(),
+            defaultBarrierPhases: [[Ptr::null(); 2]; 2],
+            myDetectorForPhase: Vec::new(),
+            myDetectorInfoVector: Vec::new(),
+            myLaneDetectorMap: BTreeMap::new(),
+            myLanePhaseMap: BTreeMap::new(),
+            myDetectorLaneMap: BTreeMap::new(),
+            myDetectorLength: 0.,
+            myDetectorLengthLeftTurnLane: 0.,
+            myShowDetectors: false,
+            myFile: String::new(),
+            myFreq: 0,
+            myVehicleTypes: String::new(),
+            rings: Vec::new(),
+            phase2ControllerLanesMap: BTreeMap::new(),
+            fixForceOff: false,
+            cycleRefPoint: 0,
+            whetherOutputState: false,
+            ignoreErrors: false,
+            myControllerType: NEMALogic_controllerType::Type170,
+            myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
+        };
+        // shortcut: base ctor still takes an Unmapped parameter map, so the NEMA parameters are copied in here, before the base logic reads them
+        for (k, v) in parameter {
+            this.base2.set_parameter(k.as_str(), v.as_str());
+        }
+        this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
+        this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
+        let cycle_default = this.get_parameter("cycleTime", "60".to_string());
+        let cycle_default = this.get_parameter("cycle-length", cycle_default);
+        let cycle_str = this.get_parameter("total-cycle-length", cycle_default);
+        this.myCycleLength = utils::common::time::time2steps(utils::common::string_utils::to_double(&cycle_str).unwrap());
+        this.myNextCycleLength = this.myCycleLength;
+        this.myDefaultCycleTime = this.myCycleLength;
+        let show_default = utils::options::options_cont::get_bool("tls.actuated.show-detectors").to_string();
+        let show_str = this.get_parameter("show-detectors", show_default);
+        this.myShowDetectors = utils::common::string_utils::to_bool(&show_str).unwrap();
+        let file_str = this.get_parameter("file", "NUL".to_string());
+        this.myFile = utils::common::file_helpers::check_for_relativity(&file_str, basePath);
+        let freq_str = this.get_parameter("freq", "300".to_string());
+        this.myFreq = utils::common::time::time2steps(utils::common::string_utils::to_double(&freq_str).unwrap());
+        this.myVehicleTypes = this.get_parameter("vTypes", String::new());
+        let controller_type_str = this.get_parameter("controllerType", "TS2".to_string());
+        this.myControllerType = this.parse_controller_type(controller_type_str);
+        let ignore_str = this.get_parameter("ignore-errors", "false".to_string());
+        this.ignoreErrors = utils::common::string_utils::to_bool(&ignore_str).unwrap();
+        // This should be extended in the future.
+        this.myNumberRings = 2;
+        this
     }
 
     /// C++: `void NEMALogic::init(NLDetectorBuilder &)` [virtual]
@@ -406,7 +477,271 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port NEMALogic::init")
+        // TODO: Create a parameter for this
+        self.cycleRefPoint = utils::common::time::time2steps(0.);
+
+        let mut barriers = self.get_parameter("barrierPhases", String::new());
+        let coordinates_default = self.get_parameter("barrier2Phases", String::new());
+        let mut coordinates = self.get_parameter("coordinatePhases", coordinates_default);
+        let mut ring1 = self.get_parameter("ring1", String::new());
+        let mut ring2 = self.get_parameter("ring2", String::new());
+
+        let fix_str = self.get_parameter("fixForceOff", "false".to_string());
+        self.fixForceOff = utils::common::string_utils::to_bool(&fix_str).unwrap();
+        self.offset = self.myOffset;
+        self.myNextOffset = self.myOffset;
+        let whether_str = self.get_parameter("whetherOutputState", "false".to_string());
+        self.whetherOutputState = utils::common::string_utils::to_bool(&whether_str).unwrap();
+        let coord_str = self.get_parameter("coordinate-mode", "false".to_string());
+        self.coordinateMode = utils::common::string_utils::to_bool(&coord_str).unwrap();
+
+        // set the queued traci changes to false
+        self.queuedTraciChanges = false;
+
+        //missing parameter error
+        self.error_handle_not_set(ring1.clone(), "ring1".to_string());
+        self.error_handle_not_set(ring2.clone(), "ring2".to_string());
+        self.error_handle_not_set(barriers.clone(), "barrierPhases".to_string());
+        self.error_handle_not_set(coordinates.clone(), "barrier2Phases or coordinatePhases".to_string());
+
+        // DEBUG_NEMA print block omitted (compile-time debug output only)
+
+        // Construct the NEMA specific timing data types and initial phases
+        self.construct_timing_and_phase_defs(&mut barriers, &mut coordinates, &mut ring1, &mut ring2);
+
+        //init the traffic light
+        MSTrafficLightLogic::init(&mut self.base.base, nb);
+        assert!(!self.myLanes.is_empty());
+        //iterate through the lanes and build one E2 detector for each lane associated with the traffic light control junction
+        let lanes_all = self.myLanes.clone();
+        for lanes in lanes_all.iter() {
+            for lane in lanes.iter() {
+                let lane = *lane;
+                //decide the detector length
+                let detector_length = if self.is_left_turn_lane(lane) {
+                    self.myDetectorLengthLeftTurnLane
+                } else {
+                    self.myDetectorLength
+                };
+                if utils::common::sumo_vehicle_class::no_vehicles(lane.get_permissions()) {
+                    // do not build detectors on green verges or sidewalks
+                    continue;
+                }
+                // Build detector and register them in the detector control
+                if !self.myLaneDetectorMap.contains_key(&lane) {
+                    let mut det: Ptr<MSE2Collector> = Ptr::null();
+                    let customID = self.get_parameter(lane.get_id(), String::new());
+                    if customID != "" {
+                        det = lookup_e2_detector_by_id(&customID);
+                        //set the detector to be visible in gui
+                        det.m().set_visible(self.myShowDetectors);
+                    } else {
+                        let mut phaseNumber = 0;
+                        if let Some(p) = self.myLanePhaseMap.get(lane.get_id()) {
+                            phaseNumber = *p;
+                        }
+                        let mut index = lane.get_index();
+                        let mut id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
+                        // shortcut: the while-loop that bumps `index` until the detector id is unused needs the typed detector lookup (Unmapped getTypedDetectors); skipped until detector control is ported
+                        //createE2Detector() method will lead to bad detector showing in sumo-gui
+                        //so it is better to use build2Detector() rather than createE2Detector()
+                        let _built = nb.build_e2_detector(
+                            &id,                                  // detectorID
+                            lane,                                 // lane to build this detector
+                            -1000000., // INVALID_POSITION: set the detector location by end point and length
+                            lane.get_length(),                    // set the end position of the detector at the end of the lane
+                            detector_length,                      // detector length
+                            &self.myFile,                         // detector information output file
+                            self.myFreq,                          // detector reading interval
+                            0,                                    // time-based threshold that describes how much time has to pass until a vehicle is considered as halting
+                            0.,                                   // speed threshold as halting
+                            0.,                                   // minimum dist to the next standing vehicle to make this vehicle count as a participant to the jam
+                            String::new(),
+                            &self.myVehicleTypes,                 // vehicle types to consider, if it is empty, meaning consider all types of vehicles
+                            "",                                   // nextEdges (no filtering by vehicle route)
+                            PersonMode::NONE as i32,              // detector vehicles, not persons
+                            true,                                 // whether to give some slack on positioning
+                            self.myShowDetectors,                 // whether to show detectors in sumo-gui
+                            Ptr::null(),                          // traffic light that triggers aggregation when switching
+                            Ptr::null(),                          // outgoing lane that associated with the traffic light
+                        );
+
+                        //get the detector to be used in the lane detector map loading
+                        det = lookup_e2_detector_by_id(&id);
+                    }
+
+                    //map the detector to lane and lane to detector
+                    self.myLaneDetectorMap.insert(lane, det);
+                    self.myDetectorLaneMap.insert(det, lane);
+                    let numPhases = self.myPhases.len() as i32;
+                    self.myDetectorInfoVector.push(NEMALogic_DetectorInfo::new(det, numPhases));
+                }
+            }
+        }
+
+        let p2c = self.phase2ControllerLanesMap.clone();
+        for (NEMAPhaseIndex, laneIDs) in p2c.iter() {
+            let mut detectors: Vec<Ptr<MSE2Collector>> = Vec::new();
+            let mut detector: Ptr<MSE2Collector> = Ptr::null();
+            for laneID in laneIDs.iter() {
+                let lane = MSLane::dictionary_2(laneID);
+                detector = *self.myLaneDetectorMap.entry(lane).or_insert(Ptr::null());
+                detectors.push(detector);
+            }
+            // have to try this on both rings, because of the case where both rings have the same phase
+            // See Basic NEMA test
+            for i in 0..2usize {
+                let ring_i = self.rings[i].clone();
+                if self.vector_contains_phase(ring_i, *NEMAPhaseIndex) {
+                    self.get_phase_obj(*NEMAPhaseIndex, i as i32).m().set_detectors(detectors.clone());
+                }
+            }
+        }
+
+        //Do not delete. SUMO traffic logic check.
+        //SUMO check begin
+        let motorized: SVCPermissions = !(SVC_PEDESTRIAN | SVC_BICYCLE);
+        let mut linkToDetectors: BTreeMap<i32, BTreeSet<Ptr<MSE2Collector>>> = BTreeMap::new();
+        let mut actuatedLinks: BTreeSet<i32> = BTreeSet::new();
+
+        let numLinks = self.myLinks.len() as i32;
+        let mut neverMajor = vec![true; numLinks as usize];
+        let phases = self.myPhases.clone();
+        for phase in phases.iter() {
+            let state = phase.get_state().to_string();
+            for i in 0..numLinks {
+                if state.as_bytes()[i as usize] as i32 == LINKSTATE_TL_GREEN_MAJOR as i32 {
+                    neverMajor[i as usize] = false;
+                }
+            }
+        }
+        let mut oneLane = vec![false; numLinks as usize];
+        for i in 0..numLinks {
+            for lane in self.get_lanes_at(i).clone() {
+                let mut numMotorized = 0;
+                for l in lane.get_edge().get_lanes().clone() {
+                    if (l.get_permissions() & motorized) != 0 {
+                        numMotorized += 1;
+                    }
+                }
+                if numMotorized == 1 {
+                    oneLane[i as usize] = true;
+                    break;
+                }
+            }
+        }
+
+        for phase in phases.iter() {
+            let phaseIndex = self.myDetectorForPhase.len() as i32;
+            // determinism: std::set<MSE2Collector*> orders by pointer address, as does BTreeSet on Ptr
+            let mut detectors: BTreeSet<Ptr<MSE2Collector>> = BTreeSet::new();
+            if phase.is_actuated() {
+                let state = phase.get_state().to_string();
+                let mut greenLinks: BTreeSet<i32> = BTreeSet::new();
+                // determinism: std::map<MSE2Collector*, ...> orders by pointer address
+                let mut detectorLinks: BTreeMap<Ptr<MSE2Collector>, BTreeSet<i32>> = BTreeMap::new();
+
+                for i in 0..numLinks {
+                    let c = state.as_bytes()[i as usize] as i32;
+                    if c == LINKSTATE_TL_GREEN_MAJOR as i32
+                        || (c == LINKSTATE_TL_GREEN_MINOR as i32
+                            && ((neverMajor[i as usize] // check1a
+                                && self.has_major(&state, self.get_lanes_at(i))) // check1b
+                                || oneLane[i as usize])) // check1c
+                    {
+                        greenLinks.insert(i);
+                        actuatedLinks.insert(i);
+                    }
+
+                    for lane in self.get_lanes_at(i).clone() {
+                        if self.myLaneDetectorMap.contains_key(&lane) {
+                            let d = self.myLaneDetectorMap[&lane];
+                            detectorLinks.entry(d).or_default().insert(i);
+                        }
+                    }
+                }
+                // std::map iteration visits keys inserted during the loop; walk by key so the same holds here
+                let mut cursor: Option<Ptr<MSE2Collector>> = None;
+                loop {
+                    let next_entry = match cursor {
+                        None => detectorLinks.iter().next().map(|(d, l)| (*d, l.clone())),
+                        Some(c) => detectorLinks
+                            .range((std::ops::Bound::Excluded(c), std::ops::Bound::Unbounded))
+                            .next()
+                            .map(|(d, l)| (*d, l.clone())),
+                    };
+                    let (det, links) = match next_entry {
+                        Some(e) => e,
+                        None => break,
+                    };
+                    cursor = Some(det);
+                    let detectorLane = *self.myDetectorLaneMap.entry(det).or_insert(Ptr::null());
+                    let mut usable = true;
+                    // check 1
+                    for j in links.iter() {
+                        if !greenLinks.contains(j) {
+                            usable = false;
+                        }
+                    }
+
+                    //check 2
+                    if usable {
+                        for link in detectorLane.get_link_cont().clone() {
+                            let next = link.get_lane();
+                            if self.myLaneDetectorMap.contains_key(&next) {
+                                let nextDet = self.myLaneDetectorMap[&next];
+                                let nextLinks = detectorLinks.entry(nextDet).or_default().clone();
+                                for j in nextLinks.iter() {
+                                    if !greenLinks.contains(j) {
+                                        usable = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if usable {
+                        detectors.insert(det);
+                        for j in links.iter() {
+                            linkToDetectors.entry(*j).or_default().insert(det);
+                        }
+                    }
+                }
+                if detectors.is_empty() {
+                    utils::common::msg_handler::write_warning(&format!(
+                        "At NEMA tlLogic '{}', actuated phase {} has no controlling detector",
+                        self.get_id(),
+                        phaseIndex
+                    ));
+                }
+            }
+            let detectorInfos: Vec<Ptr<NEMALogic_DetectorInfo>> = Vec::new();
+            self.myDetectorForPhase.push(detectorInfos);
+            for det in detectors.iter() {
+                for detInfo in self.myDetectorInfoVector.iter_mut() {
+                    if detInfo.det == *det {
+                        self.myDetectorForPhase.last_mut().unwrap().push(Ptr::from_mut(detInfo));
+                        detInfo.servedPhase[phaseIndex as usize] = true;
+                    }
+                }
+            }
+        }
+
+        for i in actuatedLinks.iter() {
+            let noDetector = linkToDetectors.entry(*i).or_default().is_empty();
+            let idx = *i as usize;
+            if noDetector
+                && self.myLinks[idx].len() > 0
+                && (self.myLinks[idx][0].get_lane_before().get_permissions() & motorized) != 0
+            {
+                utils::common::msg_handler::write_warning(&format!(
+                    "At NEMA tlLogic '{}, linkIndex {} has no controlling detector",
+                    self.get_id(),
+                    i
+                ));
+            }
+        }
     }
 
     /// C++: `void NEMALogic::~NEMALogic() noexcept` [virtual]
@@ -419,7 +754,10 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NEMALogic::~NEMALogic")
+        // delete the phase objects (destructor only; the memory is owned by the container that allocated it)
+        for p in self.myPhaseObjs.clone() {
+            p.m().drop_();
+        }
     }
 
     /// C++: `SUMOTime NEMALogic::trySwitch()` [virtual]
@@ -499,7 +837,74 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port NEMALogic::trySwitch")
+        let mut nextPhases: [Ptr<PhaseTransitionLogic>; 2] = [Ptr::null(), Ptr::null()];
+
+        // update the internal time. This is a must. Could have just used a reference to the time
+        self.set_current_time();
+
+        // Check the Detectors
+        for p in self.myPhaseObjs.clone() {
+            p.m().check_my_detectors();
+        }
+
+        // Update the timing parameters
+        let controller = Ptr::from_mut(self);
+        for p in self.myActivePhaseObjs.clone() {
+            p.m().update(controller);
+        }
+
+        // Calculate the Next Phases, but only if atleast one of them is ready to transition
+        if self.myActivePhaseObjs[0].readyToSwitch || self.myActivePhaseObjs[1].readyToSwitch {
+            let mut transitions: NEMALogic_TransitionPairs = Vec::new();
+            // set the next phases by reference
+            self.get_next_phases(&mut transitions);
+
+            // Sort the next phases by distance and select the closest.
+            // determinism: std::sort is not stable; Rust sort_by is stable, so ties may order differently
+            if transitions.len() > 1 {
+                transitions.sort_by(|i, j| {
+                    if i.distance < j.distance {
+                        std::cmp::Ordering::Less
+                    } else if j.distance < i.distance {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+            }
+
+            // Set the Next Phases = to the transition with least combined distance
+            nextPhases[0] = transitions[0].p1;
+            nextPhases[1] = transitions[0].p2;
+
+            // Try the exit logic. This doesn't necessarily mean that the phase will exit,
+            // as it could go into green rest or green transfer, but this is considered an "exit"
+            for p in self.myActivePhaseObjs.clone() {
+                if p.readyToSwitch {
+                    p.m().exit(controller, &mut nextPhases);
+                }
+            }
+
+            // This is the only time when something might have happened, so we update the phase strings here
+            let newState = self.compose_light_string();
+            if newState.as_str() != self.myPhase.get_state() {
+                self.myPhase.set_state(&newState);
+                let name = format!("{}+{}", self.myActivePhaseObjs[0].phaseName, self.myActivePhaseObjs[1].phaseName);
+                self.myPhase.set_name(&name);
+                // ensure that SwitchCommand::execute notices a change
+                self.myStep = 1 - self.myStep;
+            }
+        }
+
+        // clear the phases' detectors
+        for p in self.myPhaseObjs.clone() {
+            p.m().clear_my_detectors();
+        }
+
+        // FUZZ_TESTING barrier assertion omitted (compile-time test hook only)
+
+        // return the simulation timestep, as this controller must be checked every simulation step
+        utils::common::time::delta_t()
     }
 
     /// C++: `const MSPhaseDefinition & NEMALogic::getCurrentPhaseDef() const` [const, virtual]
@@ -510,7 +915,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_def(&self) -> &MSPhaseDefinition {
-        todo!("port NEMALogic::getCurrentPhaseDef")
+        &self.myPhase
     }
 
     /// C++: `void NEMALogic::resetLastSwitch(SUMOTime)` [virtual]
@@ -521,7 +926,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_last_switch(&mut self, t: SUMOTime) {
-        todo!("port NEMALogic::resetLastSwitch")
+        self.myPhase.myLastSwitch = t;
     }
 
     /// C++: `void NEMALogic::activateProgram()` [virtual]
@@ -534,7 +939,10 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        todo!("port NEMALogic::activateProgram")
+        MSTrafficLightLogic::activate_program(&mut self.base.base);
+        for item in self.myLaneDetectorMap.values() {
+            item.m().set_visible(true);
+        }
     }
 
     /// C++: `void NEMALogic::deactivateProgram()` [virtual]
@@ -547,7 +955,10 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        todo!("port NEMALogic::deactivateProgram")
+        MSTrafficLightLogic::deactivate_program(&mut self.base.base);
+        for item in self.myLaneDetectorMap.values() {
+            item.m().set_visible(false);
+        }
     }
 
     /// C++: `bool NEMALogic::showDetectors() const` [const]
@@ -556,7 +967,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn show_detectors(&self) -> bool {
-        todo!("port NEMALogic::showDetectors")
+        self.myShowDetectors
     }
 
     /// C++: `void NEMALogic::setShowDetectors(bool)`
@@ -569,7 +980,10 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_show_detectors(&mut self, show: bool) {
-        todo!("port NEMALogic::setShowDetectors")
+        self.myShowDetectors = show;
+        for item in self.myLaneDetectorMap.values() {
+            item.m().set_visible(self.myShowDetectors);
+        }
     }
 
     /// C++: `std::map<std::string, double> NEMALogic::getDetectorStates() const` [const, virtual]
@@ -584,7 +998,11 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
-        todo!("port NEMALogic::getDetectorStates")
+        let mut result: BTreeMap<String, f64> = BTreeMap::new();
+        for (det, _lane) in self.myDetectorLaneMap.iter() {
+            result.insert(det.base2.base.get_id().to_string(), det.get_current_vehicle_number() as f64);
+        }
+        result
     }
 
     /// C++: `void NEMALogic::getNextPhases(TransitionPairs &)`
@@ -636,7 +1054,52 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_next_phases(&mut self, transitions: &mut NEMALogic_TransitionPairs) {
-        todo!("port NEMALogic::getNextPhases")
+        let controller = Ptr::from_mut(self);
+        let mut potentialPhases: Vec<Vec<Ptr<PhaseTransitionLogic>>> = Vec::new();
+
+        // Get a vector of each phases' potential transitions
+        for p in self.myActivePhaseObjs.clone() {
+            potentialPhases.push(p.m().try_switch(controller));
+        }
+
+        // Loop through all combination of transitions, keeping only the valid ones and filling in the gaps where necessary
+        for r1_t in potentialPhases[0].clone() {
+            for r2_t in potentialPhases[1].clone() {
+                // if both transitions go to the same barrier then we are good
+                if r1_t.get_to_phase().barrierNum == r2_t.get_to_phase().barrierNum {
+                    let distance = (r1_t.m().get_distance(r2_t) + r2_t.m().get_distance(r1_t)) as f32 / 2.0;
+                    transitions.push(NEMALogic_transitionInfo { p1: r1_t, p2: r2_t, distance });
+                } else {
+                    // If the rings are different, add a choice where one of them is the default choice for whatever ring it is
+                    // create two choices, one for each of the phase as they are on  different rings
+                    if r1_t.get_from_phase().readyToSwitch {
+                        // get the r2 default
+                        let r2_t_temp = self.get_default_transition(r2_t, r1_t);
+                        // only add it if it does not cross a barrier!
+                        if r2_t_temp.get_to_phase().barrierNum == r1_t.get_to_phase().barrierNum {
+                            let distance = (r2_t_temp.m().get_distance(r1_t) + r1_t.m().get_distance(r2_t_temp)) as f32 / 2.0;
+                            transitions.push(NEMALogic_transitionInfo { p1: r1_t, p2: r2_t_temp, distance });
+                        }
+                    }
+                    if r2_t.get_from_phase().readyToSwitch {
+                        // R1 default
+                        let r1_t_temp = self.get_default_transition(r1_t, r2_t);
+                        // only add it if it does not cross a barrier!
+                        if r1_t_temp.get_to_phase().barrierNum == r2_t.get_to_phase().barrierNum {
+                            let distance = (r2_t.m().get_distance(r1_t_temp) + r1_t_temp.m().get_distance(r2_t)) as f32 / 2.0;
+                            transitions.push(NEMALogic_transitionInfo { p1: r1_t_temp, p2: r2_t, distance });
+                        }
+                    }
+                    // If the distances are <= 1, this means that this is the shortest transition possible
+                    // and we can return early without considering any other options
+                    if let Some(last) = transitions.last() {
+                        if last.distance < 1.0 {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `SUMOTime NEMALogic::ModeCycle(SUMOTime, SUMOTime)`
@@ -654,7 +1117,14 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn mode_cycle(&mut self, a: SUMOTime, b: SUMOTime) -> SUMOTime {
-        todo!("port NEMALogic::ModeCycle")
+        let mut c = a - b;
+        while c >= b {
+            c = c - b;
+        }
+        while c < 0 {
+            c += b;
+        }
+        c
     }
 
     /// C++: `void NEMALogic::getLaneInfoFromNEMAState(std::string, StringVector &, IntVector &)`
@@ -682,7 +1152,24 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_info_from_nema_state(&mut self, state: String, laneIDs: &mut StringVector, stateIndex: &mut IntVector) {
-        todo!("port NEMALogic::getLaneInfoFromNEMAState")
+        // C++ std::set `output` is built but never read, so it is not ported
+        for i in 0..self.myLinks.len() {
+            if self.myLinks[i].is_empty() {
+                // unused index
+                continue;
+            }
+            let ch = state.as_bytes()[i];
+            // if the ch is 'G', it means that the phase is controlling this lane
+            if ch == b'G' {
+                stateIndex.push(i as i32);
+                for link in self.myLinks[i].clone() {
+                    let incoming = link.get_lane_before();
+                    if incoming.is_normal() {
+                        laneIDs.push(incoming.get_id().to_string());
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NEMALogic::setNewMaxGreens(std::vector<double>)`
@@ -698,7 +1185,13 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_new_max_greens(&mut self, newMaxGreens: Vec<f64>) {
-        todo!("port NEMALogic::setNewMaxGreens")
+        for p in self.myPhaseObjs.clone() {
+            let idx = (p.phaseName - 1) as usize;
+            if newMaxGreens[idx] > 0. {
+                // set the phase's nextMaxDuration. This will be implemented when implementTraciChanges is called
+                p.m().nextMaxDuration = utils::common::time::time2steps(newMaxGreens[idx]);
+            }
+        }
     }
 
     /// C++: `void NEMALogic::setNewSplits(std::vector<double>)`
@@ -715,7 +1208,14 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_new_splits(&mut self, newSplits: Vec<f64>) {
-        todo!("port NEMALogic::setNewSplits")
+        assert!(newSplits.len() == 8);
+        for p in self.myPhaseObjs.clone() {
+            let idx = (p.phaseName - 1) as usize;
+            if newSplits[idx] > 0. {
+                // set the phase's nextMaxDuration. This will be implemented when implementTraciChanges is called
+                p.m().nextMaxDuration = utils::common::time::time2steps(newSplits[idx]) - p.yellow - p.red;
+            }
+        }
     }
 
     /// C++: `void NEMALogic::setNewCycleLength(double)`
@@ -727,7 +1227,8 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_new_cycle_length(&mut self, newCycleLength: f64) {
-        todo!("port NEMALogic::setNewCycleLength")
+        // set the controller's next cycle length. This will be implemented when implementTraciChanges is called
+        self.myNextCycleLength = utils::common::time::time2steps(newCycleLength);
     }
 
     /// C++: `void NEMALogic::setNewOffset(double)`
@@ -739,7 +1240,8 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_new_offset(&mut self, newOffset: f64) {
-        todo!("port NEMALogic::setNewOffset")
+        // set the controller's offset. This will be implemented when implementTraciChanges is called
+        self.myNextOffset = utils::common::time::time2steps(newOffset);
     }
 
     /// C++: `SUMOTime NEMALogic::getCurrentCycleLength()`
@@ -749,7 +1251,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_cycle_length(&mut self) -> SUMOTime {
-        todo!("port NEMALogic::getCurrentCycleLength")
+        self.myCycleLength
     }
 
     /// C++: `void NEMALogic::setParameter(const std::string &, const std::string &)` [virtual]
@@ -787,7 +1289,34 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port NEMALogic::setParameter")
+        self.queuedTraciChanges = true;
+        if utils::common::string_utils::starts_with(key, "NEMA.") {
+            if key == "NEMA.splits" || key == "NEMA.maxGreens" {
+                //splits="2.0 3.0 4.0 5.0 2.0 3.0 4.0 5.0"
+                let tmp = utils::common::string_tokenizer::StringTokenizer::new(value).get_vector();
+                if tmp.len() != 8 {
+                    self.queuedTraciChanges = false;
+                    panic!("{}", InvalidArgument(format!("Parameter '{}' for NEMA controller '{}' requires 8 space or comma separated values", key, self.get_id())).0);
+                }
+                let mut timing: Vec<f64> = Vec::new();
+                for s in tmp.iter() {
+                    timing.push(utils::common::string_utils::to_double(s).unwrap());
+                }
+                if key == "NEMA.maxGreens" {
+                    self.set_new_max_greens(timing);
+                } else {
+                    self.set_new_splits(timing);
+                }
+            } else if key == "NEMA.cycleLength" {
+                self.set_new_cycle_length(utils::common::string_utils::to_double(value).unwrap());
+            } else if key == "NEMA.offset" {
+                self.set_new_offset(utils::common::string_utils::to_double(value).unwrap());
+            } else {
+                self.queuedTraciChanges = false;
+                panic!("{}", InvalidArgument(format!("Unsupported parameter '{}' for NEMA controller '{}'", key, self.get_id())).0);
+            }
+        }
+        self.base2.set_parameter(key, value);
     }
 
     /// C++: `const std::string NEMALogic::getParameter(const std::string &, const std::string) const` [const, virtual]
@@ -820,7 +1349,24 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str, defaultValue: String) -> String {
-        todo!("port NEMALogic::getParameter")
+        if utils::common::string_utils::starts_with(key, "NEMA.") {
+            if key == "NEMA.phaseCall" {
+                let mut activeCalls = [0i32; 8];
+                for p in self.myPhaseObjs.iter() {
+                    // This handles the case when the controller has multiple of the same phase call
+                    let idx = (p.phaseName - 1) as usize;
+                    if activeCalls[idx] == 0 {
+                        activeCalls[idx] = 1 * (p.lastDetectActive as i32);
+                    }
+                }
+                let outStr: Vec<String> = activeCalls.iter().map(|c| c.to_string()).collect();
+                return outStr.join(",");
+            } else {
+                panic!("{}", InvalidArgument(format!("Unsupported parameter '{}' for NEMA controller '{}'", key, self.get_id())).0);
+            }
+        } else {
+            self.base2.get_parameter(key, &defaultValue)
+        }
     }
 
     /// C++: `SUMOTime NEMALogic::getCurrentTime() const` [const]
@@ -830,7 +1376,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_time(&self) -> SUMOTime {
-        todo!("port NEMALogic::getCurrentTime")
+        self.simTime
     }
 
     /// C++: `SUMOTime NEMALogic::getTimeInCycle() const` [const]
@@ -840,7 +1386,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_in_cycle(&self) -> SUMOTime {
-        todo!("port NEMALogic::getTimeInCycle")
+        (self.simTime - self.cycleRefPoint - self.offset) % self.myCycleLength
     }
 
     /// C++: `void NEMALogic::setActivePhase(PhasePtr)`
@@ -851,7 +1397,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn set_active_phase(&mut self, phase: NEMALogic_PhasePtr) {
-        todo!("port NEMALogic::setActivePhase")
+        self.myActivePhaseObjs[phase.ringNum as usize] = phase;
     }
 
     /// C++: `PhasePtr NEMALogic::getActivePhase(int)`
@@ -861,7 +1407,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_active_phase(&mut self, ringNum: i32) -> NEMALogic_PhasePtr {
-        todo!("port NEMALogic::getActivePhase")
+        self.myActivePhaseObjs[ringNum as usize]
     }
 
     /// C++: `std::vector<PhasePtr> NEMALogic::getPhasesByRing(int)`
@@ -869,7 +1415,13 @@ impl NEMALogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_phases_by_ring(&mut self, ringNum: i32) -> Vec<NEMALogic_PhasePtr> {
-        todo!("port NEMALogic::getPhasesByRing")
+        let mut phases: Vec<NEMALogic_PhasePtr> = Vec::new();
+        for p in self.myPhaseObjs.iter() {
+            if p.ringNum == ringNum {
+                phases.push(*p);
+            }
+        }
+        phases
     }
 
     /// C++: `PhasePtr NEMALogic::getPhaseObj(int, int)`
@@ -877,7 +1429,21 @@ impl NEMALogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_phase_obj(&mut self, phaseNum: i32, ringNum: i32) -> NEMALogic_PhasePtr {
-        todo!("port NEMALogic::getPhaseObj")
+        // This satisfies the case where there is a "duplicate" phase on both ring
+        let iterRing = if ringNum >= 0 { self.get_phases_by_ring(ringNum) } else { self.myPhaseObjs.clone() };
+        for p in iterRing {
+            if p.phaseName == phaseNum {
+                return p;
+            }
+        }
+        // the phase must always be found
+        panic!(
+            "At traffic signal '{}' program '{}' phase '{}' not found in ring '{}'.",
+            self.get_id(),
+            self.myProgramID,
+            phaseNum,
+            ringNum
+        );
     }
 
     /// C++: `std::vector<PhasePtr> NEMALogic::getPhaseObjs()`
@@ -887,7 +1453,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_phase_objs(&mut self) -> Vec<NEMALogic_PhasePtr> {
-        todo!("port NEMALogic::getPhaseObjs")
+        self.myPhaseObjs.clone()
     }
 
     /// C++: `int NEMALogic::measureRingDistance(int, int, int)`
@@ -914,7 +1480,25 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn measure_ring_distance(&mut self, p1: i32, p2: i32, ringNum: i32) -> i32 {
-        todo!("port NEMALogic::measureRingDistance")
+        let length = self.rings[ringNum as usize].len() as i32;
+        let mut d = 0;
+        let mut found = false;
+        // Loop around the ring and keep track of the distance from p1 to p2
+        for i in 0..(length * 2) {
+            let v = self.rings[ringNum as usize][(i % length) as usize];
+            if v > 0 {
+                if found {
+                    d += 1;
+                    if v == p2 {
+                        break;
+                    }
+                } else if v == p1 {
+                    found = true;
+                }
+            }
+        }
+        assert!(d > 0);
+        d
     }
 
     /// C++: `bool NEMALogic::isType170() const` [const]
@@ -924,7 +1508,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn is_type170(&self) -> bool {
-        todo!("port NEMALogic::isType170")
+        self.myControllerType == NEMALogic_controllerType::Type170
     }
 
     /// C++: `PhasePtr NEMALogic::getOtherPhase(PhasePtr)`
@@ -932,7 +1516,8 @@ impl NEMALogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_other_phase(&mut self, p: NEMALogic_PhasePtr) -> NEMALogic_PhasePtr {
-        todo!("port NEMALogic::getOtherPhase")
+        // return a pointer to the other active phase
+        self.myActivePhaseObjs[if p.ringNum == 0 { 1 } else { 0 }]
     }
 
     /// C++: `void NEMALogic::implementTraciChanges()`
@@ -953,7 +1538,17 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn implement_traci_changes(&mut self) {
-        todo!("port NEMALogic::implementTraciChanges")
+        // Implement Traci Updates on the start of ring1 coordinated phase (rising edge of it turning green)
+        if self.queuedTraciChanges {
+            for p in self.myPhaseObjs.clone() {
+                p.m().maxDuration = p.nextMaxDuration;
+            }
+            self.offset = self.myNextOffset;
+            self.myCycleLength = self.myNextCycleLength;
+            // now that we have set the cycle length, offset and max duration, we need to update force off times
+            self.calculate_force_offs();
+            self.queuedTraciChanges = false;
+        }
     }
 
     /// C++: `void NEMALogic::setCurrentTime()` [protected]
@@ -963,7 +1558,7 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_current_time(&mut self) {
-        todo!("port NEMALogic::setCurrentTime")
+        self.simTime = MSNet::get_instance().get_current_time_step();
     }
 
     /// C++: `void NEMALogic::constructTimingAndPhaseDefs(std::string &, std::string &, std::string &, std::string &)` [protected]
@@ -1211,7 +1806,209 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn construct_timing_and_phase_defs(&mut self, barriers: &mut String, coordinates: &mut String, ring1: &mut String, ring2: &mut String) {
-        todo!("port NEMALogic::constructTimingAndPhaseDefs")
+        // read in the barrier and coordinated phases from the XML
+        let barrierPhases = self.read_para_from_string(barriers.clone());
+        let coordinatePhases = self.read_para_from_string(coordinates.clone());
+
+        // create a {{}, {}} vector of phases
+        let ring1Phases = self.read_para_from_string(ring1.clone());
+        self.rings.push(ring1Phases);
+        let ring2Phases = self.read_para_from_string(ring2.clone());
+        self.rings.push(ring2Phases);
+
+        // load the recalls, if they exist
+        let minRecallStr = self.get_parameter("minRecall", "1,2,3,4,5,6,7,8".to_string());
+        let VecMinRecall = self.read_para_from_string(minRecallStr);
+        let maxRecallStr = self.get_parameter("maxRecall", String::new());
+        let VecMaxRecall = self.read_para_from_string(maxRecallStr);
+
+        let controller = Ptr::from_mut(self);
+
+        // loop through the rings and construct NEMAPhases.
+        // This relies on the phase being in order in the rings parameter in the configuration file
+        let mut ringNum: i32 = 0;
+        let mut lastPhaseIter: i32 = 0;
+        let mut phaseIter: i32 = 0;
+        let rings = self.rings.clone();
+        for r in rings.iter() {
+            let mut ringIter: i32 = 0;
+            lastPhaseIter = phaseIter;
+            phaseIter = 0;
+            for &p in r.iter() {
+                if p != 0 {
+                    // find the phase definition matching the phase integer
+                    let mut tempPhase: Ptr<MSPhaseDefinition> = Ptr::null();
+                    for pDef in self.myPhases.clone() {
+                        if self.string2int(pDef.get_name().to_string()) == p {
+                            tempPhase = pDef;
+                            break;
+                        }
+                    }
+                    // there must be a matching MSPhaseDefinition
+                    if tempPhase.is_null() {
+                        panic!("At traffic signal '{}' program '{}' no phase named '{}' was found", self.get_id(), self.myProgramID, p);
+                    }
+
+                    // create lane specific objects
+                    let state = tempPhase.get_state().to_string();
+
+                    // check that all phases have the same length. myPhaseStrLen is initially set to -1.
+                    if self.myPhaseStrLen < 0 {
+                        self.myPhaseStrLen = state.len() as i32;
+                    } else if self.myPhaseStrLen != state.len() as i32 {
+                        panic!("At NEMA tlLogic '{}', different sizes of NEMA phase states. Please check the NEMA XML", self.get_id());
+                    }
+
+                    // get the lane-based info
+                    let mut laneIDs: StringVector = Vec::new();
+                    let mut controlledStateIndexes: IntVector = Vec::new();
+                    self.get_lane_info_from_nema_state(state.clone(), &mut laneIDs, &mut controlledStateIndexes);
+
+                    let mut laneIDs_vector: Vec<String> = Vec::new();
+                    for laneID in laneIDs.iter() {
+                        laneIDs_vector.push(laneID.clone());
+                        self.myLanePhaseMap.insert(laneID.clone(), p);
+                    }
+                    self.phase2ControllerLanesMap.insert(p, laneIDs_vector);
+
+                    // Create the Phase Object
+                    // find if it is at a barrier
+                    let barrierPhase = self.vector_contains_phase(barrierPhases.clone(), p) || self.vector_contains_phase(coordinatePhases.clone(), p);
+                    // is it a coordinate phase
+                    let coordinatePhase = self.vector_contains_phase(coordinatePhases.clone(), p) && self.coordinateMode;
+                    // is there a minimum or max recall
+                    let minRecall = self.vector_contains_phase(VecMinRecall.clone(), p);
+                    let maxRecall = self.vector_contains_phase(VecMaxRecall.clone(), p);
+                    // A phase can "green rest" only if it has a recall and no other phases on that ring do OR if NO phases have a recall (unique case)
+                    let mut phaseGreenRest = (VecMaxRecall.len() + VecMinRecall.len()) < 1;
+                    if !phaseGreenRest {
+                        let mut recallActive = minRecall || maxRecall;
+                        if recallActive {
+                            for &pO in r.iter() {
+                                if pO != p {
+                                    if self.vector_contains_phase(VecMinRecall.clone(), pO) || self.vector_contains_phase(VecMaxRecall.clone(), pO) {
+                                        recallActive = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            // only set the green rest to true if I am the only phase on my ring with a recall
+                            phaseGreenRest = recallActive;
+                        }
+                    }
+                    // could add per-phase fixforceoff here
+                    // barrierNum is either 0 or 1, depending on mainline side or sidestreet
+                    let barrierNum = ringIter / 2;
+
+                    // now ready to create the phase
+                    // shortcut: NEMAPhase objects are leaked boxes owned for the whole simulation, like the C++ new
+                    let phaseObj = NEMAPhase::new(
+                        p,
+                        barrierPhase,
+                        phaseGreenRest,
+                        coordinatePhase,
+                        minRecall,
+                        maxRecall,
+                        self.fixForceOff,
+                        barrierNum,
+                        ringNum,
+                        controlledStateIndexes,
+                        tempPhase,
+                    );
+                    self.myPhaseObjs.push(Ptr::from_mut(Box::leak(Box::new(phaseObj))));
+
+                    // Add a reference to the sequentially prior phase
+                    if phaseIter > 0 {
+                        let prior = self.myPhaseObjs[(lastPhaseIter + (phaseIter - 1)) as usize];
+                        self.myPhaseObjs.last().unwrap().m().set_sequential_prior_phase(prior);
+                    }
+                    phaseIter += 1;
+                }
+                ringIter += 1;
+            }
+            if lastPhaseIter >= self.myPhaseObjs.len() as i32 {
+                panic!("At traffic signal '{}', ring {} contains only '0'", self.get_id(), ringNum + 1);
+            }
+            // Set the first to point to the last, wrapping around the ring.
+            let first = self.myPhaseObjs[lastPhaseIter as usize];
+            let last = self.myPhaseObjs[(lastPhaseIter + phaseIter - 1) as usize];
+            first.m().set_sequential_prior_phase(last);
+            // index the ring counter
+            ringNum += 1;
+        }
+
+        //TODO: set the default phases. This could also be set using dual entry in future
+        for i in 0..2usize {
+            // create the coordinate phase ptr
+            let coordPhase = self.get_phase_obj(coordinatePhases[i], i as i32);
+            self.coordinatePhaseObjs[i] = coordPhase;
+            self.defaultBarrierPhases[i][coordPhase.barrierNum as usize] = coordPhase;
+            // create the other barrier phase ptr
+            let b = self.get_phase_obj(barrierPhases[i], i as i32);
+            self.defaultBarrierPhases[i][b.barrierNum as usize] = b;
+            // the barrier 1 and barrier 0 default phase must not have the same barrier number
+            if b.barrierNum == self.coordinatePhaseObjs[i].barrierNum {
+                panic!(
+                    "At traffic signal {} the barrier and coordinated phases {}, {} are located on the same side of a barrier. Please check your configuration file",
+                    self.get_id(),
+                    b.phaseName,
+                    self.coordinatePhaseObjs[i].barrierNum
+                );
+            }
+        }
+
+        // Create the PhaseDetectorInfo for each of the phases (needs knowledge of other phases to create)
+        let latchingStr = self.get_parameter("latchingDetectors", String::new());
+        let latchingDetectors = self.read_para_from_string(latchingStr);
+        let mut cp: Vec<(i32, i32)> = Vec::new();
+        for p in self.myPhaseObjs.clone() {
+            let cps = format!("crossPhaseSwitching:{}", p.phaseName);
+            let crossPhase = utils::common::string_utils::to_int(&self.get_parameter(&cps, "0".to_string())).unwrap();
+            if crossPhase > 0 {
+                cp.push((p.phaseName, crossPhase));
+            }
+        }
+
+        // Knowing the cross phase info, we can add that to the phase
+        for p in self.myPhaseObjs.clone() {
+            let latching = self.vector_contains_phase(latchingDetectors.clone(), p.phaseName);
+            let mut cpTarget = 0;
+            let mut cpSource = 0;
+            for cp_pair in cp.iter() {
+                if cp_pair.0 == p.phaseName || cp_pair.1 == p.phaseName {
+                    cpTarget = cp_pair.0;
+                    cpSource = cp_pair.1;
+                }
+            }
+            p.m().init(controller, cpTarget, cpSource, latching);
+        }
+
+        // Calculate Force offs Based on Timing
+        self.calculate_force_offs();
+
+        if self.coordinateMode {
+            // Calculate the Initial Phases in coordinated operation only.
+            // Otherwise they have already been calculated above
+            self.calculate_initial_phases();
+        } else {
+            // Fall back being the barrier 0 default phases
+            let defaultP0 = self.get_phases_by_ring(0)[0];
+            let defaultP1 = self.get_phases_by_ring(1)[0];
+            defaultP0.m().force_enter(controller);
+            defaultP1.m().force_enter(controller);
+        }
+
+        // Set the initial light state
+        let composed = self.compose_light_string();
+        self.myPhase.set_state(&composed);
+        let name = format!("{}+{}", self.myActivePhaseObjs[0].phaseName, self.myActivePhaseObjs[1].phaseName);
+        self.myPhase.set_name(&name);
+        let simstep = MSNet::get_instance().get_current_time_step();
+        self.set_traffic_light_signals(simstep);
+        self.myStep = 0;
+
+        //validating timing
+        self.validate_timing();
     }
 
     /// C++: `std::string NEMALogic::composeLightString()` [protected]
@@ -1244,7 +2041,29 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn compose_light_string(&mut self) -> String {
-        todo!("port NEMALogic::composeLightString")
+        // FIX with plan to support #10742
+        let mut out: Vec<u8> = vec![b'r'; self.myPhaseStrLen as usize];
+        for i in 0..self.myPhaseStrLen {
+            let mut controlled = false;
+            let mut phaseChars: Vec<i8> = Vec::new();
+            for p in self.myActivePhaseObjs.clone() {
+                phaseChars.push(p.m().get_nema_char(i));
+                if p.m().controlled_index(i) {
+                    out[i as usize] = p.m().get_nema_char(i) as u8;
+                    controlled = true;
+                }
+            }
+            // if the index wasn't a controlled one, the prior priority order still stands
+            if !controlled {
+                for priority_char in self.lightHeadPriority.bytes() {
+                    if phaseChars.contains(&(priority_char as i8)) {
+                        out[i as usize] = priority_char;
+                        break;
+                    }
+                }
+            }
+        }
+        String::from_utf8_lossy(&out).into_owned()
     }
 
     /// C++: `bool NEMALogic::vectorContainsPhase(std::vector<int>, int)` [protected]
@@ -1258,7 +2077,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn vector_contains_phase(&mut self, v: Vec<i32>, phaseNum: i32) -> bool {
-        todo!("port NEMALogic::vectorContainsPhase")
+        v.contains(&phaseNum)
     }
 
     /// C++: `bool NEMALogic::hasMajor(const std::string &, const LaneVector &) const` [const, protected]
@@ -1279,8 +2098,19 @@ impl NEMALogic {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn has_major(&self, state: &str, lanes: &LaneVector) -> bool {
-        todo!("port NEMALogic::hasMajor")
+    pub fn has_major(&self, state: &str, lanes: &MSTrafficLightLogic_LaneVector) -> bool {
+        for i in 0..state.len() {
+            if state.as_bytes()[i] as i32 == LINKSTATE_TL_GREEN_MAJOR as i32 {
+                for cand in self.get_lanes_at(i as i32).iter() {
+                    for lane in lanes.iter() {
+                        if *lane == *cand {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `std::vector<int> NEMALogic::readParaFromString(std::string)` [protected]
@@ -1297,7 +2127,14 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn read_para_from_string(&mut self, s: String) -> Vec<i32> {
-        todo!("port NEMALogic::readParaFromString")
+        let mut output: Vec<i32> = Vec::new();
+        for c in s.chars() {
+            if c >= '0' && c <= '9' {
+                let temp = c as i32 - '0' as i32;
+                output.push(temp);
+            }
+        }
+        output
     }
 
     /// C++: `bool NEMALogic::isLeftTurnLane(const MSLane *const) const` [const, protected]
@@ -1311,7 +2148,11 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn is_left_turn_lane(&self, lane: Ptr<MSLane>) -> bool {
-        todo!("port NEMALogic::isLeftTurnLane")
+        let links = lane.get_link_cont().clone();
+        if links.len() == 1 && links[0].get_direction() == LinkDirection::LEFT {
+            return true;
+        }
+        false
     }
 
     /// C++: `int NEMALogic::string2int(std::string)` [protected]
@@ -1324,7 +2165,28 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn string2int(&mut self, s: String) -> i32 {
-        todo!("port NEMALogic::string2int")
+        // emulates `std::stringstream ss(s) >> ret` with ret = 0 on failure
+        // shortcut: no clamp to the i32 range on overflow (C++11 stream extraction saturates), upgrade if an overflowing phase name ever matters
+        let bytes = s.trim_start().as_bytes().to_vec();
+        let mut i = 0usize;
+        let mut neg = false;
+        if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
+            neg = bytes[i] == b'-';
+            i += 1;
+        }
+        let start = i;
+        let mut v: i64 = 0;
+        while i < bytes.len() && bytes[i].is_ascii_digit() {
+            v = v * 10 + (bytes[i] - b'0') as i64;
+            i += 1;
+        }
+        if i == start {
+            0
+        } else if neg {
+            (-v) as i32
+        } else {
+            v as i32
+        }
     }
 
     /// C++: `PhaseTransitionLogic * NEMALogic::getDefaultTransition(PhaseTransitionLogic *, PhaseTransitionLogic *)` [protected]
@@ -1345,7 +2207,15 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn get_default_transition(&mut self, t: Ptr<PhaseTransitionLogic>, ot: Ptr<PhaseTransitionLogic>) -> Ptr<PhaseTransitionLogic> {
-        todo!("port NEMALogic::getDefaultTransition")
+        let p = t.get_from_phase();
+        // if the current phase is not ready to switch or a barrier cross is desired by the other transition
+        // and t fromPhase is not ready to switch, the default transition is back to myself
+        if !p.readyToSwitch || (p.barrierNum == ot.get_to_phase().barrierNum && p.get_current_state() >= LightState::Green) {
+            return p.m().get_transition(p.phaseName);
+        }
+        // otherwise the default transition is to the default phase on whatever barrier ot wants to transition to
+        let target = self.defaultBarrierPhases[p.ringNum as usize][ot.get_to_phase().barrierNum as usize].phaseName;
+        p.m().get_transition(target)
     }
 
     /// C++: `controllerType NEMALogic::parseControllerType(std::string)` [protected]
@@ -1353,7 +2223,19 @@ impl NEMALogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn parse_controller_type(&mut self, inputType: String) -> NEMALogic_controllerType {
-        todo!("port NEMALogic::parseControllerType")
+        let mut cleanString = String::new();
+        for c in inputType.chars() {
+            if c.is_ascii_alphabetic() || c.is_ascii_digit() {
+                cleanString.push(c.to_ascii_lowercase());
+            }
+        }
+        if cleanString == "type170" {
+            NEMALogic_controllerType::Type170
+        } else if cleanString == "ts2" {
+            NEMALogic_controllerType::TS2
+        } else {
+            panic!("{}", InvalidArgument(format!("Please set controllerType for NEMA tlLogic {} to either Type170 or TS2", self.get_id())).0);
+        }
     }
 
     /// C++: `void NEMALogic::error_handle_not_set(std::string, std::string)` [protected]
@@ -1366,7 +2248,9 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn error_handle_not_set(&mut self, param_variable: String, param_name: String) {
-        todo!("port NEMALogic::error_handle_not_set")
+        if param_variable == "" {
+            panic!("{}", InvalidArgument(format!("Please set {} for NEMA tlLogic '{}'", param_name, self.get_id())).0);
+        }
     }
 
     /// C++: `void NEMALogic::validate_timing()` [protected]
@@ -1417,7 +2301,52 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn validate_timing(&mut self) {
-        todo!("port NEMALogic::validate_timing")
+        // check that the cycle length for each ring adds up to the specified cycle length
+        for ringIndex in 0..2usize {
+            let mut cycleLengthCalculated: SUMOTime = 0;
+            for p in self.get_phases_by_ring(ringIndex as i32) {
+                cycleLengthCalculated += p.maxDuration + p.yellow + p.red;
+            }
+            if self.coordinateMode && (cycleLengthCalculated != self.myCycleLength) {
+                let ringNumber = ringIndex + 1;
+                let error = format!("At NEMA tlLogic '{}', Ring {} does not add to cycle length.", self.get_id(), ringNumber);
+                if self.ignoreErrors {
+                    utils::common::msg_handler::write_warning(&error);
+                } else {
+                    panic!("{}", error);
+                }
+            }
+        }
+        // check that the barriers sum together
+        let mut cycleLengths: [[SUMOTime; 2]; 2] = [[0, 0], [0, 0]];
+        for ringIndex in 0..2usize {
+            // TS2 Force Offs don't go in order, so using a different method to check cycle time
+            for p in self.get_phases_by_ring(ringIndex as i32) {
+                cycleLengths[ringIndex][p.barrierNum as usize] += p.maxDuration + p.yellow + p.red;
+            }
+        }
+        // Write warnings if the barriers do not sum
+        for barrierNum in 0..2usize {
+            if cycleLengths[0][barrierNum] != cycleLengths[1][barrierNum] {
+                let error = format!(
+                    "At NEMA tlLogic '{}', the phases before barrier {} from both rings do not add up. (ring1={}, ring2={})",
+                    self.get_id(),
+                    barrierNum + 1,
+                    utils::common::to_string::to_string(&utils::common::time::steps2time(cycleLengths[0][barrierNum])),
+                    utils::common::to_string::to_string(&utils::common::time::steps2time(cycleLengths[1][barrierNum]))
+                );
+                if self.coordinateMode && !self.ignoreErrors {
+                    panic!("{}", error);
+                } else {
+                    utils::common::msg_handler::write_warning(&error);
+                }
+            }
+        }
+
+        // no offset for non coordinated
+        if !self.coordinateMode && self.offset != 0 {
+            utils::common::msg_handler::write_warning(&format!("NEMA tlLogic '{}' is not coordinated but an offset was set.", self.get_id()));
+        }
     }
 
     /// C++: `void NEMALogic::calculateForceOffsTS2()` [protected]
@@ -1445,7 +2374,26 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_force_offs_ts2(&mut self) {
-        todo!("port NEMALogic::calculateForceOffsTS2")
+        // TS2 "0" cycle time is the start of the "first" coordinated phases.
+        // We can find this "0" point by first constructing the forceOffs in sequential order via the 170 method
+        self.calculate_force_offs170();
+
+        // Switch the Force Off Times to align with TS2 Cycle, which is the *start* of the earliest coordinated phase
+        // The coordinate phases will always be the defaultBarrierPhases[i][0]
+        let c0 = self.coordinatePhaseObjs[0];
+        let c1 = self.coordinatePhaseObjs[1];
+        let minCoordTime = std::cmp::min(c0.forceOffTime - c0.maxDuration, c1.forceOffTime - c1.maxDuration);
+
+        // loop through all the phases and subtract this minCoordTime to move the 0 point to the start of the first coordinated phase
+        for p in self.myPhaseObjs.clone() {
+            if (p.forceOffTime - minCoordTime) >= 0 {
+                p.m().forceOffTime -= minCoordTime;
+            } else {
+                p.m().forceOffTime = self.myCycleLength + (p.forceOffTime - minCoordTime);
+            }
+            let gs = self.mode_cycle(p.greatestStartTime - minCoordTime, self.myCycleLength);
+            p.m().greatestStartTime = gs;
+        }
     }
 
     /// C++: `void NEMALogic::calculateForceOffs170()` [protected]
@@ -1496,7 +2444,31 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_force_offs170(&mut self) {
-        todo!("port NEMALogic::calculateForceOffs170")
+        let mut zeroTime: [SUMOTime; 2] = [utils::common::time::time2steps(0.), utils::common::time::time2steps(0.)];
+        for i in 0..2usize {
+            let mut runningTime: SUMOTime = 0;
+            // loop through the phases for ring 0 and then 1
+            for p in self.get_phases_by_ring(i as i32) {
+                runningTime += p.maxDuration + p.m().get_transition_time_stateless();
+                // in 170, the cycle "starts" when the coordinated phase goes to yellow.
+                // See https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.html
+                if p.coordinatePhase {
+                    zeroTime[i] = runningTime;
+                }
+                let forceOff = runningTime - p.m().get_transition_time_stateless();
+                p.m().forceOffTime = forceOff;
+                p.m().greatestStartTime = forceOff - p.minDuration;
+            }
+        }
+        // find the minimum offset time and then subtract from everything, modecycling where negative
+        // This sets the 0 cycle time as start of yellow on earliest ending coordinated phase
+        let minCoordYellow = std::cmp::min(zeroTime[0], zeroTime[1]);
+        for p in self.myPhaseObjs.clone() {
+            let forceOff = self.mode_cycle(p.forceOffTime - minCoordYellow, self.myCycleLength);
+            p.m().forceOffTime = forceOff;
+            let greatestStart = self.mode_cycle(p.greatestStartTime - minCoordYellow, self.myCycleLength);
+            p.m().greatestStartTime = greatestStart;
+        }
     }
 
     /// C++: `void NEMALogic::calculateForceOffs()` [protected]
@@ -1513,7 +2485,10 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_force_offs(&mut self) {
-        todo!("port NEMALogic::calculateForceOffs")
+        match self.myControllerType {
+            NEMALogic_controllerType::Type170 => self.calculate_force_offs170(),
+            NEMALogic_controllerType::TS2 => self.calculate_force_offs_ts2(),
+        }
     }
 
     /// C++: `void NEMALogic::calculateInitialPhasesTS2()` [protected]
@@ -1525,7 +2500,8 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_initial_phases_ts2(&mut self) {
-        todo!("port NEMALogic::calculateInitialPhasesTS2")
+        // Modifications where made to 170 algorithm so that it works with both.
+        self.calculate_initial_phases170();
     }
 
     /// C++: `void NEMALogic::calculateInitialPhases170()` [protected]
@@ -1580,7 +2556,49 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_initial_phases170(&mut self) {
-        todo!("port NEMALogic::calculateInitialPhases170")
+        let controller = Ptr::from_mut(self);
+        // get the time in the cycle
+        let cycleTime = self.mode_cycle(self.get_time_in_cycle(), self.myCycleLength);
+        let mut activePhases: [Ptr<NEMAPhase>; 2] = [Ptr::null(), Ptr::null()];
+        for i in 0..2usize {
+            let mut ringCopy = self.get_phases_by_ring(i as i32);
+            // sort by the minimum start time in the cycle.
+            // determinism: C++ std::sort with the non-strict `<=` comparator is unspecified on ties; a stable sort on greatestStartTime is used
+            ringCopy.sort_by(|a, b| a.greatestStartTime.cmp(&b.greatestStartTime));
+            let mut found = false;
+            // loop through the sorted phases by time and try to find the phase that should be active given the time in the cycle
+            for p in ringCopy.iter() {
+                // This handles the wrap around. Checks if the prior phases start time should have already happened.
+                // If it should have happened and it's not to the start time of me yet, start in my phase ( will have to be in my phase longer than max time likely )
+                let priorPhase = p.m().get_sequential_prior_phase();
+                let syntheticPriorStart = if priorPhase.greatestStartTime < p.greatestStartTime {
+                    priorPhase.greatestStartTime
+                } else {
+                    priorPhase.greatestStartTime - self.myCycleLength
+                };
+                if cycleTime <= self.mode_cycle(p.greatestStartTime, self.myCycleLength) && cycleTime > self.mode_cycle(syntheticPriorStart, self.myCycleLength) {
+                    found = true;
+                    activePhases[i] = *p;
+                    break;
+                }
+            }
+            if !found {
+                // DEBUG_NEMA warning omitted
+                activePhases[0] = self.defaultBarrierPhases[0][0];
+                activePhases[1] = self.defaultBarrierPhases[1][0];
+            }
+        }
+
+        // ensure that the two found phases are on the same side of the barrier. If they aren't, just override with the default barrier phases
+        if activePhases[0].barrierNum != activePhases[1].barrierNum {
+            // give preference to whatever is on the coordinate side of the barrier, one must be if they aren't equal to each other
+            activePhases[0] = if activePhases[0].barrierNum == 0 { activePhases[0] } else { self.defaultBarrierPhases[0][0] };
+            activePhases[1] = if activePhases[1].barrierNum == 0 { activePhases[1] } else { self.defaultBarrierPhases[1][0] };
+        }
+
+        // force enter the phases and update their expected duration to last until the forceOff
+        activePhases[0].m().force_enter(controller);
+        activePhases[1].m().force_enter(controller);
     }
 
     /// C++: `void NEMALogic::calculateInitialPhases()` [protected]
@@ -1598,7 +2616,10 @@ impl NEMALogic {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_initial_phases(&mut self) {
-        todo!("port NEMALogic::calculateInitialPhases")
+        match self.myControllerType {
+            NEMALogic_controllerType::Type170 => self.calculate_initial_phases170(),
+            NEMALogic_controllerType::TS2 => self.calculate_initial_phases_ts2(),
+        }
     }
 
 }
@@ -1700,7 +2721,56 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn new(phaseName: i32, isBarrier: bool, isGreenRest: bool, isCoordinated: bool, minRecall: bool, maxRecall: bool, fixForceOff: bool, barrierNum: i32, ringNum: i32, phaseStringInds: IntVector, phase: Ptr<MSPhaseDefinition>) -> Self {
-        todo!("port NEMAPhase::NEMAPhase")
+        let mut this = Self {
+            phaseName,
+            isAtBarrier: isBarrier,
+            isGreenRest,
+            barrierNum,
+            coordinatePhase: isCoordinated,
+            minRecall,
+            maxRecall,
+            fixForceOff,
+            ringNum,
+            lastDetectActive: false,
+            greenRestTimer: 0,
+            greatestStartTime: 0,
+            forceOffTime: 0,
+            readyToSwitch: false,
+            yellow: 0,
+            red: 0,
+            minDuration: 0,
+            maxDuration: 0,
+            nextMaxDuration: 0,
+            vehExt: 0,
+            myCorePhase: phase,
+            // C++ sets myInstance = this, but nothing reads it and the address would change on return; left null
+            myInstance: Ptr::null(),
+            myLastPhaseInstance: Ptr::null(),
+            sequentialPriorPhase: Ptr::null(),
+            myLightState: LightState::Red,
+            myDetectorInfo: NEMAPhase_PhaseDetectorInfo::new(),
+            maxGreenDynamic: 0,
+            myStartTime: 0,
+            myExpectedDuration: 0,
+            myLastEnd: 0,
+            myPhaseStringInds: phaseStringInds,
+            myGreenString: String::new(),
+            myYellowString: String::new(),
+            myRedString: String::new(),
+            myTransitions: Vec::new(),
+            transitionActive: false,
+            lastTransitionDecision: Ptr::null(),
+        };
+
+        // Timing Parameters
+        this.maxGreenDynamic = this.myCorePhase.maxDuration;
+        this.myStartTime = utils::common::time::time2steps(0.);
+        this.myExpectedDuration = this.myCorePhase.minDuration;
+        this.myLastEnd = utils::common::time::time2steps(0.);
+
+        // set the phase colors
+        this.set_my_nema_states();
+        this
     }
 
     /// C++: `void NEMAPhase::~NEMAPhase()`
@@ -1708,7 +2778,10 @@ impl NEMAPhase {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NEMAPhase::~NEMAPhase")
+        // Delete the transitions from their alloc
+        for t in self.myTransitions.clone() {
+            t.m().drop_();
+        }
     }
 
     /// C++: `LightState NEMAPhase::getCurrentState() const` [const]
@@ -1718,7 +2791,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_state(&self) -> LightState {
-        todo!("port NEMAPhase::getCurrentState")
+        self.myLightState
     }
 
     /// C++: `std::vector<MSE2Collector *> NEMAPhase::getDetectors() const` [const]
@@ -1728,7 +2801,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_detectors(&self) -> Vec<Ptr<MSE2Collector>> {
-        todo!("port NEMAPhase::getDetectors")
+        self.myDetectorInfo.detectors.clone()
     }
 
     /// C++: `void NEMAPhase::setDetectors(std::vector<MSE2Collector *>)`
@@ -1738,7 +2811,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn set_detectors(&mut self, detectors: Vec<Ptr<MSE2Collector>>) {
-        todo!("port NEMAPhase::setDetectors")
+        self.myDetectorInfo.detectors = detectors;
     }
 
     /// C++: `bool NEMAPhase::isTransitionActive() const` [const]
@@ -1748,7 +2821,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn is_transition_active(&self) -> bool {
-        todo!("port NEMAPhase::isTransitionActive")
+        self.transitionActive
     }
 
     /// C++: `void NEMAPhase::init(NEMALogic *, int, int, bool)`
@@ -1777,7 +2850,26 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, controller: Ptr<NEMALogic>, crossPhaseTarget: i32, crossPhaseSource: i32, latching: bool) {
-        todo!("port NEMAPhase::init")
+        // switch the durations from steps2time
+        self.recalculate_timing();
+
+        let this = Ptr::from_mut(self);
+        for p in controller.m().get_phases_by_ring(self.ringNum) {
+            // construct transitions for all potential movements, including back to myself
+            let transition = Ptr::from_mut(Box::leak(Box::new(PhaseTransitionLogic::new(this, p))));
+            let distance = controller.m().measure_ring_distance(self.phaseName, p.phaseName, self.ringNum);
+            transition.m().set_distance(distance);
+            self.myTransitions.push(transition);
+        }
+
+        // sort the transitions by distance for speed later. Using plain distance here
+        // determinism: std::sort is unstable; Rust sort_by is stable, so equal distances may order differently
+        self.myTransitions.sort_by(|i, j| i.distance.cmp(&j.distance));
+
+        // create the phase detector info
+        let cpdSource = if crossPhaseSource > 0 { controller.m().get_phase_obj(crossPhaseSource, -1) } else { Ptr::null() };
+        let cpdTarget = if crossPhaseTarget > 0 { controller.m().get_phase_obj(crossPhaseTarget, -1) } else { Ptr::null() };
+        self.myDetectorInfo = NEMAPhase_PhaseDetectorInfo::new_2(latching, cpdSource, cpdTarget);
     }
 
     /// C++: `void NEMAPhase::update(NEMALogic *)`
@@ -1851,7 +2943,70 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::update")
+        let this = Ptr::from_mut(self);
+        let dt = utils::common::time::delta_t();
+        // If I am in a transition, the rest of the update logic does not matter
+        if self.myLightState < LightState::Green {
+            // return early
+            self.readyToSwitch = true;
+            return;
+        }
+
+        // Continuation Logic
+        let duration = controller.m().get_current_time() - self.myStartTime;
+        // Check the vehicle extension timer as long as not in green transfer and not a coordinated phase
+        if self.myLightState != LightState::GreenXfer && !self.coordinatePhase {
+            self.myExpectedDuration = self.calc_vehicle_extension(duration);
+        }
+        // Special Logic for Green Rest, which behaves uniquely
+        if self.myLightState == LightState::GreenRest {
+            // check all other detectors and see if anything else is active. If so,
+            // start the green rest timer countdown, which is == to the max duration of the phase
+            let mut vehicleActive = false;
+            for p in controller.m().get_phase_objs() {
+                if p.phaseName != self.phaseName && p.phaseName != controller.m().get_other_phase(this).phaseName && p.m().call_active() {
+                    self.greenRestTimer -= dt;
+                    vehicleActive = true;
+                    break;
+                }
+            }
+            // catch the rising edge of the sidestreet detection and calculate the maximum timer
+            if vehicleActive && (self.greenRestTimer + dt >= self.maxDuration) {
+                self.maxGreenDynamic = self.minDuration + self.maxDuration;
+            }
+
+            // if there are no other vehicles slide the startTime along
+            if !vehicleActive {
+                self.greenRestTimer = self.maxDuration;
+                if duration >= self.minDuration {
+                    self.myStartTime = controller.m().get_current_time() - self.minDuration;
+                    self.maxGreenDynamic = self.minDuration + self.maxDuration;
+                    self.myExpectedDuration = self.minDuration + std::cmp::max(0, self.myExpectedDuration - duration);
+                }
+            }
+
+            // if the green rest timer is exhausted, set ready to switch
+            if self.greenRestTimer < dt {
+                self.readyToSwitch = true;
+                // force the counterpart to be ready to switch too. This needs to be latching....
+                let otherPhase = controller.m().get_other_phase(this);
+                if otherPhase.get_current_state() > LightState::Green {
+                    otherPhase.m().readyToSwitch = true;
+                }
+            }
+
+            // Special Behavior when the Green Rest Circles all the way around in coordinated mode
+            if self.coordinatePhase {
+                // This means that we have green rested until I should "start" again. Just call my entry function again.
+                if controller.m().get_time_in_cycle() <= ((self.forceOffTime - self.maxDuration) + dt / 2) {
+                    self.enter(controller, this);
+                }
+            }
+        }
+        // Check to see if a switch is desired
+        if duration >= self.myExpectedDuration {
+            self.readyToSwitch = true;
+        }
     }
 
     /// C++: `void NEMAPhase::exit(NEMALogic *, PhaseTransitionLogic **)`
@@ -1882,8 +3037,33 @@ impl NEMAPhase {
     //     handleGreenRestOrTransfer(controller, nextPhases);
     // }
     #[allow(unused_variables)]
-    pub fn exit(&mut self, controller: Ptr<NEMALogic>, nextPhases: Unmapped /* PhaseTransitionLogic *[2] */) {
-        todo!("port NEMAPhase::exit")
+    pub fn exit(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
+        let this = Ptr::from_mut(self);
+        let r = self.ringNum as usize;
+        if nextPhases[r].get_to_phase() != this {
+            // if the next phase is not me, then I need to go into a transition
+            self.lastTransitionDecision = nextPhases[r];
+            if self.myLightState >= LightState::Green {
+                // if I am in green, then I need to enter yellow
+                self.enter_yellow(controller);
+                return;
+            }
+
+            let sinceEnd = controller.m().get_current_time() - self.myLastEnd;
+            if sinceEnd < (self.yellow + self.red) {
+                if sinceEnd >= self.yellow {
+                    // if I am in yellow, then I need to enter red
+                    self.myLightState = LightState::Red;
+                }
+                // I am currently in the Red state but haven't reached max
+                return;
+            }
+
+            self.handle_red_xfer_or_next_phase(controller, nextPhases);
+            return;
+        }
+
+        self.handle_green_rest_or_transfer(controller, nextPhases);
     }
 
     /// C++: `void NEMAPhase::handleGreenRestOrTransfer(NEMALogic *, PhaseTransitionLogic **)`
@@ -1907,8 +3087,26 @@ impl NEMAPhase {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn handle_green_rest_or_transfer(&mut self, controller: Ptr<NEMALogic>, nextPhases: Unmapped /* PhaseTransitionLogic *[2] */) {
-        todo!("port NEMAPhase::handleGreenRestOrTransfer")
+    pub fn handle_green_rest_or_transfer(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
+        let this = Ptr::from_mut(self);
+        let otherPhase = controller.m().get_other_phase(this);
+        self.readyToSwitch = false;
+        // !ringNum in C++ is 1 for ring 0 and 0 for ring 1
+        let notRing = if self.ringNum == 0 { 1 } else { 0 };
+        let isOtherPhaseReady = nextPhases[notRing].get_to_phase() == otherPhase && otherPhase.readyToSwitch;
+        let isOtherPhaseInGreenRest = otherPhase.greenRestTimer >= otherPhase.maxDuration && otherPhase.get_current_state() == LightState::GreenRest;
+
+        if isOtherPhaseReady || isOtherPhaseInGreenRest {
+            self.myLightState = LightState::GreenRest;
+            self.myStartTime = controller.m().get_current_time() - self.minDuration;
+            self.myExpectedDuration = self.minDuration;
+            self.greenRestTimer = self.maxDuration * (self.isGreenRest as SUMOTime);
+        } else {
+            self.myLightState = LightState::GreenXfer;
+            if self.isAtBarrier {
+                self.myExpectedDuration = (otherPhase.myExpectedDuration + otherPhase.myStartTime) - self.myStartTime;
+            }
+        }
     }
 
     /// C++: `void NEMAPhase::enterYellow(NEMALogic *)`
@@ -1920,7 +3118,9 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn enter_yellow(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::enterYellow")
+        self.myLastEnd = controller.m().get_current_time();
+        self.myLightState = LightState::Yellow;
+        self.transitionActive = true;
     }
 
     /// C++: `void NEMAPhase::handleRedXferOrNextPhase(NEMALogic *, PhaseTransitionLogic **)`
@@ -1951,8 +3151,33 @@ impl NEMAPhase {
     //     transitionActive = false;
     // }
     #[allow(unused_variables)]
-    pub fn handle_red_xfer_or_next_phase(&mut self, controller: Ptr<NEMALogic>, nextPhases: Unmapped /* PhaseTransitionLogic *[2] */) {
-        todo!("port NEMAPhase::handleRedXferOrNextPhase")
+    pub fn handle_red_xfer_or_next_phase(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
+        let this = Ptr::from_mut(self);
+        let otherPhase = controller.m().get_other_phase(this);
+        let r = self.ringNum as usize;
+        let o = otherPhase.ringNum as usize;
+        let barrierCross = nextPhases[r].get_to_phase().barrierNum != self.barrierNum;
+        let barrierCrossButOkay = barrierCross
+            && (nextPhases[r].get_to_phase().barrierNum == nextPhases[o].get_to_phase().barrierNum)
+            && otherPhase.m().okay2_force_switch(controller);
+
+        if !barrierCross {
+            nextPhases[r].get_to_phase().m().enter(controller, this);
+            return;
+        }
+
+        if barrierCrossButOkay {
+            // if the barrier is crossed, but the other phase is going to the same barrier, then I can enter red transfer
+            // enter the next phase
+            nextPhases[r].get_to_phase().m().enter(controller, this);
+            // trigger the other phase to enter red transfer
+            nextPhases[o].get_to_phase().m().enter(controller, this);
+            return;
+        }
+
+        self.myLightState = LightState::RedXfer;
+        self.readyToSwitch = true;
+        self.transitionActive = false;
     }
 
     /// C++: `bool NEMAPhase::hasRecall()`
@@ -1962,7 +3187,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn has_recall(&mut self) -> bool {
-        todo!("port NEMAPhase::hasRecall")
+        self.minRecall || self.maxRecall
     }
 
     /// C++: `bool NEMAPhase::callActive()`
@@ -1972,7 +3197,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn call_active(&mut self) -> bool {
-        todo!("port NEMAPhase::callActive")
+        self.minRecall || self.maxRecall || self.myDetectorInfo.detectActive
     }
 
     /// C++: `bool NEMAPhase::detectActive()`
@@ -1982,7 +3207,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn detect_active(&mut self) -> bool {
-        todo!("port NEMAPhase::detectActive")
+        self.myDetectorInfo.detectActive
     }
 
     /// C++: `void NEMAPhase::checkMyDetectors()`
@@ -2022,7 +3247,36 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn check_my_detectors(&mut self) {
-        todo!("port NEMAPhase::checkMyDetectors")
+        // Check my Detectors, only necessary if it isn't currently marked as on
+        if !self.myDetectorInfo.detectActive {
+            // If I have a cross phase target and it is active and I am not, save my detector as not active
+            if !self.myDetectorInfo.cpdTarget.is_null() {
+                if self.myDetectorInfo.cpdTarget.get_current_state() >= LightState::Green {
+                    if self.myLightState < LightState::Green {
+                        self.myDetectorInfo.detectActive = false;
+                        return;
+                    }
+                }
+            }
+            // If we make it to this point, check my detector like normal.
+            for d in self.myDetectorInfo.detectors.clone() {
+                if d.get_current_vehicle_number() > 0 {
+                    self.myDetectorInfo.detectActive = true;
+                    return;
+                }
+            }
+            // If my detector is not active, check my cross phase
+            if !self.myDetectorInfo.cpdSource.is_null() && (self.myLightState >= LightState::Green) {
+                if self.myDetectorInfo.cpdSource.get_current_state() < LightState::Green {
+                    for d in self.myDetectorInfo.cpdSource.m().get_detectors() {
+                        if d.get_current_vehicle_number() > 0 {
+                            self.myDetectorInfo.detectActive = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NEMAPhase::clearMyDetectors()`
@@ -2037,7 +3291,11 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn clear_my_detectors(&mut self) {
-        todo!("port NEMAPhase::clearMyDetectors")
+        self.lastDetectActive = self.myDetectorInfo.detectActive;
+        // remove the active flag on the detector if the detector is not latching or if it is green
+        if (!self.myDetectorInfo.latching) || (self.myLightState >= LightState::Green) {
+            self.myDetectorInfo.detectActive = false;
+        }
     }
 
     /// C++: `SUMOTime NEMAPhase::getTransitionTime(NEMALogic *)`
@@ -2057,7 +3315,16 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_transition_time(&mut self, controller: Ptr<NEMALogic>) -> SUMOTime {
-        todo!("port NEMAPhase::getTransitionTime")
+        if self.myLightState == LightState::RedXfer {
+            // if in red xfer, I am ready to switch whenevery
+            return utils::common::time::time2steps(0.);
+        }
+        if !self.transitionActive {
+            // if a transition is not active, the transition is just yellow + red time
+            return self.get_transition_time_stateless();
+        }
+        // if a transition is active, then return the time left in the transition
+        std::cmp::max(utils::common::time::time2steps(0.), (self.yellow + self.red) - (controller.m().get_current_time() - self.myLastEnd))
     }
 
     /// C++: `SUMOTime NEMAPhase::getTransitionTimeStateless()`
@@ -2067,7 +3334,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_transition_time_stateless(&mut self) -> SUMOTime {
-        todo!("port NEMAPhase::getTransitionTimeStateless")
+        self.yellow + self.red
     }
 
     /// C++: `PhasePtr NEMAPhase::getSequentialPriorPhase()`
@@ -2077,7 +3344,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_sequential_prior_phase(&mut self) -> NEMALogic_PhasePtr {
-        todo!("port NEMAPhase::getSequentialPriorPhase")
+        self.sequentialPriorPhase
     }
 
     /// C++: `void NEMAPhase::setSequentialPriorPhase(PhasePtr)`
@@ -2087,7 +3354,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn set_sequential_prior_phase(&mut self, priorPhase: NEMALogic_PhasePtr) {
-        todo!("port NEMAPhase::setSequentialPriorPhase")
+        self.sequentialPriorPhase = priorPhase;
     }
 
     /// C++: `std::vector<PhaseTransitionLogic *> NEMAPhase::trySwitch(NEMALogic *)`
@@ -2144,7 +3411,52 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self, controller: Ptr<NEMALogic>) -> Vec<Ptr<PhaseTransitionLogic>> {
-        todo!("port NEMAPhase::trySwitch")
+        // this function returns the preferred valid transition for the phase
+        let mut nextTransitions: Vec<Ptr<PhaseTransitionLogic>> = Vec::new();
+        if self.readyToSwitch {
+            // only try to switch if I am ready to switch
+            for t in self.myTransitions.clone() {
+                // for the transitions check if it is okay
+                if t.m().okay(controller) {
+                    // if there was already a transition decision, it can be overriden but only if the new transition
+                    // is on the same side of a barrier
+                    if !self.lastTransitionDecision.is_null() {
+                        if t.get_to_phase().barrierNum == self.lastTransitionDecision.get_to_phase().barrierNum {
+                            nextTransitions.push(t);
+                            break;
+                        }
+                    } else {
+                        nextTransitions.push(t);
+                        // break once there is a valid option (they have already been sorted)
+                        break;
+                    }
+                }
+            }
+        }
+        // Add in the last transition decision if it hasn't been added in yet
+        if !self.lastTransitionDecision.is_null() {
+            let mut found = false;
+            let mut sameBarrier = false;
+            for t in nextTransitions.iter() {
+                if *t == self.lastTransitionDecision {
+                    found = true;
+                    break;
+                }
+                if t.get_to_phase().barrierNum == self.lastTransitionDecision.get_to_phase().barrierNum {
+                    sameBarrier = true;
+                    break;
+                }
+            }
+            // but only need to add it if it is not in the list AND if nothing in the list is the same barrier as it was.
+            if !found && !sameBarrier {
+                nextTransitions.push(self.lastTransitionDecision);
+            }
+        }
+        // Add the transition back to myself, but only in the case when no others have been added
+        if nextTransitions.is_empty() {
+            nextTransitions.push(*self.myTransitions.last().unwrap());
+        }
+        nextTransitions
     }
 
     /// C++: `PhaseTransitionLogic * NEMAPhase::getTransition(int)`
@@ -2163,7 +3475,13 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_transition(&mut self, toPhase: i32) -> Ptr<PhaseTransitionLogic> {
-        todo!("port NEMAPhase::getTransition")
+        for t in self.myTransitions.clone() {
+            if t.get_to_phase().phaseName == toPhase {
+                return t;
+            }
+        }
+        // This point should never be reached (assert(0) in C++ is a no-op in release builds, so fall back to the front)
+        self.myTransitions[0]
     }
 
     /// C++: `char NEMAPhase::getNEMAChar(int)`
@@ -2180,7 +3498,14 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_nema_char(&mut self, i: i32) -> i8 {
-        todo!("port NEMAPhase::getNEMAChar")
+        // TODO: this can be computed once.
+        if self.myLightState >= LightState::Green {
+            self.myGreenString.as_bytes()[i as usize] as i8
+        } else if self.myLightState <= LightState::Red {
+            self.myRedString.as_bytes()[i as usize] as i8
+        } else {
+            self.myYellowString.as_bytes()[i as usize] as i8
+        }
     }
 
     /// C++: `void NEMAPhase::recalculateTiming()`
@@ -2198,7 +3523,14 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn recalculate_timing(&mut self) {
-        todo!("port NEMAPhase::recalculateTiming")
+        // This could be extended in the future to allow for traci manipulation
+        self.yellow = self.myCorePhase.yellow;
+        self.red = self.myCorePhase.red;
+        self.minDuration = self.myCorePhase.minDuration;
+        self.maxDuration = self.myCorePhase.maxDuration;
+        self.nextMaxDuration = self.myCorePhase.maxDuration;
+        self.maxGreenDynamic = self.myCorePhase.maxDuration;
+        self.vehExt = self.myCorePhase.vehext;
     }
 
     /// C++: `void NEMAPhase::forceEnter(NEMALogic *)`
@@ -2208,7 +3540,8 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn force_enter(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::forceEnter")
+        let seq = self.sequentialPriorPhase;
+        self.enter(controller, seq);
     }
 
     /// C++: `bool NEMAPhase::controlledIndex(int)`
@@ -2218,7 +3551,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn controlled_index(&mut self, i: i32) -> bool {
-        todo!("port NEMAPhase::controlledIndex")
+        self.myPhaseStringInds.contains(&i)
     }
 
     /// C++: `void NEMAPhase::cleanupExit()`
@@ -2230,7 +3563,9 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn cleanup_exit(&mut self) {
-        todo!("port NEMAPhase::cleanupExit")
+        self.transitionActive = false;
+        self.readyToSwitch = false;
+        self.myLightState = LightState::Red;
     }
 
     /// C++: `bool NEMAPhase::okay2ForceSwitch(NEMALogic *)`
@@ -2240,7 +3575,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn okay2_force_switch(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port NEMAPhase::okay2ForceSwitch")
+        self.readyToSwitch && !self.transitionActive && (self.get_transition_time(controller) <= utils::common::time::time2steps(0.))
     }
 
     /// C++: `SUMOTime NEMAPhase::calcVehicleExtension(SUMOTime)` [private]
@@ -2256,7 +3591,12 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn calc_vehicle_extension(&mut self, duration: SUMOTime) -> SUMOTime {
-        todo!("port NEMAPhase::calcVehicleExtension")
+        if self.myExpectedDuration < self.maxGreenDynamic && self.myDetectorInfo.detectActive {
+            // add the vehicle extension timer if the detector is active.
+            // capped by the minimum and maximum duration
+            return std::cmp::min(std::cmp::max(duration + self.vehExt, self.minDuration), self.maxGreenDynamic);
+        }
+        self.myExpectedDuration
     }
 
     /// C++: `void NEMAPhase::enter(NEMALogic *, PhasePtr)` [private]
@@ -2264,7 +3604,57 @@ impl NEMAPhase {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn enter(&mut self, controller: Ptr<NEMALogic>, lastPhase: NEMALogic_PhasePtr) {
-        todo!("port NEMAPhase::enter")
+        let this = Ptr::from_mut(self);
+        // set the last phase instance to inactive
+        lastPhase.m().cleanup_exit();
+
+        // Enter the phase
+        self.myStartTime = controller.m().get_current_time();
+        self.myLightState = LightState::Green;
+        self.myLastPhaseInstance = lastPhase;
+        self.readyToSwitch = false;
+
+        // implement the new timing parameters on the first coordinated phase to appear
+        let coordPhaseName = controller.m().coordinatePhaseObjs[self.ringNum as usize].phaseName;
+        if self.phaseName == coordPhaseName {
+            controller.m().implement_traci_changes();
+        }
+
+        // Handle Green Rest Peculiarities
+        if !controller.coordinateMode && self.isGreenRest {
+            // If the controller is in free mode and the phase is a green rest phase, then it should enter as "green rest"
+            self.myLightState = LightState::GreenRest;
+            // if the phase has "green rest" capabilities, set its timer to the dynamic maxGreen
+            self.greenRestTimer = self.maxDuration * (self.isGreenRest as SUMOTime);
+        }
+
+        // clear the last transition decision
+        self.lastTransitionDecision = Ptr::null();
+
+        // Calculate the Max Green Time & Expected Duration here:
+        if controller.coordinateMode {
+            if self.coordinatePhase {
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                self.myExpectedDuration = controller.m().mode_cycle(self.forceOffTime - timeInCycle, cycleLength);
+            } else {
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                self.maxGreenDynamic = controller.m().mode_cycle(self.forceOffTime - timeInCycle, cycleLength);
+                if !self.fixForceOff {
+                    self.maxGreenDynamic = std::cmp::min(self.maxDuration, self.maxGreenDynamic);
+                }
+                self.myExpectedDuration = self.minDuration;
+            }
+        } else {
+            self.myExpectedDuration = self.minDuration;
+        }
+        // Implements the maxRecall functionality
+        if self.maxRecall && !self.coordinatePhase {
+            self.myExpectedDuration = self.maxGreenDynamic;
+        }
+        // Set the controller's active phase
+        controller.m().set_active_phase(this);
     }
 
     /// C++: `void NEMAPhase::setMyNEMAStates()` [private]
@@ -2285,7 +3675,17 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn set_my_nema_states(&mut self) {
-        todo!("port NEMAPhase::setMyNEMAStates")
+        self.myGreenString = self.myCorePhase.get_state().to_string();
+        self.myRedString = String::new();
+        self.myYellowString = String::new();
+        for ch in self.myGreenString.clone().chars() {
+            self.myRedString.push('r');
+            if ch == 'G' || ch == 'g' {
+                self.myYellowString.push('y');
+            } else {
+                self.myYellowString.push(ch);
+            }
+        }
     }
 
 }
@@ -2316,7 +3716,7 @@ impl NEMAPhase_PhaseDetectorInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port PhaseDetectorInfo::PhaseDetectorInfo")
+        Self { detectors: Vec::new(), cpdTarget: Ptr::null(), cpdSource: Ptr::null(), detectActive: false, latching: false }
     }
 
     /// C++: `void PhaseDetectorInfo::PhaseDetectorInfo(bool, PhasePtr, PhasePtr)`
@@ -2328,7 +3728,7 @@ impl NEMAPhase_PhaseDetectorInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new_2(latching: bool, cpdSource: NEMALogic_PhasePtr, cpdTarget: NEMALogic_PhasePtr) -> Self {
-        todo!("port PhaseDetectorInfo::PhaseDetectorInfo")
+        Self { detectors: Vec::new(), cpdTarget, cpdSource, detectActive: false, latching }
     }
 
 }
@@ -2347,7 +3747,7 @@ impl PhaseTransitionLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(fromPhase: NEMALogic_PhasePtr, toPhase: NEMALogic_PhasePtr) -> Self {
-        todo!("port PhaseTransitionLogic::PhaseTransitionLogic")
+        Self { distance: 0, fromPhase, toPhase }
     }
 
     /// C++: `bool PhaseTransitionLogic::okay(NEMALogic *)`
@@ -2376,7 +3776,23 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn okay(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::okay")
+        // Picking the correct transition logic to use
+        if self.fromPhase == self.toPhase {
+            // for green rest or green transfer, it cannot return to itself if a transition is active
+            self.fromPhase.get_current_state() >= LightState::Green
+        } else if self.fromPhase.coordinatePhase {
+            // if the from phase is a coordinated phase i.e. {2, 6} in a standard setup
+            self.from_coord(controller)
+        } else if self.fromPhase.isAtBarrier {
+            // if the phase is at a barrier i.e. {2, 6, 4, 8} in a standard setup
+            self.from_barrier(controller)
+        } else if controller.coordinateMode {
+            // typical coordinate mode transition,
+            self.coord_base(controller)
+        } else {
+            // base transition logic
+            self.free_base(controller)
+        }
     }
 
     /// C++: `int PhaseTransitionLogic::getDistance(PhaseTransitionLogic *)`
@@ -2393,7 +3809,13 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_distance(&mut self, otherTrans: Ptr<PhaseTransitionLogic>) -> i32 {
-        todo!("port PhaseTransitionLogic::getDistance")
+        // Returns the other transitions distance in green transfer situations
+        if (self.toPhase == self.fromPhase) && (otherTrans.toPhase.barrierNum == self.toPhase.barrierNum) {
+            if self.toPhase.get_current_state() == LightState::Green || self.toPhase.get_current_state() == LightState::GreenXfer {
+                return otherTrans.distance;
+            }
+        }
+        self.distance
     }
 
     /// C++: `void PhaseTransitionLogic::setDistance(int)`
@@ -2403,7 +3825,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_distance(&mut self, d: i32) {
-        todo!("port PhaseTransitionLogic::setDistance")
+        self.distance = d;
     }
 
     /// C++: `void PhaseTransitionLogic::~PhaseTransitionLogic() noexcept`
@@ -2411,7 +3833,7 @@ impl PhaseTransitionLogic {
     // ~PhaseTransitionLogic() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PhaseTransitionLogic::~PhaseTransitionLogic")
+        // C++ destructor body is empty; the object is owned by the leaked allocation made in NEMAPhase::init, so nothing is released here
     }
 
     /// C++: `PhasePtr PhaseTransitionLogic::getToPhase() const` [const]
@@ -2421,7 +3843,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_to_phase(&self) -> NEMALogic_PhasePtr {
-        todo!("port PhaseTransitionLogic::getToPhase")
+        self.toPhase
     }
 
     /// C++: `PhasePtr PhaseTransitionLogic::getFromPhase() const` [const]
@@ -2431,7 +3853,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_phase(&self) -> NEMALogic_PhasePtr {
-        todo!("port PhaseTransitionLogic::getFromPhase")
+        self.fromPhase
     }
 
     /// C++: `void PhaseTransitionLogic::buildLogic()` [private]
@@ -2439,7 +3861,7 @@ impl PhaseTransitionLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_logic(&mut self) {
-        todo!("port PhaseTransitionLogic::buildLogic")
+        // C++ declares buildLogic() but never defines it (no body in NEMAController.cpp), so there is nothing to port
     }
 
     /// C++: `bool PhaseTransitionLogic::fromBarrier(NEMALogic *)` [private]
@@ -2469,7 +3891,28 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn from_barrier(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::fromBarrier")
+        if self.free_base(controller) {
+            if self.fromPhase.barrierNum == self.toPhase.barrierNum {
+                // same barrier side so we are good.
+                // Check if green transfer is active. If so, we need to make sure that there are no calls on the other side of the barrier
+                if self.fromPhase.get_current_state() >= LightState::Green {
+                    let fromRing = self.fromPhase.ringNum;
+                    let fromBarrier = self.fromPhase.barrierNum;
+                    for p in controller.m().get_phases_by_ring(fromRing) {
+                        if p.barrierNum != fromBarrier && p.m().call_active() {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            } else {
+                // This is now a barrier cross and we need to make sure that the other phase is also ready to transition
+                if self.fromPhase.readyToSwitch && controller.m().get_other_phase(self.fromPhase).readyToSwitch {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool PhaseTransitionLogic::fromCoord(NEMALogic *)` [private]
@@ -2502,7 +3945,31 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn from_coord(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::fromCoord")
+        if self.coord_base(controller) {
+            // Determine if the other phase is also ready to switch
+            if controller.m().get_other_phase(self.fromPhase).readyToSwitch {
+                // Dr. Wang had the Type-170 code setup in a way that it could transition whenever - meaning that it didn't matter if the prior phase could fit or not
+                if controller.m().is_type170() {
+                    return true;
+                }
+                // If the transition is already active, then report that the movement is possible
+                if self.fromPhase.m().is_transition_active() {
+                    return true;
+                }
+                // now determine if there my prior phase can fit or not. We already know that I can fit.
+                let priorPhase = self.toPhase.m().get_sequential_prior_phase();
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                let timeTillForceOff = controller.m().mode_cycle(priorPhase.forceOffTime - timeInCycle, cycleLength);
+                let transitionTime = self.fromPhase.m().get_transition_time(controller);
+                // if the time till the force off is less than the min duration ||
+                // if it is greater than the cycle length minus the length of the coordinate phase (which the fromPhase automatically is)
+                if (priorPhase.minDuration + transitionTime) > timeTillForceOff || timeTillForceOff > (controller.m().get_current_cycle_length() - self.fromPhase.minDuration) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool PhaseTransitionLogic::freeBase(NEMALogic *)` [private]
@@ -2530,7 +3997,24 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn free_base(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::freeBase")
+        // Simplest transition logic. Just check if a detector (or recall) is active on that phase and
+        let mut okay = false;
+        // is a call active on the toPhase?
+        if self.toPhase.m().call_active() {
+            // would the transition be a barrier cross?
+            if self.fromPhase.barrierNum != self.toPhase.barrierNum {
+                let otherPhase = controller.m().get_other_phase(self.fromPhase);
+                // If it is a barrier cross, then the other phase must also be ready to switch
+                // or have a transition time that is lower than mine currently. DELTA_T is critical here
+                if otherPhase.readyToSwitch {
+                    // #&& otherPhase->getTransitionTime(controller) <= fromPhase->getTransitionTime(controller)) {
+                    okay = true;
+                }
+            } else {
+                okay = true;
+            }
+        }
+        okay
     }
 
     /// C++: `bool PhaseTransitionLogic::coordBase(NEMALogic *)` [private]
@@ -2555,7 +4039,22 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn coord_base(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::coordBase")
+        if self.toPhase.coordinatePhase && (controller.m().get_other_phase(self.fromPhase).readyToSwitch || self.fromPhase.barrierNum == self.toPhase.barrierNum) {
+            // transitions TO the coordinated phase may always happen, as long as the other phase is okay to switch too
+            return true;
+        }
+        // first check if the free logic is upheld
+        else if self.free_base(controller) {
+            // Then check if the "to phase" can fit, which means that there is enough time to fit the current transition + the minimum time of the next phase
+            let transitionTime = self.fromPhase.m().get_transition_time(controller);
+            let timeInCycle = controller.m().get_time_in_cycle();
+            let cycleLength = controller.m().get_current_cycle_length();
+            let timeTillForceOff = controller.m().mode_cycle(self.toPhase.forceOffTime - timeInCycle, cycleLength);
+            if self.toPhase.minDuration + transitionTime <= timeTillForceOff {
+                return true;
+            }
+        }
+        false
     }
 
 }

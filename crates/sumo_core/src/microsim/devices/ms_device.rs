@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::RefCell;
 
 /// the option values of a device's default assignment (all callers pass the global options, which do not change during a run)
 /// C++ class `MSDevice::DefaultAssignment` (microsim/devices/MSDevice.h)
@@ -42,6 +43,22 @@ impl std::ops::DerefMut for MSDevice {
 //   static int[2] MSDevice::myDefaultAssignments;
 //   static SumoRNG MSDevice::myEquipmentRNG;
 
+pub const LOADSTATE_DEVICENAMES: &str = "LOADSTATE_DEVICENAMES";
+
+thread_local! {
+    /// C++ `MSDevice::myExplicitIDs`
+    static MY_EXPLICIT_IDS: RefCell<BTreeMap<String, BTreeSet<String>>> = RefCell::new(BTreeMap::new());
+    /// C++ `MSDevice::myDefaultAssignments[2]`; entries are leaked so `get_default_assignment` can return `&'static`
+    static MY_DEFAULT_ASSIGNMENTS: RefCell<[BTreeMap<String, &'static MSDevice_DefaultAssignment>; 2]> = RefCell::new([BTreeMap::new(), BTreeMap::new()]);
+    /// C++ `MSDevice::myEquipmentRNG` (seeded with "deviceEquipment")
+    static MY_EQUIPMENT_RNG: Ptr<SumoRNG> = Ptr::from_raw(Box::into_raw(Box::new(SumoRNG::new("deviceEquipment"))));
+}
+
+/// C++ throws here; the port panics with the same message (same convention as OptionsCont's free functions)
+fn or_throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{}", e))
+}
+
 impl MSDevice {
     /// C++: `void MSDevice::insertOptions(OptionsCont &)` [static]
     /// Inserts options for building devices
@@ -74,7 +91,30 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice::insertOptions")
+        MSDevice_Routing::insert_options(oc);
+        MSDevice_Emissions::insert_options(oc);
+        MSVehicleDevice_BTreceiver::insert_options(oc);
+        MSVehicleDevice_BTsender::insert_options(oc);
+        MSDevice_Example::insert_options(oc);
+        MSDevice_StationFinder::insert_options(oc);
+        MSDevice_Battery::insert_options(oc);
+        MSDevice_SSM::insert_options(oc);
+        MSDevice_ToC::insert_options(oc);
+        MSDevice_DriverState::insert_options(oc);
+        MSDevice_Bluelight::insert_options(oc);
+        MSDevice_FCD::insert_options(oc);
+        MSDevice_ElecHybrid::insert_options(oc);
+        MSDevice_Taxi::insert_options(oc);
+        MSDevice_GLOSA::insert_options(oc);
+        MSDevice_Tripinfo::insert_options(oc);
+        MSDevice_Vehroutes::insert_options(oc);
+        MSDevice_Friction::insert_options(oc);
+        MSDevice_FCDReplay::insert_options(oc);
+
+        MSTransportableDevice_Routing::insert_options(oc);
+        MSTransportableDevice_FCD::insert_options(oc);
+        MSTransportableDevice_BTsender::insert_options(oc);
+        MSTransportableDevice_BTreceiver::insert_options(oc);
     }
 
     /// C++: `bool MSDevice::checkOptions(OptionsCont &)` [static]
@@ -87,23 +127,86 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        todo!("port MSDevice::checkOptions")
+        let mut ok = true;
+        ok &= MSDevice_Routing::check_options(oc);
+        ok
     }
 
     /// C++: `void MSDevice::buildVehicleDevices(SUMOVehicle &, int &)` [static]
     /// Build devices for the given vehicle, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // C++ (MSDevice.cpp, real signature `std::vector<MSVehicleDevice*>& into`):
+    // void
+    // MSDevice::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>& into) {
+    //     MSDevice_Vehroutes::buildVehicleDevices(v, into);
+    //     MSDevice_Tripinfo::buildVehicleDevices(v, into);
+    //     MSDevice_Routing::buildVehicleDevices(v, into);
+    //     MSDevice_Emissions::buildVehicleDevices(v, into);
+    //     MSVehicleDevice_BTreceiver::buildVehicleDevices(v, into);
+    //     MSVehicleDevice_BTsender::buildVehicleDevices(v, into);
+    //     MSDevice_Example::buildVehicleDevices(v, into);
+    //     const size_t numBefore = into.size();
+    //     MSDevice_StationFinder::buildVehicleDevices(v, into);
+    //     MSDevice_Battery::buildVehicleDevices(v, into, into.size() == numBefore ? nullptr : static_cast<MSDevice_StationFinder*>(into.back()));
+    //     MSDevice_SSM::buildVehicleDevices(v, into);
+    //     MSDevice_ToC::buildVehicleDevices(v, into);
+    //     MSDevice_DriverState::buildVehicleDevices(v, into);
+    //     MSDevice_Bluelight::buildVehicleDevices(v, into);
+    //     MSDevice_FCD::buildVehicleDevices(v, into);
+    //     MSDevice_ElecHybrid::buildVehicleDevices(v, into);
+    //     MSDevice_Taxi::buildVehicleDevices(v, into);
+    //     MSDevice_GLOSA::buildVehicleDevices(v, into);
+    //     MSDevice_Friction::buildVehicleDevices(v, into);
+    //     MSDevice_FCDReplay::buildVehicleDevices(v, into);
+    // }
     #[allow(unused_variables)]
-    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut i32) {
-        todo!("port MSDevice::buildVehicleDevices")
+    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
+        MSDevice_Vehroutes::build_vehicle_devices(v, into, i32::MAX);
+        MSDevice_Tripinfo::build_vehicle_devices(v, into);
+        MSDevice_Routing::build_vehicle_devices(v, into);
+        MSDevice_Emissions::build_vehicle_devices(v, into);
+        MSVehicleDevice_BTreceiver::build_vehicle_devices(v, into);
+        MSVehicleDevice_BTsender::build_vehicle_devices(v, into);
+        MSDevice_Example::build_vehicle_devices(v, into);
+        let num_before = into.len();
+        MSDevice_StationFinder::build_vehicle_devices(v, into);
+        let sf: Ptr<MSDevice_StationFinder> = if into.len() == num_before {
+            Ptr::default()
+        } else {
+            Ptr::from_raw(into.last().copied().unwrap().as_raw() as *mut MSDevice_StationFinder)
+        };
+        MSDevice_Battery::build_vehicle_devices(v, into, sf);
+        MSDevice_SSM::build_vehicle_devices(v, into);
+        MSDevice_ToC::build_vehicle_devices(v, into);
+        MSDevice_DriverState::build_vehicle_devices(v, into);
+        MSDevice_Bluelight::build_vehicle_devices(v, into);
+        MSDevice_FCD::build_vehicle_devices(v, into);
+        MSDevice_ElecHybrid::build_vehicle_devices(v, into);
+        MSDevice_Taxi::build_vehicle_devices(v, into);
+        MSDevice_GLOSA::build_vehicle_devices(v, into);
+        MSDevice_Friction::build_vehicle_devices(v, into);
+        MSDevice_FCDReplay::build_vehicle_devices(v, into);
     }
 
     /// C++: `void MSDevice::buildTransportableDevices(MSTransportable &, int &)` [static]
     /// Build devices for the given person, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // C++ (MSDevice.cpp, real signature `std::vector<MSTransportableDevice*>& into`):
+    // void
+    // MSDevice::buildTransportableDevices(MSTransportable& p, std::vector<MSTransportableDevice*>& into) {
+    //     MSTransportableDevice_Routing::buildDevices(p, into);
+    //     MSTransportableDevice_FCD::buildDevices(p, into);
+    //     MSTransportableDevice_BTsender::buildDevices(p, into);
+    //     MSTransportableDevice_BTreceiver::buildDevices(p, into);
+    //     MSTransportableDevice_FCDReplay::buildDevices(p, into);
+    // }
     #[allow(unused_variables)]
-    pub fn build_transportable_devices(p: &mut MSTransportable, into: &mut i32) {
-        todo!("port MSDevice::buildTransportableDevices")
+    pub fn build_transportable_devices(p: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
+        MSTransportableDevice_Routing::build_devices(p, into);
+        MSTransportableDevice_FCD::build_devices(p, into);
+        MSTransportableDevice_BTsender::build_devices(p, into);
+        MSTransportableDevice_BTreceiver::build_devices(p, into);
+        MSTransportableDevice_FCDReplay::build_devices(p, into);
     }
 
     /// C++: `std::string MSDevice::getDeviceName(const std::string &)` [static]
@@ -122,7 +225,19 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn get_device_name(id: &str) -> String {
-        todo!("port MSDevice::getDeviceName")
+        if utils::common::string_utils::starts_with(id, "routing_") {
+            // special case: renamed in output
+            "rerouting".to_string()
+        } else if utils::common::string_utils::starts_with(id, "driverstate") {
+            // special case: no underscore
+            "driverstate".to_string()
+        } else {
+            // std::string::find returns npos when there is no '_', and substr(0, npos) keeps the whole id
+            match id.find('_') {
+                Some(pos) => id[..pos].to_string(),
+                None => id.to_string(),
+            }
+        }
     }
 
     /// C++: `SumoRNG * MSDevice::getEquipmentRNG()` [static]
@@ -131,15 +246,16 @@ impl MSDevice {
     //     }
     #[allow(unused_variables)]
     pub fn get_equipment_rng() -> Ptr<SumoRNG> {
-        todo!("port MSDevice::getEquipmentRNG")
+        MY_EQUIPMENT_RNG.with(|r| *r)
     }
 
     /// C++: `const std::string MSDevice::deviceName() const` [const, virtual, pure virtual]
     /// return the name for this type of device
     // (pure virtual: no C++ body; subclasses implement it)
+    // shortcut: base-class calls cannot dispatch to the subclass override (no vtable), so overrides must be called directly
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice::deviceName")
+        panic!("MSDevice::deviceName is pure virtual and must be overridden by the device class")
     }
 
     /// C++: `void MSDevice::cleanupAll()` [static]
@@ -155,7 +271,15 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_all() {
-        todo!("port MSDevice::cleanupAll")
+        MY_DEFAULT_ASSIGNMENTS.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            cache[0].clear();
+            cache[1].clear();
+        });
+        MSRoutingEngine::cleanup();
+        MSDevice_Tripinfo::cleanup();
+        MSDevice_FCD::cleanup();
+        MSDevice_Taxi::cleanup();
     }
 
     /// C++: `void MSDevice::MSDevice(const std::string &)`
@@ -164,7 +288,7 @@ impl MSDevice {
     //     }
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port MSDevice::MSDevice")
+        MSDevice { base: Named::new(id) }
     }
 
     /// C++: `void MSDevice::~MSDevice() noexcept` [virtual]
@@ -172,7 +296,7 @@ impl MSDevice {
     // virtual ~MSDevice() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice::~MSDevice")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSDevice::generateOutput(OutputDevice *) const` [const, virtual]
@@ -181,7 +305,7 @@ impl MSDevice {
     //     }
     #[allow(unused_variables)]
     pub fn generate_output(&self, arg0: Ptr<OutputDevice>) {
-        todo!("port MSDevice::generateOutput")
+        // C++ body is empty
     }
 
     /// C++: `void MSDevice::saveState(OutputDevice &) const` [const, virtual]
@@ -192,7 +316,7 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDevice::saveState")
+        write_warningf!("Device '%' cannot save state", self.get_id());
     }
 
     /// C++: `void MSDevice::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -202,7 +326,7 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSDevice::loadState")
+        // C++ body is empty
     }
 
     /// C++: `std::string MSDevice::getParameter(const std::string &) const` [const, virtual]
@@ -210,9 +334,10 @@ impl MSDevice {
     // virtual std::string getParameter(const std::string& key) const {
     //         throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     //     }
+    // shortcut: C++ throws InvalidArgument; the port panics with the same text because the overrides return String, upgrade when device getParameter returns Result
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice::getParameter")
+        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
     }
 
     /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual]
@@ -221,9 +346,10 @@ impl MSDevice {
     //         UNUSED_PARAMETER(value);
     //         throw InvalidArgument("Setting parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     //     }
+    // shortcut: C++ throws InvalidArgument; the port panics with the same text because the overrides return (), upgrade when device setParameter returns Result
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice::setParameter")
+        panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())
     }
 
     /// C++: `void MSDevice::insertDefaultAssignmentOptions(const std::string &, const std::string &, OptionsCont &, const bool)` [static, protected]
@@ -244,7 +370,17 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn insert_default_assignment_options(deviceName: &str, optionsTopic: &str, oc: &mut OptionsCont, isPerson: bool) {
-        todo!("port MSDevice::insertDefaultAssignmentOptions")
+        let prefix = format!("{}{}", if isPerson { "person-device." } else { "device." }, deviceName);
+        let object = if isPerson { "person" } else { "vehicle" };
+        oc.do_register(&format!("{}.probability", prefix), SumoOption::float(-1.0)); // (default: no need to call RNG)
+        oc.add_description(&format!("{}.probability", prefix), optionsTopic, &format!("The probability for a {} to have a '{}' device", object, deviceName));
+
+        oc.do_register(&format!("{}.explicit", prefix), SumoOption::string_vector());
+        oc.add_synonyme(&format!("{}.explicit", prefix), &format!("{}.knownveh", prefix), true);
+        oc.add_description(&format!("{}.explicit", prefix), optionsTopic, &format!("Assign a '{}' device to named {}s", deviceName, object));
+
+        oc.do_register(&format!("{}.deterministic", prefix), SumoOption::bool(false));
+        oc.add_description(&format!("{}.deterministic", prefix), optionsTopic, &format!("The '{}' devices are set deterministic using a fraction of 1000", deviceName));
     }
 
     /// C++: `bool MSDevice::equippedByDefaultAssignmentOptions(const OptionsCont &, const std::string &, DEVICEHOLDER &, bool, const bool)` [static, protected]
@@ -309,32 +445,138 @@ impl MSDevice {
     //         return !nameGiven && outputOptionSet;
     //     }
     // }
+    // Port note: the template holder DEVICEHOLDER is replaced by its three inputs, because
+    // utils SUMOVehicle has no getParameter()/getVehicleType() in Rust. Callers pass
+    // (holder id, holder parameter, holder vehicle-type parameter).
     #[allow(unused_variables)]
-    pub fn equipped_by_default_assignment_options() -> bool {
-        todo!("port MSDevice::equippedByDefaultAssignmentOptions")
+    pub fn equipped_by_default_assignment_options(
+        oc: &OptionsCont,
+        deviceName: &str,
+        holderID: &str,
+        holderParameter: &utils::common::parameterised::Parameterised,
+        vtypeParameter: &utils::common::parameterised::Parameterised,
+        outputOptionSet: bool,
+        isPerson: bool,
+    ) -> bool {
+        let defaults = Self::get_default_assignment(oc, deviceName, isPerson);
+        let prefix = &defaults.prefix;
+        // assignment by number
+        let mut numberGiven = defaults.numberGiven;
+        let mut probability = defaults.probability;
+        // assignment by name
+        let mut haveByName = false;
+        let nameGiven = defaults.nameGiven;
+        if nameGiven {
+            if !MY_EXPLICIT_IDS.with(|m| m.borrow().contains_key(deviceName)) {
+                // C++ reads the global options here
+                let idList = utils::options::options_cont::get_string_vector(&format!("{}.explicit", prefix));
+                let ids: BTreeSet<String> = idList.into_iter().collect();
+                MY_EXPLICIT_IDS.with(|m| m.borrow_mut().insert(deviceName.to_string(), ids));
+            }
+            haveByName = MY_EXPLICIT_IDS.with(|m| m.borrow().get(deviceName).map_or(false, |s| s.contains(holderID)));
+        }
+        // assignment by abstract parameters
+        let mut haveByParameter = false;
+        let mut parameterGiven = false;
+        let key = &defaults.parameterKey;
+        if holderParameter.has_parameter(key) {
+            parameterGiven = true;
+            haveByParameter = or_throw(utils::common::string_utils::to_bool(&holderParameter.get_parameter(key, "false")));
+        } else if vtypeParameter.has_parameter(key) {
+            parameterGiven = true;
+            haveByParameter = or_throw(utils::common::string_utils::to_bool(&vtypeParameter.get_parameter(key, "false")));
+        } else if vtypeParameter.has_parameter(&defaults.probabilityKey) {
+            // override global options
+            numberGiven = true;
+            probability = or_throw(utils::common::string_utils::to_double(&vtypeParameter.get_parameter(&defaults.probabilityKey, "0")));
+        }
+        if haveByName {
+            return true;
+        } else if parameterGiven {
+            return haveByParameter;
+        } else if numberGiven {
+            if defaults.deterministic {
+                return MSNet::get_instance().m().get_vehicle_control().get_quota(probability, -1) == 1;
+            } else if probability > 0. {
+                if holderParameter.has_parameter(LOADSTATE_DEVICENAMES) {
+                    // replicate probabilistic assignment
+                    let mut tokenizer = StringTokenizer::new(&holderParameter.get_parameter(LOADSTATE_DEVICENAMES, ""));
+                    let lsdn = tokenizer.get_vector();
+                    return lsdn.iter().any(|s| s.as_str() == deviceName);
+                } else {
+                    return MY_EQUIPMENT_RNG.with(|r| *r).m().rand() < probability;
+                }
+            } else {
+                return false;
+            }
+        } else {
+            return !nameGiven && outputOptionSet;
+        }
     }
 
     /// C++: `const DefaultAssignment & MSDevice::getDefaultAssignment(const OptionsCont &, const std::string &, const bool)` [static, private]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // const MSDevice::DefaultAssignment&
+    // MSDevice::getDefaultAssignment(const OptionsCont& oc, const std::string& deviceName, const bool isPerson) {
+    //     // the options do not change during a run, the cache is cleared in cleanupAll
+    //     std::map<std::string, DefaultAssignment>& cache = myDefaultAssignments[isPerson ? 1 : 0];
+    //     auto it = cache.find(deviceName);
+    //     if (it == cache.end()) {
+    //         DefaultAssignment d;
+    //         d.prefix = (isPerson ? "person-device." : "device.") + deviceName;
+    //         d.parameterKey = "has." + deviceName + ".device";
+    //         d.probabilityKey = d.prefix + ".probability";
+    //         d.deterministic = oc.exists(d.prefix + ".deterministic") && oc.getBool(d.prefix + ".deterministic");
+    //         d.numberGiven = d.deterministic || (oc.exists(d.probabilityKey) && oc.getFloat(d.probabilityKey) >= 0.);
+    //         d.probability = d.numberGiven ? oc.getFloat(d.probabilityKey) : 0;
+    //         d.nameGiven = oc.exists(d.prefix + ".explicit") && oc.isSet(d.prefix + ".explicit");
+    //         it = cache.emplace(deviceName, d).first;
+    //     }
+    //     return it->second;
+    // }
     #[allow(unused_variables)]
     pub fn get_default_assignment(oc: &OptionsCont, deviceName: &str, isPerson: bool) -> &'static MSDevice_DefaultAssignment {
-        todo!("port MSDevice::getDefaultAssignment")
+        // the options do not change during a run, the cache is cleared in cleanupAll
+        let slot = if isPerson { 1 } else { 0 };
+        if let Some(d) = MY_DEFAULT_ASSIGNMENTS.with(|cache| cache.borrow()[slot].get(deviceName).copied()) {
+            return d;
+        }
+        let prefix = format!("{}{}", if isPerson { "person-device." } else { "device." }, deviceName);
+        let probabilityKey = format!("{}.probability", prefix);
+        let deterministicKey = format!("{}.deterministic", prefix);
+        let explicitKey = format!("{}.explicit", prefix);
+        let deterministic = oc.exists(&deterministicKey) && or_throw(oc.get_bool(&deterministicKey));
+        let numberGiven = deterministic || (oc.exists(&probabilityKey) && or_throw(oc.get_float(&probabilityKey)) >= 0.);
+        let probability = if numberGiven { or_throw(oc.get_float(&probabilityKey)) } else { 0. };
+        let nameGiven = oc.exists(&explicitKey) && or_throw(oc.is_set(&explicitKey, true));
+        let d: &'static MSDevice_DefaultAssignment = Box::leak(Box::new(MSDevice_DefaultAssignment {
+            prefix: prefix.clone(),
+            parameterKey: format!("has.{}.device", deviceName),
+            probabilityKey,
+            deterministic,
+            numberGiven,
+            probability,
+            nameGiven,
+        }));
+        MY_DEFAULT_ASSIGNMENTS.with(|cache| cache.borrow_mut()[slot].insert(deviceName.to_string(), d));
+        d
     }
 
     /// C++: `void MSDevice::MSDevice(const MSDevice &)` [private]
     /// Invalidated copy constructor.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // C++ declares it private and never defines it, so no caller can exist.
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice) -> Self {
-        todo!("port MSDevice::MSDevice")
+        unreachable!("MSDevice copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice & MSDevice::operator=(const MSDevice &)` [private]
     /// Invalidated assignment operator.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // C++ declares it private and never defines it, so no caller can exist.
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice) -> &mut MSDevice {
-        todo!("port MSDevice::operator=")
+        unreachable!("MSDevice assignment operator is private and undefined in C++")
     }
 
 }

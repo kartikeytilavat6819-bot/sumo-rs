@@ -26,14 +26,16 @@ impl MSLCM_LC2013_CC {
     // MSLCM_LC2013_CC::MSLCM_LC2013_CC(MSVehicle& v) : MSLCM_LC2013(v) {}
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
-        todo!("port MSLCM_LC2013_CC::MSLCM_LC2013_CC")
+        MSLCM_LC2013_CC {
+            base: MSLCM_LC2013::new(v),
+        }
     }
 
     /// C++: `void MSLCM_LC2013_CC::~MSLCM_LC2013_CC() noexcept` [virtual]
     // MSLCM_LC2013_CC::~MSLCM_LC2013_CC() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLCM_LC2013_CC::~MSLCM_LC2013_CC")
+        // the C++ destructor has an empty body
     }
 
     /// C++: `LaneChangeModel MSLCM_LC2013_CC::getModelID() const` [const, virtual]
@@ -43,7 +45,7 @@ impl MSLCM_LC2013_CC {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        todo!("port MSLCM_LC2013_CC::getModelID")
+        LaneChangeModel::LC2013_CC
     }
 
     /// C++: `int MSLCM_LC2013_CC::checkChangeBeforeCommitting(const MSVehicle *, int) const` [const, virtual]
@@ -61,7 +63,12 @@ impl MSLCM_LC2013_CC {
     // }
     #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
-        todo!("port MSLCM_LC2013_CC::checkChangeBeforeCommitting")
+        if (state & LCA_WANTS_LANECHANGE) != 0 {
+            // C++: dynamic_cast<const MSCFModel_CC*>(&veh->getCarFollowModel()); if it succeeds,
+            // return cfm->commitToLaneChange(veh, (state & LCA_LEFT) != 0)
+            // shortcut: no checked downcast from MSCFModel to MSCFModel_CC exists yet (MSCFModel::get_model_id is pure virtual here and MSCFModel_CC is not repr(C)), so CC car-following models never commit to a lane change; non-CC models return 0 as in C++. Upgrade when a checked downcast is available.
+        }
+        0
     }
 
 }
