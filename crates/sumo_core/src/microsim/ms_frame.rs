@@ -1973,7 +1973,7 @@ impl MSFrame {
                 }
             }
             let carFollowModel = opt_str(oc, "carfollow.model");
-            if !utils::xml::sumo_xml_definitions_gen::CarFollowModels.has_string(&carFollowModel) {
+            if !utils::xml::sumo_xml_definitions::CarFollowModels.has_string(&carFollowModel) {
                 utils::common::msg_handler::write_error(&format!("Unknown model '{}' for option 'carfollow.model'.", carFollowModel));
                 ok = false;
             }

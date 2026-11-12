@@ -498,7 +498,7 @@ impl MSInsertionControl {
                         /// @note probably obsolete since flows save their state
                         break;
                     }
-                    panic!("{}", ProcessError::Process(tlf!("Another vehicle with the id '%' exists.", newPars.id)));
+                    panic!("{}", ProcessError::Process(utils::tlf!("Another vehicle with the id '%' exists.", newPars.id)));
                 }
                 vtype = Ptr::null();
             }

@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub type IntermodalRouter_CreateNetCallback = Unmapped /* void (*)(IntermodalRouter<E, L, N, V> &) */;
 
 /// C++ typedef `IntermodalNetwork<E, L, N, V> IntermodalRouter::Network`
-pub type IntermodalRouter_Network = Unmapped /* IntermodalNetwork<E, L, N, V> */;
+pub type IntermodalRouter_Network<E, L, N, V> = IntermodalNetwork<E, L, N, V>;
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> IntermodalRouter::_IntermodalEdge`
 pub type IntermodalRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
@@ -36,7 +36,7 @@ pub struct IntermodalRouter<E, L, N, V> {
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,
     pub myAmClone: bool,
     pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
-    pub myIntermodalNet: Ptr<IntermodalRouter_Network>,
+    pub myIntermodalNet: Ptr<IntermodalRouter_Network<E, L, N, V>>,
     pub myCallback: IntermodalRouter_CreateNetCallback,
     pub myCarWalkTransfer: i32,
     pub myTaxiWait: f64,
@@ -306,7 +306,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return myIntermodalNet;
     //     }
     #[allow(unused_variables)]
-    pub fn get_network(&self) -> Ptr<IntermodalRouter_Network> {
+    pub fn get_network(&self) -> Ptr<IntermodalRouter_Network<E, L, N, V>> {
         todo!("port IntermodalRouter::getNetwork")
     }
 
@@ -330,7 +330,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         createNet();
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(net: Ptr<IntermodalRouter_Network>, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
+    pub fn new_2(net: Ptr<IntermodalRouter_Network<E, L, N, V>>, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
         todo!("port IntermodalRouter::IntermodalRouter<E, L, N, V>")
     }
 
