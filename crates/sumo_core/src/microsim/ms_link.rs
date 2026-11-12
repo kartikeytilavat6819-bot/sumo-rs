@@ -4,6 +4,8 @@ use crate::prelude::*;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use utils::tlf;
+use utils::common::to_string::f64_to_string;
+use utils::common::std_defs::INVALID_DOUBLE;
 
 /// C++ implicit upcast MSVehicle* -> SUMOTrafficObject* (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
 fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
@@ -1264,7 +1266,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn add_walking_area_foe(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSLink::addWalkingAreaFoe")
+        self.myWalkingAreaFoe = lane;
     }
 
     /// C++: `void MSLink::addWalkingAreaFoeExit(const MSLane *)`
@@ -1274,7 +1276,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn add_walking_area_foe_exit(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSLink::addWalkingAreaFoeExit")
+        self.myWalkingAreaFoeExit = lane;
     }
 
     /// C++: `const MSLane * MSLink::getWalkingAreaFoe()`
@@ -1284,7 +1286,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_area_foe(&mut self) -> Ptr<MSLane> {
-        todo!("port MSLink::getWalkingAreaFoe")
+        self.myWalkingAreaFoe
     }
 
     /// C++: `const MSLane * MSLink::getWalkingAreaFoeExit()`
@@ -1293,7 +1295,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_area_foe_exit(&mut self) -> Ptr<MSLane> {
-        todo!("port MSLink::getWalkingAreaFoeExit")
+        self.myWalkingAreaFoeExit
     }
 
     /// C++: `void MSLink::setApproaching(const SUMOVehicle *, const SUMOTime, const double, const double, const bool, const double, const SUMOTime, double, double)`
@@ -2030,7 +2032,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_junction(&self) -> Ptr<MSJunction> {
-        todo!("port MSLink::getJunction")
+        self.myJunction
     }
 
     /// C++: `LinkState MSLink::getState() const` [const]
@@ -2040,7 +2042,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_state(&self) -> LinkState {
-        todo!("port MSLink::getState")
+        self.myState
     }
 
     /// C++: `LinkState MSLink::getOffState() const` [const]
@@ -2050,7 +2052,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_off_state(&self) -> LinkState {
-        todo!("port MSLink::getOffState")
+        self.myOffState
     }
 
     /// C++: `LinkState MSLink::getLastGreenState() const` [const]
@@ -2060,7 +2062,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_green_state(&self) -> LinkState {
-        todo!("port MSLink::getLastGreenState")
+        self.myLastGreenState
     }
 
     /// C++: `SUMOTime MSLink::getLastStateChange() const` [const]
@@ -2069,7 +2071,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_state_change(&self) -> SUMOTime {
-        todo!("port MSLink::getLastStateChange")
+        self.myLastStateChange
     }
 
     /// C++: `LinkDirection MSLink::getDirection() const` [const]
@@ -2079,7 +2081,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> LinkDirection {
-        todo!("port MSLink::getDirection")
+        self.myDirection
     }
 
     /// C++: `void MSLink::setTLState(LinkState, SUMOTime)`
@@ -2096,7 +2098,30 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_state(&mut self, state: LinkState, t: SUMOTime) {
-        todo!("port MSLink::setTLState")
+        if self.myApproachingVehicles.len() > 0 {
+            od.open_tag("link");
+            od.write_attr(SUMO_ATTR_FROM, fromLaneID);
+            let via = if self.get_via_lane().is_null() { String::new() } else { self.get_via_lane().get_id().to_string() };
+            od.write_attr(SUMO_ATTR_VIA, via);
+            od.write_attr(SUMO_ATTR_TO, if self.get_lane().is_null() { String::new() } else { self.get_lane().get_id().to_string() });
+            // stabilize output: sort by arrival time, then by vehicle address (as std::pair does)
+            let mut toSort: Vec<(SUMOTime, Ptr<SUMOVehicle>)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (it.arrivalTime, veh)).collect();
+            toSort.sort();
+            for &(_, veh) in toSort.iter() {
+                od.open_tag("approaching");
+                let avi = self.myApproachingVehicles.get(&veh).unwrap();
+                od.write_attr(SUMO_ATTR_ID, veh.get_id().to_string());
+                od.write_attr(SUMO_ATTR_IMPATIENCE, veh.get_impatience());
+                od.write_attr("arrivalTime", time2string(avi.arrivalTime));
+                od.write_attr("leaveTime", time2string(avi.leavingTime));
+                od.write_attr("arrivalSpeed", f64_to_string(avi.arrivalSpeed));
+                od.write_attr("arrivalSpeedBraking", f64_to_string(avi.arrivalSpeedBraking));
+                od.write_attr("leaveSpeed", f64_to_string(avi.leaveSpeed));
+                od.write_attr("willPass", avi.willPass.to_string());
+                od.close_tag();
+            }
+            od.close_tag();
+        }
     }
 
     /// C++: `void MSLink::setTLLogic(const MSTrafficLightLogic *)`
@@ -2107,7 +2132,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_logic(&mut self, logic: Ptr<MSTrafficLightLogic>) {
-        todo!("port MSLink::setTLLogic")
+        self.myLogic = logic;
     }
 
     /// C++: `MSLane * MSLink::getLane() const` [const]
@@ -2117,7 +2142,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLink::getLane")
+        self.myLane
     }
 
     /// C++: `int MSLink::getIndex() const` [const]
@@ -2127,7 +2152,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_index(&self) -> i32 {
-        todo!("port MSLink::getIndex")
+        self.myIndex
     }
 
     /// C++: `int MSLink::getTLIndex() const` [const]
@@ -2137,7 +2162,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_index(&self) -> i32 {
-        todo!("port MSLink::getTLIndex")
+        self.myTLIndex
     }
 
     /// C++: `const MSTrafficLightLogic * MSLink::getTLLogic() const` [const]
@@ -2147,7 +2172,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_logic(&self) -> Ptr<MSTrafficLightLogic> {
-        todo!("port MSLink::getTLLogic")
+        self.myLogic
     }
 
     /// C++: `bool MSLink::havePriority() const` [const]
@@ -2157,7 +2182,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn have_priority(&self) -> bool {
-        todo!("port MSLink::havePriority")
+        self.myState >= 'A' as i32 && self.myState <= 'Z' as i32
     }
 
     /// C++: `bool MSLink::haveOffPriority() const` [const]
@@ -2166,7 +2191,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn have_off_priority(&self) -> bool {
-        todo!("port MSLink::haveOffPriority")
+        self.myOffState >= 'A' as i32 && self.myOffState <= 'Z' as i32
     }
 
     /// C++: `bool MSLink::haveRed() const` [const]
@@ -2176,7 +2201,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn have_red(&self) -> bool {
-        todo!("port MSLink::haveRed")
+        self.myState == LINKSTATE_TL_RED || self.myState == LINKSTATE_TL_REDYELLOW
     }
 
     /// C++: `bool MSLink::haveYellow() const` [const]
@@ -2185,7 +2210,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn have_yellow(&self) -> bool {
-        todo!("port MSLink::haveYellow")
+        self.myState == LINKSTATE_TL_YELLOW_MINOR || self.myState == LINKSTATE_TL_YELLOW_MAJOR
     }
 
     /// C++: `bool MSLink::haveGreen() const` [const]
@@ -2194,7 +2219,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn have_green(&self) -> bool {
-        todo!("port MSLink::haveGreen")
+        self.myState == LINKSTATE_TL_GREEN_MAJOR || self.myState == LINKSTATE_TL_GREEN_MINOR
     }
 
     /// C++: `bool MSLink::mustStop() const` [const]
@@ -2203,7 +2228,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn must_stop(&self) -> bool {
-        todo!("port MSLink::mustStop")
+        self.myState == LINKSTATE_STOP || self.myState == LINKSTATE_ALLWAY_STOP
     }
 
     /// C++: `bool MSLink::isTLSControlled() const` [const]
@@ -2212,7 +2237,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn is_tls_controlled(&self) -> bool {
-        todo!("port MSLink::isTLSControlled")
+        !self.myLogic.is_null()
     }
 
     /// C++: `bool MSLink::isTurnaround() const` [const]
@@ -2221,7 +2246,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn is_turnaround(&self) -> bool {
-        todo!("port MSLink::isTurnaround")
+        self.myDirection == LinkDirection::TURN || self.myDirection == LinkDirection::TURN_LEFTHAND
     }
 
     /// C++: `double MSLink::getLength() const` [const]
@@ -2231,7 +2256,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSLink::getLength")
+        self.myLength
     }
 
     /// C++: `double MSLink::getFoeVisibilityDistance() const` [const]
@@ -2241,7 +2266,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_visibility_distance(&self) -> f64 {
-        todo!("port MSLink::getFoeVisibilityDistance")
+        self.myFoeVisibilityDistance
     }
 
     /// C++: `double MSLink::getDistToFoePedCrossing() const` [const]
@@ -2250,7 +2275,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_dist_to_foe_ped_crossing(&self) -> f64 {
-        todo!("port MSLink::getDistToFoePedCrossing")
+        self.myDistToFoePedCrossing
     }
 
     /// C++: `bool MSLink::hasFoes() const` [const]
@@ -2260,7 +2285,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn has_foes(&self) -> bool {
-        todo!("port MSLink::hasFoes")
+        self.myHasFoes
     }
 
     /// C++: `bool MSLink::isCont() const` [const]
@@ -2271,7 +2296,12 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_cont(&self) -> bool {
-        todo!("port MSLink::isCont")
+        // when a traffic light is switched off minor roads have their cont status revoked
+        if self.myState == LINKSTATE_TL_OFF_BLINKING || self.myState == LINKSTATE_ALLWAY_STOP || self.myState == LINKSTATE_STOP {
+            self.myAmContOff
+        } else {
+            self.myAmCont
+        }
     }
 
     /// C++: `bool MSLink::keepClear() const` [const]
@@ -2281,7 +2311,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn keep_clear(&self) -> bool {
-        todo!("port MSLink::keepClear")
+        self.myKeepClear
     }
 
     /// C++: `bool MSLink::isIndirect() const` [const]
@@ -2291,7 +2321,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn is_indirect(&self) -> bool {
-        todo!("port MSLink::isIndirect")
+        self.myAmIndirect
     }
 
     /// C++: `bool MSLink::lastWasContMajor() const` [const]
@@ -2325,7 +2355,28 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn last_was_cont_major(&self) -> bool {
-        todo!("port MSLink::lastWasContMajor")
+        if self.is_exit_link_after_internal_junction() {
+            self.myInternalLaneBefore.get_incoming_lanes()[0].viaLink.last_was_cont_major()
+        } else if self.myInternalLane.is_null() || self.myAmCont {
+            false
+        } else {
+            let pred = self.myInternalLane.get_logical_predecessor_lane();
+            if !pred.get_edge().is_internal() {
+                false
+            } else {
+                let pred2 = pred.get_logical_predecessor_lane();
+                debug_assert!(!pred2.is_null());
+                let predLink = pred2.get_link_to(pred);
+                debug_assert!(!predLink.is_null());
+                if predLink.have_priority() {
+                    true
+                } else if self.myHavePedestrianCrossingFoe {
+                    predLink.get_last_green_state() == LINKSTATE_TL_GREEN_MAJOR
+                } else {
+                    predLink.have_yellow()
+                }
+            }
+        }
     }
 
     /// C++: `bool MSLink::lastWasContState(LinkState) const` [const]
@@ -2349,7 +2400,20 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn last_was_cont_state(&self, linkState: LinkState) -> bool {
-        todo!("port MSLink::lastWasContState")
+        if self.myInternalLane.is_null() || self.myAmCont || self.myHavePedestrianCrossingFoe {
+            false
+        } else {
+            let pred = self.myInternalLane.get_logical_predecessor_lane();
+            if !pred.get_edge().is_internal() {
+                false
+            } else {
+                let pred2 = pred.get_logical_predecessor_lane();
+                debug_assert!(!pred2.is_null());
+                let predLink = pred2.get_link_to(pred);
+                debug_assert!(!predLink.is_null());
+                predLink.get_state() == linkState
+            }
+        }
     }
 
     /// C++: `double MSLink::getInternalLengthsAfter() const` [const]
@@ -2367,7 +2431,13 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_lengths_after(&self) -> f64 {
-        todo!("port MSLink::getInternalLengthsAfter")
+        let mut len = 0.;
+        let mut lane = self.myInternalLane;
+        while !lane.is_null() && lane.is_internal() {
+            len += lane.get_length();
+            lane = lane.get_link_cont()[0].get_via_lane();
+        }
+        len
     }
 
     /// C++: `double MSLink::getInternalLengthsBefore() const` [const]
@@ -2389,7 +2459,17 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_internal_lengths_before(&self) -> f64 {
-        todo!("port MSLink::getInternalLengthsBefore")
+        let mut len = 0.;
+        let mut lane = self.myInternalLane;
+        while !lane.is_null() && lane.is_internal() {
+            len += lane.get_length();
+            if lane.get_incoming_lanes().len() == 1 {
+                lane = lane.get_incoming_lanes()[0].lane;
+            } else {
+                break;
+            }
+        }
+        len
     }
 
     /// C++: `double MSLink::getLengthsBeforeCrossing(const MSLane *) const` [const]
@@ -2420,7 +2500,26 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_lengths_before_crossing(&self, foeLane: Ptr<MSLane>) -> f64 {
-        todo!("port MSLink::getLengthsBeforeCrossing")
+        let mut via = self.myInternalLane;
+        let mut totalDist = 0.;
+        let mut foundCrossing = false;
+        while !via.is_null() {
+            let link = via.get_link_cont()[0];
+            let dist = link.get_length_before_crossing(foeLane);
+            if dist != INVALID_DOUBLE {
+                totalDist += dist;
+                foundCrossing = true;
+                break;
+            } else {
+                totalDist += via.get_length();
+                via = link.get_via_lane();
+            }
+        }
+        if foundCrossing {
+            totalDist
+        } else {
+            INVALID_DOUBLE
+        }
     }
 
     /// C++: `double MSLink::getLengthBeforeCrossing(const MSLane *) const` [const]
@@ -2456,7 +2555,23 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_length_before_crossing(&self, foeLane: Ptr<MSLane>) -> f64 {
-        todo!("port MSLink::getLengthBeforeCrossing")
+        let mut foe_ix: usize = 0;
+        while foe_ix != self.myFoeLanes.len() {
+            if self.myFoeLanes[foe_ix] == foeLane {
+                break;
+            }
+            foe_ix += 1;
+        }
+        if foe_ix == self.myFoeLanes.len() {
+            INVALID_DOUBLE
+        } else {
+            let dist = self.myInternalLaneBefore.get_length() - self.myConflicts[foe_ix].get_length_behind_crossing(Ptr::new(self));
+            if dist == -10000. {
+                INVALID_DOUBLE
+            } else {
+                dist
+            }
+        }
     }
 
     /// C++: `MSLane * MSLink::getViaLane() const` [const]
@@ -2466,7 +2581,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_via_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLink::getViaLane")
+        self.myInternalLane
     }
 
     /// C++: `const LinkLeaders MSLink::getLeaderInfo(const MSVehicle *, double, std::vector<const MSPerson *> *, bool) const` [const]
@@ -2639,7 +2754,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_via_lane_or_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLink::getViaLaneOrLane")
+        if self.myInternalLane.is_null() { self.myLane } else { self.myInternalLane }
     }
 
     /// C++: `const MSLane * MSLink::getLaneBefore() const` [const]
@@ -2650,7 +2765,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_before(&self) -> Ptr<MSLane> {
-        todo!("port MSLink::getLaneBefore")
+        self.myLaneBefore
     }
 
     /// C++: `const MSLane * MSLink::getInternalLaneBefore() const` [const]
@@ -2660,7 +2775,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_internal_lane_before(&self) -> Ptr<MSLane> {
-        todo!("port MSLink::getInternalLaneBefore")
+        self.myInternalLaneBefore
     }
 
     /// C++: `SUMOTime MSLink::getLeaveTime(const SUMOTime, const double, const double, const double) const` [const]
@@ -2773,7 +2888,11 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_entry_link(&self) -> bool {
-        todo!("port MSLink::isEntryLink")
+        if g_using_internal_lanes() {
+            !self.myInternalLane.is_null() && self.myInternalLaneBefore.is_null()
+        } else {
+            false
+        }
     }
 
     /// C++: `bool MSLink::isConflictEntryLink() const` [const]
@@ -2785,7 +2904,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_conflict_entry_link(&self) -> bool {
-        todo!("port MSLink::isConflictEntryLink")
+        !self.myAmCont && (self.is_entry_link() || (!self.myInternalLaneBefore.is_null() && !self.myInternalLane.is_null()))
     }
 
     /// C++: `bool MSLink::isExitLink() const` [const]
@@ -2800,7 +2919,11 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_exit_link(&self) -> bool {
-        todo!("port MSLink::isExitLink")
+        if g_using_internal_lanes() {
+            !self.myInternalLaneBefore.is_null() && self.myInternalLane.is_null()
+        } else {
+            false
+        }
     }
 
     /// C++: `bool MSLink::isExitLinkAfterInternalJunction() const` [const]
@@ -2817,7 +2940,13 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_exit_link_after_internal_junction(&self) -> bool {
-        todo!("port MSLink::isExitLinkAfterInternalJunction")
+        if g_using_internal_lanes() {
+            !self.get_internal_lane_before().is_null()
+                && self.myInternalLaneBefore.get_incoming_lanes().len() == 1
+                && self.myInternalLaneBefore.get_incoming_lanes()[0].viaLink.is_internal_junction_link()
+        } else {
+            false
+        }
     }
 
     /// C++: `const MSLink * MSLink::getCorrespondingExitLink() const` [const]
@@ -2834,7 +2963,13 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_corresponding_exit_link(&self) -> Ptr<MSLink> {
-        todo!("port MSLink::getCorrespondingExitLink")
+        let mut lane = self.myInternalLane;
+        let mut link: Ptr<MSLink> = Ptr::new(self);
+        while !lane.is_null() {
+            link = lane.get_link_cont()[0];
+            lane = link.get_via_lane();
+        }
+        link
     }
 
     /// C++: `const MSLink * MSLink::getCorrespondingEntryLink() const` [const]
@@ -2850,7 +2985,12 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_corresponding_entry_link(&self) -> Ptr<MSLink> {
-        todo!("port MSLink::getCorrespondingEntryLink")
+        let mut link: Ptr<MSLink> = Ptr::new(self);
+        while link.myLaneBefore.is_internal() {
+            debug_assert!(self.myLaneBefore.get_incoming_lanes().len() == 1);
+            link = link.myLaneBefore.get_incoming_lanes()[0].viaLink;
+        }
+        link
     }
 
     /// C++: `bool MSLink::isInternalJunctionLink() const` [const]
@@ -2861,7 +3001,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_internal_junction_link(&self) -> bool {
-        todo!("port MSLink::isInternalJunctionLink")
+        !self.get_internal_lane_before().is_null() && !self.myInternalLane.is_null()
     }
 
     /// C++: `SUMOTime MSLink::getMesoTLSPenalty() const` [const]
@@ -2871,7 +3011,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_meso_tls_penalty(&self) -> SUMOTime {
-        todo!("port MSLink::getMesoTLSPenalty")
+        self.myMesoTLSPenalty
     }
 
     /// C++: `double MSLink::getGreenFraction() const` [const]
@@ -2881,7 +3021,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_green_fraction(&self) -> f64 {
-        todo!("port MSLink::getGreenFraction")
+        self.myGreenFraction
     }
 
     /// C++: `void MSLink::setMesoTLSPenalty(const SUMOTime)`
@@ -2891,7 +3031,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn set_meso_tls_penalty(&mut self, penalty: SUMOTime) {
-        todo!("port MSLink::setMesoTLSPenalty")
+        self.myMesoTLSPenalty = penalty;
     }
 
     /// C++: `void MSLink::setGreenFraction(const double)`
@@ -2901,7 +3041,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn set_green_fraction(&mut self, fraction: f64) {
-        todo!("port MSLink::setGreenFraction")
+        self.myGreenFraction = fraction;
     }
 
     /// C++: `const std::vector<const MSLane *> & MSLink::getFoeLanes() const` [const]
@@ -2910,7 +3050,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_lanes(&self) -> &Vec<Ptr<MSLane>> {
-        todo!("port MSLink::getFoeLanes")
+        &self.myFoeLanes
     }
 
     /// C++: `const std::vector<ConflictInfo> & MSLink::getConflicts() const` [const]
@@ -2919,7 +3059,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_conflicts(&self) -> &Vec<MSLink_ConflictInfo> {
-        todo!("port MSLink::getConflicts")
+        &self.myConflicts
     }
 
     /// C++: `const std::vector<MSLink *> & MSLink::getFoeLinks() const` [const]
@@ -2928,7 +3068,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_links(&self) -> &Vec<Ptr<MSLink>> {
-        todo!("port MSLink::getFoeLinks")
+        &self.myFoeLinks
     }
 
     /// C++: `SVCPermissions MSLink::getPermissions() const` [const]
@@ -2938,7 +3078,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_permissions(&self) -> SVCPermissions {
-        todo!("port MSLink::getPermissions")
+        self.myPermissions
     }
 
     /// C++: `void MSLink::updatePermissions()`
@@ -2972,7 +3112,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_lateral_shift(&self) -> f64 {
-        todo!("port MSLink::getLateralShift")
+        self.myLateralShift
     }
 
     /// C++: `std::string MSLink::getDescription() const` [const]
