@@ -1337,7 +1337,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn get_emergency_brake_red_light(&self) -> bool {
-        todo!("port Influencer::getEmergencyBrakeRedLight")
+        self.myEmergencyBrakeRedLight
     }
 
     /// C++: `bool Influencer::getRespectJunctionLeaderPriority() const` [const]
@@ -1347,7 +1347,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn get_respect_junction_leader_priority(&self) -> bool {
-        todo!("port Influencer::getRespectJunctionLeaderPriority")
+        self.myRespectJunctionLeaderPriority
     }
 
     /// C++: `bool Influencer::considerSafeVelocity() const` [const]
@@ -1357,7 +1357,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn consider_safe_velocity(&self) -> bool {
-        todo!("port Influencer::considerSafeVelocity")
+        self.myConsiderSafeVelocity
     }
 
     /// C++: `bool Influencer::considerSpeedLimit() const` [const]
@@ -1368,7 +1368,8 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn consider_speed_limit(&self) -> bool {
-        todo!("port Influencer::considerSpeedLimit")
+        // backward compatibility (when we ignore safe velocity we implicitly ignore speed limits as well)
+        self.myConsiderSpeedLimit && self.myConsiderSafeVelocity
     }
 
     /// C++: `bool Influencer::considerMaxDeceleration() const` [const]
@@ -1378,7 +1379,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn consider_max_deceleration(&self) -> bool {
-        todo!("port Influencer::considerMaxDeceleration")
+        self.myConsiderMaxDeceleration
     }
 
     /// C++: `void Influencer::setSpeedMode(int)`
@@ -1395,7 +1396,13 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_mode(&mut self, speedMode: i32) {
-        todo!("port Influencer::setSpeedMode")
+        self.myConsiderSafeVelocity = (speedMode & 1) != 0;
+        self.myConsiderMaxAcceleration = (speedMode & 2) != 0;
+        self.myConsiderMaxDeceleration = (speedMode & 4) != 0;
+        self.myRespectJunctionPriority = (speedMode & 8) != 0;
+        self.myEmergencyBrakeRedLight = (speedMode & 16) != 0;
+        self.myRespectJunctionLeaderPriority = (speedMode & 32) == 0; // inverted!
+        self.myConsiderSpeedLimit = (speedMode & 64) == 0; // inverted!
     }
 
     /// C++: `void Influencer::setLaneChangeMode(int)`
@@ -1411,7 +1418,28 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(&mut self, value: i32) {
-        todo!("port Influencer::setLaneChangeMode")
+        // shortcut: C++ casts out-of-range ints to LaneChangeMode (value 3 is not a variant); mapped to LC_ALWAYS, revisit if it matters
+        fn lc_mode_from(v: i32) -> MSVehicle_LaneChangeMode {
+            match v {
+                0 => MSVehicle_LaneChangeMode::LC_NEVER,
+                1 => MSVehicle_LaneChangeMode::LC_NOCONFLICT,
+                _ => MSVehicle_LaneChangeMode::LC_ALWAYS,
+            }
+        }
+        fn traci_lc_priority_from(v: i32) -> MSVehicle_TraciLaneChangePriority {
+            match v {
+                0 => MSVehicle_TraciLaneChangePriority::LCP_ALWAYS,
+                1 => MSVehicle_TraciLaneChangePriority::LCP_NOOVERLAP,
+                2 => MSVehicle_TraciLaneChangePriority::LCP_URGENT,
+                _ => MSVehicle_TraciLaneChangePriority::LCP_OPPORTUNISTIC,
+            }
+        }
+        self.myStrategicLC = lc_mode_from(value & (1 + 2));
+        self.myCooperativeLC = lc_mode_from((value & (4 + 8)) >> 2);
+        self.mySpeedGainLC = lc_mode_from((value & (16 + 32)) >> 4);
+        self.myRightDriveLC = lc_mode_from((value & (64 + 128)) >> 6);
+        self.myTraciLaneChangePriority = traci_lc_priority_from((value & (256 + 512)) >> 8);
+        self.mySublaneLC = lc_mode_from((value & (1024 + 2048)) >> 10);
     }
 
     /// C++: `double Influencer::getOriginalSpeed() const` [const]
@@ -1422,7 +1450,7 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn get_original_speed(&self) -> f64 {
-        todo!("port Influencer::getOriginalSpeed")
+        self.myOriginalSpeed
     }
 
     /// C++: `void Influencer::setOriginalSpeed(double)`
@@ -1433,7 +1461,7 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_original_speed(&mut self, speed: f64) {
-        todo!("port Influencer::setOriginalSpeed")
+        self.myOriginalSpeed = speed;
     }
 
     /// C++: `void Influencer::setRemoteControlled(Position, MSLane *, double, double, double, int, const ConstMSEdgeVector &, SUMOTime)`
@@ -1450,7 +1478,14 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_remote_controlled(&mut self, xyPos: Position, l: Ptr<MSLane>, pos: f64, posLat: f64, angle: f64, edgeOffset: i32, route: &ConstMSEdgeVector, t: SUMOTime) {
-        todo!("port Influencer::setRemoteControlled")
+        self.myRemoteXYPos = xyPos;
+        self.myRemoteLane = l;
+        self.myRemotePos = pos;
+        self.myRemotePosLat = posLat;
+        self.myRemoteAngle = angle;
+        self.myRemoteEdgeOffset = edgeOffset;
+        self.myRemoteRoute = route.clone();
+        self.myLastRemoteAccess = t;
     }
 
     /// C++: `SUMOTime Influencer::getLastAccessTimeStep() const` [const]
@@ -1459,7 +1494,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn get_last_access_time_step(&self) -> SUMOTime {
-        todo!("port Influencer::getLastAccessTimeStep")
+        self.myLastRemoteAccess
     }
 
     /// C++: `void Influencer::updateRemoteControlRoute(MSVehicle *)`
@@ -1480,7 +1515,14 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn update_remote_control_route(&mut self, v: Ptr<MSVehicle>) {
-        todo!("port Influencer::updateRemoteControlRoute")
+        if self.myRemoteRoute.len() != 0 && self.myRemoteRoute != *v.get_route().get_edges() {
+            // only replace route at this time if the vehicle is moving with the flow
+            let isForward = !v.get_lane().is_null() && Ptr::from_mut(v.get_lane().get_edge()) == self.myRemoteRoute[0];
+            if isForward {
+                let _ = v.replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
+                v.update_best_lanes(false, Ptr::null());
+            }
+        }
     }
 
     /// C++: `void Influencer::postProcessRemoteControl(MSVehicle *)`
@@ -1563,7 +1605,77 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn post_process_remote_control(&mut self, v: Ptr<MSVehicle>) {
-        todo!("port Influencer::postProcessRemoteControl")
+        const NOT_YET_DEPARTED: SUMOTime = -1; // C++ MSBaseVehicle::NOT_YET_DEPARTED
+        let wasOnRoad = v.is_on_road();
+        let withinLane = !self.myRemoteLane.is_null() && self.myRemotePosLat.abs() < 0.5 * (self.myRemoteLane.get_width() + v.get_vehicle_type().get_width());
+        let keepLane = wasOnRoad && v.get_lane() == self.myRemoteLane;
+        if v.is_on_road() && !(keepLane && withinLane) {
+            if !self.myRemoteLane.is_null() && Ptr::from_mut(v.get_lane().get_edge()) == Ptr::from_mut(self.myRemoteLane.get_edge()) {
+                // correct odometer which gets incremented via onRemovalFromNet->leaveLane
+                v.m().myOdometer -= v.get_lane().get_length();
+            }
+            v.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_TELEPORT);
+            v.get_mutable_lane().m().remove_vehicle(v, MSMoveReminder_Notification::NOTIFICATION_TELEPORT, false);
+        }
+        if self.myRemoteRoute.len() != 0 && self.myRemoteRoute != *v.get_route().get_edges() {
+            // needed for the insertion step
+            // clear any prior stops because they cannot apply to the new route
+            unsafe { (*(v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter)).stops.clear() };
+            let _ = v.m().replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
+            self.myRemoteRoute.clear();
+        }
+        // shortcut: v->myCurrEdge = route.begin() + myRemoteEdgeOffset is not applied, MSRouteIterator is still Unmapped
+        if !self.myRemoteLane.is_null() && self.myRemotePos > self.myRemoteLane.get_length() {
+            self.myRemotePos = self.myRemoteLane.get_length();
+        }
+        if !self.myRemoteLane.is_null() && withinLane {
+            if keepLane {
+                // TODO this handles only the case when the new vehicle is completely on the edge
+                let needFurtherUpdate = v.myState.myPos < v.get_vehicle_type().get_length() && self.myRemotePos >= v.get_vehicle_type().get_length();
+                v.m().myState.myPos = self.myRemotePos;
+                v.m().myState.myPosLat = self.myRemotePosLat;
+                if needFurtherUpdate {
+                    // shortcut: furtherLanes are moved out of the vehicle during the call to avoid aliasing &mut
+                    let mut furtherLanes = std::mem::take(&mut v.m().myFurtherLanes);
+                    let mut furtherLanesPosLat = std::mem::take(&mut v.m().myFurtherLanesPosLat);
+                    let backPos = v.m().update_further_lanes(&mut furtherLanes, &mut furtherLanesPosLat, &Vec::new());
+                    v.m().myFurtherLanes = furtherLanes;
+                    v.m().myFurtherLanesPosLat = furtherLanesPosLat;
+                    v.m().myState.myBackPos = backPos;
+                }
+            } else {
+                let notify = if v.get_departure() == NOT_YET_DEPARTED {
+                    MSMoveReminder_Notification::NOTIFICATION_DEPARTED
+                } else {
+                    MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED
+                };
+                if !v.is_on_road() {
+                    // TODO may need optimization, this is linear in the number of vehicles in transfer
+                    MSVehicleTransfer::get_instance().m().remove(v);
+                }
+                self.myRemoteLane.m().force_vehicle_insertion(v, self.myRemotePos, notify, self.myRemotePosLat);
+                v.m().update_best_lanes(false, Ptr::null());
+            }
+            if !wasOnRoad {
+                v.m().draw_outside_network(false);
+            }
+            self.myRemoteLane.m().require_collision_check();
+        } else {
+            if v.get_departure() == NOT_YET_DEPARTED {
+                v.m().on_depart();
+            }
+            v.m().draw_outside_network(true);
+            // see updateState
+            let vNext = v.m().process_tra_ci_speed_control(v.get_max_speed(), v.get_speed());
+            v.m().set_braking_signals(vNext);
+            v.m().myState.myPreviousSpeed = v.get_speed();
+            v.m().myAcceleration = speed2accel(vNext - v.get_speed());
+            v.m().myState.mySpeed = vNext;
+            v.m().update_waiting_time(vNext);
+        }
+        // ensure that the position is correct (i.e. when the lanePosition is ambiguous at corners)
+        v.m().set_remote_state(self.myRemoteXYPos);
+        v.m().set_angle(utils::geom::geom_helper::from_navi_degree(self.myRemoteAngle), false);
     }
 
     /// C++: `double Influencer::implicitSpeedRemote(const MSVehicle *, double)`
@@ -1596,7 +1708,33 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn implicit_speed_remote(&mut self, veh: Ptr<MSVehicle>, oldSpeed: f64) -> f64 {
-        todo!("port Influencer::implicitSpeedRemote")
+        if veh.get_position(0.0) == Position::INVALID {
+            return oldSpeed;
+        }
+        let mut dist = veh.get_position(0.0).distance_to2d(&self.myRemoteXYPos);
+        if !self.myRemoteLane.is_null() {
+            // if the vehicles is frequently placed on a new edge, the route may
+            // consist only of a single edge. In this case the new edge may not be
+            // on the route so distAlongRoute will be double::max.
+            // In this case we still want a sensible speed value
+            let distAlongRoute = veh.get_distance_to_position(self.myRemotePos, self.myRemoteLane);
+            if distAlongRoute != f64::MAX {
+                dist = distAlongRoute;
+            }
+        }
+        let minSpeed = if self.myConsiderMaxDeceleration {
+            veh.get_car_follow_model().min_next_speed_emergency(oldSpeed, veh)
+        } else {
+            0.0
+        };
+        let maxSpeed = if !self.myRemoteLane.is_null() {
+            self.myRemoteLane.get_vehicle_max_speed(Ptr::from_raw(veh.as_raw().cast()))
+        } else if !veh.get_lane().is_null() {
+            veh.get_lane().get_vehicle_max_speed(Ptr::from_raw(veh.as_raw().cast()))
+        } else {
+            veh.get_max_speed()
+        };
+        min2(maxSpeed, max2(minSpeed, dist2speed(dist)))
     }
 
     /// C++: `double Influencer::implicitDeltaPosRemote(const MSVehicle *)`
@@ -1628,7 +1766,36 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn implicit_delta_pos_remote(&mut self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port Influencer::implicitDeltaPosRemote")
+        let mut dist: f64;
+        if self.myRemoteLane.is_null() {
+            dist = veh.get_position(0.0).distance_to2d(&self.myRemoteXYPos);
+        } else {
+            // if the vehicles is frequently placed on a new edge, the route may
+            // consist only of a single edge. In this case the new edge may not be
+            // on the route so getDistanceToPosition will return double::max.
+            // In this case we would rather not move the vehicle in executeMove
+            // (updateState) as it would result in emergency braking
+            dist = veh.get_distance_to_position(self.myRemotePos, self.myRemoteLane);
+        }
+        if dist == f64::MAX {
+            0.0
+        } else {
+            if dist2speed(dist) > veh.get_max_speed() * 1.1 {
+                write_warningf!(
+                    "Vehicle '%' moved by TraCI from % to % (dist %) with implied speed of % (exceeding maximum speed %). time=%.",
+                    veh.get_id(),
+                    veh.get_position(0.0),
+                    self.myRemoteXYPos,
+                    dist,
+                    dist2speed(dist),
+                    veh.get_max_speed(),
+                    time2string(MSNet::get_instance().get_current_time_step())
+                );
+                // some sanity check here
+                dist = min2(dist, speed2dist(veh.get_max_speed() * 2.0));
+            }
+            dist
+        }
     }
 
     /// C++: `bool Influencer::isRemoteControlled() const` [const]
@@ -1638,7 +1805,7 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn is_remote_controlled(&self) -> bool {
-        todo!("port Influencer::isRemoteControlled")
+        self.myLastRemoteAccess == MSNet::get_instance().get_current_time_step()
     }
 
     /// C++: `bool Influencer::isRemoteAffected(SUMOTime) const` [const]
@@ -1648,7 +1815,7 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn is_remote_affected(&self, t: SUMOTime) -> bool {
-        todo!("port Influencer::isRemoteAffected")
+        self.myLastRemoteAccess >= t - time2steps(10.0)
     }
 
     /// C++: `void Influencer::setSignals(int)`
@@ -1657,7 +1824,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn set_signals(&mut self, signals: i32) {
-        todo!("port Influencer::setSignals")
+        self.myTraCISignals = signals;
     }
 
     /// C++: `int Influencer::getSignals() const` [const]
@@ -1666,7 +1833,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn get_signals(&self) -> i32 {
-        todo!("port Influencer::getSignals")
+        self.myTraCISignals
     }
 
     /// C++: `double Influencer::getLatDist() const` [const]
@@ -1675,7 +1842,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn get_lat_dist(&self) -> f64 {
-        todo!("port Influencer::getLatDist")
+        self.myLatDist
     }
 
     /// C++: `void Influencer::resetLatDist()`
@@ -1684,7 +1851,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn reset_lat_dist(&mut self) {
-        todo!("port Influencer::resetLatDist")
+        self.myLatDist = 0.0;
     }
 
     /// C++: `bool Influencer::ignoreOverlap() const` [const]
@@ -1693,7 +1860,7 @@ impl MSVehicle_Influencer {
     //         }
     #[allow(unused_variables)]
     pub fn ignore_overlap(&self) -> bool {
-        todo!("port Influencer::ignoreOverlap")
+        self.myTraciLaneChangePriority == MSVehicle_TraciLaneChangePriority::LCP_ALWAYS
     }
 
     /// C++: `void Influencer::init()` [private]
@@ -1704,7 +1871,7 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port Influencer::init")
+        Influencer_GapControlState::init();
     }
 
 }
