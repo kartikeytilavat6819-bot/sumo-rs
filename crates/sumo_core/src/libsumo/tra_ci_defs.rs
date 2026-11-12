@@ -1,6 +1,14 @@
-//! Port of libsumo/TraCIDefs.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of libsumo/TraCIDefs.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Every method is a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+
+// C++ `os << double` prints like %g with precision 6; `os << bool` prints 1/0 (no boolalpha)
+fn cpp_dbl(v: f64) -> String {
+    utils::common::to_string::f64_to_string_default(v)
+}
+fn cpp_bool(b: bool) -> i32 {
+    b as i32
+}
 
 /// C++ typedef `std::map<std::string, libsumo::SubscriptionResults> ContextSubscriptionResults`
 pub type ContextSubscriptionResults = BTreeMap<String, SubscriptionResults>;
@@ -13,19 +21,20 @@ pub type TraCIResults = BTreeMap<i32, Rc<TraCIResult>>;
 
 /// An error which is not recoverable
 /// C++ class `libsumo::FatalTraCIError` (libsumo/TraCIDefs.h)
+#[repr(C)]
 pub struct FatalTraCIError {
     /// C++ base class `std::runtime_error`
-    pub base: Unmapped /* std::runtime_error */,
+    pub base: String /* std::runtime_error */,
 }
 
 impl std::ops::Deref for FatalTraCIError {
-    type Target = Unmapped /* std::runtime_error */;
-    fn deref(&self) -> &Unmapped /* std::runtime_error */ {
+    type Target = String /* std::runtime_error */;
+    fn deref(&self) -> &String /* std::runtime_error */ {
         &self.base
     }
 }
 impl std::ops::DerefMut for FatalTraCIError {
-    fn deref_mut(&mut self) -> &mut Unmapped /* std::runtime_error */ {
+    fn deref_mut(&mut self) -> &mut String /* std::runtime_error */ {
         &mut self.base
     }
 }
@@ -37,7 +46,7 @@ impl FatalTraCIError {
     //         : std::runtime_error(what) {}
     #[allow(unused_variables)]
     pub fn new(what: String) -> Self {
-        todo!("port FatalTraCIError::FatalTraCIError")
+        FatalTraCIError { base: what }
     }
 
 }
@@ -73,13 +82,19 @@ impl TraCIBestLanesData {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIBestLanesData::getString")
+        let mut os = format!("TraCIBestLanesData({},{},{},{},{},[", self.laneID, cpp_dbl(self.length), cpp_dbl(self.occupation), self.bestLaneOffset, cpp_bool(self.allowsContinuation));
+        for s in &self.continuationLanes {
+            os += &format!("{},", s);
+        }
+        os += "])";
+        os
     }
 
 }
 
 /// C++ class `libsumo::TraCIBestLanesDataVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIBestLanesDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -111,7 +126,13 @@ impl TraCIBestLanesDataVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIBestLanesDataVectorWrapped::getString")
+        let mut os = String::from("TraCIBestLanesDataVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -143,13 +164,14 @@ impl TraCICollision {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCICollision::getString")
+        format!("TraCICollision(collider={}, victim={})", self.collider, self.victim)
     }
 
 }
 
 /// C++ class `libsumo::TraCICollisionVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCICollisionVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -181,7 +203,13 @@ impl TraCICollisionVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCICollisionVectorWrapped::getString")
+        let mut os = String::from("TraCICollisionVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -189,6 +217,7 @@ impl TraCICollisionVectorWrapped {
 /// A color
 /// C++ class `libsumo::TraCIColor` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIColor {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -215,14 +244,14 @@ impl TraCIColor {
     // TraCIColor() : r(0), g(0), b(0), a(255) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCIColor::TraCIColor")
+        TraCIColor { base: TraCIResult::new(), r: 0, g: 0, b: 0, a: 255 }
     }
 
     /// C++: `void TraCIColor::TraCIColor(int, int, int, int)`
     // TraCIColor(int r, int g, int b, int a = 255) : r(r), g(g), b(b), a(a) {}
     #[allow(unused_variables)]
     pub fn new_2(r: i32, g: i32, b: i32, a: i32) -> Self {
-        todo!("port TraCIColor::TraCIColor")
+        TraCIColor { base: TraCIResult::new(), r, g, b, a }
     }
 
     /// C++: `std::string TraCIColor::getString() const` [const, virtual]
@@ -233,7 +262,7 @@ impl TraCIColor {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIColor::getString")
+        format!("TraCIColor({},{},{},{})", self.r, self.g, self.b, self.a)
     }
 
 }
@@ -256,7 +285,7 @@ impl TraCIConnection {
     // TraCIConnection() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCIConnection::TraCIConnection")
+        TraCIConnection { approachedLane: String::new(), hasPrio: false, isOpen: false, hasFoe: false, approachedInternal: String::new(), state: String::new(), direction: String::new(), length: 0.0 }
     }
 
     /// C++: `void TraCIConnection::TraCIConnection(const std::string &, const bool, const bool, const bool, const std::string, const std::string, const std::string, const double)`
@@ -266,7 +295,7 @@ impl TraCIConnection {
     //           approachedInternal(_approachedInternal), state(_state), direction(_direction), length(_length) {}
     #[allow(unused_variables)]
     pub fn new_2(_approachedLane: &str, _hasPrio: bool, _isOpen: bool, _hasFoe: bool, _approachedInternal: String, _state: String, _direction: String, _length: f64) -> Self {
-        todo!("port TraCIConnection::TraCIConnection")
+        TraCIConnection { approachedLane: _approachedLane.to_string(), hasPrio: _hasPrio, isOpen: _isOpen, hasFoe: _hasFoe, approachedInternal: _approachedInternal, state: _state, direction: _direction, length: _length }
     }
 
     /// C++: `std::string TraCIConnection::getString() const` [const]
@@ -278,13 +307,14 @@ impl TraCIConnection {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIConnection::getString")
+        format!("TraCIConnection({},{},{},{},{},{},{},{})", self.approachedLane, cpp_bool(self.hasPrio), cpp_bool(self.isOpen), cpp_bool(self.hasFoe), self.approachedInternal, self.state, self.direction, cpp_dbl(self.length))
     }
 
 }
 
 /// C++ class `libsumo::TraCIConnectionVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIConnectionVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -316,13 +346,20 @@ impl TraCIConnectionVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIConnectionVectorWrapped::getString")
+        let mut os = String::from("TraCIConnectionVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
 
 /// C++ class `libsumo::TraCIDouble` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIDouble {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -346,7 +383,7 @@ impl TraCIDouble {
     // TraCIDouble(double v = 0.) : value(v) {}
     #[allow(unused_variables)]
     pub fn new(v: f64) -> Self {
-        todo!("port TraCIDouble::TraCIDouble")
+        TraCIDouble { base: TraCIResult { result_type: TYPE_DOUBLE }, value: v }
     }
 
     /// C++: `std::string TraCIDouble::getString() const` [const, virtual]
@@ -357,7 +394,7 @@ impl TraCIDouble {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIDouble::getString")
+        cpp_dbl(self.value)
     }
 
     /// C++: `int TraCIDouble::getType() const` [const, virtual]
@@ -366,13 +403,14 @@ impl TraCIDouble {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIDouble::getType")
+        TYPE_DOUBLE
     }
 
 }
 
 /// C++ class `libsumo::TraCIDoubleList` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIDoubleList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -404,7 +442,13 @@ impl TraCIDoubleList {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIDoubleList::getString")
+        let mut os = String::from("[");
+        for v in &self.value {
+            os += &cpp_dbl(*v);
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -412,19 +456,20 @@ impl TraCIDoubleList {
 /// An error which allows to continue
 /// C++ class `libsumo::TraCIException` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIException {
     /// C++ base class `std::runtime_error`
-    pub base: Unmapped /* std::runtime_error */,
+    pub base: String /* std::runtime_error */,
 }
 
 impl std::ops::Deref for TraCIException {
-    type Target = Unmapped /* std::runtime_error */;
-    fn deref(&self) -> &Unmapped /* std::runtime_error */ {
+    type Target = String /* std::runtime_error */;
+    fn deref(&self) -> &String /* std::runtime_error */ {
         &self.base
     }
 }
 impl std::ops::DerefMut for TraCIException {
-    fn deref_mut(&mut self) -> &mut Unmapped /* std::runtime_error */ {
+    fn deref_mut(&mut self) -> &mut String /* std::runtime_error */ {
         &mut self.base
     }
 }
@@ -436,13 +481,14 @@ impl TraCIException {
     //         : std::runtime_error(what) {}
     #[allow(unused_variables)]
     pub fn new(what: String) -> Self {
-        todo!("port TraCIException::TraCIException")
+        TraCIException { base: what }
     }
 
 }
 
 /// C++ class `libsumo::TraCIInt` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIInt {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -467,7 +513,7 @@ impl TraCIInt {
     // TraCIInt(int v = 0, int t = libsumo::TYPE_INTEGER) : value(v), traciType(t) {}
     #[allow(unused_variables)]
     pub fn new(v: i32, t: i32) -> Self {
-        todo!("port TraCIInt::TraCIInt")
+        TraCIInt { base: TraCIResult { result_type: t }, value: v, traciType: t }
     }
 
     /// C++: `std::string TraCIInt::getString() const` [const, virtual]
@@ -478,7 +524,7 @@ impl TraCIInt {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIInt::getString")
+        self.value.to_string()
     }
 
     /// C++: `int TraCIInt::getType() const` [const, virtual]
@@ -487,13 +533,14 @@ impl TraCIInt {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIInt::getType")
+        self.traciType
     }
 
 }
 
 /// C++ class `libsumo::TraCIIntList` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIIntList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -525,7 +572,13 @@ impl TraCIIntList {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIIntList::getString")
+        let mut os = String::from("[");
+        for v in &self.value {
+            os += &v.to_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -554,13 +607,14 @@ impl TraCIJunctionFoe {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIJunctionFoe::getString")
+        format!("TraCIJunctionFoe(foeId={}, egoDist={}, foeDist={}, foeDist={})", self.foeId, cpp_dbl(self.egoDist), cpp_dbl(self.foeDist), cpp_dbl(self.foeDist))
     }
 
 }
 
 /// C++ class `libsumo::TraCIJunctionFoeVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIJunctionFoeVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -592,7 +646,13 @@ impl TraCIJunctionFoeVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIJunctionFoeVectorWrapped::getString")
+        let mut os = String::from("TraCIJunctionFoeVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -610,7 +670,7 @@ impl TraCILink {
     // TraCILink() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCILink::TraCILink")
+        TraCILink { fromLane: String::new(), viaLane: String::new(), toLane: String::new() }
     }
 
     /// C++: `void TraCILink::TraCILink(const std::string &, const std::string &, const std::string &)`
@@ -618,7 +678,7 @@ impl TraCILink {
     //         : fromLane(_from), viaLane(_via), toLane(_to) {}
     #[allow(unused_variables)]
     pub fn new_2(_from: &str, _via: &str, _to: &str) -> Self {
-        todo!("port TraCILink::TraCILink")
+        TraCILink { fromLane: _from.to_string(), viaLane: _via.to_string(), toLane: _to.to_string() }
     }
 
     /// C++: `std::string TraCILink::getString() const` [const]
@@ -629,13 +689,14 @@ impl TraCILink {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCILink::getString")
+        format!("TraCILink({},{},{})", self.fromLane, self.viaLane, self.toLane)
     }
 
 }
 
 /// C++ class `libsumo::TraCILinkVectorVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCILinkVectorVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -670,7 +731,16 @@ impl TraCILinkVectorVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCILinkVectorVectorWrapped::getString")
+        let mut os = String::from("TraCILinkVectorVectorWrapped[");
+        for v in &self.value {
+            os += "[";
+            for tl in v {
+                os += &tl.get_string();
+                os += ",";
+            }
+        }
+        os += "]";
+        os
     }
 
 }
@@ -690,7 +760,7 @@ impl TraCILogic {
     // TraCILogic() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCILogic::TraCILogic")
+        TraCILogic { programID: String::new(), type_: 0, currentPhaseIndex: 0, phases: Vec::new(), subParameter: BTreeMap::new() }
     }
 
     /// C++: `void TraCILogic::TraCILogic(const std::string &, const int, const int, const std::vector<std::shared_ptr<libsumo::TraCIPhase>> &)`
@@ -699,7 +769,7 @@ impl TraCILogic {
     //         : programID(_programID), type(_type), currentPhaseIndex(_currentPhaseIndex), phases(_phases) {}
     #[allow(unused_variables)]
     pub fn new_2(_programID: &str, _type: i32, _currentPhaseIndex: i32, _phases: &Vec<Rc<TraCIPhase>>) -> Self {
-        todo!("port TraCILogic::TraCILogic")
+        TraCILogic { programID: _programID.to_string(), type_: _type, currentPhaseIndex: _currentPhaseIndex, phases: _phases.clone(), subParameter: BTreeMap::new() }
     }
 
     /// C++: `std::string TraCILogic::getString() const` [const]
@@ -710,13 +780,15 @@ impl TraCILogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCILogic::getString")
+        // C++ prints "TraCILink(" for a TraCILogic (upstream typo), kept for identical output
+        format!("TraCILink({},{},{})", self.programID, self.type_, self.currentPhaseIndex)
     }
 
 }
 
 /// C++ class `libsumo::TraCILogicVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCILogicVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -748,7 +820,13 @@ impl TraCILogicVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCILogicVectorWrapped::getString")
+        let mut os = String::from("TraCILogicVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -827,7 +905,7 @@ impl TraCINextStopData {
     //     {}
     #[allow(unused_variables)]
     pub fn new(lane: &str, startPos: f64, endPos: f64, stoppingPlaceID: &str, stopFlags: i32, duration: f64, until: f64, intendedArrival: f64, arrival: f64, depart: f64, split: &str, join: &str, actType: &str, tripId: &str, line: &str, speed: f64) -> Self {
-        todo!("port TraCINextStopData::TraCINextStopData")
+        TraCINextStopData { lane: lane.to_string(), startPos, endPos, stoppingPlaceID: stoppingPlaceID.to_string(), stopFlags, duration, until, intendedArrival, arrival, depart, split: split.to_string(), join: join.to_string(), actType: actType.to_string(), tripId: tripId.to_string(), line: line.to_string(), speed }
     }
 
     /// C++: `std::string TraCINextStopData::getString() const` [const]
@@ -840,7 +918,7 @@ impl TraCINextStopData {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCINextStopData::getString")
+        format!("TraCINextStopData({},{},{},{},{},{},{})", self.lane, cpp_dbl(self.endPos), self.stoppingPlaceID, self.stopFlags, cpp_dbl(self.duration), cpp_dbl(self.until), cpp_dbl(self.arrival))
     }
 
 }
@@ -848,6 +926,7 @@ impl TraCINextStopData {
 /// A list of vehicle stops
 /// C++ class `libsumo::TraCINextStopDataVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCINextStopDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -879,7 +958,13 @@ impl TraCINextStopDataVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCINextStopDataVectorWrapped::getString")
+        let mut os = String::from("TraCINextStopDataVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -907,13 +992,14 @@ impl TraCINextTLSData {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCINextTLSData::getString")
+        format!("TraCINextTLSData({},{},{},{})", self.id, self.tlIndex, cpp_dbl(self.dist), self.state as u8 as char)
     }
 
 }
 
 /// C++ class `libsumo::TraCINextTLSDataVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCINextTLSDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -945,7 +1031,13 @@ impl TraCINextTLSDataVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCINextTLSDataVectorWrapped::getString")
+        let mut os = String::from("TraCINextTLSDataVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -967,7 +1059,7 @@ impl TraCIPhase {
     // TraCIPhase() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCIPhase::TraCIPhase")
+        TraCIPhase { duration: 0.0, state: String::new(), minDur: 0.0, maxDur: 0.0, next: Vec::new(), name: String::new(), earlyTarget: String::new() }
     }
 
     /// C++: `void TraCIPhase::TraCIPhase(const double, const std::string &, const double, const double, const std::vector<int> &, const std::string &, const std::string &)`
@@ -979,7 +1071,7 @@ impl TraCIPhase {
     //         duration(_duration), state(_state), minDur(_minDur), maxDur(_maxDur), next(_next), name(_name), earlyTarget(_earlyTarget) {}
     #[allow(unused_variables)]
     pub fn new_2(_duration: f64, _state: &str, _minDur: f64, _maxDur: f64, _next: &Vec<i32>, _name: &str, _earlyTarget: &str) -> Self {
-        todo!("port TraCIPhase::TraCIPhase")
+        TraCIPhase { duration: _duration, state: _state.to_string(), minDur: _minDur, maxDur: _maxDur, next: _next.clone(), name: _name.to_string(), earlyTarget: _earlyTarget.to_string() }
     }
 
 }
@@ -987,6 +1079,7 @@ impl TraCIPhase {
 /// A 2D or 3D-position, for 2D positions z == INVALID_DOUBLE_VALUE
 /// C++ class `libsumo::TraCIPosition` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIPosition {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1020,7 +1113,12 @@ impl TraCIPosition {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIPosition::getString")
+        let mut os = format!("TraCIPosition({},{}", cpp_dbl(self.x), cpp_dbl(self.y));
+        if self.z != INVALID_DOUBLE_VALUE {
+            os += &format!(",{}", cpp_dbl(self.z));
+        }
+        os += ")";
+        os
     }
 
     /// C++: `int TraCIPosition::getType() const` [const, virtual]
@@ -1029,7 +1127,7 @@ impl TraCIPosition {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIPosition::getType")
+        if self.z != INVALID_DOUBLE_VALUE { POSITION_3D } else { POSITION_2D }
     }
 
 }
@@ -1037,6 +1135,7 @@ impl TraCIPosition {
 /// A list of positions
 /// C++ class `libsumo::TraCIPositionVector` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIPositionVector {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1068,7 +1167,12 @@ impl TraCIPositionVector {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIPositionVector::getString")
+        let mut os = String::from("[");
+        for v in &self.value {
+            os += &format!("({},{},{})", cpp_dbl(v.x), cpp_dbl(v.y), cpp_dbl(v.z));
+        }
+        os += "]";
+        os
     }
 
 }
@@ -1103,7 +1207,7 @@ impl TraCIReservation {
     // TraCIReservation() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCIReservation::TraCIReservation")
+        TraCIReservation { id: String::new(), persons: Vec::new(), group: String::new(), fromEdge: String::new(), toEdge: String::new(), departPos: 0.0, arrivalPos: 0.0, depart: 0.0, reservationTime: 0.0, state: 0 }
     }
 
     /// C++: `void TraCIReservation::TraCIReservation(const std::string &, const std::vector<std::string> &, const std::string &, const std::string &, const std::string &, double, double, double, double, int)`
@@ -1121,7 +1225,7 @@ impl TraCIReservation {
     //         depart(depart), reservationTime(reservationTime), state(state) {}
     #[allow(unused_variables)]
     pub fn new_2(id: &str, persons: &Vec<String>, group: &str, fromEdge: &str, toEdge: &str, departPos: f64, arrivalPos: f64, depart: f64, reservationTime: f64, state: i32) -> Self {
-        todo!("port TraCIReservation::TraCIReservation")
+        TraCIReservation { id: id.to_string(), persons: persons.clone(), group: group.to_string(), fromEdge: fromEdge.to_string(), toEdge: toEdge.to_string(), departPos, arrivalPos, depart, reservationTime, state }
     }
 
     /// C++: `std::string TraCIReservation::getString() const` [const]
@@ -1132,13 +1236,14 @@ impl TraCIReservation {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIReservation::getString")
+        format!("TraCIReservation(id={})", self.id)
     }
 
 }
 
 /// C++ class `libsumo::TraCIReservationVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIReservationVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1170,7 +1275,13 @@ impl TraCIReservationVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIReservationVectorWrapped::getString")
+        let mut os = String::from("TraCIReservationVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -1178,7 +1289,10 @@ impl TraCIReservationVectorWrapped {
 /// @{
 /// C++ class `libsumo::TraCIResult` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIResult {
+    /// Stands in for C++ virtual getType(): -1 for a plain TraCIResult, otherwise the type set by the subclass constructor
+    pub result_type: i32,
 }
 
 impl TraCIResult {
@@ -1186,28 +1300,29 @@ impl TraCIResult {
     // TraCIResult() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port TraCIResult::TraCIResult")
+        TraCIResult { result_type: -1 }
     }
 
     /// C++: `void TraCIResult::~TraCIResult() noexcept` [virtual]
     // virtual ~TraCIResult() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TraCIResult::~TraCIResult")
+        // C++ destructor body is empty
     }
 
     /// C++: `void TraCIResult::TraCIResult(const TraCIResult &)`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &TraCIResult) -> Self {
-        todo!("port TraCIResult::TraCIResult")
+        TraCIResult { result_type: arg0.result_type }
     }
 
     /// C++: `TraCIResult & TraCIResult::operator=(const TraCIResult &)`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &TraCIResult) -> &mut TraCIResult {
-        todo!("port TraCIResult::operator=")
+        self.result_type = arg0.result_type;
+        self
     }
 
     /// C++: `std::string TraCIResult::getString() const` [const, virtual]
@@ -1216,7 +1331,7 @@ impl TraCIResult {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIResult::getString")
+        String::new()
     }
 
     /// C++: `int TraCIResult::getType() const` [const, virtual]
@@ -1225,7 +1340,7 @@ impl TraCIResult {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIResult::getType")
+        self.result_type
     }
 
 }
@@ -1233,6 +1348,7 @@ impl TraCIResult {
 /// An edgeId, position and laneIndex
 /// C++ class `libsumo::TraCIRoadPosition` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIRoadPosition {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1258,7 +1374,7 @@ impl TraCIRoadPosition {
     // TraCIRoadPosition(const std::string e = "", const double p = INVALID_DOUBLE_VALUE, const int li = INVALID_INT_VALUE) : edgeID(e), pos(p), laneIndex(li) {}
     #[allow(unused_variables)]
     pub fn new(e: String, p: f64, li: i32) -> Self {
-        todo!("port TraCIRoadPosition::TraCIRoadPosition")
+        TraCIRoadPosition { base: TraCIResult { result_type: POSITION_ROADMAP }, edgeID: e, pos: p, laneIndex: li }
     }
 
     /// C++: `std::string TraCIRoadPosition::getString() const` [const, virtual]
@@ -1269,7 +1385,7 @@ impl TraCIRoadPosition {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIRoadPosition::getString")
+        format!("TraCIRoadPosition({}_{},{})", self.edgeID, self.laneIndex, cpp_dbl(self.pos))
     }
 
     /// C++: `int TraCIRoadPosition::getType() const` [const, virtual]
@@ -1278,7 +1394,7 @@ impl TraCIRoadPosition {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIRoadPosition::getType")
+        POSITION_ROADMAP
     }
 
 }
@@ -1315,13 +1431,14 @@ impl TraCISignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCISignalConstraint::getString")
+        format!("TraCISignalConstraint(signalId={}, tripid={}, foeSignal={}, foeId={})", self.signalId, self.tripId, self.foeSignal, self.foeId)
     }
 
 }
 
 /// C++ class `libsumo::TraCISignalConstraintVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCISignalConstraintVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1353,13 +1470,20 @@ impl TraCISignalConstraintVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCISignalConstraintVectorWrapped::getString")
+        let mut os = String::from("TraCISignalConstraintVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
 
 /// C++ class `libsumo::TraCIStage` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIStage {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1414,13 +1538,14 @@ impl TraCIStage {
     //         length(length), intended(intended), depart(depart), departPos(departPos), arrivalPos(arrivalPos), description(description) {}
     #[allow(unused_variables)]
     pub fn new(type_: i32, vType: &str, line: &str, destStop: &str, edges: &Vec<String>, travelTime: f64, cost: f64, length: f64, intended: &str, depart: f64, departPos: f64, arrivalPos: f64, description: &str) -> Self {
-        todo!("port TraCIStage::TraCIStage")
+        TraCIStage { base: TraCIResult::new(), type_, vType: vType.to_string(), line: line.to_string(), destStop: destStop.to_string(), edges: edges.clone(), travelTime, cost, length, intended: intended.to_string(), depart, departPos, arrivalPos, description: description.to_string() }
     }
 
 }
 
 /// C++ class `libsumo::TraCIString` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIString {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1444,7 +1569,7 @@ impl TraCIString {
     // TraCIString(std::string v = "") : value(v) {}
     #[allow(unused_variables)]
     pub fn new(v: String) -> Self {
-        todo!("port TraCIString::TraCIString")
+        TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: v }
     }
 
     /// C++: `std::string TraCIString::getString() const` [const, virtual]
@@ -1453,7 +1578,7 @@ impl TraCIString {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIString::getString")
+        self.value.clone()
     }
 
     /// C++: `int TraCIString::getType() const` [const, virtual]
@@ -1462,13 +1587,14 @@ impl TraCIString {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> i32 {
-        todo!("port TraCIString::getType")
+        TYPE_STRING
     }
 
 }
 
 /// C++ class `libsumo::TraCIStringDoublePairList` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIStringDoublePairList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1500,13 +1626,19 @@ impl TraCIStringDoublePairList {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIStringDoublePairList::getString")
+        let mut os = String::from("[");
+        for v in &self.value {
+            os += &format!("({},{}),", v.0, cpp_dbl(v.1));
+        }
+        os += "]";
+        os
     }
 
 }
 
 /// C++ class `libsumo::TraCIStringList` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIStringList {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1538,7 +1670,13 @@ impl TraCIStringList {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIStringList::getString")
+        let mut os = String::from("[");
+        for v in &self.value {
+            os += v.as_str();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
@@ -1569,13 +1707,14 @@ impl TraCIVehicleData {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIVehicleData::getString")
+        format!("TraCIVehicleData({},{},{},{},{})", self.id, cpp_dbl(self.length), cpp_dbl(self.entryTime), cpp_dbl(self.leaveTime), self.typeID)
     }
 
 }
 
 /// C++ class `libsumo::TraCIVehicleDataVectorWrapped` (libsumo/TraCIDefs.h)
 #[derive(Clone)]
+#[repr(C)]
 pub struct TraCIVehicleDataVectorWrapped {
     /// C++ base class `TraCIResult`
     pub base: TraCIResult,
@@ -1607,7 +1746,13 @@ impl TraCIVehicleDataVectorWrapped {
     //     }
     #[allow(unused_variables)]
     pub fn get_string(&self) -> String {
-        todo!("port TraCIVehicleDataVectorWrapped::getString")
+        let mut os = String::from("TraCIVehicleDataVectorWrapped[");
+        for v in &self.value {
+            os += &v.get_string();
+            os += ",";
+        }
+        os += "]";
+        os
     }
 
 }
