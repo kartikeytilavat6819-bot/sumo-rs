@@ -1900,7 +1900,7 @@ impl NBEdgeCont {
             // build the new edge
             let newEdge = Ptr::from_raw(Box::into_raw(NBEdge::new(&id, from, to, String::new(), speed, UNSPECIFIED_FRICTION, nolanes, priority,
                 UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET,
-                tpledge.m().myLaneSpreadFunction, tpledge.m().get_street_name()))));
+                tpledge.m().myLaneSpreadFunction, tpledge.m().get_street_name())));
             // copy lane attributes
             let mut laneIndex: i32 = 0;
             for i in edges.iter() {
