@@ -12,6 +12,7 @@ pub type NBNodeCont_NodeClusters = Vec<NodeSet>;
 pub type NBNodeCont_NodeCont = BTreeMap<String, Ptr<NBNode>>;
 
 use utils::common::to_string::join_to_string;
+use utils::common::msg_handler::{write_message, write_warning};
 
 /// C++ `std::set<NBNode*, ComparatorIdLess>` iterates in id order, but NodeSet orders by address:
 /// iterate through this wherever the C++ iteration order matters.
@@ -453,7 +454,30 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_loaded_clusters(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont) -> i32 {
-        todo!("port NBNodeCont::joinLoadedClusters")
+        let mut numJoined = 0;
+        // C++ iterates myClusters2Join by reference while joinNodeCluster runs; index loop avoids aliasing &mut self
+        for i in 0..self.myClusters2Join.len() {
+            let cluster_ids = self.myClusters2Join[i].cluster.clone();
+            let itemNode = self.myClusters2Join[i].node;
+            let itemReset = self.myClusters2Join[i].resetConnections;
+            // verify loaded cluster
+            let mut cluster: NodeSet = NodeSet::new();
+            for nodeID in cluster_ids.iter() {
+                let node = self.retrieve(nodeID);
+                if node.is_null() {
+                    write_errorf!("unknown junction '%' while joining.", nodeID);
+                } else {
+                    cluster.insert(node);
+                }
+            }
+            if cluster.len() > 1 {
+                self.join_node_cluster(cluster, dc, ec, tlc, itemNode, itemReset);
+                numJoined += 1;
+                self.myJoinExclusions.insert(itemNode.get_id().to_string());
+            }
+        }
+        self.myClusters2Join.clear(); // make save for recompute
+        numJoined
     }
 
     /// C++: `int NBNodeCont::joinJunctions(double, NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, NBPTStopCont &)`
@@ -619,7 +643,127 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_junctions(&mut self, maxDist: f64, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont, sc: &mut NBPTStopCont) -> i32 {
-        todo!("port NBNodeCont::joinJunctions")
+        let mut cands: NBNodeCont_NodeClusters = Vec::new();
+        let mut clusters: NBNodeCont_NodeClusters = Vec::new();
+        let mut ptStopEnds: BTreeMap<Ptr<NBNode>, Vec<Ptr<NBNode>>> = BTreeMap::new();
+        // check for stop edges within the cluster
+        for stop in sc.get_stops().values() {
+            let edge = ec.retrieve(stop.get_edge_id(), false);
+            if !edge.is_null() {
+                ptStopEnds.entry(edge.get_from_node()).or_default().push(edge.get_to_node());
+            }
+        }
+        self.generate_node_clusters(maxDist, &mut cands);
+        for cluster in cands.iter_mut() {
+            // remove join exclusions
+            cluster.retain(|n| !self.myJoinExclusions.contains(n.get_id()));
+            let mut origCluster = join_node_ids(cluster, ",");
+            // remove nodes that can be eliminated by geometry.remove
+            self.prune_cluster_fringe(cluster, maxDist, false);
+            if cluster.len() < 2 {
+                continue;
+            }
+            // remove nodes that are part of a bypass lane (typically for turning right without waiting at a traffic light)
+            self.prune_slip_lane_nodes(cluster, maxDist);
+            if cluster.len() < 2 {
+                write_warningf!("Not joining junctions % (%).", origCluster, "slip lane");
+                continue;
+            }
+            origCluster = join_node_ids(cluster, ",");
+            let mut tryRemove: Ptr<NBNode> = Ptr::null();
+            let mut reason = String::new();
+            let mut origReason = String::new();
+            // pruneLongEdges might remove too much, so we check first to have a fallback with the circles
+            let mut feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut origReason, &mut tryRemove);
+            if feasible && ((cluster.len() as i32) - Self::prune_long_edges(cluster, maxDist, true) < 2) {
+                origReason = "long edge".to_string();
+                feasible = false;
+            }
+            if !feasible {
+                let start = cluster.clone();
+                if self.reduce_to_circle(cluster, 4, start, maxDist, Vec::new()) {
+                    feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut reason, &mut tryRemove);
+                    if feasible {
+                        write_warningf!("Reducing junction cluster % (%).", origCluster, origReason);
+                    }
+                }
+            }
+            if !feasible {
+                let start = cluster.clone();
+                if self.reduce_to_circle(cluster, 2, start, maxDist, Vec::new()) {
+                    feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut reason, &mut tryRemove);
+                    if feasible {
+                        write_warningf!("Reducing junction cluster % (%).", origCluster, origReason);
+                    }
+                }
+            }
+            while !feasible && !tryRemove.is_null() {
+                cluster.remove(&tryRemove);
+                self.prune_cluster_fringe(cluster, maxDist, false);
+                tryRemove = Ptr::null();
+                feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut reason, &mut tryRemove);
+                if feasible {
+                    write_warningf!("Reducing junction cluster % (%).", origCluster, origReason);
+                }
+            }
+            if cluster.len() < 2 {
+                write_warningf!("Not joining junctions % (%).", origCluster, "after reduction");
+                continue;
+            }
+            // avoid removal of long edges (must have been added via an alternative path).
+            let numPruned = Self::prune_long_edges(cluster, maxDist, false);
+            if cluster.len() < 2 {
+                write_warningf!("Not joining junctions % (%).", origCluster, "long edge");
+                continue;
+            }
+            // after pruning long edges we have to recheck
+            if numPruned > 0 {
+                self.prune_cluster_fringe(cluster, maxDist, false);
+                if cluster.len() < 2 {
+                    write_warningf!("Not joining junctions % (%).", origCluster, "long edge");
+                    continue;
+                }
+                self.prune_slip_lane_nodes(cluster, maxDist);
+                if cluster.len() < 2 {
+                    write_warningf!("Not joining junctions % (%).", origCluster, "slip lane");
+                    continue;
+                }
+            }
+            feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut origReason, &mut tryRemove);
+            if !feasible {
+                write_warningf!("Not joining junctions % (%).", origCluster, origReason);
+                continue;
+            }
+            // compute all connected components of this cluster
+            // (may be more than 1 if intermediate nodes were removed)
+            let mut components: NBNodeCont_NodeClusters = Vec::new();
+            for current in nodes_by_id(cluster) {
+                // merge all connected components into newComp
+                let mut newComp: NodeSet = NodeSet::new();
+                newComp.insert(current);
+                let mut idx = 0;
+                while idx < components.len() {
+                    let connected = components[idx].iter().any(|k| {
+                        !current.get_connection_to(*k).is_null() || !k.get_connection_to(current).is_null()
+                    });
+                    if connected {
+                        let comp = components.remove(idx);
+                        newComp.extend(comp);
+                    } else {
+                        idx += 1;
+                    }
+                }
+                components.push(newComp);
+            }
+            for comp in components {
+                if comp.len() > 1 {
+                    clusters.push(comp);
+                }
+            }
+        }
+        let numClusters = clusters.len() as i32;
+        self.join_node_clusters(clusters, dc, ec, tlc, false);
+        numClusters
     }
 
     /// C++: `int NBNodeCont::joinSameJunctions(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, double)`
@@ -653,7 +797,28 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_same_junctions(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont, maxDist: f64) -> i32 {
-        todo!("port NBNodeCont::joinSameJunctions")
+        let mut checked: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut clusters: NBNodeCont_NodeClusters = Vec::new();
+        for (id, n) in self.myNodes.iter() {
+            let n = *n;
+            if self.myJoinExclusions.contains(id) {
+                continue;
+            }
+            let nearby = self.retrieve_by_pos(n.get_position(), maxDist);
+            let mut cluster: NodeSet = NodeSet::new();
+            for n2 in nearby {
+                if !self.myJoinExclusions.contains(n2.get_id()) && !checked.contains(&n2) {
+                    cluster.insert(n2);
+                }
+            }
+            if cluster.len() > 1 {
+                checked.extend(cluster.iter().copied());
+                clusters.push(cluster);
+            }
+        }
+        let numClusters = clusters.len() as i32;
+        self.join_node_clusters(clusters, dc, ec, tlc, true);
+        numClusters
     }
 
     /// C++: `NodeSet NBNodeCont::getClusterNeighbors(const NBNode *, double, NodeSet &)` [static]
@@ -674,7 +839,17 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_cluster_neighbors(n: Ptr<NBNode>, longThreshold: f64, cluster: &mut NodeSet) -> NodeSet {
-        todo!("port NBNodeCont::getClusterNeighbors")
+        let mut result: NodeSet = NodeSet::new();
+        for e in n.get_edges() {
+            if e.get_length() > longThreshold {
+                continue;
+            }
+            let neighbor = if e.get_from_node() == n { e.get_to_node() } else { e.get_from_node() };
+            if cluster.contains(&neighbor) {
+                result.insert(neighbor);
+            }
+        }
+        result
     }
 
     /// C++: `bool NBNodeCont::isSlipLaneContinuation(const NBNode *)` [static]
@@ -685,7 +860,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn is_slip_lane_continuation(cont: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeCont::isSlipLaneContinuation")
+        cont.get_passenger_edges(true).len() == 1 && cont.get_passenger_edges(false).len() == 1
     }
 
     /// C++: `bool NBNodeCont::maybeSlipLaneStart(const NBNode *, EdgeVector &, double &) const` [const]
@@ -728,7 +903,38 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn maybe_slip_lane_start(&self, n: Ptr<NBNode>, outgoing: &mut EdgeVector, inAngle: &mut f64) -> bool {
-        todo!("port NBNodeCont::maybeSlipLaneStart")
+        let inPE: EdgeVector = n.get_passenger_edges(true);
+        let outPE: EdgeVector = n.get_passenger_edges(false);
+        if inPE.len() == 1 && outPE.len() == 2 {
+            outgoing.splice(0..0, outPE.iter().copied());
+            *inAngle = inPE[0].get_angle_at_node(n);
+            return true;
+        } else if inPE.len() >= 2 && outPE.len() == 3 {
+            // check if the incoming edges are going in opposite directions and then
+            // use the incoming edge that has 2 almost-straight outgoing edges
+            let inRelAngle = NBHelpers::rel_angle(inPE[0].get_angle_at_node(n), inPE[inPE.len() - 1].get_angle_at_node(n)).abs();
+            if inRelAngle < 135.0 {
+                return false; // not opposite incoming
+            }
+            for inE in inPE.iter() {
+                let mut straight: EdgeVector = Vec::new();
+                let mut numReverse = 0;
+                for out in outPE.iter() {
+                    let outRelAngle = NBHelpers::rel_angle(inE.get_angle_at_node(n), out.get_angle_at_node(n)).abs();
+                    if outRelAngle <= 45.0 {
+                        straight.push(*out);
+                    } else if outRelAngle >= 135.0 {
+                        numReverse += 1;
+                    }
+                }
+                if straight.len() == 2 && numReverse == 1 {
+                    outgoing.splice(0..0, straight.iter().copied());
+                    *inAngle = inE.get_angle_at_node(n);
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNodeCont::maybeSlipLaneEnd(const NBNode *, EdgeVector &, double &) const` [const]
@@ -771,7 +977,38 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn maybe_slip_lane_end(&self, n: Ptr<NBNode>, incoming: &mut EdgeVector, outAngle: &mut f64) -> bool {
-        todo!("port NBNodeCont::maybeSlipLaneEnd")
+        let inPE: EdgeVector = n.get_passenger_edges(true);
+        let outPE: EdgeVector = n.get_passenger_edges(false);
+        if inPE.len() == 2 && outPE.len() == 1 {
+            incoming.splice(0..0, inPE.iter().copied());
+            *outAngle = outPE[0].get_angle_at_node(n);
+            return true;
+        } else if inPE.len() == 3 && outPE.len() >= 2 {
+            // check if the outgoing edges are going in opposite directions and then
+            // use the outgoing edge that has 2 almost-straight incoming edges
+            let outRelAngle = NBHelpers::rel_angle(outPE[0].get_angle_at_node(n), outPE[outPE.len() - 1].get_angle_at_node(n)).abs();
+            if outRelAngle < 135.0 {
+                return false; // not opposite outgoing
+            }
+            for out in outPE.iter() {
+                let mut straight: EdgeVector = Vec::new();
+                let mut numReverse = 0;
+                for inE in inPE.iter() {
+                    let inRelAngle = NBHelpers::rel_angle(inE.get_angle_at_node(n), out.get_angle_at_node(n)).abs();
+                    if inRelAngle <= 45.0 {
+                        straight.push(*inE);
+                    } else if inRelAngle >= 135.0 {
+                        numReverse += 1;
+                    }
+                }
+                if straight.len() == 2 && numReverse == 1 {
+                    incoming.splice(0..0, straight.iter().copied());
+                    *outAngle = out.get_angle_at_node(n);
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNodeCont::reduceToCircle(NodeSet &, int, NodeSet, double, std::vector<NBNode *>) const` [const]
@@ -837,7 +1074,55 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn reduce_to_circle(&self, cluster: &mut NodeSet, circleSize: i32, startNodes: NodeSet, maxDist: f64, cands: Vec<Ptr<NBNode>>) -> bool {
-        todo!("port NBNodeCont::reduceToCircle")
+        debug_assert!(circleSize >= 2);
+        if cands.len() as i32 == circleSize {
+            if !cands[cands.len() - 1].get_connection_to(cands[0]).is_null() {
+                // cluster found
+                let mut candCluster: NodeSet = NodeSet::new();
+                candCluster.extend(cands.iter().copied());
+                self.prune_cluster_fringe(&mut candCluster, maxDist, true);
+                let feasible = candCluster.len() as i32 == circleSize;
+                if feasible {
+                    cluster.clear();
+                    cluster.extend(cands.iter().copied());
+                }
+                return feasible;
+            } else {
+                return false;
+            }
+        }
+        if cluster.len() as i32 <= circleSize || startNodes.is_empty() {
+            // no reduction possible
+            return false;
+        }
+        let mut startNodes = startNodes;
+        let mut cands = cands;
+        if cands.is_empty() {
+            // try to find a circle starting from another start node
+            let e = self.shortest_edge(cluster, &startNodes, &cands);
+            if !e.is_null() {
+                cands.push(e.get_from_node());
+                startNodes.remove(&e.get_from_node());
+                if self.reduce_to_circle(cluster, circleSize, startNodes.clone(), maxDist, cands.clone()) {
+                    return true;
+                } else {
+                    // try another start node
+                    return self.reduce_to_circle(cluster, circleSize, startNodes, maxDist, Vec::new());
+                }
+            }
+        } else {
+            let mut singleStart: NodeSet = NodeSet::new();
+            singleStart.insert(cands[cands.len() - 1]);
+            let e = self.shortest_edge(cluster, &singleStart, &cands);
+            if !e.is_null() {
+                let mut cands2 = cands.clone();
+                cands2.push(e.get_to_node());
+                if self.reduce_to_circle(cluster, circleSize, startNodes, maxDist, cands2) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `NBEdge * NBNodeCont::shortestEdge(const NodeSet &, const NodeSet &, const std::vector<NBNode *> &) const` [const]
@@ -864,7 +1149,21 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn shortest_edge(&self, cluster: &NodeSet, startNodes: &NodeSet, exclude: &Vec<Ptr<NBNode>>) -> Ptr<NBEdge> {
-        todo!("port NBNodeCont::shortestEdge")
+        let mut minDist = f64::MAX;
+        let mut result: Ptr<NBEdge> = Ptr::null();
+        for n in nodes_by_id(startNodes) {
+            for e in n.get_outgoing_edges() {
+                let neigh = e.get_to_node();
+                if cluster.contains(&neigh) && !exclude.contains(&neigh) {
+                    let dist = n.get_position().distance_to2d(neigh.get_position());
+                    if dist < minDist {
+                        minDist = dist;
+                        result = *e;
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `int NBNodeCont::removeSelfLoops(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &)`
@@ -882,7 +1181,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_self_loops(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tc: &mut NBTrafficLightLogicCont) -> i32 {
-        todo!("port NBNodeCont::removeSelfLoops")
+        let mut no = 0;
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            no += node.m().remove_self_loops(dc, ec, tc);
+        }
+        if no != 0 {
+            write_warning(&format!("{} self-looping edge(s) removed.", no));
+        }
+        no
     }
 
     /// C++: `void NBNodeCont::joinSimilarEdges(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, bool)`
@@ -938,7 +1245,54 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_similar_edges(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont, removeDuplicates: bool) {
-        todo!("port NBNodeCont::joinSimilarEdges")
+        // magic values
+        let distanceThreshold = 7.; // don't merge edges further apart
+        let lengthThreshold = 0.10; // don't merge edges with higher relative length-difference
+
+        // determinism: C++ map<NBNode*, ...> is ordered by address; Ptr's Ord is used here
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            // count the edges to other nodes outgoing from the current node
+            let mut connectionCount: BTreeMap<Ptr<NBNode>, EdgeVector> = BTreeMap::new();
+            let outgoing: EdgeVector = node.get_outgoing_edges().clone();
+            for e in outgoing {
+                connectionCount.entry(e.get_to_node()).or_default().push(e);
+            }
+            // check whether more than a single edge connect another node and join them
+            for (_, ev) in connectionCount {
+                // possibly we do not have anything to join...
+                if ev.len() < 2 {
+                    continue;
+                }
+                // for the edges that seem to be a single street,
+                //  check whether the geometry is similar
+                let first = ev[0];
+                let mut jci = 1;
+                while jci < ev.len() {
+                    let cand = ev[jci];
+                    let relativeLengthDifference = (first.get_loaded_length() - cand.get_loaded_length()).abs() / first.get_loaded_length();
+                    if (!first.is_near_enough2_be_joined2(cand, distanceThreshold))
+                        || (relativeLengthDifference > lengthThreshold)
+                        || ((first.get_speed() - cand.get_speed()).abs() >= 0.01) // output accuracy
+                        || (first.get_permissions(-1) != cand.get_permissions(-1))
+                    {
+                        break;
+                    }
+                    jci += 1;
+                }
+                // @bug If there are 3 edges of which 2 can be joined, no joining will
+                //   take place with the current implementation
+                if jci == ev.len() {
+                    if removeDuplicates {
+                        for ei in 1..ev.len() {
+                            ec.extract(dc, ev[ei], true);
+                        }
+                    } else {
+                        ec.join_same_node_connecting_edges(dc, tlc, ev);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NBNodeCont::avoidOverlap()`
@@ -951,7 +1305,10 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn avoid_overlap(&mut self) {
-        todo!("port NBNodeCont::avoidOverlap")
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            node.m().avoid_overlap();
+        }
     }
 
     /// C++: `int NBNodeCont::removeIsolatedRoads(NBDistrictCont &, NBEdgeCont &)`
@@ -1047,7 +1404,92 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_isolated_roads(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBNodeCont::removeIsolatedRoads")
+        let mut numRemovedEdges = 0;
+        // Warn of isolated edges, i.e. a single edge with no connection to another edge
+        let edgeNames = ec.get_all_names();
+        for name in edgeNames.iter() {
+            // Test whether this node starts at a dead end, i.e. it has only one adjacent node
+            // to which an edge exists and from which an edge may come.
+            let mut e = ec.retrieve(name, false);
+            if e.is_null() {
+                continue;
+            }
+            let from = e.get_from_node();
+            let outgoingEdges: EdgeVector = from.get_outgoing_edges().clone();
+            if outgoingEdges.len() != 1 {
+                // At this node, several edges or no edge start; so, this node is no dead end.
+                continue;
+            }
+            let incomingEdges: EdgeVector = from.get_incoming_edges().clone();
+            if incomingEdges.len() > 1 {
+                // At this node, several edges end; so, this node is no dead end.
+                continue;
+            } else if incomingEdges.len() == 1 {
+                let fromNodeOfIncomingEdge = incomingEdges[0].get_from_node();
+                let toNodeOfOutgoingEdge = outgoingEdges[0].get_to_node();
+                if fromNodeOfIncomingEdge != toNodeOfOutgoingEdge {
+                    // At this node, an edge ends which is not the inverse direction of
+                    // the starting node.
+                    continue;
+                }
+            }
+            // Now we know that the edge e starts a dead end.
+            // Next we test if the dead end is isolated, i.e. does not lead to a junction
+            let mut hasJunction = false;
+            let mut road: EdgeVector = Vec::new();
+            loop {
+                road.push(e);
+                let eOld = e;
+                let from = e.get_from_node();
+                let to = e.get_to_node();
+                let outgoingEdgesOfToNode: EdgeVector = to.get_outgoing_edges().clone();
+                let incomingEdgesOfToNode: EdgeVector = to.get_incoming_edges().clone();
+                let mut adjacentNodes: NodeSet = NodeSet::new();
+                for o in outgoingEdgesOfToNode.iter() {
+                    if o.get_to_node() != from        // The back path
+                        && o.get_to_node() != to       // A loop / dummy edge
+                    {
+                        e = *o; // Probably the next edge
+                    }
+                    adjacentNodes.insert(o.get_to_node());
+                }
+                for i in incomingEdgesOfToNode.iter() {
+                    adjacentNodes.insert(i.get_from_node());
+                }
+                adjacentNodes.remove(&to); // Omit loops
+                if adjacentNodes.len() > 2 {
+                    hasJunction = true;
+                }
+                if hasJunction || eOld == e {
+                    break;
+                }
+            }
+            if !hasJunction {
+                let mut warningString = String::new();
+                for (idx, roadEdge) in road.iter().enumerate() {
+                    if idx == 0 {
+                        warningString += roadEdge.get_id();
+                    } else {
+                        warningString += &format!(",{}", roadEdge.get_id());
+                    }
+
+                    let fromNode = roadEdge.get_from_node();
+                    let toNode = roadEdge.get_to_node();
+                    ec.erase(dc, *roadEdge);
+                    numRemovedEdges += 1;
+                    if fromNode.get_incoming_edges().len() == 0 && fromNode.get_outgoing_edges().len() == 0 {
+                        // Node is empty; can be removed
+                        self.erase(fromNode);
+                    }
+                    if toNode.get_incoming_edges().len() == 0 && toNode.get_outgoing_edges().len() == 0 {
+                        // Node is empty; can be removed
+                        self.erase(toNode);
+                    }
+                }
+                write_warningf!("Removed a road without junctions: %.", warningString);
+            }
+        }
+        numRemovedEdges
     }
 
     /// C++: `int NBNodeCont::removeComponents(NBDistrictCont &, NBEdgeCont &, const int, bool)`
@@ -1139,7 +1581,79 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_components(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, numKeep: i32, hasPTStops: bool) -> i32 {
-        todo!("port NBNodeCont::removeComponents")
+        self.myRailComponents.clear();
+        let mut components: Vec<EdgeSet> = Vec::new();
+        // need to use ids here to have the same ordering on all platforms
+        let mut edgesLeft: BTreeSet<String> = ec.get_all_names().into_iter().collect();
+        let mut queue: EdgeVector = Vec::new();
+        let mut toRemove: EdgeSet = EdgeSet::new();
+        let mut foundComponents = 0;
+        let mut numRemoved = 0;
+        while !edgesLeft.is_empty() {
+            let firstLeft = edgesLeft.iter().next().unwrap().clone();
+            queue.push(ec.get_by_id(&firstLeft));
+            let mut component: EdgeSet = EdgeSet::new();
+            while let Some(e) = queue.pop() {
+                component.insert(e);
+                let edgeLists: Vec<EdgeVector> = vec![
+                    e.get_from_node().get_outgoing_edges().clone(),
+                    e.get_from_node().get_incoming_edges().clone(),
+                    e.get_to_node().get_outgoing_edges().clone(),
+                    e.get_to_node().get_incoming_edges().clone(),
+                ];
+                for list in edgeLists {
+                    for edge in list {
+                        if edgesLeft.remove(edge.get_id()) {
+                            queue.push(edge);
+                        }
+                    }
+                }
+            }
+            foundComponents += 1;
+            // insert before the first component that is strictly smaller
+            let pos = components.iter().position(|c| c.len() < component.len()).unwrap_or(components.len());
+            components.insert(pos, component);
+            if components.len() as i32 > numKeep {
+                let mut recheck = false;
+                if hasPTStops {
+                    for e in components.last().unwrap().iter() {
+                        let permissions = e.get_permissions(-1);
+                        if is_railway(permissions) || is_waterway(permissions) {
+                            // recheck for connection to other components via access definitions
+                            recheck = true;
+                            break;
+                        }
+                    }
+                }
+                if !recheck {
+                    toRemove.extend(components.last().unwrap().iter().copied());
+                    numRemoved += 1;
+                } else {
+                    // determinism: C++ set<NBEdge*> is address-ordered; Ptr's Ord is used here
+                    let edgeIDs: Vec<String> = components.last().unwrap().iter().map(|e| e.get_id().to_string()).collect();
+                    self.myRailComponents.push(edgeIDs);
+                }
+                components.pop();
+            }
+        }
+        ec.remove_roundabout_edges(&toRemove);
+        // determinism: erase order follows Ptr's Ord (C++ set<NBEdge*> is address-ordered)
+        let removeList: Vec<Ptr<NBEdge>> = toRemove.iter().copied().collect();
+        for e in removeList {
+            let fromNode = e.get_from_node();
+            let toNode = e.get_to_node();
+            ec.erase(dc, e);
+            if fromNode.get_incoming_edges().is_empty() && fromNode.get_outgoing_edges().is_empty() {
+                self.erase(fromNode);
+            }
+            if toNode.get_incoming_edges().is_empty() && toNode.get_outgoing_edges().is_empty() {
+                self.erase(toNode);
+            }
+        }
+        if foundComponents > 1 {
+            write_message(&format!("Found {} components and removed {} ({} edges).", foundComponents, numRemoved, toRemove.len()));
+        }
+        toRemove.len() as i32
     }
 
     /// C++: `int NBNodeCont::removeRailComponents(NBDistrictCont &, NBEdgeCont &, NBPTStopCont &)`
@@ -1185,7 +1699,43 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_rail_components(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, sc: &mut NBPTStopCont) -> i32 {
-        todo!("port NBNodeCont::removeRailComponents")
+        let mut stopEdges: BTreeSet<String> = BTreeSet::new();
+        for item in sc.get_stops().values() {
+            stopEdges.insert(item.get_edge_id().to_string());
+        }
+        let mut numRemoved = 0;
+        let mut numRemovedEdges = 0;
+        for component in self.myRailComponents.clone() {
+            let mut keep = false;
+            for edgeID in component.iter() {
+                if stopEdges.contains(edgeID) {
+                    keep = true;
+                    break;
+                }
+            }
+            if !keep {
+                numRemoved += 1;
+                numRemovedEdges += component.len() as i32;
+                for edgeID in component.iter() {
+                    let e = ec.retrieve(edgeID, false);
+                    if !e.is_null() {
+                        let fromNode = e.get_from_node();
+                        let toNode = e.get_to_node();
+                        ec.erase(dc, e);
+                        if fromNode.get_incoming_edges().is_empty() && fromNode.get_outgoing_edges().is_empty() {
+                            self.erase(fromNode);
+                        }
+                        if toNode.get_incoming_edges().is_empty() && toNode.get_outgoing_edges().is_empty() {
+                            self.erase(toNode);
+                        }
+                    }
+                }
+            }
+        }
+        if numRemoved > 0 {
+            write_message(&format!("Removed {} railway components ({} edges).", numRemoved, numRemovedEdges));
+        }
+        numRemoved
     }
 
     /// C++: `int NBNodeCont::removeUnwishedNodes(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, NBPTStopCont &, NBPTLineCont &, NBParkingCont &, bool)`
@@ -1683,7 +2233,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn was_removed(&self, id: String) -> bool {
-        todo!("port NBNodeCont::wasRemoved")
+        self.myExtractedNodes.contains_key(&id)
     }
 
     /// C++: `void NBNodeCont::addPrefix(const std::string &)`
@@ -1777,7 +2327,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBNodeCont::size")
+        self.myNodes.len() as i32
     }
 
     /// C++: `void NBNodeCont::clear()`
@@ -1795,7 +2345,14 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port NBNodeCont::clear")
+        for item in self.myNodes.values().copied().collect::<Vec<_>>() {
+            delete_node(item);
+        }
+        self.myNodes.clear();
+        for item in self.myExtractedNodes.values().copied().collect::<Vec<_>>() {
+            delete_node(item);
+        }
+        self.myExtractedNodes.clear();
     }
 
     /// C++: `std::string NBNodeCont::getFreeID()`
@@ -1814,7 +2371,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_free_id(&mut self) -> String {
-        todo!("port NBNodeCont::getFreeID")
+        let mut counter = 0;
+        let mut freeID = format!("SUMOGenerated{}", counter);
+        // While there is a node with id equal to freeID
+        while !self.retrieve(&freeID).is_null() {
+            // update counter and generate a new freeID
+            counter += 1;
+            freeID = format!("SUMOGenerated{}", counter);
+        }
+        freeID
     }
 
     /// C++: `void NBNodeCont::computeNodeShapes(double)`
@@ -1945,7 +2510,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_all_names(&self) -> Vec<String> {
-        todo!("port NBNodeCont::getAllNames")
+        self.myNodes.keys().cloned().collect()
     }
 
     /// C++: `void NBNodeCont::analyzeCluster(NodeSet, std::string &, Position &, bool &, TrafficLightType &, SumoXMLNodeType &)`
@@ -2004,7 +2569,8 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn register_joined_cluster(&mut self, cluster: &NodeSet) {
-        todo!("port NBNodeCont::registerJoinedCluster")
+        let ids: BTreeSet<String> = cluster.iter().map(|n| n.get_id().to_string()).collect();
+        self.myJoinedClusters.push(ids);
     }
 
     /// C++: `void NBNodeCont::registerJoinedCluster(const std::set<std::string> &)`
@@ -2014,7 +2580,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn register_joined_cluster_2(&mut self, cluster: &BTreeSet<String>) {
-        todo!("port NBNodeCont::registerJoinedCluster")
+        self.myJoinedClusters.push(cluster.clone());
     }
 
     /// C++: `void NBNodeCont::unregisterJoinedCluster(const std::set<std::string> &)`
@@ -2028,7 +2594,9 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn unregister_joined_cluster(&mut self, cluster: &BTreeSet<String>) {
-        todo!("port NBNodeCont::unregisterJoinedCluster")
+        if let Some(pos) = self.myJoinedClusters.iter().position(|c| c == cluster) {
+            self.myJoinedClusters.remove(pos);
+        }
     }
 
     /// C++: `const std::vector<std::set<std::string>> & NBNodeCont::getJoinedClusters() const` [const]
@@ -2038,7 +2606,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_joined_clusters(&self) -> &Vec<BTreeSet<String>> {
-        todo!("port NBNodeCont::getJoinedClusters")
+        &self.myJoinedClusters
     }
 
     /// C++: `void NBNodeCont::discardTrafficLights(NBTrafficLightLogicCont &, bool)`
@@ -2092,7 +2660,11 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn discard_rail_signals(&mut self) {
-        todo!("port NBNodeCont::discardRailSignals")
+        for node in self.myNodes.values().copied().collect::<Vec<_>>() {
+            if node.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                node.m().reinit(node.get_position(), SumoXMLNodeType::PRIORITY, false);
+            }
+        }
     }
 
     /// C++: `void NBNodeCont::markAsSplit(const NBNode *)`
@@ -2102,7 +2674,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn mark_as_split(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBNodeCont::markAsSplit")
+        self.mySplit.insert(node);
     }
 
     /// C++: `void NBNodeCont::markAsNotTLS(const NBNode *)`
@@ -2112,7 +2684,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn mark_as_not_tls(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBNodeCont::markAsNotTLS")
+        self.myUnsetTLS.insert(node);
     }
 
     /// C++: `int NBNodeCont::remapIDs(bool, bool, bool, const std::string &, NBTrafficLightLogicCont &)`
