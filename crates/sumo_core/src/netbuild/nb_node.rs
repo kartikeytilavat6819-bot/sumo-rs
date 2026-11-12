@@ -1970,7 +1970,22 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_incoming(&self, e: Ptr<NBEdge>) -> Ptr<NBEdge> {
-        todo!("port NBNode::getOppositeIncoming")
+        let me = Ptr::new(self);
+        let mut edges: EdgeVector = self.myIncomingEdges.clone();
+        if let Some(pos) = edges.iter().position(|x| *x == e) {
+            edges.remove(pos);
+        }
+        if edges.is_empty() {
+            return Ptr::null();
+        }
+        if e.get_to_node() == me {
+            let sorter = NBContHelper_edge_opposite_direction_sorter::new(e, me, false);
+            sort_edges_by(&mut edges, |a, b| sorter.call_op(a, b) != 0);
+        } else {
+            let sorter = NBContHelper_edge_similar_direction_sorter::new(e, true);
+            sort_edges_by(&mut edges, |a, b| sorter.call_op(a, b) != 0);
+        }
+        edges[0]
     }
 
     /// C++: `void NBNode::invalidateIncomingConnections(bool)`
@@ -2043,7 +2058,27 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_double_edges(&mut self) {
-        todo!("port NBNode::removeDoubleEdges")
+        // C++ loop: for each i, erase every later duplicate of myX[i] (size re-checked each pass)
+        fn remove_double_entries(v: &mut EdgeVector) {
+            let mut i = 0;
+            while !v.is_empty() && i + 1 < v.len() {
+                let mut j = i + 1;
+                while j < v.len() {
+                    if v[i] == v[j] {
+                        v.remove(j);
+                    } else {
+                        j += 1;
+                    }
+                }
+                i += 1;
+            }
+        }
+        // check incoming
+        remove_double_entries(&mut self.myIncomingEdges);
+        // check outgoing
+        remove_double_entries(&mut self.myOutgoingEdges);
+        // check all
+        remove_double_entries(&mut self.myAllEdges);
     }
 
     /// C++: `NBEdge * NBNode::getConnectionTo(NBNode *) const` [const]
@@ -2059,7 +2094,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_connection_to(&self, n: Ptr<NBNode>) -> Ptr<NBEdge> {
-        todo!("port NBNode::getConnectionTo")
+        for e in self.myOutgoingEdges.iter() {
+            if e.get_to_node() == n && e.get_permissions(-1) != 0 {
+                return *e;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void NBNode::addSortedLinkFoes(const NBConnection &, const NBConnection &)`
@@ -2099,7 +2139,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_possibly_splitted_incoming(&mut self, edgeid: &str) -> Ptr<NBEdge> {
-        todo!("port NBNode::getPossiblySplittedIncoming")
+        let size = edgeid.len();
+        for e in self.myIncomingEdges.iter() {
+            // C++ id.substr(0, size) == edgeid (byte-wise, so no char-boundary panic)
+            if e.get_id().as_bytes().get(..size) == Some(edgeid.as_bytes()) {
+                return *e;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `NBEdge * NBNode::getPossiblySplittedOutgoing(const std::string &)`
@@ -2117,7 +2164,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_possibly_splitted_outgoing(&mut self, edgeid: &str) -> Ptr<NBEdge> {
-        todo!("port NBNode::getPossiblySplittedOutgoing")
+        let size = edgeid.len();
+        for e in self.myOutgoingEdges.iter() {
+            // C++ id.substr(0, size) == edgeid (byte-wise, so no char-boundary panic)
+            if e.get_id().as_bytes().get(..size) == Some(edgeid.as_bytes()) {
+                return *e;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void NBNode::removeEdge(NBEdge *, bool)`
@@ -2158,7 +2212,31 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_edge(&mut self, edge: Ptr<NBEdge>, removeFromConnections: bool) {
-        todo!("port NBNode::removeEdge")
+        if let Some(i) = self.myAllEdges.iter().position(|e| *e == edge) {
+            self.myAllEdges.remove(i);
+            if let Some(j) = self.myOutgoingEdges.iter().position(|e| *e == edge) {
+                self.myOutgoingEdges.remove(j);
+                // potential self-loop
+                if let Some(k) = self.myIncomingEdges.iter().position(|e| *e == edge) {
+                    self.myIncomingEdges.remove(k);
+                }
+            } else if let Some(k) = self.myIncomingEdges.iter().position(|e| *e == edge) {
+                self.myIncomingEdges.remove(k);
+            } else {
+                // edge must have been either incoming or outgoing
+                debug_assert!(false, "edge must have been either incoming or outgoing");
+            }
+            if removeFromConnections {
+                for e in self.myAllEdges.iter() {
+                    e.m().remove_from_connections(edge, -1, -1, false, false, false);
+                }
+            }
+            // invalidate controlled connections for loaded traffic light plans
+            let incoming = edge.get_to_node() == Ptr::new(self);
+            for tld in self.myTrafficLights.iter() {
+                tld.m().replace_removed(edge, -1, Ptr::null(), -1, incoming);
+            }
+        }
     }
 
     /// C++: `bool NBNode::isLeftMover(const NBEdge *const, const NBEdge *const) const` [const]
@@ -2182,7 +2260,26 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_left_mover(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::isLeftMover")
+        // when the junction has only one incoming edge, there are no
+        //  problems caused by left blockings
+        if self.myIncomingEdges.len() == 1 || self.myOutgoingEdges.len() == 1 {
+            return false;
+        }
+        let me = Ptr::new(self);
+        let fromAngle = from.get_angle_at_node(me);
+        let toAngle = to.get_angle_at_node(me);
+        let cw = utils::geom::geom_helper::get_cw_angle_diff(fromAngle, toAngle);
+        let ccw = utils::geom::geom_helper::get_ccw_angle_diff(fromAngle, toAngle);
+        // C++ std::find; `from` is always an edge of this node when called
+        let mut i = self.myAllEdges.iter().position(|e| *e == from).expect("from must be in myAllEdges");
+        loop {
+            NBContHelper::next_cw(&self.myAllEdges, &mut i);
+            let cur = self.myAllEdges[i];
+            if !((!self.has_outgoing(cur) || from.is_turning_direction_at(cur)) && cur != from) {
+                break;
+            }
+        }
+        cw < ccw && self.myAllEdges[i] == to && self.myOutgoingEdges.len() > 2
     }
 
     /// C++: `bool NBNode::mustBrake(const NBEdge *const, const NBEdge *const, int, int, bool) const` [const]
@@ -2235,7 +2332,17 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn brake_for_crossing_on_exit(&self, to: Ptr<NBEdge>, dir: LinkDirection, indirect: bool) -> bool {
-        todo!("port NBNode::brakeForCrossingOnExit")
+        // code is called for connections exiting after an internal junction.
+        // If the connection is turning we do not check for crossing priority anymore.
+        if dir == LinkDirection::STRAIGHT && !indirect {
+            return false;
+        }
+        for c in self.myCrossings.iter() {
+            if c.edges.contains(&to) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::rightTurnConflict(const NBEdge *, const NBEdge *, int, const NBEdge *, const NBEdge *, int)` [static]
