@@ -1,6 +1,7 @@
 //! Port of utils/handlers/CommonHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::xml::common_xml_structure::{CommonXMLStructure, CommonXMLStructure_SumoBaseObject};
 
 /// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table.
 // shortcut: linear reverse lookup of the generated TAGS table, C++ uses a map; upgrade by generating a reverse map
@@ -19,7 +20,7 @@ pub struct CommonHandler {
     /// fileBucket
     pub myFileBucket: Ptr<Unmapped /* FileBucket */>,
     /// common XML Structure
-    pub myCommonXMLStructure: Unmapped /* CommonXMLStructure */,
+    pub myCommonXMLStructure: CommonXMLStructure,
     /// flag for mark if a element wasn't created
     pub myErrorCreatingElement: bool,
     /// overwrite elements
@@ -38,7 +39,7 @@ impl CommonHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        Self { myFileBucket: fileBucket, myCommonXMLStructure: (), myErrorCreatingElement: false, myOverwriteElements: false, myRemainElements: false, myAbortLoading: false }
+        Self { myFileBucket: fileBucket, myCommonXMLStructure: CommonXMLStructure::default(), myErrorCreatingElement: false, myOverwriteElements: false, myRemainElements: false, myAbortLoading: false }
     }
 
     /// C++: `void CommonHandler::~CommonHandler() noexcept` [virtual]
@@ -175,7 +176,7 @@ impl CommonHandler {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_embedded_route(&self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */> {
+    pub fn get_embedded_route(&self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>) -> Ptr<CommonXMLStructure_SumoBaseObject> {
         todo!("port CommonHandler::getEmbeddedRoute")
     }
 
@@ -251,7 +252,7 @@ impl CommonHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn check_within_distribution(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn check_within_distribution(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port CommonHandler::checkWithinDistribution")
     }
 
@@ -287,7 +288,7 @@ impl CommonHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn check_vehicle_parents(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn check_vehicle_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port CommonHandler::checkVehicleParents")
     }
 
@@ -307,7 +308,7 @@ impl CommonHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn check_person_plan_parents(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn check_person_plan_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port CommonHandler::checkPersonPlanParents")
     }
 
@@ -327,7 +328,7 @@ impl CommonHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn check_container_plan_parents(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn check_container_plan_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port CommonHandler::checkContainerPlanParents")
     }
 
@@ -350,7 +351,7 @@ impl CommonHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn check_stop_parents(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) -> bool {
+    pub fn check_stop_parents(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> bool {
         todo!("port CommonHandler::checkStopParents")
     }
 
