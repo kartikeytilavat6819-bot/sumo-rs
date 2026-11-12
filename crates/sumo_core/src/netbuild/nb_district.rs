@@ -44,7 +44,15 @@ impl NBDistrict {
     //       myPosition(pos) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, pos: &Position) -> Self {
-        todo!("port NBDistrict::NBDistrict")
+        Self {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            mySources: Vec::new(),
+            mySourceWeights: Vec::new(),
+            mySinks: Vec::new(),
+            mySinkWeights: Vec::new(),
+            myPosition: *pos,
+            myShape: PositionVector::default(),
+        }
     }
 
     /// C++: `void NBDistrict::NBDistrict(const std::string &)`
@@ -53,7 +61,15 @@ impl NBDistrict {
     //     : Named(id), myPosition(0, 0) {}
     #[allow(unused_variables)]
     pub fn new_2(id: &str) -> Self {
-        todo!("port NBDistrict::NBDistrict")
+        Self {
+            base: Named::new(id),
+            mySources: Vec::new(),
+            mySourceWeights: Vec::new(),
+            mySinks: Vec::new(),
+            mySinkWeights: Vec::new(),
+            myPosition: Position::new(0.0, 0.0),
+            myShape: PositionVector::default(),
+        }
     }
 
     /// C++: `void NBDistrict::~NBDistrict() noexcept` [virtual]
@@ -61,7 +77,7 @@ impl NBDistrict {
     // NBDistrict::~NBDistrict() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBDistrict::~NBDistrict")
+        // C++ destructor has no body; the owned vectors are released automatically
     }
 
     /// C++: `bool NBDistrict::addSource(NBEdge *const, double)`
@@ -79,7 +95,13 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn add_source(&mut self, source: Ptr<NBEdge>, weight: f64) -> bool {
-        todo!("port NBDistrict::addSource")
+        if self.mySources.iter().any(|x| *x == source) {
+            return false;
+        }
+        self.mySources.push(source);
+        self.mySourceWeights.push(weight);
+        debug_assert!(source.get_id() != "");
+        true
     }
 
     /// C++: `bool NBDistrict::addSink(NBEdge *const, double)`
@@ -97,7 +119,13 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn add_sink(&mut self, sink: Ptr<NBEdge>, weight: f64) -> bool {
-        todo!("port NBDistrict::addSink")
+        if self.mySinks.iter().any(|x| *x == sink) {
+            return false;
+        }
+        self.mySinks.push(sink);
+        self.mySinkWeights.push(weight);
+        debug_assert!(sink.get_id() != "");
+        true
     }
 
     /// C++: `const Position & NBDistrict::getPosition() const` [const]
@@ -107,7 +135,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port NBDistrict::getPosition")
+        &self.myPosition
     }
 
     /// C++: `void NBDistrict::setCenter(const Position &)`
@@ -118,7 +146,7 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn set_center(&mut self, pos: &Position) {
-        todo!("port NBDistrict::setCenter")
+        self.myPosition = *pos;
     }
 
     /// C++: `void NBDistrict::replaceIncoming(const EdgeVector &, NBEdge *const)`
@@ -155,7 +183,27 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn replace_incoming(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBDistrict::replaceIncoming")
+        // temporary structures
+        let mut newList: EdgeVector = Vec::new();
+        let mut newWeights: NBDistrict_WeightsCont = Vec::new();
+        let mut joinedVal = 0.0;
+        // go through the list of sinks
+        for (tmp, val) in self.mySinks.iter().zip(self.mySinkWeights.iter()) {
+            if !which.contains(tmp) {
+                // if the current edge shall not be replaced, add to the temporary list
+                newList.push(*tmp);
+                newWeights.push(*val);
+            } else {
+                // otherwise, skip it and add its weight to the one to be inserted instead
+                joinedVal += *val;
+            }
+        }
+        // add the one to be inserted instead
+        newList.push(by);
+        newWeights.push(joinedVal);
+        // assign to values
+        self.mySinks = newList;
+        self.mySinkWeights = newWeights;
     }
 
     /// C++: `void NBDistrict::replaceOutgoing(const EdgeVector &, NBEdge *const)`
@@ -192,7 +240,27 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn replace_outgoing(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBDistrict::replaceOutgoing")
+        // temporary structures
+        let mut newList: EdgeVector = Vec::new();
+        let mut newWeights: NBDistrict_WeightsCont = Vec::new();
+        let mut joinedVal = 0.0;
+        // go through the list of sources
+        for (tmp, val) in self.mySources.iter().zip(self.mySourceWeights.iter()) {
+            if !which.contains(tmp) {
+                // if the current edge shall not be replaced, add to the temporary list
+                newList.push(*tmp);
+                newWeights.push(*val);
+            } else {
+                // otherwise, skip it and add its weight to the one to be inserted instead
+                joinedVal += *val;
+            }
+        }
+        // add the one to be inserted instead
+        newList.push(by);
+        newWeights.push(joinedVal);
+        // assign to values
+        self.mySources = newList;
+        self.mySourceWeights = newWeights;
     }
 
     /// C++: `void NBDistrict::removeFromSinksAndSources(NBEdge *const)`
@@ -215,7 +283,23 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn remove_from_sinks_and_sources(&mut self, e: Ptr<NBEdge>) {
-        todo!("port NBDistrict::removeFromSinksAndSources")
+        // same index stepping as the C++ loop: after an erase the next element is skipped
+        let mut i: usize = 0;
+        while i < self.mySinks.len() {
+            if self.mySinks[i] == e {
+                self.mySinks.remove(i);
+                self.mySinkWeights.remove(i);
+            }
+            i += 1;
+        }
+        i = 0;
+        while i < self.mySources.len() {
+            if self.mySources[i] == e {
+                self.mySources.remove(i);
+                self.mySourceWeights.remove(i);
+            }
+            i += 1;
+        }
     }
 
     /// C++: `void NBDistrict::addShape(const PositionVector &)`
@@ -226,7 +310,7 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn add_shape(&mut self, p: &PositionVector) {
-        todo!("port NBDistrict::addShape")
+        self.myShape = p.clone();
     }
 
     /// C++: `const std::vector<double> & NBDistrict::getSourceWeights() const` [const]
@@ -236,7 +320,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_source_weights(&self) -> &Vec<f64> {
-        todo!("port NBDistrict::getSourceWeights")
+        &self.mySourceWeights
     }
 
     /// C++: `const std::vector<NBEdge *> & NBDistrict::getSourceEdges() const` [const]
@@ -246,7 +330,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_source_edges(&self) -> &Vec<Ptr<NBEdge>> {
-        todo!("port NBDistrict::getSourceEdges")
+        &self.mySources
     }
 
     /// C++: `const std::vector<double> & NBDistrict::getSinkWeights() const` [const]
@@ -256,7 +340,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_sink_weights(&self) -> &Vec<f64> {
-        todo!("port NBDistrict::getSinkWeights")
+        &self.mySinkWeights
     }
 
     /// C++: `const std::vector<NBEdge *> & NBDistrict::getSinkEdges() const` [const]
@@ -266,7 +350,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_sink_edges(&self) -> &Vec<Ptr<NBEdge>> {
-        todo!("port NBDistrict::getSinkEdges")
+        &self.mySinks
     }
 
     /// C++: `const PositionVector & NBDistrict::getShape() const` [const]
@@ -276,7 +360,7 @@ impl NBDistrict {
     //     }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port NBDistrict::getShape")
+        &self.myShape
     }
 
     /// C++: `void NBDistrict::reshiftPosition(double, double)`
@@ -288,7 +372,8 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, xoff: f64, yoff: f64) {
-        todo!("port NBDistrict::reshiftPosition")
+        self.myPosition.add_xyz(xoff, yoff, 0.0);
+        self.myShape.add_xyz(xoff, yoff, 0.0);
     }
 
     /// C++: `void NBDistrict::mirrorX()`
@@ -300,7 +385,8 @@ impl NBDistrict {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBDistrict::mirrorX")
+        self.myPosition.mul_xy(1.0, -1.0);
+        self.myShape.mirror_x();
     }
 
     /// C++: `void NBDistrict::NBDistrict(const NBDistrict &)` [private]
@@ -308,7 +394,15 @@ impl NBDistrict {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &NBDistrict) -> Self {
-        todo!("port NBDistrict::NBDistrict")
+        Self {
+            base: Named::new(s.get_id()),
+            mySources: s.mySources.clone(),
+            mySourceWeights: s.mySourceWeights.clone(),
+            mySinks: s.mySinks.clone(),
+            mySinkWeights: s.mySinkWeights.clone(),
+            myPosition: s.myPosition,
+            myShape: s.myShape.clone(),
+        }
     }
 
     /// C++: `NBDistrict & NBDistrict::operator=(const NBDistrict &)` [private]
@@ -316,7 +410,14 @@ impl NBDistrict {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBDistrict) -> &mut NBDistrict {
-        todo!("port NBDistrict::operator=")
+        self.base.set_id(s.get_id());
+        self.mySources = s.mySources.clone();
+        self.mySourceWeights = s.mySourceWeights.clone();
+        self.mySinks = s.mySinks.clone();
+        self.mySinkWeights = s.mySinkWeights.clone();
+        self.myPosition = s.myPosition;
+        self.myShape = s.myShape.clone();
+        self
     }
 
 }

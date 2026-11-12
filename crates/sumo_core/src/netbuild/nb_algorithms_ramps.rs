@@ -1,6 +1,11 @@
 //! Port of netbuild/NBAlgorithms_Ramps.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::netbuild::nb_helpers::NBHelpers;
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+
+// C++ static NBEdge::UNSPECIFIED_WIDTH (netbuild/NBEdge.cpp:69)
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
 
 /// C++ class `NBRampsComputer` (netbuild/NBAlgorithms_Ramps.h)
 pub struct NBRampsComputer {
@@ -16,7 +21,7 @@ impl NBRampsComputer {
     // NBRampsComputer::NBRampsComputer() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBRampsComputer::NBRampsComputer")
+        Self { myShiftedEdges: BTreeMap::new() }
     }
 
     /// C++: `void NBRampsComputer::computeRamps(NBNetBuilder &, OptionsCont &, bool)`
@@ -149,7 +154,30 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn may_need_on_ramp(cur: Ptr<NBNode>, minHighwaySpeed: f64, maxRampSpeed: f64, noramps: &BTreeSet<String>, minWeaveLength: f64) -> bool {
-        todo!("port NBRampsComputer::mayNeedOnRamp")
+        if cur.get_outgoing_edges().len() != 1 || cur.get_incoming_edges().len() != 2 {
+            return false;
+        }
+        let mut potHighway: Ptr<NBEdge> = Ptr::null();
+        let mut potRamp: Ptr<NBEdge> = Ptr::null();
+        let mut cont: Ptr<NBEdge> = Ptr::null();
+        Self::get_on_ramp_edges(cur, Ptr::from_mut(&mut potHighway), Ptr::from_mut(&mut potRamp), Ptr::from_mut(&mut cont));
+        // may be an on-ramp
+        if Self::fulfills_ramp_constraints(potHighway, potRamp, cont, minHighwaySpeed, maxRampSpeed, noramps) {
+            // prevent short weaving section
+            let mut seen = cont.get_length();
+            while seen < minWeaveLength {
+                if cont.get_to_node().get_outgoing_edges().len() > 1 {
+                    return false;
+                } else if cont.get_to_node().get_outgoing_edges().len() == 0 {
+                    return true;
+                }
+                cont = cont.get_to_node().get_outgoing_edges()[0];
+                seen += cont.get_length();
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool NBRampsComputer::mayNeedOffRamp(NBNode *, double, double, const std::set<std::string> &)` [static, private]
@@ -171,7 +199,15 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn may_need_off_ramp(cur: Ptr<NBNode>, minHighwaySpeed: f64, maxRampSpeed: f64, noramps: &BTreeSet<String>) -> bool {
-        todo!("port NBRampsComputer::mayNeedOffRamp")
+        if cur.get_incoming_edges().len() != 1 || cur.get_outgoing_edges().len() != 2 {
+            return false;
+        }
+        // may be an off-ramp
+        let mut potHighway: Ptr<NBEdge> = Ptr::null();
+        let mut potRamp: Ptr<NBEdge> = Ptr::null();
+        let mut prev: Ptr<NBEdge> = Ptr::null();
+        Self::get_off_ramp_edges(cur, Ptr::from_mut(&mut potHighway), Ptr::from_mut(&mut potRamp), Ptr::from_mut(&mut prev));
+        Self::fulfills_ramp_constraints(potHighway, potRamp, prev, minHighwaySpeed, maxRampSpeed, noramps)
     }
 
     /// C++: `void NBRampsComputer::buildOnRamp(NBNode *, NBNodeCont &, NBEdgeCont &, NBDistrictCont &, double, bool, bool)` [private]
@@ -436,7 +472,17 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_on_ramp_edges(n: Ptr<NBNode>, potHighway: Ptr<Ptr<NBEdge>>, potRamp: Ptr<Ptr<NBEdge>>, other: Ptr<Ptr<NBEdge>>) {
-        todo!("port NBRampsComputer::getOnRampEdges")
+        *other.m() = n.get_outgoing_edges()[0];
+        let edges: EdgeVector = n.get_incoming_edges().clone();
+        assert!(edges.len() == 2);
+        *potHighway.m() = edges[0];
+        *potRamp.m() = edges[1];
+        // heuristic: ramp comes from right
+        if NBContHelper_relative_incoming_edge_sorter::new(*other).call_op(*potRamp, *potHighway) {
+            let t = *potHighway;
+            *potHighway.m() = *potRamp;
+            *potRamp.m() = t;
+        }
     }
 
     /// C++: `void NBRampsComputer::getOffRampEdges(NBNode *, NBEdge **, NBEdge **, NBEdge **)` [static, private]
@@ -478,7 +524,20 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_off_ramp_edges(n: Ptr<NBNode>, potHighway: Ptr<Ptr<NBEdge>>, potRamp: Ptr<Ptr<NBEdge>>, other: Ptr<Ptr<NBEdge>>) {
-        todo!("port NBRampsComputer::getOffRampEdges")
+        *other.m() = n.get_incoming_edges()[0];
+        let edges: EdgeVector = n.get_outgoing_edges().clone();
+        *potHighway.m() = edges[0];
+        *potRamp.m() = edges[1];
+        assert!(edges.len() == 2);
+        // heuristic: ramp goes to right
+        let edges2: EdgeVector = n.get_edges().clone();
+        let mut i = edges2.iter().position(|x| *x == *other).expect("other must be an edge of the node");
+        NBContHelper::next_cw(&edges2, &mut i);
+        if edges2[i] == *potRamp {
+            let t = *potHighway;
+            *potHighway.m() = *potRamp;
+            *potRamp.m() = t;
+        }
     }
 
     /// C++: `bool NBRampsComputer::determinedBySpeed(NBEdge **, NBEdge **)` [static, private]
@@ -494,7 +553,15 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn determined_by_speed(potHighway: Ptr<Ptr<NBEdge>>, potRamp: Ptr<Ptr<NBEdge>>) -> bool {
-        todo!("port NBRampsComputer::determinedBySpeed")
+        if (potHighway.get_speed() - potRamp.get_speed()).abs() < 0.1 {
+            return false;
+        }
+        if potHighway.get_speed() < potRamp.get_speed() {
+            let t = *potHighway;
+            *potHighway.m() = *potRamp;
+            *potRamp.m() = t;
+        }
+        true
     }
 
     /// C++: `bool NBRampsComputer::determinedByLaneNumber(NBEdge **, NBEdge **)` [static, private]
@@ -510,7 +577,15 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn determined_by_lane_number(potHighway: Ptr<Ptr<NBEdge>>, potRamp: Ptr<Ptr<NBEdge>>) -> bool {
-        todo!("port NBRampsComputer::determinedByLaneNumber")
+        if potHighway.get_num_lanes() == potRamp.get_num_lanes() {
+            return false;
+        }
+        if potHighway.get_num_lanes() < potRamp.get_num_lanes() {
+            let t = *potHighway;
+            *potHighway.m() = *potRamp;
+            *potRamp.m() = t;
+        }
+        true
     }
 
     /// C++: `bool NBRampsComputer::fulfillsRampConstraints(NBEdge *, NBEdge *, NBEdge *, double, double, const std::set<std::string> &)` [static, private]
@@ -581,7 +656,61 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn fulfills_ramp_constraints(potHighway: Ptr<NBEdge>, potRamp: Ptr<NBEdge>, other: Ptr<NBEdge>, minHighwaySpeed: f64, maxRampSpeed: f64, noramps: &BTreeSet<String>) -> bool {
-        todo!("port NBRampsComputer::fulfillsRampConstraints")
+        // check modes that are not appropriate for ramps: do not build ramps on rail edges
+        if Self::has_wrong_mode(potHighway) || Self::has_wrong_mode(potRamp) || Self::has_wrong_mode(other) {
+            return false;
+        }
+        // do not build ramps at traffic lights
+        if NBNode::is_traffic_light(potRamp.get_to_node().get_type()) {
+            return false;
+        }
+        // do not build ramps on connectors
+        if potHighway.is_macroscopic_connector() || potRamp.is_macroscopic_connector() || other.is_macroscopic_connector() {
+            return false;
+        }
+        // check whether a lane is missing
+        if potHighway.get_num_lanes() + potRamp.get_num_lanes() < other.get_num_lanes() {
+            return false;
+        }
+        // is it really a highway?
+        let maxSpeed = f64::max(f64::max(potHighway.get_speed(), other.get_speed()), potRamp.get_speed());
+        if maxSpeed < minHighwaySpeed {
+            return false;
+        }
+        // is any of the connections a turnaround?
+        if other.get_to_node() == potHighway.get_from_node() {
+            // off ramp
+            if other.is_turning_direction_at(potHighway) || other.is_turning_direction_at(potRamp) {
+                return false;
+            }
+        } else {
+            // on ramp
+            if other.is_turning_direction_at(potHighway) || other.is_turning_direction_at(potRamp) {
+                return false;
+            }
+        }
+        // are the angles between highway and other / ramp and other more or less straight?
+        let node: Ptr<NBNode> = if potHighway.get_to_node() == potRamp.get_to_node() && potHighway.get_to_node() == other.get_from_node() {
+            potHighway.get_to_node()
+        } else {
+            potHighway.get_from_node()
+        };
+        let mut angle = NBHelpers::rel_angle(potHighway.get_angle_at_node(node), other.get_angle_at_node(node)).abs();
+        if angle >= 60.0 {
+            return false;
+        }
+        angle = NBHelpers::rel_angle(potRamp.get_angle_at_node(node), other.get_angle_at_node(node)).abs();
+        if angle >= 60.0 {
+            return false;
+        }
+        // is it really a ramp?
+        if maxRampSpeed > 0.0 && maxRampSpeed < potRamp.get_speed() {
+            return false;
+        }
+        if noramps.contains(other.get_id()) {
+            return false;
+        }
+        true
     }
 
     /// C++: `void NBRampsComputer::moveRampRight(NBEdge *, int)` [private]
@@ -607,7 +736,18 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn move_ramp_right(&mut self, ramp: Ptr<NBEdge>, addedLanes: i32) {
-        todo!("port NBRampsComputer::moveRampRight")
+        if ramp.get_lane_spread_function() != LaneSpreadFunction::CENTER {
+            return;
+        }
+        let mut g: PositionVector = ramp.get_geometry().clone();
+        let mut offset = 0.5 * (addedLanes as f64) * (if ramp.get_lane_width() == NBEDGE_UNSPECIFIED_WIDTH { SUMO_CONST_LANE_WIDTH } else { ramp.get_lane_width() });
+        if self.myShiftedEdges.contains_key(&ramp) {
+            offset -= self.myShiftedEdges[&ramp];
+        }
+        // shortcut: Rust move2side cannot signal InvalidArgument, so the C++ catch warning is not emitted
+        g.move2side(offset, 100.0);
+        ramp.m().set_geometry(&g, false);
+        self.myShiftedEdges.insert(ramp, offset);
     }
 
     /// C++: `bool NBRampsComputer::hasWrongMode(NBEdge *)` [static, private]
@@ -628,7 +768,17 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn has_wrong_mode(edge: Ptr<NBEdge>) -> bool {
-        todo!("port NBRampsComputer::hasWrongMode")
+        // must allow passenger vehicles
+        if (edge.get_permissions(-1) & SVC_PASSENGER) == 0 {
+            return true;
+        }
+        // must not have a green verge or a lane that is only for soft modes
+        for i in 0..edge.get_num_lanes() {
+            if (edge.get_permissions(i) & !(SVC_PEDESTRIAN | SVC_BICYCLE)) == 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void NBRampsComputer::patchRampGeometry(NBEdge *, NBEdge *, NBEdge *, bool)` [static, private]
@@ -679,7 +829,42 @@ impl NBRampsComputer {
     // }
     #[allow(unused_variables)]
     pub fn patch_ramp_geometry(potRamp: Ptr<NBEdge>, first: Ptr<NBEdge>, potHighway: Ptr<NBEdge>, onRamp: bool) {
-        todo!("port NBRampsComputer::patchRampGeometry")
+        // geometry of first and highway should allign on the left side
+        if first.get_lane_spread_function() == LaneSpreadFunction::CENTER && first.has_default_geometry_endpoints() {
+            let n = if onRamp { potHighway.get_to_node() } else { potHighway.get_from_node() };
+            if potHighway.has_default_geometry_endpoint_at_node(n) {
+                let mut p2: PositionVector = first.get_geometry().clone();
+                // shortcut: Rust move2side cannot signal InvalidArgument, so the C++ empty catch is not needed here
+                p2.move2side((first.get_num_lanes() - potHighway.get_num_lanes()) as f64 * first.get_lane_width_2(0) * 0.5, 100.0);
+                first.m().set_geometry(&p2, false);
+            }
+        }
+
+        // ramp should merge smoothly with first
+        let mut p: PositionVector = potRamp.get_geometry().clone();
+        let mut offset = 0.0;
+        let mut firstIndex: i32 = std::cmp::max(0, std::cmp::min(potRamp.get_num_lanes(), first.get_num_lanes()) - 1);
+        if potRamp.get_lane_spread_function() == LaneSpreadFunction::RIGHT {
+            offset = -first.get_lane_width_2(firstIndex) / 2.0;
+        } else {
+            if firstIndex % 2 == 1 {
+                // even number of lanes
+                offset = -first.get_lane_width_2(firstIndex / 2) / 2.0;
+            }
+            firstIndex /= 2; // integer division
+        }
+        // reset lane shape (might be affected by earlier junctions.join step. see #947)
+        first.m().reset_lane_shapes();
+        let mut l: PositionVector = first.get_lane_shape(firstIndex).clone();
+        l.move2side(offset, 100.0);
+
+        if onRamp {
+            *p.at_mut(0) = *l.at(-1);
+        } else {
+            p.0.pop();
+            p.0.push(*l.at(0));
+        }
+        potRamp.m().set_geometry(&p, false);
     }
 
     /// C++: `std::string NBRampsComputer::getUnusedID(const std::string &, const T &)` [static, private]
@@ -697,8 +882,17 @@ impl NBRampsComputer {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_unused_id() -> String {
-        todo!("port NBRampsComputer::getUnusedID")
+    pub fn get_unused_id(prefix: &str, exists: impl Fn(&str) -> bool) -> String {
+        if !exists(prefix) {
+            return prefix.to_string();
+        }
+        let mut i = 0;
+        let mut result = format!("{}#{}", prefix, i);
+        while exists(&result) {
+            i += 1;
+            result = format!("{}#{}", prefix, i);
+        }
+        result
     }
 
 }

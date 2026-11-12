@@ -1,6 +1,19 @@
 //! Port of netimport/NIXMLEdgesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_message, write_warning};
+use utils::common::std_defs::{INVALID_DOUBLE, NETWORK_VERSION};
+use utils::common::string_utils::to_int;
+use utils::common::to_string::f64_to_string;
+use utils::geom::POSITION_EPS;
+use utils::options::options_cont::with_options;
+
+// C++ NBEdge::UNSPECIFIED_* (netbuild/NBEdge.cpp); NBEdge in Rust does not expose them yet
+const UNSPECIFIED_WIDTH: f64 = -1.;
+const UNSPECIFIED_OFFSET: f64 = 0.;
+const UNSPECIFIED_SPEED: f64 = -1.;
+const UNSPECIFIED_FRICTION: f64 = 1.;
+const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 
 /// Importer for network edges stored in XML
 /// C++ class `NIXMLEdgesHandler` (netimport/NIXMLEdgesHandler.h)
@@ -117,7 +130,52 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(nc: &mut NBNodeCont, ec: &mut NBEdgeCont, tc: &mut NBTypeCont, dc: &mut NBDistrictCont, tlc: &mut NBTrafficLightLogicCont, options: &mut OptionsCont) -> Self {
-        todo!("port NIXMLEdgesHandler::NIXMLEdgesHandler")
+        let type_s = options.get_string("default.junctions.type").unwrap_or_else(|e| panic!("{e}"));
+        let default_node_type = if NodeTypes.has_string(&type_s) {
+            NodeTypes.get(&type_s).unwrap_or_else(|e| panic!("{e}"))
+        } else {
+            SumoXMLNodeType::UNKNOWN
+        };
+        let keep_edge_shape = !options.get_bool("plain.extend-edge-shape").unwrap_or_else(|e| panic!("{e}"));
+        NIXMLEdgesHandler {
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "xml-edges - file", ""),
+            myOptions: Ptr::from_mut(options),
+            myCurrentID: String::new(),
+            myCurrentSpeed: 0.,
+            myCurrentFriction: 0.,
+            myCurrentPriority: 0,
+            myCurrentLaneNo: 0,
+            myCurrentWidth: 0.,
+            myCurrentEndOffset: 0.,
+            myCurrentStreetName: String::new(),
+            myCurrentType: String::new(),
+            myFromNode: Ptr::null(),
+            myToNode: Ptr::null(),
+            myLength: 0.,
+            myShape: PositionVector::default(),
+            // C++ leaves this uninitialized until tryGetLaneSpread sets it; the enum's zero value is used here
+            myLanesSpread: LaneSpreadFunction::RIGHT,
+            myPermissions: 0,
+            myReinitKeepEdgeShape: false,
+            mySidewalkWidth: 0.,
+            myBikeLaneWidth: 0.,
+            myIsUpdate: false,
+            myNodeCont: Ptr::from_mut(nc),
+            myEdgeCont: Ptr::from_mut(ec),
+            myTypeCont: Ptr::from_mut(tc),
+            myDistrictCont: Ptr::from_mut(dc),
+            myTLLogicCont: Ptr::from_mut(tlc),
+            myCurrentEdge: Ptr::null(),
+            myCurrentLaneIndex: -1,
+            mySplits: Vec::new(),
+            myHaveReportedAboutOverwriting: false,
+            myHaveReportedAboutTypeOverride: false,
+            myHaveWarnedAboutDeprecatedLaneId: false,
+            myDefaultNodeType: default_node_type,
+            myKeepEdgeShape: keep_edge_shape,
+            myLastParameterised: Vec::new(),
+            myLocation: Ptr::null(),
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::~NIXMLEdgesHandler() noexcept` [virtual]
@@ -127,7 +185,10 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLEdgesHandler::~NIXMLEdgesHandler")
+        // delete myLocation
+        if !self.myLocation.is_null() {
+            drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -212,7 +273,45 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::myStartElement")
+        match element {
+            SUMO_TAG_VIEWSETTINGS_EDGES => {
+                // infer location for legacy networks that don't have location information
+                self.myLocation = match GeoConvHelper::get_loaded_plain(self.get_file_name(), ".edg.xml") {
+                    Some(loc) => Ptr::from_raw(Box::into_raw(Box::new(loc))),
+                    None => Ptr::null(),
+                };
+            }
+            SUMO_TAG_LOCATION => {
+                // delete myLocation
+                if !self.myLocation.is_null() {
+                    drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+                }
+                self.myLocation = NIImporter_SUMO::load_location(attrs, false);
+            }
+            SUMO_TAG_EDGE => self.add_edge(attrs),
+            SUMO_TAG_LANE => self.add_lane(attrs),
+            SUMO_TAG_NEIGH => {
+                let n = self.myCurrentEdge.get_num_lanes() - 1;
+                let oppositeID = attrs.get_string(SUMO_ATTR_LANE);
+                self.myCurrentEdge.m().get_lane_struct(n).oppositeID = oppositeID;
+            }
+            SUMO_TAG_SPLIT => self.add_split(attrs),
+            SUMO_TAG_DEL => self.delete_edge(attrs),
+            SUMO_TAG_ROUNDABOUT => self.add_roundabout(attrs),
+            SUMO_TAG_PARAM => {
+                if self.myLastParameterised.len() != 0 && !self.myCurrentEdge.is_null() {
+                    let mut ok = true;
+                    let key = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut ok, true);
+                    // circumventing empty string test
+                    let val = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+                    self.myLastParameterised.last().unwrap().m().set_parameter(&key, &val);
+                }
+            }
+            SUMO_TAG_STOPOFFSET => {
+                // shortcut: C++ StopOffset(attrs, ok) constructor is not ported (utils StopOffset has no attribute ctor), add the STOPOFFSET branch body (parse, duplicate/invalid warnings, setEdgeStopOffset) when it is
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::myEndElement(int)` [virtual, protected]
@@ -268,7 +367,53 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIXMLEdgesHandler::myEndElement")
+        if element == SUMO_TAG_VIEWSETTINGS_EDGES {
+            // delete myLocation
+            if !self.myLocation.is_null() {
+                drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+            }
+            self.myLocation = Ptr::null();
+            return;
+        }
+        if self.myCurrentEdge.is_null() {
+            return;
+        }
+        if element == SUMO_TAG_EDGE {
+            self.myLastParameterised.pop();
+            // add bike lane, wait until lanes are loaded to avoid building if it already exists
+            if self.myBikeLaneWidth != -1. {
+                // -1 is NBEdge::UNSPECIFIED_WIDTH
+                self.myCurrentEdge.m().add_bike_lane(self.myBikeLaneWidth);
+            }
+            // add sidewalk, wait until lanes are loaded to avoid building if it already exists
+            if self.mySidewalkWidth != -1. {
+                self.myCurrentEdge.m().add_sidewalk(self.mySidewalkWidth);
+            }
+            // apply default stopOffsets of edge to all lanes without specified stopOffset.
+            let stopOffsets = self.myCurrentEdge.get_edge_stop_offset().clone();
+            if stopOffsets.is_defined() {
+                let n = self.myCurrentEdge.get_lanes().len() as i32;
+                for i in 0..n {
+                    self.myCurrentEdge.m().set_edge_stop_offset(i, &stopOffsets, false);
+                }
+            }
+            if !self.myIsUpdate {
+                // shortcut: C++ try/catch around myEdgeCont.insert (InvalidArgument rethrow and the "important information is missing" message) is not reproduced, Rust insert reports only a bool, upgrade when NBEdgeCont::insert can throw
+                if !self.myEdgeCont.m().insert(self.myCurrentEdge, false) {
+                    write_error(&tlf!("Duplicate edge '%' occurred.", self.myCurrentID));
+                    drop(unsafe { Box::from_raw(self.myCurrentEdge.as_raw()) });
+                    self.myCurrentEdge = Ptr::null();
+                    return;
+                }
+            }
+            // mySplits is cleared again in addEdge before the next edge reads it, so handing over the Vec is equivalent
+            let splits = std::mem::take(&mut self.mySplits);
+            self.myEdgeCont.m().process_splits(self.myCurrentEdge, splits, self.myNodeCont.m(), self.myDistrictCont.m(), self.myTLLogicCont.m());
+            self.myCurrentEdge = Ptr::null();
+        } else if element == SUMO_TAG_LANE && self.myCurrentLaneIndex != -1 {
+            self.myLastParameterised.pop();
+            self.myCurrentLaneIndex = -1;
+        }
     }
 
     /// C++: `PositionVector NIXMLEdgesHandler::tryGetShape(const SUMOSAXAttributes &)` [private]
@@ -303,7 +448,32 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn try_get_shape(&mut self, attrs: &SUMOSAXAttributes) -> PositionVector {
-        todo!("port NIXMLEdgesHandler::tryGetShape")
+        if !attrs.has_attribute(SUMO_ATTR_SHAPE) && self.myShape.len() > 0 {
+            return self.myShape.clone();
+        }
+        // try to build shape
+        let mut ok = true;
+        if !attrs.has_attribute(SUMO_ATTR_SHAPE) {
+            let maxSegmentLength = utils::options::options_cont::get_float("geometry.max-segment-length");
+            if maxSegmentLength > 0. {
+                let mut shape = PositionVector::default();
+                shape.push(self.myFromNode.get_position().clone());
+                shape.push(self.myToNode.get_position().clone());
+                // shape is already cartesian but we must use a copy because the original will be modified
+                let cartesian = PositionVector(shape.0.clone());
+                NBNetBuilder::add_geometry_segments(&mut shape, &cartesian, maxSegmentLength);
+                return shape;
+            } else {
+                self.myReinitKeepEdgeShape = false;
+                return PositionVector::default();
+            }
+        }
+        let mut shape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, PositionVector::default(), true);
+        if !NBNetBuilder::transform_coordinates(&mut shape, true, self.myLocation) {
+            write_error(&tlf!("Unable to project coordinates for edge '%'.", self.myCurrentID));
+        }
+        self.myReinitKeepEdgeShape = self.myKeepEdgeShape;
+        shape
     }
 
     /// C++: `LaneSpreadFunction NIXMLEdgesHandler::tryGetLaneSpread(const SUMOSAXAttributes &)` [private]
@@ -323,7 +493,16 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn try_get_lane_spread(&mut self, attrs: &SUMOSAXAttributes) -> LaneSpreadFunction {
-        todo!("port NIXMLEdgesHandler::tryGetLaneSpread")
+        let mut ok = true;
+        let mut result = self.myLanesSpread;
+        let mut lsfS = LaneSpreadFunctions.get_string(result).unwrap_or_else(|e| panic!("{e}")).to_string();
+        lsfS = attrs.get_opt::<String>(SUMO_ATTR_SPREADTYPE, &self.myCurrentID, &mut ok, lsfS, true);
+        if LaneSpreadFunctions.has_string(&lsfS) {
+            result = LaneSpreadFunctions.get(&lsfS).unwrap_or_else(|e| panic!("{e}"));
+        } else {
+            write_warning(&tlf!("Ignoring unknown spreadType '%' for edge '%'.", lsfS, self.myCurrentID));
+        }
+        result
     }
 
     /// C++: `bool NIXMLEdgesHandler::setNodes(const SUMOSAXAttributes &)` [private]
@@ -365,7 +544,38 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn set_nodes(&mut self, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port NIXMLEdgesHandler::setNodes")
+        // the names and the coordinates of the beginning and the end node
+        // may be found, try
+        let mut ok = true;
+        if self.myIsUpdate {
+            self.myFromNode = self.myCurrentEdge.get_from_node();
+            self.myToNode = self.myCurrentEdge.get_to_node();
+        }
+        if attrs.has_attribute(SUMO_ATTR_FROM) {
+            let begNodeID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+            if begNodeID != "" {
+                self.myFromNode = self.myNodeCont.retrieve(&begNodeID);
+                if self.myFromNode.is_null() {
+                    write_error(&tlf!("Edge's '%' from-node '%' is not known.", self.myCurrentID, begNodeID));
+                }
+            }
+        } else if !self.myIsUpdate {
+            write_error(&tlf!("The from-node is not given for edge '%'.", self.myCurrentID));
+            ok = false;
+        }
+        if attrs.has_attribute(SUMO_ATTR_TO) {
+            let endNodeID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+            if endNodeID != "" {
+                self.myToNode = self.myNodeCont.retrieve(&endNodeID);
+                if self.myToNode.is_null() {
+                    write_error(&tlf!("Edge's '%' to-node '%' is not known.", self.myCurrentID, endNodeID));
+                }
+            }
+        } else if !self.myIsUpdate {
+            write_error(&tlf!("The to-node is not given for edge '%'.", self.myCurrentID));
+            ok = false;
+        }
+        ok && !self.myFromNode.is_null() && !self.myToNode.is_null()
     }
 
     /// C++: `void NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes &)` [private]
@@ -588,7 +798,231 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_edge(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::addEdge")
+        self.myIsUpdate = false;
+        let mut ok = true;
+        // initialise the edge
+        self.myCurrentEdge = Ptr::null();
+        self.mySplits.clear();
+        // get the id, report an error if not given or empty...
+        self.myCurrentID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        self.myCurrentEdge = self.myEdgeCont.retrieve(&self.myCurrentID, false);
+        // check deprecated (unused) attributes
+        // use default values, first
+        self.myCurrentType = if self.myCurrentEdge.is_null() {
+            self.myOptions.get_string("default.type").unwrap_or_else(|err| panic!("{err}"))
+        } else {
+            self.myCurrentEdge.get_type_id().to_string()
+        };
+        // check whether a type's values shall be used
+        if attrs.has_attribute(SUMO_ATTR_TYPE) {
+            self.myCurrentType = attrs.get::<String>(SUMO_ATTR_TYPE, &self.myCurrentID, &mut ok, true);
+            if !ok {
+                return;
+            }
+            if !self.myTypeCont.knows(&self.myCurrentType) && !self.myOptions.get_bool("ignore-errors.edge-type").unwrap_or_else(|err| panic!("{err}")) {
+                write_error(&tlf!("Type '%' used by edge '%' was not defined (ignore with option --ignore-errors.edge-type).", self.myCurrentType, self.myCurrentID));
+                return;
+            }
+        }
+        self.myCurrentEndOffset = UNSPECIFIED_OFFSET;
+        if !self.myCurrentEdge.is_null() {
+            // update existing edge. only update lane-specific settings when explicitly requested
+            self.myIsUpdate = true;
+            self.myCurrentSpeed = UNSPECIFIED_SPEED;
+            self.myCurrentFriction = UNSPECIFIED_FRICTION;
+            self.myCurrentPriority = self.myCurrentEdge.get_priority();
+            self.myCurrentLaneNo = self.myCurrentEdge.get_num_lanes();
+            self.myPermissions = SVC_UNSPECIFIED;
+            self.myCurrentWidth = UNSPECIFIED_WIDTH;
+            self.myLanesSpread = self.myCurrentEdge.get_lane_spread_function();
+            self.mySidewalkWidth = UNSPECIFIED_WIDTH;
+            self.myBikeLaneWidth = UNSPECIFIED_WIDTH;
+        } else {
+            // this is a completely new edge. get the type specific defaults
+            self.myCurrentSpeed = self.myTypeCont.get_edge_type_speed(&self.myCurrentType);
+            self.myCurrentFriction = self.myTypeCont.get_edge_type_friction(&self.myCurrentType);
+            self.myCurrentPriority = self.myTypeCont.get_edge_type_priority(&self.myCurrentType);
+            self.myCurrentLaneNo = self.myTypeCont.get_edge_type_num_lanes(&self.myCurrentType);
+            self.myPermissions = self.myTypeCont.get_edge_type_permissions(&self.myCurrentType);
+            self.myCurrentWidth = self.myTypeCont.get_edge_type_width(&self.myCurrentType);
+            self.myLanesSpread = self.myTypeCont.get_edge_type_spread_type(&self.myCurrentType);
+            if self.myLanesSpread == LaneSpreadFunction::SPREAD_UNKNOWN {
+                let spread = self.myOptions.get_string("default.spreadtype").unwrap_or_else(|err| panic!("{err}"));
+                self.myLanesSpread = LaneSpreadFunctions.get(&spread).unwrap_or_else(|err| panic!("{err}"));
+            }
+            self.mySidewalkWidth = self.myTypeCont.get_edge_type_sidewalk_width(&self.myCurrentType);
+            self.myBikeLaneWidth = self.myTypeCont.get_edge_type_bike_lane_width(&self.myCurrentType);
+        }
+        self.myShape = PositionVector::default();
+        self.myLength = UNSPECIFIED_LOADED_LENGTH;
+        self.myCurrentStreetName = String::new();
+        self.myReinitKeepEdgeShape = false;
+
+        // use values from the edge to overwrite if existing, then
+        if self.myIsUpdate {
+            if !self.myHaveReportedAboutOverwriting {
+                write_message(&tlf!("Duplicate edge id occurred ('%'); assuming overwriting is wished.", self.myCurrentID));
+                self.myHaveReportedAboutOverwriting = true;
+            }
+            if attrs.has_attribute(SUMO_ATTR_TYPE) && self.myCurrentType != self.myCurrentEdge.get_type_id() {
+                if !self.myHaveReportedAboutTypeOverride {
+                    write_message(&tlf!("Edge '%' changed its type; assuming type override is wished.", self.myCurrentID));
+                    self.myHaveReportedAboutTypeOverride = true;
+                }
+            }
+            if attrs.get_opt::<bool>(SUMO_ATTR_REMOVE, &self.myCurrentID, &mut ok, false, true) {
+                self.myEdgeCont.m().erase(self.myDistrictCont.m(), self.myCurrentEdge);
+                self.myCurrentEdge = Ptr::null();
+                return;
+            }
+            if !self.myCurrentEdge.has_default_geometry() {
+                self.myShape = self.myCurrentEdge.get_geometry().clone();
+                self.myReinitKeepEdgeShape = true;
+            }
+            if self.myCurrentEdge.has_loaded_length() {
+                self.myLength = self.myCurrentEdge.get_loaded_length();
+            }
+            self.myCurrentStreetName = self.myCurrentEdge.get_street_name().to_string();
+        }
+        // speed, priority and the number of lanes have now default values;
+        // try to read the real values from the file
+        if attrs.has_attribute(SUMO_ATTR_SPEED) {
+            self.myCurrentSpeed = attrs.get::<f64>(SUMO_ATTR_SPEED, &self.myCurrentID, &mut ok, true);
+        }
+        if self.myOptions.get_bool("speed-in-kmh").unwrap_or_else(|err| panic!("{err}")) && self.myCurrentSpeed != UNSPECIFIED_SPEED {
+            self.myCurrentSpeed = self.myCurrentSpeed / 3.6;
+        }
+        // try to read the friction value from file
+        if attrs.has_attribute(SUMO_ATTR_FRICTION) {
+            self.myCurrentFriction = attrs.get::<f64>(SUMO_ATTR_FRICTION, &self.myCurrentID, &mut ok, true);
+        }
+        // try to get the number of lanes
+        if attrs.has_attribute(SUMO_ATTR_NUMLANES) {
+            self.myCurrentLaneNo = attrs.get::<i32>(SUMO_ATTR_NUMLANES, &self.myCurrentID, &mut ok, true);
+        }
+        // try to get the priority
+        if attrs.has_attribute(SUMO_ATTR_PRIORITY) {
+            self.myCurrentPriority = attrs.get::<i32>(SUMO_ATTR_PRIORITY, &self.myCurrentID, &mut ok, true);
+        }
+        // try to get the width
+        if attrs.has_attribute(SUMO_ATTR_WIDTH) {
+            self.myCurrentWidth = attrs.get::<f64>(SUMO_ATTR_WIDTH, &self.myCurrentID, &mut ok, true);
+        }
+        // try to get the offset of the stop line from the intersection
+        if attrs.has_attribute(SUMO_ATTR_ENDOFFSET) {
+            self.myCurrentEndOffset = attrs.get::<f64>(SUMO_ATTR_ENDOFFSET, &self.myCurrentID, &mut ok, true);
+        }
+        // try to get the street name
+        if attrs.has_attribute(SUMO_ATTR_NAME) {
+            self.myCurrentStreetName = attrs.get::<String>(SUMO_ATTR_NAME, &self.myCurrentID, &mut ok, true);
+            if self.myCurrentStreetName != "" && self.myOptions.is_default("output.street-names") {
+                self.myOptions.m().set("output.street-names", "true", false).unwrap_or_else(|err| panic!("{err}"));
+            }
+        }
+
+        // try to get the allowed/disallowed classes
+        if attrs.has_attribute(SUMO_ATTR_ALLOW) || attrs.has_attribute(SUMO_ATTR_DISALLOW) {
+            let allowS = if attrs.has_attribute(SUMO_ATTR_ALLOW) { attrs.get_string_secure(SUMO_ATTR_ALLOW, "") } else { String::new() };
+            let disallowS = if attrs.has_attribute(SUMO_ATTR_DISALLOW) { attrs.get_string_secure(SUMO_ATTR_DISALLOW, "") } else { String::new() };
+            // XXX matter of interpretation: should updated permissions replace or extend previously set permissions?
+            self.myPermissions = parse_vehicle_classes_allow_disallow(&allowS, &disallowS, NETWORK_VERSION);
+        }
+
+        // try to set the nodes
+        if !self.set_nodes(attrs) {
+            // return if this failed
+            self.myCurrentEdge = Ptr::null();
+            return;
+        }
+        // try to get the shape
+        self.myShape = self.try_get_shape(attrs);
+        // try to get the spread type
+        self.myLanesSpread = self.try_get_lane_spread(attrs);
+        // try to get the length
+        self.myLength = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, &self.myCurrentID, &mut ok, self.myLength, true);
+        // try to get the sidewalkWidth
+        self.mySidewalkWidth = attrs.get_opt::<f64>(SUMO_ATTR_SIDEWALKWIDTH, &self.myCurrentID, &mut ok, self.mySidewalkWidth, true);
+        // try to get the bikeLaneWidth
+        self.myBikeLaneWidth = attrs.get_opt::<f64>(SUMO_ATTR_BIKELANEWIDTH, &self.myCurrentID, &mut ok, self.myBikeLaneWidth, true);
+        // insert the parsed edge into the edges map
+        if !ok {
+            self.myCurrentEdge = Ptr::null();
+            return;
+        }
+        if self.myFromNode == self.myToNode {
+            // this might as well be an error. We make this a warning mostly for
+            // backward compatibility
+            write_warning(&tlf!("Ignoring self-looped edge '%' at junction '%'", self.myCurrentID, self.myFromNode.base.get_id()));
+            self.myCurrentEdge = Ptr::null();
+            return;
+        }
+        // check whether a previously defined edge shall be overwritten
+        let applyLaneType = self.myCurrentEdge.is_null();
+        if !self.myCurrentEdge.is_null() {
+            self.myCurrentEdge.m().reinit(self.myFromNode, self.myToNode, &self.myCurrentType, self.myCurrentSpeed, self.myCurrentFriction,
+                self.myCurrentLaneNo, self.myCurrentPriority, self.myShape.clone(),
+                self.myCurrentWidth, self.myCurrentEndOffset,
+                &self.myCurrentStreetName, self.myLanesSpread,
+                self.myReinitKeepEdgeShape);
+        } else {
+            // the edge must be allocated in dependence to whether a shape is given
+            if self.myShape.len() == 0 {
+                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
+                    self.myCurrentLaneNo, self.myCurrentPriority, self.myCurrentWidth, self.myCurrentEndOffset,
+                    self.myLanesSpread, &self.myCurrentStreetName))));
+            } else {
+                self.myCurrentEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_2(&self.myCurrentID, self.myFromNode, self.myToNode, self.myCurrentType.clone(), self.myCurrentSpeed, self.myCurrentFriction,
+                    self.myCurrentLaneNo, self.myCurrentPriority, self.myCurrentWidth, self.myCurrentEndOffset,
+                    self.myShape.clone(), self.myLanesSpread, &self.myCurrentStreetName, "",
+                    self.myKeepEdgeShape))));
+            }
+        }
+        self.myCurrentEdge.m().set_loaded_length(self.myLength);
+        if self.myPermissions != SVC_UNSPECIFIED {
+            self.myCurrentEdge.m().set_permissions(self.myPermissions, -1);
+        }
+        // apply laneType if given
+        if applyLaneType && self.myCurrentType != "" && self.myTypeCont.knows(&self.myCurrentType) {
+            let eType = self.myTypeCont.get_edge_type(&self.myCurrentType);
+            if eType.needs_lane_type() {
+                let mut lane: i32 = 0;
+                for laneType in &eType.laneTypeDefinitions {
+                    if lane >= self.myCurrentLaneNo {
+                        break;
+                    }
+                    if laneType.attrs.contains(&SUMO_ATTR_SPEED) {
+                        self.myCurrentEdge.m().set_speed(lane, laneType.speed);
+                    }
+                    if laneType.attrs.contains(&SUMO_ATTR_FRICTION) {
+                        self.myCurrentEdge.m().set_friction(lane, laneType.friction);
+                    }
+                    if laneType.attrs.contains(&SUMO_ATTR_DISALLOW) || laneType.attrs.contains(&SUMO_ATTR_ALLOW) {
+                        self.myCurrentEdge.m().set_permissions(laneType.permissions, lane);
+                    }
+                    if laneType.attrs.contains(&SUMO_ATTR_WIDTH) {
+                        self.myCurrentEdge.m().set_lane_width(lane, laneType.width);
+                    }
+                    lane += 1;
+                }
+            }
+        }
+        // try to get the kilometrage/mileage
+        let distance = self.myCurrentEdge.get_distance();
+        let distance = attrs.get_opt::<f64>(SUMO_ATTR_DISTANCE, &self.myCurrentID, &mut ok, distance, true);
+        self.myCurrentEdge.m().set_distance(distance);
+        let routingType = self.myCurrentEdge.get_routing_type().to_string();
+        let routingType = attrs.get_opt::<String>(SUMO_ATTR_ROUTINGTYPE, &self.myCurrentID, &mut ok, routingType, true);
+        self.myCurrentEdge.m().set_routing_type(&routingType);
+        // preserve bidi edge (only as bool, the actual edge will be recomputed)
+        let bidi = attrs.get_opt::<String>(SUMO_ATTR_BIDI, &self.myCurrentID, &mut ok, String::new(), true);
+        let isBidi = !self.myCurrentEdge.get_bidi_edge().is_null() || self.myCurrentEdge.is_bidi() || bidi != "";
+        self.myCurrentEdge.m().set_bidi(isBidi);
+
+        // determinism: Parameterised pointers are pushed in the order the edges are parsed
+        self.myLastParameterised.push(Ptr::from_mut(&mut self.myCurrentEdge.m().base2));
     }
 
     /// C++: `void NIXMLEdgesHandler::deleteEdge(const SUMOSAXAttributes &)` [private]
@@ -615,7 +1049,23 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn delete_edge(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::deleteEdge")
+        let mut ok = true;
+        self.myCurrentID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        let edge = self.myEdgeCont.retrieve(&self.myCurrentID, false);
+        if edge.is_null() {
+            // toString(SUMO_TAG_DEL) is "del"
+            write_warning(&format!("Ignoring tag 'del' for unknown edge '{}'", self.myCurrentID));
+            return;
+        }
+        let lane = attrs.get_opt::<i32>(SUMO_ATTR_INDEX, &self.myCurrentID, &mut ok, -1, true);
+        if lane < 0 {
+            self.myEdgeCont.m().extract(self.myDistrictCont.m(), edge, true);
+        } else {
+            edge.m().delete_lane(lane, false, true);
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::addLane(const SUMOSAXAttributes &)` [private]
@@ -710,7 +1160,94 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_lane(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::addLane")
+        if self.myCurrentEdge.is_null() {
+            if !with_options(|oc| oc.is_in_string_vector("remove-edges.explicit", &self.myCurrentID)).unwrap_or_else(|err| panic!("{err}")) {
+                write_error(&tlf!("Additional lane information could not be set - the edge with id '%' is not known.", self.myCurrentID));
+            }
+            return;
+        }
+        let mut ok = true;
+        let lane: i32;
+        if attrs.has_attribute(SUMO_ATTR_ID) {
+            lane = attrs.get::<i32>(SUMO_ATTR_ID, &self.myCurrentID, &mut ok, true);
+            if !self.myHaveWarnedAboutDeprecatedLaneId {
+                self.myHaveWarnedAboutDeprecatedLaneId = true;
+                // toString(SUMO_ATTR_ID) is "id", toString(SUMO_ATTR_INDEX) is "index"
+                write_warning(&tlf!("'%' is deprecated, please use '%' instead.", "id", "index"));
+            }
+        } else {
+            lane = attrs.get::<i32>(SUMO_ATTR_INDEX, &self.myCurrentID, &mut ok, true);
+        }
+        if !ok {
+            return;
+        }
+        // check whether this lane exists
+        if lane >= self.myCurrentEdge.get_num_lanes() {
+            write_error(&tlf!("Lane index is larger than number of lanes (edge '%').", self.myCurrentID));
+            return;
+        }
+        self.myCurrentLaneIndex = lane;
+        // set information about allowed / disallowed vehicle classes (if specified)
+        if attrs.has_attribute(SUMO_ATTR_ALLOW) || attrs.has_attribute(SUMO_ATTR_DISALLOW) {
+            let allowed = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, "", &mut ok, String::new(), true);
+            let disallowed = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, "", &mut ok, String::new(), true);
+            self.myCurrentEdge.m().set_permissions(parse_vehicle_classes_allow_disallow(&allowed, &disallowed, NETWORK_VERSION), lane);
+        }
+        if attrs.has_attribute(SUMO_ATTR_PREFER) {
+            let preferred = attrs.get::<String>(SUMO_ATTR_PREFER, "", &mut ok, true);
+            self.myCurrentEdge.m().set_preferred_vehicle_class(parse_vehicle_classes(&preferred), lane);
+        }
+        if attrs.has_attribute(SUMO_ATTR_CHANGE_LEFT) || attrs.has_attribute(SUMO_ATTR_CHANGE_RIGHT) {
+            let changeLeft = attrs.get_opt::<String>(SUMO_ATTR_CHANGE_LEFT, "", &mut ok, String::new(), true);
+            let changeRight = attrs.get_opt::<String>(SUMO_ATTR_CHANGE_RIGHT, "", &mut ok, String::new(), true);
+            self.myCurrentEdge.m().set_permitted_changing(lane, parse_vehicle_classes_allow_disallow(&changeLeft, "", NETWORK_VERSION), parse_vehicle_classes_allow_disallow(&changeRight, "", NETWORK_VERSION));
+        }
+        // try to get the width
+        if attrs.has_attribute(SUMO_ATTR_WIDTH) {
+            self.myCurrentEdge.m().set_lane_width(lane, attrs.get::<f64>(SUMO_ATTR_WIDTH, &self.myCurrentID, &mut ok, true));
+        }
+        // try to get the end-offset (lane shortened due to pedestrian crossing etc..)
+        if attrs.has_attribute(SUMO_ATTR_ENDOFFSET) {
+            self.myCurrentEdge.m().set_end_offset(lane, attrs.get::<f64>(SUMO_ATTR_ENDOFFSET, &self.myCurrentID, &mut ok, true));
+        }
+        // try to get lane specific speed (should not occur for german networks)
+        if attrs.has_attribute(SUMO_ATTR_SPEED) {
+            self.myCurrentEdge.m().set_speed(lane, attrs.get::<f64>(SUMO_ATTR_SPEED, &self.myCurrentID, &mut ok, true));
+        }
+        // try to get lane specific friction
+        if attrs.has_attribute(SUMO_ATTR_FRICTION) {
+            self.myCurrentEdge.m().set_friction(lane, attrs.get::<f64>(SUMO_ATTR_FRICTION, &self.myCurrentID, &mut ok, true));
+        }
+        // check whether this is an acceleration lane
+        if attrs.has_attribute(SUMO_ATTR_ACCELERATION) {
+            self.myCurrentEdge.m().set_acceleration(lane, attrs.get::<bool>(SUMO_ATTR_ACCELERATION, &self.myCurrentID, &mut ok, true));
+        }
+        // check whether this lane has a custom shape
+        if attrs.has_attribute(SUMO_ATTR_SHAPE) {
+            let mut shape = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, &self.myCurrentID, &mut ok, true);
+            if !NBNetBuilder::transform_coordinates(&mut shape, true, self.myLocation) {
+                let laneID = format!("{}_{}", self.myCurrentID, lane);
+                write_error(&tlf!("Unable to project coordinates for lane '%'.", laneID));
+            }
+            if shape.len() == 1 {
+                // lane shape of length 1 is not permitted
+                shape.push_front(self.myCurrentEdge.get_from_node().get_position().clone());
+                shape.push(self.myCurrentEdge.get_to_node().get_position().clone());
+            }
+            shape.remove_double_points(POSITION_EPS, false, 0, 0, false);
+            if shape.len() < 2 {
+                // ignore lane shape for very short lanes
+                shape.clear();
+            }
+            self.myCurrentEdge.m().set_lane_shape(lane, &shape);
+        }
+        // set custom lane type
+        if attrs.has_attribute(SUMO_ATTR_TYPE) {
+            let laneType = attrs.get::<String>(SUMO_ATTR_TYPE, &self.myCurrentID, &mut ok, true);
+            self.myCurrentEdge.m().set_lane_type(lane, &laneType);
+        }
+        // determinism: Parameterised pointers are pushed in the order the lanes are parsed
+        self.myLastParameterised.push(Ptr::from_mut(&mut self.myCurrentEdge.m().get_lane_struct(lane).base));
     }
 
     /// C++: `void NIXMLEdgesHandler::addSplit(const SUMOSAXAttributes &)` [private]
@@ -787,7 +1324,85 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_split(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::addSplit")
+        if self.myCurrentEdge.is_null() {
+            if !with_options(|oc| oc.is_in_string_vector("remove-edges.explicit", &self.myCurrentID)).unwrap_or_else(|err| panic!("{err}")) {
+                write_warning(&tlf!("Ignoring 'split' because it cannot be assigned to an edge"));
+            }
+            return;
+        }
+        let mut ok = true;
+        let mut e = NBEdgeCont_Split {
+            lanes: Vec::new(),
+            pos: INVALID_DOUBLE,
+            speed: INVALID_DOUBLE,
+            friction: INVALID_DOUBLE,
+            node: Ptr::null(),
+            idBefore: String::new(),
+            idAfter: String::new(),
+            nameID: String::new(),
+            offset: 0.,
+            offsetFactor: 1,
+        };
+        e.pos = attrs.get::<f64>(SUMO_ATTR_POSITION, "", &mut ok, true);
+        if ok {
+            if e.pos.abs() > self.myCurrentEdge.get_loaded_length() {
+                write_error(&tlf!("Edge '%' has a split at invalid position %.", self.myCurrentID, f64_to_string(e.pos)));
+                return;
+            }
+            let mut finder = NIXMLEdgesHandler_split_by_pos_finder::new(e.pos);
+            if self.mySplits.iter().any(|s| finder.call_op(s)) {
+                write_error(&tlf!("Edge '%' has already a split at position %.", self.myCurrentID, f64_to_string(e.pos)));
+                return;
+            }
+            // XXX rounding to int may duplicate the id of another split
+            e.nameID = format!("{}.{}", self.myCurrentID, e.pos as i32);
+            if e.pos < 0. {
+                e.pos += self.myCurrentEdge.get_loaded_length();
+            }
+            for id in attrs.get_opt::<Vec<String>>(SUMO_ATTR_LANES, &self.myCurrentID, &mut ok, Vec::new(), true) {
+                // NumberFormatException and EmptyData both report the same error
+                match to_int(&id) {
+                    Ok(lane) => e.lanes.push(lane),
+                    Err(_) => write_error(&tlf!("Error on parsing a split (edge '%').", self.myCurrentID)),
+                }
+            }
+            if e.lanes.is_empty() {
+                for l in 0..self.myCurrentEdge.get_num_lanes() {
+                    e.lanes.push(l);
+                }
+            }
+            e.speed = attrs.get_opt::<f64>(SUMO_ATTR_SPEED, "", &mut ok, self.myCurrentEdge.get_speed(), true);
+            if attrs.has_attribute(SUMO_ATTR_SPEED) && self.myOptions.get_bool("speed-in-kmh").unwrap_or_else(|err| panic!("{err}")) {
+                e.speed /= 3.6;
+            }
+            e.idBefore = attrs.get_opt::<String>(SUMO_ATTR_ID_BEFORE, "", &mut ok, String::new(), true);
+            e.idAfter = attrs.get_opt::<String>(SUMO_ATTR_ID_AFTER, "", &mut ok, String::new(), true);
+            if !ok {
+                return;
+            }
+            let nodeID = attrs.get_opt::<String>(SUMO_ATTR_ID, "", &mut ok, e.nameID.clone(), true);
+            if nodeID == self.myCurrentEdge.get_from_node().base.get_id() || nodeID == self.myCurrentEdge.get_to_node().base.get_id() {
+                write_error(&tlf!("Invalid split node id for edge '%' (from- and to-node are forbidden)", self.myCurrentEdge.base.get_id()));
+                return;
+            }
+            e.node = if e.pos != 0. { self.myNodeCont.retrieve(&nodeID) } else { self.myCurrentEdge.get_from_node() };
+            e.offset = attrs.get_opt::<f64>(SUMO_ATTR_OFFSET, "", &mut ok, 0.0, true);
+            e.offsetFactor = if utils::options::options_cont::get_bool("lefthand") { -1 } else { 1 };
+            if e.node.is_null() {
+                let mut geomPos = e.pos;
+                if self.myCurrentEdge.has_loaded_length() {
+                    geomPos *= self.myCurrentEdge.get_geometry().length() / self.myCurrentEdge.get_loaded_length();
+                }
+                // C++ `new NBNode(id, pos)` selects the district overload with a null district
+                let pos = self.myCurrentEdge.get_geometry().position_at_offset(geomPos, 0.);
+                e.node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new_2(&nodeID, &pos, Ptr::null()))));
+                self.myNodeCont.m().insert_2(e.node);
+            }
+            let nodePos = e.node.get_position().clone();
+            NIXMLNodesHandler::process_node_type(attrs, e.node, e.node.base.get_id(), &nodePos, false,
+                self.myDefaultNodeType, self.myNodeCont.m(), self.myEdgeCont.m(), self.myTLLogicCont.m(), self.myLocation);
+            self.mySplits.push(e);
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::addRoundabout(const SUMOSAXAttributes &)` [private]
@@ -813,7 +1428,23 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_roundabout(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::addRoundabout")
+        let mut ok = true;
+        let edgeIDs = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, "", &mut ok, true);
+        if ok {
+            // determinism: EdgeSet orders by pointer address, like std::set<NBEdge*>
+            let mut roundabout = EdgeSet::new();
+            for eID in &edgeIDs {
+                let edge = self.myEdgeCont.retrieve(eID, false);
+                if edge.is_null() {
+                    if !self.myEdgeCont.was_ignored(eID.clone()) {
+                        write_error(&tlf!("Unknown edge '%' in roundabout.", eID));
+                    }
+                } else {
+                    roundabout.insert(edge);
+                }
+            }
+            self.myEdgeCont.m().add_roundabout(&roundabout);
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::NIXMLEdgesHandler(const NIXMLEdgesHandler &)` [private]
@@ -821,7 +1452,7 @@ impl NIXMLEdgesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIXMLEdgesHandler) -> Self {
-        todo!("port NIXMLEdgesHandler::NIXMLEdgesHandler")
+        panic!("NIXMLEdgesHandler is not copyable: the copy constructor is invalidated in C++")
     }
 
     /// C++: `NIXMLEdgesHandler & NIXMLEdgesHandler::operator=(const NIXMLEdgesHandler &)` [private]
@@ -829,7 +1460,7 @@ impl NIXMLEdgesHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIXMLEdgesHandler) -> &mut NIXMLEdgesHandler {
-        todo!("port NIXMLEdgesHandler::operator=")
+        panic!("NIXMLEdgesHandler is not assignable: operator= is invalidated in C++")
     }
 
 }
@@ -848,7 +1479,7 @@ impl NIXMLEdgesHandler_split_by_pos_finder {
     //             : myPosition(pos) { }
     #[allow(unused_variables)]
     pub fn new(pos: f64) -> Self {
-        todo!("port split_by_pos_finder::split_by_pos_finder")
+        NIXMLEdgesHandler_split_by_pos_finder { myPosition: pos }
     }
 
     /// C++: `bool split_by_pos_finder::operator()(const NBEdgeCont::Split &)`
@@ -858,7 +1489,7 @@ impl NIXMLEdgesHandler_split_by_pos_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, e: &NBEdgeCont_Split) -> bool {
-        todo!("port split_by_pos_finder::operator()")
+        e.pos == self.myPosition
     }
 
 }
