@@ -1062,7 +1062,8 @@ impl MSVehicleType {
         // Iterate through vehicles
         // determinism: C++ iterates the loaded-vehicle std::map in key order, as does this BTreeMap
         let self_ptr: *const MSVehicleType = self;
-        let vc = MSNet::get_instance().m().get_vehicle_control();
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
         for vehPtr in vc.myVehicleDict.values() {
             let mut veh: Ptr<MSVehicle> = vehPtr.cast::<MSVehicle>();
             if std::ptr::eq(veh.get_vehicle_type(), self_ptr) {

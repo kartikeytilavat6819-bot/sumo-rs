@@ -83,6 +83,12 @@ impl std::ops::DerefMut for MSVehicleControl_DeleteKeptVehicle {
     }
 }
 
+impl Command for MSVehicleControl_DeleteKeptVehicle {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSVehicleControl_DeleteKeptVehicle::execute(self, currentTime)
+    }
+}
+
 impl MSVehicleControl_DeleteKeptVehicle {
     /// C++: `void DeleteKeptVehicle::DeleteKeptVehicle(SUMOVehicle *)`
     // DeleteKeptVehicle(SUMOVehicle* veh) : myVehicle(veh) {}
@@ -351,7 +357,7 @@ impl MSVehicleControl {
     //     delete veh;
     // }
     #[allow(unused_variables)]
-    pub fn delete_vehicle(&mut self, v: Ptr<SUMOVehicle>, discard: bool, wasKept: bool) {
+    pub fn delete_vehicle(&mut self, veh: Ptr<SUMOVehicle>, discard: bool, wasKept: bool) {
         if !wasKept {
             self.myEndedVehNo += 1;
             if discard {
@@ -379,7 +385,8 @@ impl MSVehicleControl {
         self.myEndedVehNo += 1;
         let execTimeStep = MSNet::get_instance().m().get_current_time_step() + self.myKeepTime;
         let event = MSVehicleControl_DeleteKeptVehicle::new(veh);
-        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(&mut Box::leak(Box::new(event)).base), execTimeStep);
+        let cmd: *mut dyn Command = Box::into_raw(Box::new(event));
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd), execTimeStep);
     }
 
     /// C++: `void MSVehicleControl::fixVehicleCounts()`
@@ -472,7 +479,8 @@ impl MSVehicleControl {
             // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
             let hasTripinfo = !tripinfoOut.is_null();
             for dev in veh.get_devices().iter() {
-                dev.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                // shortcut: C++ virtual dispatch to the device subclass is not available, calls MSDevice's base generateOutput, upgrade when devices are trait objects
+                dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
             }
             if !tripinfoOut.is_null() && hasTripinfo {
                 // close tag after tripinfo (possibly including emissions from another device) have been written
@@ -1035,6 +1043,7 @@ impl MSVehicleControl {
             None => match self.myVTypeDistDict.get(id).copied() {
                 None => Ptr::null(),
                 Some(dist) => dist
+                    .m()
                     .get(if rng.is_null() { None } else { Some(rng.m()) })
                     .unwrap_or_else(|e| panic!("{}", e)),
             },
@@ -1545,7 +1554,8 @@ impl MSVehicleControl {
             let bv = as_base(*veh);
             let pars = bv.get_parameter();
             let route: ConstMSRoutePtr = MSRoute::dictionary_3(&pars.routeid, Ptr::null());
-            let stops: Ptr<StopParVector> = if route.is_null() { Ptr::null() } else { Ptr::new(route.get_stops()) };
+            // shortcut: ConstMSRoutePtr is an Rc, so a null route cannot be represented and the nullptr branch is dropped, upgrade when dictionary returns Option
+            let stops: Ptr<StopParVector> = Ptr::new(route.get_stops());
             router.get_network().m().add_schedule(pars, stops);
         }
     }
