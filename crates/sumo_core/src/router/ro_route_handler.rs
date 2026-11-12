@@ -2,6 +2,43 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: VEHPARS_* and JUNCTION_TAZ_MISSING_HELP belong to SUMOVehicleParameter.h / MapMatcher.h, not ported yet, move them there
+const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
+const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
+const JUNCTION_TAZ_MISSING_HELP: &str = "\nSet option '--junction-taz' or load a TAZ-file";
+
+/// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) };
+    }
+}
+
+/// C++ `throw ProcessError(msg)`; caught by the catch_unwind emulation in myStartElement
+fn throw_process_error(msg: String) -> ! {
+    std::panic::panic_any(ProcessError::new(msg))
+}
+
+/// MsgHandler::getWarningInstance() / getErrorInstance()
+// shortcut: the instances are kept in a locked static, the pointer stays valid because they are only dropped by cleanup_on_end
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    let t = if warning { MsgType::Warning } else { MsgType::Error };
+    Ptr::from_raw(utils::common::msg_handler::with_instance(t, |h| h as *mut MsgHandler))
+}
+
+/// C++ `toString(SumoXMLTag)`: the canonical name of a tag
+// shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
+fn tag_to_string(tag: SumoXMLTag) -> String {
+    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
+}
+
+/// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
+// shortcut: parseGeoEdges belongs to the unported MapMatcher base class, geo-coordinate route parsing panics until it is ported
+#[allow(unused_variables)]
+fn parse_geo_edges(pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstROEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
+    panic!("parseGeoEdges needs the unported MapMatcher base class");
+}
+
 /// Parser and container for routes during their loading
 /// C++ class `RORouteHandler` (router/RORouteHandler.h)
 #[repr(C)]
@@ -20,7 +57,7 @@ pub struct RORouteHandler {
     /// The plan of the current person
     pub myActivePlan: Ptr<Vec<Ptr<ROPerson_PlanItem>>>,
     /// The plan of the current container
-    pub myActiveContainerPlan: Ptr<Unmapped /* OutputDevice_String */>,
+    pub myActiveContainerPlan: Ptr<OutputDevice>,
     /// The number of stages in myActiveContainerPlan
     pub myActiveContainerPlanSize: i32,
     /// Information whether routes shall be repaired
@@ -96,7 +133,34 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet, file: &str, tryRepair: bool, emptyDestinationsAllowed: bool, ignoreErrors: bool, checkSchema: bool) -> Self {
-        todo!("port RORouteHandler::RORouteHandler")
+        let mut myActiveRoute: ConstROEdgeVector = Vec::new();
+        myActiveRoute.reserve(100);
+        RORouteHandler {
+            base: SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true),
+            base2: (),
+            myNet: Ptr::from_mut(net),
+            myActiveRoute,
+            myActiveRouteRepeat: 0,
+            myActiveRoutePeriod: 0,
+            myActivePlan: Ptr::null(),
+            myActiveContainerPlan: Ptr::null(),
+            myActiveContainerPlanSize: 0,
+            myTryRepair: tryRepair,
+            myEmptyDestinationsAllowed: emptyDestinationsAllowed,
+            myErrorOutput: msg_instance(ignoreErrors),
+            myBegin: utils::common::time::string2time(&utils::options::options_cont::get_string("begin")).unwrap_or_else(|e| std::panic::panic_any(e)),
+            myKeepVTypeDist: utils::options::options_cont::get_bool("keep-vtype-distributions"),
+            myUnsortedInput: utils::options::options_cont::exists("unsorted-input") && utils::options::options_cont::get_bool("unsorted-input"),
+            myWriteFlows: utils::options::options_cont::exists("keep-flows") && utils::options::options_cont::get_bool("keep-flows"),
+            myCurrentVTypeDistribution: Ptr::null(),
+            myCurrentVTypeDistributionID: String::new(),
+            myCurrentAlternatives: Ptr::null(),
+            myUseTaz: utils::options::options_cont::get_bool("with-taz"),
+            myWriteJunctions: utils::options::options_cont::exists("write-trips")
+                && utils::options::options_cont::get_bool("write-trips")
+                && utils::options::options_cont::get_bool("write-trips.junctions"),
+        }
+        // shortcut: MapMatcher base (base2) is Unmapped, so its mapmatch.* option reads are not stored; parseFromViaTo reads mapmatch.taz when needed
     }
 
     /// C++: `void RORouteHandler::~RORouteHandler() noexcept` [virtual]
@@ -106,7 +170,9 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RORouteHandler::~RORouteHandler")
+        // C++ body only deletes myCurrentAlternatives (its destructor is empty)
+        delete_ptr(self.myCurrentAlternatives);
+        self.myCurrentAlternatives = Ptr::null();
     }
 
     /// C++: `bool RORouteHandler::checkLastDepart()` [virtual]
@@ -120,7 +186,10 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_last_depart(&mut self) -> bool {
-        todo!("port RORouteHandler::checkLastDepart")
+        if !self.myUnsortedInput {
+            return self.base.check_last_depart();
+        }
+        true
     }
 
     /// C++: `void RORouteHandler::deleteActivePlanAndVehicleParameter()` [protected]
@@ -140,7 +209,18 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn delete_active_plan_and_vehicle_parameter(&mut self) {
-        todo!("port RORouteHandler::deleteActivePlanAndVehicleParameter")
+        if !self.myActivePlan.is_null() {
+            for it in self.myActivePlan.m().iter() {
+                // shortcut: PlanItem subclasses are freed through the base type pointer, same layout as the C++ base-pointer delete
+                delete_ptr(*it);
+            }
+            delete_ptr(self.myActivePlan);
+            self.myActivePlan = Ptr::null();
+        }
+        delete_ptr(self.myActiveContainerPlan);
+        self.myActiveContainerPlan = Ptr::null();
+        delete_ptr(self.myVehicleParameter);
+        self.myVehicleParameter = Ptr::null();
     }
 
     /// C++: `void RORouteHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -200,7 +280,59 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::myStartElement")
+        // C++ throw ProcessError is panic_any(ProcessError); the try/catch is catch_unwind + resume_unwind
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if !self.myActivePlan.is_null()
+                && self.myActivePlan.is_empty()
+                && self.myVehicleParameter.departProcedure == DepartDefinition::TRIGGERED
+                && element != SUMO_TAG_RIDE
+                && element != SUMO_TAG_PARAM
+            {
+                throw_process_error(format!("Triggered departure for person '{}' requires starting with a ride.", self.myVehicleParameter.id));
+            } else if !self.myActiveContainerPlan.is_null()
+                && self.myActiveContainerPlanSize == 0
+                && self.myVehicleParameter.departProcedure == DepartDefinition::TRIGGERED
+                && element != SUMO_TAG_TRANSPORT
+                && element != SUMO_TAG_PARAM
+            {
+                throw_process_error(format!("Triggered departure for container '{}' requires starting with a transport.", self.myVehicleParameter.id));
+            }
+            self.base.my_start_element(element, attrs);
+            let mut ok = true;
+            match element {
+                SUMO_TAG_PERSON | SUMO_TAG_PERSONFLOW => {
+                    self.myActivePlan = Ptr::from_raw(Box::into_raw(Box::new(Vec::new())));
+                }
+                SUMO_TAG_RIDE => {
+                    // handled in addRide, called from SUMORouteHandler::myStartElement
+                }
+                SUMO_TAG_CONTAINER | SUMO_TAG_CONTAINERFLOW => {
+                    self.myActiveContainerPlan = Ptr::from_raw(Box::into_raw(Box::new(OutputDevice::new_string(1))));
+                    self.myActiveContainerPlanSize = 0;
+                    self.myActiveContainerPlan.m().open_tag_id(element);
+                    self.myActiveContainerPlan.m().write(&attrs.serialize());
+                }
+                SUMO_TAG_TRANSPORT | SUMO_TAG_TRANSHIP => {
+                    if self.myActiveContainerPlan.is_null() {
+                        throw_process_error(format!("Found {} outside container element", tag_to_string(element)));
+                    }
+                    // copy container elements
+                    self.myActiveContainerPlan.m().open_tag_id(element);
+                    self.myActiveContainerPlan.m().write(&attrs.serialize());
+                    self.myActiveContainerPlan.m().close_tag("");
+                    self.myActiveContainerPlanSize += 1;
+                }
+                SUMO_TAG_FLOW | SUMO_TAG_TRIP => {
+                    self.myActiveRouteProbability = DEFAULT_VEH_PROB;
+                    self.parse_from_via_to(element, attrs, &mut ok);
+                }
+                _ => {}
+            }
+        }));
+        if let Err(payload) = result {
+            self.delete_active_plan_and_vehicle_parameter();
+            std::panic::resume_unwind(payload);
+        }
     }
 
     /// C++: `void RORouteHandler::parseFromViaTo(SumoXMLTag, const SUMOSAXAttributes &, bool &)` [protected]
@@ -329,7 +461,161 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_from_via_to(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes, ok: &mut bool) {
-        todo!("port RORouteHandler::parseFromViaTo")
+        let element = tag_to_string(tag);
+        self.myActiveRoute.clear();
+        let mut useTaz = self.myUseTaz;
+        if self.myUseTaz && !self.myVehicleParameter.was_set(VEHPARS_FROM_TAZ_SET) && !self.myVehicleParameter.was_set(VEHPARS_TO_TAZ_SET) {
+            write_warningf!("Taz usage was requested but no taz present in % '%'!", element, self.myVehicleParameter.id);
+            useTaz = false;
+        }
+        // MapMatcher member, copied from the mapmatch.taz option
+        let myMapMatchTAZ = utils::options::options_cont::get_bool("mapmatch.taz");
+        let mut vClass: SUMOVehicleClass = SVC_PASSENGER;
+        let net = self.myNet;
+        if net.m().get_v_type_distribution(&self.myVehicleParameter.vtypeid).is_null() {
+            let type_ = net.m().get_vehicle_type_secure(&self.myVehicleParameter.vtypeid);
+            if !type_.is_null() {
+                vClass = type_.vehicleClass;
+            }
+        }
+        // from-attributes
+        let rid = format!("for {} '{}'", element, self.myVehicleParameter.id);
+        if (useTaz || (!attrs.has_attribute(SUMO_ATTR_FROM) && !attrs.has_attribute(SUMO_ATTR_FROMXY) && !attrs.has_attribute(SUMO_ATTR_FROMLONLAT)))
+            && (attrs.has_attribute(SUMO_ATTR_FROM_TAZ) || attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION))
+        {
+            let useJunction = attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION);
+            let tazType = if useJunction { "junction" } else { "taz" };
+            let tazID: String = attrs.get(if useJunction { SUMO_ATTR_FROM_JUNCTION } else { SUMO_ATTR_FROM_TAZ }, &self.myVehicleParameter.id, ok, true);
+            let fromTaz = self.myNet.get_edge(&format!("{}-source", tazID));
+            if fromTaz.is_null() {
+                let msg = format!(
+                    "Source {} '{}' not known for {} '{}'!{}",
+                    tazType,
+                    tazID,
+                    element,
+                    self.myVehicleParameter.id,
+                    if useJunction { JUNCTION_TAZ_MISSING_HELP } else { "" }
+                );
+                self.myErrorOutput.m().inform(&msg, true);
+                *ok = false;
+            } else if fromTaz.get_num_successors() == 0 && tag != SUMO_TAG_PERSON {
+                let msg = format!("Source {} '{}' has no outgoing edges for {} '{}'!", tazType, tazID, element, self.myVehicleParameter.id);
+                self.myErrorOutput.m().inform(&msg, true);
+                *ok = false;
+            } else {
+                self.myActiveRoute.push(fromTaz);
+                if useJunction && tag != SUMO_TAG_PERSON && !self.myWriteJunctions {
+                    self.myVehicleParameter.m().fromTaz = tazID;
+                    self.myVehicleParameter.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
+                }
+            }
+        } else if attrs.has_attribute(SUMO_ATTR_FROMXY) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_FROMXY, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, true, ok);
+            if myMapMatchTAZ && *ok {
+                self.myVehicleParameter.m().fromTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
+                self.myVehicleParameter.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
+            }
+        } else if attrs.has_attribute(SUMO_ATTR_FROMLONLAT) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_FROMLONLAT, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, true, ok);
+            if myMapMatchTAZ && *ok {
+                self.myVehicleParameter.m().fromTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
+                self.myVehicleParameter.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
+            }
+        } else {
+            let desc: String = attrs.get_opt(SUMO_ATTR_FROM, &self.myVehicleParameter.id, ok, String::new(), true);
+            let mut route = std::mem::take(&mut self.myActiveRoute);
+            self.parse_edges(&desc, &mut route, &rid, ok);
+            self.myActiveRoute = route;
+        }
+        if !attrs.has_attribute(SUMO_ATTR_VIA) && !attrs.has_attribute(SUMO_ATTR_VIALONLAT) && !attrs.has_attribute(SUMO_ATTR_VIAXY) {
+            self.myInsertStopEdgesAt = self.myActiveRoute.len() as i32;
+        }
+
+        // via-attributes
+        let mut viaEdges: ConstROEdgeVector = Vec::new();
+        if attrs.has_attribute(SUMO_ATTR_VIAXY) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_VIAXY, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, ok);
+        } else if attrs.has_attribute(SUMO_ATTR_VIALONLAT) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_VIALONLAT, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, ok);
+        } else if attrs.has_attribute(SUMO_ATTR_VIAJUNCTIONS) {
+            let junctionIDs: Vec<String> = attrs.get(SUMO_ATTR_VIAJUNCTIONS, &self.myVehicleParameter.id, ok, true);
+            for junctionID in junctionIDs {
+                let viaSink = self.myNet.get_edge(&format!("{}-sink", junctionID));
+                if viaSink.is_null() {
+                    let msg = format!("Junction-taz '{}' not found.{}", junctionID, JUNCTION_TAZ_MISSING_HELP);
+                    self.myErrorOutput.m().inform(&msg, true);
+                    *ok = false;
+                } else {
+                    viaEdges.push(viaSink);
+                }
+            }
+        } else {
+            let desc: String = attrs.get_opt(SUMO_ATTR_VIA, &self.myVehicleParameter.id, ok, String::new(), true);
+            self.parse_edges(&desc, &mut viaEdges, &rid, ok);
+        }
+        for e in viaEdges.iter() {
+            self.myActiveRoute.push(*e);
+            self.myVehicleParameter.m().via.push(e.get_id().to_string());
+        }
+
+        // to-attributes
+        if (useTaz || (!attrs.has_attribute(SUMO_ATTR_TO) && !attrs.has_attribute(SUMO_ATTR_TOXY) && !attrs.has_attribute(SUMO_ATTR_TOLONLAT)))
+            && (attrs.has_attribute(SUMO_ATTR_TO_TAZ) || attrs.has_attribute(SUMO_ATTR_TO_JUNCTION))
+        {
+            let useJunction = attrs.has_attribute(SUMO_ATTR_TO_JUNCTION);
+            let tazType = if useJunction { "junction" } else { "taz" };
+            let tazID: String = attrs.get(if useJunction { SUMO_ATTR_TO_JUNCTION } else { SUMO_ATTR_TO_TAZ }, &self.myVehicleParameter.id, ok, true);
+            let toTaz = self.myNet.get_edge(&format!("{}-sink", tazID));
+            if toTaz.is_null() {
+                let msg = format!(
+                    "Sink {} '{}' not known for {} '{}'!{}",
+                    tazType,
+                    tazID,
+                    element,
+                    self.myVehicleParameter.id,
+                    if useJunction { JUNCTION_TAZ_MISSING_HELP } else { "" }
+                );
+                self.myErrorOutput.m().inform(&msg, true);
+                *ok = false;
+            } else if toTaz.get_num_predecessors() == 0 && tag != SUMO_TAG_PERSON {
+                let msg = format!("Sink {} '{}' has no incoming edges for {} '{}'!", tazType, tazID, element, self.myVehicleParameter.id);
+                self.myErrorOutput.m().inform(&msg, true);
+                *ok = false;
+            } else {
+                self.myActiveRoute.push(toTaz);
+                if useJunction && tag != SUMO_TAG_PERSON && !self.myWriteJunctions {
+                    self.myVehicleParameter.m().toTaz = tazID;
+                    self.myVehicleParameter.m().parametersSet |= VEHPARS_TO_TAZ_SET;
+                }
+            }
+        } else if attrs.has_attribute(SUMO_ATTR_TOXY) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_TOXY, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, false, ok);
+            if myMapMatchTAZ && *ok {
+                self.myVehicleParameter.m().toTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
+                self.myVehicleParameter.m().parametersSet |= VEHPARS_TO_TAZ_SET;
+            }
+        } else if attrs.has_attribute(SUMO_ATTR_TOLONLAT) {
+            let pv: PositionVector = attrs.get(SUMO_ATTR_TOLONLAT, &self.myVehicleParameter.id, ok, true);
+            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, false, ok);
+            if myMapMatchTAZ && *ok {
+                self.myVehicleParameter.m().toTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
+                self.myVehicleParameter.m().parametersSet |= VEHPARS_TO_TAZ_SET;
+            }
+        } else {
+            let desc: String = attrs.get_opt(SUMO_ATTR_TO, &self.myVehicleParameter.id, ok, String::new(), true);
+            let mut route = std::mem::take(&mut self.myActiveRoute);
+            self.parse_edges(&desc, &mut route, &rid, ok);
+            self.myActiveRoute = route;
+        }
+        self.myActiveRouteID = format!("!{}", self.myVehicleParameter.id);
+        if self.myVehicleParameter.routeid == "" {
+            self.myVehicleParameter.m().routeid = self.myActiveRouteID.clone();
+        }
     }
 
     /// C++: `void RORouteHandler::openVehicleTypeDistribution(const SUMOSAXAttributes &)` [virtual, protected]
@@ -381,7 +667,55 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_vehicle_type_distribution(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::openVehicleTypeDistribution")
+        let mut ok = true;
+        self.myCurrentVTypeDistributionID = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if ok {
+            self.myCurrentVTypeDistribution = Ptr::from_raw(Box::into_raw(Box::new(RandomDistributor::default())));
+            if attrs.has_attribute(SUMO_ATTR_VTYPES) {
+                let mut probs: Vec<f64> = Vec::new();
+                if attrs.has_attribute(SUMO_ATTR_PROBS) {
+                    let probsStr: String = attrs.get(SUMO_ATTR_PROBS, &self.myCurrentVTypeDistributionID, &mut ok, true);
+                    let mut st = StringTokenizer::new(&probsStr);
+                    while st.has_next() {
+                        let next = st.next().unwrap();
+                        // C++ toDoubleSecure throws on a malformed value
+                        probs.push(utils::common::string_utils::to_double_secure(&next, 1.0).unwrap_or_else(|e| std::panic::panic_any(e)));
+                    }
+                }
+                let vTypes: String = attrs.get(SUMO_ATTR_VTYPES, &self.myCurrentVTypeDistributionID, &mut ok, true);
+                let mut st = StringTokenizer::new(&vTypes);
+                let mut probIndex: i32 = 0;
+                while st.has_next() {
+                    let typeID = st.next().unwrap();
+                    let dist = self.myNet.m().get_v_type_distribution(&typeID);
+                    if !dist.is_null() {
+                        let distProb = (if (probs.len() as i32) > probIndex { probs[probIndex as usize] } else { 1.0 }) / dist.get_overall_prob();
+                        let distProbs = dist.get_probs();
+                        for (i, type_) in dist.get_vals().iter().enumerate() {
+                            self.myCurrentVTypeDistribution.m().add(*type_, distProb * distProbs[i], true);
+                        }
+                    } else {
+                        let type_ = self.myNet.m().get_vehicle_type_secure(&typeID);
+                        if type_.is_null() {
+                            let msg = format!("Unknown vehicle type '{}' in distribution '{}'.", typeID, self.myCurrentVTypeDistributionID);
+                            self.myErrorOutput.m().inform(&msg, true);
+                        } else {
+                            let prob = if (probs.len() as i32) > probIndex { probs[probIndex as usize] } else { type_.defaultProbability };
+                            self.myCurrentVTypeDistribution.m().add(type_, prob, true);
+                        }
+                    }
+                    probIndex += 1;
+                }
+                if probs.len() > 0 && probIndex != (probs.len() as i32) {
+                    write_warning(&format!(
+                        "Got {} probabilities for {} types in vTypeDistribution '{}'",
+                        probs.len(),
+                        probIndex,
+                        self.myCurrentVTypeDistributionID
+                    ));
+                }
+            }
+        }
     }
 
     /// C++: `void RORouteHandler::closeVehicleTypeDistribution()` [virtual, protected]
@@ -401,7 +735,18 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_vehicle_type_distribution(&mut self) {
-        todo!("port RORouteHandler::closeVehicleTypeDistribution")
+        if !self.myCurrentVTypeDistribution.is_null() {
+            if self.myCurrentVTypeDistribution.get_overall_prob() == 0. {
+                delete_ptr(self.myCurrentVTypeDistribution);
+                let msg = format!("Vehicle type distribution '{}' is empty.", self.myCurrentVTypeDistributionID);
+                self.myErrorOutput.m().inform(&msg, true);
+            } else if !self.myNet.m().add_v_type_distribution(&self.myCurrentVTypeDistributionID, self.myCurrentVTypeDistribution) {
+                delete_ptr(self.myCurrentVTypeDistribution);
+                let msg = format!("Another vehicle type (or distribution) with the id '{}' exists.", self.myCurrentVTypeDistributionID);
+                self.myErrorOutput.m().inform(&msg, true);
+            }
+            self.myCurrentVTypeDistribution = Ptr::null();
+        }
     }
 
     /// C++: `void RORouteHandler::openRoute(const SUMOSAXAttributes &)` [virtual, protected]
@@ -471,7 +816,81 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_route(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::openRoute")
+        self.myActiveRoute.clear();
+        self.myInsertStopEdgesAt = -1;
+        // check whether the id is really necessary
+        let mut rid = String::new();
+        if !self.myCurrentAlternatives.is_null() {
+            self.myActiveRouteID = self.myCurrentAlternatives.get_id().to_string();
+            rid = format!("distribution '{}'", self.myCurrentAlternatives.get_id());
+        } else if !self.myVehicleParameter.is_null() {
+            // ok, a vehicle is wrapping the route, we may use this vehicle's id as default
+            let routeid = format!("!{}", self.myVehicleParameter.id);
+            self.myVehicleParameter.m().routeid = routeid.clone();
+            self.myActiveRouteID = routeid;
+            if attrs.has_attribute(SUMO_ATTR_ID) {
+                write_warningf!("Ids of internal routes are ignored (vehicle '%').", self.myVehicleParameter.id);
+            }
+        } else {
+            let mut ok = true;
+            self.myActiveRouteID = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+            if !ok {
+                return;
+            }
+            rid = format!("'{}'", self.myActiveRouteID);
+        }
+        if !self.myVehicleParameter.is_null() {
+            // have to do this here for nested route distributions
+            rid = format!("for vehicle '{}'", self.myVehicleParameter.id);
+        }
+        let mut ok = true;
+        if attrs.has_attribute(SUMO_ATTR_EDGES) {
+            let desc: String = attrs.get(SUMO_ATTR_EDGES, &self.myActiveRouteID, &mut ok, true);
+            let mut route = std::mem::take(&mut self.myActiveRoute);
+            self.parse_edges(&desc, &mut route, &rid, &mut ok);
+            self.myActiveRoute = route;
+        }
+        self.myActiveRouteRefID = attrs.get_opt(SUMO_ATTR_REFID, &self.myActiveRouteID, &mut ok, String::new(), true);
+        if self.myActiveRouteRefID != "" && self.myNet.get_route_def(&self.myActiveRouteRefID).is_null() {
+            let msg = format!("Invalid reference to route '{}' in route {}.", self.myActiveRouteRefID, rid);
+            self.myErrorOutput.m().inform(&msg, true);
+        }
+        if !self.myCurrentAlternatives.is_null() && !attrs.has_attribute(SUMO_ATTR_PROB) {
+            write_warningf!("No probability for route %, using default.", rid);
+        }
+        let prob: f64 = attrs.get_opt(SUMO_ATTR_PROB, &self.myActiveRouteID, &mut ok, DEFAULT_VEH_PROB, true);
+        self.myActiveRouteProbability = prob;
+        if ok && self.myActiveRouteProbability < 0. {
+            let msg = format!("Invalid probability for route '{}'.", self.myActiveRouteID);
+            self.myErrorOutput.m().inform(&msg, true);
+        }
+        self.myActiveRouteColor = if attrs.has_attribute(SUMO_ATTR_COLOR) {
+            let color: RGBColor = attrs.get(SUMO_ATTR_COLOR, &self.myActiveRouteID, &mut ok, true);
+            Ptr::from_raw(Box::into_raw(Box::new(color)))
+        } else {
+            Ptr::null()
+        };
+        ok = true;
+        self.myActiveRouteRepeat = attrs.get_opt(SUMO_ATTR_REPEAT, &self.myActiveRouteID, &mut ok, 0, true);
+        self.myActiveRoutePeriod = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_CYCLETIME, &self.myActiveRouteID, &mut ok, 0, true);
+        if self.myActiveRouteRepeat > 0 {
+            let mut vClass: SUMOVehicleClass = SVC_IGNORING;
+            if !self.myVehicleParameter.is_null() {
+                let type_ = self.myNet.m().get_vehicle_type_secure(&self.myVehicleParameter.vtypeid);
+                if !type_.is_null() {
+                    vClass = type_.vehicleClass;
+                }
+            }
+            if self.myActiveRoute.len() > 0 && !self.myActiveRoute.last().unwrap().is_connected_to(&self.myActiveRoute[0], vClass, false) {
+                let msg = format!("Disconnected route {} when repeating.", rid);
+                self.myErrorOutput.m().inform(&msg, true);
+            }
+        }
+        self.myCurrentCosts = attrs.get_opt(SUMO_ATTR_COST, &self.myActiveRouteID, &mut ok, -1., true);
+        if ok && self.myCurrentCosts != -1. && self.myCurrentCosts < 0. {
+            let msg = format!("Invalid cost for route '{}'.", self.myActiveRouteID);
+            self.myErrorOutput.m().inform(&msg, true);
+        }
     }
 
     /// C++: `void RORouteHandler::openFlow(const SUMOSAXAttributes &)` [virtual, protected]
@@ -482,7 +901,7 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::openFlow")
+        // C++ body is empty (currently unused)
     }
 
     /// C++: `void RORouteHandler::openRouteFlow(const SUMOSAXAttributes &)` [virtual, protected]
@@ -493,7 +912,7 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_route_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::openRouteFlow")
+        // C++ body is empty (currently unused)
     }
 
     /// C++: `void RORouteHandler::openTrip(const SUMOSAXAttributes &)` [virtual, protected]
@@ -504,7 +923,7 @@ impl RORouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn open_trip(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RORouteHandler::openTrip")
+        // C++ body is empty (currently unused)
     }
 
     /// C++: `void RORouteHandler::closeRoute(const bool)` [virtual, protected]
