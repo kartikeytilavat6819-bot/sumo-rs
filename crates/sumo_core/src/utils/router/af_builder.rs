@@ -12,13 +12,13 @@ pub type AFBuilder_FlippedLookupTable = Unmapped /* AbstractLookupTable<FlippedE
 /// C++ class `AFBuilder` (utils/router/AFBuilder.h)
 pub struct AFBuilder<E, N, V, M> {
     /// The edges
-    pub myEdges: Ptr<i32>,
+    pub myEdges: Ptr<Vec<Ptr<E>>>,
     /// The flipped (backward) edges
-    pub myFlippedEdges: i32,
+    pub myFlippedEdges: Vec<Ptr<FlippedEdge<E, N, V>>>,
     /// The k-d tree partition of the backward graph with flipped edges
     pub myFlippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>,
     /// The flag informations
-    pub myFlagInfos: i32,
+    pub myFlagInfos: Vec<Ptr<AFInfo_FlagInfo>>,
     /// The arc flag build
     pub myArcFlagBuild: Ptr<AFBuild<E, N, V, M>>,
     /// The number of levels of the k-d tree partition of the network
@@ -73,8 +73,31 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn new(numberOfLevels: i32, edges: &i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
-        todo!("port AFBuilder::AFBuilder<E, N, V, M>")
+    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Box<Self> {
+        let mut b = Box::new(Self {
+            myEdges: Ptr::new(edges),
+            myFlippedEdges: Vec::new(),
+            myFlippedPartition: Ptr::null(),
+            myFlagInfos: Vec::new(),
+            myArcFlagBuild: Ptr::null(),
+            myNumberOfLevels: numberOfLevels,
+            myNumberOfArcFlags: 2 * (numberOfLevels - 1),
+            myAmClean: true,
+            _p: std::marker::PhantomData,
+        });
+        for edge in edges.iter() {
+            b.myFlagInfos.push(Ptr::from_mut(Box::leak(Box::new(AFInfo_FlagInfo::new((*edge).cast::<Unmapped>())))));
+        }
+        // build the backward graph with flipped edges / nodes in advance
+        for edge in edges.iter() {
+            b.myFlippedEdges.push(e_flipped_routing_edge(*edge));
+        }
+        for flippedEdge in b.myFlippedEdges.iter() {
+            flippedEdge.m().init();
+        }
+        b.myFlippedPartition = Ptr::from_mut(Box::leak(Box::new(KDTreePartition::new(numberOfLevels, &b.myFlippedEdges, havePermissions, haveRestrictions))));
+        b.myArcFlagBuild = Ptr::from_mut(Box::leak(AFBuild::new(&b.myFlippedEdges, b.myFlippedPartition, numberOfLevels, unbuildIsWarning, flippedOperation, flippedLookup, havePermissions, haveRestrictions, toProhibit)));
+        b
     }
 
     /// C++: `void AFBuilder::~AFBuilder<E, N, V, M>()`
@@ -89,7 +112,7 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AFBuilder::~AFBuilder<E, N, V, M>")
+        // shortcut: C++ deletes owned members (ArcFlagBuild, FlippedPartition, FlagInfos); Rust leaks them like the other ports, upgrade when ownership is ported
     }
 
     /// C++: `AFBuild<E, N, V, M> * AFBuilder::getArcFlagBuild()`
@@ -99,7 +122,7 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn get_arc_flag_build(&mut self) -> Ptr<AFBuild<E, N, V, M>> {
-        todo!("port AFBuilder::getArcFlagBuild")
+        self.myArcFlagBuild
     }
 
     /// C++: `const int & AFBuilder::getEdges()`
@@ -108,8 +131,8 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     //         return myEdges;
     //     }
     #[allow(unused_variables)]
-    pub fn get_edges(&mut self) -> &i32 {
-        todo!("port AFBuilder::getEdges")
+    pub fn get_edges(&mut self) -> &Vec<Ptr<E>> {
+        self.myEdges.m()
     }
 
     /// C++: `void AFBuilder::reset()`
@@ -123,7 +146,10 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port AFBuilder::reset")
+        for flagInfo in self.myFlagInfos.iter() {
+            flagInfo.m().reset();
+        }
+        self.myAmClean = true;
     }
 
     /// C++: `int & AFBuilder::build(SUMOTime, const V *const)`
@@ -168,8 +194,23 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     //     return myFlagInfos;
     // }
     #[allow(unused_variables)]
-    pub fn build(&mut self, msTime: SUMOTime, vehicle: Ptr<V>) -> &mut i32 {
-        todo!("port AFBuilder::build")
+    pub fn build(&mut self, msTime: SUMOTime, vehicle: Ptr<V>) -> &mut Vec<Ptr<AFInfo_FlagInfo>> {
+        if !self.myAmClean {
+            self.reset();
+        }
+        assert!(!self.myFlippedPartition.is_null());
+        if self.myFlippedPartition.m().is_clean() {
+            self.myFlippedPartition.m().init(vehicle);
+            self.myArcFlagBuild.m().set_flipped_partition(self.myFlippedPartition);
+        } else {
+            self.myFlippedPartition.m().reset(vehicle);
+        }
+        assert!(!self.myArcFlagBuild.is_null());
+        self.myArcFlagBuild.m().init(msTime, vehicle, &mut self.myFlagInfos);
+        // delete myFlippedPartition: leaked (see drop_), pointer cleared as in C++
+        self.myFlippedPartition = Ptr::null();
+        self.myAmClean = false;
+        &mut self.myFlagInfos
     }
 
     /// C++: `int AFBuilder::sHARCLevel2PartitionLevel(int)`
@@ -179,8 +220,12 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn s_harc_level2_partition_level(&mut self, sHARCLevel: i32) -> i32 {
-        todo!("port AFBuilder::sHARCLevel2PartitionLevel")
+        AFRouter::<E, N, V, M>::s_harc_level2_partition_level(sHARCLevel, self.myNumberOfLevels)
     }
 
 }
 
+// shortcut: needs router trait bounds (lead), E::getFlippedRoutingEdge is not callable on generic E
+fn e_flipped_routing_edge<E, N, V>(_e: Ptr<E>) -> Ptr<FlippedEdge<E, N, V>> {
+    panic!("shortcut: needs router trait bounds (lead), E::getFlippedRoutingEdge")
+}
