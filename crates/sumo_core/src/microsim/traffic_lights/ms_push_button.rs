@@ -1,9 +1,11 @@
 //! Port of microsim/traffic_lights/MSPushButton.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::{Cell, RefCell};
 
 /// Pedestrian push button
 /// C++ class `MSPedestrianPushButton` (microsim/traffic_lights/MSPushButton.h)
+#[repr(C)]
 pub struct MSPedestrianPushButton {
     /// C++ base class `MSPushButton`
     pub base: MSPushButton,
@@ -24,6 +26,10 @@ impl std::ops::DerefMut for MSPedestrianPushButton {
 // C++ static members of MSPedestrianPushButton (port as module-level statics, see AGENTS.md):
 //   static std::map<std::string, std::vector<std::string>> MSPedestrianPushButton::m_crossingEdgeMap;
 //   static bool MSPedestrianPushButton::m_crossingEdgeMapLoaded;
+thread_local! {
+    static M_CROSSING_EDGE_MAP: RefCell<BTreeMap<String, Vec<String>>> = RefCell::new(BTreeMap::new());
+    static M_CROSSING_EDGE_MAP_LOADED: Cell<bool> = Cell::new(false);
+}
 
 impl MSPedestrianPushButton {
     /// C++: `void MSPedestrianPushButton::MSPedestrianPushButton(const MSEdge *, const MSEdge *)`
@@ -35,7 +41,10 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn new(walkingEdge: Ptr<MSEdge>, crossingEdge: Ptr<MSEdge>) -> Self {
-        todo!("port MSPedestrianPushButton::MSPedestrianPushButton")
+        let base = MSPushButton::new(walkingEdge, crossingEdge);
+        debug_assert!(walkingEdge.is_walking_area() || (walkingEdge.get_permissions() & SVC_PEDESTRIAN) != 0);
+        debug_assert!(crossingEdge.is_crossing());
+        Self { base }
     }
 
     /// C++: `void MSPedestrianPushButton::~MSPedestrianPushButton() noexcept` [virtual]
@@ -43,7 +52,7 @@ impl MSPedestrianPushButton {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPedestrianPushButton::~MSPedestrianPushButton")
+        // C++ body is empty
     }
 
     /// C++: `bool MSPedestrianPushButton::isActivated() const` [const, virtual]
@@ -53,7 +62,7 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn is_activated(&self) -> bool {
-        todo!("port MSPedestrianPushButton::isActivated")
+        Self::is_active_for_edge(self.m_edge, self.m_crossingEdge)
     }
 
     /// C++: `bool MSPedestrianPushButton::isActiveForEdge(const MSEdge *, const MSEdge *)` [static]
@@ -120,7 +129,43 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn is_active_for_edge(walkingEdge: Ptr<MSEdge>, crossing: Ptr<MSEdge>) -> bool {
-        todo!("port MSPedestrianPushButton::isActiveForEdge")
+        let persons = walkingEdge.get_persons().clone();
+        if !persons.is_empty() {
+            // determinism: C++ iterates the std::set in numerical-id order; here it is address order.
+            // The loop only ORs a pure predicate, so the boolean result does not depend on the order.
+            for &pIt in persons.iter() {
+                let person: Ptr<MSPerson> = pIt.cast::<MSPerson>();
+                let nextEdge = person.get_next_edge_ptr();
+                if person.get_waiting_seconds() >= 1.0 && !nextEdge.is_null() && nextEdge.get_id() == crossing.get_id() {
+                    return true;
+                }
+            }
+        } else {
+            // No person currently on the edge. But there may be some vehicles of class pedestrian
+            for &lane in walkingEdge.get_lanes().iter() {
+                let vehicles = lane.get_vehicles_secure().clone();
+                for &vehicle in vehicles.iter() {
+                    if vehicle.get_v_class() == SVC_PEDESTRIAN {
+                        // It's a pedestrian
+                        let nextEdge = vehicle.succ_edge(1);
+                        if vehicle.get_waiting_seconds() >= 1.0 && !nextEdge.is_null() {
+                            // Next edge is not internal. Try to find if between the current vehicle edge and the next is the crossing.
+                            // To do that check if between the successors (or predecessor) of crossing is the next edge and walking  precedes (or ensue) it.
+                            if (crossing.get_predecessors().contains(&walkingEdge) && crossing.get_successors(SVC_IGNORING).contains(&nextEdge))
+                                || (crossing.get_successors(SVC_IGNORING).contains(&walkingEdge) && crossing.get_predecessors().contains(&nextEdge))
+                            {
+                                // Also release the vehicles here
+                                lane.release_vehicles();
+                                return true;
+                            }
+                        }
+                    }
+                }
+                lane.release_vehicles();
+            }
+        }
+        // SWARM_DEBUG-only messages are compiled out, as in a default SUMO build
+        false
     }
 
     /// C++: `bool MSPedestrianPushButton::isActiveOnAnySideOfTheRoad(const MSEdge *)` [static]
@@ -140,7 +185,13 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn is_active_on_any_side_of_the_road(crossing: Ptr<MSEdge>) -> bool {
-        todo!("port MSPedestrianPushButton::isActiveOnAnySideOfTheRoad")
+        let walkingList = get_walking_areas(crossing);
+        for &walking in walkingList.iter() {
+            if Self::is_active_for_edge(walking, crossing) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `std::vector<MSPushButton *> MSPedestrianPushButton::loadPushButtons(const MSPhaseDefinition *)` [static]
@@ -181,7 +232,33 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn load_push_buttons(arg0: Ptr<MSPhaseDefinition>) -> Vec<Ptr<MSPushButton>> {
-        todo!("port MSPedestrianPushButton::loadPushButtons")
+        Self::load_crossing_edge_map();
+        let mut pushButtons: Vec<Ptr<MSPushButton>> = Vec::new();
+        let lanes = arg0.get_target_lane_set();
+        // Multiple lane can be of the same edge, so I avoid readding them
+        let mut controlledEdges: BTreeSet<String> = BTreeSet::new();
+        for lIt in lanes.iter() {
+            let lane = MSLane::dictionary_2(lIt);
+            if !lane.is_null() {
+                let laneEdge = Ptr::from_mut(lane.get_edge());
+                if controlledEdges.contains(laneEdge.get_id()) {
+                    continue;
+                }
+                controlledEdges.insert(laneEdge.get_id().to_string());
+                if M_CROSSING_EDGE_MAP.with(|m| m.borrow().contains_key(laneEdge.get_id())) {
+                    // For every crossing edge that crosses this edge
+                    let crossingIds: Vec<String> = M_CROSSING_EDGE_MAP.with(|m| m.borrow()[laneEdge.get_id()].clone());
+                    for cIt in crossingIds.iter() {
+                        let crossing = edge_by_id(cIt);
+                        let walkingList = get_walking_areas(crossing);
+                        for &walking in walkingList.iter() {
+                            pushButtons.push(Ptr::from_raw(Box::into_raw(Box::new(MSPedestrianPushButton::new(walking, crossing)))).cast::<MSPushButton>());
+                        }
+                    }
+                }
+            }
+        }
+        pushButtons
     }
 
     /// C++: `void MSPedestrianPushButton::loadCrossingEdgeMap()` [static, private]
@@ -201,13 +278,23 @@ impl MSPedestrianPushButton {
     // }
     #[allow(unused_variables)]
     pub fn load_crossing_edge_map() {
-        todo!("port MSPedestrianPushButton::loadCrossingEdgeMap")
+        if !M_CROSSING_EDGE_MAP_LOADED.with(|l| l.get()) {
+            M_CROSSING_EDGE_MAP_LOADED.with(|l| l.set(true));
+            for &edge in MSEdge::get_all_edges().iter() {
+                if edge.is_crossing() {
+                    for cId in edge.get_crossing_edges().iter() {
+                        M_CROSSING_EDGE_MAP.with(|m| m.borrow_mut().entry(cId.clone()).or_default().push(edge.get_id().to_string()));
+                    }
+                }
+            }
+        }
     }
 
 }
 
 /// Abstract push button class
 /// C++ class `MSPushButton` (microsim/traffic_lights/MSPushButton.h)
+#[repr(C)]
 pub struct MSPushButton {
     pub m_edge: Ptr<MSEdge>,
     pub m_crossingEdge: Ptr<MSEdge>,
@@ -220,7 +307,7 @@ impl MSPushButton {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPushButton::~MSPushButton")
+        // C++ body is empty: the MSEdge is not deleted here
     }
 
     /// C++: `bool MSPushButton::isActivated() const` [const, virtual, pure virtual]
@@ -228,7 +315,8 @@ impl MSPushButton {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_activated(&self) -> bool {
-        todo!("port MSPushButton::isActivated")
+        // pure virtual in C++: only MSPedestrianPushButton implements it
+        unreachable!("MSPushButton::isActivated is pure virtual")
     }
 
     /// C++: `bool MSPushButton::anyActive(const std::vector<MSPushButton *> &)` [static]
@@ -243,7 +331,13 @@ impl MSPushButton {
     // }
     #[allow(unused_variables)]
     pub fn any_active(arg0: &Vec<Ptr<MSPushButton>>) -> bool {
-        todo!("port MSPushButton::anyActive")
+        for &it in arg0.iter() {
+            // virtual dispatch: the only subclass is MSPedestrianPushButton, whose base is first (repr(C))
+            if it.cast::<MSPedestrianPushButton>().is_activated() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSPushButton::MSPushButton(const MSEdge *, const MSEdge *)` [protected]
@@ -254,9 +348,20 @@ impl MSPushButton {
     // }
     #[allow(unused_variables)]
     pub fn new(edge: Ptr<MSEdge>, crossingEdge: Ptr<MSEdge>) -> Self {
-        todo!("port MSPushButton::MSPushButton")
+        MSPushButton { m_edge: edge, m_crossingEdge: crossingEdge }
     }
 
+}
+
+/// C++ `MSEdge::dictionary(id)` lookup
+// shortcut: linear scan over MSEdge::get_all_edges() because MSEdge::dictionary_2 takes an Unmapped key in ms_edge.rs, switch to MSEdge::dictionary_2 once that is mapped to &str
+fn edge_by_id(id: &str) -> Ptr<MSEdge> {
+    for &edge in MSEdge::get_all_edges().iter() {
+        if !edge.is_null() && edge.get_id() == id {
+            return edge;
+        }
+    }
+    Ptr::null()
 }
 
 /// C++: `void (const std::vector<MSEdge *> &, std::vector<MSEdge *> &) getWalking`
@@ -270,7 +375,11 @@ impl MSPushButton {
 // }
 #[allow(unused_variables)]
 pub fn get_walking(edges: &Vec<Ptr<MSEdge>>, walkingEdges: &mut Vec<Ptr<MSEdge>>) {
-    todo!("port getWalking")
+    for &edge in edges.iter() {
+        if edge.is_walking_area() || (edge.get_permissions() & SVC_PEDESTRIAN) != 0 {
+            walkingEdges.push(edge);
+        }
+    }
 }
 
 /// C++: `const std::vector<MSEdge *> (const MSEdge *) getWalkingAreas`
@@ -283,6 +392,9 @@ pub fn get_walking(edges: &Vec<Ptr<MSEdge>>, walkingEdges: &mut Vec<Ptr<MSEdge>>
 // }
 #[allow(unused_variables)]
 pub fn get_walking_areas(crossing: Ptr<MSEdge>) -> Vec<Ptr<MSEdge>> {
-    todo!("port getWalkingAreas")
+    let mut walkingEdges: Vec<Ptr<MSEdge>> = Vec::new();
+    get_walking(crossing.get_successors(SVC_IGNORING), &mut walkingEdges);
+    get_walking(crossing.get_predecessors(), &mut walkingEdges);
+    walkingEdges
 }
 
