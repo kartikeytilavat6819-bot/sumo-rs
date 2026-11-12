@@ -2,6 +2,8 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+use utils::options::options_cont::{exists, get_bool, get_float, get_int, is_set};
 
 /// C++ typedef `std::map<NBEdge *, PositionVector> NBNodeShapeComputer::GeomsMap`
 pub type NBNodeShapeComputer_GeomsMap = BTreeMap<Ptr<NBEdge>, PositionVector>;
@@ -39,6 +41,24 @@ fn min2(a: f64, b: f64) -> f64 {
 // C++ MIN3(a, b, c) = MIN2(c, a < b ? a : b)
 fn min3(a: f64, b: f64, c: f64) -> f64 {
     min2(c, if a < b { a } else { b })
+}
+
+/// C++ `NBNode::UNSPECIFIED_RADIUS` (netbuild/NBNode.cpp)
+const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.0;
+/// C++ `NBEdge::UNSPECIFIED_WIDTH` (netbuild/NBEdge.cpp)
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
+
+/// C++ `geoms[e]` (operator[] inserts an empty geometry for a missing edge)
+fn geom_get(geoms: &mut NBNodeShapeComputer_GeomsMap, e: Ptr<NBEdge>) -> PositionVector {
+    geoms.entry(e).or_default().clone()
+}
+/// C++ `geoms[e][idx]` (operator[] inserts an empty geometry for a missing edge)
+fn geom_pos(geoms: &mut NBNodeShapeComputer_GeomsMap, e: Ptr<NBEdge>, idx: i32) -> Position {
+    *geoms.entry(e).or_default().at(idx)
+}
+/// C++ `distances[e]` read (operator[] yields 0 for a missing edge)
+fn dget(distances: &BTreeMap<Ptr<NBEdge>, f64>, e: Ptr<NBEdge>) -> f64 {
+    distances.get(&e).copied().unwrap_or(0.0)
 }
 
 impl NBNodeShapeComputer {
@@ -547,7 +567,314 @@ impl NBNodeShapeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_node_shape_default(&mut self, simpleContinuation: bool) -> PositionVector {
-        todo!("port NBNodeShapeComputer::computeNodeShapeDefault")
+        use utils::geom::geom_helper::{deg2rad, rad2deg};
+        let node = self.myNode;
+        // if we have less than two edges, we can not compute the node's shape this way
+        if node.get_edges().len() < 2 {
+            return PositionVector::new();
+        }
+        // magic values
+        let defaultRadius = utils::options::options_cont::with_options(|oc| self.get_default_radius(oc));
+        let useDefaultRadius = node.get_radius() == NBNODE_UNSPECIFIED_RADIUS || node.get_radius() == defaultRadius;
+        self.myRadius = if useDefaultRadius { defaultRadius } else { node.get_radius() };
+        let smallRadius = if useDefaultRadius { get_float("junctions.small-radius") } else { self.myRadius };
+        let cornerDetail = get_int("junctions.corner-detail");
+        let sCurveStretch = get_float("junctions.scurve-stretch");
+        let useEndpoints = get_bool("junctions.endpoint-shape");
+        let rectangularCut = get_bool("rectangular-lane-cut");
+        let openDriveOutput = is_set("opendrive-output");
+        // Extend geometries to move the stop line forward (OpenDRIVE junction start heuristic)
+        let advanceStopLine = if exists("opendrive-files") && is_set("opendrive-files") { get_float("opendrive.advance-stopline") } else { 0.0 };
+        let ext = self.EXT;
+
+        // initialise
+        // edges located in the value-vector have the same direction as the key edge
+        let mut same: BTreeMap<Ptr<NBEdge>, BTreeSet<Ptr<NBEdge>>> = BTreeMap::new();
+        // the counter-clockwise boundary of the edge regarding possible same-direction edges
+        let mut geomsCCW: NBNodeShapeComputer_GeomsMap = BTreeMap::new();
+        // the clockwise boundary of the edge regarding possible same-direction edges
+        let mut geomsCW: NBNodeShapeComputer_GeomsMap = BTreeMap::new();
+        let usedEdges: EdgeVector = node.get_edges().clone();
+        self.compute_edge_boundaries(&usedEdges, &mut geomsCCW, &mut geomsCW);
+
+        // check which edges are parallel
+        self.join_same_direction_edges(&usedEdges, &mut same, useEndpoints);
+        // compute unique direction list
+        let newAll = self.compute_unique_direction_list(&usedEdges, &mut same, &mut geomsCCW, &mut geomsCW);
+        // if we have only two "directions", let's not compute the geometry using this method
+        if newAll.len() < 2 {
+            return PositionVector::new();
+        }
+
+        // All geoms are outgoing from myNode.
+        // distances: offset at which the intersection ends and the edge starts
+        // distances2: second offset for divided roads
+        // myExtended: edges whose geometry had to be extended to get an intersection
+        let mut distances: BTreeMap<Ptr<NBEdge>, f64> = BTreeMap::new();
+        let mut distances2: BTreeMap<Ptr<NBEdge>, f64> = BTreeMap::new();
+        let mut myExtended: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        let n = newAll.len();
+
+        for i in 0..n {
+            let ei = newAll[i];
+            let mut cwi: usize = 0;
+            let mut ccwi: usize = 0;
+            let mut cad: f64 = 0.0;
+            let mut ccad: f64 = 0.0;
+            Self::init_neighbors(&newAll, i, &mut geomsCW, &mut geomsCCW, &mut cwi, &mut ccwi, &mut cad, &mut ccad);
+            let eCwi = newAll[cwi];
+            let eCcwi = newAll[ccwi];
+
+            // there are only 2 directions and they are almost parallel
+            if eCwi == eCcwi
+                && ((simpleContinuation && (ccad - cad).abs() < 0.1) || (!simpleContinuation && (ccad - cad).abs() < deg2rad(22.5)))
+            {
+                // compute the mean position between both edges ends ...
+                let mut p: Position;
+                if myExtended.contains(&eCcwi) {
+                    p = geom_pos(&mut geomsCCW, eCcwi, 0);
+                    p.add(&geom_pos(&mut geomsCW, eCcwi, 0));
+                    p.mul(0.5);
+                } else {
+                    p = geom_pos(&mut geomsCCW, eCcwi, 0);
+                    p.add(&geom_pos(&mut geomsCW, eCcwi, 0));
+                    p.add(&geom_pos(&mut geomsCCW, ei, 0));
+                    p.add(&geom_pos(&mut geomsCW, ei, 0));
+                    p.mul(0.25);
+                }
+                // ... compute the distance to this point ...
+                let dCcw = geom_get(&mut geomsCCW, ei).nearest_offset_to_point2d(&p, true);
+                let dCw = geom_get(&mut geomsCW, ei).nearest_offset_to_point2d(&p, true);
+                let mut dist = max2(dCcw, dCw);
+                if dist < 0.0 {
+                    if utils::common::sumo_vehicle_class::is_railway(ei.get_permissions(-1)) {
+                        // better not mess up bidi geometries
+                        return PositionVector::new();
+                    }
+                    // ok, the extrapolated geometry does not reach the point:
+                    // append the mean position to the geometry
+                    let mut g = ei.get_geometry().clone();
+                    if node.has_incoming(ei) {
+                        g.push_back_no_double_pos(&p);
+                    } else {
+                        g.push_front_no_double_pos(&p);
+                    }
+                    ei.m().set_geometry(&g, false);
+                    // and rebuild previous information
+                    let mut ccwB = ei.get_ccw_boundary_line(&*node);
+                    ccwB.extrapolate(ext, false, false);
+                    geomsCCW.insert(ei, ccwB);
+                    let mut cwB = ei.get_cw_boundary_line(&*node);
+                    cwB.extrapolate(ext, false, false);
+                    geomsCW.insert(ei, cwB);
+                    // the distance is now = zero (the point we have appended)
+                    distances.insert(ei, ext);
+                    myExtended.insert(ei);
+                } else {
+                    if !simpleContinuation {
+                        dist += self.myRadius;
+                    } else {
+                        // if the angles change, junction should have some size to avoid degenerate shape
+                        let mut radius2 = (ccad - cad).abs() * ei.get_num_lanes() as f64;
+                        if radius2 > NUMERICAL_EPS || openDriveOutput {
+                            radius2 = max2(0.15, radius2);
+                        }
+                        if node.get_crossings().len() > 0 {
+                            let mut width = node.get_crossings()[0].customWidth;
+                            if width == NBEDGE_UNSPECIFIED_WIDTH {
+                                width = get_float("default.crossing-width");
+                            }
+                            radius2 = max2(radius2, width / 2.0);
+                        }
+                        if !useDefaultRadius {
+                            radius2 = max2(radius2, self.myRadius);
+                        }
+                        dist += radius2;
+                    }
+                    distances.insert(ei, dist);
+                }
+            } else {
+                // the angles are different enough to compute the intersection of
+                // the outer boundaries directly (or there are more than 2 directions). The "nearer" neighbor causes the furthest distance
+                let ccwCloser = ccad < cad;
+                let cwLargeTurn = self.needs_large_turn(ei, eCwi, &mut same);
+                let ccwLargeTurn = self.needs_large_turn(ei, eCcwi, &mut same);
+                let neighLargeTurn = if ccwCloser { ccwLargeTurn } else { cwLargeTurn };
+                let neigh2LargeTurn = if ccwCloser { cwLargeTurn } else { ccwLargeTurn };
+                // the border facing the closer neighbor
+                let currGeom = if ccwCloser { geom_get(&mut geomsCCW, ei) } else { geom_get(&mut geomsCW, ei) };
+                // the border facing the far neighbor
+                let currGeom2 = if ccwCloser { geom_get(&mut geomsCW, ei) } else { geom_get(&mut geomsCCW, ei) };
+                // the border of the closer neighbor
+                let neighGeom = if ccwCloser { geom_get(&mut geomsCW, eCcwi) } else { geom_get(&mut geomsCCW, eCwi) };
+                // the border of the far neighbor
+                let neighGeom2 = if ccwCloser { geom_get(&mut geomsCCW, eCwi) } else { geom_get(&mut geomsCW, eCcwi) };
+                // whether the current edge/direction spans a divided road
+                let sameI: BTreeSet<Ptr<NBEdge>> = same.entry(ei).or_default().clone();
+                let keepBothDistances = self.is_divided(ei, sameI, &geom_get(&mut geomsCCW, ei), &geom_get(&mut geomsCW, ei));
+                if !simpleContinuation {
+                    if useEndpoints && !ei.has_default_geometry_endpoint_at_node(node) {
+                        distances.insert(ei, ext);
+                    } else if currGeom.intersects_pv(&neighGeom) {
+                        let base = if neighLargeTurn { self.myRadius } else { smallRadius };
+                        let ci = self.closest_intersection(&currGeom, &neighGeom, ext);
+                        distances.insert(ei, base + ci);
+                        if eCwi != eCcwi && currGeom2.intersects_pv(&neighGeom2) {
+                            // also use the second intersection point
+                            // but prevent very large node shapes
+                            let farAngleDist = if ccwCloser { cad } else { ccad };
+                            let a1 = dget(&distances, ei);
+                            let base2 = if neigh2LargeTurn { self.myRadius } else { smallRadius };
+                            let ci2 = self.closest_intersection(&currGeom2, &neighGeom2, ext);
+                            let a2 = base2 + ci2;
+                            if a2 <= ext {
+                                if keepBothDistances {
+                                    if ccwCloser {
+                                        distances2.insert(ei, a2);
+                                    } else {
+                                        distances.insert(ei, a2);
+                                        distances2.insert(ei, a1);
+                                    }
+                                } else {
+                                    distances.insert(ei, max2(a1, a2));
+                                }
+                            } else if ccad > deg2rad(90.0 + 45.0)
+                                && cad > deg2rad(90.0 + 45.0)
+                                && ((ccad - cad).abs() > deg2rad(10.0)
+                                    || max2(ccad, cad) > deg2rad(160.0)
+                                    || (a2 - a1) > 7.0
+                                    // keep roundabouts nodes small
+                                    || node.is_roundabout())
+                            {
+                                // ignore a2: do nothing.
+                            } else if farAngleDist < deg2rad(135.0) || ((rad2deg(farAngleDist) - 180.0).abs() > 1.0 && (a2 - a1).abs() < 10.0) {
+                                if keepBothDistances {
+                                    if ccwCloser {
+                                        distances2.insert(ei, a2);
+                                    } else {
+                                        distances.insert(ei, a2);
+                                        distances2.insert(ei, a1);
+                                    }
+                                } else {
+                                    distances.insert(ei, max2(a1, a2));
+                                }
+                            }
+                        }
+                    } else if eCwi != eCcwi && currGeom2.intersects_pv(&neighGeom2) {
+                        let base = if neigh2LargeTurn { self.myRadius } else { smallRadius };
+                        distances.insert(ei, base + currGeom2.intersects_at_lengths2d_pv(&neighGeom2)[0]);
+                    } else {
+                        distances.insert(ei, ext + self.myRadius);
+                    }
+                } else if currGeom.intersects_pv(&neighGeom) {
+                    distances.insert(ei, currGeom.intersects_at_lengths2d_pv(&neighGeom)[0]);
+                } else {
+                    distances.insert(ei, ext);
+                }
+            }
+            if useDefaultRadius && sCurveStretch > 0.0 {
+                let sCurveWidth = node.get_displacement_error();
+                if sCurveWidth > 0.0 {
+                    let sCurveRadius = self.myRadius + sCurveWidth / SUMO_CONST_LANE_WIDTH * sCurveStretch * ei.get_speed().powf(2.0 + sCurveStretch) / 1000.0;
+                    let stretch = ext + sCurveRadius - dget(&distances, ei);
+                    if stretch > 0.0 {
+                        // fixate extended geometry for repeated computation
+                        let nd = dget(&distances, ei) + stretch;
+                        distances.insert(ei, nd);
+                        let shorten = nd - ext;
+                        ei.m().shorten_geometry_at_node(node, shorten);
+                        let sameV: Vec<Ptr<NBEdge>> = same.get(&ei).map(|s| s.iter().copied().collect()).unwrap_or_default();
+                        for k in sameV {
+                            k.m().shorten_geometry_at_node(node, shorten);
+                        }
+                    }
+                }
+            }
+        }
+
+        for &edge in &newAll {
+            if !distances.contains_key(&edge) {
+                distances.insert(edge, ext);
+            }
+        }
+        // because of lane spread right the crossing point may be identical to the junction center and thus the distance is exactly EXT
+        let off = ext - NUMERICAL_EPS;
+        // prevent inverted node shapes (may happen with near-parallel edges)
+        let minDistSum = 2.0 * (ext + self.myRadius);
+        for &edge in &newAll {
+            if dget(&distances, edge) < off && edge.has_default_geometry_endpoint_at_node(node) {
+                for &j in &newAll {
+                    if dget(&distances, j) > off && j.has_default_geometry_endpoint_at_node(node) && dget(&distances, edge) + dget(&distances, j) < minDistSum {
+                        let angleDiff = NBHelpers::rel_angle(edge.get_angle_at_node(node), j.get_angle_at_node(node)).abs();
+                        if angleDiff > 160.0 || angleDiff < 20.0 {
+                            let nd = minDistSum - dget(&distances, j);
+                            distances.insert(edge, nd);
+                        }
+                    }
+                }
+            }
+        }
+
+        // build
+        let mut ret = PositionVector::new();
+        for i in 0..n {
+            let edge = newAll[i];
+            let ccwBound = geom_get(&mut geomsCCW, edge);
+            let cwBound = geom_get(&mut geomsCW, edge);
+            let mut offset = dget(&distances, edge);
+            let mut offset2 = distances2.get(&edge).copied().unwrap_or(offset);
+            if offset != offset2 {
+                // keep rectangular cuts if the difference is small or the roads aren't
+                // really divided by much (unless the angle is very different)
+                let sameEdge: BTreeSet<Ptr<NBEdge>> = same.get(&edge).cloned().unwrap_or_default();
+                let dWidth = Self::division_width(edge, sameEdge, &ccwBound.position_at_offset2d(offset, 0.0, false), &cwBound.position_at_offset2d(offset2, 0.0, false));
+                let angle = rad2deg(utils::geom::geom_helper::angle_diff(ccwBound.angle_at2d(0), cwBound.angle_at2d(0)));
+                let oDelta = (offset - offset2).abs();
+                if ((oDelta < 5.0 || dWidth < 10.0) && angle.abs() < 30.0) || (angle.abs() < 5.0 && node.get_type() != SumoXMLNodeType::RAIL_CROSSING) {
+                    offset = max2(offset, offset2);
+                    offset2 = offset;
+                }
+            }
+            if !edge.has_default_geometry_endpoint_at_node(node) {
+                // for non geometry-endpoints, only shorten but never extend the geometry
+                if advanceStopLine > 0.0 && offset < ext {
+                    // fixate extended geometry for repeated computation
+                    edge.m().extend_geometry_at_node(node, advanceStopLine);
+                    let sameV: Vec<Ptr<NBEdge>> = same.get(&edge).map(|s| s.iter().copied().collect()).unwrap_or_default();
+                    for k in sameV {
+                        k.m().extend_geometry_at_node(node, advanceStopLine);
+                    }
+                }
+                offset = max2(ext - advanceStopLine, offset);
+                offset2 = max2(ext - advanceStopLine, offset2);
+            }
+            if offset == -1.0 {
+                write_warningf!("Fixing offset for edge '%' at node '%.", edge.get_id(), node.get_id());
+                offset = -0.1;
+                offset2 = -0.1;
+            }
+            let mut p = ccwBound.position_at_offset2d(offset, 0.0, false);
+            p.setz(node.get_position().z());
+            if i != 0 {
+                let prev = geom_get(&mut geomsCW, newAll[i - 1]);
+                let corner = self.get_smooth_corner(prev, ccwBound.clone(), ret.at(-1), &p, cornerDetail);
+                ret.append(&corner, 2.0);
+            }
+            let mut p2 = cwBound.position_at_offset2d(offset2, 0.0, false);
+            p2.setz(node.get_position().z());
+            //ret.append(getEdgeCuts(*i, geomsCCW, geomsCW, offset, offset2, same));
+            ret.push_back_no_double_pos(&p);
+            ret.push_back_no_double_pos(&p2);
+            edge.m().set_node_border(node, &p, &p2, rectangularCut);
+            let sameV: Vec<Ptr<NBEdge>> = same.get(&edge).map(|s| s.iter().copied().collect()).unwrap_or_default();
+            for k in sameV {
+                k.m().set_node_border(node, &p, &p2, rectangularCut);
+            }
+        }
+        // final curve segment
+        let corner = self.get_smooth_corner(geom_get(&mut geomsCW, newAll[n - 1]), geom_get(&mut geomsCCW, newAll[0]), ret.at(-1), ret.at(0), cornerDetail);
+        ret.append(&corner, 2.0);
+        ret
     }
 
     /// C++: `const PositionVector NBNodeShapeComputer::computeNodeShapeSmall()` [private]
