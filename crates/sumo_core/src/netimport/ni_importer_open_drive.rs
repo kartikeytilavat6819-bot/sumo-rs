@@ -5595,7 +5595,7 @@ impl NIImporter_OpenDrive {
                 // cicrular shape
                 // GeoConvHelper::getFinal is not ready yet
                 GeoConvHelper::with_loaded(|g| g.cartesian2geo(&mut refPos));
-                let icon: String = POIIcons.get_string(POIIcon::NONE).unwrap().to_string();
+                let icon: String = POIIcons.get_string(POIIcon::NONE).to_string();
                 let mut POI = PointOfInterest::new(&o.id, &o.type_, &RGBColor::YELLOW, &refPos, true, "", -1.0, false, 0.0, &icon, DEFAULT_LAYER, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_WIDTH, DEFAULT_IMG_HEIGHT, DEFAULT_NAME, &BTreeMap::new());
                 POI.base3.set_parameter("name", &o.name);
                 POI.write_xml(&mut dev.borrow_mut(), writeGeo, 0.0, String::new(), 0.0, false, 0.0);
