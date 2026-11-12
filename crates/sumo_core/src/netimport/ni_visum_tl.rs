@@ -1,6 +1,14 @@
 //! Port of netimport/NIVisumTL.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::options::options_cont::get_string;
+
+/// C++ `throw`: raised as a panic carrying the ProcessError until a top-level catch exists
+fn throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
+}
+
 
 /// Intermediate class for storing visum traffic lights during their import
 /// C++ class `NIVisumTL` (netimport/NIVisumTL.h)
@@ -20,7 +28,7 @@ pub struct NIVisumTL {
     /// Map of used phases if phases defined
     pub myPhases: BTreeMap<String, Ptr<NIVisumTL_Phase>>,
     /// Map of used signal groups
-    pub mySignalGroups: BTreeMap<String, Ptr<NBLoadedTLDef_SignalGroup>>,
+    pub mySignalGroups: BTreeMap<String, Ptr<NIVisumTL_SignalGroup>>,
 }
 
 impl NIVisumTL {
@@ -33,7 +41,16 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn new(name: &str, cycleTime: SUMOTime, offset: SUMOTime, intermediateTime: SUMOTime, phaseDefined: bool) -> Self {
-        todo!("port NIVisumTL::NIVisumTL")
+        NIVisumTL {
+            myName: name.to_string(),
+            myCycleTime: cycleTime,
+            myOffset: offset,
+            myIntermediateTime: intermediateTime,
+            myPhaseDefined: phaseDefined,
+            myNodes: Vec::new(),
+            myPhases: BTreeMap::new(),
+            mySignalGroups: BTreeMap::new(),
+        }
     }
 
     /// C++: `void NIVisumTL::~NIVisumTL() noexcept`
@@ -48,7 +65,7 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVisumTL::~NIVisumTL")
+        // the C++ destructor deletes the phases and signal groups; they are leaked by addPhase/addSignalGroup (see there)
     }
 
     /// C++: `void NIVisumTL::addNode(NBNode *)`
@@ -58,7 +75,7 @@ impl NIVisumTL {
     //     }
     #[allow(unused_variables)]
     pub fn add_node(&mut self, n: Ptr<NBNode>) {
-        todo!("port NIVisumTL::addNode")
+        self.myNodes.push(n);
     }
 
     /// C++: `void NIVisumTL::addSignalGroup(const std::string &, SUMOTime, SUMOTime, SUMOTime)`
@@ -69,7 +86,8 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn add_signal_group(&mut self, name: &str, startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) {
-        todo!("port NIVisumTL::addSignalGroup")
+        // shortcut: C++ deletes these in ~NIVisumTL; they are leaked here until that destructor is ported
+        self.mySignalGroups.insert(name.to_string(), Ptr::from_mut(Box::leak(Box::new(NIVisumTL_SignalGroup::new(name, startTime, endTime, yellowTime)))));
     }
 
     /// C++: `void NIVisumTL::addPhase(const std::string &, SUMOTime, SUMOTime, SUMOTime)`
@@ -80,7 +98,8 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn add_phase(&mut self, name: &str, startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) {
-        todo!("port NIVisumTL::addPhase")
+        // shortcut: C++ deletes these in ~NIVisumTL; they are leaked here until that destructor is ported
+        self.myPhases.insert(name.to_string(), Ptr::from_mut(Box::leak(Box::new(NIVisumTL_Phase::new(startTime, endTime, yellowTime)))));
     }
 
     /// C++: `std::map<std::string, Phase *> & NIVisumTL::getPhases()`
@@ -90,15 +109,16 @@ impl NIVisumTL {
     //     }
     #[allow(unused_variables)]
     pub fn get_phases(&mut self) -> &mut BTreeMap<String, Ptr<NIVisumTL_Phase>> {
-        todo!("port NIVisumTL::getPhases")
+        &mut self.myPhases
     }
 
     /// C++: `SignalGroup & NIVisumTL::getSignalGroup(const std::string &)`
     /// Returns the named signal group
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_signal_group(&mut self, name: &str) -> &mut NBLoadedTLDef_SignalGroup {
-        todo!("port NIVisumTL::getSignalGroup")
+    pub fn get_signal_group(&mut self, name: &str) -> &mut NIVisumTL_SignalGroup {
+        // shortcut: C++ has no body for getSignalGroup and operator[] would insert a null entry; a missing group panics here
+        self.mySignalGroups.get(name).expect("unknown signal group").m()
     }
 
     /// C++: `void NIVisumTL::build(NBEdgeCont &, NBTrafficLightLogicCont &)`
@@ -142,7 +162,39 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn build(&mut self, ec: &mut NBEdgeCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NIVisumTL::build")
+        for node in self.myNodes.clone() {
+            if node.is_null() {
+                write_warning(&format!("invalid node for traffic light '{}'", self.myName));
+                continue;
+            }
+            let type_ = throw(TrafficLightTypes.get(&get_string("tls.default-type")));
+            let leaked: &'static mut NBLoadedTLDef = Box::leak(Box::new(NBLoadedTLDef::new_2(ec, node.m().get_id(), node, self.myOffset, type_)));
+            let def = Ptr::from_mut(leaked);
+            tlc.insert(Ptr::from_mut(&mut def.m().base), false);
+            def.m().set_cycle_duration(self.myCycleTime);
+            // signalgroups
+            for (groupName, sg) in self.mySignalGroups.clone() {
+                let SG = sg.m();
+                def.m().add_signal_group(&groupName);
+                def.m().add_to_signal_group_2(&groupName, SG.connections());
+                // phases
+                let mut yellowTime: SUMOTime = -1;
+                if self.myPhaseDefined {
+                    for (_, ph) in SG.phases().clone() {
+                        let PH = ph.m();
+                        def.m().add_signal_group_phase_begin(&groupName, PH.get_start_time(), NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN);
+                        def.m().add_signal_group_phase_begin(&groupName, PH.get_end_time(), NBTrafficLightDefinition_TLColor::TLCOLOR_RED);
+                        yellowTime = std::cmp::max(PH.get_yellow_time(), yellowTime);
+                    }
+                } else {
+                    def.m().add_signal_group_phase_begin(&groupName, SG.get_start_time(), NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN);
+                    def.m().add_signal_group_phase_begin(&groupName, SG.get_end_time(), NBTrafficLightDefinition_TLColor::TLCOLOR_RED);
+                    yellowTime = std::cmp::max(SG.get_yellow_time(), yellowTime);
+                }
+                // yellowTime can be -1 if not given in the input; it will be "patched" later
+                def.m().set_signal_yellow_times(&groupName, self.myIntermediateTime, yellowTime);
+            }
+        }
     }
 
 }
@@ -172,7 +224,7 @@ impl NIVisumTL_Phase {
     // Phase(SUMOTime startTime, SUMOTime endTime, SUMOTime yellowTime) : NIVisumTL::TimePeriod(startTime, endTime, yellowTime) {}
     #[allow(unused_variables)]
     pub fn new(startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) -> Self {
-        todo!("port Phase::Phase")
+        NIVisumTL_Phase { base: NIVisumTL_TimePeriod::new(startTime, endTime, yellowTime) }
     }
 
     /// C++: `void Phase::~Phase() noexcept`
@@ -180,7 +232,7 @@ impl NIVisumTL_Phase {
     // ~Phase() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Phase::~Phase")
+        // the C++ destructor has no body
     }
 
 }
@@ -217,7 +269,12 @@ impl NIVisumTL_SignalGroup {
     //             : NIVisumTL::TimePeriod(startTime, endTime, yellowTime), myName(name) {}
     #[allow(unused_variables)]
     pub fn new(name: &str, startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) -> Self {
-        todo!("port SignalGroup::SignalGroup")
+        NIVisumTL_SignalGroup {
+            base: NIVisumTL_TimePeriod::new(startTime, endTime, yellowTime),
+            myConnections: Vec::new(),
+            myPhases: BTreeMap::new(),
+            myName: name.to_string(),
+        }
     }
 
     /// C++: `void SignalGroup::~SignalGroup() noexcept`
@@ -225,7 +282,7 @@ impl NIVisumTL_SignalGroup {
     // ~SignalGroup() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SignalGroup::~SignalGroup")
+        // the C++ destructor has no body
     }
 
     /// C++: `NBConnectionVector & SignalGroup::connections()`
@@ -235,7 +292,7 @@ impl NIVisumTL_SignalGroup {
     //         }
     #[allow(unused_variables)]
     pub fn connections(&mut self) -> &mut NBConnectionVector {
-        todo!("port SignalGroup::connections")
+        &mut self.myConnections
     }
 
     /// C++: `std::map<std::string, Phase *> & SignalGroup::phases()`
@@ -245,7 +302,7 @@ impl NIVisumTL_SignalGroup {
     //         }
     #[allow(unused_variables)]
     pub fn phases(&mut self) -> &mut BTreeMap<String, Ptr<NIVisumTL_Phase>> {
-        todo!("port SignalGroup::phases")
+        &mut self.myPhases
     }
 
 }
@@ -268,7 +325,7 @@ impl NIVisumTL_TimePeriod {
     //             : myStartTime(startTime), myEndTime(endTime), myYellowTime(yellowTime) {}
     #[allow(unused_variables)]
     pub fn new(startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) -> Self {
-        todo!("port TimePeriod::TimePeriod")
+        NIVisumTL_TimePeriod { myStartTime: startTime, myEndTime: endTime, myYellowTime: yellowTime }
     }
 
     /// C++: `void TimePeriod::~TimePeriod() noexcept`
@@ -276,7 +333,7 @@ impl NIVisumTL_TimePeriod {
     // ~TimePeriod() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TimePeriod::~TimePeriod")
+        // the C++ destructor has no body
     }
 
     /// C++: `SUMOTime TimePeriod::getStartTime()`
@@ -286,7 +343,7 @@ impl NIVisumTL_TimePeriod {
     //         }
     #[allow(unused_variables)]
     pub fn get_start_time(&mut self) -> SUMOTime {
-        todo!("port TimePeriod::getStartTime")
+        self.myStartTime
     }
 
     /// C++: `SUMOTime TimePeriod::getEndTime()`
@@ -296,7 +353,7 @@ impl NIVisumTL_TimePeriod {
     //         }
     #[allow(unused_variables)]
     pub fn get_end_time(&mut self) -> SUMOTime {
-        todo!("port TimePeriod::getEndTime")
+        self.myEndTime
     }
 
     /// C++: `SUMOTime TimePeriod::getYellowTime()`
@@ -306,7 +363,7 @@ impl NIVisumTL_TimePeriod {
     //         }
     #[allow(unused_variables)]
     pub fn get_yellow_time(&mut self) -> SUMOTime {
-        todo!("port TimePeriod::getYellowTime")
+        self.myYellowTime
     }
 
     /// C++: `TimePeriod & TimePeriod::operator=(const TimePeriod &)` [private]
@@ -314,7 +371,10 @@ impl NIVisumTL_TimePeriod {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIVisumTL_TimePeriod) -> &mut NIVisumTL_TimePeriod {
-        todo!("port TimePeriod::operator=")
+        self.myStartTime = s.myStartTime;
+        self.myEndTime = s.myEndTime;
+        self.myYellowTime = s.myYellowTime;
+        self
     }
 
 }

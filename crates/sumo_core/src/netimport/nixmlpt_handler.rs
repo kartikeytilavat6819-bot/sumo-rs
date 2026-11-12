@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// C++ class `NIXMLPTHandler` (netimport/NIXMLPTHandler.h)
 pub struct NIXMLPTHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The edges container (for retrieving referenced stop edge)
     pub myEdgeCont: Ptr<NBEdgeCont>,
     /// The stop container (for loading of stops)
@@ -34,13 +34,13 @@ pub struct NIXMLPTHandler {
 }
 
 impl std::ops::Deref for NIXMLPTHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for NIXMLPTHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -500,3 +500,16 @@ impl NIXMLPTHandler {
 
 }
 
+impl SaxHandler for NIXMLPTHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIXMLPTHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIXMLPTHandler::my_end_element(self, element);
+        Ok(())
+    }
+}

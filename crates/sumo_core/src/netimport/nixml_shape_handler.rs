@@ -1,6 +1,7 @@
 //! Port of netimport/NIXMLShapeHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_warning};
 
 /// The XML-Handler for shapes loading network loading
 /// C++ class `NIXMLShapeHandler` (netimport/NIXMLShapeHandler.h)
@@ -30,7 +31,10 @@ impl NIXMLShapeHandler {
     // {}
     #[allow(unused_variables)]
     pub fn new(sc: &mut ShapeContainer, ec: &NBEdgeCont) -> Self {
-        todo!("port NIXMLShapeHandler::NIXMLShapeHandler")
+        Self {
+            base: ShapeHandler::new("polgyon - file", sc, if GeoConvHelper::get_num_loaded() == 0 { Ptr::null() } else { GeoConvHelper::with_loaded(|g| Ptr::from_mut(g)) }),
+            myEdgeCont: Ptr::new(ec),
+        }
     }
 
     /// C++: `void NIXMLShapeHandler::~NIXMLShapeHandler() noexcept` [virtual]
@@ -38,7 +42,7 @@ impl NIXMLShapeHandler {
     // virtual ~NIXMLShapeHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLShapeHandler::~NIXMLShapeHandler")
+        // the C++ destructor has no body
     }
 
     /// C++: `Position NIXMLShapeHandler::getLanePos(const std::string &, const std::string &, double, bool, double)` [virtual]
@@ -68,7 +72,28 @@ impl NIXMLShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_pos(&mut self, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
-        todo!("port NIXMLShapeHandler::getLanePos")
+        let mut edgeID = String::new();
+        let mut laneIndex: i32 = 0;
+        NBHelpers::interpret_lane_id(laneID, &mut edgeID, &mut laneIndex);
+        let edge = self.myEdgeCont.m().retrieve(&edgeID, false);
+        if edge.is_null() || laneIndex < 0 || edge.m().get_num_lanes() <= laneIndex {
+            write_error(&format!("Lane '{laneID}' to place poi '{poiID}' on is not known."));
+            return Position::INVALID;
+        }
+        let mut lanePos = lanePos;
+        if lanePos < 0.0 {
+            lanePos = edge.m().get_length() + lanePos;
+        }
+        if (lanePos < 0.0) && friendlyPos {
+            lanePos = 0.0;
+        }
+        if (lanePos > edge.m().get_length()) && friendlyPos {
+            lanePos = edge.m().get_length();
+        }
+        if lanePos < 0.0 || lanePos > edge.m().get_length() {
+            write_warning(&format!("lane position {} for poi '{poiID}' is not valid.", utils::common::to_string::to_string(&lanePos)));
+        }
+        edge.m().get_lanes()[laneIndex as usize].shape.position_at_offset(lanePos, -lanePosLat)
     }
 
     /// C++: `bool NIXMLShapeHandler::addLanePosParams()` [virtual]
@@ -77,7 +102,7 @@ impl NIXMLShapeHandler {
     //     }
     #[allow(unused_variables)]
     pub fn add_lane_pos_params(&mut self) -> bool {
-        todo!("port NIXMLShapeHandler::addLanePosParams")
+        true
     }
 
 }

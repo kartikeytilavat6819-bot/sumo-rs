@@ -42,7 +42,22 @@ impl NINavTeqHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(id: &str, speedClassS: &str) -> f64 {
-        todo!("port NINavTeqHelper::getSpeed")
+        let speedClass = match utils::common::string_utils::to_int(speedClassS) {
+            Ok(v) => v,
+            Err(_) => std::panic::panic_any(ProcessError::new(format!("Non-numerical value for an edge's speed type occurred (edge '{id}')."))),
+        };
+        match speedClass {
+            -1 => 1.0_f64 / 3.6_f64,
+            1 => 200.0_f64 / 3.6_f64,
+            2 => 120.0_f64 / 3.6_f64,
+            3 => 100.0_f64 / 3.6_f64,
+            4 => 80.0_f64 / 3.6_f64,
+            5 => 70.0_f64 / 3.6_f64,
+            6 => 50.0_f64 / 3.6_f64,
+            7 => 30.0_f64 / 3.6_f64,
+            8 => 5.0_f64 / 3.6_f64,
+            _ => std::panic::panic_any(ProcessError::new(format!("Invalid speed code (edge '{id}')."))),
+        }
     }
 
     /// C++: `int NINavTeqHelper::getLaneNumber(const std::string &, const std::string &, double)` [static]
@@ -77,7 +92,21 @@ impl NINavTeqHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_number(id: &str, laneNoS: &str, speed: f64) -> i32 {
-        todo!("port NINavTeqHelper::getLaneNumber")
+        let nolanes = match utils::common::string_utils::to_int(laneNoS) {
+            Ok(v) => v,
+            Err(_) => std::panic::panic_any(ProcessError::new(format!("Non-numerical value for an edge's lane number occurred (edge '{id}')."))),
+        };
+        if nolanes < 0 {
+            return 1;
+        } else if nolanes / 10 > 0 {
+            return nolanes / 10;
+        }
+        match nolanes % 10 {
+            1 => 1,
+            2 => if speed > 78.0 / 3.6 { 3 } else { 2 },
+            3 => 4,
+            _ => std::panic::panic_any(ProcessError::new(format!("Invalid lane number (edge '{id}')."))),
+        }
     }
 
     /// C++: `void NINavTeqHelper::addVehicleClasses(NBEdge &, const std::string &, const SVCPermissions, const SVCPermissions)` [static]
@@ -119,7 +148,41 @@ impl NINavTeqHelper {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle_classes(e: &mut NBEdge, classS: &str, allPermissions: SVCPermissions, defaultPermissions: SVCPermissions) {
-        todo!("port NINavTeqHelper::addVehicleClasses")
+        use utils::common::sumo_vehicle_class::*;
+        let full = format!("0000000000{classS}");
+        // shortcut: non-ASCII bytes in the class string would shift the indices (C++ indexes bytes), fine for valid input
+        let cs = String::from_utf8_lossy(&full.as_bytes()[full.len() - 10..]).into_owned();
+        let c = cs.as_bytes();
+        // 0: allow all vehicle types
+        if c[0] == b'1' {
+            e.set_permissions(allPermissions, -1);
+            return;
+        }
+        let mut haveCar = false;
+        e.set_permissions(defaultPermissions, -1);
+        // Passenger cars -- becomes SVC_PASSENGER
+        if c[1] == b'1' {
+            e.allow_vehicle_class(-1, SVC_PASSENGER);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_PASSENGER);
+        }
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 2);
+        if !haveCar {
+            e.set_permissions(0, -1);
+        }
+        // Bicycle -- becomes SVC_BICYCLE
+        if c[8] == b'1' {
+            e.allow_vehicle_class(-1, SVC_BICYCLE);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_BICYCLE);
+        }
+        // Pedestrian -- becomes SVC_PEDESTRIAN
+        if c[9] == b'1' {
+            e.allow_vehicle_class(-1, SVC_PEDESTRIAN);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_PEDESTRIAN);
+        }
     }
 
     /// C++: `void NINavTeqHelper::addVehicleClassesV6(NBEdge &, const std::string &, const SVCPermissions, const SVCPermissions)` [static]
@@ -172,7 +235,52 @@ impl NINavTeqHelper {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle_classes_v6(e: &mut NBEdge, classS: &str, allPermissions: SVCPermissions, defaultPermissions: SVCPermissions) {
-        todo!("port NINavTeqHelper::addVehicleClassesV6")
+        use utils::common::sumo_vehicle_class::*;
+        let full = format!("0000000000{classS}");
+        // shortcut: non-ASCII bytes in the class string would shift the indices (C++ indexes bytes), fine for valid input
+        let cs = String::from_utf8_lossy(&full.as_bytes()[full.len() - 12..]).into_owned();
+        let c = cs.as_bytes();
+        // 0: allow all vehicle types
+        if c[0] == b'1' {
+            e.set_permissions(allPermissions, -1);
+            return;
+        }
+        let mut haveCar = false;
+        e.set_permissions(defaultPermissions, -1);
+        // Passenger cars -- becomes SVC_PASSENGER
+        if c[1] == b'1' {
+            e.allow_vehicle_class(-1, SVC_PASSENGER);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_PASSENGER);
+        }
+        // Residential Vehicle -- becomes SVC_PASSENGER
+        if c[2] == b'1' {
+            e.allow_vehicle_class(-1, SVC_PASSENGER);
+            haveCar = true;
+        }
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 3);
+        if !haveCar {
+            e.set_permissions(0, -1);
+        }
+        // Motorcycle -- becomes SVC_MOTORCYCLE
+        if c[9] == b'1' {
+            e.allow_vehicle_class(-1, SVC_MOTORCYCLE);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_MOTORCYCLE);
+        }
+        // Bicycle -- becomes SVC_BICYCLE
+        if c[10] == b'1' {
+            e.allow_vehicle_class(-1, SVC_BICYCLE);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_BICYCLE);
+        }
+        // Pedestrian -- becomes SVC_PEDESTRIAN
+        if c[11] == b'1' {
+            e.allow_vehicle_class(-1, SVC_PEDESTRIAN);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_PEDESTRIAN);
+        }
     }
 
     /// C++: `bool NINavTeqHelper::addCommonVehicleClasses(NBEdge &, const std::string &, const int)` [static, private]
@@ -229,7 +337,57 @@ impl NINavTeqHelper {
     // }
     #[allow(unused_variables)]
     pub fn add_common_vehicle_classes(e: &mut NBEdge, classS: &str, offset: i32) -> bool {
-        todo!("port NINavTeqHelper::addCommonVehicleClasses")
+        use utils::common::sumo_vehicle_class::*;
+        let c = classS.as_bytes();
+        let o = offset as usize;
+        let mut haveCar = false;
+        // High Occupancy Vehicle -- becomes SVC_PASSENGER|SVC_HOV
+        if c[o] == b'1' {
+            e.allow_vehicle_class(-1, SVC_HOV);
+            e.allow_vehicle_class(-1, SVC_PASSENGER);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_HOV);
+        }
+        // Emergency Vehicle -- becomes SVC_EMERGENCY
+        if c[o + 1] == b'1' {
+            e.allow_vehicle_class(-1, SVC_EMERGENCY);
+        } else {
+            e.disallow_vehicle_class(-1, SVC_EMERGENCY);
+        }
+        // Taxi -- becomes SVC_TAXI
+        if c[o + 2] == b'1' {
+            e.allow_vehicle_class(-1, SVC_TAXI);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_TAXI);
+        }
+        // Public Bus -- becomes SVC_BUS|SVC_COACH
+        if c[o + 3] == b'1' {
+            e.allow_vehicle_class(-1, SVC_BUS);
+            e.allow_vehicle_class(-1, SVC_COACH);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_BUS);
+            e.disallow_vehicle_class(-1, SVC_COACH);
+        }
+        // Delivery Truck -- becomes SVC_DELIVERY
+        if c[o + 4] == b'1' {
+            e.allow_vehicle_class(-1, SVC_DELIVERY);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_DELIVERY);
+        }
+        // Transport Truck -- becomes SVC_TRUCK|SVC_TRAILER
+        if c[o + 5] == b'1' {
+            e.allow_vehicle_class(-1, SVC_TRUCK);
+            e.allow_vehicle_class(-1, SVC_TRAILER);
+            haveCar = true;
+        } else {
+            e.disallow_vehicle_class(-1, SVC_TRUCK);
+            e.disallow_vehicle_class(-1, SVC_TRAILER);
+        }
+        haveCar
     }
 
 }

@@ -1,6 +1,9 @@
 //! Port of netbuild/NBPTLine.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::string_utils::escape_xml;
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
 
 /// C++ class `NBPTLine` (netbuild/NBPTLine.h)
 pub struct NBPTLine {
@@ -41,7 +44,25 @@ impl NBPTLine {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, name: &str, type_: &str, ref_: &str, interval: i32, nightService: &str, vClass: SUMOVehicleClass, color: RGBColor) -> Self {
-        todo!("port NBPTLine::NBPTLine")
+        NBPTLine {
+            myName: name.to_string(),
+            myType: type_.to_string(),
+            myPTStops: Vec::new(),
+            myStopsRevised: Vec::new(),
+            myWayNodes: BTreeMap::new(),
+            myWays: Vec::new(),
+            myCurrentWay: String::new(),
+            myPTLineId: id.to_string(),
+            myRef: if ref_ != "" { ref_.to_string() } else { name.to_string() },
+            myColor: color,
+            myInterval: interval,
+            myNightService: nightService.to_string(),
+            myVClass: vClass,
+            myRoute: Vec::new(),
+            myNumOfStops: 0,
+            myMissingStopsBefore: 0,
+            myMissingStopsAfter: 0,
+        }
     }
 
     /// C++: `void NBPTLine::addPTStop(std::shared_ptr<NBPTStop>)`
@@ -59,7 +80,15 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_stop(&mut self, pStop: Rc<NBPTStop>) {
-        todo!("port NBPTLine::addPTStop")
+        if !self.myPTStops.is_empty() && pStop.get_name() != "" && self.myPTStops[self.myPTStops.len() - 1].get_name() == pStop.get_name() {
+            // avoid duplicate stop when both platform and stop_position are given as nodes
+            if self.myPTStops[self.myPTStops.len() - 1].is_platform() && !pStop.is_platform() {
+                self.myPTStops.pop();
+            } else if pStop.is_platform() {
+                return;
+            }
+        }
+        self.myPTStops.push(pStop);
     }
 
     /// C++: `const std::string & NBPTLine::getLineID() const` [const]
@@ -68,7 +97,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_line_id(&self) -> &str {
-        todo!("port NBPTLine::getLineID")
+        &self.myPTLineId
     }
 
     /// C++: `const std::string & NBPTLine::getName() const` [const]
@@ -77,7 +106,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> &str {
-        todo!("port NBPTLine::getName")
+        &self.myName
     }
 
     /// C++: `const std::string & NBPTLine::getType() const` [const]
@@ -86,7 +115,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> &str {
-        todo!("port NBPTLine::getType")
+        &self.myType
     }
 
     /// C++: `const std::vector<std::shared_ptr<NBPTStop>> & NBPTLine::getStops()`
@@ -96,7 +125,7 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn get_stops(&mut self) -> &Vec<Rc<NBPTStop>> {
-        todo!("port NBPTLine::getStops")
+        &self.myPTStops
     }
 
     /// C++: `void NBPTLine::write(OutputDevice &)`
@@ -147,7 +176,48 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn write(&mut self, device: &mut OutputDevice) {
-        todo!("port NBPTLine::write")
+        device.open_tag_id(SUMO_TAG_PT_LINE);
+        device.write_attr(SUMO_ATTR_ID, &self.myPTLineId);
+        if !self.myName.is_empty() {
+            device.write_attr(SUMO_ATTR_NAME, &escape_xml(&self.myName, false));
+        }
+
+        device.write_attr(SUMO_ATTR_LINE, &escape_xml(&self.myRef, false));
+        device.write_attr(SUMO_ATTR_TYPE, &self.myType);
+        device.write_attr(SUMO_ATTR_VCLASS, SUMO_VEHICLE_CLASS_STRINGS.get_string(self.myVClass).unwrap());
+        if self.myInterval > 0 {
+            // write seconds
+            device.write_attr(SUMO_ATTR_PERIOD, &(60 * self.myInterval));
+        }
+        if self.myNightService != "" {
+            device.write_attr("nightService", &self.myNightService);
+        }
+
+        if self.myColor.is_valid() {
+            device.write_attr(SUMO_ATTR_COLOR, &self.myColor.to_string());
+        }
+        device.write_attr("completeness", &(self.myPTStops.len() as f64 / self.myNumOfStops as f64));
+        if self.myMissingStopsBefore != 0 {
+            device.write_attr("missingBefore", &self.myMissingStopsBefore);
+        }
+        if self.myMissingStopsAfter != 0 {
+            device.write_attr("missingAfter", &self.myMissingStopsAfter);
+        }
+
+        if !self.myRoute.is_empty() {
+            device.open_tag_id(SUMO_TAG_ROUTE);
+            let edgeIDs: Vec<String> = self.myRoute.iter().map(|e| e.get_id().to_string()).collect();
+            device.write_attr(SUMO_ATTR_EDGES, &edgeIDs.join(" "));
+            device.close_tag("");
+        }
+
+        for myPTStop in self.myPTStops.iter() {
+            device.open_tag_id(SUMO_TAG_BUS_STOP);
+            device.write_attr(SUMO_ATTR_ID, &myPTStop.get_id());
+            device.write_attr(SUMO_ATTR_NAME, &escape_xml(&myPTStop.get_name(), false));
+            device.close_tag("");
+        }
+        device.close_tag("");
     }
 
     /// C++: `void NBPTLine::addWayNode(long long, long long)`
@@ -162,7 +232,12 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn add_way_node(&mut self, way: i64, node: i64) {
-        todo!("port NBPTLine::addWayNode")
+        let wayStr = way.to_string();
+        if wayStr != self.myCurrentWay {
+            self.myCurrentWay = wayStr.clone();
+            self.myWays.push(wayStr.clone());
+        }
+        self.myWayNodes.entry(wayStr).or_default().push(node);
     }
 
     /// C++: `void NBPTLine::setNumOfStops(int, int, int)`
@@ -174,7 +249,9 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn set_num_of_stops(&mut self, numStops: i32, missingBefore: i32, missingAfter: i32) {
-        todo!("port NBPTLine::setNumOfStops")
+        self.myNumOfStops = numStops;
+        self.myMissingStopsBefore = missingBefore;
+        self.myMissingStopsAfter = missingAfter;
     }
 
     /// C++: `const std::string & NBPTLine::getRef() const` [const]
@@ -184,7 +261,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_ref(&self) -> &str {
-        todo!("port NBPTLine::getRef")
+        &self.myRef
     }
 
     /// C++: `void NBPTLine::replaceStops(std::vector<std::shared_ptr<NBPTStop>>)`
@@ -193,7 +270,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn replace_stops(&mut self, stops: Vec<Rc<NBPTStop>>) {
-        todo!("port NBPTLine::replaceStops")
+        self.myPTStops = stops;
     }
 
     /// C++: `void NBPTLine::setRevised(std::vector<bool>)`
@@ -202,14 +279,24 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn set_revised(&mut self, stopsRevised: Vec<bool>) {
-        todo!("port NBPTLine::setRevised")
+        self.myStopsRevised = stopsRevised;
     }
 
     /// C++: `std::vector<PTStopInfo> NBPTLine::getStopEdges(const NBEdgeCont &) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stop_edges(&self, ec: &NBEdgeCont) -> Vec<NBPTLine_PTStopInfo> {
-        todo!("port NBPTLine::getStopEdges")
+        let mut result: Vec<NBPTLine_PTStopInfo> = Vec::new();
+        let mut i: usize = 0;
+        for stop in self.myPTStops.iter() {
+            let e = ec.retrieve(stop.get_edge_id(), false);
+            if !e.is_null() {
+                let revised = if self.myStopsRevised.len() > i { self.myStopsRevised[i] } else { false };
+                result.push(NBPTLine_PTStopInfo::new(e, &stop.get_id(), stop.get_end_pos(), revised));
+            }
+            i += 1;
+        }
+        result
     }
 
     /// C++: `NBEdge * NBPTLine::getRouteStart(const NBEdgeCont &) const` [const]
@@ -244,7 +331,29 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn get_route_start(&self, ec: &NBEdgeCont) -> Ptr<NBEdge> {
-        todo!("port NBPTLine::getRouteStart")
+        let mut validEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        // filter out edges that have been removed due to joining junctions
+        for e in self.myRoute.iter() {
+            if !ec.retrieve(e.get_id(), false).is_null() {
+                validEdges.push(*e);
+            }
+        }
+        if validEdges.is_empty() {
+            return Ptr::null();
+        }
+        // filter out edges after the first stop
+        if !self.myPTStops.is_empty() {
+            let firstStopEdge = ec.retrieve(self.myPTStops[0].get_edge_id(), false);
+            if firstStopEdge.is_null() {
+                write_warning(&format!("Could not retrieve edge '{}' for first stop of line '{}'.", self.myPTStops[0].get_edge_id(), self.myPTLineId));
+                return Ptr::null();
+            }
+            if !validEdges.contains(&firstStopEdge) {
+                write_warning(&format!("First stop edge '{}' is not part of the route of line '{}'.", firstStopEdge.get_id(), self.myPTLineId));
+                return Ptr::null();
+            }
+        }
+        validEdges[0]
     }
 
     /// C++: `NBEdge * NBPTLine::getRouteEnd(const NBEdgeCont &) const` [const]
@@ -279,7 +388,30 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn get_route_end(&self, ec: &NBEdgeCont) -> Ptr<NBEdge> {
-        todo!("port NBPTLine::getRouteEnd")
+        let mut validEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        // filter out edges that have been removed due to joining junctions
+        for e in self.myRoute.iter() {
+            if !ec.retrieve(e.get_id(), false).is_null() {
+                validEdges.push(*e);
+            }
+        }
+        if validEdges.is_empty() {
+            return Ptr::null();
+        }
+        // filter out edges after the last stop
+        if !self.myPTStops.is_empty() {
+            let lastStop = self.myPTStops[self.myPTStops.len() - 1].clone();
+            let lastStopEdge = ec.retrieve(lastStop.get_edge_id(), false);
+            if lastStopEdge.is_null() {
+                write_warning(&format!("Could not retrieve edge '{}' for last stop of line '{}'.", lastStop.get_edge_id(), self.myPTLineId));
+                return Ptr::null();
+            }
+            if !validEdges.contains(&lastStopEdge) {
+                write_warning(&format!("Last stop edge '{}' is not part of the route of line '{}'.", lastStopEdge.get_id(), self.myPTLineId));
+                return Ptr::null();
+            }
+        }
+        validEdges[validEdges.len() - 1]
     }
 
     /// C++: `bool NBPTLine::isConsistent(std::vector<NBEdge *>) const` [const]
@@ -310,7 +442,28 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn is_consistent(&self, stops: Vec<Ptr<NBEdge>>) -> bool {
-        todo!("port NBPTLine::isConsistent")
+        let mut stops = stops;
+        if self.myRoute.is_empty() || stops.is_empty() {
+            return true;
+        }
+        if stops.len() > 1 && stops[0] == stops[stops.len() - 1] {
+            // circular route where we don't expect the route edges to occur twice
+            if self.myRoute[0] == stops[0] {
+                stops.pop();
+            } else if self.myRoute[self.myRoute.len() - 1] == stops[stops.len() - 1] {
+                stops.remove(0);
+            }
+        }
+        let mut stopIt: usize = 0;
+        for e in self.myRoute.iter() {
+            while stopIt < stops.len() && *e == stops[stopIt] {
+                stopIt += 1;
+            }
+            if stopIt == stops.len() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `SUMOVehicleClass NBPTLine::getVClass() const` [const]
@@ -319,7 +472,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        todo!("port NBPTLine::getVClass")
+        self.myVClass
     }
 
     /// C++: `void NBPTLine::replaceStop(std::shared_ptr<NBPTStop>, std::shared_ptr<NBPTStop>)`
@@ -334,7 +487,11 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn replace_stop(&mut self, oldStop: Rc<NBPTStop>, newStop: Rc<NBPTStop>) {
-        todo!("port NBPTLine::replaceStop")
+        for i in 0..self.myPTStops.len() {
+            if Rc::ptr_eq(&self.myPTStops[i], &oldStop) {
+                self.myPTStops[i] = newStop.clone();
+            }
+        }
     }
 
     /// C++: `void NBPTLine::replaceEdge(const std::string &, const std::vector<NBEdge *> &)`
@@ -342,7 +499,19 @@ impl NBPTLine {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn replace_edge(&mut self, edgeID: &str, replacement: &Vec<Ptr<NBEdge>>) {
-        todo!("port NBPTLine::replaceEdge")
+        let oldRoute = self.myRoute.clone();
+        self.myRoute.clear();
+        for e in oldRoute {
+            if e.get_id() == edgeID {
+                for e2 in replacement.iter() {
+                    if self.myRoute.is_empty() || self.myRoute[self.myRoute.len() - 1] != *e2 {
+                        self.myRoute.push(*e2);
+                    }
+                }
+            } else {
+                self.myRoute.push(e);
+            }
+        }
     }
 
     /// C++: `void NBPTLine::deleteInvalidStops(const NBEdgeCont &, const NBPTStopCont &)`
@@ -364,7 +533,18 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn delete_invalid_stops(&mut self, ec: &NBEdgeCont, sc: &NBPTStopCont) {
-        todo!("port NBPTLine::deleteInvalidStops")
+        // delete stops that are missing or have no edge
+        let mut it: usize = 0;
+        while it < self.myPTStops.len() {
+            let stop = self.myPTStops[it].clone();
+            // same lookup as NBPTStopCont::get(id) == nullptr
+            if sc.myPTStops.get(&stop.get_id()).is_none() || ec.get_by_id(stop.get_edge_id()).is_null() {
+                write_warning(&format!("Removed invalid stop '{}' from line '{}'.", stop.get_id(), self.get_line_id()));
+                self.myPTStops.remove(it);
+            } else {
+                it += 1;
+            }
+        }
     }
 
     /// C++: `void NBPTLine::deleteDuplicateStops()`
@@ -390,7 +570,24 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn delete_duplicate_stops(&mut self) {
-        todo!("port NBPTLine::deleteDuplicateStops")
+        // delete subsequent stops that belong to the same stopArea
+        let mut lastAreaID: i64 = -1;
+        let mut lastName: String = String::new();
+        let mut it: usize = 0;
+        while it < self.myPTStops.len() {
+            let stop = self.myPTStops[it].clone();
+            if lastAreaID != -1 && stop.get_area_id() == lastAreaID {
+                write_warning(&format!("Removed duplicate stop '{}' at area '{}' from line '{}'.", stop.get_id(), lastAreaID.to_string(), self.get_line_id()));
+                self.myPTStops.remove(it);
+            } else if lastName != "" && stop.get_name() == lastName {
+                write_warning(&format!("Removed duplicate stop '{}' named '{}' from line '{}'.", stop.get_id(), lastName, self.get_line_id()));
+                self.myPTStops.remove(it);
+            } else {
+                it += 1;
+            }
+            lastAreaID = stop.get_area_id();
+            lastName = stop.get_name();
+        }
     }
 
     /// C++: `void NBPTLine::removeInvalidEdges(const NBEdgeCont &)`
@@ -436,7 +633,46 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn remove_invalid_edges(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBPTLine::removeInvalidEdges")
+        let mut i: usize = 0;
+        while i < self.myRoute.len() {
+            let split = ec.get_split(self.myRoute[i]);
+            if !split.is_null() {
+                self.myRoute[i] = split.0;
+                self.myRoute.insert(i + 1, split.1);
+            } else if ec.retrieve(self.myRoute[i].get_id(), false).is_null() {
+                self.myRoute.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        // validate that all stops are actually on the route
+        let mut ri: usize = 0;
+        let mut it: usize = 0;
+        while it < self.myPTStops.len() {
+            let stop = self.myPTStops[it].clone();
+            let e = ec.retrieve(stop.get_edge_id(), false);
+            if e.is_null() {
+                write_warning(&format!("Removed stop '{}' named '{}' from line '{}' because edge '{}' is missing.",
+                    stop.get_id(), stop.get_name(), self.get_line_id(), stop.get_edge_id()));
+                self.myPTStops.remove(it);
+            } else {
+                let riPrev = ri;
+                match (ri..self.myRoute.len()).find(|&k| self.myRoute[k] == e) {
+                    Some(k) => ri = k,
+                    None => {
+                        if !self.myRoute.contains(&e) {
+                            write_warning(&format!("Stop '{}' named '{}' from line '{}' on edge '{}' is not part of the route.",
+                                stop.get_id(), stop.get_name(), self.get_line_id(), stop.get_edge_id()));
+                        } else {
+                            write_warning(&format!("Stop '{}' named '{}' from line '{}' on edge '{}' is not part of the route downstream of the previous stop.",
+                                stop.get_id(), stop.get_name(), self.get_line_id(), stop.get_edge_id()));
+                        }
+                        ri = riPrev;
+                    }
+                }
+                it += 1;
+            }
+        }
     }
 
     /// C++: `void NBPTLine::setName(const std::string &)`
@@ -445,7 +681,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn set_name(&mut self, name: &str) {
-        todo!("port NBPTLine::setName")
+        self.myName = name.to_string();
     }
 
     /// C++: `void NBPTLine::setRef(const std::string &)`
@@ -454,7 +690,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn set_ref(&mut self, line: &str) {
-        todo!("port NBPTLine::setRef")
+        self.myRef = line.to_string();
     }
 
     /// C++: `void NBPTLine::setPeriod(int)`
@@ -463,7 +699,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn set_period(&mut self, intervalS: i32) {
-        todo!("port NBPTLine::setPeriod")
+        self.myInterval = intervalS / 60;
     }
 
     /// C++: `const std::vector<std::string> & NBPTLine::getWays() const` [const]
@@ -472,7 +708,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_ways(&self) -> &Vec<String> {
-        todo!("port NBPTLine::getWays")
+        &self.myWays
     }
 
     /// C++: `const std::vector<long long> * NBPTLine::getWayNodes(std::string)`
@@ -485,7 +721,10 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn get_way_nodes(&mut self, wayId: String) -> Ptr<Vec<i64>> {
-        todo!("port NBPTLine::getWayNodes")
+        if let Some(v) = self.myWayNodes.get_mut(&wayId) {
+            return Ptr::from_mut(v);
+        }
+        Ptr::null()
     }
 
     /// C++: `const EdgeVector & NBPTLine::getEdges() const` [const]
@@ -494,7 +733,7 @@ impl NBPTLine {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &EdgeVector {
-        todo!("port NBPTLine::getEdges")
+        &self.myRoute
     }
 
     /// C++: `void NBPTLine::setEdges(const std::vector<NBEdge *> &)`
@@ -523,7 +762,26 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn set_edges(&mut self, edges: &Vec<Ptr<NBEdge>>) {
-        todo!("port NBPTLine::setEdges")
+        self.myRoute = edges.clone();
+        // ensure permissions
+        for e in edges.iter() {
+            let permissions = e.get_permissions(-1);
+            if (permissions & self.myVClass) != self.myVClass {
+                let nVuln: SVCPermissions = !(SVC_PEDESTRIAN | SVC_BICYCLE);
+                if permissions != 0 && (permissions & nVuln) == 0 {
+                    // this is a footpath or sidewalk. Add another lane
+                    e.m().add_restricted_lane(SUMO_CONST_LANE_WIDTH, self.myVClass);
+                } else {
+                    // add permissions to the rightmost lane that is not exclusively used for pedestrians / bicycles
+                    for i in 0..e.get_num_lanes() {
+                        if (e.get_permissions(i) & nVuln) != 0 {
+                            e.m().allow_vehicle_class(i, self.myVClass);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `const std::vector<NBEdge *> & NBPTLine::getRoute() const` [const]
@@ -533,7 +791,7 @@ impl NBPTLine {
     // }
     #[allow(unused_variables)]
     pub fn get_route(&self) -> &Vec<Ptr<NBEdge>> {
-        todo!("port NBPTLine::getRoute")
+        &self.myRoute
     }
 
 }
@@ -553,7 +811,12 @@ impl NBPTLine_PTStopInfo {
     //             edge(_edge), stopID(_stopID), pos(_pos), revised(_revised) {}
     #[allow(unused_variables)]
     pub fn new(_edge: Ptr<NBEdge>, _stopID: &str, _pos: f64, _revised: bool) -> Self {
-        todo!("port PTStopInfo::PTStopInfo")
+        NBPTLine_PTStopInfo {
+            edge: _edge,
+            stopID: _stopID.to_string(),
+            pos: _pos,
+            revised: _revised,
+        }
     }
 
 }
