@@ -28,8 +28,14 @@ const BLOCKER_IS_BLOCKED_TIME_THRESHOLD: f64 = 5.;
 const HYST_PRECISION: f64 = 10000000.;
 
 use super::mslc_helper::MSLCHelper;
+use crate::microsim::cfmodels::mscf_model::INVALID_SPEED;
 
 const SUMO_const_haltingSpeed: f64 = 0.1;
+
+/// C++ `new Info(...)` handed to a messager; the receiver frees it in `inform`
+fn new_info(info: MSLCM_LC2013_Info) -> Ptr<()> {
+    Ptr::from_raw(Box::into_raw(Box::new(info)) as *mut ())
+}
 
 /// C++ `toString(SumoXMLAttr)`: the attribute name
 fn attr_name(a: SumoXMLAttr) -> &'static str {
@@ -2163,7 +2169,103 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn inform_leader(&mut self, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, dir: i32, neighLead: &(Ptr<MSVehicle>, f64), remainingSeconds: f64) -> f64 {
-        todo!("port MSLCM_LC2013::informLeader")
+        let mut plannedSpeed = self.myVehicle.get_speed();
+        if !self.is_opposite() {
+            plannedSpeed = min2(plannedSpeed,
+                self.myVehicle.get_car_follow_model().stop_speed(self.myVehicle, self.myVehicle.get_speed(), self.myLeftSpace - self.myLeadingBlockerLength, MSCFModel_CalcReason::CURRENT));
+        }
+        for i in self.myLCAccelerationAdvices.iter() {
+            let a = i.0;
+            if a >= -self.myVehicle.get_car_follow_model().get_max_decel() {
+                plannedSpeed = min2(plannedSpeed, self.myVehicle.get_speed() + accel2speed(a));
+            }
+        }
+
+        let nv = neighLead.0;
+        if nv.is_null() {
+            // not overtaking
+            return plannedSpeed;
+        }
+        let neighNextSpeed = min2(nv.get_speed() - accel2speed(max2(1.0, -nv.get_acceleration())),
+            // assume that we know when a neighboring vehicle intends to stop
+            if nv.next_stop_dist() <= nv.get_lane().get_length() { nv.get_car_follow_model().min_next_speed(nv.get_speed(), nv) } else { nv.get_speed() });
+        let neighNextGap;
+        if MSGlobals::semi_implicit_euler_update() {
+            neighNextGap = neighLead.1 + speed2dist(neighNextSpeed - plannedSpeed);
+        } else {
+            neighNextGap = neighLead.1 + speed2dist((nv.get_speed() + neighNextSpeed) / 2.) - speed2dist((self.myVehicle.get_speed() + plannedSpeed) / 2.);
+        }
+        if (blocked & LCA_BLOCKED_BY_LEADER) != 0 {
+            if MSLCHelper::divergent_route(&*self.myVehicle, &*nv) {
+                return plannedSpeed;
+            }
+            // decide whether we want to overtake the leader or follow it
+            let overtakeDist = Self::overtake_distance(self.myVehicle, nv, neighLead.1, INVALID_SPEED, INVALID_SPEED);
+            let dv = plannedSpeed - nv.get_speed();
+
+            let overtakeTime: f64 = if dv > self.myOvertakeDeltaSpeedFactor * self.myVehicle.get_lane().get_speed_limit() {
+                overtakeDist / dv
+            } else if nv.get_waiting_seconds() > BLOCKER_IS_BLOCKED_TIME_THRESHOLD
+                && !self.is_opposite()
+                && (self.myVehicle.get_vehicle_type().get_length_with_gap() + nv.get_vehicle_type().get_length_with_gap()) <= self.myLeftSpace {
+                // -> set overtakeTime to indicate possibility of overtaking (only if there is enough space)
+                remainingSeconds - 1.
+            } else {
+                // -> set overtakeTime to something indicating impossibility of overtaking
+                remainingSeconds + 1.
+            };
+
+            if (dv < self.myOvertakeDeltaSpeedFactor * self.myVehicle.get_lane().get_speed_limit()
+                    // overtaking on the right on an uncongested highway is forbidden (noOvertakeLCLeft)
+                    || (dir == LCA_MLEFT && self.avoid_overtake_right(neighLead.0, false))
+                    // not enough space to overtake?
+                    || (MSGlobals::semi_implicit_euler_update() && self.myLeftSpace - self.myLeadingBlockerLength - self.myVehicle.get_car_follow_model().brake_gap(self.myVehicle.get_speed()) < overtakeDist)
+                    // using brakeGap() without headway seems adequate in a situation where the obstacle (the lane end) is not moving [XXX implemented in branch ticket860, can be used in general if desired, refs. #2575] (Leo).
+                    || (!MSGlobals::semi_implicit_euler_update() && self.myLeftSpace - self.myLeadingBlockerLength - self.myVehicle.get_car_follow_model().brake_gap_2(self.myVehicle.get_speed(), self.myVehicle.get_car_follow_model().get_max_decel(), 0.) < overtakeDist)
+                    // not enough time to overtake?        (skipped for a stopped leader [currently only for ballistic update XXX: check if appropriate for euler, too, refs. #2575] to ensure that it can be overtaken if only enough space is exists) (Leo)
+                    || (remainingSeconds < overtakeTime && (MSGlobals::semi_implicit_euler_update() || !nv.is_stopped())))
+                    // opposite driving and must overtake
+                    && (!neighLead.0.is_stopped() || (self.is_opposite() && neighLead.1 >= 0.))) {
+                // cannot overtake
+                msgPass.inform_neigh_leader(new_info((f64::MAX, dir | LCA_AMBLOCKINGLEADER)), self.myVehicle);
+                // slow down smoothly to follow leader
+                // account for minor decelerations by the leader (dawdling)
+                let targetSpeed = max2(
+                    self.myVehicle.get_car_follow_model().min_next_speed(self.myVehicle.get_speed(), self.myVehicle),
+                    max2(
+                        self.myVehicle.get_car_follow_model().follow_speed(self.myVehicle, self.myVehicle.get_speed(), neighNextGap, neighNextSpeed, nv.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT),
+                        // avoid changing on intersection
+                        if self.myVehicle.get_lane().is_normal() || self.myVehicle.get_current_edge().is_roundabout() { 0. } else { accel2speed(self.myVehicle.get_car_follow_model().get_max_accel()) }));
+                if targetSpeed < self.myVehicle.get_speed() {
+                    // slow down smoothly to follow leader
+                    let decel = if remainingSeconds == 0. { self.myVehicle.get_car_follow_model().get_max_decel() } else {
+                        min2(self.myVehicle.get_car_follow_model().get_max_decel(),
+                            max2(MIN_FALLBEHIND, (self.myVehicle.get_speed() - targetSpeed) / remainingSeconds)) };
+                    let nextSpeed = min2(plannedSpeed, max2(0.0, self.myVehicle.get_speed() - accel2speed(decel)));
+                    self.add_lc_speed_advice(nextSpeed, dir);
+                    return nextSpeed;
+                } else {
+                    // leader is fast enough anyway
+                    self.add_lc_speed_advice(targetSpeed, dir);
+                    return plannedSpeed;
+                }
+            } else {
+                // overtaking, leader should not accelerate
+                // no need to pass a message if the neighbor is waiting/stuck anyway (but sending it would risk deadlock)
+                if nv.get_waiting_seconds() <= BLOCKER_IS_BLOCKED_TIME_THRESHOLD {
+                    msgPass.inform_neigh_leader(new_info((nv.get_speed(), dir | LCA_AMBLOCKINGLEADER)), self.myVehicle);
+                }
+                // XXX: using -1 is ambiguous for the ballistic update! Currently this is being catched in patchSpeed() (Leo), consider returning INVALID_SPEED, refs. #2577
+                return -1.;
+            }
+        } else { // (remainUnblocked)
+            // we are not blocked now. make sure we stay far enough from the leader
+            let targetSpeed = max2(
+                self.myVehicle.get_car_follow_model().min_next_speed(self.myVehicle.get_speed(), self.myVehicle),
+                self.myVehicle.get_car_follow_model().follow_speed(self.myVehicle, self.myVehicle.get_speed(), neighNextGap, neighNextSpeed, nv.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT));
+            self.add_lc_speed_advice(targetSpeed, dir);
+            return min2(targetSpeed, plannedSpeed);
+        }
     }
 
     /// C++: `void MSLCM_LC2013::informFollower(MSAbstractLaneChangeModel::MSLCMessager &, int, int, const std::pair<MSVehicle *, double> &, double, double)` [protected]
@@ -2557,7 +2659,14 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn overtake_distance(follower: Ptr<MSVehicle>, leader: Ptr<MSVehicle>, gap: f64, followerSpeed: f64, leaderSpeed: f64) -> f64 {
-        todo!("port MSLCM_LC2013::overtakeDistance")
+        let followerSpeed = if followerSpeed == INVALID_SPEED { follower.get_speed() } else { followerSpeed };
+        let leaderSpeed = if leaderSpeed == INVALID_SPEED { leader.get_speed() } else { leaderSpeed };
+        let overtakeDist = gap // drive to back of leader
+            + leader.get_vehicle_type().get_length_with_gap() // drive to front of leader
+            + follower.get_vehicle_type().get_length() // follower back reaches leader front
+            + leader.get_car_follow_model().get_secure_gap( // save gap to leader
+                leader, follower, leaderSpeed, followerSpeed, follower.get_car_follow_model().get_max_decel());
+        max2(overtakeDist, 0.)
     }
 
     /// C++: `int MSLCM_LC2013::slowDownForBlocked(MSVehicle *, int)` [protected]
