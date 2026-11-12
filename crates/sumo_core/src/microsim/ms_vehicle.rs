@@ -4567,7 +4567,63 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn compute_angle(&self) -> f64 {
-        todo!("port MSVehicle::computeAngle")
+        let mut p1 = Position::default();
+        let posLat = -self.myState.myPosLat; // @todo get rid of the '-'
+        let lefthandSign = if crate::microsim::ms_globals::lefthand() { -1.0 } else { 1.0 };
+
+        // if parking manoeuvre is happening then rotate vehicle on each step
+        if crate::microsim::ms_globals::model_parking_manoeuver() && !self.manoeuvre_is_complete() {
+            return self.get_angle() + self.myManoeuvre.get_gui_increment();
+        }
+
+        if self.is_parking() {
+            if !self.myStops.front().unwrap().parkingarea.is_null() {
+                return self.myStops.front().unwrap().parkingarea.get_vehicle_angle(self);
+            } else {
+                return self.myLane.get_shape_2().rotation_at_offset(self.myLane.interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()));
+            }
+        }
+        if self.myLaneChangeModel.is_changing_lanes() {
+            // cannot use getPosition() because it already includes the offset to the side and thus messes up the angle
+            p1 = self.myLane.geometry_position_at_offset(self.myState.myPos, lefthandSign * posLat);
+            if p1 == Position::INVALID && self.myLane.get_shape_2().length2d() == 0. && self.myLane.is_internal() {
+                // workaround: extrapolate the preceding lane shape
+                let predecessorLane = self.myLane.get_canonical_predecessor_lane();
+                p1 = predecessorLane.geometry_position_at_offset(predecessorLane.get_length() + self.myState.myPos, lefthandSign * posLat);
+            }
+        } else {
+            p1 = self.get_position(0.0);
+        }
+
+        let mut p2: Position;
+        if self.get_vehicle_type().get_parameter().locomotiveLength > 0.0 {
+            // articulated vehicle should use the heading of the first part
+            let locoLength = f64::min(self.get_vehicle_type().get_parameter().locomotiveLength, self.get_length());
+            p2 = self.get_position(-locoLength);
+        } else {
+            p2 = self.get_back_position();
+        }
+        if p2 == Position::INVALID {
+            // Handle special case of vehicle's back reaching out of the network
+            if self.myFurtherLanes.len() > 0 {
+                p2 = self.myFurtherLanes.last().unwrap().geometry_position_at_offset(0.0, -self.myFurtherLanesPosLat.last().unwrap());
+                if p2 == Position::INVALID {
+                    // unsuitable lane geometry
+                    p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
+                }
+            } else {
+                p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
+            }
+        }
+        let mut result = if p1 != p2 {
+            p2.angle_to2d(&p1)
+        } else {
+            self.myLane.get_shape_2().rotation_at_offset(self.myLane.interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()))
+        };
+
+        result += lefthandSign * self.myLaneChangeModel.m().calc_angle_offset();
+
+        result
     }
 
     /// C++: `void MSVehicle::setAngle(double, bool)`
