@@ -1000,7 +1000,7 @@ impl NEMALogic {
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
         let mut result: BTreeMap<String, f64> = BTreeMap::new();
         for (det, _lane) in self.myDetectorLaneMap.iter() {
-            result.insert(det.get_id().to_string(), det.get_current_vehicle_number() as f64);
+            result.insert(det.base2.base.get_id().to_string(), det.get_current_vehicle_number() as f64);
         }
         result
     }
@@ -2098,7 +2098,7 @@ impl NEMALogic {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn has_major(&self, state: &str, lanes: &LaneVector) -> bool {
+    pub fn has_major(&self, state: &str, lanes: &MSTrafficLightLogic_LaneVector) -> bool {
         for i in 0..state.len() {
             if state.as_bytes()[i] as i32 == LINKSTATE_TL_GREEN_MAJOR as i32 {
                 for cand in self.get_lanes_at(i as i32).iter() {

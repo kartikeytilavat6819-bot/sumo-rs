@@ -590,7 +590,7 @@ impl MSTrafficLightLogic {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_lanes_at(&self, i: i32) -> &LaneVector {
+    pub fn get_lanes_at(&self, i: i32) -> &MSTrafficLightLogic_LaneVector {
         todo!("port MSTrafficLightLogic::getLanesAt")
     }
 
