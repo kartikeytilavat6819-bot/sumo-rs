@@ -1,6 +1,7 @@
 //! Port of activitygen/AGActivityGen.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{progress_begin_message, progress_done_message};
 
 /// Central object handling City, Activities and Trips
 /// C++ class `AGActivityGen` (activitygen/AGActivityGen.h)
