@@ -2,6 +2,32 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// determinism: C++ std::sort is unstable and Rust sort_by is stable, so edges that compare equal may end up in a different order.
+// Converts a C++ strict-weak-order comparator (returns bool) into the ordering std::sort would use.
+fn sort_by_less<T>(v: &mut Vec<T>, less: impl Fn(&T, &T) -> bool) {
+    v.sort_by(|a, b| {
+        if less(a, b) {
+            std::cmp::Ordering::Less
+        } else if less(b, a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
+}
+
+fn sort_edges_by(v: &mut Vec<Ptr<NBEdge>>, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
+    v.sort_by(|a, b| {
+        if less(*a, *b) {
+            std::cmp::Ordering::Less
+        } else if less(*b, *a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    });
+}
+
 /// Stores the information about the angle between an incoming ("from") and an outgoing ("to") edge
 /// C++ class `NBTurningDirectionsComputer::Combination` (netbuild/NBAlgorithms.h)
 pub struct NBTurningDirectionsComputer_Combination {
@@ -278,7 +304,175 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn set_priority_junction_priorities(n: &mut NBNode, forceStraight: bool) {
-        todo!("port NBEdgePriorityComputer::setPriorityJunctionPriorities")
+        let np: Ptr<NBNode> = Ptr::from_mut(n);
+        if np.myIncomingEdges.len() == 0 || np.myOutgoingEdges.len() == 0 {
+            return;
+        }
+        let mut minPrio: i32 = i32::MAX;
+        let mut maxPrio: i32 = -i32::MAX;
+        let mut maxNumLanes: i32 = -i32::MAX;
+        let mut maxSpeed: f64 = -f64::MAX;
+        // check available vClasses to consider for lane number comparison
+        let mut all: SVCPermissions = 0;
+        for edge in np.myAllEdges.iter() {
+            all |= edge.get_permissions(-1);
+        }
+        if (all & (SVC_PASSENGER & SVC_TRAM & SVC_BUS)) != 0 {
+            all = SVC_PASSENGER & SVC_TRAM & SVC_BUS;
+        } else if (all & !SVC_VULNERABLE) != 0 {
+            all &= !SVC_VULNERABLE;
+        }
+        if forceStraight {
+            // called a second time, preset all junction's edge priorities to zero
+            for edge in np.myAllEdges.iter() {
+                edge.m().set_junction_priority(np, NBEdge_JunctionPriority::MINOR_ROAD as i32);
+                minPrio = minPrio.min(edge.get_priority());
+                maxPrio = maxPrio.max(edge.get_priority());
+                maxNumLanes = maxNumLanes.max(edge.get_num_lanes_that_allow(all, false));
+                maxSpeed = maxSpeed.max(edge.get_speed());
+            }
+        }
+        let mut incoming: EdgeVector = np.myIncomingEdges.clone();
+        let mut outgoing: EdgeVector = np.myOutgoingEdges.clone();
+        // what we do want to have is to extract the pair of roads that are
+        //  the major roads for this junction
+        // let's get the list of incoming edges with the highest priority
+        let prio_sorter = NBContHelper_edge_by_priority_sorter::new(all);
+        sort_edges_by(&mut incoming, |a, b| prio_sorter.call_op(a, b) != 0);
+        let mut bestIncoming: EdgeVector = Vec::new();
+        let bestIn: Ptr<NBEdge> = incoming[0];
+        while incoming.len() > 0 && (forceStraight || NBEdgePriorityComputer::same_priority(bestIn, incoming[0], all)) {
+            bestIncoming.push(incoming[0]);
+            incoming.remove(0);
+        }
+        // now, let's get the list of best outgoing
+        assert!(outgoing.len() != 0);
+        sort_edges_by(&mut outgoing, |a, b| prio_sorter.call_op(a, b) != 0);
+        let mut bestOutgoing: EdgeVector = Vec::new();
+        let firstOut: Ptr<NBEdge> = outgoing[0];
+        while outgoing.len() > 0 && (forceStraight || NBEdgePriorityComputer::same_priority(firstOut, outgoing[0], all)) {
+            bestOutgoing.push(outgoing[0]);
+            outgoing.remove(0);
+        }
+        // special case: user input makes mainDirection unambiguous
+        let mainDirectionExplicit = bestIncoming.len() == 1
+            && np.myIncomingEdges.len() <= 2
+            && (incoming.len() == 0 || bestIncoming[0].get_priority() > incoming[0].get_priority())
+            && bestOutgoing.len() == 1
+            && np.myOutgoingEdges.len() <= 2
+            && (outgoing.len() == 0 || bestOutgoing[0].get_priority() > outgoing[0].get_priority())
+            && !bestIncoming[0].is_turning_direction_at(bestOutgoing[0]);
+        // now, let's compute for each of the best incoming edges
+        //  the incoming which is most opposite
+        //  the outgoing which is most opposite
+        let mut counterIncomingEdges: HashMap<Ptr<NBEdge>, Ptr<NBEdge>> = HashMap::new();
+        let mut counterOutgoingEdges: HashMap<Ptr<NBEdge>, Ptr<NBEdge>> = HashMap::new();
+        incoming = np.myIncomingEdges.clone();
+        outgoing = np.myOutgoingEdges.clone();
+        for i in bestIncoming.iter().copied() {
+            let opp_in = NBContHelper_edge_opposite_direction_sorter::new(i, np, !forceStraight);
+            sort_edges_by(&mut incoming, |a, b| opp_in.call_op(a, b) != 0);
+            counterIncomingEdges.insert(i, incoming[0]);
+            let opp_out = NBContHelper_edge_opposite_direction_sorter::new(i, np, !forceStraight);
+            sort_edges_by(&mut outgoing, |a, b| opp_out.call_op(a, b) != 0);
+            counterOutgoingEdges.insert(i, outgoing[0]);
+        }
+        // at a tls junction we must prevent an underlying bent-priority layout
+        // because that would lead to invalid right-of-way rules for an oncoming
+        // tls layout (but not vice versa). See #7764
+        let hasTLS = np.is_tl_controlled();
+        // ok, let's try
+        // 1) there is one best incoming road
+        if bestIncoming.len() == 1 {
+            // let's mark this road as the best
+            let best1 = NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestIncoming, 1);
+            if !mainDirectionExplicit && counterIncomingEdges.contains_key(&best1) {
+                // ok, look, what we want is the opposite of the straight continuation edge
+                // but, what if such an edge does not exist? By now, we'll determine it
+                // geometrically
+                let s = counterIncomingEdges[&best1];
+                let minAngleDiff = utils::geom::geom_helper::get_min_angle_diff(best1.get_angle_at_node(np), s.get_angle_at_node(np));
+                if minAngleDiff > 180.0 - 45.0
+                    || (minAngleDiff > 75.0 && s.get_priority() == best1.get_priority() && NBEdgePriorityComputer::has_different_priorities(&incoming, best1))
+                {
+                    s.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+                }
+            }
+            NBEdgePriorityComputer::mark_best_parallel(np.m(), best1, Ptr::null());
+            assert!(bestOutgoing.len() != 0);
+            // mark the best outgoing as the continuation
+            let similar = NBContHelper_edge_similar_direction_sorter::new(best1, true);
+            sort_edges_by(&mut bestOutgoing, |a, b| similar.call_op(a, b) != 0);
+            // assign extra priority if the priorities are unambiguous (regardless of geometry)
+            let bestOut = NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+            if !mainDirectionExplicit && counterOutgoingEdges.contains_key(&bestOut) {
+                let s = counterOutgoingEdges[&bestOut];
+                if utils::geom::geom_helper::get_min_angle_diff(bestOut.get_angle_at_node(np), s.get_angle_at_node(np)) > 180.0 - 45.0 {
+                    s.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+                }
+            }
+            let isBent = np.get_direction(best1, bestOut, false) != LinkDirection::STRAIGHT;
+            if isBent && hasTLS && !forceStraight {
+                // redo but force straight computation
+                NBEdgePriorityComputer::set_priority_junction_priorities(np.m(), true);
+            } else {
+                np.m().mark_bent_priority(isBent);
+            }
+            return;
+        }
+
+        // ok, what we want to do in this case is to determine which incoming
+        //  has the best continuation...
+        // This means, when several incoming roads have the same priority,
+        //  we want a (any) straight connection to be more priorised than a turning
+        let mut bestAngle: f64 = -1.0;
+        let mut bestFirst: Ptr<NBEdge> = Ptr::null();
+        let mut bestSecond: Ptr<NBEdge> = Ptr::null();
+        for i in 0..bestIncoming.len() {
+            let t1 = bestIncoming[i];
+            let mut angle1 = t1.get_angle_at_node(np) + 180.0;
+            if angle1 >= 360.0 {
+                angle1 -= 360.0;
+            }
+            for j in (i + 1)..bestIncoming.len() {
+                let t2 = bestIncoming[j];
+                let mut angle2 = t2.get_angle_at_node(np) + 180.0;
+                if angle2 >= 360.0 {
+                    angle2 -= 360.0;
+                }
+                let score = if forceStraight {
+                    NBEdgePriorityComputer::get_score(t1, t2, minPrio, maxPrio, maxNumLanes, maxSpeed, all)
+                } else {
+                    0.0
+                };
+                let angle = utils::geom::geom_helper::get_min_angle_diff(angle1, angle2) + 45.0 * score;
+                if angle > bestAngle {
+                    bestAngle = angle.max(bestAngle);
+                    bestFirst = bestIncoming[i];
+                    bestSecond = bestIncoming[j];
+                }
+            }
+        }
+        bestFirst.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+        let similarFirst = NBContHelper_edge_similar_direction_sorter::new(bestFirst, true);
+        sort_edges_by(&mut bestOutgoing, |a, b| similarFirst.call_op(a, b) != 0);
+        if bestOutgoing.len() != 0 {
+            NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+        }
+        bestSecond.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+        let similarSecond = NBContHelper_edge_similar_direction_sorter::new(bestSecond, true);
+        sort_edges_by(&mut bestOutgoing, |a, b| similarSecond.call_op(a, b) != 0);
+        if bestOutgoing.len() != 0 {
+            NBEdgePriorityComputer::extract_and_mark_first(np.m(), &mut bestOutgoing, 1);
+        }
+        let isBent = utils::geom::geom_helper::get_min_angle_diff(bestFirst.get_angle_at_node(np), bestSecond.get_angle_at_node(np)) < 135.0;
+        if isBent && hasTLS && !forceStraight {
+            // redo but force straight computation
+            NBEdgePriorityComputer::set_priority_junction_priorities(np.m(), true);
+        } else {
+            np.m().mark_bent_priority(isBent);
+            NBEdgePriorityComputer::mark_best_parallel(np.m(), bestFirst, bestSecond);
+        }
     }
 
     /// C++: `double NBEdgePriorityComputer::getScore(const NBEdge *, const NBEdge *, int, int, int, double, SVCPermissions)` [static, private]
@@ -301,7 +495,24 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn get_score(e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, minPrio: i32, maxPrio: i32, maxNumLanes: i32, maxSpeed: f64, permissions: SVCPermissions) -> f64 {
-        todo!("port NBEdgePriorityComputer::getScore")
+        // normalize priorities to [0.1,1]
+        let mut normPrio1: f64 = 1.0;
+        let mut normPrio2: f64 = 1.0;
+        if minPrio != maxPrio {
+            // int / int stays integral in C++, so integer division is kept here
+            normPrio1 = (((e1.get_priority() - minPrio) / (maxPrio - minPrio)) as f64) * 0.9 + 0.1;
+            normPrio2 = (((e2.get_priority() - minPrio) / (maxPrio - minPrio)) as f64) * 0.9 + 0.1;
+        }
+        normPrio1
+            * (e1.get_num_lanes_that_allow(permissions, false) as f64)
+            / (maxNumLanes as f64)
+            * e1.get_speed()
+            / maxSpeed
+            * normPrio2
+            * (e2.get_num_lanes_that_allow(permissions, false) as f64)
+            / (maxNumLanes as f64)
+            * e2.get_speed()
+            / maxSpeed
     }
 
     /// C++: `void NBEdgePriorityComputer::markBestParallel(const NBNode &, NBEdge *, NBEdge *)` [static, private]
@@ -326,7 +537,24 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn mark_best_parallel(n: &NBNode, bestFirst: Ptr<NBEdge>, bestSecond: Ptr<NBEdge>) {
-        todo!("port NBEdgePriorityComputer::markBestParallel")
+        let np: Ptr<NBNode> = Ptr::new(n);
+        // edges running parallel to the main direction should also be prioritised
+        let a1 = bestFirst.get_angle_at_node(np);
+        let a2 = if bestSecond.is_null() { a1 } else { bestSecond.get_angle_at_node(np) };
+        let p1: SVCPermissions = bestFirst.get_permissions(-1);
+        let p2: SVCPermissions = if bestSecond.is_null() { p1 } else { bestSecond.get_permissions(-1) };
+        for e in n.get_incoming_edges().iter().copied() {
+            // @note: this rule might also apply if there are common permissions but
+            // then we would not further rules to resolve the priority between the best edge and its parallel edge
+            let perm: SVCPermissions = e.get_permissions(-1);
+            if (utils::geom::geom_helper::get_min_angle_diff(e.get_angle_at_node(np), a1) < 10.0
+                || utils::geom::geom_helper::get_min_angle_diff(e.get_angle_at_node(np), a2) < 10.0)
+                && (p1 & perm) == 0
+                && (p2 & perm) == 0
+            {
+                e.m().set_junction_priority(np, NBEdge_JunctionPriority::PRIORITY_ROAD as i32);
+            }
+        }
     }
 
     /// C++: `NBEdge * NBEdgePriorityComputer::extractAndMarkFirst(NBNode &, std::vector<NBEdge *> &, int)` [static, private]
@@ -343,7 +571,13 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn extract_and_mark_first(n: &mut NBNode, s: &mut Vec<Ptr<NBEdge>>, prio: i32) -> Ptr<NBEdge> {
-        todo!("port NBEdgePriorityComputer::extractAndMarkFirst")
+        if s.len() == 0 {
+            return Ptr::null();
+        }
+        let ret = s[0];
+        s.remove(0);
+        ret.m().set_junction_priority(Ptr::from_mut(n), prio);
+        ret
     }
 
     /// C++: `bool NBEdgePriorityComputer::samePriority(const NBEdge *const, const NBEdge *const, SVCPermissions)` [static, private]
@@ -363,7 +597,16 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn same_priority(e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, permissions: SVCPermissions) -> bool {
-        todo!("port NBEdgePriorityComputer::samePriority")
+        if e1 == e2 {
+            return true;
+        }
+        if e1.get_priority() != e2.get_priority() {
+            return false;
+        }
+        if (e1.get_speed() as i32) != (e2.get_speed() as i32) {
+            return false;
+        }
+        e1.get_num_lanes_that_allow(permissions, false) == e2.get_num_lanes_that_allow(permissions, false)
     }
 
     /// C++: `bool NBEdgePriorityComputer::hasDifferentPriorities(const EdgeVector &, const NBEdge *)` [static, private]
@@ -383,7 +626,16 @@ impl NBEdgePriorityComputer {
     // }
     #[allow(unused_variables)]
     pub fn has_different_priorities(edges: &EdgeVector, excluded: Ptr<NBEdge>) -> bool {
-        todo!("port NBEdgePriorityComputer::hasDifferentPriorities")
+        if edges.len() < 2 {
+            return false;
+        }
+        let prio = if edges[0] == excluded { edges[1].get_priority() } else { edges[0].get_priority() };
+        for e in edges.iter() {
+            if *e != excluded && e.get_priority() != prio {
+                return true;
+            }
+        }
+        false
     }
 
 }
@@ -475,7 +727,86 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_node_types(nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NBNodeTypeComputer::computeNodeTypes")
+        Self::validate_rail_crossings(nc, tlc);
+        let rightBeforeLeftSpeed = utils::options::options_cont::get_float("junctions.right-before-left.speed-threshold");
+        for n in nc.myNodes.values().copied() {
+            // the type may already be set from the data
+            if n.myType != SumoXMLNodeType::UNKNOWN && n.myType != SumoXMLNodeType::DEAD_END {
+                n.m().myTypeWasGuessed = false;
+                continue;
+            }
+            // check whether the node was set to be unregulated by the user
+            if utils::options::options_cont::get_bool("keep-nodes-unregulated")
+                || utils::options::options_cont::with_options(|oc| {
+                    oc.is_in_string_vector("keep-nodes-unregulated.explicit", n.get_id()).unwrap_or_else(|e| std::panic::panic_any(e))
+                })
+                || (utils::options::options_cont::get_bool("keep-nodes-unregulated.district-nodes") && (n.is_near_district() || n.is_district()))
+            {
+                n.m().myType = SumoXMLNodeType::NOJUNCTION;
+                continue;
+            }
+            // check whether the node is a waterway node. Set to unregulated by default
+            let mut waterway = true;
+            for e in n.get_edges().iter() {
+                if !is_waterway(e.get_permissions(-1)) {
+                    waterway = false;
+                    break;
+                }
+            }
+            if waterway && (n.myType == SumoXMLNodeType::UNKNOWN || n.myType == SumoXMLNodeType::DEAD_END) {
+                n.m().myType = SumoXMLNodeType::NOJUNCTION;
+                continue;
+            }
+
+            // check whether the junction is not a real junction
+            if n.myIncomingEdges.len() == 1 {
+                n.m().myType = SumoXMLNodeType::PRIORITY;
+                continue;
+            }
+            // @todo "isSimpleContinuation" should be revalidated
+            if n.is_simple_continuation(true, false) {
+                n.m().myType = SumoXMLNodeType::PRIORITY;
+                continue;
+            }
+            if Self::is_railway_node(n) {
+                if n.unsignalized_operation() && (n.get_incoming_edges().len() as i32) == 2 && (n.get_outgoing_edges().len() as i32) == 1 {
+                    // avoid slowing down when there are no foe vehicles
+                    n.m().myType = SumoXMLNodeType::ZIPPER;
+                } else {
+                    // priority instead of unregulated to ensure that collisions can be detected
+                    n.m().myType = SumoXMLNodeType::PRIORITY;
+                }
+                continue;
+            }
+            // determine the type
+            let mut type_ = if utils::options::options_cont::get_bool("junctions.left-before-right") {
+                SumoXMLNodeType::LEFT_BEFORE_RIGHT
+            } else {
+                SumoXMLNodeType::RIGHT_BEFORE_LEFT
+            };
+            let incoming: EdgeVector = n.myIncomingEdges.clone();
+            for i in 0..incoming.len() {
+                for j in (i + 1)..incoming.len() {
+                    // @todo "getOppositeIncoming" should probably be refactored into something the edge knows
+                    if n.get_opposite_incoming(incoming[j]) == incoming[i] && n.myIncomingEdges.len() > 2 {
+                        continue;
+                    }
+                    // @todo check against a legal document
+                    // @todo figure out when SumoXMLNodeType::PRIORITY_STOP is appropriate
+                    let s1 = incoming[i].get_speed();
+                    let s2 = incoming[j].get_speed();
+                    let p1 = incoming[i].get_priority();
+                    let p2 = incoming[j].get_priority();
+                    if (s1 - s2).abs() > (9.5 / 3.6) || s1.max(s2) >= rightBeforeLeftSpeed || p1 != p2 {
+                        type_ = SumoXMLNodeType::PRIORITY;
+                        break;
+                    }
+                }
+            }
+            // save type
+            n.m().myType = type_;
+            n.m().myTypeWasGuessed = true;
+        }
     }
 
     /// C++: `void NBNodeTypeComputer::validateRailCrossings(NBNodeCont &, NBTrafficLightLogicCont &)` [static]
@@ -531,7 +862,55 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn validate_rail_crossings(nc: &mut NBNodeCont, tlc: &mut NBTrafficLightLogicCont) {
-        todo!("port NBNodeTypeComputer::validateRailCrossings")
+        for n in nc.myNodes.values().copied() {
+            if n.myType == SumoXMLNodeType::RAIL_CROSSING {
+                // check if it really is a rail crossing
+                let mut numRailway: i32 = 0;
+                let mut numNonRailIn: i32 = 0;
+                let mut numNonRailOut: i32 = 0;
+                // only the size of this set is used, so a hash set is enough
+                let mut nonRailNodes: HashSet<Ptr<NBNode>> = HashSet::new();
+                let mut numNonRailwayNonPed: i32 = 0;
+                for e in n.get_incoming_edges().iter().copied() {
+                    if (e.get_permissions(-1) & !SVC_RAIL_CLASSES) != 0 {
+                        numNonRailIn += 1;
+                        if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                            numNonRailwayNonPed += 1;
+                        }
+                        nonRailNodes.insert(e.get_from_node());
+                    } else if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                        numRailway += 1;
+                    }
+                }
+                for e in n.get_outgoing_edges().iter().copied() {
+                    if (e.get_permissions(-1) & !SVC_RAIL_CLASSES) != 0 {
+                        numNonRailOut += 1;
+                        nonRailNodes.insert(e.get_to_node());
+                    }
+                }
+                if numNonRailIn == 0 || numNonRailOut == 0 || numRailway == 0 {
+                    // not a crossing (maybe unregulated or rail_signal)
+                    write_warningf!("Converting invalid rail_crossing to priority junction '%'.", n.get_id());
+                    n.m().myType = SumoXMLNodeType::PRIORITY;
+                } else if numNonRailwayNonPed > 2 || nonRailNodes.len() > 2 {
+                    // does not look like a rail crossing (roads in conflict). maybe a traffic light?
+                    write_warningf!("Converting invalid rail_crossing to traffic_light at junction '%'.", n.get_id());
+                    let type_ = TrafficLightTypes
+                        .get(&utils::options::options_cont::get_string("tls.default-type"))
+                        .unwrap_or_else(|e| std::panic::panic_any(e));
+                    let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(n.get_id(), n, 0, type_)));
+                    let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                    n.m().myType = SumoXMLNodeType::TRAFFIC_LIGHT;
+                    if !tlc.insert(tlDef, false) {
+                        // actually, nothing should fail here
+                        n.m().remove_traffic_light(tlDef);
+                        n.m().myType = SumoXMLNodeType::PRIORITY;
+                        drop(unsafe { Box::from_raw(raw) });
+                        write_warningf!("Could not allocate tls '%'.", n.get_id());
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNodeTypeComputer::isRailwayNode(const NBNode *)` [static]
@@ -550,7 +929,15 @@ impl NBNodeTypeComputer {
     // }
     #[allow(unused_variables)]
     pub fn is_railway_node(n: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeTypeComputer::isRailwayNode")
+        let mut hasRailway = false;
+        for e in n.get_incoming_edges().iter() {
+            if (e.get_permissions(-1) & !(SVC_RAIL_CLASSES | SVC_TAXI)) != 0 {
+                return false;
+            } else if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                hasRailway = true;
+            }
+        }
+        hasRailway
     }
 
 }
@@ -570,7 +957,9 @@ impl NBNodesEdgesSorter {
     // }
     #[allow(unused_variables)]
     pub fn sort_nodes_edges(nc: &mut NBNodeCont, useNodeShape: bool) {
-        todo!("port NBNodesEdgesSorter::sortNodesEdges")
+        for node in nc.myNodes.values().copied() {
+            node.m().sort_edges(useNodeShape);
+        }
     }
 
     /// C++: `void NBNodesEdgesSorter::swapWhenReversed(const NBNode *const, const std::vector<NBEdge *>::iterator &, const std::vector<NBEdge *>::iterator &)` [static]
@@ -590,8 +979,17 @@ impl NBNodesEdgesSorter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn swap_when_reversed(n: Ptr<NBNode>, i1: &Unmapped /* std::vector<NBEdge *>::iterator */, i2: &Unmapped /* std::vector<NBEdge *>::iterator */) {
-        todo!("port NBNodesEdgesSorter::swapWhenReversed")
+    pub fn swap_when_reversed(n: Ptr<NBNode>, edges: &mut EdgeVector, i1: usize, i2: usize) {
+        // the C++ iterators are positions in `edges`, so they are passed as indices
+        let e1 = edges[i1];
+        let e2 = edges[i2];
+        // @todo: The difference between "isTurningDirectionAt" and "isTurnaround"
+        //  is not nice. Maybe we could get rid of it if we would always mark edges
+        //  as turnarounds, even if they do not have to be added, as mentioned in
+        //  notes on NBTurningDirectionsComputer::computeTurnDirectionsForNode
+        if e2.get_to_node() == n && e2.is_turning_direction_at(e1) {
+            edges.swap(i1, i2);
+        }
     }
 
 }
@@ -611,7 +1009,9 @@ impl NBTurningDirectionsComputer {
     // }
     #[allow(unused_variables)]
     pub fn compute_turn_directions(nc: &mut NBNodeCont, warn: bool) {
-        todo!("port NBTurningDirectionsComputer::computeTurnDirections")
+        for node in nc.myNodes.values().copied() {
+            Self::compute_turn_directions_for_node(node, warn);
+        }
     }
 
     /// C++: `void NBTurningDirectionsComputer::computeTurnDirectionsForNode(NBNode *, bool)` [static]
@@ -731,8 +1131,85 @@ impl NBTurningDirectionsComputer {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn compute_turn_directions_for_node(node: Ptr<NBNode>, warn: bool) {
-        todo!("port NBTurningDirectionsComputer::computeTurnDirectionsForNode")
+    pub fn compute_turn_directions_for_node(node: Ptr<NBNode>, mut warn: bool) {
+        let incoming: EdgeVector = node.get_incoming_edges().clone();
+        let outgoing: EdgeVector = node.get_outgoing_edges().clone();
+        // reset turning directions since this may be called multiple times
+        for k in incoming.iter() {
+            k.m().set_turning_destination(Ptr::null(), false);
+        }
+        let mut combinations: Vec<NBTurningDirectionsComputer_Combination> = Vec::new();
+        let geometryLike = node.geometry_like();
+        for outedge in outgoing.iter().copied() {
+            for e in incoming.iter().copied() {
+                // @todo: check whether NBHelpers::relAngle is properly defined and whether it should really be used, here
+                let signedAngle = crate::netbuild::nb_helpers::NBHelpers::norm_rel_angle(e.get_angle_at_node(node), outedge.get_angle_at_node(node));
+                if signedAngle > 0.0 && signedAngle < 177.0 && e.get_geometry().back().distance_to2d(outedge.get_geometry().front()) < utils::geom::POSITION_EPS {
+                    // backwards curving edges can only be turnaround when there are
+                    // non-default endpoints
+                    continue;
+                }
+                let mut angle = signedAngle.abs();
+                let badPermissions = (outedge.get_permissions(-1) & e.get_permissions(-1) & !SVC_PEDESTRIAN) == 0
+                    && !geometryLike
+                    && outedge.get_permissions(-1) != e.get_permissions(-1);
+                if e.get_from_node() == outedge.get_to_node()
+                    && (angle > 120.0 || e.get_from_node().get_position() == e.get_to_node().get_position())
+                    && !badPermissions
+                {
+                    // they connect the same nodes; should be the turnaround direction
+                    // we'll assign a maximum number
+                    //
+                    // @todo: indeed, we have observed some pathological intersections
+                    //  see "294831560" in OSM/adlershof. Here, several edges are connecting
+                    //  same nodes. We have to do the angle check before...
+                    //
+                    // @todo: and well, there are some other as well, see plain import
+                    //  of delphi_muenchen (elmar), intersection "59534191". Not that it would
+                    //  be realistic in any means; we will warn, here.
+                    angle += 360.0;
+                }
+                if angle < 160.0 {
+                    if angle > 135.0 {
+                        // could be a turnaround with a green median island, look at
+                        // angle further away from the junction
+                        let inFA = Self::get_far_angle_at_node(e, node, 50.0);
+                        let outFA = Self::get_far_angle_at_node(outedge, node, 50.0);
+                        let signedFarAngle = crate::netbuild::nb_helpers::NBHelpers::norm_rel_angle(inFA, outFA);
+                        if signedFarAngle > -160.0 {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                if badPermissions {
+                    // penalty
+                    angle -= 90.0;
+                }
+                combinations.push(NBTurningDirectionsComputer_Combination { from: e, to: outedge, angle });
+            }
+        }
+        // sort combinations so that the ones with the highest angle are at the begin
+        let comb_sorter = NBTurningDirectionsComputer_combination_by_angle_sorter::new();
+        sort_by_less(&mut combinations, |a, b| comb_sorter.call_op(a, b) != 0);
+        let mut seen: HashSet<Ptr<NBEdge>> = HashSet::new();
+        for j in combinations.iter() {
+            if seen.contains(&j.from) || seen.contains(&j.to) {
+                // do not regard already set edges
+                if j.angle > 360.0 && warn {
+                    write_warningf!("Ambiguity in turnarounds computation at junction '%'.", node.get_id());
+                    warn = false;
+                }
+                continue;
+            }
+            // mark as seen
+            seen.insert(j.from);
+            seen.insert(j.to);
+            // set turnaround information
+            let onlyPossible = j.from.get_connections().len() != 0 && !j.from.is_connected_to(j.to, false);
+            j.from.m().set_turning_destination(j.to, onlyPossible);
+        }
     }
 
     /// C++: `double NBTurningDirectionsComputer::getFarAngleAtNode(const NBEdge *, const NBNode *, double)` [static]
@@ -787,8 +1264,51 @@ impl NBTurningDirectionsComputer {
     //     return GeomHelper::legacyDegree(angle);
     // }
     #[allow(unused_variables)]
-    pub fn get_far_angle_at_node(e: Ptr<NBEdge>, n: Ptr<NBNode>, dist: f64) -> f64 {
-        todo!("port NBTurningDirectionsComputer::getFarAngleAtNode")
+    pub fn get_far_angle_at_node(e: Ptr<NBEdge>, n: Ptr<NBNode>, mut dist: f64) -> f64 {
+        let mut atNode: Position = Position::default();
+        let mut far: Position = Position::default();
+        let mut angle: f64;
+        let mut next: Ptr<NBEdge> = e;
+        if e.get_to_node() == n {
+            // search upstream
+            atNode = *e.get_geometry().back();
+            while dist > 0.0 {
+                let length = next.get_geometry().length();
+                if dist <= length {
+                    far = next.get_geometry().position_at_offset(length - dist, 0.0);
+                    break;
+                } else {
+                    far = *next.get_geometry().front();
+                    dist -= length;
+                    if next.get_to_node().get_incoming_edges().len() == 1 {
+                        next = next.get_to_node().get_incoming_edges()[0];
+                    } else {
+                        break;
+                    }
+                }
+            }
+            angle = far.angle_to2d(&atNode);
+        } else {
+            // search downstream
+            atNode = *e.get_geometry().front();
+            while dist > 0.0 {
+                let length = next.get_geometry().length();
+                if dist <= length {
+                    far = next.get_geometry().position_at_offset(dist, 0.0);
+                    break;
+                } else {
+                    far = *next.get_geometry().back();
+                    dist -= length;
+                    if next.get_to_node().get_outgoing_edges().len() == 1 {
+                        next = next.get_to_node().get_outgoing_edges()[0];
+                    } else {
+                        break;
+                    }
+                }
+            }
+            angle = atNode.angle_to2d(&far);
+        }
+        utils::geom::geom_helper::legacy_degree(angle, false)
     }
 
 }
@@ -803,7 +1323,7 @@ impl NBTurningDirectionsComputer_combination_by_angle_sorter {
     // explicit combination_by_angle_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port combination_by_angle_sorter::combination_by_angle_sorter")
+        Self {}
     }
 
     /// C++: `int combination_by_angle_sorter::operator()(const Combination &, const Combination &) const` [const]
@@ -832,7 +1352,27 @@ impl NBTurningDirectionsComputer_combination_by_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: &NBTurningDirectionsComputer_Combination, c2: &NBTurningDirectionsComputer_Combination) -> i32 {
-        todo!("port combination_by_angle_sorter::operator()")
+        if c1.angle != c2.angle {
+            return (c1.angle > c2.angle) as i32;
+        }
+        if c1.from != c2.from {
+            if c1.to == c2.to && c1.from.get_permissions(-1) != c2.from.get_permissions(-1) {
+                if c1.from.get_permissions(-1) == c1.to.get_permissions(-1) {
+                    return 1;
+                } else if c2.from.get_permissions(-1) == c1.to.get_permissions(-1) {
+                    return 0;
+                }
+            }
+            return (c1.from.get_id() < c2.from.get_id()) as i32;
+        }
+        if c1.to.get_permissions(-1) != c2.to.get_permissions(-1) {
+            if c1.to.get_permissions(-1) == c1.from.get_permissions(-1) {
+                return 1;
+            } else if c2.to.get_permissions(-1) == c1.from.get_permissions(-1) {
+                return 0;
+            }
+        }
+        (c1.to.get_id() < c2.to.get_id()) as i32
     }
 
 }
@@ -854,7 +1394,17 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     // }
     #[allow(unused_variables)]
     pub fn new(node: Ptr<NBNode>, ordering: &EdgeVector) -> Self {
-        todo!("port crossing_by_junction_angle_sorter::crossing_by_junction_angle_sorter")
+        // reorder based on getAngleAtNodeToCenter
+        let mut myOrdering: EdgeVector = ordering.clone();
+        let centroid_sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(node);
+        sort_by_less(&mut myOrdering, |a, b| centroid_sorter.call_op(*a, *b));
+        // let the first edge remain the first
+        let mid = match ordering.first() {
+            Some(front) => myOrdering.iter().position(|e| e == front).unwrap_or(myOrdering.len()),
+            None => myOrdering.len(),
+        };
+        myOrdering.rotate_left(mid);
+        Self { myOrdering }
     }
 
     /// C++: `int crossing_by_junction_angle_sorter::operator()(const std::unique_ptr<NBNode::Crossing> &, const std::unique_ptr<NBNode::Crossing> &) const` [const]
@@ -869,7 +1419,13 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c1: &Box<NBNode_Crossing>, c2: &Box<NBNode_Crossing>) -> i32 {
-        todo!("port crossing_by_junction_angle_sorter::operator()")
+        let r1 = self.get_min_rank(&c1.edges);
+        let r2 = self.get_min_rank(&c2.edges);
+        if r1 == r2 {
+            (c1.edges.len() > c2.edges.len()) as i32
+        } else {
+            (r1 < r2) as i32
+        }
     }
 
     /// C++: `int crossing_by_junction_angle_sorter::getMinRank(const EdgeVector &) const` [const, private]
@@ -884,7 +1440,13 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn get_min_rank(&self, e: &EdgeVector) -> i32 {
-        todo!("port crossing_by_junction_angle_sorter::getMinRank")
+        let mut result = self.myOrdering.len() as i32;
+        for it in e.iter() {
+            // std::distance to end() when not found
+            let rank = self.myOrdering.iter().position(|x| x == it).unwrap_or(self.myOrdering.len()) as i32;
+            result = result.min(rank);
+        }
+        result
     }
 
 }
@@ -901,7 +1463,7 @@ impl NBNodesEdgesSorter_edge_by_junction_angle_sorter {
     // explicit edge_by_junction_angle_sorter(NBNode* n) : myNode(n) {}
     #[allow(unused_variables)]
     pub fn new(n: Ptr<NBNode>) -> Self {
-        todo!("port edge_by_junction_angle_sorter::edge_by_junction_angle_sorter")
+        Self { myNode: n }
     }
 
     /// C++: `int edge_by_junction_angle_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -912,7 +1474,9 @@ impl NBNodesEdgesSorter_edge_by_junction_angle_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_junction_angle_sorter::operator()")
+        let a1 = e1.get_angle_at_node_normalized(self.myNode);
+        let a2 = e2.get_angle_at_node_normalized(self.myNode);
+        (a1 < a2 || (a1 == a2 && e1.get_numerical_id() < e2.get_numerical_id())) as i32
     }
 
 }
