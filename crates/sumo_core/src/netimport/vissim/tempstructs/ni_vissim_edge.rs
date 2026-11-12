@@ -629,7 +629,7 @@ impl NIVissimEdge {
                         // start new cluster
                         remove_double_ints(&mut currentCluster);
                         let cc = NIVissimConnectionCluster::new(&currentCluster, -1, edgeid);
-                        edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(Box::new(cc))));
+                        edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(cc)));
                         currentCluster.clear();
                         currentCluster.push(connectors[j + 1]);
                     }
@@ -645,7 +645,7 @@ impl NIVissimEdge {
             if !currentCluster.is_empty() {
                 remove_double_ints(&mut currentCluster);
                 let cc = NIVissimConnectionCluster::new(&currentCluster, -1, edgeid);
-                edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(Box::new(cc))));
+                edge.m().myConnectionClusters.push(Ptr::from_mut(Box::leak(cc)));
             }
         }
     }
