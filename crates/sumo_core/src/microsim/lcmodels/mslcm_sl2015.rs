@@ -5594,7 +5594,139 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn keep_lat_gap(&mut self, state: i32, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, laneOffset: i32, latDist: &mut f64, maneuverDist: &mut f64, blocked: &mut i32) -> i32 {
-        todo!("port MSLCM_SL2015::keepLatGap")
+        let mut state = state;
+        // XXX to be made configurable
+        let mut gapFactor = self.compute_gap_factor(state);
+        let oldLatDist = *latDist;
+        let oldManeuverDist = *maneuverDist;
+        // passed state is without traci-influence but we need it here
+        let traciState = self.myVehicle.m().influence_change_decision(state);
+
+        // compute gaps after maneuver
+        let halfWidth = self.get_width() * 0.5;
+        // if the current maneuver is blocked we will stay where we are
+        let oldCenter = self.myVehicle.get_center_on_edge(Ptr::null());
+        // surplus gaps: stay within the current edge
+        let mut surplusGapRight = oldCenter - halfWidth;
+        let mut surplusGapLeft = self.get_left_border(laneOffset != 0) - oldCenter - halfWidth;
+        let stayInLane = laneOffset == 0
+            || ((traciState & LCA_STRATEGIC) != 0
+                && (traciState & LCA_STAY) != 0
+                // permit wide vehicles to stay on the road
+                && (surplusGapLeft >= 0. && surplusGapRight >= 0.));
+
+        if self.is_opposite() {
+            std::mem::swap(&mut surplusGapLeft, &mut surplusGapRight);
+        }
+        // staying within the edge overrides all minGap considerations
+        if surplusGapLeft < 0. || surplusGapRight < 0. {
+            gapFactor = 0.;
+        }
+
+        // maintain gaps to vehicles on the current lane
+        // ignore vehicles that are too far behind
+        let netOverlap = -self.myVehicle.get_vehicle_type().get_length() * 0.5;
+        let rightSideOnEdge = self.myVehicle.get_lane().get_right_side_on_edge();
+        self.update_gaps(leaders, rightSideOnEdge, oldCenter, gapFactor, &mut surplusGapRight, &mut surplusGapLeft, true, 0., 0., Ptr::null());
+        self.update_gaps(followers, rightSideOnEdge, oldCenter, gapFactor, &mut surplusGapRight, &mut surplusGapLeft, true, netOverlap, 0., Ptr::null());
+        if laneOffset != 0 {
+            // maintain gaps to vehicles on the target lane
+            let neighRight = self.get_neigh_right(neighLane);
+            self.update_gaps(neighLeaders, neighRight, oldCenter, gapFactor, &mut surplusGapRight, &mut surplusGapLeft, true, 0., 0., Ptr::null());
+            self.update_gaps(neighFollowers, neighRight, oldCenter, gapFactor, &mut surplusGapRight, &mut surplusGapLeft, true, netOverlap, 0., Ptr::null());
+        }
+
+        // we also need to track the physical gap, in addition to the psychological gap
+        let mut physicalGapLeft = if self.myLastLateralGapLeft == f64::MAX { surplusGapLeft } else { self.myLastLateralGapLeft };
+        let mut physicalGapRight = if self.myLastLateralGapRight == f64::MAX { surplusGapRight } else { self.myLastLateralGapRight };
+        let halfLaneWidth = self.myVehicle.get_lane().get_width() * 0.5;
+        let posLat = self.myVehicle.get_lateral_position_on_lane() * (if self.is_opposite() { -1. } else { 1. });
+        if stayInLane || laneOffset == 1 {
+            // do not move past the right boundary of the current lane (traffic wasn't checked there)
+            // but assume it's ok to be where we are in case we are already beyond
+            surplusGapRight = min2(surplusGapRight, max2(0.0, halfLaneWidth + posLat - halfWidth));
+            physicalGapRight = min2(physicalGapRight, max2(0.0, halfLaneWidth + posLat - halfWidth));
+        }
+        if stayInLane || laneOffset == -1 {
+            // do not move past the left boundary of the current lane (traffic wasn't checked there)
+            // but assume it's ok to be where we are in case we are already beyond
+            surplusGapLeft = min2(surplusGapLeft, max2(0.0, halfLaneWidth - posLat - halfWidth));
+            physicalGapLeft = min2(physicalGapLeft, max2(0.0, halfLaneWidth - posLat - halfWidth));
+        }
+        if surplusGapRight + surplusGapLeft < 0. {
+            // insufficient lateral space to fulfill all requirements. apportion space proportionally
+            if (state & LCA_CHANGE_REASONS) == 0 {
+                state |= LCA_SUBLANE;
+            }
+            let equalDeficit = 0.5 * (surplusGapLeft + surplusGapRight);
+            if surplusGapRight < surplusGapLeft {
+                // shift further to the left but no further than there is physical space
+                let delta = min2(equalDeficit - surplusGapRight, physicalGapLeft);
+                *latDist = delta;
+                *maneuverDist = delta;
+            } else {
+                // shift further to the right but no further than there is physical space
+                let delta = min2(equalDeficit - surplusGapLeft, physicalGapRight);
+                *latDist = -delta;
+                *maneuverDist = -delta;
+            }
+        } else {
+            // sufficient space. move as far as the gaps permit
+            *latDist = max2(min2(*latDist, surplusGapLeft), -surplusGapRight);
+            *maneuverDist = max2(min2(*maneuverDist, surplusGapLeft), -surplusGapRight);
+            if (state & LCA_KEEPRIGHT) != 0 && *maneuverDist != oldManeuverDist {
+                // don't start keepRight unless it can be completed
+                *latDist = oldLatDist;
+                *maneuverDist = oldManeuverDist;
+            }
+        }
+        // take into account overriding traci sublane-request
+        if self.myVehicle.has_influencer() && self.myVehicle.m().get_influencer().get_lat_dist() != 0. {
+            // @note: the influence is reset in MSAbstractLaneChangeModel::setOwnState at the end of the lane-changing code for this vehicle
+            let infLatDist = self.myVehicle.m().get_influencer().get_lat_dist();
+            *latDist = infLatDist;
+            *maneuverDist = infLatDist;
+            if *latDist < 0. {
+                self.mySafeLatDistRight = max2(-*latDist, self.mySafeLatDistRight);
+            } else {
+                self.mySafeLatDistLeft = max2(*latDist, self.mySafeLatDistLeft);
+            }
+            state |= LCA_TRACI;
+        }
+        // if we cannot move in the desired direction, consider the maneuver blocked anyway
+        let nonSublaneChange = (state & (LCA_STRATEGIC | LCA_COOPERATIVE | LCA_SPEEDGAIN | LCA_KEEPRIGHT)) != 0;
+        let traciChange = ((state | traciState) & LCA_TRACI) != 0;
+        let eps = utils::geom::NUMERICAL_EPS * self.myVehicle.get_action_step_length_secs();
+        if nonSublaneChange && !traciChange {
+            if *latDist < eps && oldLatDist > 0. {
+                *latDist = oldLatDist; // restore old request for usage in decideDirection()
+                *blocked = LCA_OVERLAPPING | LCA_BLOCKED_LEFT;
+            } else if *latDist > -eps && oldLatDist < 0. {
+                *latDist = oldLatDist; // restore old request for usage in decideDirection()
+                *blocked = LCA_OVERLAPPING | LCA_BLOCKED_RIGHT;
+            }
+        }
+        // if we move, even though we wish to stay, update the change reason (except for TraCI)
+        if latDist.abs() > eps && oldLatDist == 0. {
+            state &= !(LCA_CHANGE_REASONS | LCA_STAY) | LCA_TRACI;
+        }
+        // update blocked status
+        if (*latDist - oldLatDist).abs() > eps {
+            *blocked = self.check_blocking(neighLane, latDist, *maneuverDist, laneOffset, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, Ptr::null(), Ptr::null(), nonSublaneChange, 0., Ptr::null());
+        }
+        if latDist.abs() > eps {
+            state &= !LCA_STAY;
+            if (state & LCA_CHANGE_REASONS) == 0 {
+                state |= LCA_SUBLANE;
+            }
+        } else {
+            if (state & LCA_SUBLANE) != 0 {
+                state |= LCA_STAY;
+            }
+            // avoid setting blinker due to numerical issues
+            *latDist = 0.;
+        }
+        state
     }
 
     /// C++: `void MSLCM_SL2015::updateGaps(const MSLeaderDistanceInfo &, double, double, double, double &, double &, bool, double, double, std::vector<CLeaderDist> *)` [protected]
