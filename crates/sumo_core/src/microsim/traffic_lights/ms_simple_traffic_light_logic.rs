@@ -57,7 +57,56 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSimpleTrafficLightLogic::MSSimpleTrafficLightLogic")
+        let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, offset, logicType, delay, parameters);
+        let myPhases: MSTrafficLightLogic_Phases = phases.clone();
+        base.myDefaultCycleTime = base.compute_cycle_time(&myPhases);
+        let mut this = MSSimpleTrafficLightLogic {
+            base,
+            myPhases,
+            myStep: step,
+            myCoordinated: false,
+        };
+        // shortcut: the C++ constructor's switch scheduling needs the final address, so callers must call schedule_initial_switch after boxing the logic
+        let now = MSNet::get_instance().get_current_time_step();
+        if (step as usize) < this.myPhases.len() {
+            this.myPhases[step as usize].m().myLastSwitch = now;
+        }
+        // the following initializations are only used by 'actuated' and 'delay_based' but do not affect 'static'
+        if this.base.base2.has_parameter("cycleTime") {
+            this.base.myDefaultCycleTime = time2steps(utils::common::string_utils::to_double(&this.base.base2.get_parameter("cycleTime", "")).unwrap_or_else(|e| panic!("{}", e)));
+        }
+        this.myCoordinated = utils::common::string_utils::to_bool(&this.base.base2.get_parameter("coordinated", "false")).unwrap_or_else(|e| panic!("{}", e));
+        this
+    }
+
+    /// Second half of the C++ constructor: schedules the first switch (base constructor) and moves it to
+    /// `earliest` when that is later. Must run once the logic has its final address (after boxing).
+    // shortcut: callers must invoke this right after boxing the logic, upgrade when constructors return Box<Self>
+    pub fn schedule_initial_switch(&mut self, tlcontrol: &mut MSTLLogicControl, delay: SUMOTime) {
+        self.base.schedule_switch_command(tlcontrol, delay);
+        if !self.myPhases.is_empty() {
+            let now = MSNet::get_instance().get_current_time_step();
+            let earliest: SUMOTime = now + self.get_earliest(-1);
+            if earliest > self.base.get_next_switch_time() {
+                let this = Ptr::from_mut(&mut self.base);
+                self.base.mySwitchCommand.deschedule(this);
+                self.base.mySwitchCommand = Ptr::from_raw(Box::into_raw(Box::new(MSTrafficLightLogic_SwitchCommand::new(tlcontrol, this, earliest))));
+                let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+                events.m().add_event(self.base.mySwitchCommand.cast::<()>(), earliest);
+            }
+        }
+    }
+
+    /// Applies the signals of the current phase to the controlled links (MSTrafficLightLogic::setTrafficLightSignals,
+    /// with the phase taken from this subclass).
+    fn apply_phase_signals(&self, t: SUMOTime) {
+        let state = self.get_current_phase_def().get_state().to_string();
+        for i in 0..self.base.myLinks.len() {
+            let ls: LinkState = (state.as_bytes()[i] as i8) as LinkState;
+            for link in &self.base.myLinks[i] {
+                link.m().set_tl_state(ls, t);
+            }
+        }
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::~MSSimpleTrafficLightLogic() noexcept` [virtual]
@@ -67,7 +116,7 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSimpleTrafficLightLogic::~MSSimpleTrafficLightLogic")
+        self.delete_phases();
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::trySwitch()` [virtual]
@@ -106,7 +155,35 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::trySwitch")
+        // check whether the current duration shall be increased
+        if self.base.myCurrentDurationIncrement > 0 {
+            let delay = self.base.myCurrentDurationIncrement;
+            self.base.myCurrentDurationIncrement = 0;
+            return delay;
+        }
+        // increment the index
+        if self.myPhases[self.myStep as usize].nextPhases.len() > 0 && self.myPhases[self.myStep as usize].nextPhases[0] >= 0 {
+            self.myStep = self.myPhases[self.myStep as usize].nextPhases[0];
+        } else {
+            self.myStep += 1;
+        }
+        // if the last phase was reached ...
+        if self.myStep >= self.myPhases.len() as i32 {
+            // ... set the index to the first phase
+            self.myStep = 0;
+        }
+        assert!(self.myPhases.len() as i32 > self.myStep);
+        // stores the time the phase started
+        let now = MSNet::get_instance().get_current_time_step();
+        self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+        // check whether the next duration was overridden
+        if self.base.myOverridingTimes.len() > 0 {
+            let nextDuration = self.base.myOverridingTimes[0];
+            self.base.myOverridingTimes.remove(0);
+            return nextDuration;
+        }
+        // return offset to the next switch
+        self.myPhases[self.myStep as usize].duration
     }
 
     /// C++: `int MSSimpleTrafficLightLogic::getPhaseNumber() const` [const, virtual]
@@ -117,7 +194,7 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_number(&self) -> i32 {
-        todo!("port MSSimpleTrafficLightLogic::getPhaseNumber")
+        self.myPhases.len() as i32
     }
 
     /// C++: `const Phases & MSSimpleTrafficLightLogic::getPhases() const` [const, virtual]
@@ -125,7 +202,7 @@ impl MSSimpleTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_phases(&self) -> &MSTrafficLightLogic_Phases {
-        todo!("port MSSimpleTrafficLightLogic::getPhases")
+        &self.myPhases
     }
 
     /// C++: `Phases & MSSimpleTrafficLightLogic::getPhases()`
@@ -133,7 +210,7 @@ impl MSSimpleTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_phases_2(&mut self) -> &mut MSTrafficLightLogic_Phases {
-        todo!("port MSSimpleTrafficLightLogic::getPhases")
+        &mut self.myPhases
     }
 
     /// C++: `const MSPhaseDefinition & MSSimpleTrafficLightLogic::getPhase(int) const` [const, virtual]
@@ -145,7 +222,8 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_phase(&self, givenstep: i32) -> &MSPhaseDefinition {
-        todo!("port MSSimpleTrafficLightLogic::getPhase")
+        assert!(self.myPhases.len() as i32 > givenstep);
+        &*self.myPhases[givenstep as usize]
     }
 
     /// C++: `int MSSimpleTrafficLightLogic::getCurrentPhaseIndex() const` [const, virtual]
@@ -156,7 +234,7 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_index(&self) -> i32 {
-        todo!("port MSSimpleTrafficLightLogic::getCurrentPhaseIndex")
+        self.myStep
     }
 
     /// C++: `const MSPhaseDefinition & MSSimpleTrafficLightLogic::getCurrentPhaseDef() const` [const, virtual]
@@ -167,7 +245,7 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_def(&self) -> &MSPhaseDefinition {
-        todo!("port MSSimpleTrafficLightLogic::getCurrentPhaseDef")
+        &*self.myPhases[self.myStep as usize]
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::resetLastSwitch(SUMOTime)` [virtual]
@@ -178,7 +256,7 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_last_switch(&mut self, t: SUMOTime) {
-        todo!("port MSSimpleTrafficLightLogic::resetLastSwitch")
+        self.myPhases[self.myStep as usize].m().myLastSwitch = t;
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::getPhaseIndexAtTime(SUMOTime) const` [const, virtual]
@@ -198,7 +276,17 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_index_at_time(&self, simStep: SUMOTime) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::getPhaseIndexAtTime")
+        let mut position: SUMOTime = 0;
+        if self.myStep > 0 {
+            for i in 0..self.myStep {
+                position = position + self.get_phase(i).duration;
+            }
+        }
+        let now = MSNet::get_instance().get_current_time_step();
+        position = position + simStep - self.get_phase(self.myStep).myLastSwitch;
+        position = position % self.base.myDefaultCycleTime;
+        assert!(position <= self.base.myDefaultCycleTime);
+        position
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::getOffsetFromIndex(int) const` [const, virtual]
@@ -217,7 +305,15 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_offset_from_index(&self, index: i32) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::getOffsetFromIndex")
+        assert!(index < self.myPhases.len() as i32);
+        if index == 0 {
+            return 0;
+        }
+        let mut pos: SUMOTime = 0;
+        for i in 0..index {
+            pos += self.get_phase(i).duration;
+        }
+        pos
     }
 
     /// C++: `int MSSimpleTrafficLightLogic::getIndexFromOffset(SUMOTime) const` [const, virtual]
@@ -243,7 +339,22 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_index_from_offset(&self, offset: SUMOTime) -> i32 {
-        todo!("port MSSimpleTrafficLightLogic::getIndexFromOffset")
+        let offset = offset % self.base.myDefaultCycleTime;
+        if offset == self.base.myDefaultCycleTime {
+            return 0;
+        }
+        let mut testPos: SUMOTime = 0;
+        for i in 0..self.myPhases.len() {
+            testPos = testPos + self.get_phase(i as i32).duration;
+            if testPos > offset {
+                return i as i32;
+            }
+            if testPos == offset {
+                assert!(self.myPhases.len() > i + 1);
+                return (i + 1) as i32;
+            }
+        }
+        0
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::changeStepAndDuration(MSTLLogicControl &, SUMOTime, int, SUMOTime)` [virtual]
@@ -267,7 +378,22 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn change_step_and_duration(&mut self, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
-        todo!("port MSSimpleTrafficLightLogic::changeStepAndDuration")
+        let this = Ptr::from_mut(&mut self.base);
+        self.base.mySwitchCommand.deschedule(this);
+        self.base.mySwitchCommand = Ptr::from_raw(Box::into_raw(Box::new(MSTrafficLightLogic_SwitchCommand::new(tlcontrol, this, stepDuration + simStep))));
+        if step >= 0 && step != self.myStep {
+            self.myStep = step;
+            let now = MSNet::get_instance().get_current_time_step();
+            self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+            if self.base.myAmActive {
+                // when loading from state, the last loaded program isn't always the active one
+                self.apply_phase_signals(simStep);
+            }
+            let id = self.base.get_id().to_string();
+            tlcontrol.get(&id).execute_on_switch_actions();
+        }
+        let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+        events.m().add_event(self.base.mySwitchCommand.cast::<()>(), stepDuration + simStep);
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::setPhases(const Phases &, int)`
@@ -284,7 +410,17 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phases(&mut self, phases: &MSTrafficLightLogic_Phases, index: i32) {
-        todo!("port MSSimpleTrafficLightLogic::setPhases")
+        let now = MSNet::get_instance().get_current_time_step();
+        let lastSwitch: SUMOTime = if self.myPhases[self.myStep as usize].get_state() == phases[index as usize].get_state() {
+            self.myPhases[self.myStep as usize].myLastSwitch
+        } else {
+            now
+        };
+        self.delete_phases();
+        self.myPhases = phases.clone();
+        self.myStep = index;
+        self.base.myDefaultCycleTime = self.base.compute_cycle_time(&self.myPhases);
+        self.myPhases[self.myStep as usize].m().myLastSwitch = lastSwitch;
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::saveState(OutputDevice &) const` [const, virtual]
@@ -297,7 +433,9 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSSimpleTrafficLightLogic::saveState")
+        out.open_tag_id(SUMO_TAG_TLLOGIC);
+        self.save_state_attrs(out);
+        out.close_tag("");
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
@@ -309,7 +447,17 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
-        todo!("port MSSimpleTrafficLightLogic::loadState")
+        // MSTrafficLightLogic::loadState, with the virtual calls dispatched to this subclass
+        self.base.myAmActive = active;
+        let remaining = nextSwitch - t;
+        self.change_step_and_duration(tlcontrol, t, step, remaining);
+        if self.base.myAmActive {
+            // when loading from state, the last loaded program isn't always the active one
+            self.apply_phase_signals(t - spentDuration);
+            let id = self.base.get_id().to_string();
+            tlcontrol.get(&id).switch_to_loaded(Ptr::from_mut(&mut self.base));
+        }
+        self.myPhases[self.myStep as usize].m().myLastSwitch = t - spentDuration;
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::mapTimeInCycle(SUMOTime) const` [const, virtual]
@@ -321,7 +469,11 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn map_time_in_cycle(&self, t: SUMOTime) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::mapTimeInCycle")
+        if self.myCoordinated {
+            (t - self.base.myOffset) % self.base.myDefaultCycleTime
+        } else {
+            (t - self.myPhases[0].myLastSwitch) % self.base.myDefaultCycleTime
+        }
     }
 
     /// C++: `const std::string MSSimpleTrafficLightLogic::getParameter(const std::string &, const std::string) const` [const, virtual]
@@ -343,7 +495,20 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str, defaultValue: String) -> String {
-        todo!("port MSSimpleTrafficLightLogic::getParameter")
+        if key == "cycleTime" {
+            utils::common::to_string::to_string(&steps2time(self.base.myDefaultCycleTime))
+        } else if key == "offset" {
+            utils::common::to_string::to_string(&steps2time(self.base.myOffset))
+        } else if key == "coordinated" {
+            utils::common::to_string::to_string(&self.myCoordinated)
+        } else if key == "cycleSecond" {
+            let now = MSNet::get_instance().get_current_time_step();
+            utils::common::to_string::to_string(&steps2time(self.map_time_in_cycle(now)))
+        } else if key == "typeName" {
+            TrafficLightTypes.get_string(self.base.get_logic_type()).unwrap_or_else(|e| panic!("{}", e)).to_string()
+        } else {
+            self.base.base2.get_parameter(key, &defaultValue)
+        }
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::setParameter(const std::string &, const std::string &)` [virtual]
@@ -366,7 +531,19 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSSimpleTrafficLightLogic::setParameter")
+        if key == "cycleTime" {
+            self.base.myDefaultCycleTime = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            self.base.base2.set_parameter(key, value);
+        } else if key == "cycleSecond" || key == "typeName" {
+            panic!("{}", ProcessError::InvalidArgument(format!("{} cannot be changed dynamically for traffic light '{}'", key, self.base.get_id())));
+        } else if key == "offset" {
+            self.base.myOffset = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+        } else if key == "coordinated" {
+            self.myCoordinated = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
+            self.base.base2.set_parameter(key, value);
+        } else {
+            self.base.base2.set_parameter(key, value);
+        }
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::getEarliest(SUMOTime) const` [const, protected]
@@ -415,7 +592,34 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_earliest(&self, prevStart: SUMOTime) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::getEarliest")
+        // phase end times are read from this subclass (the C++ getEarliestEnd/getMinDur/... calls are virtual-free here)
+        let now = MSNet::get_instance().get_current_time_step();
+        let mut earliest = self.get_current_phase_def().earliestEnd;
+        if earliest == UNSPECIFIED_DURATION {
+            return 0;
+        } else {
+            let timeInCycle = self.map_time_in_cycle(now);
+            if prevStart >= now - timeInCycle && prevStart < self.get_current_phase_def().myLastEnd {
+                // phase was started and ended once already in the current cycle
+                // it should not end a second time in the same cycle
+                earliest += self.base.myDefaultCycleTime;
+            } else {
+                let latest = self.get_current_phase_def().latestEnd;
+                if latest != UNSPECIFIED_DURATION {
+                    let minRemaining = self.get_current_phase_def().minDuration - (now - self.get_current_phase_def().myLastSwitch);
+                    let minEnd = timeInCycle + minRemaining;
+                    if latest > earliest && latest < minEnd {
+                        // cannot terminate phase between earliest and latest -> move end into next cycle
+                        earliest += self.base.myDefaultCycleTime;
+                    } else if latest < earliest && latest >= minEnd {
+                        // can ignore earliest since it counts from the previous cycle
+                        earliest -= self.base.myDefaultCycleTime;
+                    }
+                }
+            }
+            let maxRemaining = self.get_current_phase_def().maxDuration - (now - self.get_current_phase_def().myLastSwitch);
+            std::cmp::min(earliest - timeInCycle, maxRemaining)
+        }
     }
 
     /// C++: `SUMOTime MSSimpleTrafficLightLogic::getLatest() const` [const, protected]
@@ -448,7 +652,25 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_latest(&self) -> SUMOTime {
-        todo!("port MSSimpleTrafficLightLogic::getLatest")
+        let now = MSNet::get_instance().get_current_time_step();
+        let latest = self.get_current_phase_def().latestEnd;
+        if latest == UNSPECIFIED_DURATION {
+            return SUMOTIME_MAX; // no restriction
+        } else {
+            let timeInCycle = self.map_time_in_cycle(now);
+            if latest < self.get_current_phase_def().earliestEnd {
+                let running = now - self.get_current_phase_def().myLastSwitch;
+                if running < timeInCycle {
+                    // phase was started in the current cycle so the restriction does not apply yet
+                    return SUMOTIME_MAX;
+                }
+            }
+            if latest == self.base.myDefaultCycleTime && timeInCycle == 0 {
+                // special case: end on cylce time wrap-around
+                return 0;
+            }
+            std::cmp::max(0, latest - timeInCycle)
+        }
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::saveStateAttrs(OutputDevice &) const` [const, protected]
@@ -464,7 +686,16 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn save_state_attrs(&self, out: &mut OutputDevice) {
-        todo!("port MSSimpleTrafficLightLogic::saveStateAttrs")
+        let now = MSNet::get_instance().get_current_time_step();
+        let timeInCycle = self.map_time_in_cycle(now);
+        let spentDuration: SUMOTime = now - self.get_current_phase_def().myLastSwitch;
+        out.write_attr(SUMO_ATTR_ID, self.base.get_id());
+        out.write_attr(SUMO_ATTR_PROGRAMID, self.base.get_program_id());
+        out.write_attr(SUMO_ATTR_PHASE, &self.get_current_phase_index());
+        out.write_attr(SUMO_ATTR_DURATION, &spentDuration);
+        out.write_attr(SUMO_ATTR_UNTIL, &self.base.get_next_switch_time());
+        out.write_attr(SUMO_ATTR_CYCLETIME, &timeInCycle);
+        out.write_attr(SUMO_ATTR_ACTIVE, &self.base.myAmActive);
     }
 
     /// C++: `void MSSimpleTrafficLightLogic::deletePhases()` [private]
@@ -477,7 +708,13 @@ impl MSSimpleTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn delete_phases(&mut self) {
-        todo!("port MSSimpleTrafficLightLogic::deletePhases")
+        // C++ deletes every phase definition; they were allocated with Box::into_raw by their creator
+        for i in 0..self.myPhases.len() {
+            let p = self.myPhases[i];
+            unsafe {
+                drop(Box::from_raw(p.as_raw()));
+            }
+        }
     }
 
 }
