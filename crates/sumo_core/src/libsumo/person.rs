@@ -1256,7 +1256,28 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn move_to(personID: &str, laneID: &str, pos: f64, posLat: f64) {
-        todo!("port Person::moveTo")
+        let p = Self::get_person(personID);
+        let l = MSLane::dictionary_2(laneID);
+        if l.is_null() {
+            panic!("Unknown lane '{}'.", laneID);
+        }
+        let mut posLat = posLat;
+        if posLat == INVALID_DOUBLE_VALUE {
+            posLat = 0.;
+        // 3.0 is MSPModel::SIDEWALK_OFFSET
+        } else if posLat.abs() >= (0.5 * (l.get_width() + p.get_vehicle_type().get_width()) + 3.0) {
+            // see MSPModel_Striping::moveToXY
+            panic!("Invalid lateral position {} on lane '{}'.", to_string(&posLat), laneID);
+        }
+        match p.get_stage_type(0) {
+            MSStageType::WALKING => {
+                let s = p.get_current_stage().cast::<MSStageWalking>();
+                s.get_p_state().move_to(p, l, pos, posLat, MSNet::get_instance().get_current_time_step());
+            }
+            _ => {
+                panic!("Command moveTo is not supported for person '{}' while {}.", personID, p.get_current_stage_description());
+            }
+        }
     }
 
     /// C++: `void Person::moveToXY(const std::string &, const std::string &, const double, const double, double, const int, double)` [static]
@@ -1427,7 +1448,153 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn move_to_xy(personID: &str, edgeID: &str, x: f64, y: f64, angle: f64, keepRoute: i32, matchThreshold: f64) {
-        todo!("port Person::moveToXY")
+        let p = Self::get_person(personID);
+        let doKeepRoute = (keepRoute & 1) != 0;
+        let mayLeaveNetwork = (keepRoute & 2) != 0;
+        let ignorePermissions = (keepRoute & 4) != 0;
+        let vClass = if ignorePermissions { utils::common::sumo_vehicle_class::SVC_IGNORING } else { p.get_v_class() };
+        let mut pos = Position::new(x, y);
+        let mut angle = angle;
+        // angle must be in [0,360] because it will be compared against those returned by naviDegree()
+        // angle set to INVALID_DOUBLE_VALUE is ignored in the evaluated and later set to the angle of the matched lane
+        if angle != INVALID_DOUBLE_VALUE {
+            while angle >= 360. {
+                angle -= 360.;
+            }
+            while angle < 0. {
+                angle += 360.;
+            }
+        }
+
+        let mut edges: ConstMSEdgeVector = Vec::new();
+        let mut lane: Ptr<MSLane> = Ptr::null();
+        let mut lanePos: f64 = 0.;
+        let mut lanePosLat: f64 = 0.;
+        let mut bestDistance: f64 = f64::MAX;
+        let mut routeOffset: i32 = 0;
+        let mut found = false;
+        let maxRouteDistance = matchThreshold;
+
+        let mut ev: ConstMSEdgeVector = vec![p.get_edge()];
+        let mut routeIndex: i32 = 0;
+        let currentLane: Ptr<MSLane> = get_sidewalk_lane(p.get_edge());
+        match p.get_stage_type(0) {
+            MSStageType::WALKING => {
+                let s = p.get_current_stage().cast::<MSStageWalking>();
+                ev = s.get_edges();
+                routeIndex = s.get_route_step() as i32;
+            }
+            _ => {}
+        }
+        if doKeepRoute {
+            // case a): vehicle is on its earlier route
+            //  we additionally assume it is moving forward (SUMO-limit);
+            //  note that the route ("edges") is not changed in this case
+            found = Helper::move_to_xy_map_matching_route_position(&pos, edgeID, &ev, routeIndex, vClass, true, &mut bestDistance, Ptr::from_mut(&mut lane), &mut lanePos, &mut routeOffset);
+            if bestDistance > maxRouteDistance {
+                found = false;
+                lane = Ptr::null();
+            }
+        } else {
+            let speed = pos.distance_to2d(&p.get_position(0.)); // !!!veh->getSpeed();
+            found = Helper::move_to_xy_map(&pos, maxRouteDistance, mayLeaveNetwork, edgeID, angle, speed, &ev, routeIndex, currentLane, p.get_edge_pos(), !currentLane.is_null(), vClass, navi_degree(p.get_angle()), true, &mut bestDistance, Ptr::from_mut(&mut lane), &mut lanePos, &mut routeOffset, &mut edges);
+            if !edges.is_empty() && ev.len() > 1 {
+                // try to rebuild the route
+                let origEdge = p.get_edge();
+                assert!(!lane.is_null());
+                let originalTarget: Ptr<MSJunction>;
+                if origEdge.is_normal() {
+                    if routeIndex == 0 {
+                        if origEdge.get_to_junction() == ev[1].get_to_junction() || origEdge.get_to_junction() == ev[1].get_from_junction() {
+                            originalTarget = origEdge.get_to_junction();
+                        } else {
+                            originalTarget = origEdge.get_from_junction();
+                        }
+                    } else {
+                        let prev = ev[(routeIndex - 1) as usize];
+                        if origEdge.get_to_junction() == prev.get_to_junction() || origEdge.get_to_junction() == prev.get_from_junction() {
+                            originalTarget = origEdge.get_from_junction();
+                        } else {
+                            originalTarget = origEdge.get_to_junction();
+                        }
+                    }
+                } else {
+                    originalTarget = origEdge.get_to_junction();
+                    assert!(originalTarget == origEdge.get_from_junction());
+                }
+                let newEdge = edges[0];
+                if edges[0].get_from_junction() == originalTarget || edges[0].get_to_junction() == originalTarget {
+                    edges = ev.clone();
+                    edges[routeIndex as usize] = newEdge;
+                }
+            }
+        }
+        if found || mayLeaveNetwork {
+            // compute lateral offset
+            if found {
+                let perpDist = lane.get_shape(false).distance2d(&pos, false);
+                if perpDist != utils::geom::geom_helper::INVALID_OFFSET {
+                    lanePosLat = perpDist;
+                    if !mayLeaveNetwork {
+                        let lateralLimit = 0.5 * (lane.get_width() + p.get_vehicle_type().get_width());
+                        if lateralLimit < lanePosLat {
+                            lanePosLat = lateralLimit;
+                        }
+                    }
+                    // figure out whether the offset is to the left or to the right
+                    let mut tmp = lane.get_shape(false).clone();
+                    // shortcut: PositionVector::move2side does not report ProcessError, so the C++ warning path is not reachable
+                    tmp.move2side(-lanePosLat, 100.0);
+                    if tmp.distance2d(&pos, false) > perpDist {
+                        lanePosLat = -lanePosLat;
+                    }
+                }
+            }
+            if found && !mayLeaveNetwork && MSGlobals::lateral_resolution() < 0. {
+                // mapped position may differ from pos
+                pos = lane.geometry_position_at_offset(lanePos, -lanePosLat);
+            }
+            assert!((found && !lane.is_null()) || (!found && lane.is_null()));
+            match p.get_stage_type(0) {
+                MSStageType::WALKING => {
+                    if angle == INVALID_DOUBLE_VALUE {
+                        // walking angle cannot be deduced from road angle so we always use the last pos
+                        angle = navi_degree(p.get_position(0.).angle_to2d(&pos));
+                    }
+                }
+                MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => {
+                    if p.get_num_remaining_stages() <= 1 || p.get_stage_type(1) != MSStageType::WALKING {
+                        // insert walking stage after the current stage
+                        let route: ConstMSEdgeVector = vec![p.get_edge()];
+                        let departPos = p.get_current_stage().get_arrival_pos();
+                        // f64::MAX is MSPModel::UNSPECIFIED_POS_LAT
+                        let stage = MSStageWalking::new(p.get_id(), &route, Ptr::null(), -1, -1., departPos, departPos, f64::MAX, -1, "");
+                        p.m().append_stage(Ptr::from_mut(Box::leak(Box::new(stage))).cast::<MSStage>(), 1);
+                    }
+                    // abort waiting stage and proceed to walking stage
+                    p.m().remove_stage(0, true);
+                    assert!(p.get_stage_type(0) == MSStageType::WALKING);
+                    if angle == INVALID_DOUBLE_VALUE {
+                        if !lane.is_null() && !lane.is_walking_area() {
+                            angle = navi_degree(lane.get_shape(false).rotation_at_offset(lanePos));
+                        } else {
+                            // compute angle outside road network or on walkingarea from old and new position
+                            angle = navi_degree(p.get_position(0.).angle_to2d(&pos));
+                        }
+                    }
+                }
+                _ => {
+                    panic!("Command moveToXY is not supported for person '{}' while {}.", personID, p.get_current_stage_description());
+                }
+            }
+            Helper::set_remote_controlled_2(p, pos, lane, lanePos, lanePosLat, angle, routeOffset, edges, MSNet::get_instance().get_current_time_step());
+        } else {
+            if lane.is_null() {
+                panic!("Could not map person '{}' no road found within {}m.", personID, to_string(&maxRouteDistance));
+            } else {
+                panic!("Could not map person '{}' distance to road is {}.", personID, to_string(&bestDistance));
+            }
+        }
     }
 
     /// C++: `void Person::remove(const std::string &, char)` [static]
@@ -1443,7 +1610,14 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn remove(personID: &str, reason: i8) {
-        todo!("port Person::remove")
+        // C++ `char /*reason*/` is unused
+        let person = Self::get_person(personID);
+        // remove all stages after the current and then abort the current stage
+        // (without adding a zero-length waiting stage)
+        while person.get_num_remaining_stages() > 1 {
+            person.m().remove_stage(1, true);
+        }
+        person.m().remove_stage(0, false);
     }
 
     /// C++: `void Person::setSpeed(const std::string &, double)` [static]
@@ -1453,7 +1627,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(personID: &str, speed: f64) {
-        todo!("port Person::setSpeed")
+        Self::get_person(personID).m().set_speed(speed);
     }
 
     /// C++: `void Person::setType(const std::string &, const std::string &)` [static]
@@ -1467,7 +1641,11 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn set_type(personID: &str, typeID: &str) {
-        todo!("port Person::setType")
+        let vehicleType = MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false);
+        if vehicleType.is_null() {
+            panic!("The vehicle type '{}' is not known.", typeID);
+        }
+        Self::get_person(personID).m().replace_vehicle_type(vehicleType);
     }
 
     /// C++: `void Person::setLength(const std::string &, double)` [static]
@@ -1476,8 +1654,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setLength(length);
     // }
     #[allow(unused_variables)]
-    pub fn set_length(typeID: &str, length: f64) {
-        todo!("port Person::setLength")
+    pub fn set_length(personID: &str, length: f64) {
+        Self::get_person(personID).m().get_singular_type().set_length(&length);
     }
 
     /// C++: `void Person::setMaxSpeed(const std::string &, double)` [static]
@@ -1486,8 +1664,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setMaxSpeed(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed(typeID: &str, speed: f64) {
-        todo!("port Person::setMaxSpeed")
+    pub fn set_max_speed(personID: &str, speed: f64) {
+        Self::get_person(personID).m().get_singular_type().set_max_speed(&speed);
     }
 
     /// C++: `void Person::setVehicleClass(const std::string &, const std::string &)` [static]
@@ -1496,8 +1674,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setVClass(getVehicleClassID(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_vehicle_class(typeID: &str, clazz: &str) {
-        todo!("port Person::setVehicleClass")
+    pub fn set_vehicle_class(personID: &str, clazz: &str) {
+        Self::get_person(personID).m().get_singular_type().set_v_class(utils::common::sumo_vehicle_class::get_vehicle_class_id(clazz).unwrap_or_else(|e| panic!("{}", e)));
     }
 
     /// C++: `void Person::setSpeedFactor(const std::string &, double)` [static]
@@ -1506,8 +1684,8 @@ impl Person {
     //     getPerson(personID)->setChosenSpeedFactor(factor);
     // }
     #[allow(unused_variables)]
-    pub fn set_speed_factor(typeID: &str, factor: f64) {
-        todo!("port Person::setSpeedFactor")
+    pub fn set_speed_factor(personID: &str, factor: f64) {
+        Self::get_person(personID).m().set_chosen_speed_factor(factor);
     }
 
     /// C++: `void Person::setAccel(const std::string &, double)` [static]
@@ -1516,8 +1694,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setAccel(accel);
     // }
     #[allow(unused_variables)]
-    pub fn set_accel(typeID: &str, accel: f64) {
-        todo!("port Person::setAccel")
+    pub fn set_accel(personID: &str, accel: f64) {
+        Self::get_person(personID).m().get_singular_type().set_accel(accel);
     }
 
     /// C++: `void Person::setDecel(const std::string &, double)` [static]
@@ -1526,8 +1704,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setDecel(decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_decel(typeID: &str, decel: f64) {
-        todo!("port Person::setDecel")
+    pub fn set_decel(personID: &str, decel: f64) {
+        Self::get_person(personID).m().get_singular_type().set_decel(decel);
     }
 
     /// C++: `void Person::setEmergencyDecel(const std::string &, double)` [static]
@@ -1536,8 +1714,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setEmergencyDecel(decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_emergency_decel(typeID: &str, decel: f64) {
-        todo!("port Person::setEmergencyDecel")
+    pub fn set_emergency_decel(personID: &str, decel: f64) {
+        Self::get_person(personID).m().get_singular_type().set_emergency_decel(decel);
     }
 
     /// C++: `void Person::setApparentDecel(const std::string &, double)` [static]
@@ -1546,8 +1724,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setApparentDecel(decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_apparent_decel(typeID: &str, decel: f64) {
-        todo!("port Person::setApparentDecel")
+    pub fn set_apparent_decel(personID: &str, decel: f64) {
+        Self::get_person(personID).m().get_singular_type().set_apparent_decel(decel);
     }
 
     /// C++: `void Person::setImperfection(const std::string &, double)` [static]
@@ -1556,8 +1734,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setImperfection(imperfection);
     // }
     #[allow(unused_variables)]
-    pub fn set_imperfection(typeID: &str, imperfection: f64) {
-        todo!("port Person::setImperfection")
+    pub fn set_imperfection(personID: &str, imperfection: f64) {
+        Self::get_person(personID).m().get_singular_type().set_imperfection(imperfection);
     }
 
     /// C++: `void Person::setTau(const std::string &, double)` [static]
@@ -1566,8 +1744,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setTau(tau);
     // }
     #[allow(unused_variables)]
-    pub fn set_tau(typeID: &str, tau: f64) {
-        todo!("port Person::setTau")
+    pub fn set_tau(personID: &str, tau: f64) {
+        Self::get_person(personID).m().get_singular_type().set_tau(tau);
     }
 
     /// C++: `void Person::setEmissionClass(const std::string &, const std::string &)` [static]
@@ -1576,8 +1754,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setEmissionClass(PollutantsInterface::getClassByName(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_emission_class(typeID: &str, clazz: &str) {
-        todo!("port Person::setEmissionClass")
+    pub fn set_emission_class(personID: &str, clazz: &str) {
+        Self::get_person(personID).m().get_singular_type().set_emission_class(PollutantsInterface::get_class_by_name(clazz, utils::common::sumo_vehicle_class::SVC_IGNORING));
     }
 
     /// C++: `void Person::setShapeClass(const std::string &, const std::string &)` [static]
@@ -1586,8 +1764,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setShape(getVehicleShapeID(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_shape_class(typeID: &str, shapeClass: &str) {
-        todo!("port Person::setShapeClass")
+    pub fn set_shape_class(personID: &str, shapeClass: &str) {
+        Self::get_person(personID).m().get_singular_type().set_shape(utils::common::sumo_vehicle_class::get_vehicle_shape_id(shapeClass).unwrap_or_else(|e| panic!("{}", e)));
     }
 
     /// C++: `void Person::setWidth(const std::string &, double)` [static]
@@ -1596,8 +1774,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setWidth(width);
     // }
     #[allow(unused_variables)]
-    pub fn set_width(typeID: &str, width: f64) {
-        todo!("port Person::setWidth")
+    pub fn set_width(personID: &str, width: f64) {
+        Self::get_person(personID).m().get_singular_type().set_width(&width);
     }
 
     /// C++: `void Person::setHeight(const std::string &, double)` [static]
@@ -1606,8 +1784,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setHeight(height);
     // }
     #[allow(unused_variables)]
-    pub fn set_height(typeID: &str, height: f64) {
-        todo!("port Person::setHeight")
+    pub fn set_height(personID: &str, height: f64) {
+        Self::get_person(personID).m().get_singular_type().set_height(&height);
     }
 
     /// C++: `void Person::setMass(const std::string &, double)` [static]
@@ -1616,15 +1794,20 @@ impl Person {
     //     getPerson(personID)->getSingularType().setMass(mass);
     // }
     #[allow(unused_variables)]
-    pub fn set_mass(typeID: &str, mass: f64) {
-        todo!("port Person::setMass")
+    pub fn set_mass(personID: &str, mass: f64) {
+        Self::get_person(personID).m().get_singular_type().set_mass(mass);
     }
 
     /// C++: `void Person::setColor(const std::string &, const libsumo::TraCIColor &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn set_color(typeID: &str, color: &TraCIColor) {
-        todo!("port Person::setColor")
+    pub fn set_color(personID: &str, color: &TraCIColor) {
+        const VEHPARS_COLOR_SET: i64 = 1;
+        let person = Self::get_person(personID);
+        // C++ `const SUMOVehicleParameter& p = ...` is mutated here (const_cast-style access, as in vehicle.rs)
+        let p: &mut SUMOVehicleParameter = unsafe { &mut *(person.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter) };
+        p.color.set(color.r as u8, color.g as u8, color.b as u8, color.a as u8);
+        p.parametersSet |= VEHPARS_COLOR_SET;
     }
 
     /// C++: `void Person::setMinGap(const std::string &, double)` [static]
@@ -1633,8 +1816,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setMinGap(minGap);
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap(typeID: &str, minGap: f64) {
-        todo!("port Person::setMinGap")
+    pub fn set_min_gap(personID: &str, minGap: f64) {
+        Self::get_person(personID).m().get_singular_type().set_min_gap(&minGap);
     }
 
     /// C++: `void Person::setMinGapLat(const std::string &, double)` [static]
@@ -1643,8 +1826,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setMinGapLat(minGapLat);
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap_lat(typeID: &str, minGapLat: f64) {
-        todo!("port Person::setMinGapLat")
+    pub fn set_min_gap_lat(personID: &str, minGapLat: f64) {
+        Self::get_person(personID).m().get_singular_type().set_min_gap_lat(&minGapLat);
     }
 
     /// C++: `void Person::setMaxSpeedLat(const std::string &, double)` [static]
@@ -1653,8 +1836,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setMaxSpeedLat(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed_lat(typeID: &str, speed: f64) {
-        todo!("port Person::setMaxSpeedLat")
+    pub fn set_max_speed_lat(personID: &str, speed: f64) {
+        Self::get_person(personID).m().get_singular_type().set_max_speed_lat(&speed);
     }
 
     /// C++: `void Person::setLateralAlignment(const std::string &, const std::string &)` [static]
@@ -1669,8 +1852,15 @@ impl Person {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_lateral_alignment(typeID: &str, latAlignment: &str) {
-        todo!("port Person::setLateralAlignment")
+    pub fn set_lateral_alignment(personID: &str, latAlignment: &str) {
+        let mut lao: f64 = 0.;
+        let mut lad: LatAlignmentDefinition = LatAlignmentDefinition::DEFAULT;
+        if SUMOVTypeParameter::parse_lat_alignment(latAlignment, &mut lao, &mut lad) {
+            Self::get_person(personID).m().get_singular_type().set_preferred_lateral_alignment(&lad, lao);
+        } else {
+            panic!("Unknown value '{}' when setting latAlignment for person '{}';
+ must be one of (\"right\", \"center\", \"arbitrary\", \"nice\", \"compact\", \"left\" or a float)", latAlignment, personID);
+        }
     }
 
     /// C++: `void Person::setActionStepLength(const std::string &, double, bool)` [static]
@@ -1679,8 +1869,8 @@ impl Person {
     //     getPerson(personID)->getSingularType().setActionStepLength(SUMOVehicleParserHelper::processActionStepLength(actionStepLength), resetActionOffset);
     // }
     #[allow(unused_variables)]
-    pub fn set_action_step_length(typeID: &str, actionStepLength: f64, resetActionOffset: bool) {
-        todo!("port Person::setActionStepLength")
+    pub fn set_action_step_length(personID: &str, actionStepLength: f64, resetActionOffset: bool) {
+        Self::get_person(personID).m().get_singular_type().set_action_step_length(SUMOVehicleParserHelper::process_action_step_length(actionStepLength), resetActionOffset);
     }
 
     /// C++: `void Person::setBoardingDuration(const std::string &, double)` [static]
@@ -1689,8 +1879,8 @@ impl Person {
     //     Helper::getPerson(personID)->getSingularType().setBoardingDuration(TIME2STEPS(boardingDuration));
     // }
     #[allow(unused_variables)]
-    pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
-        todo!("port Person::setBoardingDuration")
+    pub fn set_boarding_duration(personID: &str, boardingDuration: f64) {
+        Self::get_person(personID).m().get_singular_type().set_boarding_duration(time2steps(boardingDuration), true);
     }
 
     /// C++: `void Person::setImpatience(const std::string &, double)` [static]
@@ -1699,8 +1889,9 @@ impl Person {
     //     Helper::getVehicle(personID)->getSingularType().setImpatience(impatience);
     // }
     #[allow(unused_variables)]
-    pub fn set_impatience(typeID: &str, impatience: f64) {
-        todo!("port Person::setImpatience")
+    pub fn set_impatience(personID: &str, impatience: f64) {
+        // C++ routes this through Helper::getVehicle(personID), not getPerson; kept as in C++
+        Helper::get_vehicle(personID).m().get_singular_type().set_impatience(impatience);
     }
 
     /// C++: `void Person::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
