@@ -140,7 +140,8 @@ impl MSInductLoop {
         // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported: it needs a stable self address and this constructor returns by value; meso is off while g_use_meso_sim() is false
         let mut s = MSInductLoop {
             base: MSMoveReminder::new(id, lane, true),
-            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons),
+            // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
+            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,
             myPosition: positionInMeters,
             myEndPosition: positionInMeters + length,
@@ -1007,7 +1008,7 @@ impl MSInductLoop {
     /// Returns vehicle data for vehicles that have been on the detector starting at the given time
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn collect_vehicles_on_det(&self, t: SUMOTime, includeEarly: bool, leaveTime: bool, forOccupancy: bool, lastInterval: bool) -> Vec<VehicleData> {
+    pub fn collect_vehicles_on_det(&self, t: SUMOTime, includeEarly: bool, leaveTime: bool, forOccupancy: bool, lastInterval: bool) -> Vec<MSInductLoop_VehicleData> {
         let tt = steps2time(t);
         let mut ret: Vec<MSInductLoop_VehicleData> = Vec::new();
         for i in self.myVehicleDataCont.iter() {
