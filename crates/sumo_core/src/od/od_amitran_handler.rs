@@ -35,7 +35,13 @@ impl ODAmitranHandler {
     //     : SUMOSAXHandler(file), myMatrix(matrix) {}
     #[allow(unused_variables)]
     pub fn new(matrix: &mut ODMatrix, file: &str) -> Self {
-        todo!("port ODAmitranHandler::ODAmitranHandler")
+        ODAmitranHandler {
+            base: GenericSAXHandler::new(TAGS, SUMO_TAG_NOTHING, ATTRS, SUMO_ATTR_NOTHING, file, ""),
+            myMatrix: Ptr::from_mut(matrix),
+            myVehicleType: String::new(),
+            myBegin: 0,
+            myEnd: 0,
+        }
     }
 
     /// C++: `void ODAmitranHandler::~ODAmitranHandler() noexcept` [virtual]
@@ -43,7 +49,7 @@ impl ODAmitranHandler {
     // ODAmitranHandler::~ODAmitranHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ODAmitranHandler::~ODAmitranHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `void ODAmitranHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -73,7 +79,29 @@ impl ODAmitranHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port ODAmitranHandler::myStartElement")
+        let mut ok = true;
+        match element {
+            SUMO_TAG_ACTORCONFIG => {
+                self.myVehicleType = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+            }
+            SUMO_TAG_TIMESLICE => {
+                self.myBegin = attrs.get::<i32>(SUMO_ATTR_STARTTIME, &self.myVehicleType, &mut ok, true) as SUMOTime;
+                self.myEnd = self.myBegin + attrs.get::<i32>(SUMO_ATTR_DURATION, &self.myVehicleType, &mut ok, true) as SUMOTime;
+                if self.myBegin >= self.myEnd {
+                    write_errorf!("Invalid duration for timeSlice starting %.", utils::common::to_string::to_string(&self.myBegin));
+                }
+            }
+            SUMO_TAG_OD_PAIR => {
+                // determinism: C++ argument evaluation order is unspecified; errors are reported in textual order here
+                let amount = attrs.get::<f64>(SUMO_ATTR_AMOUNT, &self.myVehicleType, &mut ok, true);
+                let begin_end = (self.myBegin, self.myEnd);
+                let origin = attrs.get::<String>(SUMO_ATTR_ORIGIN, &self.myVehicleType, &mut ok, true);
+                let destination = attrs.get::<String>(SUMO_ATTR_DESTINATION, &self.myVehicleType, &mut ok, true);
+                let vtype = self.myVehicleType.clone();
+                self.myMatrix.add(amount, &begin_end, &origin, &destination, &vtype, false, false, false);
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void ODAmitranHandler::ODAmitranHandler(const ODAmitranHandler &)` [private]
@@ -81,7 +109,7 @@ impl ODAmitranHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ODAmitranHandler) -> Self {
-        todo!("port ODAmitranHandler::ODAmitranHandler")
+        panic!("ODAmitranHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `ODAmitranHandler & ODAmitranHandler::operator=(const ODAmitranHandler &)` [private]
@@ -89,8 +117,34 @@ impl ODAmitranHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &ODAmitranHandler) -> &mut ODAmitranHandler {
-        todo!("port ODAmitranHandler::operator=")
+        panic!("ODAmitranHandler assignment operator is private and undefined in C++")
     }
 
+}
+
+const TAGS: &[(&str, i32)] = &[
+    ("timeSlice", SUMO_TAG_TIMESLICE),
+    ("actorConfig", SUMO_TAG_ACTORCONFIG),
+    ("odPair", SUMO_TAG_OD_PAIR),
+    ("", SUMO_TAG_NOTHING),
+];
+const ATTRS: &[(&str, i32)] = &[
+    ("id", SUMO_ATTR_ID),
+    ("startTime", SUMO_ATTR_STARTTIME),
+    ("duration", SUMO_ATTR_DURATION),
+    ("amount", SUMO_ATTR_AMOUNT),
+    ("origin", SUMO_ATTR_ORIGIN),
+    ("destination", SUMO_ATTR_DESTINATION),
+    ("", SUMO_ATTR_NOTHING),
+];
+
+impl SaxHandler for ODAmitranHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        ODAmitranHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
 }
 
