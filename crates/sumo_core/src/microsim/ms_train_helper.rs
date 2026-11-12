@@ -2,6 +2,10 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// shortcut: these constants are C++ file-local/class statics (MSTrainHelper.cpp/.h), kept here until a shared home exists
+const PEDESTRIAN_RADIUS_EXTRA_TOLERANCE: f64 = 0.01;
+const MIN_SCALED_CARRIAGE_LENGTH: f64 = 5.0;
+
 /// C++ class `MSTrainHelper::Carriage` (microsim/MSTrainHelper.h)
 pub struct MSTrainHelper_Carriage {
     pub front: Position,
@@ -48,7 +52,33 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn new(vehicle: Ptr<MSVehicle>, scaledLength: f64, reversed: bool, secondaryShape: bool, exaggeration: f64, vehicleQuality: i32) -> Self {
-        todo!("port MSTrainHelper::MSTrainHelper")
+        let mut th = MSTrainHelper {
+            myTrain: vehicle,
+            myUpscaleLength: 0.0,
+            myLocomotiveLength: 0.0,
+            myDefaultLength: 0.0,
+            myCarriageGap: 0.0,
+            myLength: 0.0,
+            myUnscale: false,
+            myHalfWidth: 0.0,
+            myNumCarriages: 0,
+            myCarriageLengthWithGap: 0.0,
+            myCarriageLength: 0.0,
+            myFirstCarriageLength: 0.0,
+            myCarriageDoors: 0,
+            myFirstCarriageNo: 0,
+            myFirstPassengerCarriage: 0,
+            myIsReversed: false,
+            myCarriages: Vec::new(),
+        };
+        th.compute_train_dimensions(
+            exaggeration,
+            secondaryShape,
+            if scaledLength < 0.0 { vehicle.get_length() } else { scaledLength },
+            vehicleQuality,
+        );
+        th.compute_carriages(reversed, secondaryShape);
+        th
     }
 
     /// C++: `void MSTrainHelper::~MSTrainHelper() noexcept`
@@ -59,7 +89,10 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTrainHelper::~MSTrainHelper")
+        for carriage in self.myCarriages.drain(..) {
+            // delete carriage
+            unsafe { drop(Box::from_raw(carriage.as_raw())) };
+        }
     }
 
     /// C++: `double MSTrainHelper::getUpscaleLength() const` [const]
@@ -68,7 +101,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_upscale_length(&self) -> f64 {
-        todo!("port MSTrainHelper::getUpscaleLength")
+        self.myUpscaleLength
     }
 
     /// C++: `double MSTrainHelper::getHalfWidth() const` [const]
@@ -77,7 +110,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_half_width(&self) -> f64 {
-        todo!("port MSTrainHelper::getHalfWidth")
+        self.myHalfWidth
     }
 
     /// C++: `int MSTrainHelper::getNumCarriages() const` [const]
@@ -86,7 +119,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_carriages(&self) -> i32 {
-        todo!("port MSTrainHelper::getNumCarriages")
+        self.myNumCarriages
     }
 
     /// C++: `double MSTrainHelper::getCarriageLength() const` [const]
@@ -95,7 +128,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_carriage_length(&self) -> f64 {
-        todo!("port MSTrainHelper::getCarriageLength")
+        self.myCarriageLength
     }
 
     /// C++: `double MSTrainHelper::getFirstCarriageLength() const` [const]
@@ -104,7 +137,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_first_carriage_length(&self) -> f64 {
-        todo!("port MSTrainHelper::getFirstCarriageLength")
+        self.myFirstCarriageLength
     }
 
     /// C++: `int MSTrainHelper::getCarriageDoors() const` [const]
@@ -113,7 +146,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_carriage_doors(&self) -> i32 {
-        todo!("port MSTrainHelper::getCarriageDoors")
+        self.myCarriageDoors
     }
 
     /// C++: `int MSTrainHelper::getFirstCarriageNo() const` [const]
@@ -122,7 +155,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_first_carriage_no(&self) -> i32 {
-        todo!("port MSTrainHelper::getFirstCarriageNo")
+        self.myFirstCarriageNo
     }
 
     /// C++: `int MSTrainHelper::getFirstPassengerCarriage() const` [const]
@@ -131,7 +164,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_first_passenger_carriage(&self) -> i32 {
-        todo!("port MSTrainHelper::getFirstPassengerCarriage")
+        self.myFirstPassengerCarriage
     }
 
     /// C++: `bool MSTrainHelper::isReversed() const` [const]
@@ -140,7 +173,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn is_reversed(&self) -> bool {
-        todo!("port MSTrainHelper::isReversed")
+        self.myIsReversed
     }
 
     /// C++: `const std::vector<Carriage *> & MSTrainHelper::getCarriages() const` [const]
@@ -149,7 +182,7 @@ impl MSTrainHelper {
     //     }
     #[allow(unused_variables)]
     pub fn get_carriages(&self) -> &Vec<Ptr<MSTrainHelper_Carriage>> {
-        todo!("port MSTrainHelper::getCarriages")
+        &self.myCarriages
     }
 
     /// C++: `void MSTrainHelper::computeDoorPositions()`
@@ -170,7 +203,18 @@ impl MSTrainHelper {
     // }
     #[allow(unused_variables)]
     pub fn compute_door_positions(&mut self) {
-        todo!("port MSTrainHelper::computeDoorPositions")
+        for carriage in self.myCarriages.iter() {
+            let carriage = carriage.m();
+            let mut dir = carriage.front - carriage.back;
+            let carriageLength = dir.length2d();
+            if carriageLength > 0.0 {
+                dir.norm2d();
+                for j in 1..=self.myCarriageDoors {
+                    let doorOffset = j as f64 * carriageLength / (self.myCarriageDoors + 1) as f64;
+                    carriage.doorPositions.push(carriage.front - dir * doorOffset);
+                }
+            }
+        }
     }
 
     /// C++: `void MSTrainHelper::computeUnboardingPositions(double, std::vector<Position> &)`
@@ -202,7 +246,35 @@ impl MSTrainHelper {
     // }
     #[allow(unused_variables)]
     pub fn compute_unboarding_positions(&mut self, passengerRadius: f64, unboardingPositions: &mut Vec<Position>) {
-        todo!("port MSTrainHelper::computeUnboardingPositions")
+        let passengerRadius = passengerRadius + PEDESTRIAN_RADIUS_EXTRA_TOLERANCE;
+        for carriage in self.myCarriages.iter() {
+            let carriage = carriage.m();
+            let mut dir = carriage.front - carriage.back;
+            let carriageLength = dir.length2d();
+            if carriageLength > 0.0 {
+                dir.norm2d();
+                let perp = Position::new(-dir.y(), dir.x());
+                // std::modf: integral part and fractional part
+                let longitudinalRatio = (carriageLength - 2.0 * passengerRadius) / (2.0 * passengerRadius);
+                let nbrLongitudinalCells = longitudinalRatio.trunc();
+                let longitudinalOffset = longitudinalRatio.fract();
+                let lateralRatio = (self.myHalfWidth * 2.0 - 2.0 * passengerRadius) / (2.0 * passengerRadius);
+                let nbrLateralCells = lateralRatio.trunc();
+                let lateralOffset = lateralRatio.fract();
+                let gridOrigin = carriage.back + dir * (passengerRadius + 0.5 * longitudinalOffset)
+                    - perp * (self.myHalfWidth - passengerRadius - 0.5 * lateralOffset);
+                for i in 0..=(nbrLongitudinalCells as u32) {
+                    for j in 0..=(nbrLateralCells as u32) {
+                        carriage.unboardingPositions.push(
+                            gridOrigin + dir * i as f64 * 2.0 * passengerRadius + perp * j as f64 * 2.0 * passengerRadius,
+                        );
+                    }
+                }
+            }
+            unboardingPositions.extend(carriage.unboardingPositions.iter().copied());
+        }
+        // Shuffle the positions upstream so that we don't have to sample later on, just pop the last element.
+        utils::common::rand_helper::with_default(|rng| rng.shuffle(unboardingPositions));
     }
 
     /// C++: `double MSTrainHelper::getUpscaleLength(double, double, double, int)` [static]
@@ -217,7 +289,11 @@ impl MSTrainHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_upscale_length_2(upscale: f64, length: f64, width: f64, vehicleQuality: i32) -> f64 {
-        todo!("port MSTrainHelper::getUpscaleLength")
+        if upscale > 1.0 && length > 5.0 && width < 5.0 && vehicleQuality != 4 {
+            f64::max(1.0, upscale * 5.0 / length)
+        } else {
+            upscale
+        }
     }
 
     /// C++: `void MSTrainHelper::computeTrainDimensions(double, bool, double, int)` [private]
@@ -268,7 +344,56 @@ impl MSTrainHelper {
     // }
     #[allow(unused_variables)]
     pub fn compute_train_dimensions(&mut self, exaggeration: f64, secondaryShape: bool, scaledLength: f64, vehicleQuality: i32) {
-        todo!("port MSTrainHelper::computeTrainDimensions")
+        let vtype = self.myTrain.get_vehicle_type();
+        let laneFactor = if !self.myTrain.get_lane().is_null() {
+            self.myTrain.get_lane().get_length_geometry_factor(secondaryShape)
+        } else if self.myTrain.get_edge().get_lanes().len() > 0 {
+            self.myTrain.get_edge().get_lanes()[0].get_length_geometry_factor(secondaryShape)
+        } else {
+            1.0
+        };
+        let totalLength = vtype.get_length();
+        let geometryScale = scaledLength / totalLength;
+        self.myUpscaleLength = Self::get_upscale_length_2(exaggeration, totalLength, vtype.get_width(), vehicleQuality);
+        self.myLocomotiveLength = vtype.get_parameter().locomotiveLength * self.myUpscaleLength;
+        self.myDefaultLength = vtype.get_parameter().carriageLength * self.myUpscaleLength;
+        if self.myLocomotiveLength == 0.0 {
+            self.myLocomotiveLength = self.myDefaultLength;
+        }
+        let minLength = f64::min(self.myLocomotiveLength, self.myDefaultLength);
+        let minScaledLength = f64::min(MIN_SCALED_CARRIAGE_LENGTH, minLength);
+        self.myUnscale = geometryScale == 1.0 && laneFactor != 1.0;
+        if geometryScale < 1.0 && minLength * geometryScale < minScaledLength {
+            let rescaleSmall = minScaledLength / (minLength * geometryScale);
+            self.myLocomotiveLength *= rescaleSmall;
+            self.myDefaultLength *= rescaleSmall;
+        }
+        self.myCarriageGap = vtype.get_parameter().carriageGap * self.myUpscaleLength;
+        self.myLength = totalLength * self.myUpscaleLength;
+        self.myHalfWidth = 0.5 * vtype.get_width() * exaggeration;
+        // Round to closest integer.
+        self.myNumCarriages = std::cmp::max(
+            1,
+            1 + ((self.myLength - self.myLocomotiveLength) / (self.myDefaultLength + self.myCarriageGap) + 0.5) as i32,
+        );
+        if self.myUpscaleLength > 1.0 && vehicleQuality != 4 {
+            // at high zoom, it doesn't help to draw many carriages)
+            self.myNumCarriages = std::cmp::min(self.myNumCarriages, 2);
+            self.myLocomotiveLength = self.myLength / 2.0;
+        }
+        debug_assert!(self.myNumCarriages > 0);
+        if self.myNumCarriages == 1 {
+            self.myCarriageGap = 0.0;
+        }
+        self.myCarriageLengthWithGap = self.myLength / self.myNumCarriages as f64;
+        self.myCarriageLength = self.myCarriageLengthWithGap - self.myCarriageGap;
+        self.myFirstCarriageLength = self.myCarriageLength;
+        if self.myDefaultLength != self.myLocomotiveLength && self.myNumCarriages > 1 {
+            self.myFirstCarriageLength = self.myLocomotiveLength;
+            self.myCarriageLengthWithGap = (self.myLength - self.myLocomotiveLength) / (self.myNumCarriages - 1) as f64;
+            self.myCarriageLength = self.myCarriageLengthWithGap - self.myCarriageGap;
+        }
+        self.myCarriageDoors = vtype.get_parameter().carriageDoors;
     }
 
     /// C++: `void MSTrainHelper::computeCarriages(bool, bool)` [private]
@@ -349,7 +474,98 @@ impl MSTrainHelper {
     // }
     #[allow(unused_variables)]
     pub fn compute_carriages(&mut self, reversed: bool, secondaryShape: bool) {
-        todo!("port MSTrainHelper::computeCarriages")
+        self.myCarriages.clear();
+
+        let mut lane = self.myTrain.get_lane(); // Lane on which the carriage's front is situated.
+        let mut furtherIndex: i32 = 0;
+        let mut backLane = lane; // Lane on which the carriage's back is situated.
+        let mut backFurtherIndex = furtherIndex;
+        // Offsets of front and back parts of a carriage.
+        let mut carriageOffset = self.myTrain.get_position_on_lane();
+        if self.myTrain.get_lane_change_model_2().is_opposite() {
+            // This still produces some artifacts when not fully on the current lane.
+            carriageOffset = f64::min(carriageOffset + self.myTrain.get_length(), lane.get_length());
+        }
+        let unscale = if self.myUnscale { 1.0 / lane.get_length_geometry_factor_2() } else { 1.0 };
+        let mut carriageBackOffset = carriageOffset - self.myFirstCarriageLength * unscale;
+
+        self.myFirstCarriageNo = 0; // default case - we're going forwards
+        self.myIsReversed = (self.myTrain.is_reversed() && reversed) || self.myTrain.get_lane_change_model_2().is_opposite();
+        if self.myIsReversed {
+            self.myFirstCarriageNo = self.myNumCarriages - 1;
+            if self.myNumCarriages > 1 {
+                carriageBackOffset = carriageOffset - self.myCarriageLength;
+            }
+        }
+        if self.myTrain.get_vehicle_type().get_parameter().locomotiveLength == 0.0 {
+            self.myFirstCarriageNo = -1; // don't draw locomotive
+        }
+
+        self.myFirstPassengerCarriage = if self.myDefaultLength == self.myLocomotiveLength
+            || self.myNumCarriages == 1
+            || (self.myTrain.get_v_class() & (SVC_RAIL_ELECTRIC | SVC_RAIL_FAST | SVC_RAIL)) == 0
+        {
+            0
+        } else {
+            1
+        };
+
+        let lateralOffset = if self.myTrain.is_parking() && self.myTrain.get_next_stop_parameter().posLat == INVALID_DOUBLE {
+            lane.get_width() * (if MSGlobals::gLefthand { -1.0 } else { 1.0 })
+        } else {
+            -self.myTrain.get_lateral_position_on_lane()
+        };
+
+        for i in 0..self.myNumCarriages {
+            if i == self.myFirstCarriageNo {
+                if self.myFirstCarriageNo > 0 {
+                    // Previous loop iteration has adjusted backpos for a normal carriage so have to correct
+                    carriageBackOffset += self.myCarriageLengthWithGap;
+                    carriageBackOffset -= self.myFirstCarriageLength + self.myCarriageGap;
+                }
+            }
+            while carriageOffset < 0.0 {
+                let prev = self.myTrain.get_previous_lane(lane, &mut furtherIndex);
+                if prev != lane {
+                    carriageOffset += prev.get_length();
+                } else {
+                    break;
+                }
+                lane = prev;
+            }
+            while carriageBackOffset < 0.0 {
+                let prev = self.myTrain.get_previous_lane(backLane, &mut backFurtherIndex);
+                if prev != backLane {
+                    if self.myUnscale {
+                        carriageBackOffset *= backLane.get_length_geometry_factor_2() / prev.get_length_geometry_factor_2();
+                    }
+                    carriageBackOffset += prev.get_length();
+                } else {
+                    break;
+                }
+                backLane = prev;
+            }
+            let front = lane.get_shape(secondaryShape).position_at_offset2d(
+                carriageOffset * lane.get_length_geometry_factor(secondaryShape),
+                lateralOffset,
+                true,
+            );
+            let back = backLane.get_shape(secondaryShape).position_at_offset2d(
+                carriageBackOffset * backLane.get_length_geometry_factor(secondaryShape),
+                lateralOffset,
+                true,
+            );
+            self.myCarriages.push(Ptr::from_raw(Box::into_raw(Box::new(MSTrainHelper_Carriage {
+                front,
+                back,
+                doorPositions: Vec::new(),
+                unboardingPositions: Vec::new(),
+            }))));
+            lane = backLane;
+            furtherIndex = backFurtherIndex;
+            carriageOffset = carriageBackOffset - self.myCarriageGap;
+            carriageBackOffset -= self.myCarriageLengthWithGap * unscale;
+        }
     }
 
 }
