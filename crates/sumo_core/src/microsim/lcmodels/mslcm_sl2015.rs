@@ -1,6 +1,7 @@
 //! Port of microsim/lcmodels/MSLCM_SL2015.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
 
 /// C++ typedef `std::pair<double, int> MSLCM_SL2015::Info`
 pub type MSLCM_SL2015_Info = (f64, i32);
@@ -101,7 +102,7 @@ fn g_lefthand() -> bool {
 
 /// C++ `toString(SumoXMLAttr)`: the attribute name
 fn attr_name(a: SumoXMLAttr) -> &'static str {
-    utils::xml::sumo_xml_definitions_gen::Attrs.get_string(a).unwrap_or("")
+    utils::xml::sumo_xml_definitions::Attrs.get_string(a)
 }
 
 /// C++ implicit conversion `MSVehicle*` -> `SUMOTrafficObject*` (MSVehicle > MSBaseVehicle > SUMOVehicle > SUMOTrafficObject)
@@ -1093,7 +1094,7 @@ impl MSLCM_SL2015 {
             self.myKeepRightProbability * self.myKeepRightParam / self.myChangeProbThresholdRight
         } else {
             // C++ throws InvalidArgument; this signature returns String, so it panics with the same text
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel).unwrap_or_default())));
+            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel))));
         };
         utils::common::to_string::to_string(&v)
     }
@@ -1184,7 +1185,7 @@ impl MSLCM_SL2015 {
         // C++ throws InvalidArgument on both errors; this signature returns (), so it panics with the same text
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(v) => v,
-            Err(_) => panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel).unwrap_or_default()))),
+            Err(_) => panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel)))),
         };
         if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM) {
             self.myStrategicParam = doubleValue;
@@ -1253,7 +1254,7 @@ impl MSLCM_SL2015 {
         } else if key == "sigmaState" {
             self.mySigmaState = doubleValue;
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel).unwrap_or_default())));
+            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for laneChangeModel of type '{}'", key, LaneChangeModels.get_string(self.myModel))));
         }
         self.init_derived_parameters();
     }
@@ -2948,9 +2949,11 @@ impl MSLCM_SL2015 {
             //   if there is a leader and he wants to change to the opposite direction
             let neighLeadLongest = self.get_longest(neighLeaders).0;
             let canContinue = curr.bestContinuations.len() > 1;
-            let mut canReserve = MSLCHelper::update_blocker_length(&*self.myVehicle, neighLeadLongest, lcaCounter, self.myLeftSpace - POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+            let egoVehicle = self.myVehicle;
+            let leftSpace = self.myLeftSpace - POSITION_EPS;
+            let mut canReserve = MSLCHelper::update_blocker_length(&*egoVehicle, neighLeadLongest, lcaCounter, leftSpace, canContinue, &mut self.myLeadingBlockerLength);
             if *firstBlocked != neighLeadLongest && self.tie_brake_leader(*firstBlocked) {
-                canReserve &= MSLCHelper::update_blocker_length(&*self.myVehicle, *firstBlocked, lcaCounter, self.myLeftSpace - POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+                canReserve &= MSLCHelper::update_blocker_length(&*egoVehicle, *firstBlocked, lcaCounter, self.myLeftSpace - POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
             }
             if !canReserve && !self.is_opposite() {
                 // we have a low-priority relief connection
@@ -3923,7 +3926,8 @@ impl MSLCM_SL2015 {
                 // speed difference to create a sufficiently large gap
                 let needDV = overtakeDist / remainingSeconds;
                 // make sure the deceleration is not to strong
-                self.add_lc_speed_advice(max2(vhelp - needDV, self.myVehicle.get_speed() - accel2speed(self.myVehicle.get_car_follow_model().get_max_decel())), dir);
+                let vSafe = max2(vhelp - needDV, self.myVehicle.get_speed() - accel2speed(self.myVehicle.get_car_follow_model().get_max_decel()));
+                self.add_lc_speed_advice(vSafe, dir);
             }
         } else if !neighFollow.0.is_null() {
             let vsafe = MSLCHelper::get_speed_preserving_secure_gap(&*self.myVehicle, &*neighFollow.0, neighFollow.1, plannedSpeed);
@@ -4258,7 +4262,7 @@ impl MSLCM_SL2015 {
                 let gap = ahead.index_op(sublane).1;
                 let mut vSafe: f64;
                 if leader.is_null() {
-                    if myVehicle.has_blue_light() {
+                    if self.base.has_blue_light() {
                         // can continue from any lane if necessary
                         vSafe = vMax;
                     } else {
@@ -6223,7 +6227,8 @@ impl MSLCM_SL2015 {
             // - vehicles without overlap: ignore
             let veh = self.myVehicle;
             // temporarily use another decel value (C++ const_cast of the car-following model)
-            let cfmodel: &mut MSCFModel = unsafe { &mut *(veh.get_car_follow_model() as *const MSCFModel as *mut MSCFModel) };
+            let cfmodelP: Ptr<MSCFModel> = Ptr::from_raw(veh.get_car_follow_model() as *const MSCFModel as *mut MSCFModel);
+            let cfmodel: &mut MSCFModel = cfmodelP.m();
             let maxDecel = cfmodel.get_max_decel();
             cfmodel.set_max_decel(maxDecel / self.get_safety_factor());
 
