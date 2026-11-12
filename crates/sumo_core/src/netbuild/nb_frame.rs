@@ -7,7 +7,7 @@ use utils::common::sumo_vehicle_class::parse_vehicle_classes_vec;
 use utils::common::to_string::{f64_to_string_prec, join_to_string};
 use utils::common::util_exceptions::ProcessError;
 use utils::geom::POSITION_EPS;
-use utils::xml::sumo_xml_definitions_gen::{LaneSpreadFunctions, NodeTypes, RightOfWayValues, TrafficLightTypes};
+use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, NodeTypes, RightOfWayValues, TrafficLightTypes};
 use utils::{write_errorf};
 // shortcut: NBEdge static constants are not ported yet (nb_edge.rs keeps them as comments), mirrored from NBEdge.cpp; switch to NBEDGE_UNSPECIFIED_* when nb_edge.rs ports them
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
