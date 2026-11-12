@@ -254,7 +254,7 @@ impl MSDelayBasedTrafficLightLogic {
         // shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs), read the static once MSGlobals is ported
         let useMesoSim = false;
         // flag whether to prolong or not
-        if currentPhase.isGreenPhase() && !useMesoSim {
+        if currentPhase.is_green_phase() && !useMesoSim {
             let mut othersEmpty = true; // whether no vehicles are present on concurrent approaches
             let mut proposedProlongation = self.propose_prolongation(actDuration, currentPhase.maxDuration, &mut othersEmpty);
             // assure minimal duration
@@ -326,7 +326,7 @@ impl MSDelayBasedTrafficLightLogic {
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
         let mut result: BTreeMap<String, f64> = BTreeMap::new();
         for item in self.myLaneDetectors.values() {
-            result.insert(item.get_id().to_string(), item.get_current_vehicle_number() as f64);
+            result.insert(item.base2.base.get_id().to_string(), item.get_current_vehicle_number() as f64);
         }
         result
     }

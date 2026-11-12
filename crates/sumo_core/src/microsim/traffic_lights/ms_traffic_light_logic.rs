@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub type MSTrafficLightLogic_LaneVector = Vec<Ptr<MSLane>>;
 
 /// C++ typedef `std::vector<LaneVector> MSTrafficLightLogic::LaneVectorVector`
-pub type MSTrafficLightLogic_LaneVectorVector = Vec<LaneVector>;
+pub type MSTrafficLightLogic_LaneVectorVector = Vec<MSTrafficLightLogic_LaneVector>;
 
 /// C++ typedef `std::vector<MSLink *> MSTrafficLightLogic::LinkVector`
 pub type MSTrafficLightLogic_LinkVector = Vec<Ptr<MSLink>>;
@@ -590,8 +590,12 @@ impl MSTrafficLightLogic {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_lanes_at(&self, i: i32) -> &LaneVector {
-        todo!("port MSTrafficLightLogic::getLanesAt")
+    pub fn get_lanes_at(&self, i: i32) -> &MSTrafficLightLogic_LaneVector {
+        if (i as usize) < self.myLanes.len() {
+            return &self.myLanes[i as usize];
+        }
+        // shortcut: myEmptyLaneVector static not ported (Ptr is not Sync), upgrade when statics of Ptr<MSLane> vectors are supported
+        panic!("MSTrafficLightLogic::get_lanes_at: index {} out of range (myEmptyLaneVector not ported)", i)
     }
 
     /// C++: `const LinkVectorVector & MSTrafficLightLogic::getLinks() const` [const]
