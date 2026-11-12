@@ -47,7 +47,13 @@ impl AGFreeTime {
     //         nbrDays(days) {}
     #[allow(unused_variables)]
     pub fn new(hh: Ptr<AGHousehold>, das: Ptr<AGDataAndStatistics>, prevTrips: Ptr<VecDeque<AGTrip>>, days: i32) -> Self {
-        todo!("port AGFreeTime::AGFreeTime")
+        Self {
+            base: AGActivity::new(hh, das, prevTrips, 2),
+            freqOut: das.get().unwrap().freeTimeActivityRate,
+            nbrDays: days,
+            tReady: 0,
+            possibleType: 0,
+        }
     }
 
     /// C++: `bool AGFreeTime::generateTrips()` [virtual]
@@ -80,7 +86,34 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn generate_trips(&mut self) -> bool {
-        todo!("port AGFreeTime::generateTrips")
+        self.tReady = self.when_back_home();
+        self.possibleType = self.possible_type_of_trip();
+        
+        // C++ static consts AGFreeTime::DAY / EVENING / NIGHT
+        const DAY: i32 = 1;
+        const EVENING: i32 = 2;
+        const NIGHT: i32 = 4;
+        
+        for day in 1..=self.nbrDays {
+            let type_ = self.decide_type_of_trip();
+            if type_ == 0 {
+                continue;
+            } else if type_ == DAY {
+                if !self.type_from_home_day(day) {
+                    return false;
+                }
+            } else if type_ == EVENING {
+                if !self.type_from_home_evening(day) {
+                    return false;
+                }
+            } else if type_ == NIGHT {
+                if !self.type_from_home_night(day) {
+                    return false;
+                }
+            }
+        }
+        self.genDone = true;
+        self.genDone
     }
 
     /// C++: `int AGFreeTime::possibleTypeOfTrip()`
@@ -114,7 +147,36 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn possible_type_of_trip(&mut self) -> i32 {
-        todo!("port AGFreeTime::possibleTypeOfTrip")
+        // C++ static consts AGFreeTime::DAY / EVENING / NIGHT (AGFreeTime.cpp: 1, 2, 4)
+        const DAY: i32 = 1;
+        const EVENING: i32 = 2;
+        const NIGHT: i32 = 4;
+        
+        let mut val: i32 = 0;
+        if self.myHousehold.get_adults().front().unwrap().get_age() >= self.myStatData.limitAgeRetirement
+            && self.tReady == 0
+        {
+            val += DAY + EVENING;
+        } else {
+            if self.myHousehold.m().get_people_nbr() > self.myHousehold.m().get_adult_nbr() {
+                val += NIGHT;
+            }
+        
+            let mut no_body_works = true;
+            for it_a in self.myHousehold.get_adults() {
+                if it_a.is_working() {
+                    no_body_works = false;
+                }
+            }
+            if no_body_works {
+                val += DAY;
+            }
+        
+            if self.tReady < AGTime::new_3(0, 22, 0).get_time() {
+                val += EVENING;
+            }
+        }
+        return val;
     }
 
     /// C++: `int AGFreeTime::decideTypeOfTrip()`
@@ -162,7 +224,49 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn decide_type_of_trip(&mut self) -> i32 {
-        todo!("port AGFreeTime::decideTypeOfTrip")
+        const DAY: i32 = 1;
+        const EVENING: i32 = 2;
+        const NIGHT: i32 = 4;
+        
+        if self.myHousehold.get_adults().front().unwrap().decide(self.freqOut) {
+            let mut num_poss = 0;
+            if (self.possibleType & DAY) != 0 {
+                num_poss += 1;
+            }
+            if (self.possibleType & EVENING) != 0 {
+                num_poss += 1;
+            }
+            if (self.possibleType & NIGHT) != 0 {
+                num_poss += 1;
+            }
+        
+            if num_poss == 0 {
+                return 0;
+            }
+            let alea = utils::common::rand_helper::rand();
+            let mut decision = (alea * (num_poss as f64)).floor() as i32;
+        
+            if (self.possibleType & DAY) != 0 {
+                if decision == 0 {
+                    return DAY;
+                } else {
+                    decision -= 1;
+                }
+            }
+            if (self.possibleType & EVENING) != 0 {
+                if decision == 0 {
+                    return EVENING;
+                } else {
+                    decision -= 1;
+                }
+            }
+            if (self.possibleType & NIGHT) != 0 {
+                if decision == 0 {
+                    return NIGHT;
+                }
+            }
+        }
+        0
     }
 
     /// C++: `bool AGFreeTime::typeFromHomeDay(int)`
@@ -189,7 +293,40 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn type_from_home_day(&mut self, day: i32) -> bool {
-        todo!("port AGFreeTime::typeFromHomeDay")
+        let backHome = self.when_back_home_this_day(day);
+        if self.myHousehold.m().get_cars().is_empty() {
+            return true;
+        }
+        const TB_DAY: i32 = 800;  // AGTime(0, 8, 0).getTime()
+        const TE_DAY: i32 = 1800; // AGTime(0, 18, 0).getTime()
+        // hoisted out of the arr_hour() argument list: `self` is already mutably
+        // borrowed as the receiver there, so `self.myHousehold.m()` cannot also be borrowed
+        let home = self.myHousehold.m().get_position();
+        let destination = AGPosition::new_2(self.myHousehold.m().get_the_city().m().get_random_street());
+        let copy_pos = |p: &AGPosition| AGPosition { street: p.street, position: p.position, pos2d: p.pos2d };
+        let depTime = self.random_time_between(backHome.max(TB_DAY), (TB_DAY + TE_DAY) / 2);
+        let arrTime = self.arr_hour(copy_pos(&home), copy_pos(&destination), depTime);
+        let retTime = self.random_time_between(arrTime, TE_DAY);
+        if depTime < 0 || retTime < 0 {
+            return true; // not enough time during the day
+        }
+        let depTrip = AGTrip::new_5(
+            copy_pos(&home),
+            copy_pos(&destination),
+            self.myHousehold.m().get_cars().front().unwrap().get_name(),
+            depTime,
+            day,
+        );
+        let retTrip = AGTrip::new_5(
+            destination,
+            home,
+            self.myHousehold.m().get_cars().front().unwrap().get_name(),
+            retTime,
+            day,
+        );
+        self.myPartialActivityTrips.push_back(depTrip);
+        self.myPartialActivityTrips.push_back(retTrip);
+        return true;
     }
 
     /// C++: `bool AGFreeTime::typeFromHomeEvening(int)`
@@ -215,7 +352,29 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn type_from_home_evening(&mut self, day: i32) -> bool {
-        todo!("port AGFreeTime::typeFromHomeEvening")
+        let back_home = self.when_back_home_this_day(day);
+        if self.myHousehold.get_cars().is_empty() {
+            return true;
+        }
+        let destination = AGPosition::new_2(self.myHousehold.m().get_the_city().m().get_random_street());
+        // C++ takes AGPosition by value, so every use below is a copy
+        let copy_pos = |p: &AGPosition| AGPosition { street: p.street, position: p.position, pos2d: p.pos2d };
+        // TB_EVENING = 1900, TE_EVENING = 2400
+        let dep_time = self.random_time_between(back_home.max(1900), 2400);
+        // evaluate the argument before the &mut self call (two-phase borrow)
+        let home = self.myHousehold.m().get_position();
+        let arr_time = self.arr_hour(copy_pos(&home), copy_pos(&destination), dep_time);
+        let ret_time = self.random_time_between(arr_time, 2400);
+        if dep_time < 0 || ret_time < 0 {
+            return true; // not enough time during the day
+        }
+        let car_name = self.myHousehold.get_cars().front().unwrap().get_name();
+        let dep_trip = AGTrip::new_5(copy_pos(&home), copy_pos(&destination), car_name.clone(), dep_time, day);
+        let ret_trip = AGTrip::new_5(copy_pos(&destination), copy_pos(&home), car_name, ret_time, day);
+        
+        self.myPartialActivityTrips.push_back(dep_trip);
+        self.myPartialActivityTrips.push_back(ret_trip);
+        true
     }
 
     /// C++: `bool AGFreeTime::typeFromHomeNight(int)`
@@ -271,7 +430,13 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn when_back_home(&mut self) -> i32 {
-        todo!("port AGFreeTime::whenBackHome")
+        let mut timeBack = 0;
+        for itT in self.base.myPreviousTrips.iter() {
+            if timeBack < itT.get_arr_time(self.base.timePerKm) && itT.is_daily() {
+                timeBack = itT.get_arr_time(self.base.timePerKm);
+            }
+        }
+        return timeBack;
     }
 
     /// C++: `int AGFreeTime::whenBackHomeThisDay(int)`
@@ -288,7 +453,15 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn when_back_home_this_day(&mut self, day: i32) -> i32 {
-        todo!("port AGFreeTime::whenBackHomeThisDay")
+        let mut timeBack: i32 = 0;
+        for itT in self.myPreviousTrips.iter() {
+            if timeBack < itT.get_arr_time(self.base.timePerKm)
+                && (itT.get_day() == day || itT.is_daily())
+            {
+                timeBack = itT.get_arr_time(self.base.timePerKm);
+            }
+        }
+        timeBack
     }
 
     /// C++: `int AGFreeTime::whenBeginActivityNextDay(int)`
@@ -306,7 +479,14 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn when_begin_activity_next_day(&mut self, day: i32) -> i32 {
-        todo!("port AGFreeTime::whenBeginActivityNextDay")
+        let mut timeBack = AGTime::new_3(1, 0, 0);
+        for itT in self.base.myPreviousTrips.iter() {
+            if timeBack.get_time() > itT.get_time() && (itT.get_day() == (day + 1) || itT.is_daily()) {
+                timeBack.set_time(itT.get_time());
+            }
+        }
+        timeBack.add_days(1); // this the beginning of activities of the next day
+        timeBack.get_time()
     }
 
 }
