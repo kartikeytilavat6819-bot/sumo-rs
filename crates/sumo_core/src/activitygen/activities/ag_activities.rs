@@ -17,7 +17,11 @@ impl AGActivities {
     //         nbrDays(days) {}
     #[allow(unused_variables)]
     pub fn new(city: Ptr<AGCity>, days: i32) -> Self {
-        todo!("port AGActivities::AGActivities")
+        Self {
+            trips: VecDeque::new(),
+            myCity: city,
+            nbrDays: days,
+        }
     }
 
     /// C++: `void AGActivities::addTrip(AGTrip, std::list<AGTrip> *)`
@@ -40,7 +44,9 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn add_trips(&mut self, t: VecDeque<AGTrip>, tripSet: Ptr<VecDeque<AGTrip>>) {
-        todo!("port AGActivities::addTrips")
+        for trip in t {
+            tripSet.m().push_back(trip);
+        }
     }
 
     /// C++: `void AGActivities::generateActivityTrips()`
@@ -147,7 +153,45 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn generate_trips(&mut self, hh: &mut AGHousehold) -> bool {
-        todo!("port AGActivities::generateTrips")
+        const REBUILD_ITERATION_LIMIT: i32 = 2;
+        let mut iteration = 0;
+        let mut generated = false;
+        let mut temporaTrips: VecDeque<AGTrip> = VecDeque::new();
+        while !generated && iteration < REBUILD_ITERATION_LIMIT {
+            if !temporaTrips.is_empty() {
+                temporaTrips.clear();
+            }
+            // Work and school activities
+            let statData = self.myCity.m().statData;
+            let mut ws = AGWorkAndSchool::new(Ptr::from_mut(hh), statData, Ptr::from_mut(&mut temporaTrips));
+            generated = ws.generate_trips();
+            if !generated {
+                hh.regenerate();
+                iteration += 1;
+                continue;
+            }
+            // AGTrip is not Clone: move the partial trips out (ws is dropped right after this).
+            let wsTrips = std::mem::take(ws.get_partial_activity_trips());
+            self.add_trips(wsTrips, Ptr::from_mut(&mut temporaTrips));
+        
+            // free time activities
+            let statData = self.myCity.m().statData;
+            let mut ft = AGFreeTime::new(Ptr::from_mut(hh), statData, Ptr::from_mut(&mut temporaTrips), self.nbrDays);
+            generated = ft.generate_trips();
+            if !generated {
+                hh.regenerate();
+                iteration += 1;
+                continue;
+            }
+            let ftTrips = std::mem::take(ft.get_partial_activity_trips());
+            self.add_trips(ftTrips, Ptr::from_mut(&mut temporaTrips));
+            //trips of all activities generated:
+            let allTrips = std::mem::take(&mut temporaTrips);
+            // raw ptr: add_trips borrows self mutably, so &mut self.trips cannot be passed directly
+            let tripsPtr = Ptr::from_raw(std::ptr::addr_of_mut!(self.trips));
+            self.add_trips(allTrips, tripsPtr);
+        }
+        return generated;
     }
 
     /// C++: `bool AGActivities::generateBusTraffic(AGBusLine)` [private]
@@ -195,7 +239,71 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn generate_bus_traffic(&mut self, bl: AGBusLine) -> bool {
-        todo!("port AGActivities::generateBusTraffic")
+        let copy_pos = |p: &AGPosition| AGPosition {
+            street: p.street,
+            position: p.position,
+            pos2d: p.pos2d,
+        };
+        let mut bl = bl;
+        /**
+         * Buses in the first direction
+         */
+        for i in 0..bl.buses.len() {
+            if bl.stations.len() < 1 {
+                return false;
+            }
+            let dep_time = bl.buses[i].get_departure();
+            let bus = AGBus {
+                myName: bl.buses[i].myName.clone(),
+                myDepartureTime: bl.buses[i].myDepartureTime,
+            };
+            let mut t = AGTrip::new_3(
+                copy_pos(bl.stations.front().unwrap()),
+                copy_pos(bl.stations.back().unwrap()),
+                bus,
+                dep_time,
+            );
+            for j in 0..bl.stations.len() {
+                let it_s = &bl.stations[j];
+                if it_s.eq_op(&t.get_dep()) || it_s.eq_op(&t.get_arr()) {
+                    continue;
+                }
+                t.add_lay_over(copy_pos(it_s));
+            }
+            self.trips.push_back(t);
+        }
+        /**
+         * Buses in the return direction
+         */
+        //verify that buses return back to the beginning
+        if bl.revStations.is_empty() {
+            return true; //in this case, no return way: everything is ok.
+        }
+        for i in 0..bl.revBuses.len() {
+            if bl.revStations.len() < 1 {
+                return false;
+            }
+            let dep_time = bl.revBuses[i].get_departure();
+            let bus = AGBus {
+                myName: bl.revBuses[i].myName.clone(),
+                myDepartureTime: bl.revBuses[i].myDepartureTime,
+            };
+            let mut t = AGTrip::new_3(
+                copy_pos(bl.revStations.front().unwrap()),
+                copy_pos(bl.revStations.back().unwrap()),
+                bus,
+                dep_time,
+            );
+            for j in 0..bl.revStations.len() {
+                let it_s = &bl.revStations[j];
+                if it_s.eq_op(&t.get_dep()) || it_s.eq_op(&t.get_arr()) {
+                    continue;
+                }
+                t.add_lay_over(copy_pos(it_s));
+            }
+            self.trips.push_back(t);
+        }
+        true
     }
 
     /// C++: `bool AGActivities::generateInOutTraffic()` [private]
@@ -230,7 +338,36 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn generate_in_out_traffic(&mut self) -> bool {
-        todo!("port AGActivities::generateInOutTraffic")
+        if self.myCity.peopleIncoming.is_empty() {
+            return true;
+        }
+        if self.myCity.cityGates.is_empty() {
+            return false;
+        }
+        let mut num = 1;
+        let nbrIncoming = self.myCity.peopleIncoming.len();
+        for i in 0..nbrIncoming {
+            let posi = self.myCity.statData.m().get_random_city_gate_by_incoming() as usize;
+            let nom = self.generate_name(num, "carIn".to_string());
+            let gate = &self.myCity.cityGates[posi];
+            let gateFrom = AGPosition { street: gate.street, position: gate.position, pos2d: gate.pos2d };
+            let wp = self.myCity.peopleIncoming[i].get_work_position();
+            let wpPos = wp.get_position();
+            let opening = wp.get_opening();
+            let mut wayTrip = AGTrip::new_4(gateFrom, wpPos, nom.clone(), opening);
+            //now we put the estimated time of entrance in the city.
+            wayTrip.set_dep_time(wayTrip.estimate_dep_time(wayTrip.get_time(), self.myCity.statData.speedTimePerKm));
+            let wp2 = self.myCity.peopleIncoming[i].get_work_position();
+            let wpPos2 = wp2.get_position();
+            let closing = wp2.get_closing();
+            let gate2 = &self.myCity.cityGates[posi];
+            let gateTo = AGPosition { street: gate2.street, position: gate2.position, pos2d: gate2.pos2d };
+            let retTrip = AGTrip::new_4(wpPos2, gateTo, nom, closing);
+            self.trips.push_back(wayTrip);
+            self.trips.push_back(retTrip);
+            num += 1;
+        }
+        true
     }
 
     /// C++: `bool AGActivities::generateRandomTraffic()` [private]
@@ -276,7 +413,44 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn generate_random_traffic(&mut self) -> bool {
-        todo!("port AGActivities::generateRandomTraffic")
+        let mut totalTrips: i32 = 0;
+        let mut ttOneDayTrips: i32 = 0;
+        let mut ttDailyTrips: i32 = 0;
+        for it in self.trips.iter() {
+            if it.is_daily() {
+                ttDailyTrips += 1;
+            } else {
+                ttOneDayTrips += 1;
+            }
+        }
+        totalTrips = ttOneDayTrips + ttDailyTrips * self.nbrDays;
+        println!("Before Random traffic generation (days are still entire):");
+        println!("- Total number of trips: {}", totalTrips);
+        println!("- Total daily trips: {}", ttDailyTrips);
+        println!("- Total one-day trips: {}", ttOneDayTrips);
+        
+        let rate = self.myCity.statData.uniformRandomTrafficRate;
+        let nbrRandUni = ((totalTrips as f32) as f64 * rate / (1.0f64 - rate)) as i32;
+        println!("added uniform random trips: {}", nbrRandUni);
+        for i in 0..nbrRandUni {
+            let dep = AGPosition::new_2(self.myCity.m().get_random_street());
+            let arr = AGPosition::new_2(self.myCity.m().get_random_street());
+            let nbrDays = self.nbrDays;
+            let mut depTime = AGTime::new(
+                utils::common::rand_helper::with_default(|r| r.rand_int(nbrDays * 86400)),
+            );
+            let mut rdtr = AGTrip::new_5(
+                dep,
+                arr,
+                self.generate_name(i, "randUni".to_string()),
+                depTime.get_time() % 86400,
+                depTime.get_day() + 1,
+            );
+            rdtr.set_type("random".to_string());
+            self.trips.push_back(rdtr);
+        }
+        
+        true
     }
 
     /// C++: `std::string AGActivities::generateName(int, std::string)` [private]
