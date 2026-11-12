@@ -774,7 +774,7 @@ impl MSLCM_DK2008 {
 
         // -------- higher speed
         if (self.congested(neighLead.0) && neighLead.1 < 20.) || self.pred_interaction(leader) {
-            //!!!
+            // !!!
             return ret;
         }
         let mut thisLaneVSafe = myVehicle.get_lane().get_vehicle_max_speed(traffic_object_of(myVehicle));
@@ -1212,7 +1212,7 @@ impl MSLCM_DK2008 {
 
         // -------- higher speed
         if (self.congested(neighLead.0) && neighLead.1 < 20.) || self.pred_interaction(leader) {
-            //!!!
+            // !!!
             return ret;
         }
         let mut neighLaneVSafe = neighLane.get_vehicle_max_speed(traffic_object_of(myVehicle));

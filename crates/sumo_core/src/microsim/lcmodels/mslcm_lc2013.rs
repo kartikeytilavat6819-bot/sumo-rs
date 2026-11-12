@@ -2133,7 +2133,7 @@ impl MSLCM_LC2013 {
         let mut changeLeftToAvoidOvertakeRight = false;
         if changeToBest && bestLaneOffset == curr.bestLaneOffset
             && self.current_dist_disallows(usableDist, bestLaneOffset, laDist) {
-            /// @brief we urgently need to change lanes to follow our route
+            // @brief we urgently need to change lanes to follow our route
             ret = ret | lca | LCA_STRATEGIC | LCA_URGENT;
         } else {
             // VARIANT_20 (noOvertakeRight)
@@ -2231,9 +2231,10 @@ impl MSLCM_LC2013 {
             // letting vehicles merge in at the end of the lane in case of counter-lane change, step#1
             //   if there is a leader and he wants to change to the opposite direction
             let canContinue = curr.bestContinuations.len() > 1;
-            let mut canReserve = MSLCHelper::update_blocker_length(&*self.myVehicle, neighLead.0, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+            let blockerVeh = self.myVehicle;
+            let mut canReserve = MSLCHelper::update_blocker_length(&*blockerVeh, neighLead.0, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
             if firstBlocked != neighLead.0 {
-                canReserve &= MSLCHelper::update_blocker_length(&*self.myVehicle, firstBlocked, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
+                canReserve &= MSLCHelper::update_blocker_length(&*blockerVeh, firstBlocked, lcaCounter, self.myLeftSpace - utils::geom::POSITION_EPS, canContinue, &mut self.myLeadingBlockerLength);
             }
             if !canReserve && !self.is_opposite() {
                 // we have a low-priority relief connection
@@ -2700,7 +2701,7 @@ impl MSLCM_LC2013 {
                 remainingSeconds + 1.
             };
 
-            if (dv < self.myOvertakeDeltaSpeedFactor * self.myVehicle.get_lane().get_speed_limit()
+            if ((dv < self.myOvertakeDeltaSpeedFactor * self.myVehicle.get_lane().get_speed_limit()
                     // overtaking on the right on an uncongested highway is forbidden (noOvertakeLCLeft)
                     || (dir == LCA_MLEFT && self.avoid_overtake_right(neighLead.0, false))
                     // not enough space to overtake?
@@ -3302,7 +3303,8 @@ impl MSLCM_LC2013 {
                 // speed difference to create a sufficiently large gap
                 let needDV = overtakeDist / remainingSeconds;
                 // make sure the deceleration is not to strong
-                self.add_lc_speed_advice(max2(vhelp - needDV, self.myVehicle.get_speed() - accel2speed(self.myVehicle.get_car_follow_model().get_max_decel())), dir);
+                let advice = max2(vhelp - needDV, self.myVehicle.get_speed() - accel2speed(self.myVehicle.get_car_follow_model().get_max_decel()));
+                self.add_lc_speed_advice(advice, dir);
             }
         } else if !neighFollow.0.is_null() && (blocked & LCA_BLOCKED_BY_LEADER) != 0 {
             // we are not blocked by the follower now, make sure it remains that way
