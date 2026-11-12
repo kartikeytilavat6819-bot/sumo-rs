@@ -1,6 +1,15 @@
 //! Port of mesosim/MEVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::{SUMOTIME_MAX, SUMOTIME_MIN, steps2time, delta_t};
+
+// C++ `static const int MESegment::PARKING_QUEUE = -1` (used by MEVehicle)
+const PARKING_QUEUE: i32 = -1;
+
+// C++ MIN2 on doubles (same comparison order as the C++ macro)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
 
 /// A vehicle from the mesoscopic point of view
 /// C++ class `MEVehicle` (mesosim/MEVehicle.h)
@@ -57,7 +66,18 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, speedFactor: f64) -> Self {
-        todo!("port MEVehicle::MEVehicle")
+        MEVehicle {
+            base: MSBaseVehicle::new(pars, route, type_, speedFactor),
+            mySegment: Ptr::null(),
+            myQueIndex: 0,
+            myEventTime: SUMOTIME_MIN,
+            myEventIndex: -1,
+            myLastEntryTime: SUMOTIME_MIN,
+            myBlockTime: SUMOTIME_MAX,
+            myUnqueuedEventTime: SUMOTIME_MIN,
+            myWasJammed: false,
+            myInfluencer: Ptr::null(),
+        }
     }
 
     /// C++: `double MEVehicle::getPositionOnLane() const` [const, virtual]
@@ -76,7 +96,14 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position_on_lane(&self) -> f64 {
-        todo!("port MEVehicle::getPositionOnLane")
+        if MSGlobals::meso_interpolate_pos() {
+            // interpolation may cause problems with arrivals and calibrators
+            let mesoPos = self.get_edge().get_meso_positions();
+            if let Some(p) = mesoPos.get(&Ptr::new(self)) {
+                return p.0;
+            }
+        }
+        if self.mySegment.is_null() { 0. } else { (self.mySegment.get_index() as f64) * self.mySegment.get_length() }
     }
 
     /// C++: `double MEVehicle::getBackPositionOnLane(const MSLane *) const` [const, virtual]
@@ -87,7 +114,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MEVehicle::getBackPositionOnLane")
+        self.get_position_on_lane() - self.get_vehicle_type().get_length()
     }
 
     /// C++: `double MEVehicle::getAngle() const` [const, virtual]
@@ -123,7 +150,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MEVehicle::getCurrentEdge")
+        if !self.mySegment.is_null() { Ptr::new(self.mySegment.get_edge()) } else { self.get_edge() }
     }
 
     /// C++: `const MSLane * MEVehicle::getLane() const` [const, virtual]
@@ -133,7 +160,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MEVehicle::getLane")
+        Ptr::null()
     }
 
     /// C++: `const MSLane * MEVehicle::getBackLane() const` [const, virtual]
@@ -142,7 +169,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_back_lane(&self) -> Ptr<MSLane> {
-        todo!("port MEVehicle::getBackLane")
+        Ptr::null()
     }
 
     /// C++: `Position MEVehicle::getPosition(const double) const` [const, virtual]
@@ -194,7 +221,11 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        todo!("port MEVehicle::getSpeed")
+        if self.get_waiting_time(false) > 0 || self.is_stopped() {
+            0.
+        } else {
+            self.get_average_speed()
+        }
     }
 
     /// C++: `double MEVehicle::getAverageSpeed() const` [const]
@@ -212,7 +243,14 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_average_speed(&self) -> f64 {
-        todo!("port MEVehicle::getAverageSpeed")
+        // cache for thread safety
+        let s = self.mySegment;
+        if s.is_null() || self.myQueIndex == PARKING_QUEUE {
+            0.
+        } else {
+            min2(s.get_length() / steps2time(self.myEventTime - self.myLastEntryTime),
+                 self.get_edge().get_lanes()[self.myQueIndex as usize].get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()))
+        }
     }
 
     /// C++: `double MEVehicle::estimateLeaveSpeed(const MSLink *) const` [const]
@@ -226,7 +264,10 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn estimate_leave_speed(&self, link: Ptr<MSLink>) -> f64 {
-        todo!("port MEVehicle::estimateLeaveSpeed")
+        /// @see MSVehicle.cpp::estimateLeaveSpeed
+        let v = self.get_speed();
+        min2(link.get_via_lane_or_lane().get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()),
+             (2. * link.get_length() * self.get_vehicle_type().get_car_follow_model().get_max_accel() + v * v).sqrt())
     }
 
     /// C++: `double MEVehicle::getConservativeSpeed(SUMOTime &) const` [const]
@@ -238,7 +279,8 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_conservative_speed(&self, earliestArrival: &mut SUMOTime) -> f64 {
-        todo!("port MEVehicle::getConservativeSpeed")
+        *earliestArrival = std::cmp::max(self.myEventTime, *earliestArrival - delta_t()); // event times have subsecond resolution
+        self.mySegment.get_length() / steps2time(*earliestArrival - self.myLastEntryTime)
     }
 
     /// C++: `void MEVehicle::onRemovalFromNet(const MSMoveReminder::Notification)` [virtual]
@@ -250,7 +292,9 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn on_removal_from_net(&mut self, reason: MSMoveReminder_Notification) {
-        todo!("port MEVehicle::onRemovalFromNet")
+        MSGlobals::meso_net().m().remove_leader_car(Ptr::from_mut(self));
+        let now = MSNet::get_instance().get_current_time_step();
+        MSGlobals::meso_net().m().change_segment(Ptr::from_mut(self), now, Ptr::null(), reason, false);
     }
 
     /// C++: `bool MEVehicle::moveRoutePointer()`
@@ -273,7 +317,20 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn move_route_pointer(&mut self) -> bool {
-        todo!("port MEVehicle::moveRoutePointer")
+        // vehicle has just entered a new edge. Position is 0
+        if self.myCurrEdge == (self.myRoute.size() - 1) as usize || (self.myParameter.arrivalEdge >= 0 && self.get_route_position() >= self.myParameter.arrivalEdge) {
+            // may happen during teleport
+            return true;
+        }
+        self.myCurrEdge += 1;
+        if self.myRoute.index_op(self.myCurrEdge as i32).is_vaporizing() {
+            return true;
+        }
+        // update via
+        if self.myParameter.via.len() > 0 && self.myRoute.index_op(self.myCurrEdge as i32).get_id() == self.myParameter.via[0] {
+            self.myParameter.m().via.remove(0);
+        }
+        self.has_arrived()
     }
 
     /// C++: `bool MEVehicle::hasArrived() const` [const, virtual]
@@ -288,7 +345,11 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn has_arrived(&self) -> bool {
-        todo!("port MEVehicle::hasArrived")
+        // mySegment may be 0 due to teleporting or arrival
+        (self.myCurrEdge == (self.myRoute.size() - 1) as usize || (self.myParameter.arrivalEdge >= 0 && self.get_route_position() >= self.myParameter.arrivalEdge)) && (
+                   (self.mySegment.is_null())
+                   || self.myEventTime == SUMOTIME_MIN
+                   || self.get_position_on_lane() > self.myArrivalPos - utils::geom::POSITION_EPS)
     }
 
     /// C++: `bool MEVehicle::isOnRoad() const` [const, virtual]
@@ -299,7 +360,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        todo!("port MEVehicle::isOnRoad")
+        !self.mySegment.is_null()
     }
 
     /// C++: `bool MEVehicle::isIdling() const` [const, virtual]
@@ -310,7 +371,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_idling(&self) -> bool {
-        todo!("port MEVehicle::isIdling")
+        false
     }
 
     /// C++: `void MEVehicle::setApproaching(MSLink *)`
@@ -339,7 +400,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn remaining_stop_duration(&self) -> SUMOTime {
-        todo!("port MEVehicle::remainingStopDuration")
+        0
     }
 
     /// C++: `bool MEVehicle::instantStopping() const` [const, virtual]
@@ -348,7 +409,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn instant_stopping(&self) -> bool {
-        todo!("port MEVehicle::instantStopping")
+        true
     }
 
     /// C++: `bool MEVehicle::endTriggeredStop()`
@@ -579,7 +640,8 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_brake_gap(&self, delayed: bool) -> f64 {
-        todo!("port MEVehicle::getBrakeGap")
+        // UNUSED_PARAMETER(delayed);
+        if self.mySegment.is_null() || self.myQueIndex == PARKING_QUEUE { 0. } else { self.mySegment.get_length() }
     }
 
     /// C++: `void MEVehicle::setEventTime(SUMOTime, bool)`
@@ -593,7 +655,11 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_event_time(&mut self, t: SUMOTime, hasDelay: bool) {
-        todo!("port MEVehicle::setEventTime")
+        assert!(t > self.myLastEntryTime);
+        if hasDelay && !self.mySegment.is_null() {
+            self.mySegment.get_edge().mark_delayed();
+        }
+        self.myEventTime = t;
     }
 
     /// C++: `SUMOTime MEVehicle::getEventTime() const` [const]
@@ -603,7 +669,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_event_time(&self) -> SUMOTime {
-        todo!("port MEVehicle::getEventTime")
+        self.myEventTime
     }
 
     /// C++: `void MEVehicle::setEventIndex(long long)`
@@ -613,7 +679,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_event_index(&mut self, index: i64) {
-        todo!("port MEVehicle::setEventIndex")
+        self.myEventIndex = index;
     }
 
     /// C++: `long long MEVehicle::getEventIndex() const` [const]
@@ -623,7 +689,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_event_index(&self) -> i64 {
-        todo!("port MEVehicle::getEventIndex")
+        self.myEventIndex
     }
 
     /// C++: `void MEVehicle::setUnqueuedEventTime(SUMOTime)`
@@ -633,7 +699,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_unqueued_event_time(&mut self, t: SUMOTime) {
-        todo!("port MEVehicle::setUnqueuedEventTime")
+        self.myUnqueuedEventTime = t;
     }
 
     /// C++: `SUMOTime MEVehicle::getUnqueuedEventTime() const` [const]
@@ -643,7 +709,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_unqueued_event_time(&self) -> SUMOTime {
-        todo!("port MEVehicle::getUnqueuedEventTime")
+        self.myUnqueuedEventTime
     }
 
     /// C++: `void MEVehicle::setSegment(MESegment *, int)` [virtual]
@@ -654,7 +720,8 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_segment(&mut self, s: Ptr<MESegment>, idx: i32) {
-        todo!("port MEVehicle::setSegment")
+        self.mySegment = s;
+        self.myQueIndex = idx;
     }
 
     /// C++: `MESegment * MEVehicle::getSegment() const` [const]
@@ -664,7 +731,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_segment(&self) -> Ptr<MESegment> {
-        todo!("port MEVehicle::getSegment")
+        self.mySegment
     }
 
     /// C++: `int MEVehicle::getSegmentIndex() const` [const]
@@ -674,7 +741,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_index(&self) -> i32 {
-        todo!("port MEVehicle::getSegmentIndex")
+        if !self.mySegment.is_null() { self.mySegment.get_index() } else { -1 }
     }
 
     /// C++: `int MEVehicle::getQueIndex() const` [const]
@@ -684,7 +751,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_que_index(&self) -> i32 {
-        todo!("port MEVehicle::getQueIndex")
+        self.myQueIndex
     }
 
     /// C++: `double MEVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
@@ -700,7 +767,11 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_right_side_on_edge(&self, arg0: Ptr<MSLane>) -> f64 {
-        todo!("port MEVehicle::getRightSideOnEdge")
+        if self.mySegment.is_null() || self.mySegment.get_index() >= self.get_edge().get_num_lanes() {
+            return 0.;
+        }
+        let lane = self.get_edge().get_lanes()[self.mySegment.get_index() as usize];
+        lane.get_right_side_on_edge() + lane.get_width() * 0.5 - 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `void MEVehicle::setLastEntryTime(SUMOTime)`
@@ -710,7 +781,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_last_entry_time(&mut self, t: SUMOTime) {
-        todo!("port MEVehicle::setLastEntryTime")
+        self.myLastEntryTime = t;
     }
 
     /// C++: `SUMOTime MEVehicle::getLastEntryTime() const` [const]
@@ -720,7 +791,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_entry_time(&self) -> SUMOTime {
-        todo!("port MEVehicle::getLastEntryTime")
+        self.myLastEntryTime
     }
 
     /// C++: `SUMOTime MEVehicle::getLastActionTime() const` [const, virtual]
@@ -730,7 +801,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_action_time(&self) -> SUMOTime {
-        todo!("port MEVehicle::getLastActionTime")
+        MSNet::get_instance().get_current_time_step()
     }
 
     /// C++: `void MEVehicle::setBlockTime(const SUMOTime)`
@@ -741,7 +812,8 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn set_block_time(&mut self, t: SUMOTime) {
-        todo!("port MEVehicle::setBlockTime")
+        assert!(t > self.myLastEntryTime);
+        self.myBlockTime = t;
     }
 
     /// C++: `SUMOTime MEVehicle::getBlockTime() const` [const]
@@ -751,7 +823,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_block_time(&self) -> SUMOTime {
-        todo!("port MEVehicle::getBlockTime")
+        self.myBlockTime
     }
 
     /// C++: `SUMOTime MEVehicle::getWaitingTime(const bool) const` [const, virtual]
@@ -762,7 +834,8 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self, accumulated: bool) -> SUMOTime {
-        todo!("port MEVehicle::getWaitingTime")
+        // UNUSED_PARAMETER(accumulated);
+        std::cmp::max(0, self.myEventTime - self.myBlockTime)
     }
 
     /// C++: `SUMOTime MEVehicle::getQueuingTimeLoss() const` [const]
@@ -772,7 +845,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_queuing_time_loss(&self) -> SUMOTime {
-        todo!("port MEVehicle::getQueuingTimeLoss")
+        std::cmp::max(0, self.myEventTime - self.myUnqueuedEventTime)
     }
 
     /// C++: `SUMOTime MEVehicle::getTimeLoss() const` [const, virtual]
@@ -782,7 +855,8 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss(&self) -> SUMOTime {
-        todo!("port MEVehicle::getTimeLoss")
+        // slow-downs while driving are not modelled
+        self.get_waiting_time(false)
     }
 
     /// C++: `double MEVehicle::getEventTimeSeconds() const` [const]
@@ -792,7 +866,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_event_time_seconds(&self) -> f64 {
-        todo!("port MEVehicle::getEventTimeSeconds")
+        steps2time(self.get_event_time())
     }
 
     /// C++: `double MEVehicle::getLastEntryTimeSeconds() const` [const]
@@ -802,7 +876,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_entry_time_seconds(&self) -> f64 {
-        todo!("port MEVehicle::getLastEntryTimeSeconds")
+        steps2time(self.get_last_entry_time())
     }
 
     /// C++: `double MEVehicle::getBlockTimeSeconds() const` [const]
@@ -812,7 +886,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_block_time_seconds(&self) -> f64 {
-        todo!("port MEVehicle::getBlockTimeSeconds")
+        steps2time(self.get_block_time())
     }
 
     /// C++: `double MEVehicle::getCurrentLinkPenaltySeconds() const` [const]
@@ -827,7 +901,11 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_current_link_penalty_seconds(&self) -> f64 {
-        todo!("port MEVehicle::getCurrentLinkPenaltySeconds")
+        if self.mySegment.is_null() {
+            0.
+        } else {
+            steps2time(self.mySegment.get_link_penalty(Ptr::new(self)))
+        }
     }
 
     /// C++: `double MEVehicle::getCurrentStoppingTimeSeconds() const` [const]
@@ -975,14 +1053,14 @@ impl MEVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        todo!("port MEVehicle::getBaseInfluencer")
+        self.base.get_base_influencer()
     }
 
     /// C++: `const BaseInfluencer * MEVehicle::getBaseInfluencer() const` [const, virtual]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer_2(&self) -> Ptr<MSBaseVehicle_BaseInfluencer> {
-        todo!("port MEVehicle::getBaseInfluencer")
+        self.base.get_base_influencer_2()
     }
 
     /// C++: `bool MEVehicle::hasInfluencer() const` [const, virtual]
@@ -991,7 +1069,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        todo!("port MEVehicle::hasInfluencer")
+        !self.myInfluencer.is_null()
     }
 
     /// C++: `void MEVehicle::markJammed(bool)`
@@ -1000,7 +1078,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn mark_jammed(&mut self, jammed: bool) {
-        todo!("port MEVehicle::markJammed")
+        self.myWasJammed = jammed;
     }
 
     /// C++: `bool MEVehicle::wasJammed() const` [const]
@@ -1009,7 +1087,7 @@ impl MEVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn was_jammed(&self) -> bool {
-        todo!("port MEVehicle::wasJammed")
+        self.myWasJammed
     }
 
     /// C++: `void MEVehicle::saveState(OutputDevice &)` [virtual]
