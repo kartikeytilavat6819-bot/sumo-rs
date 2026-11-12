@@ -5,18 +5,18 @@ use crate::prelude::*;
 /// A container for districts
 /// C++ class `ODDistrictCont` (od/ODDistrictCont.h)
 pub struct ODDistrictCont {
-    /// C++ base class `NamedObjectCont<ODDistrict *>`
-    pub base: Unmapped /* NamedObjectCont<ODDistrict *> */,
+    /// C++ base class `NamedObjectCont<ODDistrict *>` (a std::map keyed by id, see utils/shapes/shape_container.rs)
+    pub base: BTreeMap<String, Ptr<ODDistrict>>,
 }
 
 impl std::ops::Deref for ODDistrictCont {
-    type Target = Unmapped /* NamedObjectCont<ODDistrict *> */;
-    fn deref(&self) -> &Unmapped /* NamedObjectCont<ODDistrict *> */ {
+    type Target = BTreeMap<String, Ptr<ODDistrict>>;
+    fn deref(&self) -> &BTreeMap<String, Ptr<ODDistrict>> {
         &self.base
     }
 }
 impl std::ops::DerefMut for ODDistrictCont {
-    fn deref_mut(&mut self) -> &mut Unmapped /* NamedObjectCont<ODDistrict *> */ {
+    fn deref_mut(&mut self) -> &mut BTreeMap<String, Ptr<ODDistrict>> {
         &mut self.base
     }
 }
@@ -27,7 +27,7 @@ impl ODDistrictCont {
     // ODDistrictCont::ODDistrictCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ODDistrictCont::ODDistrictCont")
+        Self { base: BTreeMap::new() }
     }
 
     /// C++: `void ODDistrictCont::~ODDistrictCont() noexcept` [virtual]
@@ -35,7 +35,7 @@ impl ODDistrictCont {
     // ODDistrictCont::~ODDistrictCont() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ODDistrictCont::~ODDistrictCont")
+        // C++ body is empty: the container never deletes the districts it holds
     }
 
     /// C++: `std::string ODDistrictCont::getRandomSourceFromDistrict(const std::string &) const` [const]
@@ -56,7 +56,11 @@ impl ODDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn get_random_source_from_district(&self, name: &str) -> String {
-        todo!("port ODDistrictCont::getRandomSourceFromDistrict")
+        let Some(district) = self.base.get(name) else {
+            panic!("{}", ProcessError::InvalidArgument(format!("There is no district '{}'.", name)));
+        };
+        // shortcut: C++ catches OutOfBoundsException from getRandomSource() and rethrows ProcessError; ODDistrict::get_random_source panics instead of returning an error, so no catch here, upgrade when ODDistrict returns Result
+        district.get_random_source()
     }
 
     /// C++: `std::string ODDistrictCont::getRandomSinkFromDistrict(const std::string &) const` [const]
@@ -77,7 +81,11 @@ impl ODDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn get_random_sink_from_district(&self, name: &str) -> String {
-        todo!("port ODDistrictCont::getRandomSinkFromDistrict")
+        let Some(district) = self.base.get(name) else {
+            panic!("{}", ProcessError::InvalidArgument(format!("There is no district '{}'.", name)));
+        };
+        // shortcut: C++ catches OutOfBoundsException from getRandomSink() and rethrows ProcessError; ODDistrict::get_random_sink panics instead of returning an error, so no catch here, upgrade when ODDistrict returns Result
+        district.get_random_sink()
     }
 
     /// C++: `void ODDistrictCont::loadDistricts(std::vector<std::string>)`
@@ -101,7 +109,15 @@ impl ODDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn load_districts(&mut self, files: Vec<String>) {
-        todo!("port ODDistrictCont::loadDistricts")
+        for districtfile in &files {
+            if !utils::common::file_helpers::is_readable(districtfile) {
+                panic!("{}", ProcessError::new(utils::tlf!("Could not access network file '%' to load.", districtfile)));
+            }
+            utils::common::msg_handler::progress_begin_message(&format!("Loading districts from '{}'", districtfile));
+            // build the xml-parser and handler
+            // shortcut: ODDistrictHandler does not implement SaxHandler yet, so the XML parse cannot run, upgrade once od_district_handler.rs is ported
+            panic!("ODDistrictCont::loadDistricts: XML parsing of '{}' needs ODDistrictHandler as a SaxHandler", districtfile);
+        }
     }
 
     /// C++: `void ODDistrictCont::makeDistricts(const std::map<std::string, std::pair<std::vector<std::string>, std::vector<std::string>>> &)`
@@ -123,7 +139,21 @@ impl ODDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn make_districts(&mut self, districts: &BTreeMap<String, (Vec<String>, Vec<String>)>) {
-        todo!("port ODDistrictCont::makeDistricts")
+        // std::map iteration order is key order, same as BTreeMap
+        for (id, (sources, sinks)) in districts {
+            let mut current = Box::new(ODDistrict::new(id));
+            for source in sources {
+                current.add_source(source, 1.);
+            }
+            for sink in sinks {
+                current.add_sink(sink, 1.);
+            }
+            let currentID = current.get_id().to_string();
+            // C++ `new` with no matching delete: the container holds the district for the rest of the run
+            let current: Ptr<ODDistrict> = Ptr::from_mut(Box::leak(current));
+            // C++ add(): insert only if the id is free
+            self.base.entry(currentID).or_insert(current);
+        }
     }
 
     /// C++: `void ODDistrictCont::ODDistrictCont(const ODDistrictCont &)` [private]
@@ -131,7 +161,7 @@ impl ODDistrictCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ODDistrictCont) -> Self {
-        todo!("port ODDistrictCont::ODDistrictCont")
+        panic!("ODDistrictCont copy constructor is private and never defined in C++")
     }
 
     /// C++: `ODDistrictCont & ODDistrictCont::operator=(const ODDistrictCont &)` [private]
@@ -139,7 +169,7 @@ impl ODDistrictCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &ODDistrictCont) -> &mut ODDistrictCont {
-        todo!("port ODDistrictCont::operator=")
+        panic!("ODDistrictCont assignment operator is private and never defined in C++")
     }
 
 }
