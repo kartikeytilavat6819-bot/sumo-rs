@@ -1,6 +1,13 @@
 //! Port of netimport/NIXMLTypesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::NETWORK_VERSION;
+use utils::common::msg_handler::write_error;
+
+/// C++ `throw`: raised as a panic carrying the ProcessError until a top-level catch exists
+fn throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
+}
 
 /// Importer for edge type information stored in XML
 /// C++ class `NIXMLTypesHandler` (netimport/NIXMLTypesHandler.h)

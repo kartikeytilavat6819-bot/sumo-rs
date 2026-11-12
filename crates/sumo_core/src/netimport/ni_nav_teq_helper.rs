@@ -167,7 +167,7 @@ impl NINavTeqHelper {
         } else {
             e.disallow_vehicle_class(-1, SVC_PASSENGER);
         }
-        haveCar |= add_common_vehicle_classes(e, &cs, 2);
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 2);
         if !haveCar {
             e.set_permissions(0, -1);
         }
@@ -259,7 +259,7 @@ impl NINavTeqHelper {
             e.allow_vehicle_class(-1, SVC_PASSENGER);
             haveCar = true;
         }
-        haveCar |= add_common_vehicle_classes(e, &cs, 3);
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 3);
         if !haveCar {
             e.set_permissions(0, -1);
         }

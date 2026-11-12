@@ -1,7 +1,7 @@
 //! Port of netimport/NILoader.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::{write_message, write_warning};
+use utils::common::msg_handler::{write_error, write_message, write_warning};
 
 /// C++ `throw`: raised as a panic carrying the ProcessError until a top-level catch exists
 fn throw<T>(r: Result<T, ProcessError>) -> T {
@@ -130,7 +130,7 @@ impl NILoader {
             let files: Vec<String> = Vec::new();
             ok &= NITypeLoader::load(&mut handler, &files, "types", true);
         } else {
-            ok &= NITypeLoader::load(&mut handler, throw(oc.get_string_vector("type-files")), "types", false);
+            ok &= NITypeLoader::load(&mut handler, throw(oc.get_string_vector("type-files")).as_slice(), "types", false);
         }
         // try to load height data so it is ready for use by other importers
         NBHeightMapper::load_if_set(oc);
@@ -250,11 +250,11 @@ impl NILoader {
     pub fn load_xml(&mut self, oc: &mut OptionsCont) -> bool {
         // load nodes
         let mut nodesHandler = NIXMLNodesHandler::new(self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_tl_logic_cont(), oc);
-        let mut ok = NITypeLoader::load(&mut nodesHandler, throw(oc.get_string_vector("node-files")), "nodes", false);
+        let mut ok = NITypeLoader::load(&mut nodesHandler, throw(oc.get_string_vector("node-files")).as_slice(), "nodes", false);
         // load the edges
         if ok {
             let mut edgesHandler = NIXMLEdgesHandler::new(self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_type_cont(), self.myNetBuilder.m().get_district_cont(), self.myNetBuilder.m().get_tl_logic_cont(), oc);
-            ok = NITypeLoader::load(&mut edgesHandler, throw(oc.get_string_vector("edge-files")), "edges", false);
+            ok = NITypeLoader::load(&mut edgesHandler, throw(oc.get_string_vector("edge-files")).as_slice(), "edges", false);
         }
         let seen = DEPRECATED_VEHICLE_CLASSES_SEEN.with(|s| s.borrow().clone());
         if !seen.is_empty() {
@@ -263,30 +263,31 @@ impl NILoader {
         // load the connections
         if ok {
             let mut connectionsHandler = NIXMLConnectionsHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_node_cont(), self.myNetBuilder.m().get_tl_logic_cont());
-            ok = NITypeLoader::load(&mut connectionsHandler, throw(oc.get_string_vector("connection-files")), "connections", false);
+            ok = NITypeLoader::load(&mut connectionsHandler, throw(oc.get_string_vector("connection-files")).as_slice(), "connections", false);
         }
         // load traffic lights (needs to come last, references loaded edges and connections)
         if ok {
             let mut tlHandler = NIXMLTrafficLightsHandler::new(self.myNetBuilder.m().get_tl_logic_cont(), self.myNetBuilder.m().get_edge_cont(), false);
-            ok = NITypeLoader::load(&mut tlHandler, throw(oc.get_string_vector("tllogic-files")), "traffic lights", false);
+            ok = NITypeLoader::load(&mut tlHandler, throw(oc.get_string_vector("tllogic-files")).as_slice(), "traffic lights", false);
         }
 
         // load public transport stops (used for restricting edge removal and as input when repairing railroad topology)
         if ok && oc.exists("ptstop-files") {
             let mut ptHandler = NIXMLPTHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_pt_stop_cont(), self.myNetBuilder.m().get_pt_line_cont());
-            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptstop-files")), "public transport stops", false);
+            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptstop-files")).as_slice(), "public transport stops", false);
         }
 
         // load public transport lines (used as input when repairing railroad topology)
         if ok && oc.exists("ptline-files") {
             let mut ptHandler = NIXMLPTHandler::new(self.myNetBuilder.m().get_edge_cont(), self.myNetBuilder.m().get_pt_stop_cont(), self.myNetBuilder.m().get_pt_line_cont());
-            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptline-files")), "public transport lines", false);
+            ok = NITypeLoader::load(&mut ptHandler, throw(oc.get_string_vector("ptline-files")).as_slice(), "public transport lines", false);
         }
 
         // load shapes for output formats that embed shape data
         if ok && oc.exists("polygon-files") {
-            let mut shapeHandler = NIXMLShapeHandler::new(self.myNetBuilder.m().get_shape_cont(), self.myNetBuilder.m().get_edge_cont());
-            ok = NITypeLoader::load(&mut shapeHandler, throw(oc.get_string_vector("polygon-files")), "polygon data", false);
+            // shortcut: NIXMLShapeHandler needs the SUMOSAXHandler base of ShapeHandler (utils/shapes, still todo), so polygon-files cannot be parsed yet; upgrade when ShapeHandler.base is a GenericSAXHandler
+            write_error("Polygon data cannot be loaded yet: the polygon shape handler is not ported.");
+            ok = false;
         }
         ok
     }
