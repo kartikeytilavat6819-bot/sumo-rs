@@ -46,15 +46,27 @@ impl MEInductLoop {
     //     s->addDetector(&myMeanData);
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, s: Ptr<MESegment>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
-        todo!("port MEInductLoop::MEInductLoop")
+    pub fn new(id: &str, s: Ptr<MESegment>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Box<Self> {
+        let myMeanData = MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::default(), s.get_length(), false, Ptr::default());
+        // Box: the constructor registers &myMeanData with the segment, so the object must not move
+        let mut b = Box::new(MEInductLoop {
+            base: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
+            myName: name,
+            mySegment: s,
+            myPosition: positionInMeters,
+            myMeanData,
+        });
+        b.myMeanData.set_description(&format!("inductionLoop_{}", id));
+        let data = Ptr::from_mut(&mut b.myMeanData).cast::<MSMoveReminder>();
+        s.m().add_detector(data, -1);
+        b
     }
 
     /// C++: `void MEInductLoop::~MEInductLoop() noexcept` [virtual]
     // MEInductLoop::~MEInductLoop() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MEInductLoop::~MEInductLoop")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MEInductLoop::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual]
@@ -64,7 +76,7 @@ impl MEInductLoop {
     //     }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MEInductLoop::writeXMLDetectorProlog")
+        dev.write_xml_header("detector", "det_e1meso_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `void MEInductLoop::writeXMLOutput(OutputDevice &, SUMOTime, SUMOTime)` [virtual]
@@ -80,7 +92,17 @@ impl MEInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        todo!("port MEInductLoop::writeXMLOutput")
+        self.mySegment.m().prepare_detector_for_writing(&mut self.myMeanData, -1);
+        dev.open_tag_id(SUMO_TAG_INTERVAL);
+        dev.write_attr(SUMO_ATTR_BEGIN, &time2string(startTime));
+        dev.write_attr(SUMO_ATTR_END, &time2string(stopTime));
+        dev.write_attr(SUMO_ATTR_ID, &utils::common::string_utils::escape_xml(self.get_id(), false));
+        dev.write_attr("sampledSeconds", &self.myMeanData.get_samples());
+        let edge = self.mySegment.get_edge();
+        let numLanes = edge.get_lanes().len() as i32;
+        let speedLimit = edge.get_speed_limit();
+        self.myMeanData.write(dev, &SumoXMLAttrMask::default(), stopTime - startTime, numLanes, speedLimit, -1.0, -1);
+        self.myMeanData.reset(false);
     }
 
     /// C++: `const MSMeanData_Net::MSLaneMeanDataValues & MEInductLoop::getMeanData() const` [const]
@@ -89,7 +111,7 @@ impl MEInductLoop {
     //     }
     #[allow(unused_variables)]
     pub fn get_mean_data(&self) -> &MSMeanData_Net_MSLaneMeanDataValues {
-        todo!("port MEInductLoop::getMeanData")
+        &self.myMeanData
     }
 
     /// C++: `const MSEdge & MEInductLoop::getEdge() const` [const]
@@ -99,7 +121,7 @@ impl MEInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> &MSEdge {
-        todo!("port MEInductLoop::getEdge")
+        self.mySegment.get_edge()
     }
 
     /// C++: `void MEInductLoop::MEInductLoop()` [private]
@@ -107,7 +129,7 @@ impl MEInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port MEInductLoop::MEInductLoop")
+        panic!("MEInductLoop default constructor is private and undefined in C++")
     }
 
     /// C++: `void MEInductLoop::MEInductLoop(const MEInductLoop &)` [private]
@@ -115,7 +137,7 @@ impl MEInductLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &MEInductLoop) -> Self {
-        todo!("port MEInductLoop::MEInductLoop")
+        panic!("MEInductLoop copy constructor is private and undefined in C++")
     }
 
     /// C++: `MEInductLoop & MEInductLoop::operator=(const MEInductLoop &)` [private]
