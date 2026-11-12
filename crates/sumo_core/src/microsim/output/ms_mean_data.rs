@@ -1,6 +1,8 @@
-//! Port of microsim/output/MSMeanData.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/output/MSMeanData.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 // shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty). These return the values MSFrame
 // sets for default options. The mesoscopic branches (gUseMesoSim, gMesoNet) are not ported, so the
@@ -1185,7 +1187,14 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, parent: Ptr<MSMeanData>) -> Self {
-        todo!("port MeanDataValueTracker::MeanDataValueTracker")
+        let base = MSMeanData_MeanDataValues::new(lane, length, true, parent);
+        let mut tracker = Self {
+            base,
+            myTrackedData: BTreeMap::new(),
+            myCurrentData: VecDeque::new(),
+        };
+        tracker.myCurrentData.push_back(Rc::new(MeanDataValueTracker_TrackerEntry::new(parent.create_values_sub_data(lane, length, false))));
+        tracker
     }
 
     /// C++: `void MeanDataValueTracker::~MeanDataValueTracker() noexcept` [virtual]
@@ -1193,7 +1202,7 @@ impl MSMeanData_MeanDataValueTracker {
     // MSMeanData::MeanDataValueTracker::~MeanDataValueTracker() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MeanDataValueTracker::~MeanDataValueTracker")
+        // C++ destructor body is empty.
     }
 
     /// C++: `void MeanDataValueTracker::reset(bool)` [virtual]
@@ -1210,7 +1219,14 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self, afterWrite: bool) {
-        todo!("port MeanDataValueTracker::reset")
+        if afterWrite {
+            if !self.myCurrentData.is_empty() {
+                self.myCurrentData.pop_front();
+            }
+        } else {
+            let entry = MeanDataValueTracker_TrackerEntry::new(self.myParent.create_values_sub_data(self.myLane, self.myLaneLength, false));
+            self.myCurrentData.push_back(Rc::new(entry));
+        }
     }
 
     /// C++: `void MeanDataValueTracker::addTo(MSMeanData::MeanDataValues &) const` [const, virtual]
@@ -1221,7 +1237,7 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        todo!("port MeanDataValueTracker::addTo")
+        self.myCurrentData.front().unwrap().myValues.add_to(val);
     }
 
     /// C++: `void MeanDataValueTracker::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual]
@@ -1232,7 +1248,8 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MeanDataValueTracker::notifyMoveInternal")
+        let key = Ptr::new(veh);
+        self.myTrackedData[&key].myValues.m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane);
     }
 
     /// C++: `bool MeanDataValueTracker::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1246,7 +1263,13 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MeanDataValueTracker::notifyLeave")
+        let key = Ptr::from_mut(&mut *veh);
+        if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
+            let entry = self.myTrackedData[&key].clone();
+            entry.myNumVehicleLeft.set(entry.myNumVehicleLeft.get() + 1);
+        }
+        let entry = self.myTrackedData[&key].clone();
+        entry.myValues.m().notify_leave(veh, lastPos, reason, enteredLane)
     }
 
     /// C++: `bool MeanDataValueTracker::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1275,7 +1298,22 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MeanDataValueTracker::notifyEnter")
+        if reason == MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
+            return true;
+        }
+        let key = Ptr::from_mut(&mut *veh);
+        if self.myParent.vehicleApplies(veh) && !self.myTrackedData.contains_key(&key) {
+            let entry = self.myCurrentData.back().unwrap().clone();
+            self.myTrackedData.insert(key, entry.clone());
+            entry.myNumVehicleEntered.set(entry.myNumVehicleEntered.get() + 1);
+            if !entry.myValues.m().notify_enter(veh, reason, enteredLane) {
+                entry.myNumVehicleLeft.set(entry.myNumVehicleLeft.get() + 1);
+                self.myTrackedData.remove(&key);
+                return false;
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MeanDataValueTracker::isEmpty() const` [const, virtual]
@@ -1285,7 +1323,7 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MeanDataValueTracker::isEmpty")
+        self.myCurrentData.front().unwrap().myValues.is_empty()
     }
 
     /// C++: `void MeanDataValueTracker::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual]
@@ -1304,7 +1342,8 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        todo!("port MeanDataValueTracker::write")
+        let front = self.myCurrentData.front().unwrap();
+        front.myValues.write(dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, front.myNumVehicleEntered.get());
     }
 
     /// C++: `int MeanDataValueTracker::getNumReady() const` [const]
@@ -1322,14 +1361,23 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn get_num_ready(&self) -> i32 {
-        todo!("port MeanDataValueTracker::getNumReady")
+        let mut result = 0;
+        for it in self.myCurrentData.iter() {
+            if it.myNumVehicleEntered.get() == it.myNumVehicleLeft.get() {
+                result += 1;
+            } else {
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `void MeanDataValueTracker::clearFirst()`
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // (declared in MSMeanData.h, never defined in C++: calling it fails to link)
     #[allow(unused_variables)]
     pub fn clear_first(&mut self) {
-        todo!("port MeanDataValueTracker::clearFirst")
+        // shortcut: declared but never defined in C++, so no behaviour to port; panics if reached
+        panic!("MeanDataValueTracker::clearFirst is declared but not defined in SUMO")
     }
 
     /// C++: `double MeanDataValueTracker::getSamples() const` [const, virtual]
@@ -1339,7 +1387,7 @@ impl MSMeanData_MeanDataValueTracker {
     // }
     #[allow(unused_variables)]
     pub fn get_samples(&self) -> f64 {
-        todo!("port MeanDataValueTracker::getSamples")
+        self.myCurrentData.front().unwrap().myValues.get_samples()
     }
 
 }
@@ -1389,7 +1437,17 @@ impl MSMeanData_MeanDataValues {
     //     travelledDistance(0) { }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData>) -> Self {
-        todo!("port MeanDataValues::MeanDataValues")
+        let parentId = if parent.is_null() { String::new() } else { format!("{}|", parent.get_id()) };
+        let laneId = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
+        Self {
+            base: MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd),
+            myParent: parent,
+            myLaneLength: length,
+            sampleSeconds: 0.0,
+            travelledDistance: 0.0,
+            resetTime: 0,
+            mySubData: Ptr::null(),
+        }
     }
 
     /// C++: `void MeanDataValues::~MeanDataValues() noexcept` [virtual]
@@ -1398,7 +1456,7 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MeanDataValues::~MeanDataValues")
+        // C++ destructor body is empty.
     }
 
     /// C++: `void MeanDataValues::reset(bool)` [virtual, pure virtual]
@@ -1406,7 +1464,8 @@ impl MSMeanData_MeanDataValues {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset(&mut self, afterWrite: bool) {
-        todo!("port MeanDataValues::reset")
+        // shortcut: pure virtual in C++; Rust has no dispatch from the base to the subclass override, so this panics like a pure-virtual call
+        panic!("MeanDataValues::reset is pure virtual; the subclass must implement it")
     }
 
     /// C++: `void MeanDataValues::addTo(MeanDataValues &) const` [const, virtual, pure virtual]
@@ -1414,7 +1473,8 @@ impl MSMeanData_MeanDataValues {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        todo!("port MeanDataValues::addTo")
+        // shortcut: pure virtual in C++; see reset
+        panic!("MeanDataValues::addTo is pure virtual; the subclass must implement it")
     }
 
     /// C++: `bool MeanDataValues::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1431,7 +1491,8 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MeanDataValues::notifyEnter")
+        // UNUSED_PARAMETER(reason), enteredLane is only used in debug output in C++
+        self.myParent.is_null() || self.myParent.vehicleApplies(veh)
     }
 
     /// C++: `bool MeanDataValues::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -1609,7 +1670,147 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MeanDataValues::notifyMove")
+        // if the vehicle has arrived, the reminder must be kept so it can be
+        // notified of the arrival subsequently
+        let oldSpeed = veh.get_previous_speed();
+        let mut enterSpeed = if g_semi_implicit_euler_update() { newSpeed } else { oldSpeed }; // NOTE: For the euler update, the vehicle is assumed to travel at constant speed for the whole time step
+        let mut leaveSpeed = newSpeed;
+        let mut leaveSpeedFront = newSpeed;
+
+        // These values will be further decreased below
+        let TS = ts();
+        let mut timeOnLane = TS;
+        let mut frontOnLane = if oldPos > self.myLaneLength { 0. } else { TS };
+        let mut ret = true;
+
+        // entry and exit times (will be modified below)
+        let mut timeBeforeEnter = 0.;
+        let mut timeBeforeEnterBack = 0.;
+        let mut timeBeforeLeaveFront = if newPos <= self.myLaneLength { TS } else { 0. };
+        let mut timeBeforeLeave = TS;
+
+        // Treat the case that the vehicle entered the lane in the last step
+        if oldPos < 0. && newPos >= 0. {
+            // Vehicle was not on this lane in the last time step
+            timeBeforeEnter = MSCFModel::passing_time(oldPos, 0., newPos, oldSpeed, newSpeed);
+            timeOnLane = TS - timeBeforeEnter;
+            frontOnLane = timeOnLane;
+            enterSpeed = MSCFModel::speed_after_time(timeBeforeEnter, oldSpeed, newPos - oldPos);
+        }
+
+        let oldBackPos = oldPos - veh.get_vehicle_type().get_length();
+        let newBackPos = newPos - veh.get_vehicle_type().get_length();
+
+        // Determine the time before the vehicle back enters
+        if oldBackPos < 0. && newBackPos > 0. {
+            timeBeforeEnterBack = MSCFModel::passing_time(oldBackPos, 0., newBackPos, oldSpeed, newSpeed);
+        } else if newBackPos <= 0. {
+            timeBeforeEnterBack = TS;
+        } else {
+            timeBeforeEnterBack = 0.;
+        }
+
+        // Treat the case that the vehicle's back left the lane in the last step
+        if newBackPos > self.myLaneLength // vehicle's back has left the lane
+            && oldBackPos <= self.myLaneLength
+        {
+            // and hasn't left the lane before
+            debug_assert!(!g_semi_implicit_euler_update() || newSpeed != 0.); // how could it move across the lane boundary otherwise
+            // (Leo) vehicle left this lane (it can also have skipped over it in one time step -> therefore we use "timeOnLane -= ..." and ( ... - timeOnLane) below)
+            timeBeforeLeave = MSCFModel::passing_time(oldBackPos, self.myLaneLength, newBackPos, oldSpeed, newSpeed);
+            let timeAfterLeave = TS - timeBeforeLeave;
+            timeOnLane -= timeAfterLeave;
+            leaveSpeed = MSCFModel::speed_after_time(timeBeforeLeave, oldSpeed, newPos - oldPos);
+            // XXX: Do we really need this? Why would this "reduce rounding errors"? (Leo) Refs. #2579
+            if timeOnLane.abs() < utils::geom::NUMERICAL_EPS {
+                // reduce rounding errors
+                timeOnLane = 0.;
+            }
+            ret = veh.has_arrived();
+        }
+
+        // Treat the case that the vehicle's front left the lane in the last step
+        if newPos > self.myLaneLength && oldPos <= self.myLaneLength {
+            // vehicle's front has left the lane and has not left before
+            debug_assert!(!g_semi_implicit_euler_update() || newSpeed != 0.);
+            timeBeforeLeaveFront = MSCFModel::passing_time(oldPos, self.myLaneLength, newPos, oldSpeed, newSpeed);
+            let timeAfterLeave = TS - timeBeforeLeaveFront;
+            frontOnLane -= timeAfterLeave;
+            // XXX: Do we really need this? Why would this "reduce rounding errors"? (Leo) Refs. #2579
+            if frontOnLane.abs() < utils::geom::NUMERICAL_EPS {
+                // reduce rounding errors
+                frontOnLane = 0.;
+            }
+            leaveSpeedFront = MSCFModel::speed_after_time(timeBeforeLeaveFront, oldSpeed, newPos - oldPos);
+        }
+
+        debug_assert!(frontOnLane <= TS);
+        debug_assert!(timeOnLane <= TS);
+
+        if timeOnLane < 0. {
+            utils::write_errorf!("Negative vehicle step fraction for '%' on lane '%'.", veh.get_id(), self.get_lane().get_id());
+            return veh.has_arrived();
+        }
+        if timeOnLane == 0. {
+            return veh.has_arrived();
+        }
+
+        debug_assert!(timeBeforeEnter <= min2(timeBeforeEnterBack, timeBeforeLeaveFront));
+        debug_assert!(timeBeforeLeave >= max2(timeBeforeEnterBack, timeBeforeLeaveFront));
+        // compute average vehicle length on lane in last step
+        let vehLength = veh.get_vehicle_type().get_length();
+        // occupied lane length at timeBeforeEnter (resp. stepStart if already on lane)
+        let lengthOnLaneAtStepStart = max2(0., min4(self.myLaneLength, vehLength, vehLength - (oldPos - self.myLaneLength), oldPos));
+        // occupied lane length at timeBeforeLeave (resp. stepEnd if still on lane)
+        let lengthOnLaneAtStepEnd = max2(0., min4(self.myLaneLength, vehLength, vehLength - (newPos - self.myLaneLength), newPos));
+        let mut integratedLengthOnLane = 0.;
+        if timeBeforeEnterBack < timeBeforeLeaveFront {
+            // => timeBeforeLeaveFront>0, myLaneLength>vehLength
+            // vehicle length on detector at timeBeforeEnterBack
+            let lengthOnLaneAtBackEnter = min2(veh.get_vehicle_type().get_length(), newPos);
+            // linear quadrature of occupancy between timeBeforeEnter and timeBeforeEnterBack
+            integratedLengthOnLane += (timeBeforeEnterBack - timeBeforeEnter) * (lengthOnLaneAtBackEnter + lengthOnLaneAtStepStart) * 0.5;
+            // linear quadrature of occupancy between timeBeforeEnterBack and timeBeforeLeaveFront
+            // (vehicle is completely on the edge in between)
+            integratedLengthOnLane += (timeBeforeLeaveFront - timeBeforeEnterBack) * vehLength;
+            // and until vehicle leaves/stepEnd
+            integratedLengthOnLane += (timeBeforeLeave - timeBeforeLeaveFront) * (vehLength + lengthOnLaneAtStepEnd) * 0.5;
+        } else if timeBeforeEnterBack >= timeBeforeLeaveFront {
+            // => myLaneLength <= vehLength or (timeBeforeLeaveFront == timeBeforeEnterBack == 0)
+            // vehicle length on detector at timeBeforeLeaveFront
+            let lengthOnLaneAtLeaveFront;
+            if timeBeforeLeaveFront == timeBeforeEnter {
+                // for the case that front already left
+                lengthOnLaneAtLeaveFront = lengthOnLaneAtStepStart;
+            } else if timeBeforeLeaveFront == timeBeforeLeave {
+                // for the case that front doesn't leave in this step
+                lengthOnLaneAtLeaveFront = lengthOnLaneAtStepEnd;
+            } else {
+                lengthOnLaneAtLeaveFront = self.myLaneLength;
+            }
+            // linear quadrature of occupancy between timeBeforeEnter and timeBeforeLeaveFront
+            integratedLengthOnLane += (timeBeforeLeaveFront - timeBeforeEnter) * (lengthOnLaneAtLeaveFront + lengthOnLaneAtStepStart) * 0.5;
+            // linear quadrature of occupancy between timeBeforeLeaveFront and timeBeforeEnterBack
+            integratedLengthOnLane += (timeBeforeEnterBack - timeBeforeLeaveFront) * lengthOnLaneAtLeaveFront;
+            // and until vehicle leaves/stepEnd
+            integratedLengthOnLane += (timeBeforeLeave - timeBeforeEnterBack) * (lengthOnLaneAtLeaveFront + lengthOnLaneAtStepEnd) * 0.5;
+        }
+
+        let meanLengthOnLane = integratedLengthOnLane / TS;
+
+        // XXX: use this, when #2556 is fixed! Refs. #2575
+        // XXX: #2556 fixed for ballistic update
+        let travelledDistanceFrontOnLane = if g_semi_implicit_euler_update() { frontOnLane * newSpeed } else { max2(0., min2(newPos, self.myLaneLength) - max2(oldPos, 0.)) };
+        let travelledDistanceVehicleOnLane = if g_semi_implicit_euler_update() {
+            timeOnLane * newSpeed
+        } else {
+            min2(newPos, self.myLaneLength) - max2(oldPos, 0.) + min2(max2(0., newPos - self.myLaneLength), veh.get_vehicle_type().get_length())
+        };
+
+        // shortcut: the HAVE_FOX ScopedLocker around notifyMoveInternal is not needed (single-threaded port)
+        let veh_ref: &SUMOTrafficObject = veh;
+        self.notify_move_internal(veh_ref, frontOnLane, timeOnLane, (enterSpeed + leaveSpeedFront) / 2., (enterSpeed + leaveSpeed) / 2., travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane);
+        ret
     }
 
     /// C++: `bool MeanDataValues::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1623,7 +1824,10 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MeanDataValues::notifyLeave")
+        if g_use_meso_sim() {
+            return false; // reminder is re-added on every segment (@recheck for performance)
+        }
+        reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION
     }
 
     /// C++: `bool MeanDataValues::isEmpty() const` [const, virtual]
@@ -1634,7 +1838,7 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        todo!("port MeanDataValues::isEmpty")
+        self.sampleSeconds == 0.
     }
 
     /// C++: `void MeanDataValues::update()` [virtual]
@@ -1643,16 +1847,15 @@ impl MSMeanData_MeanDataValues {
     // MSMeanData::MeanDataValues::update() {
     // }
     #[allow(unused_variables)]
-    pub fn update(&mut self) {
-        todo!("port MeanDataValues::update")
-    }
+    pub fn update(&mut self) {}
 
     /// C++: `void MeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual, pure virtual]
     /// Writes output values into the given stream
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        todo!("port MeanDataValues::write")
+        // shortcut: pure virtual in C++; see reset
+        panic!("MeanDataValues::write is pure virtual; the subclass must implement it")
     }
 
     /// C++: `double MeanDataValues::getSamples() const` [const, virtual]
@@ -1663,7 +1866,7 @@ impl MSMeanData_MeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn get_samples(&self) -> f64 {
-        todo!("port MeanDataValues::getSamples")
+        self.sampleSeconds
     }
 
     /// C++: `double MeanDataValues::getTravelledDistance() const` [const]
@@ -1673,7 +1876,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn get_travelled_distance(&self) -> f64 {
-        todo!("port MeanDataValues::getTravelledDistance")
+        self.travelledDistance
     }
 
     /// C++: `SUMOTime MeanDataValues::getResetTime() const` [const]
@@ -1682,7 +1885,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn get_reset_time(&self) -> SUMOTime {
-        todo!("port MeanDataValues::getResetTime")
+        self.resetTime
     }
 
     /// C++: `double MeanDataValues::getLaneLength() const` [const]
@@ -1691,7 +1894,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn get_lane_length(&self) -> f64 {
-        todo!("port MeanDataValues::getLaneLength")
+        self.myLaneLength
     }
 
     /// C++: `double MeanDataValues::getAttributeValue(SumoXMLAttr, const SUMOTime, const double, const double) const` [const, virtual]
@@ -1705,7 +1908,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn get_attribute_value(&self, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
-        todo!("port MeanDataValues::getAttributeValue")
+        0.
     }
 
     /// C++: `MeanDataValues * MeanDataValues::getSubData()`
@@ -1714,7 +1917,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn get_sub_data(&mut self) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MeanDataValues::getSubData")
+        self.mySubData
     }
 
     /// C++: `void MeanDataValues::setSubData(MeanDataValues *)`
@@ -1723,7 +1926,7 @@ impl MSMeanData_MeanDataValues {
     //         }
     #[allow(unused_variables)]
     pub fn set_sub_data(&mut self, subData: Ptr<MSMeanData_MeanDataValues>) {
-        todo!("port MeanDataValues::setSubData")
+        self.mySubData = subData;
     }
 
 }
@@ -1745,7 +1948,11 @@ impl MeanDataValueTracker_TrackerEntry {
     //                 : myNumVehicleEntered(0), myNumVehicleLeft(0), myValues(values) {}
     #[allow(unused_variables)]
     pub fn new(values: Ptr<MSMeanData_MeanDataValues>) -> Self {
-        todo!("port TrackerEntry::TrackerEntry")
+        Self {
+            myNumVehicleEntered: std::cell::Cell::new(0),
+            myNumVehicleLeft: std::cell::Cell::new(0),
+            myValues: values,
+        }
     }
 
     /// C++: `void TrackerEntry::~TrackerEntry() noexcept` [virtual]
@@ -1755,7 +1962,7 @@ impl MeanDataValueTracker_TrackerEntry {
     //             }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TrackerEntry::~TrackerEntry")
+        // shortcut: C++ deletes myValues here; leaked, see file header
     }
 
 }
