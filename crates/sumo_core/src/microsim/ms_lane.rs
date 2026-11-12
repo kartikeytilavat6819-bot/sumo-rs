@@ -6134,7 +6134,25 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed_bike(&self) -> f64 {
-        todo!("port MSLane::getMeanSpeedBike")
+        // @note: redundant code with getMeanSpeed to avoid extra checks in a function that is called very often
+        if self.myVehicles.len() == 0 {
+            return self.myMaxSpeed;
+        }
+        let mut v = 0.;
+        let mut numBikes = 0;
+        for veh in self.get_vehicles_secure().iter() {
+            if veh.get_v_class() == SVC_BICYCLE {
+                v += veh.get_speed();
+                numBikes += 1;
+            }
+        }
+        let ret = if numBikes > 0 {
+            v / (self.myVehicles.len() as f64)
+        } else {
+            self.myMaxSpeed
+        };
+        self.release_vehicles();
+        ret
     }
 
     /// C++: `double MSLane::getWaitingSeconds() const` [const]
@@ -6152,7 +6170,14 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_seconds(&self) -> f64 {
-        todo!("port MSLane::getWaitingSeconds")
+        if self.myVehicles.len() == 0 {
+            return 0.;
+        }
+        let mut wtime = 0.;
+        for i in self.myVehicles.iter() {
+            wtime += i.get_waiting_seconds();
+        }
+        wtime
     }
 
     /// C++: `double MSLane::getBruttoOccupancy() const` [const]
@@ -6172,7 +6197,17 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_brutto_occupancy(&self) -> f64 {
-        todo!("port MSLane::getBruttoOccupancy")
+        self.get_vehicles_secure();
+        let mut fractions = self.get_fractional_vehicle_length(true);
+        if self.myVehicles.len() != 0 {
+            let lastVeh = self.myVehicles[0];
+            if lastVeh.get_position_on_lane() < lastVeh.get_vehicle_type().get_length() {
+                fractions -= lastVeh.get_vehicle_type().get_length() - lastVeh.get_position_on_lane();
+            }
+        }
+        self.release_vehicles();
+        let x = (self.myBruttoVehicleLengthSum + fractions) / self.myLength;
+        if 1. < x { 1. } else { x }
     }
 
     /// C++: `double MSLane::getNettoOccupancy() const` [const]
@@ -6192,7 +6227,16 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_netto_occupancy(&self) -> f64 {
-        todo!("port MSLane::getNettoOccupancy")
+        self.get_vehicles_secure();
+        let mut fractions = self.get_fractional_vehicle_length(false);
+        if self.myVehicles.len() != 0 {
+            let lastVeh = self.myVehicles[0];
+            if lastVeh.get_position_on_lane() < lastVeh.get_vehicle_type().get_length() {
+                fractions -= lastVeh.get_vehicle_type().get_length() - lastVeh.get_position_on_lane();
+            }
+        }
+        self.release_vehicles();
+        (self.myNettoVehicleLengthSum + fractions) / self.myLength
     }
 
     /// C++: `double MSLane::getBruttoVehLenSum() const` [const]
@@ -6202,7 +6246,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_brutto_veh_len_sum(&self) -> f64 {
-        todo!("port MSLane::getBruttoVehLenSum")
+        self.myBruttoVehicleLengthSum
     }
 
     /// C++: `double MSLane::getEmissions() const` [const]
@@ -6288,7 +6332,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_right_side_on_edge(&self) -> f64 {
-        todo!("port MSLane::getRightSideOnEdge")
+        self.myRightSideOnEdge
     }
 
     /// C++: `int MSLane::getRightmostSublane() const` [const]
@@ -6297,7 +6341,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_rightmost_sublane(&self) -> i32 {
-        todo!("port MSLane::getRightmostSublane")
+        self.myRightmostSublane
     }
 
     /// C++: `double MSLane::getCenterOnEdge() const` [const]
@@ -6306,7 +6350,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_center_on_edge(&self) -> f64 {
-        todo!("port MSLane::getCenterOnEdge")
+        self.myRightSideOnEdge + 0.5 * self.myWidth
     }
 
     /// C++: `void MSLane::sortPartialVehicles()`
