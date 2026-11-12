@@ -2721,7 +2721,56 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn new(phaseName: i32, isBarrier: bool, isGreenRest: bool, isCoordinated: bool, minRecall: bool, maxRecall: bool, fixForceOff: bool, barrierNum: i32, ringNum: i32, phaseStringInds: IntVector, phase: Ptr<MSPhaseDefinition>) -> Self {
-        todo!("port NEMAPhase::NEMAPhase")
+        let mut this = Self {
+            phaseName,
+            isAtBarrier: isBarrier,
+            isGreenRest,
+            barrierNum,
+            coordinatePhase: isCoordinated,
+            minRecall,
+            maxRecall,
+            fixForceOff,
+            ringNum,
+            lastDetectActive: false,
+            greenRestTimer: 0,
+            greatestStartTime: 0,
+            forceOffTime: 0,
+            readyToSwitch: false,
+            yellow: 0,
+            red: 0,
+            minDuration: 0,
+            maxDuration: 0,
+            nextMaxDuration: 0,
+            vehExt: 0,
+            myCorePhase: phase,
+            // C++ sets myInstance = this, but nothing reads it and the address would change on return; left null
+            myInstance: Ptr::null(),
+            myLastPhaseInstance: Ptr::null(),
+            sequentialPriorPhase: Ptr::null(),
+            myLightState: LightState::Red,
+            myDetectorInfo: NEMAPhase_PhaseDetectorInfo::new(),
+            maxGreenDynamic: 0,
+            myStartTime: 0,
+            myExpectedDuration: 0,
+            myLastEnd: 0,
+            myPhaseStringInds: phaseStringInds,
+            myGreenString: String::new(),
+            myYellowString: String::new(),
+            myRedString: String::new(),
+            myTransitions: Vec::new(),
+            transitionActive: false,
+            lastTransitionDecision: Ptr::null(),
+        };
+
+        // Timing Parameters
+        this.maxGreenDynamic = this.myCorePhase.maxDuration;
+        this.myStartTime = utils::common::time::time2steps(0.);
+        this.myExpectedDuration = this.myCorePhase.minDuration;
+        this.myLastEnd = utils::common::time::time2steps(0.);
+
+        // set the phase colors
+        this.set_my_nema_states();
+        this
     }
 
     /// C++: `void NEMAPhase::~NEMAPhase()`
@@ -2729,7 +2778,10 @@ impl NEMAPhase {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NEMAPhase::~NEMAPhase")
+        // Delete the transitions from their alloc
+        for t in self.myTransitions.clone() {
+            t.m().drop_();
+        }
     }
 
     /// C++: `LightState NEMAPhase::getCurrentState() const` [const]
@@ -2739,7 +2791,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_state(&self) -> LightState {
-        todo!("port NEMAPhase::getCurrentState")
+        self.myLightState
     }
 
     /// C++: `std::vector<MSE2Collector *> NEMAPhase::getDetectors() const` [const]
@@ -2749,7 +2801,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_detectors(&self) -> Vec<Ptr<MSE2Collector>> {
-        todo!("port NEMAPhase::getDetectors")
+        self.myDetectorInfo.detectors.clone()
     }
 
     /// C++: `void NEMAPhase::setDetectors(std::vector<MSE2Collector *>)`
@@ -2759,7 +2811,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn set_detectors(&mut self, detectors: Vec<Ptr<MSE2Collector>>) {
-        todo!("port NEMAPhase::setDetectors")
+        self.myDetectorInfo.detectors = detectors;
     }
 
     /// C++: `bool NEMAPhase::isTransitionActive() const` [const]
@@ -2769,7 +2821,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn is_transition_active(&self) -> bool {
-        todo!("port NEMAPhase::isTransitionActive")
+        self.transitionActive
     }
 
     /// C++: `void NEMAPhase::init(NEMALogic *, int, int, bool)`
@@ -2798,7 +2850,26 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, controller: Ptr<NEMALogic>, crossPhaseTarget: i32, crossPhaseSource: i32, latching: bool) {
-        todo!("port NEMAPhase::init")
+        // switch the durations from steps2time
+        self.recalculate_timing();
+
+        let this = Ptr::from_mut(self);
+        for p in controller.m().get_phases_by_ring(self.ringNum) {
+            // construct transitions for all potential movements, including back to myself
+            let transition = Ptr::from_mut(Box::leak(Box::new(PhaseTransitionLogic::new(this, p))));
+            let distance = controller.m().measure_ring_distance(self.phaseName, p.phaseName, self.ringNum);
+            transition.m().set_distance(distance);
+            self.myTransitions.push(transition);
+        }
+
+        // sort the transitions by distance for speed later. Using plain distance here
+        // determinism: std::sort is unstable; Rust sort_by is stable, so equal distances may order differently
+        self.myTransitions.sort_by(|i, j| i.distance.cmp(&j.distance));
+
+        // create the phase detector info
+        let cpdSource = if crossPhaseSource > 0 { controller.m().get_phase_obj(crossPhaseSource, -1) } else { Ptr::null() };
+        let cpdTarget = if crossPhaseTarget > 0 { controller.m().get_phase_obj(crossPhaseTarget, -1) } else { Ptr::null() };
+        self.myDetectorInfo = NEMAPhase_PhaseDetectorInfo::new_2(latching, cpdSource, cpdTarget);
     }
 
     /// C++: `void NEMAPhase::update(NEMALogic *)`
@@ -2872,7 +2943,70 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::update")
+        let this = Ptr::from_mut(self);
+        let dt = utils::common::time::delta_t();
+        // If I am in a transition, the rest of the update logic does not matter
+        if self.myLightState < LightState::Green {
+            // return early
+            self.readyToSwitch = true;
+            return;
+        }
+
+        // Continuation Logic
+        let duration = controller.m().get_current_time() - self.myStartTime;
+        // Check the vehicle extension timer as long as not in green transfer and not a coordinated phase
+        if self.myLightState != LightState::GreenXfer && !self.coordinatePhase {
+            self.myExpectedDuration = self.calc_vehicle_extension(duration);
+        }
+        // Special Logic for Green Rest, which behaves uniquely
+        if self.myLightState == LightState::GreenRest {
+            // check all other detectors and see if anything else is active. If so,
+            // start the green rest timer countdown, which is == to the max duration of the phase
+            let mut vehicleActive = false;
+            for p in controller.m().get_phase_objs() {
+                if p.phaseName != self.phaseName && p.phaseName != controller.m().get_other_phase(this).phaseName && p.m().call_active() {
+                    self.greenRestTimer -= dt;
+                    vehicleActive = true;
+                    break;
+                }
+            }
+            // catch the rising edge of the sidestreet detection and calculate the maximum timer
+            if vehicleActive && (self.greenRestTimer + dt >= self.maxDuration) {
+                self.maxGreenDynamic = self.minDuration + self.maxDuration;
+            }
+
+            // if there are no other vehicles slide the startTime along
+            if !vehicleActive {
+                self.greenRestTimer = self.maxDuration;
+                if duration >= self.minDuration {
+                    self.myStartTime = controller.m().get_current_time() - self.minDuration;
+                    self.maxGreenDynamic = self.minDuration + self.maxDuration;
+                    self.myExpectedDuration = self.minDuration + std::cmp::max(0, self.myExpectedDuration - duration);
+                }
+            }
+
+            // if the green rest timer is exhausted, set ready to switch
+            if self.greenRestTimer < dt {
+                self.readyToSwitch = true;
+                // force the counterpart to be ready to switch too. This needs to be latching....
+                let otherPhase = controller.m().get_other_phase(this);
+                if otherPhase.get_current_state() > LightState::Green {
+                    otherPhase.m().readyToSwitch = true;
+                }
+            }
+
+            // Special Behavior when the Green Rest Circles all the way around in coordinated mode
+            if self.coordinatePhase {
+                // This means that we have green rested until I should "start" again. Just call my entry function again.
+                if controller.m().get_time_in_cycle() <= ((self.forceOffTime - self.maxDuration) + dt / 2) {
+                    self.enter(controller, this);
+                }
+            }
+        }
+        // Check to see if a switch is desired
+        if duration >= self.myExpectedDuration {
+            self.readyToSwitch = true;
+        }
     }
 
     /// C++: `void NEMAPhase::exit(NEMALogic *, PhaseTransitionLogic **)`
@@ -2904,7 +3038,32 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn exit(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
-        todo!("port NEMAPhase::exit")
+        let this = Ptr::from_mut(self);
+        let r = self.ringNum as usize;
+        if nextPhases[r].get_to_phase() != this {
+            // if the next phase is not me, then I need to go into a transition
+            self.lastTransitionDecision = nextPhases[r];
+            if self.myLightState >= LightState::Green {
+                // if I am in green, then I need to enter yellow
+                self.enter_yellow(controller);
+                return;
+            }
+
+            let sinceEnd = controller.m().get_current_time() - self.myLastEnd;
+            if sinceEnd < (self.yellow + self.red) {
+                if sinceEnd >= self.yellow {
+                    // if I am in yellow, then I need to enter red
+                    self.myLightState = LightState::Red;
+                }
+                // I am currently in the Red state but haven't reached max
+                return;
+            }
+
+            self.handle_red_xfer_or_next_phase(controller, nextPhases);
+            return;
+        }
+
+        self.handle_green_rest_or_transfer(controller, nextPhases);
     }
 
     /// C++: `void NEMAPhase::handleGreenRestOrTransfer(NEMALogic *, PhaseTransitionLogic **)`
@@ -2929,7 +3088,25 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn handle_green_rest_or_transfer(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
-        todo!("port NEMAPhase::handleGreenRestOrTransfer")
+        let this = Ptr::from_mut(self);
+        let otherPhase = controller.m().get_other_phase(this);
+        self.readyToSwitch = false;
+        // !ringNum in C++ is 1 for ring 0 and 0 for ring 1
+        let notRing = if self.ringNum == 0 { 1 } else { 0 };
+        let isOtherPhaseReady = nextPhases[notRing].get_to_phase() == otherPhase && otherPhase.readyToSwitch;
+        let isOtherPhaseInGreenRest = otherPhase.greenRestTimer >= otherPhase.maxDuration && otherPhase.get_current_state() == LightState::GreenRest;
+
+        if isOtherPhaseReady || isOtherPhaseInGreenRest {
+            self.myLightState = LightState::GreenRest;
+            self.myStartTime = controller.m().get_current_time() - self.minDuration;
+            self.myExpectedDuration = self.minDuration;
+            self.greenRestTimer = self.maxDuration * (self.isGreenRest as SUMOTime);
+        } else {
+            self.myLightState = LightState::GreenXfer;
+            if self.isAtBarrier {
+                self.myExpectedDuration = (otherPhase.myExpectedDuration + otherPhase.myStartTime) - self.myStartTime;
+            }
+        }
     }
 
     /// C++: `void NEMAPhase::enterYellow(NEMALogic *)`
@@ -2941,7 +3118,9 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn enter_yellow(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::enterYellow")
+        self.myLastEnd = controller.m().get_current_time();
+        self.myLightState = LightState::Yellow;
+        self.transitionActive = true;
     }
 
     /// C++: `void NEMAPhase::handleRedXferOrNextPhase(NEMALogic *, PhaseTransitionLogic **)`
@@ -2973,7 +3152,32 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn handle_red_xfer_or_next_phase(&mut self, controller: Ptr<NEMALogic>, nextPhases: &mut [Ptr<PhaseTransitionLogic>; 2]) {
-        todo!("port NEMAPhase::handleRedXferOrNextPhase")
+        let this = Ptr::from_mut(self);
+        let otherPhase = controller.m().get_other_phase(this);
+        let r = self.ringNum as usize;
+        let o = otherPhase.ringNum as usize;
+        let barrierCross = nextPhases[r].get_to_phase().barrierNum != self.barrierNum;
+        let barrierCrossButOkay = barrierCross
+            && (nextPhases[r].get_to_phase().barrierNum == nextPhases[o].get_to_phase().barrierNum)
+            && otherPhase.m().okay2_force_switch(controller);
+
+        if !barrierCross {
+            nextPhases[r].get_to_phase().m().enter(controller, this);
+            return;
+        }
+
+        if barrierCrossButOkay {
+            // if the barrier is crossed, but the other phase is going to the same barrier, then I can enter red transfer
+            // enter the next phase
+            nextPhases[r].get_to_phase().m().enter(controller, this);
+            // trigger the other phase to enter red transfer
+            nextPhases[o].get_to_phase().m().enter(controller, this);
+            return;
+        }
+
+        self.myLightState = LightState::RedXfer;
+        self.readyToSwitch = true;
+        self.transitionActive = false;
     }
 
     /// C++: `bool NEMAPhase::hasRecall()`
@@ -2983,7 +3187,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn has_recall(&mut self) -> bool {
-        todo!("port NEMAPhase::hasRecall")
+        self.minRecall || self.maxRecall
     }
 
     /// C++: `bool NEMAPhase::callActive()`
@@ -2993,7 +3197,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn call_active(&mut self) -> bool {
-        todo!("port NEMAPhase::callActive")
+        self.minRecall || self.maxRecall || self.myDetectorInfo.detectActive
     }
 
     /// C++: `bool NEMAPhase::detectActive()`
@@ -3003,7 +3207,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn detect_active(&mut self) -> bool {
-        todo!("port NEMAPhase::detectActive")
+        self.myDetectorInfo.detectActive
     }
 
     /// C++: `void NEMAPhase::checkMyDetectors()`
@@ -3043,7 +3247,36 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn check_my_detectors(&mut self) {
-        todo!("port NEMAPhase::checkMyDetectors")
+        // Check my Detectors, only necessary if it isn't currently marked as on
+        if !self.myDetectorInfo.detectActive {
+            // If I have a cross phase target and it is active and I am not, save my detector as not active
+            if !self.myDetectorInfo.cpdTarget.is_null() {
+                if self.myDetectorInfo.cpdTarget.get_current_state() >= LightState::Green {
+                    if self.myLightState < LightState::Green {
+                        self.myDetectorInfo.detectActive = false;
+                        return;
+                    }
+                }
+            }
+            // If we make it to this point, check my detector like normal.
+            for d in self.myDetectorInfo.detectors.clone() {
+                if d.get_current_vehicle_number() > 0 {
+                    self.myDetectorInfo.detectActive = true;
+                    return;
+                }
+            }
+            // If my detector is not active, check my cross phase
+            if !self.myDetectorInfo.cpdSource.is_null() && (self.myLightState >= LightState::Green) {
+                if self.myDetectorInfo.cpdSource.get_current_state() < LightState::Green {
+                    for d in self.myDetectorInfo.cpdSource.m().get_detectors() {
+                        if d.get_current_vehicle_number() > 0 {
+                            self.myDetectorInfo.detectActive = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NEMAPhase::clearMyDetectors()`
@@ -3058,7 +3291,11 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn clear_my_detectors(&mut self) {
-        todo!("port NEMAPhase::clearMyDetectors")
+        self.lastDetectActive = self.myDetectorInfo.detectActive;
+        // remove the active flag on the detector if the detector is not latching or if it is green
+        if (!self.myDetectorInfo.latching) || (self.myLightState >= LightState::Green) {
+            self.myDetectorInfo.detectActive = false;
+        }
     }
 
     /// C++: `SUMOTime NEMAPhase::getTransitionTime(NEMALogic *)`
@@ -3078,7 +3315,16 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_transition_time(&mut self, controller: Ptr<NEMALogic>) -> SUMOTime {
-        todo!("port NEMAPhase::getTransitionTime")
+        if self.myLightState == LightState::RedXfer {
+            // if in red xfer, I am ready to switch whenevery
+            return utils::common::time::time2steps(0.);
+        }
+        if !self.transitionActive {
+            // if a transition is not active, the transition is just yellow + red time
+            return self.get_transition_time_stateless();
+        }
+        // if a transition is active, then return the time left in the transition
+        std::cmp::max(utils::common::time::time2steps(0.), (self.yellow + self.red) - (controller.m().get_current_time() - self.myLastEnd))
     }
 
     /// C++: `SUMOTime NEMAPhase::getTransitionTimeStateless()`
@@ -3088,7 +3334,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_transition_time_stateless(&mut self) -> SUMOTime {
-        todo!("port NEMAPhase::getTransitionTimeStateless")
+        self.yellow + self.red
     }
 
     /// C++: `PhasePtr NEMAPhase::getSequentialPriorPhase()`
@@ -3098,7 +3344,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn get_sequential_prior_phase(&mut self) -> NEMALogic_PhasePtr {
-        todo!("port NEMAPhase::getSequentialPriorPhase")
+        self.sequentialPriorPhase
     }
 
     /// C++: `void NEMAPhase::setSequentialPriorPhase(PhasePtr)`
@@ -3108,7 +3354,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn set_sequential_prior_phase(&mut self, priorPhase: NEMALogic_PhasePtr) {
-        todo!("port NEMAPhase::setSequentialPriorPhase")
+        self.sequentialPriorPhase = priorPhase;
     }
 
     /// C++: `std::vector<PhaseTransitionLogic *> NEMAPhase::trySwitch(NEMALogic *)`
@@ -3165,7 +3411,52 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self, controller: Ptr<NEMALogic>) -> Vec<Ptr<PhaseTransitionLogic>> {
-        todo!("port NEMAPhase::trySwitch")
+        // this function returns the preferred valid transition for the phase
+        let mut nextTransitions: Vec<Ptr<PhaseTransitionLogic>> = Vec::new();
+        if self.readyToSwitch {
+            // only try to switch if I am ready to switch
+            for t in self.myTransitions.clone() {
+                // for the transitions check if it is okay
+                if t.m().okay(controller) {
+                    // if there was already a transition decision, it can be overriden but only if the new transition
+                    // is on the same side of a barrier
+                    if !self.lastTransitionDecision.is_null() {
+                        if t.get_to_phase().barrierNum == self.lastTransitionDecision.get_to_phase().barrierNum {
+                            nextTransitions.push(t);
+                            break;
+                        }
+                    } else {
+                        nextTransitions.push(t);
+                        // break once there is a valid option (they have already been sorted)
+                        break;
+                    }
+                }
+            }
+        }
+        // Add in the last transition decision if it hasn't been added in yet
+        if !self.lastTransitionDecision.is_null() {
+            let mut found = false;
+            let mut sameBarrier = false;
+            for t in nextTransitions.iter() {
+                if *t == self.lastTransitionDecision {
+                    found = true;
+                    break;
+                }
+                if t.get_to_phase().barrierNum == self.lastTransitionDecision.get_to_phase().barrierNum {
+                    sameBarrier = true;
+                    break;
+                }
+            }
+            // but only need to add it if it is not in the list AND if nothing in the list is the same barrier as it was.
+            if !found && !sameBarrier {
+                nextTransitions.push(self.lastTransitionDecision);
+            }
+        }
+        // Add the transition back to myself, but only in the case when no others have been added
+        if nextTransitions.is_empty() {
+            nextTransitions.push(*self.myTransitions.last().unwrap());
+        }
+        nextTransitions
     }
 
     /// C++: `PhaseTransitionLogic * NEMAPhase::getTransition(int)`
@@ -3184,7 +3475,13 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_transition(&mut self, toPhase: i32) -> Ptr<PhaseTransitionLogic> {
-        todo!("port NEMAPhase::getTransition")
+        for t in self.myTransitions.clone() {
+            if t.get_to_phase().phaseName == toPhase {
+                return t;
+            }
+        }
+        // This point should never be reached (assert(0) in C++ is a no-op in release builds, so fall back to the front)
+        self.myTransitions[0]
     }
 
     /// C++: `char NEMAPhase::getNEMAChar(int)`
@@ -3201,7 +3498,14 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn get_nema_char(&mut self, i: i32) -> i8 {
-        todo!("port NEMAPhase::getNEMAChar")
+        // TODO: this can be computed once.
+        if self.myLightState >= LightState::Green {
+            self.myGreenString.as_bytes()[i as usize] as i8
+        } else if self.myLightState <= LightState::Red {
+            self.myRedString.as_bytes()[i as usize] as i8
+        } else {
+            self.myYellowString.as_bytes()[i as usize] as i8
+        }
     }
 
     /// C++: `void NEMAPhase::recalculateTiming()`
@@ -3219,7 +3523,14 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn recalculate_timing(&mut self) {
-        todo!("port NEMAPhase::recalculateTiming")
+        // This could be extended in the future to allow for traci manipulation
+        self.yellow = self.myCorePhase.yellow;
+        self.red = self.myCorePhase.red;
+        self.minDuration = self.myCorePhase.minDuration;
+        self.maxDuration = self.myCorePhase.maxDuration;
+        self.nextMaxDuration = self.myCorePhase.maxDuration;
+        self.maxGreenDynamic = self.myCorePhase.maxDuration;
+        self.vehExt = self.myCorePhase.vehext;
     }
 
     /// C++: `void NEMAPhase::forceEnter(NEMALogic *)`
@@ -3229,7 +3540,8 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn force_enter(&mut self, controller: Ptr<NEMALogic>) {
-        todo!("port NEMAPhase::forceEnter")
+        let seq = self.sequentialPriorPhase;
+        self.enter(controller, seq);
     }
 
     /// C++: `bool NEMAPhase::controlledIndex(int)`
@@ -3239,7 +3551,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn controlled_index(&mut self, i: i32) -> bool {
-        todo!("port NEMAPhase::controlledIndex")
+        self.myPhaseStringInds.contains(&i)
     }
 
     /// C++: `void NEMAPhase::cleanupExit()`
@@ -3251,7 +3563,9 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn cleanup_exit(&mut self) {
-        todo!("port NEMAPhase::cleanupExit")
+        self.transitionActive = false;
+        self.readyToSwitch = false;
+        self.myLightState = LightState::Red;
     }
 
     /// C++: `bool NEMAPhase::okay2ForceSwitch(NEMALogic *)`
@@ -3261,7 +3575,7 @@ impl NEMAPhase {
     //     }
     #[allow(unused_variables)]
     pub fn okay2_force_switch(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port NEMAPhase::okay2ForceSwitch")
+        self.readyToSwitch && !self.transitionActive && (self.get_transition_time(controller) <= utils::common::time::time2steps(0.))
     }
 
     /// C++: `SUMOTime NEMAPhase::calcVehicleExtension(SUMOTime)` [private]
@@ -3277,7 +3591,12 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn calc_vehicle_extension(&mut self, duration: SUMOTime) -> SUMOTime {
-        todo!("port NEMAPhase::calcVehicleExtension")
+        if self.myExpectedDuration < self.maxGreenDynamic && self.myDetectorInfo.detectActive {
+            // add the vehicle extension timer if the detector is active.
+            // capped by the minimum and maximum duration
+            return std::cmp::min(std::cmp::max(duration + self.vehExt, self.minDuration), self.maxGreenDynamic);
+        }
+        self.myExpectedDuration
     }
 
     /// C++: `void NEMAPhase::enter(NEMALogic *, PhasePtr)` [private]
@@ -3285,7 +3604,57 @@ impl NEMAPhase {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn enter(&mut self, controller: Ptr<NEMALogic>, lastPhase: NEMALogic_PhasePtr) {
-        todo!("port NEMAPhase::enter")
+        let this = Ptr::from_mut(self);
+        // set the last phase instance to inactive
+        lastPhase.m().cleanup_exit();
+
+        // Enter the phase
+        self.myStartTime = controller.m().get_current_time();
+        self.myLightState = LightState::Green;
+        self.myLastPhaseInstance = lastPhase;
+        self.readyToSwitch = false;
+
+        // implement the new timing parameters on the first coordinated phase to appear
+        let coordPhaseName = controller.m().coordinatePhaseObjs[self.ringNum as usize].phaseName;
+        if self.phaseName == coordPhaseName {
+            controller.m().implement_traci_changes();
+        }
+
+        // Handle Green Rest Peculiarities
+        if !controller.coordinateMode && self.isGreenRest {
+            // If the controller is in free mode and the phase is a green rest phase, then it should enter as "green rest"
+            self.myLightState = LightState::GreenRest;
+            // if the phase has "green rest" capabilities, set its timer to the dynamic maxGreen
+            self.greenRestTimer = self.maxDuration * (self.isGreenRest as SUMOTime);
+        }
+
+        // clear the last transition decision
+        self.lastTransitionDecision = Ptr::null();
+
+        // Calculate the Max Green Time & Expected Duration here:
+        if controller.coordinateMode {
+            if self.coordinatePhase {
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                self.myExpectedDuration = controller.m().mode_cycle(self.forceOffTime - timeInCycle, cycleLength);
+            } else {
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                self.maxGreenDynamic = controller.m().mode_cycle(self.forceOffTime - timeInCycle, cycleLength);
+                if !self.fixForceOff {
+                    self.maxGreenDynamic = std::cmp::min(self.maxDuration, self.maxGreenDynamic);
+                }
+                self.myExpectedDuration = self.minDuration;
+            }
+        } else {
+            self.myExpectedDuration = self.minDuration;
+        }
+        // Implements the maxRecall functionality
+        if self.maxRecall && !self.coordinatePhase {
+            self.myExpectedDuration = self.maxGreenDynamic;
+        }
+        // Set the controller's active phase
+        controller.m().set_active_phase(this);
     }
 
     /// C++: `void NEMAPhase::setMyNEMAStates()` [private]
@@ -3306,7 +3675,17 @@ impl NEMAPhase {
     // }
     #[allow(unused_variables)]
     pub fn set_my_nema_states(&mut self) {
-        todo!("port NEMAPhase::setMyNEMAStates")
+        self.myGreenString = self.myCorePhase.get_state().to_string();
+        self.myRedString = String::new();
+        self.myYellowString = String::new();
+        for ch in self.myGreenString.clone().chars() {
+            self.myRedString.push('r');
+            if ch == 'G' || ch == 'g' {
+                self.myYellowString.push('y');
+            } else {
+                self.myYellowString.push(ch);
+            }
+        }
     }
 
 }
@@ -3337,7 +3716,7 @@ impl NEMAPhase_PhaseDetectorInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port PhaseDetectorInfo::PhaseDetectorInfo")
+        Self { detectors: Vec::new(), cpdTarget: Ptr::null(), cpdSource: Ptr::null(), detectActive: false, latching: false }
     }
 
     /// C++: `void PhaseDetectorInfo::PhaseDetectorInfo(bool, PhasePtr, PhasePtr)`
@@ -3349,7 +3728,7 @@ impl NEMAPhase_PhaseDetectorInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new_2(latching: bool, cpdSource: NEMALogic_PhasePtr, cpdTarget: NEMALogic_PhasePtr) -> Self {
-        todo!("port PhaseDetectorInfo::PhaseDetectorInfo")
+        Self { detectors: Vec::new(), cpdTarget, cpdSource, detectActive: false, latching }
     }
 
 }
@@ -3368,7 +3747,7 @@ impl PhaseTransitionLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(fromPhase: NEMALogic_PhasePtr, toPhase: NEMALogic_PhasePtr) -> Self {
-        todo!("port PhaseTransitionLogic::PhaseTransitionLogic")
+        Self { distance: 0, fromPhase, toPhase }
     }
 
     /// C++: `bool PhaseTransitionLogic::okay(NEMALogic *)`
@@ -3397,7 +3776,23 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn okay(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::okay")
+        // Picking the correct transition logic to use
+        if self.fromPhase == self.toPhase {
+            // for green rest or green transfer, it cannot return to itself if a transition is active
+            self.fromPhase.get_current_state() >= LightState::Green
+        } else if self.fromPhase.coordinatePhase {
+            // if the from phase is a coordinated phase i.e. {2, 6} in a standard setup
+            self.from_coord(controller)
+        } else if self.fromPhase.isAtBarrier {
+            // if the phase is at a barrier i.e. {2, 6, 4, 8} in a standard setup
+            self.from_barrier(controller)
+        } else if controller.coordinateMode {
+            // typical coordinate mode transition,
+            self.coord_base(controller)
+        } else {
+            // base transition logic
+            self.free_base(controller)
+        }
     }
 
     /// C++: `int PhaseTransitionLogic::getDistance(PhaseTransitionLogic *)`
@@ -3414,7 +3809,13 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_distance(&mut self, otherTrans: Ptr<PhaseTransitionLogic>) -> i32 {
-        todo!("port PhaseTransitionLogic::getDistance")
+        // Returns the other transitions distance in green transfer situations
+        if (self.toPhase == self.fromPhase) && (otherTrans.toPhase.barrierNum == self.toPhase.barrierNum) {
+            if self.toPhase.get_current_state() == LightState::Green || self.toPhase.get_current_state() == LightState::GreenXfer {
+                return otherTrans.distance;
+            }
+        }
+        self.distance
     }
 
     /// C++: `void PhaseTransitionLogic::setDistance(int)`
@@ -3424,7 +3825,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_distance(&mut self, d: i32) {
-        todo!("port PhaseTransitionLogic::setDistance")
+        self.distance = d;
     }
 
     /// C++: `void PhaseTransitionLogic::~PhaseTransitionLogic() noexcept`
@@ -3432,7 +3833,7 @@ impl PhaseTransitionLogic {
     // ~PhaseTransitionLogic() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PhaseTransitionLogic::~PhaseTransitionLogic")
+        // C++ destructor body is empty; the object is owned by the leaked allocation made in NEMAPhase::init, so nothing is released here
     }
 
     /// C++: `PhasePtr PhaseTransitionLogic::getToPhase() const` [const]
@@ -3442,7 +3843,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_to_phase(&self) -> NEMALogic_PhasePtr {
-        todo!("port PhaseTransitionLogic::getToPhase")
+        self.toPhase
     }
 
     /// C++: `PhasePtr PhaseTransitionLogic::getFromPhase() const` [const]
@@ -3452,7 +3853,7 @@ impl PhaseTransitionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_phase(&self) -> NEMALogic_PhasePtr {
-        todo!("port PhaseTransitionLogic::getFromPhase")
+        self.fromPhase
     }
 
     /// C++: `void PhaseTransitionLogic::buildLogic()` [private]
@@ -3460,7 +3861,7 @@ impl PhaseTransitionLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_logic(&mut self) {
-        todo!("port PhaseTransitionLogic::buildLogic")
+        // C++ declares buildLogic() but never defines it (no body in NEMAController.cpp), so there is nothing to port
     }
 
     /// C++: `bool PhaseTransitionLogic::fromBarrier(NEMALogic *)` [private]
@@ -3490,7 +3891,28 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn from_barrier(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::fromBarrier")
+        if self.free_base(controller) {
+            if self.fromPhase.barrierNum == self.toPhase.barrierNum {
+                // same barrier side so we are good.
+                // Check if green transfer is active. If so, we need to make sure that there are no calls on the other side of the barrier
+                if self.fromPhase.get_current_state() >= LightState::Green {
+                    let fromRing = self.fromPhase.ringNum;
+                    let fromBarrier = self.fromPhase.barrierNum;
+                    for p in controller.m().get_phases_by_ring(fromRing) {
+                        if p.barrierNum != fromBarrier && p.m().call_active() {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            } else {
+                // This is now a barrier cross and we need to make sure that the other phase is also ready to transition
+                if self.fromPhase.readyToSwitch && controller.m().get_other_phase(self.fromPhase).readyToSwitch {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool PhaseTransitionLogic::fromCoord(NEMALogic *)` [private]
@@ -3523,7 +3945,31 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn from_coord(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::fromCoord")
+        if self.coord_base(controller) {
+            // Determine if the other phase is also ready to switch
+            if controller.m().get_other_phase(self.fromPhase).readyToSwitch {
+                // Dr. Wang had the Type-170 code setup in a way that it could transition whenever - meaning that it didn't matter if the prior phase could fit or not
+                if controller.m().is_type170() {
+                    return true;
+                }
+                // If the transition is already active, then report that the movement is possible
+                if self.fromPhase.m().is_transition_active() {
+                    return true;
+                }
+                // now determine if there my prior phase can fit or not. We already know that I can fit.
+                let priorPhase = self.toPhase.m().get_sequential_prior_phase();
+                let timeInCycle = controller.m().get_time_in_cycle();
+                let cycleLength = controller.m().get_current_cycle_length();
+                let timeTillForceOff = controller.m().mode_cycle(priorPhase.forceOffTime - timeInCycle, cycleLength);
+                let transitionTime = self.fromPhase.m().get_transition_time(controller);
+                // if the time till the force off is less than the min duration ||
+                // if it is greater than the cycle length minus the length of the coordinate phase (which the fromPhase automatically is)
+                if (priorPhase.minDuration + transitionTime) > timeTillForceOff || timeTillForceOff > (controller.m().get_current_cycle_length() - self.fromPhase.minDuration) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool PhaseTransitionLogic::freeBase(NEMALogic *)` [private]
@@ -3551,7 +3997,24 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn free_base(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::freeBase")
+        // Simplest transition logic. Just check if a detector (or recall) is active on that phase and
+        let mut okay = false;
+        // is a call active on the toPhase?
+        if self.toPhase.m().call_active() {
+            // would the transition be a barrier cross?
+            if self.fromPhase.barrierNum != self.toPhase.barrierNum {
+                let otherPhase = controller.m().get_other_phase(self.fromPhase);
+                // If it is a barrier cross, then the other phase must also be ready to switch
+                // or have a transition time that is lower than mine currently. DELTA_T is critical here
+                if otherPhase.readyToSwitch {
+                    // #&& otherPhase->getTransitionTime(controller) <= fromPhase->getTransitionTime(controller)) {
+                    okay = true;
+                }
+            } else {
+                okay = true;
+            }
+        }
+        okay
     }
 
     /// C++: `bool PhaseTransitionLogic::coordBase(NEMALogic *)` [private]
@@ -3576,7 +4039,22 @@ impl PhaseTransitionLogic {
     // }
     #[allow(unused_variables)]
     pub fn coord_base(&mut self, controller: Ptr<NEMALogic>) -> bool {
-        todo!("port PhaseTransitionLogic::coordBase")
+        if self.toPhase.coordinatePhase && (controller.m().get_other_phase(self.fromPhase).readyToSwitch || self.fromPhase.barrierNum == self.toPhase.barrierNum) {
+            // transitions TO the coordinated phase may always happen, as long as the other phase is okay to switch too
+            return true;
+        }
+        // first check if the free logic is upheld
+        else if self.free_base(controller) {
+            // Then check if the "to phase" can fit, which means that there is enough time to fit the current transition + the minimum time of the next phase
+            let transitionTime = self.fromPhase.m().get_transition_time(controller);
+            let timeInCycle = controller.m().get_time_in_cycle();
+            let cycleLength = controller.m().get_current_cycle_length();
+            let timeTillForceOff = controller.m().mode_cycle(self.toPhase.forceOffTime - timeInCycle, cycleLength);
+            if self.toPhase.minDuration + transitionTime <= timeTillForceOff {
+                return true;
+            }
+        }
+        false
     }
 
 }
