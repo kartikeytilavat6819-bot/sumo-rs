@@ -1,7 +1,8 @@
 //! Port of microsim/devices/MSDevice_SSM.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::INVALID_DOUBLE;
+use utils::common::std_defs::{INVALID_DOUBLE, g_precision, g_precision_geo};
+use utils::common::to_string::to_string;
 
 /// C++ enum `MSDevice_SSM::EncounterType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -528,10 +529,16 @@ impl std::ops::DerefMut for MSDevice_SSM {
 //   static const int MSDevice_SSM::EGO_ENCOUNTERTYPES;
 
 thread_local! {
+    /// C++ static `MSDevice_SSM::myInstances` (std::set<MSDevice_SSM*, ComparatorNumericalIdLess>)
+    pub static MY_INSTANCES: std::cell::RefCell<BTreeSet<Ptr<MSDevice_SSM>>> = std::cell::RefCell::new(BTreeSet::new());
     /// C++ static `MSDevice_SSM::myEdgeFilter` (std::set<const MSEdge*>; ordered by pointer)
     pub static MY_EDGE_FILTER: std::cell::RefCell<BTreeSet<Ptr<MSEdge>>> = std::cell::RefCell::new(BTreeSet::new());
+    /// C++ static `MSDevice_SSM::myEdgeFilterInitialized`
+    pub static MY_EDGE_FILTER_INITIALIZED: std::cell::Cell<bool> = std::cell::Cell::new(false);
     /// C++ static `MSDevice_SSM::myEdgeFilterActive`
     pub static MY_EDGE_FILTER_ACTIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    /// C++ static `MSDevice_SSM::myCreatedOutputFiles` (remember which files were created already)
+    pub static MY_CREATED_OUTPUT_FILES: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
 }
 
 impl MSDevice_SSM {
@@ -686,15 +693,64 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_SSM::buildVehicleDevices")
+        // shortcut: equippedByDefaultAssignmentOptions needs the holder's Parameterised and vType parameters, which SUMOVehicle does not expose yet; until then no SSM device is equipped (only runs requesting device.ssm.* are affected), upgrade when SUMOVehicle exposes getParameter()/getVehicleType()
+        let equipped = false;
+        if equipped {
+            if MSGlobals::use_meso_sim() {
+                write_warningf!("SSM Device for vehicle '%' will not be built. (SSMs not supported in MESO)", v.get_id());
+                return;
+            }
+            // ID for the device
+            let deviceID = format!("ssm_{}", v.get_id());
+
+            // Load parameters:
+
+            // Measures and thresholds
+            let mut thresholds: BTreeMap<String, f64> = BTreeMap::new();
+            let success = Self::get_measures_and_thresholds(v, deviceID.clone(), &mut thresholds);
+            if !success {
+                return;
+            }
+
+            // Trajectories
+            let trajectories = Self::requests_trajectories(v);
+
+            // detection range
+            let range = Self::get_detection_range(v);
+
+            // extra time
+            let extraTime = Self::get_extra_time(v);
+
+            // File
+            let file = Self::get_output_filename(v, deviceID.clone());
+            let useGeo = Self::use_geo_coords(v);
+            let writePos = Self::write_positions(v);
+            let writeLanesPos = Self::write_lanes_positions(v);
+            let mut conflictTypeFilter: Vec<i32> = Vec::new();
+            let success = Self::filter_by_conflict_type(v, deviceID.clone(), &mut conflictTypeFilter);
+            if !success {
+                return;
+            }
+
+            // Build the device (C++ never deletes it, so it is leaked here as well)
+            let device: &mut MSDevice_SSM = Box::leak(MSDevice_SSM::new(v, &deviceID, file, thresholds, trajectories, range, extraTime, useGeo, writePos, writeLanesPos, conflictTypeFilter));
+            into.push(Ptr::from_mut(&mut device.base));
+
+            // Init spatial filter (once)
+            if !MY_EDGE_FILTER_INITIALIZED.with(|c| c.get()) {
+                Self::init_edge_filter();
+            }
+        }
     }
 
     /// C++: `const int & MSDevice_SSM::getInstances()` [static]
     /// returns all currently existing SSM devices
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static i32 {
-        todo!("port MSDevice_SSM::getInstances")
+    pub fn get_instances() -> &'static BTreeSet<Ptr<MSDevice_SSM>> {
+        // determinism: C++ orders myInstances by ComparatorNumericalIdLess (numerical id); this set orders by pointer
+        // SAFETY: thread-local storage lives for the thread; C++ returns a reference to the global set (same pattern as MSDevice_ToC::get_instances)
+        unsafe { &*MY_INSTANCES.with(|m| m.as_ptr()) }
     }
 
     /// C++: `const int & MSDevice_SSM::getEdgeFilter()` [static]
@@ -703,8 +759,9 @@ impl MSDevice_SSM {
     //         return myEdgeFilter;
     //     }
     #[allow(unused_variables)]
-    pub fn get_edge_filter() -> &'static i32 {
-        todo!("port MSDevice_SSM::getEdgeFilter")
+    pub fn get_edge_filter() -> BTreeSet<Ptr<MSEdge>> {
+        // returns a copy: the set lives in a thread_local RefCell (same as MSDevice_FCD::get_edge_filter)
+        MY_EDGE_FILTER.with(|c| c.borrow().clone())
     }
 
     /// C++: `void MSDevice_SSM::updateAndWriteOutput()`
@@ -1091,7 +1148,135 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn write_out_conflict(&mut self, e: Ptr<MSDevice_SSM_Encounter>) {
-        todo!("port MSDevice_SSM::writeOutConflict")
+        let e = e.m();
+        let outPtr = self.myOutputFile;
+        let out = outPtr.m();
+        out.open_tag("conflict");
+        out.write_attr("begin", &e.begin).write_attr("end", &e.end);
+        out.write_attr("ego", &e.egoID).write_attr("foe", &e.foeID);
+        if self.mySaveTrajectories {
+            out.open_tag("timeSpan").write_attr("values", &e.timeSpan).close_tag("");
+            out.open_tag("typeSpan").write_attr("values", &e.typeSpan).close_tag("");
+            // Some useful snippets for that (from MSFCDExport.cpp):
+            if self.myUseGeoCoords {
+                Self::to_geo_2(&mut e.egoTrajectory.x);
+                Self::to_geo_2(&mut e.foeTrajectory.x);
+                Self::to_geo_2(&mut e.conflictPointSpan);
+            }
+            let prec = if self.myUseGeoCoords { g_precision_geo() } else { g_precision() };
+            out.open_tag("egoPosition").write_attr("values", &e.egoTrajectory.x.to_string_prec(prec)).close_tag("");
+            if self.myWriteLanesPositions {
+                out.open_tag("egoLane").write_attr("values", &to_string(&e.egoTrajectory.lane)).close_tag("");
+                out.open_tag("egoLanePosition").write_attr("values", &to_string(&e.egoTrajectory.lanePos)).close_tag("");
+            }
+            out.open_tag("egoVelocity").write_attr("values", &e.egoTrajectory.v.to_string_prec(g_precision())).close_tag("");
+            out.open_tag("foePosition").write_attr("values", &e.foeTrajectory.x.to_string_prec(prec)).close_tag("");
+            if self.myWriteLanesPositions {
+                out.open_tag("foeLane").write_attr("values", &to_string(&e.foeTrajectory.lane)).close_tag("");
+                out.open_tag("foeLanePosition").write_attr("values", &to_string(&e.foeTrajectory.lanePos)).close_tag("");
+            }
+            out.open_tag("foeVelocity").write_attr("values", &e.foeTrajectory.v.to_string_prec(g_precision())).close_tag("");
+            out.open_tag("conflictPoint").write_attr("values", &self.make_string_with_n_as_3(&e.conflictPointSpan)).close_tag("");
+        }
+        if self.myComputeTTC {
+            if self.mySaveTrajectories {
+                out.open_tag("TTCSpan").write_attr("values", &Self::make_string_with_n_as(&e.TTCspan, INVALID_DOUBLE)).close_tag("");
+            }
+            if e.minTTC.time == INVALID_DOUBLE {
+                if self.myWriteNA {
+                    out.open_tag("minTTC").write_attr("time", "NA").write_attr("position", "NA").write_attr("type", "NA").write_attr("value", "NA").write_attr("speed", "NA").close_tag("");
+                }
+            } else {
+                let time = to_string(&e.minTTC.time);
+                let type_ = to_string(&(e.minTTC.type_ as i32));
+                let value = to_string(&e.minTTC.value);
+                let speed = to_string(&e.minTTC.speed);
+                if self.myUseGeoCoords {
+                    Self::to_geo(&mut e.minTTC.pos);
+                }
+                let position = self.make_string_with_n_as_4(&e.minTTC.pos);
+                out.open_tag("minTTC").write_attr("time", &time).write_attr("position", &position).write_attr("type", &type_).write_attr("value", &value).write_attr("speed", &speed).close_tag("");
+            }
+        }
+        if self.myComputeDRAC {
+            if self.mySaveTrajectories {
+                out.open_tag("DRACSpan").write_attr("values", &Self::make_string_with_n_as_2(&e.DRACspan, &vec![0.0, INVALID_DOUBLE])).close_tag("");
+            }
+            if e.maxDRAC.time == INVALID_DOUBLE {
+                if self.myWriteNA {
+                    out.open_tag("maxDRAC").write_attr("time", "NA").write_attr("position", "NA").write_attr("type", "NA").write_attr("value", "NA").write_attr("speed", "NA").close_tag("");
+                }
+            } else {
+                let time = to_string(&e.maxDRAC.time);
+                let type_ = to_string(&(e.maxDRAC.type_ as i32));
+                let value = to_string(&e.maxDRAC.value);
+                let speed = to_string(&e.maxDRAC.speed);
+                if self.myUseGeoCoords {
+                    Self::to_geo(&mut e.maxDRAC.pos);
+                }
+                let position = self.make_string_with_n_as_4(&e.maxDRAC.pos);
+                out.open_tag("maxDRAC").write_attr("time", &time).write_attr("position", &position).write_attr("type", &type_).write_attr("value", &value).write_attr("speed", &speed).close_tag("");
+            }
+        }
+        if self.myComputePET {
+            if e.PET.time == INVALID_DOUBLE {
+                if self.myWriteNA {
+                    out.open_tag("PET").write_attr("time", "NA").write_attr("position", "NA").write_attr("type", "NA").write_attr("value", "NA").write_attr("speed", "NA").close_tag("");
+                }
+            } else {
+                let time = to_string(&e.PET.time);
+                let type_ = to_string(&(e.PET.type_ as i32));
+                let value = to_string(&e.PET.value);
+                let speed = to_string(&e.PET.speed);
+                if self.myUseGeoCoords {
+                    Self::to_geo(&mut e.PET.pos);
+                }
+                let prec = if self.myUseGeoCoords { g_precision_geo() } else { g_precision() };
+                let position = e.PET.pos.to_string_prec(prec);
+                out.open_tag("PET").write_attr("time", &time).write_attr("position", &position).write_attr("type", &type_).write_attr("value", &value).write_attr("speed", &speed).close_tag("");
+            }
+        }
+        if self.myComputePPET {
+            if self.mySaveTrajectories {
+                out.open_tag("PPETSpan").write_attr("values", &Self::make_string_with_n_as(&e.PPETspan, INVALID_DOUBLE)).close_tag("");
+            }
+            if e.minPPET.time == INVALID_DOUBLE {
+                if self.myWriteNA {
+                    out.open_tag("minPPET").write_attr("time", "NA").write_attr("position", "NA").write_attr("type", "NA").write_attr("value", "NA").write_attr("speed", "NA").close_tag("");
+                }
+            } else {
+                let time = to_string(&e.minPPET.time);
+                let type_ = to_string(&(e.minPPET.type_ as i32));
+                let value = to_string(&e.minPPET.value);
+                let speed = to_string(&e.minPPET.speed);
+                if self.myUseGeoCoords {
+                    Self::to_geo(&mut e.minPPET.pos);
+                }
+                let position = self.make_string_with_n_as_4(&e.minPPET.pos);
+                out.open_tag("minPPET").write_attr("time", &time).write_attr("position", &position).write_attr("type", &type_).write_attr("value", &value).write_attr("speed", &speed).close_tag("");
+            }
+        }
+        if self.myComputeMDRAC {
+            if self.mySaveTrajectories {
+                out.open_tag("MDRACSpan").write_attr("values", &Self::make_string_with_n_as_2(&e.MDRACspan, &vec![0.0, INVALID_DOUBLE])).close_tag("");
+            }
+            if e.maxMDRAC.time == INVALID_DOUBLE {
+                if self.myWriteNA {
+                    out.open_tag("maxMDRAC").write_attr("time", "NA").write_attr("position", "NA").write_attr("type", "NA").write_attr("value", "NA").write_attr("speed", "NA").close_tag("");
+                }
+            } else {
+                let time = to_string(&e.maxMDRAC.time);
+                let type_ = to_string(&(e.maxMDRAC.type_ as i32));
+                let value = to_string(&e.maxMDRAC.value);
+                let speed = to_string(&e.maxMDRAC.speed);
+                if self.myUseGeoCoords {
+                    Self::to_geo(&mut e.maxMDRAC.pos);
+                }
+                let position = self.make_string_with_n_as_4(&e.maxMDRAC.pos);
+                out.open_tag("maxMDRAC").write_attr("time", &time).write_attr("position", &position).write_attr("type", &type_).write_attr("value", &value).write_attr("speed", &speed).close_tag("");
+            }
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSDevice_SSM::toGeo(Position &)` [static, private]
@@ -1147,7 +1332,25 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_SSM::cleanup")
+        // Close current encounters and flush conflicts to file for all existing devices
+        // (snapshot of the set: the calls below do not modify myInstances)
+        let devices: Vec<Ptr<MSDevice_SSM>> = MY_INSTANCES.with(|m| m.borrow().iter().copied().collect());
+        for device in devices {
+            let d = device.m();
+            d.reset_encounters();
+            d.flush_conflicts(true);
+            d.flush_global_measures();
+        }
+        MY_INSTANCES.with(|m| m.borrow_mut().clear());
+        let files: Vec<String> = MY_CREATED_OUTPUT_FILES.with(|f| f.borrow().iter().cloned().collect());
+        for fname in files {
+            let dev = OutputDevice::get_device(&fname, true).unwrap_or_else(|e| panic!("{e}"));
+            dev.borrow_mut().close_tag("");
+        }
+        MY_CREATED_OUTPUT_FILES.with(|f| f.borrow_mut().clear());
+        MY_EDGE_FILTER.with(|f| f.borrow_mut().clear());
+        MY_EDGE_FILTER_INITIALIZED.with(|c| c.set(false));
+        MY_EDGE_FILTER_ACTIVE.with(|c| c.set(false));
     }
 
     /// C++: `void MSDevice_SSM::~MSDevice_SSM()` [virtual]
@@ -1155,7 +1358,13 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_SSM::~MSDevice_SSM")
+        // Deleted in ~BaseVehicle()
+        // unregister from static instance container
+        let me = Ptr::from_mut(self);
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
+        self.reset_encounters();
+        self.flush_conflicts(true);
+        self.flush_global_measures();
     }
 
     /// C++: `void MSDevice_SSM::findSurroundingVehicles(const MSVehicle &, double, FoeInfoMap &)` [static]
@@ -3397,15 +3606,24 @@ impl MSDevice_SSM {
     /// make a string of a double vector and treat a special value as invalid ("NA")
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn make_string_with_n_as(v: &i32, NA: f64) -> String {
-        todo!("port MSDevice_SSM::makeStringWithNAs")
+    pub fn make_string_with_n_as(v: &Vec<f64>, NA: f64) -> String {
+        let mut res = String::new();
+        for (i, x) in v.iter().enumerate() {
+            res += &format!("{}{}", if i == 0 { "" } else { " " }, if *x == NA { "NA".to_string() } else { to_string(x) });
+        }
+        res
     }
 
     /// C++: `std::string MSDevice_SSM::makeStringWithNAs(const int &, const int &)` [static, private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn make_string_with_n_as_2(v: &i32, NAs: &i32) -> String {
-        todo!("port MSDevice_SSM::makeStringWithNAs")
+    pub fn make_string_with_n_as_2(v: &Vec<f64>, NAs: &Vec<f64>) -> String {
+        let mut res = String::new();
+        for (i, x) in v.iter().enumerate() {
+            // std::find over NAs (exact double comparison)
+            res += &format!("{}{}", if i == 0 { "" } else { " " }, if NAs.contains(x) { "NA".to_string() } else { to_string(x) });
+        }
+        res
     }
 
     /// C++: `std::string MSDevice_SSM::makeStringWithNAs(const PositionVector &)` [private]
@@ -3419,8 +3637,13 @@ impl MSDevice_SSM {
     //     return res;
     // }
     #[allow(unused_variables)]
-    pub fn make_string_with_n_as_3(&mut self, v: &PositionVector) -> String {
-        todo!("port MSDevice_SSM::makeStringWithNAs")
+    pub fn make_string_with_n_as_3(&self, v: &PositionVector) -> String {
+        let precision = if self.myUseGeoCoords { g_precision_geo() } else { g_precision() };
+        let mut res = String::new();
+        for (i, x) in v.iter().enumerate() {
+            res += &format!("{}{}", if i == 0 { "" } else { " " }, if *x == Position::INVALID { "NA".to_string() } else { x.to_string_prec(precision) });
+        }
+        res
     }
 
     /// C++: `std::string MSDevice_SSM::makeStringWithNAs(const Position &)` [private]
@@ -3430,8 +3653,9 @@ impl MSDevice_SSM {
     //     return p == Position::INVALID ? "NA" : toString(p, precision);
     // }
     #[allow(unused_variables)]
-    pub fn make_string_with_n_as_4(&mut self, p: &Position) -> String {
-        todo!("port MSDevice_SSM::makeStringWithNAs")
+    pub fn make_string_with_n_as_4(&self, p: &Position) -> String {
+        let precision = if self.myUseGeoCoords { g_precision_geo() } else { g_precision() };
+        if *p == Position::INVALID { "NA".to_string() } else { p.to_string_prec(precision) }
     }
 
     /// C++: `std::string MSDevice_SSM::writeNA(double, double)` [static, private]
@@ -3441,7 +3665,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn write_na(v: f64, NA: f64) -> String {
-        todo!("port MSDevice_SSM::writeNA")
+        if v == NA { "NA".to_string() } else { to_string(&v) }
     }
 
     /// C++: `std::string MSDevice_SSM::getOutputFilename(const SUMOVehicle &, std::string)` [static, private]
