@@ -199,7 +199,7 @@ impl PolygonDynamics {
     //     const double dt = simtime - myLastUpdateTime;
     //     myLastUpdateTime = simtime;
     //
-    //     SUMOTime ret = DELTA_T;
+    //     SUMOTime ret = utils::common::time::delta_t();
     //
     //     if (tracking) {
     //         if (myTrackedObjectsInitialPositon == nullptr) {
@@ -326,7 +326,7 @@ impl PolygonDynamics {
         let dt = simtime - self.myLastUpdateTime;
         self.myLastUpdateTime = simtime;
 
-        let mut ret: SUMOTime = DELTA_T;
+        let mut ret: SUMOTime = utils::common::time::delta_t();
 
         if self.tracking {
             if self.myTrackedObjectsInitialPositon.is_none() {
@@ -336,7 +336,7 @@ impl PolygonDynamics {
             }
             if self.myTrackedObjectsInitialPositon.is_some() {
                 // Initial position was initialized, relative tracking is possible
-                let objPos: Position = self.myTrackedObject.get_position().clone();
+                let objPos: Position = self.myTrackedObject.get_position(0.0).clone();
                 let onRoad = objPos != Position::INVALID;
                 if onRoad {
                     // Update polygon's shape
@@ -455,7 +455,7 @@ impl PolygonDynamics {
     // }
     #[allow(unused_variables)]
     pub fn init_tracked_position(&mut self) {
-        let objPos: Position = self.myTrackedObject.get_position().clone();
+        let objPos: Position = self.myTrackedObject.get_position(0.0).clone();
         if objPos != Position::INVALID {
             // Initialize Position of tracked object
             self.myTrackedObjectsInitialPositon = Some(Box::new(objPos.clone()));

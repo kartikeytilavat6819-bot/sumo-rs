@@ -66,13 +66,13 @@ impl PointOfInterest {
         PointOfInterest {
             base: Shape::new_2(id, type_, color, layer, angle, imgFile, name),
             base2: pos.clone(),
-            base3: Parameterised::from_map(parameters),
+            base3: Parameterised::from_map(parameters.clone()),
             myGeo: geo,
             myLane: lane.to_string(),
             myPosOverLane: posOverLane,
             myFriendlyPos: friendlyPos,
             myPosLat: posLat,
-            myIcon: POIIcons.get(icon),
+            myIcon: POIIcons.get(icon).unwrap(),
             myHalfImgWidth: width / 2.0,
             myHalfImgHeight: height / 2.0,
         }
@@ -105,7 +105,7 @@ impl PointOfInterest {
     // }
     #[allow(unused_variables)]
     pub fn get_icon_str(&self) -> &str {
-        POIIcons.get_string(self.myIcon).unwrap()
+        POIIcons.get_string(self.myIcon)
     }
 
     /// C++: `double PointOfInterest::getWidth() const` [const]
@@ -156,11 +156,11 @@ impl PointOfInterest {
     /// set icon
     // void
     // PointOfInterest::setIcon(const std::string& icon) {
-    //     myIcon = SUMOXMLDefinitions::POIIcons.get(icon);
+    //     myIcon = SUMOXMLDefinitions::POIIcons.get(icon).unwrap();
     // }
     #[allow(unused_variables)]
     pub fn set_icon(&mut self, icon: &str) {
-        self.myIcon = POIIcons.get(icon);
+        self.myIcon = POIIcons.get(icon).unwrap();
     }
 
     /// C++: `void PointOfInterest::setWidth(double)`
@@ -201,9 +201,9 @@ impl PointOfInterest {
     // PointOfInterest::writeXML(OutputDevice& out, const bool geo, const double zOffset, const std::string laneID,
     //                           const double pos, const bool friendlyPos, const double posLat) const {
     //     out.openTag(SUMO_TAG_POI);
-    //     out.writeAttr(SUMO_ATTR_ID, StringUtils::escapeXML(getID()));
-    //     if (getShapeType().size() > 0) {
-    //         out.writeAttr(SUMO_ATTR_TYPE, StringUtils::escapeXML(getShapeType()));
+    //     out.writeAttr(SUMO_ATTR_ID, utils::common::string_utils::escape_xml(getID()));
+    //     if (getShapeType().len() > 0) {
+    //         out.writeAttr(SUMO_ATTR_TYPE, utils::common::string_utils::escape_xml(getShapeType()));
     //     }
     //     if (myIcon != POIIcon::NONE) {
     //         out.writeAttr(SUMO_ATTR_ICON, SUMOXMLDefinitions::POIIcons.getString(myIcon));
@@ -225,8 +225,8 @@ impl PointOfInterest {
     //     } else {
     //         if (geo) {
     //             Position POICartesianPos(*this);
-    //             GeoConvHelper::getFinal().cartesian2geo(POICartesianPos);
-    //             out.setPrecision(gPrecisionGeo);
+    //             GeoConvHelper::with_final(|g| g.cartesian2geo(POICartesianPos));
+    //             out.setPrecision(utils::common::std_defs::g_precision_geo());
     //             out.writeAttr(SUMO_ATTR_LON, POICartesianPos.x());
     //             out.writeAttr(SUMO_ATTR_LAT, POICartesianPos.y());
     //             out.setPrecision();
@@ -256,12 +256,12 @@ impl PointOfInterest {
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool, zOffset: f64, laneID: String, pos: f64, friendlyPos: bool, posLat: f64) {
         out.open_tag_id(SUMO_TAG_POI);
-        out.write_attr(SUMO_ATTR_ID, &StringUtils::escapeXML(self.get_id()));
+        out.write_attr(SUMO_ATTR_ID, &utils::common::string_utils::escape_xml(self.get_id(), false));
         if !self.get_shape_type().is_empty() {
-            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escapeXML(self.get_shape_type()));
+            out.write_attr(SUMO_ATTR_TYPE, &utils::common::string_utils::escape_xml(self.get_shape_type(), false));
         }
         if self.myIcon != POIIcon::NONE {
-            out.write_attr(SUMO_ATTR_ICON, POIIcons.get_string(self.myIcon).unwrap());
+            out.write_attr(SUMO_ATTR_ICON, POIIcons.get_string(self.myIcon));
         }
         out.write_attr(SUMO_ATTR_COLOR, self.get_shape_color());
         out.write_attr(SUMO_ATTR_LAYER, &(self.get_shape_layer() + zOffset));
@@ -280,11 +280,11 @@ impl PointOfInterest {
         } else {
             if geo {
                 let mut POICartesianPos: Position = self.base2.clone();
-                GeoConvHelper::getFinal().cartesian2geo(&mut POICartesianPos);
-                out.set_precision(Some(gPrecisionGeo));
+                GeoConvHelper::with_final(|g| g.cartesian2geo(&mut POICartesianPos));
+                out.set_precision(utils::common::std_defs::g_precision_geo());
                 out.write_attr(SUMO_ATTR_LON, &POICartesianPos.x());
                 out.write_attr(SUMO_ATTR_LAT, &POICartesianPos.y());
-                out.set_precision(None); // C++ setPrecision() without argument
+                out.set_precision(utils::common::std_defs::g_precision()); // C++ setPrecision() without argument
             } else {
                 out.write_attr(SUMO_ATTR_X, &self.base2.x());
                 out.write_attr(SUMO_ATTR_Y, &self.base2.y());

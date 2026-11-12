@@ -56,7 +56,7 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_polygon(&mut self, id: &str, type_: &str, color: &RGBColor, layer: f64, angle: f64, imgFile: &str, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, ignorePruning: bool, name: &str) -> bool {
-        self.add(Ptr::new(SUMOPolygon::new(id, type_, color, shape, geo, fill, lineWidth, layer, angle, imgFile, name, DEFAULT_HEIGHT, &BTreeMap::new())), ignorePruning)
+        self.add(new_ptr(SUMOPolygon::new(id, type_, color, shape, geo, fill, lineWidth, layer, angle, imgFile, name, DEFAULT_HEIGHT, &BTreeMap::new())), ignorePruning)
     }
 
     /// C++: `PolygonDynamics * ShapeContainer::addPolygonDynamics(double, std::string, SUMOTrafficObject *, const std::vector<double> &, const std::vector<double> &, bool, bool)` [virtual]
@@ -109,7 +109,7 @@ impl ShapeContainer {
         self.remove_polygon_dynamics(&polyID);
 
         // Add new dynamics
-        let pd: Ptr<PolygonDynamics> = Ptr::new(PolygonDynamics::new(simtime, p.clone(), trackedObject.clone(), timeSpan, alphaSpan, looped, rotate));
+        let pd: Ptr<PolygonDynamics> = new_ptr(PolygonDynamics::new(simtime, p.clone(), trackedObject.clone(), timeSpan, alphaSpan, looped, rotate));
         self.myPolygonDynamics.insert(polyID.clone(), pd.clone());
 
         // Add tracking information
@@ -190,7 +190,7 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_poi(&mut self, id: &str, type_: &str, color: &RGBColor, pos: &Position, geo: bool, lane: &str, posOverLane: f64, friendlyPos: bool, posLat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, ignorePruning: bool) -> bool {
-        self.add_2(Ptr::new(PointOfInterest::new(id, type_, color, pos, geo, lane, posOverLane, friendlyPos, posLat, icon, layer, angle, imgFile, width, height, DEFAULT_NAME, &BTreeMap::new())), ignorePruning)
+        self.add_2(new_ptr(PointOfInterest::new(id, type_, color, pos, geo, lane, posOverLane, friendlyPos, posLat, icon, layer, angle, imgFile, width, height, DEFAULT_NAME, &BTreeMap::new())), ignorePruning)
     }
 
     /// C++: `bool ShapeContainer::removePolygon(const std::string &, bool)` [virtual]
@@ -328,7 +328,7 @@ impl ShapeContainer {
             let polyID = pd.get_polygon_id().to_string();
             // shortcut: C++ operator[] would insert null and crash here, guarded lookup used instead
             if let Some(cmd) = self.myPolygonUpdateCommands.get(&polyID) {
-                cmd.m().deschedule();
+                panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
             }
             // Don't aquire lock (in GUI case GUIShapeContainer::polygonDynamicsUpdate() does this)
             self.remove_polygon(&polyID, false);
@@ -410,7 +410,7 @@ impl ShapeContainer {
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
         for item in self.myPolygonUpdateCommands.values() {
-            item.m().deschedule();
+            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
         }
         self.myPolygonUpdateCommands.clear();
     }
@@ -491,7 +491,7 @@ impl ShapeContainer {
     #[allow(unused_variables)]
     pub fn cleanup_polygon_dynamics(&mut self, id: &str) {
         if let Some(cmd) = self.myPolygonUpdateCommands.remove(id) {
-            cmd.m().deschedule();
+            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
         }
     }
 
@@ -603,3 +603,8 @@ impl ShapeListener {
 
 }
 
+
+/// C++ `new T(...)` as a raw Ptr (owned by the shape container for its lifetime)
+fn new_ptr<T>(t: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(t)))
+}

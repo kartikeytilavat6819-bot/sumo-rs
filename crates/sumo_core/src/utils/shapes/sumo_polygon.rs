@@ -55,7 +55,7 @@ impl SUMOPolygon {
     pub fn new(id: &str, type_: &str, color: &RGBColor, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, layer: f64, angle: f64, imgFile: &str, name: &str, height: f64, parameters: &BTreeMap<String, String>) -> Self {
         SUMOPolygon {
             base: Shape::new_2(id, type_, color, layer, angle, imgFile, name),
-            base2: Parameterised::from_map(parameters),
+            base2: Parameterised::from_map(parameters.clone()),
             myShape: shape.clone(),
             myHoles: Vec::new(),
             myGEO: geo,
@@ -198,9 +198,9 @@ impl SUMOPolygon {
     // void
     // SUMOPolygon::writeXML(OutputDevice& out, bool geo) const {
     //     out.openTag(SUMO_TAG_POLY);
-    //     out.writeAttr(SUMO_ATTR_ID, StringUtils::escapeXML(getID()));
-    //     if (getShapeType().size() > 0) {
-    //         out.writeAttr(SUMO_ATTR_TYPE, StringUtils::escapeXML(getShapeType()));
+    //     out.writeAttr(SUMO_ATTR_ID, utils::common::string_utils::escape_xml(getID()));
+    //     if (getShapeType().len() > 0) {
+    //         out.writeAttr(SUMO_ATTR_TYPE, utils::common::string_utils::escape_xml(getShapeType()));
     //     }
     //     out.writeAttr(SUMO_ATTR_COLOR, getShapeColor());
     //     out.writeAttr(SUMO_ATTR_FILL,  getFill());
@@ -217,11 +217,11 @@ impl SUMOPolygon {
     //     PositionVector shape = getShape();
     //     if (geo) {
     //         out.writeAttr(SUMO_ATTR_GEO, true);
-    //         for (int i = 0; i < (int) shape.size(); i++) {
-    //             GeoConvHelper::getFinal().cartesian2geo(shape[i]);
+    //         for (int i = 0; i < (int) shape.len(); i++) {
+    //             GeoConvHelper::with_final(|g| g.cartesian2geo(shape[i]));
     //         }
     //     }
-    //     out.setPrecision(gPrecisionGeo);
+    //     out.setPrecision(utils::common::std_defs::g_precision_geo());
     //     out.writeAttr(SUMO_ATTR_SHAPE, shape);
     //     out.setPrecision();
     //     if (getShapeNaviDegree() != Shape::DEFAULT_ANGLE) {
@@ -236,9 +236,9 @@ impl SUMOPolygon {
     #[allow(unused_variables)]
     pub fn write_xml(&self, out: &mut OutputDevice, geo: bool) {
         out.open_tag_id(SUMO_TAG_POLY);
-        out.write_attr(SUMO_ATTR_ID, &StringUtils::escapeXML(self.get_id()));
+        out.write_attr(SUMO_ATTR_ID, &utils::common::string_utils::escape_xml(self.get_id(), false));
         if !self.get_shape_type().is_empty() {
-            out.write_attr(SUMO_ATTR_TYPE, &StringUtils::escapeXML(self.get_shape_type()));
+            out.write_attr(SUMO_ATTR_TYPE, &utils::common::string_utils::escape_xml(self.get_shape_type(), false));
         }
         out.write_attr(SUMO_ATTR_COLOR, self.get_shape_color());
         out.write_attr(SUMO_ATTR_FILL, &self.get_fill());
@@ -255,13 +255,13 @@ impl SUMOPolygon {
         let mut shape: PositionVector = self.get_shape().clone();
         if geo {
             out.write_attr(SUMO_ATTR_GEO, &true);
-            for i in 0..shape.size() {
-                GeoConvHelper::getFinal().cartesian2geo(&mut shape[i]);
+            for i in 0..shape.len() {
+                GeoConvHelper::with_final(|g| g.cartesian2geo(&mut shape[i]));
             }
         }
-        out.set_precision(Some(gPrecisionGeo));
+        out.set_precision(utils::common::std_defs::g_precision_geo());
         out.write_attr(SUMO_ATTR_SHAPE, &shape);
-        out.set_precision(None); // C++ setPrecision() without argument
+        out.set_precision(utils::common::std_defs::g_precision()); // C++ setPrecision() without argument
         if self.get_shape_navi_degree() != DEFAULT_ANGLE {
             out.write_attr(SUMO_ATTR_ANGLE, &self.get_shape_navi_degree());
         }

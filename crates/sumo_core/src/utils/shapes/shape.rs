@@ -105,7 +105,7 @@ impl Shape {
     //     }
     //     // type
     //     if (myType != DEFAULT_TYPE) {
-    //         device.writeAttr(SUMO_ATTR_TYPE, StringUtils::escapeXML(myType));
+    //         device.writeAttr(SUMO_ATTR_TYPE, utils::common::string_utils::escape_xml(myType));
     //     }
     //     // color
     //     if (myColor != defaultColor) {
@@ -132,7 +132,7 @@ impl Shape {
         }
         // type
         if self.myType != DEFAULT_TYPE {
-            device.write_attr(SUMO_ATTR_TYPE, StringUtils::escapeXML(&self.myType).as_str());
+            device.write_attr(SUMO_ATTR_TYPE, &utils::common::string_utils::escape_xml(&self.myType, false));
         }
         // color
         if self.myColor != *defaultColor {
@@ -297,3 +297,25 @@ impl Shape {
 
 }
 
+
+/// Helpers for the C++ pattern `GeoConvHelper *gch` = loader's helper, else getProcessing()/getFinal().
+/// `gch` is None when the loader has no helper of its own.
+pub fn gch_using_geo_projection(gch: Option<Ptr<GeoConvHelper>>, use_processing: bool) -> bool {
+    match gch {
+        Some(g) => g.using_geo_projection(),
+        None if use_processing => GeoConvHelper::with_processing(|g| g.using_geo_projection()),
+        None => GeoConvHelper::with_final(|g| g.using_geo_projection()),
+    }
+}
+
+/// `useProcessing ? getProcessing().x2cartesian(pos) : gch.x2cartesian_const(pos)`
+pub fn gch_x2cartesian(gch: Option<Ptr<GeoConvHelper>>, use_processing: bool, pos: &mut Position) -> bool {
+    if use_processing {
+        GeoConvHelper::with_processing(|g| g.x2cartesian(pos, true))
+    } else {
+        match gch {
+            Some(g) => g.x2cartesian_const(pos),
+            None => GeoConvHelper::with_final(|g| g.x2cartesian_const(pos)),
+        }
+    }
+}
