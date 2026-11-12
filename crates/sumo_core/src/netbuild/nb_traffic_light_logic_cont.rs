@@ -38,13 +38,63 @@ pub struct NBTrafficLightLogicCont {
 // C++ static members of NBTrafficLightLogicCont (port as module-level statics, see AGENTS.md):
 //   static const Program2Def NBTrafficLightLogicCont::EmptyDefinitions;
 
+/// Wrapper so the empty map can live in a `static` (Ptr is not Sync); the map is never mutated
+pub struct NBTrafficLightLogicCont_EmptyDefinitions(pub NBTrafficLightLogicCont_Program2Def);
+// SAFETY: the wrapped map is always empty, so it holds no pointers that could be shared unsafely
+unsafe impl Sync for NBTrafficLightLogicCont_EmptyDefinitions {}
+static EMPTY_DEFINITIONS: NBTrafficLightLogicCont_EmptyDefinitions = NBTrafficLightLogicCont_EmptyDefinitions(BTreeMap::new());
+
+/// C++ `delete p` for a Ptr that was allocated as a Box (same convention as ms_route.rs)
+fn delete_ptr<T>(p: Ptr<T>) {
+    drop(unsafe { Box::from_raw(p.as_raw()) });
+}
+
+/// `std::istringstream(id) >> long long` as IDSupplier::avoid uses it: optional leading whitespace,
+/// optional sign, then digits; None when no number can be read
+fn parse_leading_i64(s: &str) -> Option<i64> {
+    let t = s.trim_start();
+    let bytes = t.as_bytes();
+    let mut i = 0;
+    if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
+        i += 1;
+    }
+    let digits_start = i;
+    while i < bytes.len() && bytes[i].is_ascii_digit() {
+        i += 1;
+    }
+    if i == digits_start {
+        return None;
+    }
+    t[..i].parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_leading_i64;
+
+    #[test]
+    fn leading_integer_is_read_like_istringstream() {
+        assert_eq!(parse_leading_i64("12"), Some(12));
+        assert_eq!(parse_leading_i64("12abc"), Some(12));
+        assert_eq!(parse_leading_i64("-3"), Some(-3));
+        assert_eq!(parse_leading_i64("abc"), None);
+        assert_eq!(parse_leading_i64(""), None);
+    }
+}
+
 impl NBTrafficLightLogicCont {
     /// C++: `void NBTrafficLightLogicCont::NBTrafficLightLogicCont()`
     /// Constructor
     // NBTrafficLightLogicCont::NBTrafficLightLogicCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBTrafficLightLogicCont::NBTrafficLightLogicCont")
+        Self {
+            myComputed: BTreeMap::new(),
+            myDefinitions: BTreeMap::new(),
+            myExtracted: BTreeSet::new(),
+            myHalfOffsetTLS: BTreeSet::new(),
+            myQuarterOffsetTLS: BTreeSet::new(),
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::~NBTrafficLightLogicCont()`
@@ -52,7 +102,7 @@ impl NBTrafficLightLogicCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBTrafficLightLogicCont::~NBTrafficLightLogicCont")
+        self.clear();
     }
 
     /// C++: `void NBTrafficLightLogicCont::applyOptions(OptionsCont &)`
@@ -74,7 +124,18 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_options(&mut self, oc: &mut OptionsCont) {
-        todo!("port NBTrafficLightLogicCont::applyOptions")
+        // check whether any offsets shall be manipulated by setting
+        //  them to half of the duration
+        if oc.is_set("tls.half-offset", true).unwrap_or_else(|e| panic!("{e}")) {
+            let ids = oc.get_string_vector("tls.half-offset").unwrap_or_else(|e| panic!("{e}")).clone();
+            self.myHalfOffsetTLS.extend(ids);
+        }
+        // check whether any offsets shall be manipulated by setting
+        //  them to a quarter of the duration
+        if oc.is_set("tls.quarter-offset", true).unwrap_or_else(|e| panic!("{e}")) {
+            let ids = oc.get_string_vector("tls.quarter-offset").unwrap_or_else(|e| panic!("{e}")).clone();
+            self.myQuarterOffsetTLS.extend(ids);
+        }
     }
 
     /// C++: `bool NBTrafficLightLogicCont::insert(NBTrafficLightDefinition *, bool)`
@@ -98,7 +159,23 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn insert(&mut self, logic: Ptr<NBTrafficLightDefinition>, forceInsert: bool) -> bool {
-        todo!("port NBTrafficLightLogicCont::insert")
+        self.myExtracted.remove(&logic);
+        let id = logic.get_id().to_string();
+        if self.myDefinitions.contains_key(&id) {
+            if self.myDefinitions[&id].contains_key(logic.get_program_id()) {
+                if forceInsert {
+                    let next = self.get_next_program_id(&id);
+                    logic.m().set_program_id(&next);
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            self.myDefinitions.insert(id.clone(), NBTrafficLightLogicCont_Program2Def::new());
+        }
+        let programID = logic.get_program_id().to_string();
+        self.myDefinitions.get_mut(&id).unwrap().insert(programID, logic);
+        true
     }
 
     /// C++: `bool NBTrafficLightLogicCont::removeFully(const std::string)`
@@ -125,7 +202,21 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_fully(&mut self, id: String) -> bool {
-        todo!("port NBTrafficLightLogicCont::removeFully")
+        if let Some(programs) = self.myDefinitions.remove(&id) {
+            // delete all programs
+            for def in programs.into_values() {
+                delete_ptr(def);
+            }
+            // also delete any logics that were already computed
+            if let Some(programs) = self.myComputed.remove(&id) {
+                for logic in programs.into_values() {
+                    delete_ptr(logic);
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool NBTrafficLightLogicCont::removeProgram(const std::string, const std::string, bool)`
@@ -150,7 +241,21 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_program(&mut self, id: String, programID: String, del: bool) -> bool {
-        todo!("port NBTrafficLightLogicCont::removeProgram")
+        if self.myDefinitions.get(&id).is_some_and(|p| p.contains_key(&programID)) {
+            let def = self.myDefinitions.get_mut(&id).unwrap().remove(&programID).unwrap();
+            if del {
+                delete_ptr(def);
+            }
+            if self.myComputed.get(&id).is_some_and(|p| p.contains_key(&programID)) {
+                let logic = self.myComputed.get_mut(&id).unwrap().remove(&programID).unwrap();
+                if del {
+                    delete_ptr(logic);
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::extract(NBTrafficLightDefinition *)`
@@ -162,7 +267,8 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn extract(&mut self, definition: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBTrafficLightLogicCont::extract")
+        self.myExtracted.insert(definition);
+        self.remove_program(definition.get_id().to_string(), definition.get_program_id().to_string(), false);
     }
 
     /// C++: `bool NBTrafficLightLogicCont::exist(const std::string &, bool) const` [const]
@@ -179,7 +285,9 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn exist(&self, newID: &str, requireComputed: bool) -> bool {
-        todo!("port NBTrafficLightLogicCont::exist")
+        let itD = self.myDefinitions.contains_key(newID);
+        let itC = self.myComputed.contains_key(newID);
+        itD && (itC || !requireComputed)
     }
 
     /// C++: `void NBTrafficLightLogicCont::rename(NBTrafficLightDefinition *, const std::string &)`
@@ -205,7 +313,22 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn rename(&mut self, tlDef: Ptr<NBTrafficLightDefinition>, newID: &str) {
-        todo!("port NBTrafficLightLogicCont::rename")
+        let oldID = tlDef.get_id().to_string();
+        if let Some(programs) = self.myDefinitions.get(&oldID).cloned() {
+            for item in programs.values() {
+                item.m().set_id(newID);
+            }
+            self.myDefinitions.insert(newID.to_string(), programs);
+            // C++ erases the old iterator after the assignment, so renaming to the same ID erases the entry too
+            self.myDefinitions.remove(&oldID);
+        }
+        if let Some(programs) = self.myComputed.get(&oldID).cloned() {
+            for item in programs.values() {
+                item.m().set_id(newID);
+            }
+            self.myComputed.insert(newID.to_string(), programs);
+            self.myComputed.remove(&oldID);
+        }
     }
 
     /// C++: `int NBTrafficLightLogicCont::getNumExtracted() const` [const]
@@ -216,7 +339,7 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn get_num_extracted(&self) -> i32 {
-        todo!("port NBTrafficLightLogicCont::getNumExtracted")
+        self.myExtracted.len() as i32
     }
 
     /// C++: `std::vector<NBTrafficLightLogic *> NBTrafficLightLogicCont::getComputed() const` [const]
@@ -224,7 +347,13 @@ impl NBTrafficLightLogicCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_computed(&self) -> Vec<Ptr<NBTrafficLightLogic>> {
-        todo!("port NBTrafficLightLogicCont::getComputed")
+        let mut result = Vec::new();
+        for programs in self.myComputed.values() {
+            for logic in programs.values() {
+                result.push(*logic);
+            }
+        }
+        result
     }
 
     /// C++: `std::pair<int, int> NBTrafficLightLogicCont::computeLogics(OptionsCont &)`
@@ -308,7 +437,20 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn compute_logics(&mut self, oc: &mut OptionsCont) -> (i32, i32) {
-        todo!("port NBTrafficLightLogicCont::computeLogics")
+        // clean previous logics
+        let logics = self.get_computed();
+        for logic in logics {
+            delete_ptr(logic);
+        }
+        self.myComputed.clear();
+        // shortcut: the tls.rebuild, tls.group-signals and tls.ungroup-signals branches use dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which needs runtime type info that NBTrafficLightDefinition does not carry in the Rust port; these branches are skipped, upgrade when a type tag is added to NBTrafficLightDefinition
+        let mut numPrograms = 0;
+        for def in self.get_definitions() {
+            if self.compute_single_logic(oc, def) {
+                numPrograms += 1;
+            }
+        }
+        (self.myComputed.len() as i32, numPrograms)
     }
 
     /// C++: `bool NBTrafficLightLogicCont::computeSingleLogic(OptionsCont &, NBTrafficLightDefinition *)`
@@ -344,7 +486,35 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn compute_single_logic(&mut self, oc: &mut OptionsCont, def: Ptr<NBTrafficLightDefinition>) -> bool {
-        todo!("port NBTrafficLightLogicCont::computeSingleLogic")
+        if def.get_nodes().is_empty() {
+            return false;
+        }
+        let id = def.get_id().to_string();
+        let programID = def.get_program_id().to_string();
+        // build program
+        let built = def.m().compute(oc);
+        if built.is_null() {
+            utils::common::msg_handler::write_warning(&format!("Could not build program '{}' for traffic light '{}'", programID, id));
+            return false;
+        }
+        // compute offset
+        let T = built.get_duration();
+        if self.myHalfOffsetTLS.contains(&id) {
+            built.m().set_offset(time2steps((steps2time(T / 2)).floor()));
+        }
+        if self.myQuarterOffsetTLS.contains(&id) {
+            built.m().set_offset(time2steps((steps2time(T / 4)).floor()));
+        }
+        // and insert the result after computation
+        // make sure we don't leak memory if computeSingleLogic is called externally
+        let programs = self.myComputed.entry(id).or_default();
+        if let Some(old) = programs.get(&programID) {
+            if !old.is_null() {
+                delete_ptr(*old);
+            }
+        }
+        programs.insert(programID, built);
+        true
     }
 
     /// C++: `void NBTrafficLightLogicCont::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)`
@@ -359,7 +529,10 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBTrafficLightLogicCont::remapRemoved")
+        let definitions = self.get_definitions();
+        for def in definitions {
+            def.m().remap_removed(removed, incoming, outgoing);
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)`
@@ -374,7 +547,10 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBTrafficLightLogicCont::replaceRemoved")
+        let definitions = self.get_definitions();
+        for def in definitions {
+            def.m().replace_removed(removed, removedLane, by, byLane, incoming);
+        }
     }
 
     /// C++: `NBTrafficLightDefinition * NBTrafficLightLogicCont::getDefinition(const std::string &, const std::string &) const` [const]
@@ -393,7 +569,11 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn get_definition(&self, id: &str, programID: &str) -> Ptr<NBTrafficLightDefinition> {
-        todo!("port NBTrafficLightLogicCont::getDefinition")
+        // C++ returns nullptr when either lookup misses
+        match self.myDefinitions.get(id).and_then(|programs| programs.get(programID)) {
+            Some(def) => *def,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `const std::map<std::string, NBTrafficLightDefinition *> & NBTrafficLightLogicCont::getPrograms(const std::string &) const` [const]
@@ -401,7 +581,10 @@ impl NBTrafficLightLogicCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_programs(&self, id: &str) -> &BTreeMap<String, Ptr<NBTrafficLightDefinition>> {
-        todo!("port NBTrafficLightLogicCont::getPrograms")
+        match self.myDefinitions.get(id) {
+            Some(programs) => programs,
+            None => &EMPTY_DEFINITIONS.0,
+        }
     }
 
     /// C++: `NBTrafficLightLogic * NBTrafficLightLogicCont::getLogic(const std::string &, const std::string &) const` [const]
@@ -420,7 +603,11 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn get_logic(&self, id: &str, programID: &str) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBTrafficLightLogicCont::getLogic")
+        // C++ returns nullptr when either lookup misses
+        match self.myComputed.get(id).and_then(|programs| programs.get(programID)) {
+            Some(logic) => *logic,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::setTLControllingInformation(const NBEdgeCont &, const NBNodeCont &)`
@@ -452,7 +639,28 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&mut self, ec: &NBEdgeCont, nc: &NBNodeCont) {
-        todo!("port NBTrafficLightLogicCont::setTLControllingInformation")
+        let definitions = self.get_definitions();
+        // set the information about all participants, first
+        for def in &definitions {
+            def.m().set_participants_information();
+        }
+        // clear previous information because tlDefs may have been removed in netedit
+        ec.clear_controlling_tl_information();
+        // insert the information about the tl-controlling
+        for def in &definitions {
+            def.set_tl_controlling_information();
+        }
+        // handle rail signals which are not instantiated as normal definitions
+        for n in nc.myNodes.values() {
+            let n = *n;
+            if n.get_type() == SumoXMLNodeType::RAIL_SIGNAL || n.get_type() == SumoXMLNodeType::RAIL_CROSSING {
+                let mut dummy = NBOwnTLDef::new_2(n.get_id(), n, 0, TrafficLightType::STATIC);
+                dummy.set_participants_information();
+                dummy.set_tl_controlling_information();
+                n.m().set_crossing_tl_indices(dummy.get_id(), dummy.get_controlled_links().len() as i32, false);
+                n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+            }
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::setOpenDriveSignalParameters()`
@@ -481,7 +689,7 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn set_open_drive_signal_parameters(&mut self) {
-        todo!("port NBTrafficLightLogicCont::setOpenDriveSignalParameters")
+        // shortcut: NBEdge::Connection hasParameter/getParameter (the port maps getConnection to CHBuilder_Connection, which has no parameter map) and def->setParameter are not usable yet, so the signalID propagation is skipped; upgrade when NBEdge::Connection is ported with its Parameterised base
     }
 
     /// C++: `void NBTrafficLightLogicCont::applyOpenDriveControllers(OptionsCont &)`
@@ -593,14 +801,21 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_open_drive_controllers(&mut self, oc: &mut OptionsCont) {
-        todo!("port NBTrafficLightLogicCont::applyOpenDriveControllers")
+        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters) and rebuilds NBLoadedSUMOTLDef via dynamic_cast (needs runtime type info), so no OpenDRIVE controller groups are formed; upgrade when both are ported
+        let _ = oc;
     }
 
     /// C++: `Definitions NBTrafficLightLogicCont::getDefinitions() const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_definitions(&self) -> NBTrafficLightLogicCont_Definitions {
-        todo!("port NBTrafficLightLogicCont::getDefinitions")
+        let mut result = Vec::new();
+        for programs in self.myDefinitions.values() {
+            for def in programs.values() {
+                result.push(*def);
+            }
+        }
+        result
     }
 
     /// C++: `std::string NBTrafficLightLogicCont::getNextProgramID(const std::string &) const` [const]
@@ -618,7 +833,16 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn get_next_program_id(&self, id: &str) -> String {
-        todo!("port NBTrafficLightLogicCont::getNextProgramID")
+        // IDSupplier("", 0) inlined: avoid() each known program ID, then getNext()
+        let mut current: i64 = 0;
+        if let Some(programs) = self.myDefinitions.get(id) {
+            for item in programs.keys() {
+                if let Some(number) = parse_leading_i64(item) {
+                    current = current.max(number + 1);
+                }
+            }
+        }
+        current.to_string()
     }
 
     /// C++: `void NBTrafficLightLogicCont::clear()` [private]
@@ -642,7 +866,19 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port NBTrafficLightLogicCont::clear")
+        let definitions = self.get_definitions();
+        for def in definitions {
+            delete_ptr(def);
+        }
+        self.myDefinitions.clear();
+        let logics = self.get_computed();
+        for logic in logics {
+            delete_ptr(logic);
+        }
+        self.myComputed.clear();
+        for def in std::mem::take(&mut self.myExtracted) {
+            delete_ptr(def);
+        }
     }
 
 }

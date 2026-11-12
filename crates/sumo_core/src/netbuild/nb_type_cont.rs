@@ -1,6 +1,34 @@
 //! Port of netbuild/NBTypeCont.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::sumo_vehicle_class::get_vehicle_class_names;
+use utils::iodevices::output_device::OutputDevice;
+use utils::xml::sumo_xml_definitions::{
+    LaneSpreadFunctions, SUMO_ATTR_ALLOW, SUMO_ATTR_BIKELANEWIDTH, SUMO_ATTR_DISALLOW, SUMO_ATTR_DISCARD, SUMO_ATTR_FRICTION, SUMO_ATTR_INDEX, SUMO_ATTR_NUMLANES,
+    SUMO_ATTR_ONEWAY, SUMO_ATTR_PRIORITY, SUMO_ATTR_SIDEWALKWIDTH, SUMO_ATTR_SPEED, SUMO_ATTR_SPREADTYPE, SUMO_ATTR_VCLASS, SUMO_ATTR_WIDTH, SUMO_TAG_LANETYPE,
+    SUMO_TAG_RESTRICTION, SUMO_TAG_TYPE,
+};
+
+// NBEdge::UNSPECIFIED_* are static members of NBEdge (NBEdge.cpp) that the Rust NBEdge does not expose yet; same values as NBEdge.cpp
+const UNSPECIFIED_SPEED: f64 = -1.;
+const UNSPECIFIED_FRICTION: f64 = 1.;
+const UNSPECIFIED_WIDTH: f64 = -1.;
+
+/// C++ `delete p` for a Ptr that was allocated as a Box (same convention as ms_route.rs)
+fn delete_ptr<T>(p: Ptr<T>) {
+    drop(unsafe { Box::from_raw(p.as_raw()) });
+}
+
+/// C++ `newType->restrictions.insert(old->restrictions...)` and `attrs.insert(...)`:
+/// std::map::insert keeps existing keys, so restrictions already on `to` win
+fn merge_restrictions_and_attrs(to: Ptr<NBTypeCont_EdgeTypeDefinition>, from: Ptr<NBTypeCont_EdgeTypeDefinition>) {
+    let toM = to.m();
+    for (svc, speed) in &from.restrictions {
+        toM.restrictions.entry(*svc).or_insert(*speed);
+    }
+    toM.attrs.extend(from.attrs.iter().copied());
+}
 
 /// C++ typedef `std::map<std::string, EdgeTypeDefinition *> NBTypeCont::TypesCont`
 pub type NBTypeCont_TypesCont = BTreeMap<String, Ptr<NBTypeCont_EdgeTypeDefinition>>;
@@ -59,7 +87,25 @@ impl NBTypeCont_EdgeTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port EdgeTypeDefinition::EdgeTypeDefinition")
+        Self {
+            speed: 13.89,
+            friction: UNSPECIFIED_FRICTION,
+            priority: -1,
+            permissions: SVC_UNSPECIFIED,
+            spreadType: LaneSpreadFunction::RIGHT,
+            oneWay: true,
+            discard: false,
+            width: UNSPECIFIED_WIDTH,
+            widthResolution: 0.,
+            maxWidth: 0.,
+            minWidth: 0.,
+            sidewalkWidth: UNSPECIFIED_WIDTH,
+            bikeLaneWidth: UNSPECIFIED_WIDTH,
+            restrictions: BTreeMap::new(),
+            attrs: BTreeSet::new(),
+            // set laneTypes
+            laneTypeDefinitions: vec![NBTypeCont_LaneTypeDefinition::new()],
+        }
     }
 
     /// C++: `void EdgeTypeDefinition::EdgeTypeDefinition(const EdgeTypeDefinition *)`
@@ -84,7 +130,25 @@ impl NBTypeCont_EdgeTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(edgeType: Ptr<NBTypeCont_EdgeTypeDefinition>) -> Self {
-        todo!("port EdgeTypeDefinition::EdgeTypeDefinition")
+        let e = edgeType;
+        Self {
+            speed: e.speed,
+            friction: e.friction,
+            priority: e.priority,
+            permissions: e.permissions,
+            spreadType: e.spreadType,
+            oneWay: e.oneWay,
+            discard: e.discard,
+            width: e.width,
+            widthResolution: e.widthResolution,
+            maxWidth: e.maxWidth,
+            minWidth: e.minWidth,
+            sidewalkWidth: e.sidewalkWidth,
+            bikeLaneWidth: e.bikeLaneWidth,
+            restrictions: e.restrictions.clone(),
+            attrs: e.attrs.clone(),
+            laneTypeDefinitions: e.laneTypeDefinitions.clone(),
+        }
     }
 
     /// C++: `void EdgeTypeDefinition::EdgeTypeDefinition(int, double, double, int, double, SVCPermissions, LaneSpreadFunction, bool, double, double, double, double, double)`
@@ -108,7 +172,25 @@ impl NBTypeCont_EdgeTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_3(numLanes: i32, speed: f64, friction: f64, priority: i32, width: f64, permissions: SVCPermissions, spreadType: LaneSpreadFunction, oneWay: bool, sideWalkWidth: f64, bikeLaneWidth: f64, widthResolution: f64, maxWidth: f64, minWidth: f64) -> Self {
-        todo!("port EdgeTypeDefinition::EdgeTypeDefinition")
+        Self {
+            speed,
+            friction,
+            priority,
+            permissions,
+            spreadType,
+            oneWay,
+            discard: false,
+            width,
+            widthResolution,
+            maxWidth,
+            minWidth,
+            sidewalkWidth: sideWalkWidth,
+            bikeLaneWidth,
+            restrictions: BTreeMap::new(),
+            attrs: BTreeSet::new(),
+            // set laneTypes
+            laneTypeDefinitions: (0..numLanes as usize).map(|_| NBTypeCont_LaneTypeDefinition::new()).collect(),
+        }
     }
 
     /// C++: `bool EdgeTypeDefinition::needsLaneType() const` [const]
@@ -137,13 +219,31 @@ impl NBTypeCont_EdgeTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn needs_lane_type(&self) -> bool {
-        todo!("port EdgeTypeDefinition::needsLaneType")
+        for laneType in &self.laneTypeDefinitions {
+            if laneType.attrs.contains(&SUMO_ATTR_SPEED) && laneType.speed != UNSPECIFIED_SPEED && laneType.speed != self.speed {
+                return true;
+            }
+            if laneType.attrs.contains(&SUMO_ATTR_FRICTION) && laneType.friction != UNSPECIFIED_FRICTION && laneType.friction != self.friction {
+                return true;
+            }
+            if (laneType.attrs.contains(&SUMO_ATTR_DISALLOW) || laneType.attrs.contains(&SUMO_ATTR_ALLOW)) && laneType.permissions != self.permissions {
+                return true;
+            }
+            if laneType.attrs.contains(&SUMO_ATTR_WIDTH) && laneType.width != self.width && laneType.width != UNSPECIFIED_WIDTH {
+                return true;
+            }
+            if !laneType.restrictions.is_empty() {
+                return true;
+            }
+        }
+        false
     }
 
 }
 
 /// laneType definition
 /// C++ class `NBTypeCont::LaneTypeDefinition` (netbuild/NBTypeCont.h)
+#[derive(Clone)]
 pub struct NBTypeCont_LaneTypeDefinition {
     /// The maximal velocity on a lane in m/s
     pub speed: f64,
@@ -170,7 +270,14 @@ impl NBTypeCont_LaneTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port LaneTypeDefinition::LaneTypeDefinition")
+        Self {
+            speed: UNSPECIFIED_SPEED,
+            friction: UNSPECIFIED_FRICTION,
+            permissions: SVC_UNSPECIFIED,
+            width: UNSPECIFIED_WIDTH,
+            restrictions: BTreeMap::new(),
+            attrs: BTreeSet::new(),
+        }
     }
 
     /// C++: `void LaneTypeDefinition::LaneTypeDefinition(const EdgeTypeDefinition *)`
@@ -183,7 +290,14 @@ impl NBTypeCont_LaneTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(edgeTypeDefinition: Ptr<NBTypeCont_EdgeTypeDefinition>) -> Self {
-        todo!("port LaneTypeDefinition::LaneTypeDefinition")
+        Self {
+            speed: edgeTypeDefinition.speed,
+            friction: edgeTypeDefinition.friction,
+            permissions: edgeTypeDefinition.permissions,
+            width: edgeTypeDefinition.width,
+            restrictions: BTreeMap::new(),
+            attrs: BTreeSet::new(),
+        }
     }
 
     /// C++: `void LaneTypeDefinition::LaneTypeDefinition(const double, const double, const double, SVCPermissions, const std::set<SumoXMLAttr> &)`
@@ -197,7 +311,14 @@ impl NBTypeCont_LaneTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_3(speed: f64, friction: f64, width: f64, permissions: SVCPermissions, attrs: &BTreeSet<SumoXMLAttr>) -> Self {
-        todo!("port LaneTypeDefinition::LaneTypeDefinition")
+        Self {
+            speed,
+            friction,
+            permissions,
+            width,
+            restrictions: BTreeMap::new(),
+            attrs: attrs.clone(),
+        }
     }
 
     /// C++: `void LaneTypeDefinition::LaneTypeDefinition(const LaneTypeDefinition *)`
@@ -212,7 +333,15 @@ impl NBTypeCont_LaneTypeDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_4(laneTypeDefinition: Ptr<NBTypeCont_LaneTypeDefinition>) -> Self {
-        todo!("port LaneTypeDefinition::LaneTypeDefinition")
+        let l = laneTypeDefinition;
+        Self {
+            speed: l.speed,
+            friction: l.friction,
+            permissions: l.permissions,
+            width: l.width,
+            restrictions: l.restrictions.clone(),
+            attrs: l.attrs.clone(),
+        }
     }
 
 }
@@ -233,7 +362,10 @@ impl NBTypeCont {
     //     myDefaultType(new EdgeTypeDefinition()) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBTypeCont::NBTypeCont")
+        Self {
+            myDefaultType: Ptr::from_raw(Box::into_raw(Box::new(NBTypeCont_EdgeTypeDefinition::new()))),
+            myEdgeTypes: BTreeMap::new(),
+        }
     }
 
     /// C++: `void NBTypeCont::~NBTypeCont()`
@@ -241,7 +373,8 @@ impl NBTypeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBTypeCont::~NBTypeCont")
+        self.clear_types();
+        delete_ptr(self.myDefaultType);
     }
 
     /// C++: `void NBTypeCont::clearTypes()`
@@ -257,7 +390,10 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn clear_types(&mut self) {
-        todo!("port NBTypeCont::clearTypes")
+        // remove edge types
+        for edgeType in std::mem::take(&mut self.myEdgeTypes).into_values() {
+            delete_ptr(edgeType);
+        }
     }
 
     /// C++: `void NBTypeCont::setEdgeTypeDefaults(int, double, double, double, int, SVCPermissions, LaneSpreadFunction)`
@@ -281,7 +417,15 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn set_edge_type_defaults(&mut self, defaultNumLanes: i32, defaultLaneWidth: f64, defaultSpeed: f64, defaultFriction: f64, defaultPriority: i32, defaultPermissions: SVCPermissions, defaultSpreadType: LaneSpreadFunction) {
-        todo!("port NBTypeCont::setEdgeTypeDefaults")
+        let d = self.myDefaultType.m();
+        d.laneTypeDefinitions.clear();
+        d.laneTypeDefinitions.extend((0..defaultNumLanes as usize).map(|_| NBTypeCont_LaneTypeDefinition::new()));
+        d.width = defaultLaneWidth;
+        d.speed = defaultSpeed;
+        d.friction = defaultFriction;
+        d.priority = defaultPriority;
+        d.permissions = defaultPermissions;
+        d.spreadType = defaultSpreadType;
     }
 
     /// C++: `void NBTypeCont::insertEdgeType(const std::string &, int, double, int, SVCPermissions, LaneSpreadFunction, double, bool, double, double, double, double, double)`
@@ -308,7 +452,30 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert_edge_type(&mut self, id: &str, numLanes: i32, maxSpeed: f64, prio: i32, permissions: SVCPermissions, spreadType: LaneSpreadFunction, width: f64, oneWayIsDefault: bool, sidewalkWidth: f64, bikeLaneWidth: f64, widthResolution: f64, maxWidth: f64, minWidth: f64) {
-        todo!("port NBTypeCont::insertEdgeType")
+        // Create edge type definition
+        let newType = Ptr::from_raw(Box::into_raw(Box::new(NBTypeCont_EdgeTypeDefinition::new_3(
+            numLanes,
+            maxSpeed,
+            UNSPECIFIED_FRICTION,
+            prio,
+            width,
+            permissions,
+            spreadType,
+            oneWayIsDefault,
+            sidewalkWidth,
+            bikeLaneWidth,
+            widthResolution,
+            maxWidth,
+            minWidth,
+        ))));
+        // check if edgeType already exist in types
+        // if exists, then update restrictions and attributes
+        if let Some(old) = self.myEdgeTypes.get(id).copied() {
+            merge_restrictions_and_attrs(newType, old);
+            delete_ptr(old);
+        }
+        // insert it in types
+        self.myEdgeTypes.insert(id.to_string(), newType);
     }
 
     /// C++: `void NBTypeCont::insertEdgeType(const std::string &, const EdgeTypeDefinition *)`
@@ -330,7 +497,16 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert_edge_type_2(&mut self, id: &str, edgeType: Ptr<NBTypeCont_EdgeTypeDefinition>) {
-        todo!("port NBTypeCont::insertEdgeType")
+        // Create edge type definition
+        let newType = Ptr::from_raw(Box::into_raw(Box::new(NBTypeCont_EdgeTypeDefinition::new_2(edgeType))));
+        // check if edgeType already exist in types
+        // if exists, then update restrictions and attributes
+        if let Some(old) = self.myEdgeTypes.get(id).copied() {
+            merge_restrictions_and_attrs(newType, old);
+            delete_ptr(old);
+        }
+        // insert it in types
+        self.myEdgeTypes.insert(id.to_string(), newType);
     }
 
     /// C++: `void NBTypeCont::insertLaneType(const std::string &, int, double, SVCPermissions, double, const std::set<SumoXMLAttr> &)`
@@ -347,7 +523,12 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert_lane_type(&mut self, edgeTypeID: &str, index: i32, maxSpeed: f64, permissions: SVCPermissions, width: f64, attrs: &BTreeSet<SumoXMLAttr>) {
-        todo!("port NBTypeCont::insertLaneType")
+        let et = *self.myEdgeTypes.get(edgeTypeID).expect("std::map::at: key not found");
+        while (et.laneTypeDefinitions.len() as i32) <= index {
+            et.m().laneTypeDefinitions.push(NBTypeCont_LaneTypeDefinition::new_2(et));
+        }
+        // add LaneTypeDefinition with the given attributes
+        et.m().laneTypeDefinitions[index as usize] = NBTypeCont_LaneTypeDefinition::new_3(maxSpeed, UNSPECIFIED_FRICTION, width, permissions, attrs);
     }
 
     /// C++: `int NBTypeCont::size() const` [const]
@@ -358,7 +539,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBTypeCont::size")
+        self.myEdgeTypes.len() as i32
     }
 
     /// C++: `void NBTypeCont::removeEdgeType(const std::string &)`
@@ -376,7 +557,9 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_edge_type(&mut self, id: &str) {
-        todo!("port NBTypeCont::removeEdgeType")
+        if let Some(edgeType) = self.myEdgeTypes.remove(id) {
+            delete_ptr(edgeType);
+        }
     }
 
     /// C++: `void NBTypeCont::updateEdgeTypeID(const std::string &, const std::string &)`
@@ -398,23 +581,31 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn update_edge_type_id(&mut self, oldId: &str, newId: &str) {
-        todo!("port NBTypeCont::updateEdgeTypeID")
+        // if exists, then remove it
+        if self.myEdgeTypes.contains_key(oldId) && !self.myEdgeTypes.contains_key(newId) {
+            // remove it from map and add it again
+            let edgeType = self.myEdgeTypes.remove(oldId).unwrap();
+            self.myEdgeTypes.insert(newId.to_string(), edgeType);
+        }
     }
 
     /// C++: `TypesCont::const_iterator NBTypeCont::begin() const` [const]
     /// return begin iterator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn begin(&self) -> Unmapped /* TypesCont::const_iterator */ {
-        todo!("port NBTypeCont::begin")
+    pub fn begin(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBTypeCont_EdgeTypeDefinition>> {
+        self.myEdgeTypes.iter()
     }
 
     /// C++: `TypesCont::const_iterator NBTypeCont::end() const` [const]
     /// return end iterator
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn end(&self) -> Unmapped /* TypesCont::const_iterator */ {
-        todo!("port NBTypeCont::end")
+    pub fn end(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBTypeCont_EdgeTypeDefinition>> {
+        // C++ end() is the past-the-end position; a Rust iterator cannot name that position, so return an exhausted iterator
+        let mut it = self.myEdgeTypes.iter();
+        let _ = it.nth(self.myEdgeTypes.len());
+        it
     }
 
     /// C++: `bool NBTypeCont::knows(const std::string &) const` [const]
@@ -425,7 +616,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn knows(&self, edgeType: &str) -> bool {
-        todo!("port NBTypeCont::knows")
+        self.myEdgeTypes.contains_key(edgeType)
     }
 
     /// C++: `const EdgeTypeDefinition * NBTypeCont::getEdgeType(const std::string &) const` [const]
@@ -433,7 +624,11 @@ impl NBTypeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_edge_type(&self, name: &str) -> Ptr<NBTypeCont_EdgeTypeDefinition> {
-        todo!("port NBTypeCont::getEdgeType")
+        // check if return edge types, or default edge types
+        match self.myEdgeTypes.get(name) {
+            None => self.myDefaultType,
+            Some(t) => *t,
+        }
     }
 
     /// C++: `bool NBTypeCont::markEdgeTypeAsToDiscard(const std::string &)`
@@ -449,7 +644,13 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn mark_edge_type_as_to_discard(&mut self, id: &str) -> bool {
-        todo!("port NBTypeCont::markEdgeTypeAsToDiscard")
+        match self.myEdgeTypes.get(id) {
+            None => false,
+            Some(t) => {
+                t.m().discard = true;
+                true
+            }
+        }
     }
 
     /// C++: `bool NBTypeCont::markEdgeTypeAsSet(const std::string &, const SumoXMLAttr)`
@@ -465,7 +666,13 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn mark_edge_type_as_set(&mut self, id: &str, attr: SumoXMLAttr) -> bool {
-        todo!("port NBTypeCont::markEdgeTypeAsSet")
+        match self.myEdgeTypes.get(id) {
+            None => false,
+            Some(t) => {
+                t.m().attrs.insert(attr);
+                true
+            }
+        }
     }
 
     /// C++: `bool NBTypeCont::addEdgeTypeRestriction(const std::string &, const SUMOVehicleClass, const double)`
@@ -481,7 +688,13 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_type_restriction(&mut self, id: &str, svc: SUMOVehicleClass, speed: f64) -> bool {
-        todo!("port NBTypeCont::addEdgeTypeRestriction")
+        match self.myEdgeTypes.get(id) {
+            None => false,
+            Some(t) => {
+                t.m().restrictions.insert(svc, speed);
+                true
+            }
+        }
     }
 
     /// C++: `bool NBTypeCont::copyEdgeTypeRestrictionsAndAttrs(const std::string &, const std::string &)`
@@ -499,7 +712,11 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn copy_edge_type_restrictions_and_attrs(&mut self, fromId: &str, toId: &str) -> bool {
-        todo!("port NBTypeCont::copyEdgeTypeRestrictionsAndAttrs")
+        let (Some(from), Some(to)) = (self.myEdgeTypes.get(fromId).copied(), self.myEdgeTypes.get(toId).copied()) else {
+            return false;
+        };
+        merge_restrictions_and_attrs(to, from);
+        true
     }
 
     /// C++: `bool NBTypeCont::markLaneTypeAsSet(const std::string &, int, const SumoXMLAttr)`
@@ -515,7 +732,13 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn mark_lane_type_as_set(&mut self, id: &str, index: i32, attr: SumoXMLAttr) -> bool {
-        todo!("port NBTypeCont::markLaneTypeAsSet")
+        match self.myEdgeTypes.get(id) {
+            None => false,
+            Some(t) => {
+                t.m().laneTypeDefinitions[index as usize].attrs.insert(attr);
+                true
+            }
+        }
     }
 
     /// C++: `bool NBTypeCont::addLaneTypeRestriction(const std::string &, const SUMOVehicleClass, const double)`
@@ -531,7 +754,13 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_lane_type_restriction(&mut self, id: &str, svc: SUMOVehicleClass, speed: f64) -> bool {
-        todo!("port NBTypeCont::addLaneTypeRestriction")
+        match self.myEdgeTypes.get(id) {
+            None => false,
+            Some(t) => {
+                t.m().laneTypeDefinitions.last_mut().unwrap().restrictions.insert(svc, speed);
+                true
+            }
+        }
     }
 
     /// C++: `void NBTypeCont::writeEdgeTypes(OutputDevice &, const std::set<std::string> &) const` [const]
@@ -628,7 +857,87 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn write_edge_types(&self, into: &mut OutputDevice, typeIDs: &BTreeSet<String>) {
-        todo!("port NBTypeCont::writeEdgeTypes")
+        // iterate over edge types
+        for (id, edgeType) in &self.myEdgeTypes {
+            if !typeIDs.is_empty() && !typeIDs.contains(id) {
+                continue;
+            }
+            let et = *edgeType;
+            // C++ write(attr, val): writeOptionalAttr(attr, val, attrs.count(attr) == 0)
+            into.open_tag_id(SUMO_TAG_TYPE);
+            into.write_attr(SUMO_ATTR_ID, id.as_str());
+            into.write_optional_attr(SUMO_ATTR_PRIORITY, &et.priority, !et.attrs.contains(&SUMO_ATTR_PRIORITY));
+            let numLanes = et.laneTypeDefinitions.len();
+            into.write_optional_attr(SUMO_ATTR_NUMLANES, &numLanes, !et.attrs.contains(&SUMO_ATTR_NUMLANES) && numLanes <= 1);
+            into.write_optional_attr(SUMO_ATTR_SPEED, &et.speed, !et.attrs.contains(&SUMO_ATTR_SPEED));
+            into.write_optional_attr(SUMO_ATTR_FRICTION, &et.friction, !et.attrs.contains(&SUMO_ATTR_FRICTION));
+            // write permissions
+            if et.attrs.contains(&SUMO_ATTR_DISALLOW) || et.attrs.contains(&SUMO_ATTR_ALLOW) {
+                // shortcut: writePermissions (utils/common/SUMOVehicleClass.cpp) is not ported, so the allow/disallow attributes of edge types are not written yet; upgrade when writePermissions is ported
+            }
+            // write spreadType (unless default)
+            if et.attrs.contains(&SUMO_ATTR_SPREADTYPE) && et.spreadType != LaneSpreadFunction::RIGHT {
+                into.write_attr(SUMO_ATTR_SPREADTYPE, LaneSpreadFunctions.get_string(et.spreadType));
+            }
+            into.write_optional_attr(SUMO_ATTR_ONEWAY, &et.oneWay, !et.attrs.contains(&SUMO_ATTR_ONEWAY));
+            into.write_optional_attr(SUMO_ATTR_DISCARD, &et.discard, !et.attrs.contains(&SUMO_ATTR_DISCARD));
+            into.write_optional_attr(SUMO_ATTR_WIDTH, &et.width, !et.attrs.contains(&SUMO_ATTR_WIDTH));
+            into.write_optional_attr(SUMO_ATTR_SIDEWALKWIDTH, &et.sidewalkWidth, !et.attrs.contains(&SUMO_ATTR_SIDEWALKWIDTH));
+            into.write_optional_attr(SUMO_ATTR_BIKELANEWIDTH, &et.bikeLaneWidth, !et.attrs.contains(&SUMO_ATTR_BIKELANEWIDTH));
+            for (svc, speed) in &et.restrictions {
+                // open restriction tag
+                into.open_tag_id(SUMO_TAG_RESTRICTION);
+                // write vclass
+                let vclass = get_vehicle_class_names(*svc, false);
+                into.write_attr(SUMO_ATTR_VCLASS, vclass.as_str());
+                // write speed
+                into.write_attr(SUMO_ATTR_SPEED, speed);
+                // close restriction tag
+                into.close_tag("");
+            }
+            // iterate over lanes
+            if et.needs_lane_type() {
+                let mut index: i32 = 0;
+                for laneType in &et.laneTypeDefinitions {
+                    // open lane type tag
+                    into.open_tag_id(SUMO_TAG_LANETYPE);
+                    into.write_attr(SUMO_ATTR_INDEX, &index);
+                    index += 1;
+                    // write speed
+                    if laneType.attrs.contains(&SUMO_ATTR_SPEED) && laneType.speed != UNSPECIFIED_SPEED && laneType.speed != et.speed {
+                        into.write_attr(SUMO_ATTR_SPEED, &laneType.speed);
+                    }
+                    // write friction
+                    if laneType.attrs.contains(&SUMO_ATTR_FRICTION) && laneType.friction != UNSPECIFIED_FRICTION && laneType.friction != et.friction {
+                        into.write_attr(SUMO_ATTR_FRICTION, &laneType.friction);
+                    }
+                    // write permissions
+                    if laneType.attrs.contains(&SUMO_ATTR_DISALLOW) || laneType.attrs.contains(&SUMO_ATTR_ALLOW) {
+                        // shortcut: writePermissions (utils/common/SUMOVehicleClass.cpp) is not ported, so lane-level allow/disallow are not written yet; upgrade when writePermissions is ported
+                    }
+                    // write width
+                    if laneType.attrs.contains(&SUMO_ATTR_WIDTH) && laneType.width != et.width && laneType.width != UNSPECIFIED_WIDTH {
+                        into.write_attr(SUMO_ATTR_WIDTH, &laneType.width);
+                    }
+                    // write restrictions
+                    for (svc, speed) in &laneType.restrictions {
+                        into.open_tag_id(SUMO_TAG_RESTRICTION);
+                        let vclass = get_vehicle_class_names(*svc, false);
+                        into.write_attr(SUMO_ATTR_VCLASS, vclass.as_str());
+                        into.write_attr(SUMO_ATTR_SPEED, speed);
+                        into.close_tag("");
+                    }
+                    // close lane type tag
+                    into.close_tag("");
+                }
+            }
+            // close edge type tag
+            into.close_tag("");
+        }
+        // write endtype
+        if !self.myEdgeTypes.is_empty() {
+            into.lf();
+        }
     }
 
     /// C++: `int NBTypeCont::getEdgeTypeNumLanes(const std::string &) const` [const]
@@ -639,7 +948,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_num_lanes(&self, edgeType: &str) -> i32 {
-        todo!("port NBTypeCont::getEdgeTypeNumLanes")
+        self.get_edge_type(edgeType).laneTypeDefinitions.len() as i32
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeSpeed(const std::string &) const` [const]
@@ -650,7 +959,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_speed(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeSpeed")
+        self.get_edge_type(edgeType).speed
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeFriction(const std::string &) const` [const]
@@ -661,7 +970,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_friction(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeFriction")
+        self.get_edge_type(edgeType).friction
     }
 
     /// C++: `int NBTypeCont::getEdgeTypePriority(const std::string &) const` [const]
@@ -672,7 +981,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_priority(&self, edgeType: &str) -> i32 {
-        todo!("port NBTypeCont::getEdgeTypePriority")
+        self.get_edge_type(edgeType).priority
     }
 
     /// C++: `bool NBTypeCont::getEdgeTypeIsOneWay(const std::string &) const` [const]
@@ -683,7 +992,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_is_one_way(&self, edgeType: &str) -> bool {
-        todo!("port NBTypeCont::getEdgeTypeIsOneWay")
+        self.get_edge_type(edgeType).oneWay
     }
 
     /// C++: `bool NBTypeCont::getEdgeTypeShallBeDiscarded(const std::string &) const` [const]
@@ -694,7 +1003,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_shall_be_discarded(&self, edgeType: &str) -> bool {
-        todo!("port NBTypeCont::getEdgeTypeShallBeDiscarded")
+        self.get_edge_type(edgeType).discard
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeWidthResolution(const std::string &) const` [const]
@@ -705,7 +1014,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_width_resolution(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeWidthResolution")
+        self.get_edge_type(edgeType).widthResolution
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeMaxWidth(const std::string &) const` [const]
@@ -716,7 +1025,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_max_width(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeMaxWidth")
+        self.get_edge_type(edgeType).maxWidth
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeMinWidth(const std::string &) const` [const]
@@ -727,7 +1036,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_min_width(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeMinWidth")
+        self.get_edge_type(edgeType).minWidth
     }
 
     /// C++: `bool NBTypeCont::wasSetEdgeTypeAttribute(const std::string &, const SumoXMLAttr) const` [const]
@@ -738,7 +1047,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn was_set_edge_type_attribute(&self, edgeType: &str, attr: SumoXMLAttr) -> bool {
-        todo!("port NBTypeCont::wasSetEdgeTypeAttribute")
+        self.get_edge_type(edgeType).attrs.contains(&attr)
     }
 
     /// C++: `SVCPermissions NBTypeCont::getEdgeTypePermissions(const std::string &) const` [const]
@@ -749,7 +1058,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_permissions(&self, edgeType: &str) -> SVCPermissions {
-        todo!("port NBTypeCont::getEdgeTypePermissions")
+        self.get_edge_type(edgeType).permissions
     }
 
     /// C++: `LaneSpreadFunction NBTypeCont::getEdgeTypeSpreadType(const std::string &) const` [const]
@@ -760,7 +1069,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_spread_type(&self, edgeType: &str) -> LaneSpreadFunction {
-        todo!("port NBTypeCont::getEdgeTypeSpreadType")
+        self.get_edge_type(edgeType).spreadType
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeWidth(const std::string &) const` [const]
@@ -771,7 +1080,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_width(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeWidth")
+        self.get_edge_type(edgeType).width
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeSidewalkWidth(const std::string &) const` [const]
@@ -782,7 +1091,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_sidewalk_width(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeSidewalkWidth")
+        self.get_edge_type(edgeType).sidewalkWidth
     }
 
     /// C++: `double NBTypeCont::getEdgeTypeBikeLaneWidth(const std::string &) const` [const]
@@ -793,7 +1102,7 @@ impl NBTypeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_type_bike_lane_width(&self, edgeType: &str) -> f64 {
-        todo!("port NBTypeCont::getEdgeTypeBikeLaneWidth")
+        self.get_edge_type(edgeType).bikeLaneWidth
     }
 
     /// C++: `void NBTypeCont::NBTypeCont(const NBTypeCont &)` [private]
@@ -801,7 +1110,7 @@ impl NBTypeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NBTypeCont) -> Self {
-        todo!("port NBTypeCont::NBTypeCont")
+        panic!("NBTypeCont(const NBTypeCont&) is deleted in C++")
     }
 
     /// C++: `NBTypeCont & NBTypeCont::operator=(const NBTypeCont &)` [private]
@@ -809,7 +1118,7 @@ impl NBTypeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBTypeCont) -> &mut NBTypeCont {
-        todo!("port NBTypeCont::operator=")
+        panic!("NBTypeCont::operator= is deleted in C++")
     }
 
 }
