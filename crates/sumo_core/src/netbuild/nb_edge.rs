@@ -60,6 +60,26 @@ const NBNODE_AVOID_INTERSECTING_LEFT_TURNS: i32 = 8;
 const NBNODE_SCURVE_IGNORE: i32 = 16;
 // C++ `NBOwnTLDef::MIN_SPEED_CROSSING_TIME` (nb_own_tl_def.rs keeps it private)
 const NBOWNTLDEF_MIN_SPEED_CROSSING_TIME: f64 = 25.0 / 3.6;
+
+// C++ `Bresenham::compute(callBack, val1, val2)` (utils/geom/Bresenham.cpp); the utils crate has no port yet, so the callback is a closure here
+fn bresenham_compute(val1: i32, val2: i32, mut execute: impl FnMut(i32, i32)) {
+    let smaller = std::cmp::min(val1, val2);
+    let greater = std::cmp::max(val1, val2);
+    let mut pos: i32 = 0;
+    let mut c: i32 = smaller;
+    for i in 0..greater {
+        if smaller == val1 {
+            execute(pos, i);
+        } else {
+            execute(i, pos);
+        }
+        c += 2 * smaller;
+        if c >= 2 * greater {
+            pos += 1;
+            c -= 2 * greater;
+        }
+    }
+}
 pub const UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
 pub const ANGLE_LOOKAHEAD: f64 = 10.0;
 pub const UNSPECIFIED_INTERNAL_LANE_INDEX: i32 = -1;
@@ -7875,7 +7895,36 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn first_intersection(v1: &PositionVector, v2: &PositionVector, width1: f64, width2: f64, error: &str, secondIntersection: bool) -> f64 {
-        todo!("port NBEdge::firstIntersection")
+        let mut intersect = f64::MAX;
+        if v2.length() < POSITION_EPS {
+            return intersect;
+        }
+        // shortcut: intersects_at_lengths2d_pv cannot throw InvalidArgument, so the C++ catch branch (WRITE_WARNING(error)) is not reproduced; upgrade if it gains a Result
+        let mut v1Right = v1.clone();
+        v1Right.move2side(width1, 100.0);
+
+        let mut v1Left = v1.clone();
+        v1Left.move2side(-width1, 100.0);
+
+        let mut v2Right = v2.clone();
+        v2Right.move2side(width2, 100.0);
+
+        let mut v2Left = v2.clone();
+        v2Left.move2side(-width2, 100.0);
+
+        // intersect all border combinations
+        let pairs: [(&PositionVector, &PositionVector); 4] = [(&v1Left, &v2Right), (&v1Left, &v2Left), (&v1Right, &v2Right), (&v1Right, &v2Left)];
+        for (a, b) in pairs.iter() {
+            let mut skip = secondIntersection;
+            for cand in a.intersects_at_lengths2d_pv(b) {
+                if skip {
+                    skip = false;
+                    continue;
+                }
+                intersect = f64::min(intersect, cand);
+            }
+        }
+        intersect
     }
 
     /// C++: `PositionVector NBEdge::startShapeAt(const PositionVector &, const NBNode *, PositionVector)` [static]
@@ -7939,8 +7988,53 @@ impl NBEdge {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn start_shape_at(laneShape: &PositionVector, startNode: Ptr<NBNode>, nodeShape: PositionVector) -> PositionVector {
-        todo!("port NBEdge::startShapeAt")
+    pub fn start_shape_at(laneShape: &PositionVector, startNode: Ptr<NBNode>, mut nodeShape: PositionVector) -> PositionVector {
+        if nodeShape.len() == 0 {
+            nodeShape = startNode.get_shape().clone();
+            nodeShape.close_polygon();
+        }
+        let mut lb = laneShape.clone();
+        lb.extrapolate2d(100.0, false);
+        if nodeShape.intersects_pv(laneShape) {
+            // shape intersects directly
+            let pbv = laneShape.intersects_at_lengths2d_pv(&nodeShape);
+            assert!(pbv.len() > 0);
+            // ensure that the subpart has at least two points
+            let maxPb = pbv.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            let pb = f64::min(laneShape.length2d() - POSITION_EPS - NUMERICAL_EPS, maxPb);
+            if pb < 0.0 {
+                return laneShape.clone();
+            }
+            let mut ns = laneShape.get_subpart2d(pb, laneShape.length2d());
+            //PositionVector ns = pb < (laneShape.length() - POSITION_EPS) ? laneShape.getSubpart2D(pb, laneShape.length()) : laneShape;
+            let delta = ns[0].z() - laneShape[0].z();
+            if f64::abs(delta) > 2.0 * POSITION_EPS && (!startNode.geometry_like() || pb < 1.0) {
+                // make "real" intersections and small intersections flat
+                ns[0].setz(startNode.get_position().z());
+            }
+            assert!(ns.len() >= 2);
+            ns
+        } else if nodeShape.intersects_pv(&lb) {
+            // extension of first segment intersects
+            let pbv = lb.intersects_at_lengths2d_pv(&nodeShape);
+            assert!(pbv.len() > 0);
+            let pb = pbv.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+            assert!(pb >= 0.0);
+            let mut result = laneShape.get_subpart_by_index(1, laneShape.len() as i32 - 1);
+            let mut np = lb.position_at_offset2d(pb, 0.0, false);
+            let delta = np.z() - laneShape[0].z();
+            if f64::abs(delta) > 2.0 * POSITION_EPS && !startNode.geometry_like() {
+                // avoid z-overshoot when extrapolating
+                np.setz(startNode.get_position().z());
+            }
+            result.push_front_no_double_pos(&np);
+            result
+        } else {
+            // could not find proper intersection. Probably the edge is very short
+            // and lies within nodeShape
+            // @todo enable warning WRITE_WARNING(error + " (laneShape lies within nodeShape)");
+            laneShape.clone()
+        }
     }
 
     /// C++: `double NBEdge::getTravelTimeStatic(const NBEdge *const, const NBVehicle *const, double)` [static]
@@ -7949,7 +8043,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<NBEdge>, arg1: Ptr<NBVehicle>, arg2: f64) -> f64 {
-        todo!("port NBEdge::getTravelTimeStatic")
+        edge.get_length() / edge.get_speed()
     }
 
     /// C++: `int NBEdge::getLaneIndexFromLaneID(const std::string)` [static]
@@ -8110,7 +8204,21 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn join_lanes(&mut self, perms: SVCPermissions) -> bool {
-        todo!("port NBEdge::joinLanes")
+        let mut haveJoined = false;
+        let mut i: i32 = 0;
+        while i < self.get_num_lanes() - 1 {
+            if self.get_permissions(i) == perms && self.get_permissions(i + 1) == perms {
+                let newWidth = self.get_lane_width_2(i) + self.get_lane_width_2(i + 1);
+                let newType = format!("{}|{}", self.myLanes[i as usize].type_, self.myLanes[(i + 1) as usize].type_);
+                self.delete_lane(i, false, true);
+                self.set_lane_width(i, newWidth);
+                self.set_lane_type(i, &newType);
+                haveJoined = true;
+            } else {
+                i += 1;
+            }
+        }
+        haveJoined
     }
 
     /// C++: `void NBEdge::resetLaneShapes()`
@@ -8121,7 +8229,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reset_lane_shapes(&mut self) {
-        todo!("port NBEdge::resetLaneShapes")
+        self.compute_lane_shapes();
     }
 
     /// C++: `void NBEdge::updateChangeRestrictions(SVCPermissions)`
@@ -8147,7 +8255,22 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn update_change_restrictions(&mut self, ignoring: SVCPermissions) {
-        todo!("port NBEdge::updateChangeRestrictions")
+        for lane in self.myLanes.iter_mut() {
+            if lane.changeLeft != SVC_ALL {
+                lane.changeLeft = ignoring;
+            }
+            if lane.changeRight != SVC_ALL {
+                lane.changeRight = ignoring;
+            }
+        }
+        for con in self.myConnections.iter_mut() {
+            if con.changeLeft != SVC_UNSPECIFIED && con.changeLeft != SVC_ALL {
+                con.changeLeft = ignoring;
+            }
+            if con.changeRight != SVC_UNSPECIFIED && con.changeRight != SVC_ALL {
+                con.changeRight = ignoring;
+            }
+        }
     }
 
     /// C++: `NBEdge * NBEdge::getStraightContinuation(SVCPermissions) const` [const]
@@ -8168,7 +8291,27 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_straight_continuation(&self, permissions: SVCPermissions) -> Ptr<NBEdge> {
-        todo!("port NBEdge::getStraightContinuation")
+        let mut cands: EdgeVector = NBEdge::filter_by_permissions(self.myTo.get_outgoing_edges(), permissions);
+        if cands.len() == 0 {
+            return Ptr::null();
+        }
+        let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), true);
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
+        cands.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        let best: Ptr<NBEdge> = cands[0];
+        if best.is_turning_direction_at(Ptr::new(self)) {
+            Ptr::null()
+        } else {
+            best
+        }
     }
 
     /// C++: `NBEdge * NBEdge::getStraightPredecessor(SVCPermissions) const` [const]
@@ -8189,7 +8332,27 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_straight_predecessor(&self, permissions: SVCPermissions) -> Ptr<NBEdge> {
-        todo!("port NBEdge::getStraightPredecessor")
+        let mut cands: EdgeVector = NBEdge::filter_by_permissions(self.myFrom.get_incoming_edges(), permissions);
+        if cands.len() == 0 {
+            return Ptr::null();
+        }
+        let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), false);
+        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
+        cands.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        let best: Ptr<NBEdge> = cands[0];
+        if best.is_turning_direction_at(Ptr::new(self)) {
+            Ptr::null()
+        } else {
+            best
+        }
     }
 
     /// C++: `NBEdge * NBEdge::guessOpposite(bool)`
@@ -8226,7 +8389,37 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn guess_opposite(&mut self, reguess: bool) -> Ptr<NBEdge> {
-        todo!("port NBEdge::guessOpposite")
+        let mut opposite: Ptr<NBEdge> = Ptr::null();
+        if self.get_num_lanes() > 0 {
+            let lastLaneShape: PositionVector = self.myLanes.last().unwrap().shape.clone();
+            let lastLaneOppositeID: String = self.myLanes.last().unwrap().oppositeID.clone();
+            let lastWidth = self.get_lane_width_2(self.get_num_lanes() - 1);
+            if lastLaneOppositeID == "" || reguess {
+                let toNode: Ptr<NBNode> = self.myTo;
+                let fromNode: Ptr<NBNode> = self.myFrom;
+                for cand_ in toNode.get_outgoing_edges().iter() {
+                    let cand: Ptr<NBEdge> = *cand_;
+                    if cand.get_to_node() == fromNode && !cand.get_lanes().is_empty() {
+                        let candLastLane = cand.get_lanes().last().unwrap();
+                        if candLastLane.oppositeID == "" || candLastLane.oppositeID == self.get_lane_id(self.get_num_lanes() - 1) {
+                            let lastWidthCand = cand.get_lane_width_2(cand.get_num_lanes() - 1);
+                            // in sharp corners, the difference may be higher
+                            // factor (sqrt(2) for 90 degree corners
+                            let threshold = 1.42 * 0.5 * (lastWidth + lastWidthCand) + 0.5;
+                            let distance = lastLaneShape.distances(&candLastLane.shape, false).into_iter().fold(f64::NEG_INFINITY, f64::max);
+                            if distance < threshold {
+                                opposite = cand;
+                            }
+                        }
+                    }
+                }
+                if !opposite.is_null() {
+                    let oppositeLaneID = opposite.get_lane_id(opposite.get_num_lanes() - 1);
+                    self.myLanes.last_mut().unwrap().oppositeID = oppositeLaneID;
+                }
+            }
+        }
+        opposite
     }
 
     /// C++: `const std::string & NBEdge::getTurnSignTarget() const` [const]
@@ -8284,7 +8477,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn compute_lane_shape(&self, lane: i32, offset: f64) -> PositionVector {
-        todo!("port NBEdge::computeLaneShape")
+        let mut shape = self.myGeom.clone();
+        // shortcut: Rust move2side has no InvalidArgument path, so the C++ catch (WRITE_WARNINGF "Could not build shape") is not reproduced; upgrade if move2side gains a Result
+        shape.move2side(offset, 100.0);
+        shape
     }
 
     /// C++: `void NBEdge::computeLaneShapes()` [private]
@@ -8341,7 +8537,54 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn compute_lane_shapes(&mut self) {
-        todo!("port NBEdge::computeLaneShapes")
+        // vissim needs this
+        if self.myFrom == self.myTo {
+            return;
+        }
+        // compute lane offset, first
+        let nl: i32 = self.myLanes.len() as i32;
+        let mut offsets: Vec<f64> = vec![0.0; self.myLanes.len()];
+        let mut offset: f64 = 0.0;
+        let mut i: i32 = nl - 2;
+        while i >= 0 {
+            offset += (self.get_lane_width_2(i) + self.get_lane_width_2(i + 1)) / 2.0;
+            offsets[i as usize] = offset;
+            i -= 1;
+        }
+        if self.myLaneSpreadFunction == LaneSpreadFunction::CENTER {
+            let mut width: f64 = 0.0;
+            for i in 0..nl {
+                width += self.get_lane_width_2(i);
+            }
+            offset = -width / 2.0 + self.get_lane_width_2(nl - 1) / 2.0;
+        } else {
+            let laneWidth = if self.myLanes.last().unwrap().width != UNSPECIFIED_WIDTH { self.myLanes.last().unwrap().width } else { SUMO_const_laneWidth };
+            offset = laneWidth / 2.0;
+        }
+        if self.myLaneSpreadFunction == LaneSpreadFunction::ROADCENTER {
+            for e_ in self.myTo.get_outgoing_edges().iter() {
+                let e: Ptr<NBEdge> = *e_;
+                if e.get_to_node() == self.myFrom && self.get_inner_geometry().reverse() == e.get_inner_geometry() {
+                    offset += (e.get_total_width() - self.get_total_width()) / 2.0;
+                    break;
+                }
+            }
+        }
+
+        for i in 0..nl {
+            offsets[i as usize] += offset;
+        }
+
+        // build the shape of each lane
+        for i in 0..nl {
+            let iu = i as usize;
+            if self.myLanes[iu].customShape.len() != 0 {
+                self.myLanes[iu].shape = self.myLanes[iu].customShape.clone();
+                continue;
+            }
+            // shortcut: computeLaneShape cannot throw in this port, so the C++ catch (WRITE_WARNINGF "lane shape could not be determined") is not reproduced
+            self.myLanes[iu].shape = self.compute_lane_shape(i, offsets[iu]);
+        }
     }
 
     /// C++: `void NBEdge::init(int, bool, const std::string &)` [private]
@@ -8602,7 +8845,89 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn divide_on_edges(&mut self, outgoing: Ptr<EdgeVector>) {
-        todo!("port NBEdge::divideOnEdges")
+        if outgoing.len() == 0 {
+            // we have to do this, because the turnaround may have been added before
+            self.myConnections.clear();
+            return;
+        }
+
+        // build connections for miv lanes
+        let mut availableLanes: Vec<i32> = Vec::new();
+        for i in 0..self.myLanes.len() as i32 {
+            if (self.get_permissions(i) & SVC_PASSENGER) != 0 {
+                availableLanes.push(i);
+            }
+        }
+        if availableLanes.len() > 0 {
+            self.divide_selected_lanes_on_edges(outgoing, &availableLanes);
+        }
+        // build connections for miscellaneous further modes (more than bike,peds,bus and without passenger)
+        availableLanes.clear();
+        for i in 0..self.myLanes.len() as i32 {
+            let perms = self.get_permissions(i);
+            if (perms & !(SVC_PEDESTRIAN | SVC_BICYCLE | SVC_BUS)) == 0 || (perms & SVC_PASSENGER) != 0 || utils::common::sumo_vehicle_class::is_forbidden(perms) {
+                continue;
+            }
+            availableLanes.push(i);
+        }
+        if availableLanes.len() > 0 {
+            self.divide_selected_lanes_on_edges(outgoing, &availableLanes);
+        }
+        // build connections for busses from lanes that were excluded in the previous step
+        availableLanes.clear();
+        for i in 0..self.myLanes.len() as i32 {
+            let perms = self.get_permissions(i);
+            if (perms & SVC_BUS) == 0 || (perms & !(SVC_PEDESTRIAN | SVC_BICYCLE | SVC_BUS)) != 0 || (perms & SVC_PASSENGER) != 0 {
+                continue;
+            }
+            availableLanes.push(i);
+        }
+        if availableLanes.len() > 0 {
+            self.divide_selected_lanes_on_edges(outgoing, &availableLanes);
+        }
+        // build connections for bicycles (possibly combined with pedestrians)
+        availableLanes.clear();
+        for i in 0..self.myLanes.len() as i32 {
+            let perms = self.get_permissions(i);
+            if perms != SVC_BICYCLE && perms != (SVC_BICYCLE | SVC_PEDESTRIAN) {
+                continue;
+            }
+            availableLanes.push(i);
+        }
+        if availableLanes.len() > 0 {
+            self.divide_selected_lanes_on_edges(outgoing, &availableLanes);
+        }
+        // clean up unassigned fromLanes
+        let mut explicitTurnaround = false;
+        let mut turnaroundPermissions: SVCPermissions = SVC_UNSPECIFIED;
+        let mut i: usize = 0;
+        while i < self.myConnections.len() {
+            if self.myConnections[i].fromLane == -1 {
+                let toEdge = self.myConnections[i].toEdge;
+                let perms = self.myConnections[i].permissions;
+                if toEdge == self.myTurnDestination && !self.myTurnDestination.is_null() {
+                    explicitTurnaround = true;
+                    turnaroundPermissions = perms;
+                }
+                if perms != SVC_UNSPECIFIED {
+                    for c in self.myConnections.iter_mut() {
+                        if c.toLane == -1 && c.toEdge == toEdge {
+                            // carry over loaded edge2edge permissions
+                            c.permissions = perms;
+                        }
+                    }
+                }
+                self.myConnections.remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        if explicitTurnaround {
+            let mut con = NBEdge_Connection::new(self.myLanes.len() as i32 - 1, self.myTurnDestination, self.myTurnDestination.get_num_lanes() - 1, false);
+            con.permissions = turnaroundPermissions;
+            self.myConnections.push(con);
+        }
+        self.sort_outgoing_connections_by_index();
     }
 
     /// C++: `void NBEdge::divideSelectedLanesOnEdges(const EdgeVector *, const std::vector<int> &)` [private]
@@ -8712,7 +9037,81 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn divide_selected_lanes_on_edges(&mut self, outgoing: Ptr<EdgeVector>, availableLanes: &Vec<i32>) {
-        todo!("port NBEdge::divideSelectedLanesOnEdges")
+        let priorities: Vec<i32> = self.prepare_edge_priorities(outgoing, availableLanes);
+        if priorities.is_empty() {
+            return;
+        }
+        // compute the resulting number of lanes that should be used to reach the following edge
+        let numOutgoing = outgoing.len() as i32;
+        let mut resultingLanesFactor: Vec<i32> = Vec::with_capacity(numOutgoing as usize);
+        let mut minResulting = i32::MAX;
+        for i in 0..numOutgoing {
+            // res / minResulting will be the number of lanes which are meant to reach the current outgoing edge
+            let res = priorities[i as usize] * availableLanes.len() as i32;
+            resultingLanesFactor.push(res);
+            if minResulting > res && res > 0 {
+                // prevent minResulting from becoming 0
+                minResulting = res;
+            }
+        }
+        // compute the number of virtual edges
+        //  a virtual edge is used as a replacement for a real edge from now on
+        //  it shall allow to divide the existing lanes on this structure without
+        //  regarding the structure of outgoing edges
+        let mut numVirtual: i32 = 0;
+        // compute the transition from virtual to real edges
+        let mut transition: EdgeVector = Vec::with_capacity(numOutgoing as usize);
+        for i in 0..numOutgoing {
+            // tmpNum will be the number of connections from this edge to the next edge
+            let tmpNum = (resultingLanesFactor[i as usize] + minResulting - 1) / minResulting; // integer division rounding up
+            numVirtual += tmpNum;
+            for _j in 0..tmpNum {
+                transition.push(outgoing[i as usize]);
+            }
+        }
+
+        // assign lanes to edges
+        //  (conversion from virtual to real edges is done)
+        let mut adder = NBEdge_ToEdgeConnectionsAdder::new(&transition);
+        bresenham_compute(availableLanes.len() as i32, numVirtual, |a, b| adder.execute(a, b));
+        let l2eConns = adder.get_built_connections();
+        for target_ in outgoing.iter() {
+            let target: Ptr<NBEdge> = *target_;
+            assert!(l2eConns.contains_key(&target));
+            for &j in l2eConns.get(&target).unwrap().iter() {
+                let fromIndex = availableLanes[j as usize];
+                if (self.get_permissions(fromIndex) & target.get_permissions(-1)) == 0 {
+                    // exclude connection if fromLane and toEdge have no common permissions
+                    continue;
+                }
+                if (self.get_permissions(fromIndex) & target.get_permissions(-1)) == SVC_PEDESTRIAN {
+                    // exclude connection if the only commonly permitted class are pedestrians
+                    // these connections are later built in NBNode::buildWalkingAreas
+                    continue;
+                }
+                // avoid building more connections than the edge has viable lanes (earlier
+                // ones have precedence). This is necessary when running divideSelectedLanesOnEdges more than once.
+                //    @todo To decide which target lanes are still available we need to do a
+                // preliminary lane-to-lane assignment in regard to permissions (rather than to ordering)
+                let finder = NBEdge_connections_toedge_finder::new(target, true);
+                let numConsToTarget = self.myConnections.iter().filter(|c| finder.call_op(c)).count() as i32;
+                let mut targetLanes = target.get_num_lanes();
+                if target.get_permissions(0) == SVC_PEDESTRIAN {
+                    targetLanes -= 1;
+                }
+                if numConsToTarget >= targetLanes {
+                    continue;
+                }
+                if self.myLanes[fromIndex as usize].connectionsDone {
+                    // we already have complete information about connections from
+                    // this lane. do not add anything else
+                    continue;
+                }
+                self.myConnections.push(NBEdge_Connection::new(fromIndex, target, -1, false));
+            }
+        }
+
+        self.add_straight_connections(outgoing, availableLanes, &priorities);
     }
 
     /// C++: `void NBEdge::addStraightConnections(const EdgeVector *, const std::vector<int> &, const std::vector<int> &)` [private]
@@ -8799,7 +9198,64 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_straight_connections(&mut self, outgoing: Ptr<EdgeVector>, availableLanes: &Vec<i32>, priorities: &Vec<i32>) {
-        todo!("port NBEdge::addStraightConnections")
+        let this: Ptr<NBEdge> = Ptr::from_mut(self);
+        // ensure sufficient straight connections for the (highest-priority) straight target
+        let numOutgoing = outgoing.len() as i32;
+        let mut target: Ptr<NBEdge> = Ptr::null();
+        let mut rightOfTarget: Ptr<NBEdge> = Ptr::null();
+        let mut leftOfTarget: Ptr<NBEdge> = Ptr::null();
+        let mut maxPrio: i32 = 0;
+        for i in 0..numOutgoing {
+            if maxPrio < priorities[i as usize] {
+                let dir = self.myTo.get_direction(this, outgoing[i as usize], false);
+                if dir == LinkDirection::STRAIGHT {
+                    maxPrio = priorities[i as usize];
+                    target = outgoing[i as usize];
+                    rightOfTarget = if i == 0 { outgoing[(numOutgoing - 1) as usize] } else { outgoing[(i - 1) as usize] };
+                    leftOfTarget = if i + 1 == numOutgoing { outgoing[0] } else { outgoing[(i + 1) as usize] };
+                }
+            }
+        }
+        if target.is_null() {
+            return;
+        }
+        let toEdgeFinder = NBEdge_connections_toedge_finder::new(target, true);
+        let mut numConsToTarget = self.myConnections.iter().filter(|c| toEdgeFinder.call_op(c)).count() as i32;
+        let mut targetLanes = target.get_num_lanes();
+        if target.get_permissions(0) == SVC_PEDESTRIAN {
+            targetLanes -= 1;
+        }
+        let numDesiredConsToTarget = std::cmp::min(targetLanes, availableLanes.len() as i32);
+        let mut it: usize = 0;
+        while numConsToTarget < numDesiredConsToTarget && it < availableLanes.len() {
+            let fromIndex = availableLanes[it];
+            let existingFinder = NBEdge_connections_finder::new(fromIndex, target, -1, false);
+            let notYetConnected = self.myConnections.iter().filter(|c| existingFinder.call_op(c)).count() == 0;
+            if
+            // not yet connected
+            notYetConnected
+                // matching permissions
+                && ((self.get_permissions(fromIndex) & target.get_permissions(-1)) != 0)
+                // more than pedestrians
+                && ((self.get_permissions(fromIndex) & target.get_permissions(-1)) != SVC_PEDESTRIAN)
+                // lane not yet fully defined
+                && !self.myLanes[fromIndex as usize].connectionsDone
+            {
+                // prevent same-edge conflicts
+                let rightFinder = NBEdge_connections_conflict_finder::new(fromIndex, rightOfTarget, false);
+                let leftFinder = NBEdge_connections_conflict_finder::new(fromIndex, leftOfTarget, true);
+                if
+                // no outgoing connections to the right from further left
+                (it + 1 == availableLanes.len() || self.myConnections.iter().filter(|c| rightFinder.call_op(c)).count() == 0)
+                    // no outgoing connections to the left from further right
+                    && (it == 0 || self.myConnections.iter().filter(|c| leftFinder.call_op(c)).count() == 0)
+                {
+                    self.myConnections.push(NBEdge_Connection::new(fromIndex, target, -1, false));
+                    numConsToTarget += 1;
+                }
+            }
+            it += 1;
+        }
     }
 
     /// C++: `const std::vector<int> NBEdge::prepareEdgePriorities(const EdgeVector *, const std::vector<int> &)` [private]
@@ -8897,7 +9353,57 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn prepare_edge_priorities(&mut self, outgoing: Ptr<EdgeVector>, availableLanes: &Vec<i32>) -> Vec<i32> {
-        todo!("port NBEdge::prepareEdgePriorities")
+        let mut priorities: Vec<i32> = Vec::new();
+        let mainDirections = NBEdge_MainDirections::new(&*outgoing, Ptr::from_mut(self), self.myTo, availableLanes);
+        let dist = mainDirections.get_straightest();
+        if dist == -1 {
+            return priorities;
+        }
+        // copy the priorities first
+        priorities.reserve(outgoing.len());
+        for out_ in outgoing.iter() {
+            let out: Ptr<NBEdge> = *out_;
+            let mut prio = if NBNode::is_traffic_light(self.myTo.get_type()) { 0 } else { out.get_junction_priority(self.myTo) };
+            assert!((prio + 1) * 2 > 0);
+            prio = (prio + 1) * 2;
+            priorities.push(prio);
+        }
+        // when the right turning direction has not a higher priority, divide
+        //  the importance by 2 due to the possibility to leave the junction
+        //  faster from this lane
+        if dist != 0 && !mainDirections.includes(MainDirections_Direction::RIGHTMOST) {
+            assert!(priorities.len() > 0);
+            priorities[0] /= 2;
+        }
+        // HEURISTIC:
+        // when no higher priority exists, let the forward direction be
+        //  the main direction
+        if mainDirections.empty() {
+            assert!((dist as usize) < priorities.len());
+            priorities[dist as usize] *= 2;
+        }
+        if NBNode::is_traffic_light(self.myTo.get_type()) {
+            priorities[dist as usize] += 1;
+        } else {
+            // try to ensure separation of left turns
+            if mainDirections.includes(MainDirections_Direction::RIGHTMOST) && mainDirections.includes(MainDirections_Direction::LEFTMOST) {
+                priorities[0] /= 4;
+                let last = priorities.len() - 1;
+                priorities[last] /= 2;
+            } else if mainDirections.includes(MainDirections_Direction::RIGHTMOST) && outgoing.len() > 2 && availableLanes.len() == 2 && outgoing[dist as usize].get_priority() == outgoing[0].get_priority() {
+                priorities[0] /= 4;
+                let last = priorities.len() - 1;
+                priorities[last] /= 2;
+            }
+        }
+        if mainDirections.includes(MainDirections_Direction::FORWARD) {
+            if self.myLanes.len() > 2 {
+                priorities[dist as usize] *= 2;
+            } else {
+                priorities[dist as usize] *= 3;
+            }
+        }
+        priorities
     }
 
     /// C++: `void NBEdge::moveConnectionToLeft(int)` [private]
@@ -8920,7 +9426,14 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn move_connection_to_left(&mut self, lane: i32) {
-        todo!("port NBEdge::moveConnectionToLeft")
+        let mut index: usize = 0;
+        for i in 0..self.myConnections.len() {
+            if self.myConnections[i].fromLane == lane && self.can_move_connection(&self.myConnections[i], lane + 1) {
+                index = i;
+            }
+        }
+        let c: NBEdge_Connection = self.myConnections.remove(index);
+        self.set_connection(lane + 1, c.toEdge, c.toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, my_default_connection_length(), &PositionVector::default(), UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
     }
 
     /// C++: `void NBEdge::moveConnectionToRight(int)` [private]
@@ -8941,7 +9454,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn move_connection_to_right(&mut self, lane: i32) {
-        todo!("port NBEdge::moveConnectionToRight")
+        for i in 0..self.myConnections.len() {
+            if self.myConnections[i].fromLane == lane && self.can_move_connection(&self.myConnections[i], lane - 1) {
+                let c: NBEdge_Connection = self.myConnections.remove(i);
+                self.set_connection(lane - 1, c.toEdge, c.toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, my_default_connection_length(), &PositionVector::default(), UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+                return;
+            }
+        }
     }
 
     /// C++: `bool NBEdge::canMoveConnection(const Connection &, int) const` [const, private]
@@ -8955,7 +9474,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn can_move_connection(&self, con: &NBEdge_Connection, newFromLane: i32) -> bool {
-        todo!("port NBEdge::canMoveConnection")
+        // only allow using newFromLane if at least 1 vClass is permitted to use
+        // this connection. If the connection shall be moved to a sidewalk, only create the connection if there is no walking area
+        let common: SVCPermissions = self.get_permissions(newFromLane) & con.toEdge.get_permissions(con.toLane);
+        common > 0 && common != SVC_PEDESTRIAN
     }
 
     /// C++: `void NBEdge::computeAngle()` [private]
@@ -9058,7 +9580,66 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn compute_angle(&mut self) {
-        todo!("port NBEdge::computeAngle")
+        // taking the angle at the first might be unstable, thus we take the angle
+        // at a certain distance. (To compare two edges, additional geometry
+        // segments are considered to resolve ambiguities)
+        let hasFromShape = self.myFrom.get_shape().len() > 0;
+        let hasToShape = self.myTo.get_shape().len() > 0;
+        let fromCenter: Position = if hasFromShape { self.myFrom.get_shape().get_centroid() } else { self.myFrom.get_position().clone() };
+        let toCenter: Position = if hasToShape { self.myTo.get_shape().get_centroid() } else { self.myTo.get_position().clone() };
+        let mut shape: PositionVector = self.myGeom.clone();
+        if (hasFromShape || hasToShape) && self.get_num_lanes() > 0 {
+            if self.myLaneSpreadFunction == LaneSpreadFunction::RIGHT {
+                shape = self.myLanes[(self.get_num_lanes() - 1) as usize].shape.clone();
+            } else {
+                shape = self.myLanes[(self.get_num_lanes() / 2) as usize].shape.clone();
+                if self.get_num_lanes() % 2 == 0 {
+                    // there is no center lane. shift to get the center
+                    shape.move2side(self.get_lane_width_2(self.get_num_lanes() / 2) * 0.5, 100.0);
+                }
+            }
+        }
+
+        // if the junction shape is suspicious we cannot trust the angle to the centroid
+        let suspiciousFromShape = hasFromShape && (self.myFrom.get_shape().distance2d(&shape[0], false) > 2.0 * POSITION_EPS || self.myFrom.get_shape().around(shape.back(), 0.0) || !(self.myFrom.get_shape().around(&fromCenter, 0.0)));
+        let suspiciousToShape = hasToShape && (self.myTo.get_shape().distance2d(shape.back(), false) > 2.0 * POSITION_EPS || self.myTo.get_shape().around(&shape[0], 0.0) || !(self.myTo.get_shape().around(&toCenter, 0.0)));
+
+        let angleLookahead = f64::min(shape.length2d() / 2.0, ANGLE_LOOKAHEAD);
+        let referencePosStart = shape.position_at_offset2d(angleLookahead, 0.0, false);
+        let referencePosEnd = shape.position_at_offset2d(shape.length2d() - angleLookahead, 0.0, false);
+
+        self.myStartAngle = utils::geom::geom_helper::legacy_degree(fromCenter.angle_to2d(&referencePosStart), true);
+        let myStartAngle2 = utils::geom::geom_helper::legacy_degree(self.myFrom.get_position().angle_to2d(&referencePosStart), true);
+        let myStartAngle3 = self.get_angle_at_node(self.myFrom);
+        self.myEndAngle = utils::geom::geom_helper::legacy_degree(referencePosEnd.angle_to2d(&toCenter), true);
+        let myEndAngle2 = utils::geom::geom_helper::legacy_degree(referencePosEnd.angle_to2d(self.myTo.get_position()), true);
+        let myEndAngle3 = self.get_angle_at_node(self.myTo);
+
+        if suspiciousFromShape && shape.length() > 1.0 {
+            self.myStartAngle = myStartAngle2;
+        } else if suspiciousToShape && f64::abs(NBHelpers::norm_rel_angle(self.myStartAngle, myStartAngle3)) > 90.0
+            // don't trust footpath angles
+            && (self.get_permissions(-1) & !SVC_PEDESTRIAN) != 0
+        {
+            self.myStartAngle = myStartAngle3;
+            if self.myStartAngle < 0.0 {
+                self.myStartAngle += 360.0;
+            }
+        }
+
+        if suspiciousToShape && shape.length() > 1.0 {
+            self.myEndAngle = myEndAngle2;
+        } else if suspiciousToShape && f64::abs(NBHelpers::norm_rel_angle(self.myEndAngle, myEndAngle3)) > 90.0
+            // don't trust footpath angles
+            && (self.get_permissions(-1) & !SVC_PEDESTRIAN) != 0
+        {
+            self.myEndAngle = myEndAngle3;
+            if self.myEndAngle < 0.0 {
+                self.myEndAngle += 360.0;
+            }
+        }
+
+        self.myTotalAngle = utils::geom::geom_helper::legacy_degree(self.myFrom.get_position().angle_to2d(self.myTo.get_position()), true);
     }
 
     /// C++: `bool NBEdge::bothLeftTurns(LinkDirection, const NBEdge *, LinkDirection) const` [const, private]
@@ -9073,7 +9654,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn both_left_turns(&self, dir: LinkDirection, otherFrom: Ptr<NBEdge>, dir2: LinkDirection) -> bool {
-        todo!("port NBEdge::bothLeftTurns")
+        if otherFrom == Ptr::new(self) {
+            // not an opposite pair
+            return false;
+        }
+        (dir == LinkDirection::LEFT || dir == LinkDirection::PARTLEFT) && (dir2 == LinkDirection::LEFT || dir2 == LinkDirection::PARTLEFT)
     }
 
     /// C++: `bool NBEdge::haveIntersection(const NBNode &, const PositionVector &, const NBEdge *, const NBEdge::Connection &, int, double, double, int) const` [const, private]
@@ -9086,7 +9671,9 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn have_intersection(&self, n: &NBNode, shape: &PositionVector, otherFrom: Ptr<NBEdge>, otherCon: &NBEdge_Connection, numPoints: i32, width1: f64, width2: f64, shapeFlag: i32) -> bool {
-        todo!("port NBEdge::haveIntersection")
+        let otherShape = n.compute_internal_lane_shape(otherFrom, otherCon, numPoints, Ptr::null(), shapeFlag);
+        let minDV = NBEdge::first_intersection(shape, &otherShape, width1, width2, "", false);
+        minDV < shape.length() - POSITION_EPS && minDV > POSITION_EPS
     }
 
     /// C++: `bool NBEdge::hasRestrictedLane(SUMOVehicleClass) const` [const, private]
@@ -9102,7 +9689,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_restricted_lane(&self, vclass: SUMOVehicleClass) -> bool {
-        todo!("port NBEdge::hasRestrictedLane")
+        for lane in self.myLanes.iter() {
+            if lane.permissions == vclass {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void NBEdge::restoreRestrictedLane(SUMOVehicleClass, std::vector<NBEdge::Lane>, PositionVector, std::vector<NBEdge::Connection>)` [private]
@@ -9130,7 +9722,25 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn restore_restricted_lane(&mut self, vclass: SUMOVehicleClass, oldLanes: Vec<NBEdge_Lane>, oldGeometry: PositionVector, oldConnections: Vec<NBEdge_Connection>) {
-        todo!("port NBEdge::restoreRestrictedLane")
+        // check that previously lane was transformed
+        if self.myLanes[0].permissions != vclass {
+            write_warning(&format!("Edge '{}' doesn't have a dedicated lane for {}. Cannot be restored.", self.get_id(), utils::common::sumo_vehicle_class::get_vehicle_class_names(vclass, false)));
+            return;
+        }
+        // restore old values
+        self.myGeom = oldGeometry;
+        self.myLanes = oldLanes;
+        self.myConnections = oldConnections;
+        // shift incoming connections to the right
+        let incoming: EdgeVector = self.myFrom.get_incoming_edges().clone();
+        let this: Ptr<NBEdge> = Ptr::from_mut(self);
+        for e in incoming.iter() {
+            e.m().shift_to_lanes_to_edge(this, 0);
+        }
+        // Shift TL conections
+        self.myFrom.m().shift_tl_connection_lane_index(this, 0, -1);
+        self.myTo.m().shift_tl_connection_lane_index(this, 0, -1);
+        self.compute_lane_shapes();
     }
 
     /// C++: `double NBEdge::assignInternalLaneLength(std::vector<Connection>::iterator, int, double, bool)` [private]
