@@ -2,6 +2,16 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+const NBCONNECTION_INVALID_TL_INDEX: i32 = -1;
+
+/// C++ `delete myTLLogic`: frees a logic that was allocated with `Box::into_raw`.
+fn delete_tl_logic(logic: Ptr<NBTrafficLightLogic>) {
+    if !logic.is_null() {
+        // SAFETY: every logic owned by a definition is created with Box::into_raw (see `new`)
+        drop(unsafe { Box::from_raw(logic.as_raw()) });
+    }
+}
+
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedSUMOTLDef` (netbuild/NBLoadedSUMOTLDef.h)
 pub struct NBLoadedSUMOTLDef {
@@ -43,7 +53,15 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBLoadedSUMOTLDef::NBLoadedSUMOTLDef")
+        let myTLLogic = Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new(id, programID, 0, offset, type_))));
+        NBLoadedSUMOTLDef {
+            base: NBTrafficLightDefinition::new_3(id, programID, offset, type_),
+            myTLLogic,
+            myShifted: BTreeSet::new(),
+            myReconstructAddedConnections: false,
+            myReconstructRemovedConnections: false,
+            myPhasesLoaded: false,
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::NBLoadedSUMOTLDef(const NBTrafficLightDefinition &, const NBTrafficLightLogic &)`
@@ -67,7 +85,20 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(def: &NBTrafficLightDefinition, logic: &NBTrafficLightLogic) -> Self {
-        todo!("port NBLoadedSUMOTLDef::NBLoadedSUMOTLDef")
+        assert!(def.get_type() == logic.get_type());
+        let mut ret = NBLoadedSUMOTLDef {
+            base: NBTrafficLightDefinition::new_3(def.get_id(), logic.get_program_id(), logic.get_offset(), def.get_type()),
+            myTLLogic: Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new_2(Ptr::new(logic))))),
+            myShifted: BTreeSet::new(),
+            myReconstructAddedConnections: false,
+            myReconstructRemovedConnections: false,
+            myPhasesLoaded: false,
+        };
+        ret.base.myControlledLinks = def.get_controlled_links().iter().map(NBConnection::new_4).collect();
+        ret.base.myControlledNodes = def.get_nodes().clone();
+        ret.base.base2.update_parameters(def.base2.get_parameters_map());
+        // shortcut: C++ dynamic_cast<const NBLoadedSUMOTLDef*>(&def) has no runtime type check in this port, so the reconstruct flags of a source NBLoadedSUMOTLDef are not copied, upgrade: add a kind tag to NBTrafficLightDefinition
+        ret
     }
 
     /// C++: `void NBLoadedSUMOTLDef::~NBLoadedSUMOTLDef() noexcept` [virtual]
@@ -77,7 +108,9 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::~NBLoadedSUMOTLDef")
+        delete_tl_logic(self.myTLLogic);
+        self.myTLLogic = Ptr::null();
+        self.base.drop_();
     }
 
     /// C++: `void NBLoadedSUMOTLDef::setID(const std::string &)` [virtual]
@@ -88,7 +121,8 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_id(&mut self, newID: &str) {
-        todo!("port NBLoadedSUMOTLDef::setID")
+        self.base.base.set_id(newID);
+        self.myTLLogic.m().set_id(newID);
     }
 
     /// C++: `void NBLoadedSUMOTLDef::setProgramID(const std::string &)` [virtual]
@@ -100,7 +134,8 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
-        todo!("port NBLoadedSUMOTLDef::setProgramID")
+        self.base.set_program_id(programID);
+        self.myTLLogic.m().set_program_id(programID);
     }
 
     /// C++: `void NBLoadedSUMOTLDef::setTLControllingInformation() const` [const, virtual]
@@ -139,7 +174,39 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        todo!("port NBLoadedSUMOTLDef::setTLControllingInformation")
+        if self.myReconstructAddedConnections {
+            let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.base.myControlledNodes, 0, self.base.get_type());
+            dummy.set_participants_information();
+            dummy.set_tl_controlling_information();
+            for n in self.base.myControlledNodes.iter() {
+                n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+            }
+        }
+        if self.myReconstructRemovedConnections {
+            return; // will be called again in reconstructLogic()
+        }
+        // if nodes have been removed our links may have been invalidated as well
+        // since no logic will be built anyway there is no reason to inform any edges
+        if self.am_invalid() {
+            return;
+        }
+        // set the information about the link's positions within the tl into the
+        //  edges the links are starting at, respectively
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() >= self.myTLLogic.m().get_num_links() {
+                std::panic::panic_any(ProcessError::new(format!(
+                    "Invalid linkIndex {} for traffic light '{}' with {} links.",
+                    c.get_tl_index(),
+                    self.get_id(),
+                    self.myTLLogic.m().get_num_links()
+                )));
+            }
+            let edge = c.get_from();
+            if !edge.is_null() && edge.get_num_lanes() > c.get_from_lane() {
+                // logic may have yet to be reconstructed
+                edge.m().set_controlling_tl_information(c, self.get_id());
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)` [virtual]
@@ -148,7 +215,7 @@ impl NBLoadedSUMOTLDef {
     // NBLoadedSUMOTLDef::remapRemoved(NBEdge*, const EdgeVector&, const EdgeVector&) {}
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBLoadedSUMOTLDef::remapRemoved")
+        // C++ body is empty
     }
 
     /// C++: `void NBLoadedSUMOTLDef::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual]
@@ -168,7 +235,16 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBLoadedSUMOTLDef::replaceRemoved")
+        if by.is_null() {
+            self.myReconstructRemovedConnections = true;
+        }
+        for it in self.base.myControlledLinks.iter_mut() {
+            if incoming {
+                it.replace_from_2(removed, removedLane, by, byLane);
+            } else {
+                it.replace_to_2(removed, removedLane, by, byLane);
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::shiftTLConnectionLaneIndex(NBEdge *, int, int)` [virtual]
