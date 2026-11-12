@@ -4701,7 +4701,9 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn clear_controlling_tl_information(&mut self) {
-        todo!("port NBEdge::clearControllingTLInformation")
+        for it in self.myConnections.iter_mut() {
+            it.tlID = String::new();
+        }
     }
 
     /// C++: `PositionVector NBEdge::getCWBoundaryLine(const NBNode &) const` [const]
@@ -4960,7 +4962,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_signalised_connection_to(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBEdge::hasSignalisedConnectionTo")
+        for i in self.myConnections.iter() {
+            if i.toEdge == e && i.tlID != "" {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void NBEdge::moveOutgoingConnectionsFrom(NBEdge *, int)`
