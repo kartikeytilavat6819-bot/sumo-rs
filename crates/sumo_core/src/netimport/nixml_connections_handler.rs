@@ -604,7 +604,10 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_lane_definition(&mut self, attributes: &SUMOSAXAttributes, fromLane: Ptr<i32>, toLane: Ptr<i32>) -> bool {
-        todo!("port NIXMLConnectionsHandler::parseLaneDefinition")
+        let mut ok = true;
+        fromLane.m().clone_from(&attributes.get::<i32>(SUMO_ATTR_FROM_LANE, "", &mut ok, true));
+        toLane.m().clone_from(&attributes.get::<i32>(SUMO_ATTR_TO_LANE, "", &mut ok, true));
+        ok
     }
 
     /// C++: `void NIXMLConnectionsHandler::delConnection(const SUMOSAXAttributes &)` [private]
@@ -653,7 +656,52 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn del_connection(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::delConnection")
+        let mut ok = true;
+        let from = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+        let to = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        // these connections were removed when the edge was deleted
+        if self.myEdgeCont.m().was_removed(from.clone()) || self.myEdgeCont.m().was_removed(to.clone()) {
+            return;
+        }
+        // extract edges
+        let fromEdge = self.myEdgeCont.m().retrieve(&from, false);
+        let toEdge = self.myEdgeCont.m().retrieve(&to, false);
+        if fromEdge.is_null() {
+            self.myErrorMsgHandler.m().inform(&format!("The connection-source edge '{from}' to reset is not known."), true);
+            return;
+        }
+        if toEdge.is_null() {
+            self.myErrorMsgHandler.m().inform(&format!("The connection-destination edge '{to}' to reset is not known."), true);
+            return;
+        }
+        if !fromEdge.is_connected_to(toEdge, false) && fromEdge.get_step() >= NBEdge_EdgeBuildingStep::EDGE2EDGES {
+            write_warning(&tlf!(
+                "Target edge '%' is not connected with '%'; the connection cannot be reset.",
+                toEdge.get_id(),
+                fromEdge.get_id()
+            ));
+            return;
+        }
+        let mut fromLane: i32 = -1; // Assume all lanes are to be reset.
+        let mut toLane: i32 = -1;
+        if attrs.has_attribute(SUMO_ATTR_LANE) || attrs.has_attribute(SUMO_ATTR_FROM_LANE) || attrs.has_attribute(SUMO_ATTR_TO_LANE) {
+            if !self.parse_lane_info(attrs, fromEdge, toEdge, Ptr::from_mut(&mut fromLane), Ptr::from_mut(&mut toLane)) {
+                return;
+            }
+            // we could be trying to reset a connection loaded from a sumo net and which has become obsolete.
+            // In this case it's ok to encounter invalid lance indices
+            if !fromEdge.has_connection_to(toEdge, toLane, -1) && fromEdge.get_step() >= NBEdge_EdgeBuildingStep::LANES2EDGES {
+                write_warning(&tlf!(
+                    "Edge '%' has no connection to lane '%'; the connection cannot be reset.",
+                    fromEdge.get_id(),
+                    toEdge.get_lane_id(toLane)
+                ));
+            }
+        }
+        fromEdge.m().remove_from_connections(toEdge, fromLane, toLane, true, false, false);
     }
 
     /// C++: `void NIXMLConnectionsHandler::parseConnection(const SUMOSAXAttributes &)` [private]
@@ -705,7 +753,53 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_connection(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::parseConnection")
+        let mut ok = true;
+        let from = attrs.get::<String>(SUMO_ATTR_FROM, "connection", &mut ok, true);
+        let to = attrs.get_opt::<String>(SUMO_ATTR_TO, "connection", &mut ok, String::new(), true);
+        if !ok || self.myEdgeCont.m().was_ignored(from.clone()) || self.myEdgeCont.m().was_ignored(to.clone()) {
+            return;
+        }
+        // extract edges
+        let fromEdge = self.myEdgeCont.m().retrieve(&from, false);
+        let toEdge = if to.len() != 0 { self.myEdgeCont.m().retrieve(&to, false) } else { Ptr::null() };
+        // check whether they are valid
+        if fromEdge.is_null() {
+            self.myErrorMsgHandler.m().inform(&format!("The connection-source edge '{from}' is not known."), true);
+            return;
+        }
+        if toEdge.is_null() && to.len() != 0 {
+            self.myErrorMsgHandler.m().inform(&format!("The connection-destination edge '{to}' is not known."), true);
+            return;
+        }
+        // parse optional lane information
+        if attrs.has_attribute(SUMO_ATTR_LANE) || attrs.has_attribute(SUMO_ATTR_FROM_LANE) || attrs.has_attribute(SUMO_ATTR_TO_LANE) {
+            self.parse_lane_bound(attrs, fromEdge, toEdge);
+        } else {
+            fromEdge.m().add_edge2_edge_connection(toEdge, false, SVC_UNSPECIFIED);
+            fromEdge.get_to_node().m().invalidate_tls(self.myTLLogicCont.m(), true, false);
+            let reset = attrs.get_opt::<bool>(SUMO_ATTR_RESET, "connection", &mut ok, false, true);
+            if reset {
+                fromEdge.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::INIT);
+            }
+            if attrs.has_attribute(SUMO_ATTR_PASS)
+                || attrs.has_attribute(SUMO_ATTR_KEEP_CLEAR)
+                || attrs.has_attribute(SUMO_ATTR_CONTPOS)
+                || attrs.has_attribute(SUMO_ATTR_VISIBILITY_DISTANCE)
+                || attrs.has_attribute(SUMO_ATTR_SPEED)
+                || attrs.has_attribute(SUMO_ATTR_LENGTH)
+                || attrs.has_attribute(SUMO_ATTR_UNCONTROLLED)
+                || attrs.has_attribute(SUMO_ATTR_SHAPE)
+                || attrs.has_attribute(SUMO_ATTR_ALLOW)
+                || attrs.has_attribute(SUMO_ATTR_DISALLOW)
+            {
+                write_error(&format!(
+                    "No additional connection attributes are permitted in connection from edge '{}' unless '{}' and '{}' are set.",
+                    fromEdge.get_id(),
+                    attr_name(SUMO_ATTR_FROM_LANE),
+                    attr_name(SUMO_ATTR_TO_LANE)
+                ));
+            }
+        }
     }
 
     /// C++: `void NIXMLConnectionsHandler::addCrossing(const SUMOSAXAttributes &)` [private]
@@ -803,7 +897,90 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_crossing(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::addCrossing")
+        let mut ok = true;
+        let mut edges: EdgeVector = Vec::new();
+        let nodeID = attrs.get::<String>(SUMO_ATTR_NODE, "", &mut ok, true);
+        let mut width = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, &nodeID, &mut ok, UNSPECIFIED_WIDTH, true);
+        let discard = attrs.get_opt::<bool>(SUMO_ATTR_DISCARD, &nodeID, &mut ok, false, true);
+        let mut tlIndex = attrs.get_opt::<i32>(SUMO_ATTR_TLLINKINDEX, "", &mut ok, -1, true);
+        let mut tlIndex2 = attrs.get_opt::<i32>(SUMO_ATTR_TLLINKINDEX2, "", &mut ok, -1, true);
+        let node = self.myNodeCont.m().retrieve(&nodeID);
+        if node.is_null() {
+            if !discard && self.myNodeCont.m().was_removed(nodeID.clone()) {
+                write_error(&tlf!("Node '%' in crossing is not known.", nodeID));
+            }
+            return;
+        }
+        if !attrs.has_attribute(SUMO_ATTR_EDGES) {
+            if discard {
+                node.m().discard_all_crossings(true);
+                return;
+            } else {
+                write_error(&tlf!("No edges specified for crossing at node '%'.", nodeID));
+                return;
+            }
+        }
+        for id in attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, &nodeID, &mut ok, true) {
+            let mut edge = self.myEdgeCont.m().retrieve(&id, false);
+            if edge.is_null() {
+                if !(discard && self.myEdgeCont.m().was_removed(id.clone())) {
+                    write_error(&tlf!("Edge '%' for crossing at node '%' is not known.", id, nodeID));
+                    return;
+                } else {
+                    edge = self.myEdgeCont.m().retrieve(&id, true);
+                }
+            } else if edge.get_to_node() != node && edge.get_from_node() != node && !discard {
+                write_error(&tlf!("Edge '%' does not touch node '%'.", id, nodeID));
+                return;
+            }
+            edges.push(edge);
+        }
+        if !ok {
+            return;
+        }
+        let mut priority = attrs.get_opt::<bool>(SUMO_ATTR_PRIORITY, &nodeID, &mut ok, node.is_tl_controlled(), true);
+        if node.is_tl_controlled() && !priority {
+            // traffic_light nodes should always have priority crossings
+            write_warning(&tlf!("Crossing at controlled node '%' must be prioritized", nodeID));
+            priority = true;
+        }
+        let mut customShape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, PositionVector::EMPTY, true);
+        if !NBNetBuilder::transform_coordinates(&mut customShape, true, self.myLocation) {
+            write_error(&tlf!("Unable to project shape for crossing at node '%'.", node.get_id()));
+        }
+        if discard {
+            node.m().remove_crossing(&edges);
+        } else {
+            if node.m().check_crossing_duplicated(edges.clone()) {
+                // possibly a diff
+                let existing = get_crossing_by_edges(node, &edges);
+                if !((attrs.has_attribute(SUMO_ATTR_WIDTH) && width != existing.width)
+                    || (attrs.has_attribute(SUMO_ATTR_TLLINKINDEX) && tlIndex != existing.customTLIndex)
+                    || (attrs.has_attribute(SUMO_ATTR_TLLINKINDEX2) && tlIndex2 != existing.customTLIndex2)
+                    || (attrs.has_attribute(SUMO_ATTR_PRIORITY) && priority != existing.priority))
+                {
+                    write_error(&tlf!("Crossing with edges '%' already exists at node '%'.", edges_to_string(&edges), node.get_id()));
+                    return;
+                } else {
+                    // replace existing, keep old attributes
+                    if !attrs.has_attribute(SUMO_ATTR_WIDTH) {
+                        width = existing.width;
+                    }
+                    if !attrs.has_attribute(SUMO_ATTR_TLLINKINDEX) {
+                        tlIndex = existing.customTLIndex;
+                    }
+                    if !attrs.has_attribute(SUMO_ATTR_TLLINKINDEX2) {
+                        tlIndex2 = existing.customTLIndex2;
+                    }
+                    if !attrs.has_attribute(SUMO_ATTR_PRIORITY) {
+                        priority = existing.priority;
+                    }
+                    node.m().remove_crossing(&edges);
+                }
+            }
+            let c = node.m().add_crossing(edges, width, priority, tlIndex, tlIndex2, &customShape, false, Ptr::null());
+            self.myLastParameterised = Ptr::from_mut(&mut c.m().base);
+        }
     }
 
     /// C++: `void NIXMLConnectionsHandler::addWalkingArea(const SUMOSAXAttributes &)` [private]
@@ -854,7 +1031,44 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_walking_area(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::addWalkingArea")
+        let mut ok = true;
+        let mut node: Ptr<NBNode> = Ptr::null();
+        let mut edges: EdgeVector = Vec::new();
+        let nodeID = attrs.get::<String>(SUMO_ATTR_NODE, "", &mut ok, true);
+        if !attrs.has_attribute(SUMO_ATTR_EDGES) {
+            write_error(&tlf!("No edges specified for walkingArea at node '%'.", nodeID));
+            return;
+        }
+        for id in attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, &nodeID, &mut ok, true) {
+            let edge = self.myEdgeCont.m().retrieve(&id, false);
+            if edge.is_null() {
+                write_error(&tlf!("Edge '%' for walkingArea at node '%' is not known.", id, nodeID));
+                return;
+            }
+            if node.is_null() {
+                if edge.get_to_node().get_id() == nodeID {
+                    node = edge.get_to_node();
+                } else if edge.get_from_node().get_id() == nodeID {
+                    node = edge.get_from_node();
+                } else {
+                    write_error(&tlf!("Edge '%' does not touch node '%'.", id, nodeID));
+                    return;
+                }
+            } else if edge.get_to_node() != node && edge.get_from_node() != node {
+                write_error(&tlf!("Edge '%' does not touch node '%'.", id, nodeID));
+                return;
+            }
+            edges.push(edge);
+        }
+        if !ok {
+            return;
+        }
+        let mut customShape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, PositionVector::EMPTY, true);
+        let customWidth = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, "", &mut ok, UNSPECIFIED_WIDTH, true);
+        if !NBNetBuilder::transform_coordinates(&mut customShape, true, self.myLocation) {
+            write_error(&tlf!("Unable to project shape for walkingArea at node '%'.", node.get_id()));
+        }
+        node.m().add_walking_area_shape(edges, &customShape, customWidth);
     }
 
     /// C++: `void NIXMLConnectionsHandler::addProhibition(const SUMOSAXAttributes &)` [private]
@@ -878,7 +1092,20 @@ impl NIXMLConnectionsHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_prohibition(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLConnectionsHandler::addProhibition")
+        let mut ok = true;
+        let prohibitor = attrs.get_opt::<String>(SUMO_ATTR_PROHIBITOR, "", &mut ok, String::new(), true);
+        let prohibited = attrs.get_opt::<String>(SUMO_ATTR_PROHIBITED, "", &mut ok, String::new(), true);
+        if !ok {
+            return;
+        }
+        let prohibitorC = self.parse_connection_def("prohibitor", &prohibitor);
+        let prohibitedC = self.parse_connection_def("prohibited", &prohibited);
+        if prohibitorC.eq_op(&invalid_connection()) || prohibitedC.eq_op(&invalid_connection()) {
+            // something failed
+            return;
+        }
+        let n = prohibitorC.get_from().get_to_node();
+        n.m().add_sorted_link_foes(&prohibitorC, &prohibitedC);
     }
 
     /// C++: `void NIXMLConnectionsHandler::NIXMLConnectionsHandler(const NIXMLConnectionsHandler &)` [private]
@@ -886,7 +1113,8 @@ impl NIXMLConnectionsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIXMLConnectionsHandler) -> Self {
-        todo!("port NIXMLConnectionsHandler::NIXMLConnectionsHandler")
+        // private and never defined in C++ (invalidated), so it cannot be called there either
+        panic!("NIXMLConnectionsHandler copy constructor is invalidated")
     }
 
     /// C++: `NIXMLConnectionsHandler & NIXMLConnectionsHandler::operator=(const NIXMLConnectionsHandler &)` [private]
@@ -894,7 +1122,8 @@ impl NIXMLConnectionsHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIXMLConnectionsHandler) -> &mut NIXMLConnectionsHandler {
-        todo!("port NIXMLConnectionsHandler::operator=")
+        // private and never defined in C++ (invalidated), so it cannot be called there either
+        panic!("NIXMLConnectionsHandler operator= is invalidated")
     }
 
 }
