@@ -11,6 +11,11 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
+// C++ MAX2 on doubles (a > b ? a : b)
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
 /// A vehicle from the mesoscopic point of view
 /// C++ class `MEVehicle` (mesosim/MEVehicle.h)
 pub struct MEVehicle {
@@ -126,7 +131,8 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port MEVehicle::getAngle")
+        let lane = self.get_edge().get_lanes()[std::cmp::max(0, self.get_que_index()) as usize];
+        lane.get_shape(false).rotation_at_offset(lane.interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()))
     }
 
     /// C++: `double MEVehicle::getSlope() const` [const, virtual]
@@ -139,7 +145,9 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_slope(&self) -> f64 {
-        todo!("port MEVehicle::getSlope")
+        let lane = self.get_edge().get_lanes()[std::cmp::max(0, self.get_que_index()) as usize];
+        lane.get_shape(false).slope_degree_at_offset(lane.interpolate_lane_pos_to_geometry_pos(
+            self.get_position_on_lane() - (if MSGlobals::slope_centered() { self.get_length() / 2. } else { 0. })))
     }
 
     /// C++: `const MSEdge * MEVehicle::getCurrentEdge() const` [const, virtual]
@@ -181,7 +189,8 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, offset: f64) -> Position {
-        todo!("port MEVehicle::getPosition")
+        let lane = self.get_edge().get_lanes()[std::cmp::max(0, self.get_que_index()) as usize];
+        lane.geometry_position_at_offset(self.get_position_on_lane() + offset, 0.)
     }
 
     /// C++: `PositionVector MEVehicle::getBoundingBox(double) const` [const, virtual]
@@ -206,7 +215,19 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_box(&self, offset: f64) -> PositionVector {
-        todo!("port MEVehicle::getBoundingBox")
+        let a = self.get_angle() + std::f64::consts::PI; // angle pointing backwards
+        let l = self.get_length();
+        let pos = self.get_position(0.);
+        let back_pos = pos + Position::new(l * a.cos(), l * a.sin());
+        let mut center_line = PositionVector(vec![pos, back_pos]);
+        if offset != 0. {
+            center_line.extrapolate2d(offset, false);
+        }
+        let mut result = center_line.clone();
+        result.move2side(max2(0.0, 0.5 * self.get_vehicle_type().get_width() + offset), 100.);
+        center_line.move2side(min2(0.0, -0.5 * self.get_vehicle_type().get_width() - offset), 100.);
+        result.append(&center_line.reverse(), utils::geom::POSITION_EPS);
+        result
     }
 
     /// C++: `double MEVehicle::getSpeed() const` [const, virtual]
@@ -390,7 +411,22 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_approaching(&mut self, link: Ptr<MSLink>) {
-        todo!("port MEVehicle::setApproaching")
+        if !link.is_null() {
+            let me = Ptr::from_mut(self);
+            let speed = self.get_speed();
+            // tie breaker
+            let tie: SUMOTime = if link.get_state() == LINKSTATE_ALLWAY_STOP {
+                utils::common::rand_helper::with_default(|r| r.rand_int(2)) as SUMOTime
+            } else {
+                0
+            };
+            let arrival = self.get_event_time() + tie;
+            let max_speed = link.get_via_lane_or_lane().get_vehicle_max_speed(me.cast::<SUMOTrafficObject>());
+            // @note: dist is not used by meso (getZipperSpeed is never called)
+            let seg_len = self.get_segment().get_length();
+            let waiting = self.get_waiting_time(false);
+            link.m().set_approaching(me.cast::<SUMOVehicle>(), arrival, speed, max_speed, true, speed, waiting, seg_len, 0.);
+        }
     }
 
     /// C++: `SUMOTime MEVehicle::remainingStopDuration() const` [const, virtual]
@@ -479,7 +515,71 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn end_triggered_stop(&mut self) -> bool {
-        todo!("port MEVehicle::endTriggeredStop")
+        let net = MSNet::get_instance();
+        let me = Ptr::from_mut(self);
+        for i in 0..self.myStops.len() {
+            if !self.myStops[i].reached {
+                break;
+            }
+            if net.get_current_time_step() > self.myStops[i].endBoarding {
+                if self.myStops[i].triggered || self.myStops[i].containerTriggered {
+                    // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so cancelCurrentCustomers() is skipped; upgrade when device lookup by type is ported
+                    self.myStops[i].triggered = false;
+                    self.myStops[i].containerTriggered = false;
+                }
+                if self.myAmRegisteredAsWaiting {
+                    net.m().get_vehicle_control().unregister_one_waiting();
+                    self.myAmRegisteredAsWaiting = false;
+                }
+            }
+            if self.myStops[i].triggered {
+                if self.get_vehicle_type().get_person_capacity() == self.get_person_number() {
+                    // we could not check this on entering the segment because there may be persons who still want to leave
+                    utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores triggered stop on lane '%' due to capacity constraints.", self.get_id(), self.myStops[i].lane.get_id()));
+                    self.myStops[i].triggered = false;
+                    if self.myAmRegisteredAsWaiting {
+                        net.m().get_vehicle_control().unregister_one_waiting();
+                        self.myAmRegisteredAsWaiting = false;
+                    }
+                } else {
+                    let mut dummy_load: SUMOTime = -1;
+                    let mut dummy_stop: SUMOTime = -1;
+                    if !net.has_persons() || !net.m().get_person_control().load_any_waiting(Ptr::new(self.mySegment.get_edge()), me.cast::<SUMOVehicle>(), &mut dummy_load, &mut dummy_stop, Ptr::null()) {
+                        if !self.myAmRegisteredAsWaiting {
+                            MSNet::get_instance().m().get_vehicle_control().register_one_waiting();
+                            self.myAmRegisteredAsWaiting = true;
+                        }
+                        return false;
+                    }
+                }
+            }
+            if self.myStops[i].containerTriggered {
+                if self.get_vehicle_type().get_container_capacity() == self.get_container_number() {
+                    // we could not check this on entering the segment because there may be containers who still want to leave
+                    utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores container triggered stop on lane '%' due to capacity constraints.", self.get_id(), self.myStops[i].lane.get_id()));
+                    self.myStops[i].containerTriggered = false;
+                    if self.myAmRegisteredAsWaiting {
+                        net.m().get_vehicle_control().unregister_one_waiting();
+                        self.myAmRegisteredAsWaiting = false;
+                    }
+                } else {
+                    let mut dummy_load: SUMOTime = -1;
+                    let mut dummy_stop: SUMOTime = -1;
+                    if !net.has_containers() || !net.m().get_container_control().load_any_waiting(Ptr::new(self.mySegment.get_edge()), me.cast::<SUMOVehicle>(), &mut dummy_load, &mut dummy_stop, Ptr::null()) {
+                        if !self.myAmRegisteredAsWaiting {
+                            MSNet::get_instance().m().get_vehicle_control().register_one_waiting();
+                            self.myAmRegisteredAsWaiting = true;
+                        }
+                        return false;
+                    }
+                }
+            }
+            if self.myStops[i].joinTriggered {
+                // TODO do something useful here
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `void MEVehicle::processStop()`
@@ -521,7 +621,39 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_stop(&mut self) {
-        todo!("port MEVehicle::processStop")
+        assert!(self.is_stopped());
+        let mut lastPos: f64 = -1.;
+        let mut hadStop = false;
+        let me = Ptr::from_mut(self);
+        while !self.myStops.is_empty() {
+            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
+            let curEdge = self.myRoute.index_op(self.myCurrEdge as i32);
+            let endPos = self.myStops[0].pars.endPos;
+            if self.myStops[0].get_edge() != curEdge || self.myStops[0].segment != self.mySegment || endPos <= lastPos {
+                break;
+            }
+            lastPos = endPos;
+            let net = MSNet::get_instance();
+            let mut dummy_load: SUMOTime = -1; // boarding- and loading-time are not considered
+            let mut dummy_stop: SUMOTime = -1;
+            if hadStop && MSStopOut::active() {
+                self.myStops[0].reached = true;
+                MSStopOut::get_instance().m().stop_started(me.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), self.myLastEntryTime);
+            }
+            if net.has_persons() {
+                net.m().get_person_control().load_any_waiting(Ptr::new(self.mySegment.get_edge()), me.cast::<SUMOVehicle>(), &mut dummy_load, &mut dummy_stop, Ptr::null());
+            }
+            if net.has_containers() {
+                net.m().get_container_control().load_any_waiting(Ptr::new(self.mySegment.get_edge()), me.cast::<SUMOVehicle>(), &mut dummy_load, &mut dummy_stop, Ptr::null());
+            }
+            self.resume_from_stopping();
+            hadStop = true;
+        }
+        if self.get_waiting_time(false) > 0 {
+            // entry back onto the road was blocked for some time
+            // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so recordMesoParkingTimeLoss() is skipped; upgrade when device lookup by type is ported
+        }
+        self.mySegment.get_edge().remove_waiting(me.cast::<SUMOVehicle>());
     }
 
     /// C++: `SUMOTime MEVehicle::checkStop(SUMOTime)`
@@ -590,7 +722,61 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_stop(&mut self, time: SUMOTime) -> SUMOTime {
-        todo!("port MEVehicle::checkStop")
+        let initialTime = time;
+        let mut time = time;
+        let mut hadStop = false;
+        let mut reachedStop = false;
+        let me = Ptr::from_mut(self);
+        for i in 0..self.myStops.len() {
+            if self.myStops[i].joinTriggered {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Join stops are not available in meso yet (vehicle '%', segment '%').", self.get_id(), self.mySegment.get_id()));
+                continue;
+            }
+            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
+            if self.myStops[i].get_edge() != self.myRoute.index_op(self.myCurrEdge as i32) || self.myStops[i].segment != self.mySegment {
+                break;
+            }
+            let cur = time;
+            if self.myStops[i].duration > 0 { // it might be a triggered stop with duration -1
+                if self.myStops[i].duration >= SUMOTIME_MAX / 2 {
+                    // avoid overflow!
+                    time = SUMOTIME_MAX / 2;
+                } else {
+                    time += self.myStops[i].duration;
+                }
+            }
+            if self.myStops[i].pars.until > time {
+                // @note: this assumes the stop is reached at time. With the way this is called in MESegment (time == entryTime),
+                // travel time is overestimated of the stop is not at the start of the segment
+                time = self.myStops[i].pars.until;
+            }
+            if MSGlobals::use_stop_ended() && self.myStops[i].pars.ended >= 0 {
+                time = std::cmp::max(cur, self.myStops[i].pars.ended);
+            }
+            if !self.myStops[i].reached {
+                reachedStop = true;
+                self.myStops[i].reached = true;
+                self.myStops[i].pars.started = self.myLastEntryTime;
+                self.myStops[i].endBoarding = if self.myStops[i].pars.extension >= 0 { time + self.myStops[i].pars.extension } else { SUMOTIME_MAX };
+                if MSStopOut::active() {
+                    if !hadStop {
+                        MSStopOut::get_instance().m().stop_started(me.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), self.myLastEntryTime);
+                    } else {
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' has multiple stops on segment '%', time=% (stop-output will be merged).", self.get_id(), self.mySegment.get_id(), utils::common::time::time2string(time)));
+                    }
+                }
+            }
+            if self.myStops[i].triggered || self.myStops[i].containerTriggered || self.myStops[i].joinTriggered {
+                time = std::cmp::max(time, cur + delta_t());
+            }
+            hadStop = true;
+        }
+        if reachedStop {
+            // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so taxi->notifyMove(*this, 0, 0, 0) is skipped
+        }
+        // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so tripinfo->updateStopTime(time - initialTime) is skipped
+        let _ = initialTime;
+        time
     }
 
     /// C++: `bool MEVehicle::resumeFromStopping()` [virtual]
@@ -629,7 +815,42 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn resume_from_stopping(&mut self) -> bool {
-        todo!("port MEVehicle::resumeFromStopping")
+        if self.is_stopped() {
+            let now = MSNet::get_instance().get_current_time_step();
+            let me = Ptr::from_mut(self);
+            self.myStops.front_mut().unwrap().pars.ended = now;
+            for rem in self.myMoveReminders.iter() {
+                rem.0.m().notify_stop_ended();
+            }
+            if MSStopOut::active() {
+                MSStopOut::get_instance().m().stop_ended(me.cast::<SUMOVehicle>(), self.myStops.front().unwrap(), false);
+            }
+            let pars = self.myStops.front().unwrap().pars.clone();
+            self.myPastStops.push(pars);
+            // shortcut: MSStop.edge is an Unmapped route iterator; routeIndex uses the current route position, which equals stop.edge for stops handled in meso
+            self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+            let (triggered, containerTriggered, joinTriggered) = {
+                let s = self.myStops.front().unwrap();
+                (s.triggered, s.containerTriggered, s.joinTriggered)
+            };
+            if self.myAmRegisteredAsWaiting && (triggered || containerTriggered || joinTriggered) {
+                MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                self.myAmRegisteredAsWaiting = false;
+            }
+            self.myStops.pop_front();
+            if self.myEventTime > now {
+                // if this is an aborted stop we need to change the event time of the vehicle
+                let isLeader = self.mySegment.get_queue(self.myQueIndex).last().copied() == Some(me);
+                if isLeader {
+                    let meso = MSGlobals::meso_net();
+                    meso.m().remove_leader_car(me);
+                    self.myEventTime = now + 1;
+                    meso.m().add_leader_car(me, Ptr::null(), false);
+                }
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `double MEVehicle::getBrakeGap(bool) const` [const, virtual]
