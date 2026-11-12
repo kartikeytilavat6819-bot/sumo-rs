@@ -13,6 +13,7 @@ const G_TLS_PENALTY: f64 = 0.;
 const G_MINOR_PENALTY: f64 = 0.;
 const G_TURNAROUND_PENALTY: f64 = 0.;
 const G_LANE_CHANGE_DURATION: SUMOTime = 0;
+const G_STOP_TOLERANCE: f64 = 10.; // default of option ride.stop-tolerance
 
 /// C++ typedef `std::map<const MSEdge *, AllowedLanesCont> MSEdge::AllowedLanesByTarget`
 pub type MSEdge_AllowedLanesByTarget = BTreeMap<Ptr<MSEdge>, MSEdge_AllowedLanesCont>;
@@ -2712,7 +2713,20 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_to(&self, other: Ptr<MSEdge>, doBoundaryEstimate: bool) -> f64 {
-        todo!("port MSEdge::getDistanceTo")
+        assert!(Ptr::new(self) != other);
+        if doBoundaryEstimate {
+            return self.myBoundary.distance_to2d_boundary(&other.myBoundary);
+        }
+        if self.is_taz_connector() {
+            if other.is_taz_connector() {
+                return self.myBoundary.distance_to2d_boundary(&other.myBoundary);
+            }
+            return self.myBoundary.distance_to2d(other.get_lanes()[0].get_shape_2().at(0));
+        }
+        if other.is_taz_connector() {
+            return other.myBoundary.distance_to2d(self.get_lanes()[0].get_shape_2().at(-1));
+        }
+        self.get_lanes()[0].get_shape_2().at(-1).distance_to2d(other.get_lanes()[0].get_shape_2().at(0))
     }
 
     /// C++: `const Position MSEdge::getStopPosition(const SUMOVehicleParameter::Stop &)` [static]
@@ -2723,7 +2737,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
-        todo!("port MSEdge::getStopPosition")
+        MSLane::dictionary_2(&stop.lane).geometry_position_at_offset((stop.endPos + stop.startPos) / 2., 0.)
     }
 
     /// C++: `double MSEdge::getLength() const` [const]
@@ -2733,7 +2747,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSEdge::getLength")
+        self.myLength
     }
 
     /// C++: `double MSEdge::getMinLength() const` [const]
@@ -2748,7 +2762,13 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_min_length(&self) -> f64 {
-        todo!("port MSEdge::getMinLength")
+        let mut result = f64::MAX;
+        for l in self.myLanes.iter() {
+            // MIN2(result, l->getLength())
+            let len = l.get_length();
+            result = if result < len { result } else { len };
+        }
+        result
     }
 
     /// C++: `double MSEdge::getSpeedLimit() const` [const]
@@ -2760,7 +2780,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_limit(&self) -> f64 {
-        todo!("port MSEdge::getSpeedLimit")
+        if self.myLanes.is_empty() { 1. } else { self.myLanes[0].get_speed_limit() }
     }
 
     /// C++: `double MSEdge::getSpeedLimit(SUMOVehicleClass) const` [const]
@@ -2772,7 +2792,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_limit_2(&self, svc: SUMOVehicleClass) -> f64 {
-        todo!("port MSEdge::getSpeedLimit")
+        if self.myLanes.is_empty() { 1. } else { self.myLanes[0].get_speed_limit_2(svc) }
     }
 
     /// C++: `double MSEdge::getLengthGeometryFactor() const` [const]
@@ -2783,7 +2803,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor(&self) -> f64 {
-        todo!("port MSEdge::getLengthGeometryFactor")
+        if self.myLanes.is_empty() { 1. } else { self.myLanes[0].get_length_geometry_factor_2() }
     }
 
     /// C++: `void MSEdge::setMaxSpeed(const double, const bool, const double)`
@@ -2799,7 +2819,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(&mut self, val: f64, modified: bool, jamThreshold: f64) {
-        todo!("port MSEdge::setMaxSpeed")
+        assert!(val >= 0.);
+        let laneList = self.myLanes.clone();
+        for lane in laneList.iter() {
+            lane.m().set_max_speed(val, modified, jamThreshold);
+        }
     }
 
     /// C++: `void MSEdge::setFrictionCoefficient(double) const` [const]
@@ -2807,7 +2831,9 @@ impl MSEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_friction_coefficient(&self, val: f64) {
-        todo!("port MSEdge::setFrictionCoefficient")
+        for lane in self.myLanes.iter() {
+            lane.m().set_friction_coefficient(val);
+        }
     }
 
     /// C++: `double MSEdge::getVehicleMaxSpeed(const SUMOTrafficObject *const) const` [const]
@@ -2819,7 +2845,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_max_speed(&self, veh: Ptr<SUMOTrafficObject>) -> f64 {
-        todo!("port MSEdge::getVehicleMaxSpeed")
+        if self.myLanes.is_empty() { 1. } else { self.myLanes[0].get_vehicle_max_speed(veh) }
     }
 
     /// C++: `void MSEdge::addTransportable(MSTransportable *) const` [const, virtual]
@@ -2833,7 +2859,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&self, t: Ptr<MSTransportable>) {
-        todo!("port MSEdge::addTransportable")
+        if t.is_person() {
+            Ptr::new(self).m().myPersons.insert(t);
+        } else {
+            Ptr::new(self).m().myContainers.insert(t);
+        }
     }
 
     /// C++: `void MSEdge::removeTransportable(MSTransportable *) const` [const, virtual]
@@ -2847,7 +2877,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&self, t: Ptr<MSTransportable>) {
-        todo!("port MSEdge::removeTransportable")
+        let me = Ptr::new(self).m();
+        let tc = if t.is_person() { &mut me.myPersons } else { &mut me.myContainers };
+        tc.remove(&t);
     }
 
     /// C++: `bool MSEdge::isRoundabout() const` [const]
@@ -2856,7 +2888,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_roundabout(&self) -> bool {
-        todo!("port MSEdge::isRoundabout")
+        self.myAmRoundabout
     }
 
     /// C++: `void MSEdge::markAsRoundabout()`
@@ -2865,7 +2897,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn mark_as_roundabout(&mut self) {
-        todo!("port MSEdge::markAsRoundabout")
+        self.myAmRoundabout = true;
     }
 
     /// C++: `void MSEdge::markDelayed() const` [const]
@@ -2874,7 +2906,8 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn mark_delayed(&self) {
-        todo!("port MSEdge::markDelayed")
+        // C++ field is mutable; the marker is const
+        Ptr::new(self).m().myAmDelayed = true;
     }
 
     /// C++: `bool MSEdge::isDelayed() const` [const]
@@ -2883,7 +2916,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_delayed(&self) -> bool {
-        todo!("port MSEdge::isDelayed")
+        self.myAmDelayed || (!self.myBidiEdge.is_null() && self.myBidiEdge.myAmDelayed)
     }
 
     /// C++: `bool MSEdge::hasLaneChanger() const` [const]
@@ -2892,7 +2925,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn has_lane_changer(&self) -> bool {
-        todo!("port MSEdge::hasLaneChanger")
+        !self.myLaneChanger.is_null()
     }
 
     /// C++: `std::pair<double, SUMOTime> MSEdge::getLastBlocked(int) const` [const]
@@ -2906,7 +2939,10 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_blocked(&self, index: i32) -> (f64, SUMOTime) {
-        todo!("port MSEdge::getLastBlocked")
+        if !self.myLaneChanger.is_null() {
+            return self.myLaneChanger.get_last_blocked(index);
+        }
+        (-1., -1)
     }
 
     /// C++: `bool MSEdge::canChangeToOpposite() const` [const]
@@ -2921,7 +2957,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn can_change_to_opposite(&self) -> bool {
-        todo!("port MSEdge::canChangeToOpposite")
+        !self.myLanes.is_empty()
+            && !self.myLanes.last().unwrap().get_opposite().is_null()
+            // do not change on curved internal lanes
+            && (!self.is_internal()
+                || (G_USING_INTERNAL_LANES
+                    && self.myLanes.last().unwrap().get_incoming_lanes()[0].viaLink.get_direction() == LinkDirection::STRAIGHT))
     }
 
     /// C++: `const MSEdge * MSEdge::getOppositeEdge() const` [const]
@@ -2936,7 +2977,11 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSEdge::getOppositeEdge")
+        if !self.myLanes.is_empty() && !self.myLanes.last().unwrap().get_opposite().is_null() {
+            Ptr::new(self.myLanes.last().unwrap().get_opposite().get_edge())
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `double MSEdge::getMeanSpeed() const` [const]
@@ -2982,7 +3027,30 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self) -> f64 {
-        todo!("port MSEdge::getMeanSpeed")
+        // shortcut: meso branch (MESegment::getMeanSpeed) not ported, unreachable while G_USE_MESO_SIM is false
+        let mut v = 0.;
+        let mut totalNumVehs = 0.;
+        for lane in self.myLanes.iter() {
+            let mut numVehs = lane.get_vehicle_number();
+            if numVehs == 0 {
+                // take speed limit but with lowest possible weight
+                numVehs = 1;
+            }
+            v += numVehs as f64 * lane.get_mean_speed();
+            totalNumVehs += numVehs as f64;
+        }
+        if !self.myBidiEdge.is_null() {
+            for lane in self.myBidiEdge.get_lanes().iter() {
+                if lane.get_vehicle_number() > 0 {
+                    // do not route across edges which are already occupied in reverse direction
+                    return 0.;
+                }
+            }
+        }
+        if totalNumVehs == 0. {
+            return self.get_speed_limit();
+        }
+        v / totalNumVehs
     }
 
     /// C++: `double MSEdge::getMeanFriction() const` [const]
@@ -3000,7 +3068,14 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_friction(&self) -> f64 {
-        todo!("port MSEdge::getMeanFriction")
+        let mut f = 0.;
+        for lane in self.myLanes.iter() {
+            f += lane.get_friction_coefficient();
+        }
+        if !self.myLanes.is_empty() {
+            return f / (self.myLanes.len() as f64);
+        }
+        1.
     }
 
     /// C++: `double MSEdge::getMeanSpeedBike() const` [const]
@@ -3025,7 +3100,17 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed_bike(&self) -> f64 {
-        todo!("port MSEdge::getMeanSpeedBike")
+        let mut v = 0.;
+        let mut totalNumVehs = 0.;
+        for lane in self.myLanes.iter() {
+            let numVehs = lane.get_vehicle_number();
+            v += numVehs as f64 * lane.get_mean_speed_bike();
+            totalNumVehs += numVehs as f64;
+        }
+        if totalNumVehs == 0. {
+            return self.get_speed_limit();
+        }
+        v / totalNumVehs
     }
 
     /// C++: `bool MSEdge::hasMinorLink() const` [const]
@@ -3043,7 +3128,14 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_minor_link(&self) -> bool {
-        todo!("port MSEdge::hasMinorLink")
+        for l in self.myLanes.iter() {
+            for link in l.get_link_cont() {
+                if !link.have_priority() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool MSEdge::isFringe() const` [const]
@@ -3053,7 +3145,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_fringe(&self) -> bool {
-        todo!("port MSEdge::isFringe")
+        self.myAmFringe
     }
 
     /// C++: `bool MSEdge::hasChangeProhibitions(SUMOVehicleClass, int) const` [const]
@@ -3074,7 +3166,17 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_change_prohibitions(&self, svc: SUMOVehicleClass, index: i32) -> bool {
-        todo!("port MSEdge::hasChangeProhibitions")
+        if self.myLanes.len() == 1 {
+            return false;
+        }
+        for l in self.myLanes.iter() {
+            if l.get_index() <= index && !l.allows_changing_right(svc) && l.get_index() > 0 {
+                return true;
+            } else if l.get_index() >= index && !l.allows_changing_left(svc) && l.get_index() < (self.myLanes.len() as i32 - 1) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSEdge::isSelected() const` [const, virtual]
@@ -3084,7 +3186,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_selected(&self) -> bool {
-        todo!("port MSEdge::isSelected")
+        false
     }
 
     /// C++: `void MSEdge::lock() const` [const, virtual]
@@ -3092,7 +3194,7 @@ impl MSEdge {
     // virtual void lock() const {}
     #[allow(unused_variables)]
     pub fn lock(&self) {
-        todo!("port MSEdge::lock")
+        // C++ virtual no-op (mesoscopic locking is not used in the microsim)
     }
 
     /// C++: `void MSEdge::unlock() const` [const, virtual]
@@ -3100,7 +3202,7 @@ impl MSEdge {
     // virtual void unlock() const {}
     #[allow(unused_variables)]
     pub fn unlock(&self) {
-        todo!("port MSEdge::unlock")
+        // C++ virtual no-op (mesoscopic locking is not used in the microsim)
     }
 
     /// C++: `void MSEdge::addWaiting(SUMOVehicle *) const` [const]
@@ -3114,7 +3216,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        todo!("port MSEdge::addWaiting")
+        Ptr::new(self).m().myWaiting.push(vehicle);
     }
 
     /// C++: `void MSEdge::removeWaiting(const SUMOVehicle *) const` [const]
@@ -3131,7 +3233,10 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        todo!("port MSEdge::removeWaiting")
+        let me = Ptr::new(self).m();
+        if let Some(i) = me.myWaiting.iter().position(|v| *v == vehicle) {
+            me.myWaiting.remove(i);
+        }
     }
 
     /// C++: `SUMOVehicle * MSEdge::getWaitingVehicle(MSTransportable *, const double) const` [const]
@@ -3159,7 +3264,31 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_vehicle(&self, transportable: Ptr<MSTransportable>, position: f64) -> Ptr<SUMOVehicle> {
-        todo!("port MSEdge::getWaitingVehicle")
+        for vehicle in self.myWaiting.iter() {
+            let vehicle = *vehicle;
+            if transportable.is_waiting_for(vehicle) {
+                if vehicle.is_stopped_in_range(position, G_STOP_TOLERANCE, true)
+                    || (!vehicle.has_departed()
+                        && (vehicle.get_parameter().departProcedure == DepartDefinition::TRIGGERED
+                            || vehicle.get_parameter().departProcedure == DepartDefinition::CONTAINER_TRIGGERED))
+                {
+                    return vehicle;
+                }
+                if !vehicle.is_line_stop(position) && vehicle.allows_boarding(transportable) {
+                    // shortcut: C++ toString(double) uses the global output precision; Rust default formatting is used here
+                    write_warning(&format!(
+                        "{} '{}' at edge '{}' position {} cannot use waiting vehicle '{}' at position {} because it is too far away.",
+                        if transportable.is_person() { "Person" } else { "Container" },
+                        transportable.get_id(),
+                        self.get_id(),
+                        position,
+                        vehicle.get_id(),
+                        vehicle.get_position_on_lane()
+                    ));
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSEdge::clearState()`
@@ -3172,7 +3301,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSEdge::clearState")
+        self.myPersons.clear();
+        self.myContainers.clear();
+        self.myWaiting.clear();
     }
 
     /// C++: `void MSEdge::postLoadInitLaneChanger()`
@@ -3184,7 +3315,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn post_load_init_lane_changer(&mut self) {
-        todo!("port MSEdge::postLoadInitLaneChanger")
+        if !self.myLaneChanger.is_null() {
+            self.myLaneChanger.m().postload_init_lc();
+        }
     }
 
     /// C++: `DepartLaneDefinition & MSEdge::getDefaultDepartLaneDefinition()` [static]
