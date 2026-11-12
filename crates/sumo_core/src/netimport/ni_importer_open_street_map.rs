@@ -6,6 +6,8 @@ use utils::xml::sumo_sax_reader::SUMOSAXReader;
 use utils::xml::sumo_sax_handler;
 use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
 use utils::{write_errorf, write_messagef, write_warningf};
+// shortcut: NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION is not ported as a const yet (nb_traffic_light_definition.rs keeps it as a comment); mirrors NBTrafficLightDefinition.cpp:49, switch to the ported constant when it lands
+const OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
 
 /// C++ static `NBNode::FORWARD` (netbuild/NBNode.cpp); NBNode statics are not ported as consts yet.
 const NBNODE_FORWARD: i32 = 1;
@@ -1115,7 +1117,7 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
             let mut ok = true;
             let mut r: i64 = attrs.get(SUMO_ATTR_REF, "", &mut ok, true);
             if ok {
-                let Some(node) = self.myOSMNodes.get(&r) else {
+                let Some(node) = (*self.myOSMNodes).get(&r) else {
                     write_warningf!("The referenced geometry information (ref='%') is not known", r);
                     return;
                 };
@@ -1733,7 +1735,7 @@ impl NIImporter_OpenStreetMap_EdgesHandler {
         match utils::common::string_utils::parse_speed(&value, true) {
             Ok(s) => s,
             Err(_) => {
-                write_warning(&format!("Value of key '{}' is not numeric ('{}') in edge '{}'.", key, value, self.myCurrentEdge.id));
+                utils::common::msg_handler::write_warning(&format!("Value of key '{}' is not numeric ('{}') in edge '{}'.", key, value, self.myCurrentEdge.id));
                 MAXSPEED_UNGIVEN
             }
         }
@@ -2451,14 +2453,14 @@ impl NIImporter_OpenStreetMap {
         let files = opt::get_string_vector("osm-files");
         let mut readers: Vec<Option<SUMOSAXReader>> = Vec::new();
 
-        self.myImportLaneAccess = oc.get_bool("osm.lane-access");
-        self.myImportTurnSigns = oc.get_bool("osm.turn-lanes");
-        self.myImportSidewalks = oc.get_bool("osm.sidewalks");
-        self.myImportBikeAccess = oc.get_bool("osm.bike-access");
-        self.myImportCrossings = oc.get_bool("osm.crossings");
-        self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk");
-        self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults");
-        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block");
+        self.myImportLaneAccess = oc.get_bool("osm.lane-access").unwrap();
+        self.myImportTurnSigns = oc.get_bool("osm.turn-lanes").unwrap();
+        self.myImportSidewalks = oc.get_bool("osm.sidewalks").unwrap();
+        self.myImportBikeAccess = oc.get_bool("osm.bike-access").unwrap();
+        self.myImportCrossings = oc.get_bool("osm.crossings").unwrap();
+        self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk").unwrap();
+        self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults").unwrap();
+        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block").unwrap();
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
@@ -2510,7 +2512,7 @@ impl NIImporter_OpenStreetMap {
         }
 
         /* Remove duplicate edges with the same shape and attributes */
-        if !oc.get_bool("osm.skip-duplicates-check") {
+        if !oc.get_bool("osm.skip-duplicates-check").unwrap() {
             let mut numRemoved = 0;
             progress_begin_message("Removing duplicate edges");
             if self.myEdges.len() > 1 {
@@ -2731,7 +2733,7 @@ impl NIImporter_OpenStreetMap {
         for item in self.myOSMNodes.values() {
             let n = *item;
             if n.ptStopPosition && !stopNames.contains(&n.name) {
-                let mut ptPos = Position::new(n.lon, n.lat, n.ele);
+                let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
                 if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
                     write_errorf!("Unable to project coordinates for node '%'.", n.id);
                 }
@@ -2806,9 +2808,9 @@ impl NIImporter_OpenStreetMap {
     //         }
     //         if (n->railwaySignal != SIGNAL_NONE) {
     //             if (n->myRailDirection == WAY_FORWARD) {
-    //                 node->setParameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "forward");
+    //                 node->setParameter(OSM_SIGNAL_DIRECTION, "forward");
     //             } else if (n->myRailDirection == WAY_BACKWARD) {
-    //                 node->setParameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "backward");
+    //                 node->setParameter(OSM_SIGNAL_DIRECTION, "backward");
     //             }
     //         }
     //         node->updateParameters(n->getParametersMap());
@@ -2820,7 +2822,7 @@ impl NIImporter_OpenStreetMap {
         let mut node = nc.retrieve(&id.to_string());
         if node.is_null() {
             let n = self.myOSMNodes[&id];
-            let mut pos = Position::new(n.lon, n.lat, n.ele);
+            let mut pos = Position::new3(n.lon, n.lat, n.ele);
             if !NBNetBuilder::transform_coordinate(&mut pos, true, Ptr::null()) {
                 write_errorf!("Unable to project coordinates for junction '%'.", id);
                 return Ptr::null();
@@ -2840,10 +2842,10 @@ impl NIImporter_OpenStreetMap {
             } else if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
                 node.m().reinit(&pos, SumoXMLNodeType::RAIL_SIGNAL, false);
                 if (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32) == 0 {
-                    node.m().set_parameter("virtual", "true");
+                    node.m().base2.set_parameter("virtual", "true");
                 }
                 if self.myETCS_movingBlock && (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32) != 0 {
-                    node.m().set_parameter("moving-block", "true");
+                    node.m().base2.set_parameter("moving-block", "true");
                 }
             } else if n.tlsControlled {
                 // ok, this node is a traffic light node where no other nodes
@@ -2859,18 +2861,18 @@ impl NIImporter_OpenStreetMap {
                 }
             }
             if n.railwayBufferStop {
-                node.m().set_parameter("buffer_stop", "true");
+                node.m().base2.set_parameter("buffer_stop", "true");
                 node.m().set_fringe_type(FringeType::INNER);
             }
             if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
                 if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32 {
-                    node.m().set_parameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "forward");
+                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "forward");
                 } else if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32 {
-                    node.m().set_parameter(NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION, "backward");
+                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "backward");
                 }
             }
             let params = n.get_parameters_map().clone();
-            node.m().update_parameters(&params);
+            node.m().base2.update_parameters(&params);
         }
         node
     }
@@ -4764,3 +4766,45 @@ impl NIImporter_OpenStreetMap_RelationHandler {
 
 }
 
+// The C++ handlers derive from SUMOSAXHandler; these forward the trait hooks to the inherent C++ overrides.
+impl SaxHandler for NIImporter_OpenStreetMap_NodesHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_NodesHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_NodesHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_OpenStreetMap_EdgesHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_EdgesHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_EdgesHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl SaxHandler for NIImporter_OpenStreetMap_RelationHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_RelationHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_OpenStreetMap_RelationHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
