@@ -5447,7 +5447,77 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_critical_leader(&self, dist: f64, seen: f64, speed: f64, veh: &MSVehicle) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getCriticalLeader")
+        let bestLaneConts = veh.get_best_lanes_continuation_2(Ptr::new(self));
+        let mut result: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.);
+        let mut safeSpeed = f64::MAX;
+        let mut view: i32 = 1;
+        let mut dist = dist;
+        let mut seen = seen;
+        // loop over following lanes
+        // @note: we don't check the partial occupator for this lane since it was
+        // already checked in MSLaneChanger::getRealLeader()
+        let mut nextLane: Ptr<MSLane> = Ptr::new(self);
+        let mut arrivalTime: SUMOTime = MSNet::get_instance().get_current_time_step()
+            + utils::common::time::time2steps(seen / (if speed > NUMERICAL_EPS { speed } else { NUMERICAL_EPS }));
+        loop {
+            // get the next link used
+            let mut link: usize = MSLane::succ_link_sec(veh, view, &nextLane, bestLaneConts);
+            if nextLane.is_link_end(&mut link)
+                || !nextLane.get_link_cont()[link].opened(arrivalTime, speed, speed, veh.get_vehicle_type().get_length(),
+                    veh.get_impatience(), veh.get_car_follow_model().get_max_decel(), 0, veh.get_lateral_position_on_lane(), Ptr::null(), false, Ptr::new(veh).cast::<SUMOTrafficObject>(), -1.)
+                || nextLane.get_link_cont()[link].have_red() {
+                return result;
+            }
+            // check for link leaders
+            let linkLeaders = nextLane.get_link_cont()[link].get_leader_info(Ptr::new(veh), seen, Ptr::null(), false);
+            for it in linkLeaders.iter() {
+                let leader = it.vehAndGap.0;
+                if !leader.is_null() && leader != result.0 {
+                    // XXX ignoring pedestrians here!
+                    // XXX ignoring the fact that the link leader may alread by following us
+                    // XXX ignoring the fact that we may drive up to the crossing point
+                    let mut tmpSpeed = safeSpeed;
+                    // shortcut: C++ passes tmpSpeed as both v and vLinkPass (aliased references), two separate locals here, merged back into tmpSpeed afterwards, upgrade when adaptToJunctionLeader takes one mutable state
+                    let mut v = tmpSpeed;
+                    let mut vLinkPass = tmpSpeed;
+                    veh.adapt_to_junction_leader(it.vehAndGap, seen, Ptr::null(), nextLane, &mut v, &mut vLinkPass, it.distToCrossing);
+                    tmpSpeed = v;
+                    if tmpSpeed < safeSpeed {
+                        safeSpeed = tmpSpeed;
+                        result = it.vehAndGap;
+                    }
+                }
+            }
+            let nextInternal = !nextLane.get_link_cont()[link].get_via_lane().is_null();
+            nextLane = nextLane.get_link_cont()[link].get_via_lane_or_lane();
+            if nextLane.is_null() {
+                break;
+            }
+            let leader = nextLane.get_last_any_vehicle();
+            if !leader.is_null() && leader != result.0 {
+                let gap = seen + leader.get_back_position_on_lane(nextLane) - veh.get_vehicle_type().get_min_gap();
+                let tmpSpeed = veh.get_car_follow_model().insertion_follow_speed(Ptr::new(veh), speed, gap, leader.get_speed(), leader.get_car_follow_model().get_max_decel(), leader);
+                if tmpSpeed < safeSpeed {
+                    safeSpeed = tmpSpeed;
+                    result = (leader, gap);
+                }
+            }
+            if nextLane.get_vehicle_max_speed(Ptr::new(veh).cast::<SUMOTrafficObject>()) < speed {
+                dist = veh.get_car_follow_model().brake_gap(nextLane.get_vehicle_max_speed(Ptr::new(veh).cast::<SUMOTrafficObject>()));
+            }
+            seen += nextLane.get_length();
+            if seen <= dist {
+                // delaying the update of arrivalTime and making it conditional to avoid possible integer overflows
+                arrivalTime += utils::common::time::time2steps(nextLane.get_length() / (if speed > NUMERICAL_EPS { speed } else { NUMERICAL_EPS }));
+            }
+            if !nextInternal {
+                view += 1;
+            }
+            if !(seen <= dist || nextLane.is_internal()) {
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `MSVehicle * MSLane::getPartialBehind(const MSVehicle *) const` [const]
@@ -5475,7 +5545,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_partial_behind(&self, ego: Ptr<MSVehicle>) -> Ptr<MSVehicle> {
-        todo!("port MSLane::getPartialBehind")
+        for i in self.myPartialVehicles.iter().rev() {
+            let veh = *i;
+            if veh.is_front_on_lane(Ptr::new(self))
+                && veh != ego
+                && veh.get_position_on_lane() <= ego.get_position_on_lane() {
+                return veh;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `MSLeaderInfo MSLane::getPartialBeyond() const` [const]
@@ -5495,7 +5573,16 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_partial_beyond(&self) -> MSLeaderInfo {
-        todo!("port MSLane::getPartialBeyond")
+        let mut result = MSLeaderInfo::new(self.myWidth, Ptr::null(), 0.);
+        for it in self.myPartialVehicles.iter() {
+            let veh = *it;
+            if !veh.is_front_on_lane(Ptr::new(self)) {
+                result.add_leader(veh, false, veh.get_lat_offset(Ptr::new(self)));
+            } else {
+                break;
+            }
+        }
+        result
     }
 
     /// C++: `std::set<MSVehicle *> MSLane::getSurroundingVehicles(double, double, double, std::shared_ptr<LaneCoverageInfo>) const` [const]
@@ -5551,8 +5638,35 @@ impl MSLane {
     //     return foundVehicles;
     // }
     #[allow(unused_variables)]
-    pub fn get_surrounding_vehicles(&self, startPos: f64, downstreamDist: f64, upstreamDist: f64, checkedLanes: Rc<LaneCoverageInfo>) -> BTreeSet<Ptr<MSVehicle>> {
-        todo!("port MSLane::getSurroundingVehicles")
+    pub fn get_surrounding_vehicles(&self, startPos: f64, downstreamDist: f64, upstreamDist: f64, checkedLanes: Rc<std::cell::RefCell<LaneCoverageInfo>>) -> BTreeSet<Ptr<MSVehicle>> {
+        // the C++ shared_ptr map is mutated by all recursive calls, hence the RefCell
+        let key = Ptr::new(self);
+        let already = checkedLanes.borrow().contains_key(&key);
+        if already {
+            return BTreeSet::new();
+        }
+        // Add this lane's coverage to the lane coverage info
+        checkedLanes.borrow_mut().insert(key, (if 0.0 > startPos - upstreamDist { 0.0 } else { startPos - upstreamDist }, if startPos + downstreamDist < self.get_length() { startPos + downstreamDist } else { self.get_length() }));
+        let mut foundVehicles = self.get_vehicles_in_range(
+            if 0. > startPos - upstreamDist { 0. } else { startPos - upstreamDist },
+            if self.myLength < startPos + downstreamDist { self.myLength } else { startPos + downstreamDist });
+        if startPos < upstreamDist {
+            // scan incoming lanes
+            for incomingInfo in self.get_incoming_lanes().iter() {
+                let incoming = incomingInfo.lane;
+                let newVehs = incoming.get_surrounding_vehicles(incoming.get_length(), 0.0, upstreamDist - startPos, checkedLanes.clone());
+                foundVehicles.extend(newVehs);
+            }
+        }
+        if self.get_length() < startPos + downstreamDist {
+            // scan successive lanes
+            let lc = self.get_link_cont();
+            for l in lc.iter() {
+                let newVehs = l.get_via_lane_or_lane().get_surrounding_vehicles(0.0, downstreamDist - (self.myLength - startPos), upstreamDist, checkedLanes.clone());
+                foundVehicles.extend(newVehs);
+            }
+        }
+        foundVehicles
     }
 
     /// C++: `std::set<MSVehicle *> MSLane::getVehiclesInRange(const double, const double) const` [const]
@@ -5577,7 +5691,20 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles_in_range(&self, a: f64, b: f64) -> BTreeSet<Ptr<MSVehicle>> {
-        todo!("port MSLane::getVehiclesInRange")
+        let mut res: BTreeSet<Ptr<MSVehicle>> = BTreeSet::new();
+        let vehs = self.get_vehicles_secure();
+        if !vehs.is_empty() {
+            for veh in vehs.iter() {
+                if veh.get_position_on_lane() >= a {
+                    if veh.get_back_position_on_lane_2() > b {
+                        break;
+                    }
+                    res.insert(*veh);
+                }
+            }
+        }
+        self.release_vehicles();
+        res
     }
 
     /// C++: `std::vector<const MSJunction *> MSLane::getUpcomingJunctions(double, double, const std::vector<MSLane *> &) const` [const]
