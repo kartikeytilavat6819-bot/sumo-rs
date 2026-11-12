@@ -55,7 +55,7 @@ impl ValueTimeLineDouble {
             return;
         }
         // we have at least one entry strictly before our end
-        let oldEndValue = self.last_lt(end).expect("ValueTimeLine::add: entry before end").1;
+        let oldEndValue = *self.last_lt(end).expect("ValueTimeLine::add: entry before end").1;
         self.myValues.retain(|k, _| !(k.0 > begin && k.0 < end));
         self.myValues.insert(MSEdgeWeightsStorage_TimeKey(begin), (true, value));
         self.myValues.insert(MSEdgeWeightsStorage_TimeKey(end), oldEndValue);
