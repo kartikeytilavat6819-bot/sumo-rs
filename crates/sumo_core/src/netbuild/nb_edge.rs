@@ -743,9 +743,8 @@ impl NBEdge {
     //     init(nolanes, false, "");
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, spread: LaneSpreadFunction, streetName: &str) -> Self {
-        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
-        let mut e = NBEdge::new_base(id, from, to, type_, speed, friction, priority, PositionVector::new(), spread, endOffset, width, streetName);
+    pub fn new(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, spread: LaneSpreadFunction, streetName: &str) -> Box<Self> {
+        let mut e = Box::new(NBEdge::new_base(id, from, to, type_, speed, friction, priority, PositionVector::new(), spread, endOffset, width, streetName));
         e.init(nolanes, false, "");
         e
     }
@@ -832,9 +831,8 @@ impl NBEdge {
     //     init(nolanes, tryIgnoreNodePositions, origID);
     // }
     #[allow(unused_variables)]
-    pub fn new_2(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, geom: PositionVector, spread: LaneSpreadFunction, streetName: &str, origID: &str, tryIgnoreNodePositions: bool) -> Self {
-        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
-        let mut e = NBEdge::new_base(id, from, to, type_, speed, friction, priority, geom, spread, endOffset, width, streetName);
+    pub fn new_2(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: String, speed: f64, friction: f64, nolanes: i32, priority: i32, width: f64, endOffset: f64, geom: PositionVector, spread: LaneSpreadFunction, streetName: &str, origID: &str, tryIgnoreNodePositions: bool) -> Box<Self> {
+        let mut e = Box::new(NBEdge::new_base(id, from, to, type_, speed, friction, priority, geom, spread, endOffset, width, streetName));
         e.init(nolanes, tryIgnoreNodePositions, origID);
         e
     }
@@ -887,9 +885,8 @@ impl NBEdge {
     //     updateParameters(tpl->getParametersMap());
     // }
     #[allow(unused_variables)]
-    pub fn new_3(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, tpl: Ptr<NBEdge>, geom: &PositionVector, numLanes: i32) -> Self {
-        // shortcut: init() stores `this` in NBNode/NBEdge_Lane but the value is moved on return, so those pointers dangle until constructors return Ptr<NBEdge> (callers box the result today), upgrade with that caller change
-        let mut e = NBEdge::new_base(id, from, to, tpl.get_type_id().to_string(), tpl.get_speed(), tpl.get_friction(), tpl.get_priority(), geom.clone(), tpl.get_lane_spread_function(), tpl.get_end_offset(), tpl.get_lane_width(), tpl.get_street_name());
+    pub fn new_3(id: &str, from: Ptr<NBNode>, to: Ptr<NBNode>, tpl: Ptr<NBEdge>, geom: &PositionVector, numLanes: i32) -> Box<Self> {
+        let mut e = Box::new(NBEdge::new_base(id, from, to, tpl.get_type_id().to_string(), tpl.get_speed(), tpl.get_friction(), tpl.get_priority(), geom.clone(), tpl.get_lane_spread_function(), tpl.get_end_offset(), tpl.get_lane_width(), tpl.get_street_name()));
         if to == tpl.myTo {
             e.mySignalPosition = tpl.mySignalPosition;
             e.mySignalNode = tpl.mySignalNode;
@@ -1919,7 +1916,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_crossing_angle(&mut self, node: Ptr<NBNode>) -> f64 {
-        todo!("port NBEdge::getCrossingAngle")
+        let mut angle = self.get_angle_at_node(node) + (if self.get_from_node() == node { 180.0 } else { 0.0 });
+        if angle < 0.0 {
+            angle += 360.0;
+        }
+        if angle >= 360.0 {
+            angle -= 360.0;
+        }
+        // shortcut: gDebugFlag1 debug print omitted, no debug-flag global ported yet, upgrade with the debug-flag port
+        angle
     }
 
     /// C++: `std::string NBEdge::getSidewalkID()`
@@ -1941,7 +1946,17 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_sidewalk_id(&mut self) -> String {
-        todo!("port NBEdge::getSidewalkID")
+        for i in 0..self.myLanes.len() {
+            if self.myLanes[i].permissions == SVC_PEDESTRIAN {
+                return self.get_lane_id(i as i32);
+            }
+        }
+        for i in 0..self.myLanes.len() {
+            if (self.myLanes[i].permissions & SVC_PEDESTRIAN) != 0 {
+                return self.get_lane_id(i as i32);
+            }
+        }
+        self.get_lane_id(0)
     }
 
     /// C++: `const PositionVector & NBEdge::getGeometry() const` [const]
@@ -1951,7 +1966,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_geometry(&self) -> &PositionVector {
-        todo!("port NBEdge::getGeometry")
+        &self.myGeom
     }
 
     /// C++: `const PositionVector NBEdge::getInnerGeometry() const` [const]
@@ -1962,7 +1977,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_inner_geometry(&self) -> PositionVector {
-        todo!("port NBEdge::getInnerGeometry")
+        self.myGeom.get_subpart_by_index(1, self.myGeom.len() as i32 - 2)
     }
 
     /// C++: `bool NBEdge::hasDefaultGeometry() const` [const]
@@ -1973,7 +1988,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_default_geometry(&self) -> bool {
-        todo!("port NBEdge::hasDefaultGeometry")
+        self.myGeom.len() == 2 && self.has_default_geometry_endpoints()
     }
 
     /// C++: `bool NBEdge::hasDefaultGeometryEndpoints() const` [const]
@@ -1985,7 +2000,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_default_geometry_endpoints(&self) -> bool {
-        todo!("port NBEdge::hasDefaultGeometryEndpoints")
+        self.myGeom.front().almost_same(self.myFrom.get_position(), 0.01) && self.myGeom.back().almost_same(self.myTo.get_position(), 0.01)
     }
 
     /// C++: `bool NBEdge::hasDefaultGeometryEndpointAtNode(const NBNode *) const` [const]
@@ -2002,7 +2017,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_default_geometry_endpoint_at_node(&self, node: Ptr<NBNode>) -> bool {
-        todo!("port NBEdge::hasDefaultGeometryEndpointAtNode")
+        // do not extend past the node position
+        if node == self.myFrom {
+            self.myGeom.front() == node.get_position()
+        } else {
+            debug_assert!(node == self.myTo);
+            self.myGeom.back() == node.get_position()
+        }
     }
 
     /// C++: `Position NBEdge::getEndpointAtNode(const NBNode *) const` [const]
@@ -2012,7 +2033,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_endpoint_at_node(&self, node: Ptr<NBNode>) -> Position {
-        todo!("port NBEdge::getEndpointAtNode")
+        if node == self.myFrom { *self.myGeom.front() } else { *self.myGeom.back() }
     }
 
     /// C++: `void NBEdge::resetEndpointAtNode(const NBNode *)`
@@ -2029,7 +2050,15 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reset_endpoint_at_node(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBEdge::resetEndpointAtNode")
+        debug_assert!(self.myGeom.len() >= 2);
+        if node == self.myFrom {
+            self.myGeom[0] = *self.myFrom.get_position();
+        } else if node == self.myTo {
+            let last = self.myGeom.len() - 1;
+            self.myGeom[last] = *self.myTo.get_position();
+        } else {
+            debug_assert!(false);
+        }
     }
 
     /// C++: `void NBEdge::setGeometry(const PositionVector &, bool)`
@@ -2055,7 +2084,22 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_geometry(&mut self, g: &PositionVector, inner: bool) {
-        todo!("port NBEdge::setGeometry")
+        let begin = *self.myGeom.front(); // may differ from node position
+        let end = *self.myGeom.back(); // may differ from node position
+        self.myGeom = g.clone();
+        if inner {
+            self.myGeom.insert(0, begin);
+            self.myGeom.push(end);
+        }
+        // ensure non-zero length (see ::init)
+        if self.myGeom.len() == 2 && self.myGeom[0] == self.myGeom[1] {
+            write_warningf!("Edge's '%' from- and to-node are at the same position.", self.get_id());
+            let patchIndex = if self.myFrom.get_id() < self.myTo.get_id() { 1 } else { 0 };
+            self.myGeom[patchIndex].add(&Position::new(utils::geom::POSITION_EPS, utils::geom::POSITION_EPS));
+        }
+        self.compute_lane_shapes();
+        self.compute_angle();
+        self.myLength = self.myGeom.length();
     }
 
     /// C++: `void NBEdge::addGeometryPoint(int, const Position &)`
@@ -2070,7 +2114,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_geometry_point(&mut self, index: i32, p: &Position) {
-        todo!("port NBEdge::addGeometryPoint")
+        if index >= 0 {
+            self.myGeom.insert(index as usize, *p);
+        } else {
+            self.myGeom.insert((self.myGeom.len() as i32 + index) as usize, *p);
+        }
     }
 
     /// C++: `void NBEdge::extendGeometryAtNode(const NBNode *, double)`
@@ -2098,7 +2146,31 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn extend_geometry_at_node(&mut self, node: Ptr<NBNode>, maxExtent: f64) {
-        todo!("port NBEdge::extendGeometryAtNode")
+        //std::cout << "extendGeometryAtNode edge=" << getID() << " node=" << node->getID() << " nodePos=" << node->getPosition() << " extent=" << maxExtent << " geom=" << myGeom;
+        if node == self.myFrom {
+            self.myGeom.extrapolate(maxExtent, true, false);
+            let offset = self.myGeom.nearest_offset_to_point2d(node.get_position(), true);
+            if offset != utils::geom::geom_helper::INVALID_OFFSET {
+                let len2d = self.myGeom.length2d();
+                // MIN2(offset, myGeom.length2D() - 2 * POSITION_EPS)
+                let from = len2d - 2.0 * utils::geom::POSITION_EPS;
+                let begin = if offset < from { offset } else { from };
+                let g = self.myGeom.get_subpart2d(begin, len2d);
+                self.myGeom = g;
+            }
+        } else {
+            debug_assert!(node == self.myTo);
+            self.myGeom.extrapolate(maxExtent, false, true);
+            let offset = self.myGeom.nearest_offset_to_point2d(node.get_position(), true);
+            if offset != utils::geom::geom_helper::INVALID_OFFSET {
+                // MAX2(offset, 2 * POSITION_EPS)
+                let to = 2.0 * utils::geom::POSITION_EPS;
+                let end = if offset > to { offset } else { to };
+                let g = self.myGeom.get_subpart2d(0.0, end);
+                self.myGeom = g;
+            }
+        }
+        //std::cout << " geom3=" << myGeom << "\n";
     }
 
     /// C++: `void NBEdge::shortenGeometryAtNode(const NBNode *, double)`
@@ -2117,7 +2189,19 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn shorten_geometry_at_node(&mut self, node: Ptr<NBNode>, reduction: f64) {
-        todo!("port NBEdge::shortenGeometryAtNode")
+        //std::cout << "shortenGeometryAtNode edge=" << getID() << " node=" << node->getID() << " nodePos=" << node->getPosition() << " reduction=" << reduction << " geom=" << myGeom;
+        // MIN2(reduction, myGeom.length2D() - 2 * POSITION_EPS)
+        let max_reduction = self.myGeom.length2d() - 2.0 * utils::geom::POSITION_EPS;
+        let reduction = if reduction < max_reduction { reduction } else { max_reduction };
+        if node == self.myFrom {
+            let g = self.myGeom.get_subpart2d(reduction, self.myGeom.length2d());
+            self.myGeom = g;
+        } else {
+            let g = self.myGeom.get_subpart2d(0.0, self.myGeom.length2d() - reduction);
+            self.myGeom = g;
+        }
+        self.compute_lane_shapes();
+        //std::cout << " geom2=" << myGeom << "\n";
     }
 
     /// C++: `bool NBEdge::shiftPositionAtNode(NBNode *, NBEdge *)`
