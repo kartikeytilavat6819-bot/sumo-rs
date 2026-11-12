@@ -5720,7 +5720,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_upcoming_junctions(&self, pos: f64, range: f64, contLanes: &Vec<Ptr<MSLane>>) -> Vec<Ptr<MSJunction>> {
-        todo!("port MSLane::getUpcomingJunctions")
+        // set of upcoming junctions and the corresponding conflict links
+        let mut junctions: Vec<Ptr<MSJunction>> = Vec::new();
+        for l in self.get_upcoming_links(pos, range, contLanes) {
+            junctions.push(l.get_junction());
+        }
+        junctions
     }
 
     /// C++: `std::vector<const MSLink *> MSLane::getUpcomingLinks(double, double, const std::vector<MSLane *> &) const` [const]
@@ -5773,7 +5778,43 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_upcoming_links(&self, pos: f64, range: f64, contLanes: &Vec<Ptr<MSLane>>) -> Vec<Ptr<MSLink>> {
-        todo!("port MSLane::getUpcomingLinks")
+        let mut pos = pos;
+        // set of upcoming junctions and the corresponding conflict links
+        let mut links: Vec<Ptr<MSLink>> = Vec::new();
+        // Currently scanned lane
+        let mut lane: Ptr<MSLane> = Ptr::new(self);
+        // continuation lanes for the vehicle (index of the C++ iterator)
+        let mut contLanesIt: usize = 0;
+        // scanned distance so far
+        let mut dist = 0.0;
+        // link to be crossed by the vehicle
+        let mut link: Ptr<MSLink> = Ptr::null();
+        if lane.is_internal() {
+            // assert(*contLanesIt == nullptr); // is called with vehicle's bestLane structure
+            link = lane.get_entry_link();
+            links.push(link);
+            dist += link.get_internal_lengths_after();
+            // next non-internal lane behind junction
+            lane = link.get_lane();
+            pos = 0.0;
+        }
+        loop {
+            contLanesIt += 1;
+            if contLanesIt >= contLanes.len() {
+                break;
+            }
+            dist += lane.get_length() - pos;
+            pos = 0.;
+            if dist > range {
+                break;
+            }
+            link = lane.get_link_to(contLanes[contLanesIt]);
+            if !link.is_null() {
+                links.push(link);
+            }
+            lane = contLanes[contLanesIt];
+        }
+        links
     }
 
     /// C++: `MSLane * MSLane::getLogicalPredecessorLane() const` [const]
@@ -5818,7 +5859,11 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_predecessor_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getNormalPredecessorLane")
+        if self.is_internal() {
+            self.get_logical_predecessor_lane().get_normal_predecessor_lane()
+        } else {
+            Ptr::new(self)
+        }
     }
 
     /// C++: `const MSLane * MSLane::getNormalSuccessorLane() const` [const]
@@ -5833,7 +5878,11 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_successor_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getNormalSuccessorLane")
+        if self.is_internal() {
+            self.get_canonical_successor_lane().get_normal_successor_lane()
+        } else {
+            Ptr::new(self)
+        }
     }
 
     /// C++: `MSLane * MSLane::getLogicalPredecessorLane(const MSEdge &) const` [const]
@@ -5849,7 +5898,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_logical_predecessor_lane_2(&self, fromEdge: &MSEdge) -> Ptr<MSLane> {
-        todo!("port MSLane::getLogicalPredecessorLane")
+        for cand in self.myIncomingLanes.iter() {
+            if cand.lane.myEdge == Ptr::new(fromEdge) {
+                return cand.lane;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `MSLane * MSLane::getCanonicalPredecessorLane() const` [const]
@@ -5878,7 +5932,26 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_canonical_predecessor_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getCanonicalPredecessorLane")
+        if !self.myCanonicalPredecessorLane.is_null() {
+            return self.myCanonicalPredecessorLane;
+        }
+        if self.myIncomingLanes.is_empty() {
+            return Ptr::null();
+        }
+        // myCanonicalPredecessorLane has not yet been determined and there exist incoming lanes
+        // get the lane with the priorized (or if this does not apply the "straightest") connection
+        // std::min_element: keep the first element that no later element is strictly less than
+        let sorter = MSLane_incoming_lane_priority_sorter::new(Ptr::new(self));
+        let mut best = 0;
+        for i in 1..self.myIncomingLanes.len() {
+            if sorter.call_op(&self.myIncomingLanes[i], &self.myIncomingLanes[best]) != 0 {
+                best = i;
+            }
+        }
+        // shortcut: C++ takes myLeaderInfoMutex (ScopedLocker) here, omitted as the port runs single-threaded, upgrade when gNumSimThreads > 1 is supported
+        let bestLane = self.myIncomingLanes[best].lane;
+        Ptr::new(self).m().myCanonicalPredecessorLane = bestLane;
+        bestLane
     }
 
     /// C++: `MSLane * MSLane::getCanonicalSuccessorLane() const` [const]
@@ -5904,7 +5977,24 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_canonical_successor_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSLane::getCanonicalSuccessorLane")
+        if !self.myCanonicalSuccessorLane.is_null() {
+            return self.myCanonicalSuccessorLane;
+        }
+        if self.myLinks.is_empty() {
+            return Ptr::null();
+        }
+        // myCanonicalSuccessorLane has not yet been determined and there exist outgoing links
+        // determinism: C++ std::sort leaves the order of equal links unspecified, the first best link is used here
+        let sorter = MSLane_outgoing_lane_priority_sorter::new(Ptr::new(self));
+        let mut best = 0;
+        for i in 1..self.myLinks.len() {
+            if sorter.call_op(self.myLinks[i], self.myLinks[best]) != 0 {
+                best = i;
+            }
+        }
+        let bestLane = self.myLinks[best].get_via_lane_or_lane();
+        Ptr::new(self).m().myCanonicalSuccessorLane = bestLane;
+        bestLane
     }
 
     /// C++: `LinkState MSLane::getIncomingLinkState() const` [const]
@@ -5920,7 +6010,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_link_state(&self) -> LinkState {
-        todo!("port MSLane::getIncomingLinkState")
+        let pred = self.get_logical_predecessor_lane();
+        if pred.is_null() {
+            LINKSTATE_DEADEND
+        } else {
+            pred.get_link_to(Ptr::new(self)).get_state()
+        }
     }
 
     /// C++: `const std::vector<std::pair<const MSLane *, const MSEdge *>> MSLane::getOutgoingViaLanes() const` [const]
@@ -5936,7 +6031,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_outgoing_via_lanes(&self) -> Vec<(Ptr<MSLane>, Ptr<MSEdge>)> {
-        todo!("port MSLane::getOutgoingViaLanes")
+        let mut result: Vec<(Ptr<MSLane>, Ptr<MSEdge>)> = Vec::new();
+        for link in self.myLinks.iter() {
+            assert!(!link.get_lane().is_null());
+            result.push((link.get_lane(), if link.get_via_lane().is_null() { Ptr::null() } else { link.get_via_lane().myEdge }));
+        }
+        result
     }
 
     /// C++: `std::vector<const MSLane *> MSLane::getNormalIncomingLanes() const` [const]
@@ -5955,7 +6055,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_normal_incoming_lanes(&self) -> Vec<Ptr<MSLane>> {
-        todo!("port MSLane::getNormalIncomingLanes")
+        let mut result: Vec<Ptr<MSLane>> = Vec::new();
+        for (_, lanes) in self.myApproachingLanes.iter() {
+            for lane in lanes.iter() {
+                if !lane.is_internal() {
+                    result.push(*lane);
+                }
+            }
+        }
+        result
     }
 
     /// C++: `double MSLane::getMeanSpeed() const` [const]
@@ -5981,7 +6089,22 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self) -> f64 {
-        todo!("port MSLane::getMeanSpeed")
+        if self.myVehicles.len() == 0 {
+            return self.myMaxSpeed;
+        }
+        let mut v = 0.;
+        let mut numVehs = 0;
+        for veh in self.get_vehicles_secure().iter() {
+            if !veh.is_stopped() || !self.myEdge.has_lane_changer() {
+                v += veh.get_speed();
+                numVehs += 1;
+            }
+        }
+        self.release_vehicles();
+        if numVehs == 0 {
+            return self.myMaxSpeed;
+        }
+        v / numVehs as f64
     }
 
     /// C++: `double MSLane::getMeanSpeedBike() const` [const]
