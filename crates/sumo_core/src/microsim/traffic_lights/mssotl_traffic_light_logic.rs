@@ -1,6 +1,8 @@
 //! Port of microsim/traffic_lights/MSSOTLTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{with_instance, write_error, write_message};
+use utils::common::rand_helper;
 
 /// C++ typedef `std::map<const std::string, std::vector<MSPushButton *>> MSSOTLTrafficLightLogic::PhasePushButtons`
 pub type MSSOTLTrafficLightLogic_PhasePushButtons = BTreeMap<String, Vec<Ptr<MSPushButton>>>;
@@ -54,8 +56,35 @@ impl MSSOTLTrafficLightLogic {
     //     setToATargetPhase();
     // }
     #[allow(unused_variables)]
+    /// Shared C++ member initialisation for both constructors (member order follows the header).
+    fn with_base(base: MSSimpleTrafficLightLogic, mySensors: Ptr<MSSOTLSensors>, sensorsSelfBuilt: bool) -> Self {
+        Self {
+            base,
+            m_pushButtons: BTreeMap::new(),
+            mySensors,
+            myCountSensors: Ptr::null(),
+            sensorsSelfBuilt,
+            targetPhasesCTS: BTreeMap::new(),
+            lastCheckForTargetPhase: BTreeMap::new(),
+            targetPhasesLastSelection: BTreeMap::new(),
+            lastChain: 0, // shortcut: C++ leaves lastChain uninitialised, Rust starts it at 0
+            decayThreshold: 0.0, // shortcut: C++ leaves decayThreshold uninitialised, Rust starts it at 0
+        }
+    }
+
+    /// C++ `(MSSOTLE2Sensors*)mySensors`: mySensors is always built as an E2 sensor here (SENSORS_TYPE is E2).
+    fn e2_sensors(&self) -> Ptr<MSSOTLE2Sensors> {
+        Ptr::from_raw(self.mySensors.as_raw() as *mut MSSOTLE2Sensors)
+    }
+
+    #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLTrafficLightLogic::MSSOTLTrafficLightLogic")
+        let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters);
+        let mut this = Self::with_base(base, Ptr::null(), true);
+        this.check_phases();
+        this.setup_cts();
+        this.set_to_a_target_phase();
+        this
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::MSSOTLTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const TrafficLightType, const Phases &, int, SUMOTime, const Parameterised::Map &, MSSOTLSensors *)`
@@ -79,7 +108,12 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */, sensors: Ptr<MSSOTLSensors>) -> Self {
-        todo!("port MSSOTLTrafficLightLogic::MSSOTLTrafficLightLogic")
+        let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters);
+        let mut this = Self::with_base(base, sensors, false);
+        this.check_phases();
+        this.setup_cts();
+        this.set_to_a_target_phase();
+        this
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::~MSSOTLTrafficLightLogic() noexcept` [virtual]
@@ -97,7 +131,17 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::~MSSOTLTrafficLightLogic")
+        for buttons in self.m_pushButtons.values() {
+            for button in buttons {
+                unsafe { drop(Box::from_raw(button.as_raw())) };
+            }
+        }
+        self.m_pushButtons.clear();
+        if self.sensorsSelfBuilt && !self.mySensors.is_null() {
+            unsafe { drop(Box::from_raw(self.e2_sensors().as_raw())) };
+        }
+        // C++ `delete myCountSensors` is commented out upstream, so it is not freed here.
+        self.base.drop_();
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -188,7 +232,58 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSOTLTrafficLightLogic::init")
+        // MSTrafficLightLogic::init(nb);
+        self.base.base.init(nb);
+
+        if self.is_decay_threshold_activated() {
+            self.decayThreshold = 1.0;
+        }
+        if self.sensorsSelfBuilt {
+            // SENSORS_TYPE is SENSORS_TYPE_E2, so the E1 branch (throws ProcessError) is unreachable and not ported.
+            // Adding Sensors to the ingoing Lanes
+            let sensor_phases = Ptr::new(self.get_phases());
+            let e2 = MSSOTLE2Sensors::new(self.get_id().to_string(), sensor_phases);
+            self.mySensors = Ptr::from_raw(Box::into_raw(Box::new(e2)) as *mut MSSOTLSensors);
+            let myLanes = self.myLanes.clone();
+            let inputLength = self.get_input_sensors_length();
+            self.e2_sensors().m().build_sensors_2(myLanes, nb, inputLength);
+            let idx = self.get_current_phase_index();
+            self.mySensors.m().step_changed(idx);
+            if self.get_parameter("USE_VEHICLE_TYPES_WEIGHTS", "0".to_string()) == "1" {
+                let weights = self.get_parameter("VEHICLE_TYPES_WEIGHTS", "".to_string());
+                self.e2_sensors().m().set_vehicle_weigths(&weights);
+            }
+            // threshold speed param for tuning with irace
+            let speedThreshold = self.get_speed_threshold();
+            self.e2_sensors().m().set_speed_threshold_param(speedThreshold);
+
+            let count_phases = Ptr::new(self.get_phases());
+            let count = MSSOTLE2Sensors::new(format!("{}Count", self.get_id()), count_phases);
+            self.myCountSensors = Ptr::from_raw(Box::into_raw(Box::new(count)));
+            let myLanes = self.myLanes.clone();
+            self.myCountSensors.m().build_count_sensors(myLanes, nb);
+            let idx = self.get_current_phase_index();
+            self.myCountSensors.m().step_changed(idx);
+
+            // Adding Sensors to the outgoing Lanes
+            let mut myLaneVector: MSTrafficLightLogic_LaneVectorVector = Vec::new();
+            let mut outLanes: MSTrafficLightLogic_LaneVector = Vec::new();
+            for i in 0..self.get_links().len() {
+                let oneLink = self.get_links_at(i as i32).clone();
+                for j in 0..oneLink.len() {
+                    let lane = oneLink[j].get_lane();
+                    outLanes.push(lane);
+                }
+            }
+            if !outLanes.is_empty() {
+                myLaneVector.push(outLanes);
+            }
+            if !myLaneVector.is_empty() {
+                let outLength = self.get_output_sensors_length();
+                self.e2_sensors().m().build_out_sensors_2(myLaneVector.clone(), nb, outLength);
+                self.myCountSensors.m().build_count_out_sensors(myLaneVector, nb);
+            }
+        }
     }
 
     /// C++: `SUMOTime MSSOTLTrafficLightLogic::trySwitch()` [virtual]
@@ -250,7 +345,52 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        todo!("port MSSOTLTrafficLightLogic::trySwitch")
+        if MSNet::get_instance().get_current_time_step() % 1000 == 0 {
+            write_message("MSSOTLTrafficLightLogic::trySwitch()");
+            // To check if decideNextPhase changes the step
+            let previousStep = self.get_current_phase_index();
+            // Update CTS according to sensors
+            self.update_cts();
+
+            // Invoking the function member, specialized for each SOTL logic
+            let next = self.decide_next_phase();
+            self.set_step(next);
+            // C++ copies the current phase here and sets its myLastSwitch on that copy, which has no effect on the real phase, so no write is made.
+
+            //At the end, check if new step started
+            if self.get_current_phase_index() != previousStep {
+                //Check if a new steps chain started
+                if self.get_current_phase_def().is_target() {
+                    //Reset CTS for the ending steps chain
+                    let oldChain = self.lastChain;
+                    self.reset_cts(oldChain);
+                    //Update lastTargetPhase
+                    self.lastChain = self.get_current_phase_index();
+                    let lastChain = self.lastChain;
+                    let maxLastSelection = self.get_target_phase_max_last_selection();
+                    for (key, val) in self.targetPhasesLastSelection.iter_mut() {
+                        if *key == lastChain {
+                            if *val >= maxLastSelection {
+                                write_message(&format!("Forced selection of the phase {} since its last selection was {} changes ago", lastChain, val));
+                            }
+                            *val = 0;
+                        } else if *key != previousStep {
+                            *val += 1;
+                        }
+                    }
+                    if self.is_decay_threshold_activated() {
+                        self.decayThreshold = 1.0;
+                    }
+                }
+                //Inform the sensors logic
+                let idx = self.get_current_phase_index();
+                self.mySensors.m().step_changed(idx);
+                if self.is_decay_threshold_activated() {
+                    self.decayThreshold = 1.0;
+                }
+            }
+        }
+        self.compute_return_time()
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::logStatus()` [protected]
@@ -259,7 +399,7 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn log_status(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::logStatus")
+        // C++ body is empty.
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::decideNextPhase()` [virtual, protected]
@@ -290,14 +430,32 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::decideNextPhase")
+        let (commit, transient, decisional) = {
+            let currentPhase = self.get_current_phase_def();
+            (currentPhase.is_commit(), currentPhase.is_transient(), currentPhase.is_decisional())
+        };
+        //If the junction was in a commit step
+        //=> go to the target step that gives green to the set with the current highest CTS
+        if commit {
+            return self.get_phase_index_with_max_cts();
+        }
+        //If the junction was in a transient step => go to the next step
+        if transient {
+            return self.get_current_phase_index() + 1;
+        }
+        if decisional {
+            if self.can_release() {
+                return self.get_current_phase_index() + 1;
+            }
+        }
+        self.get_current_phase_index()
     }
 
     /// C++: `bool MSSOTLTrafficLightLogic::canRelease()` [virtual, pure virtual, protected]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn can_release(&mut self) -> bool {
-        todo!("port MSSOTLTrafficLightLogic::canRelease")
+        panic!("MSSOTLTrafficLightLogic::canRelease is pure virtual; subclasses must override it")
     }
 
     /// C++: `SUMOTime MSSOTLTrafficLightLogic::getCurrentPhaseElapsed()` [protected]
@@ -312,7 +470,9 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_current_phase_elapsed(&mut self) -> SUMOTime {
-        todo!("port MSSOTLTrafficLightLogic::getCurrentPhaseElapsed")
+        let now = MSNet::get_instance().get_current_time_step();
+        let elapsed = now - self.get_current_phase_def().myLastSwitch;
+        elapsed
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::countVehicles(MSPhaseDefinition)` [protected]
@@ -344,8 +504,24 @@ impl MSSOTLTrafficLightLogic {
     //     return accumulator;
     // }
     #[allow(unused_variables)]
-    pub fn count_vehicles(&mut self, phase: MSPhaseDefinition) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::countVehicles")
+    // Signature change: C++ takes MSPhaseDefinition by value (a copy); MSPhaseDefinition is not Clone, so a pointer is passed.
+    pub fn count_vehicles(&mut self, phase: Ptr<MSPhaseDefinition>) -> i32 {
+        if !phase.is_target() {
+            return 0;
+        }
+
+        let mut accumulator: i32 = 0;
+        //Iterate over the target lanes for the current target phase to get the number of approaching vehicles
+        for lane in phase.get_target_lane_set() {
+            //SWITCH between 3 counting vehicles function
+            match self.get_mode() {
+                0 => accumulator += self.e2_sensors().m().count_vehicles_2(lane.clone()), //SUMO
+                1 => accumulator += self.e2_sensors().m().estimate_vehicles(lane.clone()), //COMPLEX
+                2 => accumulator = std::cmp::max(self.e2_sensors().m().get_estimate_queue_length(lane.clone()) as i32, accumulator), //QUEUE
+                _ => write_error("Unrecognized traffic threshold calculation mode"),
+            }
+        }
+        accumulator
     }
 
     /// C++: `bool MSSOTLTrafficLightLogic::isThresholdPassed()` [protected]
@@ -401,7 +577,23 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn is_threshold_passed(&mut self) -> bool {
-        todo!("port MSSOTLTrafficLightLogic::isThresholdPassed")
+        /*
+         * if a dynamic threshold based on the exponential decrease, if passed we force the phase change
+         */
+        let random = rand_helper::rand();
+        if !self.is_decay_threshold_activated() || (self.is_decay_threshold_activated() && random > (1.0 - self.decayThreshold)) {
+            // Snapshot the map: getThreshold() needs &mut self inside the loop.
+            let entries: Vec<(i32, SUMOTime)> = self.targetPhasesCTS.iter().map(|(&k, &v)| (k, v)).collect();
+            for (chain, cts) in entries {
+                //Note that the current chain is not eligible to be directly targeted again, it would be unfair
+                if chain != self.lastChain && (self.get_threshold() as SUMOTime) <= cts {
+                    return true;
+                }
+            }
+            false
+        } else {
+            true
+        }
     }
 
     /// C++: `bool MSSOTLTrafficLightLogic::isPushButtonPressed()` [protected]
@@ -418,7 +610,15 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn is_push_button_pressed(&mut self) -> bool {
-        todo!("port MSSOTLTrafficLightLogic::isPushButtonPressed")
+        if self.get_parameter("USE_PUSH_BUTTON", "0".to_string()) == "0" {
+            return false;
+        }
+        let state = self.get_current_phase_def().get_state().to_string();
+        if !self.m_pushButtons.contains_key(&state) {
+            let buttons = MSPedestrianPushButton::load_push_buttons(Ptr::new(self.get_current_phase_def()));
+            self.m_pushButtons.insert(state.clone(), buttons);
+        }
+        MSPushButton::any_active(&self.m_pushButtons[&state])
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::getThreshold()` [protected]
@@ -427,7 +627,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_threshold(&mut self) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::getThreshold")
+        utils::common::string_utils::to_int(&self.get_parameter("THRESHOLD", "10".to_string())).unwrap()
     }
 
     /// C++: `double MSSOTLTrafficLightLogic::getSpeedThreshold()` [protected]
@@ -436,7 +636,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_threshold(&mut self) -> f64 {
-        todo!("port MSSOTLTrafficLightLogic::getSpeedThreshold")
+        utils::common::string_utils::to_double(&self.get_parameter("THRESHOLDSPEED", "2".to_string())).unwrap()
     }
 
     /// C++: `double MSSOTLTrafficLightLogic::getInputSensorsLength()` [protected]
@@ -445,7 +645,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_input_sensors_length(&mut self) -> f64 {
-        todo!("port MSSOTLTrafficLightLogic::getInputSensorsLength")
+        utils::common::string_utils::to_double(&self.get_parameter("INSENSORSLENGTH", "100".to_string())).unwrap()
     }
 
     /// C++: `double MSSOTLTrafficLightLogic::getOutputSensorsLength()` [protected]
@@ -454,7 +654,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_output_sensors_length(&mut self) -> f64 {
-        todo!("port MSSOTLTrafficLightLogic::getOutputSensorsLength")
+        utils::common::string_utils::to_double(&self.get_parameter("OUTSENSORSLENGTH", "80".to_string())).unwrap()
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::getPhaseIndexWithMaxCTS()` [protected]
@@ -516,7 +716,57 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_phase_index_with_max_cts(&mut self) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::getPhaseIndexWithMaxCTS")
+        let mut maxCTS: SUMOTime = 0;
+        let mut maxLastStep: i32 = self.get_target_phase_max_last_selection();
+        let mut usedMaxCTS = false;
+        let mut equalIndexes: Vec<i32> = Vec::new();
+        for (&idx, &last) in self.targetPhasesLastSelection.iter() {
+            if idx != self.lastChain {
+                if maxLastStep < last {
+                    maxLastStep = last;
+                    equalIndexes.clear();
+                    equalIndexes.push(idx);
+                } else if maxLastStep == last {
+                    equalIndexes.push(idx);
+                }
+            }
+        }
+        if equalIndexes.is_empty() {
+            usedMaxCTS = true;
+            for (&idx, &cts) in self.targetPhasesCTS.iter() {
+                if idx != self.lastChain {
+                    if maxCTS < cts {
+                        maxCTS = cts;
+                        equalIndexes.clear();
+                        equalIndexes.push(idx);
+                    } else if maxCTS == cts {
+                        equalIndexes.push(idx);
+                    }
+                }
+            }
+        }
+
+        let mut oss = format!("MSSOTLTrafficLightLogic::getPhaseIndexWithMaxCTS-> TLC {}", self.get_id());
+        if usedMaxCTS {
+            oss.push_str(&format!(" maxCTS {}", maxCTS));
+        } else {
+            oss.push_str(&format!(" forcing selection since not selected for {}", maxLastStep));
+        }
+        if equalIndexes.len() == 1 {
+            oss.push_str(&format!(" phase {}", equalIndexes[0]));
+            write_message(&oss);
+            equalIndexes[0]
+        } else {
+            // determinism: RandHelper::getRandomFrom draws from the shared RNG, same as the C++ call.
+            let index = *rand_helper::with_default(|r| *r.get_random_from(&equalIndexes));
+            oss.push_str(" phases [");
+            for it in &equalIndexes {
+                oss.push_str(&format!("{}, ", it));
+            }
+            oss.push_str(&format!("]. Random select {}", index));
+            write_message(&oss);
+            index
+        }
     }
 
     /// C++: `MSSOTLSensors * MSSOTLTrafficLightLogic::getSensors()` [protected]
@@ -525,7 +775,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_sensors(&mut self) -> Ptr<MSSOTLSensors> {
-        todo!("port MSSOTLTrafficLightLogic::getSensors")
+        self.mySensors
     }
 
     /// C++: `MSSOTLE2Sensors * MSSOTLTrafficLightLogic::getCountSensors()` [protected]
@@ -535,7 +785,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_count_sensors(&mut self) -> Ptr<MSSOTLE2Sensors> {
-        todo!("port MSSOTLTrafficLightLogic::getCountSensors")
+        self.myCountSensors
     }
 
     /// C++: `SUMOTime MSSOTLTrafficLightLogic::computeReturnTime()` [virtual, protected]
@@ -549,7 +799,14 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn compute_return_time(&mut self) -> SUMOTime {
-        todo!("port MSSOTLTrafficLightLogic::computeReturnTime")
+        let (transient, duration) = {
+            let currentPhase = self.get_current_phase_def();
+            (currentPhase.is_transient(), currentPhase.duration)
+        };
+        if transient {
+            return duration;
+        }
+        delta_t()
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::setStep(int)` [protected]
@@ -563,7 +820,13 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_step(&mut self, step: i32) {
-        todo!("port MSSOTLTrafficLightLogic::setStep")
+        // C++ `step % myPhases.size()`: the int is converted to size_t, so a negative step wraps.
+        let step = ((step as u64) % (self.myPhases.len() as u64)) as i32;
+        if self.myStep != step {
+            self.myStep = step;
+            let now = MSNet::get_instance().get_current_time_step();
+            self.myPhases[self.myStep as usize].m().myLastSwitch = now;
+        }
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::getTargetPhaseMaxLastSelection()` [private]
@@ -573,7 +836,8 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_target_phase_max_last_selection(&mut self) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::getTargetPhaseMaxLastSelection")
+        //return 2 * targetPhasesCTS.size() - 1;
+        self.targetPhasesCTS.len() as i32 - 1
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::checkPhases()` [private]
@@ -587,7 +851,12 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn check_phases(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::checkPhases")
+        for step in 0..self.get_phases().len() as i32 {
+            if self.get_phase(step).is_undefined() {
+                let msg = format!("Step {} of traffic light logic {} phases declaration has its type undeclared!", step, self.get_id());
+                with_instance(MsgType::Error, |m| m.inform(&msg, true));
+            }
+        }
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::setToATargetPhase()` [private]
@@ -604,7 +873,15 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_to_a_target_phase(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::setToATargetPhase")
+        for step in 0..self.get_phases().len() as i32 {
+            if self.get_phase(step).is_target() {
+                self.set_step(step);
+                self.lastChain = step;
+                return;
+            }
+        }
+        let msg = format!("No phase of type target found for traffic light logic {} The logic could malfunction. Check phases declaration.", self.get_id());
+        with_instance(MsgType::Error, |m| m.inform(&msg, true));
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::setupCTS()` [private]
@@ -620,7 +897,14 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn setup_cts(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::setupCTS")
+        for phaseStep in 0..self.get_phases().len() as i32 {
+            if self.get_phase(phaseStep).is_target() {
+                self.targetPhasesCTS.insert(phaseStep, 0);
+                let now = MSNet::get_instance().get_current_time_step();
+                self.lastCheckForTargetPhase.insert(phaseStep, now);
+                self.targetPhasesLastSelection.insert(phaseStep, 0);
+            }
+        }
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::updateCTS()` [private]
@@ -667,7 +951,43 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn update_cts(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::updateCTS")
+        let mut elapsedTimeSteps: SUMOTime = 0;
+        let now = MSNet::get_instance().get_current_time_step();
+        // Iterate over the target phase map and update CTS value for every target phase except for the one belonging to the current steps chain
+        // (keys are snapshotted because getMode()/countVehicles() need &mut self inside the loop; only values change)
+        let chains: Vec<i32> = self.targetPhasesCTS.keys().copied().collect();
+        for chain in chains {
+            let oldVal = self.targetPhasesCTS[&chain];
+            if chain != self.lastChain {
+                //Get the number of timesteps since the last check for that phase
+                let lastCheck = self.lastCheckForTargetPhase.get(&chain).copied().unwrap_or(0);
+                elapsedTimeSteps = now - lastCheck;
+                //Update the last check time
+                self.lastCheckForTargetPhase.insert(chain, now);
+                //Increment the CTS
+                //SWITCH between 3 counting vehicles function
+                match self.get_mode() {
+                    0 | 1 => {
+                        // SUMO (0) and COMPLEX (1) both add elapsed steps times the vehicle count
+                        let phase = Ptr::new(self.get_phase(chain));
+                        let count = self.count_vehicles(phase);
+                        *self.targetPhasesCTS.get_mut(&chain).unwrap() += elapsedTimeSteps * count as SUMOTime;
+                    }
+                    2 => {
+                        // QUEUE
+                        let phase = Ptr::new(self.get_phase(chain));
+                        let count = self.count_vehicles(phase);
+                        *self.targetPhasesCTS.get_mut(&chain).unwrap() = count as SUMOTime;
+                    }
+                    _ => write_error("Unrecognized traffic threshold calculation mode"),
+                }
+                let newVal = self.targetPhasesCTS[&chain];
+                write_message(&format!("MSSOTLTrafficLightLogic::updateCTS->TLC {} chain {} oldVal {} newVal {}", self.get_id(), chain, oldVal, newVal));
+            }
+            if self.is_decay_threshold_activated() {
+                self.update_decay_threshold();
+            }
+        }
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::resetCTS(int)` [private]
@@ -681,7 +1001,11 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_cts(&mut self, phaseStep: i32) {
-        todo!("port MSSOTLTrafficLightLogic::resetCTS")
+        if self.targetPhasesCTS.contains_key(&phaseStep) {
+            self.targetPhasesCTS.insert(phaseStep, 0);
+            let now = MSNet::get_instance().get_current_time_step();
+            self.lastCheckForTargetPhase.insert(phaseStep, now);
+        }
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::updateDecayThreshold()` [private]
@@ -698,7 +1022,10 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn update_decay_threshold(&mut self) {
-        todo!("port MSSOTLTrafficLightLogic::updateDecayThreshold")
+        if self.get_current_phase_def().is_green_phase() {
+            let factor = self.get_decay_constant().exp();
+            self.decayThreshold = self.decayThreshold * factor;
+        }
     }
 
     /// C++: `int MSSOTLTrafficLightLogic::getMode()` [private]
@@ -707,7 +1034,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_mode(&mut self) -> i32 {
-        todo!("port MSSOTLTrafficLightLogic::getMode")
+        utils::common::string_utils::to_int(&self.get_parameter("MODE", "0".to_string())).unwrap()
     }
 
     /// C++: `bool MSSOTLTrafficLightLogic::isDecayThresholdActivated()` [private]
@@ -716,7 +1043,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn is_decay_threshold_activated(&mut self) -> bool {
-        todo!("port MSSOTLTrafficLightLogic::isDecayThresholdActivated")
+        utils::common::string_utils::to_bool(&self.get_parameter("DECAY_THRESHOLD", "0".to_string())).unwrap()
     }
 
     /// C++: `double MSSOTLTrafficLightLogic::getDecayConstant()` [private]
@@ -725,7 +1052,7 @@ impl MSSOTLTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_decay_constant(&mut self) -> f64 {
-        todo!("port MSSOTLTrafficLightLogic::getDecayConstant")
+        utils::common::string_utils::to_double(&self.get_parameter("DECAY_CONSTANT", "-0.001".to_string())).unwrap()
     }
 
 }
