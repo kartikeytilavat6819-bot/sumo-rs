@@ -1048,7 +1048,51 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn collect_edges(&mut self) {
-        todo!("port NBTrafficLightDefinition::collectEdges")
+        self.myIncomingEdges.clear();
+        self.myEdgesWithin.clear();
+        let mut myOutgoing: EdgeVector = Vec::new();
+        // collect the edges from the participating nodes
+        for i in self.myControlledNodes.clone() {
+            let incoming = i.get_incoming_edges().clone();
+            self.myIncomingEdges.extend(incoming);
+            let outgoing = i.get_outgoing_edges().clone();
+            myOutgoing.extend(outgoing);
+        }
+        let mut outer: EdgeVector = Vec::new();
+        // check which of the edges are completely within the junction
+        //  add them to the list of edges lying within the node
+        for edge in self.myIncomingEdges.clone() {
+            edge.m().set_inside_tls(false); // reset
+            // an edge lies within the logic if it is outgoing as well as incoming
+            if myOutgoing.contains(&edge) {
+                self.myEdgesWithin.push(edge);
+            } else {
+                outer.push(edge);
+            }
+        }
+        // collect edges that are reachable from the outside via controlled connections
+        let reachable = Self::collect_reachable(outer.clone(), &self.myEdgesWithin, true);
+        // collect edges that are reachable from the outside regardless of controllability
+        let reachable2 = Self::collect_reachable(outer, &self.myEdgesWithin, false);
+
+        let uncontrolledWithin = utils::options::options_cont::get_bool("tls.uncontrolled-within");
+        for edge in self.myEdgesWithin.clone() {
+            // edges that are marked as 'inner' will not get their own phase when
+            // computing traffic light logics (unless they cannot be reached from the outside at all)
+            if reachable.contains(&edge) {
+                edge.m().set_inside_tls(true);
+                // legacy behavior
+                if uncontrolledWithin && !self.myControlledInnerEdges.contains(edge.get_id()) {
+                    let pos = self.myIncomingEdges.iter().position(|e| *e == edge).unwrap();
+                    self.myIncomingEdges.remove(pos);
+                }
+            }
+            // FORWARD is NBNode::FORWARD (1)
+            if !reachable2.contains(&edge) && edge.get_first_non_pedestrian_lane_index(1, true) >= 0
+                && self.get_id() != NBTrafficLightDefinition_DummyID {
+                write_warningf!("Unreachable edge '%' within tlLogic '%'", edge.get_id(), self.get_id());
+            }
+        }
     }
 
     /// C++: `bool NBTrafficLightDefinition::amInvalid() const` [const, virtual, protected]
@@ -1058,7 +1102,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn am_invalid(&self) -> bool {
-        todo!("port NBTrafficLightDefinition::amInvalid")
+        self.myControlledLinks.len() == 0
     }
 
     /// C++: `void NBTrafficLightDefinition::collectAllLinks(NBConnectionVector &)` [protected]
@@ -1175,13 +1219,30 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn rail_signal_uncontrolled(in_: Ptr<NBEdge>, out: Ptr<NBEdge>) -> bool {
-        todo!("port NBTrafficLightDefinition::railSignalUncontrolled")
+        let n = in_.get_to_node();
+        if n.base2.has_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION)
+            && in_.base2.has_parameter(NBTrafficLightDefinition_OSM_DIRECTION)
+            && out.base2.has_parameter(NBTrafficLightDefinition_OSM_DIRECTION)
+        {
+            if in_.base2.get_parameter(NBTrafficLightDefinition_OSM_DIRECTION, "") == out.base2.get_parameter(NBTrafficLightDefinition_OSM_DIRECTION, "") {
+                if n.base2.get_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION, "") != in_.base2.get_parameter(NBTrafficLightDefinition_OSM_DIRECTION, "") {
+                    return true;
+                }
+            } else {
+                write_warningf!("Could not interpret rail signal direction at junction '%' due to inconsistent directions of edge '%' (%) and edge '%' (%)",
+                    n.get_id(),
+                    in_.get_id(), in_.base2.get_parameter(NBTrafficLightDefinition_OSM_DIRECTION, ""),
+                    out.get_id(), out.base2.get_parameter(NBTrafficLightDefinition_OSM_DIRECTION, ""));
+            }
+        }
+        false
     }
 
 }
 
 /// data structure for caching needsCont information
 /// C++ class `NBTrafficLightDefinition::StreamPair` (netbuild/NBTrafficLightDefinition.h)
+#[derive(Clone, Copy)]
 pub struct NBTrafficLightDefinition_StreamPair {
     pub from1: Ptr<NBEdge>,
     pub to1: Ptr<NBEdge>,
@@ -1198,7 +1259,7 @@ impl NBTrafficLightDefinition_StreamPair {
     //             to2(_to2) {}
     #[allow(unused_variables)]
     pub fn new(_from1: Ptr<NBEdge>, _to1: Ptr<NBEdge>, _from2: Ptr<NBEdge>, _to2: Ptr<NBEdge>) -> Self {
-        todo!("port StreamPair::StreamPair")
+        Self { from1: _from1, to1: _to1, from2: _from2, to2: _to2 }
     }
 
     /// C++: `bool StreamPair::operator==(const StreamPair &) const` [const]
@@ -1208,7 +1269,7 @@ impl NBTrafficLightDefinition_StreamPair {
     //         }
     #[allow(unused_variables)]
     pub fn eq_op(&self, o: &NBTrafficLightDefinition_StreamPair) -> bool {
-        todo!("port StreamPair::operator==")
+        self.from1 == o.from1 && self.to1 == o.to1 && self.from2 == o.from2 && self.to2 == o.to2
     }
 
     /// C++: `bool StreamPair::operator<(const StreamPair &) const` [const]
@@ -1226,8 +1287,37 @@ impl NBTrafficLightDefinition_StreamPair {
     //         }
     #[allow(unused_variables)]
     pub fn lt_op(&self, o: &NBTrafficLightDefinition_StreamPair) -> bool {
-        todo!("port StreamPair::operator<")
+        if self.from1 != o.from1 {
+            return self.from1 < o.from1;
+        }
+        if self.to1 != o.to1 {
+            return self.to1 < o.to1;
+        }
+        if self.from2 != o.from2 {
+            return self.from2 < o.from2;
+        }
+        self.to2 < o.to2
     }
 
+}
+
+// std::set<StreamPair> needs total ordering; both are defined via the C++ operators above
+impl PartialEq for NBTrafficLightDefinition_StreamPair {
+    fn eq(&self, o: &Self) -> bool { self.eq_op(o) }
+}
+impl Eq for NBTrafficLightDefinition_StreamPair {}
+impl PartialOrd for NBTrafficLightDefinition_StreamPair {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> { Some(self.cmp(o)) }
+}
+impl Ord for NBTrafficLightDefinition_StreamPair {
+    fn cmp(&self, o: &Self) -> std::cmp::Ordering {
+        if self.lt_op(o) {
+            std::cmp::Ordering::Less
+        } else if o.lt_op(self) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    }
 }
 
