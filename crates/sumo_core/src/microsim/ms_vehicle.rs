@@ -16,6 +16,7 @@ fn max2(a: f64, b: f64) -> f64 {
 // shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
 const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
+const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
 
 /// C++ implicit upcast MSVehicle& -> SUMOTrafficObject& (MSVehicle derives from SUMOVehicle, which derives from SUMOTrafficObject)
 #[allow(dead_code)]
