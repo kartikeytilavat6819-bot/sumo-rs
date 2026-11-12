@@ -4476,7 +4476,170 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_followers_on_consecutive(&self, ego: Ptr<MSVehicle>, backOffset: f64, allSublanes: bool, searchDist: f64, mLinkMode: MSLane_MinorLinkMode, maxSearchDist: bool) -> MSLeaderDistanceInfo {
-        todo!("port MSLane::getFollowersOnConsecutive")
+        debug_assert!(!ego.is_null());
+        // get the follower vehicle on the lane to change to
+        let egoPos = backOffset + ego.get_vehicle_type().get_length();
+        let egoLatDist = ego.get_lane().get_right_side_on_edge() - self.get_right_side_on_edge();
+        let getOppositeLeaders = (ego.get_lane_change_model_2().is_opposite() && ego.get_lane() == Ptr::new(self))
+            || (!ego.get_lane_change_model_2().is_opposite() && ego.get_lane().myEdge != self.myEdge);
+        let mut result = MSCriticalFollowerDistanceInfo::new(self.myWidth, if allSublanes { Ptr::null() } else { ego }, if allSublanes { 0. } else { egoLatDist }, getOppositeLeaders);
+        if g_lateral_resolution() > 0. && egoLatDist == 0. {
+            // check whether ego is outside lane bounds far enough so that another vehicle might
+            // be between itself and the first "actual" sublane
+            // shift the offset so that we "see" this vehicle
+            if ego.get_left_side_on_lane() < -g_lateral_resolution() {
+                result.set_sublane_offset((-ego.get_left_side_on_lane() / g_lateral_resolution()) as i32);
+            } else if ego.get_right_side_on_lane() > self.get_width() + g_lateral_resolution() {
+                result.set_sublane_offset(-(((ego.get_right_side_on_lane() - self.get_width()) / g_lateral_resolution()) as i32));
+            }
+        }
+        // XXX iterate in reverse and abort when there are no more freeSublanes
+        let mut last = self.any_vehicles_begin();
+        let lastEnd = self.any_vehicles_end();
+        while last.ne_op(&lastEnd) {
+            let veh = last.mul_op();
+            if veh != ego && veh.get_position_on_lane_2(Ptr::new(self)) < egoPos {
+                let latOffset = veh.get_lat_offset(Ptr::new(self));
+                let mut dist = backOffset - veh.get_position_on_lane_2(Ptr::new(self)) - veh.get_vehicle_type().get_min_gap();
+                if veh.is_bidi_on(Ptr::new(self)) {
+                    dist -= veh.get_length();
+                }
+                result.add_follower(veh, ego, dist, latOffset, -1);
+            }
+            last.op__2();
+        }
+        if result.num_free_sublanes() > 0 {
+            // do a tree search among all follower lanes and check for the most
+            // important vehicle (the one requiring the largest reargap)
+            // to get a safe bound on the necessary search depth, we need to consider the maximum speed and minimum
+            // deceleration of potential follower vehicles
+            let mut searchDist = searchDist;
+            if searchDist == -1. {
+                searchDist = self.get_maximum_brake_dist() - backOffset;
+            }
+            let mut egoFurther: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
+            for further in ego.get_further_lanes() {
+                egoFurther.insert(further.myEdge);
+            }
+            if ego.get_position_on_lane() < ego.get_vehicle_type().get_length() && egoFurther.is_empty()
+                && !ego.get_lane().get_logical_predecessor_lane().is_null() {
+                // on insertion
+                egoFurther.insert(ego.get_lane().get_logical_predecessor_lane().myEdge);
+            }
+
+            // avoid loops
+            let mut visited: BTreeSet<Ptr<MSLane>> = self.myEdge.get_lanes().iter().copied().collect();
+            if !self.myEdge.get_bidi_edge().is_null() {
+                visited.extend(self.myEdge.get_bidi_edge().get_lanes().iter().copied());
+            }
+            let mut newFound: Vec<MSLane_IncomingLaneInfo> = Vec::new();
+            let mut toExamine: Vec<MSLane_IncomingLaneInfo> = self.myIncomingLanes.iter()
+                .map(|ili| MSLane_IncomingLaneInfo { lane: ili.lane, length: ili.length, viaLink: ili.viaLink })
+                .collect();
+            while toExamine.len() != 0 {
+                for it in toExamine.iter() {
+                    let next = it.lane;
+                    searchDist = if maxSearchDist {
+                        let b = next.get_maximum_brake_dist() - backOffset;
+                        if searchDist > b { searchDist } else { b }
+                    } else {
+                        let b = next.get_maximum_brake_dist() - backOffset;
+                        if searchDist < b { searchDist } else { b }
+                    };
+                    let first = next.get_first_vehicle_information(Ptr::null(), 0., false, f64::MAX, false);
+                    let firstFront = next.get_first_vehicle_information(Ptr::null(), 0., true, f64::MAX, true);
+
+                    if backOffset + it.length - next.get_length() < 0. && egoFurther.contains(&next.myEdge) {
+                        // check for junction foes that would interfere with lane changing
+                        // @note: we are passing the back of ego as its front position so
+                        //        we need to add this back to the returned gap
+                        let linkLeaders = it.viaLink.get_leader_info(ego, -backOffset, Ptr::null(), false);
+                        for ll in linkLeaders.iter() {
+                            if !ll.vehAndGap.0.is_null() {
+                                let bidiFoe = it.viaLink.get_lane() == ll.vehAndGap.0.get_lane().get_normal_predecessor_lane().get_bidi_lane();
+                                let egoIsLeader = !bidiFoe && ll.vehAndGap.0.is_leader(it.viaLink, ego, ll.vehAndGap.1);
+                                // if ego is leader the returned gap still assumes that ego follows the leader
+                                // if the foe vehicle follows ego we need to deduce that gap
+                                let gap = if egoIsLeader {
+                                    -ll.vehAndGap.1 - ll.vehAndGap.0.get_vehicle_type().get_length_with_gap() - ego.get_vehicle_type().get_min_gap()
+                                } else {
+                                    ll.vehAndGap.1 + ego.get_vehicle_type().get_length()
+                                };
+                                result.add_follower(ll.vehAndGap.0, ego, gap, 0., -1);
+                            }
+                        }
+                    }
+
+                    for i in 0..first.num_sublanes() {
+                        let mut v = if first.index_op(i) == ego { firstFront.index_op(i) } else { first.index_op(i) };
+                        let mut agap = 0.;
+
+                        if !v.is_null() && v != ego {
+                            if !v.is_front_on_lane(next) {
+                                // the front of v is already on divergent trajectory from the ego vehicle
+                                // for which this method is called (in the context of MSLaneChanger).
+                                // Therefore, technically v is not a follower but only an obstruction and
+                                // the gap is not between the front of v and the back of ego
+                                // but rather between the flank of v and the back of ego.
+                                agap = it.length - next.get_length() + backOffset;
+                                if MSGlobals::using_internal_lanes() {
+                                    // ego should have left the intersection still occupied by v
+                                    agap -= v.get_vehicle_type().get_min_gap();
+                                }
+                                let differentEdge = v.get_lane().myEdge != ego.get_lane().myEdge;
+                                if agap > 0. && differentEdge {
+                                    // Only if ego overlaps we treat v as if it were a real follower
+                                    // Otherwise we ignore it and look for another follower
+                                    if !getOppositeLeaders {
+                                        // even if the vehicle is not a real
+                                        // follower, it still forms a real
+                                        // obstruction in opposite direction driving
+                                        v = firstFront.index_op(i);
+                                        if !v.is_null() && v != ego {
+                                            agap = it.length - v.get_position_on_lane() + backOffset - v.get_vehicle_type().get_min_gap();
+                                        } else {
+                                            v = Ptr::null();
+                                        }
+                                    }
+                                } else if differentEdge && result.has_vehicle(v) {
+                                    // ignore this vehicle as it was already seen on another lane
+                                    agap = 0.;
+                                }
+                            } else {
+                                if !next.get_bidi_lane().is_null() && v.is_bidi_on(next) {
+                                    agap = v.get_position_on_lane() + backOffset - v.get_vehicle_type().get_length_with_gap();
+                                } else {
+                                    agap = it.length - v.get_position_on_lane() + backOffset - v.get_vehicle_type().get_min_gap();
+                                }
+                                if !it.viaLink.have_priority() && !egoFurther.contains(&it.lane.myEdge)
+                                    && ego.is_on_road() // during insertion, this can lead to collisions because ego's further lanes are not set (see #3053)
+                                    && !ego.get_lane_change_model_2().is_opposite()
+                                    && v.get_speed() < utils::common::std_defs::SUMO_CONST_HALTING_SPEED {
+                                    // if v is stopped on a minor side road it should not block lane changing
+                                    agap = if agap > 0.0 { agap } else { 0.0 };
+                                }
+                            }
+                            result.add_follower(v, ego, agap, 0., i);
+                        }
+                    }
+                    if it.length < searchDist {
+                        let followers = next.get_incoming_lanes();
+                        for j in followers.iter() {
+                            if !visited.contains(&j.lane) && ((j.viaLink.have_priority() && !j.viaLink.is_turnaround())
+                                || mLinkMode == MSLane_MinorLinkMode::FOLLOW_ALWAYS
+                                || (mLinkMode == MSLane_MinorLinkMode::FOLLOW_ONCOMING && j.viaLink.get_direction() == LinkDirection::STRAIGHT)) {
+                                visited.insert(j.lane);
+                                newFound.push(MSLane_IncomingLaneInfo { lane: j.lane, length: j.length + it.length, viaLink: j.viaLink });
+                            }
+                        }
+                    }
+                }
+                toExamine.clear();
+                std::mem::swap(&mut newFound, &mut toExamine);
+            }
+        }
+        // the sliced MSLeaderDistanceInfo base is returned, as in C++
+        result.base
     }
 
     /// C++: `double MSLane::getMissingRearGap(const MSVehicle *, double, double) const` [const]
@@ -4496,7 +4659,17 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_missing_rear_gap(&self, leader: Ptr<MSVehicle>, backOffset: f64, leaderSpeed: f64) -> f64 {
-        todo!("port MSLane::getMissingRearGap")
+        // this follows the same logic as getFollowerOnConsecutive. we do a tree
+        // search and check for the vehicle with the largest missing rear gap within
+        // relevant range
+        let mut result = 0.;
+        let leaderDecel = leader.get_car_follow_model().get_max_decel();
+        let followerInfo = self.get_followers_on_consecutive(leader, backOffset, false, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false).index_op(0);
+        let v = followerInfo.0;
+        if !v.is_null() {
+            result = v.get_car_follow_model().get_secure_gap(v, leader, v.get_speed(), leaderSpeed, leaderDecel) - followerInfo.1;
+        }
+        result
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getLeader(const MSVehicle *, const double, const std::vector<MSLane *> &, double, bool) const` [const]
@@ -4573,7 +4746,56 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_leader(&self, veh: Ptr<MSVehicle>, vehPos: f64, bestLaneConts: &Vec<Ptr<MSLane>>, dist: f64, checkTmpVehicles: bool) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getLeader")
+        // get the leading vehicle for (shadow) veh
+        // XXX this only works as long as all lanes of an edge have equal length
+        if checkTmpVehicles {
+            for last in self.myTmpVehicles.iter() {
+                // XXX refactor leaderInfo to use a const vehicle all the way through the call hierarchy
+                let pred = *last;
+                if pred == veh {
+                    continue;
+                }
+                if pred.get_position_on_lane() >= vehPos {
+                    return (pred, pred.get_back_position_on_lane(Ptr::new(self)) - veh.get_vehicle_type().get_min_gap() - vehPos);
+                }
+            }
+        } else {
+            let mut last = self.any_vehicles_begin();
+            let lastEnd = self.any_vehicles_end();
+            while last.ne_op(&lastEnd) {
+                // XXX refactor leaderInfo to use a const vehicle all the way through the call hierarchy
+                let pred = last.mul_op();
+                last.op__2();
+                if pred == veh {
+                    continue;
+                }
+                if pred.get_position_on_lane_2(Ptr::new(self)) >= vehPos {
+                    if MSGlobals::lane_change_duration() > 0
+                        && pred.get_lane_change_model_2().is_opposite()
+                        && !pred.get_lane_change_model_2().is_changing_lanes()
+                        && pred.get_lane_change_model_2().get_shadow_lane() == Ptr::new(self) {
+                        // skip non-overlapping shadow
+                        continue;
+                    }
+                    return (pred, pred.get_back_position_on_lane(Ptr::new(self)) - veh.get_vehicle_type().get_min_gap() - vehPos);
+                }
+            }
+        }
+        // XXX from here on the code mirrors MSLaneChanger::getRealLeader
+        if bestLaneConts.len() > 0 {
+            let seen = self.get_length() - vehPos;
+            let speed = veh.get_speed();
+            let mut dist = dist;
+            if dist < 0. {
+                dist = veh.get_car_follow_model().brake_gap(speed) + veh.get_vehicle_type().get_min_gap();
+            }
+            if seen > dist {
+                return (Ptr::null(), -1.);
+            }
+            self.get_leader_on_consecutive(dist, seen, speed, &veh, bestLaneConts, true)
+        } else {
+            (Ptr::null(), -1.)
+        }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getLeaderOnConsecutive(double, double, double, const MSVehicle &, const std::vector<MSLane *> &, bool) const` [const]
@@ -4719,7 +4941,109 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_leader_on_consecutive(&self, dist: f64, seen: f64, speed: f64, veh: &MSVehicle, bestLaneConts: &Vec<Ptr<MSLane>>, considerCrossingFoes: bool) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getLeaderOnConsecutive")
+        let mut dist = dist;
+        let mut seen = seen;
+        if seen > dist && !self.is_internal() {
+            return (Ptr::null(), -1.);
+        }
+        let mut view: i32 = 1;
+        // loop over following lanes
+        if self.myPartialVehicles.len() > 0 {
+            // XXX
+            let pred = self.myPartialVehicles[0];
+            let gap = seen - (self.get_length() - pred.get_back_position_on_lane(Ptr::new(self))) - veh.get_vehicle_type().get_min_gap();
+            // make sure pred is really a leader and not doing continous lane-changing behind ego
+            if gap > 0. {
+                return (pred, gap);
+            }
+        }
+        let mut nextLane: Ptr<MSLane> = Ptr::new(self);
+        loop {
+            nextLane.get_vehicles_secure(); // lock against running sim when called from GUI for time gap coloring
+            // get the next link used
+            let mut link: usize = MSLane::succ_link_sec(veh, view, &nextLane, bestLaneConts);
+            if nextLane.is_link_end(&mut link) && view < veh.get_route().size() - veh.get_route_position() {
+                let nextEdge = veh.succ_edge(view);
+                if nextEdge.get_num_lanes() == 1 {
+                    // lanes are unambiguous on the next route edge, continue beyond bestLaneConts
+                    link = 0;
+                    while link < nextLane.get_link_cont().len() {
+                        if nextLane.get_link_cont()[link].get_lane() == nextEdge.get_lanes()[0] {
+                            break;
+                        }
+                        link += 1;
+                    }
+                }
+            }
+            if nextLane.is_link_end(&mut link) {
+                nextLane.release_vehicles();
+                break;
+            }
+            // check for link leaders
+            let laneChanging = veh.get_lane() != Ptr::new(self);
+            let linkLeaders = nextLane.get_link_cont()[link].get_leader_info(Ptr::new(veh), seen, Ptr::null(), false);
+            nextLane.release_vehicles();
+            if linkLeaders.len() > 0 {
+                let mut result: (Ptr<MSVehicle>, f64) = (Ptr::null(), 0.);
+                let mut shortestGap = f64::MAX;
+                for ll in linkLeaders.iter() {
+                    // C++ iterates over a copy: work on local copies of the mutable fields
+                    let mut vehAndGap = ll.vehAndGap;
+                    let mut gap = vehAndGap.1;
+                    let lVeh = vehAndGap.0;
+                    if !lVeh.is_null() {
+                        // leader is a vehicle, not a pedestrian
+                        gap += lVeh.get_car_follow_model().brake_gap_2(lVeh.get_speed(), lVeh.get_car_follow_model().get_max_decel(), 0.);
+                    }
+                    // skip vehicles which do not share the outgoing edge (to get only real leader vehicles in TraCI #13842)
+                    if !considerCrossingFoes && !ll.same_target() {
+                        continue;
+                    }
+                    // in the context of lane-changing, all candidates are leaders
+                    if !lVeh.is_null() && !laneChanging && !veh.is_leader(nextLane.get_link_cont()[link], lVeh, vehAndGap.1) {
+                        continue;
+                    }
+                    if gap < shortestGap {
+                        shortestGap = gap;
+                        if vehAndGap.1 < 0. && !MSGlobals::compute_lc() {
+                            // can always continue up to the stop line or crossing point
+                            // @todo: figure out whether this should also impact lane changing
+                            let a = seen - nextLane.get_length();
+                            let b = ll.distToCrossing;
+                            vehAndGap.1 = if a > b { a } else { b };
+                        }
+                        result = vehAndGap;
+                    }
+                }
+                if shortestGap != f64::MAX {
+                    return result;
+                }
+            }
+            let nextInternal = !nextLane.get_link_cont()[link].get_via_lane().is_null();
+            nextLane = nextLane.get_link_cont()[link].get_via_lane_or_lane();
+            if nextLane.is_null() {
+                break;
+            }
+            nextLane.get_vehicles_secure();
+            let leader = nextLane.get_last_any_vehicle();
+            if !leader.is_null() {
+                let leaderDist = seen + leader.get_back_position_on_lane(nextLane) - veh.get_vehicle_type().get_min_gap();
+                nextLane.release_vehicles();
+                return (leader, leaderDist);
+            }
+            nextLane.release_vehicles();
+            if nextLane.get_vehicle_max_speed(Ptr::new(veh).cast::<SUMOTrafficObject>()) < speed {
+                dist = veh.get_car_follow_model().brake_gap(nextLane.get_vehicle_max_speed(Ptr::new(veh).cast::<SUMOTrafficObject>()));
+            }
+            seen += nextLane.get_length();
+            if !nextInternal {
+                view += 1;
+            }
+            if !(seen <= dist || nextLane.is_internal()) {
+                break;
+            }
+        }
+        (Ptr::null(), -1.)
     }
 
     /// C++: `void MSLane::getLeadersOnConsecutive(double, double, double, const MSVehicle *, const std::vector<MSLane *> &, MSLeaderDistanceInfo &, bool) const` [const]
@@ -4857,7 +5181,81 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_leaders_on_consecutive(&self, dist: f64, seen: f64, speed: f64, ego: Ptr<MSVehicle>, bestLaneConts: &Vec<Ptr<MSLane>>, result: &mut MSLeaderDistanceInfo, oppositeDirection: bool) {
-        todo!("port MSLane::getLeadersOnConsecutive")
+        let mut seen = seen;
+        let mut dist = dist;
+        if seen > dist && !(self.is_internal() && MSGlobals::compute_lc()) {
+            return;
+        }
+        // check partial vehicles (they might be on a different route and thus not
+        // found when iterating along bestLaneConts)
+        for it in self.myPartialVehicles.iter() {
+            let veh = *it;
+            if !veh.is_front_on_lane(Ptr::new(self)) {
+                result.add_leader(veh, seen, veh.get_lat_offset(Ptr::new(self)), -1);
+            } else {
+                break;
+            }
+        }
+        let mut nextLane: Ptr<MSLane> = Ptr::new(self);
+        let mut view: i32 = 1;
+        // loop over following lanes
+        while (seen < dist && result.num_free_sublanes() > 0) || nextLane.is_internal() {
+            if nextLane != Ptr::new(self) {
+                seen += nextLane.get_length();
+            }
+            // get the next link used
+            let mut nextInternal = false;
+            if oppositeDirection {
+                if view >= bestLaneConts.len() as i32 {
+                    break;
+                }
+                nextLane = bestLaneConts[view as usize];
+            } else {
+                let mut link: usize = MSLane::succ_link_sec(ego, view, &nextLane, bestLaneConts);
+                if nextLane.is_link_end(&mut link) {
+                    break;
+                }
+                // check for link leaders
+                let linkLeaders = nextLane.get_link_cont()[link].get_leader_info(ego, seen, Ptr::null(), false);
+                for ll in linkLeaders.iter() {
+                    let veh = ll.vehAndGap.0;
+                    // in the context of lane changing all junction leader candidates must be respected
+                    if !veh.is_null() && (ego.is_leader(nextLane.get_link_cont()[link], veh, ll.vehAndGap.1)
+                        || (MSGlobals::compute_lc()
+                            && veh.get_position(0.).distance_to2d(&ego.get_position(0.)) - veh.get_vehicle_type().get_min_gap() - ego.get_vehicle_type().get_length()
+                                < veh.get_car_follow_model().brake_gap(veh.get_speed()))) {
+                        if ll.same_target() || ll.same_source() {
+                            result.add_leader(veh, ll.vehAndGap.1, ll.latOffset, -1);
+                        } else {
+                            // add link leader to all sublanes and return
+                            for i in 0..result.num_sublanes() {
+                                result.add_leader(veh, ll.vehAndGap.1, 0., i);
+                            }
+                        }
+                    } // XXX else, deal with pedestrians
+                }
+                nextInternal = !nextLane.get_link_cont()[link].get_via_lane().is_null();
+                nextLane = nextLane.get_link_cont()[link].get_via_lane_or_lane();
+                if nextLane.is_null() {
+                    break;
+                }
+            }
+            let leaders = nextLane.get_last_vehicle_information(Ptr::null(), 0., 0., false, Ptr::null());
+            // @todo check alignment issues if the lane width changes
+            let iMax = if leaders.num_sublanes() < result.num_sublanes() { leaders.num_sublanes() } else { result.num_sublanes() };
+            for i in 0..iMax {
+                let veh = leaders.index_op(i);
+                if !veh.is_null() {
+                    result.add_leader(veh, seen - ego.get_vehicle_type().get_min_gap() + veh.get_back_position_on_lane(nextLane), 0., i);
+                }
+            }
+            if nextLane.get_vehicle_max_speed(ego.cast::<SUMOTrafficObject>()) < speed {
+                dist = ego.get_car_follow_model().brake_gap(nextLane.get_vehicle_max_speed(ego.cast::<SUMOTrafficObject>()));
+            }
+            if !nextInternal {
+                view += 1;
+            }
+        }
     }
 
     /// C++: `void MSLane::addLeaders(const MSVehicle *, double, MSLeaderDistanceInfo &, bool)`
@@ -4929,7 +5327,38 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn add_leaders(&mut self, vehicle: Ptr<MSVehicle>, vehPos: f64, result: &mut MSLeaderDistanceInfo, oppositeDirection: bool) {
-        todo!("port MSLane::addLeaders")
+        // if there are vehicles on the target lane with the same position as ego,
+        // they may not have been added to 'ahead' yet
+        let aheadSamePos = self.get_last_vehicle_information(Ptr::null(), 0., vehPos, false, vehicle);
+        for i in 0..aheadSamePos.num_sublanes() {
+            let veh = aheadSamePos.index_op(i);
+            if !veh.is_null() && veh != vehicle {
+                let gap = veh.get_back_position_on_lane(Ptr::new(self)) - vehPos - vehicle.get_vehicle_type().get_min_gap();
+                result.add_leader(veh, gap, 0., i);
+            }
+        }
+        // we must consider linkLeaders (via getLeadersOnConsecutive) while on a junction
+        if result.num_free_sublanes() > 0 || self.is_internal() {
+            let seen = vehicle.get_lane().get_length() - vehPos;
+            let speed = vehicle.get_speed();
+            // leader vehicle could be link leader on the next junction
+            let brake = vehicle.get_car_follow_model().brake_gap(speed);
+            let mut dist = (if brake > 10.0 { brake } else { 10.0 }) + vehicle.get_vehicle_type().get_min_gap();
+            if !self.get_bidi_lane().is_null() {
+                dist = if dist > self.myMaxSpeed * 20. { dist } else { self.myMaxSpeed * 20. };
+            }
+            // check for link leaders when on internal
+            if seen > dist && !(self.is_internal() && MSGlobals::compute_lc()) {
+                return;
+            }
+            if oppositeDirection {
+                let bestLaneConts = vehicle.get_upstream_opposite_lanes();
+                self.get_leaders_on_consecutive(dist, seen, speed, vehicle, &bestLaneConts, result, oppositeDirection);
+            } else {
+                let bestLaneConts = vehicle.get_best_lanes_continuation_2(Ptr::new(self));
+                self.get_leaders_on_consecutive(dist, seen, speed, vehicle, bestLaneConts, result, false);
+            }
+        }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getCriticalLeader(double, double, double, const MSVehicle &) const` [const]
