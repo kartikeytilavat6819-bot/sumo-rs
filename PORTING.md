@@ -107,3 +107,12 @@ Intel IDEAS (github.com/IntelLabs/IDEAS), ACToR (github.com/kisp-nus/ACToR), Req
 12,875 methods with `todo!()` bodies, each preceded by its C++ source as a comment. It compiles.
 Regenerate with `wsl -e bash tools/skeleton/run.sh` (only before agents start editing; it overwrites).
 Filling bodies: follow AGENTS.md; one agent per batch of files; don't change public signatures casually.
+
+## Known architecture gap: virtual dispatch (to do next, by the lead)
+
+Generated structs embed their base as the first field (`#[repr(C)]` + Deref), so a call through
+`Ptr<Base>` runs the base implementation: C++ virtual overrides are NOT dispatched. SUMO relies on this
+everywhere (MSCFModel/LC models, MSTrafficLightLogic subclasses, devices, move reminders, stages).
+Plan: generate a vtable struct per polymorphic root from the clang AST (fn pointers for every virtual
+method), store `vt: &'static XVTable` in the root, have each subclass constructor install its table,
+and make the base's virtual methods forward through it. Do this once the current agent wave is merged.
