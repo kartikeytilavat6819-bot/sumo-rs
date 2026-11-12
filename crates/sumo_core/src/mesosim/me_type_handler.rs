@@ -38,7 +38,14 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, net: &mut MSNet) -> Self {
-        todo!("port METypeHandler::METypeHandler")
+        // shortcut: SUMOSAXHandler base is Unmapped (the file name is not stored), upgrade when sax handler base is ported
+        let _ = file;
+        Self {
+            base: (),
+            myNet: Ptr::from_mut(net),
+            myCurrentTypeID: String::new(),
+            myHaveSeenMesoEdgeType: false,
+        }
     }
 
     /// C++: `void METypeHandler::~METypeHandler() noexcept` [virtual]
@@ -46,7 +53,7 @@ impl METypeHandler {
     // METypeHandler::~METypeHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port METypeHandler::~METypeHandler")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool METypeHandler::haveSeenMesoEdgeType() const` [const]
@@ -55,7 +62,7 @@ impl METypeHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_meso_edge_type(&self) -> bool {
-        todo!("port METypeHandler::haveSeenMesoEdgeType")
+        self.myHaveSeenMesoEdgeType
     }
 
     /// C++: `void METypeHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -83,7 +90,17 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port METypeHandler::myStartElement")
+        // the Rust attribute getters report the error and return the default, they do not throw InvalidArgument, so the C++ catch has no counterpart here
+        match element {
+            SUMO_TAG_TYPE => {
+                let mut ok = true;
+                self.myCurrentTypeID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+            }
+            SUMO_TAG_MESO => {
+                self.add_meso_edge_type(attrs);
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void METypeHandler::myEndElement(int)` [virtual, protected]
@@ -100,7 +117,12 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port METypeHandler::myEndElement")
+        match element {
+            SUMO_TAG_TYPE => {
+                self.myCurrentTypeID = String::new();
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void METypeHandler::addMesoEdgeType(const SUMOSAXAttributes &)` [protected]
@@ -129,7 +151,26 @@ impl METypeHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_meso_edge_type(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port METypeHandler::addMesoEdgeType")
+        let mut ok = true;
+        let id = self.myCurrentTypeID.clone();
+        let mut edgeType = *self.myNet.m().get_meso_type(""); // init defaults
+        edgeType.tauff = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUFF, &id, &mut ok, edgeType.tauff, true);
+        edgeType.taufj = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUFJ, &id, &mut ok, edgeType.taufj, true);
+        edgeType.taujf = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUJF, &id, &mut ok, edgeType.taujf, true);
+        edgeType.taujj = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_TAUJJ, &id, &mut ok, edgeType.taujj, true);
+        edgeType.jamThreshold = attrs.get_opt::<f64>(SUMO_ATTR_JAM_DIST_THRESHOLD, &id, &mut ok, edgeType.jamThreshold, true);
+        edgeType.junctionControl = attrs.get_opt::<bool>(SUMO_ATTR_MESO_JUNCTION_CONTROL, &id, &mut ok, edgeType.junctionControl, true);
+        edgeType.tlsPenalty = attrs.get_opt::<f64>(SUMO_ATTR_MESO_TLS_PENALTY, &id, &mut ok, edgeType.tlsPenalty, true);
+        edgeType.tlsFlowPenalty = attrs.get_opt::<f64>(SUMO_ATTR_MESO_TLS_FLOW_PENALTY, &id, &mut ok, edgeType.tlsFlowPenalty, true);
+        edgeType.minorPenalty = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_MESO_MINOR_PENALTY, &id, &mut ok, edgeType.minorPenalty, true);
+        edgeType.overtaking = attrs.get_opt::<bool>(SUMO_ATTR_MESO_OVERTAKING, &id, &mut ok, edgeType.overtaking, true);
+        edgeType.edgeLength = attrs.get_opt::<f64>(SUMO_ATTR_MESO_EDGELENGHT, &id, &mut ok, edgeType.edgeLength, true);
+        edgeType.lookahead = attrs.get_opt::<f64>(SUMO_ATTR_MESO_LOOKAHEAD, &id, &mut ok, edgeType.lookahead, true);
+
+        if ok {
+            self.myNet.m().add_meso_type(&id, &edgeType);
+        }
+        self.myHaveSeenMesoEdgeType = true;
     }
 
     /// C++: `void METypeHandler::METypeHandler(const METypeHandler &)` [private]
@@ -137,7 +178,7 @@ impl METypeHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &METypeHandler) -> Self {
-        todo!("port METypeHandler::METypeHandler")
+        panic!("METypeHandler copy constructor is private and undefined in C++")
     }
 
     /// C++: `METypeHandler & METypeHandler::operator=(const METypeHandler &)` [private]
