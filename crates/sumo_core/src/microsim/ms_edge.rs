@@ -3,6 +3,9 @@
 use crate::prelude::*;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
+/// C++ `#define BEST_LANE_LOOKAHEAD 3000.0` (MSEdge.cpp)
+const BEST_LANE_LOOKAHEAD: f64 = 3000.0;
+
 // shortcut: MSGlobals is still an empty skeleton (ms_globals.rs), so the g* values used here are the
 // default-run values (lateral-resolution=-1, no-internal-links=false, no meso, zero penalties);
 // upgrade these to MSGlobals::g* reads once that module is ported.
@@ -1926,7 +1929,118 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn insert_vehicle(&self, v: &mut SUMOVehicle, time: SUMOTime, checkOnly: bool, forceCheck: bool) -> bool {
-        todo!("port MSEdge::insertVehicle")
+        // when vaporizing, no vehicles are inserted, but checking needs to be successful to trigger removal
+        let vp: Ptr<SUMOVehicle> = Ptr::from_mut(v);
+        if self.is_vaporizing() || self.is_taz_connector()
+            || vp.m().get_route_validity(true, checkOnly, Ptr::null()) != crate::microsim::ms_base_vehicle::MSBaseVehicle_RouteValidity::ROUTE_VALID as i32 {
+            return checkOnly;
+        }
+        let base: Ptr<MSBaseVehicle> = vp.cast();
+        let pars = base.m().get_parameter();
+        if !self.validate_depart_speed(vp.m()) {
+            if MSGlobals::check_routes() {
+                panic!("{}", utils::common::util_exceptions::ProcessError::Process(utils::tlf!("Departure speed for vehicle '%' is too high for the departure edge '%', time=%.", pars.id.clone(), self.get_id().to_string(), utils::common::time::time2string(time))));
+            } else {
+                utils::write_warningf!("Departure speed for vehicle '%' is too high for the departure edge '%', time=%.", pars.id.as_str(), self.get_id(), utils::common::time::time2string(time).as_str());
+            }
+        }
+        if MSGlobals::use_meso_sim() {
+            if !forceCheck && self.myLastFailedInsertionTime == time {
+                return false;
+            }
+            let mut pos: f64 = 0.0;
+            match pars.departPosProcedure {
+                DepartPosDefinition::GIVEN => {
+                    if pars.departPos >= 0. {
+                        pos = pars.departPos;
+                    } else {
+                        pos = pars.departPos + self.get_length();
+                    }
+                    if pos < 0. || pos > self.get_length() {
+                        utils::write_warningf!("Invalid departPos % given for vehicle '%', time=%. Inserting at lane end instead.", pos, pars.id.as_str(), utils::common::time::time2string(time).as_str());
+                        pos = self.get_length();
+                    }
+                }
+                DepartPosDefinition::RANDOM | DepartPosDefinition::RANDOM_FREE => {
+                    pos = utils::common::rand_helper::with_default(|r| r.rand_max(self.get_length()));
+                }
+                _ => {}
+            }
+            let mut result = false;
+            let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, pos);
+            let veh = vp.cast::<MEVehicle>();
+            let mut qIdx: i32 = 0;
+            if pars.departPosProcedure == DepartPosDefinition::FREE {
+                while !segment.is_null() && !result {
+                    if checkOnly {
+                        result = segment.m().has_space_for(veh, time, &mut qIdx, true) == time;
+                    } else {
+                        result = segment.m().initialise(veh, time);
+                    }
+                    segment = segment.m().get_next_segment();
+                }
+            } else {
+                if checkOnly {
+                    result = segment.m().has_space_for(veh, time, &mut qIdx, true) == time;
+                } else {
+                    result = segment.m().initialise(veh, time);
+                }
+            }
+            return result;
+        }
+        if checkOnly {
+            let mut dld = pars.departLaneProcedure;
+            if dld == DepartLaneDefinition::DEFAULT {
+                dld = *Self::get_default_depart_lane_definition();
+            }
+            match dld {
+                DepartLaneDefinition::GIVEN | DepartLaneDefinition::DEFAULT | DepartLaneDefinition::FIRST_ALLOWED => {
+                    let insertionLane = self.get_depart_lane(vp.cast::<MSVehicle>().m());
+                    if insertionLane.is_null() {
+                        utils::write_warningf!("Could not insert vehicle '%' on any lane of edge '%', time=%.", pars.id.as_str(), self.get_id(), utils::common::time::time2string(time).as_str());
+                        return false;
+                    }
+                    let occupancy = insertionLane.get_brutto_occupancy();
+                    let vlen = base.m().get_vehicle_type().get_length_with_gap();
+                    return occupancy == 0. || occupancy * self.myLength + vlen <= self.myLength || pars.departProcedure == DepartDefinition::SPLIT;
+                }
+                _ => {
+                    let vlen = base.m().get_vehicle_type().get_length_with_gap();
+                    for lane in self.myLanes.iter() {
+                        let occupancy = lane.get_brutto_occupancy();
+                        if occupancy == 0. || occupancy * self.myLength + vlen <= self.myLength || pars.departProcedure == DepartDefinition::SPLIT {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        let insertionLane = self.get_depart_lane(vp.cast::<MSVehicle>().m());
+        if insertionLane.is_null() {
+            return false;
+        }
+        // determinism: the failed-insertion memory is a set of lane indices, so iteration order does not matter
+        let me: Ptr<MSEdge> = Ptr::new(self);
+        if !forceCheck {
+            if self.myLastFailedInsertionTime == time {
+                if self.myFailedInsertionMemory.contains(&insertionLane.get_index()) {
+                    // A vehicle was already rejected for the proposed insertionLane in this timestep
+                    return false;
+                }
+            } else {
+                // last rejection occurred in a previous timestep, clear cache
+                me.m().myFailedInsertionMemory.clear();
+            }
+        }
+        let success = insertionLane.m().insert_vehicle(vp.cast::<MSVehicle>().m());
+        if !success {
+            // constraints may enforce explicit re-ordering so we need to try other vehicles after failure
+            if !insertionLane.base2.has_parameter(&format!("insertionOrder{}", vp.m().get_id())) {
+                me.m().myFailedInsertionMemory.insert(insertionLane.get_index());
+            }
+        }
+        success
     }
 
     /// C++: `bool MSEdge::validateDepartSpeed(SUMOVehicle &) const` [const]
@@ -1968,7 +2082,35 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn validate_depart_speed(&self, v: &mut SUMOVehicle) -> bool {
-        todo!("port MSEdge::validateDepartSpeed")
+        let vp: Ptr<SUMOVehicle> = Ptr::from_mut(v);
+        let base: Ptr<MSBaseVehicle> = vp.cast();
+        let pars = base.m().get_parameter();
+        if pars.departSpeedProcedure == DepartSpeedDefinition::GIVEN {
+            // departSpeed could have been rounded down in the output
+            let mut vMax = self.get_vehicle_max_speed(vp.cast::<SUMOTrafficObject>()) + crate::microsim::ms_base_vehicle::SPEED_EPS;
+            if pars.departSpeed > vMax {
+                // check departLane (getVehicleMaxSpeed checks lane 0)
+                let departLane = if !crate::microsim::ms_globals::meso_net().is_null() {
+                    self.get_depart_lane_meso(vp.m())
+                } else {
+                    self.get_depart_lane(vp.cast::<MSVehicle>().m())
+                };
+                if !departLane.is_null() {
+                    vMax = departLane.get_vehicle_max_speed(vp.cast::<SUMOTrafficObject>());
+                    if pars.was_set(crate::microsim::ms_base_vehicle::VEHPARS_SPEEDFACTOR_SET) {
+                        // speedFactor could have been rounded down in the output
+                        vMax *= 1. + crate::microsim::ms_base_vehicle::SPEED_EPS;
+                    }
+                    // additive term must come after multiplication!
+                    vMax += crate::microsim::ms_base_vehicle::SPEED_EPS;
+                    if pars.departSpeed > vMax {
+                        // shortcut: MSVehicleType::getSpeedFactor() is Unmapped, so the speed-factor deviation (parameter 1 > 0) cannot be read; the no-deviation branch is taken and the departure is rejected. Upgrade when getSpeedFactor() returns Distribution_Parameterized.
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `MSLane * MSEdge::getFreeLane(const std::vector<MSLane *> *, const SUMOVehicleClass, double) const` [const]
@@ -2183,7 +2325,84 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_lane(&self, veh: &mut MSVehicle) -> Ptr<MSLane> {
-        todo!("port MSEdge::getDepartLane")
+        let mut dld = veh.get_parameter().departLaneProcedure;
+        let mut departLane = veh.get_parameter().departLane;
+        if dld == DepartLaneDefinition::DEFAULT {
+            dld = *Self::get_default_depart_lane_definition();
+            departLane = *Self::get_default_depart_lane();
+        }
+        let vclass = veh.get_vehicle_type().get_vehicle_class();
+        match dld {
+            DepartLaneDefinition::GIVEN => {
+                if (self.myLanes.len() as i32) <= departLane || !self.myLanes[departLane as usize].allows_vehicle_class(veh.get_v_class()) {
+                    return Ptr::null();
+                }
+                return self.myLanes[departLane as usize];
+            }
+            DepartLaneDefinition::RANDOM => {
+                let allowed = self.allowed_lanes_2(vclass);
+                return utils::common::rand_helper::with_default(|r| *r.get_random_from(&allowed.m()[..]));
+            }
+            DepartLaneDefinition::FREE => {
+                return self.get_free_lane(Ptr::null(), vclass, self.get_depart_pos_bound(veh, false));
+            }
+            DepartLaneDefinition::ALLOWED_FREE => {
+                let route = veh.get_route();
+                if route.size() == 1 {
+                    return self.get_free_lane(Ptr::null(), vclass, self.get_depart_pos_bound(veh, false));
+                } else {
+                    let allowed = self.allowed_lanes(&*route.get_edges()[1], vclass, false);
+                    return self.get_free_lane(allowed, vclass, self.get_depart_pos_bound(veh, false));
+                }
+            }
+            DepartLaneDefinition::BEST_FREE | DepartLaneDefinition::BEST_PROB => {
+                veh.update_best_lanes(false, self.myLanes[0]);
+                let mut bestLength: f64 = -1.;
+                for lq in veh.get_best_lanes().iter() {
+                    if lq.length > bestLength {
+                        bestLength = lq.length;
+                    }
+                }
+                // beyond a certain length, all lanes are suitable
+                // however, we still need to check departPos to avoid unsuitable insertion
+                // (this is only possible in some cases)
+                let mut departPos: f64 = 0.;
+                if bestLength > BEST_LANE_LOOKAHEAD {
+                    departPos = self.get_depart_pos_bound(veh, true);
+                    let t = bestLength - departPos;
+                    bestLength = if t < BEST_LANE_LOOKAHEAD { t } else { BEST_LANE_LOOKAHEAD };
+                }
+                let mut bestLanes: Vec<Ptr<MSLane>> = Vec::new();
+                for lq in veh.get_best_lanes().iter() {
+                    if (lq.length - departPos) >= bestLength {
+                        if self.is_internal() {
+                            for lane in self.myLanes.iter() {
+                                if lane.get_normal_successor_lane().as_raw() == lq.lane.as_raw() && lane.allows_vehicle_class(veh.get_v_class()) {
+                                    bestLanes.push(*lane);
+                                }
+                            }
+                        } else if lq.lane.allows_vehicle_class(veh.get_v_class()) {
+                            bestLanes.push(lq.lane);
+                        }
+                    }
+                }
+                let ret = if veh.get_parameter().departLaneProcedure == DepartLaneDefinition::BEST_FREE {
+                    self.get_free_lane(Ptr::new(&bestLanes), vclass, self.get_depart_pos_bound(veh, false))
+                } else {
+                    let vmax = self.get_vehicle_max_speed(Ptr::from_mut(veh).cast::<SUMOTrafficObject>());
+                    self.get_probable_lane(Ptr::new(&bestLanes), vclass, self.get_depart_pos_bound(veh, false), vmax)
+                };
+                return ret;
+            }
+            DepartLaneDefinition::DEFAULT | DepartLaneDefinition::FIRST_ALLOWED => {
+                return self.get_first_allowed(vclass, false, 0);
+            }
+            _ => {}
+        }
+        if !self.myLanes[0].allows_vehicle_class(vclass) {
+            return Ptr::null();
+        }
+        self.myLanes[0]
     }
 
     /// C++: `MSLane * MSEdge::getFirstAllowed(SUMOVehicleClass, bool, int) const` [const]
@@ -2224,7 +2443,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_lane_meso(&self, veh: &mut SUMOVehicle) -> Ptr<MSLane> {
-        todo!("port MSEdge::getDepartLaneMeso")
+        let base: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast();
+        let pars = base.m().get_parameter();
+        if pars.departLaneProcedure == DepartLaneDefinition::GIVEN {
+            if (self.myLanes.len() as i32) <= pars.departLane || !self.myLanes[pars.departLane as usize].allows_vehicle_class(base.m().get_vehicle_type().get_vehicle_class()) {
+                return Ptr::null();
+            }
+            return self.myLanes[pars.departLane as usize];
+        }
+        self.myLanes[0]
     }
 
     /// C++: `SUMOTime MSEdge::getLastFailedInsertionTime() const` [const]
@@ -3763,7 +3990,43 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_pos_bound(&self, veh: &MSVehicle, upper: bool) -> f64 {
-        todo!("port MSEdge::getDepartPosBound")
+        let pars = veh.get_parameter();
+        let mut pos = self.get_length();
+        // determine the position
+        match pars.departPosProcedure {
+            DepartPosDefinition::GIVEN => {
+                pos = pars.departPos;
+                if pos < 0. {
+                    pos += self.myLength;
+                }
+            }
+            DepartPosDefinition::RANDOM | DepartPosDefinition::RANDOM_FREE | DepartPosDefinition::FREE => {
+                // could be any position on the edge (no tighter bound is computed)
+            }
+            DepartPosDefinition::LAST => {
+                if upper {
+                    for lane in self.myLanes.iter() {
+                        let last = lane.get_last_full_vehicle();
+                        if !last.is_null() {
+                            let p = last.m().get_position_on_lane();
+                            pos = if pos < p { pos } else { p };
+                        }
+                    }
+                } else {
+                    pos = 0.;
+                }
+            }
+            DepartPosDefinition::BASE | DepartPosDefinition::DEFAULT => {
+                if !upper {
+                    pos = 0.;
+                }
+            }
+            _ => {
+                let len = veh.get_vehicle_type().get_length();
+                pos = if pos < len { pos } else { len };
+            }
+        }
+        pos
     }
 
     /// C++: `void MSEdge::MSEdge(const MSEdge &)` [private]
