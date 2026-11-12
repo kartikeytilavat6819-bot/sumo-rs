@@ -13,6 +13,10 @@ pub struct NIVissimBoundedClusterObject {
 
 // C++ static members of NIVissimBoundedClusterObject (port as module-level statics, see AGENTS.md):
 //   static ContType NIVissimBoundedClusterObject::myDict;
+thread_local! {
+    // determinism: C++ std::set orders by pointer address; BTreeSet orders by Ptr's Ord (address), same relative order
+    static MY_DICT: std::cell::RefCell<NIVissimBoundedClusterObject_ContType> = std::cell::RefCell::new(BTreeSet::new());
+}
 
 impl NIVissimBoundedClusterObject {
     /// C++: `void NIVissimBoundedClusterObject::NIVissimBoundedClusterObject()`
@@ -21,8 +25,12 @@ impl NIVissimBoundedClusterObject {
     //     myDict.insert(this);
     // }
     #[allow(unused_variables)]
-    pub fn new() -> Self {
-        todo!("port NIVissimBoundedClusterObject::NIVissimBoundedClusterObject")
+    pub fn new() -> Box<Self> {
+        // the constructor registers `this` in myDict, so the object must stay at a fixed address: return the Box
+        let mut b = Box::new(Self { myBoundary: Ptr::null(), myClusterID: -1 });
+        let this = Ptr::from_mut(&mut *b);
+        MY_DICT.with(|d| d.borrow_mut().insert(this));
+        b
     }
 
     /// C++: `void NIVissimBoundedClusterObject::~NIVissimBoundedClusterObject() noexcept` [virtual]
@@ -31,14 +39,17 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimBoundedClusterObject::~NIVissimBoundedClusterObject")
+        if !self.myBoundary.is_null() {
+            // SAFETY: myBoundary is a Box::leak'd or Box-owned Boundary created by its owner; delete frees it once
+            drop(unsafe { Box::from_raw(self.myBoundary.as_raw()) });
+        }
     }
 
     /// C++: `void NIVissimBoundedClusterObject::computeBounding()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute_bounding(&mut self) {
-        todo!("port NIVissimBoundedClusterObject::computeBounding")
+        panic!("NIVissimBoundedClusterObject::computeBounding is pure virtual; subclasses implement it")
     }
 
     /// C++: `bool NIVissimBoundedClusterObject::crosses(const AbstractPoly &, double) const` [const]
@@ -50,7 +61,8 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn crosses(&self, poly: &dyn AbstractPoly, offset: f64) -> bool {
-        todo!("port NIVissimBoundedClusterObject::crosses")
+        debug_assert!(!self.myBoundary.is_null() && self.myBoundary.xmax() >= self.myBoundary.xmin());
+        self.myBoundary.overlaps_with(poly, offset)
     }
 
     /// C++: `void NIVissimBoundedClusterObject::inCluster(int)`
@@ -60,7 +72,7 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn in_cluster(&mut self, id: i32) {
-        todo!("port NIVissimBoundedClusterObject::inCluster")
+        self.myClusterID = id;
     }
 
     /// C++: `bool NIVissimBoundedClusterObject::clustered() const` [const]
@@ -70,7 +82,7 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn clustered(&self) -> bool {
-        todo!("port NIVissimBoundedClusterObject::clustered")
+        self.myClusterID > 0
     }
 
     /// C++: `const Boundary & NIVissimBoundedClusterObject::getBoundary() const` [const]
@@ -80,7 +92,7 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn get_boundary(&self) -> &Boundary {
-        todo!("port NIVissimBoundedClusterObject::getBoundary")
+        self.myBoundary.get().expect("NIVissimBoundedClusterObject::getBoundary on a null boundary")
     }
 
     /// C++: `void NIVissimBoundedClusterObject::closeLoading()` [static]
@@ -92,7 +104,11 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn close_loading() {
-        todo!("port NIVissimBoundedClusterObject::closeLoading")
+        MY_DICT.with(|d| {
+            for o in d.borrow().iter() {
+                o.m().compute_bounding();
+            }
+        });
     }
 
 }

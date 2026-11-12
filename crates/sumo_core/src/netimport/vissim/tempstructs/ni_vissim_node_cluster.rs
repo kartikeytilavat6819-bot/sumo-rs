@@ -125,14 +125,61 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn build_nb_node(&mut self, nc: &mut NBNodeCont) {
-        todo!("port NIVissimNodeCluster::buildNBNode")
+        if self.myConnectors.len() == 0 {
+            return; // !!! Check, whether this can happen
+        }
+
+        // compute the position
+        let mut crossings = PositionVector::new();
+        // check whether this is a split of an edge only
+        if self.myAmEdgeSplit {
+            // !!! should be        assert(myTLID==-1);
+            for &i in self.myConnectors.iter() {
+                let c1 = NIVissimConnection::dictionary_2(i);
+                crossings.push_back_no_double_pos(&c1.get_from_geom_position());
+            }
+        } else {
+            // compute the places the connections cross
+            for ii in 0..self.myConnectors.len() {
+                let c1 = NIVissimAbstractEdge::dictionary_2(self.myConnectors[ii]);
+                c1.m().build_geom();
+                for jj in ii + 1..self.myConnectors.len() {
+                    let c2 = NIVissimAbstractEdge::dictionary_2(self.myConnectors[jj]);
+                    c2.m().build_geom();
+                    if c1.crosses_edge(c2) {
+                        crossings.push_back_no_double_pos(&c1.crosses_edge_at_point(c2));
+                    }
+                }
+            }
+            // alternative way: compute via positions of crossings
+            if crossings.0.len() == 0 {
+                for &i in self.myConnectors.iter() {
+                    let c1 = NIVissimConnection::dictionary_2(i);
+                    crossings.push_back_no_double_pos(&c1.get_from_geom_position());
+                    crossings.push_back_no_double_pos(&c1.get_to_geom_position());
+                }
+            }
+        }
+        // get the position (center)
+        let pos = crossings.get_polygon_center();
+        // build the node
+        let mut node = Box::new(NBNode::new(&self.get_node_name(), &pos, SumoXMLNodeType::PRIORITY));
+        let nodePtr = Ptr::from_mut(&mut *node);
+        if !nc.insert_2(nodePtr) {
+            drop(node); // delete node
+            panic!("NIVissimNodeCluster::buildNBNode: node could not be inserted (C++ throw 1)");
+        }
+        // the node stays alive for the network, like the C++ `new`
+        Box::leak(node);
+        self.myNBNode = nodePtr;
     }
 
     /// C++: `bool NIVissimNodeCluster::recheckEdgeChanges()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn recheck_edge_changes(&mut self) -> bool {
-        todo!("port NIVissimNodeCluster::recheckEdgeChanges")
+        // shortcut: declared without a definition in SUMO (no C++ body), nothing to port yet
+        panic!("NIVissimNodeCluster::recheckEdgeChanges has no C++ definition")
     }
 
     /// C++: `NBNode * NIVissimNodeCluster::getNBNode() const` [const]
@@ -270,7 +317,11 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn build_nb_nodes(nc: &mut NBNodeCont) {
-        todo!("port NIVissimNodeCluster::buildNBNodes")
+        MY_DICT.with(|d| {
+            for o in d.borrow().values() {
+                o.m().build_nb_node(nc);
+            }
+        });
     }
 
     /// C++: `void NIVissimNodeCluster::dict_recheckEdgeChanges()` [static]
@@ -306,7 +357,23 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_from_node(edgeid: i32) -> i32 {
-        todo!("port NIVissimNodeCluster::getFromNode")
+        let mut ret = -1;
+        MY_DICT.with(|d| {
+            for (&i, c) in d.borrow().iter() {
+                for &j in c.myConnectors.iter() {
+                    let conn = NIVissimConnection::dictionary_2(j);
+                    if !conn.is_null() && conn.get_to_edge_id() == edgeid {
+                        // an edge should not outgo from two different nodes
+                        // but actually, a joined cluster may posess a connections more than once
+                        if ret != -1 && i != ret {
+                            panic!("NIVissimNodeCluster: an edge should not outgo from two different nodes (C++ throw 1)");
+                        }
+                        ret = i;
+                    }
+                }
+            }
+        });
+        ret
     }
 
     /// C++: `int NIVissimNodeCluster::getToNode(int)` [static]
@@ -333,7 +400,23 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_to_node(edgeid: i32) -> i32 {
-        todo!("port NIVissimNodeCluster::getToNode")
+        let mut ret = -1;
+        MY_DICT.with(|d| {
+            for (&i, c) in d.borrow().iter() {
+                for &j in c.myConnectors.iter() {
+                    let conn = NIVissimConnection::dictionary_2(j);
+                    if !conn.is_null() && conn.get_from_edge_id() == edgeid {
+                        // an edge should not outgo from two different nodes
+                        // but actually, a joined cluster may posess a connections more than once
+                        if ret != -1 && ret != i {
+                            panic!("NIVissimNodeCluster: multiple to-nodes (C++ throw 1)");
+                        }
+                        ret = i;
+                    }
+                }
+            }
+        });
+        ret
     }
 
     /// C++: `void NIVissimNodeCluster::_debugOut(std::ostream &)` [static]
@@ -352,8 +435,19 @@ impl NIVissimNodeCluster {
     //     into << "=======================" << std::endl;
     // }
     #[allow(unused_variables)]
-    pub fn debug_out(into: &mut Unmapped /* std::ostream */) {
-        todo!("port NIVissimNodeCluster::_debugOut")
+    pub fn debug_out(into: &mut dyn std::io::Write) {
+        MY_DICT.with(|d| {
+            for c in d.borrow().values() {
+                let _ = write!(into, "\n{}:", c.myID);
+                for (idx, j) in c.myConnectors.iter().enumerate() {
+                    if idx != 0 {
+                        let _ = write!(into, ", ");
+                    }
+                    let _ = write!(into, "{}", j);
+                }
+            }
+        });
+        let _ = write!(into, "=======================\n");
     }
 
     /// C++: `void NIVissimNodeCluster::dict_addDisturbances(NBDistrictCont &, NBNodeCont &, NBEdgeCont &)` [static]
@@ -372,7 +466,17 @@ impl NIVissimNodeCluster {
     // }
     #[allow(unused_variables)]
     pub fn dict_add_disturbances(dc: &mut NBDistrictCont, nc: &mut NBNodeCont, ec: &mut NBEdgeCont) {
-        todo!("port NIVissimNodeCluster::dict_addDisturbances")
+        MY_DICT.with(|d| {
+            for o in d.borrow().values() {
+                let disturbances = o.myDisturbances.clone();
+                let node = nc.retrieve(&o.get_node_name());
+                for j in disturbances {
+                    let disturbance = NIVissimDisturbance::dictionary_3(j);
+                    disturbance.m().add_to_node(node, dc, nc, ec);
+                }
+            }
+        });
+        NIVissimDisturbance::report_refused();
     }
 
     /// C++: `void NIVissimNodeCluster::clearDict()` [static]

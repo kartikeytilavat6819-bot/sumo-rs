@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `AGBus` (activitygen/city/AGBus.h)
+#[derive(Clone)]
 pub struct AGBus {
     pub myName: String,
     pub myDepartureTime: i32,

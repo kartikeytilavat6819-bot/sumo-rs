@@ -4,10 +4,18 @@ use crate::prelude::*;
 
 /// A location in the 2D plane freely positioned on a street.
 /// C++ class `AGPosition` (activitygen/city/AGPosition.h)
+#[derive(Clone, Copy)]
 pub struct AGPosition {
     pub street: Ptr<AGStreet>,
     pub position: f64,
     pub pos2d: Position,
+}
+
+/// C++ `AGPosition::operator==`: positions are equal when their 2D points almost coincide
+impl PartialEq for AGPosition {
+    fn eq(&self, pos: &AGPosition) -> bool {
+        self.pos2d.almost_same_eps(&pos.pos2d)
+    }
 }
 
 impl AGPosition {

@@ -34,8 +34,8 @@ impl AGActivity {
             myPartialActivityTrips: VecDeque::new(),
             activityPriority: prio,
             genDone: false,
-            timePerKm: das.get().unwrap().speedTimePerKm,
-            carPreference: das.get().unwrap().carPreference,
+            timePerKm: das.speedTimePerKm,
+            carPreference: das.carPreference,
         }
     }
 
@@ -111,40 +111,39 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn possible_transp_mean(&mut self, destination: AGPosition) -> i32 {
-        let foot: i32 = 1;
-        let bus: i32 = 2;
-        let car: i32 = 4;
-        
-        let mut transp: i32 = 0;
-        
-        if destination.distance_to(&self.myHousehold.m().get_position()) <= self.myStatData.maxFootDistance {
-            transp = foot;
-            if self.myHousehold.get_car_nbr() != 0 {
-                transp += car;
+        let FOOT = 1;
+        let BUS = 2;
+        let CAR = 4;
+
+        let mut transp = 0;
+        let home = self.myHousehold.m().get_position();
+
+        if destination.distance_to(&home) <= self.myStatData.maxFootDistance {
+            transp = FOOT;
+            if self.myHousehold.m().get_car_nbr() != 0 {
+                transp += CAR;
             }
             if destination.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
-                && self.myHousehold.get_position().min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
+                && home.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
             {
-                transp += bus;
+                transp += BUS;
             }
-        } else if self.myHousehold.get_car_nbr() == 0 {
-            let d1 = destination.distance_to(&self.myHousehold.m().get_position());
-            let d2 = destination.min_distance_to_2(&self.myStatData.busStations)
-                + self.myHousehold.get_position().min_distance_to_2(&self.myStatData.busStations);
-        
+        } else if self.myHousehold.m().get_car_nbr() == 0 {
+            let d1 = destination.distance_to(&home);
+            let d2 = destination.min_distance_to_2(&self.myStatData.busStations) + home.min_distance_to_2(&self.myStatData.busStations);
+
             if d1 > d2 {
-                transp = bus;
+                transp = BUS;
             } else {
-                transp = foot;
+                transp = FOOT;
             }
-        } else if self.myHousehold.get_car_nbr() != 0 {
-            // all other cases
+        } else if self.myHousehold.m().get_car_nbr() != 0 { // all other cases
             if destination.min_distance_to_2(&self.myStatData.busStations) > self.myStatData.maxFootDistance
-                || self.myHousehold.get_position().min_distance_to_2(&self.myStatData.busStations) > self.myStatData.maxFootDistance
+                || home.min_distance_to_2(&self.myStatData.busStations) > self.myStatData.maxFootDistance
             {
-                transp = car;
+                transp = CAR;
             } else {
-                transp = car + bus;
+                transp = CAR + BUS;
             }
         }
         transp
@@ -170,11 +169,11 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn available_transp_means(&mut self, from: AGPosition, to: AGPosition) -> i32 {
-        let FOOT: i32 = 1;
-        let BUS: i32 = 2;
-        
-        let mut available: i32 = 0;
-        
+        let FOOT = 1;
+        let BUS = 2;
+
+        let mut available = 0;
+
         if from.distance_to(&to) <= self.myStatData.maxFootDistance {
             available += FOOT;
         }
@@ -195,8 +194,8 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn time_to_drive(&mut self, from: AGPosition, to: AGPosition) -> i32 {
-        let dist: f64 = from.distance_to(&to);
-        return (self.timePerKm * dist / 1000.0) as i32;
+        let dist = from.distance_to(&to);
+        (self.timePerKm * dist / 1000.0) as i32
     }
 
     /// C++: `int AGActivity::depHour(AGPosition, AGPosition, int)`
@@ -247,8 +246,8 @@ impl AGActivity {
         if begin == end {
             return begin;
         }
-        let t_alea = utils::common::rand_helper::with_default(|r| r.rand_int(end - begin));
-        return begin + t_alea;
+        let tAlea = utils::common::rand_helper::with_default(|r| r.rand_int(end - begin));
+        begin + tAlea
     }
 
     /// C++: `std::list<AGTrip> & AGActivity::getPartialActivityTrips()`

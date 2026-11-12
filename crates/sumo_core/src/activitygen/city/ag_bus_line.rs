@@ -3,6 +3,7 @@
 use crate::prelude::*;
 
 /// C++ class `AGBusLine` (activitygen/city/AGBusLine.h)
+#[derive(Clone)]
 pub struct AGBusLine {
     pub stations: VecDeque<AGPosition>,
     pub revStations: VecDeque<AGPosition>,
