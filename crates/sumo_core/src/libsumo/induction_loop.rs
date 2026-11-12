@@ -1,16 +1,31 @@
 //! Port of libsumo/InductionLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_error;
+use utils::common::time::delta_t;
 
 /// C++ class `libsumo::InductionLoop` (libsumo/InductionLoop.h)
 pub struct InductionLoop {
 }
 
+// shortcut: C++ throws TraCIException(msg) for unknown detectors (here panic!("{}", msg)), and libsumo functions are not Result-based yet; upgrade when they return Result
 // C++ static members of InductionLoop (port as module-level statics, see AGENTS.md):
 //   static const int InductionLoop::DOMAIN_ID;
 //   static SubscriptionResults InductionLoop::mySubscriptionResults;
 //   static ContextSubscriptionResults InductionLoop::myContextSubscriptionResults;
 //   static NamedRTree * InductionLoop::myTree;
+
+thread_local! {
+    /// C++ static `InductionLoop::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `InductionLoop::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
+/// C++ `MSGlobals::gUseMesoSim`. shortcut: MSGlobals is not ported, so this always reports the microscopic mode; upgrade when ms_globals.rs ports the static.
+fn use_meso_sim() -> bool {
+    false
+}
 
 impl InductionLoop {
     /// C++: `double InductionLoop::getPosition(const std::string &)` [static]
@@ -20,7 +35,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_position(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getPosition")
+        Self::get_detector(loopID).get_position()
     }
 
     /// C++: `std::string InductionLoop::getLaneID(const std::string &)` [static]
@@ -30,7 +45,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(loopID: &str) -> String {
-        todo!("port InductionLoop::getLaneID")
+        Self::get_detector(loopID).get_lane().get_id().to_string()
     }
 
     /// C++: `int InductionLoop::getLastStepVehicleNumber(const std::string &)` [static]
@@ -40,7 +55,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_number(loopID: &str) -> i32 {
-        todo!("port InductionLoop::getLastStepVehicleNumber")
+        Self::get_detector(loopID).get_entered_number(delta_t() as i32) as i32
     }
 
     /// C++: `double InductionLoop::getLastStepMeanSpeed(const std::string &)` [static]
@@ -50,7 +65,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_mean_speed(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getLastStepMeanSpeed")
+        Self::get_detector(loopID).get_speed(delta_t() as i32)
     }
 
     /// C++: `std::vector<std::string> InductionLoop::getLastStepVehicleIDs(const std::string &)` [static]
@@ -60,7 +75,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_vehicle_i_ds(loopID: &str) -> Vec<String> {
-        todo!("port InductionLoop::getLastStepVehicleIDs")
+        Self::get_detector(loopID).get_vehicle_i_ds(delta_t() as i32)
     }
 
     /// C++: `double InductionLoop::getLastStepOccupancy(const std::string &)` [static]
@@ -70,7 +85,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getLastStepOccupancy")
+        Self::get_detector(loopID).get_occupancy()
     }
 
     /// C++: `double InductionLoop::getLastStepMeanLength(const std::string &)` [static]
@@ -80,7 +95,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_mean_length(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getLastStepMeanLength")
+        Self::get_detector(loopID).get_vehicle_length(delta_t() as i32)
     }
 
     /// C++: `double InductionLoop::getTimeSinceDetection(const std::string &)` [static]
@@ -90,7 +105,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_time_since_detection(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getTimeSinceDetection")
+        Self::get_detector(loopID).get_time_since_last_detection()
     }
 
     /// C++: `std::vector<libsumo::TraCIVehicleData> InductionLoop::getVehicleData(const std::string &)` [static]
@@ -110,7 +125,19 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_data(loopID: &str) -> Vec<TraCIVehicleData> {
-        todo!("port InductionLoop::getVehicleData")
+        let det = Self::get_detector(loopID);
+        let vd = det.collect_vehicles_on_det(MSNet::get_instance().get_current_time_step() - delta_t(), true, true, false, false);
+        let mut tvd: Vec<TraCIVehicleData> = Vec::new();
+        for vdi in vd.iter() {
+            tvd.push(TraCIVehicleData {
+                id: vdi.idM.clone(),
+                length: vdi.lengthM,
+                entryTime: vdi.entryTimeM,
+                leaveTime: vdi.leaveTimeM,
+                typeID: vdi.typeIDM.clone(),
+            });
+        }
+        tvd
     }
 
     /// C++: `double InductionLoop::getIntervalOccupancy(const std::string &)` [static]
@@ -126,7 +153,14 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_occupancy(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getIntervalOccupancy")
+        // shortcut: MSGlobals::gUseMesoSim is not ported (ms_globals.rs keeps it as a comment), so the micro branch is always taken; upgrade when MSGlobals is ported
+        if use_meso_sim() {
+            let det = Self::get_me_detector(loopID);
+            let meanData = det.get_mean_data();
+            meanData.get_occupancy(MSNet::get_instance().get_current_time_step() - meanData.get_reset_time(), det.get_edge().get_num_lanes())
+        } else {
+            Self::get_detector(loopID).get_interval_occupancy(false)
+        }
     }
 
     /// C++: `double InductionLoop::getIntervalMeanSpeed(const std::string &)` [static]
@@ -147,7 +181,18 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_mean_speed(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getIntervalMeanSpeed")
+        if use_meso_sim() {
+            let det = Self::get_me_detector(loopID);
+            let meanData = det.get_mean_data();
+            if meanData.get_samples() != 0.0 {
+                meanData.get_travelled_distance() / meanData.get_samples()
+            } else {
+                let defaultTravelTime = det.get_edge().get_length() / det.get_edge().get_speed_limit();
+                meanData.get_lane_length() / defaultTravelTime
+            }
+        } else {
+            Self::get_detector(loopID).get_interval_mean_speed(false)
+        }
     }
 
     /// C++: `int InductionLoop::getIntervalVehicleNumber(const std::string &)` [static]
@@ -162,7 +207,13 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_vehicle_number(loopID: &str) -> i32 {
-        todo!("port InductionLoop::getIntervalVehicleNumber")
+        if use_meso_sim() {
+            let det = Self::get_me_detector(loopID);
+            let meanData = det.get_mean_data();
+            meanData.nVehDeparted + meanData.nVehEntered
+        } else {
+            Self::get_detector(loopID).get_interval_vehicle_number(false)
+        }
     }
 
     /// C++: `std::vector<std::string> InductionLoop::getIntervalVehicleIDs(const std::string &)` [static]
@@ -176,7 +227,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_vehicle_i_ds(loopID: &str) -> Vec<String> {
-        todo!("port InductionLoop::getIntervalVehicleIDs")
+        if use_meso_sim() {
+            write_error("getIntervalVehicleIDs not applicable for meso");
+            return Vec::new();
+        }
+        Self::get_detector(loopID).get_interval_vehicle_i_ds(false)
     }
 
     /// C++: `double InductionLoop::getLastIntervalOccupancy(const std::string &)` [static]
@@ -190,7 +245,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_occupancy(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getLastIntervalOccupancy")
+        if use_meso_sim() {
+            write_error("getLastIntervalOccupancy not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
+        Self::get_detector(loopID).get_interval_occupancy(true)
     }
 
     /// C++: `double InductionLoop::getLastIntervalMeanSpeed(const std::string &)` [static]
@@ -204,7 +263,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_mean_speed(loopID: &str) -> f64 {
-        todo!("port InductionLoop::getLastIntervalMeanSpeed")
+        if use_meso_sim() {
+            write_error("getLastIntervalMeanSpeed not applicable for meso");
+            return INVALID_DOUBLE_VALUE;
+        }
+        Self::get_detector(loopID).get_interval_mean_speed(true)
     }
 
     /// C++: `int InductionLoop::getLastIntervalVehicleNumber(const std::string &)` [static]
@@ -218,7 +281,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_vehicle_number(loopID: &str) -> i32 {
-        todo!("port InductionLoop::getLastIntervalVehicleNumber")
+        if use_meso_sim() {
+            write_error("getLastIntervalVehicleNumber not applicable for meso");
+            return INVALID_INT_VALUE;
+        }
+        Self::get_detector(loopID).get_interval_vehicle_number(true)
     }
 
     /// C++: `std::vector<std::string> InductionLoop::getLastIntervalVehicleIDs(const std::string &)` [static]
@@ -232,7 +299,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_last_interval_vehicle_i_ds(loopID: &str) -> Vec<String> {
-        todo!("port InductionLoop::getLastIntervalVehicleIDs")
+        if use_meso_sim() {
+            write_error("getLastIntervalVehicleIDs not applicable for meso");
+            return Vec::new();
+        }
+        Self::get_detector(loopID).get_interval_vehicle_i_ds(true)
     }
 
     /// C++: `void InductionLoop::overrideTimeSinceDetection(const std::string &, double)` [static]
@@ -242,7 +313,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn override_time_since_detection(loopID: &str, time: f64) {
-        todo!("port InductionLoop::overrideTimeSinceDetection")
+        Self::get_detector(loopID).m().override_time_since_detection(time);
     }
 
     /// C++: `std::vector<std::string> InductionLoop::getIDList()` [static]
@@ -254,7 +325,11 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port InductionLoop::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int InductionLoop::getIDCount()` [static]
@@ -265,7 +340,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port InductionLoop::getIDCount")
+        MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).len() as i32
     }
 
     /// C++: `std::string InductionLoop::getParameter(const std::string &, const std::string &)` [static]
@@ -275,14 +350,14 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port InductionLoop::getParameter")
+        Self::get_detector(loopID).get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> InductionLoop::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(InductionLoop)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port InductionLoop::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void InductionLoop::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -292,77 +367,77 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port InductionLoop::setParameter")
+        Self::get_detector(loopID).m().set_parameter(key, value);
     }
 
     /// C++: `void InductionLoop::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port InductionLoop::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_INDUCTIONLOOP_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void InductionLoop::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port InductionLoop::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_INDUCTIONLOOP_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void InductionLoop::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port InductionLoop::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_INDUCTIONLOOP_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void InductionLoop::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port InductionLoop::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_INDUCTIONLOOP_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults InductionLoop::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port InductionLoop::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults InductionLoop::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port InductionLoop::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults InductionLoop::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port InductionLoop::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults InductionLoop::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port InductionLoop::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void InductionLoop::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port InductionLoop::subscribeParameterWithKey")
+        panic!("shortcut: InductionLoop::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int InductionLoop::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port InductionLoop::domainID")
+        CMD_GET_INDUCTIONLOOP_VARIABLE
     }
 
     /// C++: `NamedRTree * InductionLoop::getTree()` [static]
@@ -383,7 +458,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        todo!("port InductionLoop::getTree")
+        panic!("shortcut: InductionLoop::getTree needs NamedRTree (unmapped)")
     }
 
     /// C++: `void InductionLoop::cleanup()` [static]
@@ -394,7 +469,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port InductionLoop::cleanup")
+        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
     }
 
     /// C++: `void InductionLoop::storeShape(const std::string &, PositionVector &)` [static]
@@ -406,7 +481,9 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port InductionLoop::storeShape")
+        let il = Self::get_detector(loopID);
+        let lane = il.get_lane();
+        shape.push(lane.get_shape_2().position_at_offset(il.get_position(), 0.0));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> InductionLoop::makeWrapper()` [static]
@@ -416,7 +493,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port InductionLoop::makeWrapper")
+        panic!("shortcut: InductionLoop::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool InductionLoop::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -473,7 +550,38 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port InductionLoop::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_POSITION => wrapper.m().wrap_double(objID, variable, Self::get_position(objID)),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            LAST_STEP_VEHICLE_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_step_vehicle_number(objID)),
+            LAST_STEP_MEAN_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_step_mean_speed(objID)),
+            LAST_STEP_VEHICLE_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_step_vehicle_i_ds(objID)),
+            LAST_STEP_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_step_occupancy(objID)),
+            LAST_STEP_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_last_step_mean_length(objID)),
+            LAST_STEP_TIME_SINCE_DETECTION => wrapper.m().wrap_double(objID, variable, Self::get_time_since_detection(objID)),
+            VAR_INTERVAL_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_interval_occupancy(objID)),
+            VAR_INTERVAL_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_interval_mean_speed(objID)),
+            VAR_INTERVAL_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_interval_vehicle_number(objID)),
+            VAR_INTERVAL_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_interval_vehicle_i_ds(objID)),
+            VAR_LAST_INTERVAL_OCCUPANCY => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_occupancy(objID)),
+            VAR_LAST_INTERVAL_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_last_interval_mean_speed(objID)),
+            VAR_LAST_INTERVAL_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_last_interval_vehicle_number(objID)),
+            VAR_LAST_INTERVAL_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_interval_vehicle_i_ds(objID)),
+            LAST_STEP_VEHICLE_DATA => wrapper.m().wrap_vehicle_data_vector(objID, variable, &Self::get_vehicle_data(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSInductLoop * InductionLoop::getDetector(const std::string &)` [static, private]
@@ -487,7 +595,15 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_detector(loopID: &str) -> Ptr<MSInductLoop> {
-        todo!("port InductionLoop::getDetector")
+        // shortcut: C++ dynamic_cast<MSInductLoop*> cannot be checked at runtime; a non-MSInductLoop typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
+        let il = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(loopID).copied();
+        match il {
+            Some(d) => d.cast::<MSInductLoop>(),
+            None => {
+                let msg = format!("Induction loop '{}' is not known", loopID);
+                panic!("{}", msg);
+            }
+        }
     }
 
     /// C++: `MEInductLoop * InductionLoop::getMEDetector(const std::string &)` [static, private]
@@ -501,7 +617,15 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_me_detector(loopID: &str) -> Ptr<MEInductLoop> {
-        todo!("port InductionLoop::getMEDetector")
+        // shortcut: C++ dynamic_cast<MEInductLoop*> cannot be checked at runtime; a non-MEInductLoop typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
+        let il = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(loopID).copied();
+        match il {
+            Some(d) => d.cast::<MEInductLoop>(),
+            None => {
+                let msg = format!("Induction loop '{}' is not known", loopID);
+                panic!("{}", msg);
+            }
+        }
     }
 
     /// C++: `void InductionLoop::InductionLoop()` [private]
@@ -509,7 +633,7 @@ impl InductionLoop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port InductionLoop::InductionLoop")
+        panic!("libsumo::InductionLoop cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
