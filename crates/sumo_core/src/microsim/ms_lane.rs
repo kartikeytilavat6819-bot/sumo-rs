@@ -3882,7 +3882,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSLane::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if d.contains_key(id) {
+                false
+            } else {
+                d.insert(id.to_string(), lane);
+                true
+            }
+        })
     }
 
     /// C++: `MSLane * MSLane::dictionary(const std::string &)` [static]
@@ -3898,7 +3906,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: &str) -> Ptr<MSLane> {
-        todo!("port MSLane::dictionary")
+        MY_DICT.with(|d| d.borrow().get(id).copied().unwrap_or(Ptr::null()))
     }
 
     /// C++: `void MSLane::clear()` [static]
@@ -3912,7 +3920,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn clear() {
-        todo!("port MSLane::clear")
+        // shortcut: C++ deletes the stored lane objects; Ptr entries are not owned here, so only the map is cleared
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `int MSLane::dictSize()` [static]
@@ -3922,7 +3931,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn dict_size() -> i32 {
-        todo!("port MSLane::dictSize")
+        MY_DICT.with(|d| d.borrow().len() as i32)
     }
 
     /// C++: `void MSLane::insertIDs(std::vector<std::string> &)` [static]
@@ -3935,7 +3944,11 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn insert_i_ds(into: &mut Vec<String>) {
-        todo!("port MSLane::insertIDs")
+        MY_DICT.with(|d| {
+            for k in d.borrow().keys() {
+                into.push(k.clone());
+            }
+        });
     }
 
     /// C++: `void MSLane::fill(RTREE &)` [static]
