@@ -21,6 +21,8 @@ const NBNODE_SPLIT_CROSSING_WIDTH_THRESHOLD: f64 = 1.5;
 const NBNODE_SPLIT_CROSSING_ANGLE_THRESHOLD: f64 = 5.0;
 // C++ NBEdge::UNSPECIFIED_WIDTH
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
+// C++ utils/common/StdDefs.h SUMO_const_laneWidth
+const NBNODE_SUMO_CONST_LANE_WIDTH: f64 = 3.2;
 
 // C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
 // nb_edge.rs / nb_node.rs expose them as statics).
@@ -4381,7 +4383,124 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossings(&mut self) -> i32 {
-        todo!("port NBNode::buildCrossings")
+        let me = Ptr::from_mut(self);
+        if self.myDiscardAllCrossings {
+            self.myCrossings.clear();
+        }
+        let mut index: i32 = 0;
+        let defaultWidth = utils::options::options_cont::get_float("default.crossing-width");
+        for ci in 0..self.myCrossings.len() {
+            self.myCrossings[ci].valid = true;
+            self.myCrossings[ci].tlID = String::new(); // reset for Netedit, set via setCrossingTLIndices()
+            self.myCrossings[ci].id = format!(":{}_c{}", self.get_id(), index);
+            index += 1;
+            self.myCrossings[ci].width = if self.myCrossings[ci].customWidth == NBEDGE_UNSPECIFIED_WIDTH { defaultWidth } else { self.myCrossings[ci].customWidth };
+            // reset fields, so repeated computation (Netedit) will successfully perform the checks
+            // in buildWalkingAreas (split crossings) and buildInnerEdges (sanity check)
+            self.myCrossings[ci].nextWalkingArea = String::new();
+            self.myCrossings[ci].prevWalkingArea = String::new();
+            let mut edges: EdgeVector = self.myCrossings[ci].edges.clone();
+            // sorting the edges in the right way is imperative. We want to sort
+            // them by getAngleAtNodeToCenter() but need to be extra carefull to avoid wrapping around 0 somewhere in between
+            let sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(me);
+            edges.sort_by(|a, b| {
+                if sorter.call_op(*a, *b) {
+                    std::cmp::Ordering::Less
+                } else if sorter.call_op(*b, *a) {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+            // rotate the edges so that the largest relative angle difference comes at the end
+            let mut rawAngleDiffs: Vec<f64> = Vec::new();
+            let mut maxAngleDiff: f64 = 0.;
+            let mut maxAngleDiffIndex: usize = 0; // index before maxDist
+            let n = edges.len();
+            for i in 0..n {
+                let mut diff = NBHelpers::rel_angle(edges[i].get_angle_at_node_to_center(me), edges[(i + 1) % n].get_angle_at_node_to_center(me));
+                if diff < 0. {
+                    diff += 360.;
+                }
+                let rawDiff = NBHelpers::rel_angle(edges[i].get_angle_at_node_normalized(me), edges[(i + 1) % n].get_angle_at_node_normalized(me));
+                rawAngleDiffs.push(rawDiff.abs());
+                if diff > maxAngleDiff {
+                    maxAngleDiff = diff;
+                    maxAngleDiffIndex = i;
+                }
+            }
+            if maxAngleDiff > 2. && maxAngleDiff < 360. - 2. {
+                // if the angle differences is too small, we better not rotate
+                // std::rotate(begin, begin + (idx+1)%size, end) is a left rotation by that amount
+                edges.rotate_left((maxAngleDiffIndex + 1) % n);
+            }
+            let mut diagonalCrossing = false;
+            rawAngleDiffs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            if rawAngleDiffs.len() >= 2 && rawAngleDiffs[rawAngleDiffs.len() - 2] > 30. {
+                diagonalCrossing = true;
+            }
+            // reverse to get them in CCW order (walking direction around the node)
+            edges.reverse();
+            // edges is a reference to c->edges in C++; keep the stored crossing in sync
+            self.myCrossings[ci].edges = edges.clone();
+            // compute shape
+            self.myCrossings[ci].shape = PositionVector::default();
+            let begDir: i32 = if edges[0].get_from_node() == me { NBNODE_FORWARD } else { NBNODE_BACKWARD };
+            let endDir: i32 = if edges[edges.len() - 1].get_to_node() == me { NBNODE_FORWARD } else { NBNODE_BACKWARD };
+            let mut firstNonPedLane = edges[0].get_first_non_pedestrian_lane_index(begDir, false);
+            let mut lastNonPedLane = edges[edges.len() - 1].get_first_non_pedestrian_lane_index(endDir, false);
+            if firstNonPedLane < 0 || lastNonPedLane < 0 {
+                // invalid crossing
+                let edgeIds: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+                write_warning(&format!(
+                    "Discarding invalid crossing '{}' at junction '{}' with edges [{}] (no vehicle lanes to cross).",
+                    self.myCrossings[ci].id,
+                    self.get_id(),
+                    edgeIds.join(" ")
+                ));
+                self.myCrossings[ci].valid = false;
+                // compute surrogate shape to make it visible in netedit
+                firstNonPedLane = if begDir == NBNODE_FORWARD { 0 } else { edges[0].get_num_lanes() - 1 };
+                lastNonPedLane = if endDir == NBNODE_FORWARD { 0 } else { edges[edges.len() - 1].get_num_lanes() - 1 };
+            }
+            if self.myCrossings[ci].customShape.len() != 0 {
+                self.myCrossings[ci].shape = self.myCrossings[ci].customShape.clone();
+            } else {
+                let mut crossingBegShape: PositionVector = edges[0].get_lanes()[firstNonPedLane as usize].shape.clone();
+                let mut crossingBegWidth: f64 = edges[0].get_lanes()[firstNonPedLane as usize].width;
+                let mut crossingEndShape: PositionVector = edges[edges.len() - 1].get_lanes()[lastNonPedLane as usize].shape.clone();
+                let mut crossingEndWidth: f64 = edges[edges.len() - 1].get_lanes()[lastNonPedLane as usize].width;
+                crossingBegWidth = if crossingBegWidth == NBEDGE_UNSPECIFIED_WIDTH { NBNODE_SUMO_CONST_LANE_WIDTH } else { crossingBegWidth };
+                crossingEndWidth = if crossingEndWidth == NBEDGE_UNSPECIFIED_WIDTH { NBNODE_SUMO_CONST_LANE_WIDTH } else { crossingEndWidth };
+                crossingBegShape.move2side((begDir as f64) * crossingBegWidth / 2., 100.);
+                crossingEndShape.move2side((endDir as f64) * crossingEndWidth / 2., 100.);
+                let mut offset = self.myCrossings[ci].width / 2.;
+                self.patch_offset_path_across_street(&mut offset);
+                crossingBegShape.extrapolate(offset, false, false);
+                crossingEndShape.extrapolate(offset, false, false);
+                // check if after all changes shape are NAN (in these case, discard)
+                if crossingBegShape.is_nan() || crossingEndShape.is_nan() {
+                    let edgeIds: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+                    write_warning(&format!(
+                        "Discarding invalid crossing '{}' at junction '{}' with edges [{}] (invalid shape).",
+                        self.myCrossings[ci].id,
+                        self.get_id(),
+                        edgeIds.join(" ")
+                    ));
+                    self.myCrossings[ci].valid = false;
+                } else {
+                    let begPt = *crossingBegShape.at(if begDir == NBNODE_FORWARD { 0 } else { -1 });
+                    let endPt = *crossingEndShape.at(if endDir == NBNODE_FORWARD { -1 } else { 0 });
+                    self.myCrossings[ci].shape.push(begPt);
+                    self.myCrossings[ci].shape.push(endPt);
+                }
+                if diagonalCrossing {
+                    let w = -self.myCrossings[ci].width;
+                    self.myCrossings[ci].shape.move2side(w, 100.);
+                }
+            }
+        }
+        index
     }
 
     /// C++: `void NBNode::buildWalkingAreas(int, double)`
@@ -5062,7 +5181,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn crosses_fringe(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::crossesFringe")
+        self.myFringeType != FringeType::DEFAULT
+            && self.myIncomingEdges.len() == 1
+            && self.myOutgoingEdges.len() == 1
+            && (e1.is_turning_direction_at(e2) || e2.is_turning_direction_at(e1))
     }
 
     /// C++: `const NBConnectionProhibits & NBNode::getProhibitions()`
@@ -5072,7 +5194,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_prohibitions(&mut self) -> &NBConnectionProhibits {
-        todo!("port NBNode::getProhibitions")
+        &self.myBlockedConnections
     }
 
     /// C++: `bool NBNode::geometryLike() const` [const]
@@ -5083,7 +5205,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn geometry_like(&self) -> bool {
-        todo!("port NBNode::geometryLike")
+        NBNode::geometry_like_2(&self.myIncomingEdges, &self.myOutgoingEdges)
     }
 
     /// C++: `bool NBNode::geometryLike(const EdgeVector &, const EdgeVector &)` [static]
@@ -5122,7 +5244,36 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn geometry_like_2(incoming: &EdgeVector, outgoing: &EdgeVector) -> bool {
-        todo!("port NBNode::geometryLike")
+        if incoming.len() == 1 && outgoing.len() == 1 {
+            return incoming[0].get_bidi_edge() != outgoing[0];
+        }
+        if incoming.len() == 2 && outgoing.len() == 2 {
+            // check whether the incoming and outgoing edges are pairwise (near) parallel and
+            // thus the only cross-connections could be turn-arounds
+            let in0 = incoming[0];
+            let in1 = incoming[1];
+            let out0 = outgoing[0];
+            let out1 = outgoing[1];
+            if (in0.is_turning_direction_at(out0) || in0.is_turning_direction_at(out1))
+                && (in1.is_turning_direction_at(out0) || in1.is_turning_direction_at(out1))
+            {
+                return true;
+            }
+            if in0.get_geometry() == in1.get_geometry() && out0.get_geometry() == out1.get_geometry() {
+                // overlapping edges
+                return true;
+            }
+            for inEdge in incoming.iter() {
+                let angle0 = NBHelpers::rel_angle(inEdge.get_angle_at_node(inEdge.get_to_node()), out0.get_angle_at_node(out0.get_from_node())).abs();
+                let angle1 = NBHelpers::rel_angle(inEdge.get_angle_at_node(inEdge.get_to_node()), out1.get_angle_at_node(out1.get_from_node())).abs();
+                if angle0.max(angle1) <= 160. {
+                    // neither of the outgoing edges is parallel to inEdge
+                    return false;
+                }
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `void NBNode::setRoundabout()`
@@ -6400,7 +6551,73 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn patch_offset_path_across_street(&mut self, offset: &mut f64) {
-        todo!("port NBNode::patchOffset_pathAcrossStreet")
+        if self.myCrossings.len() == 1 && self.myAllEdges.len() >= 3 {
+            let mut nonPedIncoming: EdgeVector = Vec::new();
+            let mut nonPedOutgoing: EdgeVector = Vec::new();
+            let mut pedIncoming: EdgeVector = Vec::new();
+            let mut pedOutgoing: EdgeVector = Vec::new();
+            for e in self.get_incoming_edges().iter() {
+                if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                    nonPedIncoming.push(*e);
+                } else {
+                    pedIncoming.push(*e);
+                }
+            }
+            for e in self.get_outgoing_edges().iter() {
+                if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                    nonPedOutgoing.push(*e);
+                } else {
+                    pedOutgoing.push(*e);
+                }
+            }
+            if NBNode::geometry_like_2(&nonPedIncoming, &nonPedOutgoing) && (pedIncoming.len() > 0 || pedOutgoing.len() > 0) {
+                let mut maxAngle: f64 = 0.;
+                let mut inE = nonPedIncoming[0];
+                let mut outE = nonPedOutgoing[0];
+                if nonPedIncoming.len() == 1 {
+                    maxAngle = NBHelpers::rel_angle(inE.get_angle_at_node(Ptr::from_mut(self)), outE.get_angle_at_node(Ptr::from_mut(self))).abs();
+                } else {
+                    for in2 in nonPedIncoming.iter() {
+                        let mut minAngle: f64 = 180.;
+                        for out2 in nonPedOutgoing.iter() {
+                            let angle = NBHelpers::rel_angle(in2.get_angle_at_node(Ptr::from_mut(self)), out2.get_angle_at_node(Ptr::from_mut(self))).abs();
+                            if angle < minAngle {
+                                minAngle = angle;
+                                inE = *in2;
+                                outE = *out2;
+                            }
+                        }
+                        maxAngle = maxAngle.max(minAngle);
+                    }
+                }
+                // changing the offset only handles the simple case where the road stays straight
+                if maxAngle < 15. {
+                    let inLane = inE.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false);
+                    let outLane = outE.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false);
+                    if inLane >= 0 && outLane >= 0 {
+                        let p0 = *inE.get_lane_shape(inLane).back();
+                        let p1 = *outE.get_lane_shape(outLane).front();
+                        let mut road = PositionVector::default();
+                        road.push(p0);
+                        road.push(p1);
+                        let mid = (p0 + p1) / 2.;
+                        let mut maxPathDist: f64 = 0.;
+                        for e in pedIncoming.iter() {
+                            let roadPos = road.position_at_offset2d(road.nearest_offset_to_point2d(e.get_lane_shape(0).back(), true), 0., false);
+                            maxPathDist = maxPathDist.max(mid.distance_to2d(&roadPos));
+                        }
+                        for e in pedOutgoing.iter() {
+                            let roadPos = road.position_at_offset2d(road.nearest_offset_to_point2d(e.get_lane_shape(0).front(), true), 0., false);
+                            maxPathDist = maxPathDist.max(mid.distance_to2d(&roadPos));
+                        }
+                        // if the junction is stretched, the crossing should stay close to the paths
+                        if maxPathDist < self.myCrossings[0].width.max(4.0) {
+                            *offset = p0.distance_to2d(&p1) / 2.;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNode::unsignalizedOperation() const` [const, private]
