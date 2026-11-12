@@ -423,7 +423,9 @@ impl Person {
             };
             edges.truncate(it + 1);
             let mut distance = 0.0;
-            let router = MSNet::get_instance().get_pedestrian_router(0, &MSNet_Prohibitions::new());
+            let prohibitions = MSNet_Prohibitions::new();
+            let net = MSNet::get_instance();
+            let router = net.get_pedestrian_router(0, &prohibitions);
             router.recompute_walk_costs(&edges, p.get_max_speed(), p.get_edge_pos(), pos, MSNet::get_instance().get_current_time_step(), p.get_v_type_parameter(), &mut distance);
             if distance == f64::MAX {
                 return INVALID_DOUBLE_VALUE;
@@ -584,7 +586,7 @@ impl Person {
             panic!("{}", format!("Person '{}' does not support chanigng device status\n", objectID));
         } else {
             let par = Self::get_person(objectID).get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-            unsafe { &mut *par }.set_parameter(key, value);
+            unsafe { (*par).set_parameter(key, value) };
         }
     }
 
@@ -1039,7 +1041,7 @@ impl Person {
     //     p->appendStage(new MSStageWalking(p->getID(), edges, bs, TIME2STEPS(duration), speed, p->getArrivalPos(), arrivalPos, MSPModel::UNSPECIFIED_POS_LAT));
     // }
     #[allow(unused_variables)]
-    pub fn append_walking_stage(personID: &str, edges: &Vec<String>, arrivalPos: f64, duration: f64, speed: f64, stopID: &str) {
+    pub fn append_walking_stage(personID: &str, edgeIDs: &Vec<String>, arrivalPos: f64, duration: f64, speed: f64, stopID: &str) {
         let p = Self::get_person(personID);
         let mut edges: ConstMSEdgeVector = Vec::new();
         // ProcessError from parseEdgesList is re-raised as TraCIException(e.what()) in C++; here it propagates as a panic
@@ -1812,9 +1814,11 @@ impl Person {
         const VEHPARS_COLOR_SET: i64 = 1;
         let person = Self::get_person(personID);
         // C++ `const SUMOVehicleParameter& p = ...` is mutated here (const_cast-style access, as in vehicle.rs)
-        let p: &mut SUMOVehicleParameter = unsafe { &mut *(person.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter) };
-        p.color.set(color.r as u8, color.g as u8, color.b as u8, color.a as u8);
-        p.parametersSet |= VEHPARS_COLOR_SET;
+        let p = person.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
+        unsafe {
+            (*p).color.set(color.r as u8, color.g as u8, color.b as u8, color.a as u8);
+            (*p).parametersSet |= VEHPARS_COLOR_SET;
+        }
     }
 
     /// C++: `void Person::setMinGap(const std::string &, double)` [static]

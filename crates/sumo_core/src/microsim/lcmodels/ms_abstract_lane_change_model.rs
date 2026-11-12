@@ -2664,7 +2664,7 @@ impl MSAbstractLaneChangeModel {
             ProcessError::InvalidArgument(format!(
                 "Parameter '{}' is not supported for laneChangeModel of type '{}'",
                 key,
-                LaneChangeModels.get_string(self.myModel).unwrap()
+                LaneChangeModels.get_string(self.myModel)
             ))
         );
     }
@@ -2682,7 +2682,7 @@ impl MSAbstractLaneChangeModel {
             ProcessError::InvalidArgument(format!(
                 "Setting parameter '{}' is not supported for laneChangeModel of type '{}'",
                 key,
-                LaneChangeModels.get_string(self.myModel).unwrap()
+                LaneChangeModels.get_string(self.myModel)
             ))
         );
     }
