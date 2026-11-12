@@ -1,6 +1,23 @@
 //! Port of microsim/cfmodels/MSCFModel_ACC.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use crate::microsim::ms_globals::MSGlobals;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::geom::NUMERICAL_EPS;
+
+// C++ #defines in MSCFModel_ACC.cpp
+const DEFAULT_SC_GAIN: f64 = -0.4;
+const DEFAULT_GCC_GAIN_SPEED: f64 = 0.8;
+const DEFAULT_GCC_GAIN_SPACE: f64 = 0.04;
+const DEFAULT_GC_GAIN_SPEED: f64 = 0.07;
+const DEFAULT_GC_GAIN_SPACE: f64 = 0.23;
+const DEFAULT_CA_GAIN_SPACE: f64 = 0.8;
+const DEFAULT_CA_GAIN_SPEED: f64 = 0.23;
+const GAP_THRESHOLD_SPEEDCTRL: f64 = 120.;
+const GAP_THRESHOLD_GAPCTRL: f64 = 100.;
+const DEFAULT_EMERGENCY_OVERRIDE_THRESHOLD: f64 = 2.0;
 
 /// C++ class `MSCFModel_ACC::ACCVehicleVariables` (microsim/cfmodels/MSCFModel_ACC.h)
 #[repr(C)]
@@ -29,7 +46,11 @@ impl MSCFModel_ACC_ACCVehicleVariables {
     // ACCVehicleVariables() : ACC_ControlMode(0) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ACCVehicleVariables::ACCVehicleVariables")
+        MSCFModel_ACC_ACCVehicleVariables {
+            base: MSCFModel_VehicleVariables {},
+            ACC_ControlMode: 0,
+            lastUpdateTime: 0, // C++ leaves lastUpdateTime uninitialized; 0 keeps the port deterministic
+        }
     }
 
     /// C++: `void ACCVehicleVariables::saveState(OutputDevice &, const MSCFModel &) const` [const, virtual]
@@ -46,7 +67,12 @@ impl MSCFModel_ACC_ACCVehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port ACCVehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "ACC");
+        let internals = format!("{} {}", self.ACC_ControlMode, self.lastUpdateTime);
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void ACCVehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -63,8 +89,21 @@ impl MSCFModel_ACC_ACCVehicleVariables {
     //     bis >> lastUpdateTime;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port ACCVehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "ACC" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for ACC", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        if let Some(v) = bis.next().and_then(|s| s.parse::<i32>().ok()) {
+            self.ACC_ControlMode = v;
+        }
+        if let Some(v) = bis.next().and_then(|s| s.parse::<SUMOTime>().ok()) {
+            self.lastUpdateTime = v;
+        }
+        Ok(())
     }
 
 }
@@ -117,7 +156,31 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_ACC::MSCFModel_ACC")
+        let p = vtype.get_parameter();
+        let mut base = MSCFModel::new(vtype);
+        let mySpeedControlGain = p.get_cf_param(SUMO_ATTR_SC_GAIN, DEFAULT_SC_GAIN);
+        let myGapClosingControlGainSpeed = p.get_cf_param(SUMO_ATTR_GCC_GAIN_SPEED, DEFAULT_GCC_GAIN_SPEED);
+        let myGapClosingControlGainSpace = p.get_cf_param(SUMO_ATTR_GCC_GAIN_SPACE, DEFAULT_GCC_GAIN_SPACE);
+        let myGapControlGainSpeed = p.get_cf_param(SUMO_ATTR_GC_GAIN_SPEED, DEFAULT_GC_GAIN_SPEED);
+        let myGapControlGainSpace = p.get_cf_param(SUMO_ATTR_GC_GAIN_SPACE, DEFAULT_GC_GAIN_SPACE);
+        let myCollisionAvoidanceGainSpeed = p.get_cf_param(SUMO_ATTR_CA_GAIN_SPEED, DEFAULT_CA_GAIN_SPEED);
+        let myCollisionAvoidanceGainSpace = p.get_cf_param(SUMO_ATTR_CA_GAIN_SPACE, DEFAULT_CA_GAIN_SPACE);
+        let myApplyDriverstate = p.get_cf_param(SUMO_ATTR_APPLYDRIVERSTATE, 0.);
+        let myEmergencyThreshold = p.get_cf_param(SUMO_ATTR_CA_OVERRIDE, DEFAULT_EMERGENCY_OVERRIDE_THRESHOLD);
+        // ACC does not drive very precise and often violates minGap
+        base.myCollisionMinGapFactor = p.get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
+        MSCFModel_ACC {
+            base,
+            mySpeedControlGain,
+            myGapClosingControlGainSpeed,
+            myGapClosingControlGainSpace,
+            myGapControlGainSpeed,
+            myGapControlGainSpace,
+            myCollisionAvoidanceGainSpeed,
+            myCollisionAvoidanceGainSpace,
+            myApplyDriverstate,
+            myEmergencyThreshold,
+        }
     }
 
     /// C++: `void MSCFModel_ACC::~MSCFModel_ACC() noexcept` [virtual]
@@ -125,7 +188,7 @@ impl MSCFModel_ACC {
     // MSCFModel_ACC::~MSCFModel_ACC() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_ACC::~MSCFModel_ACC")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_ACC::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -147,7 +210,18 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_ACC::followSpeed")
+        let mut gap2pred = gap2pred;
+        let mut predSpeed = predSpeed;
+        if self.myApplyDriverstate != 0. {
+            self.apply_headway_and_speed_difference_perception_errors(veh, speed, &mut gap2pred, &mut predSpeed, predMaxDecel, pred);
+        }
+        let desSpeed = min2(veh.get_lane().get_speed_limit(), veh.get_max_speed());
+        let vACC = self.v(veh, gap2pred, speed, predSpeed, desSpeed, true);
+        let vSafe = self.maximum_safe_follow_speed(gap2pred, speed, predSpeed, predMaxDecel, false);
+        if vSafe + self.myEmergencyThreshold < vACC {
+            return vSafe + self.myEmergencyThreshold;
+        }
+        vACC
     }
 
     /// C++: `double MSCFModel_ACC::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -164,7 +238,14 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_ACC::stopSpeed")
+        let mut gap = gap2pred;
+        if self.myApplyDriverstate != 0. {
+            self.apply_headway_perception_error(veh, speed, &mut gap);
+        }
+        // NOTE: This allows return of smaller values than minNextSpeed().
+        // Only relevant for the ballistic update: We give the argument headway=TS, to assure that
+        // the stopping position is approached with a uniform deceleration also for tau!=TS.
+        min2(self.maximum_safe_stop_speed(gap, decel, speed, false, veh.get_action_step_length_secs(), true), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_ACC::getSecureGap(const MSVehicle *const, const MSVehicle *const, const double, const double, const double) const` [const, virtual]
@@ -179,7 +260,11 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel_ACC::getSecureGap")
+        // Accel in gap mode should vanish:
+        //      0 = myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * (g - myHeadwayTime * speed);
+        // <=>  myGapControlGainSpace * g = - myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * myHeadwayTime * speed;
+        // <=>  g = - myGapControlGainSpeed * (leaderSpeed - speed) / myGapControlGainSpace + myHeadwayTime * speed;
+        self.myGapControlGainSpeed * (speed - leaderSpeed) / self.myGapControlGainSpace + self.myHeadwayTime * speed
     }
 
     /// C++: `double MSCFModel_ACC::insertionFollowSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const) const` [const, virtual]
@@ -214,7 +299,25 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn insertion_follow_speed(&self, v: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_ACC::insertionFollowSpeed")
+        // iterate to find a stationary value for
+        //    speed = followSpeed(v, speed, gap2pred, predSpeed, predMaxDecel, nullptr, CalcReason::FUTURE)
+        let max_iter = 50;
+        let mut n_iter = 0;
+        let tol = 0.1;
+        let damping = 0.1;
+
+        let mut res = speed;
+        while n_iter < max_iter {
+            // proposed acceleration
+            let a = speed2accel(self.follow_speed(v, res, gap2pred, predSpeed, predMaxDecel, Ptr::null(), MSCFModel_CalcReason::FUTURE) - res);
+            res = res + damping * a;
+            if a.abs() < tol {
+                break;
+            } else {
+                n_iter += 1;
+            }
+        }
+        res
     }
 
     /// C++: `double MSCFModel_ACC::interactionGap(const MSVehicle *const, double) const` [const, virtual]
@@ -226,7 +329,8 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn interaction_gap(&self, arg0: Ptr<MSVehicle>, vL: f64) -> f64 {
-        todo!("port MSCFModel_ACC::interactionGap")
+        /*maximum radar range is ACC is enabled*/
+        250.
     }
 
     /// C++: `double MSCFModel_ACC::maximumLaneSpeedCF(const MSVehicle *const, double, double) const` [const, virtual]
@@ -240,7 +344,11 @@ impl MSCFModel_ACC {
     //     }
     #[allow(unused_variables)]
     pub fn maximum_lane_speed_cf(&self, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
-        todo!("port MSCFModel_ACC::maximumLaneSpeedCF")
+        let mut result = min2(maxSpeed, maxSpeedLane);
+        if self.myApplyDriverstate != 0. {
+            self.apply_own_speed_perception_error(veh, &mut result);
+        }
+        result
     }
 
     /// C++: `int MSCFModel_ACC::getModelID() const` [const, virtual]
@@ -250,7 +358,7 @@ impl MSCFModel_ACC {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_ACC::getModelID")
+        SUMO_TAG_CF_ACC as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_ACC::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -261,7 +369,8 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_ACC::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_ACC::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `VehicleVariables * MSCFModel_ACC::createVehicleVariables() const` [const, virtual]
@@ -273,7 +382,8 @@ impl MSCFModel_ACC {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_ACC::createVehicleVariables")
+        // shortcut: allocated with Box::into_raw like C++ `new`; the owning vehicle must free it once ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_ACC_ACCVehicleVariables::new())) as *mut MSCFModel_VehicleVariables)
     }
 
     /// C++: `double MSCFModel_ACC::_v(const MSVehicle *const, const double, const double, const double, const double, const bool) const` [const, private]
@@ -351,7 +461,47 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, gap2pred: f64, mySpeed: f64, predSpeed: f64, desSpeed: f64, respectMinGap: bool) -> f64 {
-        todo!("port MSCFModel_ACC::_v")
+        let speed = mySpeed;
+        let mut accelACC = 0.;
+        let gapLimit_SC = GAP_THRESHOLD_SPEEDCTRL; // lower gap limit in meters to enable speed control law
+        let gapLimit_GC = GAP_THRESHOLD_GAPCTRL; // upper gap limit in meters to enable gap control law
+
+        /* Velocity error */
+        let vErr = speed - desSpeed;
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_ACC_ACCVehicleVariables>();
+        let now = MSNet::get_instance().get_current_time_step();
+        let mut setControlMode = false;
+        if vars.lastUpdateTime != now {
+            vars.m().lastUpdateTime = now;
+            setControlMode = true;
+        }
+        if gap2pred > gapLimit_SC {
+            // Find acceleration - Speed control law
+            accelACC = self.accel_speed_control(vErr);
+            // Set cl to vehicle parameters
+            if setControlMode {
+                vars.m().ACC_ControlMode = 0;
+            }
+        } else if gap2pred < gapLimit_GC {
+            // Find acceleration - Gap control law
+            accelACC = self.accel_gap_control(veh, gap2pred, speed, predSpeed, vErr);
+            // Set cl to vehicle parameters
+            if setControlMode {
+                vars.m().ACC_ControlMode = 1;
+            }
+        } else {
+            // Follow previous applied law
+            let cm = vars.ACC_ControlMode;
+            if cm == 0 {
+                accelACC = self.accel_speed_control(vErr);
+            } else {
+                accelACC = self.accel_gap_control(veh, gap2pred, speed, predSpeed, vErr);
+            }
+        }
+
+        let newSpeed = speed + accel2speed(accelACC);
+
+        max2(0., newSpeed)
     }
 
     /// C++: `double MSCFModel_ACC::accelSpeedControl(double) const` [const, private]
@@ -361,7 +511,8 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn accel_speed_control(&self, vErr: f64) -> f64 {
-        todo!("port MSCFModel_ACC::accelSpeedControl")
+        // Speed control law
+        self.mySpeedControlGain * vErr
     }
 
     /// C++: `double MSCFModel_ACC::accelGapControl(const MSVehicle *const, const double, const double, const double, double) const` [const, private]
@@ -406,7 +557,26 @@ impl MSCFModel_ACC {
     // }
     #[allow(unused_variables)]
     pub fn accel_gap_control(&self, veh: Ptr<MSVehicle>, gap2pred: f64, speed: f64, predSpeed: f64, vErr: f64) -> f64 {
-        todo!("port MSCFModel_ACC::accelGapControl")
+        // Gap control law
+        let mut gclAccel = 0.0;
+        let deltaVel = predSpeed - speed;
+
+        // see dynamic gap margin definition from (Xiao et. al, 2018)[3], equation 5 reformulated as min/max to avoid discontinuities
+        let d0 = max2(0., min2(75. / speed - 5., 2.));
+        // this is equation 4, gap2pred is the difference in vehicle positions minus the length
+        let spacingErr = gap2pred - self.myHeadwayTime * speed - d0;
+
+        if spacingErr.abs() < 0.2 && vErr.abs() < 0.1 {
+            // gap mode
+            gclAccel = self.myGapControlGainSpeed * deltaVel + self.myGapControlGainSpace * spacingErr;
+        } else if spacingErr < 0. {
+            // collision avoidance mode
+            gclAccel = self.myCollisionAvoidanceGainSpeed * deltaVel + self.myCollisionAvoidanceGainSpace * spacingErr;
+        } else {
+            // gap closing mode
+            gclAccel = self.myGapClosingControlGainSpeed * deltaVel + self.myGapClosingControlGainSpace * spacingErr;
+        }
+        gclAccel
     }
 
     /// C++: `MSCFModel_ACC & MSCFModel_ACC::operator=(const MSCFModel_ACC &)` [private]
@@ -414,7 +584,8 @@ impl MSCFModel_ACC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSCFModel_ACC) -> &mut MSCFModel_ACC {
-        todo!("port MSCFModel_ACC::operator=")
+        // shortcut: C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
+        panic!("MSCFModel_ACC::operator= is private and not defined in C++")
     }
 
 }
