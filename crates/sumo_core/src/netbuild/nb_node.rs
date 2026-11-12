@@ -2399,7 +2399,46 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn right_turn_conflict(from: Ptr<NBEdge>, to: Ptr<NBEdge>, fromLane: i32, prohibitorFrom: Ptr<NBEdge>, prohibitorTo: Ptr<NBEdge>, prohibitorFromLane: i32) -> bool {
-        todo!("port NBNode::rightTurnConflict")
+        if from != prohibitorFrom {
+            return false;
+        }
+        if from.is_turning_direction_at(to) || prohibitorFrom.is_turning_direction_at(prohibitorTo) {
+            // XXX should warn if there are any non-turning connections left of this
+            return false;
+        }
+        // conflict if to is between prohibitorTo and from when going clockwise
+        if to.get_start_angle() == prohibitorTo.get_start_angle() {
+            // reduce rounding errors
+            return false;
+        }
+        let d1 = from.get_to_node().get_direction(from, to, false);
+        // must be a right turn to qualify as rightTurnConflict
+        if d1 == LinkDirection::STRAIGHT {
+            // no conflict for straight going connections
+            // XXX actually this should check the main direction (which could also
+            // be a turn)
+            return false;
+        }
+        let d2 = prohibitorFrom.get_to_node().get_direction(prohibitorFrom, prohibitorTo, false);
+        let mut flip = false;
+        if d1 == LinkDirection::LEFT || d1 == LinkDirection::PARTLEFT {
+            // check for leftTurnConflicht
+            flip = !flip;
+            if d2 == LinkDirection::RIGHT || d2 == LinkDirection::PARTRIGHT {
+                // assume that the left-turning bicycle goes straight at first
+                // and thus gets precedence over a right turning vehicle
+                return false;
+            }
+        }
+        if (!flip && fromLane <= prohibitorFromLane) || (flip && fromLane >= prohibitorFromLane) {
+            return false;
+        }
+        // C++ fmod(x, 360.0) is Rust's float % (both truncate toward zero)
+        let toAngleAtNode = (to.get_start_angle() + 180.) % 360.0;
+        let prohibitorToAngleAtNode = (prohibitorTo.get_start_angle() + 180.) % 360.0;
+        flip
+            != (utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), toAngleAtNode)
+                < utils::geom::geom_helper::get_cw_angle_diff(from.get_end_angle(), prohibitorToAngleAtNode))
     }
 
     /// C++: `bool NBNode::mergeConflictYields(const NBEdge *, int, int, NBEdge *, int) const` [const]
@@ -2415,7 +2454,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn merge_conflict_yields(&self, from: Ptr<NBEdge>, fromLane: i32, fromLaneFoe: i32, to: Ptr<NBEdge>, toLane: i32) -> bool {
-        todo!("port NBNode::mergeConflictYields")
+        if self.myRequest.is_null() {
+            return false;
+        }
+        let con = from.get_connection(fromLane, to, toLane);
+        let prohibitorCon = from.get_connection(fromLaneFoe, to, toLane);
+        self.myRequest.merge_conflict(from, con, from, prohibitorCon, false)
     }
 
     /// C++: `bool NBNode::mergeConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -2430,7 +2474,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn merge_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBNode::mergeConflict")
+        if self.myRequest.is_null() {
+            return false;
+        }
+        self.myRequest.merge_conflict(from, con, prohibitorFrom, prohibitorCon, foes)
     }
 
     /// C++: `bool NBNode::bidiConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &, bool) const` [const]
@@ -2445,7 +2492,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn bidi_conflict(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, prohibitorFrom: Ptr<NBEdge>, prohibitorCon: &NBEdge_Connection, foes: bool) -> bool {
-        todo!("port NBNode::bidiConflict")
+        if self.myRequest.is_null() {
+            return false;
+        }
+        self.myRequest.bidi_conflict(from, con, prohibitorFrom, prohibitorCon, foes)
     }
 
     /// C++: `bool NBNode::zipperConflict(const NBEdge *, const NBEdge *, int, int) const` [const]
@@ -2465,7 +2515,17 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn zipper_conflict(&self, incoming: Ptr<NBEdge>, outgoing: Ptr<NBEdge>, fromLane: i32, toLane: i32) -> bool {
-        todo!("port NBNode::zipperConflict")
+        if self.must_brake(incoming, outgoing, fromLane, toLane, false) {
+            // there should be another connection with the same target (not just some intersecting trajectories)
+            for inE in self.get_incoming_edges().iter() {
+                for c in inE.get_connections() {
+                    if (*inE != incoming || c.fromLane != fromLane) && c.toEdge == outgoing && c.toLane == toLane {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::turnFoes(const NBEdge *, const NBEdge *, int, const NBEdge *, const NBEdge *, int, bool) const` [const]
@@ -2516,7 +2576,34 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn turn_foes(&self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, fromLane: i32, from2: Ptr<NBEdge>, to2: Ptr<NBEdge>, fromLane2: i32, lefthand: bool) -> bool {
-        todo!("port NBNode::turnFoes")
+        if from != from2 || to == to2 || fromLane == fromLane2 {
+            return false;
+        }
+        if from.is_turning_direction_at(to) || from2.is_turning_direction_at(to2) {
+            // XXX should warn if there are any non-turning connections left of this
+            return false;
+        }
+        let mut result = false;
+        // C++ std::find; `from` is always an edge of this node when called
+        let mut it = self.myAllEdges.iter().position(|e| *e == from).expect("from must be in myAllEdges");
+        if fromLane < fromLane2 {
+            // conflict if 'to' comes before 'to2' going clockwise starting at 'from'
+            while self.myAllEdges[it] != to2 {
+                if self.myAllEdges[it] == to {
+                    result = true;
+                }
+                NBContHelper::next_cw(&self.myAllEdges, &mut it);
+            }
+        } else {
+            // conflict if 'to' comes before 'to2' going counter-clockwise starting at 'from'
+            while self.myAllEdges[it] != to2 {
+                if self.myAllEdges[it] == to {
+                    result = true;
+                }
+                NBContHelper::next_ccw(&self.myAllEdges, &mut it);
+            }
+        }
+        result
     }
 
     /// C++: `bool NBNode::forbids(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const, bool) const` [const]
@@ -2531,7 +2618,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn forbids(&self, possProhibitorFrom: Ptr<NBEdge>, possProhibitorTo: Ptr<NBEdge>, possProhibitedFrom: Ptr<NBEdge>, possProhibitedTo: Ptr<NBEdge>, regardNonSignalisedLowerPriority: bool) -> bool {
-        todo!("port NBNode::forbids")
+        !self.myRequest.is_null()
+            && self.myRequest.forbids(possProhibitorFrom, possProhibitorTo, possProhibitedFrom, possProhibitedTo, regardNonSignalisedLowerPriority)
     }
 
     /// C++: `bool NBNode::foes(const NBEdge *const, const NBEdge *const, const NBEdge *const, const NBEdge *const) const` [const]
@@ -2543,7 +2631,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn foes(&self, from1: Ptr<NBEdge>, to1: Ptr<NBEdge>, from2: Ptr<NBEdge>, to2: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::foes")
+        !self.myRequest.is_null() && self.myRequest.foes(from1, to1, from2, to2)
     }
 
     /// C++: `LinkDirection NBNode::getDirection(const NBEdge *const, const NBEdge *const, bool) const` [const]
@@ -2664,7 +2752,48 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_link_state(&self, incoming: Ptr<NBEdge>, outgoing: Ptr<NBEdge>, fromLane: i32, toLane: i32, mayDefinitelyPass: bool, tlID: &str) -> LinkState {
-        todo!("port NBNode::getLinkState")
+        if self.myType == SumoXMLNodeType::RAIL_CROSSING && utils::common::sumo_vehicle_class::is_railway(incoming.get_permissions(-1)) {
+            return LINKSTATE_MAJOR; // the trains must run on time
+        }
+        if tlID != "" {
+            if self.get_right_of_way() == RightOfWay::ALLWAYSTOP {
+                return LINKSTATE_ALLWAY_STOP;
+            }
+            return if self.must_brake(incoming, outgoing, fromLane, toLane, true) { LINKSTATE_TL_OFF_BLINKING } else { LINKSTATE_TL_OFF_NOSIGNAL };
+        }
+        if outgoing.is_null() {
+            // always off
+            return LINKSTATE_TL_OFF_NOSIGNAL;
+        }
+        if (self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT || self.myType == SumoXMLNodeType::LEFT_BEFORE_RIGHT)
+            && self.must_brake(incoming, outgoing, fromLane, toLane, true)
+        {
+            return LINKSTATE_EQUAL; // all the same
+        }
+        if self.myType == SumoXMLNodeType::ALLWAY_STOP {
+            return LINKSTATE_ALLWAY_STOP; // all drive, first one to arrive may drive first
+        }
+        if self.myType == SumoXMLNodeType::ZIPPER && self.zipper_conflict(incoming, outgoing, fromLane, toLane) {
+            return LINKSTATE_ZIPPER;
+        }
+        if !mayDefinitelyPass
+            && self.must_brake(incoming, outgoing, fromLane, toLane, true)
+            // legacy mode
+            && (!incoming.is_inside_tls() || self.get_direction(incoming, outgoing, false) != LinkDirection::STRAIGHT)
+            // avoid linkstate minor at pure railway nodes
+            && (!NBNodeTypeComputer::is_railway_node(Ptr::new(self)) || self.unsignalized_operation())
+        {
+            // minor road
+            return if self.myType == SumoXMLNodeType::PRIORITY_STOP
+                && incoming.get_junction_priority(Ptr::new(self)) == NBEdge_JunctionPriority::MINOR_ROAD as i32
+            {
+                LINKSTATE_STOP
+            } else {
+                LINKSTATE_MINOR
+            };
+        }
+        // traffic lights are not regarded here
+        LINKSTATE_MAJOR
     }
 
     /// C++: `void NBNode::computeNodeShape(double)`
@@ -2724,7 +2853,13 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn update_surrounding_geometry(&mut self) {
-        todo!("port NBNode::updateSurroundingGeometry")
+        let me = Ptr::from_mut(self);
+        NBTurningDirectionsComputer::compute_turn_directions_for_node(me, false);
+        self.sort_edges(false);
+        self.compute_node_shape(-1.);
+        for edge in self.myAllEdges.iter() {
+            edge.m().compute_edge_shape(-1.);
+        }
     }
 
     /// C++: `const PositionVector & NBNode::getShape() const` [const]
