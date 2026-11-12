@@ -33,8 +33,20 @@ impl NIVissimAbstractEdge {
     //     dictionary(id, this);
     // }
     #[allow(unused_variables)]
-    pub fn new(id: i32, geom: &PositionVector) -> Self {
-        todo!("port NIVissimAbstractEdge::NIVissimAbstractEdge")
+    pub fn new(id: i32, geom: &PositionVector) -> Box<Self> {
+        // the constructor registers `this` in myDict, so the object must stay at a fixed address: return the Box
+        let mut b = Box::new(Self { myID: id, myGeom: PositionVector::default(), myDisturbances: Vec::new(), myNode: -1 });
+        // convert/publicate geometry
+        for i in geom.iter() {
+            let mut p = *i;
+            if !NBNetBuilder::transform_coordinate(&mut p, true, Ptr::null()) {
+                write_warningf!("Unable to project coordinates for edge '%'.", id);
+            }
+            b.myGeom.push_back_no_double_pos(&p);
+        }
+        //
+        Self::dictionary(id, Ptr::from_box(&b));
+        b
     }
 
     /// C++: `void NIVissimAbstractEdge::~NIVissimAbstractEdge() noexcept` [virtual]
