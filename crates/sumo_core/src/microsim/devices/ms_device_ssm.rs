@@ -5,6 +5,50 @@ use utils::common::std_defs::{INVALID_DOUBLE, g_precision, g_precision_geo};
 use utils::common::to_string::to_string;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 use utils::common::time::{steps2time, ts};
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::string_utils::{to_bool, to_double, to_int, is_int, url_decode, starts_with};
+use utils::common::file_helpers::check_for_relativity;
+use utils::common::util_exceptions::ProcessError;
+use utils::options::options_cont::{get_bool, get_float, get_string, is_default, is_set};
+use MSDevice_SSM_SSMParameterWarning::*;
+
+/// C++ `#define DEFAULT_EXTRA_TIME 5.` (MSDevice_SSM.cpp)
+const DEFAULT_EXTRA_TIME: f64 = 5.;
+/// C++ `#define AVAILABLE_SSMS "TTC DRAC PET BR SGAP TGAP PPET MDRAC"` (MSDevice_SSM.cpp)
+const AVAILABLE_SSMS: &str = "TTC DRAC PET BR SGAP TGAP PPET MDRAC";
+/// C++ `#define DEFAULT_THRESHOLD_*` (MSDevice_SSM.cpp)
+const DEFAULT_THRESHOLD_TTC: f64 = 3.;
+const DEFAULT_THRESHOLD_DRAC: f64 = 3.;
+const DEFAULT_THRESHOLD_MDRAC: f64 = 3.4;
+const DEFAULT_THRESHOLD_PET: f64 = 2.;
+const DEFAULT_THRESHOLD_PPET: f64 = 2.;
+const DEFAULT_THRESHOLD_BR: f64 = 0.0;
+const DEFAULT_THRESHOLD_SGAP: f64 = 0.2;
+const DEFAULT_THRESHOLD_TGAP: f64 = 0.5;
+
+thread_local! {
+    /// C++ static `MSDevice_SSM::myIssuedParameterWarnFlags` (bit set of SSMParameterWarning values)
+    pub static MY_ISSUED_PARAMETER_WARN_FLAGS: std::cell::Cell<i64> = std::cell::Cell::new(0);
+}
+
+/// Returns true (and marks the warning as issued) if the given parameter warning was not issued before.
+/// C++: `(myIssuedParameterWarnFlags & FLAG) == 0` followed by `myIssuedParameterWarnFlags |= FLAG`
+fn issue_once(flag: MSDevice_SSM_SSMParameterWarning) -> bool {
+    let bit = flag as i64;
+    MY_ISSUED_PARAMETER_WARN_FLAGS.with(|c| {
+        if c.get() & bit == 0 {
+            c.set(c.get() | bit);
+            true
+        } else {
+            false
+        }
+    })
+}
+
+/// The vehicle as an MSBaseVehicle: every SUMOVehicle in the simulation is one (base-first repr(C) embedding)
+fn base_of(v: &SUMOVehicle) -> Ptr<MSBaseVehicle> {
+    Ptr::new(v).cast::<MSBaseVehicle>()
+}
 
 /// C++ enum `MSDevice_SSM::EncounterType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -5553,7 +5597,30 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn get_output_filename(v: &SUMOVehicle, deviceID: String) -> String {
-        todo!("port MSDevice_SSM::getOutputFilename")
+        let bv = base_of(v);
+        let mut file = format!("{}.xml", deviceID);
+        let mut basePath = String::new();
+        if bv.get_parameter().has_parameter("device.ssm.file") {
+            file = bv.get_parameter().get_parameter("device.ssm.file", &file);
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.file") {
+            file = bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.file", &file);
+        } else {
+            file = if get_string("device.ssm.file") == "" { file.clone() } else { get_string("device.ssm.file") };
+            if is_default("device.ssm.file") && issue_once(SSM_WARN_FILE) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.file'. Using default of '%'.", v.get_id(), file);
+            }
+            if is_set("configuration-file") && !is_default("device.ssm.file") {
+                basePath = get_string("configuration-file");
+            }
+        }
+        if basePath != "" {
+            file = check_for_relativity(&file, &basePath);
+            match url_decode(&file) {
+                Ok(d) => file = d,
+                Err(e) => write_warning(&format!("{} when trying to decode filename '{}'.", e, file)),
+            }
+        }
+        file
     }
 
     /// C++: `double MSDevice_SSM::getDetectionRange(const SUMOVehicle &)` [static, private]
@@ -5584,7 +5651,25 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn get_detection_range(v: &SUMOVehicle) -> f64 {
-        todo!("port MSDevice_SSM::getDetectionRange")
+        let bv = base_of(v);
+        let mut range = -INVALID_DOUBLE;
+        if bv.get_parameter().has_parameter("device.ssm.range") {
+            match to_double(&bv.get_parameter().get_parameter("device.ssm.range", "")) {
+                Ok(x) => range = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.range'.", bv.get_parameter().get_parameter("device.ssm.range", "")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.range") {
+            match to_double(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.range", "")) {
+                Ok(x) => range = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.range'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.range", "")),
+            }
+        } else {
+            range = get_float("device.ssm.range");
+            if is_default("device.ssm.range") && issue_once(SSM_WARN_RANGE) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.range'. Using default of '%'.", v.get_id(), to_string(&range));
+            }
+        }
+        range
     }
 
     /// C++: `double MSDevice_SSM::getMDRAC_PRT(const SUMOVehicle &)` [static, private]
@@ -5615,7 +5700,25 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn get_mdrac_prt(v: &SUMOVehicle) -> f64 {
-        todo!("port MSDevice_SSM::getMDRAC_PRT")
+        let bv = base_of(v);
+        let mut prt = 1.;
+        if bv.get_parameter().has_parameter("device.ssm.mdrac.prt") {
+            match to_double(&bv.get_parameter().get_parameter("device.ssm.mdrac.prt", "")) {
+                Ok(x) => prt = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.mdrac.prt'.", bv.get_parameter().get_parameter("device.ssm.mdrac.prt", "")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.mdrac.prt") {
+            match to_double(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.mdrac.prt", "")) {
+                Ok(x) => prt = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.mdrac.prt'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.mdrac.prt", "")),
+            }
+        } else {
+            prt = get_float("device.ssm.mdrac.prt");
+            if is_default("device.ssm.mdrac.prt") && issue_once(MSDevice_SSM_SSMParameterWarning::SSM_WARN_MDRAC_PRT) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.mdrac.prt'. Using default of '%'.", v.get_id(), to_string(&prt));
+            }
+        }
+        prt
     }
 
     /// C++: `double MSDevice_SSM::getExtraTime(const SUMOVehicle &)` [static, private]
@@ -5650,7 +5753,29 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn get_extra_time(v: &SUMOVehicle) -> f64 {
-        todo!("port MSDevice_SSM::getExtraTime")
+        let bv = base_of(v);
+        let mut extraTime = INVALID_DOUBLE;
+        if bv.get_parameter().has_parameter("device.ssm.extratime") {
+            match to_double(&bv.get_parameter().get_parameter("device.ssm.extratime", "")) {
+                Ok(x) => extraTime = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.extratime'.", bv.get_parameter().get_parameter("device.ssm.extratime", "")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.extratime") {
+            match to_double(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.extratime", "")) {
+                Ok(x) => extraTime = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.extratime'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.extratime", "")),
+            }
+        } else {
+            extraTime = get_float("device.ssm.extratime");
+            if is_default("device.ssm.extratime") && issue_once(SSM_WARN_EXTRATIME) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.extratime'. Using default of '%'.", v.get_id(), to_string(&extraTime));
+            }
+        }
+        if extraTime < 0. {
+            extraTime = DEFAULT_EXTRA_TIME;
+            write_warningf!("Negative (or no) value encountered for vehicle parameter 'device.ssm.extratime' in vehicle '%' using default value % instead.", v.get_id(), to_string(&extraTime));
+        }
+        extraTime
     }
 
     /// C++: `bool MSDevice_SSM::useGeoCoords(const SUMOVehicle &)` [static, private]
@@ -5681,7 +5806,25 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn use_geo_coords(v: &SUMOVehicle) -> bool {
-        todo!("port MSDevice_SSM::useGeoCoords")
+        let bv = base_of(v);
+        let mut useGeo = false;
+        if bv.get_parameter().has_parameter("device.ssm.geo") {
+            match to_bool(&bv.get_parameter().get_parameter("device.ssm.geo", "no")) {
+                Ok(x) => useGeo = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.geo'.", bv.get_parameter().get_parameter("device.ssm.geo", "no")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.geo") {
+            match to_bool(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.geo", "no")) {
+                Ok(x) => useGeo = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.geo'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.geo", "no")),
+            }
+        } else {
+            useGeo = get_bool("device.ssm.geo");
+            if is_default("device.ssm.geo") && issue_once(SSM_WARN_GEO) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.geo'. Using default of '%'.", v.get_id(), to_string(&useGeo));
+            }
+        }
+        useGeo
     }
 
     /// C++: `bool MSDevice_SSM::writePositions(const SUMOVehicle &)` [static, private]
@@ -5712,7 +5855,25 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn write_positions(v: &SUMOVehicle) -> bool {
-        todo!("port MSDevice_SSM::writePositions")
+        let bv = base_of(v);
+        let mut writePos = false;
+        if bv.get_parameter().has_parameter("device.ssm.write-positions") {
+            match to_bool(&bv.get_parameter().get_parameter("device.ssm.write-positions", "no")) {
+                Ok(x) => writePos = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.write-positions'.", bv.get_parameter().get_parameter("device.ssm.write-positions", "no")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.write-positions") {
+            match to_bool(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.write-positions", "no")) {
+                Ok(x) => writePos = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.write-positions'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.write-positions", "no")),
+            }
+        } else {
+            writePos = get_bool("device.ssm.write-positions");
+            if is_default("device.ssm.write-positions") && issue_once(SSM_WARN_POS) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.write-positions'. Using default of '%'.", v.get_id(), to_string(&writePos));
+            }
+        }
+        writePos
     }
 
     /// C++: `bool MSDevice_SSM::writeLanesPositions(const SUMOVehicle &)` [static, private]
@@ -5743,14 +5904,64 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn write_lanes_positions(v: &SUMOVehicle) -> bool {
-        todo!("port MSDevice_SSM::writeLanesPositions")
+        let bv = base_of(v);
+        let mut writeLanesPos = false;
+        if bv.get_parameter().has_parameter("device.ssm.write-lane-positions") {
+            match to_bool(&bv.get_parameter().get_parameter("device.ssm.write-lane-positions", "no")) {
+                Ok(x) => writeLanesPos = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.write-lane-positions'.", bv.get_parameter().get_parameter("device.ssm.write-lane-positions", "no")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.write-lane-positions") {
+            match to_bool(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.write-lane-positions", "no")) {
+                Ok(x) => writeLanesPos = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.write-lane-positions'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.write-lane-positions", "no")),
+            }
+        } else {
+            writeLanesPos = get_bool("device.ssm.write-lane-positions");
+            if is_default("device.ssm.write-lane-positions") && issue_once(SSM_WARN_LANEPOS) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.write-lane-positions'. Using default of '%'.", v.get_id(), to_string(&writeLanesPos));
+            }
+        }
+        writeLanesPos
     }
 
     /// C++: `bool MSDevice_SSM::filterByConflictType(const SUMOVehicle &, std::string, int &)` [static, private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn filter_by_conflict_type(v: &SUMOVehicle, deviceID: String, conflictTypes: &mut i32) -> bool {
-        todo!("port MSDevice_SSM::filterByConflictType")
+    pub fn filter_by_conflict_type(v: &SUMOVehicle, deviceID: String, conflictTypes: &mut Vec<i32>) -> bool {
+        let bv = base_of(v);
+        let mut typeString = String::new();
+        if bv.get_parameter().has_parameter("device.ssm.exclude-conflict-types") {
+            typeString = bv.get_parameter().get_parameter("device.ssm.exclude-conflict-types", "");
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.exclude-conflict-types") {
+            typeString = bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.exclude-conflict-types", "");
+        } else {
+            typeString = get_string("device.ssm.exclude-conflict-types");
+            if is_default("device.ssm.exclude-conflict-types") && issue_once(SSM_WARN_CONFLICTFILTER) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.exclude-conflict-types'. Using default of '%'.", v.get_id(), typeString);
+            }
+        }
+        // Check retrieved conflict keys
+        let mut st = if typeString.contains(',') { StringTokenizer::with_token(&typeString, ",", true) } else { StringTokenizer::new(&typeString) };
+        let found: Vec<String> = st.get_vector();
+        let mut confirmed: BTreeSet<i32> = BTreeSet::new();
+        for i in &found {
+            if i == "foe" {
+                confirmed.extend([ENCOUNTER_TYPE_FOLLOWING_LEADER as i32, ENCOUNTER_TYPE_MERGING_FOLLOWER as i32, ENCOUNTER_TYPE_CROSSING_FOLLOWER as i32, ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA as i32, ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA as i32]);
+            } else if i == "ego" {
+                confirmed.extend([ENCOUNTER_TYPE_FOLLOWING_FOLLOWER as i32, ENCOUNTER_TYPE_MERGING_LEADER as i32, ENCOUNTER_TYPE_CROSSING_LEADER as i32, ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA as i32, ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA as i32]);
+            } else if i == "none" {
+                return true;
+            } else if is_int(i) && to_int(i).map_or(false, |n| encounter_type_from_i32(n) as i32 == n) {
+                confirmed.insert(to_int(i).unwrap());
+            } else {
+                // Given identifier is unknown
+                write_errorf!("SSM exclude-conflict-type '%' is not supported. Aborting construction of SSM device '%'.", i, deviceID);
+                return false;
+            }
+        }
+        conflictTypes.extend(confirmed.into_iter());
+        true
     }
 
     /// C++: `bool MSDevice_SSM::requestsTrajectories(const SUMOVehicle &)` [static, private]
@@ -5781,14 +5992,106 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn requests_trajectories(v: &SUMOVehicle) -> bool {
-        todo!("port MSDevice_SSM::requestsTrajectories")
+        let bv = base_of(v);
+        let mut trajectories = false;
+        if bv.get_parameter().has_parameter("device.ssm.trajectories") {
+            match to_bool(&bv.get_parameter().get_parameter("device.ssm.trajectories", "no")) {
+                Ok(x) => trajectories = x,
+                Err(_) => write_warningf!("Invalid value '%' for vehicle parameter 'ssm.trajectories'.", bv.get_parameter().get_parameter("device.ssm.trajectories", "no")),
+            }
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.trajectories") {
+            match to_bool(&bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.trajectories", "no")) {
+                Ok(x) => trajectories = x,
+                Err(_) => write_warningf!("Invalid value '%' for vType parameter 'ssm.trajectories'.", bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.trajectories", "no")),
+            }
+        } else {
+            trajectories = get_bool("device.ssm.trajectories");
+            if is_default("device.ssm.trajectories") && issue_once(SSM_WARN_TRAJECTORIES) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.trajectories'. Using default of '%'.", v.get_id(), to_string(&trajectories));
+            }
+        }
+        trajectories
     }
 
     /// C++: `bool MSDevice_SSM::getMeasuresAndThresholds(const SUMOVehicle &, std::string, int &)` [static, private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_measures_and_thresholds(v: &SUMOVehicle, deviceID: String, thresholds: &mut i32) -> bool {
-        todo!("port MSDevice_SSM::getMeasuresAndThresholds")
+    pub fn get_measures_and_thresholds(v: &SUMOVehicle, deviceID: String, thresholds: &mut BTreeMap<String, f64>) -> bool {
+        let bv = base_of(v);
+        let mut measures_str = String::new();
+        if bv.get_parameter().has_parameter("device.ssm.measures") {
+            measures_str = bv.get_parameter().get_parameter("device.ssm.measures", "");
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.measures") {
+            measures_str = bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.measures", "");
+        } else {
+            measures_str = get_string("device.ssm.measures");
+            if is_default("device.ssm.measures") && issue_once(SSM_WARN_MEASURES) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.measures'. Using default of '%'.", v.get_id(), measures_str);
+            }
+        }
+        // Check retrieved measures
+        if measures_str == "" {
+            write_warningf!("No measures specified for ssm device of vehicle '%'. Registering all available SSMs.", v.get_id());
+            measures_str = AVAILABLE_SSMS.to_string();
+        }
+        let available: Vec<String> = StringTokenizer::new(AVAILABLE_SSMS).get_vector();
+        let mut st = if measures_str.contains(',') { StringTokenizer::with_token(&measures_str, ",", true) } else { StringTokenizer::new(&measures_str) };
+        let measures: Vec<String> = st.get_vector();
+        for i in &measures {
+            if !available.contains(i) {
+                // Given identifier is unknown
+                write_errorf!("SSM identifier '%' is not supported. Aborting construction of SSM device '%'.", i, deviceID);
+                return false;
+            }
+        }
+
+        // Thresholds
+        let mut thresholds_str = String::new();
+        if bv.get_parameter().has_parameter("device.ssm.thresholds") {
+            thresholds_str = bv.get_parameter().get_parameter("device.ssm.thresholds", "");
+        } else if bv.get_vehicle_type().get_parameter().has_parameter("device.ssm.thresholds") {
+            thresholds_str = bv.get_vehicle_type().get_parameter().get_parameter("device.ssm.thresholds", "");
+        } else {
+            thresholds_str = get_string("device.ssm.thresholds");
+            if is_default("device.ssm.thresholds") && issue_once(SSM_WARN_THRESHOLDS) {
+                write_messagef!("Vehicle '%' does not supply vehicle parameter 'device.ssm.thresholds'. Using default of '%'.", v.get_id(), thresholds_str);
+            }
+        }
+        // Parse vector of doubles from threshold_str
+        let mut count = 0usize;
+        if thresholds_str != "" {
+            st = if thresholds_str.contains(',') { StringTokenizer::with_token(&thresholds_str, ",", true) } else { StringTokenizer::new(&thresholds_str) };
+            while count < measures.len() && st.has_next() {
+                let thresh = to_double(&st.next().unwrap()).unwrap_or_else(|e| panic!("{}", e));
+                // std::map::insert does not overwrite existing keys
+                thresholds.entry(measures[count].clone()).or_insert(thresh);
+                count += 1;
+            }
+            if thresholds.len() < measures.len() || st.has_next() {
+                write_errorf!("Given list of thresholds ('%') is not of the same size as the list of measures ('%').\nPlease specify exactly one threshold for each measure.", thresholds_str, measures_str);
+                return false;
+            }
+        } else {
+            // assume default thresholds if none are given
+            for i in &measures {
+                let dflt = match i.as_str() {
+                    "TTC" => DEFAULT_THRESHOLD_TTC,
+                    "DRAC" => DEFAULT_THRESHOLD_DRAC,
+                    "MDRAC" => DEFAULT_THRESHOLD_MDRAC,
+                    "PET" => DEFAULT_THRESHOLD_PET,
+                    "PPET" => DEFAULT_THRESHOLD_PPET,
+                    "BR" => DEFAULT_THRESHOLD_BR,
+                    "SGAP" => DEFAULT_THRESHOLD_SGAP,
+                    "TGAP" => DEFAULT_THRESHOLD_TGAP,
+                    _ => {
+                        write_error(&format!("Unknown SSM identifier '{}'. Aborting construction of ssm device.", i)); // should never occur
+                        return false;
+                    }
+                };
+                thresholds.entry(i.clone()).or_insert(dflt);
+            }
+        }
+        true
     }
 
     /// C++: `void MSDevice_SSM::initEdgeFilter()` [static, private]
@@ -5835,7 +6138,43 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn init_edge_filter() {
-        todo!("port MSDevice_SSM::initEdgeFilter")
+        MY_EDGE_FILTER_INITIALIZED.with(|c| c.set(true));
+        if is_set("device.ssm.filter-edges.input-file") {
+            let file = get_string("device.ssm.filter-edges.input-file");
+            let bytes = match std::fs::read(&file) {
+                Ok(b) => b,
+                Err(_) => panic!("{}", ProcessError::new(tlf!("Could not load names of edges for filtering SSM device output from '%'.", file))),
+            };
+            let content = String::from_utf8_lossy(&bytes).into_owned();
+            MY_EDGE_FILTER_ACTIVE.with(|c| c.set(true));
+            // C++ "strm >> line" reads whitespace-separated tokens
+            for line in content.split_whitespace() {
+                // maybe we are loading an edge-selection
+                if starts_with(line, "edge:") {
+                    let edgeID = &line[5..];
+                    let edge = MSEdge::dictionary_2(edgeID);
+                    if !edge.is_null() {
+                        MY_EDGE_FILTER.with(|f| f.borrow_mut().insert(edge));
+                    } else {
+                        write_warning(&format!("Unknown edge ID '{}' in SSM device edge filter ({}): {}", edgeID, file, line));
+                    }
+                } else if starts_with(line, "junction:") {
+                    // get the internal edge(s) of a junction
+                    let junctionID = &line[9..];
+                    let junction = MSNet::get_instance().m().get_junction_control().base.get(junctionID).copied().unwrap_or_default();
+                    if !junction.is_null() {
+                        for lane in junction.get_internal_lanes() {
+                            let e = Ptr::from_mut(lane.m().get_edge());
+                            MY_EDGE_FILTER.with(|f| f.borrow_mut().insert(e));
+                        }
+                    } else {
+                        write_warning(&format!("Unknown junction ID '{}' in SSM device edge filter ({}): {}", junctionID, file, line));
+                    }
+                } else {
+                    write_warning(&format!("Cannot interpret line in SSM device edge filter ({}): {}", file, line));
+                }
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::MSDevice_SSM(const MSDevice_SSM &)` [private]
@@ -5843,7 +6182,8 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_SSM) -> Self {
-        todo!("port MSDevice_SSM::MSDevice_SSM")
+        // C++ declares the copy constructor private and never defines it: any use is a compile error in C++.
+        panic!("MSDevice_SSM copy constructor is private and invalidated")
     }
 
     /// C++: `MSDevice_SSM & MSDevice_SSM::operator=(const MSDevice_SSM &)` [private]
@@ -5851,7 +6191,8 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_SSM) -> &mut MSDevice_SSM {
-        todo!("port MSDevice_SSM::operator=")
+        // C++ declares this operator private and never defines it: any use is a compile error in C++.
+        panic!("MSDevice_SSM assignment operator is private and invalidated")
     }
 
 }
@@ -5884,7 +6225,7 @@ impl MSDevice_SSM_UpstreamScanStartInfo {
     //             edge(edge), pos(pos), range(range), egoDistToConflictLane(egoDistToConflictLane), egoConflictLane(egoConflictLane) {}
     #[allow(unused_variables)]
     pub fn new(edge: Ptr<MSEdge>, pos: f64, range: f64, egoDistToConflictLane: f64, egoConflictLane: Ptr<MSLane>) -> Self {
-        todo!("port UpstreamScanStartInfo::UpstreamScanStartInfo")
+        Self { edge, pos, range, egoDistToConflictLane, egoConflictLane }
     }
 
 }
@@ -5905,7 +6246,11 @@ impl Encounter_compare {
     //             }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, e1: Ptr<MSDevice_SSM_Encounter>, e2: Ptr<MSDevice_SSM_Encounter>) -> bool {
-        todo!("port compare::operator()")
+        if e1.begin == e2.begin {
+            e1.foeID > e2.foeID
+        } else {
+            e1.begin > e2.begin
+        }
     }
 
 }
@@ -5987,7 +6332,33 @@ impl Encounter_compare {
 //     return out;
 // }
 #[allow(unused_variables)]
-pub fn shl_op(out: &mut Unmapped /* std::ostream */, type_: MSDevice_SSM_EncounterType) -> &'static mut Unmapped /* std::ostream */ {
-    todo!("port operator<<")
+pub fn shl_op(out: &mut String /* std::ostream */, type_: MSDevice_SSM_EncounterType) -> &mut String /* std::ostream */ {
+    use MSDevice_SSM_EncounterType::*;
+    let name = match type_ {
+        ENCOUNTER_TYPE_NOCONFLICT_AHEAD => "NOCONFLICT_AHEAD",
+        ENCOUNTER_TYPE_FOLLOWING => "FOLLOWING",
+        ENCOUNTER_TYPE_FOLLOWING_FOLLOWER => "FOLLOWING_FOLLOWER",
+        ENCOUNTER_TYPE_FOLLOWING_LEADER => "FOLLOWING_LEADER",
+        ENCOUNTER_TYPE_ON_ADJACENT_LANES => "ON_ADJACENT_LANES",
+        ENCOUNTER_TYPE_MERGING => "MERGING",
+        ENCOUNTER_TYPE_MERGING_LEADER => "MERGING_LEADER",
+        ENCOUNTER_TYPE_MERGING_FOLLOWER => "MERGING_FOLLOWER",
+        ENCOUNTER_TYPE_MERGING_ADJACENT => "MERGING_ADJACENT",
+        ENCOUNTER_TYPE_CROSSING => "CROSSING",
+        ENCOUNTER_TYPE_CROSSING_LEADER => "CROSSING_LEADER",
+        ENCOUNTER_TYPE_CROSSING_FOLLOWER => "CROSSING_FOLLOWER",
+        ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA => "EGO_ENTERED_CONFLICT_AREA",
+        ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA => "FOE_ENTERED_CONFLICT_AREA",
+        ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA => "BOTH_ENTERED_CONFLICT_AREA",
+        ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA => "EGO_LEFT_CONFLICT_AREA",
+        ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA => "FOE_LEFT_CONFLICT_AREA",
+        ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA => "BOTH_LEFT_CONFLICT_AREA",
+        ENCOUNTER_TYPE_FOLLOWING_PASSED => "FOLLOWING_PASSED",
+        ENCOUNTER_TYPE_MERGING_PASSED => "MERGING_PASSED",
+        ENCOUNTER_TYPE_COLLISION => "COLLISION",
+        ENCOUNTER_TYPE_ONCOMING => "ONCOMING",
+    };
+    out.push_str(name);
+    out
 }
 
