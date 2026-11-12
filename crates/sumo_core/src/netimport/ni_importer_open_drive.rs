@@ -1,7 +1,7 @@
 //! Port of netimport/NIImporter_OpenDrive.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_warning};
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_error, write_warning};
 use utils::tlf;
 use utils::xml::generic_sax_handler::SaxHandler;
 
@@ -1360,13 +1360,13 @@ impl NIImporter_OpenDrive {
                         }
                     }
                     // set node information
-                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs);
+                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs)?;
                     continue;
                 }
                 if edge2junction.contains_key(&nid) {
                     // set node information of an internal road
                     let junction = edge2junction[&nid].clone();
-                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &junction, linkType, &mut joinedNodeIDs);
+                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &junction, linkType, &mut joinedNodeIDs)?;
                     continue;
                 }
             }
@@ -1399,7 +1399,7 @@ impl NIImporter_OpenDrive {
                         return Err(ProcessError::new(tlf!("Could not build node '%'.", nid.clone())));
                     }
                 }
-                NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs);
+                NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs)?;
             }
         }
         // we should now have start/end nodes for all outer edge-to-outer edge connections
@@ -1424,9 +1424,9 @@ impl NIImporter_OpenDrive {
                     }
                     let nid = edge2junction.entry(ie.id.clone()).or_default().clone();
                     if contactPoint == NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START {
-                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_PREDECESSOR, &mut joinedNodeIDs);
+                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_PREDECESSOR, &mut joinedNodeIDs)?;
                     } else {
-                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR, &mut joinedNodeIDs);
+                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR, &mut joinedNodeIDs)?;
                     }
                 }
             }
@@ -1679,7 +1679,7 @@ impl NIImporter_OpenDrive {
                 sFrom = sTo;
             }
             if utils::options::options_cont::is_set("polygon-output") {
-                NIImporter_OpenDrive::write_road_objects(oe.clone());
+                NIImporter_OpenDrive::write_road_objects(oe.clone())?;
             }
             if !lanesBuilt {
                 write_warningf!("Edge '%' has no lanes.", e.id);
@@ -1687,7 +1687,7 @@ impl NIImporter_OpenDrive {
         }
         if utils::options::options_cont::is_set("polygon-output") {
             for (_, item) in &innerEdges {
-                NIImporter_OpenDrive::write_road_objects(item.clone());
+                NIImporter_OpenDrive::write_road_objects(item.clone())?;
             }
         }
 
@@ -1907,7 +1907,7 @@ impl NIImporter_OpenDrive {
                         // shortcut: C++ loops over from->getConnections() to set tlLinkIndex, signalID and controllerID;
                         // the Rust NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so this is skipped until it is ported
                         let _ = to;
-                        NIImporter_OpenDrive::get_tls_secure(from, nb);
+                        NIImporter_OpenDrive::get_tls_secure(from, nb)?;
                     } else {
                         write_warningf!("Found a traffic light signal on an unknown edge (original edge id='%').", e.id);
                         continue;
@@ -1925,7 +1925,7 @@ impl NIImporter_OpenDrive {
                     }
                     // shortcut: connection-level signalID/controllerID/tlLinkIndex assignment is skipped, see above
                     let _ = importSignalGroups;
-                    NIImporter_OpenDrive::get_tls_secure(edge, nb);
+                    NIImporter_OpenDrive::get_tls_secure(edge, nb)?;
                 }
                 // @note: tls 'signalID' parameters are set via NBTrafficLightLogicCont::setOpenDriveSignalParameters
                 // @note: OpenDRIVE controllers are applied to the signal programs in NBTrafficLightLogicCont::applyOpenDriveControllers
@@ -3595,7 +3595,181 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn build_connections_to_outer(c: &NIImporter_OpenDrive_Connection, innerEdges: &BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>, edges: &BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>, tc: &NBTypeCont, into: &mut Vec<NIImporter_OpenDrive_Connection>, seen: &mut BTreeSet<NIImporter_OpenDrive_Connection>) {
-        todo!("port NIImporter_OpenDrive::buildConnectionsToOuter")
+        use NIImporter_OpenDrive_ContactPoint as CP;
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let dest: Ptr<NIImporter_OpenDrive_OpenDriveEdge> = *innerEdges.get(&c.toEdge).unwrap();
+        if dest.is_null() {
+            // !!! should not, look in all?
+            return;
+        }
+        seen.insert(c.clone());
+        // C++ iterates dest->connections live; that set is not modified while this runs, so a snapshot is equivalent
+        let destConnections: Vec<NIImporter_OpenDrive_Connection> = dest.m().connections.iter().cloned().collect();
+        for destCon in destConnections.iter() {
+            let innerEdgesIt = innerEdges.get(&destCon.toEdge);
+            if let Some(innerEdge) = innerEdgesIt {
+                let mut t: Vec<NIImporter_OpenDrive_Connection> = Vec::new();
+                if !seen.contains(destCon) {
+                    Self::build_connections_to_outer(destCon, innerEdges, edges, tc, &mut t, seen);
+                    for j in t.iter() {
+                        // @todo this section is unverified
+                        let mut cn = j.clone();
+                        cn.fromEdge = c.fromEdge.clone();
+                        cn.fromLane = c.fromLane;
+                        cn.fromCP = c.fromCP;
+                        cn.all = c.all; // @todo "all" is a hack trying to avoid the "from is zero" problem;
+                        if MY_IMPORT_INTERNAL_SHAPES.with(|v| v.get()) {
+                            // shortcut: C++ PositionVector::operator+ never advances its iterators (infinite loop);
+                            // the intended pairwise sum is used here, revisit if upstream fixes operator+
+                            let innerGeom = innerEdge.m().geom.clone();
+                            if innerGeom.length() != c.shape.length() {
+                                write_error("Trying to add PositionVectors of different lengths.");
+                            }
+                            let mut sum = PositionVector::default();
+                            for (p1, p2) in innerGeom.iter().zip(c.shape.iter()) {
+                                sum.push((*p1) + (*p2));
+                            }
+                            cn.shape = sum;
+                        }
+                        into.push(cn);
+                    }
+                } else {
+                    write_warning(&format!(
+                        "Circular connections in junction including roads '{}' and '{}', loop size {}",
+                        c.fromEdge, c.toEdge, seen.len()
+                    ));
+                }
+            } else {
+                let mut in_ = c.toLane;
+                let mut out = destCon.fromLane;
+                if c.toCP == CP::OPENDRIVE_CP_END {
+                    // inner edge runs in reverse direction
+                    std::mem::swap(&mut in_, &mut out);
+                }
+                if Self::lane_sections_connected(dest, in_, out) {
+                    let mut cn = destCon.clone();
+                    cn.fromEdge = c.fromEdge.clone();
+                    cn.fromLane = c.fromLane;
+                    cn.fromCP = c.fromCP;
+                    cn.all = c.all;
+                    cn.origID = c.toEdge.clone();
+                    cn.origLane = c.toLane;
+                    if MY_IMPORT_INTERNAL_SHAPES.with(|v| v.get()) {
+                        cn.shape = dest.m().geom.clone();
+                        // determine which lane of dest belongs to this connection
+                        let mut referenceLane: i32 = 0;
+                        let mut offsetFactor: i32 = 1;
+                        let lanesDir: T;
+                        if c.toCP == CP::OPENDRIVE_CP_END {
+                            offsetFactor = -1;
+                            lanesDir = T::OPENDRIVE_TAG_LEFT;
+                            let lanes = dest.m().laneSections[0].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in lanes.iter() {
+                                if destLane.successor == c.fromLane {
+                                    referenceLane = destLane.id;
+                                    break;
+                                }
+                            }
+                        } else {
+                            lanesDir = T::OPENDRIVE_TAG_RIGHT;
+                            let lanes = dest.m().laneSections[0].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in lanes.iter() {
+                                if destLane.predecessor == c.fromLane {
+                                    referenceLane = destLane.id;
+                                    break;
+                                }
+                            }
+                        }
+                        // compute offsets
+                        let mut offsets: Vec<f64> = vec![0.0; dest.m().geom.len()];
+                        if dest.m().laneOffsets.len() > 0 {
+                            offsets = dest.m().laneOffsets.clone();
+                        }
+                        let mut s: f64 = 0.0;
+                        let mut iShape: usize = 0;
+                        for laneSectionIndex in 0..dest.m().laneSections.len() {
+                            let nextS = if laneSectionIndex + 1 < dest.m().laneSections.len() {
+                                dest.m().laneSections[laneSectionIndex + 1].s
+                            } else {
+                                f64::MAX
+                            };
+                            let sStart = s; // distance offset a the start of the current lane section
+                            let mut finalS = s; // final distance value after processing this segment
+                            let mut finalI = iShape;
+                            let destLanes: Vec<NIImporter_OpenDrive_OpenDriveLane> = dest.m().laneSections[laneSectionIndex].lanesByDir.entry(lanesDir).or_default().clone();
+                            for destLane in destLanes.iter() {
+                                // each lane of the current segment repeats the same section of shape points and distance offsets
+                                let mut sectionS: f64 = 0.0;
+                                let mut i: usize = iShape; // shape index at the start of the current lane section
+                                s = sStart;
+                                if destLane.id.abs() <= referenceLane.abs() || destLane.id.abs() == c.toLane.abs() {
+                                    let multiplier: f64 = (offsetFactor as f64) * (if destLane.id == referenceLane { 0.5 } else { 1.0 });
+                                    let mut widthDataIndex: usize = 0;
+                                    while s < nextS && i < cn.shape.len() {
+                                        if i > 0 {
+                                            let dist = cn.shape[i - 1].distance_to2d(&cn.shape[i]);
+                                            s += dist;
+                                            sectionS += dist;
+                                        }
+                                        while widthDataIndex + 1 < destLane.widthData.len()
+                                            && sectionS >= destLane.widthData[widthDataIndex + 1].s
+                                        {
+                                            widthDataIndex += 1;
+                                        }
+                                        let mut width: f64 = tc.get_edge_type_width(&destLane.type_);
+                                        if destLane.widthData.len() > 0 {
+                                            width = destLane.widthData[widthDataIndex].compute_at(sectionS);
+                                        } else {
+                                            // use first width of the target lane
+                                            let outerToEdge = edges.get(&cn.toEdge).unwrap().m();
+                                            let toLaneSection = if cn.toCP == CP::OPENDRIVE_CP_END {
+                                                outerToEdge.laneSections.first_mut().unwrap()
+                                            } else {
+                                                outerToEdge.laneSections.last_mut().unwrap()
+                                            };
+                                            let laneDir = if cn.toLane < 0 { T::OPENDRIVE_TAG_RIGHT } else { T::OPENDRIVE_TAG_LEFT };
+                                            // lookup only (C++ break on first match, no effect besides the map entry)
+                                            let _ = toLaneSection.lanesByDir.entry(laneDir).or_default().iter().any(|outerToLane| {
+                                                outerToLane.id == cn.toLane && outerToLane.width > 0.0
+                                            });
+                                        }
+                                        offsets[i] += width * multiplier;
+                                        i += 1;
+                                    }
+                                    finalS = s;
+                                    finalI = i;
+                                } else if finalS == s {
+                                    // update finalS without changing offsets
+                                    while s < nextS && i < cn.shape.len() {
+                                        if i > 0 {
+                                            let dist = cn.shape[i - 1].distance_to2d(&cn.shape[i]);
+                                            s += dist;
+                                            finalS += dist;
+                                        }
+                                        i += 1;
+                                    }
+                                    finalI = i;
+                                }
+                            }
+                            // advance values for the next lane section
+                            iShape = finalI;
+                            s = finalS;
+                        }
+                        if cn.shape.move2side_custom(&offsets, 100.0).is_err() {
+                            write_warning(&format!(
+                                "Could not import internal lane shape from edge '{}' to edge '{}",
+                                c.fromEdge, c.toEdge
+                            ));
+                            cn.shape.clear();
+                        }
+                        if cn.toCP == CP::OPENDRIVE_CP_END {
+                            cn.shape = cn.shape.reverse();
+                        }
+                    }
+                    into.push(cn);
+                }
+            }
+        }
     }
 
     /// C++: `bool NIImporter_OpenDrive::laneSectionsConnected(OpenDriveEdge *, int, int)` [static, private]
@@ -3798,7 +3972,38 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_spiral(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromSpiral")
+        let mut ret = PositionVector::default();
+        let curveStart = g.params[0];
+        let curveEnd = g.params[1];
+        // C++ try block: odrSpiral does not throw (no throw in the C++ source), so the
+        // std::runtime_error catch below is unreachable and is not ported as a separate path.
+        let cDot = (curveEnd - curveStart) / g.length;
+        if cDot == 0.0 || g.length == 0.0 {
+            write_warningf!("Could not compute spiral geometry for edge '%' (cDot=% length=%).", e.id.clone(), cDot, g.length);
+            ret.push(Position::new(g.x, g.y));
+            return ret;
+        }
+        let sStart = curveStart / cDot;
+        let sEnd = curveEnd / cDot;
+        let (_, _, tStart) = foreign::eulerspiral::odr_spiral::odr_spiral(sStart, cDot);
+        let mut s = sStart;
+        while s <= sEnd {
+            let (x, y, _) = foreign::eulerspiral::odr_spiral::odr_spiral(s, cDot);
+            ret.push(Position::new(x, y));
+            s += resolution;
+        }
+        if s != sEnd {
+            let (x, y, _) = foreign::eulerspiral::odr_spiral::odr_spiral(sEnd, cDot);
+            ret.push(Position::new(x, y));
+        }
+        // shift start to coordinate origin
+        let neg = *ret.front() * -1.0;
+        ret.add(&neg);
+        // rotate
+        ret.rotate2d(g.hdg - tStart);
+        // shift to geometry start
+        ret.add_xyz(g.x, g.y, 0.0);
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromArc(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3844,7 +4049,45 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_arc(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromArc")
+        let mut ret = PositionVector::default();
+        let mut centerX = g.x;
+        let mut centerY = g.y;
+        // left: positive value
+        let curvature = g.params[0];
+        let radius = 1.0 / curvature;
+        // center point
+        Self::calculate_curve_center(Ptr::from_mut(&mut centerX), Ptr::from_mut(&mut centerY), radius, g.hdg);
+        let mut endX = g.x;
+        let mut endY = g.y;
+        let mut startX = g.x;
+        let mut startY = g.y;
+        let mut geo_posS = g.s;
+        let mut geo_posE = g.s;
+        let mut end = false;
+        loop {
+            geo_posE += resolution;
+            if geo_posE - g.s > g.length {
+                geo_posE = g.s + g.length;
+            }
+            if geo_posE - g.s > g.length {
+                geo_posE = g.s + g.length;
+            }
+            Self::calc_point_on_curve(Ptr::from_mut(&mut endX), Ptr::from_mut(&mut endY), centerX, centerY, radius, geo_posE - geo_posS);
+            ret.push(Position::new(startX, startY));
+
+            startX = endX;
+            startY = endY;
+            geo_posS = geo_posE;
+
+            if geo_posE - (g.s + g.length) < 0.001 && geo_posE - (g.s + g.length) > -0.001 {
+                end = true;
+            }
+            if end {
+                break;
+            }
+        }
+        ret.push(Position::new(startX, startY));
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromPoly(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3865,7 +4108,19 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_poly(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromPoly")
+        let s = g.hdg.sin();
+        let c = g.hdg.cos();
+        let mut ret = PositionVector::default();
+        let mut off: f64 = 0.0;
+        while off < g.length + 2.0 {
+            let x = off;
+            let y = g.params[0] + g.params[1] * off + g.params[2] * off.powf(2.0) + g.params[3] * off.powf(3.0);
+            let xnew = x * c - y * s;
+            let ynew = x * s + y * c;
+            ret.push(Position::new(g.x + xnew, g.y + ynew));
+            off += resolution;
+        }
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `PositionVector NIImporter_OpenDrive::geomFromParamPoly(const OpenDriveEdge &, const OpenDriveGeometry &, double)` [static, protected]
@@ -3888,7 +4143,21 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn geom_from_param_poly(e: &NIImporter_OpenDrive_OpenDriveEdge, g: &NIImporter_OpenDrive_OpenDriveGeometry, resolution: f64) -> PositionVector {
-        todo!("port NIImporter_OpenDrive::geomFromParamPoly")
+        let s = g.hdg.sin();
+        let c = g.hdg.cos();
+        let pMax = if g.params[8] <= 0.0 { g.length } else { g.params[8] };
+        let pStep = pMax / (g.length / resolution).ceil();
+        let mut ret = PositionVector::default();
+        let mut p: f64 = 0.0;
+        while p <= pMax + pStep {
+            let x = g.params[0] + g.params[1] * p + g.params[2] * p.powf(2.0) + g.params[3] * p.powf(3.0);
+            let y = g.params[4] + g.params[5] * p + g.params[6] * p.powf(2.0) + g.params[7] * p.powf(3.0);
+            let xnew = x * c - y * s;
+            let ynew = x * s + y * c;
+            ret.push(Position::new(g.x + xnew, g.y + ynew));
+            p += pStep;
+        }
+        ret.get_subpart2d(0.0, g.length)
     }
 
     /// C++: `Position NIImporter_OpenDrive::calculateStraightEndPoint(double, double, const Position &)` [static, protected]
@@ -3904,7 +4173,13 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calculate_straight_end_point(hdg: f64, length: f64, start: &Position) -> Position {
-        todo!("port NIImporter_OpenDrive::calculateStraightEndPoint")
+        let normx: f64 = 1.0;
+        let normy: f64 = 0.0;
+        let x2 = normx * hdg.cos() - normy * hdg.sin();
+        let y2 = normx * hdg.sin() + normy * hdg.cos();
+        let normx = x2 * length;
+        let normy = y2 * length;
+        Position::new(start.x() + normx, start.y() + normy)
     }
 
     /// C++: `void NIImporter_OpenDrive::calculateCurveCenter(double *, double *, double, double)` [static, protected]
@@ -3936,7 +4211,29 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calculate_curve_center(ad_x: Ptr<f64>, ad_y: Ptr<f64>, ad_radius: f64, ad_hdg: f64) {
-        todo!("port NIImporter_OpenDrive::calculateCurveCenter")
+        let mut normX: f64 = 1.0;
+        let mut normY: f64 = 0.0;
+        let mut tmpX: f64;
+        let turn: f64;
+        if ad_radius > 0.0 {
+            turn = -1.0;
+        } else {
+            turn = 1.0;
+        }
+
+        tmpX = normX;
+        normX = normX * ad_hdg.cos() + normY * ad_hdg.sin();
+        normY = tmpX * ad_hdg.sin() + normY * ad_hdg.cos();
+
+        tmpX = normX;
+        normX = turn * normY;
+        normY = -turn * tmpX;
+
+        normX = ad_radius.abs() * normX;
+        normY = ad_radius.abs() * normY;
+
+        *ad_x.m() += normX;
+        *ad_y.m() += normY;
     }
 
     /// C++: `void NIImporter_OpenDrive::calcPointOnCurve(double *, double *, double, double, double, double)` [static, protected]
@@ -3962,7 +4259,22 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn calc_point_on_curve(ad_x: Ptr<f64>, ad_y: Ptr<f64>, ad_centerX: f64, ad_centerY: f64, ad_r: f64, ad_length: f64) {
-        todo!("port NIImporter_OpenDrive::calcPointOnCurve")
+        let rotAngle = ad_length / ad_r.abs();
+        let mut vx = *ad_x.m() - ad_centerX;
+        let mut vy = *ad_y.m() - ad_centerY;
+        let tmpx: f64;
+
+        let turn: f64;
+        if ad_r > 0.0 {
+            turn = -1.0; //left
+        } else {
+            turn = 1.0; //right
+        }
+        tmpx = vx;
+        vx = vx * rotAngle.cos() + turn * vy * rotAngle.sin();
+        vy = -1.0 * turn * tmpx * rotAngle.sin() + vy * rotAngle.cos();
+        *ad_x.m() = vx + ad_centerX;
+        *ad_y.m() = vy + ad_centerY;
     }
 
     /// C++: `void NIImporter_OpenDrive::computeShapes(std::map<std::string, OpenDriveEdge *> &)` [static, protected]
@@ -4072,7 +4384,82 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn compute_shapes(edges: &mut BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) {
-        todo!("port NIImporter_OpenDrive::computeShapes")
+        use NIImporter_OpenDrive_GeometryType as GT;
+        let res = utils::options::options_cont::get_float("opendrive.curve-resolution");
+        for (_, ePtr) in edges.iter() {
+            let e = ePtr.m();
+            let mut prevType = GT::OPENDRIVE_GT_UNKNOWN;
+            let lineRes = if Self::has_non_linear_elevation(e) { res } else { -1.0 };
+            let mut last = Position::default();
+            let mut index: i32 = 0;
+            let geometries = e.geometries.clone();
+            for g in geometries.iter() {
+                let mut geom = PositionVector::default();
+                match g.type_ {
+                    GT::OPENDRIVE_GT_UNKNOWN => {}
+                    GT::OPENDRIVE_GT_LINE => geom = Self::geom_from_line(e, g, lineRes),
+                    GT::OPENDRIVE_GT_SPIRAL => geom = Self::geom_from_spiral(e, g, res),
+                    GT::OPENDRIVE_GT_ARC => geom = Self::geom_from_arc(e, g, res),
+                    GT::OPENDRIVE_GT_POLY3 => geom = Self::geom_from_poly(e, g, res),
+                    GT::OPENDRIVE_GT_PARAMPOLY3 => geom = Self::geom_from_param_poly(e, g, res),
+                    _ => {}
+                }
+                if e.geom.len() > 0 && prevType == GT::OPENDRIVE_GT_LINE {
+                    // remove redundant end point of the previous geometry segment
+                    // (the start point of the current segment should have the same value)
+                    // this avoids geometry errors due to imprecision
+                    if !e.geom.back().almost_same(geom.front(), utils::geom::POSITION_EPS) {
+                        write_warningf!("Mismatched geometry for edge '%' between geometry segments % and %.", e.id.clone(), index - 1, index);
+                    }
+                    e.geom.pop();
+                }
+                for k in geom.iter() {
+                    last = *k;
+                    e.geom.push_back_no_double_pos(k);
+                }
+                prevType = g.type_;
+                index += 1;
+            }
+            if e.geom.len() == 1 && *e.geom.front() != last {
+                // avoid length-1 geometry due to almostSame check
+                e.geom.push(last);
+            }
+            if utils::options::options_cont::exists("geometry.min-dist") && !utils::options::options_cont::is_default("geometry.min-dist") {
+                // simplify geometry for both directions consistently but ensure
+                // that start and end angles are preserved
+                if e.geom.len() > 4 {
+                    let minDist = utils::options::options_cont::get_float("geometry.min-dist");
+                    e.geom.remove_double_points(minDist, true, 1, 1, true);
+                }
+            }
+            if !NBNetBuilder::transform_coordinates(&mut e.geom, true, Ptr::null()) {
+                write_errorf!("Unable to project coordinates for edge '%'.", e.id.clone());
+            }
+            // add z-data
+            let mut k: usize = 0;
+            let mut pos: f64 = 0.0;
+            if !utils::options::options_cont::get_bool("flatten") {
+                let n = e.elevations.len();
+                for (jdx, el) in e.elevations.iter().enumerate() {
+                    let sNext = if jdx + 1 == n { f64::MAX } else { e.elevations[jdx + 1].s };
+                    while k < e.geom.len() && pos < sNext {
+                        let z = el.compute_at(pos);
+                        e.geom[k].add_xyz(0.0, 0.0, z);
+                        k += 1;
+                        if k < e.geom.len() {
+                            // XXX pos underestimates the actual position since the
+                            // actual geometry between k-1 and k could be curved
+                            pos += e.geom[k - 1].distance_to2d(&e.geom[k]);
+                        }
+                    }
+                }
+            }
+            e.geom = e.geom.simplified2(false, utils::geom::NUMERICAL_EPS);
+            // add laneoffset
+            if e.offsets.len() > 0 {
+                e.laneOffsets = Self::discretize_offsets(&mut e.geom, &e.offsets, &e.id);
+            }
+        }
     }
 
     /// C++: `bool NIImporter_OpenDrive::hasNonLinearElevation(const OpenDriveEdge &)` [static, protected]
@@ -4090,7 +4477,15 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn has_non_linear_elevation(e: &NIImporter_OpenDrive_OpenDriveEdge) -> bool {
-        todo!("port NIImporter_OpenDrive::hasNonLinearElevation")
+        if e.elevations.len() > 1 {
+            return true;
+        }
+        for el in e.elevations.iter() {
+            if el.c != 0.0 || el.d != 0.0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `std::vector<double> NIImporter_OpenDrive::discretizeOffsets(PositionVector &, const std::vector<OpenDriveLaneOffset> &, const std::string &)` [static, protected]
@@ -4132,14 +4527,81 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn discretize_offsets(geom: &mut PositionVector, offsets: &Vec<NIImporter_OpenDrive_OpenDriveLaneOffset>, id: &str) -> Vec<f64> {
-        todo!("port NIImporter_OpenDrive::discretizeOffsets")
+        let mut laneOffsets: Vec<f64> = Vec::new();
+        // make sure there are intermediate points for each offset-section
+        for el in offsets.iter() {
+            // check whether we need to insert a new point at dist
+            let pS = geom.position_at_offset2d(el.s, 0.0, false);
+            let iS = geom.index_of_closest(&pS, false);
+            // prevent close spacing to reduce impact of rounding errors in z-axis
+            if pS.distance_to2d(&geom[iS as usize]) > utils::geom::POSITION_EPS {
+                geom.insert_at_closest(&pS, false);
+            }
+        }
+        // XXX add further points for sections with non-constant offset
+        // shift each point orthogonally by the specified offset
+        let mut kk: usize = 0;
+        let mut ppos: f64 = 0.0;
+        let n = offsets.len();
+        for (jdx, el) in offsets.iter().enumerate() {
+            let sNext = if jdx + 1 == n { f64::MAX } else { offsets[jdx + 1].s };
+            while kk < geom.len() && ppos < sNext {
+                let offset = el.compute_at(ppos);
+                laneOffsets.push(if offset.abs() > utils::geom::POSITION_EPS { -offset } else { 0.0 });
+                kk += 1;
+                if kk < geom.len() {
+                    // XXX pos understimates the actual position since the
+                    // actual geometry between k-1 and k could be curved
+                    ppos += geom[kk - 1].distance_to2d(&geom[kk]);
+                }
+            }
+        }
+        let _ = id;
+        laneOffsets
     }
 
     /// C++: `void NIImporter_OpenDrive::addOffsets(bool, PositionVector &, const std::vector<OpenDriveLaneOffset> &, const std::string &, std::vector<double> &)` [static, protected]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_offsets(left: bool, geom: &mut PositionVector, offsets: &Vec<NIImporter_OpenDrive_OpenDriveLaneOffset>, id: &str, result: &mut Vec<f64>) {
-        todo!("port NIImporter_OpenDrive::addOffsets")
+        // make sure there are intermediate points for each offset-section
+        for el in offsets.iter() {
+            // check whether we need to insert a new point at dist
+            let pS = geom.position_at_offset2d(el.s, 0.0, false);
+            let iS = geom.index_of_closest(&pS, false);
+            // prevent close spacing to reduce impact of rounding errors in z-axis
+            if pS.distance_to2d(&geom[iS as usize]) > utils::geom::POSITION_EPS {
+                let at = geom.insert_at_closest(&pS, false);
+                let mut interpolatedOffset: f64 = 0.0;
+                if at == 0 {
+                    interpolatedOffset = result[0];
+                } else if at == geom.len() as i32 - 1 {
+                    interpolatedOffset = *result.last().unwrap();
+                } else {
+                    interpolatedOffset = (result[at as usize - 1] + result[at as usize]) / 2.0;
+                }
+                result.insert(at as usize, interpolatedOffset);
+            }
+        }
+        // shift each point orthogonally by the specified offset
+        let mut kk: usize = 0;
+        let mut ppos: f64 = 0.0;
+        let sign: i32 = if left { -1 } else { 1 };
+        let n = offsets.len();
+        for (jdx, el) in offsets.iter().enumerate() {
+            let sNext = if jdx + 1 == n { f64::MAX } else { offsets[jdx + 1].s };
+            while kk < geom.len() && ppos < sNext {
+                let offset = el.compute_at(ppos);
+                result[kk] += if offset.abs() > utils::geom::POSITION_EPS { (sign as f64) * offset } else { 0.0 };
+                kk += 1;
+                if kk < geom.len() {
+                    // XXX pos understimates the actual position since the
+                    // actual geometry between k-1 and k could be curved
+                    ppos += geom[kk - 1].distance_to2d(&geom[kk]);
+                }
+            }
+        }
+        let _ = id;
     }
 
     /// C++: `void NIImporter_OpenDrive::revisitLaneSections(const NBTypeCont &, std::map<std::string, OpenDriveEdge *> &)` [static, protected]
@@ -4202,7 +4664,61 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn revisit_lane_sections(tc: &NBTypeCont, edges: &mut BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) {
-        todo!("port NIImporter_OpenDrive::revisitLaneSections")
+        for (_, ePtr) in edges.iter() {
+            let e = ePtr.m();
+            // split by speed limits or by access restrictions
+            let mut newSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+            for section in e.laneSections.iter_mut() {
+                let mut splitSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+                let splitByAttrChange = section.build_attribute_changes(tc, &mut splitSections);
+                if !splitByAttrChange {
+                    newSections.push(section.clone());
+                } else {
+                    newSections.extend(splitSections);
+                }
+            }
+
+            e.laneSections = newSections;
+            let mut lastS: f64 = -1.0;
+            // check whether the lane sections are in the right order
+            let mut sorted = true;
+            for section in e.laneSections.iter() {
+                if section.s <= lastS {
+                    sorted = false;
+                    break;
+                }
+                lastS = section.s;
+            }
+            if !sorted {
+                write_warningf!("The sections of edge '%' are not sorted properly.", e.id.clone());
+                // determinism: C++ std::sort is unstable; ties on s may be ordered differently
+                let mut sorter = NIImporter_OpenDrive_sections_by_s_sorter::new();
+                e.laneSections.sort_by(|a, b| {
+                    if sorter.call_op(a, b) != 0 {
+                        std::cmp::Ordering::Less
+                    } else if sorter.call_op(b, a) != 0 {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+            }
+            // check whether duplicate s-values occur
+            // but keep all lane sections for connecting roads because they are
+            // needed to establish connectivity (laneSectionsConnected)
+            // TODO recheck whether removing short sections is a good idea at all: once we parse linkage info, it will be lost.
+            if e.laneSections.len() > 1 && !e.isInner {
+                let mut j: usize = 0;
+                while j != e.laneSections.len() - 1 {
+                    if e.laneSections[j + 1].s - e.laneSections[j].s < utils::geom::POSITION_EPS {
+                        write_warningf!("Almost duplicate s-value '%' for lane sections occurred at edge '%'; first entry was removed.", e.laneSections[j].s, e.id.clone());
+                        e.laneSections.remove(j);
+                    } else {
+                        j += 1;
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setNodeSecure(NBNodeCont &, OpenDriveEdge &, const std::string &, NIImporter_OpenDrive::LinkType, std::vector<NodeSet> &)` [static, protected]
@@ -4252,8 +4768,60 @@ impl NIImporter_OpenDrive {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_node_secure(nc: &mut NBNodeCont, e: &mut NIImporter_OpenDrive_OpenDriveEdge, nodeID: &str, lt: NIImporter_OpenDrive_LinkType, joinedNodeIDs: &mut Vec<NodeSet>) {
-        todo!("port NIImporter_OpenDrive::setNodeSecure")
+    pub fn set_node_secure(nc: &mut NBNodeCont, e: &mut NIImporter_OpenDrive_OpenDriveEdge, nodeID: &str, lt: NIImporter_OpenDrive_LinkType, joinedNodeIDs: &mut Vec<NodeSet>) -> Result<(), ProcessError> {
+        let n: Ptr<NBNode> = nc.retrieve(nodeID);
+        if n.is_null() {
+            return Err(ProcessError::new(tlf!("Could not find node '%'.", nodeID.to_string())));
+        }
+        let mut toJoin: Ptr<NBNode> = Ptr::null();
+        if lt == NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR {
+            if !e.to.is_null() && e.to != n {
+                toJoin = e.to;
+            }
+            e.to = n;
+        } else {
+            if !e.from.is_null() && e.from != n {
+                toJoin = e.from;
+            }
+            e.from = n;
+        }
+        if !toJoin.is_null() {
+            // join nodes
+            // C++ keeps the last matching set for set1/set2 (pointer overwritten in the loop)
+            let mut set1: Option<usize> = None;
+            let mut set2: Option<usize> = None;
+            for (idx, joined) in joinedNodeIDs.iter().enumerate() {
+                if joined.contains(&toJoin) {
+                    set1 = Some(idx);
+                }
+                if joined.contains(&n) {
+                    set2 = Some(idx);
+                }
+            }
+            match (set1, set2) {
+                (None, None) => {
+                    let mut newSet: NodeSet = NodeSet::new();
+                    newSet.insert(n);
+                    newSet.insert(toJoin);
+                    joinedNodeIDs.push(newSet);
+                }
+                (None, Some(i2)) => {
+                    joinedNodeIDs[i2].insert(toJoin);
+                }
+                (Some(i1), None) => {
+                    joinedNodeIDs[i1].insert(n);
+                }
+                (Some(i1), Some(i2)) => {
+                    let set2Copy: NodeSet = joinedNodeIDs[i2].clone();
+                    joinedNodeIDs[i1].extend(set2Copy.iter().cloned());
+                    // erase the first set equal to *set2 (std::find by value)
+                    if let Some(pos) = joinedNodeIDs.iter().position(|s| *s == set2Copy) {
+                        joinedNodeIDs.remove(pos);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// C++: `NBTrafficLightDefinition * NIImporter_OpenDrive::getTLSSecure(NBEdge *, NBNetBuilder &)` [static, protected]
@@ -4274,8 +4842,23 @@ impl NIImporter_OpenDrive {
     //     return *toNode->getControllingTLS().begin();
     // }
     #[allow(unused_variables)]
-    pub fn get_tls_secure(inEdge: Ptr<NBEdge>, nb: &mut NBNetBuilder) -> Ptr<NBTrafficLightDefinition> {
-        todo!("port NIImporter_OpenDrive::getTLSSecure")
+    pub fn get_tls_secure(inEdge: Ptr<NBEdge>, nb: &mut NBNetBuilder) -> Result<Ptr<NBTrafficLightDefinition>, ProcessError> {
+        let toNode: Ptr<NBNode> = inEdge.m().get_to_node();
+        if !toNode.m().is_tl_controlled() {
+            let type_ = TrafficLightTypes
+                .get(&utils::options::options_cont::get_string("tls.default-type"))
+                .unwrap_or_else(|e| std::panic::panic_any(e));
+            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(toNode.m().get_id(), toNode, 0, type_)));
+            let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            if !nb.get_tl_logic_cont().insert(tlDef, false) {
+                // actually, nothing should fail here
+                drop(unsafe { Box::from_raw(raw) });
+                return Err(ProcessError::default_msg());
+            }
+            toNode.m().add_traffic_light(tlDef);
+        }
+        let first: Ptr<NBTrafficLightDefinition> = *toNode.m().get_controlling_tls().iter().next().unwrap();
+        Ok(first)
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NIImporter_OpenDrive::retrieveSignalEdges(NBNetBuilder &, const std::string &, const std::string &, int)` [static, protected]
@@ -4318,7 +4901,33 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_signal_edges(nb: &mut NBNetBuilder, fromID: &str, toID: &str, signalMinLane: i32) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NIImporter_OpenDrive::retrieveSignalEdges")
+        let mut from: Ptr<NBEdge> = nb.get_edge_cont().retrieve(fromID, false);
+        let mut to: Ptr<NBEdge> = nb.get_edge_cont().retrieve(toID, false);
+        let fromReverse: Ptr<NBEdge> = nb.get_edge_cont().retrieve(&Self::reversed_edge_id(fromID), false);
+        let toReverse: Ptr<NBEdge> = nb.get_edge_cont().retrieve(&Self::reversed_edge_id(toID), false);
+
+        if from.is_null() {
+            from = fromReverse;
+        }
+        if to.is_null() {
+            to = toReverse;
+        }
+        if !from.is_null() && !to.is_null() && from.m().get_to_node() != to.m().get_from_node() {
+            if from.m().get_from_node() == to.m().get_to_node() && signalMinLane >= 0 {
+                std::mem::swap(&mut from, &mut to);
+            } else if !fromReverse.is_null() && !toReverse.is_null() && fromReverse.m().get_to_node() == toReverse.m().get_from_node() && signalMinLane <= 0 {
+                from = fromReverse;
+                to = toReverse;
+            } else {
+                if from.m().get_from_node() == to.m().get_from_node() && !fromReverse.is_null() && fromReverse.m().get_to_node() == to.m().get_from_node() {
+                    from = fromReverse;
+                }
+                if to.m().get_to_node() == from.m().get_to_node() && !toReverse.is_null() && toReverse.m().get_from_node() == from.m().get_to_node() {
+                    to = toReverse;
+                }
+            }
+        }
+        (from, to)
     }
 
     /// C++: `void NIImporter_OpenDrive::splitMinWidths(OpenDriveEdge *, const NBTypeCont &, double)` [static, protected]
@@ -4415,7 +5024,64 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn split_min_widths(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>, tc: &NBTypeCont, minDist: f64) {
-        todo!("port NIImporter_OpenDrive::splitMinWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut newSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+        let nSections = e.m().laneSections.len();
+        for j in 0..nSections {
+            let mut splitPositions: Vec<f64> = Vec::new();
+            let sectionEnd = if j + 1 == nSections { e.m().length } else { e.m().laneSections[j + 1].s };
+            let section = j as i32;
+            let sec = &mut e.m().laneSections[j];
+            if sec.rightLaneNumber > 0 {
+                let sOrig = sec.sOrig;
+                let lanes = sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default();
+                Self::find_width_split(tc, lanes, section, sOrig, sectionEnd, &mut splitPositions);
+            }
+            if sec.leftLaneNumber > 0 {
+                let sOrig = sec.sOrig;
+                let lanes = sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default();
+                Self::find_width_split(tc, lanes, section, sOrig, sectionEnd, &mut splitPositions);
+            }
+            newSections.push(sec.clone());
+            splitPositions.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            // filter out tiny splits
+            let mut prevSplit: f64 = sec.s;
+            let mut it: usize = 0;
+            while it < splitPositions.len() {
+                if splitPositions[it] - prevSplit < minDist || sectionEnd - splitPositions[it] < minDist {
+                    // avoid tiny (or duplicate) splits
+                    splitPositions.remove(it);
+                } else if splitPositions[it] < sec.s {
+                    // avoid splits for another section
+                    splitPositions.remove(it);
+                } else {
+                    prevSplit = splitPositions[it];
+                    it += 1;
+                }
+            }
+
+            if splitPositions.len() > 0 {
+                let sOrig = sec.sOrig;
+                Self::recompute_widths(newSections.last_mut().unwrap(), sOrig, splitPositions[0], sOrig, sectionEnd);
+                for it in 0..splitPositions.len() {
+                    let mut secNew = sec.clone();
+                    secNew.s = splitPositions[it];
+                    let secNewS = secNew.s;
+                    newSections.push(secNew);
+                    if newSections.last().unwrap().rightLaneNumber > 0 {
+                        let lanes = newSections.last_mut().unwrap().lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default();
+                        Self::set_straight_connections(lanes);
+                    }
+                    if newSections.last().unwrap().leftLaneNumber > 0 {
+                        let lanes = newSections.last_mut().unwrap().lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default();
+                        Self::set_straight_connections(lanes);
+                    }
+                    let end = if it + 1 == splitPositions.len() { sectionEnd } else { splitPositions[it + 1] };
+                    Self::recompute_widths(newSections.last_mut().unwrap(), secNewS, end, sOrig, sectionEnd);
+                }
+            }
+        }
+        e.m().laneSections = newSections;
     }
 
     /// C++: `void NIImporter_OpenDrive::findWidthSplit(const NBTypeCont &, std::vector<OpenDriveLane> &, int, double, double, std::vector<double> &)` [static, protected]
@@ -4512,7 +5178,45 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn find_width_split(tc: &NBTypeCont, lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, section: i32, sectionStart: f64, sectionEnd: f64, splitPositions: &mut Vec<f64>) {
-        todo!("port NIImporter_OpenDrive::findWidthSplit")
+        let myMinWidth: f64 = MY_MIN_WIDTH.with(|v| v.get());
+        for l in lanes.iter() {
+            let permissions: SVCPermissions = tc.get_edge_type_permissions(&l.type_) & !SVC_VULNERABLE;
+            if l.widthData.len() > 0 && tc.knows(&l.type_) && !tc.get_edge_type_shall_be_discarded(&l.type_) && permissions != 0 {
+                let mut sPrev: f64 = l.widthData[0].s;
+                let mut wPrev: f64 = l.widthData[0].compute_at(sPrev);
+                for (idx, it_w) in l.widthData.iter().enumerate() {
+                    let sEnd: f64 = if idx + 1 < l.widthData.len() { l.widthData[idx + 1].s } else { sectionEnd - sectionStart };
+                    let w: f64 = it_w.compute_at(sEnd);
+                    let changeDist: f64 = (myMinWidth - wPrev).abs();
+                    if (wPrev < myMinWidth && w > myMinWidth) || (wPrev > myMinWidth && w < myMinWidth) {
+                        let mut splitPos: f64 = sPrev + (sEnd - sPrev) / (w - wPrev).abs() * changeDist;
+                        let mut wSplit: f64 = it_w.compute_at(splitPos);
+                        // ensure that the thin part is actually thin enough
+                        while wSplit > myMinWidth {
+                            if wPrev < myMinWidth {
+                                // getting wider
+                                splitPos -= utils::geom::POSITION_EPS;
+                                if splitPos < sPrev {
+                                    splitPos = sPrev;
+                                    break;
+                                }
+                            } else {
+                                // getting thinner
+                                splitPos += utils::geom::POSITION_EPS;
+                                if splitPos > sEnd {
+                                    splitPos = sEnd;
+                                    break;
+                                }
+                            }
+                            wSplit = it_w.compute_at(splitPos);
+                        }
+                        splitPositions.push(sectionStart + splitPos);
+                    }
+                    wPrev = w;
+                    sPrev = sEnd;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::sanitizeWidths(OpenDriveEdge *)` [static, protected]
@@ -4537,7 +5241,17 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn sanitize_widths(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) {
-        todo!("port NIImporter_OpenDrive::sanitizeWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        for sec in e.m().laneSections.iter_mut() {
+            // filter widths within the current section (#5888).
+            // @note, Short laneSections could also be worth filtering alltogether
+            if sec.rightLaneNumber > 0 {
+                Self::sanitize_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default(), sec.length);
+            }
+            if sec.leftLaneNumber > 0 {
+                Self::sanitize_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default(), sec.length);
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::sanitizeWidths(std::vector<OpenDriveLane> &, double)` [static, protected]
@@ -4569,7 +5283,26 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn sanitize_widths_2(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, length: f64) {
-        todo!("port NIImporter_OpenDrive::sanitizeWidths")
+        for l in lanes.iter_mut() {
+            if l.widthData.len() > 0 {
+                let wd = &l.widthData;
+                let threshold: f64 = utils::geom::POSITION_EPS;
+                let mut maxNoShort: f64 = -f64::MAX;
+                let mut seen: f64 = 0.0;
+                for i in 0..wd.len() {
+                    let wdLength: f64 = if i < wd.len() - 1 { wd[i + 1].s - wd[i].s } else { length - seen };
+                    seen += wdLength;
+                    if wdLength > threshold {
+                        // MAX2(maxNoShort, wd[i].a)
+                        let a = wd[i].a;
+                        maxNoShort = if maxNoShort > a { maxNoShort } else { a };
+                    }
+                }
+                if maxNoShort > 0.0 {
+                    l.width = maxNoShort;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setStraightConnections(std::vector<OpenDriveLane> &)` [static, protected]
@@ -4581,7 +5314,9 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn set_straight_connections(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>) {
-        todo!("port NIImporter_OpenDrive::setStraightConnections")
+        for k in lanes.iter_mut() {
+            k.predecessor = k.id;
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::recomputeWidths(OpenDriveLaneSection &, double, double, double, double)` [static, protected]
@@ -4596,7 +5331,13 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn recompute_widths(sec: &mut NIImporter_OpenDrive_OpenDriveLaneSection, start: f64, end: f64, sectionStart: f64, sectionEnd: f64) {
-        todo!("port NIImporter_OpenDrive::recomputeWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        if sec.rightLaneNumber > 0 {
+            Self::recompute_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default(), start, end, sectionStart, sectionEnd);
+        }
+        if sec.leftLaneNumber > 0 {
+            Self::recompute_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default(), start, end, sectionStart, sectionEnd);
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::recomputeWidths(std::vector<OpenDriveLane> &, double, double, double, double)` [static, protected]
@@ -4678,7 +5419,35 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn recompute_widths_2(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, start: f64, end: f64, sectionStart: f64, sectionEnd: f64) {
-        todo!("port NIImporter_OpenDrive::recomputeWidths")
+        // C++ MAX2(a, b)
+        let max2 = |a: f64, b: f64| if a > b { a } else { b };
+        for k in lanes.iter_mut() {
+            let l = k;
+            if l.widthData.len() > 0 {
+                l.width = 0.0;
+                let mut sPrev: f64 = l.widthData[0].s;
+                let mut sPrevAbs: f64 = sPrev + sectionStart;
+                for idx in 0..l.widthData.len() {
+                    let it_w = l.widthData[idx].clone();
+                    let sEnd: f64 = if idx + 1 < l.widthData.len() { l.widthData[idx + 1].s } else { sectionEnd - sectionStart };
+                    let sEndAbs: f64 = sEnd + sectionStart;
+                    if sPrevAbs <= start && sEndAbs >= start {
+                        l.width = max2(l.width, it_w.compute_at(start - sectionStart));
+                    }
+                    if sPrevAbs <= end && sEndAbs >= end {
+                        l.width = max2(l.width, it_w.compute_at(end - sectionStart));
+                    }
+                    if start <= sPrevAbs && end >= sPrevAbs {
+                        l.width = max2(l.width, it_w.compute_at(sPrev));
+                    }
+                    if start <= sEndAbs && end >= sEndAbs {
+                        l.width = max2(l.width, it_w.compute_at(sEnd));
+                    }
+                    sPrev = sEnd;
+                    sPrevAbs = sEndAbs;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setLaneAttributes(const OpenDriveEdge *, NBEdge::Lane &, const OpenDriveLane &, bool, const NBTypeCont &)` [static, protected]
@@ -4721,7 +5490,44 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_attributes(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>, sumoLane: &mut NBEdge_Lane, odLane: &NIImporter_OpenDrive_OpenDriveLane, saveOrigIDs: bool, tc: &NBTypeCont) {
-        todo!("port NIImporter_OpenDrive::setLaneAttributes")
+        // C++ MAX2 / MIN2
+        let max2 = |a: f64, b: f64| if a > b { a } else { b };
+        if saveOrigIDs {
+            sumoLane.base.set_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &format!("{}_{}", e.m().id, odLane.id));
+        }
+        sumoLane.speed = if odLane.speed != 0.0 { odLane.speed } else { tc.get_edge_type_speed(&odLane.type_) };
+        sumoLane.permissions = if odLane.permission > 0 { odLane.permission } else { tc.get_edge_type_permissions(&odLane.type_) }; // TODO: how to get the OD lane specific restriction
+        sumoLane.width = if MY_IMPORT_WIDTHS.with(|v| v.get()) && odLane.width != crate::netbuild::nb_edge::UNSPECIFIED_WIDTH { odLane.width } else { tc.get_edge_type_width(&odLane.type_) };
+        sumoLane.type_ = odLane.type_.clone();
+
+        let widthResolution: f64 = tc.get_edge_type_width_resolution(&odLane.type_);
+        let maxWidth: f64 = tc.get_edge_type_max_width(&odLane.type_);
+        let myMinWidth: f64 = MY_MIN_WIDTH.with(|v| v.get());
+
+        let forbiddenNarrow: bool = sumoLane.width < myMinWidth
+            && (sumoLane.permissions & !SVC_VULNERABLE) != 0
+            && sumoLane.width < tc.get_edge_type_width(&odLane.type_);
+
+        if sumoLane.width >= 0.0 && widthResolution > 0.0 {
+            sumoLane.width = (sumoLane.width / widthResolution + 0.5).floor() * widthResolution;
+            if forbiddenNarrow && sumoLane.width >= myMinWidth {
+                sumoLane.width -= widthResolution;
+                if sumoLane.width <= 0.0 {
+                    sumoLane.width = max2(utils::geom::POSITION_EPS, myMinWidth - utils::geom::POSITION_EPS);
+                }
+            } else if sumoLane.width == 0.0 {
+                // round up when close to 0
+                sumoLane.width = widthResolution;
+            }
+        }
+        if maxWidth > 0.0 {
+            // MIN2(sumoLane.width, maxWidth)
+            sumoLane.width = if sumoLane.width < maxWidth { sumoLane.width } else { maxWidth };
+        }
+        if forbiddenNarrow {
+            // avoid narrow passenger car lanes (especially at sections with varying width)
+            sumoLane.permissions = SVC_EMERGENCY | SVC_AUTHORITY;
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::writeRoadObjects(const OpenDriveEdge *)` [static, protected]
@@ -4772,8 +5578,48 @@ impl NIImporter_OpenDrive {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn write_road_objects(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) {
-        todo!("port NIImporter_OpenDrive::writeRoadObjects")
+    pub fn write_road_objects(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) -> Result<(), ProcessError> {
+        use crate::utils::shapes::point_of_interest::PointOfInterest;
+        use crate::utils::shapes::shape::{DEFAULT_ANGLE, DEFAULT_HEIGHT, DEFAULT_IMG_FILE, DEFAULT_IMG_HEIGHT, DEFAULT_IMG_WIDTH, DEFAULT_LAYER, DEFAULT_NAME};
+        use crate::utils::shapes::sumo_polygon::SUMOPolygon;
+        let writeGeo = GeoConvHelper::with_loaded(|g| g.using_geo_projection())
+            && (utils::options::options_cont::is_default("proj.plain-geo") || utils::options::options_cont::get_bool("proj.plain-geo"));
+        let dev: OutputDeviceRef = OutputDevice::get_device(&utils::options::options_cont::get_string("polygon-output"), true)?;
+        dev.borrow_mut().write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for o in e.m().objects.iter() {
+            let mut refPos: Position = e.m().geom.position_at_offset2d(o.s, -o.t, false);
+            if o.radius >= 0.0 {
+                // cicrular shape
+                // GeoConvHelper::getFinal is not ready yet
+                GeoConvHelper::with_loaded(|g| g.cartesian2geo(&mut refPos));
+                let icon: String = POIIcons.get_string(POIIcon::NONE).unwrap().to_string();
+                let mut POI = PointOfInterest::new(&o.id, &o.type_, &RGBColor::YELLOW, &refPos, true, "", -1.0, false, 0.0, &icon, DEFAULT_LAYER, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_WIDTH, DEFAULT_IMG_HEIGHT, DEFAULT_NAME, &BTreeMap::new());
+                POI.base3.set_parameter("name", &o.name);
+                POI.write_xml(&mut dev.borrow_mut(), writeGeo, 0.0, String::new(), 0.0, false, 0.0);
+            } else {
+                // rectangular shape
+                let mut centerLine = PositionVector::default();
+                centerLine.push(Position::new(-o.length / 2.0, 0.0));
+                centerLine.push(Position::new(o.length / 2.0, 0.0));
+                let roadHdg: f64 = e.m().geom.rotation_at_offset(o.s);
+                centerLine.rotate2d(roadHdg + o.hdg);
+                centerLine.add(&refPos);
+                centerLine.move2side(o.width / 2.0, 100.0);
+                let mut shape: PositionVector = centerLine.clone();
+                centerLine.move2side(-o.width, 100.0);
+                shape.append(&centerLine.reverse(), utils::geom::POSITION_EPS);
+                if writeGeo {
+                    // GeoConvHelper::getFinal is not ready yet
+                    for p in shape.iter_mut() {
+                        GeoConvHelper::with_loaded(|g| g.cartesian2geo(p));
+                    }
+                }
+                let mut poly = SUMOPolygon::new(&o.id, &o.type_, &RGBColor::YELLOW, &shape, true, true, 1.0, 7.0, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_NAME, DEFAULT_HEIGHT, &BTreeMap::new());
+                poly.base2.set_parameter("name", &o.name);
+                poly.write_xml(&mut dev.borrow_mut(), writeGeo);
+            }
+        }
+        Ok(())
     }
 
 }
@@ -5063,7 +5909,64 @@ impl NIImporter_OpenDrive_OpenDriveLane {
     // }
     #[allow(unused_variables)]
     pub fn compute_permission(&self, tc: &NBTypeCont, allowed: &Vec<String>, denied: &Vec<String>) -> SVCPermissions {
-        todo!("port OpenDriveLane::computePermission")
+        let mut perms: SVCPermissions = tc.get_edge_type_permissions(&self.type_);
+        if allowed.len() > 0 && denied.len() > 0 {
+            write_warning("Will discard access settings as both denied and allowed classes have been specified.");
+        } else if allowed.len() > 0 {
+            perms = SVC_IGNORING;
+            for allow in allowed.iter() {
+                match allow.as_str() {
+                    "simulator" => {
+                        perms = SVC_IGNORING;
+                        break;
+                    }
+                    "autonomousTraffic" | "autonomous traffic" | "throughTraffic" => {
+                        perms = tc.get_edge_type_permissions(&self.type_);
+                        break;
+                    }
+                    "pedestrian" => perms |= SVC_PEDESTRIAN,
+                    "passengerCar" => perms |= SVC_PASSENGER,
+                    "bus" => perms |= SVC_BUS,
+                    "delivery" => perms |= SVC_DELIVERY,
+                    "emergency" => perms |= SVC_EMERGENCY,
+                    "taxi" => perms |= SVC_TAXI,
+                    "bicycle" => perms |= SVC_BICYCLE,
+                    "motorcycle" => perms |= SVC_MOTORCYCLE,
+                    "truck" | "trucks" => {
+                        perms |= SVC_TRUCK;
+                        perms |= SVC_TRAILER;
+                    }
+                    _ => {}
+                }
+            }
+        } else if denied.len() > 0 {
+            for deny in denied.iter() {
+                match deny.as_str() {
+                    "none" => {
+                        perms = tc.get_edge_type_permissions(&self.type_);
+                        break;
+                    }
+                    "autonomousTraffic" | "autonomous traffic" | "throughTraffic" => {
+                        perms = SVC_IGNORING;
+                        break;
+                    }
+                    "pedestrian" => perms &= !SVC_PEDESTRIAN,
+                    "passengerCar" => perms &= !SVC_PASSENGER,
+                    "bus" => perms &= !SVC_BUS,
+                    "delivery" => perms &= !SVC_DELIVERY,
+                    "emergency" => perms &= !SVC_EMERGENCY,
+                    "taxi" => perms &= !SVC_TAXI,
+                    "bicycle" => perms &= !SVC_BICYCLE,
+                    "motorcycle" => perms &= !SVC_MOTORCYCLE,
+                    "truck" | "trucks" => {
+                        perms &= !SVC_TRUCK;
+                        perms &= !SVC_TRAILER;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        perms
     }
 
 }
@@ -5171,7 +6074,55 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn build_lane_mapping(&mut self, tc: &NBTypeCont) {
-        todo!("port OpenDriveLaneSection::buildLaneMapping")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        self.discardedInnerWidthRight = 0.0;
+        let mut sumoLane: i32 = 0;
+        let mut singleType = true;
+        let mut types: Vec<String> = Vec::new();
+        let dirLanesR = self.lanesByDir.get(&T::OPENDRIVE_TAG_RIGHT).cloned().unwrap_or_default();
+        for i in dirLanesR.iter().rev() {
+            if MY_IMPORT_ALL_TYPES.with(|v| v.get()) || (tc.knows(&i.type_) && !tc.get_edge_type_shall_be_discarded(&i.type_)) {
+                self.discardedInnerWidthRight = 0.0;
+                self.laneMap.insert(i.id, sumoLane);
+                sumoLane += 1;
+                types.push(i.type_.clone());
+                if types[0] != *types.last().unwrap() {
+                    singleType = false;
+                }
+            } else {
+                self.discardedInnerWidthRight += i.width;
+            }
+        }
+        self.discardedInnerWidthLeft = 0.0;
+        self.rightLaneNumber = sumoLane;
+        self.rightType = if sumoLane > 0 {
+            if singleType { types[0].clone() } else { types.join("|") }
+        } else {
+            String::new()
+        };
+        sumoLane = 0;
+        singleType = true;
+        types.clear();
+        let dirLanesL = self.lanesByDir.get(&T::OPENDRIVE_TAG_LEFT).cloned().unwrap_or_default();
+        for i in dirLanesL.iter() {
+            if MY_IMPORT_ALL_TYPES.with(|v| v.get()) || (tc.knows(&i.type_) && !tc.get_edge_type_shall_be_discarded(&i.type_)) {
+                self.discardedInnerWidthLeft = 0.0;
+                self.laneMap.insert(i.id, sumoLane);
+                sumoLane += 1;
+                types.push(i.type_.clone());
+                if types[0] != *types.last().unwrap() {
+                    singleType = false;
+                }
+            } else {
+                self.discardedInnerWidthLeft += i.width;
+            }
+        }
+        self.leftLaneNumber = sumoLane;
+        self.leftType = if sumoLane > 0 {
+            if singleType { types[0].clone() } else { types.join("|") }
+        } else {
+            String::new()
+        };
     }
 
     /// C++: `std::map<int, int> OpenDriveLaneSection::getInnerConnections(OpenDriveXMLTag, const OpenDriveLaneSection &)`
@@ -5215,7 +6166,35 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn get_inner_connections(&mut self, dir: NIImporter_OpenDrive_OpenDriveXMLTag, prev: &NIImporter_OpenDrive_OpenDriveLaneSection) -> BTreeMap<i32, i32> {
-        todo!("port OpenDriveLaneSection::getInnerConnections")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut ret: BTreeMap<i32, i32> = BTreeMap::new();
+        let dirLanes = self.lanesByDir.get(&dir).cloned().unwrap_or_default();
+        for i in dirLanes.iter().rev() {
+            let mut to: i32 = match self.laneMap.get(&i.id) {
+                Some(v) => *v,
+                None => {
+                    // the current lane is not available in SUMO
+                    continue;
+                }
+            };
+            let mut from: i32 = UNSET_CONNECTION;
+            if i.predecessor != UNSET_CONNECTION {
+                from = i.predecessor;
+            }
+            if from != UNSET_CONNECTION {
+                match prev.laneMap.get(&from) {
+                    Some(v) => from = *v,
+                    None => from = UNSET_CONNECTION,
+                }
+            }
+            if from != UNSET_CONNECTION && to != UNSET_CONNECTION {
+                if dir == T::OPENDRIVE_TAG_LEFT {
+                    std::mem::swap(&mut from, &mut to);
+                }
+                ret.insert(from, to);
+            }
+        }
+        ret
     }
 
     /// C++: `bool OpenDriveLaneSection::buildAttributeChanges(const NBTypeCont &, std::vector<OpenDriveLaneSection> &)`
@@ -5290,14 +6269,109 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn build_attribute_changes(&mut self, tc: &NBTypeCont, newSections: &mut Vec<NIImporter_OpenDrive_OpenDriveLaneSection>) -> bool {
-        todo!("port OpenDriveLaneSection::buildAttributeChanges")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        // sorted-set insert, equivalent to std::set<double>::insert
+        fn set_insert(v: &mut Vec<f64>, x: f64) {
+            if let Err(pos) = v.binary_search_by(|p| p.partial_cmp(&x).unwrap()) {
+                v.insert(pos, x);
+            }
+        }
+        let mut attributeChangePositions: Vec<f64> = Vec::new();
+        // collect speed change and access restriction positions and apply initial values to the begin
+        for k in self.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default().iter_mut() {
+            for l in k.attributeChanges.iter() {
+                set_insert(&mut attributeChangePositions, l.0);
+                if l.0 == 0.0 {
+                    let perm = k.compute_permission(tc, &l.1.allowed, &l.1.denied);
+                    k.speed = l.1.speed;
+                    k.permission = perm;
+                }
+            }
+        }
+        for k in self.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default().iter_mut() {
+            for l in k.attributeChanges.iter() {
+                set_insert(&mut attributeChangePositions, l.0);
+                if l.0 == 0.0 {
+                    let perm = k.compute_permission(tc, &l.1.allowed, &l.1.denied);
+                    k.speed = l.1.speed;
+                    k.permission = perm;
+                }
+            }
+        }
+
+        // do nothing if there is none
+        if attributeChangePositions.len() == 0 {
+            return false;
+        }
+
+        if attributeChangePositions[0] > 0.0 {
+            set_insert(&mut attributeChangePositions, 0.0);
+        }
+
+        for (idx, pos) in attributeChangePositions.iter().enumerate() {
+            if idx == 0 {
+                newSections.push(self.clone());
+            } else {
+                let built = self.build_lane_section(tc, *pos);
+                newSections.push(built);
+            }
+        }
+        // propagate speeds and access restrictions
+        for i in 0..newSections.len() {
+            let (before, after) = newSections.split_at_mut(i);
+            let cur = &mut after[0];
+            let keys: Vec<T> = cur.lanesByDir.keys().cloned().collect();
+            for key in keys {
+                let n = cur.lanesByDir[&key].len();
+                for j in 0..n {
+                    let l = &mut cur.lanesByDir.get_mut(&key).unwrap()[j];
+                    if l.speed == 0.0 {
+                        if i > 0 {
+                            l.speed = before[i - 1].lanesByDir.entry(key).or_default()[j].speed;
+                        } else {
+                            let _ = tc.get_edge_type_speed(&l.type_);
+                        }
+                    }
+                    if l.permission == 0 {
+                        if i > 0 {
+                            let (prevPerm, prevType) = {
+                                let prevLane = &before[i - 1].lanesByDir.entry(key).or_default()[j];
+                                (prevLane.permission, prevLane.type_.clone())
+                            };
+                            l.permission = prevPerm;
+                            l.type_ = prevType;
+                        } else {
+                            let _ = tc.get_edge_type_permissions(&l.type_);
+                        }
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `OpenDriveLaneSection OpenDriveLaneSection::buildLaneSection(const NBTypeCont &, double)`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_lane_section(&mut self, tc: &NBTypeCont, startPos: f64) -> NIImporter_OpenDrive_OpenDriveLaneSection {
-        todo!("port OpenDriveLaneSection::buildLaneSection")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        let mut ret: NIImporter_OpenDrive_OpenDriveLaneSection = self.clone();
+        ret.s += startPos;
+        for dir in [T::OPENDRIVE_TAG_RIGHT, T::OPENDRIVE_TAG_LEFT] {
+            for l in ret.lanesByDir.entry(dir).or_default().iter_mut() {
+                l.speed = 0.0;
+                l.permission = 0;
+                let mut finder = NIImporter_OpenDrive_same_position_finder::new(startPos);
+                if let Some(idx) = l.attributeChanges.iter().position(|ps| finder.call_op(ps)) {
+                    let ac = &l.attributeChanges[idx].1;
+                    let permission = l.compute_permission(tc, &ac.allowed, &ac.denied);
+                    let speed = ac.speed;
+                    l.speed = speed;
+                    l.permission = permission;
+                }
+            }
+        }
+        ret
     }
 
 }
