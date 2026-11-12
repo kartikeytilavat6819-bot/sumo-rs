@@ -411,13 +411,13 @@ impl CommonHandler {
     pub fn check_negative_2(&mut self, tag: SumoXMLTag, id: &str, attribute: SumoXMLAttr, value: f64, canBeZero: bool) -> bool {
         if canBeZero {
             if value < 0.0 {
-                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} cannot be negative ({}).", tag_str(tag), id, attr_str(attribute), to_string(&value)));
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} cannot be negative ({}).", tag_str(tag), id, attr_str(attribute), utils::common::to_string::to_string(&value)));
             } else {
                 return true;
             }
         } else {
             if value <= 0.0 {
-                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} must be greather than zero ({}).", tag_str(tag), id, attr_str(attribute), to_string(&value)));
+                return self.write_error(&format!("Could not build {} with ID '{}' in netedit; Attribute {} must be greather than zero ({}).", tag_str(tag), id, attr_str(attribute), utils::common::to_string::to_string(&value)));
             } else {
                 return true;
             }
