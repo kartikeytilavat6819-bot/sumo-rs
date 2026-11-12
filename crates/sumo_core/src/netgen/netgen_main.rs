@@ -1,6 +1,17 @@
 //! Port of netgen/netgen_main.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::netbuild::nb_frame::NBFrame;
+use crate::netwrite::nw_frame::NWFrame;
+use crate::netgen::ng_frame::NGFrame;
+use crate::netgen::ng_random_net_builder::NGRandomNetBuilder;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+use utils::common::to_string::f64_to_string;
+use utils::distribution::random_distributor::RandomDistributor;
+use utils::geom::geom_helper::deg2rad;
+use utils::geom::POSITION_EPS;
+use utils::options::options_cont::{get_bool, get_float, get_int, is_default, with_options};
 
 /// C++: `NGNet *(NBNetBuilder &) buildNetwork`
 // NGNet*
@@ -121,7 +132,109 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn build_network(nb: &mut NBNetBuilder) -> Ptr<NGNet> {
-    todo!("port buildNetwork")
+    let laneWidth: f64 = if is_default("default.lanewidth") { SUMO_CONST_LANE_WIDTH } else { get_float("default.lanewidth") };
+    let mut minLength: f64 = ((get_int("default.lanenumber") + get_int("turn-lanes")) * 2) as f64 * laneWidth + get_float("default.junctions.radius") * 2.0 + POSITION_EPS;
+    // spider-net
+    if get_bool("spider") {
+        // check values
+        let mut hadError = false;
+        if get_int("spider.arm-number") < 3 {
+            write_error("Spider networks need at least 3 arms.");
+            hadError = true;
+        }
+        if get_int("spider.arm-number") > 4 && !get_bool("spider.omit-center") {
+            write_warning("Spider networks with many arms should use option spider.omit-center");
+        }
+        if get_int("spider.circle-number") < 1 {
+            write_error("Spider networks need at least one circle.");
+            hadError = true;
+        }
+        minLength = minLength.max(laneWidth * 2.0 * (std::cmp::max(get_int("spider.arm-number"), 3) as f64) / (2.0 * std::f64::consts::PI));
+        if get_float("spider.space-radius") < POSITION_EPS {
+            write_error(&format!("The radius of spider networks must be at least {}", f64_to_string(POSITION_EPS)));
+            hadError = true;
+        } else if get_float("spider.space-radius") < minLength {
+            write_warningf!("The radius of spider networks should be at least % for the given lanenumber, lanewidth and junction radius", f64_to_string(minLength));
+        }
+        if hadError {
+            panic!("{}", ProcessError::new(""));
+        }
+        // build if everything's ok
+        let net: Ptr<NGNet> = Ptr::from_raw(Box::into_raw(Box::new(NGNet::new(nb))));
+        net.m().create_spider_web(get_int("spider.arm-number"), get_int("spider.circle-number"), get_float("spider.space-radius"), !get_bool("spider.omit-center"), get_float("spider.attach-length"));
+        return net;
+    }
+    // grid-net
+    if get_bool("grid") {
+        // get options
+        let mut xNo: i32 = get_int("grid.x-number");
+        let mut yNo: i32 = get_int("grid.y-number");
+        let mut xLength: f64 = get_float("grid.x-length");
+        let mut yLength: f64 = get_float("grid.y-length");
+        let mut xAttachLength: f64 = get_float("grid.x-attach-length");
+        let mut yAttachLength: f64 = get_float("grid.y-attach-length");
+        if is_default("grid.x-number") && !is_default("grid.number") {
+            xNo = get_int("grid.number");
+        }
+        if is_default("grid.y-number") && !is_default("grid.number") {
+            yNo = get_int("grid.number");
+        }
+        if is_default("grid.x-length") && !is_default("grid.length") {
+            xLength = get_float("grid.length");
+        }
+        if is_default("grid.y-length") && !is_default("grid.length") {
+            yLength = get_float("grid.length");
+        }
+        if is_default("grid.x-attach-length") && !is_default("grid.attach-length") {
+            xAttachLength = get_float("grid.attach-length");
+        }
+        if is_default("grid.y-attach-length") && !is_default("grid.attach-length") {
+            yAttachLength = get_float("grid.attach-length");
+        }
+        // check values
+        let mut hadError = false;
+        if xNo < 1 || yNo < 1 || (xAttachLength == 0.0 && yAttachLength == 0.0 && (xNo < 2 && yNo < 2)) {
+            write_error("The number of nodes must be positive and at least 2 in one direction if there are no attachments.");
+            hadError = true;
+        }
+        let minAttachLength: f64 = minLength / 2.0 + POSITION_EPS / 2.0;
+        if xLength < POSITION_EPS || yLength < POSITION_EPS {
+            write_error(&format!("The distance between nodes must be at least {}", f64_to_string(POSITION_EPS)));
+            hadError = true;
+        } else if xLength < minLength || yLength < minLength {
+            write_warningf!("The distance between nodes should be at least % for the given lanenumber, lanewidth and junction radius", f64_to_string(minLength));
+        }
+        if xAttachLength != 0.0 && xAttachLength < POSITION_EPS {
+            write_error(&format!("The length of attached streets must be at least {}", f64_to_string(POSITION_EPS)));
+            hadError = true;
+        } else if xAttachLength != 0.0 && xAttachLength < minAttachLength {
+            write_warningf!("The length of attached streets should be at least % for the given lanenumber, lanewidth and junction radius", f64_to_string(minAttachLength));
+        } else if yAttachLength != 0.0 && yAttachLength < POSITION_EPS {
+            write_error(&format!("The length of attached streets must be at least {}", f64_to_string(POSITION_EPS)));
+            hadError = true;
+        } else if yAttachLength != 0.0 && yAttachLength < minAttachLength {
+            write_warningf!("The length of attached streets should be at least % for the given lanenumber, lanewidth and junction radius", f64_to_string(minAttachLength));
+        }
+        if hadError {
+            panic!("{}", ProcessError::new(""));
+        }
+        // build if everything's ok
+        let net: Ptr<NGNet> = Ptr::from_raw(Box::into_raw(Box::new(NGNet::new(nb))));
+        net.m().create_chequer_board(xNo, yNo, xLength, yLength, xAttachLength, yAttachLength);
+        return net;
+    }
+    // random net
+    let mut neighborDist: RandomDistributor<i32> = RandomDistributor::<i32>::default();
+    neighborDist.add(1, get_float("rand.neighbor-dist1"), true);
+    neighborDist.add(2, get_float("rand.neighbor-dist2"), true);
+    neighborDist.add(3, get_float("rand.neighbor-dist3"), true);
+    neighborDist.add(4, get_float("rand.neighbor-dist4"), true);
+    neighborDist.add(5, get_float("rand.neighbor-dist5"), true);
+    neighborDist.add(6, get_float("rand.neighbor-dist6"), true);
+    let net: Ptr<NGNet> = Ptr::from_raw(Box::into_raw(Box::new(NGNet::new(nb))));
+    let mut randomNet = NGRandomNetBuilder::new(net.m(), deg2rad(get_float("rand.min-angle")), get_float("rand.min-distance"), get_float("rand.max-distance"), get_float("rand.connectivity"), get_int("rand.num-tries"), &neighborDist);
+    randomNet.create_net(get_int("rand.iterations"), get_bool("rand.grid"));
+    net
 }
 
 /// C++: `bool () checkOptions`
@@ -136,7 +249,13 @@ pub fn build_network(nb: &mut NBNetBuilder) -> Ptr<NGNet> {
 // }
 #[allow(unused_variables)]
 pub fn check_options() -> bool {
-    todo!("port checkOptions")
+    let mut ok = NGFrame::check_options();
+    with_options(|oc| {
+        ok &= NBFrame::check_options(oc);
+        ok &= NWFrame::check_options(oc);
+        // shortcut: SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here, upgrade when system_frame is ported
+    });
+    ok
 }
 
 /// C++: `void () fillOptions`
@@ -180,6 +299,44 @@ pub fn check_options() -> bool {
 // }
 #[allow(unused_variables)]
 pub fn fill_options() {
-    todo!("port fillOptions")
+    with_options(|oc| {
+        oc.add_call_example("-c <CONFIGURATION>", "create net from given configuration");
+        oc.add_call_example("--grid [grid-network options] -o <OUTPUTFILE>", "create grid net");
+        oc.add_call_example("--spider [spider-network options] -o <OUTPUTFILE>", "create spider net");
+        oc.add_call_example("--rand [random-network options] -o <OUTPUTFILE>", "create random net");
+
+        oc.set_additional_help_message(" Either \"--grid\", \"--spider\" or \"--rand\" must be supplied.\n  In dependence to these switches other options are used.");
+
+        // insert options sub-topics
+        // shortcut: SystemFrame::addConfigurationOptions(oc) is not ported, so its subtopic is not filled here, upgrade when system_frame is ported
+        oc.add_option_sub_topic("Grid Network");
+        oc.add_option_sub_topic("Spider Network");
+        oc.add_option_sub_topic("Random Network");
+        oc.add_option_sub_topic("Input");
+        oc.add_option_sub_topic("Output");
+        oc.add_option_sub_topic("Processing");
+        oc.add_option_sub_topic("Building Defaults");
+        oc.add_option_sub_topic("TLS Building");
+        oc.add_option_sub_topic("Edge Removal");
+        oc.add_option_sub_topic("Unregulated Nodes");
+        oc.add_option_sub_topic("Junctions");
+        oc.add_option_sub_topic("Pedestrian");
+        oc.add_option_sub_topic("Bicycle");
+        // shortcut: SystemFrame::addReportOptions(oc) is not ported, so its subtopic is not filled here, upgrade when system_frame is ported
+    });
+
+    NGFrame::fill_options();
+    with_options(|oc| {
+        NBFrame::fill_options(oc, true);
+        NWFrame::fill_options(oc, true);
+        // shortcut: RandHelper::insertRandOptions(oc) is not ported, so the rand options are not registered here, upgrade when rand_helper registers them
+        // (RandHelper::insertRandOptions is not in this port)
+
+        oc.do_register("tls.discard-simple", SumoOption::bool(false));
+        oc.add_description("tls.discard-simple", "TLS Building", "Does not instantiate traffic lights at geometry-like nodes");
+
+        oc.do_register("railway.signal.permit-unsignalized", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
+        oc.add_description("railway.signal.permit-unsignalized", "TLS Building", "List rail classes that may run without rail signals");
+    });
 }
 
