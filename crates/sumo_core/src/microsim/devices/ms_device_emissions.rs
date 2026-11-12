@@ -1,6 +1,16 @@
-//! Port of microsim/devices/MSDevice_Emissions.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/devices/MSDevice_Emissions.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
+use utils::common::std_defs::{g_precision, g_precision_emissions};
+use utils::common::time::ts;
+use utils::options::options_cont::{get_string_vector, is_set};
+use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
+
+thread_local! {
+    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
+    static MY_AM_INITIALIZED: Cell<bool> = const { Cell::new(false) };
+}
 
 /// A device which collects vehicular emissions
 /// C++ class `MSDevice_Emissions` (microsim/devices/MSDevice_Emissions.h)
@@ -42,7 +52,13 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Emissions::insertOptions")
+        MSDevice::insert_default_assignment_options("emissions", "Emissions", oc, false);
+
+        oc.do_register("device.emissions.begin", SumoOption::string_with("-1"));
+        oc.add_description("device.emissions.begin", "Emissions", "Recording begin time for emission-data");
+
+        oc.do_register("device.emissions.period", SumoOption::string_with("0"));
+        oc.add_description("device.emissions.period", "Emissions", "Recording period for emission-output");
     }
 
     /// C++: `void MSDevice_Emissions::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -56,7 +72,12 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_Emissions::buildVehicleDevices")
+        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "emissions", v, isSet("emission-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
+        if MSDevice::equipped_by_default_assignment_options() {
+            // the device is owned by the vehicle's device list for the rest of the run, as in C++
+            let device: &mut MSDevice_Emissions = Box::leak(Box::new(MSDevice_Emissions::new(v)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_Emissions::MSDevice_Emissions(SUMOVehicle &)`
@@ -66,7 +87,12 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle) -> Self {
-        todo!("port MSDevice_Emissions::MSDevice_Emissions")
+        let id = format!("emissions_{}", holder.get_id());
+        MSDevice_Emissions {
+            base: MSVehicleDevice::new(holder, &id),
+            // C++ `myEmissions()` value-initializes all sums to zero
+            myEmissions: PollutantsInterface_Emissions { CO2: 0.0, CO: 0.0, HC: 0.0, fuel: 0.0, NOx: 0.0, PMx: 0.0, electricity: 0.0 },
+        }
     }
 
     /// C++: `void MSDevice_Emissions::~MSDevice_Emissions() noexcept` [virtual]
@@ -75,7 +101,8 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Emissions::~MSDevice_Emissions")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `bool MSDevice_Emissions::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -88,7 +115,10 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Emissions::notifyMove")
+        let c = veh.get_vehicle_type().get_emission_class();
+        let computed = PollutantsInterface::compute_all(c, newSpeed, veh.get_acceleration(), veh.get_slope(), self.myHolder.get_emission_parameters());
+        self.myEmissions.add_scaled(&computed, ts());
+        true
     }
 
     /// C++: `bool MSDevice_Emissions::notifyIdle(SUMOTrafficObject &)` [virtual]
@@ -101,7 +131,10 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn notify_idle(&mut self, veh: &mut SUMOTrafficObject) -> bool {
-        todo!("port MSDevice_Emissions::notifyIdle")
+        let c = veh.get_vehicle_type().get_emission_class();
+        let computed = PollutantsInterface::compute_all(c, 0., 0., 0., self.myHolder.get_emission_parameters());
+        self.myEmissions.add_scaled(&computed, ts());
+        true
     }
 
     /// C++: `const std::string MSDevice_Emissions::deviceName() const` [const, virtual]
@@ -111,7 +144,7 @@ impl MSDevice_Emissions {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Emissions::deviceName")
+        "emissions".to_string()
     }
 
     /// C++: `void MSDevice_Emissions::generateOutput(OutputDevice *) const` [const, virtual]
@@ -134,7 +167,20 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_Emissions::generateOutput")
+        if !tripinfoOut.is_null() {
+            let out = tripinfoOut.m();
+            out.set_precision(g_precision_emissions());
+            out.open_tag("emissions");
+            out.write_attr(SUMO_ATTR_CO_ABS, &self.myEmissions.CO);
+            out.write_attr(SUMO_ATTR_CO2_ABS, &self.myEmissions.CO2);
+            out.write_attr(SUMO_ATTR_HC_ABS, &self.myEmissions.HC);
+            out.write_attr(SUMO_ATTR_PMX_ABS, &self.myEmissions.PMx);
+            out.write_attr(SUMO_ATTR_NOX_ABS, &self.myEmissions.NOx);
+            out.write_attr(SUMO_ATTR_FUEL_ABS, &self.myEmissions.fuel);
+            out.write_attr(SUMO_ATTR_ELECTRICITY_ABS, &self.myEmissions.electricity);
+            out.close_tag("");
+            out.set_precision(g_precision());
+        }
     }
 
     /// C++: `SumoXMLAttrMask MSDevice_Emissions::getWrittenAttributes()` [static]
@@ -143,7 +189,7 @@ impl MSDevice_Emissions {
     //     }
     #[allow(unused_variables)]
     pub fn get_written_attributes() -> SumoXMLAttrMask {
-        todo!("port MSDevice_Emissions::getWrittenAttributes")
+        MY_WRITTEN_ATTRIBUTES.with(|c| c.get())
     }
 
     /// C++: `void MSDevice_Emissions::initOnce()` [static]
@@ -173,7 +219,26 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn init_once() {
-        todo!("port MSDevice_Emissions::initOnce")
+        if MY_AM_INITIALIZED.get() {
+            return;
+        }
+        MY_AM_INITIALIZED.set(true);
+        if is_set("emission-output.attributes") {
+            let mut written = SumoXMLAttrMask::default();
+            for attr_name in get_string_vector("emission-output.attributes") {
+                if !Attrs.has_string(&attr_name) {
+                    if attr_name == "all" {
+                        written.set_all();
+                    } else {
+                        utils::write_errorf!("Unknown attribute '%' to write in emission output.", attr_name);
+                    }
+                    continue;
+                }
+                let attr = Attrs.get(&attr_name).unwrap_or_else(|e| panic!("{e}"));
+                written.set(attr);
+            }
+            MY_WRITTEN_ATTRIBUTES.set(written);
+        }
     }
 
     /// C++: `void MSDevice_Emissions::cleanup()` [static]
@@ -185,7 +250,8 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_Emissions::cleanup")
+        MY_WRITTEN_ATTRIBUTES.set(MSDevice_Emissions::get_default_mask());
+        MY_AM_INITIALIZED.set(false);
     }
 
     /// C++: `void MSDevice_Emissions::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -206,7 +272,10 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSDevice_Emissions::notifyMoveInternal")
+        // called by meso (see MSMeanData_Emissions::MSLaneMeanDataValues::notifyMoveInternal)
+        let c = veh.get_vehicle_type().get_emission_class();
+        let computed = PollutantsInterface::compute_all(c, meanSpeedVehicleOnLane, veh.get_acceleration(), veh.get_slope(), self.myHolder.get_emission_parameters());
+        self.myEmissions.add_scaled(&computed, timeOnLane);
     }
 
     /// C++: `SumoXMLAttrMask MSDevice_Emissions::getDefaultMask()` [static, private]
@@ -219,7 +288,10 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn get_default_mask() -> SumoXMLAttrMask {
-        todo!("port MSDevice_Emissions::getDefaultMask")
+        // set all bits to 1
+        let mut mask = SumoXMLAttrMask::default();
+        mask.set_all();
+        mask
     }
 
     /// C++: `void MSDevice_Emissions::MSDevice_Emissions(const MSDevice_Emissions &)` [private]
@@ -227,7 +299,8 @@ impl MSDevice_Emissions {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Emissions) -> Self {
-        todo!("port MSDevice_Emissions::MSDevice_Emissions")
+        // the C++ copy constructor is private and has no definition, so it is never called
+        unreachable!("MSDevice_Emissions copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSDevice_Emissions & MSDevice_Emissions::operator=(const MSDevice_Emissions &)` [private]
@@ -235,7 +308,8 @@ impl MSDevice_Emissions {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Emissions) -> &mut MSDevice_Emissions {
-        todo!("port MSDevice_Emissions::operator=")
+        // the C++ assignment operator is private and has no definition, so it is never called
+        unreachable!("MSDevice_Emissions assignment operator is private and undefined in C++")
     }
 
 }
