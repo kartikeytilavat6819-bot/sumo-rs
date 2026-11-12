@@ -1010,7 +1010,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_tls(&mut self, tlCont: &mut NBTrafficLightLogicCont, addedConnections: bool, removedConnections: bool) {
-        todo!("port NBNode::invalidateTLS")
+        // shortcut: the dynamic_cast checks (NBLoadedSUMOTLDef / NBOwnTLDef) need RTTI, and NBTrafficLightDefinition has no type tag yet; the TL-controlled node is left unchanged, upgrade when a type tag or downcast exists
+        let _ = (tlCont, addedConnections, removedConnections);
     }
 
     /// C++: `void NBNode::shiftTLConnectionLaneIndex(NBEdge *, int, int)`
@@ -1062,7 +1063,33 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_self_loops(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tc: &mut NBTrafficLightLogicCont) -> i32 {
-        todo!("port NBNode::removeSelfLoops")
+        let mut ret = 0;
+        let mut pos: usize = 0;
+        let mut j: usize = 0;
+        while j < self.myIncomingEdges.len() {
+            // skip edges which are only incoming and not outgoing
+            let dummy = self.myIncomingEdges[j];
+            if !self.myOutgoingEdges.contains(&dummy) {
+                j += 1;
+                pos += 1;
+                continue;
+            }
+            // an edge with both its origin and destination being the current
+            //  node should be removed
+            write_warning(&format!(" Removing self-looping edge '{}'", dummy.get_id()));
+            // get the list of incoming edges connected to the self-loop
+            let incomingConnected = dummy.get_incoming_edges();
+            // get the list of outgoing edges connected to the self-loop
+            let outgoingConnected = dummy.get_connected_edges();
+            // let the self-loop remap its connections
+            dummy.m().remap_connections(&incomingConnected);
+            self.remap_removed(tc, dummy, &incomingConnected, &outgoingConnected);
+            // delete the self-loop
+            ec.erase(dc, dummy);
+            j = pos;
+            ret += 1;
+        }
+        ret
     }
 
     /// C++: `void NBNode::reshiftPosition(double, double)`
@@ -1546,7 +1573,47 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBNode::computeLogic")
+        // delete myRequest (possibly recomputation step)
+        if !self.myRequest.is_null() {
+            drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+        }
+        self.myRequest = Ptr::null();
+        if self.myIncomingEdges.len() == 0 || self.myOutgoingEdges.len() == 0 {
+            // no logic if nothing happens here
+            self.myType = SumoXMLNodeType::DEAD_END;
+            self.remove_joined_traffic_lights();
+            return;
+        }
+        // compute the logic if necessary or split the junction
+        if self.myType != SumoXMLNodeType::NOJUNCTION && self.myType != SumoXMLNodeType::DISTRICT && self.myType != SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION {
+            // build the request
+            self.myRequest = Ptr::from_raw(Box::into_raw(Box::new(NBRequest::new(ec, Ptr::from_mut(self), &self.myAllEdges, &self.myIncomingEdges, &self.myOutgoingEdges, &self.myBlockedConnections))));
+            // check whether it is not too large
+            let numConnections = self.num_normal_connections();
+            if numConnections >= utils::common::std_defs::SUMO_MAX_CONNECTIONS as i32 {
+                // yep -> make it untcontrolled, warn
+                if !self.myRequest.is_null() {
+                    drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+                }
+                self.myRequest = Ptr::null();
+                if self.myType == SumoXMLNodeType::TRAFFIC_LIGHT {
+                    self.myType = SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION;
+                } else {
+                    self.myType = SumoXMLNodeType::NOJUNCTION;
+                }
+                write_warning(&format!("Junction '{}' is too complicated ({} connections, max {}); will be set to {}.",
+                    self.get_id(), numConnections, utils::common::std_defs::SUMO_MAX_CONNECTIONS, NodeTypes.get_string(self.myType)));
+            } else if numConnections == 0 {
+                if !self.myRequest.is_null() {
+                    drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+                }
+                self.myRequest = Ptr::null();
+                self.myType = SumoXMLNodeType::DEAD_END;
+                self.remove_joined_traffic_lights();
+            } else {
+                self.myRequest.m().build_bitfield_logic();
+            }
+        }
     }
 
     /// C++: `void NBNode::computeLogic2(bool)`
@@ -1559,7 +1626,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic2(&mut self, checkLaneFoes: bool) {
-        todo!("port NBNode::computeLogic2")
+        if !self.myRequest.is_null() {
+            self.myRequest.m().compute_logic(checkLaneFoes);
+        }
     }
 
     /// C++: `void NBNode::computeKeepClear()`
@@ -1608,7 +1677,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn write_logic(&self, into: &mut OutputDevice) -> bool {
-        todo!("port NBNode::writeLogic")
+        if !self.myRequest.is_null() {
+            self.myRequest.write_logic(into);
+            return true;
+        }
+        false
     }
 
     /// C++: `const std::string NBNode::getFoes(int) const` [const]
@@ -1623,7 +1696,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_foes(&self, linkIndex: i32) -> String {
-        todo!("port NBNode::getFoes")
+        if self.myRequest.is_null() {
+            String::new()
+        } else {
+            self.myRequest.get_foes(linkIndex).to_string()
+        }
     }
 
     /// C++: `const std::string NBNode::getResponse(int) const` [const]
@@ -1638,7 +1715,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_response(&self, linkIndex: i32) -> String {
-        todo!("port NBNode::getResponse")
+        if self.myRequest.is_null() {
+            String::new()
+        } else {
+            self.myRequest.get_response(linkIndex).to_string()
+        }
     }
 
     /// C++: `bool NBNode::hasConflict() const` [const]
@@ -1653,7 +1734,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict(&self) -> bool {
-        todo!("port NBNode::hasConflict")
+        if self.myRequest.is_null() {
+            false
+        } else {
+            self.myRequest.has_conflict()
+        }
     }
 
     /// C++: `bool NBNode::hasConflict(const NBEdge *) const` [const]
@@ -1673,7 +1758,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict_2(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasConflict")
+        if self.myRequest.is_null() {
+            return false;
+        }
+        for con in e.get_connections().iter() {
+            let index = self.get_connection_index(e, con);
+            if self.myRequest.has_conflict_at_link(index) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `Position NBNode::getEmptyDir() const` [const]
@@ -1702,7 +1796,25 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_empty_dir(&self) -> Position {
-        todo!("port NBNode::getEmptyDir")
+        let mut pos = Position::new(0., 0.);
+        for e_in in self.myIncomingEdges.iter() {
+            let mut toAdd = e_in.get_from_node().get_position().clone();
+            toAdd.sub(&self.myPosition);
+            toAdd.norm2d();
+            pos.add(&toAdd);
+        }
+        for e_out in self.myOutgoingEdges.iter() {
+            let mut toAdd = e_out.get_to_node().get_position().clone();
+            toAdd.sub(&self.myPosition);
+            toAdd.norm2d();
+            pos.add(&toAdd);
+        }
+        pos.mul(-1. / ((self.myIncomingEdges.len() + self.myOutgoingEdges.len()) as f64));
+        if pos.x() == 0. && pos.y() == 0. {
+            pos = Position::new(1., 0.);
+        }
+        pos.norm2d();
+        pos
     }
 
     /// C++: `bool NBNode::hasIncoming(const NBEdge *const) const` [const]
@@ -1713,7 +1825,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_incoming(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasIncoming")
+        self.myIncomingEdges.contains(&e)
     }
 
     /// C++: `bool NBNode::hasOutgoing(const NBEdge *const) const` [const]
@@ -1724,7 +1836,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_outgoing(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasOutgoing")
+        self.myOutgoingEdges.contains(&e)
     }
 
     /// C++: `NBEdge * NBNode::getOppositeIncoming(NBEdge *) const` [const]
@@ -1760,7 +1872,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_incoming_connections(&mut self, reallowSetting: bool) {
-        todo!("port NBNode::invalidateIncomingConnections")
+        for i in self.myIncomingEdges.iter() {
+            i.m().invalidate_connections(reallowSetting);
+        }
     }
 
     /// C++: `void NBNode::invalidateOutgoingConnections(bool)`
@@ -1773,7 +1887,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_outgoing_connections(&mut self, reallowSetting: bool) {
-        todo!("port NBNode::invalidateOutgoingConnections")
+        for i in self.myOutgoingEdges.iter() {
+            i.m().invalidate_connections(reallowSetting);
+        }
     }
 
     /// C++: `void NBNode::removeDoubleEdges()`
