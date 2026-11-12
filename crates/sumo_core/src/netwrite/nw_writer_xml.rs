@@ -856,9 +856,7 @@ impl NWWriter_XML {
         let mut device = device_ref.borrow_mut();
         device.write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
         for stop in ec.get_stops().values() {
-            // shortcut: NBPTStop::write takes &mut self but the container holds Rc; cast like C++ does through its shared pointer
-            let stop_mut: &mut NBPTStop = unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) };
-            stop_mut.write(&mut device);
+            stop.write(&mut device);
         }
         or_panic(device.close());
     }
