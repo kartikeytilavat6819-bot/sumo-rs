@@ -2,6 +2,14 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+const VEHPARS_VTYPE_SET: i64 = 2;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const LINE_ANY: &str = "ANY";
+// C++ static const std::string ROPerson::PlanItem::UNDEFINED_STOPPING_PLACE (empty string)
+const UNDEFINED_STOPPING_PLACE: &str = "";
+// C++ static bool ROPerson::myHaveWarnedPTMissing
+static MY_HAVE_WARNED_PT_MISSING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// A planItem can be a Trip which contains multiple tripItems
 /// C++ class `ROPerson::PersonTrip` (router/ROPerson.h)
 #[repr(C)]
@@ -16,7 +24,7 @@ pub struct ROPerson_PersonTrip {
     pub stopOrigin: String,
     pub stopDest: String,
     /// the fully specified trips
-    pub myTripItems: Vec<Ptr<IntermodalRouter_TripItem>>,
+    pub myTripItems: Vec<Ptr<ROPerson_TripItem>>,
     /// the vehicles which may be used for routing
     pub myVehicles: Vec<Ptr<ROVehicle>>,
     /// walking speed factor
@@ -43,7 +51,20 @@ impl ROPerson_PersonTrip {
     //             from(0), to(_to), modes(SVC_PEDESTRIAN), dep(0), arr(0), stopDest(_stopDest), walkFactor(1.0) {}
     #[allow(unused_variables)]
     pub fn new(_to: Ptr<ROEdge>, _stopDest: String) -> Self {
-        todo!("port PersonTrip::PersonTrip")
+        ROPerson_PersonTrip {
+            base: ROPerson_PlanItem { base: Parameterised::default() },
+            from: Ptr::null(),
+            to: _to,
+            modes: SVC_PEDESTRIAN,
+            dep: 0.,
+            arr: 0.,
+            stopOrigin: String::new(),
+            stopDest: _stopDest,
+            myTripItems: Vec::new(),
+            myVehicles: Vec::new(),
+            walkFactor: 1.0,
+            group: String::new(),
+        }
     }
 
     /// C++: `void PersonTrip::PersonTrip(const ROEdge *const, const ROEdge *const, const SVCPermissions, const double, const std::string &, const double, const std::string &, double, const std::string &)`
@@ -52,7 +73,20 @@ impl ROPerson_PersonTrip {
     //             from(_from), to(_to), modes(modeSet), dep(departPos), arr(arrivalPos), stopOrigin(_stopOrigin), stopDest(_stopDest), walkFactor(_walkFactor), group(_group) { }
     #[allow(unused_variables)]
     pub fn new_2(_from: Ptr<ROEdge>, _to: Ptr<ROEdge>, modeSet: SVCPermissions, departPos: f64, _stopOrigin: &str, arrivalPos: f64, _stopDest: &str, _walkFactor: f64, _group: &str) -> Self {
-        todo!("port PersonTrip::PersonTrip")
+        ROPerson_PersonTrip {
+            base: ROPerson_PlanItem { base: Parameterised::default() },
+            from: _from,
+            to: _to,
+            modes: modeSet,
+            dep: departPos,
+            arr: arrivalPos,
+            stopOrigin: _stopOrigin.to_string(),
+            stopDest: _stopDest.to_string(),
+            myTripItems: Vec::new(),
+            myVehicles: Vec::new(),
+            walkFactor: _walkFactor,
+            group: _group.to_string(),
+        }
     }
 
     /// C++: `void PersonTrip::~PersonTrip() noexcept` [virtual]
@@ -68,14 +102,27 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PersonTrip::~PersonTrip")
+        // shortcut: items and vehicles are freed through their base types until virtual destructors are dispatched
+        for it in self.myTripItems.drain(..) {
+            it.m().drop_();
+            drop(unsafe { Box::from_raw(it.as_raw()) });
+        }
+        for v in self.myVehicles.drain(..) {
+            let rd = v.get_route_definition();
+            drop(unsafe { Box::from_raw(rd.as_raw()) });
+            drop(unsafe { Box::from_raw(v.as_raw()) });
+        }
     }
 
     /// C++: `PlanItem * PersonTrip::clone() const` [const, virtual]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<ROPerson_PlanItem> {
-        todo!("port PersonTrip::clone")
+        let result: Ptr<ROPerson_PersonTrip> = Ptr::from_raw(Box::into_raw(Box::new(ROPerson_PersonTrip::new_2(self.from, self.to, self.modes, self.dep, &self.stopOrigin, self.arr, &self.stopDest, self.walkFactor, &self.group))));
+        for item in self.myTripItems.iter() {
+            result.m().myTripItems.push(ROPerson_TripItem::clone(item));
+        }
+        result.cast::<ROPerson_PlanItem>()
     }
 
     /// C++: `void PersonTrip::addTripItem(TripItem *)` [virtual]
@@ -83,8 +130,8 @@ impl ROPerson_PersonTrip {
     //             myTripItems.push_back(tripIt);
     //         }
     #[allow(unused_variables)]
-    pub fn add_trip_item(&mut self, tripIt: Ptr<IntermodalRouter_TripItem>) {
-        todo!("port PersonTrip::addTripItem")
+    pub fn add_trip_item(&mut self, tripIt: Ptr<ROPerson_TripItem>) {
+        self.myTripItems.push(tripIt);
     }
 
     /// C++: `void PersonTrip::addVehicle(ROVehicle *)`
@@ -93,7 +140,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn add_vehicle(&mut self, veh: Ptr<ROVehicle>) {
-        todo!("port PersonTrip::addVehicle")
+        self.myVehicles.push(veh);
     }
 
     /// C++: `std::vector<ROVehicle *> & PersonTrip::getVehicles()`
@@ -102,7 +149,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_vehicles(&mut self) -> &mut Vec<Ptr<ROVehicle>> {
-        todo!("port PersonTrip::getVehicles")
+        &mut self.myVehicles
     }
 
     /// C++: `const ROEdge * PersonTrip::getOrigin() const` [const, virtual]
@@ -111,7 +158,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port PersonTrip::getOrigin")
+        if !self.from.is_null() { self.from } else { self.myTripItems[0].get_origin() }
     }
 
     /// C++: `const ROEdge * PersonTrip::getDestination() const` [const, virtual]
@@ -120,7 +167,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port PersonTrip::getDestination")
+        self.to
     }
 
     /// C++: `double PersonTrip::getDestinationPos() const` [const, virtual]
@@ -133,7 +180,11 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port PersonTrip::getDestinationPos")
+        if self.myTripItems.is_empty() {
+            self.get_arrival_pos(true)
+        } else {
+            self.myTripItems[self.myTripItems.len() - 1].get_destination_pos()
+        }
     }
 
     /// C++: `double PersonTrip::getDepartPos(bool) const` [const]
@@ -142,7 +193,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_depart_pos(&self, replaceDefault: bool) -> f64 {
-        todo!("port PersonTrip::getDepartPos")
+        if self.dep == f64::INFINITY && replaceDefault { 0. } else { self.dep }
     }
 
     /// C++: `double PersonTrip::getArrivalPos(bool) const` [const]
@@ -151,7 +202,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self, replaceDefault: bool) -> f64 {
-        todo!("port PersonTrip::getArrivalPos")
+        if self.arr == f64::INFINITY && replaceDefault { self.to.get_length() / 2. } else { self.arr }
     }
 
     /// C++: `SVCPermissions PersonTrip::getModes() const` [const]
@@ -160,7 +211,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_modes(&self) -> SVCPermissions {
-        todo!("port PersonTrip::getModes")
+        self.modes
     }
 
     /// C++: `void PersonTrip::updateModes(SVCPermissions)`
@@ -169,7 +220,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn update_modes(&mut self, additionalModes: SVCPermissions) {
-        todo!("port PersonTrip::updateModes")
+        self.modes |= additionalModes;
     }
 
     /// C++: `const std::string & PersonTrip::getGroup() const` [const]
@@ -178,7 +229,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_group(&self) -> &str {
-        todo!("port PersonTrip::getGroup")
+        self.group.as_str()
     }
 
     /// C++: `const std::string & PersonTrip::getStopOrigin() const` [const]
@@ -187,7 +238,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_origin(&self) -> &str {
-        todo!("port PersonTrip::getStopOrigin")
+        self.stopOrigin.as_str()
     }
 
     /// C++: `const std::string & PersonTrip::getStopDest() const` [const, virtual]
@@ -196,7 +247,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_dest(&self) -> &str {
-        todo!("port PersonTrip::getStopDest")
+        self.stopDest.as_str()
     }
 
     /// C++: `bool PersonTrip::needsRouting() const` [const, virtual]
@@ -205,7 +256,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn needs_routing(&self) -> bool {
-        todo!("port PersonTrip::needsRouting")
+        self.myTripItems.is_empty()
     }
 
     /// C++: `void PersonTrip::setItems(std::vector<TripItem *> &, const ROVehicle *const)`
@@ -223,8 +274,20 @@ impl ROPerson_PersonTrip {
     //             }
     //         }
     #[allow(unused_variables)]
-    pub fn set_items(&mut self, newItems: &mut Vec<Ptr<IntermodalRouter_TripItem>>, veh: Ptr<ROVehicle>) {
-        todo!("port PersonTrip::setItems")
+    pub fn set_items(&mut self, newItems: &mut Vec<Ptr<ROPerson_TripItem>>, veh: Ptr<ROVehicle>) {
+        debug_assert!(self.myTripItems.is_empty());
+        std::mem::swap(&mut self.myTripItems, newItems);
+        let mut kept: Vec<Ptr<ROVehicle>> = Vec::new();
+        for v in std::mem::take(&mut self.myVehicles) {
+            if v != veh {
+                let rd = v.get_route_definition();
+                drop(unsafe { Box::from_raw(rd.as_raw()) });
+                drop(unsafe { Box::from_raw(v.as_raw()) });
+            } else {
+                kept.push(v);
+            }
+        }
+        self.myVehicles = kept;
     }
 
     /// C++: `void PersonTrip::saveVehicles(OutputDevice &, OutputDevice *const, bool, OptionsCont &) const` [const, virtual]
@@ -238,7 +301,11 @@ impl ROPerson_PersonTrip {
     // }
     #[allow(unused_variables)]
     pub fn save_vehicles(&self, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont) {
-        todo!("port PersonTrip::saveVehicles")
+        for veh in self.myVehicles.iter() {
+            if !RONet::get_instance().knows_vehicle(veh.get_id()) {
+                veh.save_as_xml(os, typeos, asAlternatives, options, 0);
+            }
+        }
     }
 
     /// C++: `void PersonTrip::saveAsXML(OutputDevice &, const bool, const bool, OptionsCont &) const` [const, virtual]
@@ -319,7 +386,71 @@ impl ROPerson_PersonTrip {
     // }
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, asTrip: bool, options: &mut OptionsCont) {
-        todo!("port PersonTrip::saveAsXML")
+        if (asTrip || extended) && !self.from.is_null() {
+            let writeGeoTrip = asTrip && options.get_bool("write-trips.geo").unwrap_or_else(|e| panic!("{e}"));
+            os.open_tag_id(SUMO_TAG_PERSONTRIP);
+            if writeGeoTrip {
+                let mut fromPos = self.from.get_lanes()[0].get_shape().position_at_offset2d(self.get_depart_pos(true), 0., false);
+                if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
+                    os.set_precision(utils::common::std_defs::g_precision_geo());
+                    GeoConvHelper::with_final(|g| g.cartesian2geo(&mut fromPos));
+                    os.write_attr(SUMO_ATTR_FROMLONLAT, &utils::common::to_string::ToStringPrec::to_string_prec(&fromPos, utils::common::std_defs::g_precision_geo()));
+                    os.set_precision(utils::common::std_defs::g_precision());
+                } else {
+                    os.write_attr(SUMO_ATTR_FROMXY, &utils::common::to_string::ToStringPrec::to_string_prec(&fromPos, utils::common::std_defs::g_precision()));
+                }
+            } else {
+                os.write_attr(SUMO_ATTR_FROM, self.from.get_id());
+            }
+            if writeGeoTrip {
+                let shape = self.to.get_lanes()[0].get_shape();
+                let len = shape.length2d();
+                let arrPos = self.get_arrival_pos(true);
+                let offset = if arrPos < len { arrPos } else { len };
+                let mut toPos = shape.position_at_offset2d(offset, 0., false);
+                if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
+                    os.set_precision(utils::common::std_defs::g_precision_geo());
+                    GeoConvHelper::with_final(|g| g.cartesian2geo(&mut toPos));
+                    os.write_attr(SUMO_ATTR_TOLONLAT, &utils::common::to_string::ToStringPrec::to_string_prec(&toPos, utils::common::std_defs::g_precision_geo()));
+                    os.set_precision(utils::common::std_defs::g_precision());
+                } else {
+                    os.write_attr(SUMO_ATTR_TOXY, &utils::common::to_string::ToStringPrec::to_string_prec(&toPos, utils::common::std_defs::g_precision()));
+                }
+            } else {
+                os.write_attr(SUMO_ATTR_TO, self.to.get_id());
+            }
+            let mut allowedModes: Vec<String> = Vec::new();
+            if (self.modes & SVC_BUS) != 0 { allowedModes.push("public".to_string()); }
+            if (self.modes & SVC_PASSENGER) != 0 { allowedModes.push("car".to_string()); }
+            if (self.modes & SVC_TAXI) != 0 { allowedModes.push("taxi".to_string()); }
+            if (self.modes & SVC_BICYCLE) != 0 { allowedModes.push("bicycle".to_string()); }
+            if allowedModes.len() > 0 {
+                os.write_attr(SUMO_ATTR_MODES, &allowedModes);
+            }
+            if !writeGeoTrip {
+                if self.dep != 0. && self.dep != f64::INFINITY {
+                    os.write_attr(SUMO_ATTR_DEPARTPOS, &self.dep);
+                }
+                if self.arr != 0. && self.arr != f64::INFINITY {
+                    os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.arr);
+                }
+            }
+            if self.get_stop_dest() != "" {
+                os.write_attr(SUMO_ATTR_BUS_STOP, self.get_stop_dest());
+            }
+            if self.walkFactor != 1. {
+                os.write_attr(SUMO_ATTR_WALKFACTOR, &self.walkFactor);
+            }
+            if extended && self.myTripItems.len() != 0 {
+                let costs: Vec<f64> = self.myTripItems.iter().map(|t| t.get_cost()).collect();
+                os.write_attr(SUMO_ATTR_COSTS, &costs);
+            }
+            os.close_tag("");
+        } else {
+            for it in self.myTripItems.iter() {
+                it.save_as_xml(os, extended, options);
+            }
+        }
     }
 
     /// C++: `double PersonTrip::getWalkFactor() const` [const]
@@ -328,7 +459,7 @@ impl ROPerson_PersonTrip {
     //         }
     #[allow(unused_variables)]
     pub fn get_walk_factor(&self) -> f64 {
-        todo!("port PersonTrip::getWalkFactor")
+        self.walkFactor
     }
 
     /// C++: `SUMOTime PersonTrip::getDuration() const` [const, virtual]
@@ -343,7 +474,11 @@ impl ROPerson_PersonTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port PersonTrip::getDuration")
+        let mut result: SUMOTime = 0;
+        for tItem in self.myTripItems.iter() {
+            result += tItem.get_duration();
+        }
+        result
     }
 
     /// C++: `PersonTrip & PersonTrip::operator=(const PersonTrip &)` [private]
@@ -351,7 +486,7 @@ impl ROPerson_PersonTrip {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROPerson_PersonTrip) -> &mut ROPerson_PersonTrip {
-        todo!("port PersonTrip::operator=")
+        panic!("ROPerson::PersonTrip::operator= is private and undefined in C++ (invalidated copy)")
     }
 
 }
@@ -385,14 +520,14 @@ impl ROPerson_PlanItem {
     // virtual ~PlanItem() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PlanItem::~PlanItem")
+        // C++ destructor body is empty
     }
 
     /// C++: `PlanItem * PlanItem::clone() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<ROPerson_PlanItem> {
-        todo!("port PlanItem::clone")
+        panic!("ROPerson::PlanItem::clone is pure virtual: a subclass must implement it")
     }
 
     /// C++: `void PlanItem::addTripItem(TripItem *)` [virtual]
@@ -400,43 +535,43 @@ impl ROPerson_PlanItem {
     //             throw ProcessError();
     //         }
     #[allow(unused_variables)]
-    pub fn add_trip_item(&mut self, arg0: Ptr<IntermodalRouter_TripItem>) {
-        todo!("port PlanItem::addTripItem")
+    pub fn add_trip_item(&mut self, arg0: Ptr<ROPerson_TripItem>) {
+        panic!("{}", utils::common::util_exceptions::ProcessError::Process(String::new()))
     }
 
     /// C++: `const ROEdge * PlanItem::getOrigin() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port PlanItem::getOrigin")
+        panic!("ROPerson::PlanItem::getOrigin is pure virtual: a subclass must implement it")
     }
 
     /// C++: `const ROEdge * PlanItem::getDestination() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port PlanItem::getDestination")
+        panic!("ROPerson::PlanItem::getDestination is pure virtual: a subclass must implement it")
     }
 
     /// C++: `double PlanItem::getDestinationPos() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port PlanItem::getDestinationPos")
+        panic!("ROPerson::PlanItem::getDestinationPos is pure virtual: a subclass must implement it")
     }
 
     /// C++: `void PlanItem::saveVehicles(OutputDevice &, OutputDevice *const, bool, OptionsCont &) const` [const, virtual]
     // virtual void saveVehicles(OutputDevice& /* os */, OutputDevice* const /* typeos */, bool /* asAlternatives */, OptionsCont& /* options */) const {}
     #[allow(unused_variables)]
     pub fn save_vehicles(&self, arg0: &mut OutputDevice, arg1: Ptr<OutputDevice>, arg2: bool, arg3: &mut OptionsCont) {
-        todo!("port PlanItem::saveVehicles")
+        // C++ body is an empty virtual no-op
     }
 
     /// C++: `void PlanItem::saveAsXML(OutputDevice &, const bool, const bool, OptionsCont &) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, asTrip: bool, options: &mut OptionsCont) {
-        todo!("port PlanItem::saveAsXML")
+        panic!("ROPerson::PlanItem::saveAsXML is pure virtual: a subclass must implement it")
     }
 
     /// C++: `bool PlanItem::isStop() const` [const, virtual]
@@ -445,7 +580,7 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn is_stop(&self) -> bool {
-        todo!("port PlanItem::isStop")
+        false
     }
 
     /// C++: `bool PlanItem::needsRouting() const` [const, virtual]
@@ -454,7 +589,7 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn needs_routing(&self) -> bool {
-        todo!("port PlanItem::needsRouting")
+        false
     }
 
     /// C++: `SUMOVehicleParameter::Stop * PlanItem::getStopParameters()` [virtual]
@@ -463,14 +598,14 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_parameters(&mut self) -> Ptr<SUMOVehicleParameter_Stop> {
-        todo!("port PlanItem::getStopParameters")
+        Ptr::null()
     }
 
     /// C++: `SUMOTime PlanItem::getDuration() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port PlanItem::getDuration")
+        panic!("ROPerson::PlanItem::getDuration is pure virtual: a subclass must implement it")
     }
 
     /// C++: `const std::string & PlanItem::getStopDest() const` [const, virtual]
@@ -479,7 +614,7 @@ impl ROPerson_PlanItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_dest(&self) -> &str {
-        todo!("port PlanItem::getStopDest")
+        UNDEFINED_STOPPING_PLACE
     }
 
 }
@@ -517,7 +652,10 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: &SUMOVehicleParameter, type_: Ptr<SUMOVTypeParameter>) -> Self {
-        todo!("port ROPerson::ROPerson")
+        ROPerson {
+            base: RORoutable::new(pars, type_),
+            myPlan: Vec::new(),
+        }
     }
 
     /// C++: `void ROPerson::~ROPerson() noexcept` [virtual]
@@ -529,7 +667,11 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROPerson::~ROPerson")
+        // shortcut: plan items are freed through the base type until virtual destructors are dispatched
+        for it in self.myPlan.drain(..) {
+            it.m().drop_();
+            drop(unsafe { Box::from_raw(it.as_raw()) });
+        }
     }
 
     /// C++: `void ROPerson::addTrip(std::vector<PlanItem *> &, const std::string &, const ROEdge *const, const ROEdge *const, const SVCPermissions, const std::string &, const double, const std::string &, const double, const std::string &, double, const std::string &)` [static]
@@ -588,7 +730,56 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn add_trip(plan: &mut Vec<Ptr<ROPerson_PlanItem>>, id: &str, from: Ptr<ROEdge>, to: Ptr<ROEdge>, modeSet: SVCPermissions, vTypes: &str, departPos: f64, stopOrigin: &str, arrivalPos: f64, busStop: &str, walkFactor: f64, group: &str) {
-        todo!("port ROPerson::addTrip")
+        let trip: Ptr<ROPerson_PersonTrip> = Ptr::from_raw(Box::into_raw(Box::new(ROPerson_PersonTrip::new_2(from, to, modeSet, departPos, stopOrigin, arrivalPos, busStop, walkFactor, group))));
+        let net = RONet::get_instance();
+        let mut pars = SUMOVehicleParameter::new();
+        pars.departProcedure = DepartDefinition::TRIGGERED;
+        if departPos != 0. {
+            pars.departPosProcedure = DepartPosDefinition::GIVEN;
+            pars.departPos = departPos;
+            pars.parametersSet |= VEHPARS_DEPARTPOS_SET;
+        }
+        let mut st = utils::common::string_tokenizer::StringTokenizer::new(vTypes);
+        while st.has_next() {
+            pars.vtypeid = st.next().unwrap_or_else(|e| panic!("{e}"));
+            pars.parametersSet |= VEHPARS_VTYPE_SET;
+            let type_ = net.m().get_vehicle_type_secure(&pars.vtypeid);
+            if type_.is_null() {
+                drop(unsafe { Box::from_raw(trip.as_raw()) });
+                panic!("{}", utils::common::util_exceptions::ProcessError::InvalidArgument(format!("The vehicle type '{}' in a trip for person '{}' is not known.", pars.vtypeid, id)));
+            }
+            pars.id = format!("{}_{}", id, trip.m().get_vehicles().len());
+            let rd = Ptr::from_raw(Box::into_raw(Box::new(RORouteDef::new(&format!("!{}", pars.id), 0, false, false))));
+            trip.m().add_vehicle(Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&pars, rd, type_, net, Ptr::null())))));
+            // update modeset with routing-category vClass
+            if type_.vehicleClass == SVC_BICYCLE {
+                trip.m().update_modes(SVC_BICYCLE);
+            } else {
+                trip.m().update_modes(SVC_PASSENGER);
+            }
+        }
+        if trip.m().get_vehicles().is_empty() {
+            if (modeSet & SVC_PASSENGER) != 0 {
+                pars.id = format!("{}_0", id);
+                let rd = Ptr::from_raw(Box::into_raw(Box::new(RORouteDef::new(&format!("!{}", pars.id), 0, false, false))));
+                trip.m().add_vehicle(Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&pars, rd, net.m().get_vehicle_type_secure(DEFAULT_VTYPE_ID), net, Ptr::null())))));
+            }
+            if (modeSet & SVC_BICYCLE) != 0 {
+                pars.id = format!("{}_b0", id);
+                pars.vtypeid = DEFAULT_BIKETYPE_ID.to_string();
+                pars.parametersSet |= VEHPARS_VTYPE_SET;
+                let rd = Ptr::from_raw(Box::into_raw(Box::new(RORouteDef::new(&format!("!{}", pars.id), 0, false, false))));
+                trip.m().add_vehicle(Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&pars, rd, net.m().get_vehicle_type_secure(DEFAULT_BIKETYPE_ID), net, Ptr::null())))));
+            }
+            if (modeSet & SVC_TAXI) != 0 {
+                // add dummy taxi for routing (never added to output)
+                pars.id = "taxi".to_string(); // id is written as 'line'
+                pars.vtypeid = DEFAULT_TAXITYPE_ID.to_string();
+                let rd = Ptr::from_raw(Box::into_raw(Box::new(RORouteDef::new(&format!("!{}", pars.id), 0, false, false))));
+                trip.m().add_vehicle(Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&pars, rd, net.m().get_vehicle_type_secure(DEFAULT_TAXITYPE_ID), net, Ptr::null())))));
+            }
+        }
+        plan.push(trip.cast::<ROPerson_PlanItem>());
     }
 
     /// C++: `void ROPerson::addRide(std::vector<PlanItem *> &, const ROEdge *const, const ROEdge *const, const std::string &, double, const std::string &, const std::string &)` [static]
@@ -600,7 +791,10 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn add_ride(plan: &mut Vec<Ptr<ROPerson_PlanItem>>, from: Ptr<ROEdge>, to: Ptr<ROEdge>, lines: &str, arrivalPos: f64, destStop: &str, group: &str) {
-        todo!("port ROPerson::addRide")
+        plan.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_PersonTrip::new(to, destStop.to_string())))).cast::<ROPerson_PlanItem>());
+        // the item just pushed is the PersonTrip
+        let trip: Ptr<ROPerson_PersonTrip> = plan[plan.len() - 1].cast::<ROPerson_PersonTrip>();
+        trip.m().add_trip_item(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Ride::new(-1, from, to, lines, group, -1., arrivalPos, -1., destStop, "", -1)))).cast::<ROPerson_TripItem>());
     }
 
     /// C++: `void ROPerson::addWalk(std::vector<PlanItem *> &, const ConstROEdgeVector &, const double, const double, const double, const double, const std::string &)` [static]
@@ -613,7 +807,12 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn add_walk(plan: &mut Vec<Ptr<ROPerson_PlanItem>>, edges: &ConstROEdgeVector, duration: f64, speed: f64, departPos: f64, arrivalPos: f64, busStop: &str) {
-        todo!("port ROPerson::addWalk")
+        if plan.is_empty() || plan[plan.len() - 1].is_stop() {
+            plan.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_PersonTrip::new(*edges.last().unwrap(), busStop.to_string())))).cast::<ROPerson_PlanItem>());
+        }
+        // only PersonTrip is not a stop, so the back item is a PersonTrip here
+        let trip: Ptr<ROPerson_PersonTrip> = plan[plan.len() - 1].cast::<ROPerson_PersonTrip>();
+        trip.m().add_trip_item(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Walk::new_2(-1, edges, -1., duration, speed, departPos, arrivalPos, busStop)))).cast::<ROPerson_TripItem>());
     }
 
     /// C++: `void ROPerson::addStop(std::vector<PlanItem *> &, const SUMOVehicleParameter::Stop &, const ROEdge *const)` [static]
@@ -623,7 +822,7 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(plan: &mut Vec<Ptr<ROPerson_PlanItem>>, stopPar: &SUMOVehicleParameter_Stop, stopEdge: Ptr<ROEdge>) {
-        todo!("port ROPerson::addStop")
+        plan.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Stop::new(stopPar, stopEdge)))).cast::<ROPerson_PlanItem>());
     }
 
     /// C++: `const ROEdge * ROPerson::getDepartEdge() const` [const, virtual]
@@ -633,7 +832,7 @@ impl ROPerson {
     //     }
     #[allow(unused_variables)]
     pub fn get_depart_edge(&self) -> Ptr<ROEdge> {
-        todo!("port ROPerson::getDepartEdge")
+        self.myPlan[0].get_origin()
     }
 
     /// C++: `void ROPerson::computeRoute(const RORouterProvider &, const bool, MsgHandler *)` [virtual]
@@ -693,7 +892,58 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn compute_route(&mut self, provider: &RORouterProvider, removeLoops: bool, errorHandler: Ptr<MsgHandler>) {
-        todo!("port ROPerson::computeRoute")
+        self.myRoutingSuccess = true;
+        let mut time: SUMOTime = self.get_parameter().depart;
+        for i in 0..self.myPlan.len() {
+            let it = self.myPlan[i];
+            if it.needs_routing() {
+                let trip: Ptr<ROPerson_PersonTrip> = it.cast::<ROPerson_PersonTrip>();
+                let vehicles: Vec<Ptr<ROVehicle>> = trip.m().get_vehicles().clone();
+                let mut resultItems: Vec<Ptr<ROPerson_TripItem>> = Vec::new();
+                let mut best: Vec<Ptr<ROPerson_TripItem>> = Vec::new();
+                let mut bestVeh: Ptr<ROVehicle> = Ptr::null();
+                if vehicles.is_empty() {
+                    self.compute_intermodal(time, provider, trip, Ptr::null(), &mut best, errorHandler);
+                } else {
+                    let mut bestCost = f64::INFINITY;
+                    for v in vehicles.iter() {
+                        let carUsed = self.compute_intermodal(time, provider, trip, *v, &mut resultItems, errorHandler);
+                        let mut cost = 0.;
+                        for tripIt in resultItems.iter() {
+                            cost += tripIt.get_cost();
+                        }
+                        if cost < bestCost {
+                            bestCost = cost;
+                            bestVeh = if carUsed { *v } else { Ptr::null() };
+                            std::mem::swap(&mut best, &mut resultItems);
+                        }
+                        // shortcut: items are freed through the base type until virtual destructors are dispatched
+                        for tripIt in resultItems.drain(..) {
+                            drop(unsafe { Box::from_raw(tripIt.as_raw()) });
+                        }
+                    }
+                }
+                trip.m().set_items(&mut best, bestVeh);
+
+                // test after routing to ensure network was initialized
+                if !MY_HAVE_WARNED_PT_MISSING.load(std::sync::atomic::Ordering::Relaxed) && (trip.get_modes() & SVC_BUS) != 0 {
+                    MY_HAVE_WARNED_PT_MISSING.store(true, std::sync::atomic::Ordering::Relaxed);
+                    if !provider.get_intermodal_router().get_network().has_pt_schedules() {
+                        write_warningf!("Person '%' is configured to use public transport but no schedules are loaded.", self.get_id());
+                    }
+                }
+            }
+            time += it.get_duration();
+        }
+        if RONet::get_instance().get_max_traveltime() > 0. {
+            let costs = utils::common::time::steps2time(time - self.get_parameter().depart);
+            if costs > RONet::get_instance().get_max_traveltime() {
+                let args: [&dyn utils::common::to_string::ToStringPrec; 2] = [&self.get_id(), &utils::common::time::time2string(utils::common::time::time2steps(costs))];
+                errorHandler.m().informf("Person '%' has no valid route (traveltime % exceeds max-traveltime).", &args);
+                self.myRoutingSuccess = false;
+                return;
+            }
+        }
     }
 
     /// C++: `void ROPerson::saveAsXML(OutputDevice &, OutputDevice *const, bool, OptionsCont &, int) const` [const, virtual]
@@ -738,7 +988,41 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont, cloneIndex: i32) {
-        todo!("port ROPerson::saveAsXML")
+        // write the person's vehicles
+        let writeTrip = options.exists("write-trips") && options.get_bool("write-trips").unwrap_or_else(|e| panic!("{e}"));
+        let writeFlow = options.exists("keep-flows") && options.get_bool("keep-flows").unwrap_or_else(|e| panic!("{e}")) && self.is_part_of_flow();
+        if !writeTrip {
+            for it in self.myPlan.iter() {
+                it.save_vehicles(os, typeos, asAlternatives, options);
+            }
+        }
+
+        if !typeos.is_null() && !self.get_type().is_null() && !self.get_type().saved {
+            self.get_type().write(typeos.m());
+            self.get_type().m().saved = true;
+        }
+        if !self.get_type().is_null() && !self.get_type().saved {
+            self.get_type().write(os);
+            self.get_type().m().saved = asAlternatives;
+        }
+        let tag = if writeFlow { SUMO_TAG_PERSONFLOW } else { SUMO_TAG_PERSON };
+        // write the person
+        if cloneIndex == 0 {
+            self.get_parameter().write(os, options, tag, "");
+        } else {
+            let mut p = self.get_parameter().clone();
+            let suffix = options.get_string("scale-suffix").unwrap_or_else(|e| panic!("{e}"));
+            p.id += &format!("{}{}", suffix, cloneIndex);
+            p.write(os, options, tag, "");
+        }
+
+        for it in self.myPlan.iter() {
+            it.save_as_xml(os, asAlternatives, writeTrip, options);
+        }
+
+        // write params
+        self.get_parameter().write_params(os);
+        os.close_tag("");
     }
 
     /// C++: `std::vector<PlanItem *> & ROPerson::getPlan()`
@@ -747,7 +1031,7 @@ impl ROPerson {
     //     }
     #[allow(unused_variables)]
     pub fn get_plan(&mut self) -> &mut Vec<Ptr<ROPerson_PlanItem>> {
-        todo!("port ROPerson::getPlan")
+        &mut self.myPlan
     }
 
     /// C++: `bool ROPerson::computeIntermodal(SUMOTime, const RORouterProvider &, const PersonTrip *const, const ROVehicle *const, std::vector<TripItem *> &, MsgHandler *const)` [private]
@@ -824,8 +1108,72 @@ impl ROPerson {
     //     return carUsed;
     // }
     #[allow(unused_variables)]
-    pub fn compute_intermodal(&mut self, time: SUMOTime, provider: &RORouterProvider, trip: Ptr<ROPerson_PersonTrip>, veh: Ptr<ROVehicle>, resultItems: &mut Vec<Ptr<IntermodalRouter_TripItem>>, errorHandler: Ptr<MsgHandler>) -> bool {
-        todo!("port ROPerson::computeIntermodal")
+    pub fn compute_intermodal(&mut self, time: SUMOTime, provider: &RORouterProvider, trip: Ptr<ROPerson_PersonTrip>, veh: Ptr<ROVehicle>, resultItems: &mut Vec<Ptr<ROPerson_TripItem>>, errorHandler: Ptr<MsgHandler>) -> bool {
+        let speed = self.get_max_speed() * trip.get_walk_factor();
+        let mut result: Vec<IntermodalRouter_TripItem> = Vec::new();
+        provider.get_intermodal_router().compute(trip.get_origin(), trip.get_destination(), trip.get_depart_pos(true), trip.get_stop_origin(), trip.get_arrival_pos(true), trip.get_stop_dest(), speed, veh, &*self.get_type(), trip.get_modes(), time, &mut result, 0.);
+        let mut carUsed = false;
+        let mut start: SUMOTime = time;
+        let lastIndex: i32 = result.len() as i32 - 1;
+        for (index, item) in result.iter().enumerate() {
+            if !item.edges.is_empty() {
+                // shortcut: IntermodalRouter_TripItem.edges is Vec<Ptr<Unmapped>>, cast back to ROEdge
+                let edges: ConstROEdgeVector = item.edges.iter().map(|e| e.cast::<ROEdge>()).collect();
+                if item.line == "" {
+                    let mut depPos = trip.get_depart_pos(false);
+                    let mut arrPos = trip.get_arrival_pos(false);
+                    if trip.get_origin().is_taz_connector() {
+                        // walk the whole length of the first edge
+                        let first = edges[0];
+                        if first.get_predecessors().contains(&trip.get_origin()) {
+                            depPos = 0.;
+                        } else {
+                            depPos = first.get_length();
+                        }
+                    }
+                    if trip.get_destination().is_taz_connector() {
+                        // walk the whole length of the last edge
+                        let last = edges[edges.len() - 1];
+                        if last.get_successors(SVC_IGNORING).contains(&trip.get_destination()) {
+                            arrPos = last.get_length();
+                        } else {
+                            arrPos = 0.;
+                        }
+                    }
+                    if index == result.len() - 1 && trip.get_stop_dest() == "" {
+                        resultItems.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Walk::new(start, &edges, item.cost, &item.exitTimes, depPos, arrPos, "")))).cast::<ROPerson_TripItem>());
+                    } else {
+                        resultItems.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Walk::new(start, &edges, item.cost, &item.exitTimes, depPos, arrPos, &item.destStop)))).cast::<ROPerson_TripItem>());
+                    }
+                } else if !veh.is_null() && item.line == veh.get_id() {
+                    let mut cost = item.cost;
+                    if veh.get_v_class() != SVC_TAXI {
+                        let mut route = RORoute::new_2(&format!("{}_RouteDef", veh.get_id()), &edges);
+                        route.set_probability(1.);
+                        veh.get_route_definition().m().add_loaded_alternative(Rc::new(route));
+                        carUsed = true;
+                    } else if resultItems.is_empty() {
+                        // if this is the first plan item the initial taxi waiting time wasn't added yet
+                        let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
+                        cost += taxiWait;
+                    }
+                    let arrPos = if index as i32 == lastIndex { trip.get_arrival_pos(false) } else { item.arrivalPos };
+                    resultItems.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Ride::new(start, edges[0], edges[edges.len() - 1], veh.get_id(), trip.get_group(), cost, arrPos, item.length, &item.destStop, "", -1)))).cast::<ROPerson_TripItem>());
+                } else {
+                    // write origin for first element of the plan
+                    let origin = if trip.cast::<ROPerson_PlanItem>() == self.myPlan[0] && resultItems.is_empty() { trip.get_origin() } else { Ptr::null() };
+                    let line: String = if utils::options::options_cont::get_bool("persontrip.ride-public-line") { item.line.clone() } else { LINE_ANY.to_string() };
+                    resultItems.push(Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Ride::new(start, origin, Ptr::null(), &line, trip.get_group(), item.cost, item.arrivalPos, item.length, &item.destStop, &item.intended, utils::common::time::time2steps(item.depart))))).cast::<ROPerson_TripItem>());
+                }
+            }
+            start += utils::common::time::time2steps(item.cost);
+        }
+        if result.is_empty() {
+            let args: [&dyn utils::common::to_string::ToStringPrec; 1] = [&self.get_id()];
+            errorHandler.m().informf("No route for trip in person '%'.", &args);
+            self.myRoutingSuccess = false;
+        }
+        carUsed
     }
 
     /// C++: `void ROPerson::ROPerson(const ROPerson &)` [private]
@@ -833,7 +1181,7 @@ impl ROPerson {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROPerson) -> Self {
-        todo!("port ROPerson::ROPerson")
+        panic!("ROPerson::ROPerson(const ROPerson &) is private and undefined in C++ (invalidated copy)")
     }
 
     /// C++: `ROPerson & ROPerson::operator=(const ROPerson &)` [private]
@@ -841,7 +1189,7 @@ impl ROPerson {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROPerson) -> &mut ROPerson {
-        todo!("port ROPerson::operator=")
+        panic!("ROPerson::operator= is private and undefined in C++ (invalidated copy)")
     }
 
 }
@@ -851,7 +1199,7 @@ impl ROPerson {
 #[repr(C)]
 pub struct ROPerson_Ride {
     /// C++ base class `TripItem`
-    pub base: IntermodalRouter_TripItem,
+    pub base: ROPerson_TripItem,
     pub from: Ptr<ROEdge>,
     pub to: Ptr<ROEdge>,
     pub lines: String,
@@ -864,13 +1212,13 @@ pub struct ROPerson_Ride {
 }
 
 impl std::ops::Deref for ROPerson_Ride {
-    type Target = IntermodalRouter_TripItem;
-    fn deref(&self) -> &IntermodalRouter_TripItem {
+    type Target = ROPerson_TripItem;
+    fn deref(&self) -> &ROPerson_TripItem {
         &self.base
     }
 }
 impl std::ops::DerefMut for ROPerson_Ride {
-    fn deref_mut(&mut self) -> &mut IntermodalRouter_TripItem {
+    fn deref_mut(&mut self) -> &mut ROPerson_TripItem {
         &mut self.base
     }
 }
@@ -893,7 +1241,18 @@ impl ROPerson_Ride {
     //         }
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, _from: Ptr<ROEdge>, _to: Ptr<ROEdge>, _lines: &str, _group: &str, cost: f64, arrivalPos: f64, _length: f64, _destStop: &str, _intended: &str, _depart: SUMOTime) -> Self {
-        todo!("port Ride::Ride")
+        ROPerson_Ride {
+            base: ROPerson_TripItem::new(start, cost),
+            from: _from,
+            to: _to,
+            lines: _lines.to_string(),
+            group: _group.to_string(),
+            destStop: _destStop.to_string(),
+            intended: _intended.to_string(),
+            depart: _depart,
+            arrPos: arrivalPos,
+            length: _length,
+        }
     }
 
     /// C++: `TripItem * Ride::clone() const` [const, virtual]
@@ -901,8 +1260,8 @@ impl ROPerson_Ride {
     //             return new Ride(myStart, from, to, lines, group, myCost, arrPos, length, destStop, intended, depart);
     //         }
     #[allow(unused_variables)]
-    pub fn clone(&self) -> Ptr<IntermodalRouter_TripItem> {
-        todo!("port Ride::clone")
+    pub fn clone(&self) -> Ptr<ROPerson_TripItem> {
+        Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Ride::new(self.base.myStart, self.from, self.to, &self.lines, &self.group, self.base.myCost, self.arrPos, self.length, &self.destStop, &self.intended, self.depart)))).cast::<ROPerson_TripItem>()
     }
 
     /// C++: `const ROEdge * Ride::getOrigin() const` [const, virtual]
@@ -911,7 +1270,7 @@ impl ROPerson_Ride {
     //         }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port Ride::getOrigin")
+        self.from
     }
 
     /// C++: `const ROEdge * Ride::getDestination() const` [const, virtual]
@@ -920,7 +1279,7 @@ impl ROPerson_Ride {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port Ride::getDestination")
+        self.to
     }
 
     /// C++: `double Ride::getDestinationPos() const` [const, virtual]
@@ -929,7 +1288,7 @@ impl ROPerson_Ride {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port Ride::getDestinationPos")
+        if self.arrPos == f64::INFINITY { -utils::geom::NUMERICAL_EPS } else { self.arrPos }
     }
 
     /// C++: `void Ride::saveAsXML(OutputDevice &, const bool, OptionsCont &) const` [const, virtual]
@@ -980,7 +1339,48 @@ impl ROPerson_Ride {
     // }
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, options: &mut OptionsCont) {
-        todo!("port Ride::saveAsXML")
+        os.open_tag_id(SUMO_TAG_RIDE);
+        let mut comment = String::new();
+        if (extended || options.get_bool("write-costs").unwrap_or_else(|e| panic!("{e}"))) && self.base.myCost >= 0. {
+            os.write_attr(SUMO_ATTR_COST, &self.base.myCost);
+        }
+        if !self.from.is_null() {
+            os.write_attr(SUMO_ATTR_FROM, self.from.get_id());
+        }
+        if !self.to.is_null() {
+            os.write_attr(SUMO_ATTR_TO, self.to.get_id());
+        }
+        if self.destStop != "" {
+            let element = RONet::get_instance().get_stopping_place_element(&self.destStop);
+            os.write_attr(element.as_str(), &self.destStop);
+            let name = RONet::get_instance().get_stopping_place_name(&self.destStop);
+            if name != "" {
+                comment = format!(" <!-- {} -->", name);
+            }
+        } else if self.arrPos != 0. && self.arrPos != f64::INFINITY {
+            os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.arrPos);
+        }
+        if self.lines != LINE_ANY {
+            // no need to write the default
+            os.write_attr(SUMO_ATTR_LINES, &self.lines);
+        }
+        if self.group != "" {
+            os.write_attr(SUMO_ATTR_GROUP, &self.group);
+        }
+        if self.intended != "" && self.intended != self.lines {
+            os.write_attr(SUMO_ATTR_INTENDED, &self.intended);
+        }
+        if self.depart >= 0 {
+            os.write_attr(SUMO_ATTR_DEPART, &utils::common::time::time2string(self.depart));
+        }
+        if options.get_bool("exit-times").unwrap_or_else(|e| panic!("{e}")) {
+            os.write_attr("started", &utils::common::time::time2string(self.get_start()));
+            os.write_attr("ended", &utils::common::time::time2string(self.get_start() + self.get_duration()));
+        }
+        if options.get_bool("route-length").unwrap_or_else(|e| panic!("{e}")) && self.length != -1. {
+            os.write_attr("routeLength", &self.length);
+        }
+        os.close_tag(&comment);
     }
 
     /// C++: `Ride & Ride::operator=(const Ride &)` [private]
@@ -988,7 +1388,7 @@ impl ROPerson_Ride {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROPerson_Ride) -> &mut ROPerson_Ride {
-        todo!("port Ride::operator=")
+        panic!("ROPerson::Ride::operator= is private and undefined in C++ (invalidated copy)")
     }
 
 }
@@ -1021,7 +1421,11 @@ impl ROPerson_Stop {
     //             : stopDesc(stop), edge(stopEdge) {}
     #[allow(unused_variables)]
     pub fn new(stop: &SUMOVehicleParameter_Stop, stopEdge: Ptr<ROEdge>) -> Self {
-        todo!("port Stop::Stop")
+        ROPerson_Stop {
+            base: ROPerson_PlanItem { base: Parameterised::default() },
+            stopDesc: stop.clone(),
+            edge: stopEdge,
+        }
     }
 
     /// C++: `PlanItem * Stop::clone() const` [const, virtual]
@@ -1030,7 +1434,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<ROPerson_PlanItem> {
-        todo!("port Stop::clone")
+        Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Stop::new(&self.stopDesc, self.edge)))).cast::<ROPerson_PlanItem>()
     }
 
     /// C++: `const ROEdge * Stop::getOrigin() const` [const, virtual]
@@ -1039,7 +1443,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port Stop::getOrigin")
+        self.edge
     }
 
     /// C++: `const ROEdge * Stop::getDestination() const` [const, virtual]
@@ -1048,7 +1452,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port Stop::getDestination")
+        self.edge
     }
 
     /// C++: `double Stop::getDestinationPos() const` [const, virtual]
@@ -1057,7 +1461,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port Stop::getDestinationPos")
+        (self.stopDesc.startPos + self.stopDesc.endPos) / 2.
     }
 
     /// C++: `void Stop::saveAsXML(OutputDevice &, const bool, const bool, OptionsCont &) const` [const, virtual]
@@ -1079,7 +1483,19 @@ impl ROPerson_Stop {
     // }
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, asTrip: bool, options: &mut OptionsCont) {
-        todo!("port Stop::saveAsXML")
+        self.stopDesc.write(os, false, true);
+        let mut comment = String::new();
+        for sID in self.stopDesc.get_stopping_place_i_ds() {
+            let name = RONet::get_instance().get_stopping_place_name(&sID);
+            if name != "" {
+                comment += &format!("{} ", name);
+            }
+        }
+        if comment != "" {
+            comment = format!(" <!-- {} -->", comment);
+        }
+        self.stopDesc.write_params(os);
+        os.close_tag(&comment);
     }
 
     /// C++: `bool Stop::isStop() const` [const, virtual]
@@ -1088,7 +1504,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn is_stop(&self) -> bool {
-        todo!("port Stop::isStop")
+        true
     }
 
     /// C++: `SUMOVehicleParameter::Stop * Stop::getStopParameters()` [virtual]
@@ -1097,7 +1513,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_parameters(&mut self) -> Ptr<SUMOVehicleParameter_Stop> {
-        todo!("port Stop::getStopParameters")
+        Ptr::from_mut(&mut self.stopDesc)
     }
 
     /// C++: `SUMOTime Stop::getDuration() const` [const, virtual]
@@ -1106,7 +1522,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port Stop::getDuration")
+        self.stopDesc.duration
     }
 
     /// C++: `const std::string & Stop::getStopDest() const` [const, virtual]
@@ -1115,7 +1531,7 @@ impl ROPerson_Stop {
     //         }
     #[allow(unused_variables)]
     pub fn get_stop_dest(&self) -> &str {
-        todo!("port Stop::getStopDest")
+        self.stopDesc.busstop.as_str()
     }
 
     /// C++: `Stop & Stop::operator=(const Stop &)` [private]
@@ -1123,13 +1539,14 @@ impl ROPerson_Stop {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &SUMOVehicleParameter_Stop) -> &mut SUMOVehicleParameter_Stop {
-        todo!("port Stop::operator=")
+        panic!("ROPerson::Stop::operator= is private and undefined in C++ (invalidated copy)")
     }
 
 }
 
 /// A TripItem is part of a trip, e.g., go from here to here by car
 /// C++ class `ROPerson::TripItem` (router/ROPerson.h)
+#[repr(C)]
 pub struct ROPerson_TripItem {
     pub myStart: SUMOTime,
     pub myCost: f64,
@@ -1141,7 +1558,7 @@ impl ROPerson_TripItem {
     //             : myStart(start), myCost(cost) {}
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, cost: f64) -> Self {
-        todo!("port TripItem::TripItem")
+        ROPerson_TripItem { myStart: start, myCost: cost }
     }
 
     /// C++: `void TripItem::~TripItem() noexcept` [virtual]
@@ -1149,42 +1566,42 @@ impl ROPerson_TripItem {
     // virtual ~TripItem() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TripItem::~TripItem")
+        // C++ destructor body is empty
     }
 
     /// C++: `TripItem * TripItem::clone() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn clone(&self) -> Ptr<IntermodalRouter_TripItem> {
-        todo!("port TripItem::clone")
+    pub fn clone(&self) -> Ptr<ROPerson_TripItem> {
+        panic!("ROPerson::TripItem::clone is pure virtual: a subclass must implement it")
     }
 
     /// C++: `const ROEdge * TripItem::getOrigin() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port TripItem::getOrigin")
+        panic!("ROPerson::TripItem::getOrigin is pure virtual: a subclass must implement it")
     }
 
     /// C++: `const ROEdge * TripItem::getDestination() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port TripItem::getDestination")
+        panic!("ROPerson::TripItem::getDestination is pure virtual: a subclass must implement it")
     }
 
     /// C++: `double TripItem::getDestinationPos() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port TripItem::getDestinationPos")
+        panic!("ROPerson::TripItem::getDestinationPos is pure virtual: a subclass must implement it")
     }
 
     /// C++: `void TripItem::saveAsXML(OutputDevice &, const bool, OptionsCont &) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, options: &mut OptionsCont) {
-        todo!("port TripItem::saveAsXML")
+        panic!("ROPerson::TripItem::saveAsXML is pure virtual: a subclass must implement it")
     }
 
     /// C++: `SUMOTime TripItem::getStart() const` [const]
@@ -1193,7 +1610,7 @@ impl ROPerson_TripItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_start(&self) -> SUMOTime {
-        todo!("port TripItem::getStart")
+        self.myStart
     }
 
     /// C++: `SUMOTime TripItem::getDuration() const` [const]
@@ -1202,7 +1619,7 @@ impl ROPerson_TripItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port TripItem::getDuration")
+        utils::common::time::time2steps(self.myCost)
     }
 
     /// C++: `double TripItem::getCost() const` [const]
@@ -1211,7 +1628,7 @@ impl ROPerson_TripItem {
     //         }
     #[allow(unused_variables)]
     pub fn get_cost(&self) -> f64 {
-        todo!("port TripItem::getCost")
+        self.myCost
     }
 
 }
@@ -1221,7 +1638,7 @@ impl ROPerson_TripItem {
 #[repr(C)]
 pub struct ROPerson_Walk {
     /// C++ base class `TripItem`
-    pub base: IntermodalRouter_TripItem,
+    pub base: ROPerson_TripItem,
     pub edges: ConstROEdgeVector,
     pub exitTimes: Vec<f64>,
     pub dur: f64,
@@ -1232,13 +1649,13 @@ pub struct ROPerson_Walk {
 }
 
 impl std::ops::Deref for ROPerson_Walk {
-    type Target = IntermodalRouter_TripItem;
-    fn deref(&self) -> &IntermodalRouter_TripItem {
+    type Target = ROPerson_TripItem;
+    fn deref(&self) -> &ROPerson_TripItem {
         &self.base
     }
 }
 impl std::ops::DerefMut for ROPerson_Walk {
-    fn deref_mut(&mut self) -> &mut IntermodalRouter_TripItem {
+    fn deref_mut(&mut self) -> &mut ROPerson_TripItem {
         &mut self.base
     }
 }
@@ -1253,7 +1670,16 @@ impl ROPerson_Walk {
     //             : TripItem(start, cost), edges(_edges), exitTimes(_exitTimes), dur(-1), v(-1), dep(departPos), arr(arrivalPos), destStop(_destStop) {}
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, _edges: &ConstROEdgeVector, cost: f64, _exitTimes: &Vec<f64>, departPos: f64, arrivalPos: f64, _destStop: &str) -> Self {
-        todo!("port Walk::Walk")
+        ROPerson_Walk {
+            base: ROPerson_TripItem::new(start, cost),
+            edges: _edges.clone(),
+            exitTimes: _exitTimes.clone(),
+            dur: -1.,
+            v: -1.,
+            dep: departPos,
+            arr: arrivalPos,
+            destStop: _destStop.to_string(),
+        }
     }
 
     /// C++: `void Walk::Walk(const SUMOTime, const ConstROEdgeVector &, const double, const double, const double, const double, const double, const std::string &)`
@@ -1262,7 +1688,16 @@ impl ROPerson_Walk {
     //             : TripItem(start, cost), edges(edges), dur(duration), v(speed), dep(departPos), arr(arrivalPos), destStop(_destStop) {}
     #[allow(unused_variables)]
     pub fn new_2(start: SUMOTime, edges: &ConstROEdgeVector, cost: f64, duration: f64, speed: f64, departPos: f64, arrivalPos: f64, _destStop: &str) -> Self {
-        todo!("port Walk::Walk")
+        ROPerson_Walk {
+            base: ROPerson_TripItem::new(start, cost),
+            edges: edges.clone(),
+            exitTimes: Vec::new(),
+            dur: duration,
+            v: speed,
+            dep: departPos,
+            arr: arrivalPos,
+            destStop: _destStop.to_string(),
+        }
     }
 
     /// C++: `TripItem * Walk::clone() const` [const, virtual]
@@ -1270,8 +1705,8 @@ impl ROPerson_Walk {
     //             return new Walk(myStart, edges, myCost, exitTimes, dep, arr, destStop);
     //         }
     #[allow(unused_variables)]
-    pub fn clone(&self) -> Ptr<IntermodalRouter_TripItem> {
-        todo!("port Walk::clone")
+    pub fn clone(&self) -> Ptr<ROPerson_TripItem> {
+        Ptr::from_raw(Box::into_raw(Box::new(ROPerson_Walk::new(self.base.myStart, &self.edges, self.base.myCost, &self.exitTimes, self.dep, self.arr, &self.destStop)))).cast::<ROPerson_TripItem>()
     }
 
     /// C++: `const ROEdge * Walk::getOrigin() const` [const, virtual]
@@ -1280,7 +1715,7 @@ impl ROPerson_Walk {
     //         }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port Walk::getOrigin")
+        self.edges[0]
     }
 
     /// C++: `const ROEdge * Walk::getDestination() const` [const, virtual]
@@ -1289,7 +1724,7 @@ impl ROPerson_Walk {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port Walk::getDestination")
+        self.edges[self.edges.len() - 1]
     }
 
     /// C++: `double Walk::getDestinationPos() const` [const, virtual]
@@ -1298,7 +1733,7 @@ impl ROPerson_Walk {
     //         }
     #[allow(unused_variables)]
     pub fn get_destination_pos(&self) -> f64 {
-        todo!("port Walk::getDestinationPos")
+        if self.arr == f64::INFINITY { 0. } else { self.arr }
     }
 
     /// C++: `void Walk::saveAsXML(OutputDevice &, const bool, OptionsCont &) const` [const, virtual]
@@ -1344,7 +1779,44 @@ impl ROPerson_Walk {
     // }
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, extended: bool, options: &mut OptionsCont) {
-        todo!("port Walk::saveAsXML")
+        os.open_tag_id(SUMO_TAG_WALK);
+        let mut comment = String::new();
+        if (extended || options.get_bool("write-costs").unwrap_or_else(|e| panic!("{e}"))) && self.base.myCost >= 0. {
+            os.write_attr(SUMO_ATTR_COST, &self.base.myCost);
+        }
+        if self.dur > 0. {
+            os.write_attr(SUMO_ATTR_DURATION, &self.dur);
+        }
+        if self.v > 0. {
+            os.write_attr(SUMO_ATTR_SPEED, &self.v);
+        }
+        let edgeIds: Vec<String> = self.edges.iter().map(|e| e.get_id().to_string()).collect();
+        os.write_attr(SUMO_ATTR_EDGES, &edgeIds.join(" "));
+        if options.get_bool("exit-times").unwrap_or_else(|e| panic!("{e}")) {
+            os.write_attr("started", &utils::common::time::time2string(self.get_start()));
+            os.write_attr("ended", &utils::common::time::time2string(self.get_start() + self.get_duration()));
+            if !self.exitTimes.is_empty() {
+                os.write_attr("exitTimes", &self.exitTimes);
+            }
+        }
+        if options.get_bool("route-length").unwrap_or_else(|e| panic!("{e}")) {
+            let mut length = 0.;
+            for roe in self.edges.iter() {
+                length += roe.get_length();
+            }
+            os.write_attr("routeLength", &length);
+        }
+        if self.destStop != "" {
+            let element = RONet::get_instance().get_stopping_place_element(&self.destStop);
+            os.write_attr(element.as_str(), &self.destStop);
+            let name = RONet::get_instance().get_stopping_place_name(&self.destStop);
+            if name != "" {
+                comment = format!(" <!-- {} -->", name);
+            }
+        } else if self.arr != 0. && self.arr != f64::INFINITY {
+            os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.arr);
+        }
+        os.close_tag(&comment);
     }
 
     /// C++: `Walk & Walk::operator=(const Walk &)` [private]
@@ -1352,7 +1824,7 @@ impl ROPerson_Walk {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROPerson_Walk) -> &mut ROPerson_Walk {
-        todo!("port Walk::operator=")
+        panic!("ROPerson::Walk::operator= is private and undefined in C++ (invalidated copy)")
     }
 
 }
