@@ -594,6 +594,76 @@ fn encounter_type_from_i32(v: i32) -> MSDevice_SSM_EncounterType {
     *ALL.iter().find(|t| **t as i32 == v).unwrap_or(&ENCOUNTER_TYPE_NOCONFLICT_AHEAD)
 }
 
+/// Lane-pair classification shared by classifyEncounter() for a conflict lane equal to the ego's current lane
+/// and for two internal lanes of the same junction conflict lane (the two C++ copies are identical)
+fn classify_same_lane_pair(e: Ptr<MSDevice_SSM_Encounter>, egoLane: Ptr<MSLane>, foeLane: Ptr<MSLane>, foeConflictLane: Ptr<MSLane>, foeDistToConflictLane: f64, egoOpposite: bool, foeOpposite: bool, eInfo: &mut MSDevice_SSM_EncounterApproachInfo) -> MSDevice_SSM_EncounterType {
+    use MSDevice_SSM_EncounterType::*;
+    let mut type_;
+    if foeLane == egoLane {
+        // Foe is on the same non-internal lane
+        if !egoOpposite && !foeOpposite {
+            if e.ego.get_position_on_lane() > e.foe.get_position_on_lane() {
+                type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                eInfo.foeConflictEntryDist = e.ego.get_back_position_on_lane(e.ego.get_lane()) - e.foe.get_position_on_lane();
+            } else {
+                type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                eInfo.egoConflictEntryDist = e.foe.get_back_position_on_lane(e.foe.get_lane()) - e.ego.get_position_on_lane();
+            }
+        } else if egoOpposite && foeOpposite {
+            if e.ego.get_position_on_lane() < e.foe.get_position_on_lane() {
+                type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                eInfo.foeConflictEntryDist = -(e.ego.get_back_position_on_lane(e.ego.get_lane()) - e.foe.get_position_on_lane());
+            } else {
+                type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                eInfo.egoConflictEntryDist = -(e.foe.get_back_position_on_lane(e.foe.get_lane()) - e.ego.get_position_on_lane());
+            }
+        } else {
+            type_ = ENCOUNTER_TYPE_ONCOMING;
+            let gap = e.ego.get_position_on_lane() - e.foe.get_position_on_lane();
+            if egoOpposite {
+                if e.ego.get_position_on_lane() > e.foe.get_position_on_lane() {
+                    eInfo.egoConflictEntryDist = gap;
+                    eInfo.foeConflictEntryDist = gap;
+                } else {
+                    type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+                }
+            } else {
+                if e.ego.get_position_on_lane() < e.foe.get_position_on_lane() {
+                    eInfo.egoConflictEntryDist = -gap;
+                    eInfo.foeConflictEntryDist = -gap;
+                } else {
+                    type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+                }
+            }
+        }
+    } else if edge_of_lane(foeLane) == edge_of_lane(egoLane) {
+        // Foe is on the same non-internal edge but not on the same lane. Treat this as no conflict for now
+        // XXX: this disregards conflicts for vehicles on adjacent lanes
+        if foeOpposite != egoOpposite {
+            type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+        } else {
+            type_ = ENCOUNTER_TYPE_ON_ADJACENT_LANES;
+        }
+    } else {
+        if !egoOpposite && !foeOpposite {
+            // Foe must be on a route leading into the ego's edge
+            if foeConflictLane == egoLane {
+                type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                eInfo.foeConflictEntryDist = foeDistToConflictLane + e.ego.get_back_position_on_lane(e.ego.get_lane());
+            } else {
+                // Foe's route leads to an adjacent lane of the current lane of the ego
+                type_ = ENCOUNTER_TYPE_ON_ADJACENT_LANES;
+            }
+        } else if egoOpposite && foeOpposite {
+            // XXX determine follower relationship by searching for the foe lane in the opposites of ego bestlanes
+            type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+        } else {
+            type_ = ENCOUNTER_TYPE_ONCOMING;
+        }
+    }
+    type_
+}
+
 /// C++ macro `MAX2`
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
@@ -2623,7 +2693,24 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn flush_conflicts(&mut self, all: bool) {
-        todo!("port MSDevice_SSM::flushConflicts")
+        while let Some(top) = self.myPastConflicts.peek().map(|entry| entry.0) {
+            if all || top.begin <= self.myOldestActiveEncounterBegin {
+                let mut write = true;
+                if self.myFilterConflictTypes {
+                    // std::set_intersection over the dropped types and the encounter's types is non-empty
+                    let encounterTypes: BTreeSet<i32> = top.typeSpan.iter().copied().collect();
+                    let found = self.myDroppedConflictTypes.iter().any(|t| encounterTypes.contains(t));
+                    write = !found;
+                }
+                if write {
+                    self.write_out_conflict(top);
+                }
+                self.myPastConflicts.pop();
+                delete_encounter(top);
+            } else {
+                break;
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::flushGlobalMeasures()` [private]
@@ -2690,7 +2777,53 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn flush_global_measures(&mut self) {
-        todo!("port MSDevice_SSM::flushGlobalMeasures")
+        let egoID = self.myHolderMS.get_id().to_string();
+        if self.myComputeBR || self.myComputeSGAP || self.myComputeTGAP {
+            let outPtr = self.myOutputFile;
+            let out = outPtr.m();
+            out.open_tag("globalMeasures");
+            out.write_attr("ego", &egoID);
+            out.open_tag("timeSpan").write_attr("values", &self.myGlobalMeasuresTimeSpan).close_tag("");
+            if self.myWritePositions {
+                out.open_tag("positions").write_attr("values", &self.myGlobalMeasuresPositions.to_string_prec(g_precision())).close_tag("");
+            }
+            if self.myWriteLanesPositions {
+                out.open_tag("lane").write_attr("values", &self.myGlobalMeasuresLaneIDs).close_tag("");
+                out.open_tag("lanePosition").write_attr("values", &self.myGlobalMeasuresLanesPositions).close_tag("");
+            }
+            if self.myComputeBR {
+                out.open_tag("BRSpan").write_attr("values", &self.myBRspan).close_tag("");
+                if self.myMaxBR.1 != 0.0 {
+                    if self.myUseGeoCoords {
+                        Self::to_geo(&mut self.myMaxBR.0 .1);
+                    }
+                    let position = self.make_string_with_n_as_4(&self.myMaxBR.0 .1);
+                    out.open_tag("maxBR").write_attr("time", &self.myMaxBR.0 .0).write_attr("position", &position).write_attr("value", &self.myMaxBR.1).close_tag("");
+                }
+            }
+            if self.myComputeSGAP {
+                out.open_tag("SGAPSpan").write_attr("values", &Self::make_string_with_n_as(&self.mySGAPspan, INVALID_DOUBLE)).close_tag("");
+                if !self.myMinSGAP.1.is_empty() {
+                    if self.myUseGeoCoords {
+                        Self::to_geo(&mut self.myMinSGAP.0 .0 .1);
+                    }
+                    let position = self.make_string_with_n_as_4(&self.myMinSGAP.0 .0 .1);
+                    out.open_tag("minSGAP").write_attr("time", &self.myMinSGAP.0 .0 .0).write_attr("position", &position).write_attr("value", &self.myMinSGAP.0 .1).write_attr("leader", &self.myMinSGAP.1).close_tag("");
+                }
+            }
+            if self.myComputeTGAP {
+                out.open_tag("TGAPSpan").write_attr("values", &Self::make_string_with_n_as(&self.myTGAPspan, INVALID_DOUBLE)).close_tag("");
+                if !self.myMinTGAP.1.is_empty() {
+                    if self.myUseGeoCoords {
+                        Self::to_geo(&mut self.myMinTGAP.0 .0 .1);
+                    }
+                    let position = self.make_string_with_n_as_4(&self.myMinTGAP.0 .0 .1);
+                    out.open_tag("minTGAP").write_attr("time", &self.myMinTGAP.0 .0 .0).write_attr("position", &position).write_attr("value", &self.myMinTGAP.0 .1).write_attr("leader", &self.myMinTGAP.1).close_tag("");
+                }
+            }
+            // close globalMeasures
+            out.close_tag("");
+        }
     }
 
     /// C++: `bool MSDevice_SSM::updateEncounter(Encounter *, FoeInfo *)` [private]
@@ -3163,7 +3296,259 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn classify_encounter(&self, foeInfo: Ptr<MSDevice_SSM_FoeInfo>, eInfo: &mut MSDevice_SSM_EncounterApproachInfo) -> MSDevice_SSM_EncounterType {
-        todo!("port MSDevice_SSM::classifyEncounter")
+        use MSDevice_SSM_EncounterType::*;
+        if foeInfo.is_null() {
+            // foeInfo == 0 signalizes, that no corresponding foe info was returned by findSurroundingVehicles(),
+            // i.e. the foe is actually out of range (This may also mean that it has left the network)
+            return ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+        }
+        let e = eInfo.encounter;
+        // previous classification (if encounter was not just created)
+        let prevType = if e.typeSpan.len() > 0 { encounter_type_from_i32(*e.typeSpan.last().unwrap()) } else { ENCOUNTER_TYPE_NOCONFLICT_AHEAD };
+        if e.typeSpan.len() > 0
+            && (prevType == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+                || prevType == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA)
+        {
+            // This is an ongoing crossing situation with at least one of the vehicles not
+            // having passed the conflict area.
+            // -> Merely trace the change of distances to the conflict entry / exit
+            // -> Derefer this to updatePassedEncounter, where this is done anyhow.
+            return prevType;
+        }
+
+        // Ego's current Lane
+        let egoLane = e.ego.get_lane();
+        // Foe's current Lane
+        let foeLane = e.foe.get_lane();
+
+        // Ego's conflict lane is memorized in foeInfo
+        let mut egoConflictLane = foeInfo.egoConflictLane;
+        let mut egoDistToConflictLane = foeInfo.egoDistToConflictLane;
+        // Find conflicting lane and the distance to its entry link for the foe
+        let mut foeDistToConflictLane = 0.;
+        let mut foeConflictLane = self.find_foe_conflict_lane(e.foe, foeInfo.egoConflictLane, &mut foeDistToConflictLane);
+
+        // Treat different cases for foeConflictLane and egoConflictLane (internal or non-internal / equal to egoLane or to foeLane),
+        // and thereby determine encounterType and the ego/foeEncounterDistance.
+        let mut type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+
+        if foeConflictLane.is_null() {
+            // foe vehicle is not on course towards the ego's route (see findFoeConflictLane)
+            type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+        } else if !egoConflictLane.is_internal() {
+            // The conflict lane is non-internal, therefore we either have no potential conflict or a lead/follow situation (i.e., no crossing or merging)
+            if egoConflictLane == egoLane {
+                let egoOpposite = e.ego.get_lane_change_model_2().is_opposite();
+                let foeOpposite = e.foe.get_lane_change_model_2().is_opposite();
+                // The conflict point is on the ego's current lane.
+                type_ = classify_same_lane_pair(e, egoLane, foeLane, foeConflictLane, foeDistToConflictLane, egoOpposite, foeOpposite, eInfo);
+            } else {
+                // The egoConflictLane is a non-internal lane which is not the ego's current lane. Thus it must lie ahead of the ego vehicle and
+                // is located on the foe's current edge see findSurroundingVehicles()
+                // (otherwise the foe would have had to enter the ego's route along a junction and the corresponding
+                // conflict lane would be internal)
+                if foeLane == egoConflictLane {
+                    type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                    eInfo.egoConflictEntryDist = egoDistToConflictLane + e.foe.get_back_position_on_lane(e.foe.get_lane());
+                } else {
+                    // Ego's route leads to an adjacent lane of the current lane of the foe
+                    type_ = ENCOUNTER_TYPE_ON_ADJACENT_LANES;
+                }
+            }
+        } else {
+            // egoConflictLane is internal, i.e., lies on a junction. Besides the lead/follow situation (which may stretch over different lanes of a connection),
+            // merging or crossing of the conflict lanes is possible.
+            let egoEntryLink = egoConflictLane.get_entry_link();
+            let foeEntryLink = foeConflictLane.get_entry_link();
+            let egoOpposite = e.ego.get_lane_change_model_2().is_opposite();
+            let foeOpposite = e.foe.get_lane_change_model_2().is_opposite();
+
+            if ((!egoOpposite && foeOpposite) || (egoOpposite && !foeOpposite)) && egoConflictLane == foeConflictLane {
+                // oncoming on junction
+                type_ = classify_same_lane_pair(e, egoLane, foeLane, foeConflictLane, foeDistToConflictLane, egoOpposite, foeOpposite, eInfo);
+            } else if edge_of_lane(egoEntryLink.get_via_lane()) == edge_of_lane(foeEntryLink.get_via_lane()) {
+                if egoEntryLink != foeEntryLink {
+                    // XXX: this disregards conflicts for vehicles on adjacent internal lanes
+                    type_ = ENCOUNTER_TYPE_ON_ADJACENT_LANES;
+                } else {
+                    // Lead / follow situation on connection
+                    if egoLane == egoConflictLane && foeLane != foeConflictLane {
+                        // ego on junction, foe not yet
+                        type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                        eInfo.foeConflictEntryDist = foeDistToConflictLane + e.ego.get_back_position_on_lane(e.ego.get_lane());
+                        if e.ego.get_lane().get_incoming_lanes()[0].lane.is_internal() {
+                            eInfo.foeConflictEntryDist += e.ego.get_lane().get_incoming_lanes()[0].lane.get_length();
+                        }
+                    } else if egoLane != egoConflictLane && foeLane == foeConflictLane {
+                        // foe on junction, ego not yet
+                        type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                        eInfo.egoConflictEntryDist = egoDistToConflictLane + e.foe.get_back_position_on_lane(e.foe.get_lane());
+                        if e.foe.get_lane().get_incoming_lanes()[0].lane.is_internal() {
+                            eInfo.egoConflictEntryDist += e.foe.get_lane().get_incoming_lanes()[0].lane.get_length();
+                        }
+                    } else if e.ego.get_lane_change_model_2().is_opposite() || e.foe.get_lane_change_model_2().is_opposite() {
+                        type_ = ENCOUNTER_TYPE_MERGING;
+                        eInfo.foeConflictEntryDist = foeDistToConflictLane;
+                        eInfo.egoConflictEntryDist = egoDistToConflictLane;
+                    } else {
+                        // Both must be already on the junction in a lead / follow situation on a connection
+                        // (since they approach via the same link, findSurroundingVehicles() would have determined a
+                        // different conflictLane if both are not on the junction)
+                        if egoLane != egoConflictLane || foeLane != foeConflictLane {
+                            write_warningf!("Cannot classify SSM encounter between ego vehicle % and foe vehicle % at time=%\n", e.ego.get_id(), e.foe.get_id(), simtime());
+                            return ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+                        }
+                        if egoLane == foeLane {
+                            // both on the same internal lane
+                            if e.ego.get_position_on_lane() > e.foe.get_position_on_lane() {
+                                type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                                eInfo.foeConflictEntryDist = foeDistToConflictLane + e.ego.get_back_position_on_lane(e.ego.get_lane());
+                            } else {
+                                type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                                eInfo.egoConflictEntryDist = egoDistToConflictLane + e.foe.get_back_position_on_lane(e.foe.get_lane());
+                            }
+                        } else {
+                            // ego and foe on distinct, consecutive internal lanes
+                            let mut lane = egoEntryLink.get_via_lane();
+                            loop {
+                                if egoLane == lane {
+                                    // ego is follower
+                                    type_ = ENCOUNTER_TYPE_FOLLOWING_FOLLOWER;
+                                    // adapt conflict dist
+                                    eInfo.egoConflictEntryDist = egoDistToConflictLane;
+                                    while lane != foeLane {
+                                        eInfo.egoConflictEntryDist += lane.get_length();
+                                        lane = lane.get_link_cont()[0].get_via_lane();
+                                    }
+                                    eInfo.egoConflictEntryDist += e.foe.get_back_position_on_lane(e.foe.get_lane());
+                                    egoConflictLane = lane;
+                                    break;
+                                } else if foeLane == lane {
+                                    // ego is leader
+                                    type_ = ENCOUNTER_TYPE_FOLLOWING_LEADER;
+                                    eInfo.foeConflictEntryDist = foeDistToConflictLane;
+                                    while lane != egoLane {
+                                        eInfo.foeConflictEntryDist += lane.get_length();
+                                        lane = lane.get_link_cont()[0].get_via_lane();
+                                    }
+                                    eInfo.foeConflictEntryDist += e.ego.get_back_position_on_lane(e.ego.get_lane());
+                                    foeConflictLane = lane;
+                                    break;
+                                }
+                                lane = lane.get_link_cont()[0].get_via_lane();
+                            }
+                        }
+                    }
+                }
+            } else {
+                let egoFoeLinks = egoEntryLink.get_foe_links().clone();
+                let foeFoeLinks = foeEntryLink.get_foe_links().clone();
+                let crossOrMerge = egoFoeLinks.contains(&foeEntryLink) || foeFoeLinks.contains(&egoEntryLink);
+                if !crossOrMerge {
+                    // no conflict: the links do not cross or merge
+                    type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+                } else if edge_of_lane(foeEntryLink.get_lane()) == edge_of_lane(egoEntryLink.get_lane()) {
+                    if foeEntryLink.get_lane() == egoEntryLink.get_lane() {
+                        type_ = ENCOUNTER_TYPE_MERGING;
+                        eInfo.egoConflictEntryDist = egoDistToConflictLane + egoEntryLink.get_internal_lengths_after();
+                        eInfo.foeConflictEntryDist = foeDistToConflictLane + foeEntryLink.get_internal_lengths_after();
+                        let egoEntryLinkSucc = egoEntryLink.get_via_lane().get_link_cont()[0];
+                        if egoEntryLinkSucc.is_internal_junction_link() && e.ego.get_lane() == egoEntryLinkSucc.get_via_lane() {
+                            eInfo.egoConflictEntryDist -= egoEntryLink.get_via_lane().get_length();
+                            eInfo.egoConflictExitDist -= egoEntryLink.get_via_lane().get_length();
+                        }
+                        let foeEntryLinkSucc = foeEntryLink.get_via_lane().get_link_cont()[0];
+                        if foeEntryLinkSucc.is_internal_junction_link() && e.foe.get_lane() == foeEntryLinkSucc.get_via_lane() {
+                            eInfo.foeConflictEntryDist -= foeEntryLink.get_via_lane().get_length();
+                            eInfo.foeConflictExitDist -= foeEntryLink.get_via_lane().get_length();
+                        }
+                    } else {
+                        // Links leading to the same edge but different lanes. XXX: Disregards conflicts on adjacent lanes
+                        type_ = ENCOUNTER_TYPE_MERGING_ADJACENT;
+                    }
+                } else {
+                    type_ = ENCOUNTER_TYPE_CROSSING;
+                    // If the conflict lanes are internal, they may not correspond to the
+                    // actually crossing parts of the corresponding connections.
+                    // Adjust the conflict lanes accordingly.
+                    // set back both to the first parts of the corresponding connections
+                    let mut offset = 0.;
+                    egoConflictLane = egoConflictLane.get_first_internal_in_connection(&mut offset);
+                    egoDistToConflictLane -= offset;
+                    foeConflictLane = foeConflictLane.get_first_internal_in_connection(&mut offset);
+                    foeDistToConflictLane -= offset;
+
+                    // determine the distance of the ego vehicle to the conflict point (lateral position is accounted for below)
+                    let mut egoDistToConflictFromJunctionEntry = INVALID_DOUBLE;
+                    while !foeConflictLane.is_null() && foeConflictLane.is_internal() {
+                        egoDistToConflictFromJunctionEntry = egoEntryLink.get_lengths_before_crossing(foeConflictLane);
+                        if egoDistToConflictFromJunctionEntry != INVALID_DOUBLE {
+                            egoDistToConflictFromJunctionEntry += 0.5 * (foeConflictLane.get_width() - e.foe.get_vehicle_type().get_width());
+                            break;
+                        }
+                        if !foeConflictLane.get_canonical_successor_lane().is_internal() {
+                            egoDistToConflictFromJunctionEntry = 0.;
+                            write_warningf!("Cannot compute SSM due to bad internal lane geometry at junction '%'. Crossing point between traffic from links % and % not found.", egoEntryLink.get_junction().get_id(), egoEntryLink.get_index(), foeEntryLink.get_index());
+                            break;
+                        }
+                        foeConflictLane = foeConflictLane.get_canonical_successor_lane();
+                    }
+
+                    let mut foeDistToConflictFromJunctionEntry = INVALID_DOUBLE;
+                    while !egoConflictLane.is_null() && egoConflictLane.is_internal() {
+                        foeDistToConflictFromJunctionEntry = foeEntryLink.get_lengths_before_crossing(egoConflictLane);
+                        if foeDistToConflictFromJunctionEntry != INVALID_DOUBLE {
+                            foeDistToConflictFromJunctionEntry += 0.5 * (egoConflictLane.get_width() - e.ego.get_vehicle_type().get_width());
+                            break;
+                        }
+                        if !egoConflictLane.get_canonical_successor_lane().is_internal() {
+                            foeDistToConflictFromJunctionEntry = 0.;
+                            write_warningf!("Cannot compute SSM due to bad internal lane geometry at junction '%'. Crossing point between traffic from links % and % not found.", foeEntryLink.get_junction().get_id(), foeEntryLink.get_index(), egoEntryLink.get_index());
+                            break;
+                        }
+                        egoConflictLane = egoConflictLane.get_canonical_successor_lane();
+                    }
+
+                    // Take into account the lateral position for the exact determination of the conflict point
+                    // whether lateral position increases or decreases conflict distance depends on lane angles at conflict
+                    // -> conflictLaneOrientation in {-1,+1}
+                    // First, measure the angle between the two connection lines (straight lines from junction entry point to junction exit point)
+                    let egoEntryPos = *egoEntryLink.get_via_lane().get_shape(false).first().unwrap();
+                    let egoExitPos = *egoEntryLink.get_corresponding_exit_link().get_internal_lane_before().get_shape(false).last().unwrap();
+                    let egoConnectionLine = PositionVector(vec![egoEntryPos, egoExitPos]);
+                    let foeEntryPos = *foeEntryLink.get_via_lane().get_shape(false).first().unwrap();
+                    let foeExitPos = *foeEntryLink.get_corresponding_exit_link().get_internal_lane_before().get_shape(false).last().unwrap();
+                    let foeConnectionLine = PositionVector(vec![foeEntryPos, foeExitPos]);
+                    let mut angle = (egoConnectionLine.rotation_at_offset(0.) - foeConnectionLine.rotation_at_offset(0.)) % (2. * std::f64::consts::PI);
+                    if angle < 0. {
+                        angle += 2. * std::f64::consts::PI;
+                    }
+                    if angle > std::f64::consts::PI {
+                        angle -= 2. * std::f64::consts::PI;
+                    }
+                    // Determine orientation of the connection lines. (Positive values mean that the ego vehicle approaches from the foe's left side.)
+                    let crossingOrientation = ((angle < 0.) as i32 - (angle > 0.) as i32) as f64;
+
+                    // Adjust conflict dist to lateral positions
+                    egoDistToConflictFromJunctionEntry -= crossingOrientation * e.foe.get_lateral_position_on_lane();
+                    foeDistToConflictFromJunctionEntry += crossingOrientation * e.ego.get_lateral_position_on_lane();
+
+                    // Sum up distances
+                    eInfo.egoConflictEntryDist = egoDistToConflictLane + egoDistToConflictFromJunctionEntry;
+                    eInfo.foeConflictEntryDist = foeDistToConflictLane + foeDistToConflictFromJunctionEntry;
+
+                    // Conflict area lengths are the vehicle widths; exit distances add the vehicle lengths
+                    eInfo.egoConflictAreaLength = e.foe.get_width();
+                    eInfo.foeConflictAreaLength = e.ego.get_width();
+                    eInfo.egoConflictExitDist = eInfo.egoConflictEntryDist + eInfo.egoConflictAreaLength + e.ego.get_length();
+                    eInfo.foeConflictExitDist = eInfo.foeConflictEntryDist + eInfo.foeConflictAreaLength + e.foe.get_length();
+                }
+            }
+        }
+        type_
     }
 
     /// C++: `void MSDevice_SSM::determineConflictPoint(EncounterApproachInfo &)` [static, private]
