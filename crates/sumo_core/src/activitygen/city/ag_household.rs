@@ -20,7 +20,14 @@ impl AGHousehold {
     //         myId(idHouseholds) {}
     #[allow(unused_variables)]
     pub fn new(pos: AGPosition, city: Ptr<AGCity>, idHouseholds: i32) -> Self {
-        todo!("port AGHousehold::AGHousehold")
+        Self {
+            myCity: city,
+            myLocation: pos,
+            myId: idHouseholds,
+            myAdults: VecDeque::new(),
+            myChildren: VecDeque::new(),
+            myCars: VecDeque::new(),
+        }
     }
 
     /// C++: `void AGHousehold::AGHousehold(AGStreet *, AGCity *, int)`
@@ -30,7 +37,14 @@ impl AGHousehold {
     //         myId(idHouseholds) {}
     #[allow(unused_variables)]
     pub fn new_2(str: Ptr<AGStreet>, city: Ptr<AGCity>, idHouseholds: i32) -> Self {
-        todo!("port AGHousehold::AGHousehold")
+        Self {
+            myCity: city,
+            myLocation: AGPosition::new_2(&*str),
+            myId: idHouseholds,
+            myAdults: VecDeque::new(),
+            myChildren: VecDeque::new(),
+            myCars: VecDeque::new(),
+        }
     }
 
     /// C++: `void AGHousehold::generatePeople(int, int, bool)`
@@ -62,7 +76,28 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn generate_people(&mut self, numAdults: i32, numChilds: i32, firstRetired: bool) {
-        todo!("port AGHousehold::generatePeople")
+        let ds = self.myCity.statData.m();
+        //the first adult
+        let mut pers = AGAdult::new(ds.get_random_pop_distributed(ds.limitAgeChildren, ds.limitEndAge));
+        if firstRetired {
+            pers = AGAdult::new(ds.get_random_pop_distributed(ds.limitAgeRetirement, ds.limitEndAge));
+        }
+        self.myAdults.push_back(pers);
+        //further adults
+        while (self.myAdults.len() as i32) < numAdults {
+            if firstRetired {
+                let pers2 = AGAdult::new(ds.get_random_pop_distributed(ds.limitAgeRetirement, ds.limitEndAge));
+                self.myAdults.push_back(pers2);
+            } else {
+                let pers2 = AGAdult::new(ds.get_random_pop_distributed(ds.limitAgeChildren, ds.limitAgeRetirement));
+                self.myAdults.push_back(pers2);
+            }
+        }
+        //Children
+        while (self.myChildren.len() as i32) < numChilds {
+            let chl = AGChild::new(ds.get_random_pop_distributed(0, ds.limitAgeChildren));
+            self.myChildren.push_back(chl);
+        }
     }
 
     /// C++: `int AGHousehold::getPeopleNbr()`
@@ -72,7 +107,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_people_nbr(&mut self) -> i32 {
-        todo!("port AGHousehold::getPeopleNbr")
+        (self.myAdults.len() + self.myChildren.len()) as i32
     }
 
     /// C++: `int AGHousehold::getAdultNbr()`
@@ -82,7 +117,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_adult_nbr(&mut self) -> i32 {
-        todo!("port AGHousehold::getAdultNbr")
+        self.myAdults.len() as i32
     }
 
     /// C++: `const std::list<AGAdult> & AGHousehold::getAdults() const` [const]
@@ -92,7 +127,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_adults(&self) -> &VecDeque<AGAdult> {
-        todo!("port AGHousehold::getAdults")
+        &self.myAdults
     }
 
     /// C++: `const std::list<AGChild> & AGHousehold::getChildren() const` [const]
@@ -102,7 +137,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_children(&self) -> &VecDeque<AGChild> {
-        todo!("port AGHousehold::getChildren")
+        &self.myChildren
     }
 
     /// C++: `const std::list<AGCar> & AGHousehold::getCars() const` [const]
@@ -112,7 +147,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_cars(&self) -> &VecDeque<AGCar> {
-        todo!("port AGHousehold::getCars")
+        &self.myCars
     }
 
     /// C++: `bool AGHousehold::isCloseFromPubTransport(std::list<AGPosition> *)`
@@ -127,7 +162,11 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn is_close_from_pub_transport(&mut self, pubTransport: Ptr<VecDeque<AGPosition>>) -> bool {
-        todo!("port AGHousehold::isCloseFromPubTransport")
+        let distToPT = self.myLocation.min_distance_to(&*pubTransport);
+        if distToPT > self.myCity.statData.maxFootDistance {
+            return false;
+        }
+        true
     }
 
     /// C++: `bool AGHousehold::isCloseFromPubTransport(std::map<int, AGPosition> *)`
@@ -141,7 +180,11 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn is_close_from_pub_transport_2(&mut self, pubTransport: Ptr<BTreeMap<i32, AGPosition>>) -> bool {
-        todo!("port AGHousehold::isCloseFromPubTransport")
+        let distToPT = self.myLocation.min_distance_to_2(&*pubTransport);
+        if distToPT > self.myCity.statData.maxFootDistance {
+            return false;
+        }
+        true
     }
 
     /// C++: `void AGHousehold::regenerate()`
@@ -175,7 +218,31 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn regenerate(&mut self) {
-        todo!("port AGHousehold::regenerate")
+        //only allocation of work or school to people will change
+        let city = self.myCity;
+        let schools = Ptr::from_mut(&mut city.m().schools);
+        let pos = self.myLocation;
+        for itC in self.myChildren.iter_mut() {
+            if itC.have_a_school() {
+                if itC.leave_school() {
+                    itC.allocate_a_school(schools, pos);
+                }
+            } else {
+                itC.allocate_a_school(schools, pos);
+            }
+        }
+        for itA in self.myAdults.iter_mut() {
+            if itA.is_working() {
+                itA.resign_from_work_position();
+            }
+
+            if city.statData.workPositions > 0 {
+                itA.try_to_work(1.0 - city.statData.unemployement, Ptr::from_mut(&mut city.m().workPositions));
+
+            } else {
+                println!("Not enough work positions in AGHousehold::regenerate. Should not happen!");
+            }
+        }
     }
 
     /// C++: `bool AGHousehold::allocateChildrenSchool()`
@@ -194,7 +261,16 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn allocate_children_school(&mut self) -> bool {
-        todo!("port AGHousehold::allocateChildrenSchool")
+        let mut oneRemainsAtHome = false;
+        let city = self.myCity;
+        let schools = Ptr::from_mut(&mut city.m().schools);
+        let pos = self.myLocation;
+        for it in self.myChildren.iter_mut() {
+            if !it.allocate_a_school(schools, pos) {
+                oneRemainsAtHome = true;
+            }
+        }
+        !oneRemainsAtHome
     }
 
     /// C++: `bool AGHousehold::allocateAdultsWork()`
@@ -215,7 +291,18 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn allocate_adults_work(&mut self) -> bool {
-        todo!("port AGHousehold::allocateAdultsWork")
+        let city = self.myCity;
+        let wps = Ptr::from_mut(&mut city.m().workPositions);
+        for it in self.myAdults.iter_mut() {
+            if city.statData.workPositions <= 0 {
+                println!("Not enough free work positions in AGHousehold::allocateAdultsWork. Should not happen.");
+                return false;
+
+            } else {
+                it.try_to_work(1.0 - city.statData.unemployement, wps);
+            }
+        }
+        true
     }
 
     /// C++: `void AGHousehold::generateCars(double)`
@@ -232,7 +319,13 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn generate_cars(&mut self, rate: f64) {
-        todo!("port AGHousehold::generateCars")
+        let mut peopleInNeed = self.myAdults.len() as i32 - self.myCars.len() as i32;
+        while peopleInNeed > 0 {
+            if utils::common::rand_helper::rand() < rate {
+                self.add_a_car();
+            }
+            peopleInNeed -= 1;
+        }
     }
 
     /// C++: `int AGHousehold::getCarNbr()`
@@ -242,7 +335,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_car_nbr(&mut self) -> i32 {
-        todo!("port AGHousehold::getCarNbr")
+        self.myCars.len() as i32
     }
 
     /// C++: `void AGHousehold::addACar()`
@@ -254,7 +347,8 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn add_a_car(&mut self) {
-        todo!("port AGHousehold::addACar")
+        let numCar = (self.myCars.len() + 1) as i32;
+        self.myCars.push_back(AGCar::new_2(self.myId, numCar));
     }
 
     /// C++: `AGCity * AGHousehold::getTheCity()`
@@ -265,7 +359,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_the_city(&mut self) -> Ptr<AGCity> {
-        todo!("port AGHousehold::getTheCity")
+        self.myCity
     }
 
     /// C++: `bool AGHousehold::retiredHouseholders()`
@@ -276,7 +370,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn retired_householders(&mut self) -> bool {
-        todo!("port AGHousehold::retiredHouseholders")
+        self.myAdults.front().unwrap().get_age() >= self.myCity.statData.limitAgeRetirement
     }
 
     /// C++: `AGPosition AGHousehold::getPosition()`
@@ -287,7 +381,7 @@ impl AGHousehold {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&mut self) -> AGPosition {
-        todo!("port AGHousehold::getPosition")
+        self.myLocation
     }
 
 }
