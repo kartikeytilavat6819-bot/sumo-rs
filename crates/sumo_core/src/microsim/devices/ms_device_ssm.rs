@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use utils::common::std_defs::{INVALID_DOUBLE, g_precision, g_precision_geo};
 use utils::common::to_string::to_string;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 /// C++ enum `MSDevice_SSM::EncounterType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,7 +53,39 @@ impl MSDevice_SSM_SSMParameterWarning {
 }
 
 /// C++ typedef `int MSDevice_SSM::EncounterQueue`
-pub type MSDevice_SSM_EncounterQueue = i32;
+/// C++ typedef `priority_queue<Encounter*, vector<Encounter*>, Encounter::compare> MSDevice_SSM::EncounterQueue`
+/// determinism: C++ std::priority_queue and Rust BinaryHeap use the same sift-up/sift-down scheme, but ties are not guaranteed to pop in the same order
+pub type MSDevice_SSM_EncounterQueue = BinaryHeap<MSDevice_SSM_EncounterQueueEntry>;
+
+/// Heap entry ordered like C++ `Encounter::compare`: the top of the queue is the encounter with the earliest begin
+#[derive(Clone, Copy)]
+pub struct MSDevice_SSM_EncounterQueueEntry(pub Ptr<MSDevice_SSM_Encounter>);
+
+impl PartialEq for MSDevice_SSM_EncounterQueueEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == std::cmp::Ordering::Equal
+    }
+}
+impl Eq for MSDevice_SSM_EncounterQueueEntry {}
+impl PartialOrd for MSDevice_SSM_EncounterQueueEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for MSDevice_SSM_EncounterQueueEntry {
+    // std::priority_queue keeps the element for which comp(x, others) is false; BinaryHeap keeps the greatest,
+    // so an entry is greater when comp(other, self) holds, i.e. when it has the higher priority
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let mut comp = Encounter_compare {};
+        if comp.call_op(self.0, other.0) {
+            std::cmp::Ordering::Less
+        } else if comp.call_op(other.0, self.0) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    }
+}
 
 /// C++ typedef `std::vector<Encounter*> MSDevice_SSM::EncounterVector`
 pub type MSDevice_SSM_EncounterVector = Vec<Ptr<MSDevice_SSM_Encounter>>;
@@ -440,7 +473,7 @@ pub struct MSDevice_SSM {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,
     /// thresholds for the ssms, i.e., critical values above or below which a value indicates that a conflict has occurred. These are used in qualifiesAsConflict() and decide whether an encounter is saved.
-    pub myThresholds: i32,
+    pub myThresholds: BTreeMap<String, f64>,
     /// This determines whether the whole trajectories of the vehicles (position, speed, ssms) shall be saved in the ssm-output or only the most critical value shall be reported.
     pub mySaveTrajectories: bool,
     /// Detection range. For vehicles closer than this distance from the ego vehicle, SSMs are traced
@@ -460,7 +493,7 @@ pub struct MSDevice_SSM {
     /// Whether to exclude certain conflicts containing certain conflict types from the output
     pub myFilterConflictTypes: bool,
     /// Which conflict types to exclude from the output
-    pub myDroppedConflictTypes: i32,
+    pub myDroppedConflictTypes: Vec<i32>,
     /// Flags for switching on / off computation of different SSMs, derived from myMeasures
     pub myComputeTTC: bool,
     /// Flags for switching on / off computation of different SSMs, derived from myMeasures
@@ -485,19 +518,19 @@ pub struct MSDevice_SSM {
     /// Past encounters that where qualified as conflicts and are not yet flushed to the output file
     pub myPastConflicts: MSDevice_SSM_EncounterQueue,
     /// @{
-    pub myGlobalMeasuresTimeSpan: i32,
+    pub myGlobalMeasuresTimeSpan: Vec<f64>,
     /// All values for positions (coordinates)
     pub myGlobalMeasuresPositions: PositionVector,
     /// All values for lanes
-    pub myGlobalMeasuresLaneIDs: i32,
+    pub myGlobalMeasuresLaneIDs: Vec<String>,
     /// All values for positions on the lanes
-    pub myGlobalMeasuresLanesPositions: i32,
+    pub myGlobalMeasuresLanesPositions: Vec<f64>,
     /// All values for brake rate
-    pub myBRspan: i32,
+    pub myBRspan: Vec<f64>,
     /// All values for space gap
-    pub mySGAPspan: i32,
+    pub mySGAPspan: Vec<f64>,
     /// All values for time gap
-    pub myTGAPspan: i32,
+    pub myTGAPspan: Vec<f64>,
     /// Extremal values for the global measures (as <<<time, Position>, value>, [leaderID]>-pairs) @{
     pub myMaxBR: ((f64, Position), f64),
     pub myMinSGAP: (((f64, Position), f64), String),
@@ -539,6 +572,63 @@ thread_local! {
     pub static MY_EDGE_FILTER_ACTIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
     /// C++ static `MSDevice_SSM::myCreatedOutputFiles` (remember which files were created already)
     pub static MY_CREATED_OUTPUT_FILES: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
+}
+
+/// C++ `&lane->getEdge()`
+fn edge_of_lane(lane: Ptr<MSLane>) -> Ptr<MSEdge> {
+    Ptr::from_mut(lane.m().get_edge())
+}
+
+/// C++ `new FoeInfo()` with its two fields set; released with `delete_foe_info`
+fn new_foe_info(egoConflictLane: Ptr<MSLane>, egoDistToConflictLane: f64) -> Ptr<MSDevice_SSM_FoeInfo> {
+    Ptr::from_raw(Box::into_raw(Box::new(MSDevice_SSM_FoeInfo { egoConflictLane, egoDistToConflictLane })))
+}
+
+/// C++ `delete foeInfo`
+fn delete_foe_info(foeInfo: Ptr<MSDevice_SSM_FoeInfo>) {
+    // SAFETY: every FoeInfo is created by new_foe_info (Box::into_raw) and deleted exactly once
+    unsafe { drop(Box::from_raw(foeInfo.as_raw())) };
+}
+
+/// Collects a FoeInfo for every vehicle in `vehicles` (body of the C++ lambda collectFoeInfos)
+fn collect_foe_infos(vehicles: &Vec<Ptr<MSVehicle>>, egoConflictLane: Ptr<MSLane>, egoDistToConflictLane: f64, foeCollector: &mut MSDevice_SSM_FoeInfoMap) {
+    for &veh in vehicles.iter() {
+        if let Some(old) = foeCollector.get(&veh).copied() {
+            delete_foe_info(old);
+        }
+        let c = new_foe_info(egoConflictLane, egoDistToConflictLane);
+        foeCollector.insert(veh, c);
+    }
+}
+
+/// Body of the C++ lambda scanInternalLane in getVehiclesOnJunction
+fn scan_internal_lane(startLane: Ptr<MSLane>, egoConflictLane: Ptr<MSLane>, egoDistToConflictLane: f64, foeCollector: &mut MSDevice_SSM_FoeInfoMap) {
+    let mut lane = startLane;
+    // Add FoeInfos (XXX: for some situations, a vehicle may be collected twice. Then the later finding overwrites the earlier in foeCollector.
+    // This could lead to neglecting a conflict when determining foeConflictLane later.) -> TODO: test with twice intersecting routes
+    let vehicles = lane.get_vehicles_secure().clone();
+    collect_foe_infos(&vehicles, egoConflictLane, egoDistToConflictLane, foeCollector);
+    lane.release_vehicles();
+    // check additional internal link upstream in the same junction
+    // TODO: getEntryLink returns nullptr
+    if lane.get_canonical_predecessor_lane().is_internal() {
+        lane = lane.get_canonical_predecessor_lane();
+        // collect vehicles (C++ assert(!lane->getEntryLink()->fromInternalLane()) is not ported)
+        let vehicles2 = lane.get_vehicles_secure().clone();
+        // Add FoeInfos for the first internal lane
+        collect_foe_infos(&vehicles2, egoConflictLane, egoDistToConflictLane, foeCollector);
+        lane.release_vehicles();
+    }
+    // If there is an internal continuation lane, also collect vehicles on that lane
+    if lane.get_link_cont().len() > 1 && !lane.get_link_cont()[0].get_via_lane().is_null() {
+        // There's a second internal lane of the connection
+        lane = lane.get_link_cont()[0].get_via_lane();
+        // collect vehicles (C++ assert(lane->getLinkCont().size() == 0 || ...) is not ported)
+        let vehicles2 = lane.get_vehicles_secure().clone();
+        // Add FoeInfos for the first internal lane
+        collect_foe_infos(&vehicles2, egoConflictLane, egoDistToConflictLane, foeCollector);
+        lane.release_vehicles();
+    }
 }
 
 impl MSDevice_SSM {
@@ -1658,23 +1748,307 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn find_surrounding_vehicles(veh: &MSVehicle, range: f64, foeCollector: &mut MSDevice_SSM_FoeInfoMap) {
-        todo!("port MSDevice_SSM::findSurroundingVehicles")
+        // C++ assert()s and gDebugFlag3 debug output are not ported
+        if !veh.is_on_road() {
+            return;
+        }
+        // The requesting vehicle's current route
+        // XXX: Restriction to route scanning may have to be generalized to scanning of possible continuations when
+        //      considering situations involving sudden route changes. See also the definition of the EncounterTypes.
+        //      A second problem is that following situations on deviating routes may result in closing encounters
+        //      too early if a leading foe is not traced on its new lane. (see test 'foe_leader_deviating_routes')
+        // Best continuation lanes for the ego vehicle
+        let mut egoBestLanes: Vec<Ptr<MSLane>> = veh.get_best_lanes_continuation().clone();
+        // current lane in loop below
+        let mut lane: Ptr<MSLane> = veh.get_lane();
+        let egoEdge: Ptr<MSEdge> = edge_of_lane(lane);
+        let isOpposite = veh.get_lane_change_model_2().is_opposite();
+        let mut laneIter: usize = 0;
+        if lane.is_internal() && !egoBestLanes[0].is_null() {
+            // outdated BestLanes, see #11336
+            return;
+        }
+        if isOpposite {
+            for i in 0..egoBestLanes.len() {
+                if !egoBestLanes[i].is_null() && !edge_of_lane(egoBestLanes[i]).get_opposite_edge().is_null() {
+                    let opp = edge_of_lane(egoBestLanes[i]).get_opposite_edge();
+                    egoBestLanes[i] = *opp.get_lanes().last().unwrap();
+                }
+            }
+        }
+        // next non-internal lane on the route
+        let mut nextNonInternalLane: Ptr<MSLane> = Ptr::default();
+        let mut edge: Ptr<MSEdge>; // current edge in loop below
+        // Init pos with vehicle's current position. Below pos is set to zero to denote
+        // the beginning position of the currently considered edge
+        let mut pos = veh.get_position_on_lane();
+        // remainingDownstreamRange is the range minus the distance that is already scanned downstream along the vehicles route
+        let mut remainingDownstreamRange = range;
+        // distToConflictLane is the distance of the ego vehicle to the start of the currently considered potential conflict lane (can be negative for its current lane)
+        let mut distToConflictLane = if isOpposite { pos - veh.get_lane().get_length() } else { -pos };
+        // remember already visited lanes (no matter whether internal or not) and junctions downstream along the route
+        let mut seenLanes: BTreeSet<Ptr<MSLane>> = BTreeSet::new();
+        let mut routeJunctions: BTreeSet<Ptr<MSJunction>> = BTreeSet::new();
+        // Starting points for upstream scans to be executed after downstream scan is complete.
+        // Holds pairs (starting edge, starting position on edge)
+        let mut upstreamScanStartPositions: Vec<MSDevice_SSM_UpstreamScanStartInfo> = Vec::new();
+
+        // if the current edge is internal, collect all vehicles from the junction and within upstream range (except on the vehicles own edge),
+        // this is analogous to the code treating junctions in the loop below. Note that the distance on the junction itself is not included into
+        // range, so vehicles farther away than range can be collected, too.
+        if lane.is_internal() {
+            edge = edge_of_lane(lane);
+            let junction = edge.get_to_junction();
+            // Collect vehicles on the junction
+            Self::get_vehicles_on_junction(junction, lane, distToConflictLane, lane, foeCollector, &mut seenLanes);
+            routeJunctions.insert(junction);
+            // Collect vehicles on incoming edges.
+            // Note that this includes the previous edge on the ego vehicle's route.
+            // (The distance on the current internal edge is ignored)
+            for &ei in junction.get_incoming().iter() {
+                if ei.is_internal() {
+                    continue;
+                }
+                // Upstream range is taken from the vehicle's back
+                upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(ei, ei.get_length(), range + veh.get_length(), distToConflictLane, lane));
+            }
+            // Take into account non-internal lengths until next non-internal lane
+            let link = lane.get_link_cont()[0];
+            remainingDownstreamRange -= link.get_internal_lengths_after();
+            distToConflictLane += lane.get_length() + link.get_internal_lengths_after();
+            // The next non-internal lane
+            pos = 0.;
+            laneIter += 1;
+            lane = egoBestLanes[laneIter];
+            edge = edge_of_lane(lane);
+        } else {
+            // Collect all vehicles in range behind ego vehicle
+            edge = edge_of_lane(lane);
+            let edgeLength = edge.get_length();
+            let startScanPos = if edgeLength < pos + remainingDownstreamRange { edgeLength } else { pos + remainingDownstreamRange };
+            let rangeArg = {
+                let v = startScanPos - pos + range + veh.get_length();
+                if 0. < v { v } else { 0. }
+            };
+            upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(edge, startScanPos, rangeArg, distToConflictLane, lane));
+        }
+
+        // Advance downstream the ego vehicle's route for distance 'range'.
+        // Collect all vehicles on the traversed Edges and on incoming edges at junctions
+        // and starting points for upstream vehicle collection strated below after downstream scan.
+        while remainingDownstreamRange > 0. {
+            if pos + remainingDownstreamRange < lane.get_length() {
+                // scan range ends on this lane
+                if edge.get_id() != egoEdge.get_id() {
+                    upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(edge, pos + remainingDownstreamRange, remainingDownstreamRange, distToConflictLane, lane));
+                }
+                // scanned required downstream range
+                break;
+            } else {
+                // Also need to scan area that reaches beyond the lane
+                // Collecting vehicles on non-internal edge ahead
+                if edge.get_id() != egoEdge.get_id() {
+                    upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(edge, edge.get_length(), edge.get_length() - pos, distToConflictLane, lane));
+                }
+                // account for scanned distance on lane
+                remainingDownstreamRange -= lane.get_length() - pos;
+                distToConflictLane += lane.get_length();
+                pos = 0.;
+                // proceed to next non-internal lane
+                laneIter += 1;
+                // If the vehicle's best lanes go on, collect vehicles on the upcoming junction
+                if laneIter < egoBestLanes.len() {
+                    // Upcoming junction
+                    let junction = if isOpposite {
+                        lane.get_parallel_opposite().get_edge().get_to_junction()
+                    } else {
+                        lane.get_edge().get_to_junction()
+                    };
+                    // Find connection for ego on the junction
+                    nextNonInternalLane = egoBestLanes[laneIter];
+                    let mut link = lane.get_link_to(nextNonInternalLane);
+                    if isOpposite && link.is_null() {
+                        link = nextNonInternalLane.get_link_to(lane);
+                        if link.is_null() {
+                            link = lane.get_parallel_opposite().get_link_to(nextNonInternalLane);
+                        }
+                    }
+                    if link.is_null() {
+                        // disconnected route
+                        break;
+                    }
+                    // First lane of the connection
+                    lane = link.get_via_lane();
+                    if lane.is_null() {
+                        // link without internal lane
+                        lane = nextNonInternalLane;
+                        edge = edge_of_lane(lane);
+                        if !seenLanes.contains(&lane) {
+                            seenLanes.insert(lane);
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+                    if !seenLanes.contains(&lane) {
+                        // Collect vehicles on the junction, if it wasn't considered already
+                        Self::get_vehicles_on_junction(junction, lane, distToConflictLane, lane, foeCollector, &mut seenLanes);
+                        routeJunctions.insert(junction);
+                        // Collect vehicles on incoming edges (except the last edge, where we already collected). Use full range.
+                        if isOpposite {
+                            // look for vehicles that are also driving on the opposite side behind ego
+                            for &ei in junction.get_outgoing().iter() {
+                                if ei == edge || ei.is_internal() {
+                                    continue;
+                                }
+                                upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(ei, ei.get_length(), range, distToConflictLane, lane));
+                            }
+                        } else {
+                            for &ei in junction.get_incoming().iter() {
+                                if ei == edge || ei.is_internal() {
+                                    continue;
+                                }
+                                upstreamScanStartPositions.push(MSDevice_SSM_UpstreamScanStartInfo::new(ei, ei.get_length(), range, distToConflictLane, lane));
+                            }
+                        }
+                        // account for scanned distance on junction
+                        let linkLength = link.get_internal_lengths_after();
+                        remainingDownstreamRange -= linkLength;
+                        distToConflictLane += linkLength;
+                        // update ego's lane to next non internal edge
+                        lane = nextNonInternalLane;
+                        edge = edge_of_lane(lane);
+                    } else {
+                        // stops at a lane which has already been scanned
+                        break;
+                    }
+                } else {
+                    // Further vehicle path unknown, break search
+                    break;
+                }
+            }
+        }
+        // add junction from the end of the route
+        routeJunctions.insert(edge_of_lane(lane).get_to_junction());
+
+        // Scan upstream branches from collected starting points
+        for i in upstreamScanStartPositions.iter() {
+            Self::get_upstream_vehicles(i, foeCollector, &mut seenLanes, &routeJunctions);
+        }
+
+        // remove ego vehicle
+        let egoPtr = Ptr::new(veh);
+        if let Some(info) = foeCollector.get(&egoPtr).copied() {
+            delete_foe_info(info);
+            foeCollector.remove(&egoPtr);
+        }
     }
 
     /// C++: `void MSDevice_SSM::getUpstreamVehicles(const UpstreamScanStartInfo &, FoeInfoMap &, int &, const int &)` [static]
     /// Collects all vehicles within range 'range' upstream of the position 'pos' on the edge 'edge' into foeCollector
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_upstream_vehicles(scanStart: &MSDevice_SSM_UpstreamScanStartInfo, foeCollector: &mut MSDevice_SSM_FoeInfoMap, seenLanes: &mut i32, routeJunctions: &i32) {
-        todo!("port MSDevice_SSM::getUpstreamVehicles")
+    pub fn get_upstream_vehicles(scanStart: &MSDevice_SSM_UpstreamScanStartInfo, foeCollector: &mut MSDevice_SSM_FoeInfoMap, seenLanes: &mut BTreeSet<Ptr<MSLane>>, routeJunctions: &BTreeSet<Ptr<MSJunction>>) {
+        if scanStart.range <= 0. {
+            return;
+        }
+        // Collect vehicles on the given edge with position in [pos-range,pos]
+        for lane in scanStart.edge.get_lanes().clone() {
+            if seenLanes.contains(&lane) {
+                return;
+            }
+            for veh in lane.get_vehicles_secure().clone() {
+                if foeCollector.contains_key(&veh) {
+                    // vehicle already recognized, earlier recognized conflict has priority
+                    continue;
+                }
+                if veh.get_position_on_lane() - veh.get_length() <= scanStart.pos && veh.get_position_on_lane() >= scanStart.pos - scanStart.range {
+                    // c is deleted in updateEncounter()
+                    let c = new_foe_info(scanStart.egoConflictLane, scanStart.egoDistToConflictLane);
+                    foeCollector.insert(veh, c);
+                }
+            }
+            lane.release_vehicles();
+            seenLanes.insert(lane);
+        }
+
+        // TODO: Gather vehicles from opposite direction. This should happen in any case, where opposite direction overtaking is possible.
+        //       If it isn't it might still be nicer to trace oncoming vehicles for the resulting trajectories in the encounters
+        if scanStart.range <= scanStart.pos {
+            return;
+        }
+        // Here we have: range > pos, i.e. we proceed collecting vehicles on preceding edges
+        let remainingRange = scanStart.range - scanStart.pos;
+        // Junction representing the origin of 'edge'
+        let junction = scanStart.edge.get_from_junction();
+        // stop if upstream search reaches the ego route
+        if routeJunctions.contains(&junction) {
+            return;
+        }
+        // Collect vehicles from incoming edges of the junction
+        let mut incomingEdgeCount = 0;
+        if !scanStart.edge.is_internal() {
+            // collect vehicles on preceding junction (for internal edges this is already done in caller,
+            // i.e. findSurroundingVehicles() or the recursive call from getUpstreamVehicles())
+            // run vehicle collection for all incoming connections
+            for internalLane in junction.get_internal_lanes() {
+                let successor = edge_of_lane(internalLane).get_successors(SVC_IGNORING)[0];
+                if successor.get_id() == scanStart.edge.get_id() {
+                    Self::get_vehicles_on_junction(junction, internalLane, scanStart.egoDistToConflictLane, scanStart.egoConflictLane, foeCollector, seenLanes);
+                    incomingEdgeCount += 1;
+                }
+            }
+        }
+        // Collect vehicles from incoming edges from the junction representing the origin of 'edge'
+        if incomingEdgeCount > 0 {
+            for inEdge in junction.get_incoming().clone() {
+                if inEdge.is_internal() || inEdge.is_crossing() {
+                    continue;
+                }
+                let mut skip = false;
+                for lane in inEdge.get_lanes().clone() {
+                    if seenLanes.contains(&lane) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if skip {
+                    continue;
+                }
+                // XXX the length may be wrong if there are parallel internal edges for different vClasses
+                let distOnJunction = if scanStart.edge.is_internal() { 0. } else { inEdge.get_internal_following_length_to(scanStart.edge, SVC_IGNORING) };
+                if distOnJunction >= remainingRange {
+                    continue;
+                }
+                // account for vehicles on the predecessor edge
+                let nextInfo = MSDevice_SSM_UpstreamScanStartInfo::new(inEdge, inEdge.get_length(), remainingRange - distOnJunction, scanStart.egoDistToConflictLane, scanStart.egoConflictLane);
+                Self::get_upstream_vehicles(&nextInfo, foeCollector, seenLanes, routeJunctions);
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::getVehiclesOnJunction(const MSJunction *, const MSLane *, double, const MSLane *const, FoeInfoMap &, int &)` [static]
     /// Collects all vehicles on the junction into foeCollector
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_vehicles_on_junction(arg0: Ptr<MSJunction>, egoJunctionLane: Ptr<MSLane>, egoDistToConflictLane: f64, egoConflictLane: Ptr<MSLane>, foeCollector: &mut MSDevice_SSM_FoeInfoMap, seenLanes: &mut i32) {
-        todo!("port MSDevice_SSM::getVehiclesOnJunction")
+    pub fn get_vehicles_on_junction(junction: Ptr<MSJunction>, egoJunctionLane: Ptr<MSLane>, egoDistToConflictLane: f64, egoConflictLane: Ptr<MSLane>, foeCollector: &mut MSDevice_SSM_FoeInfoMap, seenLanes: &mut BTreeSet<Ptr<MSLane>>) {
+        // stop condition
+        if seenLanes.contains(&egoJunctionLane) || egoJunctionLane.is_crossing() {
+            return;
+        }
+        // Collect vehicles on conflicting lanes
+        let entryLink = egoJunctionLane.get_entry_link();
+        if entryLink.get_foe_lanes().len() > 0 {
+            let foeLanes: Vec<Ptr<MSLane>> = junction.get_foe_internal_lanes(entryLink).clone();
+            for lane in foeLanes {
+                if seenLanes.contains(&lane) {
+                    continue;
+                }
+                scan_internal_lane(lane, egoConflictLane, egoDistToConflictLane, foeCollector);
+                seenLanes.insert(lane);
+            }
+        }
+        scan_internal_lane(egoJunctionLane, egoConflictLane, egoDistToConflictLane, foeCollector);
     }
 
     /// C++: `bool MSDevice_SSM::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -1695,7 +2069,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_SSM::notifyMove")
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_SSM::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1768,8 +2142,71 @@ impl MSDevice_SSM {
     /// Constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn new(holder: &mut SUMOVehicle, id: &str, outputFilename: String, thresholds: i32, trajectories: bool, range: f64, extraTime: f64, useGeoCoords: bool, writePositions: bool, writeLanesPositions: bool, conflictOrder: i32) -> Self {
-        todo!("port MSDevice_SSM::MSDevice_SSM")
+    pub fn new(holder: &mut SUMOVehicle, id: &str, outputFilename: String, thresholds: BTreeMap<String, f64>, trajectories: bool, range: f64, extraTime: f64, useGeoCoords: bool, writePositions: bool, writeLanesPositions: bool, conflictTypeFilter: Vec<i32>) -> Box<Self> {
+        // C++ member initialisers evaluated in declaration order
+        let base = MSVehicleDevice::new(holder, id);
+        let myMDRACPRT = Self::get_mdrac_prt(holder);
+        let myWriteNA = holder.get_bool_param("device.ssm.write-na", true, true);
+        let has = |k: &str| thresholds.contains_key(k);
+        let myComputeTTC = has("TTC");
+        let myComputeDRAC = has("DRAC");
+        let myComputeMDRAC = has("MDRAC");
+        let myComputePET = has("PET");
+        let myComputePPET = has("PPET");
+        let myComputeBR = has("BR");
+        let myComputeSGAP = has("SGAP");
+        let myComputeTGAP = has("TGAP");
+        let myFilterConflictTypes = conflictTypeFilter.len() > 0;
+        let mut b = Box::new(MSDevice_SSM {
+            base,
+            myThresholds: thresholds,
+            mySaveTrajectories: trajectories,
+            myRange: range,
+            myMDRACPRT,
+            myExtraTime: extraTime,
+            myUseGeoCoords: useGeoCoords,
+            myWritePositions: writePositions,
+            myWriteLanesPositions: writeLanesPositions,
+            myWriteNA,
+            myOldestActiveEncounterBegin: INVALID_DOUBLE,
+            myMaxBR: ((-1., Position::new(0., 0.)), 0.),
+            myMinSGAP: (((-1., Position::new(0., 0.)), f64::MAX), String::new()),
+            myMinTGAP: (((-1., Position::new(0., 0.)), f64::MAX), String::new()),
+            myComputeTTC,
+            myComputeDRAC,
+            myComputePET,
+            myComputeBR,
+            myComputeSGAP,
+            myComputeTGAP,
+            myComputePPET,
+            myComputeMDRAC,
+            myDroppedConflictTypes: conflictTypeFilter,
+            myFilterConflictTypes,
+            myHolderMS: Ptr::default(),
+            myActiveEncounters: Vec::new(),
+            myPastConflicts: BinaryHeap::new(),
+            myGlobalMeasuresTimeSpan: Vec::new(),
+            myGlobalMeasuresPositions: PositionVector(Vec::new()),
+            myGlobalMeasuresLaneIDs: Vec::new(),
+            myGlobalMeasuresLanesPositions: Vec::new(),
+            myBRspan: Vec::new(),
+            mySGAPspan: Vec::new(),
+            myTGAPspan: Vec::new(),
+            // XXX: Who deletes the OutputDevice? (the Rust port keeps it in the output device registry)
+            myOutputFile: Ptr::default(),
+        });
+        // Take care! Holder is currently being constructed. Cast occurs before completion.
+        b.myHolderMS = Ptr::from_mut(holder).cast::<MSVehicle>();
+        let dev = OutputDevice::get_device(&outputFilename, true).unwrap_or_else(|e| panic!("{e}"));
+        b.myOutputFile = Ptr::from_raw(dev.as_ptr());
+        // (the C++ file-header check below is ported as-is)
+        if !MY_CREATED_OUTPUT_FILES.with(|f| f.borrow().contains(&outputFilename)) {
+            b.myOutputFile.m().write_xml_header("SSMLog", "", BTreeMap::new(), true);
+            MY_CREATED_OUTPUT_FILES.with(|f| f.borrow_mut().insert(outputFilename.clone()));
+        }
+        // register at static instance container (the Box keeps the address stable)
+        MY_INSTANCES.with(|m| m.borrow_mut().insert(Ptr::from_box(&b)));
+        b
     }
 
     /// C++: `void MSDevice_SSM::processEncounters(FoeInfoMap &, bool)` [private]
