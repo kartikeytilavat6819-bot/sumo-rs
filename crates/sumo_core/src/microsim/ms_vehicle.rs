@@ -8876,7 +8876,33 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_box(&self, offset: f64) -> PositionVector {
-        todo!("port MSVehicle::getBoundingBox")
+        let mut centerLine: PositionVector = PositionVector(Vec::new());
+        let pos = self.get_position(0.0);
+        centerLine.push(pos);
+        match self.myType.get_gui_shape() {
+            SUMOVehicleShape::BusFlexible | SUMOVehicleShape::Rail | SUMOVehicleShape::RailCar | SUMOVehicleShape::RailCargo | SUMOVehicleShape::TruckSemitrailer | SUMOVehicleShape::Truck1Trailer => {
+                for lane in self.myFurtherLanes.iter() {
+                    centerLine.push(*lane.get_shape_2().back());
+                }
+            }
+            _ => {}
+        }
+        let l = self.get_length();
+        let mut backPos = self.get_back_position();
+        if pos.distance_to2d(&backPos) > l + utils::geom::NUMERICAL_EPS {
+            // getBackPosition may not match the visual back in networks without internal lanes
+            let a = self.get_angle() + std::f64::consts::PI; // angle pointing backwards
+            backPos = pos + Position::new(l * a.cos(), l * a.sin());
+        }
+        centerLine.push(backPos);
+        if offset != 0.0 {
+            centerLine.extrapolate2d(offset, false);
+        }
+        let mut result = centerLine.clone();
+        result.move2side(max2(0.0, 0.5 * self.myType.get_width() + offset), 100.0);
+        centerLine.move2side(min2(0.0, -0.5 * self.myType.get_width() - offset), 100.0);
+        result.append(&centerLine.reverse(), POSITION_EPS);
+        result
     }
 
     /// C++: `PositionVector MSVehicle::getBoundingPoly(double) const` [const]
@@ -8920,7 +8946,35 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_bounding_poly(&self, offset: f64) -> PositionVector {
-        todo!("port MSVehicle::getBoundingPoly")
+        match self.myType.get_gui_shape() {
+            SUMOVehicleShape::Passenger | SUMOVehicleShape::PassengerSedan | SUMOVehicleShape::PassengerHatchback | SUMOVehicleShape::PassengerWagon | SUMOVehicleShape::PassengerVan => {
+                // box with corners cut off
+                let mut result: PositionVector = PositionVector(Vec::new());
+                let mut centerLine: PositionVector = PositionVector(Vec::new());
+                centerLine.push(self.get_position(0.0));
+                centerLine.push(self.get_back_position());
+                if offset != 0.0 {
+                    centerLine.extrapolate2d(offset, false);
+                }
+                let mut line1 = centerLine.clone();
+                let mut line2 = centerLine.clone();
+                line1.move2side(max2(0.0, 0.3 * self.myType.get_width() + offset), 100.0);
+                line2.move2side(max2(0.0, 0.5 * self.myType.get_width() + offset), 100.0);
+                line2.scale_relative(0.8);
+                result.push(line1[0]);
+                result.push(line2[0]);
+                result.push(line2[1]);
+                result.push(line1[1]);
+                line1.move2side(min2(0.0, -0.6 * self.myType.get_width() - offset), 100.0);
+                line2.move2side(min2(0.0, -1.0 * self.myType.get_width() - offset), 100.0);
+                result.push(line1[1]);
+                result.push(line2[1]);
+                result.push(line2[0]);
+                result.push(line1[0]);
+                result
+            }
+            _ => self.get_bounding_box(0.0),
+        }
     }
 
     /// C++: `bool MSVehicle::setExitManoeuvre()`
