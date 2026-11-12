@@ -79,14 +79,25 @@ const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
 
+// C++ statics NBNode::myPermitUnsignalizedClasses / NBNode::myHaveRailSignalClasses
+thread_local! {
+    static MY_PERMIT_UNSIGNALIZED_CLASSES: std::cell::Cell<SVCPermissions> = const { std::cell::Cell::new(0) };
+    static MY_HAVE_RAIL_SIGNAL_CLASSES: std::cell::Cell<SVCPermissions> = const { std::cell::Cell::new(0) };
+}
+
 /// C++ `incoming->setConnection(lane, dest, destLane, type)` using the header defaults
 fn nbnode_set_connection_default(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<NBEdge>, destLane: i32, type_: NBEdge_Lane2LaneInfoType) -> bool {
+    nbnode_set_connection_same_dest(incoming, lane, dest, destLane, type_, false)
+}
+
+/// C++ `incoming->setConnection(lane, dest, destLane, type, mayUseSameDestination)` with the other header defaults
+fn nbnode_set_connection_same_dest(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<NBEdge>, destLane: i32, type_: NBEdge_Lane2LaneInfoType, mayUseSameDestination: bool) -> bool {
     incoming.m().set_connection(
         lane,
         dest,
         destLane,
         type_,
-        false,
+        mayUseSameDestination,
         false,
         KeepClear::KEEPCLEAR_UNSPECIFIED,
         NBEDGE_UNSPECIFIED_CONTPOS,
@@ -7290,7 +7301,25 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_end_points(&self) -> Vec<(Position, String)> {
-        todo!("port NBNode::getEndPoints")
+        // using a set would be nicer but we want to have some slack in position identification
+        let self_ptr = Ptr::from_raw(self as *const NBNode as *mut NBNode);
+        let mut result: Vec<(Position, String)> = Vec::new();
+        for e in self.myAllEdges.iter() {
+            let isFrom = self_ptr == e.get_from_node();
+            let pos = if isFrom { *e.get_geometry().front() } else { *e.get_geometry().back() };
+            let origID = e.get_parameter(if isFrom { "origFrom" } else { "origTo" }, "");
+            let mut unique = true;
+            for (p, id) in result.iter() {
+                if pos.almost_same_eps(p) || (origID != "" && *id == origID) {
+                    unique = false;
+                    break;
+                }
+            }
+            if unique {
+                result.push((pos, origID));
+            }
+        }
+        result
     }
 
     /// C++: `void NBNode::recheckVClassConnections(NBEdge *)`
@@ -7362,7 +7391,51 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn recheck_v_class_connections(&mut self, currentOutgoing: Ptr<NBEdge>) {
-        todo!("port NBNode::recheckVClassConnections")
+        // ensure that all modes have a connection if possible
+        for incoming in self.myIncomingEdges.clone() {
+            if incoming.get_connection_lanes(currentOutgoing, true, true).len() > 0 && incoming.get_step() <= NBEdge_EdgeBuildingStep::LANES2LANES_DONE {
+                // no connections are needed for pedestrians during this step
+                // no satisfaction is possible if the outgoing edge disallows
+                let mut unsatisfied: SVCPermissions = incoming.get_permissions(-1) & currentOutgoing.get_permissions(-1) & !SVC_PEDESTRIAN;
+                for c in incoming.get_connections().iter() {
+                    if c.toEdge == currentOutgoing && c.toLane >= 0 {
+                        let satisfied: SVCPermissions = incoming.get_permissions(c.fromLane) & c.toEdge.get_permissions(c.toLane);
+                        unsatisfied &= !satisfied;
+                    }
+                }
+                if unsatisfied != 0 {
+                    let mut fromLane = 0;
+                    // first attempt: try to use a dedicated fromLane
+                    while unsatisfied != 0 && fromLane < incoming.get_num_lanes() {
+                        if incoming.get_permissions(fromLane) == unsatisfied {
+                            unsatisfied = self.find_to_lane_for_permissions(currentOutgoing, fromLane, incoming, unsatisfied);
+                        }
+                        fromLane += 1;
+                    }
+                    // second attempt: try to re-use a fromLane that already connects to currentOutgoing
+                    // (because we don't wont to create extra turn lanes)
+                    fromLane = 0;
+                    while unsatisfied != 0 && fromLane < incoming.get_num_lanes() {
+                        if (incoming.get_permissions(fromLane) & unsatisfied) != 0 && incoming.get_connections_from_lane(fromLane, currentOutgoing, -1).len() > 0 {
+                            unsatisfied = self.find_to_lane_for_permissions(currentOutgoing, fromLane, incoming, unsatisfied);
+                        }
+                        fromLane += 1;
+                    }
+                    // third attempt: use any possible fromLane
+                    fromLane = 0;
+                    while unsatisfied != 0 && fromLane < incoming.get_num_lanes() {
+                        if (incoming.get_permissions(fromLane) & unsatisfied) != 0 {
+                            unsatisfied = self.find_to_lane_for_permissions(currentOutgoing, fromLane, incoming, unsatisfied);
+                        }
+                        fromLane += 1;
+                    }
+                }
+            }
+            // prevent dead-end bus and bicycle lanes (they were excluded by the ApproachingDivider)
+            // and the bus/bicycle class might already be satisfied by other lanes
+            self.recheck_special_connections(incoming, currentOutgoing, SVC_BUS);
+            self.recheck_special_connections(incoming, currentOutgoing, SVC_BICYCLE);
+        }
     }
 
     /// C++: `void NBNode::initRailSignalClasses(const NBNodeCont &)` [static]
@@ -7382,7 +7455,17 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn init_rail_signal_classes(nc: &NBNodeCont) {
-        todo!("port NBNode::initRailSignalClasses")
+        // toString(vector<string>) joins with spaces (shortcut: assumed separator, verify against ToString.h)
+        let permit = utils::options::options_cont::get_string_vector("railway.signal.permit-unsignalized").join(" ");
+        MY_PERMIT_UNSIGNALIZED_CLASSES.with(|c| c.set(utils::common::sumo_vehicle_class::parse_vehicle_classes(&permit)));
+        MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.set(0));
+        for (_, n) in nc.myNodes.iter() {
+            if n.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                for in_ in n.myIncomingEdges.iter() {
+                    MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.set(c.get() | in_.get_permissions(-1)));
+                }
+            }
+        }
     }
 
     /// C++: `void NBNode::setPriorityJunctionPriorities()` [private]
@@ -7390,7 +7473,8 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_priority_junction_priorities(&mut self) {
-        todo!("port NBNode::setPriorityJunctionPriorities")
+        // shortcut: NBNode::setPriorityJunctionPriorities has no C++ definition (declared only, never called); delegating to NBEdgePriorityComputer::setPriorityJunctionPriorities (NBAlgorithms.cpp) with forceStraight=false, upgrade if a real NBNode body turns up
+        NBEdgePriorityComputer::set_priority_junction_priorities(self, false);
     }
 
     /// C++: `void NBNode::getEdgesThatApproach(NBEdge *, EdgeVector &)` [private]
@@ -7417,7 +7501,23 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_edges_that_approach(&mut self, currentOutgoing: Ptr<NBEdge>, approaching: &mut EdgeVector) {
-        todo!("port NBNode::getEdgesThatApproach")
+        let self_ptr = Ptr::from_raw(self as *const NBNode as *mut NBNode);
+        // get the position of the node to get the approaching nodes of
+        let mut i = self.myAllEdges.iter().position(|e| *e == currentOutgoing).unwrap_or(self.myAllEdges.len());
+        // get the first possible approaching edge
+        NBContHelper::next_cw(&self.myAllEdges, &mut i);
+        // go through the list of edges clockwise and add the edges
+        approaching.clear();
+        while self.myAllEdges[i] != currentOutgoing {
+            // check only incoming edges
+            if self.myAllEdges[i].get_to_node() == self_ptr && self.myAllEdges[i].get_turn_destination(false) != currentOutgoing {
+                let connLanes = self.myAllEdges[i].get_connection_lanes(currentOutgoing, true, true);
+                if connLanes.len() != 0 {
+                    approaching.push(self.myAllEdges[i]);
+                }
+            }
+            NBContHelper::next_cw(&self.myAllEdges, &mut i);
+        }
     }
 
     /// C++: `void NBNode::replaceInConnectionProhibitions(NBEdge *, NBEdge *, int, int)` [private]
@@ -7786,7 +7886,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_reduction(&self, in_: Ptr<NBEdge>, out: Ptr<NBEdge>, inOffset: &mut i32, inEnd: &mut i32, outOffset: &mut i32, outEnd: &mut i32, reduction: &mut i32) {
-        todo!("port NBNode::getReduction")
+        *inOffset = std::cmp::max(0, in_.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+        *outOffset = std::cmp::max(0, out.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+        *inEnd = in_.get_first_non_pedestrian_lane_index(NBNODE_BACKWARD, true) + 1;
+        *outEnd = out.get_first_non_pedestrian_lane_index(NBNODE_BACKWARD, true) + 1;
+        *reduction = (*inEnd - *inOffset) - (*outEnd - *outOffset);
     }
 
     /// C++: `SVCPermissions NBNode::findToLaneForPermissions(NBEdge *, int, NBEdge *, SVCPermissions)` [private]
@@ -7828,8 +7932,28 @@ impl NBNode {
     //     return unsatisfied;
     // }
     #[allow(unused_variables)]
-    pub fn find_to_lane_for_permissions(&mut self, currentOutgoing: Ptr<NBEdge>, fromLane: i32, incoming: Ptr<NBEdge>, unsatisfied: SVCPermissions) -> SVCPermissions {
-        todo!("port NBNode::findToLaneForPermissions")
+    pub fn find_to_lane_for_permissions(&mut self, currentOutgoing: Ptr<NBEdge>, fromLane: i32, incoming: Ptr<NBEdge>, mut unsatisfied: SVCPermissions) -> SVCPermissions {
+        for toLane in 0..currentOutgoing.get_num_lanes() {
+            let satisfied: SVCPermissions = incoming.get_permissions(fromLane) & currentOutgoing.get_permissions(toLane) & unsatisfied;
+            if satisfied != 0 && !incoming.get_lane_struct_2(fromLane).connectionsDone {
+                if incoming.has_connection_to(currentOutgoing, toLane, -1) && unsatisfied == SVC_TRAM && incoming.get_permissions(fromLane) == currentOutgoing.get_permissions(toLane) {
+                    // avoid double tram connection by shifting an existing connection
+                    for con in incoming.get_connections().clone() {
+                        if con.toEdge == currentOutgoing && con.toLane == toLane {
+                            incoming.m().get_connection_ref(con.fromLane, con.toEdge, toLane).fromLane = fromLane;
+                            unsatisfied &= !satisfied;
+                            break;
+                        }
+                    }
+                } else {
+                    // other modes (i.e. bus) can fix lane permissions NBPTLineCont::fixPermissions but do not wish to create parallel tram tracks here
+                    let mayUseSameDestination = unsatisfied == SVC_TRAM || (unsatisfied & SVC_PASSENGER) != 0;
+                    nbnode_set_connection_same_dest(incoming, fromLane, currentOutgoing, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, mayUseSameDestination);
+                    unsatisfied &= !satisfied;
+                }
+            }
+        }
+        unsatisfied
     }
 
     /// C++: `int NBNode::addedLanesRight(NBEdge *, int) const` [const, private]
@@ -7888,7 +8012,45 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn added_lanes_right(&self, out: Ptr<NBEdge>, addedLanes: i32) -> i32 {
-        todo!("port NBNode::addedLanesRight")
+        if out.is_off_ramp() {
+            return addedLanes;
+        }
+        let to = out.get_to_node();
+        // check whether a right lane ends
+        if to.myIncomingEdges.len() == 1 && to.myOutgoingEdges.len() == 1 {
+            let (mut inOffset, mut inEnd, mut outOffset, mut outEnd, mut reduction) = (0, 0, 0, 0, 0);
+            to.get_reduction(out, to.myOutgoingEdges[0], &mut inOffset, &mut inEnd, &mut outOffset, &mut outEnd, &mut reduction);
+            if reduction > 0 {
+                return reduction;
+            }
+        }
+        // check for the presence of right and left turns at the next intersection
+        let mut outLanesRight = 0;
+        let mut outLanesLeft = 0;
+        let mut outLanesStraight = 0;
+        for succ in to.myOutgoingEdges.iter() {
+            if out.is_connected_to(*succ, false) {
+                let outOffset = std::cmp::max(0, succ.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+                let usableLanes = succ.get_num_lanes() - outOffset;
+                let dir = to.get_direction(out, *succ, false);
+                if dir == LinkDirection::STRAIGHT {
+                    outLanesStraight += usableLanes;
+                } else if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+                    outLanesRight += usableLanes;
+                } else {
+                    outLanesLeft += usableLanes;
+                }
+            }
+        }
+        let outOffset = std::cmp::max(0, out.get_first_non_pedestrian_non_bicycle_lane_index(NBNODE_FORWARD, true));
+        let outEnd = out.get_first_non_pedestrian_lane_index(NBNODE_BACKWARD, true) + 1;
+        let usableLanes = outEnd - outOffset;
+        let addedTurnLanes = std::cmp::min(addedLanes, std::cmp::min(std::cmp::max(0, usableLanes - outLanesStraight), outLanesRight + outLanesLeft));
+        if outLanesLeft == 0 {
+            return addedTurnLanes;
+        } else {
+            return std::cmp::min(addedTurnLanes / 2, outLanesRight);
+        }
     }
 
     /// C++: `bool NBNode::isStraighter(const NBEdge *const, const double, const SVCPermissions, const int, const NBEdge *const) const` [const, private]
