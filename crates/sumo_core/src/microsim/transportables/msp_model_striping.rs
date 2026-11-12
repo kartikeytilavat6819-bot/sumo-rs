@@ -1662,14 +1662,151 @@ impl MSPModel_Striping {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_neighboring_obstacles(pedestrians: &MSPModel_Interacting_Pedestrians, egoIndex: i32, stripes: i32) -> MSPModel_Striping_Obstacles {
-        todo!("port MSPModel_Striping::getNeighboringObstacles")
+        let ego = pedestrians[egoIndex as usize].cast::<MSPModel_Striping_PState>();
+        let egoStripe = ego.stripe();
+        let mut obs: MSPModel_Striping_Obstacles = (0..stripes).map(|_| MSPModel_Striping_Obstacle::new(ego.get_direction(), DIST_FAR_AWAY)).collect();
+        let mut haveBlocker = vec![false; stripes as usize];
+        for index in ((egoIndex + 1) as usize)..pedestrians.len() {
+            let p = pedestrians[index].cast::<MSPModel_Striping_PState>();
+            if !p.is_waiting_to_enter() && !p.is_jammed() {
+                let o = MSPModel_Striping_Obstacle::new_2(&*p);
+                if ego.distance_to(&o, true) == DIST_BEHIND {
+                    break;
+                }
+                if ego.distance_to(&o, true) == DIST_OVERLAP {
+                    if p.stripe() != egoStripe || p.get_direction() != ego.get_direction() {
+                        obs[p.stripe() as usize] = o.clone();
+                        haveBlocker[p.stripe() as usize] = true;
+                    } else {
+                        //std::cout << SIMTIME << "   ignoring overlap between " << ego.getID() << " and " << p.getID() << " on stripe=" << egoStripe << "\n";
+                    }
+                    if p.other_stripe() != egoStripe || p.get_direction() != ego.get_direction() {
+                        obs[p.other_stripe() as usize] = o.clone();
+                        haveBlocker[p.other_stripe() as usize] = true;
+                    } else {
+                        //std::cout << SIMTIME << "   ignoring overlap between " << ego.getID() << " and " << p.getID() << " on stripe2=" << egoStripe << "\n";
+                    }
+                } else {
+                    if !haveBlocker[p.stripe() as usize] {
+                        obs[p.stripe() as usize] = o.clone();
+                    }
+                    if !haveBlocker[p.other_stripe() as usize] {
+                        obs[p.other_stripe() as usize] = o.clone();
+                    }
+                }
+            }
+        }
+        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        obs
     }
 
     /// C++: `const Obstacles & MSPModel_Striping::getNextLaneObstacles(NextLanesObstacles &, const MSLane *, const MSLane *, int, int, double, int)` [private]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    /// returns the cached obstacles for nextLane, computing them on first use (the reference lives in nextLanesObs)
     #[allow(unused_variables)]
-    pub fn get_next_lane_obstacles(&mut self, nextLanesObs: &mut MSPModel_Striping_NextLanesObstacles, lane: Ptr<MSLane>, nextLane: Ptr<MSLane>, stripes: i32, nextDir: i32, currentLength: f64, currentDir: i32) -> &MSPModel_Striping_Obstacles {
-        todo!("port MSPModel_Striping::getNextLaneObstacles")
+    pub fn get_next_lane_obstacles<'a>(&mut self, nextLanesObs: &'a mut MSPModel_Striping_NextLanesObstacles, lane: Ptr<MSLane>, nextLane: Ptr<MSLane>, stripes: i32, mut nextDir: i32, currentLength: f64, currentDir: i32) -> &'a MSPModel_Striping_Obstacles {
+        if !nextLanesObs.contains_key(&nextLane) {
+            let nextLength = if nextLane.is_walking_area() {
+                MY_MIN_NEXT_LENGTHS.with(|m| *m.borrow_mut().entry(nextLane).or_insert(0.))
+            } else {
+                nextLane.get_length()
+            };
+            // figure out the which pedestrians are ahead on the next lane
+            let nextStripes = Self::num_stripes(nextLane);
+            // do not move past the end of the next lane in a single step
+            let mut obs: MSPModel_Striping_Obstacles = (0..stripes)
+                .map(|_| MSPModel_Striping_Obstacle::new_3(if nextDir == MSPMODEL_FORWARD { nextLength } else { 0. }, 0., MSPModel_Striping_ObstacleType::OBSTACLE_NEXTEND, "nextEnd", 0., Ptr::null()))
+                .collect();
+
+            let offset = Self::get_stripe_offset(nextStripes, stripes, currentDir != nextDir && nextStripes > stripes);
+            if nextStripes < stripes {
+                // some stripes do not continue
+                for ii in 0..stripes {
+                    if ii < offset || ii >= nextStripes + offset {
+                        obs[ii as usize] = MSPModel_Striping_Obstacle::new_3(if nextDir == MSPMODEL_FORWARD { 0. } else { nextLength }, 0., MSPModel_Striping_ObstacleType::OBSTACLE_END, "stripeEnd", 0., Ptr::null());
+                    }
+                }
+            }
+            // C++ getPedestrians(nextLane) returns myActiveLanes[nextLane]
+            let pedestrians: &mut MSPModel_Interacting_Pedestrians = self.myActiveLanes.entry(nextLane).or_default();
+            if nextLane.is_walking_area() {
+                Self::transform_to_current_lane_positions(&mut obs, currentDir, nextDir, currentLength, nextLength);
+                // complex transformation into the coordinate system of the current lane
+                // (pedestrians on next lane may walk at arbitrary angles relative to the current lane)
+                let mut lateral_offset = (lane.get_width() - stripe_width()) * 0.5;
+                if (stripes - nextStripes) % 2 != 0 {
+                    lateral_offset += 0.5 * stripe_width();
+                }
+                nextDir = currentDir;
+                // transform pedestrians into the current coordinate system
+                for ii in 0..pedestrians.len() {
+                    let p = pedestrians[ii].cast::<MSPModel_Striping_PState>();
+                    if p.is_waiting_to_enter() || p.is_jammed() {
+                        continue;
+                    }
+                    let pPos = p.get_position(&*p.get_stage(), -1);
+                    let relPos = lane.get_shape_2().transform_to_vector_coordinates(&pPos, true);
+                    if relPos == Position::INVALID {
+                        utils::write_warningf!("Could not map position % onto lane '%'", pPos, lane.get_id());
+                    }
+                    let newY = relPos.y() + lateral_offset;
+                    if (currentDir == MSPMODEL_FORWARD && relPos.x() >= lane.get_length()) || (currentDir == MSPMODEL_BACKWARD && relPos.x() < 0.) {
+                        Self::add_closer_obstacle(&mut obs, relPos.x(), MSPModel_Striping_PState::stripe_2(newY), stripes, p.get_person().get_id(),
+                            p.get_person().get_vehicle_type().get_width(), currentDir, MSPModel_Striping_ObstacleType::OBSTACLE_PED);
+                        Self::add_closer_obstacle(&mut obs, relPos.x(), p.other_stripe_2(newY), stripes, p.get_person().get_id(),
+                            p.get_person().get_vehicle_type().get_width(), currentDir, MSPModel_Striping_ObstacleType::OBSTACLE_PED);
+                    }
+                }
+            } else {
+                // simple transformation into the coordinate system of the current lane
+                // (only need to worry about currentDir and nextDir)
+                // XXX consider waitingToEnter on nextLane
+                // determinism: C++ std::sort is unstable; ties are resolved by the id comparison in by_xpos_sorter
+                let sorter = MSPModel_Striping_by_xpos_sorter::new(nextDir);
+                pedestrians.sort_by(|a, b| {
+                    if sorter.call_op(*a, *b) {
+                        std::cmp::Ordering::Less
+                    } else if sorter.call_op(*b, *a) {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+                for ii in 0..pedestrians.len() {
+                    let p = pedestrians[ii].cast::<MSPModel_Striping_PState>();
+                    if p.is_waiting_to_enter() || p.is_jammed() {
+                        continue;
+                    }
+                    let mut newY = p.get_pos_lat();
+                    let mut pObs = MSPModel_Striping_Obstacle::new_2(&*p);
+                    if nextDir != currentDir {
+                        newY = (nextStripes - 1) as f64 * stripe_width() - newY;
+                        pObs.speed *= -1.;
+                    }
+                    newY += offset as f64 * stripe_width();
+                    let stripe = MSPModel_Striping_PState::stripe_2(newY);
+                    if stripe >= 0 && stripe < stripes {
+                        obs[stripe as usize] = pObs.clone();
+                    }
+                    let otherStripe = p.other_stripe_2(newY);
+                    if otherStripe >= 0 && otherStripe < stripes {
+                        obs[otherStripe as usize] = pObs.clone();
+                    }
+                }
+                if nextLane.is_crossing() {
+                    // add vehicle obstacles
+                    let crossingEntryLink = nextLane.get_incoming_lanes()[0].viaLink;
+                    let prio = crossingEntryLink.have_priority() || !crossingEntryLink.get_tl_logic().is_null();
+                    Self::add_crossing_vehs(nextLane, stripes, offset as f64, nextDir, &mut obs, prio, currentDir != nextDir);
+                }
+                if nextLane.get_vehicle_number_with_partials() > 0 {
+                    let vehObs = Self::get_vehicle_obstacles(nextLane, nextDir, Ptr::null());
+                    MSPModel_Striping_PState::merge_obstacles_2(&mut obs, &vehObs, nextDir, offset);
+                }
+                Self::transform_to_current_lane_positions(&mut obs, currentDir, nextDir, currentLength, nextLength);
+            }
+            nextLanesObs.insert(nextLane, obs);
+        }
+        nextLanesObs.get(&nextLane).unwrap()
     }
 
     /// C++: `void MSPModel_Striping::transformToCurrentLanePositions(Obstacles &, int, int, double, double)` [static, private]
