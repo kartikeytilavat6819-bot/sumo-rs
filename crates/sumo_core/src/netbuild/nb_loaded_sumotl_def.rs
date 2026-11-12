@@ -262,7 +262,14 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn shift_tl_connection_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
-        todo!("port NBLoadedSUMOTLDef::shiftTLConnectionLaneIndex")
+        // avoid shifting twice if the edge is incoming and outgoing to a joined TLS
+        if !self.myShifted.contains(&edge) {
+            // XXX what if an edge should really be shifted twice?
+            self.myShifted.insert(edge);
+            for it in self.base.myControlledLinks.iter_mut() {
+                it.shift_lane_index(edge, offset, threshold);
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::addPhase(const SUMOTime, const std::string &, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const std::vector<int> &, const std::string &)`
@@ -275,7 +282,7 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_phase(&mut self, duration: SUMOTime, state: &str, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime, vehExt: SUMOTime, yellow: SUMOTime, red: SUMOTime, next: &Vec<i32>, name: &str) {
-        todo!("port NBLoadedSUMOTLDef::addPhase")
+        self.myTLLogic.m().add_step_2(duration, state, minDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, name, next, -1);
     }
 
     /// C++: `void NBLoadedSUMOTLDef::phasesLoaded()`
@@ -285,7 +292,7 @@ impl NBLoadedSUMOTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn phases_loaded(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::phasesLoaded")
+        self.myPhasesLoaded = true;
     }
 
     /// C++: `void NBLoadedSUMOTLDef::addConnection(NBEdge *, NBEdge *, int, int, int, int, bool)`
@@ -319,7 +326,40 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_connection(&mut self, from: Ptr<NBEdge>, to: Ptr<NBEdge>, fromLane: i32, toLane: i32, linkIndex: i32, linkIndex2: i32, reconstruct: bool) {
-        todo!("port NBLoadedSUMOTLDef::addConnection")
+        assert!(self.myTLLogic.m().get_num_links() > 0); // logic should be loaded by now
+        if linkIndex >= self.myTLLogic.m().get_num_links() {
+            std::panic::panic_any(ProcessError::new(format!(
+                "Invalid linkIndex {} in connection from edge '{}' to edge '{}' for traffic light '{}' with {} links.",
+                linkIndex,
+                from.get_id(),
+                to.get_id(),
+                self.get_id(),
+                self.myTLLogic.m().get_num_links()
+            )));
+        }
+        if linkIndex2 >= self.myTLLogic.m().get_num_links() {
+            std::panic::panic_any(ProcessError::new(format!(
+                "Invalid linkIndex2 {} in connection from edge '{}' to edge '{}' for traffic light '{}' with {} links.",
+                linkIndex2,
+                from.get_id(),
+                to.get_id(),
+                self.get_id(),
+                self.myTLLogic.m().get_num_links()
+            )));
+        }
+        let conn = NBConnection::new_2(from, fromLane, to, toLane, linkIndex, linkIndex2);
+        // avoid duplicates
+        let eq = NBLoadedSUMOTLDef_connection_equal::new(&conn);
+        // remove_if does not remove, only re-order
+        self.base.myControlledLinks.retain(|c| !eq.call_op(c));
+        self.base.myControlledLinks.push(NBConnection::new_4(&conn));
+        self.base.add_node(from.get_to_node());
+        self.base.add_node(to.get_from_node());
+        // added connections are definitely controlled. make sure none are removed because they lie within the tl
+        // myControlledInnerEdges.insert(from->getID()); // @todo recheck: this appears to be obsolete
+        // set this information now so that it can be used while loading diffs
+        from.m().set_controlling_tl_information(&conn, self.get_id());
+        self.myReconstructAddedConnections |= reconstruct;
     }
 
     /// C++: `void NBLoadedSUMOTLDef::removeConnection(const NBConnection &, bool)` [virtual]
@@ -347,7 +387,27 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn remove_connection(&mut self, conn: &NBConnection, reconstruct: bool) {
-        todo!("port NBLoadedSUMOTLDef::removeConnection")
+        let mut i: usize = 0;
+        while i < self.base.myControlledLinks.len() {
+            let it = &self.base.myControlledLinks[i];
+            let matches = (it.get_from() == conn.get_from()
+                && it.get_to() == conn.get_to()
+                && it.get_from_lane() == conn.get_from_lane()
+                && it.get_to_lane() == conn.get_to_lane())
+                || (it.get_tl_index() == conn.get_tl_index()
+                    && conn.get_tl_index() != NBCONNECTION_INVALID_TL_INDEX
+                    && (it.get_from().is_null() || it.get_to().is_null()));
+            if matches {
+                if reconstruct {
+                    self.myReconstructRemovedConnections = true;
+                    i += 1;
+                } else {
+                    self.base.myControlledLinks.remove(i);
+                }
+            } else {
+                i += 1;
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::registerModifications(bool, bool)`
@@ -359,7 +419,8 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn register_modifications(&mut self, addedConnections: bool, removedConnections: bool) {
-        todo!("port NBLoadedSUMOTLDef::registerModifications")
+        self.myReconstructAddedConnections |= addedConnections;
+        self.myReconstructRemovedConnections |= removedConnections;
     }
 
     /// C++: `NBTrafficLightLogic * NBLoadedSUMOTLDef::getLogic()`
@@ -369,7 +430,7 @@ impl NBLoadedSUMOTLDef {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic(&mut self) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBLoadedSUMOTLDef::getLogic")
+        self.myTLLogic
     }
 
     /// C++: `void NBLoadedSUMOTLDef::setOffset(SUMOTime)`
@@ -381,7 +442,8 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_offset(&mut self, offset: SUMOTime) {
-        todo!("port NBLoadedSUMOTLDef::setOffset")
+        self.base.myOffset = offset;
+        self.myTLLogic.m().set_offset(offset);
     }
 
     /// C++: `void NBLoadedSUMOTLDef::setType(TrafficLightType)` [virtual]
@@ -393,7 +455,8 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: TrafficLightType) {
-        todo!("port NBLoadedSUMOTLDef::setType")
+        self.base.myType = type_;
+        self.myTLLogic.m().set_type(type_);
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::extraConflict(int, int) const` [const, virtual]
@@ -411,7 +474,14 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
-        todo!("port NBLoadedSUMOTLDef::extraConflict")
+        if self.am_invalid() {
+            return false;
+        }
+        if !self.base.myExtraConflictsReady {
+            self.base.init_extra_conflicts();
+            assert!(self.base.myExtraConflictsReady);
+        }
+        self.base.myExtraConflicts.contains(&(index, foeIndex))
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::cleanupStates()`
@@ -441,7 +511,27 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_states(&mut self) -> bool {
-        todo!("port NBLoadedSUMOTLDef::cleanupStates")
+        let maxIndex = self.get_max_valid_index();
+        let mut unusedIndices: Vec<i32> = Vec::new();
+        for i in 0..=maxIndex {
+            if self.is_used(i) {
+                if unusedIndices.len() > 0 {
+                    self.replace_index(i, i - unusedIndices.len() as i32);
+                }
+            } else {
+                unusedIndices.push(i);
+            }
+        }
+        for i in (0..unusedIndices.len()).rev() {
+            self.myTLLogic.m().delete_state_index(unusedIndices[i]);
+        }
+        if unusedIndices.len() > 0 {
+            self.myTLLogic.m().set_state_length(maxIndex + 1 - unusedIndices.len() as i32, LINKSTATE_TL_RED);
+            self.set_tl_controlling_information();
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::usingSignalGroups() const` [const, virtual]
@@ -468,7 +558,18 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn using_signal_groups(&self) -> bool {
-        todo!("port NBLoadedSUMOTLDef::usingSignalGroups")
+        // count how often each index is used
+        let mut indexUsage: BTreeMap<i32, i32> = BTreeMap::new();
+        for c in self.base.myControlledLinks.iter() {
+            *indexUsage.entry(c.get_tl_index()).or_insert(0) += 1;
+        }
+        for n in self.base.myControlledNodes.iter() {
+            for c in n.get_crossings() {
+                *indexUsage.entry(c.tlLinkIndex).or_insert(0) += 1;
+                *indexUsage.entry(c.tlLinkIndex2).or_insert(0) += 1;
+            }
+        }
+        indexUsage.iter().any(|(k, v)| *k >= 0 && *v > 1)
     }
 
     /// C++: `void NBLoadedSUMOTLDef::joinLogic(NBTrafficLightDefinition *)`
@@ -483,7 +584,14 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn join_logic(&mut self, def: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBLoadedSUMOTLDef::joinLogic")
+        def.m().set_participants_information();
+        // C++ def->compute(OptionsCont::getOptions())
+        let _ = utils::options::options_cont::with_options(|oc| def.m().compute(oc));
+        let maxIndex = std::cmp::max(self.get_max_index(), def.m().get_max_index());
+        self.myTLLogic.m().set_state_length(maxIndex + 1, LINKSTATE_TL_RED);
+        for c in def.get_controlled_links().iter() {
+            self.base.myControlledLinks.push(NBConnection::new_4(c));
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::guessMinMaxDuration()`
@@ -539,7 +647,54 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn guess_min_max_duration(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::guessMinMaxDuration")
+        use utils::common::time::time2steps;
+        let mut hasMinMaxDur = false;
+        for phase in self.myTLLogic.m().get_phases().iter() {
+            if phase.maxDur != NBTrafficLightDefinition_UNSPECIFIED_DURATION {
+                hasMinMaxDur = true;
+            }
+        }
+        if !hasMinMaxDur {
+            let minMinDur: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.min-dur") as f64);
+            let maxDur: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.max-dur") as f64);
+            let mut yellowIndices: BTreeSet<usize> = BTreeSet::new();
+            for phase in self.myTLLogic.m().get_phases().iter() {
+                for (i, &ch) in phase.state.as_bytes().iter().enumerate() {
+                    if ch == b'y' || ch == b'Y' {
+                        yellowIndices.insert(i);
+                    }
+                }
+            }
+            let numPhases = self.myTLLogic.m().get_phases().len();
+            for ip in 0..numPhases {
+                let mut needMinMaxDur = false;
+                let phaseState: String = self.myTLLogic.m().get_phases()[ip].state.clone();
+                let mut greenIndices: BTreeSet<i32> = BTreeSet::new();
+                if phaseState.bytes().any(|b| b == b'y' || b == b'Y') {
+                    continue;
+                }
+                for (i, &ch) in phaseState.as_bytes().iter().enumerate() {
+                    if yellowIndices.contains(&i) && ch == b'G' {
+                        needMinMaxDur = true;
+                        greenIndices.insert(i as i32);
+                    }
+                }
+                if needMinMaxDur {
+                    let mut maxSpeed: f64 = 0.0;
+                    for c in self.base.myControlledLinks.iter() {
+                        if greenIndices.contains(&c.get_tl_index()) {
+                            let speed = c.get_from().get_lane_speed(c.get_from_lane());
+                            maxSpeed = if maxSpeed > speed { maxSpeed } else { speed };
+                        }
+                    }
+                    // 5s at 50km/h, 10s at 80km/h, rounded to full seconds
+                    let minDurBySpeed: f64 = maxSpeed * 3.6 / 6.0 - 3.3;
+                    let minDur: SUMOTime = std::cmp::max(minMinDur, time2steps((minDurBySpeed + 0.5).floor()));
+                    self.myTLLogic.m().set_phase_min_duration(ip as i32, minDur);
+                    self.myTLLogic.m().set_phase_max_duration(ip as i32, maxDur);
+                }
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::groupSignals()`
@@ -591,7 +746,47 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn group_signals(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::groupSignals")
+        let maxIndex = self.get_max_index();
+        let mut unusedIndices: Vec<i32> = Vec::new();
+        for i in 0..=maxIndex {
+            if self.is_used(i) {
+                let edges = self.get_edges_using_index(i);
+                // compactify
+                self.replace_index(i, i - unusedIndices.len() as i32);
+                if edges.len() == 0 {
+                    // do not group pedestrian crossing signals
+                    continue;
+                }
+                let states = self.get_states(i);
+                for j in (i + 1)..=maxIndex {
+                    // only group signals from the same edges as is commonly done by
+                    // traffic engineers
+                    if states == self.get_states(j) && edges == self.get_edges_using_index(j) {
+                        self.replace_index(j, i - unusedIndices.len() as i32);
+                    }
+                }
+            } else {
+                unusedIndices.push(i);
+            }
+        }
+        for i in (0..unusedIndices.len()).rev() {
+            self.myTLLogic.m().delete_state_index(unusedIndices[i]);
+        }
+        self.cleanup_states();
+        self.set_tl_controlling_information();
+        // patch crossing indices
+        for n in self.base.myControlledNodes.clone() {
+            for c in n.get_crossings() {
+                for i in (0..unusedIndices.len()).rev() {
+                    if c.m().customTLIndex > i as i32 {
+                        c.m().customTLIndex -= 1;
+                    }
+                    if c.m().customTLIndex2 > i as i32 {
+                        c.m().customTLIndex2 -= 1;
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::ungroupSignals()`
@@ -627,7 +822,45 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn ungroup_signals(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::ungroupSignals")
+        let mut defaultOrdering: NBConnectionVector = Vec::new();
+        self.base.collect_all_links(&mut defaultOrdering);
+        let mut states: Vec<String> = Vec::new(); // organized per link rather than phase
+        let mut index: i32 = 0;
+        for c in defaultOrdering.iter() {
+            let eq = NBLoadedSUMOTLDef_connection_equal::new(c);
+            let pos = self
+                .base
+                .myControlledLinks
+                .iter()
+                .position(|c2| eq.call_op(c2))
+                .expect("connection_equal: connection not found");
+            let oldIndex = self.base.myControlledLinks[pos].get_tl_index();
+            let s = self.get_states(oldIndex);
+            states.push(s);
+            self.base.myControlledLinks[pos].set_tl_index(index);
+            index += 1;
+        }
+        for n in self.base.myControlledNodes.clone() {
+            for c in n.get_crossings() {
+                let s = self.get_states(c.tlLinkIndex);
+                states.push(s);
+                c.m().customTLIndex = index;
+                index += 1;
+                if c.tlLinkIndex2 != NBCONNECTION_INVALID_TL_INDEX {
+                    let s2 = self.get_states(c.tlLinkIndex2);
+                    states.push(s2);
+                    c.m().customTLIndex2 = index;
+                    index += 1;
+                }
+            }
+        }
+        self.myTLLogic.m().set_state_length(index, LINKSTATE_TL_RED);
+        for i in 0..states.len() {
+            for (p, &ch) in states[i].as_bytes().iter().enumerate() {
+                self.myTLLogic.m().set_phase_state(p as i32, i as i32, ch as LinkState);
+            }
+        }
+        self.set_tl_controlling_information();
     }
 
     /// C++: `void NBLoadedSUMOTLDef::copyIndices(NBTrafficLightDefinition *)`
@@ -661,7 +894,39 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn copy_indices(&mut self, def: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBLoadedSUMOTLDef::copyIndices")
+        let mut oldStates: BTreeMap<i32, String> = BTreeMap::new(); // organized per link index rather than phase
+        let mut newStates: BTreeMap<i32, String> = BTreeMap::new(); // organized per link index rather than phase
+        for c in def.get_controlled_links().iter() {
+            let eq = NBLoadedSUMOTLDef_connection_equal::new(c);
+            let pos = self
+                .base
+                .myControlledLinks
+                .iter()
+                .position(|c2| eq.call_op(c2))
+                .expect("connection_equal: connection not found");
+            let oldIndex = self.base.myControlledLinks[pos].get_tl_index();
+            let newIndex = c.get_tl_index();
+            let states = self.get_states(oldIndex);
+            oldStates.insert(oldIndex, states.clone());
+            if newStates.contains_key(&newIndex) && newStates[&newIndex] != states {
+                write_warningf!("Signal groups from program '%' are incompatible with the states of program '%' at tlLogic '%'. Possibly unsafe program.", def.get_program_id(), self.get_program_id(), self.get_id());
+            } else {
+                newStates.insert(newIndex, states);
+            }
+            self.base.myControlledLinks[pos].set_tl_index(newIndex);
+        }
+        let maxIndex = self.get_max_index();
+        self.myTLLogic.m().set_state_length(maxIndex + 1, LINKSTATE_TL_RED);
+        // C++ re-evaluates newStates.size() and operator[] (which may insert) in every iteration
+        let mut i: i32 = 0;
+        while (i as usize) < newStates.len() {
+            let states: String = newStates.entry(i).or_default().clone();
+            for (p, &ch) in states.as_bytes().iter().enumerate() {
+                self.myTLLogic.m().set_phase_state(p as i32, i, ch as LinkState);
+            }
+            i += 1;
+        }
+        self.set_tl_controlling_information();
     }
 
     /// C++: `void NBLoadedSUMOTLDef::finalChecks() const` [const, virtual]
@@ -677,7 +942,14 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn final_checks(&self) {
-        todo!("port NBLoadedSUMOTLDef::finalChecks")
+        let mut i: i32 = 0;
+        while i < self.myTLLogic.m().get_num_links() {
+            if !self.is_used(i) {
+                write_warningf!("Unused state in tlLogic '%', program '%' at tl-index %", self.get_id(), self.get_program_id(), i);
+                break;
+            }
+            i += 1;
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::replaceIndex(int, int)`
@@ -708,7 +980,27 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn replace_index(&mut self, oldIndex: i32, newIndex: i32) {
-        todo!("port NBLoadedSUMOTLDef::replaceIndex")
+        if oldIndex == newIndex {
+            return;
+        }
+        for c in self.base.myControlledLinks.iter_mut() {
+            if c.get_tl_index() == oldIndex {
+                c.set_tl_index(newIndex);
+            }
+            if c.get_tl_index2() == oldIndex {
+                c.set_tl_index2(newIndex);
+            }
+        }
+        for n in self.base.myControlledNodes.iter() {
+            for c in n.get_crossings() {
+                if c.tlLinkIndex == oldIndex {
+                    c.m().tlLinkIndex = newIndex;
+                }
+                if c.tlLinkIndex2 == oldIndex {
+                    c.m().tlLinkIndex2 = newIndex;
+                }
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::collectLinks()` [virtual, protected]
