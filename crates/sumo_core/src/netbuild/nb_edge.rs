@@ -1,6 +1,8 @@
 //! Port of netbuild/NBEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+use utils::common::to_string::f64_to_string;
 
 /// C++ enum `MainDirections::Direction`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -6108,7 +6110,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_sidewalk(&mut self, width: f64) {
-        todo!("port NBEdge::addSidewalk")
+        self.add_restricted_lane(width, SVC_PEDESTRIAN);
     }
 
     /// C++: `void NBEdge::restoreSidewalk(std::vector<NBEdge::Lane>, PositionVector, std::vector<NBEdge::Connection>)`
@@ -6119,7 +6121,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn restore_sidewalk(&mut self, oldLanes: Vec<NBEdge_Lane>, oldGeometry: PositionVector, oldConnections: Vec<NBEdge_Connection>) {
-        todo!("port NBEdge::restoreSidewalk")
+        self.restore_restricted_lane(SVC_PEDESTRIAN, oldLanes, oldGeometry, oldConnections);
     }
 
     /// C++: `void NBEdge::addBikeLane(double)`
@@ -6130,7 +6132,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_bike_lane(&mut self, width: f64) {
-        todo!("port NBEdge::addBikeLane")
+        self.add_restricted_lane(width, SVC_BICYCLE);
     }
 
     /// C++: `void NBEdge::restoreBikelane(std::vector<NBEdge::Lane>, PositionVector, std::vector<NBEdge::Connection>)`
@@ -6141,7 +6143,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn restore_bikelane(&mut self, oldLanes: Vec<NBEdge_Lane>, oldGeometry: PositionVector, oldConnections: Vec<NBEdge_Connection>) {
-        todo!("port NBEdge::restoreBikelane")
+        self.restore_restricted_lane(SVC_BICYCLE, oldLanes, oldGeometry, oldConnections);
     }
 
     /// C++: `void NBEdge::addRestrictedLane(double, SUMOVehicleClass)`
@@ -6185,7 +6187,45 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_restricted_lane(&mut self, width: f64, vclass: SUMOVehicleClass) {
-        todo!("port NBEdge::addRestrictedLane")
+        if self.has_restricted_lane(vclass) {
+            write_warningf!(
+                "Edge '%' already has a dedicated lane for %s. Not adding another one.",
+                self.get_id(),
+                utils::common::sumo_vehicle_class::SUMO_VEHICLE_CLASS_STRINGS.get_string(vclass).unwrap()
+            );
+            return;
+        }
+        if self.myLaneSpreadFunction == LaneSpreadFunction::CENTER {
+            self.myGeom.move2side(width / 2.0, 100.0);
+        }
+        // disallow the designated vclass on all "old" lanes
+        self.disallow_vehicle_class(-1, vclass);
+        // don't create a restricted vehicle lane to the right of a sidewalk
+        let newIndex: i32 = if vclass != SVC_PEDESTRIAN && self.myLanes[0].permissions == SVC_PEDESTRIAN { 1 } else { 0 };
+        if newIndex == 0 {
+            // disallow pedestrians on all "higher" lanes to ensure that sidewalk remains the rightmost lane
+            self.disallow_vehicle_class(-1, SVC_PEDESTRIAN);
+        }
+        // add new lane
+        let me = Ptr::from_mut(self);
+        let origID = self.myLanes[0].get_parameter(SUMO_PARAM_ORIGID, "");
+        self.myLanes.insert(newIndex as usize, NBEdge_Lane::new(me, &origID));
+        self.myLanes[newIndex as usize].permissions = vclass;
+        self.myLanes[newIndex as usize].width = width.abs();
+        // shift outgoing connections to the left
+        for c in self.myConnections.iter_mut() {
+            if c.fromLane >= newIndex {
+                c.fromLane += 1;
+            }
+        }
+        // shift incoming connections to the left
+        let incoming = self.myFrom.get_incoming_edges().clone();
+        for inc in incoming.iter() {
+            inc.m().shift_to_lanes_to_edge(me, 1);
+        }
+        self.myFrom.m().shift_tl_connection_lane_index(me, 1, -1);
+        self.myTo.m().shift_tl_connection_lane_index(me, 1, -1);
+        self.compute_lane_shapes();
     }
 
     /// C++: `void NBEdge::setPermissions(SVCPermissions, int)`
