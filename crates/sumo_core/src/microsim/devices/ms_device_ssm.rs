@@ -4,6 +4,7 @@ use crate::prelude::*;
 use utils::common::std_defs::{INVALID_DOUBLE, g_precision, g_precision_geo};
 use utils::common::to_string::to_string;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::common::time::{steps2time, ts};
 
 /// C++ enum `MSDevice_SSM::EncounterType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -572,6 +573,41 @@ thread_local! {
     pub static MY_EDGE_FILTER_ACTIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
     /// C++ static `MSDevice_SSM::myCreatedOutputFiles` (remember which files were created already)
     pub static MY_CREATED_OUTPUT_FILES: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
+}
+
+/// C++ macro `SIMTIME`
+fn simtime() -> f64 {
+    steps2time(MSNet::get_instance().get_current_time_step())
+}
+
+/// C++ `static_cast<EncounterType>(int)` for values stored in typeSpan (always valid encounter types)
+fn encounter_type_from_i32(v: i32) -> MSDevice_SSM_EncounterType {
+    use MSDevice_SSM_EncounterType::*;
+    const ALL: [MSDevice_SSM_EncounterType; 22] = [
+        ENCOUNTER_TYPE_NOCONFLICT_AHEAD, ENCOUNTER_TYPE_FOLLOWING, ENCOUNTER_TYPE_FOLLOWING_FOLLOWER, ENCOUNTER_TYPE_FOLLOWING_LEADER,
+        ENCOUNTER_TYPE_ON_ADJACENT_LANES, ENCOUNTER_TYPE_MERGING, ENCOUNTER_TYPE_MERGING_LEADER, ENCOUNTER_TYPE_MERGING_FOLLOWER,
+        ENCOUNTER_TYPE_MERGING_ADJACENT, ENCOUNTER_TYPE_CROSSING, ENCOUNTER_TYPE_CROSSING_LEADER, ENCOUNTER_TYPE_CROSSING_FOLLOWER,
+        ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA, ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA, ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA,
+        ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA, ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA, ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA,
+        ENCOUNTER_TYPE_FOLLOWING_PASSED, ENCOUNTER_TYPE_MERGING_PASSED, ENCOUNTER_TYPE_ONCOMING, ENCOUNTER_TYPE_COLLISION,
+    ];
+    *ALL.iter().find(|t| **t as i32 == v).unwrap_or(&ENCOUNTER_TYPE_NOCONFLICT_AHEAD)
+}
+
+/// C++ macro `MAX2`
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ macro `MIN2`
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `delete e` for an encounter created with Box::into_raw
+fn delete_encounter(e: Ptr<MSDevice_SSM_Encounter>) {
+    // SAFETY: every Encounter is created by Box::into_raw in create_encounters and deleted exactly once
+    unsafe { drop(Box::from_raw(e.as_raw())) };
 }
 
 /// C++ `&lane->getEdge()`
@@ -2299,7 +2335,61 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn process_encounters(&mut self, foes: &mut MSDevice_SSM_FoeInfoMap, forceClose: bool) {
-        todo!("port MSDevice_SSM::processEncounters")
+        // Run through active encounters. If corresponding foe is still present in foes update and
+        // remove foe from foes. If the foe has disappeared close the encounter (check if it qualifies
+        // as a conflict and in case transfer it to myPastConflicts).
+        // Afterwards run through remaining elements in foes and create new encounters for them.
+        let mut ei: usize = 0;
+        while ei < self.myActiveEncounters.len() {
+            let e = self.myActiveEncounters[ei];
+            // check whether foe is still on net
+            let foeExists = !MSNet::get_instance().m().get_vehicle_control().get_vehicle(&e.foeID).is_null();
+            if !foeExists {
+                e.m().foe = Ptr::default();
+            }
+            if foes.contains_key(&e.foe) {
+                let foeInfo = foes[&e.foe];
+                let prevType = e.currentType;
+                // Update encounter
+                self.update_encounter(e, foeInfo);
+                if prevType == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+                    && e.currentType != MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+                {
+                    // The encounter classification switched from BOTH_LEFT to another
+                    // => Start new encounter (i.e. don't erase the foe, don't delete the foeInfo and request closing)
+                    // Note that updateEncounter did not add another trajectory point in this case.
+                    e.m().closingRequested = true;
+                } else {
+                    // Erase foes which were already encountered and should not be used to open a new conflict
+                    delete_foe_info(foeInfo);
+                    foes.remove(&e.foe);
+                }
+            } else {
+                if e.get_remaining_extra_time() <= 0. || forceClose || !foeExists {
+                    // Close encounter, extra time has expired (deletes e if it does not qualify as conflict)
+                    e.m().closingRequested = true;
+                } else {
+                    self.update_encounter(e, Ptr::default()); // counts down extra time
+                }
+            }
+
+            if e.closingRequested {
+                let eBegin = e.begin;
+                self.close_encounter(e);
+                self.myActiveEncounters.remove(ei);
+                if self.myActiveEncounters.is_empty() {
+                    self.myOldestActiveEncounterBegin = INVALID_DOUBLE;
+                } else if eBegin == self.myOldestActiveEncounterBegin {
+                    // Erased the oldest encounter, update myOldestActiveEncounterBegin
+                    self.myOldestActiveEncounterBegin = self.myActiveEncounters[0].begin;
+                    for i in 1..self.myActiveEncounters.len() {
+                        self.myOldestActiveEncounterBegin = min2(self.myOldestActiveEncounterBegin, self.myActiveEncounters[i].begin);
+                    }
+                }
+            } else {
+                ei += 1;
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::storeEncountersExceedingMaxLength()` [private]
@@ -2307,7 +2397,8 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn store_encounters_exceeding_max_length(&mut self) {
-        todo!("port MSDevice_SSM::storeEncountersExceedingMaxLength")
+        // C++ declares this private method but never defines it (MSDevice_SSM.cpp has no body), so any call is a link error in C++
+        panic!("MSDevice_SSM::storeEncountersExceedingMaxLength is declared but not defined in C++")
     }
 
     /// C++: `void MSDevice_SSM::createEncounters(FoeInfoMap &)` [private]
@@ -2344,7 +2435,21 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn create_encounters(&mut self, foes: &mut MSDevice_SSM_FoeInfoMap) {
-        todo!("port MSDevice_SSM::createEncounters")
+        for (&foe, &foeInfo) in foes.iter() {
+            let e = Ptr::from_raw(Box::into_raw(Box::new(MSDevice_SSM_Encounter::new(self.myHolderMS, foe, simtime(), self.myExtraTime))));
+            if self.update_encounter(e, foeInfo) {
+                if self.myOldestActiveEncounterBegin == INVALID_DOUBLE {
+                    // assert(myActiveEncounters.empty()) is not ported
+                    self.myOldestActiveEncounterBegin = e.begin;
+                }
+                self.myActiveEncounters.push(e);
+            } else {
+                // Discard encounters, where one vehicle already left the conflict area
+                delete_encounter(e);
+            }
+            // free foeInfo
+            delete_foe_info(foeInfo);
+        }
     }
 
     /// C++: `void MSDevice_SSM::computeGlobalMeasures()` [private]
@@ -2410,7 +2515,58 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn compute_global_measures(&mut self) {
-        todo!("port MSDevice_SSM::computeGlobalMeasures")
+        if self.myComputeBR || self.myComputeSGAP || self.myComputeTGAP {
+            self.myGlobalMeasuresTimeSpan.push(simtime());
+            let holder = self.myHolderMS;
+            if self.myWritePositions {
+                self.myGlobalMeasuresPositions.push(holder.get_position(0.));
+            }
+            if self.myWriteLanesPositions {
+                self.myGlobalMeasuresLaneIDs.push(holder.get_lane().get_id().to_string());
+                self.myGlobalMeasuresLanesPositions.push(holder.get_position_on_lane());
+            }
+            if self.myComputeBR {
+                let br = max2(-holder.get_acceleration(), 0.0);
+                if br > self.myMaxBR.1 {
+                    self.myMaxBR = ((simtime(), holder.get_position(0.)), br);
+                }
+                self.myBRspan.push(br);
+            }
+            let mut leaderSearchDist = 0.;
+            let mut leader: (Ptr<MSVehicle>, f64) = (Ptr::default(), 0.);
+            if self.myComputeSGAP {
+                leaderSearchDist = *self.myThresholds.entry("SGAP".to_string()).or_insert(0.);
+            }
+            if self.myComputeTGAP {
+                leaderSearchDist = max2(leaderSearchDist, *self.myThresholds.entry("TGAP".to_string()).or_insert(0.) * holder.get_speed());
+            }
+            if leaderSearchDist > 0. {
+                leader = holder.get_leader(leaderSearchDist, true);
+            }
+            // negative gap indicates theoretical car-following relationship for paths that cross at an intersection
+            if self.myComputeSGAP {
+                if leader.0.is_null() || leader.1 < 0. {
+                    self.mySGAPspan.push(INVALID_DOUBLE);
+                } else {
+                    let sgap = leader.1 + self.myHolder.get_vehicle_type().get_min_gap();
+                    self.mySGAPspan.push(sgap);
+                    if sgap < self.myMinSGAP.0.1 {
+                        self.myMinSGAP = (((simtime(), holder.get_position(0.)), sgap), leader.0.get_id().to_string());
+                    }
+                }
+            }
+            if self.myComputeTGAP {
+                if leader.0.is_null() || holder.get_speed() == 0. || leader.1 < 0. {
+                    self.myTGAPspan.push(INVALID_DOUBLE);
+                } else {
+                    let tgap = (leader.1 + self.myHolder.get_vehicle_type().get_min_gap()) / holder.get_speed();
+                    self.myTGAPspan.push(tgap);
+                    if tgap < self.myMinTGAP.0.1 {
+                        self.myMinTGAP = (((simtime(), holder.get_position(0.)), tgap), leader.0.get_id().to_string());
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::resetEncounters()` [private]
@@ -2424,7 +2580,10 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn reset_encounters(&mut self) {
-        todo!("port MSDevice_SSM::resetEncounters")
+        // Call processEncounters() with empty vehicle set
+        let mut foes: MSDevice_SSM_FoeInfoMap = BTreeMap::new();
+        // processEncounters with empty argument closes all encounters
+        self.process_encounters(&mut foes, true);
     }
 
     /// C++: `void MSDevice_SSM::flushConflicts(bool)` [private]
@@ -2638,7 +2797,107 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn update_encounter(&mut self, e: Ptr<MSDevice_SSM_Encounter>, foeInfo: Ptr<MSDevice_SSM_FoeInfo>) -> bool {
-        todo!("port MSDevice_SSM::updateEncounter")
+        // Struct storing distances (determined in classifyEncounter()) and times to potential conflict entry / exit (in estimateConflictTimes())
+        let mut eInfo = MSDevice_SSM_EncounterApproachInfo::new(e);
+        // Classify encounter type based on the present information
+        // More details on follower/lead relation are determined in a second step below, see estimateConflictTimes()
+        // If a crossing situation is ongoing (i.e. one of the vehicles entered the conflict area already in the last step,
+        // this is handled by passedEncounter by only tracing the vehicle's movements)
+        // The further development of the encounter type is done in checkConflictEntryAndExit()
+        eInfo.type_ = self.classify_encounter(foeInfo, &mut eInfo);
+
+        // Discard new encounters, where one vehicle has already left the conflict area
+        if e.size() == 0 {
+            if eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+                || eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+            {
+                // Signalize to discard
+                return false;
+            }
+        }
+
+        if eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_NOCONFLICT_AHEAD {
+            // At this state, eInfo.type == ENCOUNTER_TYPE_NOCONFLICT_AHEAD implies that the foe
+            // is either out of the device's range or its route does not interfere with the ego's route.
+            self.update_passed_encounter(e, foeInfo, &mut eInfo);
+        } else if matches!(
+            eInfo.type_,
+            MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA
+                | MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+                | MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+                | MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+                | MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA
+                | MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+        ) {
+            // Ongoing encounter. Treat with update passed encounter (trace covered distances)
+            // eInfo.type only holds the previous type
+            self.update_passed_encounter(e, foeInfo, &mut eInfo);
+            // Estimate times until a possible conflict / collision
+            Self::estimate_conflict_times(&mut eInfo);
+        } else {
+            // Estimate times until a possible conflict / collision
+            // Not all are used for all types of encounters:
+            // Follow/lead situation doesn't need them at all, currently (might change if more SSMs are implemented).
+            // Crossing / Merging calculates entry times to determine leader/follower and calculates the exit time for the leader.
+            Self::estimate_conflict_times(&mut eInfo);
+            // reset the remaining extra time (foe could have re-entered the device range after beginning extra time countdown already)
+            e.m().reset_extra_time(self.myExtraTime);
+        }
+
+        // update entry/exit times for conflict area
+        Self::check_conflict_entry_and_exit(&mut eInfo);
+
+        if e.size() == 0 {
+            if eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+                || eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+                || eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+                || eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_NOCONFLICT_AHEAD
+                || eInfo.type_ == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA
+            {
+                return false;
+            }
+        }
+
+        // update (x,y)-coords of conflict point
+        Self::determine_conflict_point(&mut eInfo);
+
+        // Compute SSMs
+        self.compute_ss_ms(&mut eInfo);
+
+        if e.currentType == MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+            && eInfo.type_ != MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+        {
+            // Don't add a point which switches back to a different encounter type from a passed encounter.
+            // For this situation this encounter will be closed and a new encounter will be created,
+            // @see correspondingly conditionalized code in processEncounters()
+            e.m().currentType = eInfo.type_;
+        } else {
+            // Add current states to trajectories and update type
+            let ego = e.ego;
+            let foe = e.foe;
+            e.m().add(
+                simtime(),
+                eInfo.type_,
+                ego.get_position(0.),
+                ego.get_lane().get_id().to_string(),
+                ego.get_position_on_lane(),
+                ego.get_velocity_vector(),
+                foe.get_position(0.),
+                foe.get_lane().get_id().to_string(),
+                foe.get_position_on_lane(),
+                foe.get_velocity_vector(),
+                eInfo.conflictPoint,
+                eInfo.egoConflictEntryDist,
+                eInfo.foeConflictEntryDist,
+                eInfo.ttc,
+                eInfo.drac,
+                eInfo.pet,
+                eInfo.ppet,
+                eInfo.mdrac,
+            );
+        }
+        // Keep encounter
+        true
     }
 
     /// C++: `void MSDevice_SSM::updatePassedEncounter(Encounter *, FoeInfo *, EncounterApproachInfo &)` [private]
@@ -2805,7 +3064,98 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn update_passed_encounter(&mut self, e: Ptr<MSDevice_SSM_Encounter>, foeInfo: Ptr<MSDevice_SSM_FoeInfo>, eInfo: &mut MSDevice_SSM_EncounterApproachInfo) {
-        todo!("port MSDevice_SSM::updatePassedEncounter")
+        use MSDevice_SSM_EncounterType::*;
+        if foeInfo.is_null() {
+            // the foe is out of the device's range, proceed counting down the remaining extra time to trace
+            e.m().count_down_extra_time(ts());
+        } else {
+            // reset the remaining extra time (foe could have re-entered the device range after beginning extra time countdown already)
+            e.m().reset_extra_time(self.myExtraTime);
+        }
+        // Check, whether this was really a potential conflict at some time:
+        // Search through typeSpan for a type other than no conflict
+        let lastPotentialConflictType = if e.typeSpan.len() > 0 { encounter_type_from_i32(*e.typeSpan.last().unwrap()) } else { ENCOUNTER_TYPE_NOCONFLICT_AHEAD };
+        if lastPotentialConflictType == ENCOUNTER_TYPE_NOCONFLICT_AHEAD {
+            // This encounter was no conflict in the last step -> remains so
+            if foeInfo.is_null() {
+                // Encounter was either never a potential conflict and foe is out of range
+                // or the foe has left the network
+                // -> no use in further tracing this encounter
+                e.m().closingRequested = true;
+                eInfo.type_ = ENCOUNTER_TYPE_NOCONFLICT_AHEAD;
+            }
+        } else if lastPotentialConflictType == ENCOUNTER_TYPE_FOLLOWING_FOLLOWER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_FOLLOWING_LEADER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_FOLLOWING_PASSED
+        {
+            // if a following situation leads to a no-conflict situation this encounter switches no-conflict, since no further computations (PET) are needed.
+            eInfo.type_ = ENCOUNTER_TYPE_FOLLOWING_PASSED;
+        } else if lastPotentialConflictType == ENCOUNTER_TYPE_MERGING_FOLLOWER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_MERGING_LEADER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_MERGING_PASSED
+        {
+            // if a merging situation leads to a no-conflict situation the leader was either removed from the net (we disregard special treatment)
+            // or route- or lane-changes removed the conflict.
+            eInfo.type_ = ENCOUNTER_TYPE_MERGING_PASSED;
+        }
+
+        if lastPotentialConflictType == ENCOUNTER_TYPE_CROSSING_FOLLOWER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_CROSSING_LEADER
+            || lastPotentialConflictType == ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA
+            || lastPotentialConflictType == ENCOUNTER_TYPE_COLLISION
+        {
+            // Encounter has been a crossing situation.
+            // For passed encounters, the xxxConflictAreaLength variables are not determined before -> we use the stored values.
+            // TODO: This could also more precisely be calculated wrt the angle of the crossing *at the conflict point*
+            if eInfo.egoConflictAreaLength == INVALID_DOUBLE {
+                eInfo.egoConflictAreaLength = e.foe.get_width();
+            }
+            if eInfo.foeConflictAreaLength == INVALID_DOUBLE {
+                eInfo.foeConflictAreaLength = e.ego.get_width();
+            }
+            eInfo.egoConflictEntryDist = *e.egoDistsToConflict.last().unwrap() - e.ego.get_last_step_dist();
+            eInfo.egoConflictExitDist = eInfo.egoConflictEntryDist + eInfo.egoConflictAreaLength + e.ego.get_length();
+            eInfo.foeConflictEntryDist = *e.foeDistsToConflict.last().unwrap() - e.foe.get_last_step_dist();
+            eInfo.foeConflictExitDist = eInfo.foeConflictEntryDist + eInfo.foeConflictAreaLength + e.foe.get_length();
+
+            // Determine actual encounter type
+            let egoEnteredConflict = eInfo.egoConflictEntryDist < 0.;
+            let foeEnteredConflict = eInfo.foeConflictEntryDist < 0.;
+            let egoLeftConflict = eInfo.egoConflictExitDist < 0.;
+            let foeLeftConflict = eInfo.foeConflictExitDist < 0.;
+            if (!egoEnteredConflict) && !foeEnteredConflict {
+                // XXX: do we need to recompute the follow/lead order, here?
+                eInfo.type_ = lastPotentialConflictType;
+            } else if egoEnteredConflict && !foeEnteredConflict {
+                eInfo.type_ = ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA;
+            } else if (!egoEnteredConflict) && foeEnteredConflict {
+                eInfo.type_ = ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA;
+            } else {
+                // (egoEnteredConflict && foeEnteredConflict)
+                eInfo.type_ = ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA;
+            }
+            if (!egoLeftConflict) && !foeLeftConflict {
+                if eInfo.type_ == ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA {
+                    eInfo.type_ = ENCOUNTER_TYPE_COLLISION;
+                }
+            } else if egoLeftConflict && !foeLeftConflict {
+                if eInfo.type_ != ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA {
+                    eInfo.type_ = ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA;
+                }
+            } else if (!egoLeftConflict) && foeLeftConflict {
+                if eInfo.type_ != ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA {
+                    eInfo.type_ = ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA;
+                }
+            } else {
+                eInfo.type_ = ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA;
+            }
+            // TODO: adjust the conflict distances according to lateral movement for single ENTERED-cases
+        }
     }
 
     /// C++: `EncounterType MSDevice_SSM::classifyEncounter(const FoeInfo *, EncounterApproachInfo &) const` [const, private]
@@ -3385,7 +3735,17 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn close_encounter(&mut self, e: Ptr<MSDevice_SSM_Encounter>) {
-        todo!("port MSDevice_SSM::closeEncounter")
+        // erase pointers (encounter is stored before being destroyed and pointers could become invalid)
+        let em = e.m();
+        em.ego = Ptr::default();
+        em.foe = Ptr::default();
+        em.end = *em.timeSpan.last().unwrap();
+        let wasConflict = self.qualifies_as_conflict(e);
+        if wasConflict {
+            self.myPastConflicts.push(MSDevice_SSM_EncounterQueueEntry(e));
+        } else {
+            delete_encounter(e);
+        }
     }
 
     /// C++: `bool MSDevice_SSM::qualifiesAsConflict(Encounter *)` [private]
@@ -3419,7 +3779,23 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn qualifies_as_conflict(&mut self, e: Ptr<MSDevice_SSM_Encounter>) -> bool {
-        todo!("port MSDevice_SSM::qualifiesAsConflict")
+        // Check if conflict measure thresholds are exceeded (to decide whether to keep the encounter for writing out)
+        if self.myComputePET && e.PET.value != INVALID_DOUBLE && e.PET.value <= *self.myThresholds.entry("PET".to_string()).or_insert(0.) {
+            return true;
+        }
+        if self.myComputeTTC && e.minTTC.value != INVALID_DOUBLE && e.minTTC.value <= *self.myThresholds.entry("TTC".to_string()).or_insert(0.) {
+            return true;
+        }
+        if self.myComputeDRAC && e.maxDRAC.value != INVALID_DOUBLE && e.maxDRAC.value >= *self.myThresholds.entry("DRAC".to_string()).or_insert(0.) {
+            return true;
+        }
+        if self.myComputePPET && e.minPPET.value != INVALID_DOUBLE && e.minPPET.value <= *self.myThresholds.entry("PPET".to_string()).or_insert(0.) {
+            return true;
+        }
+        if self.myComputeMDRAC && e.maxMDRAC.value != INVALID_DOUBLE && e.maxMDRAC.value >= *self.myThresholds.entry("MDRAC".to_string()).or_insert(0.) {
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSDevice_SSM::computeSSMs(EncounterApproachInfo &) const` [const, private]
