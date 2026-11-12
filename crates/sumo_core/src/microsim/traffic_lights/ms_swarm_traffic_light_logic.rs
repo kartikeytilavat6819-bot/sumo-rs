@@ -2,6 +2,75 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// Leaks a heap object for the whole simulation, like the C++ `new` the constructor uses.
+fn leak<T>(value: T) -> &'static mut T {
+    Box::leak(Box::new(value))
+}
+
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ `beta * oldPhero + gamma * pheroAdd * updatePheromone` (bool as 0/1)
+fn beta_gamma_phero(beta: f64, oldPhero: f64, gamma: f64, pheroAdd: f64, updatePheromone: bool) -> f64 {
+    beta * oldPhero + gamma * pheroAdd * (updatePheromone as i32 as f64)
+}
+
+/// Returns (max value, average of the other values) as computed by the C++ getDistanceOfMaxPhero* methods
+fn distance_of_max_phero(map: &MSLaneId_PheromoneMap) -> (f64, f64) {
+    let mut max_phero_val_current: f64 = 0.0;
+    let mut max_phero_val_old: f64 = 0.0;
+    let mut temp_avg_other_lanes: f64 = 0.0;
+    let mut counter: i32 = 0;
+    for &lanePhero in map.values() {
+        if counter == 0 {
+            max_phero_val_current = lanePhero;
+            counter += 1;
+            continue;
+        }
+        if lanePhero > max_phero_val_current {
+            max_phero_val_old = max_phero_val_current;
+            max_phero_val_current = lanePhero;
+            temp_avg_other_lanes = (temp_avg_other_lanes * (counter - 1) as f64 + max_phero_val_old) / counter as f64;
+        } else {
+            temp_avg_other_lanes = (temp_avg_other_lanes * (counter - 1) as f64 + lanePhero) / counter as f64;
+        }
+        counter += 1;
+    }
+    (max_phero_val_current, temp_avg_other_lanes)
+}
+
+/// Owned copy of a phase. The generated countVehicles takes the phase by value, the C++ takes const&.
+// shortcut: copy only because MSSOTLTrafficLightLogic::count_vehicles takes MSPhaseDefinition by value, change it to &MSPhaseDefinition and drop this copy
+fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
+    MSPhaseDefinition {
+        duration: p.duration,
+        lastDuration: p.lastDuration,
+        minDuration: p.minDuration,
+        maxDuration: p.maxDuration,
+        earliestEnd: p.earliestEnd,
+        latestEnd: p.latestEnd,
+        earlyTarget: p.earlyTarget.clone(),
+        finalTarget: p.finalTarget.clone(),
+        myLastSwitch: p.myLastSwitch,
+        myLastEnd: p.myLastEnd,
+        nextPhases: p.nextPhases.clone(),
+        name: p.name.clone(),
+        yellow: p.yellow,
+        red: p.red,
+        vehext: p.vehext,
+        myTransientNotDecisional: p.myTransientNotDecisional,
+        myCommit: p.myCommit,
+        myUndefined: p.myUndefined,
+        myTargetLaneSet: p.myTargetLaneSet.clone(),
+        myState: p.myState.clone(),
+    }
+}
+
 /// C++ class `CircularBuffer` (microsim/traffic_lights/MSSwarmTrafficLightLogic.h)
 pub struct CircularBuffer<T> {
     pub m_buffer: Ptr<T>,
@@ -19,7 +88,20 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn new(size: i32) -> Self {
-        todo!("port CircularBuffer::CircularBuffer<T>")
+        let layout = std::alloc::Layout::array::<T>(size as usize).unwrap();
+        // C++ `new T[m_size]`: uninitialised storage, the elements are plain values (f64 in practice)
+        let buffer = if layout.size() == 0 {
+            std::ptr::NonNull::<T>::dangling().as_ptr()
+        } else {
+            unsafe { std::alloc::alloc(layout) as *mut T }
+        };
+        Self {
+            m_buffer: Ptr::from_raw(buffer),
+            m_size: size,
+            m_currentIndex: 0,
+            m_firstTime: true,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CircularBuffer::~CircularBuffer<T>()` [virtual]
@@ -28,7 +110,11 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CircularBuffer::~CircularBuffer<T>")
+        // C++ `delete[] m_buffer`
+        if std::mem::size_of::<T>() != 0 && self.m_size > 0 {
+            let layout = std::alloc::Layout::array::<T>(self.m_size as usize).unwrap();
+            unsafe { std::alloc::dealloc(self.m_buffer.as_raw() as *mut u8, layout) };
+        }
     }
 
     /// C++: `bool CircularBuffer::addValue(const T, T &)`
@@ -42,7 +128,12 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn add_value(&mut self, newValue: T, replacedValue: &mut T) -> bool {
-        todo!("port CircularBuffer::addValue")
+        let result = !self.m_firstTime;
+        if result {
+            unsafe { std::ptr::copy_nonoverlapping(self.m_buffer.as_raw().add(self.m_currentIndex as usize), replacedValue as *mut T, 1) };
+        }
+        self.insert(&newValue);
+        result
     }
 
     /// C++: `void CircularBuffer::push_front(const T)`
@@ -51,7 +142,7 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn push_front(&mut self, value: T) {
-        todo!("port CircularBuffer::push_front")
+        self.insert(&value);
     }
 
     /// C++: `T CircularBuffer::at(const int) const` [const]
@@ -61,7 +152,8 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn at(&self, index: i32) -> T {
-        todo!("port CircularBuffer::at")
+        let idx = (self.m_currentIndex - 1 - index + self.m_size) % self.m_size;
+        unsafe { std::ptr::read(self.m_buffer.as_raw().add(idx as usize)) }
     }
 
     /// C++: `T CircularBuffer::front() const` [const]
@@ -70,7 +162,7 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn front(&self) -> T {
-        todo!("port CircularBuffer::front")
+        self.at(0)
     }
 
     /// C++: `T CircularBuffer::back() const` [const]
@@ -79,7 +171,7 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn back(&self) -> T {
-        todo!("port CircularBuffer::back")
+        self.at(self.size() - 1)
     }
 
     /// C++: `int CircularBuffer::size() const` [const]
@@ -91,7 +183,10 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port CircularBuffer::size")
+        if self.m_firstTime {
+            return self.m_currentIndex;
+        }
+        self.m_size
     }
 
     /// C++: `void CircularBuffer::clear()`
@@ -101,7 +196,8 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port CircularBuffer::clear")
+        self.m_currentIndex = 0;
+        self.m_firstTime = true;
     }
 
     /// C++: `void CircularBuffer::insert(const T &)` [private]
@@ -114,7 +210,13 @@ impl<T> CircularBuffer<T> {
     //     }
     #[allow(unused_variables)]
     pub fn insert(&mut self, value: &T) {
-        todo!("port CircularBuffer::insert")
+        // m_buffer[m_currentIndex++] = value;
+        unsafe { std::ptr::copy_nonoverlapping(value as *const T, self.m_buffer.as_raw().add(self.m_currentIndex as usize), 1) };
+        self.m_currentIndex += 1;
+        if self.m_currentIndex == self.m_size {
+            self.m_currentIndex = 0;
+            self.m_firstTime = false;
+        }
     }
 
 }
@@ -130,7 +232,7 @@ pub struct MSSwarmTrafficLightLogic {
     /// This member keeps track of the last thresholds update, s.t. updates can be correctly performed even on time-variable interations.
     pub lastThetaSensitivityUpdate: SUMOTime,
     pub logData: bool,
-    pub swarmLogFile: Unmapped /* std::ofstream */,
+    pub swarmLogFile: Option<std::fs::File> /* std::ofstream */,
     /// When true, indicates that the current policy MUST be changed. It's used to force the exit from the congestion policy
     pub mustChange: bool,
     pub congestion_steps: SUMOTime,
@@ -150,7 +252,7 @@ pub struct MSSwarmTrafficLightLogic {
     pub scaleFactorDispersionIn: f64,
     pub scaleFactorDispersionOut: f64,
     pub m_laneIndexMap: BTreeMap<String, Vec<i32>>,
-    pub m_pheroLevelLog: Unmapped /* Parameterised::Map */,
+    pub m_pheroLevelLog: BTreeMap<String, String>,
     pub m_meanSpeedHistory: BTreeMap<String, Ptr<CircularBuffer<f64>>>,
     pub m_derivativeHistory: BTreeMap<String, Ptr<CircularBuffer<f64>>>,
     pub m_derivativeAlpha: f64,
@@ -230,7 +332,72 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSwarmTrafficLightLogic::MSSwarmTrafficLightLogic")
+        let mut this = Self {
+            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters),
+            pheromoneInputLanes: BTreeMap::new(),
+            pheromoneOutputLanes: BTreeMap::new(),
+            lastThetaSensitivityUpdate: 0,
+            logData: false,
+            swarmLogFile: None,
+            mustChange: false,
+            congestion_steps: 0,
+            laneCheck: BTreeMap::new(),
+            targetLanes: Vec::new(),
+            skipEta: false,
+            gotTargetLane: false,
+            carsIn: 0,
+            carsOut: 0,
+            inTarget: 0,
+            notTarget: 0,
+            scaleFactorDispersionIn: 0.0,
+            scaleFactorDispersionOut: 0.0,
+            m_laneIndexMap: BTreeMap::new(),
+            m_pheroLevelLog: BTreeMap::new(),
+            m_meanSpeedHistory: BTreeMap::new(),
+            m_derivativeHistory: BTreeMap::new(),
+            m_derivativeAlpha: 0.0,
+            m_losCounter: 0,
+            m_losMaxLimit: 0,
+            m_useVehicleTypesWeights: false,
+        };
+
+        let pols = utils::common::string_utils::to_lower_case(&this.get_policies_param());
+        // the policies are owned for the whole simulation, as the C++ `new` calls leak them
+        if pols.contains("platoon") {
+            let stimulus = leak(MSSOTLPolicy5DFamilyStimulus::new("PLATOON".to_string(), parameters));
+            let policy = leak(MSSOTLPlatoonPolicy::new_3(Ptr::from_mut(&mut stimulus.base), parameters));
+            this.add_policy(Ptr::from_mut(&mut policy.base));
+        }
+        if pols.contains("phase") {
+            let stimulus = leak(MSSOTLPolicy5DFamilyStimulus::new("PHASE".to_string(), parameters));
+            let policy = leak(MSSOTLPhasePolicy::new_3(Ptr::from_mut(&mut stimulus.base), parameters));
+            this.add_policy(Ptr::from_mut(&mut policy.base));
+        }
+        if pols.contains("marching") {
+            let stimulus = leak(MSSOTLPolicy5DFamilyStimulus::new("MARCHING".to_string(), parameters));
+            let policy = leak(MSSOTLMarchingPolicy::new_3(Ptr::from_mut(&mut stimulus.base), parameters));
+            this.add_policy(Ptr::from_mut(&mut policy.base));
+        }
+        if pols.contains("congestion") {
+            let stimulus = leak(MSSOTLPolicy5DFamilyStimulus::new("CONGESTION".to_string(), parameters));
+            let policy = leak(MSSOTLCongestionPolicy::new_3(Ptr::from_mut(&mut stimulus.base), parameters));
+            this.add_policy(Ptr::from_mut(&mut policy.base));
+        }
+
+        if this.myPolicies.is_empty() {
+            utils::common::msg_handler::write_error("NO VALID POLICY LIST READ");
+        }
+
+        this.mustChange = false;
+        this.skipEta = false;
+        this.gotTargetLane = false;
+
+        this.congestion_steps = 0;
+        this.m_useVehicleTypesWeights = this.get_parameter("USE_VEHICLE_TYPES_WEIGHTS", "0".to_string()) == "1";
+        if this.m_useVehicleTypesWeights && !pols.contains("phase") {
+            utils::common::msg_handler::write_error("VEHICLE TYPES WEIGHT only works with phase policy, which is missing");
+        }
+        this
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::~MSSwarmTrafficLightLogic() throw()` [virtual]
@@ -251,7 +418,18 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::~MSSwarmTrafficLightLogic")
+        // the log file is closed when swarmLogFile is dropped
+        self.swarmLogFile = None;
+        for buffer in self.m_meanSpeedHistory.values() {
+            buffer.m().drop_();
+            unsafe { drop(Box::from_raw(buffer.as_raw())) };
+        }
+        self.m_meanSpeedHistory.clear();
+        for buffer in self.m_derivativeHistory.values() {
+            buffer.m().drop_();
+            unsafe { drop(Box::from_raw(buffer.as_raw())) };
+        }
+        self.m_derivativeHistory.clear();
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::init(NLDetectorBuilder &)` [virtual]
@@ -347,7 +525,68 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        todo!("port MSSwarmTrafficLightLogic::init")
+        self.base.init(nb);
+        // Setting the startup policy
+        self.choose_policy(0.0, 0.0, 0.0, 0.0);
+        // Initializing the random number generator to a time-dependent seed
+        utils::common::rand_helper::init_rand(None, true, 0);
+        // Initializing pheromone maps according to input lanes
+        // For each lane insert a pair into maps
+
+        // Derivative
+        let derivativeHistorySize = utils::common::string_utils::to_int(&self.get_parameter("PHERO_DERIVATIVE_HISTORY_SIZE", "3".to_string())).unwrap();
+        let meanSpeedHistorySize = utils::common::string_utils::to_int(&self.get_parameter("PHERO_MEAN_SPEED_HISTORY_SIZE", "3".to_string())).unwrap();
+        self.m_derivativeAlpha = utils::common::string_utils::to_double(&self.get_parameter("PHERO_DERIVATIVE_ALPHA", "1".to_string())).unwrap();
+        self.m_losCounter = 0;
+        self.m_losMaxLimit = utils::common::string_utils::to_int(&self.get_parameter("LOSS_OF_SIGNAL_LIMIT", "10".to_string())).unwrap();
+
+        let mut index: i32 = 0;
+        let myLanes = self.myLanes.clone();
+        for laneVector in myLanes.iter() {
+            for &currentLane in laneVector.iter() {
+                if !self.pheromoneInputLanes.contains_key(currentLane.get_id()) {
+                    self.laneCheck.insert(currentLane, false);
+                    if self.allow_line(currentLane) {
+                        self.pheromoneInputLanes.insert(currentLane.get_id().to_string(), 0.0);
+                        // Consider the derivative only for the input lane
+                        let meanBuffer = Ptr::from_raw(Box::into_raw(Box::new(CircularBuffer::<f64>::new(meanSpeedHistorySize))));
+                        self.m_meanSpeedHistory.insert(currentLane.get_id().to_string(), meanBuffer);
+                        let derivativeBuffer = Ptr::from_raw(Box::into_raw(Box::new(CircularBuffer::<f64>::new(derivativeHistorySize))));
+                        self.m_derivativeHistory.insert(currentLane.get_id().to_string(), derivativeBuffer);
+                    }
+                }
+                self.m_laneIndexMap.entry(currentLane.get_id().to_string()).or_default().push(index);
+                index += 1;
+            }
+        }
+
+        let links = self.myLinks.clone();
+        for i in 0..links.len() {
+            let oneLink = links[i].clone();
+            for j in 0..oneLink.len() {
+                let currentLane = oneLink[j].get_lane();
+                if !self.pheromoneOutputLanes.contains_key(currentLane.get_id()) {
+                    self.laneCheck.insert(currentLane, false);
+                    if self.allow_line(currentLane) {
+                        self.pheromoneOutputLanes.insert(currentLane.get_id().to_string(), 0.0);
+                    }
+                }
+            }
+        }
+
+        let lanesIn = self.pheromoneInputLanes.len() as i32;
+        self.init_scale_factor_dispersion_in(lanesIn);
+        let lanesOut = self.pheromoneOutputLanes.len() as i32;
+        self.init_scale_factor_dispersion_out(lanesOut);
+        // Initializing thresholds for theta evaluations
+        self.lastThetaSensitivityUpdate = MSNet::get_instance().get_current_time_step();
+
+        utils::common::msg_handler::write_message(&format!("*** Intersection {} will run using MSSwarmTrafficLightLogic ***", self.get_id()));
+        let logFileName = self.get_parameter("SWARMLOG", String::new());
+        self.logData = logFileName != "";
+        if self.logData {
+            self.swarmLogFile = std::fs::File::create(&logFileName).ok();
+        }
     }
 
     /// C++: `SUMOTime MSSwarmTrafficLightLogic::getMaxCongestionDuration()`
@@ -356,7 +595,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_congestion_duration(&mut self) -> SUMOTime {
-        todo!("port MSSwarmTrafficLightLogic::getMaxCongestionDuration")
+        utils::common::string_utils::to_int(&self.get_parameter("MAX_CONGESTION_DUR", "120".to_string())).unwrap() as SUMOTime
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getPheroMaxVal()`
@@ -365,7 +604,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_phero_max_val(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getPheroMaxVal")
+        utils::common::string_utils::to_double(&self.get_parameter("PHERO_MAXVAL", "10".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getBetaNo()`
@@ -374,7 +613,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_beta_no(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getBetaNo")
+        utils::common::string_utils::to_double(&self.get_parameter("BETA_NO", "0.99".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getGammaNo()`
@@ -383,7 +622,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_gamma_no(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getGammaNo")
+        utils::common::string_utils::to_double(&self.get_parameter("GAMMA_NO", "1.0".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getBetaSp()`
@@ -392,7 +631,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_beta_sp(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getBetaSp")
+        utils::common::string_utils::to_double(&self.get_parameter("BETA_SP", "0.99".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getGammaSp()`
@@ -401,7 +640,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_gamma_sp(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getGammaSp")
+        utils::common::string_utils::to_double(&self.get_parameter("GAMMA_SP", "1.0".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getChangePlanProbability()`
@@ -410,7 +649,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_change_plan_probability(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getChangePlanProbability")
+        utils::common::string_utils::to_double(&self.get_parameter("CHANGE_PLAN_PROBABILITY", "0.003".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getThetaMax()`
@@ -419,7 +658,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_max(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getThetaMax")
+        utils::common::string_utils::to_double(&self.get_parameter("THETA_MAX", "0.8".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getThetaMin()`
@@ -428,7 +667,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_min(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getThetaMin")
+        utils::common::string_utils::to_double(&self.get_parameter("THETA_MIN", "0.2".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getThetaInit()`
@@ -437,7 +676,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_init(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getThetaInit")
+        utils::common::string_utils::to_double(&self.get_parameter("THETA_INIT", "0.5".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getLearningCox()`
@@ -446,7 +685,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_learning_cox(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getLearningCox")
+        utils::common::string_utils::to_double(&self.get_parameter("LEARNING_COX", "0.0005".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getForgettingCox()`
@@ -455,7 +694,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_forgetting_cox(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getForgettingCox")
+        utils::common::string_utils::to_double(&self.get_parameter("FORGETTING_COX", "0.0005".to_string())).unwrap()
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getScaleFactorDispersionIn()`
@@ -464,7 +703,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_scale_factor_dispersion_in(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getScaleFactorDispersionIn")
+        self.scaleFactorDispersionIn
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getScaleFactorDispersionOut()`
@@ -473,7 +712,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_scale_factor_dispersion_out(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getScaleFactorDispersionOut")
+        self.scaleFactorDispersionOut
     }
 
     /// C++: `const std::string MSSwarmTrafficLightLogic::getLogicType() const` [const]
@@ -483,7 +722,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic_type(&self) -> String {
-        todo!("port MSSwarmTrafficLightLogic::getLogicType")
+        "swarmBasedTrafficLogic".to_string()
     }
 
     /// C++: `int MSSwarmTrafficLightLogic::decideNextPhase()` [virtual, protected]
@@ -573,7 +812,50 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self) -> i32 {
-        todo!("port MSSwarmTrafficLightLogic::decideNextPhase")
+        // if we're congested, it should be wise to reset and recalculate the pheromone levels after X steps
+        if self.get_current_phase_def().is_target() {
+            self.targetLanes = self.get_current_phase_def().get_target_lane_set().clone();
+        }
+
+        if self.myCurrentPolicy.m().get_name() == "Congestion" && self.get_current_phase_def().is_commit() {
+            self.congestion_steps += 1; // STEPS2TIME(getCurrentPhaseDef().duration);
+            if self.congestion_steps >= self.get_max_congestion_duration() {
+                self.reset_pheromone();
+                self.congestion_steps = 0;
+                self.mustChange = true;
+                if self.get_reinforcement_mode() != 0 {
+                    self.skipEta = true;
+                }
+            }
+        }
+
+        // Update pheromone levels
+        self.update_pheromone_levels();
+
+        /* Since we changed the behaviour of computeReturnTime() in order to update pheromone levels every step
+         * it is now mandatory to check if the duration of a transient phase is elapsed or not*/
+        if self.get_current_phase_def().is_transient() && self.get_current_phase_elapsed() < self.get_current_phase_def().duration {
+            return self.get_current_phase_index();
+        }
+
+        // Decide the current policy according to pheromone levels. this should be done only at the end of a chain, before selecting the new one
+        if self.get_current_phase_def().is_commit() {
+            // Update learning and forgetting thresholds
+            self.update_sensitivities();
+            self.decide_policy();
+            self.gotTargetLane = false;
+        }
+
+        // Execute current policy. congestion "policy" must maintain the commit phase, and that must be an all-red one
+        let policy = self.myCurrentPolicy;
+        let curPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
+        let elapsed = self.get_current_phase_elapsed();
+        let currentPhaseIndex = self.get_current_phase_index();
+        let phaseMaxCTS = self.get_phase_index_with_max_cts();
+        let thresholdPassed = self.is_threshold_passed();
+        let pushButtonPressed = self.is_push_button_pressed();
+        let vehicleCount = self.count_vehicles(phase_copy(&curPhase));
+        policy.m().decide_next_phase(elapsed, curPhase, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
     }
 
     /// C++: `bool MSSwarmTrafficLightLogic::canRelease()` [virtual, protected]
@@ -588,7 +870,13 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self) -> bool {
-        todo!("port MSSwarmTrafficLightLogic::canRelease")
+        let policy = self.myCurrentPolicy;
+        let elapsed = self.get_current_phase_elapsed();
+        let thresholdPassed = self.is_threshold_passed();
+        let pushButtonPressed = self.is_push_button_pressed();
+        let curPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
+        let vehicleCount = self.count_vehicles(phase_copy(&curPhase));
+        policy.m().can_release(elapsed, thresholdPassed, pushButtonPressed, curPhase, vehicleCount)
     }
 
     /// C++: `SUMOTime MSSwarmTrafficLightLogic::computeReturnTime()` [virtual, protected]
@@ -599,7 +887,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn compute_return_time(&mut self) -> SUMOTime {
-        todo!("port MSSwarmTrafficLightLogic::computeReturnTime")
+        utils::common::time::delta_t()
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::resetPheromone()` [protected]
@@ -620,7 +908,14 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_pheromone(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::resetPheromone")
+        // input
+        for v in self.pheromoneInputLanes.values_mut() {
+            *v = 0.0;
+        }
+        // output
+        for v in self.pheromoneOutputLanes.values_mut() {
+            *v = 0.0;
+        }
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getPheromoneForInputLanes()` [protected]
@@ -649,7 +944,14 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_pheromone_for_input_lanes(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getPheromoneForInputLanes")
+        if self.pheromoneInputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut pheroIn: f64 = 0.0;
+        for v in self.pheromoneInputLanes.values() {
+            pheroIn += *v;
+        }
+        pheroIn / (self.pheromoneInputLanes.len() as f64)
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getPheromoneForOutputLanes()` [protected]
@@ -676,7 +978,14 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_pheromone_for_output_lanes(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getPheromoneForOutputLanes")
+        if self.pheromoneOutputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut pheroOut: f64 = 0.0;
+        for v in self.pheromoneOutputLanes.values() {
+            pheroOut += *v;
+        }
+        pheroOut / (self.pheromoneOutputLanes.len() as f64)
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getDispersionForInputLanes(double)` [protected]
@@ -701,7 +1010,15 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_dispersion_for_input_lanes(&mut self, average_phero_in: f64) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getDispersionForInputLanes")
+        if self.pheromoneInputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut sum: f64 = 0.0;
+        for v in self.pheromoneInputLanes.values() {
+            sum += (*v - average_phero_in).powf(2.0);
+        }
+        let result = (sum / (self.pheromoneInputLanes.len() as f64)).sqrt() * self.get_scale_factor_dispersion_in();
+        result
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getDispersionForOutputLanes(double)` [protected]
@@ -725,7 +1042,15 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_dispersion_for_output_lanes(&mut self, average_phero_out: f64) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getDispersionForOutputLanes")
+        if self.pheromoneOutputLanes.len() == 0 {
+            return 0.0;
+        }
+        let mut sum: f64 = 0.0;
+        for v in self.pheromoneOutputLanes.values() {
+            sum += (*v - average_phero_out).powf(2.0);
+        }
+        let result = (sum / (self.pheromoneOutputLanes.len() as f64)).sqrt() * self.get_scale_factor_dispersion_out();
+        result
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getDistanceOfMaxPheroForInputLanes()` [protected]
@@ -768,7 +1093,11 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_of_max_phero_for_input_lanes(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getDistanceOfMaxPheroForInputLanes")
+        if self.pheromoneInputLanes.len() == 0 {
+            return 0.0;
+        }
+        let (max_phero_val_current, temp_avg_other_lanes) = distance_of_max_phero(&self.pheromoneInputLanes);
+        max_phero_val_current - temp_avg_other_lanes
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::getDistanceOfMaxPheroForOutputLanes()` [protected]
@@ -811,7 +1140,11 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_of_max_phero_for_output_lanes(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::getDistanceOfMaxPheroForOutputLanes")
+        if self.pheromoneOutputLanes.len() == 0 {
+            return 0.0;
+        }
+        let (max_phero_val_current, temp_avg_other_lanes) = distance_of_max_phero(&self.pheromoneOutputLanes);
+        max_phero_val_current - temp_avg_other_lanes
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::updatePheromoneLevels()` [protected]
@@ -829,7 +1162,21 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn update_pheromone_levels(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::updatePheromoneLevels")
+        // Updating input lanes pheromone: all input lanes without distinction
+        // BETA_NO, GAMMA_NO
+        let beta = self.get_beta_no();
+        let gamma = self.get_gamma_no();
+        let mut inMap = std::mem::take(&mut self.pheromoneInputLanes);
+        self.update_pheromone_levels_2(&mut inMap, "PheroIn".to_string(), beta, gamma);
+        self.pheromoneInputLanes = inMap;
+
+        // BETA_SP, GAMMA_SP
+        // Updating output lanes pheromone: only input lanes currently having green light. Pheromone for non green lanes is "freezed"
+        let beta = self.get_beta_sp();
+        let gamma = self.get_gamma_sp();
+        let mut outMap = std::mem::take(&mut self.pheromoneOutputLanes);
+        self.update_pheromone_levels_2(&mut outMap, "PheroOut".to_string(), beta, gamma);
+        self.pheromoneOutputLanes = outMap;
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::updatePheromoneLevels(MSLaneId_PheromoneMap &, std::string, const double, const double)` [protected]
@@ -959,7 +1306,71 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn update_pheromone_levels_2(&mut self, arg0: &mut MSLaneId_PheromoneMap, arg1: String, arg2: f64, arg3: f64) {
-        todo!("port MSSwarmTrafficLightLogic::updatePheromoneLevels")
+        // Utility method to avoid code duplication
+        let laneIds: Vec<String> = arg0.keys().cloned().collect();
+        for laneId in laneIds.iter() {
+            let oldPhero: f64 = arg0[laneId];
+            let maxSpeed = self.get_sensors().m().get_max_speed(laneId.clone());
+            let meanVehiclesSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            let updatePheromone = meanVehiclesSpeed > -1.0;
+
+            // derivative
+            let mut derivative: f64 = 0.0;
+            // If i need to use the derivative for the lane
+            if self.m_meanSpeedHistory.contains_key(laneId) {
+                // Update the derivative
+                if updatePheromone {
+                    let mut currentDerivative: f64 = 0.0;
+                    self.m_losCounter = 0;
+                    let meanHistory: Ptr<CircularBuffer<f64>> = self.m_meanSpeedHistory[laneId];
+                    if meanHistory.size() > 0 {
+                        // Calculate the current derivative mean with the old speed points
+                        for i in 0..meanHistory.size() {
+                            if i == 0 {
+                                currentDerivative += (meanVehiclesSpeed - meanHistory.at(i)).abs();
+                            } else {
+                                currentDerivative += (meanHistory.at(i - 1) - meanHistory.at(i)).abs();
+                            }
+                        }
+                        currentDerivative /= meanHistory.size() as f64; // Non weighted mean
+                    }
+                    meanHistory.m().push_front(meanVehiclesSpeed);
+                    // Check if the current value of the derivative is above the set alpha
+                    if currentDerivative >= self.m_derivativeAlpha {
+                        self.m_derivativeHistory[laneId].m().push_front(currentDerivative);
+                    }
+                    let derivativeHistory: Ptr<CircularBuffer<f64>> = self.m_derivativeHistory[laneId];
+                    if derivativeHistory.size() > 0 {
+                        // Calculate the mean derivative with the old derivative
+                        for i in 0..derivativeHistory.size() {
+                            derivative += derivativeHistory.at(i);
+                        }
+                        derivative /= derivativeHistory.size() as f64;
+                    }
+                } else {
+                    // Reset the values if no information is received after a timeout
+                    self.m_losCounter += 1;
+                    if self.m_losCounter >= self.m_losMaxLimit {
+                        let derivativeHistory: Ptr<CircularBuffer<f64>> = self.m_derivativeHistory[laneId];
+                        derivativeHistory.m().clear();
+                        let meanHistory: Ptr<CircularBuffer<f64>> = self.m_meanSpeedHistory[laneId];
+                        meanHistory.m().clear();
+                        meanHistory.m().push_front(maxSpeed);
+                    }
+                }
+            }
+            let mut pheroAdd = max2((maxSpeed - meanVehiclesSpeed) * 10.0 / maxSpeed, 0.0);
+            // Use the derivative only if it has a value
+            if derivative > 0.0 {
+                // Correct the pheromone value by dividing it for the derivative.
+                pheroAdd /= max2(derivative, self.m_derivativeAlpha);
+            }
+
+            // Evaporation + current contribute
+            let mut phero = beta_gamma_phero(arg2, oldPhero, arg3, pheroAdd, updatePheromone);
+            phero = min2(max2(phero, 0.0), self.get_phero_max_val());
+            arg0.insert(laneId.clone(), phero);
+        }
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::updateSensitivities()` [protected]
@@ -1051,7 +1462,63 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn update_sensitivities(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::updateSensitivities")
+        let elapsedTime = utils::common::time::steps2time(MSNet::get_instance().get_current_time_step() - self.lastThetaSensitivityUpdate);
+        self.lastThetaSensitivityUpdate = MSNet::get_instance().get_current_time_step();
+
+        // reset of the sensitivity thresholds in case of 0 pheromone on the input lanes
+        if self.get_pheromone_for_input_lanes() == 0.0 {
+            let policies = self.myPolicies.clone();
+            for policy in policies.iter() {
+                policy.m().set_theta_sensitivity(self.get_theta_init());
+            }
+            return;
+        }
+
+        let mut eta: f64 = -1.0;
+        // If skipEta it means that we've had Congestion for too much time. Forcing forgetting.
+        if !self.skipEta || self.myCurrentPolicy.m().get_name() != "Congestion" {
+            match self.get_reinforcement_mode() {
+                0 => {
+                    if elapsedTime == utils::common::time::steps2time(MSNet::get_instance().get_current_time_step()) {
+                        return; // we don't want to reinforce the policy selected at the beginning of the simulation since it's time-based
+                    }
+                    eta = elapsedTime;
+                }
+                1 => {
+                    eta = self.calculate_eta_diff();
+                }
+                2 => {
+                    eta = self.calculate_eta_ratio();
+                }
+                _ => {}
+            }
+        }
+        let policies = self.myPolicies.clone();
+        for policy in policies.iter() {
+            let policy = *policy;
+            let mut newSensitivity: f64;
+            if eta < 0.0 {
+                // bad performance
+                if policy == self.myCurrentPolicy {
+                    // punish the current policy
+                    newSensitivity = policy.m().get_theta_sensitivity() + self.get_forgetting_cox() * (-eta);
+                } else {
+                    // reward the other ones
+                    newSensitivity = policy.m().get_theta_sensitivity() - self.get_learning_cox() * (-eta);
+                }
+            } else {
+                // good performance
+                if policy == self.myCurrentPolicy {
+                    // reward the current policy
+                    newSensitivity = policy.m().get_theta_sensitivity() - self.get_learning_cox() * eta;
+                } else {
+                    // punish the other ones
+                    newSensitivity = policy.m().get_theta_sensitivity() + self.get_forgetting_cox() * eta;
+                }
+            }
+            newSensitivity = max2(min2(newSensitivity, self.get_theta_max()), self.get_theta_min());
+            policy.m().set_theta_sensitivity(newSensitivity);
+        }
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::decidePolicy()` [virtual, protected]
@@ -1101,7 +1568,29 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn decide_policy(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::decidePolicy")
+        // Decide if it is the case to check for another plan
+        let sampled = utils::common::rand_helper::rand();
+        let changeProb = self.get_change_plan_probability();
+
+        if sampled <= changeProb || self.mustChange {
+            // Check for another plan
+            let pheroIn = self.get_pheromone_for_input_lanes();
+            let pheroOut = self.get_pheromone_for_output_lanes();
+            let distancePheroIn = self.get_distance_of_max_phero_for_input_lanes();
+            let distancePheroOut = self.get_distance_of_max_phero_for_output_lanes();
+            let oldPolicy = self.myCurrentPolicy;
+            self.choose_policy(pheroIn, pheroOut, distancePheroIn, distancePheroOut);
+            let newPolicy = self.myCurrentPolicy;
+
+            if newPolicy != oldPolicy {
+                if oldPolicy.m().get_name() == "Congestion" {
+                    self.congestion_steps = 0;
+                }
+            }
+
+            self.mustChange = false;
+            self.skipEta = false;
+        }
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::calculatePhi(int)` [protected]
@@ -1118,7 +1607,13 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_phi(&mut self, factor: i32) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::calculatePhi")
+        if factor == 0 {
+            1.0
+        } else if factor == 1 {
+            0.2
+        } else {
+            1.0 - (1.0 / (factor as f64))
+        }
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::calculateEtaDiff()` [protected]
@@ -1330,7 +1825,168 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_eta_diff(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::calculateEtaDiff")
+        let mut count: i32 = 0;
+        let mut minIn: i32 = 0;
+        let mut minOut: i32 = 0;
+        let mut toSub: i32;
+        let mut tmp: i32;
+        let mut inInit = true;
+        let mut outInit = true;
+        let mut eta: f64;
+        let mut normalized: f64;
+        let mut diff: f64;
+        let mut phi: f64;
+        let mut delta: f64;
+        let mut toReset: LaneIdVector = Vec::new();
+
+        self.carsIn = 0;
+        self.carsOut = 0;
+        self.inTarget = 0;
+        self.notTarget = 0;
+
+        let sensors: Ptr<MSSOTLE2Sensors> = self.get_count_sensors();
+        let myLanes = self.myLanes.clone();
+        let myLinks = self.myLinks.clone();
+
+        // Search the incoming lane to get the count of the vehicles passed. [IN]
+        for laneVector in myLanes.iter() {
+            for &currentLane in laneVector.iter() {
+                // Map to avoid check the lane for every possible direction
+                if !*self.laneCheck.entry(currentLane).or_insert(false) {
+                    // Get the vehicles passed from this lane.
+                    count = sensors.m().get_passed_veh(currentLane.get_id().to_string(), false);
+                    // Increment the global count of the cars passed through the tl
+                    self.carsIn += count;
+                    // Set to true to skip similar lane since there's just one sensor
+                    self.laneCheck.insert(currentLane, true);
+                }
+            }
+        }
+
+        // Search the outgoing lane to get the count of the vehicles passed. [OUT]
+        // We use the links to get the respective lane id.
+        for linkVector in myLinks.iter() {
+            for link in linkVector.iter() {
+                let currentLane = link.get_lane();
+                // Map to avoid check the lane for every possible direction
+                if !*self.laneCheck.entry(currentLane).or_insert(false) {
+                    // Get the vehicles passed from this lane.
+                    count = sensors.m().get_passed_veh(currentLane.get_id().to_string(), true);
+                    // Increment the global count of the cars passed through the tl
+                    self.carsOut += count;
+
+                    // Since there's no output target lanes we check here the minimum number of
+                    // cars passed though the tl. This ahs to be done to all the output lanes since cars can go
+                    // in any direction from a target lane. If a direction isn't reachable the sensor count will be 0.
+                    // This is done to update the sensorCount value in order to don't make it grow too much.
+                    if count != 0 {
+                        toReset.push(currentLane.get_id().to_string());
+                        if outInit {
+                            minOut = count;
+                            outInit = false;
+                        } else if count <= minOut {
+                            minOut = count;
+                        }
+                    }
+                    // Set to true to skip similar lane since there's just one sensor
+                    self.laneCheck.insert(currentLane, true);
+                }
+            }
+        }
+        // Reset the map to check again all the lane on the next commit.
+        self.reset_lane_check();
+
+        // We retrieve the minimum number of cars passed from the target lanes.
+        let targetLanes = self.targetLanes.clone();
+        for laneId in targetLanes.iter() {
+            let lane = laneId.clone();
+            tmp = sensors.m().get_passed_veh(lane.clone(), false);
+            self.inTarget += tmp;
+            if inInit && tmp != 0 {
+                minIn = tmp;
+                inInit = false;
+            }
+            if tmp < minIn && tmp != 0 {
+                minIn = tmp;
+            }
+            if tmp != 0 {
+                toReset.push(lane);
+            }
+        }
+
+        // The cars not on a target lane counted as in.
+        self.notTarget = self.carsIn - self.inTarget;
+
+        // Calculate the min beetween the min number of cars entered the tl (minIn) and the
+        // ones that have exit the tl (minOut)
+        toSub = std::cmp::min(minIn, minOut);
+
+        // Subtract the value to all the sensor on the target lanes.
+        while let Some(laneId) = toReset.pop() {
+            sensors.m().subtract_passed_veh(laneId, toSub);
+        }
+
+        // Normalized to 1
+        diff = (self.inTarget - self.carsOut) as f64;
+        normalized = diff / (self.inTarget as f64);
+
+        // Analize difference to return an appropriate eta to reinforce/forget the policies.
+        // IN > OUT
+        if self.inTarget > self.carsOut {
+            if self.carsOut == 0 {
+                // We're in Congestion but not for long so we don't do nothing. When we reach max steps for
+                // Congestion the evaluation of eta is skipped and we force a forget of the policy
+                if self.myCurrentPolicy.m().get_name() == "Congestion" {
+                    eta = 0.0;
+                } else {
+                    // vehicles aren't going out and we've additional vehicle on a red lane. We set
+                    // eta to -1 to forget
+                    eta = -1.0;
+                }
+            } else {
+                // Forget - Amplify to R
+                phi = self.calculate_phi(self.notTarget);
+                eta = -normalized * (1.0 / phi);
+                if eta < -1.0 {
+                    eta = -1.0;
+                }
+            }
+        }
+        // IN = OUT
+        else if self.inTarget == self.carsOut {
+            // Can't say nothing
+            if self.inTarget == 0 {
+                eta = 0.0;
+            }
+            // Reinforce - Attenuate to R
+            // Normalized = 0 --> use delta = 1-1/IN
+            else {
+                delta = self.calculate_phi(self.inTarget);
+                phi = self.calculate_phi(self.notTarget);
+                eta = delta * phi;
+                if eta > 1.0 {
+                    eta = 1.0;
+                }
+            }
+        }
+        // IN < OUT
+        else {
+            // Can't say nothing
+            if self.inTarget == 0 {
+                eta = 0.0;
+            }
+            // Reinforce - Attenuate to R
+            else {
+                phi = self.calculate_phi(self.notTarget);
+                diff = (self.inTarget - self.carsOut) as f64;
+                normalized = diff / (self.carsOut as f64);
+                eta = normalized * phi;
+                if eta > 1.0 {
+                    eta = 1.0;
+                }
+            }
+        }
+        eta
     }
 
     /// C++: `double MSSwarmTrafficLightLogic::calculateEtaRatio()` [protected]
@@ -1544,7 +2200,176 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn calculate_eta_ratio(&mut self) -> f64 {
-        todo!("port MSSwarmTrafficLightLogic::calculateEtaRatio")
+        let mut count: i32 = 0;
+        let mut minIn: i32 = 0;
+        let mut minOut: i32 = 0;
+        let mut toSub: i32;
+        let mut tmp: i32;
+        let mut inInit = true;
+        let mut outInit = true;
+        let mut eta: f64;
+        let mut ratio: f64;
+        let mut phi: f64;
+        let mut normalized: f64;
+        let mut delta: f64;
+        let mut toReset: LaneIdVector = Vec::new();
+
+        self.carsIn = 0;
+        self.carsOut = 0;
+        self.inTarget = 0;
+        self.notTarget = 0;
+
+        let sensors: Ptr<MSSOTLE2Sensors> = self.get_count_sensors();
+        let myLanes = self.myLanes.clone();
+        let myLinks = self.myLinks.clone();
+
+        // Search the incoming lane to get the count of the vehicles passed. [IN]
+        for laneVector in myLanes.iter() {
+            for &currentLane in laneVector.iter() {
+                // Map to avoid check the lane for every possible direction
+                if !*self.laneCheck.entry(currentLane).or_insert(false) {
+                    // Get the vehicles passed from this lane.
+                    count = sensors.m().get_passed_veh(currentLane.get_id().to_string(), false);
+                    // Increment the global count of the cars passed through the tl
+                    self.carsIn += count;
+                    // Set to true to skip similar lane since there's just one sensor
+                    self.laneCheck.insert(currentLane, true);
+                }
+            }
+        }
+
+        // Search the outgoing lane to get the count of the vehicles passed. [OUT]
+        // We use the links to get the respective lane id.
+        for linkVector in myLinks.iter() {
+            for link in linkVector.iter() {
+                let currentLane = link.get_lane();
+                // Map to avoid check the lane for every possible direction
+                if !*self.laneCheck.entry(currentLane).or_insert(false) {
+                    // Get the vehicles passed from this lane.
+                    count = sensors.m().get_passed_veh(currentLane.get_id().to_string(), true);
+                    // Increment the global count of the cars passed through the tl
+                    self.carsOut += count;
+
+                    // Since there's no output target lanes we check here the minimum number of
+                    // cars passed though the tl. This has to be done to all the output lanes since cars can go
+                    // in any direction from a target lane. If a direction isn't reachable the sensor count will be 0.
+                    // This is done to update the sensorCount value in order to don't make it grow too much.
+                    if count != 0 {
+                        toReset.push(currentLane.get_id().to_string());
+                        if outInit {
+                            minOut = count;
+                            outInit = false;
+                        } else if count <= minOut {
+                            minOut = count;
+                        }
+                    }
+
+                    // Set to true to skip similar lane since there's just one sensor
+                    self.laneCheck.insert(currentLane, true);
+                }
+            }
+        }
+        // Reset the map to check again all the lane on the next commit.
+        self.reset_lane_check();
+
+        // We retrieve the minimum number of cars passed from the target lanes.
+        let targetLanes = self.targetLanes.clone();
+        for laneId in targetLanes.iter() {
+            let lane = laneId.clone();
+            tmp = sensors.m().get_passed_veh(lane.clone(), false);
+            self.inTarget += tmp;
+            if inInit && tmp != 0 {
+                minIn = tmp;
+                inInit = false;
+            }
+            if tmp < minIn && tmp != 0 {
+                minIn = tmp;
+            }
+            if tmp != 0 {
+                toReset.push(lane);
+            }
+        }
+
+        // The cars not on a target lane counted as in.
+        self.notTarget = self.carsIn - self.inTarget;
+
+        // Calculate the min beetween the min number of cars entered the tl (minIn) and the
+        // ones that have exit the tl (minOut)
+        toSub = std::cmp::min(minIn, minOut);
+
+        // Subtract the value to all the sensor on the target lanes.
+        while let Some(laneId) = toReset.pop() {
+            sensors.m().subtract_passed_veh(laneId, toSub);
+        }
+
+        // Normalized to 1
+        if self.carsOut != 0 {
+            ratio = (self.inTarget as f64) / (self.carsOut as f64);
+            normalized = ratio / ((self.inTarget + self.carsOut) as f64);
+        } else {
+            ratio = f64::INFINITY;
+            normalized = f64::INFINITY;
+        }
+
+        // Analize ratio to return an appropriate eta to reinforce/forget the policies.
+        // IN > OUT
+        if self.inTarget > self.carsOut {
+            if self.carsOut == 0 {
+                // we're in Congestion but not for long so we don't do nothing. When we reach max steps for
+                // Congestion the evaluation of eta is skipped and we force a forget of the policy
+                if self.myCurrentPolicy.m().get_name() == "Congestion" {
+                    eta = 0.0;
+                }
+                // vehicles aren't going out and we've additional vehicle on a red lane. We set
+                // eta to -1 to forget
+                else {
+                    eta = -1.0;
+                }
+            } else {
+                // Forget according to the ratio. Amplify due to the cars in the red lanes
+                phi = self.calculate_phi(self.notTarget);
+                eta = -(normalized) * (1.0 / phi);
+                if eta < -1.0 {
+                    eta = -1.0;
+                }
+            }
+        }
+        // IN = OUT
+        else if self.inTarget == self.carsOut {
+            // We can't say nothing.
+            if self.inTarget == 0 {
+                eta = 0.0;
+            }
+            // Reinforce - Attenuate to R
+            // same number of vehicles that are getting IN is getting OUT
+            // Normalized = 1/TOT ---> change to delta = 1-1/IN
+            else {
+                delta = self.calculate_phi(self.inTarget);
+                phi = self.calculate_phi(self.notTarget);
+                eta = delta * phi;
+                if eta > 1.0 {
+                    eta = 1.0;
+                }
+            }
+        }
+        // IN < OUT
+        else {
+            // We can't say nothing.
+            if self.inTarget == 0 {
+                eta = 0.0;
+            }
+            // There was a queue and now cars are getting over it
+            // There're vehicles on the red lanes (R)
+            // We reinforce and attenuate according to R
+            else {
+                phi = self.calculate_phi(self.notTarget);
+                eta = normalized * phi;
+                if eta > 1.0 {
+                    eta = 1.0;
+                }
+            }
+        }
+        eta
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::resetLaneCheck()` [protected]
@@ -1574,7 +2399,22 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_lane_check(&mut self) {
-        todo!("port MSSwarmTrafficLightLogic::resetLaneCheck")
+        let myLanes = self.myLanes.clone();
+        let myLinks = self.myLinks.clone();
+
+        // reset both the input and the output lanes.
+        for laneVector in myLanes.iter() {
+            for &currentLane in laneVector.iter() {
+                self.laneCheck.insert(currentLane, false);
+            }
+        }
+
+        for linkVector in myLinks.iter() {
+            for link in linkVector.iter() {
+                let currentLane = link.get_lane();
+                self.laneCheck.insert(currentLane, false);
+            }
+        }
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::choosePolicy(double, double, double, double)` [protected]
@@ -1629,7 +2469,38 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn choose_policy(&mut self, phero_in: f64, phero_out: f64, dispersion_in: f64, dispersion_out: f64) {
-        todo!("port MSSwarmTrafficLightLogic::choosePolicy")
+        if self.m_useVehicleTypesWeights {
+            let policies = self.myPolicies.clone();
+            for &it in policies.iter() {
+                if it.m().get_name() == "Phase" {
+                    self.activate(it);
+                    return;
+                }
+            }
+        }
+        let mut thetaStimuli: Vec<f64> = Vec::new();
+        let mut thetaSum: f64 = 0.0;
+        // Compute stimulus for each policy
+        for i in 0..self.myPolicies.len() {
+            let policy = self.myPolicies[i];
+            let stimulus = policy.m().compute_desirability(phero_in, phero_out, dispersion_in, dispersion_out);
+            let thetaStimulus = stimulus.powf(2.0) / (stimulus.powf(2.0) + policy.m().get_theta_sensitivity().powf(2.0));
+            thetaStimuli.push(thetaStimulus);
+            thetaSum += thetaStimulus;
+        }
+
+        // Compute a random value between 0 and the sum of the thetaSum
+        let r = utils::common::rand_helper::with_default(|rng| rng.rand_max(thetaSum));
+
+        let mut partialSum: f64 = 0.0;
+        for i in 0..self.myPolicies.len() {
+            partialSum += thetaStimuli[i];
+            if partialSum >= r {
+                let chosen = self.myPolicies[i];
+                self.activate(chosen);
+                break;
+            }
+        }
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::choosePolicy(double, double)` [protected]
@@ -1638,7 +2509,7 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn choose_policy_2(&mut self, phero_in: f64, phero_out: f64) {
-        todo!("port MSSwarmTrafficLightLogic::choosePolicy")
+        self.choose_policy(phero_in, phero_out, 0.0, 0.0);
     }
 
     /// C++: `std::string MSSwarmTrafficLightLogic::getPoliciesParam()` [protected]
@@ -1647,7 +2518,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_policies_param(&mut self) -> String {
-        todo!("port MSSwarmTrafficLightLogic::getPoliciesParam")
+        self.get_parameter("POLICIES", "Platoon;Phase;Marching;Congestion".to_string())
     }
 
     /// C++: `int MSSwarmTrafficLightLogic::getReinforcementMode()` [protected]
@@ -1656,7 +2527,7 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_reinforcement_mode(&mut self) -> i32 {
-        todo!("port MSSwarmTrafficLightLogic::getReinforcementMode")
+        utils::common::string_utils::to_int(&self.get_parameter("REIMODE", "0".to_string())).unwrap()
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::initScaleFactorDispersionIn(int)` [protected]
@@ -1689,7 +2560,24 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn init_scale_factor_dispersion_in(&mut self, lanes_in: i32) {
-        todo!("port MSSwarmTrafficLightLogic::initScaleFactorDispersionIn")
+        let mut phero_values: Vec<f64> = Vec::new();
+        for _ in 0..lanes_in / 2 {
+            phero_values.push(self.get_phero_max_val());
+        }
+        for _ in (lanes_in / 2)..lanes_in {
+            phero_values.push(0.0);
+        }
+        let mut sum_avg_tmp: f64 = 0.0;
+        for v in phero_values.iter() {
+            sum_avg_tmp += *v;
+        }
+        let mean = sum_avg_tmp / (phero_values.len() as f64);
+        let mut sum_dev_tmp: f64 = 0.0;
+        for v in phero_values.iter() {
+            sum_dev_tmp += (*v - mean).powf(2.0);
+        }
+        let deviation = (sum_dev_tmp / (phero_values.len() as f64)).sqrt();
+        self.scaleFactorDispersionIn = self.get_phero_max_val() / deviation;
     }
 
     /// C++: `void MSSwarmTrafficLightLogic::initScaleFactorDispersionOut(int)` [protected]
@@ -1721,7 +2609,24 @@ impl MSSwarmTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn init_scale_factor_dispersion_out(&mut self, lanes_out: i32) {
-        todo!("port MSSwarmTrafficLightLogic::initScaleFactorDispersionOut")
+        let mut phero_values: Vec<f64> = Vec::new();
+        for _ in 0..lanes_out / 2 {
+            phero_values.push(self.get_phero_max_val());
+        }
+        for _ in (lanes_out / 2)..lanes_out {
+            phero_values.push(0.0);
+        }
+        let mut sum_avg_tmp: f64 = 0.0;
+        for v in phero_values.iter() {
+            sum_avg_tmp += *v;
+        }
+        let mean = sum_avg_tmp / (phero_values.len() as f64);
+        let mut sum_dev_tmp: f64 = 0.0;
+        for v in phero_values.iter() {
+            sum_dev_tmp += (*v - mean).powf(2.0);
+        }
+        let deviation = (sum_dev_tmp / (phero_values.len() as f64)).sqrt();
+        self.scaleFactorDispersionOut = self.get_phero_max_val() / deviation;
     }
 
     /// C++: `bool MSSwarmTrafficLightLogic::allowLine(MSLane *)` [protected]
@@ -1751,7 +2656,27 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn allow_line(&mut self, arg0: Ptr<MSLane>) -> bool {
-        todo!("port MSSwarmTrafficLightLogic::allowLine")
+        // No walking areas
+        if arg0.is_walking_area() {
+            return false;
+        }
+        // No pedestrian crossing
+        if arg0.is_crossing() {
+            return false;
+        }
+        // No pedestrian only lanes
+        if arg0.get_permissions() == SVC_PEDESTRIAN {
+            return false;
+        }
+        // No bicycle only lanes
+        if arg0.get_permissions() == SVC_BICYCLE {
+            return false;
+        }
+        // No pedestrian and bicycle only lanes
+        if arg0.get_permissions() == (SVC_PEDESTRIAN | SVC_BICYCLE) {
+            return false;
+        }
+        true
     }
 
     /// C++: `std::string MSSwarmTrafficLightLogic::getLaneLightState(const std::string &)` [protected]
@@ -1767,7 +2692,14 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_light_state(&mut self, laneId: &str) -> String {
-        todo!("port MSSwarmTrafficLightLogic::getLaneLightState")
+        let mut laneState = String::new();
+        if self.m_laneIndexMap.contains_key(laneId) {
+            let state = self.get_current_phase_def().get_state().to_string();
+            for &idx in self.m_laneIndexMap[laneId].clone().iter() {
+                laneState.push(state.as_bytes()[idx as usize] as char);
+            }
+        }
+        laneState
     }
 
 }
