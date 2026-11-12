@@ -9772,7 +9772,25 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_tra_ci_speed_control(&mut self, vSafe: f64, vNext: f64) -> f64 {
-        todo!("port MSVehicle::processTraCISpeedControl")
+        let mut vNext = vNext;
+        if !self.myInfluencer.is_null() {
+            let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+            self.myInfluencer.m().set_original_speed(vNext);
+            if self.myInfluencer.is_remote_controlled() {
+                vNext = self.myInfluencer.m().implicit_speed_remote(this, self.myState.mySpeed);
+            }
+            let vMax = self.get_vehicle_type().get_car_follow_model().max_next_speed(self.myState.mySpeed, this);
+            let mut vMin = self.get_vehicle_type().get_car_follow_model().min_next_speed(self.myState.mySpeed, this);
+            if semi_implicit_euler_update() {
+                vMin = max2(0.0, vMin);
+            }
+            vNext = self.myInfluencer.m().influence_speed(MSNet::get_instance().get_current_time_step(), vNext, vSafe, vMin, vMax);
+            if self.keep_stopping(false) && self.myStops.front().unwrap().get_speed() == 0.0 {
+                // avoid driving while stopped (unless it's actually a waypoint
+                vNext = self.myInfluencer.m().get_original_speed();
+            }
+        }
+        vNext
     }
 
     /// C++: `void MSVehicle::removePassedDriveItems()` [protected]
@@ -9831,7 +9849,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_passed_drive_items(&mut self) {
-        todo!("port MSVehicle::removePassedDriveItems")
+        let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+        let n = self.myNextDriveItem;
+        for j in 0..n {
+            let link = self.myLFLinkLanes[j].myLink;
+            if !link.is_null() {
+                link.m().remove_approaching(this.cast::<SUMOVehicle>());
+            }
+        }
+        self.myLFLinkLanes.drain(0..n);
+        self.myNextDriveItem = 0;
     }
 
     /// C++: `void MSVehicle::updateWaitingTime(double)` [protected]
@@ -9851,7 +9878,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_waiting_time(&mut self, vNext: f64) {
-        todo!("port MSVehicle::updateWaitingTime")
+        if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED && (!self.is_stopped() || self.is_idling()) && self.myAcceleration <= self.accel_threshold_for_waiting() {
+            self.myWaitingTime += delta_t();
+            self.myWaitingTimeCollector.pass_time(delta_t(), true);
+        } else {
+            self.myWaitingTime = 0;
+            self.myWaitingTimeCollector.pass_time(delta_t(), false);
+            if self.has_influencer() {
+                self.get_influencer().get_base_influencer().set_extra_impatience(0.0);
+            }
+        }
     }
 
     /// C++: `void MSVehicle::updateTimeLoss(double)` [protected]
@@ -9869,7 +9905,15 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_time_loss(&mut self, vNext: f64) {
-        todo!("port MSVehicle::updateTimeLoss")
+        // update time loss (depends on the updated edge)
+        if !self.is_stopped() {
+            // some cfModels (i.e. EIDM may drive faster than predicted by maxNextSpeed)
+            let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+            let vmax = min2(self.myLane.get_vehicle_max_speed(this.cast::<SUMOTrafficObject>()), max2(self.myStopSpeed, vNext));
+            if vmax > 0.0 {
+                self.myTimeLoss += TS * (vmax - vNext) / vmax;
+            }
+        }
     }
 
     /// C++: `double MSVehicle::checkReversal(bool &, double, double) const` [const, protected]
