@@ -58,7 +58,32 @@ impl AGFrame {
     // }
     #[allow(unused_variables)]
     pub fn fill_options() {
-        todo!("port AGFrame::fillOptions")
+        utils::options::options_cont::with_options(|oc| {
+            oc.add_call_example("--net-file <INPUT>.net.xml --stat-file <INPUT>.stat.xml --output <OUTPUT>.rou.xml --rand", "generate a trips file from a stats file on a given net using arbitrary random seed");
+            oc.add_call_example("--net-file <INPUT>.net.xml --stat-file <INPUT>.stat.xml --output <OUTPUT>.rou.xml --duration-d <NBR_OF_DAYS>", "generate a trips file from a stats file on a given net for numerous days (with fixed random seed)");
+            // shortcut: SystemFrame::addConfigurationOptions, SystemFrame::addReportOptions and RandHelper::insertRandOptions are not ported yet, so their options are not registered here; upgrade when they land
+            oc.add_option_sub_topic("Input");
+            oc.add_option_sub_topic("Output");
+            oc.add_option_sub_topic("Processing");
+            oc.add_option_sub_topic("Time");
+            oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
+            oc.add_synonyme("net-file", "net", false);
+            oc.add_description("net-file", "Input", "Use FILE as SUMO-network to create trips for");
+            oc.do_register_abbr("stat-file", 's', SumoOption::file_name());
+            oc.add_description("stat-file", "Input", "Loads the SUMO-statistics FILE");
+            oc.do_register_abbr("output-file", 'o', SumoOption::file_name());
+            oc.add_synonyme("output-file", "output", true);
+            oc.add_description("output-file", "Output", "Write generated trips to FILE");
+            oc.do_register("debug", SumoOption::bool(false));
+            oc.add_description("debug", "Report", "Detailed messages about every single step");
+            // TODO in C++: which time options are consistent with other parts of SUMO
+            oc.do_register_abbr("begin", 'b', SumoOption::integer(0));
+            oc.add_description("begin", "Time", "Sets the time of beginning of the simulation during the first day (in seconds)");
+            oc.do_register_abbr("end", 'e', SumoOption::integer(0));
+            oc.add_description("end", "Time", "Sets the time of ending of the simulation during the last day (in seconds)");
+            oc.do_register("duration-d", SumoOption::integer(1));
+            oc.add_description("duration-d", "Time", "Sets the duration of the simulation in days");
+        });
     }
 
     /// C++: `bool AGFrame::checkOptions()` [static]

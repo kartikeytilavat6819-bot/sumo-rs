@@ -26,7 +26,23 @@ impl AGActivityTripWriter {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &mut OutputDevice) -> Self {
-        todo!("port AGActivityTripWriter::AGActivityTripWriter")
+        file.open_tag_id(SUMO_TAG_VTYPE)
+            .write_attr(SUMO_ATTR_ID, "default")
+            .write_attr(SUMO_ATTR_VCLASS, "passenger")
+            .write_attr(SUMO_ATTR_COLOR, &RGBColor::RED)
+            .close_tag("");
+        file.open_tag_id(SUMO_TAG_VTYPE)
+            .write_attr(SUMO_ATTR_ID, "random")
+            .write_attr(SUMO_ATTR_VCLASS, "passenger")
+            .write_attr(SUMO_ATTR_COLOR, &RGBColor::BLUE)
+            .close_tag("");
+        file.open_tag_id(SUMO_TAG_VTYPE)
+            .write_attr(SUMO_ATTR_ID, "bus")
+            .write_attr(SUMO_ATTR_VCLASS, "bus")
+            .write_attr(SUMO_ATTR_COLOR, &RGBColor::GREEN)
+            .close_tag("");
+        file.lf();
+        AGActivityTripWriter { myTripOutput: Ptr::from_mut(file) }
     }
 
     /// C++: `void AGActivityTripWriter::addTrip(const AGTrip &)`
@@ -58,7 +74,30 @@ impl AGActivityTripWriter {
     // }
     #[allow(unused_variables)]
     pub fn add_trip(&mut self, trip: &AGTrip) {
-        todo!("port AGActivityTripWriter::addTrip")
+        let time: i32 = (trip.get_day() - 1) * 86400 + trip.get_time();
+
+        let out = self.myTripOutput.m();
+        out.open_tag_id(SUMO_TAG_TRIP)
+            .write_attr(SUMO_ATTR_ID, trip.get_vehicle_name())
+            .write_attr(SUMO_ATTR_TYPE, trip.get_type())
+            .write_attr(SUMO_ATTR_DEPART, &time2string(time2steps(time as f64)))
+            .write_attr(SUMO_ATTR_DEPARTPOS, &trip.get_dep().get_position())
+            .write_attr(SUMO_ATTR_ARRIVALPOS, &trip.get_arr().get_position())
+            .write_attr(SUMO_ATTR_ARRIVALSPEED, &0.)
+            .write_attr(SUMO_ATTR_FROM, &trip.get_dep().get_street().get_id());
+
+        if !trip.get_passed().is_empty() {
+            let mut oss = String::new();
+            for (idx, it) in trip.get_passed().iter().enumerate() {
+                if idx != 0 {
+                    oss.push_str(" ");
+                }
+                oss.push_str(&it.get_street().get_id());
+            }
+            out.write_attr(SUMO_ATTR_VIA, &oss);
+        }
+        out.write_attr(SUMO_ATTR_TO, &trip.get_arr().get_street().get_id());
+        out.close_tag("");
     }
 
     /// C++: `void AGActivityTripWriter::AGActivityTripWriter(const AGActivityTripWriter &)` [private]
