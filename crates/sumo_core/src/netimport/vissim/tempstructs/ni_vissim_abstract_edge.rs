@@ -15,6 +15,9 @@ pub struct NIVissimAbstractEdge {
 
 // C++ static members of NIVissimAbstractEdge (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimAbstractEdge::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimAbstractEdge_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimAbstractEdge {
     /// C++: `void NIVissimAbstractEdge::NIVissimAbstractEdge(int, const PositionVector &)`
@@ -32,9 +35,42 @@ impl NIVissimAbstractEdge {
     //     //
     //     dictionary(id, this);
     // }
+    /// Geometry part of the C++ constructor, without the final `dictionary(id, this)` registration.
+    /// Subclasses embed the base by value, so they register it once their own Box is allocated.
     #[allow(unused_variables)]
-    pub fn new(id: i32, geom: &PositionVector) -> Self {
-        todo!("port NIVissimAbstractEdge::NIVissimAbstractEdge")
+    pub fn new_unregistered(id: i32, geom: &PositionVector) -> Self {
+        let mut s = Self { myID: id, myGeom: PositionVector::default(), myDisturbances: Vec::new(), myNode: -1 };
+        // convert/publicate geometry
+        for i in geom.iter() {
+            let mut p = *i;
+            if !NBNetBuilder::transform_coordinate(&mut p, true, Ptr::null()) {
+                write_warningf!("Unable to project coordinates for edge '%'.", id);
+            }
+            s.myGeom.push_back_no_double_pos(&p);
+        }
+        s
+    }
+
+    /// C++: `void NIVissimAbstractEdge::NIVissimAbstractEdge(int, const PositionVector &)`
+    // NIVissimAbstractEdge::NIVissimAbstractEdge(int id,
+    //         const PositionVector& geom)
+    //     : myID(id), myNode(-1) {
+    //     // convert/publicate geometry
+    //     for (PositionVector::const_iterator i = geom.begin(); i != geom.end(); ++i) {
+    //         Position p = *i;
+    //         if (!NBNetBuilder::transformCoordinate(p)) {
+    //             WRITE_WARNINGF(TL("Unable to project coordinates for edge '%'."), toString(id));
+    //         }
+    //         myGeom.push_back_noDoublePos(p);
+    //     }
+    //     //
+    //     dictionary(id, this);
+    // }
+    // the constructor registers `this` in myDict, so the object must stay at a fixed address: return the Box
+    pub fn new(id: i32, geom: &PositionVector) -> Box<Self> {
+        let b = Box::new(Self::new_unregistered(id, geom));
+        Self::dictionary(id, Ptr::from_box(&b));
+        b
     }
 
     /// C++: `void NIVissimAbstractEdge::~NIVissimAbstractEdge() noexcept` [virtual]
@@ -177,7 +213,15 @@ impl NIVissimAbstractEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, e: Ptr<NIVissimAbstractEdge>) -> bool {
-        todo!("port NIVissimAbstractEdge::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if let std::collections::btree_map::Entry::Vacant(v) = d.entry(id) {
+                v.insert(e);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// C++: `NIVissimAbstractEdge * NIVissimAbstractEdge::dictionary(int)` [static]
