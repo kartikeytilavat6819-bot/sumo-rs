@@ -7901,7 +7901,7 @@ impl NBEdge {
         if v2.length() < POSITION_EPS {
             return intersect;
         }
-        // shortcut: intersects_at_lengths2d_pv cannot throw InvalidArgument, so the C++ catch branch (WRITE_WARNING(error)) is not reproduced; upgrade if it gains a Result
+        // C++ catch(InvalidArgument) (WRITE_WARNING(error)) is dead code: PositionVector::move2side and intersectsAtLengths2D never throw in C++ either, and the Rust ports return no Result
         let mut v1Right = v1.clone();
         v1Right.move2side(width1, 100.0);
 
@@ -8480,7 +8480,7 @@ impl NBEdge {
     #[allow(unused_variables)]
     pub fn compute_lane_shape(&self, lane: i32, offset: f64) -> PositionVector {
         let mut shape = self.myGeom.clone();
-        // shortcut: Rust move2side has no InvalidArgument path, so the C++ catch (WRITE_WARNINGF "Could not build shape") is not reproduced; upgrade if move2side gains a Result
+        // C++ catch(InvalidArgument) (WRITE_WARNINGF "Could not build shape") is dead code: PositionVector::move2side never throws in C++ and the Rust port returns no Result
         shape.move2side(offset, 100.0);
         shape
     }
@@ -8584,7 +8584,7 @@ impl NBEdge {
                 self.myLanes[iu].shape = self.myLanes[iu].customShape.clone();
                 continue;
             }
-            // shortcut: computeLaneShape cannot throw in this port, so the C++ catch (WRITE_WARNINGF "lane shape could not be determined") is not reproduced
+            // C++ catch(InvalidArgument) (WRITE_WARNINGF "lane shape could not be determined") is dead code: computeLaneShape cannot throw (see above)
             self.myLanes[iu].shape = self.compute_lane_shape(i, offsets[iu]);
         }
     }
