@@ -935,3 +935,43 @@ impl PartialEq for MSRoute {
         std::ptr::eq(self, other)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn edge(id: &str) -> Ptr<MSEdge> {
+        Ptr::from_raw(Box::into_raw(Box::new(MSEdge::new(id, 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 0.0))))
+    }
+
+    #[test]
+    fn dictionary_roundtrip() {
+        let r: ConstMSRoutePtr = Rc::new(MSRoute::new("t_dict_r", &vec![edge("x")], true, Ptr::null(), &Vec::new(), -1, -1));
+        assert!(!MSRoute::has_route("t_dict_r"));
+        assert!(MSRoute::dictionary("t_dict_r", r.clone()));
+        assert!(!MSRoute::dictionary("t_dict_r", r.clone()));
+        assert!(MSRoute::has_route("t_dict_r"));
+        assert_eq!(MSRoute::dictionary_3("t_dict_r", Ptr::null()).size(), 1);
+        // unknown id: C++ returns nullptr; the Rust stand-in is a leaked empty route
+        assert_eq!(MSRoute::dictionary_3("t_dict_none", Ptr::null()).size(), 0);
+        MSRoute::clear();
+        assert!(!MSRoute::has_route("t_dict_r"));
+        assert!(MSRoute::dist_dictionary("t_dict_r").is_null());
+    }
+
+    #[test]
+    fn write_edge_ids_and_distance() {
+        let r = Box::new(MSRoute::new("t_wrt", &vec![edge("a"), edge("b"), edge("c")], true, Ptr::null(), &Vec::new(), -1, -1));
+        let mut os = OutputDevice::new_string(0);
+        assert_eq!(r.write_edge_i_ds(&mut os, 0, -1, false, SVC_IGNORING), 3);
+        assert_eq!(os.get_string(), "a b c ");
+        // zero-length edges: distance from pos 5 on the first edge to pos 7 on the last = -5 + 7
+        assert_eq!(r.get_distance_between_2(5.0, 7.0, &r.begin(), &2, false), 2.0);
+        // destination position is on the start edge, backwards: cannot go backwards
+        assert_eq!(r.get_distance_between_2(7.0, 5.0, &r.begin(), &0, false), f64::MAX);
+        // we don't visit the edge again
+        assert_eq!(r.get_distance_between_2(0.0, 1.0, &2, &0, false), f64::MAX);
+        // first to last, including the destination position
+        assert_eq!(r.get_distance_between_2(0.0, 1.0, &r.begin(), &2, false), 1.0);
+    }
+}
