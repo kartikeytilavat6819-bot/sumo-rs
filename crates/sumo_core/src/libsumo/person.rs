@@ -149,10 +149,147 @@ impl Person {
     }
 
     /// C++: `libsumo::TraCIStage Person::getStage(const std::string &, int)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // TraCIStage
+    // Person::getStage(const std::string& personID, int nextStageIndex) {
+    //     MSTransportable* p = getPerson(personID);
+    //     TraCIStage result;
+    //     if (nextStageIndex >= p->getNumRemainingStages()) {
+    //         throw TraCIException("The stage index must be lower than the number of remaining stages.");
+    //     }
+    //     if (nextStageIndex < (p->getNumRemainingStages() - p->getNumStages())) {
+    //         throw TraCIException("The negative stage index " + toString(nextStageIndex) + " must refer to a valid previous stage.");
+    //     }
+    //     //stageType, arrivalPos, edges, destStop, vType, and description can be retrieved directly from the base Stage class.
+    //     MSStage* stage = p->getNextStage(nextStageIndex);
+    //     result.type = (int)stage->getStageType();
+    //     result.arrivalPos = stage->getArrivalPos();
+    //     for (auto e : stage->getEdges()) {
+    //         if (e != nullptr) {
+    //             result.edges.push_back(e->getID());
+    //         }
+    //     }
+    //     MSStoppingPlace* destinationStop = stage->getDestinationStop();
+    //     if (destinationStop != nullptr) {
+    //         result.destStop = destinationStop->getID();
+    //     }
+    //     result.description = stage->getStageDescription(p->isPerson());
+    //     result.length = stage->getDistance();
+    //     if (result.length == -1.) {
+    //         result.length = INVALID_DOUBLE_VALUE;
+    //     }
+    //     result.departPos = INVALID_DOUBLE_VALUE;
+    //     result.cost = INVALID_DOUBLE_VALUE;
+    //     result.depart = stage->getDeparted() >= 0 ? STEPS2TIME(stage->getDeparted()) : INVALID_DOUBLE_VALUE;
+    //     result.travelTime = INVALID_DOUBLE_VALUE;
+    //     if (stage->getArrived() >= 0) {
+    //         result.travelTime = STEPS2TIME(stage->getArrived() - stage->getDeparted());
+    //     } else if (stage->getDeparted() >= 0) {
+    //         result.travelTime = STEPS2TIME(SIMSTEP - stage->getDeparted());
+    //     }
+    //
+    //     // Some stage type dependant attributes
+    //     switch (stage->getStageType()) {
+    //         case MSStageType::DRIVING: {
+    //             MSStageDriving* const drivingStage = static_cast<MSStageDriving*>(stage);
+    //             result.vType = drivingStage->getVehicleType();
+    //             result.intended = drivingStage->getIntendedVehicleID();
+    //             if (result.depart < 0 && drivingStage->getIntendedDepart() >= 0) {
+    //                 result.depart = STEPS2TIME(drivingStage->getIntendedDepart());
+    //             }
+    //             const std::set<std::string> lines = drivingStage->getLines();
+    //             for (auto line = lines.begin(); line != lines.end(); line++) {
+    //                 if (line != lines.begin()) {
+    //                     result.line += " ";
+    //                 }
+    //                 result.line += *line;
+    //             }
+    //             break;
+    //         }
+    //         case MSStageType::WALKING: {
+    //             auto* walkingStage = (MSStageWalking*) stage;
+    //             result.departPos = walkingStage->getDepartPos();
+    //             break;
+    //         }
+    //         case MSStageType::WAITING: {
+    //             auto* waitingStage = (MSStageWaiting*) stage;
+    //             if (waitingStage->getPlannedDuration() > 0) {
+    //                 result.travelTime = STEPS2TIME(waitingStage->getPlannedDuration());
+    //             }
+    //             break;
+    //         }
+    //         default:
+    //             break;
+    //     }
+    //     return result;
+    // }
     #[allow(unused_variables)]
     pub fn get_stage(personID: &str, nextStageIndex: i32) -> TraCIStage {
-        todo!("port Person::getStage")
+        let p = Self::get_person(personID);
+        if nextStageIndex >= p.get_num_remaining_stages() {
+            panic!("The stage index must be lower than the number of remaining stages.");
+        }
+        if nextStageIndex < (p.get_num_remaining_stages() - p.get_num_stages()) {
+            panic!("The negative stage index {} must refer to a valid previous stage.", nextStageIndex);
+        }
+        // stageType, arrivalPos, edges, destStop, vType, and description can be retrieved directly from the base Stage class.
+        let stage = p.get_next_stage(nextStageIndex);
+        let mut result = TraCIStage::new(INVALID_INT_VALUE, "", "", "", &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "", INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "");
+        result.type_ = stage.get_stage_type() as i32;
+        result.arrivalPos = stage.get_arrival_pos();
+        for e in stage.get_edges().iter() {
+            if !e.is_null() {
+                result.edges.push(e.get_id().to_string());
+            }
+        }
+        let destinationStop = stage.get_destination_stop();
+        if !destinationStop.is_null() {
+            result.destStop = destinationStop.get_id().to_string();
+        }
+        result.description = stage.get_stage_description(p.is_person());
+        result.length = stage.get_distance();
+        if result.length == -1. {
+            result.length = INVALID_DOUBLE_VALUE;
+        }
+        result.departPos = INVALID_DOUBLE_VALUE;
+        result.cost = INVALID_DOUBLE_VALUE;
+        result.depart = if stage.get_departed() >= 0 { steps2time(stage.get_departed()) } else { INVALID_DOUBLE_VALUE };
+        result.travelTime = INVALID_DOUBLE_VALUE;
+        if stage.get_arrived() >= 0 {
+            result.travelTime = steps2time(stage.get_arrived() - stage.get_departed());
+        } else if stage.get_departed() >= 0 {
+            result.travelTime = steps2time(MSNet::get_instance().get_current_time_step() - stage.get_departed());
+        }
+
+        // Some stage type dependant attributes
+        match stage.get_stage_type() {
+            MSStageType::DRIVING => {
+                let drivingStage = stage.cast::<MSStageDriving>();
+                result.vType = drivingStage.get_vehicle_type();
+                result.intended = drivingStage.get_intended_vehicle_id();
+                if result.depart < 0. && drivingStage.get_intended_depart() >= 0 {
+                    result.depart = steps2time(drivingStage.get_intended_depart());
+                }
+                let lines = drivingStage.get_lines();
+                for (i, line) in lines.iter().enumerate() {
+                    if i != 0 {
+                        result.line += " ";
+                    }
+                    result.line += line;
+                }
+            }
+            MSStageType::WALKING => {
+                let walkingStage = stage.cast::<MSStageWalking>();
+                result.departPos = walkingStage.get_depart_pos();
+            }
+            MSStageType::WAITING => {
+                let waitingStage = stage.cast::<MSStageWaiting>();
+                if waitingStage.get_planned_duration() > 0 {
+                    result.travelTime = steps2time(waitingStage.get_planned_duration());
+                }
+            }
+            _ => {}
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> Person::getEdges(const std::string &, int)` [static]
@@ -265,7 +402,30 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_walking_distance(personID: &str, edgeID: &str, pos: f64, laneIndex: i32) -> f64 {
-        todo!("port Person::getWalkingDistance")
+        let p = Self::get_person(personID);
+        if p.get_current_stage_type() == MSStageType::WALKING {
+            // guaranteed: the current stage type was checked to be WALKING above
+            let walk = p.get_current_stage().cast::<MSStageWalking>();
+            let mut edges: ConstMSEdgeVector = walk.get_edges();
+            edges.drain(..walk.get_route_position() as usize);
+            let lane = Helper::get_lane_checking(edgeID, laneIndex, pos);
+            let laneEdge = Ptr::from_mut(lane.get_edge());
+            let it = match edges.iter().position(|e| *e == laneEdge) {
+                Some(it) => it,
+                None => panic!("{}", utils::tlf!("Edge '%' does not occur within the remaining walk of person '%'.", edgeID, personID)),
+            };
+            edges.truncate(it + 1);
+            let mut distance = 0.0;
+            let router = MSNet::get_instance().get_pedestrian_router(0, &MSNet_Prohibitions::new());
+            router.recompute_walk_costs(&edges, p.get_max_speed(), p.get_edge_pos(), pos, MSNet::get_instance().get_current_time_step(), p.get_v_type_parameter(), &mut distance);
+            if distance == f64::MAX {
+                return INVALID_DOUBLE_VALUE;
+            }
+            distance
+        } else {
+            // Vehicle would return INVALID_DOUBLE_VALUE;
+            panic!("{}", utils::tlf!("Person '%' is not walking", personID));
+        }
     }
 
     /// C++: `double Person::getWalkingDistance2D(const std::string &, double, double)` [static]
@@ -286,7 +446,26 @@ impl Person {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_taxi_reservations(onlyNew: i32) -> Vec<TraCIReservation> {
-        todo!("port Person::getTaxiReservations")
+        let mut result: Vec<TraCIReservation> = Vec::new();
+        let dispatcher = MSDevice_Taxi::get_dispatch_algorithm();
+        if !dispatcher.is_null() {
+            for res in dispatcher.m().get_reservations() {
+                if Self::filter_reservation(onlyNew, res, &mut result) {
+                    if res.state == Reservation_ReservationState::NEW {
+                        res.m().state = Reservation_ReservationState::RETRIEVED;
+                    }
+                }
+            }
+            let includeRunning = onlyNew == 0 || (onlyNew & (Reservation_ReservationState::ASSIGNED as i32 | Reservation_ReservationState::ONBOARD as i32)) != 0;
+            if includeRunning {
+                for res in dispatcher.m().get_running_reservations() {
+                    Self::filter_reservation(onlyNew, res, &mut result);
+                }
+            }
+        }
+        // determinism: C++ std::sort is unstable; reservation ids are unique so ties do not occur
+        result.sort_by(|r1, r2| r1.id.cmp(&r2.id));
+        result
     }
 
     /// C++: `std::string Person::splitTaxiReservation(std::string, const std::vector<std::string> &)` [static]
@@ -303,7 +482,15 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn split_taxi_reservation(reservationID: String, personIDs: &Vec<String>) -> String {
-        todo!("port Person::splitTaxiReservation")
+        let dispatcher = MSDevice_Taxi::get_dispatch_algorithm();
+        if !dispatcher.is_null() {
+            // replaces dynamic_cast: MSDevice_Taxi::initDispatch creates MSDispatch_TraCI only when the algo option is "traci"
+            if utils::options::options_cont::get_string("device.taxi.dispatch-algorithm") == "traci" {
+                let traciDispatcher = dispatcher.cast::<MSDispatch_TraCI>();
+                return traciDispatcher.m().split_reservation(reservationID, personIDs.clone());
+            }
+        }
+        panic!("device.taxi.dispatch-algorithm 'traci' has not been loaded");
     }
 
     /// C++: `std::vector<std::string> Person::getIDList()` [static]
@@ -1683,7 +1870,27 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn filter_reservation(stateFilter: i32, res: Ptr<Reservation>, reservations: &mut Vec<TraCIReservation>) -> bool {
-        todo!("port Person::filterReservation")
+        if stateFilter != 0 && (stateFilter & res.state as i32) == 0 {
+            return false;
+        }
+        let mut personIDs: Vec<String> = Vec::new();
+        for p in res.persons.values() {
+            personIDs.push(p.get_id().to_string());
+        }
+        personIDs.sort();
+        reservations.push(TraCIReservation::new_2(
+            &res.id,
+            &personIDs,
+            &res.group,
+            &res.from.get_id().to_string(),
+            &res.to.get_id().to_string(),
+            res.fromPos,
+            res.toPos,
+            steps2time(res.pickupTime),
+            steps2time(res.reservationTime),
+            res.state as i32,
+        ));
+        true
     }
 
     /// C++: `void Person::Person()` [private]
@@ -1691,7 +1898,8 @@ impl Person {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Person::Person")
+        // C++ `Person() = delete;` (Person.h): constructing a libsumo::Person is not allowed
+        panic!("libsumo::Person has a deleted default constructor");
     }
 
 }
@@ -1707,7 +1915,7 @@ impl Person_reservation_by_id_sorter {
     // reservation_by_id_sorter() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port reservation_by_id_sorter::reservation_by_id_sorter")
+        Person_reservation_by_id_sorter {}
     }
 
     /// C++: `int reservation_by_id_sorter::operator()(const TraCIReservation &, const TraCIReservation &) const` [const]
@@ -1718,7 +1926,7 @@ impl Person_reservation_by_id_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, r1: &TraCIReservation, r2: &TraCIReservation) -> i32 {
-        todo!("port reservation_by_id_sorter::operator()")
+        (r1.id < r2.id) as i32
     }
 
 }
