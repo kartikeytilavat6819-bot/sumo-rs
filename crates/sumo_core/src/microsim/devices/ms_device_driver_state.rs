@@ -66,7 +66,28 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_DriverState::insertOptions")
+        oc.add_option_sub_topic("Driver State Device");
+        MSDevice::insert_default_assignment_options("driverstate", "Driver State Device", oc, false);
+        oc.do_register("device.driverstate.initialAwareness", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_INITIAL_AWARENESS));
+        oc.add_description("device.driverstate.initialAwareness", "Driver State Device", "Initial value assigned to the driver's awareness.");
+        oc.do_register("device.driverstate.errorTimeScaleCoefficient", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_ERROR_TIME_SCALE_COEFFICIENT));
+        oc.add_description("device.driverstate.errorTimeScaleCoefficient", "Driver State Device", "Time scale for the error process.");
+        oc.do_register("device.driverstate.errorNoiseIntensityCoefficient", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_ERROR_NOISE_INTENSITY_COEFFICIENT));
+        oc.add_description("device.driverstate.errorNoiseIntensityCoefficient", "Driver State Device", "Noise intensity driving the error process.");
+        oc.do_register("device.driverstate.speedDifferenceErrorCoefficient", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_SPEED_DIFFERENCE_ERROR_COEFFICIENT));
+        oc.add_description("device.driverstate.speedDifferenceErrorCoefficient", "Driver State Device", "General scaling coefficient for applying the error to the perceived speed difference (error also scales with distance).");
+        oc.do_register("device.driverstate.headwayErrorCoefficient", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_HEADWAY_ERROR_COEFFICIENT));
+        oc.add_description("device.driverstate.headwayErrorCoefficient", "Driver State Device", "General scaling coefficient for applying the error to the perceived distance (error also scales with distance).");
+        oc.do_register("device.driverstate.freeSpeedErrorCoefficient", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_FREE_SPEED_ERROR_COEFFICIENT));
+        oc.add_description("device.driverstate.freeSpeedErrorCoefficient", "Driver State Device", "General scaling coefficient for applying the error to the vehicle's own speed when driving without a leader (error also scales with own speed).");
+        oc.do_register("device.driverstate.speedDifferenceChangePerceptionThreshold", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_SPEED_DIFFERENCE_CHANGE_PERCEPTION_THRESHOLD));
+        oc.add_description("device.driverstate.speedDifferenceChangePerceptionThreshold", "Driver State Device", "Base threshold for recognizing changes in the speed difference (threshold also scales with distance).");
+        oc.do_register("device.driverstate.headwayChangePerceptionThreshold", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_HEADWAY_CHANGE_PERCEPTION_THRESHOLD));
+        oc.add_description("device.driverstate.headwayChangePerceptionThreshold", "Driver State Device", "Base threshold for recognizing changes in the headway (threshold also scales with distance).");
+        oc.do_register("device.driverstate.minAwareness", SumoOption::float(crate::microsim::ms_driver_state::DRIVER_STATE_MIN_AWARENESS));
+        oc.add_description("device.driverstate.minAwareness", "Driver State Device", "Minimal admissible value for the driver's awareness.");
+        oc.do_register("device.driverstate.maximalReactionTime", SumoOption::float(-1.0));
+        oc.add_description("device.driverstate.maximalReactionTime", "Driver State Device", "Maximal reaction time (~action step length) induced by decreased awareness level (reached for awareness=minAwareness).");
     }
 
     /// C++: `void MSDevice_DriverState::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -93,7 +114,32 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_DriverState::buildVehicleDevices")
+        // ToC device implies driverstate
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "driverstate", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+                || MSDevice::equipped_by_default_assignment_options(oc, "toc", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            // build the device
+            let id = format!("driverstate{}", v.get_id());
+            let minAwareness = v.get_float_param("device.driverstate.minAwareness", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let initialAwareness = v.get_float_param("device.driverstate.initialAwareness", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let errorTimeScaleCoefficient = v.get_float_param("device.driverstate.errorTimeScaleCoefficient", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let errorNoiseIntensityCoefficient = v.get_float_param("device.driverstate.errorNoiseIntensityCoefficient", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let speedDifferenceErrorCoefficient = v.get_float_param("device.driverstate.speedDifferenceErrorCoefficient", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let speedDifferenceChangePerceptionThreshold = v.get_float_param("device.driverstate.speedDifferenceChangePerceptionThreshold", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let headwayChangePerceptionThreshold = v.get_float_param("device.driverstate.headwayChangePerceptionThreshold", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let headwayErrorCoefficient = v.get_float_param("device.driverstate.headwayErrorCoefficient", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let freeSpeedErrorCoefficient = v.get_float_param("device.driverstate.freeSpeedErrorCoefficient", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            let maximalReactionTime = v.get_float_param("device.driverstate.maximalReactionTime", false, utils::common::std_defs::INVALID_DOUBLE, true);
+            // shortcut: the device is leaked like the C++ new, so the vehicle's device list keeps a stable pointer; upgrade when MSVehicle owns its devices as Box
+            let device: &mut MSDevice_DriverState = Box::leak(Box::new(MSDevice_DriverState::new(v, &id,
+                    minAwareness, initialAwareness, errorTimeScaleCoefficient, errorNoiseIntensityCoefficient,
+                    speedDifferenceErrorCoefficient, speedDifferenceChangePerceptionThreshold,
+                    headwayChangePerceptionThreshold, headwayErrorCoefficient, freeSpeedErrorCoefficient,
+                    maximalReactionTime)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_DriverState::update()`
@@ -104,7 +150,12 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self) {
-        todo!("port MSDevice_DriverState::update")
+        self.driver_state_mut().update();
+    }
+
+    /// Mutable access to the shared driver state (C++ shared_ptr semantics; the Rc is also handed out by getDriverState()).
+    fn driver_state_mut(&self) -> &mut MSSimpleDriverState {
+        unsafe { &mut *(Rc::as_ptr(&self.myDriverState) as *mut MSSimpleDriverState) }
     }
 
     /// C++: `std::shared_ptr<MSSimpleDriverState> MSDevice_DriverState::getDriverState() const` [const]
@@ -114,7 +165,7 @@ impl MSDevice_DriverState {
     //     }
     #[allow(unused_variables)]
     pub fn get_driver_state(&self) -> Rc<MSSimpleDriverState> {
-        todo!("port MSDevice_DriverState::getDriverState")
+        Rc::clone(&self.myDriverState)
     }
 
     /// C++: `void MSDevice_DriverState::~MSDevice_DriverState() noexcept` [virtual]
@@ -122,7 +173,7 @@ impl MSDevice_DriverState {
     // ~MSDevice_DriverState() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_DriverState::~MSDevice_DriverState")
+        // C++ destructor body is empty; the Rc field is released by Rust drop glue
     }
 
     /// C++: `const std::string MSDevice_DriverState::deviceName() const` [const, virtual]
@@ -132,7 +183,7 @@ impl MSDevice_DriverState {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_DriverState::deviceName")
+        "driverstate".to_string()
     }
 
     /// C++: `std::string MSDevice_DriverState::getParameter(const std::string &) const` [const, virtual]
@@ -177,7 +228,27 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_DriverState::getParameter")
+        let ds: &MSSimpleDriverState = &self.myDriverState;
+        let value: f64 = match key {
+            "awareness" => ds.get_awareness(),
+            "errorState" => ds.get_error_state(),
+            "errorTimeScale" => ds.get_error_time_scale(),
+            "errorNoiseIntensity" => ds.get_error_noise_intensity(),
+            "minAwareness" => ds.get_min_awareness(),
+            "initialAwareness" => ds.get_initial_awareness(),
+            "errorTimeScaleCoefficient" => ds.get_error_time_scale_coefficient(),
+            "errorNoiseIntensityCoefficient" => ds.get_error_noise_intensity_coefficient(),
+            "speedDifferenceErrorCoefficient" => ds.get_speed_difference_error_coefficient(),
+            "headwayErrorCoefficient" => ds.get_headway_error_coefficient(),
+            "speedDifferenceChangePerceptionThreshold" => ds.get_speed_difference_change_perception_threshold(),
+            "headwayChangePerceptionThreshold" => ds.get_headway_change_perception_threshold(),
+            "maximalReactionTime" => ds.get_maximal_reaction_time(),
+            "originalReactionTime" => ds.get_original_reaction_time(),
+            "actionStepLength" => ds.get_action_step_length(),
+            // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
+            _ => panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()),
+        };
+        utils::common::to_string::to_string(&value)
     }
 
     /// C++: `void MSDevice_DriverState::setParameter(const std::string &, const std::string &)` [virtual]
@@ -223,7 +294,28 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_DriverState::setParameter")
+        let ds = self.driver_state_mut();
+        // shortcut: StringUtils::toDouble throws NumberFormatException in C++; the port panics with its message, upgrade when device setParameter returns Result
+        let to_double = || utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+        match key {
+            "awareness" => ds.set_awareness(to_double()),
+            "errorState" => ds.set_error_state(to_double()),
+            "errorTimeScale" => ds.set_error_time_scale(to_double()),
+            "errorNoiseIntensity" => ds.set_error_noise_intensity(to_double()),
+            "minAwareness" => ds.set_min_awareness(to_double()),
+            "initialAwareness" => ds.set_initial_awareness(to_double()),
+            "errorTimeScaleCoefficient" => ds.set_error_time_scale_coefficient(to_double()),
+            "errorNoiseIntensityCoefficient" => ds.set_error_noise_intensity_coefficient(to_double()),
+            "speedDifferenceErrorCoefficient" => ds.set_speed_difference_error_coefficient(to_double()),
+            "headwayErrorCoefficient" => ds.set_headway_error_coefficient(to_double()),
+            "freeSpeedErrorCoefficient" => ds.set_free_speed_error_coefficient(to_double()),
+            "speedDifferenceChangePerceptionThreshold" => ds.set_speed_difference_change_perception_threshold(to_double()),
+            "headwayChangePerceptionThreshold" => ds.set_headway_change_perception_threshold(to_double()),
+            "maximalReactionTime" => ds.set_maximal_reaction_time(to_double()),
+            "originalReactionTime" => ds.set_original_reaction_time(to_double()),
+            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
+            _ => panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()),
+        }
     }
 
     /// C++: `void MSDevice_DriverState::MSDevice_DriverState(SUMOVehicle &, const std::string &, double, double, double, double, double, double, double, double, double, double)` [private]
@@ -271,7 +363,24 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, minAwareness: f64, initialAwareness: f64, errorTimeScaleCoefficient: f64, errorNoiseIntensityCoefficient: f64, speedDifferenceErrorCoefficient: f64, speedDifferenceChangePerceptionThreshold: f64, headwayChangePerceptionThreshold: f64, headwayErrorCoefficient: f64, freeSpeedErrorCoefficient: f64, maximalReactionTime: f64) -> Self {
-        todo!("port MSDevice_DriverState::MSDevice_DriverState")
+        let holderMS = Ptr::from_mut(holder).cast::<MSVehicle>();
+        let mut b = MSDevice_DriverState {
+            base: MSVehicleDevice::new(holder, id),
+            myHolderMS: holderMS,
+            myMinAwareness: minAwareness,
+            myInitialAwareness: initialAwareness,
+            myErrorTimeScaleCoefficient: errorTimeScaleCoefficient,
+            myErrorNoiseIntensityCoefficient: errorNoiseIntensityCoefficient,
+            mySpeedDifferenceErrorCoefficient: speedDifferenceErrorCoefficient,
+            mySpeedDifferenceChangePerceptionThreshold: speedDifferenceChangePerceptionThreshold,
+            myHeadwayChangePerceptionThreshold: headwayChangePerceptionThreshold,
+            myHeadwayErrorCoefficient: headwayErrorCoefficient,
+            myFreeSpeedErrorCoefficient: freeSpeedErrorCoefficient,
+            myMaximalReactionTime: maximalReactionTime,
+            myDriverState: Rc::new(MSSimpleDriverState::new(holderMS)),
+        };
+        b.init_driver_state();
+        b
     }
 
     /// C++: `void MSDevice_DriverState::initDriverState()` [private]
@@ -295,7 +404,21 @@ impl MSDevice_DriverState {
     // }
     #[allow(unused_variables)]
     pub fn init_driver_state(&mut self) {
-        todo!("port MSDevice_DriverState::initDriverState")
+        // the state itself is created in new() (C++ make_shared); its parameters are set here in place
+        let ds = Rc::get_mut(&mut self.myDriverState).unwrap();
+        ds.set_min_awareness(self.myMinAwareness);
+        ds.set_initial_awareness(self.myInitialAwareness);
+        ds.set_error_time_scale_coefficient(self.myErrorTimeScaleCoefficient);
+        ds.set_error_noise_intensity_coefficient(self.myErrorNoiseIntensityCoefficient);
+        ds.set_speed_difference_error_coefficient(self.mySpeedDifferenceErrorCoefficient);
+        ds.set_headway_error_coefficient(self.myHeadwayErrorCoefficient);
+        ds.set_free_speed_error_coefficient(self.myFreeSpeedErrorCoefficient);
+        ds.set_speed_difference_change_perception_threshold(self.mySpeedDifferenceChangePerceptionThreshold);
+        ds.set_headway_change_perception_threshold(self.myHeadwayChangePerceptionThreshold);
+        ds.set_awareness(self.myInitialAwareness);
+        if self.myMaximalReactionTime > 0. {
+            ds.set_maximal_reaction_time(self.myMaximalReactionTime);
+        }
     }
 
     /// C++: `void MSDevice_DriverState::MSDevice_DriverState(const MSDevice_DriverState &)` [private]
@@ -303,7 +426,7 @@ impl MSDevice_DriverState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_DriverState) -> Self {
-        todo!("port MSDevice_DriverState::MSDevice_DriverState")
+        panic!("MSDevice_DriverState copy constructor is private and invalid")
     }
 
     /// C++: `MSDevice_DriverState & MSDevice_DriverState::operator=(const MSDevice_DriverState &)` [private]
@@ -311,7 +434,7 @@ impl MSDevice_DriverState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_DriverState) -> &mut MSDevice_DriverState {
-        todo!("port MSDevice_DriverState::operator=")
+        panic!("MSDevice_DriverState assignment operator is private and invalid")
     }
 
 }
