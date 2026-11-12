@@ -1699,7 +1699,43 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_rail_components(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, sc: &mut NBPTStopCont) -> i32 {
-        todo!("port NBNodeCont::removeRailComponents")
+        let mut stopEdges: BTreeSet<String> = BTreeSet::new();
+        for item in sc.get_stops().values() {
+            stopEdges.insert(item.get_edge_id().to_string());
+        }
+        let mut numRemoved = 0;
+        let mut numRemovedEdges = 0;
+        for component in self.myRailComponents.clone() {
+            let mut keep = false;
+            for edgeID in component.iter() {
+                if stopEdges.contains(edgeID) {
+                    keep = true;
+                    break;
+                }
+            }
+            if !keep {
+                numRemoved += 1;
+                numRemovedEdges += component.len() as i32;
+                for edgeID in component.iter() {
+                    let e = ec.retrieve(edgeID, false);
+                    if !e.is_null() {
+                        let fromNode = e.get_from_node();
+                        let toNode = e.get_to_node();
+                        ec.erase(dc, e);
+                        if fromNode.get_incoming_edges().is_empty() && fromNode.get_outgoing_edges().is_empty() {
+                            self.erase(fromNode);
+                        }
+                        if toNode.get_incoming_edges().is_empty() && toNode.get_outgoing_edges().is_empty() {
+                            self.erase(toNode);
+                        }
+                    }
+                }
+            }
+        }
+        if numRemoved > 0 {
+            write_message(&format!("Removed {} railway components ({} edges).", numRemoved, numRemovedEdges));
+        }
+        numRemoved
     }
 
     /// C++: `int NBNodeCont::removeUnwishedNodes(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &, NBPTStopCont &, NBPTLineCont &, NBParkingCont &, bool)`
@@ -2197,7 +2233,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn was_removed(&self, id: String) -> bool {
-        todo!("port NBNodeCont::wasRemoved")
+        self.myExtractedNodes.contains_key(&id)
     }
 
     /// C++: `void NBNodeCont::addPrefix(const std::string &)`
@@ -2291,7 +2327,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBNodeCont::size")
+        self.myNodes.len() as i32
     }
 
     /// C++: `void NBNodeCont::clear()`
@@ -2309,7 +2345,14 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port NBNodeCont::clear")
+        for item in self.myNodes.values().copied().collect::<Vec<_>>() {
+            delete_node(item);
+        }
+        self.myNodes.clear();
+        for item in self.myExtractedNodes.values().copied().collect::<Vec<_>>() {
+            delete_node(item);
+        }
+        self.myExtractedNodes.clear();
     }
 
     /// C++: `std::string NBNodeCont::getFreeID()`
@@ -2328,7 +2371,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_free_id(&mut self) -> String {
-        todo!("port NBNodeCont::getFreeID")
+        let mut counter = 0;
+        let mut freeID = format!("SUMOGenerated{}", counter);
+        // While there is a node with id equal to freeID
+        while !self.retrieve(&freeID).is_null() {
+            // update counter and generate a new freeID
+            counter += 1;
+            freeID = format!("SUMOGenerated{}", counter);
+        }
+        freeID
     }
 
     /// C++: `void NBNodeCont::computeNodeShapes(double)`
@@ -2459,7 +2510,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_all_names(&self) -> Vec<String> {
-        todo!("port NBNodeCont::getAllNames")
+        self.myNodes.keys().cloned().collect()
     }
 
     /// C++: `void NBNodeCont::analyzeCluster(NodeSet, std::string &, Position &, bool &, TrafficLightType &, SumoXMLNodeType &)`
@@ -2518,7 +2569,8 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn register_joined_cluster(&mut self, cluster: &NodeSet) {
-        todo!("port NBNodeCont::registerJoinedCluster")
+        let ids: BTreeSet<String> = cluster.iter().map(|n| n.get_id().to_string()).collect();
+        self.myJoinedClusters.push(ids);
     }
 
     /// C++: `void NBNodeCont::registerJoinedCluster(const std::set<std::string> &)`
@@ -2528,7 +2580,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn register_joined_cluster_2(&mut self, cluster: &BTreeSet<String>) {
-        todo!("port NBNodeCont::registerJoinedCluster")
+        self.myJoinedClusters.push(cluster.clone());
     }
 
     /// C++: `void NBNodeCont::unregisterJoinedCluster(const std::set<std::string> &)`
@@ -2542,7 +2594,9 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn unregister_joined_cluster(&mut self, cluster: &BTreeSet<String>) {
-        todo!("port NBNodeCont::unregisterJoinedCluster")
+        if let Some(pos) = self.myJoinedClusters.iter().position(|c| c == cluster) {
+            self.myJoinedClusters.remove(pos);
+        }
     }
 
     /// C++: `const std::vector<std::set<std::string>> & NBNodeCont::getJoinedClusters() const` [const]
@@ -2552,7 +2606,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_joined_clusters(&self) -> &Vec<BTreeSet<String>> {
-        todo!("port NBNodeCont::getJoinedClusters")
+        &self.myJoinedClusters
     }
 
     /// C++: `void NBNodeCont::discardTrafficLights(NBTrafficLightLogicCont &, bool)`
@@ -2606,7 +2660,11 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn discard_rail_signals(&mut self) {
-        todo!("port NBNodeCont::discardRailSignals")
+        for node in self.myNodes.values().copied().collect::<Vec<_>>() {
+            if node.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                node.m().reinit(node.get_position(), SumoXMLNodeType::PRIORITY, false);
+            }
+        }
     }
 
     /// C++: `void NBNodeCont::markAsSplit(const NBNode *)`
@@ -2616,7 +2674,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn mark_as_split(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBNodeCont::markAsSplit")
+        self.mySplit.insert(node);
     }
 
     /// C++: `void NBNodeCont::markAsNotTLS(const NBNode *)`
@@ -2626,7 +2684,7 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn mark_as_not_tls(&mut self, node: Ptr<NBNode>) {
-        todo!("port NBNodeCont::markAsNotTLS")
+        self.myUnsetTLS.insert(node);
     }
 
     /// C++: `int NBNodeCont::remapIDs(bool, bool, bool, const std::string &, NBTrafficLightLogicCont &)`
