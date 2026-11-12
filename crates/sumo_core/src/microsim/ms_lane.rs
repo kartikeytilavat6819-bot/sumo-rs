@@ -383,6 +383,19 @@ fn g_lateral_resolution() -> f64 {
     -1.
 }
 
+/// C++: `MSPModel::SAFETY_GAP`
+const MSP_MODEL_SAFETY_GAP: f64 = 1.0;
+
+/// C++: `MSGlobals::gEmergencyInsert`
+fn g_emergency_insert() -> bool {
+    utils::options::options_cont::get_bool("emergency-insert")
+}
+
+/// C++: `MSGlobals::gCheckRoutes` (set from the inverse of `ignore-route-errors`)
+fn g_check_routes() -> bool {
+    !utils::options::options_cont::get_bool("ignore-route-errors")
+}
+
 /// C++: `RandHelper::rand(double max)` with the default RNG
 fn rand_max_default(max: f64) -> f64 {
     utils::common::rand_helper::with_default(|r| r.rand_max(max))
@@ -1595,8 +1608,364 @@ impl MSLane {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn is_insertion_success(&mut self, vehicle: Ptr<MSVehicle>, speed: f64, pos: f64, posLat: f64, recheckNextLanes: bool, notification: MSMoveReminder_Notification) -> bool {
-        todo!("port MSLane::isInsertionSuccess")
+    pub fn is_insertion_success(&mut self, vehicle: Ptr<MSVehicle>, speed: f64, pos: f64, posLat: f64, patchSpeed: bool, notification: MSMoveReminder_Notification) -> bool {
+        use utils::xml::sumo_xml_definitions::{LINKSTATE_ALLWAY_STOP, LINKSTATE_EQUAL, LINKSTATE_MINOR, LINKSTATE_STOP, LINKSTATE_ZIPPER, SUMO_ATTR_JM_STOPLINE_CROSSING_GAP, SumoXMLNodeType};
+        use crate::microsim::cfmodels::mscf_model::INVALID_SPEED;
+        let aVehicle = vehicle;
+        let mut speed = speed;
+        let mut pos = pos;
+        let insertionChecks = aVehicle.get_insertion_checks();
+        if pos < 0. || pos > self.myLength {
+            // we may not start there
+            utils::write_warningf!("Invalid departPos % given for vehicle '%', time=%. Inserting at lane end instead.",
+                pos, aVehicle.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+            pos = self.myLength;
+        }
+
+        aVehicle.m().set_tentative_lane_and_position(Ptr::from_mut(self), pos, posLat);
+        aVehicle.m().update_best_lanes(false, Ptr::from_mut(self));
+        let cfModel = aVehicle.get_car_follow_model();
+        let bestLaneConts = aVehicle.get_best_lanes_continuation_2(Ptr::from_mut(self));
+        let mut ri: usize = 0;
+        let mut seen = self.get_length() - pos; // == distance from insertion position until the end of the currentLane
+        let mut dist = cfModel.brake_gap(speed) + aVehicle.get_vehicle_type().get_min_gap();
+        let isRail = aVehicle.is_rail();
+        if isRail && insertionChecks != InsertionCheck::NONE as i32
+            && aVehicle.get_parameter().departProcedure != DepartDefinition::SPLIT
+            && MSRailSignalControl::is_signalized(aVehicle.get_v_class())
+            && utils::common::sumo_vehicle_class::is_railway_or_shared(self.myPermissions) {
+            let dw = MSDriveWay::get_departure_driveway(aVehicle.cast::<SUMOVehicle>(), false);
+            let mut occupied: MSEdgeVector = Vec::new();
+            let mut dwBlocked = false;
+            if dw.foe_drive_way_occupied(false, aVehicle.cast::<SUMOVehicle>(), &mut occupied) {
+                dwBlocked = true;
+            } else if dw.siding_deadlock(aVehicle.cast::<SUMOVehicle>()) {
+                dwBlocked = true;
+            }
+            if dwBlocked {
+                self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.get_id());
+                return false;
+            }
+        }
+        if !self.get_bidi_lane().is_null() && isRail {
+            // do not insert if the bidirectional edge is occupied
+            if self.get_bidi_lane().get_vehicle_number_with_partials() > 0 && (insertionChecks & (InsertionCheck::BIDI as i32)) != 0 {
+                return false;
+            }
+            // do not insert the back of the train would be put onto an occupied bidi-lane
+            let mut backLength = aVehicle.get_length() - pos;
+            if backLength > 0. && (insertionChecks & (InsertionCheck::BIDI as i32)) != 0 {
+                let mut pred = self.get_logical_predecessor_lane();
+                let mut bidi = if pred.is_null() { Ptr::default() } else { pred.get_bidi_lane() };
+                while backLength > 0. && !bidi.is_null() {
+                    if bidi.get_vehicle_number_with_partials() > 0 {
+                        return false;
+                    }
+                    backLength -= bidi.get_length();
+                    pred = pred.get_logical_predecessor_lane();
+                    bidi = if pred.is_null() { Ptr::default() } else { pred.get_bidi_lane() };
+                }
+            }
+        }
+        let mut firstRailSignal: Ptr<MSLink> = Ptr::default();
+        let mut firstRailSignalDist: f64 = -1.;
+        // whether speed may be patched for unavoidable reasons (stops, speedLimits, ...)
+        let patchSpeedSpecial = patchSpeed || aVehicle.get_parameter().departSpeedProcedure != DepartSpeedDefinition::GIVEN;
+
+        // before looping through the continuation lanes, check if a stop is scheduled on this lane
+        // (the code is duplicated in the loop)
+        if aVehicle.has_stops() {
+            let nextStop = aVehicle.get_next_stop();
+            if nextStop.lane == Ptr::from_mut(self) {
+                let msg: String;
+                let distToStop: f64;
+                let safeSpeed: f64;
+                if nextStop.pars.speed > 0. {
+                    msg = format!("scheduled waypoint on lane '{}' too close", self.get_id());
+                    distToStop = 0f64.max(nextStop.pars.startPos - pos);
+                    safeSpeed = cfModel.free_speed(aVehicle, speed, distToStop, nextStop.pars.speed, true, MSCFModel_CalcReason::FUTURE);
+                } else {
+                    msg = format!("scheduled stop on lane '{}' too close", self.get_id());
+                    distToStop = nextStop.pars.endPos - pos;
+                    safeSpeed = cfModel.stop_speed(aVehicle, speed, distToStop, MSCFModel_CalcReason::FUTURE);
+                }
+                if self.check_failure(aVehicle, &mut speed, &mut dist, 0f64.max(safeSpeed), patchSpeedSpecial, msg, InsertionCheck::STOP) {
+                    // we may not drive with the given velocity - we cannot stop at the stop
+                    return false;
+                }
+            }
+        }
+        // check leader vehicle first because it could have influenced the departSpeed (for departSpeed=avg)
+        // get the pointer to the vehicle next in front of the given position
+        let leaders = self.get_last_vehicle_information(aVehicle, 0., pos, true, Ptr::default());
+        let nspeed = self.safe_insertion_speed(aVehicle, -pos, &leaders, speed);
+        if nspeed == INVALID_SPEED || self.check_failure(aVehicle, &mut speed, &mut dist, nspeed, patchSpeed, String::new(), InsertionCheck::LEADER_GAP) {
+            // we may not drive with the given velocity - we crash into the leader
+            return false;
+        }
+
+        let r = aVehicle.get_route();
+        let mut nRouteSuccs: i32 = 1;
+        let mut currentLane: Ptr<MSLane> = Ptr::from_mut(self);
+        let mut nextLane: Ptr<MSLane> = Ptr::from_mut(self);
+        let mut arrivalTime: SUMOTime = MSNet::get_instance().get_current_time_step() + utils::common::time::time2steps(seen / speed.max(SUMO_CONST_HALTING_SPEED));
+        while (seen < dist || (isRail && firstRailSignal.is_null())) && ri < bestLaneConts.len() {
+            // get the next link used...
+            let mut link: usize = MSLane::succ_link_sec(&*aVehicle, nRouteSuccs, &*currentLane, bestLaneConts);
+            // get the next used lane (including internal)
+            if currentLane.is_link_end(&mut link) {
+                if Ptr::from_mut(currentLane.get_edge()) == r.get_last_edge() {
+                    // reached the end of the route
+                    if aVehicle.get_parameter().arrivalSpeedProcedure == ArrivalSpeedDefinition::GIVEN {
+                        let remaining = seen + aVehicle.get_arrival_pos() - currentLane.get_length();
+                        let fspeed = cfModel.free_speed(aVehicle, speed, remaining, aVehicle.get_parameter().arrivalSpeed, true, MSCFModel_CalcReason::FUTURE);
+                        if self.check_failure(aVehicle, &mut speed, &mut dist, fspeed, patchSpeedSpecial, "arrival speed too low".to_string(), InsertionCheck::ARRIVAL_SPEED) {
+                            // we may not drive with the given velocity - we cannot match the specified arrival speed
+                            return false;
+                        }
+                    }
+                    if self.may_continue(aVehicle) && self.has_unsafe_link() {
+                        // since the route is likely to continue we must be prepared for braking
+                        let stopSpeed = cfModel.insertion_stop_speed(aVehicle, speed, seen);
+                        let errorMsg = format!("junction '{}' too close", currentLane.get_edge().get_to_junction().get_id());
+                        if self.check_failure(aVehicle, &mut speed, &mut dist, stopSpeed, patchSpeedSpecial, errorMsg, InsertionCheck::JUNCTION) {
+                            // we may not drive with the given velocity - we cannot stop at the junction
+                            return false;
+                        }
+                    }
+                } else {
+                    // lane does not continue
+                    let stopSpeed = cfModel.insertion_stop_speed(aVehicle, speed, seen);
+                    let errorMsg = format!("junction '{}' too close", currentLane.get_edge().get_to_junction().get_id());
+                    if self.check_failure(aVehicle, &mut speed, &mut dist, stopSpeed, patchSpeedSpecial, errorMsg, InsertionCheck::JUNCTION) {
+                        // we may not drive with the given velocity - we cannot stop at the junction
+                        return false;
+                    }
+                }
+                break;
+            }
+            let l: Ptr<MSLink> = currentLane.myLinks[link];
+            if isRail && firstRailSignal.is_null() {
+                let mut constraintInfo = String::new();
+                let mut isInsertionOrder = false;
+                if MSRailSignal::has_insertion_constraint(l, aVehicle, &mut constraintInfo, &mut isInsertionOrder) {
+                    let key = if isInsertionOrder { "insertionOrder" } else { "insertionConstraint:" };
+                    self.base2.set_parameter(&format!("{}{}", key, aVehicle.get_id()), &constraintInfo);
+                    return false;
+                }
+            }
+
+            // might also by a regular traffic_light instead of a rail_signal
+            if firstRailSignal.is_null() && !l.get_tl_logic().is_null() {
+                firstRailSignal = l;
+                firstRailSignalDist = seen;
+            }
+            nextLane = l.get_via_lane_or_lane();
+            if !l.opened(arrivalTime, speed, speed, aVehicle.get_vehicle_type().get_length(), aVehicle.get_impatience(),
+                cfModel.get_max_decel(), 0, posLat, Ptr::default(), false, aVehicle.cast::<SUMOTrafficObject>(), -1.)
+                || l.rail_signal_was_passed()
+                || !l.have_priority()
+                || l.get_state() == LINKSTATE_ZIPPER {
+                // have to stop at junction
+                let mut errorMsg = String::new();
+                let state = l.get_state();
+                if state == LINKSTATE_MINOR || state == LINKSTATE_EQUAL || state == LINKSTATE_STOP || state == LINKSTATE_ALLWAY_STOP {
+                    // no sense in trying later
+                    errorMsg = "unpriorised junction too close".to_string();
+                } else if !l.get_tl_logic().is_null() && !l.get_tl_logic().gets_major_green(l.get_tl_index()) {
+                    // traffic light never turns 'G'?
+                    errorMsg = format!("tlLogic '{}' link {} never switches to 'G'", l.get_tl_logic().get_id(), l.get_tl_index());
+                }
+                let laneStopOffset = self.get_vehicle_stop_offset(aVehicle).max(
+                    aVehicle.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_STOPLINE_CROSSING_GAP, MSP_MODEL_SAFETY_GAP) - l.get_dist_to_foe_ped_crossing());
+                let remaining = seen - laneStopOffset;
+                let stopSpeed = cfModel.insertion_stop_speed(aVehicle, speed, remaining);
+                if self.check_failure(aVehicle, &mut speed, &mut dist, stopSpeed, patchSpeedSpecial, errorMsg, InsertionCheck::JUNCTION) {
+                    // we may not drive with the given velocity - we cannot stop at the junction in time
+                    return false;
+                }
+                if seen >= aVehicle.get_vehicle_type().get_min_gap() {
+                    break;
+                }
+            } else if nextLane.is_internal() {
+                let mut tmp = 0f64;
+                let mut tmp2 = 0f64;
+                let mut dummyReq = true;
+                let mut nSpeed = speed;
+                aVehicle.check_link_leader(nextLane.get_link_cont()[0], nextLane, seen + nextLane.get_length(), Ptr::default(), &mut nSpeed, &mut tmp, &mut tmp2, &mut dummyReq, false);
+                if self.check_failure(aVehicle, &mut speed, &mut dist, nSpeed, patchSpeed, String::new(), InsertionCheck::LEADER_GAP) {
+                    // we may not drive with the given velocity - there is a junction leader
+                    return false;
+                }
+            }
+            // check how next lane affects the journey
+            if !nextLane.is_null() {
+                // do not insert if the bidirectional edge is occupied before a railSignal has been encountered
+                if firstRailSignal.is_null() && !nextLane.get_bidi_lane().is_null() && nextLane.get_bidi_lane().get_vehicle_number_with_partials() > 0 {
+                    if (insertionChecks & (InsertionCheck::ONCOMING_TRAIN as i32)) != 0 {
+                        return false;
+                    }
+                }
+
+                // check if there are stops on the next lane that should be regarded
+                // (this block is duplicated before the loop to deal with the insertion lane)
+                if aVehicle.has_stops() {
+                    let nextStop = aVehicle.get_next_stop();
+                    if nextStop.lane == nextLane {
+                        let msg = format!("scheduled stop on lane '{}' too close", nextStop.lane.get_id());
+                        let distToStop = seen + nextStop.pars.endPos;
+                        let stopSpeed = cfModel.insertion_stop_speed(aVehicle, speed, distToStop);
+                        if self.check_failure(aVehicle, &mut speed, &mut dist, stopSpeed, patchSpeedSpecial, msg, InsertionCheck::STOP) {
+                            // we may not drive with the given velocity - we cannot stop at the stop
+                            return false;
+                        }
+                    }
+                }
+
+                // check leader on next lane
+                let nextLeaders = nextLane.get_last_vehicle_information(aVehicle, 0., 0., true, Ptr::default());
+                if nextLeaders.has_vehicles() {
+                    let nextLaneSpeed = nextLane.m().safe_insertion_speed(aVehicle, seen, &nextLeaders, speed);
+                    if nextLaneSpeed == INVALID_SPEED || self.check_failure(aVehicle, &mut speed, &mut dist, nextLaneSpeed, patchSpeed, String::new(), InsertionCheck::LEADER_GAP) {
+                        // we may not drive with the given velocity - we crash into the leader
+                        return false;
+                    }
+                }
+                if !nextLane.check_for_pedestrians(aVehicle, &mut speed, &mut dist, -seen, patchSpeed) {
+                    return false;
+                }
+                // check next lane's maximum velocity
+                let freeSpeed = cfModel.free_speed(aVehicle, speed, seen, nextLane.get_vehicle_max_speed(aVehicle.cast::<SUMOTrafficObject>()), true, MSCFModel_CalcReason::FUTURE);
+                if freeSpeed < speed {
+                    if patchSpeedSpecial {
+                        speed = freeSpeed;
+                        dist = cfModel.brake_gap(speed) + aVehicle.get_vehicle_type().get_min_gap();
+                    } else if (insertionChecks & (InsertionCheck::SPEED_LIMIT as i32)) != 0 {
+                        if !g_check_routes() {
+                            utils::write_warningf!("Vehicle '%' is inserted too fast and will violate the speed limit on a lane '%', time=%.",
+                                aVehicle.get_id(), nextLane.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+                        } else {
+                            // we may not drive with the given velocity - we would be too fast on the next lane
+                            utils::write_errorf!("Vehicle '%' will not be able to depart using the given velocity (slow lane ahead), time=%.",
+                                aVehicle.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step()));
+                            MSNet::get_instance().m().get_insertion_control().deschedule_departure(aVehicle.cast::<SUMOVehicle>());
+                            return false;
+                        }
+                    }
+                }
+                // check traffic on next junction
+                // we cannot use (*link)->opened because a vehicle without priority
+                // may already be comitted to blocking the link and unable to stop
+                let leaveTime = l.get_leave_time(arrivalTime, speed, speed, aVehicle.get_vehicle_type().get_length());
+                if l.has_approaching_foe(arrivalTime, leaveTime, speed, cfModel.get_max_decel()) {
+                    let stopSpeed = cfModel.insertion_stop_speed(aVehicle, speed, seen);
+                    if self.check_failure(aVehicle, &mut speed, &mut dist, stopSpeed, patchSpeed, String::new(), InsertionCheck::JUNCTION) {
+                        // we may not drive with the given velocity - we crash at the junction
+                        return false;
+                    }
+                }
+                arrivalTime += utils::common::time::time2steps(nextLane.get_length() / speed.max(NUMERICAL_EPS));
+                seen += nextLane.get_length();
+                currentLane = nextLane;
+                if l.get_via_lane().is_null() {
+                    nRouteSuccs += 1;
+                    ri += 1;
+                }
+            }
+        }
+
+        let followers = self.get_followers_on_consecutive(aVehicle, aVehicle.get_back_position_on_lane_2(), false, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+        for i in 0..followers.num_sublanes() {
+            let (follower, gap) = followers.index_op(i);
+            if !follower.is_null() {
+                let backGapNeeded = follower.get_car_follow_model().get_secure_gap(follower, aVehicle, follower.get_speed(), speed, cfModel.get_max_decel());
+                if gap < backGapNeeded
+                    && ((insertionChecks & (InsertionCheck::FOLLOWER_GAP as i32)) != 0
+                        || (gap < 0. && (insertionChecks & (InsertionCheck::COLLISION as i32)) != 0)) {
+                    // too close to the follower on this lane
+                    return false;
+                }
+            }
+        }
+
+        if !self.check_for_pedestrians(aVehicle, &mut speed, &mut dist, pos, patchSpeed) {
+            return false;
+        }
+
+        let shadowLane = aVehicle.m().get_lane_change_model().get_shadow_lane_2(Ptr::from_mut(self));
+        if !shadowLane.is_null() {
+            let shadowFollowers = shadowLane.get_followers_on_consecutive(aVehicle, aVehicle.get_back_position_on_lane_2(), false, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+            for i in 0..shadowFollowers.num_sublanes() {
+                let (follower, gap) = shadowFollowers.index_op(i);
+                if !follower.is_null() {
+                    let backGapNeeded = follower.get_car_follow_model().get_secure_gap(follower, aVehicle, follower.get_speed(), speed, cfModel.get_max_decel());
+                    if gap < backGapNeeded
+                        && ((insertionChecks & (InsertionCheck::FOLLOWER_GAP as i32)) != 0
+                            || (gap < 0. && (insertionChecks & (InsertionCheck::COLLISION as i32)) != 0)) {
+                        // too close to the follower on this lane
+                        return false;
+                    }
+                }
+            }
+            let ahead = shadowLane.get_last_vehicle_information(Ptr::default(), 0., aVehicle.get_position_on_lane(), false, Ptr::default());
+            for i in 0..ahead.num_sublanes() {
+                let veh = ahead.index_op(i);
+                if !veh.is_null() {
+                    let gap = veh.get_back_position_on_lane(shadowLane) - aVehicle.get_position_on_lane() - aVehicle.get_vehicle_type().get_min_gap();
+                    let gapNeeded = aVehicle.get_car_follow_model().get_secure_gap(aVehicle, veh, speed, veh.get_speed(), veh.get_car_follow_model().get_max_decel());
+                    if gap < gapNeeded
+                        && ((insertionChecks & (InsertionCheck::LEADER_GAP as i32)) != 0
+                            || (gap < 0. && (insertionChecks & (InsertionCheck::COLLISION as i32)) != 0)) {
+                        // too close to the shadow leader
+                        return false;
+                    }
+                }
+            }
+        }
+        if followers.num_free_sublanes() > 0 {
+            // check approaching vehicles to prevent rear-end collisions
+            let backOffset = pos - aVehicle.get_vehicle_type().get_length();
+            let missingRearGap = self.get_missing_rear_gap(aVehicle, backOffset, speed);
+            if missingRearGap > 0. && (insertionChecks & (InsertionCheck::LEADER_GAP as i32)) != 0 {
+                // too close to a follower
+                return false;
+            }
+        }
+        if insertionChecks == InsertionCheck::NONE as i32 {
+            speed = 0f64.max(speed);
+        }
+        // may got negative while adaptation
+        if speed < 0. {
+            return false;
+        }
+        let bestLaneOffset = aVehicle.get_best_lane_offset();
+        let extraReservation = aVehicle.m().get_lane_change_model().get_extra_reservation(bestLaneOffset, 0.);
+        if extraReservation > 0. {
+            let msg = format!("too many lane changes required on lane '{}'", self.get_id());
+            // we need to take into acount one extra actionStep of delay due to #3665
+            let mut distToStop = aVehicle.get_best_lane_dist() - pos - extraReservation - speed * aVehicle.get_action_step_length_secs();
+            if distToStop >= 0. {
+                let stopSpeed = cfModel.stop_speed(aVehicle, speed, distToStop, MSCFModel_CalcReason::FUTURE);
+                if self.check_failure(aVehicle, &mut speed, &mut distToStop, 0f64.max(stopSpeed), patchSpeedSpecial, msg, InsertionCheck::LANECHANGE) {
+                    // we may not drive with the given velocity - we cannot reserve enough space for lane changing
+                    return false;
+                }
+            }
+        }
+        // enter
+        let at = self.myVehicles.iter().position(|v| v.get_position_on_lane() >= pos).unwrap_or(self.myVehicles.len());
+        self.incorporate_vehicle(aVehicle, pos, speed, posLat, at, notification);
+        if isRail {
+            self.base2.unset_parameter(&format!("insertionConstraint:{}", aVehicle.get_id()));
+            self.base2.unset_parameter(&format!("insertionOrder:{}", aVehicle.get_id()));
+            self.base2.unset_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()));
+            // rail_signal (not traffic_light) requires approach information for
+            // switching correctly at the start of the next simulation step
+            if !firstRailSignal.is_null() && firstRailSignal.get_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                aVehicle.m().register_insertion_approach(firstRailSignal, firstRailSignalDist);
+            }
+        }
+        true
     }
 
     /// C++: `bool MSLane::checkFailure(const MSVehicle *, double &, double &, const double, const bool, const std::string, InsertionCheck) const` [const]
@@ -1633,7 +2002,34 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn check_failure(&self, aVehicle: Ptr<MSVehicle>, speed: &mut f64, dist: &mut f64, nspeed: f64, patchSpeed: bool, errorMsg: String, check: InsertionCheck) -> bool {
-        todo!("port MSLane::checkFailure")
+        if nspeed < *speed {
+            if patchSpeed {
+                *speed = nspeed.min(*speed);
+                *dist = aVehicle.get_car_follow_model().brake_gap(*speed) + aVehicle.get_vehicle_type().get_min_gap();
+            } else if *speed > 0. {
+                if (aVehicle.get_insertion_checks() & (check as i32)) == 0 {
+                    return false;
+                }
+                if g_emergency_insert() {
+                    // Check whether vehicle can stop at the given distance when applying emergency braking
+                    let emergencyBrakeGap = 0.5 * *speed * *speed / aVehicle.get_car_follow_model().get_emergency_decel();
+                    if emergencyBrakeGap <= *dist {
+                        // Vehicle may stop in time with emergency deceleration
+                        // still, emit a warning
+                        utils::write_warningf!("Vehicle '%' is inserted in an emergency situation, time=%.", aVehicle.get_id(), time2string(MSNet::get_instance().get_current_time_step()));
+                        return false;
+                    }
+                }
+
+                if errorMsg != "" {
+                    utils::write_errorf!("Vehicle '%' will not be able to depart on lane '%' with speed % (%), time=%.",
+                        aVehicle.get_id(), self.get_id(), *speed, errorMsg, time2string(MSNet::get_instance().get_current_time_step()));
+                    MSNet::get_instance().m().get_insertion_control().deschedule_departure(aVehicle.cast::<SUMOVehicle>());
+                }
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSLane::lastInsertion(MSVehicle &, double, double, bool)`
@@ -3263,9 +3659,46 @@ impl MSLane {
     // #endif
     //     return succLinkSource.myLinks.end();
     // }
-    #[allow(unused_variables)]
-    pub fn succ_link_sec(veh: &SUMOVehicle, nRouteSuccs: i32, succLinkSource: &MSLane, conts: &Vec<Ptr<MSLane>>) -> Unmapped /* std::vector<MSLink *>::const_iterator */ {
-        todo!("port MSLane::succLinkSec")
+    /// Returns the index into `succLinkSource.myLinks` of the link to use (`myLinks.len()` stands for C++ `end()`).
+    // shortcut: iterators are modelled as indices into myLinks (usize), `len()` is end()
+    pub fn succ_link_sec(veh: &SUMOVehicle, nRouteSuccs: i32, succLinkSource: &MSLane, conts: &Vec<Ptr<MSLane>>) -> usize {
+        let nRouteEdge = veh.succ_edge(nRouteSuccs);
+        // check whether the vehicle tried to look beyond its route
+        if nRouteEdge.is_null() {
+            // return end (no succeeding link) if so
+            return succLinkSource.myLinks.len();
+        }
+        // if we are on an internal lane there should only be one link and it must be allowed
+        if succLinkSource.is_internal() {
+            debug_assert!(succLinkSource.myLinks.len() == 1);
+            return 0;
+        }
+        // a link may be used if
+        //  1) there is a destination lane ((*link)->getLane()!=0)
+        //  2) the destination lane belongs to the next edge in route ((*link)->getLane()->myEdge == nRouteEdge)
+        //  3) the destination lane allows the vehicle's class ((*link)->getLane()->allowsVehicleClass(veh.getVehicleClass()))
+        // there should be a link which leads to the next desired lane our route in "conts" (built in "getBestLanes")
+        // "conts" stores the best continuations of our current lane
+        // we should never return an arbitrary link since this may cause collisions
+        if (nRouteSuccs as usize) < conts.len() {
+            // we go through the links in our list and return the matching one
+            for (idx, link) in succLinkSource.myLinks.iter().enumerate() {
+                let lane = link.get_lane();
+                if !lane.is_null() && lane.myEdge == nRouteEdge
+                    && lane.allows_vehicle_class(veh.get_v_class())
+                    && (link.get_via_lane().is_null() || link.get_via_lane().allows_vehicle_class(veh.get_v_class())) {
+                    // we should use the link if it connects us to the best lane
+                    if lane == conts[nRouteSuccs as usize] {
+                        return idx;
+                    }
+                }
+            }
+        } else {
+            // the source lane is a dead end (no continuations exist)
+            return succLinkSource.myLinks.len();
+        }
+        // the only case where this should happen is for a disconnected route (deliberately ignored)
+        succLinkSource.myLinks.len()
     }
 
     /// C++: `bool MSLane::isLinkEnd(std::vector<MSLink *>::const_iterator &) const` [const]
@@ -3273,9 +3706,8 @@ impl MSLane {
     // inline bool isLinkEnd(std::vector<MSLink*>::const_iterator& i) const {
     //         return i == myLinks.end();
     //     }
-    #[allow(unused_variables)]
-    pub fn is_link_end(&self, i: &mut Unmapped /* std::vector<MSLink *>::const_iterator */) -> bool {
-        todo!("port MSLane::isLinkEnd")
+    pub fn is_link_end(&self, i: &mut usize) -> bool {
+        *i == self.myLinks.len()
     }
 
     /// C++: `bool MSLane::isLinkEnd(std::vector<MSLink *>::iterator &)`
@@ -3283,9 +3715,8 @@ impl MSLane {
     // inline bool isLinkEnd(std::vector<MSLink*>::iterator& i) {
     //         return i == myLinks.end();
     //     }
-    #[allow(unused_variables)]
-    pub fn is_link_end_2(&mut self, i: &mut Unmapped /* std::vector<MSLink *>::iterator */) -> bool {
-        todo!("port MSLane::isLinkEnd")
+    pub fn is_link_end_2(&mut self, i: &mut usize) -> bool {
+        *i == self.myLinks.len()
     }
 
     /// C++: `bool MSLane::isEmpty() const` [const]
@@ -5689,7 +6120,7 @@ impl MSLane {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn incorporate_vehicle(&mut self, veh: Ptr<MSVehicle>, pos: f64, speed: f64, posLat: f64, at: &Unmapped /* MSLane::VehCont::iterator */, notification: MSMoveReminder_Notification) {
+    pub fn incorporate_vehicle(&mut self, veh: Ptr<MSVehicle>, pos: f64, speed: f64, posLat: f64, at: usize, notification: MSMoveReminder_Notification) {
         todo!("port MSLane::incorporateVehicle")
     }
 
