@@ -16,6 +16,12 @@ use crate::common::to_string::f64_to_string;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PositionVector(pub Vec<Position>);
 
+impl crate::iodevices::output_device::OutputValue for PositionVector {
+    fn to_output_string(&self, precision: i32) -> std::borrow::Cow<'_, str> {
+        std::borrow::Cow::Owned(self.to_string_prec(precision))
+    }
+}
+
 impl Deref for PositionVector {
     type Target = Vec<Position>;
     fn deref(&self) -> &Vec<Position> {
