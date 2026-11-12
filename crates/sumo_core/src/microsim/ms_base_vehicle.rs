@@ -81,6 +81,7 @@ impl MSBaseVehicle_BaseInfluencer {
 
 /// The base class for microscopic and mesoscopic vehicles
 /// C++ class `MSBaseVehicle` (microsim/MSBaseVehicle.h)
+#[repr(C)]
 pub struct MSBaseVehicle {
     /// C++ base class `SUMOVehicle`
     pub base: SUMOVehicle,
