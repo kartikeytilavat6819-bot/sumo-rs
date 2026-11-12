@@ -1,6 +1,11 @@
 //! Port of microsim/cfmodels/MSCFModel_Rail.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{accel2dist, accel2speed, dist2speed, speed2dist, ts};
+use utils::geom::geom_helper::{deg2rad, GRAVITY};
+use utils::common::std_defs::INVALID_DOUBLE;
+use utils::common::to_string::f64_to_string_prec;
 
 /// C++ class `MSCFModel_Rail` (microsim/cfmodels/MSCFModel_Rail.h)
 #[repr(C)]
@@ -122,7 +127,103 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_Rail::MSCFModel_Rail")
+        let base = MSCFModel::new(vtype);
+        let mut this = MSCFModel_Rail { base, myTrainParams: MSCFModel_Rail_TrainParams::default() };
+        let trainType = vtype.get_parameter().get_cf_param_string(SUMO_ATTR_TRAIN_TYPE, "NGT400".to_string());
+        if trainType == "RB425" {
+            this.myTrainParams = this.init_rb425_params();
+        } else if trainType == "RB628" {
+            this.myTrainParams = this.init_rb628_params();
+        } else if trainType == "NGT400" {
+            this.myTrainParams = this.init_ngt400_params();
+        } else if trainType == "NGT400_16" {
+            this.myTrainParams = this.init_ngt400_16_params();
+        } else if trainType == "ICE1" {
+            this.myTrainParams = this.init_ice1_params();
+        } else if trainType == "REDosto7" {
+            this.myTrainParams = this.init_re_dosto7_params();
+        } else if trainType == "Freight" {
+            this.myTrainParams = this.init_freight_params();
+        } else if trainType == "ICE3" {
+            this.myTrainParams = this.init_ice3_params();
+        } else if trainType == "MireoPlusB" {
+            this.myTrainParams = this.init_mireo_plus_b2_t_params();
+        } else if trainType == "MireoPlusH" {
+            this.myTrainParams = this.init_mireo_plus_h2_t_params();
+        } else if trainType == "custom" {
+            this.myTrainParams = this.init_custom_params();
+        } else {
+            utils::common::msg_handler::write_error(&format!("Unknown train type: {}. Exiting!", trainType));
+            panic!("{}", utils::common::util_exceptions::ProcessError::default_msg());
+        }
+        // override with user values
+        if vtype.was_set(VTYPEPARS_MAXSPEED_SET) {
+            this.myTrainParams.vmax = vtype.get_max_speed();
+        }
+        if vtype.was_set(VTYPEPARS_LENGTH_SET) {
+            this.myTrainParams.length = vtype.get_length();
+        }
+        this.myTrainParams.mf = vtype.get_parameter().get_cf_param(SUMO_ATTR_MASSFACTOR, this.myTrainParams.mf);
+        this.myTrainParams.decl = vtype.get_parameter().get_cf_param(SUMO_ATTR_DECEL, this.myTrainParams.decl);
+        this.base.set_max_decel(this.myTrainParams.decl);
+        let emergencyDefault = this.myTrainParams.decl + 0.3;
+        this.base.set_emergency_decel(vtype.get_parameter().get_cf_param(SUMO_ATTR_EMERGENCYDECEL, emergencyDefault));
+        // update type parameters so they are shown correctly in the gui (if defaults from trainType are used)
+        vtype.m().set_max_speed(&this.myTrainParams.vmax);
+        vtype.m().set_length(&this.myTrainParams.length);
+        if !vtype.was_set(VTYPEPARS_MASS_SET) {
+            // tons to kg
+            vtype.m().set_mass(this.myTrainParams.weight * 1000.);
+        }
+
+        // init tabular curves
+        // shortcut: SUMOVTypeParameter::getCFProfile returns Unmapped, so tractionTable/resistanceTable from the vType are ignored and the trainType defaults are kept; upgrade when sumov_type_parameter.rs maps LinearApproxMap
+        let _ = vtype.get_parameter().get_cf_profile(SUMO_ATTR_TRACTION_TABLE, &());
+        let _ = vtype.get_parameter().get_cf_profile(SUMO_ATTR_RESISTANCE_TABLE, &());
+
+        // init parametric curves
+        this.myTrainParams.maxPower = vtype.get_parameter().get_cf_param(SUMO_ATTR_MAXPOWER, INVALID_DOUBLE);
+        this.myTrainParams.maxTraction = vtype.get_parameter().get_cf_param(SUMO_ATTR_MAXTRACTION, INVALID_DOUBLE);
+        this.myTrainParams.resCoef_constant = vtype.get_parameter().get_cf_param(SUMO_ATTR_RESISTANCE_COEFFICIENT_CONSTANT, INVALID_DOUBLE);
+        this.myTrainParams.resCoef_linear = vtype.get_parameter().get_cf_param(SUMO_ATTR_RESISTANCE_COEFFICIENT_LINEAR, INVALID_DOUBLE);
+        this.myTrainParams.resCoef_quadratic = vtype.get_parameter().get_cf_param(SUMO_ATTR_RESISTANCE_COEFFICIENT_QUADRATIC, INVALID_DOUBLE);
+        // curve resistance parameters
+        this.myTrainParams.curveResistance = vtype.get_parameter().get_cf_param(SUMO_ATTR_CURVE_RESISTANCE, this.myTrainParams.curveResistance);
+        this.myTrainParams.curveIntegration = vtype.get_parameter().get_cf_param(SUMO_ATTR_CURVE_INTEGRATION, this.myTrainParams.curveIntegration);
+        this.myTrainParams.roeckl_sharp_radius = vtype.get_parameter().get_cf_param(SUMO_ATTR_ROECKL_SHARP_RADIUS, this.myTrainParams.roeckl_sharp_radius);
+        this.myTrainParams.roeckl_numerator = vtype.get_parameter().get_cf_param(SUMO_ATTR_ROECKL_NUMERATOR, this.myTrainParams.roeckl_numerator);
+        this.myTrainParams.roeckl_numerator_sharp = vtype.get_parameter().get_cf_param(SUMO_ATTR_ROECKL_NUMERATOR_SHARP, this.myTrainParams.roeckl_numerator_sharp);
+        this.myTrainParams.roeckl_offset = vtype.get_parameter().get_cf_param(SUMO_ATTR_ROECKL_OFFSET, this.myTrainParams.roeckl_offset);
+        this.myTrainParams.roeckl_offset_sharp = vtype.get_parameter().get_cf_param(SUMO_ATTR_ROECKL_OFFSET_SHARP, this.myTrainParams.roeckl_offset_sharp);
+
+        if this.myTrainParams.maxPower != INVALID_DOUBLE && this.myTrainParams.maxTraction == INVALID_DOUBLE {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Undefined maxPower for vType '{}'.", vtype.get_id())));
+        } else if this.myTrainParams.maxPower == INVALID_DOUBLE && this.myTrainParams.maxTraction != INVALID_DOUBLE {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Undefined maxTraction for vType '{}'.", vtype.get_id())));
+        }
+        if this.myTrainParams.maxPower != INVALID_DOUBLE && vtype.get_parameter().get_cf_param_string(SUMO_ATTR_TRACTION_TABLE, "".to_string()) != "" {
+            utils::common::msg_handler::write_warning(&format!("Ignoring tractionTable because maxPower and maxTraction are set for vType '{}'.", vtype.get_id()));
+        }
+        let hasSomeResCoef = this.myTrainParams.resCoef_constant != INVALID_DOUBLE
+            || this.myTrainParams.resCoef_linear != INVALID_DOUBLE
+            || this.myTrainParams.resCoef_quadratic != INVALID_DOUBLE;
+        let hasAllResCoef = this.myTrainParams.resCoef_constant != INVALID_DOUBLE
+            && this.myTrainParams.resCoef_linear != INVALID_DOUBLE
+            && this.myTrainParams.resCoef_quadratic != INVALID_DOUBLE;
+        if hasSomeResCoef && !hasAllResCoef {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Some undefined resistance coefficients for vType '{}' (requires resCoef_constant, resCoef_linear and resCoef_quadratic)", vtype.get_id())));
+        }
+        if this.myTrainParams.resCoef_constant != INVALID_DOUBLE && vtype.get_parameter().get_cf_param_string(SUMO_ATTR_RESISTANCE_TABLE, "".to_string()) != "" {
+            utils::common::msg_handler::write_warning(&format!("Ignoring resistanceTable because resistance coefficients are set for vType '{}'.", vtype.get_id()));
+        }
+
+        if this.myTrainParams.traction.is_empty() && this.myTrainParams.maxPower == INVALID_DOUBLE {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Either tractionTable or maxPower must be defined for vType '{}' with Rail model type '{}'.", vtype.get_id(), trainType)));
+        }
+        if this.myTrainParams.resistance.is_empty() && this.myTrainParams.resCoef_constant == INVALID_DOUBLE {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Either resistanceTable or resCoef_constant must be defined for vType '{}' with Rail model type '{}'.", vtype.get_id(), trainType)));
+        }
+        this
     }
 
     /// C++: `double MSCFModel_Rail::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -153,7 +254,23 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Rail::followSpeed")
+        let mut gap = gap2pred;
+        // @note: default train minGap of 5 is already subtracted from gap
+        if speed >= 30. / 3.6 {
+            // safety distance for higher speeds (>= 30 km/h)
+            gap = max2(0.0, gap + veh.get_vehicle_type().get_min_gap() - 50.);
+        }
+
+        let vsafe = self.base.maximum_safe_stop_speed(gap, self.myDecel, speed, false, ts(), false); // absolute breaking distance
+        let vmin = self.min_next_speed(speed, veh);
+        let vmax = self.max_next_speed(speed, veh);
+
+        if g_semi_implicit_euler_update() {
+            min2(vsafe, vmax)
+        } else {
+            // ballistic
+            max2(min2(vsafe, vmax), vmin)
+        }
     }
 
     /// C++: `int MSCFModel_Rail::getModelID() const` [const, virtual]
@@ -163,7 +280,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_Rail::getModelID")
+        SUMO_TAG_CF_RAIL as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_Rail::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -173,14 +290,15 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_Rail::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Rail::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `void MSCFModel_Rail::~MSCFModel_Rail() noexcept` [virtual]
     // MSCFModel_Rail::~MSCFModel_Rail() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_Rail::~MSCFModel_Rail")
+
     }
 
     /// C++: `VehicleVariables * MSCFModel_Rail::createVehicleVariables() const` [const, virtual]
@@ -192,7 +310,14 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_Rail::createVehicleVariables")
+        if self.myTrainParams.curveResistance > 0. {
+            // shortcut: the vehicle variables are leaked like C++ `new`; the owner must free them once ownership is ported
+            return Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Rail_RailVehicleVariables {
+                base: MSCFModel_VehicleVariables {},
+                odometerAngles: Vec::new(),
+            })).base);
+        }
+        Ptr::default()
     }
 
     /// C++: `double MSCFModel_Rail::maxNextSpeed(double, const MSVehicle *const) const` [const, virtual]
@@ -230,7 +355,33 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn max_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::maxNextSpeed")
+        if speed >= self.myTrainParams.vmax {
+            return self.myTrainParams.vmax;
+        }
+
+        let targetSpeed = self.myTrainParams.vmax;
+
+        let res = self.myTrainParams.get_resistance(speed); // kN
+
+        let slope = veh.get_slope();
+        let gr = self.get_weight(veh) * GRAVITY * deg2rad(slope).sin(); //kN
+        let cr = self.get_weight(veh) * self.get_curve_resistance(veh); //kN
+
+        let totalRes = res + gr + cr; //kN
+
+        let trac = self.myTrainParams.get_traction(speed); // kN
+        let a;
+        if speed < targetSpeed {
+            a = (trac - totalRes) / self.get_rot_weight(veh); //kN/t == N/kg
+        } else {
+            a = 0.;
+            if totalRes > trac {
+                a = (trac - totalRes) / self.get_rot_weight(veh); //kN/t == N/kg
+            }
+        }
+        let maxNextSpeed = speed + accel2speed(a);
+
+        min2(self.myTrainParams.vmax, maxNextSpeed)
     }
 
     /// C++: `double MSCFModel_Rail::minNextSpeed(double, const MSVehicle *const) const` [const, virtual]
@@ -253,7 +404,19 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::minNextSpeed")
+        let slope = veh.get_slope();
+        let gr = self.get_weight(veh) * GRAVITY * deg2rad(slope).sin(); //kN
+        let cr = self.get_weight(veh) * self.get_curve_resistance(veh);
+        let res = self.myTrainParams.get_resistance(speed); // kN
+        let totalRes = res + gr + cr; //kN
+        let a = self.myTrainParams.decl + totalRes / self.get_rot_weight(veh);
+        let vMin = speed - accel2speed(a);
+        if g_semi_implicit_euler_update() {
+            max2(vMin, 0.)
+        } else {
+            // NOTE: ballistic update allows for negative speeds to indicate a stop within the next timestep
+            vMin
+        }
     }
 
     /// C++: `double MSCFModel_Rail::minNextSpeedEmergency(double, const MSVehicle *const) const` [const, virtual]
@@ -263,7 +426,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn min_next_speed_emergency(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::minNextSpeedEmergency")
+        self.min_next_speed(speed, veh)
     }
 
     /// C++: `double MSCFModel_Rail::getSpeedAfterMaxDecel(double) const` [const, virtual]
@@ -280,7 +443,8 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_after_max_decel(&self, v: f64) -> f64 {
-        todo!("port MSCFModel_Rail::getSpeedAfterMaxDecel")
+        utils::common::msg_handler::write_error("function call not allowed for rail model. Exiting!");
+        panic!("{}", utils::common::util_exceptions::ProcessError::default_msg())
     }
 
     /// C++: `double MSCFModel_Rail::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -289,7 +453,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_Rail::finalizeSpeed")
+        self.base.finalize_speed(veh, vPos)
     }
 
     /// C++: `double MSCFModel_Rail::freeSpeed(const MSVehicle *const, double, double, double, const bool, const CalcReason) const` [const, virtual]
@@ -326,7 +490,27 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Rail::freeSpeed")
+        if g_semi_implicit_euler_update() {
+            // adapt speed to succeeding lane, no reaction time is involved
+            // when breaking for y steps the following distance g is covered
+            // (drive with v in the final step)
+            // g = (y^2 + y) * 0.5 * b + y * v
+            // y = ((((sqrt((b + 2.0*v)*(b + 2.0*v) + 8.0*b*g)) - b)*0.5 - v)/b)
+            let v = speed2dist(maxSpeed);
+            if seen < v {
+                return maxSpeed;
+            }
+            let b = accel2dist(self.myDecel);
+            let root = ((b + 2.0 * v) * (b + 2.0 * v) + 8.0 * b * seen).sqrt();
+            let y = max2(0.0, ((root - b) * 0.5 - v) / b);
+            let yFull = y.floor();
+            let exactGap = (yFull * yFull + yFull) * 0.5 * b + yFull * v + (if y > yFull { v } else { 0.0 });
+            let fullSpeedGain = (yFull + (if onInsertion { 1. } else { 0. })) * accel2speed(self.myTrainParams.decl);
+            dist2speed(max2(0.0, seen - exactGap) / (yFull + 1.)) + fullSpeedGain + maxSpeed
+        } else {
+            utils::common::msg_handler::write_error("Anything else than semi implicit euler update is not yet implemented. Exiting!");
+            panic!("{}", utils::common::util_exceptions::ProcessError::default_msg())
+        }
     }
 
     /// C++: `bool MSCFModel_Rail::startupDelayStopped() const` [const, virtual]
@@ -336,7 +520,8 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn startup_delay_stopped(&self) -> bool {
-        todo!("port MSCFModel_Rail::startupDelayStopped")
+        // starup delay in trains is dominated by inertia + brake delay and thus applies to any kind of stopping
+        true
     }
 
     /// C++: `double MSCFModel_Rail::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -345,7 +530,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_Rail::stopSpeed")
+        min2(self.base.maximum_safe_stop_speed(gap, decel, speed, false, ts(), false), self.max_next_speed(speed, veh))
     }
 
     /// C++: `double MSCFModel_Rail::getRotWeight(const MSVehicle *const) const` [const, protected]
@@ -355,7 +540,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn get_rot_weight(&self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::getRotWeight")
+        self.get_weight(veh) * self.myTrainParams.mf
     }
 
     /// C++: `double MSCFModel_Rail::getWeight(const MSVehicle *const) const` [const, protected]
@@ -366,7 +551,8 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn get_weight(&self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::getWeight")
+        // kg to tons
+        veh.get_vehicle_type().get_mass() / 1000.
     }
 
     /// C++: `double MSCFModel_Rail::getCurveResistance(const MSVehicle *) const` [const, protected]
@@ -392,7 +578,22 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn get_curve_resistance(&self, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_Rail::getCurveResistance")
+        if self.myTrainParams.curveResistance > 0. {
+            let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Rail_RailVehicleVariables);
+            debug_assert!(!vars.is_null());
+            let r = vars.m().get_integrated_radius(veh, self.myTrainParams.curveIntegration);
+            if r == f64::MAX {
+                return 0.;
+            } else if r >= self.myTrainParams.roeckl_sharp_radius {
+                return 0.001 * self.myTrainParams.curveResistance * self.myTrainParams.roeckl_numerator / (r - self.myTrainParams.roeckl_offset);
+            } else if r > self.myTrainParams.roeckl_offset_sharp {
+                return 0.001 * self.myTrainParams.curveResistance * self.myTrainParams.roeckl_numerator_sharp / (r - self.myTrainParams.roeckl_offset_sharp);
+            } else {
+                utils::common::msg_handler::write_warning(&format!("Cannot compute curve resistance for vehicle '{}' with radius {} at time {}", veh.get_id(), utils::common::to_string::f64_to_string_default(r), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                return 0.;
+            }
+        }
+        0.
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initNGT400Traction() const` [const, private]
@@ -451,8 +652,59 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ngt400_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initNGT400Traction")
+    pub fn init_ngt400_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 716.0));
+        map.push((10.0, 700.0));
+        map.push((20.0, 684.0));
+        map.push((30.0, 669.0));
+        map.push((40.0, 653.0));
+        map.push((50.0, 637.0));
+        map.push((60.0, 622.0));
+        map.push((70.0, 606.0));
+        map.push((80.0, 590.0));
+        map.push((90.0, 574.0));
+        map.push((100.0, 559.0));
+        map.push((110.0, 543.0));
+        map.push((120.0, 527.0));
+        map.push((130.0, 507.0));
+        map.push((140.0, 471.0));
+        map.push((150.0, 439.0));
+        map.push((160.0, 412.0));
+        map.push((170.0, 388.0));
+        map.push((180.0, 366.0));
+        map.push((190.0, 347.0));
+        map.push((200.0, 329.0));
+        map.push((210.0, 314.0));
+        map.push((220.0, 299.0));
+        map.push((230.0, 286.0));
+        map.push((240.0, 275.0));
+        map.push((250.0, 264.0));
+        map.push((260.0, 253.0));
+        map.push((270.0, 244.0));
+        map.push((280.0, 235.0));
+        map.push((290.0, 227.0));
+        map.push((300.0, 220.0));
+        map.push((310.0, 213.0));
+        map.push((320.0, 206.0));
+        map.push((330.0, 200.0));
+        map.push((340.0, 194.0));
+        map.push((350.0, 188.0));
+        map.push((360.0, 183.0));
+        map.push((370.0, 178.0));
+        map.push((380.0, 173.0));
+        map.push((390.0, 169.0));
+        map.push((400.0, 165.0));
+        map.push((410.0, 160.6));
+        map.push((420.0, 156.8));
+        map.push((430.0, 153.2));
+        map.push((440.0, 149.7));
+        map.push((450.0, 146.4));
+        map.push((460.0, 143.2));
+        map.push((470.0, 140.1));
+        map.push((480.0, 137.2));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initNGT400Resistance() const` [const, private]
@@ -511,8 +763,59 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ngt400_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initNGT400Resistance")
+    pub fn init_ngt400_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 1.9));
+        map.push((10.0, 2.1));
+        map.push((20.0, 2.4));
+        map.push((30.0, 2.9));
+        map.push((40.0, 3.5));
+        map.push((50.0, 4.2));
+        map.push((60.0, 5.0));
+        map.push((70.0, 6.0));
+        map.push((80.0, 7.0));
+        map.push((90.0, 8.2));
+        map.push((100.0, 9.6));
+        map.push((110.0, 11.0));
+        map.push((120.0, 12.6));
+        map.push((130.0, 14.3));
+        map.push((140.0, 16.1));
+        map.push((150.0, 18.0));
+        map.push((160.0, 20.1));
+        map.push((170.0, 22.3));
+        map.push((180.0, 24.6));
+        map.push((190.0, 27.0));
+        map.push((200.0, 29.5));
+        map.push((210.0, 32.2));
+        map.push((220.0, 35.0));
+        map.push((230.0, 37.9));
+        map.push((240.0, 40.9));
+        map.push((250.0, 44.1));
+        map.push((260.0, 47.4));
+        map.push((270.0, 50.8));
+        map.push((280.0, 54.3));
+        map.push((290.0, 58.0));
+        map.push((300.0, 61.7));
+        map.push((310.0, 65.6));
+        map.push((320.0, 69.7));
+        map.push((330.0, 73.8));
+        map.push((340.0, 78.1));
+        map.push((350.0, 82.4));
+        map.push((360.0, 86.9));
+        map.push((370.0, 91.6));
+        map.push((380.0, 96.3));
+        map.push((390.0, 101.2));
+        map.push((400.0, 106.2));
+        map.push((410.0, 111.3));
+        map.push((420.0, 116.6));
+        map.push((430.0, 121.9));
+        map.push((440.0, 127.4));
+        map.push((450.0, 133.0));
+        map.push((460.0, 138.7));
+        map.push((470.0, 144.6));
+        map.push((480.0, 150.6));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initNGT400Params() const` [const, private]
@@ -530,7 +833,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_ngt400_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initNGT400Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 384.0;
+        params.mf = 1.04;
+        params.length = 200.0;
+        params.decl = 0.9;
+        params.vmax = 500.0 / 3.6;
+        params.recovery = 0.6;
+        params.traction = self.init_ngt400_traction();
+        params.resistance = self.init_ngt400_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initNGT400_16Traction() const` [const, private]
@@ -588,8 +900,58 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ngt400_16_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initNGT400_16Traction")
+    pub fn init_ngt400_16_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 274.5));
+        map.push((10.0, 274.5));
+        map.push((20.0, 274.5));
+        map.push((30.0, 274.5));
+        map.push((40.0, 274.5));
+        map.push((50.0, 274.5));
+        map.push((60.0, 274.5));
+        map.push((70.0, 274.5));
+        map.push((80.0, 274.5));
+        map.push((90.0, 274.5));
+        map.push((100.0, 274.5));
+        map.push((110.0, 274.5));
+        map.push((120.0, 274.5));
+        map.push((130.0, 274.5));
+        map.push((140.0, 274.5));
+        map.push((150.0, 274.5));
+        map.push((160.0, 274.5));
+        map.push((170.0, 274.5));
+        map.push((180.0, 274.5));
+        map.push((190.0, 274.5));
+        map.push((200.0, 274.5));
+        map.push((210.0, 273.0));
+        map.push((220.0, 262.3));
+        map.push((230.0, 250.0));
+        map.push((240.0, 239.0));
+        map.push((250.0, 229.0));
+        map.push((260.0, 222.0));
+        map.push((270.0, 213.0));
+        map.push((280.0, 205.0));
+        map.push((290.0, 198.0));
+        map.push((300.0, 191.0));
+        map.push((310.0, 186.0));
+        map.push((320.0, 180.0));
+        map.push((330.0, 174.0));
+        map.push((340.0, 169.0));
+        map.push((350.0, 165.0));
+        map.push((360.0, 160.0));
+        map.push((370.0, 155.5));
+        map.push((380.0, 151.0));
+        map.push((390.0, 148.0));
+        map.push((400.0, 144.0));
+        map.push((410.0, 140.0));
+        map.push((420.0, 136.0));
+        map.push((430.0, 134.0));
+        map.push((440.0, 131.0));
+        map.push((450.0, 128.0));
+        map.push((460.0, 125.0));
+        map.push((470.0, 123.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initNGT400_16Resistance() const` [const, private]
@@ -647,8 +1009,58 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ngt400_16_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initNGT400_16Resistance")
+    pub fn init_ngt400_16_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 5.71));
+        map.push((10.0, 6.01));
+        map.push((20.0, 6.4));
+        map.push((30.0, 7.0));
+        map.push((40.0, 7.51));
+        map.push((50.0, 8.34));
+        map.push((60.0, 9.2));
+        map.push((70.0, 10.4));
+        map.push((80.0, 11.3));
+        map.push((90.0, 12.58));
+        map.push((100.0, 14.05));
+        map.push((110.0, 15.5));
+        map.push((120.0, 16.9));
+        map.push((130.0, 18.75));
+        map.push((140.0, 20.77));
+        map.push((150.0, 22.9));
+        map.push((160.0, 25.0));
+        map.push((170.0, 26.9));
+        map.push((180.0, 29.38));
+        map.push((190.0, 32.0));
+        map.push((200.0, 34.5));
+        map.push((210.0, 37.0));
+        map.push((220.0, 39.91));
+        map.push((230.0, 43.11));
+        map.push((240.0, 46.4));
+        map.push((250.0, 49.3));
+        map.push((260.0, 52.4));
+        map.push((270.0, 56.09));
+        map.push((280.0, 59.8));
+        map.push((290.0, 63.7));
+        map.push((300.0, 66.8));
+        map.push((310.0, 71.0));
+        map.push((320.0, 75.39));
+        map.push((330.0, 79.9));
+        map.push((340.0, 84.1));
+        map.push((350.0, 87.9));
+        map.push((360.0, 92.7));
+        map.push((370.0, 97.6));
+        map.push((380.0, 102.0));
+        map.push((390.0, 107.0));
+        map.push((400.0, 112.0));
+        map.push((410.0, 117.5));
+        map.push((420.0, 123.0));
+        map.push((430.0, 128.3));
+        map.push((440.0, 133.3));
+        map.push((450.0, 139.2));
+        map.push((460.0, 145.5));
+        map.push((470.0, 150.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initNGT400_16Params() const` [const, private]
@@ -666,7 +1078,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_ngt400_16_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initNGT400_16Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 384.0;
+        params.mf = 1.04;
+        params.length = 200.0;
+        params.decl = 0.9;
+        params.vmax = 430.0 / 3.6;
+        params.recovery = 0.6;
+        params.traction = self.init_ngt400_16_traction();
+        params.resistance = self.init_ngt400_16_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initICE1Traction() const` [const, private]
@@ -702,8 +1123,36 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ice1_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initICE1Traction")
+    pub fn init_ice1_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 400.0));
+        map.push((10.0, 394.0));
+        map.push((20.0, 388.0));
+        map.push((30.0, 382.0));
+        map.push((40.0, 377.0));
+        map.push((50.0, 372.0));
+        map.push((60.0, 369.0));
+        map.push((70.0, 366.0));
+        map.push((80.0, 363.0));
+        map.push((90.0, 361.0));
+        map.push((100.0, 349.0));
+        map.push((110.0, 317.0));
+        map.push((120.0, 290.0));
+        map.push((130.0, 268.0));
+        map.push((140.0, 249.0));
+        map.push((150.0, 232.0));
+        map.push((160.0, 217.0));
+        map.push((170.0, 205.0));
+        map.push((180.0, 193.0));
+        map.push((190.0, 183.0));
+        map.push((200.0, 174.0));
+        map.push((210.0, 165.0));
+        map.push((220.0, 158.0));
+        map.push((230.0, 151.0));
+        map.push((240.0, 145.0));
+        map.push((250.0, 139.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initICE1Resistance() const` [const, private]
@@ -739,8 +1188,36 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ice1_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initICE1Resistance")
+    pub fn init_ice1_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 10.7));
+        map.push((10.0, 12.3));
+        map.push((20.0, 14.2));
+        map.push((30.0, 16.4));
+        map.push((40.0, 18.7));
+        map.push((50.0, 21.3));
+        map.push((60.0, 24.2));
+        map.push((70.0, 27.3));
+        map.push((80.0, 30.6));
+        map.push((90.0, 34.1));
+        map.push((100.0, 37.9));
+        map.push((110.0, 41.9));
+        map.push((120.0, 46.2));
+        map.push((130.0, 50.6));
+        map.push((140.0, 55.4));
+        map.push((150.0, 60.4));
+        map.push((160.0, 65.6));
+        map.push((170.0, 71.1));
+        map.push((180.0, 76.7));
+        map.push((190.0, 82.6));
+        map.push((200.0, 88.8));
+        map.push((210.0, 95.2));
+        map.push((220.0, 101.8));
+        map.push((230.0, 108.7));
+        map.push((240.0, 115.8));
+        map.push((250.0, 123.1));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initICE1Params() const` [const, private]
@@ -758,7 +1235,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_ice1_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initICE1Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 876.0;
+        params.mf = 1.1;
+        params.length = 358.0;
+        params.decl = 0.5;
+        params.vmax = 250.0 / 3.6;
+        params.recovery = 0.1;
+        params.traction = self.init_ice1_traction();
+        params.resistance = self.init_ice1_resistance();
+        params
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initICE3Params() const` [const, private]
@@ -776,7 +1262,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_ice3_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initICE3Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 420.0;
+        params.mf = 1.04;
+        params.length = 200.0;
+        params.decl = 0.5;
+        params.vmax = 300.0 / 3.6;
+        params.recovery = 0.6;
+        params.traction = self.init_ice3_traction();
+        params.resistance = self.init_ice3_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initICE3Traction() const` [const, private]
@@ -817,8 +1312,41 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ice3_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initICE3Traction")
+    pub fn init_ice3_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 300.0));
+        map.push((10.0, 298.0));
+        map.push((20.0, 297.0));
+        map.push((30.0, 295.0));
+        map.push((40.0, 293.0));
+        map.push((50.0, 292.0));
+        map.push((60.0, 290.0));
+        map.push((70.0, 288.0));
+        map.push((80.0, 286.5));
+        map.push((90.0, 285.0));
+        map.push((100.0, 283.0));
+        map.push((110.0, 262.0));
+        map.push((120.0, 240.0));
+        map.push((130.0, 221.0));
+        map.push((140.0, 206.0));
+        map.push((150.0, 192.0));
+        map.push((160.0, 180.0));
+        map.push((170.0, 169.0));
+        map.push((180.0, 160.0));
+        map.push((190.0, 152.0));
+        map.push((200.0, 144.0));
+        map.push((210.0, 137.0));
+        map.push((220.0, 131.0));
+        map.push((230.0, 125.0));
+        map.push((240.0, 120.0));
+        map.push((250.0, 115.0));
+        map.push((260.0, 111.0));
+        map.push((270.0, 107.0));
+        map.push((280.0, 103.0));
+        map.push((290.0, 99.0));
+        map.push((300.0, 96.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initICE3Resistance() const` [const, private]
@@ -859,8 +1387,41 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_ice3_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initICE3Resistance")
+    pub fn init_ice3_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 7.4));
+        map.push((10.0, 7.6));
+        map.push((20.0, 8.0));
+        map.push((30.0, 8.4));
+        map.push((40.0, 9.1));
+        map.push((50.0, 9.8));
+        map.push((60.0, 10.7));
+        map.push((70.0, 11.7));
+        map.push((80.0, 12.8));
+        map.push((90.0, 14.1));
+        map.push((100.0, 15.5));
+        map.push((110.0, 17.1));
+        map.push((120.0, 18.8));
+        map.push((130.0, 20.6));
+        map.push((140.0, 22.6));
+        map.push((150.0, 24.6));
+        map.push((160.0, 26.9));
+        map.push((170.0, 29.2));
+        map.push((180.0, 31.7));
+        map.push((190.0, 34.3));
+        map.push((200.0, 37.1));
+        map.push((210.0, 40.0));
+        map.push((220.0, 43.1));
+        map.push((230.0, 46.2));
+        map.push((240.0, 49.6));
+        map.push((250.0, 53.0));
+        map.push((260.0, 56.6));
+        map.push((270.0, 60.3));
+        map.push((280.0, 64.1));
+        map.push((290.0, 68.1));
+        map.push((300.0, 71.8));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initREDosto7Params() const` [const, private]
@@ -878,7 +1439,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_re_dosto7_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initREDosto7Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 425.5;
+        params.mf = 1.1;
+        params.length = 207.0;
+        params.decl = 0.5;
+        params.vmax = 160.0 / 3.6;
+        params.recovery = 0.1;
+        params.traction = self.init_re_dosto7_traction();
+        params.resistance = self.init_re_dosto7_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initREDosto7Traction() const` [const, private]
@@ -905,8 +1475,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_re_dosto7_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initREDosto7Traction")
+    pub fn init_re_dosto7_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 300.0));
+        map.push((10.0, 300.0));
+        map.push((20.0, 300.0));
+        map.push((30.0, 300.0));
+        map.push((40.0, 300.0));
+        map.push((50.0, 300.0));
+        map.push((60.0, 300.0));
+        map.push((70.0, 289.0));
+        map.push((80.0, 253.0));
+        map.push((90.0, 224.0));
+        map.push((100.0, 202.0));
+        map.push((110.0, 183.0));
+        map.push((120.0, 168.0));
+        map.push((130.0, 155.0));
+        map.push((140.0, 144.0));
+        map.push((150.0, 134.0));
+        map.push((160.0, 125.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initREDosto7Resistance() const` [const, private]
@@ -933,8 +1522,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_re_dosto7_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initREDosto7Resistance")
+    pub fn init_re_dosto7_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 8.5));
+        map.push((10.0, 8.9));
+        map.push((20.0, 9.5));
+        map.push((30.0, 10.4));
+        map.push((40.0, 11.4));
+        map.push((50.0, 12.7));
+        map.push((60.0, 14.1));
+        map.push((70.0, 15.8));
+        map.push((80.0, 17.7));
+        map.push((90.0, 19.8));
+        map.push((100.0, 22.6));
+        map.push((110.0, 24.6));
+        map.push((120.0, 27.3));
+        map.push((130.0, 30.2));
+        map.push((140.0, 33.3));
+        map.push((150.0, 36.6));
+        map.push((160.0, 40.2));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initRB628Params() const` [const, private]
@@ -952,7 +1560,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_rb628_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initRB628Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 72.2;
+        params.mf = 1.04;
+        params.length = 46.0;
+        params.decl = 0.5;
+        params.vmax = 120.0 / 3.6;
+        params.recovery = 0.0;
+        params.traction = self.init_rb628_traction();
+        params.resistance = self.init_rb628_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initRB628Traction() const` [const, private]
@@ -975,8 +1592,23 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_rb628_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initRB628Traction")
+    pub fn init_rb628_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 60.0));
+        map.push((10.0, 53.8));
+        map.push((20.0, 47.6));
+        map.push((30.0, 36.9));
+        map.push((40.0, 28.7));
+        map.push((50.0, 23.5));
+        map.push((60.0, 20.0));
+        map.push((70.0, 17.5));
+        map.push((80.0, 15.2));
+        map.push((90.0, 13.9));
+        map.push((100.0, 12.8));
+        map.push((110.0, 11.7));
+        map.push((120.0, 10.8));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initRB628Resistance() const` [const, private]
@@ -999,8 +1631,23 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_rb628_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initRB628Resistance")
+    pub fn init_rb628_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 1.29));
+        map.push((10.0, 1.46));
+        map.push((20.0, 1.73));
+        map.push((30.0, 2.08));
+        map.push((40.0, 2.52));
+        map.push((50.0, 3.05));
+        map.push((60.0, 3.66));
+        map.push((70.0, 4.36));
+        map.push((80.0, 5.16));
+        map.push((90.0, 6.03));
+        map.push((100.0, 7.00));
+        map.push((110.0, 8.06));
+        map.push((120.0, 9.2));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initFreightParams() const` [const, private]
@@ -1018,7 +1665,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_freight_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initFreightParams")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 1440.0;
+        params.mf = 1.06;
+        params.length = 512.0;
+        params.decl = 0.3;
+        params.vmax = 120.0 / 3.6;
+        params.recovery = 0.05;
+        params.traction = self.init_freight_traction();
+        params.resistance = self.init_freight_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initFreightTraction() const` [const, private]
@@ -1041,8 +1697,23 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_freight_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initFreightTraction")
+    pub fn init_freight_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 300.0));
+        map.push((10.0, 296.0));
+        map.push((20.0, 293.0));
+        map.push((30.0, 289.0));
+        map.push((40.0, 286.0));
+        map.push((50.0, 282.0));
+        map.push((60.0, 279.0));
+        map.push((70.0, 275.0));
+        map.push((80.0, 272.0));
+        map.push((90.0, 255.0));
+        map.push((100.0, 230.0));
+        map.push((110.0, 209.0));
+        map.push((120.0, 190.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initFreightResistance() const` [const, private]
@@ -1065,8 +1736,23 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_freight_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initFreightResistance")
+    pub fn init_freight_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 1.9));
+        map.push((10.0, 4.3));
+        map.push((20.0, 8.5));
+        map.push((30.0, 14.3));
+        map.push((40.0, 21.7));
+        map.push((50.0, 30.8));
+        map.push((60.0, 41.5));
+        map.push((70.0, 53.8));
+        map.push((80.0, 67.8));
+        map.push((90.0, 83.5));
+        map.push((100.0, 110.7));
+        map.push((110.0, 119.6));
+        map.push((120.0, 140.2));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initRB425Traction() const` [const, private]
@@ -1093,8 +1779,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_rb425_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initRB425Traction")
+    pub fn init_rb425_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 150.0));
+        map.push((10.0, 150.0));
+        map.push((20.0, 150.0));
+        map.push((30.0, 150.0));
+        map.push((40.0, 150.0));
+        map.push((50.0, 150.0));
+        map.push((60.0, 140.0));
+        map.push((70.0, 120.0));
+        map.push((80.0, 105.0));
+        map.push((90.0, 93.0));
+        map.push((100.0, 84.0));
+        map.push((110.0, 75.0));
+        map.push((120.0, 70.0));
+        map.push((130.0, 56.0));
+        map.push((140.0, 52.0));
+        map.push((150.0, 46.0));
+        map.push((160.0, 40.0));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initRB425Resistance() const` [const, private]
@@ -1121,8 +1826,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_rb425_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initRB425Resistance")
+    pub fn init_rb425_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 2.6));
+        map.push((10.0, 2.9));
+        map.push((20.0, 3.3));
+        map.push((30.0, 3.7));
+        map.push((40.0, 4.3));
+        map.push((50.0, 4.9));
+        map.push((60.0, 5.7));
+        map.push((70.0, 6.6));
+        map.push((80.0, 7.5));
+        map.push((90.0, 8.6));
+        map.push((100.0, 9.7));
+        map.push((110.0, 11.0));
+        map.push((120.0, 12.3));
+        map.push((130.0, 13.8));
+        map.push((140.0, 15.3));
+        map.push((150.0, 16.9));
+        map.push((160.0, 18.7));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initRB425Params() const` [const, private]
@@ -1140,7 +1864,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_rb425_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initRB425Params")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 138.0;
+        params.mf = 1.04;
+        params.length = 67.5;
+        params.decl = 1.0;
+        params.vmax = 160.0 / 3.6;
+        params.recovery = 0.6;
+        params.traction = self.init_rb425_traction();
+        params.resistance = self.init_rb425_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initMireoPlusB2TTraction() const` [const, private]
@@ -1167,8 +1900,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_mireo_plus_b2_t_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initMireoPlusB2TTraction")
+    pub fn init_mireo_plus_b2_t_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 106.15));
+        map.push((10.0, 106.15));
+        map.push((20.0, 106.15));
+        map.push((30.0, 106.15));
+        map.push((40.0, 106.15));
+        map.push((50.0, 106.15));
+        map.push((60.0, 103.73));
+        map.push((70.0, 88.70));
+        map.push((80.0, 77.47));
+        map.push((90.0, 68.76));
+        map.push((100.0, 61.82));
+        map.push((110.0, 56.15));
+        map.push((120.0, 51.43));
+        map.push((130.0, 47.44));
+        map.push((140.0, 44.03));
+        map.push((150.0, 41.07));
+        map.push((160.0, 38.49));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initMireoPlusB2TResistance() const` [const, private]
@@ -1195,8 +1947,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_mireo_plus_b2_t_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initMireoPlusB2TResistance")
+    pub fn init_mireo_plus_b2_t_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 1.01));
+        map.push((10.0, 1.09));
+        map.push((20.0, 1.27));
+        map.push((30.0, 1.55));
+        map.push((40.0, 1.93));
+        map.push((50.0, 2.41));
+        map.push((60.0, 2.99));
+        map.push((70.0, 3.67));
+        map.push((80.0, 4.46));
+        map.push((90.0, 5.34));
+        map.push((100.0, 6.34));
+        map.push((110.0, 7.44));
+        map.push((120.0, 8.64));
+        map.push((130.0, 9.96));
+        map.push((140.0, 11.38));
+        map.push((150.0, 12.91));
+        map.push((160.0, 14.56));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initMireoPlusB2TParams() const` [const, private]
@@ -1214,7 +1985,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_mireo_plus_b2_t_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initMireoPlusB2TParams")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 105.5;
+        params.mf = 1.05;
+        params.length = 46.56;
+        params.decl = 1.1;
+        params.vmax = 160.0 / 3.6;
+        params.recovery = 0.3;
+        params.traction = self.init_mireo_plus_b2_t_traction();
+        params.resistance = self.init_mireo_plus_b2_t_resistance();
+        params
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initMireoPlusH2TTraction() const` [const, private]
@@ -1241,8 +2021,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_mireo_plus_h2_t_traction(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initMireoPlusH2TTraction")
+    pub fn init_mireo_plus_h2_t_traction(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 104.50));
+        map.push((10.0, 104.50));
+        map.push((20.0, 104.50));
+        map.push((30.0, 104.50));
+        map.push((40.0, 104.50));
+        map.push((50.0, 104.50));
+        map.push((60.0, 102.00));
+        map.push((70.0, 87.43));
+        map.push((80.0, 76.50));
+        map.push((90.0, 68.00));
+        map.push((100.0, 61.20));
+        map.push((110.0, 55.64));
+        map.push((120.0, 51.00));
+        map.push((130.0, 47.08));
+        map.push((140.0, 43.71));
+        map.push((150.0, 40.80));
+        map.push((160.0, 38.25));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `LinearApproxHelpers::LinearApproxMap MSCFModel_Rail::initMireoPlusH2TResistance() const` [const, private]
@@ -1269,8 +2068,27 @@ impl MSCFModel_Rail {
     //         return map;
     //     }
     #[allow(unused_variables)]
-    pub fn init_mireo_plus_h2_t_resistance(&self) -> Unmapped /* LinearApproxHelpers::LinearApproxMap */ {
-        todo!("port MSCFModel_Rail::initMireoPlusH2TResistance")
+    pub fn init_mireo_plus_h2_t_resistance(&self) -> LinearApproxMap {
+        let mut map: LinearApproxMap = Vec::new();
+        map.push((0.0, 1.01));
+        map.push((10.0, 1.09));
+        map.push((20.0, 1.27));
+        map.push((30.0, 1.55));
+        map.push((40.0, 1.93));
+        map.push((50.0, 2.41));
+        map.push((60.0, 2.99));
+        map.push((70.0, 3.67));
+        map.push((80.0, 4.45));
+        map.push((90.0, 5.34));
+        map.push((100.0, 6.34));
+        map.push((110.0, 7.43));
+        map.push((120.0, 8.64));
+        map.push((130.0, 9.95));
+        map.push((140.0, 11.38));
+        map.push((150.0, 12.91));
+        map.push((160.0, 14.56));
+        map = map.into_iter().map(|(k, v)| (k * (1.0 / 3.6), v * (1.0))).collect();
+        map
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initMireoPlusH2TParams() const` [const, private]
@@ -1288,7 +2106,16 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_mireo_plus_h2_t_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initMireoPlusH2TParams")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 105.4;
+        params.mf = 1.05;
+        params.length = 46.56;
+        params.decl = 1.1;
+        params.vmax = 160.0 / 3.6;
+        params.recovery = 0.3;
+        params.traction = self.init_mireo_plus_h2_t_traction();
+        params.resistance = self.init_mireo_plus_h2_t_resistance();
+        params
     }
 
     /// C++: `TrainParams MSCFModel_Rail::initCustomParams() const` [const, private]
@@ -1304,7 +2131,14 @@ impl MSCFModel_Rail {
     //     }
     #[allow(unused_variables)]
     pub fn init_custom_params(&self) -> MSCFModel_Rail_TrainParams {
-        todo!("port MSCFModel_Rail::initCustomParams")
+        let mut params = MSCFModel_Rail_TrainParams::default();
+        params.weight = 100.0;
+        params.mf = 1.05;
+        params.length = 100.0;
+        params.decl = 1.0;
+        params.vmax = 200.0 / 3.6;
+        params.recovery = 0.3;
+        params
     }
 
 }
@@ -1359,7 +2193,31 @@ impl MSCFModel_Rail_RailVehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn get_integrated_radius(&mut self, veh: Ptr<MSVehicle>, curveIntegration: f64) -> f64 {
-        todo!("port RailVehicleVariables::getIntegratedRadius")
+        let odo = veh.get_odometer();
+        // add new data point
+        if (self.odometerAngles.is_empty() || self.odometerAngles.last().unwrap().0 != odo) && veh.has_departed() {
+            self.odometerAngles.push((odo, veh.get_angle()));
+            // clean up old data points beyond integration distance
+            while self.odometerAngles.len() > 2 {
+                let distCleaned = self.odometerAngles.last().unwrap().0 - self.odometerAngles[1].0;
+                if distCleaned >= curveIntegration {
+                    self.odometerAngles.remove(0);
+                } else {
+                    break;
+                }
+            }
+        }
+        if self.odometerAngles.len() > 1 {
+            let dist = self.odometerAngles.last().unwrap().0 - self.odometerAngles.first().unwrap().0;
+            let angleDiff = utils::geom::geom_helper::angle_diff(self.odometerAngles.last().unwrap().1, self.odometerAngles.first().unwrap().1);
+            if angleDiff == 0. {
+                f64::MAX
+            } else {
+                dist / angleDiff.abs()
+            }
+        } else {
+            veh.get_curve_radius()
+        }
     }
 
     /// C++: `void RailVehicleVariables::saveState(OutputDevice &, const MSCFModel &) const` [const, virtual]
@@ -1378,7 +2236,16 @@ impl MSCFModel_Rail_RailVehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port RailVehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "Rail");
+        let mut internals = String::new();
+        internals += &format!("{} ", self.odometerAngles.len());
+        for item in self.odometerAngles.iter() {
+            internals += &format!("{} {} ", f64_to_string_prec(item.0, 6), f64_to_string_prec(item.1, 6));
+        }
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void RailVehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -1403,12 +2270,25 @@ impl MSCFModel_Rail_RailVehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port RailVehicleVariables::loadState")
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "Rail" {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for Rail", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        let odometerAnglesSize: i32 = bis.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+        for _ in 0..odometerAnglesSize {
+            let o: f64 = bis.next().and_then(|s| s.parse().ok()).unwrap_or(0.);
+            let a: f64 = bis.next().and_then(|s| s.parse().ok()).unwrap_or(0.);
+            self.odometerAngles.push((o, a));
+        }
     }
 
 }
 
 /// C++ class `MSCFModel_Rail::TrainParams` (microsim/cfmodels/MSCFModel_Rail.h)
+#[derive(Default)]
 pub struct MSCFModel_Rail_TrainParams {
     pub weight: f64,
     pub mf: f64,
@@ -1416,8 +2296,8 @@ pub struct MSCFModel_Rail_TrainParams {
     pub decl: f64,
     pub vmax: f64,
     pub recovery: f64,
-    pub traction: Unmapped /* LinearApproxHelpers::LinearApproxMap */,
-    pub resistance: Unmapped /* LinearApproxHelpers::LinearApproxMap */,
+    pub traction: LinearApproxMap,
+    pub resistance: LinearApproxMap,
     pub maxPower: f64,
     pub maxTraction: f64,
     pub resCoef_constant: f64,
@@ -1444,7 +2324,11 @@ impl MSCFModel_Rail_TrainParams {
     // }
     #[allow(unused_variables)]
     pub fn get_resistance(&self, speed: f64) -> f64 {
-        todo!("port TrainParams::getResistance")
+        if self.resCoef_constant != INVALID_DOUBLE {
+            (self.resCoef_quadratic * speed * speed + self.resCoef_linear * speed + self.resCoef_constant) // kN
+        } else {
+            get_interpolated_value(&self.resistance, speed) // kN
+        }
     }
 
     /// C++: `double TrainParams::getTraction(double) const` [const]
@@ -1458,7 +2342,11 @@ impl MSCFModel_Rail_TrainParams {
     // }
     #[allow(unused_variables)]
     pub fn get_traction(&self, speed: f64) -> f64 {
-        todo!("port TrainParams::getTraction")
+        if self.maxPower != INVALID_DOUBLE {
+            min2(self.maxPower / speed, self.maxTraction) // kN
+        } else {
+            get_interpolated_value(&self.traction, speed) // kN
+        }
     }
 
 }
