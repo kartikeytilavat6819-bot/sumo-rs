@@ -4,6 +4,10 @@ use crate::prelude::*;
 
 use utils::common::msg_handler::write_warning;
 use utils::options::options_cont;
+use utils::common::std_defs::g_precision;
+use utils::common::to_string::f64_to_string_prec;
+
+const INVALID_DOUBLE: f64 = f64::MAX;
 
 // C++ MSPModel::FORWARD / UNDEFINED_DIRECTION (MSPModel.h)
 const MSPMODEL_FORWARD: i32 = 1;
@@ -235,7 +239,7 @@ impl MSStageDriving {
             // jumping out of a moving vehicle!
             let v = self.myVehicle.cast::<MSVehicle>();
             v.m().remove_transportable(t);
-            self.myDestination = if v.get_lane().is_null() { v.get_edge() } else { v.get_lane().get_edge() };
+            self.myDestination = if v.get_lane().is_null() { v.get_edge() } else { Ptr::from_mut(v.get_lane().get_edge()) };
             self.myArrivalPos = v.get_position_on_lane();
             // myVehicleDistance and myTimeLoss are updated in subsequent call to setArrived
         } else {
@@ -275,9 +279,9 @@ impl MSStageDriving {
         if self.has_parameter("earliestPickupTime") {
             let mut reservationTime = MSNet::get_instance().get_current_time_step();
             if self.has_parameter("reservationTime") {
-                reservationTime = string2time(&self.get_parameter("reservationTime"));
+                reservationTime = string2time(&self.get_parameter("reservationTime", "")).unwrap_or_else(|e| panic!("{}", e));
             }
-            let earliestPickupTime = string2time(&self.get_parameter("earliestPickupTime"));
+            let earliestPickupTime = string2time(&self.get_parameter("earliestPickupTime", "")).unwrap_or_else(|e| panic!("{}", e));
             if transportable.get_next_stage(1) == Ptr::from_mut(&mut self.base) {
                 // if the ride is the first stage use the departPos (there is a unvisible stop before)
                 self.myWaitingPos = transportable.get_parameter().departPos;
@@ -311,7 +315,7 @@ impl MSStageDriving {
         if !self.myVehicle.is_null() {
             let v = self.myVehicle.cast::<MSVehicle>();
             if !v.get_lane().is_null() {
-                return v.get_lane().get_edge();
+                return Ptr::from_mut(v.get_lane().get_edge());
             }
             return v.get_edge();
         } else if self.myArrived >= 0 {
@@ -425,7 +429,7 @@ impl MSStageDriving {
             self.get_edge_position(self.myDestination, self.myArrivalPos,
                 ROADSIDE_OFFSET * (if crate::microsim::ms_globals::lefthand() { -1. } else { 1. }))
         } else {
-            self.myVehicle.cast::<MSVehicle>().get_position()
+            self.myVehicle.cast::<MSVehicle>().get_position(0.)
         }
     }
 
@@ -655,7 +659,7 @@ impl MSStageDriving {
         }
         if !self.myOriginStop.is_null() {
             // the arrival stop may have an access point
-            self.myWaitingEdge = self.myOriginStop.get_lane().get_edge();
+            self.myWaitingEdge = Ptr::from_mut(self.myOriginStop.get_lane().get_edge());
             self.myStopWaitPos = self.myOriginStop.get_wait_position(transportable);
             self.myWaitingPos = self.myOriginStop.get_waiting_position_on_lane(transportable);
         } else {
@@ -1143,7 +1147,7 @@ impl MSStageDriving {
     //     if (t->getDestination() == stopEdge) {
     //         // if this is the last stage, we can use the arrivalPos of the person
     //         const bool unspecifiedAP = unspecifiedArrivalPos() && (
-    //                                        t->getNumRemainingStages() > 1 || !t->getParameter().wasSet(VEHPARS_ARRIVALPOS_SET));
+    //                                        t->getNumRemainingStages() > 1 || !t->getParameter().was_set(VEHPARS_ARRIVALPOS_SET));
     //         const double arrivalPos = (unspecifiedArrivalPos()
     //                                    ? SUMOVehicleParameter::interpretEdgePos(t->getParameter().arrivalPos, stopEdge->getLength(),
     //                                            SUMO_ATTR_ARRIVALPOS, t->getID(), true)
@@ -1176,7 +1180,7 @@ impl MSStageDriving {
         if t.get_destination() == stopEdge {
             // if this is the last stage, we can use the arrivalPos of the person
             let unspecifiedAP = self.unspecified_arrival_pos()
-                && (t.get_num_remaining_stages() > 1 || !t.get_parameter().wasSet(VEHPARS_ARRIVALPOS_SET));
+                && (t.get_num_remaining_stages() > 1 || !t.get_parameter().was_set(VEHPARS_ARRIVALPOS_SET));
             let arrivalPos = if self.unspecified_arrival_pos() {
                 SUMOVehicleParameter::interpret_edge_pos(t.get_parameter().arrivalPos, stopEdge.get_length(), SUMO_ATTR_ARRIVALPOS, t.get_id(), true)
             } else {
@@ -1192,7 +1196,7 @@ impl MSStageDriving {
                 let accessPos = self.myDestinationStop.get_access_pos(veh.get_edge(), veh.get_edge().get_lanes()[0].get_rng());
                 if accessPos >= 0. {
                     let mut tolerance = veh.get_length() + crate::microsim::ms_globals::stop_tolerance();
-                    if self.myDestinationStop.get_lane().get_edge() == veh.get_edge() {
+                    if Ptr::from_mut(self.myDestinationStop.get_lane().get_edge()) == veh.get_edge() {
                         // accessPos is in the middle of the stop
                         tolerance += (self.myDestinationStop.get_end_lane_position() - self.myDestinationStop.get_begin_lane_position()) / 2.;
                     }
@@ -1335,7 +1339,7 @@ impl MSStageDriving {
             let y = next_f64(state);
             self.myStopWaitPos = Position::new(x, y);
             self.myOriginStop.m().add_transportable(transportable, waitingSpot);
-            self.myWaitingEdge = self.myOriginStop.get_lane().get_edge();
+            self.myWaitingEdge = Ptr::from_mut(self.myOriginStop.get_lane().get_edge());
         } else {
             self.myWaitingEdge = previous.get_edge();
             self.myStopWaitPos = Position::INVALID;
@@ -1424,7 +1428,7 @@ impl MSStageDriving {
             if (to.get_permissions() & SVC_TAXI) == 0 && !self.get_destination_stop().is_null() {
                 // try to find usable access edge
                 for access in self.get_destination_stop().get_all_access_pos().iter() {
-                    let accessEdge = access.lane.get_edge();
+                    let accessEdge = Ptr::from_mut(access.lane.get_edge());
                     if (accessEdge.get_permissions() & SVC_TAXI) != 0 {
                         to = accessEdge;
                         toPos = access.endPos;
@@ -1435,7 +1439,7 @@ impl MSStageDriving {
             if (self.myWaitingEdge.get_permissions() & SVC_TAXI) == 0 && !self.myOriginStop.is_null() {
                 // try to find usable access edge
                 for access in self.myOriginStop.get_all_access_pos().iter() {
-                    let accessEdge = access.lane.get_edge();
+                    let accessEdge = Ptr::from_mut(access.lane.get_edge());
                     if (accessEdge.get_permissions() & SVC_TAXI) != 0 {
                         self.myWaitingEdge = accessEdge;
                         self.myStopWaitPos = Position::INVALID;

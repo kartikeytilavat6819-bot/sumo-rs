@@ -566,7 +566,8 @@ impl MSStageTrip {
             // previous stage ended at a taz sink-edge
             origin = transportable.get_next_stage(-1).get_destination();
         }
-        let vehControl = MSNet::get_instance().m().get_vehicle_control();
+        let netPtr = MSNet::get_instance();
+        let vehControl = netPtr.m().get_vehicle_control();
         let mut minCost = f64::MAX;
         let mut minResult: Vec<IntermodalRouter_TripItem> = Vec::new();
         let mut minVehicle: Ptr<SUMOVehicle> = Ptr::null();
@@ -710,7 +711,7 @@ impl MSStageTrip {
             stages.push(previous);
             if crate::microsim::ms_globals::check_routes() {
                 // if not pedestrians will teleport
-                return format!("No connection found between {} and {} for person '{}'.", self.getOriginDescription(), self.getDestinationDescription(), transportable.get_id());
+                return format!("No connection found between {} and {} for person '{}'.", self.get_origin_description(), self.get_destination_description(), transportable.get_id());
             }
         }
         if stages.is_empty() {
@@ -723,7 +724,7 @@ impl MSStageTrip {
                 stages.push(Ptr::from_mut(Box::leak(Box::new(walk))).cast::<MSStage>());
                 if crate::microsim::ms_globals::check_routes() {
                     // if not pedestrians will teleport
-                    return format!("Empty route between {} and {} for person '{}'.", self.getOriginDescription(), self.getDestinationDescription(), transportable.get_id());
+                    return format!("Empty route between {} and {} for person '{}'.", self.get_origin_description(), self.get_destination_description(), transportable.get_id());
                 }
             }
         }
