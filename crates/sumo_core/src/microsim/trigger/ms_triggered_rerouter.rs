@@ -1,6 +1,8 @@
 //! Port of microsim/trigger/MSTriggeredRerouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::RefCell;
+use crate::utils::router::intermodal_router::IntermodalRouter_TripItem;
 
 /// C++ typedef `std::map<const MSEdge *, RouterProhibition> MSTriggeredRerouter::Prohibitions`
 pub type MSTriggeredRerouter_Prohibitions = BTreeMap<Ptr<MSEdge>, RouterProhibition>;
@@ -794,7 +796,7 @@ impl MSTriggeredRerouter {
             }
         }
         let mut edges: ConstMSEdgeVector = Vec::new();
-        let mut items: Vec<MSTransportableRouter_TripItem> = Vec::new();
+        let mut items: Vec<IntermodalRouter_TripItem> = Vec::new();
         // we have a new destination, let's replace the route (if it is affected)
         let prohibited = rerouteDef.get_closed();
         if rerouteDef.closed.is_empty() || destUnreachable || Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed) {
@@ -860,14 +862,14 @@ impl MSTriggeredRerouter {
                 let person = Ptr::from_raw(tObject as *mut SUMOTrafficObject as *mut MSPerson);
                 let success = router.compute(tObject.get_edge(), newEdge, tObject.get_position_on_lane(), "",
                     if rerouteDef.isVia { newEdge.get_length() / 2. } else { tObject.get_parameter().arrivalPos }, "",
-                    tObject.get_max_speed(), Ptr::default(), tObject.get_v_type_parameter(), 0, now, &mut items);
+                    tObject.get_max_speed(), Ptr::default(), tObject.get_v_type_parameter(), 0, now, &mut items, 0.);
                 if !rerouteDef.isVia {
                     if success {
                         for it in &items {
-                            if !it.edges.is_empty() && !edges.is_empty() && edges.last() == it.edges.first() {
+                            if !it.edges.is_empty() && !edges.is_empty() && edges.last() == it.edges.first().map(|e| e.cast::<MSEdge>()).as_ref() {
                                 edges.pop();
                             }
-                            edges.extend(it.edges.iter().copied());
+                            edges.extend(it.edges.iter().map(|e| e.cast::<MSEdge>()));
                             if !edges.is_empty() {
                                 person.m().replace_walk(&edges, tObject.get_position_on_lane(), 0, 1);
                             }
@@ -918,15 +920,15 @@ impl MSTriggeredRerouter {
                     };
                     success = router.compute(newEdge, lastEdge, newEdge.get_length() / 2., "",
                         tObject.get_parameter().arrivalPos, "",
-                        tObject.get_max_speed(), Ptr::default(), tObject.get_v_type_parameter(), 0, now, &mut items);
+                        tObject.get_max_speed(), Ptr::default(), tObject.get_v_type_parameter(), 0, now, &mut items, 0.);
                 }
                 let person = Ptr::from_raw(tObject as *mut SUMOTrafficObject as *mut MSPerson);
                 if success {
                     for it in &items {
-                        if !it.edges.is_empty() && !edges.is_empty() && edges.last() == it.edges.first() {
+                        if !it.edges.is_empty() && !edges.is_empty() && edges.last() == it.edges.first().map(|e| e.cast::<MSEdge>()).as_ref() {
                             edges.pop();
                         }
-                        edges.extend(it.edges.iter().copied());
+                        edges.extend(it.edges.iter().map(|e| e.cast::<MSEdge>()));
                     }
                     if !edges.is_empty() {
                         person.m().replace_walk(&edges, tObject.get_position_on_lane(), 0, 1);
@@ -2225,7 +2227,7 @@ impl MSTriggeredRerouter {
                 defer: false,
             };
             let mut ok = true;
-            for edgeID in attrs.get::<Vec<String>>(SUMO_ATTR_MAIN, &rid, &mut ok) {
+            for edgeID in attrs.get::<Vec<String>>(SUMO_ATTR_MAIN, &rid, &mut ok, true) {
                 let edge = lookup_edge(&edgeID);
                 if edge.is_null() {
                     panic!("{}", ProcessError::new(format!("The main edge '{}' to use within rerouter '{}' is not known.", edgeID, rid)));
@@ -2233,7 +2235,7 @@ impl MSTriggeredRerouter {
                 oloc.main.push(edge);
                 oloc.cMain.push(edge);
             }
-            for edgeID in attrs.get::<Vec<String>>(SUMO_ATTR_SIDING, &rid, &mut ok) {
+            for edgeID in attrs.get::<Vec<String>>(SUMO_ATTR_SIDING, &rid, &mut ok, true) {
                 let edge = lookup_edge(&edgeID);
                 if edge.is_null() {
                     panic!("{}", ProcessError::new(format!("The siding edge '{}' to use within rerouter '{}' is not known.", edgeID, rid)));
@@ -2429,7 +2431,7 @@ impl MSTriggeredRerouter {
     #[allow(unused_variables)]
     pub fn affected(edgeIndices: &BTreeSet<SUMOTrafficObject_NumericalID>, closed: &MSEdgeVector) -> bool {
         for e in closed {
-            if edgeIndices.contains(&e.get_numerical_id()) {
+            if edgeIndices.contains(&(e.get_numerical_id() as SUMOTrafficObject_NumericalID)) {
                 return true;
             }
         }

@@ -1,5 +1,6 @@
 //! Port of microsim/output/MSInstantInductLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::common::to_string::f64_to_string_default;
 use crate::prelude::*;
 
 /// C++ macro `SIMTIME`: STEPS2TIME(MSNet::getInstance()->getCurrentTimeStep())
@@ -59,7 +60,7 @@ impl MSInstantInductLoop {
         // shortcut: C++ MSMoveReminder(id, lane) registers this reminder with the lane (doAdd); new() returns by value, so the caller must call MSLane::add_move_reminder after placing it
         let this = MSInstantInductLoop {
             base: MSMoveReminder::new(id, lane, true),
-            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons),
+            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,
             myOutputDevice: Ptr::from_mut(od),
             myPosition: positionInMeters,
@@ -302,14 +303,14 @@ impl MSInstantInductLoop {
             let dev = self.myOutputDevice.m();
             dev.open_tag("instantOut")
                 .write_attr("id", self.base2.base.get_id())
-                .write_attr("time", &to_string(&t))
+                .write_attr("time", &f64_to_string_default(t))
                 .write_attr("state", state)
                 .write_attr("vehID", veh.get_id())
-                .write_attr("speed", &to_string(&speed))
-                .write_attr("length", &to_string(&veh.get_vehicle_type().get_length()))
+                .write_attr("speed", &f64_to_string_default(speed))
+                .write_attr("length", &f64_to_string_default(veh.get_vehicle_type().get_length()))
                 .write_attr("type", veh.get_vehicle_type().get_id());
             if !add.is_empty() {
-                dev.write_attr(add, &to_string(&addValue));
+                dev.write_attr(add, &f64_to_string_default(addValue));
             }
             dev.close_tag("");
         }
