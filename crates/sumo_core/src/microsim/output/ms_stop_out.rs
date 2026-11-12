@@ -1,6 +1,18 @@
 //! Port of microsim/output/MSStopOut.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
+use utils::options::options_cont::is_set;
+
+thread_local! {
+    /// C++ static `MSStopOut::myInstance`
+    static MY_INSTANCE: Cell<Ptr<MSStopOut>> = const { Cell::new(Ptr::null()) };
+}
+
+/// C++ `MSNet::getInstance()->getCurrentTimeStep()` (SIMSTEP)
+fn current_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
 
 /// Realises dumping the complete network state
 /// C++ class `MSStopOut` (microsim/output/MSStopOut.h)
@@ -23,7 +35,11 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn init() {
-        todo!("port MSStopOut::init")
+        if is_set("stop-output") {
+            let dev = OutputDevice::get_device_by_option("stop-output").unwrap_or_else(|e| panic!("{e}"));
+            let inst = MSStopOut::new(&mut dev.borrow_mut());
+            MY_INSTANCE.set(Ptr::from_raw(Box::into_raw(Box::new(inst))));
+        }
     }
 
     /// C++: `bool MSStopOut::active()` [static]
@@ -32,7 +48,7 @@ impl MSStopOut {
     //     }
     #[allow(unused_variables)]
     pub fn active() -> bool {
-        todo!("port MSStopOut::active")
+        !MY_INSTANCE.get().is_null()
     }
 
     /// C++: `void MSStopOut::cleanup()` [static]
@@ -43,7 +59,12 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSStopOut::cleanup")
+        let inst = MY_INSTANCE.get();
+        if !inst.is_null() {
+            // C++ `delete myInstance`
+            unsafe { drop(Box::from_raw(inst.as_raw())) };
+        }
+        MY_INSTANCE.set(Ptr::null());
     }
 
     /// C++: `MSStopOut * MSStopOut::getInstance()` [static]
@@ -52,7 +73,7 @@ impl MSStopOut {
     //     }
     #[allow(unused_variables)]
     pub fn get_instance() -> Ptr<MSStopOut> {
-        todo!("port MSStopOut::getInstance")
+        MY_INSTANCE.get()
     }
 
     /// C++: `void MSStopOut::MSStopOut(OutputDevice &)`
@@ -62,7 +83,10 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn new(dev: &mut OutputDevice) -> Self {
-        todo!("port MSStopOut::MSStopOut")
+        MSStopOut {
+            myStopped: BTreeMap::new(),
+            myDevice: Ptr::from_mut(dev),
+        }
     }
 
     /// C++: `void MSStopOut::~MSStopOut()` [virtual]
@@ -70,7 +94,7 @@ impl MSStopOut {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStopOut::~MSStopOut")
+        // C++ destructor has no body; the map is released by Rust drop glue
     }
 
     /// C++: `void MSStopOut::stopBlocked(const SUMOVehicle *, SUMOTime)`
@@ -83,7 +107,10 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn stop_blocked(&mut self, veh: Ptr<SUMOVehicle>, time: SUMOTime) {
-        todo!("port MSStopOut::stopBlocked")
+        debug_assert!(!veh.is_null());
+        if !self.myStopped.contains_key(&veh) {
+            self.myStopped.insert(veh, MSStopOut_StopInfo::new(-time, -1, -1));
+        }
     }
 
     /// C++: `void MSStopOut::stopNotStarted(const SUMOVehicle *)`
@@ -94,7 +121,8 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn stop_not_started(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSStopOut::stopNotStarted")
+        debug_assert!(!veh.is_null());
+        self.myStopped.remove(&veh);
     }
 
     /// C++: `void MSStopOut::stopStarted(const SUMOVehicle *, int, int, SUMOTime)`
@@ -112,7 +140,15 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn stop_started(&mut self, veh: Ptr<SUMOVehicle>, numPersons: i32, numContainers: i32, time: SUMOTime) {
-        todo!("port MSStopOut::stopStarted")
+        debug_assert!(!veh.is_null());
+        if !self.myStopped.contains_key(&veh) {
+            self.myStopped.insert(veh, MSStopOut_StopInfo::new(0, numPersons, numContainers));
+        } else {
+            let info = self.myStopped.get_mut(&veh).unwrap();
+            info.blockTime += time;
+            info.initialNumPersons = numPersons;
+            info.initialNumContainers = numContainers;
+        }
     }
 
     /// C++: `void MSStopOut::loadedPersons(const SUMOVehicle *, int)`
@@ -130,7 +166,14 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn loaded_persons(&mut self, veh: Ptr<SUMOVehicle>, n: i32) {
-        todo!("port MSStopOut::loadedPersons")
+        // ignore triggered vehicles
+        if veh.has_departed() {
+            if !self.myStopped.contains_key(&veh) {
+                write_warningf!("Vehicle '%' loads persons on edge '%', time=% without starting the stop.", veh.get_id(), veh.get_edge().get_id(), time2string(current_step()));
+            } else {
+                self.myStopped.get_mut(&veh).unwrap().loadedPersons += n;
+            }
+        }
     }
 
     /// C++: `void MSStopOut::unloadedPersons(const SUMOVehicle *, int)`
@@ -145,7 +188,11 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn unloaded_persons(&mut self, veh: Ptr<SUMOVehicle>, n: i32) {
-        todo!("port MSStopOut::unloadedPersons")
+        if !self.myStopped.contains_key(&veh) {
+            write_warningf!("Vehicle '%' unloads persons on edge '%', time=% without starting the stop.", veh.get_id(), veh.get_edge().get_id(), time2string(current_step()));
+        } else {
+            self.myStopped.get_mut(&veh).unwrap().unloadedPersons += n;
+        }
     }
 
     /// C++: `void MSStopOut::loadedContainers(const SUMOVehicle *, int)`
@@ -163,7 +210,14 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn loaded_containers(&mut self, veh: Ptr<SUMOVehicle>, n: i32) {
-        todo!("port MSStopOut::loadedContainers")
+        // ignore triggered vehicles
+        if veh.has_departed() {
+            if !self.myStopped.contains_key(&veh) {
+                write_warningf!("Vehicle '%' loads container on edge '%', time=% without starting the stop.", veh.get_id(), veh.get_edge().get_id(), time2string(current_step()));
+            } else {
+                self.myStopped.get_mut(&veh).unwrap().loadedContainers += n;
+            }
+        }
     }
 
     /// C++: `void MSStopOut::unloadedContainers(const SUMOVehicle *, int)`
@@ -178,7 +232,11 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn unloaded_containers(&mut self, veh: Ptr<SUMOVehicle>, n: i32) {
-        todo!("port MSStopOut::unloadedContainers")
+        if !self.myStopped.contains_key(&veh) {
+            write_warningf!("Vehicle '%' unloads container on edge '%', time=% without starting the stop.", veh.get_id(), veh.get_edge().get_id(), time2string(current_step()));
+        } else {
+            self.myStopped.get_mut(&veh).unwrap().unloadedContainers += n;
+        }
     }
 
     /// C++: `void MSStopOut::stopEnded(const SUMOVehicle *, const MSStop &, bool)`
@@ -271,7 +329,91 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn stop_ended(&mut self, veh: Ptr<SUMOVehicle>, stop: &MSStop, simEnd: bool) {
-        todo!("port MSStopOut::stopEnded")
+        debug_assert!(!veh.is_null());
+        if !self.myStopped.contains_key(&veh) {
+            write_warningf!("Vehicle '%' ends stop on edge '%', time=% without entering the stop.", veh.get_id(), veh.get_edge().get_id(), time2string(current_step()));
+            return;
+        }
+        let pars = &stop.pars;
+        let si = &self.myStopped[&veh];
+        let mut delay = -1.;
+        let mut arrival_delay = -1.;
+        if pars.until >= 0 && !simEnd {
+            delay = steps2time(current_step() - pars.until);
+        }
+        if pars.arrival >= 0 {
+            arrival_delay = steps2time(pars.started - pars.arrival);
+        }
+        let dev = self.myDevice;
+        dev.m().open_tag("stopinfo");
+        dev.m().write_attr(SUMO_ATTR_ID, veh.get_id());
+        dev.m().write_attr(SUMO_ATTR_TYPE, veh.get_vehicle_type().get_id());
+        if MSGlobals::use_meso_sim() {
+            dev.m().write_attr(SUMO_ATTR_EDGE, veh.get_edge().get_id());
+        } else {
+            dev.m().write_attr(SUMO_ATTR_LANE, stop.lane.get_id());
+        }
+        dev.m().write_attr(SUMO_ATTR_POSITION, &veh.get_position_on_lane());
+        dev.m().write_attr(SUMO_ATTR_PARKING, &pars.parking);
+        dev.m().write_attr(SUMO_ATTR_STARTED, &time2string(pars.started));
+        let ended = if simEnd { "-1".to_string() } else { time2string(current_step()) };
+        dev.m().write_attr(SUMO_ATTR_ENDED, &ended);
+        if pars.until >= 0 {
+            dev.m().write_attr("delay", &delay);
+        }
+        if pars.arrival >= 0 {
+            dev.m().write_attr(SUMO_ATTR_ARRIVALDELAY, &arrival_delay);
+        }
+        if !pars.busstop.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_BUS_STOP, &pars.busstop);
+        }
+        if !pars.containerstop.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_CONTAINER_STOP, &pars.containerstop);
+        }
+        if !pars.parkingarea.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_PARKING_AREA, &pars.parkingarea);
+        }
+        if !pars.chargingStation.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_CHARGING_STATION, &pars.chargingStation);
+        }
+        if !pars.overheadWireSegment.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_OVERHEAD_WIRE_SEGMENT, &pars.overheadWireSegment);
+        }
+        if !pars.tripId.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_TRIP_ID, &pars.tripId);
+        }
+        if !pars.line.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_LINE, &pars.line);
+        }
+        if !pars.split.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_SPLIT, &pars.split);
+        }
+        if MSGlobals::use_stop_ended() {
+            dev.m().write_attr(SUMO_ATTR_USED_ENDED, &(pars.ended >= 0));
+        }
+        dev.m().write_attr("initialPersons", &si.initialNumPersons);
+        dev.m().write_attr("loadedPersons", &si.loadedPersons);
+        dev.m().write_attr("unloadedPersons", &si.unloadedPersons);
+        dev.m().write_attr("initialContainers", &si.initialNumContainers);
+        dev.m().write_attr("loadedContainers", &si.loadedContainers);
+        dev.m().write_attr("unloadedContainers", &si.unloadedContainers);
+        dev.m().write_attr("blockedDuration", &time2string(si.blockTime));
+
+        if !pars.actType.is_empty() {
+            dev.m().write_attr(SUMO_ATTR_ACTTYPE, &pars.actType);
+        }
+        if stop.pars.speed > 0. {
+            if stop.waypointWithStop {
+                dev.m().write_attr(SUMO_ATTR_STATE, "waypointStopped");
+            } else {
+                dev.m().write_attr(SUMO_ATTR_STATE, "waypoint");
+            }
+        } else if stop.skipOnDemand {
+            dev.m().write_attr(SUMO_ATTR_STATE, "skippedOnDemand");
+        }
+
+        dev.m().close_tag("");
+        self.myStopped.remove(&veh);
     }
 
     /// C++: `void MSStopOut::generateOutputForUnfinished()`
@@ -289,7 +431,14 @@ impl MSStopOut {
     // }
     #[allow(unused_variables)]
     pub fn generate_output_for_unfinished(&mut self) {
-        todo!("port MSStopOut::generateOutputForUnfinished")
+        while !self.myStopped.is_empty() {
+            // C++ myStopped is ordered by ComparatorNumericalIdLess: the lowest numerical ID comes first
+            let veh = *self.myStopped.keys().min_by_key(|v| v.get_numerical_id()).unwrap();
+            debug_assert!(veh.is_stopped());
+            let stop = veh.get_next_stop();
+            // erases item from myStopped
+            self.stop_ended(veh, stop, true);
+        }
     }
 
     /// C++: `void MSStopOut::MSStopOut(const MSStopOut &)` [private]
@@ -297,7 +446,7 @@ impl MSStopOut {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSStopOut) -> Self {
-        todo!("port MSStopOut::MSStopOut")
+        panic!("MSStopOut copy constructor is private and invalidated in SUMO")
     }
 
     /// C++: `MSStopOut & MSStopOut::operator=(const MSStopOut &)` [private]
@@ -305,7 +454,7 @@ impl MSStopOut {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSStopOut) -> &mut MSStopOut {
-        todo!("port MSStopOut::operator=")
+        panic!("MSStopOut assignment operator is private and invalidated in SUMO")
     }
 
 }
@@ -334,7 +483,15 @@ impl MSStopOut_StopInfo {
     //         }
     #[allow(unused_variables)]
     pub fn new(now: SUMOTime, numPersons: i32, numContainers: i32) -> Self {
-        todo!("port StopInfo::StopInfo")
+        MSStopOut_StopInfo {
+            blockTime: now,
+            initialNumPersons: numPersons,
+            loadedPersons: 0,
+            unloadedPersons: 0,
+            initialNumContainers: numContainers,
+            loadedContainers: 0,
+            unloadedContainers: 0,
+        }
     }
 
 }
