@@ -2,7 +2,8 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::{write_error, write_warning};
-use utils::common::time::{sumotime_max_period, time2steps};
+use utils::common::time::{sumotime_max_period, time2steps, SUMOTIME_MAX};
+use utils::common::file_helpers::check_for_relativity;
 
 /// C++ typedef `std::map<std::string, std::pair<std::string, std::string> > NLHandler::JunctionGraph`
 pub type NLHandler_JunctionGraph = BTreeMap<String, (String, String)>;
@@ -2779,7 +2780,7 @@ impl NLHandler {
             self.myCurrentIsBroken = true;
         } else {
             let result = try_catch_args(|| {
-                self.myJunctionControlBuilder.m().open_junction(&id, &key, type_, Position::new(x, y, z), &shape, &incomingLanes, &internalLanes, &name);
+                self.myJunctionControlBuilder.m().open_junction(&id, &key, type_, Position::new3(x, y, z), &shape, &incomingLanes, &internalLanes, &name);
             });
             if let Err(what) = result {
                 write_error(&format!("{}\n Can not build according junction.", what));
@@ -3338,7 +3339,91 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_district(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addDistrict")
+        let mut ok = true;
+        self.myCurrentIsBroken = false;
+        // get the id, report an error if not given or empty...
+        self.myCurrentDistrictID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let id = self.myCurrentDistrictID.clone();
+        let result = try_catch_args(|| {
+            let sinkID = format!("{}-sink", id);
+            let sourceID = format!("{}-source", id);
+            let junctionTaz = utils::options::options_cont::get_bool("junction-taz");
+
+            let mut sink = MSEdge::dictionary_2(&sinkID);
+            if sink.is_null() {
+                sink = self.myEdgeControlBuilder.m().build_edge(&sinkID, SumoXMLEdgeFunc::CONNECTOR, "", "", "", -1, 0.0);
+                MSEdge::dictionary(&sinkID, sink);
+                sink.m().initialize(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+            } else {
+                let junction = self.myNet.m().get_junction_control().get(&id).copied().unwrap_or(Ptr::null());
+                if junctionTaz && !junction.is_null() {
+                    // overwrite junction taz
+                    sink.m().reset_taz(junction);
+                    write_warning(&format!("Replacing junction-taz '{}' with loaded TAZ.", id));
+                } else {
+                    throw_invalid_argument(format!("Another edge with the id '{}' exists.", sinkID));
+                }
+            }
+            let mut source = MSEdge::dictionary_2(&sourceID);
+            if source.is_null() {
+                source = self.myEdgeControlBuilder.m().build_edge(&sourceID, SumoXMLEdgeFunc::CONNECTOR, "", "", "", -1, 0.0);
+                MSEdge::dictionary(&sourceID, source);
+                source.m().initialize(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+            } else {
+                let junction = self.myNet.m().get_junction_control().get(&id).copied().unwrap_or(Ptr::null());
+                if junctionTaz && !junction.is_null() {
+                    // overwrite junction taz
+                    source.m().reset_taz(junction);
+                } else {
+                    throw_invalid_argument(format!("Another edge with the id '{}' exists.", sourceID));
+                }
+            }
+            sink.m().set_other_taz_connector(source);
+            source.m().set_other_taz_connector(sink);
+            let desc = attrs.get_opt::<Vec<String>>(SUMO_ATTR_EDGES, &id, &mut ok, Vec::new(), true);
+            for eID in &desc {
+                let edge = MSEdge::dictionary_2(eID);
+                // check whether the edge exists
+                if edge.is_null() {
+                    throw_invalid_argument(format!("The edge '{}' within district '{}' is not known.", eID, id));
+                }
+                source.m().add_successor(edge, Ptr::null());
+                edge.m().add_successor(sink, Ptr::null());
+            }
+            source.m().base2.set_parameter("taz", &id);
+            sink.m().base2.set_parameter("taz", &id);
+            // shortcut: getOpt<RGBColor> is not in the SUMOSAXAttributes FromAttr set, so the color is parsed directly; a bad color is not reported as a broken district
+            let color = if attrs.has_attribute(SUMO_ATTR_COLOR) {
+                unwrap_or_throw(utils::common::rgb_color::RGBColor::parse_color(&attrs.get_string(SUMO_ATTR_COLOR)))
+            } else {
+                unwrap_or_throw(utils::common::rgb_color::RGBColor::parse_color("1.0,.33,.33"))
+            };
+            source.m().base2.set_parameter("tazColor", &color.to_string());
+            sink.m().base2.set_parameter("tazColor", &color.to_string());
+
+            let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+            if attrs.has_attribute(SUMO_ATTR_SHAPE) {
+                let shape = attrs.get::<PositionVector>(SUMO_ATTR_SHAPE, &id, &mut ok, true);
+                let fill = attrs.get_opt::<bool>(SUMO_ATTR_FILL, &id, &mut ok, false, true);
+                if shape.size() != 0 {
+                    if !self.myNet.m().get_shape_container().add_polygon(&id, "taz", &color, 0.0, 0.0, "", &shape, false, fill, 1.0, false, &name) {
+                        write_warning(&format!("Skipping visualization of taz '{}', polygon already exists.", id));
+                    } else {
+                        let poly = self.myNet.m().get_shape_container().get_polygons().get(&id).copied().unwrap_or(Ptr::null());
+                        self.myLastParameterised.push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*poly.as_raw()).base2) }));
+                        self.myCurrentIsBroken = false;
+                    }
+                }
+            }
+        });
+        if let Err(what) = result {
+            write_error(&what);
+            self.myCurrentIsBroken = true;
+        }
     }
 
     /// C++: `void NLHandler::addDistrictEdge(const SUMOSAXAttributes &, bool)` [private]
@@ -3365,7 +3450,24 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_district_edge(&mut self, attrs: &SUMOSAXAttributes, isSource: bool) {
-        todo!("port NLHandler::addDistrictEdge")
+        if self.myCurrentIsBroken {
+            // earlier error
+            return;
+        }
+        let mut ok = true;
+        let cur = self.myCurrentDistrictID.clone();
+        let id = attrs.get::<String>(SUMO_ATTR_ID, &cur, &mut ok, true);
+        let succ = MSEdge::dictionary_2(&id);
+        if !succ.is_null() {
+            // connect edge
+            if isSource {
+                MSEdge::dictionary_2(&format!("{}-source", cur)).m().add_successor(succ, Ptr::null());
+            } else {
+                succ.m().add_successor(MSEdge::dictionary_2(&format!("{}-sink", cur)), Ptr::null());
+            }
+        } else {
+            write_error(&format!("At district '{}': succeeding edge '{}' does not exist.", cur, id));
+        }
     }
 
     /// C++: `void NLHandler::addRoundabout(const SUMOSAXAttributes &)` [private]
@@ -3549,7 +3651,8 @@ impl NLShapeHandler {
     //         ShapeHandler(file, sc) {}
     #[allow(unused_variables)]
     pub fn new(file: &str, sc: &mut ShapeContainer) -> Self {
-        todo!("port NLShapeHandler::NLShapeHandler")
+        // C++ default for the GeoConvHelper argument of ShapeHandler is nullptr
+        NLShapeHandler { base: ShapeHandler::new(file, sc, Ptr::null()) }
     }
 
     /// C++: `void NLShapeHandler::~NLShapeHandler() noexcept` [virtual]
@@ -3557,7 +3660,7 @@ impl NLShapeHandler {
     // virtual ~NLShapeHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLShapeHandler::~NLShapeHandler")
+        // C++: `virtual ~NLShapeHandler() {}`; nothing to release beyond the base's fields
     }
 
     /// C++: `Position NLShapeHandler::getLanePos(const std::string &, const std::string &, double, bool, double)` [virtual]
@@ -3584,7 +3687,25 @@ impl NLShapeHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_pos(&mut self, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
-        todo!("port NLShapeHandler::getLanePos")
+        let lane = MSLane::dictionary_2(laneID);
+        if lane.is_null() {
+            write_error(&format!("Lane '{}' to place poi '{}' on is not known.", laneID, poiID));
+            return Position::INVALID;
+        }
+        let mut lanePos = lanePos;
+        if lanePos < 0.0 {
+            lanePos = lane.get_length() + lanePos;
+        }
+        if (lanePos < 0.0) && friendlyPos {
+            lanePos = 0.0;
+        }
+        if (lanePos > lane.get_length()) && friendlyPos {
+            lanePos = lane.get_length();
+        }
+        if lanePos < 0.0 || lanePos > lane.get_length() {
+            write_warning(&format!("lane position {} for poi '{}' is not valid.", utils::common::to_string::f64_to_string_default(lanePos), poiID));
+        }
+        lane.geometry_position_at_offset(lanePos, -lanePosLat)
     }
 
     /// C++: `bool NLShapeHandler::addLanePosParams()` [virtual]
@@ -3593,7 +3714,7 @@ impl NLShapeHandler {
     //     }
     #[allow(unused_variables)]
     pub fn add_lane_pos_params(&mut self) -> bool {
-        todo!("port NLShapeHandler::addLanePosParams")
+        true
     }
 
 }
