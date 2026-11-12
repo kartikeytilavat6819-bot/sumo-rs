@@ -54,6 +54,8 @@ pub const UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
 pub const ANGLE_LOOKAHEAD: f64 = 10.0;
 pub const UNSPECIFIED_INTERNAL_LANE_INDEX: i32 = -1;
 pub const UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
+// utils/common/StdDefs.h SUMO_const_laneWidth
+const SUMO_const_laneWidth: f64 = 3.2;
 // C++ `static double NBEdge::myDefaultConnectionLength`, stored as bits so it is a plain global like the C++ static
 static MY_DEFAULT_CONNECTION_LENGTH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(UNSPECIFIED_LOADED_LENGTH.to_bits());
 fn my_default_connection_length() -> f64 {
@@ -316,6 +318,7 @@ impl NBEdge_Connection {
 
 /// An (internal) definition of a single lane of an edge
 /// C++ class `NBEdge::Lane` (netbuild/NBEdge.h)
+#[derive(Clone)]
 pub struct NBEdge_Lane {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -835,7 +838,7 @@ impl NBEdge {
     // NBEdge::~NBEdge() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBEdge::~NBEdge")
+        // empty C++ destructor body; the members are released by their owners
     }
 
     /// C++: `void NBEdge::reinit(NBNode *, NBNode *, const std::string &, double, double, int, int, PositionVector, double, double, const std::string &, LaneSpreadFunction, bool)`
@@ -891,7 +894,48 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reinit(&mut self, from: Ptr<NBNode>, to: Ptr<NBNode>, type_: &str, speed: f64, friction: f64, nolanes: i32, priority: i32, geom: PositionVector, width: f64, endOffset: f64, streetName: &str, spread: LaneSpreadFunction, tryIgnoreNodePositions: bool) {
-        todo!("port NBEdge::reinit")
+        let this = Ptr::from_mut(&mut *self);
+        if self.myFrom != from {
+            self.myFrom.m().remove_edge(this, false);
+        }
+        if self.myTo != to {
+            self.myTo.m().remove_edge(this, false);
+        }
+        self.myType = utils::common::string_utils::convert_umlaute(type_);
+        self.myFrom = from;
+        self.myTo = to;
+        self.myPriority = priority;
+        self.myGeom = geom;
+        self.myLaneSpreadFunction = spread;
+        self.myLoadedLength = UNSPECIFIED_LOADED_LENGTH;
+        self.myStreetName = streetName.to_string();
+
+        // preserve lane-specific settings (geometry must be recomputed)
+        // if new lanes are added they copy the values from the leftmost lane (if specified)
+        let oldLanes = self.myLanes.clone();
+        let origID = if oldLanes.is_empty() { String::new() } else { oldLanes[0].get_parameter(SUMO_PARAM_ORIGID, "") };
+        self.init(nolanes, tryIgnoreNodePositions, &origID);
+        let last = oldLanes.len() as i32 - 1;
+        for i in 0..nolanes {
+            let newShape = self.myLanes[i as usize].shape.clone();
+            // MIN2(i, (int)oldLanes.size() - 1)
+            let idx = if i < last { i } else { last };
+            self.myLanes[i as usize] = oldLanes[idx as usize].clone();
+            self.myLanes[i as usize].shape = newShape;
+        }
+        // however, if the new edge defaults are explicityly given, they override the old settings
+        if endOffset != UNSPECIFIED_OFFSET {
+            self.set_end_offset(-1, endOffset);
+        }
+        if width != UNSPECIFIED_WIDTH {
+            self.set_lane_width(-1, width);
+        }
+        if speed != UNSPECIFIED_SPEED {
+            self.set_speed(-1, speed);
+        }
+        if friction != UNSPECIFIED_FRICTION {
+            self.set_friction(-1, friction);
+        }
     }
 
     /// C++: `void NBEdge::reinitNodes(NBNode *, NBNode *)`
@@ -922,7 +966,29 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reinit_nodes(&mut self, from: Ptr<NBNode>, to: Ptr<NBNode>) {
-        todo!("port NBEdge::reinitNodes")
+        // connections may still be valid
+        if from.is_null() || to.is_null() {
+            // TLF("At least one of edge's '%' nodes is not known.", myID)
+            panic!("{}", ProcessError::new(format!("At least one of edge's '{}' nodes is not known.", self.get_id())));
+        }
+        let this = Ptr::from_mut(&mut *self);
+        if self.myFrom != from {
+            self.myFrom.m().remove_edge(this, false);
+        }
+        if self.myTo != to {
+            self.myTo.m().remove_edge(this, false);
+        }
+        // remove first from both nodes and then add to the new nodes
+        // (otherwise reversing does not work)
+        if self.myFrom != from {
+            self.myFrom = from;
+            self.myFrom.m().add_outgoing_edge(this);
+        }
+        if self.myTo != to {
+            self.myTo = to;
+            self.myTo.m().add_incoming_edge(this);
+        }
+        self.compute_angle();
     }
 
     /// C++: `void NBEdge::reshiftPosition(double, double)`
@@ -947,7 +1013,31 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, xoff: f64, yoff: f64) {
-        todo!("port NBEdge::reshiftPosition")
+        for p in self.myGeom.iter_mut() {
+            p.add_xyz(xoff, yoff, 0.0);
+        }
+        for lane in self.myLanes.iter_mut() {
+            for p in lane.customShape.iter_mut() {
+                p.add_xyz(xoff, yoff, 0.0);
+            }
+        }
+        self.compute_lane_shapes(); // old shapes are dubious if computed with large coordinates
+        for c in self.myConnections.iter_mut() {
+            for p in c.customShape.iter_mut() {
+                p.add_xyz(xoff, yoff, 0.0);
+            }
+        }
+        if self.mySignalPosition != Position::INVALID {
+            self.mySignalPosition.add_xy(xoff, yoff);
+        }
+        for p in self.myFromBorder.iter_mut() {
+            p.add_xyz(xoff, yoff, 0.0);
+        }
+        for p in self.myToBorder.iter_mut() {
+            p.add_xyz(xoff, yoff, 0.0);
+        }
+        self.compute_edge_shape(-1.0);
+        self.compute_angle(); // update angles because they are numerically sensitive (especially where based on centroids)
     }
 
     /// C++: `void NBEdge::roundGeometry()`
@@ -964,7 +1054,14 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn round_geometry(&mut self) {
-        todo!("port NBEdge::roundGeometry")
+        let precision = utils::common::std_defs::g_precision();
+        self.myGeom.round(precision, true);
+        for lane in self.myLanes.iter_mut() {
+            lane.customShape.round(precision, true);
+        }
+        for c in self.myConnections.iter_mut() {
+            c.customShape.round(precision, true);
+        }
     }
 
     /// C++: `void NBEdge::roundSpeed()`
@@ -979,7 +1076,12 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn round_speed(&mut self) {
-        todo!("port NBEdge::roundSpeed")
+        let precision = utils::common::std_defs::g_precision();
+        self.mySpeed = utils::common::std_defs::round_decimal_to_even(self.mySpeed, precision);
+        // lane speeds are not used for computation but are compared to mySpeed in hasLaneSpecificSpeed
+        for l in self.myLanes.iter_mut() {
+            l.speed = utils::common::std_defs::round_decimal_to_even(l.speed, precision);
+        }
     }
 
     /// C++: `void NBEdge::mirrorX()`
@@ -1003,7 +1105,21 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBEdge::mirrorX")
+        self.myGeom.mirror_x();
+        for i in 0..self.myLanes.len() {
+            self.myLanes[i].shape.mirror_x();
+            self.myLanes[i].customShape.mirror_x();
+        }
+        for c in self.myConnections.iter_mut() {
+            c.shape.mirror_x();
+            c.viaShape.mirror_x();
+            c.customShape.mirror_x();
+        }
+        if self.mySignalPosition != Position::INVALID {
+            let y = -self.mySignalPosition.y();
+            self.mySignalPosition.sety(y);
+        }
+        self.compute_angle(); // update angles because they are numerically sensitive (especially where based on centroids)
     }
 
     /// C++: `int NBEdge::getNumLanes() const` [const]
@@ -1086,7 +1202,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_start_angle(&self) -> f64 {
-        todo!("port NBEdge::getShapeStartAngle")
+        let half = self.myGeom.length2d() / 2.0;
+        let angleLookahead = if half < ANGLE_LOOKAHEAD { half } else { ANGLE_LOOKAHEAD };
+        let referencePosStart = self.myGeom.position_at_offset2d(angleLookahead, 0.0, false);
+        utils::geom::geom_helper::legacy_degree(self.myGeom.front().angle_to2d(&referencePosStart), true)
     }
 
     /// C++: `double NBEdge::getShapeEndAngle() const` [const]
@@ -1099,7 +1218,10 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_end_angle(&self) -> f64 {
-        todo!("port NBEdge::getShapeEndAngle")
+        let half = self.myGeom.length2d() / 2.0;
+        let angleLookahead = if half < ANGLE_LOOKAHEAD { half } else { ANGLE_LOOKAHEAD };
+        let referencePosEnd = self.myGeom.position_at_offset2d(self.myGeom.length2d() - angleLookahead, 0.0, false);
+        utils::geom::geom_helper::legacy_degree(referencePosEnd.angle_to2d(self.myGeom.back()), true)
     }
 
     /// C++: `double NBEdge::getTotalAngle() const` [const]
@@ -1206,7 +1328,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_width(&self) -> f64 {
-        todo!("port NBEdge::getLaneWidth")
+        self.myLaneWidth
     }
 
     /// C++: `double NBEdge::getLaneWidth(int) const` [const]
@@ -1219,7 +1341,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_width_2(&self, lane: i32) -> f64 {
-        todo!("port NBEdge::getLaneWidth")
+        if self.myLanes[lane as usize].width != UNSPECIFIED_WIDTH {
+            self.myLanes[lane as usize].width
+        } else if self.get_lane_width() != UNSPECIFIED_WIDTH {
+            self.get_lane_width()
+        } else {
+            SUMO_const_laneWidth
+        }
     }
 
     /// C++: `double NBEdge::getInternalLaneWidth(const NBNode &, const NBEdge::Connection &, const NBEdge::Lane &, bool) const` [const]
