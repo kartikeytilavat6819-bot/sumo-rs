@@ -1,6 +1,51 @@
 //! Port of microsim/MSLink.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::RefCell;
+use std::collections::BTreeSet;
+use utils::tlf;
+use utils::geom::NUMERICAL_EPS;
+use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_degree, INVALID_OFFSET};
+
+/// C++ `#define INVALID_TIME -1000` (MSLink.cpp)
+const INVALID_TIME: SUMOTime = -1000;
+
+// shortcut: MSGlobals::gLefthand is a static that is not ported yet, this stub returns the C++ default (right-hand traffic), upgrade when MSGlobals statics are ported
+fn g_lefthand() -> bool {
+    false
+}
+
+// shortcut: MSGlobals::gUseMesoSim is a static that is not ported yet, this stub returns the C++ default (micro simulation), upgrade when MSGlobals statics are ported
+fn g_use_meso_sim() -> bool {
+    false
+}
+
+// shortcut: MSGlobals::gUsingInternalLanes is a static that is not ported yet, this stub returns the usual setting (internal lanes enabled, option no-internal-links off), upgrade when MSGlobals statics are ported
+fn g_using_internal_lanes() -> bool {
+    true
+}
+
+/// C++ `#define DIVERGENCE_MIN_WIDTH 2.5` (MSLink.cpp)
+const DIVERGENCE_MIN_WIDTH: f64 = 2.5;
+
+/// MIN2/MAX2 from StdDefs.h (differ from f64::min/max for NaN)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ `myRecheck.insert({a, b})`
+fn recheck_insert(a: Ptr<MSLink>, b: Ptr<MSLink>) {
+    MY_RECHECK.with(|r| r.borrow_mut().insert((a, b)));
+}
+
+/// C++ `myRecheck.erase({a, b})`
+fn recheck_erase(a: Ptr<MSLink>, b: Ptr<MSLink>) {
+    MY_RECHECK.with(|r| r.borrow_mut().remove(&(a, b)));
+}
 
 /// C++ enum `MSLink::ConflictFlag`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -51,7 +96,7 @@ impl MSLink_ApproachingPersonInformation {
     //             arrivalTime(_arrivalTime), leavingTime(_leavingTime) {}
     #[allow(unused_variables)]
     pub fn new(_arrivalTime: SUMOTime, _leavingTime: SUMOTime) -> Self {
-        todo!("port ApproachingPersonInformation::ApproachingPersonInformation")
+        MSLink_ApproachingPersonInformation { arrivalTime: _arrivalTime, leavingTime: _leavingTime }
     }
 
 }
@@ -104,7 +149,18 @@ impl MSLink_ApproachingVehicleInformation {
     //         }
     #[allow(unused_variables)]
     pub fn new(_arrivalTime: SUMOTime, _leavingTime: SUMOTime, _arrivalSpeed: f64, _leaveSpeed: f64, _willPass: bool, _arrivalSpeedBraking: f64, _waitingTime: SUMOTime, _dist: f64, _speed: f64, _latOffset: f64) -> Self {
-        todo!("port ApproachingVehicleInformation::ApproachingVehicleInformation")
+        MSLink_ApproachingVehicleInformation {
+            arrivalTime: _arrivalTime,
+            leavingTime: _leavingTime,
+            arrivalSpeed: _arrivalSpeed,
+            leaveSpeed: _leaveSpeed,
+            willPass: _willPass,
+            arrivalSpeedBraking: _arrivalSpeedBraking,
+            waitingTime: _waitingTime,
+            dist: _dist,
+            speed: _speed,
+            latOffset: _latOffset,
+        }
     }
 
 }
@@ -122,7 +178,9 @@ impl MSLink_ComparatorNumericalLaneIdLess {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, a: Ptr<MSLink>, b: Ptr<MSLink>) -> bool {
-        todo!("port ComparatorNumericalLaneIdLess::operator()")
+        let la = a.get_lane().get_numerical_id();
+        let lb = b.get_lane().get_numerical_id();
+        (la < lb) || (la == lb && a.get_index() < b.get_index())
     }
 
 }
@@ -149,7 +207,7 @@ impl MSLink_ConflictInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new(lbc: f64, cs: f64, fl: MSLink_ConflictFlag) -> Self {
-        todo!("port ConflictInfo::ConflictInfo")
+        MSLink_ConflictInfo { foeConflictIndex: -1, lengthBehindCrossing: lbc, conflictSize: cs, flag: fl }
     }
 
     /// C++: `double ConflictInfo::getFoeLengthBehindCrossing(const MSLink *) const` [const]
@@ -165,7 +223,13 @@ impl MSLink_ConflictInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_foe_length_behind_crossing(&self, foeExitLink: Ptr<MSLink>) -> f64 {
-        todo!("port ConflictInfo::getFoeLengthBehindCrossing")
+        if self.flag == MSLink_ConflictFlag::CONFLICT_DUMMY_MERGE {
+            0.0
+        } else if self.foeConflictIndex >= 0 {
+            foeExitLink.myConflicts[self.foeConflictIndex as usize].lengthBehindCrossing
+        } else {
+            -MSLink::NO_INTERSECTION
+        }
     }
 
     /// C++: `double ConflictInfo::getFoeConflictSize(const MSLink *) const` [const]
@@ -179,7 +243,11 @@ impl MSLink_ConflictInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_foe_conflict_size(&self, foeExitLink: Ptr<MSLink>) -> f64 {
-        todo!("port ConflictInfo::getFoeConflictSize")
+        if self.foeConflictIndex >= 0 {
+            foeExitLink.myConflicts[self.foeConflictIndex as usize].conflictSize
+        } else {
+            0.0
+        }
     }
 
     /// C++: `double ConflictInfo::getLengthBehindCrossing(const MSLink *) const` [const]
@@ -193,7 +261,11 @@ impl MSLink_ConflictInfo {
     // }
     #[allow(unused_variables)]
     pub fn get_length_behind_crossing(&self, exitLink: Ptr<MSLink>) -> f64 {
-        todo!("port ConflictInfo::getLengthBehindCrossing")
+        if self.flag == MSLink_ConflictFlag::CONFLICT_STOP_AT_INTERNAL_JUNCTION {
+            exitLink.get_internal_lane_before().get_length()
+        } else {
+            self.lengthBehindCrossing
+        }
     }
 
 }
@@ -213,7 +285,7 @@ impl MSLink_CustomConflict {
     //             from(f), to(t), startPos(s), endPos(e) {}
     #[allow(unused_variables)]
     pub fn new(f: Ptr<MSLane>, t: Ptr<MSLane>, s: f64, e: f64) -> Self {
-        todo!("port CustomConflict::CustomConflict")
+        MSLink_CustomConflict { from: f, to: t, startPos: s, endPos: e }
     }
 
 }
@@ -236,7 +308,7 @@ impl MSLink_LinkLeader {
     //         { }
     #[allow(unused_variables)]
     pub fn new(_veh: Ptr<MSVehicle>, _gap: f64, _distToCrossing: f64, _llFlags: i32, _latOffst: f64) -> Self {
-        todo!("port LinkLeader::LinkLeader")
+        MSLink_LinkLeader { vehAndGap: (_veh, _gap), distToCrossing: _distToCrossing, llFlags: _llFlags, latOffset: _latOffst }
     }
 
     /// C++: `bool LinkLeader::fromLeft() const` [const]
@@ -245,7 +317,7 @@ impl MSLink_LinkLeader {
     //         }
     #[allow(unused_variables)]
     pub fn from_left(&self) -> bool {
-        todo!("port LinkLeader::fromLeft")
+        (self.llFlags & MSLink_LinkLeaderFlag::LL_FROM_LEFT as i32) != 0
     }
 
     /// C++: `bool LinkLeader::inTheWay() const` [const]
@@ -254,7 +326,7 @@ impl MSLink_LinkLeader {
     //         }
     #[allow(unused_variables)]
     pub fn in_the_way(&self) -> bool {
-        todo!("port LinkLeader::inTheWay")
+        (self.llFlags & MSLink_LinkLeaderFlag::LL_IN_THE_WAY as i32) != 0
     }
 
     /// C++: `bool LinkLeader::sameTarget() const` [const]
@@ -263,7 +335,7 @@ impl MSLink_LinkLeader {
     //         }
     #[allow(unused_variables)]
     pub fn same_target(&self) -> bool {
-        todo!("port LinkLeader::sameTarget")
+        (self.llFlags & MSLink_LinkLeaderFlag::LL_SAME_TARGET as i32) != 0
     }
 
     /// C++: `bool LinkLeader::sameSource() const` [const]
@@ -272,7 +344,7 @@ impl MSLink_LinkLeader {
     //         }
     #[allow(unused_variables)]
     pub fn same_source(&self) -> bool {
-        todo!("port LinkLeader::sameSource")
+        (self.llFlags & MSLink_LinkLeaderFlag::LL_SAME_SOURCE as i32) != 0
     }
 
 }
@@ -355,6 +427,20 @@ pub struct MSLink {
 //   static std::set<std::pair<MSLink *, MSLink *>> MSLink::myRecheck;
 
 impl MSLink {
+    /// C++ `MSLink::NO_INTERSECTION`
+    pub const NO_INTERSECTION: f64 = 10000.;
+    /// C++ `MSLink::myLookaheadTime` = TIME2STEPS(1)
+    pub const myLookaheadTime: SUMOTime = 1000;
+    /// C++ `MSLink::myLookaheadTimeZipper` = TIME2STEPS(16)
+    pub const myLookaheadTimeZipper: SUMOTime = 16000;
+}
+
+thread_local! {
+    /// C++ `MSLink::myRecheck`
+    pub static MY_RECHECK: RefCell<BTreeSet<(Ptr<MSLink>, Ptr<MSLink>)>> = RefCell::new(BTreeSet::new());
+}
+
+impl MSLink {
     /// C++: `void MSLink::MSLink(MSLane *, MSLane *, MSLane *, LinkDirection, LinkState, double, double, bool, MSTrafficLightLogic *, int, bool)`
     /// Constructor for simulation which uses internal lanes
     // MSLink::MSLink(MSLane* predLane, MSLane* succLane, MSLane* via, LinkDirection dir, LinkState state,
@@ -419,7 +505,68 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn new(predLane: Ptr<MSLane>, succLane: Ptr<MSLane>, via: Ptr<MSLane>, dir: LinkDirection, state: LinkState, length: f64, foeVisibilityDistance: f64, keepClear: bool, logic: Ptr<MSTrafficLightLogic>, tlLinkIdx: i32, indirect: bool) -> Self {
-        todo!("port MSLink::MSLink")
+        let mut s = MSLink {
+            myLane: succLane,
+            myLaneBefore: predLane,
+            myApproachingVehicles: BTreeMap::new(),
+            myApproachingPersons: Ptr::null(),
+            myIndex: -1,
+            myTLIndex: tlLinkIdx,
+            myLogic: logic,
+            myState: state,
+            myLastGreenState: LINKSTATE_TL_GREEN_MINOR,
+            myOffState: state,
+            myLastStateChange: SUMOTIME_MIN / 2,
+            myDirection: dir,
+            myLength: length,
+            myFoeVisibilityDistance: foeVisibilityDistance,
+            myDistToFoePedCrossing: f64::MAX,
+            myHasFoes: false,
+            myAmCont: false,
+            myAmContOff: false,
+            myKeepClear: keepClear,
+            myInternalLane: via,
+            myInternalLaneBefore: Ptr::null(),
+            myMesoTLSPenalty: 0,
+            myGreenFraction: 1.,
+            myLateralShift: 0.,
+            myConflicts: Vec::new(),
+            myCustomConflicts: Vec::new(),
+            myFoeLinks: Vec::new(),
+            myFoeLanes: Vec::new(),
+            myOffFoeLinks: Ptr::null(),
+            myWalkingAreaFoe: Ptr::null(),
+            myWalkingAreaFoeExit: Ptr::null(),
+            myHavePedestrianCrossingFoe: false,
+            mySublaneFoeLinks: Vec::new(),
+            mySublaneFoeLinks2: Vec::new(),
+            mySublaneFoeLanes: Vec::new(),
+            myParallelRight: Ptr::null(),
+            myParallelLeft: Ptr::null(),
+            myAmIndirect: indirect,
+            myRadius: f64::MAX,
+            myPermissions: 0,
+            myJunction: Ptr::null(),
+        };
+        s.update_permissions();
+        if g_lateral_resolution() > 0. {
+            // detect lateral shift from lane geometries
+            if (!s.myInternalLane.is_null() || predLane.is_internal())
+                && s.myLaneBefore.get_shape_2().back() != s.get_via_lane_or_lane().get_shape_2().front()
+            {
+                let mut from = s.myLaneBefore.get_shape_2().clone();
+                let via = s.get_via_lane_or_lane();
+                let to = via.get_shape_2();
+                let dist = from.back().distance_to2d(to.front());
+                // figure out direction of shift
+                from.move2side(dist, 100.);
+                s.myLateralShift = if from.back().distance_to2d(to.front()) < dist { dist } else { -dist };
+                if g_lefthand() {
+                    s.myLateralShift *= -1.;
+                }
+            }
+        }
+        s
     }
 
     /// C++: `void MSLink::~MSLink()`
@@ -427,7 +574,13 @@ impl MSLink {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLink::~MSLink")
+        // C++: delete myOffFoeLinks; delete myApproachingPersons;
+        if !self.myOffFoeLinks.is_null() {
+            unsafe { drop(Box::from_raw(self.myOffFoeLinks.as_raw())) };
+        }
+        if !self.myApproachingPersons.is_null() {
+            unsafe { drop(Box::from_raw(self.myApproachingPersons.as_raw())) };
+        }
     }
 
     /// C++: `void MSLink::addCustomConflict(const MSLane *, const MSLane *, double, double)`
@@ -437,7 +590,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn add_custom_conflict(&mut self, from: Ptr<MSLane>, to: Ptr<MSLane>, startPos: f64, endPos: f64) {
-        todo!("port MSLink::addCustomConflict")
+        self.myCustomConflicts.push(MSLink_CustomConflict::new(from, to, startPos, endPos));
     }
 
     /// C++: `void MSLink::setRequestInformation(int, bool, bool, const std::vector<MSLink *> &, const std::vector<MSLane *> &, MSLane *)`
@@ -801,7 +954,283 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_request_information(&mut self, index: i32, hasFoes: bool, isCont: bool, foeLinks: &Vec<Ptr<MSLink>>, foeLanes: &Vec<Ptr<MSLane>>, internalLaneBefore: Ptr<MSLane>) {
-        todo!("port MSLink::setRequestInformation")
+        let this = Ptr::from_mut(self);
+        self.myIndex = index;
+        self.myHasFoes = hasFoes;
+        self.myAmCont = isCont && g_using_internal_lanes();
+        self.myFoeLinks = foeLinks.clone();
+        for &foeLane in foeLanes.iter() {
+            // cannot assign vector due to const-ness
+            self.myFoeLanes.push(foeLane);
+        }
+        // junctionGraph is initialized after the whole network is loaded
+        self.myJunction = self.myLane.get_edge().get_from_junction();
+        self.myAmContOff = isCont && !self.myLogic.is_null() && internalLaneBefore.is_null() && self.check_cont_off();
+        self.myInternalLaneBefore = internalLaneBefore;
+        let mut lane: Ptr<MSLane> = Ptr::null();
+        if !internalLaneBefore.is_null() {
+            // this is an exit link. compute crossing points with all foeLanes
+            lane = internalLaneBefore;
+        }
+        let entryLink = self.get_corresponding_entry_link();
+        if entryLink.get_off_state() == LINKSTATE_ALLWAY_STOP && !entryLink.get_tl_logic().is_null() {
+            // TLS has "normal" right of way rules but all conflicting links are foes when switching TLS off
+            // (unless it's an internal junction link which should ignore all foes and should be ignored by all foes
+            self.myOffFoeLinks = Ptr::from_mut(Box::leak(Box::new(Vec::new())));
+            if self.is_entry_link() {
+                for &foeLane in foeLanes.iter() {
+                    debug_assert!(foeLane.is_internal() || foeLane.is_crossing());
+                    let viaLink = foeLane.get_incoming_lanes()[0].viaLink;
+                    if viaLink.get_lane_before().is_normal() {
+                        self.myOffFoeLinks.m().push(viaLink);
+                    }
+                }
+            }
+        }
+        if !lane.is_null() {
+            let beforeInternalJunction = lane.get_link_cont()[0].get_via_lane_or_lane().get_edge().is_internal();
+            if lane.get_incoming_lanes().len() != 1 {
+                panic!("{}", ProcessError::new(tlf!("Internal lane '%' has % predecessors", lane.get_id().to_string(), lane.get_incoming_lanes().len() as i32)));
+            }
+            let junctionEntryLink = lane.get_entry_link();
+            let isSecondPart = self.is_exit_link_after_internal_junction();
+            // compute crossing points
+            for i in 0..self.myFoeLanes.len() {
+                let foeLane = self.myFoeLanes[i];
+                let cc = if !junctionEntryLink.is_null() { junctionEntryLink.get_custom_conflict(foeLane) } else { Ptr::null() };
+                if !cc.is_null() {
+                    // handle custom conflict definition
+                    let mut startPos = cc.startPos;
+                    let conflictSize = cc.endPos - cc.startPos;
+                    if isSecondPart {
+                        startPos -= junctionEntryLink.get_via_lane().get_length();
+                    }
+                    // the foe connection may be split at an internal
+                    // junction, we need to figure out whether the current
+                    // foeLane is the intended target for the custom conflict
+                    // There are two possibilities:
+                    // a) We have no custom conflict for the reverse pair of connections
+                    //    -> just check whether lane and foeLane intersect
+                    // b) We have a "reverse" custom conflict
+                    //    -> check whether it covers the foeLane
+                    let rcc = foeLane.get_entry_link().get_custom_conflict(lane);
+                    let mut haveIntersection = false;
+                    if rcc.is_null() {
+                        // a)
+                        haveIntersection = lane.get_shape_2().intersects_at_lengths2d_pv(foeLane.get_shape_2()).len() > 0;
+                    } else {
+                        // b)
+                        let foeIsSecondPart = foeLane.get_logical_predecessor_lane().is_internal();
+                        let mut foeStartPos = rcc.startPos;
+                        let foeConflictSize = rcc.endPos - rcc.startPos;
+                        if foeIsSecondPart {
+                            foeStartPos -= foeLane.get_logical_predecessor_lane().get_length();
+                        }
+                        let foeEndPos = foeStartPos + foeConflictSize;
+                        haveIntersection = (foeStartPos > 0. && foeStartPos < foeLane.get_length())
+                            || (foeEndPos > 0. && foeEndPos < foeLane.get_length());
+                    }
+                    if haveIntersection {
+                        self.myConflicts.push(MSLink_ConflictInfo::new(lane.get_length() - startPos, conflictSize, MSLink_ConflictFlag::CONFLICT_DEFAULT));
+                    } else {
+                        self.myConflicts.push(MSLink_ConflictInfo::new(-MSLink::NO_INTERSECTION, 0., MSLink_ConflictFlag::CONFLICT_DEFAULT));
+                    }
+                    continue;
+                }
+                self.myHavePedestrianCrossingFoe = self.myHavePedestrianCrossingFoe || foeLane.is_crossing();
+                let sameTarget = self.myLane == foeLane.get_link_cont()[0].get_lane();
+                if sameTarget && !beforeInternalJunction && !self.cont_intersect(lane, foeLane) {
+                    // this foeLane has the same target and merges at the end (lane exits the junction)
+                    let minDist = min2(DIVERGENCE_MIN_WIDTH, 0.5 * (lane.get_width() + foeLane.get_width()));
+                    if lane.get_shape_2().back().distance_to2d(foeLane.get_shape_2().back()) >= minDist {
+                        // account for lateral shift by the entry links
+                        if foeLane.get_entry_link().is_indirect() {
+                            self.myConflicts.push(MSLink_ConflictInfo::new(-MSLink::NO_INTERSECTION, 0., MSLink_ConflictFlag::CONFLICT_DEFAULT)); // dummy value, never used
+                        } else {
+                            self.myConflicts.push(MSLink_ConflictInfo::new(0., foeLane.get_width(), MSLink_ConflictFlag::CONFLICT_DUMMY_MERGE)); // dummy value, never used
+                        }
+                    } else {
+                        let distAfterDivergence = self.compute_dist_to_divergence(lane, foeLane, minDist, false, 0.);
+                        let lbcLane = lane.interpolate_geometry_pos_to_lane_pos(distAfterDivergence);
+                        self.myConflicts.push(MSLink_ConflictInfo::new(lbcLane, foeLane.get_width(), MSLink_ConflictFlag::CONFLICT_DEFAULT));
+                    }
+                } else {
+                    let mut intersections1 = lane.get_shape_2().intersects_at_lengths2d_pv(foeLane.get_shape_2());
+                    let mut haveIntersection = true;
+                    if intersections1.is_empty() {
+                        intersections1.push(-MSLink::NO_INTERSECTION); // disregard this foe (using maxdouble leads to nasty problems down the line)
+                        haveIntersection = false;
+                    } else if intersections1.len() > 1 {
+                        intersections1.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    }
+                    let mut intersections2 = foeLane.get_shape_2().intersects_at_lengths2d_pv(lane.get_shape_2());
+                    if intersections2.is_empty() {
+                        intersections2.push(0.);
+                    } else if intersections2.len() > 1 {
+                        intersections2.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    }
+
+                    // check for near-intersection (internal junctions for a side road which are only relevant when they have stranded vehicles))
+                    if !haveIntersection && !foeLane.get_link_cont()[0].get_via_lane().is_null() {
+                        let waitPos = foeLane.get_shape_2().back().clone();
+                        let dist = lane.get_shape_2().distance2d(&waitPos, true);
+                        if dist != INVALID_OFFSET && dist < lane.get_width() / 2. {
+                            // risk of collision
+                            intersections1.clear();
+                            intersections2.clear();
+                            intersections1.push(lane.get_shape_2().nearest_offset_to_point2d(&waitPos, true));
+                            intersections2.push(foeLane.get_shape_2().length());
+                            haveIntersection = true;
+                        }
+                    }
+
+                    let last1 = intersections1.len() - 1;
+                    let last2 = intersections2.len() - 1;
+                    let mut conflictSize = foeLane.get_width();
+                    let mut flag = MSLink_ConflictFlag::CONFLICT_NO_INTERSECTION;
+                    if haveIntersection {
+                        flag = MSLink_ConflictFlag::CONFLICT_DEFAULT;
+                        let angle1 = navi_degree(lane.get_shape_2().rotation_at_offset(intersections1[last1]));
+                        let angle2 = navi_degree(foeLane.get_shape_2().rotation_at_offset(intersections2[last2]));
+                        let angleDiff = get_min_angle_diff(angle1, angle2);
+                        let widthFactor = 1. / max2(deg2rad(angleDiff).sin(), 0.2) * 2. - 1.;
+                        conflictSize *= widthFactor;
+                        conflictSize = min2(conflictSize, lane.get_length());
+                        // lane width affects the crossing point
+                        intersections1[last1] -= conflictSize / 2.;
+                        // ensure non-negative offset for weird geometries
+                        intersections1[last1] = max2(0.0, intersections1[last1]);
+
+                        // also length/geometry factor. (XXX: Why subtract width/2 *before* converting geometric position to lane pos? refs #3031)
+                        intersections1[last1] = lane.interpolate_geometry_pos_to_lane_pos(intersections1[last1]);
+
+                        if internalLaneBefore.get_logical_predecessor_lane().get_edge().is_internal() && !foeLane.is_crossing() {
+                            flag = MSLink_ConflictFlag::CONFLICT_STOP_AT_INTERNAL_JUNCTION;
+                        }
+
+                        if foeLane.is_crossing() {
+                            let before = self.myInternalLaneBefore.get_canonical_predecessor_lane().get_link_to(self.myInternalLaneBefore);
+                            before.m().update_dist_to_foe_ped_crossing(intersections1[last1]);
+                        }
+                    }
+
+                    self.myConflicts.push(MSLink_ConflictInfo::new(lane.get_length() - intersections1[last1], conflictSize, flag));
+                }
+            }
+            // check for overlap with internal lanes from the same source lane
+            let pred = lane.get_logical_predecessor_lane();
+            // to avoid overlap with vehicles that came from pred (especially when pred has endOffset > 0)
+            // we add all other internal lanes from pred as foeLanes
+            for &link in pred.get_link_cont().iter() {
+                let sibling = link.get_via_lane();
+                if sibling != lane && !sibling.is_null() {
+                    let minDist = min2(DIVERGENCE_MIN_WIDTH, 0.5 * (lane.get_width() + sibling.get_width()));
+                    if lane.get_shape_2().front().distance_to2d(sibling.get_shape_2().front()) >= minDist {
+                        // account for lateral shift by the entry links
+                        continue;
+                    }
+                    let distToDivergence = self.compute_dist_to_divergence(lane, sibling, minDist, true, 0.);
+                    let lbcLane;
+                    if lane.get_length() == sibling.get_length() && std::ptr::eq(lane.get_edge(), sibling.get_edge()) {
+                        // for parallel lanes, avoid inconsistency in distance estimation (#10988)
+                        // between forward distance (getLeaderInfo)
+                        // and backward distance used in lane-changing (getFollowersOnConsecutive)
+                        lbcLane = lane.get_length() - distToDivergence;
+                    } else {
+                        lbcLane = max2(0.0, lane.get_length() - lane.interpolate_geometry_pos_to_lane_pos(distToDivergence));
+                    }
+                    let ci = MSLink_ConflictInfo::new(lbcLane, sibling.get_width(), MSLink_ConflictFlag::CONFLICT_DEFAULT);
+                    match self.myFoeLanes.iter().position(|&x| x == sibling) {
+                        Some(replacedIndex) => {
+                            // avoid duplicate foeLane
+                            self.myConflicts[replacedIndex] = ci;
+                        }
+                        None => {
+                            self.myConflicts.push(ci);
+                            self.myFoeLanes.push(sibling);
+                        }
+                    }
+                    let siblingCont = sibling.get_link_cont()[0].get_via_lane_or_lane();
+                    if siblingCont.is_internal() && lane.get_shape_2().distance2d(siblingCont.get_shape_2().front(), false) < minDist {
+                        // there may still be overlap with siblingCont (when considering vehicle widths)
+                        let maxCommonLength = min2(lane.get_length(), sibling.get_length() + siblingCont.get_length());
+                        let lengthBehindDivergence = max2(0.0, lane.get_length() - maxCommonLength);
+                        let ci2 = MSLink_ConflictInfo::new(lengthBehindDivergence, siblingCont.get_width(), MSLink_ConflictFlag::CONFLICT_SIBLING_CONTINUATION);
+                        self.myConflicts.push(ci2);
+                        self.myFoeLanes.push(siblingCont);
+                        recheck_insert(this, siblingCont.get_link_cont()[0]);
+                    }
+                }
+            }
+            // init points for the symmetrical conflict
+            // for each pair of conflicting lanes, the link that gets second, sets the pointers
+            for i in 0..self.myFoeLanes.len() {
+                let foeLane = self.myFoeLanes[i];
+                let foeExitLink = foeLane.get_link_cont()[0];
+                let mut foundIndex: i32 = -1;
+                for i2 in 0..foeExitLink.myFoeLanes.len() {
+                    if foeExitLink.myFoeLanes[i2] == lane {
+                        self.myConflicts[i].foeConflictIndex = i2 as i32;
+                        foeExitLink.m().myConflicts[i2].foeConflictIndex = i as i32;
+                        recheck_erase(foeExitLink, this);
+                        foundIndex = i2 as i32;
+                        break;
+                    }
+                }
+                if foundIndex < 0 {
+                    if self.myConflicts[i].flag != MSLink_ConflictFlag::CONFLICT_NO_INTERSECTION {
+                        recheck_insert(this, foeExitLink);
+                    }
+                }
+            }
+        }
+        if g_lateral_resolution() > 0. {
+            // check for links with the same origin lane and the same destination edge
+            let myTarget = self.myLane.get_edge() as *const MSEdge;
+            // save foes for entry links
+            let laneBefore = self.myLaneBefore;
+            for &it in laneBefore.get_link_cont().iter() {
+                let target = it.get_lane().get_edge() as *const MSEdge;
+                if it == this {
+                    continue;
+                }
+                if std::ptr::eq(target, myTarget) {
+                    self.mySublaneFoeLinks.push(it);
+                } else if self.myDirection != LinkDirection::STRAIGHT && it.get_direction() == LinkDirection::STRAIGHT {
+                    // potential turn conflict
+                    self.mySublaneFoeLinks2.push(it);
+                }
+            }
+            // save foes for exit links
+            if self.from_internal_lane() {
+                for &link in laneBefore.get_incoming_lanes()[0].lane.get_link_cont().iter() {
+                    if link.get_via_lane() != self.myInternalLaneBefore && std::ptr::eq(link.get_lane().get_edge() as *const MSEdge, myTarget) {
+                        self.mySublaneFoeLanes.push(link.get_via_lane());
+                    }
+                }
+            }
+        }
+        if !self.myInternalLaneBefore.is_null()
+            && self.myDirection != LinkDirection::STRAIGHT
+            // for right turns, the curvature helps rather than restricts the linkLeader check
+            && ((!g_lefthand() && self.myDirection != LinkDirection::RIGHT)
+                || (g_lefthand() && self.myDirection != LinkDirection::LEFT))
+        {
+            let angle = angle_diff(
+                self.myLaneBefore.get_normal_predecessor_lane().get_shape_2().angle_at2d(-2),
+                self.myLane.get_shape_2().angle_at2d(0),
+            )
+            .abs();
+            if angle > 0. {
+                let mut length = self.myInternalLaneBefore.get_shape_2().length2d();
+                if self.myInternalLaneBefore.get_incoming_lanes().len() == 1 && self.myInternalLaneBefore.get_incoming_lanes()[0].lane.is_internal() {
+                    length += self.myInternalLaneBefore.get_incoming_lanes()[0].lane.get_shape_2().length2d();
+                } else if !self.myInternalLane.is_null() {
+                    length += self.myInternalLane.get_shape_2().length2d();
+                }
+                self.myRadius = length / angle;
+            }
+        }
     }
 
     /// C++: `void MSLink::addWalkingAreaFoe(const MSLane *)`
@@ -874,7 +1303,17 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_approaching(&mut self, approaching: Ptr<SUMOVehicle>, arrivalTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, setRequest: bool, arrivalSpeedBraking: f64, waitingTime: SUMOTime, dist: f64, latOffset: f64) {
-        todo!("port MSLink::setApproaching")
+        let leaveTime = self.get_leave_time(arrivalTime, arrivalSpeed, leaveSpeed, approaching.get_vehicle_type().get_length());
+        if g_use_meso_sim() {
+            // - in meso, setApproaching may be called multiple times without intermediate removeApproaching (whenever a vehicle is blocked in MELoop::checkCar)
+            // explicit erasure is necessary because emplace does nothing if the key already exists
+            // - in micro, double registration only happens on looped routes. Here, we only wish to keep the first arrival and thus emplace has the correct behavior
+            //   (on meso, only the next upcoming link is registered so nothing gets overwritten on looped routes)
+            self.myApproachingVehicles.remove(&approaching);
+        }
+        let info = MSLink_ApproachingVehicleInformation::new(arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, approaching.get_speed(), latOffset);
+        // emplace does not overwrite an existing entry
+        self.myApproachingVehicles.entry(approaching).or_insert(info);
     }
 
     /// C++: `void MSLink::setApproaching(const SUMOVehicle *, ApproachingVehicleInformation)`
@@ -897,7 +1336,8 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_approaching_2(&mut self, approaching: Ptr<SUMOVehicle>, ai: MSLink_ApproachingVehicleInformation) {
-        todo!("port MSLink::setApproaching")
+        // emplace does not overwrite an existing entry
+        self.myApproachingVehicles.entry(approaching).or_insert(ai);
     }
 
     /// C++: `void MSLink::setApproachingPerson(const MSPerson *, const SUMOTime, const SUMOTime)`
@@ -911,7 +1351,11 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn set_approaching_person(&mut self, approaching: Ptr<MSPerson>, arrivalTime: SUMOTime, leaveTime: SUMOTime) {
-        todo!("port MSLink::setApproachingPerson")
+        if self.myApproachingPersons.is_null() {
+            self.myApproachingPersons = Ptr::from_mut(Box::leak(Box::new(BTreeMap::new())));
+        }
+        // emplace does not overwrite an existing entry
+        self.myApproachingPersons.m().entry(approaching).or_insert(MSLink_ApproachingPersonInformation::new(arrivalTime, leaveTime));
     }
 
     /// C++: `void MSLink::removeApproaching(const SUMOVehicle *)`
@@ -934,7 +1378,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn remove_approaching(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSLink::removeApproaching")
+        self.myApproachingVehicles.remove(&veh);
     }
 
     /// C++: `void MSLink::removeApproachingPerson(const MSPerson *)`
@@ -958,21 +1402,31 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn remove_approaching_person(&mut self, person: Ptr<MSPerson>) {
-        todo!("port MSLink::removeApproachingPerson")
+        if self.myApproachingPersons.is_null() {
+            utils::write_warningf!("Person '%' entered crossing lane '%' without registering approach, time=%", person.get_id().to_string(), self.myLane.get_id().to_string(), time2string(MSNet::get_instance().get_current_time_step()));
+            return;
+        }
+        self.myApproachingPersons.m().remove(&person);
     }
 
     /// C++: `ApproachingVehicleInformation MSLink::getApproaching(const SUMOVehicle *) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_approaching(&self, veh: Ptr<SUMOVehicle>) -> MSLink_ApproachingVehicleInformation {
-        todo!("port MSLink::getApproaching")
+        match self.myApproachingVehicles.get(&veh) {
+            Some(i) => MSLink_ApproachingVehicleInformation::new(i.arrivalTime, i.leavingTime, i.arrivalSpeed, i.leaveSpeed, i.willPass, i.arrivalSpeedBraking, i.waitingTime, i.dist, i.speed, i.latOffset),
+            None => MSLink_ApproachingVehicleInformation::new(INVALID_TIME, INVALID_TIME, 0., 0., false, 0., 0, 0., 0., 0.),
+        }
     }
 
     /// C++: `const ApproachingVehicleInformation * MSLink::getApproachingPtr(const SUMOVehicle *) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_approaching_ptr(&self, veh: Ptr<SUMOVehicle>) -> Ptr<MSLink_ApproachingVehicleInformation> {
-        todo!("port MSLink::getApproachingPtr")
+        match self.myApproachingVehicles.get(&veh) {
+            Some(i) => Ptr::new(i),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `const ApproachInfos & MSLink::getApproaching() const` [const]
@@ -982,7 +1436,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_approaching_2(&self) -> &MSLink_ApproachInfos {
-        todo!("port MSLink::getApproaching")
+        &self.myApproachingVehicles
     }
 
     /// C++: `const PersonApproachInfos * MSLink::getApproachingPersons() const` [const]
@@ -992,7 +1446,7 @@ impl MSLink {
     //     }
     #[allow(unused_variables)]
     pub fn get_approaching_persons(&self) -> Ptr<MSLink_PersonApproachInfos> {
-        todo!("port MSLink::getApproachingPersons")
+        self.myApproachingPersons
     }
 
     /// C++: `void MSLink::clearState()`
@@ -1003,7 +1457,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSLink::clearState")
+        self.myApproachingVehicles.clear();
     }
 
     /// C++: `bool MSLink::opened(SUMOTime, double, double, double, double, double, SUMOTime, double, BlockingFoes *, bool, const SUMOTrafficObject *, double) const` [const]
@@ -1989,7 +2443,11 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn get_leave_time(&self, arrivalTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, vehicleLength: f64) -> SUMOTime {
-        todo!("port MSLink::getLeaveTime")
+        if arrivalTime == SUMOTIME_MAX {
+            SUMOTIME_MAX
+        } else {
+            arrivalTime + time2steps((self.get_length() + vehicleLength) / max2(0.5 * (arrivalSpeed + leaveSpeed), NUMERICAL_EPS))
+        }
     }
 
     /// C++: `void MSLink::writeApproaching(OutputDevice &, const std::string) const` [const]
@@ -2262,7 +2720,8 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn update_permissions(&mut self) {
-        todo!("port MSLink::updatePermissions")
+        // we only ever increase permission because transient permission reductions lead to invalid bestLanes assignment otherwise
+        self.myPermissions |= self.myLaneBefore.get_permissions() & self.myLane.get_permissions() & (if self.myInternalLane.is_null() { SVC_ALL } else { self.myInternalLane.get_permissions() });
     }
 
     /// C++: `void MSLink::initParallelLinks()`
@@ -2398,7 +2857,51 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn recheck_set_request_information() {
-        todo!("port MSLink::recheckSetRequestInformation")
+        let items: Vec<(Ptr<MSLink>, Ptr<MSLink>)> = MY_RECHECK.with(|r| r.borrow().iter().cloned().collect());
+        for (link, foeExitLink) in items {
+            let lane = link.get_internal_lane_before();
+            let foeLane = foeExitLink.get_internal_lane_before();
+            let mut conflictIndex: i32 = -1;
+            for i in 0..link.myFoeLanes.len() {
+                if link.myFoeLanes[i] == foeLane {
+                    conflictIndex = i as i32;
+                    break;
+                }
+            }
+            if conflictIndex == -1 {
+                utils::common::msg_handler::write_warning(&format!("Could not recheck ConflictInfo for {} and {}\n", link.get_description(), foeExitLink.get_description()));
+                continue;
+            }
+            let ci = conflictIndex as usize;
+            if (link.myConflicts[ci].flag as i64 & MSLink_ConflictFlag::CONFLICT_SIBLING_CONTINUATION as i64) != 0 {
+                let intLane = link.get_internal_lane_before();
+                let siblingCont = foeExitLink.get_internal_lane_before();
+                let sibling = siblingCont.get_logical_predecessor_lane();
+                let distToDivergence = intLane.get_length() - link.myConflicts[ci].lengthBehindCrossing;
+                let lbcSibCont = min2(siblingCont.get_length(), max2(0.0, sibling.get_length() + siblingCont.get_length() - distToDivergence));
+                let ci2 = MSLink_ConflictInfo::new(lbcSibCont, intLane.get_width(), MSLink_ConflictFlag::CONFLICT_DEFAULT);
+                // the vector index of ci2 is set before ci2 is appended to foeExitLink
+                let mut ci2 = ci2;
+                ci2.foeConflictIndex = conflictIndex;
+                link.m().myConflicts[ci].foeConflictIndex = foeExitLink.myConflicts.len() as i32;
+                foeExitLink.m().myFoeLanes.push(intLane);
+                foeExitLink.m().myConflicts.push(ci2);
+                continue;
+            }
+            let mut intersections1 = foeLane.get_shape_2().intersects_at_lengths2d_pv(lane.get_shape_2());
+            if intersections1.is_empty() {
+                continue;
+            }
+            let widthFactor = link.myConflicts[ci].conflictSize / foeLane.get_width();
+            let conflictSize2 = lane.get_width() * widthFactor;
+            intersections1.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let last = intersections1.len() - 1;
+            intersections1[last] -= conflictSize2 / 2.;
+            intersections1[last] = max2(0.0, intersections1[last]);
+            link.m().myConflicts[ci].foeConflictIndex = foeExitLink.myConflicts.len() as i32;
+            foeExitLink.m().myConflicts.push(MSLink_ConflictInfo::new(foeLane.get_length() - intersections1[last], conflictSize2, MSLink_ConflictFlag::CONFLICT_DEFAULT));
+        }
+        MY_RECHECK.with(|r| r.borrow_mut().clear());
     }
 
     /// C++: `bool MSLink::ignoreFoe(const SUMOTrafficObject *, const SUMOTrafficObject *)` [static]
@@ -2744,7 +3247,11 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn cont_intersect(&mut self, lane: Ptr<MSLane>, foe: Ptr<MSLane>) -> bool {
-        todo!("port MSLink::contIntersect")
+        if !foe.get_link_cont()[0].get_via_lane().is_null() {
+            let intersections = lane.get_shape_2().intersects_at_lengths2d_pv(foe.get_shape_2());
+            return intersections.len() > 0;
+        }
+        false
     }
 
     /// C++: `double MSLink::computeDistToDivergence(const MSLane *, const MSLane *, double, bool, double) const` [const, private]
@@ -2834,7 +3341,57 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn compute_dist_to_divergence(&self, lane: Ptr<MSLane>, sibling: Ptr<MSLane>, minDist: f64, sameSource: bool, siblingPredLength: f64) -> f64 {
-        todo!("port MSLink::computeDistToDivergence")
+        let mut lbcSibling = 0.;
+        let mut lbcLane = 0.;
+        let mut l = lane.get_shape_2().clone();
+        let mut s = sibling.get_shape_2().clone();
+        let length = l.length2d();
+        let sibLength = s.length2d();
+        if !sameSource {
+            l = l.reverse();
+            s = s.reverse();
+        } else if sibling.get_entry_link().myAmIndirect {
+            lbcSibling += s.at(-1).distance_to2d(s.at(-2));
+            s.pop();
+        } else if lane.get_entry_link().myAmIndirect {
+            lbcLane += l.at(-1).distance_to2d(l.at(-2));
+            l.pop();
+        }
+        if l.back().distance_to2d(s.back()) > minDist {
+            let distances = l.distances(&s, false);
+            debug_assert!(distances.len() == l.len() + s.len());
+            if distances[distances.len() - 1] > minDist && distances[l.len() - 1] > minDist {
+                for j in (0..s.len() as isize - 1).rev() {
+                    let j = j as usize;
+                    let i = j + l.len();
+                    let segLength = s[j].distance_to2d(&s[j + 1]);
+                    if distances[i] > minDist {
+                        lbcSibling += segLength;
+                    } else {
+                        lbcSibling += segLength - (minDist - distances[i]) * segLength / (distances[i + 1] - distances[i]);
+                        break;
+                    }
+                }
+                for i in (0..l.len() as isize - 1).rev() {
+                    let i = i as usize;
+                    let segLength = l[i].distance_to2d(&l[i + 1]);
+                    if distances[i] > minDist {
+                        lbcLane += segLength;
+                    } else {
+                        lbcLane += segLength - (minDist - distances[i]) * segLength / (distances[i + 1] - distances[i]);
+                        break;
+                    }
+                }
+            }
+            debug_assert!(lbcSibling >= -NUMERICAL_EPS);
+            debug_assert!(lbcLane >= -NUMERICAL_EPS);
+        }
+        let distToDivergence1 = sibling.get_length() + siblingPredLength - lbcSibling;
+        let distToDivergence2 = lane.get_length() - lbcLane;
+        let maxDist = max2(distToDivergence1, distToDivergence2);
+        // C++ MIN3(a, b, c) = MIN2(c, a < b ? a : b)
+        let distToDivergence = min2(length, if maxDist < sibLength { maxDist } else { sibLength });
+        distToDivergence
     }
 
     /// C++: `SUMOTime MSLink::computeFoeArrivalTimeBraking(SUMOTime, const SUMOVehicle *, SUMOTime, double, double, double &)` [static, private]
@@ -2922,7 +3479,16 @@ impl MSLink {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_custom_conflict(&self, foeLane: Ptr<MSLane>) -> Ptr<MSLink_CustomConflict> {
-        todo!("port MSLink::getCustomConflict")
+        if !self.myCustomConflicts.is_empty() {
+            let foeFrom = foeLane.get_normal_predecessor_lane();
+            let foeTo = foeLane.get_normal_successor_lane();
+            for cc in self.myCustomConflicts.iter() {
+                if cc.from == foeFrom && cc.to == foeTo {
+                    return Ptr::new(cc);
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSLink::updateDistToFoePedCrossing(double)` [private]
