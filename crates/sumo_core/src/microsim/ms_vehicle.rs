@@ -3930,7 +3930,46 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_slope(&self) -> f64 {
-        todo!("port MSVehicle::getSlope")
+        if self.is_parking() && self.get_stops().front().map_or(false, |s| !s.parkingarea.is_null()) {
+            let parkingArea = self.get_stops().front().unwrap().parkingarea;
+            let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
+            return parkingArea.m().get_vehicle_slope(veh.get());
+        }
+        if self.myLane.is_null() {
+            return 0.0;
+        }
+        if crate::microsim::ms_globals::slope_centered() {
+            let mut centerLane = self.myLane;
+            let mut centerPos = self.get_position_on_lane() - self.get_length() / 2.0;
+            let mut furtherIndex: usize = 0;
+            while centerPos < 0.0 && furtherIndex < self.myFurtherLanes.len() {
+                centerLane = self.myFurtherLanes[furtherIndex];
+                centerPos += centerLane.m().get_length();
+                furtherIndex += 1;
+            }
+            return centerLane.m().get_shape_2().slope_degree_at_offset(centerLane.m().interpolate_lane_pos_to_geometry_pos(centerPos));
+        }
+        let posLat = self.myState.myPosLat; // @todo get rid of the '-'
+        let p1 = self.get_position(0.0);
+        let mut p2 = self.get_back_position();
+        if p2 == Position::INVALID {
+            // Handle special case of vehicle's back reaching out of the network
+            if self.myFurtherLanes.len() > 0 {
+                let last = self.myFurtherLanes.len() - 1;
+                p2 = self.myFurtherLanes[last].m().geometry_position_at_offset(0.0, -self.myFurtherLanesPosLat[last]);
+                if p2 == Position::INVALID {
+                    // unsuitable lane geometry
+                    p2 = self.myLane.m().geometry_position_at_offset(0.0, posLat);
+                }
+            } else {
+                p2 = self.myLane.m().geometry_position_at_offset(0.0, posLat);
+            }
+        }
+        if p1 != p2 {
+            utils::geom::geom_helper::rad2deg(p2.slope_to2d(&p1))
+        } else {
+            self.myLane.m().get_shape_2().slope_degree_at_offset(self.myLane.m().interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane()))
+        }
     }
 
     /// C++: `Position MSVehicle::getPosition(const double) const` [const, virtual]
@@ -3975,7 +4014,46 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, offset: f64) -> Position {
-        todo!("port MSVehicle::getPosition")
+        // myCachedPosition is a mutable member written from this const method (C++ `mutable`)
+        let cache = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle);
+        if self.myLane.is_null() {
+            // when called in the context of GUI-Drawing, the simulation step is already incremented
+            if !self.myInfluencer.is_null() && self.myInfluencer.m().is_remote_affected(MSNet::get_instance().get_current_time_step()) {
+                return self.myCachedPosition;
+            } else {
+                return Position::INVALID;
+            }
+        }
+        if self.is_parking() {
+            if !self.myInfluencer.is_null() && self.myInfluencer.m().get_last_access_time_step() > self.get_next_stop_parameter().m().started {
+                return self.myCachedPosition;
+            }
+            let parkingArea = self.get_stops().front().unwrap().parkingarea;
+            if !parkingArea.is_null() {
+                let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
+                return parkingArea.m().get_vehicle_position(veh.get());
+            } else {
+                // position beside the road
+                let mut shp = self.myLane.m().get_edge().get_lanes()[0].m().get_shape_2().clone();
+                shp.move2side(utils::common::std_defs::SUMO_CONST_LANE_WIDTH * (if crate::microsim::ms_globals::lefthand() { -1.0 } else { 1.0 }), 100.0);
+                return shp.position_at_offset(self.myLane.m().interpolate_lane_pos_to_geometry_pos(self.get_position_on_lane() + offset), 0.0);
+            }
+        }
+        let changingLanes = self.myLaneChangeModel.m().is_changing_lanes();
+        let posLat = (if crate::microsim::ms_globals::lefthand() { 1.0 } else { -1.0 }) * self.get_lateral_position_on_lane();
+        if offset == 0.0 && !changingLanes {
+            if self.myCachedPosition == Position::INVALID {
+                let mut pos = self.validate_position(self.myLane.m().geometry_position_at_offset(self.myState.myPos, posLat), 0.0);
+                if MSNet::get_instance().has_elevation() && crate::microsim::ms_globals::sublane() {
+                    self.interpolate_lateral_z(&mut pos, self.myState.myPos, posLat);
+                }
+                cache.m().myCachedPosition = pos;
+            }
+            return self.myCachedPosition;
+        }
+        let mut result = self.validate_position(self.myLane.m().geometry_position_at_offset(self.get_position_on_lane() + offset, posLat), offset);
+        self.interpolate_lateral_z(&mut result, self.get_position_on_lane() + offset, posLat);
+        result
     }
 
     /// C++: `Position MSVehicle::getPositionAlongBestLanes(double) const` [const]
