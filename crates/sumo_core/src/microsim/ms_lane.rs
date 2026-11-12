@@ -985,7 +985,8 @@ impl MSLane {
             let mut dist = speed * utils::common::time::steps2time(relevantDelay);
             let (leader, leaderGap) = self.get_leader(Ptr::from_mut(v), pos, v.get_best_lanes_continuation(), 0., false);
             if !leader.is_null() {
-                let frontGapNeeded = v.get_car_follow_model().get_secure_gap(Ptr::from_mut(v), leader, speed, leader.get_speed(), leader.get_car_follow_model().get_max_decel());
+                let vp = Ptr::from_mut(v);
+                let frontGapNeeded = v.get_car_follow_model().get_secure_gap(vp, leader, speed, leader.get_speed(), leader.get_car_follow_model().get_max_decel());
                 dist = dist.min(leaderGap - frontGapNeeded);
             }
             if dist > 0. {
