@@ -1,8 +1,10 @@
-//! Port of netimport/NIXMLPTHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of netimport/NIXMLPTHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Every method is a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::{write_error, write_message, write_warning};
 use utils::common::rgb_color::RGBColor;
+use utils::tlf;
+use crate::netimport::ni_importer_open_street_map::NIImporter_OpenStreetMap;
 use utils::common::string_tokenizer::StringTokenizer;
 use utils::common::string_utils::{to_double, to_int};
 use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_SHIP, SVC_TAXI, get_vehicle_class_id, is_railway};
@@ -379,7 +381,78 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_stop(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addPTStop")
+        let mut ok = true;
+        let id: String = attrs.get::<String>(SUMO_ATTR_ID, "busStop", &mut ok, true);
+        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let laneID: String = attrs.get::<String>(SUMO_ATTR_LANE, &id, &mut ok, true);
+        let mut startPos: f64 = attrs.get::<f64>(SUMO_ATTR_STARTPOS, &id, &mut ok, true);
+        let mut endPos: f64 = attrs.get::<f64>(SUMO_ATTR_ENDPOS, &id, &mut ok, true);
+        let parkingLength: f64 = attrs.get_opt::<f64>(SUMO_ATTR_PARKING_LENGTH, &id, &mut ok, 0., true);
+        let color: RGBColor = get_opt_color(attrs, SUMO_ATTR_COLOR, &id, &mut ok);
+        let lines: String = attrs.get_opt::<String>(SUMO_ATTR_LINES, &id, &mut ok, String::new(), true);
+        let mut laneIndex: i32 = NBEdge::get_lane_index_from_lane_id(laneID.clone());
+        let mut edgeID: String = get_edge_id_from_lane(&laneID);
+        let mut edge: Ptr<NBEdge> = self.myEdgeCont.retrieve(&edgeID, false);
+        if edge.is_null() {
+            edge = self.myEdgeCont.retrieve(&edgeID, true);
+            if !edge.is_null() && self.myEdgeCont.get_split(edge).is_null() {
+                // splits are treated later
+                edge = Ptr::null();
+            }
+        }
+        if edge.is_null() {
+            if !self.report_error("Edge '%' for stop '%' not found", &edgeID, &id) {
+                self.myCurrentStopWasIgnored = true;
+                NBPTStopCont::add_ignored(&id);
+            }
+            return;
+        }
+        if edge.get_num_lanes() <= laneIndex {
+            if self.myWarnOnly {
+                write_warning(&tlf!("Lane '%' for stop '%' not found. Using leftmost lane", laneID, id));
+                laneIndex = edge.get_num_lanes() - 1;
+            } else {
+                write_error(&tlf!("Lane '%' for stop '%' not found", laneID, id));
+                return;
+            }
+        }
+        let mut permissions: SVCPermissions = edge.get_permissions(laneIndex);
+        // possibly the stops were written for a different network. If the lane is not a typical public transport stop lane, assume bus as the default
+        if !is_railway(permissions) && permissions != SVC_SHIP && permissions != SVC_TAXI {
+            permissions = SVC_BUS;
+        }
+        if ok {
+            if startPos < 0. {
+                startPos += edge.get_loaded_length();
+            }
+            if endPos < 0. {
+                endPos += edge.get_loaded_length();
+            }
+            if self.myEdgeCont.was_removed(edgeID.clone()) && (startPos >= endPos || startPos < 0. || endPos < 0. || startPos >= edge.get_loaded_length() || endPos >= edge.get_loaded_length()) {
+                let longest: Ptr<NBEdge> = self.myEdgeCont.get_split_base(&edgeID);
+                if !longest.is_null() {
+                    edge = longest;
+                }
+            }
+            let pos: Position = edge.geometry_position_at_offset((startPos + endPos) / 2.);
+            let stopRc: Rc<NBPTStop> = Rc::new(NBPTStop::new(element, id.clone(), pos, edgeID.clone(), edgeID.clone(), endPos - startPos, name.clone(), permissions, parkingLength, color, startPos));
+            self.myCurrentStop = Some(stopRc.clone());
+            let stop: &mut NBPTStop = stop_mut(&stopRc);
+            while !self.myEdgeCont.get_split(edge).is_null() {
+                stop.reset_loaded();
+                let split: (Ptr<NBEdge>, Ptr<NBEdge>) = *self.myEdgeCont.get_split(edge);
+                if stop.replace_edge(&edgeID, &vec![split.0, split.1]) {
+                    edge = if split.0.get_id() == stop.get_edge_id() { split.0 } else { split.1 };
+                    edgeID = edge.get_id().to_string();
+                }
+            }
+            for line in StringTokenizer::new(&lines).get_vector() {
+                stop.add_line(&line);
+            }
+            if !self.myStopCont.m().insert(stopRc.clone(), false) {
+                write_error(&tlf!("Could not add public transport stop '%' (already exists)", id));
+            }
+        }
     }
 
     /// C++: `void NIXMLPTHandler::addPTLineRoute(const SUMOSAXAttributes &)` [private]
@@ -405,7 +478,23 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_line_route(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addPTLineRoute")
+        if self.myCurrentLine.is_null() {
+            write_error(&tlf!("Found route outside line definition"));
+            return;
+        }
+        let mut ok = true;
+        let edgeIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, "", &mut ok, true);
+        let mut edges: EdgeVector = Vec::new();
+        for edgeID in &edgeIDs {
+            let edge: Ptr<NBEdge> = self.myEdgeCont.retrieve(edgeID, false);
+            if edge.is_null() {
+                let lineID: String = self.myCurrentLine.get_line_id().to_string();
+                self.report_error("Edge '%' in route of line '%' not found", edgeID, &lineID);
+            } else {
+                edges.push(edge);
+            }
+        }
+        self.myCurrentLine.m().set_edges(&edges);
     }
 
     /// C++: `void NIXMLPTHandler::addRoute(const SUMOSAXAttributes &)` [private]
@@ -428,7 +517,22 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_route(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addRoute")
+        let mut ok = true;
+        self.myCurrentRouteID = attrs.get::<String>(SUMO_ATTR_ID, "route", &mut ok, true);
+        let edgeIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_EDGES, &self.myCurrentRouteID, &mut ok, true);
+        let mut edges: EdgeVector = Vec::new();
+        for edgeID in &edgeIDs {
+            let edge: Ptr<NBEdge> = self.myEdgeCont.retrieve(edgeID, false);
+            if edge.is_null() {
+                // C++ dereferences myCurrentLine here although it is nullptr for stand-alone routes (undefined behaviour);
+                // an empty line id is reported instead of crashing
+                let lineID: String = if self.myCurrentLine.is_null() { String::new() } else { self.myCurrentLine.get_line_id().to_string() };
+                self.report_error("Edge '%' in route of line '%' not found", edgeID, &lineID);
+            } else {
+                edges.push(edge);
+            }
+        }
+        self.myRouteEdges.insert(self.myCurrentRouteID.clone(), edges);
     }
 
     /// C++: `void NIXMLPTHandler::addPTLineStop(const SUMOSAXAttributes &)` [private]
@@ -450,7 +554,20 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_line_stop(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addPTLineStop")
+        let mut ok = true;
+        let id: String = if attrs.has_attribute(SUMO_ATTR_ID) {
+            attrs.get::<String>(SUMO_ATTR_ID, "ptLine", &mut ok, true)
+        } else {
+            attrs.get::<String>(SUMO_ATTR_BUS_STOP, "ptline", &mut ok, true)
+        };
+        // C++ NBPTStopCont::get returns nullptr for unknown ids; an Rc cannot be null, so the lookup is the same map lookup on get_stops()
+        let Some(stop) = self.myStopCont.get_stops().get(&id).cloned() else {
+            if !NBPTStopCont::was_ignored(&id) {
+                write_error(&tlf!("Stop '%' within line '%' not found", id, self.myCurrentLine.get_line_id()));
+            }
+            return;
+        };
+        self.myCurrentLine.m().add_pt_stop(stop);
     }
 
     /// C++: `void NIXMLPTHandler::addRouteStop(const SUMOSAXAttributes &)` [private]
@@ -471,7 +588,19 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_route_stop(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addRouteStop")
+        assert!(self.myCurrentRouteID != "");
+        let mut ok = true;
+        let id: String = if attrs.has_attribute(SUMO_ATTR_ID) {
+            attrs.get::<String>(SUMO_ATTR_ID, "ptLine", &mut ok, true)
+        } else {
+            attrs.get::<String>(SUMO_ATTR_BUS_STOP, "ptline", &mut ok, true)
+        };
+        // C++ NBPTStopCont::get returns nullptr for unknown ids; an Rc cannot be null, so the lookup is the same map lookup on get_stops()
+        let Some(stop) = self.myStopCont.get_stops().get(&id).cloned() else {
+            write_error(&tlf!("Stop '%' within route '%' not found", id, self.myCurrentRouteID));
+            return;
+        };
+        self.myRouteStops.entry(self.myCurrentRouteID.clone()).or_default().push(stop);
     }
 
     /// C++: `void NIXMLPTHandler::addAccess(const SUMOSAXAttributes &)` [private]
@@ -500,7 +629,24 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_access(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addAccess")
+        let Some(stop) = self.myCurrentStop.clone() else {
+            if self.myCurrentStopWasIgnored {
+                return;
+            }
+            panic!("{}", ProcessError::new("Could not add access outside a stopping place."));
+        };
+        let mut ok = true;
+        let laneID: String = attrs.get::<String>(SUMO_ATTR_LANE, "access", &mut ok, true);
+        let edgeID: String = get_edge_id_from_lane(&laneID);
+        if self.myEdgeCont.retrieve(&edgeID, false).is_null() {
+            self.report_error("Edge '%' for access to stop '%' not found", &edgeID, &stop.get_id());
+            return;
+        }
+        let pos: f64 = attrs.get::<f64>(SUMO_ATTR_POSITION, "access", &mut ok, true);
+        let length: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, "access", &mut ok, -1., true);
+        if ok {
+            stop_mut(&stop).add_access(laneID, pos, length);
+        }
     }
 
     /// C++: `void NIXMLPTHandler::addPTLine(const SUMOSAXAttributes &)` [private]
@@ -544,7 +690,41 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_line(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addPTLine")
+        let mut ok = true;
+        let id: String = attrs.get::<String>(SUMO_ATTR_ID, "ptLine", &mut ok, true);
+        let name: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let line: String = attrs.get_opt::<String>(SUMO_ATTR_LINE, &id, &mut ok, String::new(), true);
+        let type_: String = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut ok, String::new(), true);
+        let mut vClass: SUMOVehicleClass = NIImporter_OpenStreetMap::interpret_transport_type(&type_, Ptr::null());
+        if attrs.has_attribute(SUMO_ATTR_VCLASS) {
+            vClass = get_vehicle_class_id(&attrs.get::<String>(SUMO_ATTR_VCLASS, &id, &mut ok, true)).unwrap_or_else(|e| panic!("{e}"));
+        }
+        let color: RGBColor = get_opt_color(attrs, SUMO_ATTR_COLOR, &id, &mut ok);
+        let intervalS: i32 = attrs.get_opt::<i32>(SUMO_ATTR_PERIOD, &id, &mut ok, -1, true);
+        let nightService: String = attrs.get_string_secure_name("nightService", "");
+        self.myCurrentCompletion = to_double(&attrs.get_string_secure_name("completeness", "1")).unwrap_or_else(|e| panic!("{e}"));
+        self.myMissingBefore = to_int(&attrs.get_string_secure_name("missingBefore", "0")).unwrap_or_else(|e| panic!("{e}"));
+        self.myMissingAfter = to_int(&attrs.get_string_secure_name("missingAfter", "0")).unwrap_or_else(|e| panic!("{e}"));
+        if ok {
+            // patching existing line?
+            self.myCurrentLine = self.myLineCont.m().retrieve(&id);
+            if self.myCurrentLine.is_null() {
+                let newLine: NBPTLine = NBPTLine::new(&id, &name, &type_, &line, intervalS / 60, &nightService, vClass, color);
+                self.myCurrentLine = Ptr::from_raw(Box::into_raw(Box::new(newLine)));
+                self.myLineCont.m().insert(self.myCurrentLine);
+            } else {
+                write_message(&tlf!("Duplicate ptLine id occurred ('%'); assuming overwriting is wished.", id));
+                if name != "" {
+                    self.myCurrentLine.m().set_name(&name);
+                }
+                if line != "" {
+                    self.myCurrentLine.m().set_ref(&line);
+                }
+                if intervalS != -1 {
+                    self.myCurrentLine.m().set_period(intervalS);
+                }
+            }
+        }
     }
 
     /// C++: `void NIXMLPTHandler::addPTLineFromFlow(const SUMOSAXAttributes &)` [private]
@@ -572,7 +752,28 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_pt_line_from_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLPTHandler::addPTLineFromFlow")
+        let mut ok = true;
+        self.myMissingBefore = 0;
+        self.myMissingAfter = 0;
+        let id: String = attrs.get::<String>(SUMO_ATTR_ID, "flow", &mut ok, true);
+        let line: String = attrs.get::<String>(SUMO_ATTR_LINE, &id, &mut ok, true);
+        let type_: String = attrs.get::<String>(SUMO_ATTR_TYPE, &id, &mut ok, true);
+        let route: String = attrs.get::<String>(SUMO_ATTR_ROUTE, &id, &mut ok, true);
+        let vClass: SUMOVehicleClass = NIImporter_OpenStreetMap::interpret_transport_type(&type_, Ptr::null());
+        let intervalS: i32 = attrs.get_opt::<i32>(SUMO_ATTR_PERIOD, &id, &mut ok, -1, true);
+        let color: RGBColor = get_opt_color(attrs, SUMO_ATTR_COLOR, &id, &mut ok);
+        if ok {
+            let newLine: NBPTLine = NBPTLine::new(&id, "", &type_, &line, intervalS / 60, "", vClass, color);
+            self.myCurrentLine = Ptr::from_raw(Box::into_raw(Box::new(newLine)));
+            // operator[] default-inserts an empty entry for a missing route, as in C++
+            let edges: EdgeVector = self.myRouteEdges.entry(route.clone()).or_default().clone();
+            self.myCurrentLine.m().set_edges(&edges);
+            let stops: Vec<Rc<NBPTStop>> = self.myRouteStops.entry(route.clone()).or_default().clone();
+            for stop in stops {
+                self.myCurrentLine.m().add_pt_stop(stop);
+            }
+            self.myLineCont.m().insert(self.myCurrentLine);
+        }
     }
 
     /// C++: `bool NIXMLPTHandler::reportError(const std::string &, const std::string &, const std::string &)` [private]
@@ -590,7 +791,14 @@ impl NIXMLPTHandler {
     // }
     #[allow(unused_variables)]
     pub fn report_error(&mut self, msg: &str, edgeID: &str, id: &str) -> bool {
-        todo!("port NIXMLPTHandler::reportError")
+        let ignored: bool = self.myEdgeCont.was_ignored(edgeID.to_string());
+        if !ignored && !self.myWarnOnly {
+            write_error(&tlf!(msg, edgeID, id));
+            return true;
+        } else if !ignored {
+            write_warning(&tlf!(msg, edgeID, id));
+        }
+        false
     }
 
     /// C++: `void NIXMLPTHandler::NIXMLPTHandler(const NIXMLPTHandler &)` [private]
@@ -598,7 +806,7 @@ impl NIXMLPTHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIXMLPTHandler) -> Self {
-        todo!("port NIXMLPTHandler::NIXMLPTHandler")
+        panic!("NIXMLPTHandler is not copyable: its copy constructor is declared private and never defined in C++")
     }
 
     /// C++: `NIXMLPTHandler & NIXMLPTHandler::operator=(const NIXMLPTHandler &)` [private]
@@ -606,7 +814,7 @@ impl NIXMLPTHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIXMLPTHandler) -> &mut NIXMLPTHandler {
-        todo!("port NIXMLPTHandler::operator=")
+        panic!("NIXMLPTHandler is not assignable: operator= is declared private and never defined in C++")
     }
 
 }
