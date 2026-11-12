@@ -39,7 +39,12 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBLoadedTLDef::NBLoadedTLDef")
+        NBLoadedTLDef {
+            base: NBTrafficLightDefinition::new(id, junctions, "0", offset, type_), // DefaultProgramID = "0"
+            myEdgeCont: Ptr::new(ec),
+            mySignalGroups: BTreeMap::new(),
+            myCycleDuration: 0,
+        }
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -50,7 +55,12 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBLoadedTLDef::NBLoadedTLDef")
+        NBLoadedTLDef {
+            base: NBTrafficLightDefinition::new_2(id, junction, "0", offset, type_), // DefaultProgramID = "0"
+            myEdgeCont: Ptr::new(ec),
+            mySignalGroups: BTreeMap::new(),
+            myCycleDuration: 0,
+        }
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, SUMOTime, TrafficLightType)`
@@ -61,7 +71,12 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(ec: &NBEdgeCont, id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBLoadedTLDef::NBLoadedTLDef")
+        NBLoadedTLDef {
+            base: NBTrafficLightDefinition::new_3(id, "0", offset, type_), // DefaultProgramID = "0"
+            myEdgeCont: Ptr::new(ec),
+            mySignalGroups: BTreeMap::new(),
+            myCycleDuration: 0,
+        }
     }
 
     /// C++: `void NBLoadedTLDef::~NBLoadedTLDef() noexcept` [virtual]
@@ -73,7 +88,10 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBLoadedTLDef::~NBLoadedTLDef")
+        for g in self.mySignalGroups.values() {
+            // the groups were allocated with Box::into_raw in add_signal_group
+            unsafe { drop(Box::from_raw(g.as_raw())) };
+        }
     }
 
     /// C++: `void NBLoadedTLDef::setCycleDuration(SUMOTime)`
@@ -84,7 +102,7 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_cycle_duration(&mut self, cycleDur: SUMOTime) {
-        todo!("port NBLoadedTLDef::setCycleDuration")
+        self.myCycleDuration = cycleDur;
     }
 
     /// C++: `void NBLoadedTLDef::addSignalGroup(const std::string &)`
@@ -96,7 +114,9 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_signal_group(&mut self, id: &str) {
-        todo!("port NBLoadedTLDef::addSignalGroup")
+        debug_assert!(!self.mySignalGroups.contains_key(id));
+        let g = Box::into_raw(Box::new(NBLoadedTLDef_SignalGroup::new(id)));
+        self.mySignalGroups.insert(id.to_string(), Ptr::from_raw(g));
     }
 
     /// C++: `bool NBLoadedTLDef::addToSignalGroup(const std::string &, const NBConnection &)`
@@ -122,7 +142,22 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_to_signal_group(&mut self, groupid: &str, connection: &NBConnection) -> bool {
-        todo!("port NBLoadedTLDef::addToSignalGroup")
+        if !self.mySignalGroups.contains_key(groupid) {
+            return false;
+        }
+        let group = *self.mySignalGroups.get(groupid).unwrap();
+        group.m().add_connection(connection);
+        let n1 = connection.get_from().get_to_node();
+        if !n1.is_null() {
+            self.add_node(n1);
+            n1.m().add_traffic_light(Ptr::new(&self.base));
+        }
+        let n2 = connection.get_to().get_from_node();
+        if !n2.is_null() {
+            self.add_node(n2);
+            n2.m().add_traffic_light(Ptr::new(&self.base));
+        }
+        true
     }
 
     /// C++: `bool NBLoadedTLDef::addToSignalGroup(const std::string &, const NBConnectionVector &)`
@@ -138,7 +173,11 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_to_signal_group_2(&mut self, groupid: &str, connections: &NBConnectionVector) -> bool {
-        todo!("port NBLoadedTLDef::addToSignalGroup")
+        let mut ok = true;
+        for c in connections {
+            ok &= self.add_to_signal_group(groupid, c);
+        }
+        ok
     }
 
     /// C++: `void NBLoadedTLDef::addSignalGroupPhaseBegin(const std::string &, SUMOTime, TLColor)`
@@ -151,7 +190,9 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn add_signal_group_phase_begin(&mut self, groupid: &str, time: SUMOTime, color: NBTrafficLightDefinition_TLColor) {
-        todo!("port NBLoadedTLDef::addSignalGroupPhaseBegin")
+        debug_assert!(self.mySignalGroups.contains_key(groupid));
+        let group = *self.mySignalGroups.get(groupid).unwrap();
+        group.m().add_phase_begin(time, color);
     }
 
     /// C++: `void NBLoadedTLDef::setSignalYellowTimes(const std::string &, SUMOTime, SUMOTime)`
@@ -164,7 +205,9 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_signal_yellow_times(&mut self, groupid: &str, tRedYellow: SUMOTime, tYellow: SUMOTime) {
-        todo!("port NBLoadedTLDef::setSignalYellowTimes")
+        debug_assert!(self.mySignalGroups.contains_key(groupid));
+        let group = *self.mySignalGroups.get(groupid).unwrap();
+        group.m().set_yellow_times(tRedYellow, tYellow);
     }
 
     /// C++: `void NBLoadedTLDef::setTLControllingInformation() const` [const, virtual]
@@ -181,7 +224,12 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        todo!("port NBLoadedTLDef::setTLControllingInformation")
+        // assign the tl-indices to the edge connections
+        for c in self.myControlledLinks.iter() {
+            if c.get_tl_index() != -1 {
+                let _ = c.get_from().m().set_controlling_tl_information(c, self.base.base.get_id());
+            }
+        }
     }
 
     /// C++: `void NBLoadedTLDef::remapRemoved(NBEdge *, const EdgeVector &, const EdgeVector &)` [virtual]
@@ -202,7 +250,14 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBLoadedTLDef::remapRemoved")
+        for &group in self.mySignalGroups.values() {
+            if group.contains_incoming(removed) {
+                group.m().remap_incoming(removed, incoming);
+            }
+            if group.contains_outgoing(removed) {
+                group.m().remap_outgoing(removed, outgoing);
+            }
+        }
     }
 
     /// C++: `void NBLoadedTLDef::initNeedsContRelation() const` [const, virtual]
@@ -214,7 +269,9 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        todo!("port NBLoadedTLDef::initNeedsContRelation")
+        if !self.myNeedsContRelationReady {
+            panic!("{}", ProcessError::new("myNeedsContRelation was not properly initialized\n"));
+        }
     }
 
     /// C++: `int NBLoadedTLDef::getMaxIndex()` [virtual]
@@ -231,7 +288,13 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        todo!("port NBLoadedTLDef::getMaxIndex")
+        self.set_participants_information();
+        let logic = utils::options::options_cont::with_options(|oc| self.compute(oc));
+        if !logic.is_null() {
+            logic.m().get_num_links() - 1
+        } else {
+            -1
+        }
     }
 
     /// C++: `NBTrafficLightLogic * NBLoadedTLDef::myCompute(int)` [virtual, protected]
@@ -306,7 +369,92 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTimeSeconds: i32) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBLoadedTLDef::myCompute")
+        // MsgHandler::getWarningInstance()->clear()
+        utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.clear(true));
+        // compute the switching times and count the signals
+        let mut switchTimes: BTreeSet<SUMOTime> = BTreeSet::new();
+        let mut numSignals: i32 = 0;
+        let yellowPatch = utils::options::options_cont::get_bool("tls.yellow.patch-small");
+        for group in self.mySignalGroups.values() {
+            let group = *group;
+            // needed later
+            group.m().sort_phases();
+            // patch the yellow time for this group
+            group.m().patch_t_yellow(utils::common::time::time2steps(brakingTimeSeconds as f64), yellowPatch);
+            // both the given red and green phases are added and also the yellow times
+            let gtimes = group.get_times(self.myCycleDuration);
+            switchTimes.extend(gtimes);
+            numSignals += group.get_link_no();
+        }
+        // build the phases
+        let logicId = self.base.base.get_id().to_string();
+        let logic: Ptr<NBTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new(
+            &logicId,
+            self.get_program_id(),
+            numSignals,
+            self.myOffset,
+            self.myType,
+        ))));
+        let mut prev: SUMOTime = -1;
+        for &l in &switchTimes {
+            if prev != -1 {
+                let st = self.build_phase_state(prev);
+                logic.m().add_step(l - prev, &st, &Vec::<i32>::new(), "", -1);
+            }
+            prev = l;
+        }
+        // C++ dereferences begin() unconditionally; an empty switch set is UB there
+        let first = *switchTimes.iter().next().unwrap();
+        let st = self.build_phase_state(prev);
+        logic.m().add_step(self.myCycleDuration + first - prev, &st, &Vec::<i32>::new(), "", -1);
+        // check whether any warnings were printed
+        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.was_informed()) {
+            write_warningf!("During computation of traffic light '%'.", self.base.base.get_id());
+        }
+        logic.m().close_building(true);
+
+        // initialize myNeedsContRelation
+        self.myNeedsContRelation.clear();
+        let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
+        let states: Vec<String> = logic.get_phases().iter().map(|p| p.state.clone()).collect();
+        let links = Ptr::new(&self.myControlledLinks);
+        for state in &states {
+            let sb = state.as_bytes();
+            for c1 in links.iter() {
+                let i1 = c1.get_tl_index();
+                if i1 == -1 || sb[i1 as usize] != b'g' || c1.get_from().is_null() || c1.get_to().is_null() {
+                    continue;
+                }
+                for c2 in links.iter() {
+                    let i2 = c2.get_tl_index();
+                    if i2 != -1
+                        && i2 != i1
+                        && (sb[i2 as usize] == b'G' || sb[i2 as usize] == b'g')
+                        && !c2.get_from().is_null()
+                        && !c2.get_to().is_null()
+                    {
+                        let rightTurnConflict = NBNode::right_turn_conflict(
+                            c1.get_from(),
+                            c1.get_to(),
+                            c1.get_from_lane(),
+                            c2.get_from(),
+                            c2.get_to(),
+                            c2.get_from_lane(),
+                        );
+                        if self.forbids(c2.get_from(), c2.get_to(), c1.get_from(), c1.get_to(), true, controlledWithin) || rightTurnConflict {
+                            self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                                c1.get_from(),
+                                c1.get_to(),
+                                c2.get_from(),
+                                c2.get_to(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        self.myNeedsContRelationReady = true;
+        logic
     }
 
     /// C++: `void NBLoadedTLDef::setParticipantsInformation()` [virtual, protected]
@@ -321,7 +469,11 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_participants_information(&mut self) {
-        todo!("port NBLoadedTLDef::setParticipantsInformation")
+        // assign participating nodes to the request
+        self.collect_nodes();
+        // collect the information about participating edges and links
+        self.collect_edges();
+        self.collect_links();
     }
 
     /// C++: `void NBLoadedTLDef::collectNodes()` [protected]
@@ -344,7 +496,18 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_nodes(&mut self) {
-        todo!("port NBLoadedTLDef::collectNodes")
+        self.myControlledNodes.clear();
+        for &group in self.mySignalGroups.values() {
+            let linkNo = group.get_link_no();
+            for j in 0..linkNo {
+                let conn = group.get_connection(j);
+                let edge = conn.get_from();
+                let node = edge.get_to_node();
+                self.myControlledNodes.push(node);
+            }
+        }
+        // determinism: C++ std::sort is unstable; node IDs are unique so ties do not occur
+        self.myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     }
 
     /// C++: `void NBLoadedTLDef::collectLinks()` [virtual, protected]
@@ -444,7 +607,37 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn must_brake(&self, possProhibited: &NBConnection, state: &str, strmpos: i32) -> bool {
-        todo!("port NBLoadedTLDef::mustBrake")
+        let sb = state.as_bytes();
+        // check whether the stream has red
+        if sb[strmpos as usize] != b'g' && sb[strmpos as usize] != b'G' {
+            return true;
+        }
+        // check whether another stream which has green is a higher priorised foe to the given
+        let mut pos: usize = 0;
+        for &group in self.mySignalGroups.values() {
+            // get other links that have green
+            let linkNo = group.get_link_no();
+            for j in 0..linkNo {
+                // get the current connection (possible foe)
+                let other = group.get_connection(j);
+                let mut possProhibitor = NBConnection::new_4(other);
+                // if the connection ist still valid ...
+                if possProhibitor.check(&*self.myEdgeCont) {
+                    // ... do nothing if it starts at the same edge
+                    if possProhibited.get_from() == possProhibitor.get_from() {
+                        pos += 1;
+                        continue;
+                    }
+                    if sb[pos] == b'g' || sb[pos] == b'G' {
+                        if self.must_brake_2(possProhibited, &possProhibitor, true) {
+                            return true;
+                        }
+                    }
+                    pos += 1;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void NBLoadedTLDef::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual, protected]
@@ -461,7 +654,11 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        todo!("port NBLoadedTLDef::replaceRemoved")
+        for &group in self.mySignalGroups.values() {
+            if (incoming && group.contains_incoming(removed)) || (!incoming && group.contains_outgoing(removed)) {
+                group.m().remap(removed, removedLane, by, byLane);
+            }
+        }
     }
 
     /// C++: `std::string NBLoadedTLDef::buildPhaseState(const SUMOTime) const` [const, private]
@@ -520,7 +717,51 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn build_phase_state(&self, time: SUMOTime) -> String {
-        todo!("port NBLoadedTLDef::buildPhaseState")
+        let mut state: Vec<u8> = Vec::new();
+        // set the green and yellow information first;
+        // the information whether other have to break needs those masks completely filled
+        for &group in self.mySignalGroups.values() {
+            let linkNo = group.get_link_no();
+            let mayDrive = group.may_drive(time);
+            let hasYellow = group.has_yellow(time);
+            let mut c = b'r';
+            if mayDrive {
+                c = b'g';
+            }
+            if hasYellow {
+                c = b'y';
+            }
+            for j in 0..linkNo {
+                let conn = group.get_connection(j);
+                let mut assConn = NBConnection::new_4(conn);
+                // assert that the connection really exists
+                if assConn.check(&*self.myEdgeCont) {
+                    state.push(c);
+                }
+            }
+        }
+        // set the braking mask
+        let mut pos: usize = 0;
+        for &group in self.mySignalGroups.values() {
+            let linkNo = group.get_link_no();
+            for j in 0..linkNo {
+                let conn = group.get_connection(j);
+                let mut assConn = NBConnection::new_4(conn);
+                if assConn.check(&*self.myEdgeCont) {
+                    let stateStr = String::from_utf8(state.clone()).unwrap();
+                    if !self.must_brake(&assConn, &stateStr, pos as i32) {
+                        if state[pos] == b'g' {
+                            state[pos] = b'G';
+                        }
+                        if state[pos] == b'y' {
+                            state[pos] = b'Y';
+                        }
+                    }
+                    pos += 1;
+                }
+            }
+        }
+        String::from_utf8(state).unwrap()
     }
 
 }
@@ -541,7 +782,7 @@ impl SignalGroup_PhaseDef {
     //                 : myTime(time), myColor(color) { }
     #[allow(unused_variables)]
     pub fn new(time: SUMOTime, color: NBTrafficLightDefinition_TLColor) -> Self {
-        todo!("port PhaseDef::PhaseDef")
+        SignalGroup_PhaseDef { myTime: time, myColor: color }
     }
 
 }
@@ -580,7 +821,14 @@ impl NBLoadedTLDef_SignalGroup {
     //     : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port SignalGroup::SignalGroup")
+        NBLoadedTLDef_SignalGroup {
+            base: Named::new(id),
+            myConnections: Vec::new(),
+            myPhases: Vec::new(),
+            // C++ leaves these uninitialized; -1 matches the "was not set" check in patchTYellow
+            myTRedYellow: -1,
+            myTYellow: -1,
+        }
     }
 
     /// C++: `void SignalGroup::~SignalGroup() noexcept` [virtual]
@@ -588,7 +836,7 @@ impl NBLoadedTLDef_SignalGroup {
     // NBLoadedTLDef::SignalGroup::~SignalGroup() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SignalGroup::~SignalGroup")
+        // C++ destructor body is empty
     }
 
     /// C++: `void SignalGroup::addConnection(const NBConnection &)`
@@ -600,7 +848,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn add_connection(&mut self, c: &NBConnection) {
-        todo!("port SignalGroup::addConnection")
+        self.myConnections.push(NBConnection::new_4(c));
     }
 
     /// C++: `void SignalGroup::addPhaseBegin(SUMOTime, TLColor)`
@@ -611,7 +859,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn add_phase_begin(&mut self, time: SUMOTime, color: NBTrafficLightDefinition_TLColor) {
-        todo!("port SignalGroup::addPhaseBegin")
+        self.myPhases.push(SignalGroup_PhaseDef::new(time, color));
     }
 
     /// C++: `void SignalGroup::setYellowTimes(SUMOTime, SUMOTime)`
@@ -623,7 +871,8 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn set_yellow_times(&mut self, tRedYellowe: SUMOTime, tYellow: SUMOTime) {
-        todo!("port SignalGroup::setYellowTimes")
+        self.myTRedYellow = tRedYellowe;
+        self.myTYellow = tYellow;
     }
 
     /// C++: `std::vector<SUMOTime> SignalGroup::getTimes(SUMOTime) const` [const]
@@ -647,7 +896,20 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn get_times(&self, cycleDuration: SUMOTime) -> Vec<SUMOTime> {
-        todo!("port SignalGroup::getTimes")
+        // within the phase container, we should have the green and red phases add their times
+        let mut ret: Vec<SUMOTime> = Vec::new();
+        for p in &self.myPhases {
+            ret.push(p.myTime);
+        }
+        // further, we possibly should set the yellow phases
+        if self.myTYellow > 0 {
+            for p in &self.myPhases {
+                if p.myColor == NBTrafficLightDefinition_TLColor::TLCOLOR_RED {
+                    ret.push((p.myTime + self.myTYellow) % cycleDuration);
+                }
+            }
+        }
+        ret
     }
 
     /// C++: `void SignalGroup::sortPhases()`
@@ -660,7 +922,8 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn sort_phases(&mut self) {
-        todo!("port SignalGroup::sortPhases")
+        // determinism: stable sort; C++ std::sort is unstable on equal begin times
+        self.myPhases.sort_by(|p1, p2| p1.myTime.cmp(&p2.myTime));
     }
 
     /// C++: `int SignalGroup::getLinkNo() const` [const]
@@ -671,7 +934,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn get_link_no(&self) -> i32 {
-        todo!("port SignalGroup::getLinkNo")
+        self.myConnections.len() as i32
     }
 
     /// C++: `bool SignalGroup::mayDrive(SUMOTime) const` [const]
@@ -689,7 +952,13 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn may_drive(&self, time: SUMOTime) -> bool {
-        todo!("port SignalGroup::mayDrive")
+        for p in self.myPhases.iter().rev() {
+            let nextTime = p.myTime;
+            if time >= nextTime {
+                return p.myColor == NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN;
+            }
+        }
+        self.myPhases[self.myPhases.len() - 1].myColor == NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN
     }
 
     /// C++: `bool SignalGroup::hasYellow(SUMOTime) const` [const]
@@ -702,7 +971,9 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn has_yellow(&self, time: SUMOTime) -> bool {
-        todo!("port SignalGroup::hasYellow")
+        let has_red_now = !self.may_drive(time);
+        let had_green = self.may_drive(time - self.myTYellow);
+        has_red_now && had_green
     }
 
     /// C++: `bool SignalGroup::containsIncoming(NBEdge *) const` [const]
@@ -718,7 +989,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn contains_incoming(&self, from: Ptr<NBEdge>) -> bool {
-        todo!("port SignalGroup::containsIncoming")
+        self.myConnections.iter().any(|c| c.get_from() == from)
     }
 
     /// C++: `void SignalGroup::remapIncoming(NBEdge *, const EdgeVector &)`
@@ -746,7 +1017,24 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn remap_incoming(&mut self, which: Ptr<NBEdge>, by: &EdgeVector) {
-        todo!("port SignalGroup::remapIncoming")
+        let mut newConns: Vec<NBConnection> = Vec::new();
+        let mut i = 0;
+        while i < self.myConnections.len() {
+            if self.myConnections[i].get_from() == which {
+                let conn = NBConnection::new(self.myConnections[i].get_from(), self.myConnections[i].get_to());
+                self.myConnections.remove(i);
+                for &j in by {
+                    let mut curr = NBConnection::new_4(&conn);
+                    if !curr.replace_from(which, j) {
+                        panic!("{}", ProcessError::new(format!("Could not replace edge '{}' by '{}'.\nUndefined...", which.get_id(), j.get_id())));
+                    }
+                    newConns.push(curr);
+                }
+            } else {
+                i += 1;
+            }
+        }
+        self.myConnections.extend(newConns);
     }
 
     /// C++: `bool SignalGroup::containsOutgoing(NBEdge *) const` [const]
@@ -762,7 +1050,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn contains_outgoing(&self, to: Ptr<NBEdge>) -> bool {
-        todo!("port SignalGroup::containsOutgoing")
+        self.myConnections.iter().any(|c| c.get_to() == to)
     }
 
     /// C++: `void SignalGroup::remapOutgoing(NBEdge *, const EdgeVector &)`
@@ -790,7 +1078,24 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn remap_outgoing(&mut self, which: Ptr<NBEdge>, by: &EdgeVector) {
-        todo!("port SignalGroup::remapOutgoing")
+        let mut newConns: Vec<NBConnection> = Vec::new();
+        let mut i = 0;
+        while i < self.myConnections.len() {
+            if self.myConnections[i].get_to() == which {
+                let conn = NBConnection::new(self.myConnections[i].get_from(), self.myConnections[i].get_to());
+                self.myConnections.remove(i);
+                for &j in by {
+                    let mut curr = NBConnection::new_4(&conn);
+                    if !curr.replace_to(which, j) {
+                        panic!("{}", ProcessError::new(format!("Could not replace edge '{}' by '{}'.\nUndefined...", which.get_id(), j.get_id())));
+                    }
+                    newConns.push(curr);
+                }
+            } else {
+                i += 1;
+            }
+        }
+        self.myConnections.extend(newConns);
     }
 
     /// C++: `const NBConnection & SignalGroup::getConnection(int) const` [const]
@@ -802,7 +1107,7 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn get_connection(&self, pos: i32) -> &NBConnection {
-        todo!("port SignalGroup::getConnection")
+        &self.myConnections[pos as usize]
     }
 
     /// C++: `void SignalGroup::patchTYellow(SUMOTime, bool)`
@@ -819,7 +1124,18 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn patch_t_yellow(&mut self, tyellow: SUMOTime, forced: bool) {
-        todo!("port SignalGroup::patchTYellow")
+        if self.myTYellow < 0 {
+            // was not set before (was not loaded)
+            self.myTYellow = tyellow;
+        } else if forced && self.myTYellow < tyellow {
+            write_warning(&format!(
+                "TYellow of signal group '{}' was less than the computed one; patched (was:{}, is:{})",
+                self.base.get_id(),
+                self.myTYellow,
+                utils::common::time::time2string(tyellow)
+            ));
+            self.myTYellow = tyellow;
+        }
     }
 
     /// C++: `void SignalGroup::remap(NBEdge *, int, NBEdge *, int)`
@@ -853,7 +1169,18 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn remap(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32) {
-        todo!("port SignalGroup::remap")
+        for c in self.myConnections.iter_mut() {
+            if c.get_to() == removed && (c.get_to_lane() == removedLane || c.get_to_lane() == -1) {
+                let _ = c.replace_to_2(removed, removedLane, by, byLane);
+            } else if c.get_to() == removed && removedLane == -1 {
+                let _ = c.replace_to(removed, by);
+            }
+            if c.get_from() == removed && (c.get_from_lane() == removedLane || c.get_from_lane() == -1) {
+                let _ = c.replace_from_2(removed, removedLane, by, byLane);
+            } else if c.get_from() == removed && removedLane == -1 {
+                let _ = c.replace_from(removed, by);
+            }
+        }
     }
 
 }
