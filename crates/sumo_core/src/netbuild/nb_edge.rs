@@ -7565,7 +7565,8 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_index_from_lane_id(laneID: String) -> i32 {
-        todo!("port NBEdge::getLaneIndexFromLaneID")
+        let start = laneID.rfind('_').map_or(0, |p| p + 1);
+        utils::common::string_utils::to_int(&laneID[start..]).unwrap()
     }
 
     /// C++: `void NBEdge::setNumericalID(int)`
@@ -7575,7 +7576,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_numerical_id(&mut self, index: i32) {
-        todo!("port NBEdge::setNumericalID")
+        self.myIndex = index;
     }
 
     /// C++: `int NBEdge::getNumericalID() const` [const, virtual]
@@ -7585,7 +7586,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port NBEdge::getNumericalID")
+        self.myIndex
     }
 
     /// C++: `const NBEdge * NBEdge::getBidiEdge() const` [const, virtual]
@@ -7840,7 +7841,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_turn_sign_target(&self) -> &str {
-        todo!("port NBEdge::getTurnSignTarget")
+        &self.myTurnSignTarget
     }
 
     /// C++: `void NBEdge::setTurnSignTarget(const std::string &)`
@@ -7849,7 +7850,7 @@ impl NBEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_turn_sign_target(&mut self, target: &str) {
-        todo!("port NBEdge::setTurnSignTarget")
+        self.myTurnSignTarget = target.to_string();
     }
 
     /// C++: `EdgeVector NBEdge::filterByPermissions(const EdgeVector &, SVCPermissions)` [static]
@@ -7866,7 +7867,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn filter_by_permissions(edges: &EdgeVector, permissions: SVCPermissions) -> EdgeVector {
-        todo!("port NBEdge::filterByPermissions")
+        let mut result: EdgeVector = Vec::new();
+        for edge in edges {
+            if (edge.get_permissions(-1) & permissions) != 0 {
+                result.push(*edge);
+            }
+        }
+        result
     }
 
     /// C++: `PositionVector NBEdge::computeLaneShape(int, double) const` [const, private]
