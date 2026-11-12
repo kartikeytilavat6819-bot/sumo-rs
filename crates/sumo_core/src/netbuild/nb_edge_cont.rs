@@ -14,6 +14,8 @@ const UNSPECIFIED_CONTPOS: f64 = -1.;
 const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
 // shortcut: C++ uses NBEdge::myDefaultConnectionLength (static, settable); the static is not ported yet, so the unspecified default -1 is used
 const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+const UNSPECIFIED_WIDTH: f64 = -1.;
+const UNSPECIFIED_OFFSET: f64 = 0.;
 
 /// C++ `addLane2LaneConnection(from, dest, toLane, type, mayUseSameDestination)` with the header defaults filled in
 fn add_lane2_lane_connection_validated(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayUseSameDestination: bool) -> bool {
@@ -32,6 +34,13 @@ pub type NBEdgeCont_EdgeCont = BTreeMap<String, Ptr<NBEdge>>;
 fn delete_edge(edge: Ptr<NBEdge>) {
     edge.m().drop_();
     drop(unsafe { Box::from_raw(edge.as_raw()) });
+}
+
+/// C++ `toString(std::set<NBEdge *>)` (utils/common/ToString.h): sorted edge ids joined by spaces
+fn edge_set_to_string(edges: &EdgeSet) -> String {
+    let mut ids: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+    ids.sort();
+    ids.join(" ")
 }
 
 /// C++ class `NBEdgeCont::MinLaneComparatorIdLess` (netbuild/NBEdgeCont.h)
@@ -1787,7 +1796,103 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn join_same_node_connecting_edges(&mut self, dc: &mut NBDistrictCont, tlc: &mut NBTrafficLightLogicCont, edges: EdgeVector) {
-        todo!("port NBEdgeCont::joinSameNodeConnectingEdges")
+        let mut edges = edges;
+        // count the number of lanes, the speed and the id
+        let mut nolanes: i32 = 0;
+        let mut speed: f64 = 0.;
+        let mut priority: i32 = -1;
+        let mut joinEdges = true;
+        let mut id = String::new();
+        // determinism: C++ std::sort is unstable; sort_by with the same strict-weak comparator gives the same order for distinct keys
+        let sorter = NBContHelper_same_connection_edge_sorter::new();
+        edges.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        // retrieve the connected nodes
+        let tpledge = edges[0];
+        let from = tpledge.m().get_from_node();
+        let to = tpledge.m().get_to_node();
+        let myPriority = edges[0].m().get_priority();
+        for (idx, i) in edges.iter().enumerate() {
+            // some assertions
+            debug_assert!(i.m().get_from_node() == from);
+            debug_assert!(i.m().get_to_node() == to);
+            // ad the number of lanes the current edge has
+            nolanes += i.m().get_num_lanes();
+            // build the id
+            if idx != 0 {
+                id += "+";
+            }
+            id += i.m().get_id();
+            // compute the speed
+            speed += i.m().get_speed();
+            // build the priority
+            // merged edges should have the same inherited priority
+            if myPriority == i.m().get_priority() {
+                priority = myPriority;
+            } else {
+                priority = -1;
+                joinEdges = false;
+            }
+        }
+        if joinEdges {
+            speed /= edges.len() as f64;
+            // build the new edge
+            let newEdge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(&id, from, to, String::new(), speed, UNSPECIFIED_FRICTION, nolanes, priority,
+                UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET,
+                tpledge.m().myLaneSpreadFunction, tpledge.m().get_street_name()))));
+            // copy lane attributes
+            let mut laneIndex: i32 = 0;
+            for i in edges.iter() {
+                let lanes = i.m().get_lanes();
+                for lane in lanes.iter() {
+                    newEdge.m().set_permissions(lane.permissions, laneIndex);
+                    newEdge.m().set_lane_width(laneIndex, lane.width);
+                    newEdge.m().set_end_offset(laneIndex, lane.endOffset);
+                    laneIndex += 1;
+                }
+            }
+            self.insert(newEdge, true);
+            // replace old edge by current within the nodes
+            //  and delete the old
+            from.m().replace_outgoing_2(&edges, newEdge);
+            to.m().replace_incoming_2(&edges, newEdge);
+            // patch connections
+            //  add edge2edge-information
+            for i in edges.iter() {
+                let ev = i.m().get_connected_edges();
+                for j in ev.iter() {
+                    newEdge.m().add_edge2_edge_connection(*j, false, SVC_UNSPECIFIED);
+                }
+            }
+            //  copy outgoing connections to the new edge
+            let mut currLane: i32 = 0;
+            for i in edges.iter() {
+                newEdge.m().move_outgoing_connections_from(*i, currLane);
+                currLane += i.m().get_num_lanes();
+            }
+            // patch tl-information
+            currLane = 0;
+            for i in edges.iter() {
+                let noLanes = i.m().get_num_lanes();
+                for j in 0..noLanes {
+                    // replace in traffic lights
+                    tlc.replace_removed(*i, j, newEdge, currLane, true);
+                    tlc.replace_removed(*i, j, newEdge, currLane, false);
+                    currLane += 1;
+                }
+            }
+            // delete joined edges
+            for i in edges.iter() {
+                self.extract(dc, *i, true);
+            }
+        }
     }
 
     /// C++: `void NBEdgeCont::guessOpposites()`
@@ -1873,7 +1978,10 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_by_id(&self, edgeID: &str) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::getByID")
+        match self.myEdges.get(edgeID) {
+            Some(e) => *e,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `int NBEdgeCont::guessRoundabouts()`
@@ -2108,7 +2216,161 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn guess_roundabouts(&mut self) -> i32 {
-        todo!("port NBEdgeCont::guessRoundabouts")
+        self.myGuessedRoundabouts.clear();
+        let mut loadedRoundaboutEdges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        for it in self.myRoundabouts.iter() {
+            loadedRoundaboutEdges.extend(it.iter().copied());
+        }
+        // step 1: keep only those edges which have no turnarounds and which are not
+        // part of a loaded roundabout
+        // determinism: C++ std::set<NBEdge*> is ordered by pointer; here the order is the Ptr ordering
+        let mut candidates: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        let valid: SVCPermissions = SVC_ALL & !SVC_PEDESTRIAN;
+        for e in self.myEdges.values() {
+            let e = *e;
+            let to = e.m().get_to_node();
+            if e.m().get_turn_destination(false).is_null()
+                && to.m().get_connection_to(e.m().get_from_node()).is_null()
+                && (e.m().get_permissions(-1) & valid) != 0 {
+                candidates.insert(e);
+            }
+        }
+
+        // step 2:
+        let mut visited: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        for i in candidates.iter() {
+            let mut loopEdges: EdgeVector = Vec::new();
+            // start with a random edge (this doesn't have to be a roundabout edge)
+            // loop over connected edges (using always the leftmost one)
+            // and keep the list in loopEdges
+            // continue until we loop back onto a loopEdges and extract the loop
+            let mut e = *i;
+            if visited.contains(&e) {
+                // already seen
+                continue;
+            }
+            loopEdges.push(e);
+            let mut doLoop = true;
+            loop {
+                visited.insert(e);
+                let to = e.m().get_to_node();
+                let edges: EdgeVector = to.m().get_edges().clone();
+                if (to.m().get_type() == SumoXMLNodeType::RIGHT_BEFORE_LEFT || to.m().get_type() == SumoXMLNodeType::LEFT_BEFORE_RIGHT)
+                    && !to.m().type_was_guessed() {
+                    doLoop = false;
+                    break;
+                }
+                if to.m().get_roundabout_type() == RoundaboutType::NO {
+                    doLoop = false;
+                    break;
+                }
+                if edges.len() < 2 {
+                    doLoop = false;
+                    break;
+                }
+                if !e.m().get_turn_destination(true).is_null() || !to.m().get_connection_to(e.m().get_from_node()).is_null() {
+                    // do not follow turn-arounds while in a (tentative) loop
+                    doLoop = false;
+                    break;
+                }
+                let mut me: usize = edges.iter().position(|x| *x == e).expect("edge must be among its to-node's edges");
+                NBContHelper::next_cw(&edges, &mut me);
+                let mut left = edges[me];
+                while (left.m().get_permissions(-1) & valid) == 0 && left != e {
+                    NBContHelper::next_cw(&edges, &mut me);
+                    left = edges[me];
+                }
+                if left == e {
+                    // no usable continuation edge found
+                    doLoop = false;
+                    break;
+                }
+                NBContHelper::next_cw(&edges, &mut me);
+                let nextLeft = edges[me];
+                let angle = NBHelpers::rel_angle(e.m().get_angle_at_node(to), left.m().get_angle_at_node(to)).abs();
+                let nextAngle = if nextLeft == e { 180. } else { NBHelpers::rel_angle(e.m().get_angle_at_node(to), nextLeft.m().get_angle_at_node(to)).abs() };
+                // there should be no straigher edge further left
+                if angle >= 90. && nextAngle < 45. {
+                    doLoop = false;
+                    break;
+                }
+                // roundabouts do not have sharp turns (or they wouldn't be called 'round')
+                // however, if the roundabout is very small then most of the roundness may be in the junction so the angle may be as high as 180 (for smooth attachments at a joined junction)
+                if angle >= 90. {
+                    let edgeAngle = NBHelpers::rel_angle(e.m().get_start_angle(), e.m().get_end_angle()).abs();
+                    let edgeAngle2 = NBHelpers::rel_angle(left.m().get_start_angle(), left.m().get_end_angle()).abs();
+                    let edgeRadius = e.m().get_geometry().length2d() / deg2rad(edgeAngle);
+                    let edgeRadius2 = left.m().get_geometry().length2d() / deg2rad(edgeAngle2);
+                    let avgRadius = 0.5 * (edgeRadius + edgeRadius2);
+                    let junctionRadius = e.m().get_lane_shape(0).back().distance_to2d(left.m().get_lane_shape(0).front()) / deg2rad(angle);
+                    if junctionRadius < 0.8 * avgRadius {
+                        doLoop = false;
+                        break;
+                    }
+                }
+                let loopClosed = loopEdges.iter().position(|x| *x == left);
+                let loopSize: i32 = match loopClosed {
+                    Some(k) => (loopEdges.len() - k) as i32,
+                    None => 0,
+                };
+                if loopSize > 0 {
+                    // loop found
+                    if loopSize < 3 {
+                        doLoop = false; // need at least 3 edges for a roundabout
+                    } else if (loopSize as usize) < loopEdges.len() {
+                        // remove initial edges not belonging to the loop
+                        let keepFrom = loopEdges.len() - loopSize as usize;
+                        loopEdges = loopEdges.split_off(keepFrom);
+                    }
+                    // count attachments to the outside. need at least 3 or a roundabout doesn't make much sense
+                    let mut attachments = 0;
+                    for j in loopEdges.iter() {
+                        if j.m().get_to_node().m().get_edges().len() > 2 {
+                            attachments += 1;
+                        }
+                    }
+                    if attachments < 3 {
+                        doLoop = false;
+                    }
+                    break;
+                }
+                if visited.contains(&left) {
+                    doLoop = false;
+                } else {
+                    // keep going
+                    loopEdges.push(left);
+                    e = left;
+                }
+                if !doLoop {
+                    break;
+                }
+            }
+            if doLoop {
+                // check form factor to avoid elongated shapes (circle: 1, square: ~0.79)
+                let mut loopLength = 0.;
+                for le in loopEdges.iter() {
+                    loopLength += le.m().get_loaded_length();
+                }
+                if Self::form_factor(&loopEdges) > 0.6
+                    && loopLength < utils::options::options_cont::get_float("roundabouts.guess.max-length") {
+                    // collected edges are marked in markRoundabouts
+                    let guessed: EdgeSet = loopEdges.iter().copied().collect();
+                    if loadedRoundaboutEdges.contains(&loopEdges[0]) {
+                        if !self.myRoundabouts.contains(&guessed) {
+                            let toReplace: Option<EdgeSet> = self.myRoundabouts.iter().find(|it| it.contains(&loopEdges[0])).cloned();
+                            if let Some(it) = toReplace {
+                                utils::common::msg_handler::write_warning(&format!("Replacing loaded roundabout '{}' with '{}'.", edge_set_to_string(&it), edge_set_to_string(&guessed)));
+                                self.myRoundabouts.remove(&it);
+                            }
+                            self.myGuessedRoundabouts.insert(guessed);
+                        }
+                    } else {
+                        self.myGuessedRoundabouts.insert(guessed);
+                    }
+                }
+            }
+        }
+        self.myGuessedRoundabouts.len() as i32
     }
 
     /// C++: `int NBEdgeCont::extractRoundabouts()`
@@ -2160,7 +2422,44 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn extract_roundabouts(&mut self) -> i32 {
-        todo!("port NBEdgeCont::extractRoundabouts")
+        let mut candidateEdges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        let roundabout = NBEdge_JunctionPriority::ROUNDABOUT as i32;
+        for edge in self.myEdges.values() {
+            let e = *edge;
+            if e.m().get_junction_priority(e.m().get_to_node()) == roundabout || e.m().get_junction_priority(e.m().get_from_node()) == roundabout {
+                candidateEdges.insert(e);
+            }
+        }
+        let mut visited: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        let mut extracted: i32 = 0;
+        for edgeIt in candidateEdges.iter() {
+            let mut loopEdges: EdgeVector = Vec::new();
+            let mut e = *edgeIt;
+            if visited.contains(&e) {
+                // already seen
+                continue;
+            }
+            loopEdges.push(e);
+            loop {
+                if visited.contains(&e) {
+                    if loopEdges.len() > 1 {
+                        let set: EdgeSet = loopEdges.iter().copied().collect();
+                        self.add_roundabout(&set);
+                        extracted += 1;
+                    }
+                    break;
+                }
+                visited.insert(e);
+                loopEdges.push(e);
+                let outgoingEdges: EdgeVector = e.m().get_to_node().m().get_outgoing_edges().clone();
+                match outgoingEdges.iter().find(|oe| oe.m().get_junction_priority(oe.m().get_to_node()) == roundabout) {
+                    // no closed loop
+                    None => break,
+                    Some(me) => e = *me,
+                }
+            }
+        }
+        extracted
     }
 
     /// C++: `void NBEdgeCont::cleanupRoundabouts()`
@@ -2187,7 +2486,24 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_roundabouts(&mut self) {
-        todo!("port NBEdgeCont::cleanupRoundabouts")
+        // only loaded roundabouts are of concern here since guessing comes later
+        let mut validRoundabouts: BTreeSet<EdgeSet> = BTreeSet::new();
+        let mut validEdges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        for item in self.myEdges.values() {
+            validEdges.insert(*item);
+        }
+        for roundabout in self.myRoundabouts.iter() {
+            let mut validRoundabout: EdgeSet = BTreeSet::new();
+            for cand in roundabout.iter() {
+                if validEdges.contains(cand) {
+                    validRoundabout.insert(*cand);
+                }
+            }
+            if validRoundabout.len() > 0 {
+                validRoundabouts.insert(validRoundabout);
+            }
+        }
+        self.myRoundabouts = validRoundabouts;
     }
 
     /// C++: `bool NBEdgeCont::wasIgnored(std::string) const` [const]
@@ -2197,7 +2513,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn was_ignored(&self, id: String) -> bool {
-        todo!("port NBEdgeCont::wasIgnored")
+        self.myIgnoredEdges.contains(&id)
     }
 
     /// C++: `void NBEdgeCont::ignore(std::string)`
@@ -2207,7 +2523,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn ignore(&mut self, id: String) {
-        todo!("port NBEdgeCont::ignore")
+        self.myIgnoredEdges.insert(id);
     }
 
     /// C++: `bool NBEdgeCont::wasRemoved(std::string) const` [const]
@@ -2217,7 +2533,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn was_removed(&self, id: String) -> bool {
-        todo!("port NBEdgeCont::wasRemoved")
+        self.myExtractedEdges.contains_key(&id)
     }
 
     /// C++: `void NBEdgeCont::rename(NBEdge *, const std::string &)`
@@ -2255,7 +2571,7 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_post_process_connection(&mut self, from: &str, fromLane: i32, to: &str, toLane: i32, mayDefinitelyPass: bool, keepClear: KeepClear, contPos: f64, visibility: f64, speed: f64, friction: f64, length: f64, customShape: &PositionVector, uncontrolled: bool, warnOnly: bool, permissions: SVCPermissions, indirectLeft: bool, edgeType: &str, changeLeft: SVCPermissions, changeRight: SVCPermissions) {
-        todo!("port NBEdgeCont::addPostProcessConnection")
+        self.myConnections.entry(from.to_string()).or_default().push(NBEdgeCont_PostProcessConnection::new(from, fromLane, to, toLane, mayDefinitelyPass, keepClear, contPos, visibility, speed, friction, length, customShape, uncontrolled, warnOnly, permissions, indirectLeft, edgeType, changeLeft, changeRight));
     }
 
     /// C++: `bool NBEdgeCont::hasPostProcessConnection(const std::string &, const std::string &)`
@@ -2279,7 +2595,16 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn has_post_process_connection(&mut self, from: &str, to: &str) -> bool {
-        todo!("port NBEdgeCont::hasPostProcessConnection")
+        match self.myConnections.get(from) {
+            None => false,
+            Some(conns) => {
+                // wildcard
+                if to == "" {
+                    return true;
+                }
+                conns.iter().any(|ppc| ppc.to == to)
+            }
+        }
     }
 
     /// C++: `void NBEdgeCont::recheckPostProcessConnections()`
