@@ -1,6 +1,19 @@
 //! Port of netbuild/NBPTLineCont.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::options::options_cont::{get_bool, get_float};
+
+
+/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
+#[allow(clippy::mut_from_ref)]
+fn stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
+
+pub const FWD: i32 = 1;
+pub const BWD: i32 = -1;
+
 
 /// C++ class `NBPTLineCont` (netbuild/NBPTLineCont.h)
 pub struct NBPTLineCont {
@@ -20,7 +33,8 @@ impl NBPTLineCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBPTLineCont::~NBPTLineCont")
+        // shortcut: NBPTLine objects are shared as Ptr and their owner is not ported yet, so they are not freed here; upgrade when NBPTLine ownership is decided
+        self.myPTLines.clear();
     }
 
     /// C++: `bool NBPTLineCont::insert(NBPTLine *)`
@@ -35,7 +49,11 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn insert(&mut self, ptLine: Ptr<NBPTLine>) -> bool {
-        todo!("port NBPTLineCont::insert")
+        if !self.myPTLines.contains_key(ptLine.get_line_id()) {
+            self.myPTLines.insert(ptLine.get_line_id().to_string(), ptLine);
+            return true;
+        }
+        false
     }
 
     /// C++: `NBPTLine * NBPTLineCont::retrieve(const std::string &)`
@@ -49,7 +67,10 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve(&mut self, lineID: &str) -> Ptr<NBPTLine> {
-        todo!("port NBPTLineCont::retrieve")
+        match self.myPTLines.get(lineID) {
+            None => Ptr::null(),
+            Some(line) => *line,
+        }
     }
 
     /// C++: `const std::map<std::string, NBPTLine *> & NBPTLineCont::getLines() const` [const]
@@ -58,7 +79,7 @@ impl NBPTLineCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_lines(&self) -> &BTreeMap<String, Ptr<NBPTLine>> {
-        todo!("port NBPTLineCont::getLines")
+        &self.myPTLines
     }
 
     /// C++: `void NBPTLineCont::process(NBEdgeCont &, NBPTStopCont &, bool)`
@@ -97,7 +118,39 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn process(&mut self, ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, routeOnly: bool) {
-        todo!("port NBPTLineCont::process")
+        let lines: Vec<Ptr<NBPTLine>> = self.myPTLines.values().copied().collect();
+        for line in lines {
+            if line.get_ways().len() > 0 {
+                // loaded from OSM rather than ptline input. We can use extra
+                // information to reconstruct route and stops
+                self.construct_route(line, ec);
+                if !routeOnly {
+                    // map stops to ways, using the constructed route for loose stops
+                    self.revise_stops(line, ec, sc);
+                }
+            }
+            // fix circular line if necessary
+            let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+            if stops.len() > 1
+                    && Rc::ptr_eq(&stops[0], &stops[stops.len() - 1])
+                    && line.get_route().len() > 1
+                    && line.get_route()[0] != line.get_route()[line.get_route().len() - 1] {
+                // we need to duplicate either the first or the last edge depending on the stop locations
+                let firstStopEdge: String = stops[0].get_edge_id().to_string();
+                let lastStopEdge: String = stops[stops.len() - 1].get_edge_id().to_string();
+                let mut edges: Vec<Ptr<NBEdge>> = line.get_route().clone();
+                let lastEdge = edges[edges.len() - 1];
+                let firstEdge = edges[0];
+                if firstStopEdge == lastEdge.get_id() {
+                    edges.insert(0, lastEdge);
+                } else if lastStopEdge == firstEdge.get_id() {
+                    edges.push(firstEdge);
+                }
+                line.m().set_edges(&edges);
+            }
+            line.m().delete_invalid_stops(ec, sc);
+            //line->deleteDuplicateStops();
+        }
     }
 
     /// C++: `void NBPTLineCont::replaceEdge(const std::string &, const EdgeVector &)`
@@ -123,7 +176,24 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn replace_edge(&mut self, edgeID: &str, replacement: &EdgeVector) {
-        todo!("port NBPTLineCont::replaceEdge")
+        //std::cout << " replaceEdge " << edgeID << " replacement=" << toString(replacement) << "\n";
+        if self.myPTLines.len() > 0 && self.myPTLineLookup.len() == 0 {
+            // init lookup once
+            for item in self.myPTLines.values() {
+                for e in item.get_route().iter() {
+                    self.myPTLineLookup.entry(e.get_id().to_string()).or_default().insert(*item);
+                }
+            }
+        }
+        // determinism: std::set<NBPTLine*> orders by pointer, BTreeSet<Ptr> orders by address in the same way
+        let lines: Vec<Ptr<NBPTLine>> = self.myPTLineLookup.entry(edgeID.to_string()).or_default().iter().copied().collect();
+        for line in lines {
+            line.m().replace_edge(edgeID, replacement);
+            for e in replacement.iter() {
+                self.myPTLineLookup.entry(e.get_id().to_string()).or_default().insert(line);
+            }
+        }
+        self.myPTLineLookup.remove(edgeID);
     }
 
     /// C++: `void NBPTLineCont::fixBidiStops(const NBEdgeCont &)`
@@ -233,7 +303,8 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_bidi_stops(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBPTLineCont::fixBidiStops")
+        // shortcut: NBPTStop::myBidiStop is Unmapped (std::weak_ptr) and SUMOAbstractRouter::Operation is Unmapped, so bidi stop direction fixing cannot run yet; upgrade when both are mapped
+        panic!("NBPTLineCont::fixBidiStops: shortcut, needs NBPTStop bidi links and router operations");
     }
 
     /// C++: `void NBPTLineCont::removeInvalidEdges(const NBEdgeCont &)`
@@ -246,7 +317,9 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_invalid_edges(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBPTLineCont::removeInvalidEdges")
+        for item in self.myPTLines.values() {
+            item.m().remove_invalid_edges(ec);
+        }
     }
 
     /// C++: `void NBPTLineCont::fixPermissions()`
@@ -281,7 +354,8 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_permissions(&mut self) {
-        todo!("port NBPTLineCont::fixPermissions")
+        // shortcut: NBEdge connections are mapped to CHBuilder_Connection, which has no fromLane, so fixPermissions cannot read lanes; upgrade when NBEdge::Connection is mapped
+        panic!("NBPTLineCont::fixPermissions: shortcut, NBEdge::Connection has no fromLane yet");
     }
 
     /// C++: `std::set<std::string> NBPTLineCont::getServedPTStops()`
@@ -298,7 +372,14 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn get_served_pt_stops(&mut self) -> BTreeSet<String> {
-        todo!("port NBPTLineCont::getServedPTStops")
+        let mut result: BTreeSet<String> = BTreeSet::new();
+        for item in self.myPTLines.values() {
+            let line = *item;
+            for stop in line.m().get_stops().iter() {
+                result.insert(stop.get_id());
+            }
+        }
+        result
     }
 
     /// C++: `void NBPTLineCont::reviseStops(NBPTLine *, const NBEdgeCont &, NBPTStopCont &)` [private]
@@ -399,7 +480,97 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn revise_stops(&mut self, line: Ptr<NBPTLine>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) {
-        todo!("port NBPTLineCont::reviseStops")
+        let waysIds: Vec<String> = line.get_ways().clone();
+        if waysIds.len() == 1 && line.m().get_stops().len() > 1 {
+            self.revise_single_way_stops(line, ec, sc);
+            return;
+        }
+        if waysIds.len() <= 1 {
+            write_warning(&format!("Cannot revise pt stop localization for pt line '{}', which consist of one way only. Ignoring!", line.get_line_id()));
+            return;
+        }
+        if line.get_route().len() == 0 {
+            write_warning(&format!("Cannot revise pt stop localization for pt line '{}', which has no route edges. Ignoring!", line.get_line_id()));
+            return;
+        }
+        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        let mut stopsRevised: Vec<bool> = Vec::new();
+        for stop0 in stops {
+            stopsRevised.push(false);
+            //get the corresponding and one of the two adjacent ways
+            let mut stop = match self.find_way(line, stop0, ec, sc) {
+                Some(st) => st,
+                None => continue, // warning already given
+            };
+            let waysIdsIt = match waysIds.iter().position(|w| *w == stop.get_orig_edge_id()) {
+                Some(idx) => idx,
+                None => continue, // warning already given
+            };
+            // find directional edge (OSM ways are bidirectional)
+            let way: &Vec<i64> = match line.m().get_way_nodes(stop.get_orig_edge_id()).get() {
+                Some(w) => w,
+                None => {
+                    write_warning(&format!("Cannot assign stop '{}' on edge '{}' to pt line '{}' (wayNodes not found). Ignoring!",
+                        stop.get_id(), stop.get_orig_edge_id(), line.get_line_id()));
+                    continue;
+                }
+            };
+
+            let mut wayPrev: Option<&Vec<i64>> = None;
+            if waysIdsIt != 0 {
+                wayPrev = line.m().get_way_nodes(waysIds[waysIdsIt - 1].clone()).get();
+            }
+            let mut wayNext: Option<&Vec<i64>> = None;
+            if waysIdsIt != waysIds.len() - 1 {
+                wayNext = line.m().get_way_nodes(waysIds[waysIdsIt + 1].clone()).get();
+            }
+            if wayPrev.is_none() && wayNext.is_none() {
+                write_warning(&format!("Cannot revise pt stop localization for incomplete pt line '{}'. Ignoring!", line.get_line_id()));
+                continue;
+            }
+            let wayEnds = *way.last().unwrap();
+            let wayBegins = way[0];
+            let wayPrevEnds = wayPrev.map_or(0, |w| *w.last().unwrap());
+            let wayPrevBegins = wayPrev.map_or(0, |w| w[0]);
+            let wayNextEnds = wayNext.map_or(0, |w| *w.last().unwrap());
+            let wayNextBegins = wayNext.map_or(0, |w| w[0]);
+            let dir: i32;
+            if wayBegins == wayPrevEnds || wayBegins == wayPrevBegins || wayEnds == wayNextBegins || wayEnds == wayNextEnds {
+                dir = FWD;
+            } else if wayEnds == wayPrevBegins || wayEnds == wayPrevEnds || wayBegins == wayNextEnds || wayBegins == wayNextBegins {
+                dir = BWD;
+            } else {
+                write_warning(&format!("Cannot revise pt stop localization for incomplete pt line '{}'. Ignoring!", line.get_line_id()));
+                continue;
+            }
+
+            let edgeId: String = stop.get_edge_id().to_string();
+            let current = ec.get_by_id(&edgeId);
+            let assignedDir = if edgeId.starts_with('-') { BWD } else { FWD };
+
+            if dir != assignedDir {
+                let reverse = NBPTStopCont::get_reverse_edge(current);
+                if reverse.is_null() {
+                    if !get_bool("railway.topology.repair") && get_bool("ptstop-output.no-bidi") {
+                        write_warning(&format!("Could not re-assign PT stop '{}'. May need option --railway.topology.repair", stop.get_id()));
+                    }
+                    continue;
+                }
+                if stop.get_lines().len() > 0 {
+                    let reverseStop = sc.get_reverse_stop(stop.clone(), ec);
+                    sc.insert(reverseStop.clone(), false);
+                    line.m().replace_stop(stop.clone(), reverseStop.clone());
+                    stop = reverseStop;
+                } else {
+                    write_warning(&format!("PT stop '{}' has been moved to edge '{}'.", stop.get_id(), reverse.get_id()));
+                }
+                stop_mut(&stop).set_edge_id(reverse.get_id().to_string(), ec);
+            }
+            stop_mut(&stop).add_line(line.get_ref());
+            let lastIdx = stopsRevised.len() - 1;
+            stopsRevised[lastIdx] = true;
+        }
+        line.m().set_revised(stopsRevised);
     }
 
     /// C++: `void NBPTLineCont::reviseSingleWayStops(NBPTLine *, const NBEdgeCont &, NBPTStopCont &)` [private]
@@ -422,7 +593,19 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn revise_single_way_stops(&mut self, line: Ptr<NBPTLine>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) {
-        todo!("port NBPTLineCont::reviseSingleWayStops")
+        let waysIds: Vec<String> = line.get_ways().clone();
+        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        for stop0 in stops {
+            //get the corresponding and one of the two adjacent ways
+            let stop = match self.find_way(line, stop0, ec, sc) {
+                Some(st) => st,
+                None => continue, // warning already given
+            };
+            if !waysIds.iter().any(|w| *w == stop.get_orig_edge_id()) {
+                continue; // warning already given
+            }
+            stop_mut(&stop).add_line(line.get_ref());
+        }
     }
 
     /// C++: `std::shared_ptr<NBPTStop> NBPTLineCont::findWay(NBPTLine *, std::shared_ptr<NBPTStop>, const NBEdgeCont &, NBPTStopCont &) const` [const, private]
@@ -509,8 +692,83 @@ impl NBPTLineCont {
     //     return stop;
     // }
     #[allow(unused_variables)]
-    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Rc<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Rc<NBPTStop> {
-        todo!("port NBPTLineCont::findWay")
+    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Rc<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Option<Rc<NBPTStop>> {
+        let waysIds: Vec<String> = line.get_ways().clone();
+        if stop.is_loose() {
+            // find closest edge in route
+            let mut minDist = f64::MAX;
+            let mut best: Ptr<NBEdge> = Ptr::null();
+            for edge in line.get_route().iter() {
+                let dist = edge.get_lane_shape(0).distance2d(stop.get_position(), false);
+                if dist < minDist {
+                    best = *edge;
+                    minDist = dist;
+                }
+            }
+            if minDist < get_float("ptline.match-dist") {
+                let wayID = Self::get_way_id(best.get_id());
+                if stop.get_edge_id().is_empty() {
+                    stop_mut(&stop).set_edge_id(best.get_id().to_string(), ec);
+                    stop_mut(&stop).set_orig_edge_id(&wayID);
+                } else if stop.get_edge_id() != best.get_id() {
+                    // stop is used by multiple lines and mapped to different edges.
+                    // check if an alternative stop already exists
+                    // same lookup as NBPTStopCont::findStop(wayID, pos) with threshold 1
+                    let mut existing: Option<Rc<NBPTStop>> = None;
+                    for item in sc.myPTStops.values() {
+                        if item.get_orig_edge_id() == wayID && item.get_position().distance_to2d(stop.get_position()) < 1.0 {
+                            existing = Some(item.clone());
+                            break;
+                        }
+                    }
+                    let newStop: Rc<NBPTStop> = match existing {
+                        Some(ns) => ns,
+                        None => {
+                            let mut ns = NBPTStop::new(stop.get_element(), format!("{}@{}", stop.get_id(), line.get_line_id()), stop.get_position().clone(),
+                                best.get_id().to_string(), wayID.clone(), stop.get_length(), stop.get_name(), stop.get_permissions(),
+                                0.0, RGBColor::default(), -1.0);
+                            ns.set_edge_id(best.get_id().to_string(), ec); // trigger lane assignment
+                            let ns = Rc::new(ns);
+                            sc.insert(ns.clone(), false);
+                            ns
+                        }
+                    };
+                    line.m().replace_stop(stop.clone(), newStop.clone());
+                    return Some(newStop);
+                }
+            } else {
+                write_warning(&format!("Could not assign stop '{}' to pt line '{}' (closest edge '{}', distance {}). Ignoring!",
+                    stop.get_id(), line.get_line_id(), if best.is_null() { "" } else { best.get_id() }, minDist));
+                return None;
+            }
+            Some(stop)
+        } else {
+            // if the stop is part of an edge, find that edge among the line edges
+            let waysIdsIt = waysIds.iter().position(|w| *w == stop.get_orig_edge_id());
+            if waysIdsIt.is_none() {
+                // stop edge not found, try additional edges
+                let mut found = false;
+                for (edgeCandFirst, edgeCandSecond) in stop.get_additional_edge_candidates().iter() {
+                    for w in waysIds.iter() {
+                        if w == edgeCandFirst {
+                            if stop_mut(&stop).set_edge_id(edgeCandSecond.clone(), ec) {
+                                stop_mut(&stop).set_orig_edge_id(edgeCandFirst);
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if found {
+                        break;
+                    }
+                }
+                if !found {
+                    write_warning(&format!("Cannot assign stop {} on edge '{}' to pt line '{}'. Ignoring!",
+                        stop.get_id(), stop.get_orig_edge_id(), line.get_line_id()));
+                }
+            }
+            Some(stop)
+        }
     }
 
     /// C++: `void NBPTLineCont::constructRoute(NBPTLine *, const NBEdgeCont &)` [private]
@@ -660,7 +918,135 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn construct_route(&mut self, myPTLine: Ptr<NBPTLine>, cont: &NBEdgeCont) {
-        todo!("port NBPTLineCont::constructRoute")
+        let mut edges: Vec<Ptr<NBEdge>> = Vec::new();
+
+        let mut first = Ptr::null();
+        let mut last = Ptr::null();
+        let mut prevWayEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        let mut prevWayMinusEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        let mut currentWayEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        let mut currentWayMinusEdges: Vec<Ptr<NBEdge>> = Vec::new();
+        let waysIds: Vec<String> = myPTLine.get_ways().clone();
+        for (wIdx, way) in waysIds.iter().enumerate() {
+            let mut foundForward = 0usize;
+            if !cont.retrieve(way, false).is_null() {
+                currentWayEdges.push(cont.retrieve(way, false));
+                foundForward += 1;
+            } else {
+                let mut i = 0;
+                while !cont.retrieve(&format!("{}#{}", way, i), true).is_null() {
+                    if !cont.retrieve(&format!("{}#{}", way, i), false).is_null() {
+                        currentWayEdges.push(cont.retrieve(&format!("{}#{}", way, i), false));
+                        foundForward += 1;
+                    }
+                    i += 1;
+                }
+            }
+
+            let mut foundReverse = 0usize;
+            let minusWay = format!("-{}", way);
+            if !cont.retrieve(&minusWay, false).is_null() {
+                currentWayMinusEdges.push(cont.retrieve(&minusWay, false));
+                foundReverse += 1;
+            } else {
+                let mut i = 0;
+                while !cont.retrieve(&format!("-{}#{}", way, i), true).is_null() {
+                    if !cont.retrieve(&format!("-{}#{}", way, i), false).is_null() {
+                        let pos = currentWayMinusEdges.len() - foundReverse;
+                        currentWayMinusEdges.insert(pos, cont.retrieve(&format!("-{}#{}", way, i), false));
+                        foundReverse += 1;
+                    }
+                    i += 1;
+                }
+            }
+            let mut fakeMinus = false;
+            if foundReverse == 0 && foundForward > 0 && is_railway(myPTLine.get_v_class()) {
+                // rail tracks may be used in both directions and are often not tagged as such.
+                // This can be repaired later with option --railway.topology.repair
+                let reversed: Vec<Ptr<NBEdge>> = currentWayEdges.iter().rev().take(foundForward).copied().collect();
+                currentWayMinusEdges.splice(0..0, reversed);
+                fakeMinus = true;
+            }
+
+            if currentWayEdges.is_empty() {
+                continue;
+            }
+            let frontFrom = currentWayEdges[0].get_from_node();
+            let backTo = currentWayEdges[currentWayEdges.len() - 1].get_to_node();
+            if last == frontFrom && !last.is_null() {
+                if !prevWayEdges.is_empty() {
+                    edges.extend(prevWayEdges.iter().copied());
+                    prevWayEdges.clear();
+                    prevWayMinusEdges.clear();
+                }
+                edges.extend(currentWayEdges.iter().copied());
+                last = backTo;
+            } else if last == backTo && !last.is_null() {
+                if !prevWayEdges.is_empty() {
+                    edges.extend(prevWayEdges.iter().copied());
+                    prevWayEdges.clear();
+                    prevWayMinusEdges.clear();
+                }
+                if currentWayMinusEdges.is_empty() {
+                    currentWayEdges.clear();
+                    last = Ptr::null();
+                    continue;
+                } else {
+                    edges.extend(currentWayMinusEdges.iter().copied());
+                    let minusLast = currentWayMinusEdges[currentWayMinusEdges.len() - 1];
+                    if fakeMinus {
+                        last = minusLast.get_from_node();
+                    } else {
+                        last = minusLast.get_to_node();
+                    }
+                }
+            } else if first == frontFrom && !first.is_null() {
+                edges.extend(prevWayMinusEdges.iter().copied());
+                edges.extend(currentWayEdges.iter().copied());
+                last = backTo;
+                prevWayEdges.clear();
+                prevWayMinusEdges.clear();
+            } else if first == backTo && !first.is_null() {
+                edges.extend(prevWayMinusEdges.iter().copied());
+                if currentWayMinusEdges.is_empty() {
+                    currentWayEdges.clear();
+                    last = Ptr::null();
+                    prevWayEdges.clear();
+                    prevWayMinusEdges.clear();
+                    continue;
+                } else {
+                    edges.extend(currentWayMinusEdges.iter().copied());
+                    last = currentWayMinusEdges[currentWayMinusEdges.len() - 1].get_to_node();
+                    prevWayEdges.clear();
+                    prevWayMinusEdges.clear();
+                }
+            } else {
+                if wIdx != 0 {
+                    // way is not the start of the ptline
+                } else if waysIds.len() == 1 {
+                    if currentWayEdges.len() > 0 {
+                        edges.extend(currentWayEdges.iter().copied());
+                    } else {
+                        edges.extend(currentWayMinusEdges.iter().copied());
+                    }
+                }
+                prevWayEdges = currentWayEdges.clone();
+                prevWayMinusEdges = currentWayMinusEdges.clone();
+                if !prevWayEdges.is_empty() {
+                    first = prevWayEdges[0].get_from_node();
+                    last = prevWayEdges[prevWayEdges.len() - 1].get_to_node();
+                } else {
+                    first = Ptr::null();
+                    last = Ptr::null();
+                }
+            }
+            currentWayEdges.clear();
+            currentWayMinusEdges.clear();
+        }
+        if edges.is_empty() && !currentWayMinusEdges.is_empty() {
+            edges = currentWayMinusEdges.clone();
+        }
+        myPTLine.m().set_edges(&edges);
     }
 
     /// C++: `double NBPTLineCont::getCost(const NBEdgeCont &, SUMOAbstractRouter<NBRouterEdge, NBVehicle> &, const std::shared_ptr<NBPTStop>, const std::shared_ptr<NBPTStop>, const NBVehicle *)` [static, private]
@@ -690,7 +1076,9 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Rc<NBPTStop>, to: Rc<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
-        todo!("port NBPTLineCont::getCost")
+        // shortcut: SUMOAbstractRouter::Operation is Unmapped and NBRouterEdge is not linked to NBEdge yet, so routing costs cannot be computed; upgrade when the router is ported
+        let _ = (ec, router, from, to, veh);
+        panic!("NBPTLineCont::getCost: shortcut, router operations are not mapped yet");
     }
 
     /// C++: `std::string NBPTLineCont::getWayID(const std::string &)` [static, private]
@@ -708,7 +1096,14 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn get_way_id(edgeID: &str) -> String {
-        todo!("port NBPTLineCont::getWayID")
+        let mut result = edgeID.to_string();
+        if let Some(found) = edgeID.rfind('#') {
+            result = edgeID[..found].to_string();
+        }
+        if result.starts_with('-') {
+            result = result[1..].to_string();
+        }
+        result
     }
 
 }

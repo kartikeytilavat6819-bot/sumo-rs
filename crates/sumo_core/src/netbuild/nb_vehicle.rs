@@ -20,7 +20,11 @@ impl NBVehicle {
     //         myID(id), myVClass(vClass), myLength(getDefaultVehicleLength(vClass)) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, vClass: SUMOVehicleClass) -> Self {
-        todo!("port NBVehicle::NBVehicle")
+        Self {
+            myID: id.to_string(),
+            myVClass: vClass,
+            myLength: get_default_vehicle_length(vClass),
+        }
     }
 
     /// C++: `const std::string & NBVehicle::getID() const` [const]
@@ -29,7 +33,7 @@ impl NBVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port NBVehicle::getID")
+        &self.myID
     }
 
     /// C++: `SUMOVehicleClass NBVehicle::getVClass() const` [const]
@@ -38,7 +42,7 @@ impl NBVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        todo!("port NBVehicle::getVClass")
+        self.myVClass
     }
 
     /// C++: `bool NBVehicle::ignoreTransientPermissions() const` [const]
@@ -48,7 +52,7 @@ impl NBVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn ignore_transient_permissions(&self) -> bool {
-        todo!("port NBVehicle::ignoreTransientPermissions")
+        false
     }
 
     /// C++: `double NBVehicle::getLength() const` [const]
@@ -57,23 +61,21 @@ impl NBVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port NBVehicle::getLength")
+        self.myLength
     }
 
     /// C++: `void NBVehicle::~NBVehicle() noexcept` [virtual]
     /// Destructor
     // virtual ~NBVehicle() {}
     #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        todo!("port NBVehicle::~NBVehicle")
-    }
+    pub fn drop_(&mut self) {}
 
     /// C++: `void NBVehicle::NBVehicle(const NBVehicle &)` [private]
     /// Invalidated copy constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &NBVehicle) -> Self {
-        todo!("port NBVehicle::NBVehicle")
+        panic!("NBVehicle copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NBVehicle & NBVehicle::operator=(const NBVehicle &)` [private]
@@ -81,7 +83,7 @@ impl NBVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &NBVehicle) -> &mut NBVehicle {
-        todo!("port NBVehicle::operator=")
+        panic!("NBVehicle assignment operator is private and invalidated in C++")
     }
 
 }
