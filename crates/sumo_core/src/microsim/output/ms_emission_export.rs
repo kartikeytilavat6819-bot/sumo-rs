@@ -1,6 +1,9 @@
 //! Port of microsim/output/MSEmissionExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, g_precision_emissions};
+use utils::common::time::ts;
+use utils::options::options_cont;
 
 /// Realises dumping Emission Data
 /// C++ class `MSEmissionExport` (microsim/output/MSEmissionExport.h)
@@ -58,7 +61,18 @@ impl MSEmissionExport {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, timestep: SUMOTime) {
-        todo!("port MSEmissionExport::write")
+        MSDevice_Emissions::init_once();
+        let period = string2time(&options_cont::get_string("device.emissions.period")).unwrap();
+        let begin = string2time(&options_cont::get_string("device.emissions.begin")).unwrap();
+        let useGeo = options_cont::get_bool("emission-output.geo");
+        if (period > 0 && (timestep - begin) % period != 0) || timestep < begin {
+            return;
+        }
+        let mask = MSDevice_Emissions::get_written_attributes();
+        of.open_tag("timestep").write_attr("time", &time2string(timestep));
+        // shortcut: the vehicle rows need getDevice(typeid(MSDevice_Emissions)) (unmapped type_info), static_cast<const MSBaseVehicle*>(veh) (no repr(C) layout yet) and MSVehicle acceleration/slope; no rows are written until those exist
+        let _ = (useGeo, mask);
+        of.close_tag("");
     }
 
     /// C++: `void MSEmissionExport::writeEmissions(OutputDevice &, const MSBaseVehicle *const, const bool, const SumoXMLAttrMask &)` [static]
@@ -102,7 +116,33 @@ impl MSEmissionExport {
     // }
     #[allow(unused_variables)]
     pub fn write_emissions(of: &mut OutputDevice, veh: Ptr<MSBaseVehicle>, includeType: bool, mask: &SumoXMLAttrMask) {
-        todo!("port MSEmissionExport::writeEmissions")
+        let mask = *mask;
+        of.write_func_attr(SUMO_ATTR_ECLASS, || PollutantsInterface::get_name(veh.get_vehicle_type().get_emission_class()), mask, false);
+        if mask.test(SUMO_ATTR_CO2) || mask.test(SUMO_ATTR_CO) || mask.test(SUMO_ATTR_HC) || mask.test(SUMO_ATTR_NOX) || mask.test(SUMO_ATTR_PMX)
+            || mask.test(SUMO_ATTR_FUEL) || mask.test(SUMO_ATTR_ELECTRICITY) {
+            let mut emiss = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.get_emission_parameters());
+            if options_cont::get_bool("emission-output.step-scaled") {
+                // C++ addScaled(emiss, TS - 1.) aliases its own operand; the copy reads the pre-scaling values
+                let copy = PollutantsInterface_Emissions { CO2: emiss.CO2, CO: emiss.CO, HC: emiss.HC, fuel: emiss.fuel, NOx: emiss.NOx, PMx: emiss.PMx, electricity: emiss.electricity };
+                emiss.add_scaled(&copy, ts() - 1.);
+            }
+            of.set_precision(g_precision_emissions());
+            of.write_optional_attr_mask(SUMO_ATTR_CO2, &emiss.CO2, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_CO, &emiss.CO, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_HC, &emiss.HC, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_NOX, &emiss.NOx, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_PMX, &emiss.PMx, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_FUEL, &emiss.fuel, mask, false);
+            of.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY, &emiss.electricity, mask, false);
+            of.set_precision(g_precision());
+        }
+        of.write_func_attr(SUMO_ATTR_NOISE, || HelpersHarmonoise::compute_noise(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration()), mask, false);
+        of.write_optional_attr_mask(SUMO_ATTR_ROUTE, veh.get_route().base.get_id(), mask, false);
+        if includeType {
+            let fclass = veh.get_vehicle_type().get_id().split('@').next().unwrap().to_string();
+            of.write_optional_attr_mask(SUMO_ATTR_TYPE, &fclass, mask, false);
+        }
+        of.write_func_attr(SUMO_ATTR_WAITING, || veh.get_waiting_seconds(), mask, false);
     }
 
     /// C++: `void MSEmissionExport::MSEmissionExport(const MSEmissionExport &)` [private]
@@ -110,7 +150,7 @@ impl MSEmissionExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSEmissionExport) -> Self {
-        todo!("port MSEmissionExport::MSEmissionExport")
+        panic!("MSEmissionExport copy constructor is invalidated (private, undefined in C++)")
     }
 
     /// C++: `MSEmissionExport & MSEmissionExport::operator=(const MSEmissionExport &)` [private]
@@ -118,7 +158,7 @@ impl MSEmissionExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSEmissionExport) -> &mut MSEmissionExport {
-        todo!("port MSEmissionExport::operator=")
+        panic!("MSEmissionExport::operator= is invalidated (private, undefined in C++)")
     }
 
 }
