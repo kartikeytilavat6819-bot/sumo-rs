@@ -30,7 +30,7 @@ pub struct MSStateHandler {
     /// the last object that potentially carries parameters
     pub myLastParameterised: Ptr<Parameterised>,
     /// vehicles that shall be removed when loading state
-    pub myVehiclesToRemove: i32,
+    pub myVehiclesToRemove: BTreeSet<String>,
     /// vehicles that were removed when loading state
     pub myRemoved: i32,
     /// the loaded counter of meso leader events (-1 if not given)
@@ -79,7 +79,32 @@ impl MSStateHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, offset: SUMOTime) -> Self {
-        todo!("port MSStateHandler::MSStateHandler")
+        let mut sh = MSStateHandler {
+            base: MSRouteHandler::new(file, true),
+            myOffset: offset,
+            myTime: 0,
+            mySegment: Ptr::null(),
+            myCurrentLane: Ptr::null(),
+            myCurrentLink: Ptr::null(),
+            myQueIndex: 0,
+            myAttrs: Ptr::null(),
+            myVCAttrs: Ptr::null(),
+            myDeviceAttrs: 0,
+            myReminderAttrs: 0,
+            myCFMAttrs: Ptr::null(),
+            myLastParameterised: Ptr::null(),
+            myVehiclesToRemove: utils::options::options_cont::get_string_vector("load-state.remove-vehicles")
+                .into_iter()
+                .collect(),
+            myRemoved: 0,
+            myMesoEventCounter: -1,
+            myFlowIndex: -1,
+            myConstrainedSignal: Ptr::null(),
+            myArrived: 0,
+        };
+        sh.myAmLoadingState = true;
+        sh.myAllowInternalRoutes = true;
+        sh
     }
 
     /// C++: `void MSStateHandler::~MSStateHandler()` [virtual]
@@ -87,7 +112,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStateHandler::~MSStateHandler")
+        // C++ body only frees the attribute holders (myDeviceAttrs, myReminderAttrs, myAttrs); not owned here yet
+        // shortcut: the attribute holders are i32 placeholders in the skeleton, so nothing is freed until they are typed
     }
 
     /// C++: `void MSStateHandler::saveState(const std::string &, SUMOTime, bool)` [static]
@@ -169,7 +195,7 @@ impl MSStateHandler {
     //     }
     #[allow(unused_variables)]
     pub fn get_time(&self) -> SUMOTime {
-        todo!("port MSStateHandler::getTime")
+        self.myTime
     }
 
     /// C++: `void MSStateHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -691,7 +717,11 @@ impl MSStateHandler {
     // }
     #[allow(unused_variables)]
     pub fn save_rn_gs(out: &mut OutputDevice) {
-        todo!("port MSStateHandler::saveRNGs")
+        out.open_tag(SUMO_TAG_RNGSTATE);
+        out.write_attr(SUMO_ATTR_DEFAULT, &utils::common::rand_helper::with_default(|rng| rng.save_state()));
+        out.write_attr(SUMO_ATTR_RNG_ROUTEHANDLER, &SUMORouteHandler::get_parsing_rng().m().save_state());
+        // shortcut: FlowRNG (MSInsertionControl::getFlowRNG), MSDevice/BTreceiver/OUProcess/ToC RNGs and MSLane::saveRNGStates are not ported, their states are not written yet
+        out.close_tag("");
     }
 
     /// C++: `void MSStateHandler::MSStateHandler(const MSStateHandler &)` [private]
@@ -699,7 +729,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &MSStateHandler) -> Self {
-        todo!("port MSStateHandler::MSStateHandler")
+        // C++ copy constructor is deleted ("Invalidated"), copying is a programming error
+        panic!("MSStateHandler copy constructor is invalidated in C++ and must not be used");
     }
 
     /// C++: `MSStateHandler & MSStateHandler::operator=(const MSStateHandler &)` [private]
@@ -707,7 +738,8 @@ impl MSStateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSStateHandler) -> &mut MSStateHandler {
-        todo!("port MSStateHandler::operator=")
+        // C++ assignment operator is deleted ("Invalidated"), assignment is a programming error
+        panic!("MSStateHandler assignment operator is invalidated in C++ and must not be used");
     }
 
 }
@@ -775,7 +807,10 @@ impl MSStateHandler_MSStateTimeHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port MSStateTimeHandler::myStartElement")
+        if element == SUMO_TAG_SNAPSHOT {
+            self.myTime = utils::common::time::string2time(&attrs.get_string(SUMO_ATTR_TIME))
+                .unwrap_or_else(|e| std::panic::panic_any(e));
+        }
     }
 
 }
