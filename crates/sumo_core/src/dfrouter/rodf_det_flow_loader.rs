@@ -120,7 +120,19 @@ impl RODFDetFlowLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RODFDetFlowLoader) -> Self {
-        todo!("port RODFDetFlowLoader::RODFDetFlowLoader")
+        {
+            Self {
+                myStorage: Ptr::null(),
+                myTimeOffset: 0,
+                myTimeScale: 1,
+                myStartTime: 0,
+                myEndTime: 0,
+                myLineHandler: NamedColumnsParser::new(),
+                myDetectorContainer: Ptr::null(),
+                myHaveWarnedAboutOverridingBoundaries: false,
+                myHaveWarnedAboutPartialDefs: false,
+            }
+        }
     }
 
     /// C++: `RODFDetFlowLoader & RODFDetFlowLoader::operator=(const RODFDetFlowLoader &)` [private]
