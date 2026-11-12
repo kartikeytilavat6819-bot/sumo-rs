@@ -1,5 +1,6 @@
 //! Port of microsim/MSStateHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 
 /// Parser and output filter for routes and vehicles state saving and loading
@@ -750,18 +751,18 @@ impl MSStateHandler {
 #[repr(C)]
 pub struct MSStateHandler_MSStateTimeHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     pub myTime: SUMOTime,
 }
 
 impl std::ops::Deref for MSStateHandler_MSStateTimeHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for MSStateHandler_MSStateTimeHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }

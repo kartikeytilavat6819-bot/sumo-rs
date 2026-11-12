@@ -1,5 +1,6 @@
 //! Port of od/ODMatrix.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 
 /// An O/D (origin/destination) matrix
@@ -593,7 +594,7 @@ impl ODMatrix {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn load_routes(&mut self, oc: &mut OptionsCont, handler: &mut Unmapped /* SUMOSAXHandler */) {
+    pub fn load_routes(&mut self, oc: &mut OptionsCont, handler: &mut GenericSAXHandler) {
         todo!("port ODMatrix::loadRoutes")
     }
 

@@ -1,5 +1,6 @@
 //! Port of router/RONetHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::string_bijection::StringBijection;
@@ -10,7 +11,7 @@ use utils::common::sumo_vehicle_class::{SVC_ALL, SVC_PEDESTRIAN};
 #[repr(C)]
 pub struct RONetHandler {
     /// C++ base class `SUMOSAXHandler`
-    pub base: Unmapped /* SUMOSAXHandler */,
+    pub base: GenericSAXHandler,
     /// The net to store the information into
     pub myNet: Ptr<RONet>,
     /// the loaded network version
@@ -41,13 +42,13 @@ pub struct RONetHandler {
 }
 
 impl std::ops::Deref for RONetHandler {
-    type Target = Unmapped /* SUMOSAXHandler */;
-    fn deref(&self) -> &Unmapped /* SUMOSAXHandler */ {
+    type Target = GenericSAXHandler;
+    fn deref(&self) -> &GenericSAXHandler {
         &self.base
     }
 }
 impl std::ops::DerefMut for RONetHandler {
-    fn deref_mut(&mut self) -> &mut Unmapped /* SUMOSAXHandler */ {
+    fn deref_mut(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
 }
@@ -144,7 +145,7 @@ impl RONetHandler {
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet, eb: &mut ROAbstractEdgeBuilder, ignoreInternal: bool, minorPenalty: f64, tlsPenalty: f64, turnaroundPenalty: f64) -> Self {
         RONetHandler {
-            base: (),
+            base: utils::xml::sumo_sax_handler::new("sumo-network", ""),
             myNet: Ptr::from_mut(net),
             myNetworkVersion: (0, 0.),
             myEdgeBuilder: Ptr::from_mut(eb),
