@@ -202,7 +202,7 @@ impl NLNetShapeHandler {
         if !self.myNet.has_internal_links() && id.starts_with(':') {
             return;
         }
-        let junction = self.myNet.m().get_junction_control().get(&id);
+        let junction = self.myNet.m().get_junction_control().get(&id).copied().unwrap_or_else(Ptr::null);
         if junction.is_null() {
             utils::common::msg_handler::write_warning(&format!("The junction '{}' does not exist in the primary network.", id));
             return;
