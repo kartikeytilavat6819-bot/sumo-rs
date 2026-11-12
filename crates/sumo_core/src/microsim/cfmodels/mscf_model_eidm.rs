@@ -1,6 +1,18 @@
 //! Port of microsim/cfmodels/MSCFModel_EIDM.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use crate::microsim::ms_globals::MSGlobals;
+use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
+use utils::common::to_string::f64_to_string_prec;
+use utils::geom::NUMERICAL_EPS;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
+use utils::common::rand_helper::with_default;
+
+/// C++ `#define EST_REAC_THRESHOLD 3.` (MSCFModel_EIDM.cpp): under this threshold estimation, error and reaction time variables don't get taken into account
+const EST_REAC_THRESHOLD: f64 = 3.;
+/// C++ `#define ClutchEngageSpeed 0.5` (MSCFModel_EIDM.cpp): below this speed a vehicle is "slow to start"
+const CLUTCH_ENGAGE_SPEED: f64 = 0.5;
 
 /// The Extended Intelligent Driver Model (EIDM) car-following model
 /// C++ class `MSCFModel_EIDM` (microsim/cfmodels/MSCFModel_EIDM.h)
@@ -68,7 +80,31 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_EIDM::MSCFModel_EIDM")
+        let p = vtype.get_parameter();
+        let mut base = MSCFModel::new(vtype);
+        let myDelta = p.get_cf_param(SUMO_ATTR_CF_IDM_DELTA, 4.);
+        let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, .25) + .5) as i32;
+        let myIterations = if 1 > iterations0 { 1 } else { iterations0 };
+        let myTPersDrive = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_PERSISTENCE_DRIVE, 3.);
+        let myTreaction = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_REACTION, 0.5);
+        let myTpreview = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD, 4.);
+        let myTPersEstimate = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_PERSISTENCE_ESTIMATE, 10.);
+        let myCcoolness = p.get_cf_param(SUMO_ATTR_CF_EIDM_C_COOLNESS, 0.99);
+        let mySigmaleader = p.get_cf_param(SUMO_ATTR_CF_EIDM_SIG_LEADER, 0.02);
+        let mySigmagap = p.get_cf_param(SUMO_ATTR_CF_EIDM_SIG_GAP, 0.1);
+        let mySigmaerror = p.get_cf_param(SUMO_ATTR_CF_EIDM_SIG_ERROR, 0.04);
+        let myJerkmax = p.get_cf_param(SUMO_ATTR_CF_EIDM_JERK_MAX, 3.);
+        let myEpsilonacc = p.get_cf_param(SUMO_ATTR_CF_EIDM_EPSILON_ACC, 1.);
+        let myTaccmax = p.get_cf_param(SUMO_ATTR_CF_EIDM_T_ACC_MAX, 1.2);
+        let myMflatness = p.get_cf_param(SUMO_ATTR_CF_EIDM_M_FLATNESS, 2.);
+        let myMbegin = p.get_cf_param(SUMO_ATTR_CF_EIDM_M_BEGIN, 0.7);
+        let myUseVehDynamics = p.get_cf_param(SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS, 0.) == 1.;
+        // IDM does not drive very precise and may violate minGap on occasion
+        base.myCollisionMinGapFactor = p.get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
+        if vtype.get_action_step_length() != delta_t() {
+            utils::common::msg_handler::write_warning(&format!("CarFollowModel EIDM is not compatible with actionStepLength {} in vType '{}'", f64_to_string_prec(steps2time(vtype.get_action_step_length()), 6), base.myType.get_id()));
+        }
+        MSCFModel_EIDM { base, myDelta, myIterations, myTPersDrive, myTreaction, myTpreview, myTPersEstimate, myCcoolness, mySigmaleader, mySigmagap, mySigmaerror, myJerkmax, myEpsilonacc, myTaccmax, myMflatness, myMbegin, myUseVehDynamics }
     }
 
     /// C++: `void MSCFModel_EIDM::~MSCFModel_EIDM() noexcept` [virtual]
@@ -76,7 +112,7 @@ impl MSCFModel_EIDM {
     // MSCFModel_EIDM::~MSCFModel_EIDM() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_EIDM::~MSCFModel_EIDM")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_EIDM::insertionFollowSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const) const` [const, virtual]
@@ -94,7 +130,13 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn insertion_follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_EIDM::insertionFollowSpeed")
+        if MSGlobals::semi_implicit_euler_update() {
+            self.maximum_safe_follow_speed(gap2pred, speed, predSpeed, predMaxDecel, true, MSCFModel_CalcReason::CURRENT)
+        } else {
+            // Not Done/checked yet for the ballistic update model!!!!
+            // NOTE: Even for ballistic update, the current speed is irrelevant at insertion, therefore passing 0. (Leo)
+            self.maximum_safe_follow_speed(gap2pred, speed, predSpeed, predMaxDecel, true, MSCFModel_CalcReason::CURRENT)
+        }
     }
 
     /// C++: `double MSCFModel_EIDM::insertionStopSpeed(const MSVehicle *const, double, double) const` [const, virtual]
@@ -111,7 +153,12 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn insertion_stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::insertionStopSpeed")
+        if MSGlobals::semi_implicit_euler_update() {
+            self.maximum_safe_stop_speed(gap, self.myDecel, speed, true, self.myHeadwayTime)
+        } else {
+            // Not Done/checked yet for the ballistic update model!!!!
+            min2(self.maximum_safe_stop_speed(gap, self.myDecel, speed, true, self.myHeadwayTime), self.myType.get_max_speed())
+        }
     }
 
     /// C++: `double MSCFModel_EIDM::maximumSafeFollowSpeed(double, double, double, double, bool, const CalcReason) const` [const]
@@ -180,7 +227,45 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_follow_speed(&self, gap: f64, egoSpeed: f64, predSpeed: f64, predMaxDecel: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_EIDM::maximumSafeFollowSpeed")
+        let mut x: f64;
+        if gap >= 0. || MSGlobals::compute_lc() {
+            let a = 1.;
+            let b = self.myHeadwayTime * (2. * (self.get_current_accel(egoSpeed) * self.myDecel).sqrt()) - predSpeed;
+            let c = -(1. + self.myDecel / (2. * self.get_current_accel(egoSpeed))).sqrt() * gap * (2. * (self.get_current_accel(egoSpeed) * self.myDecel).sqrt());
+            // with myDecel/myAccel, the intended deceleration is myDecel
+            // with myDecel/(2*myAccel), the intended deceleration is myDecel/2
+            // with the IIDM, if gap=s, then the acceleration is zero and if gap<s, then the term v/vMax is not present
+
+            // myDecel is positive, but is intended as negative value here, therefore + instead of -
+            // quadratic formula
+            x = (-b + (b * b - 4. * a * c).sqrt()) / (2. * a);
+        } else {
+            x = egoSpeed - accel2speed(self.myEmergencyDecel);
+            if MSGlobals::semi_implicit_euler_update() {
+                x = max2(x, 0.);
+            }
+        }
+
+        if self.myDecel != self.myEmergencyDecel && !onInsertion && !MSGlobals::compute_lc() {
+            let origSafeDecel = speed2accel(egoSpeed - x);
+            if origSafeDecel > self.myDecel + NUMERICAL_EPS {
+                // Braking harder than myDecel was requested -> calculate required emergency deceleration.
+                // Note that the resulting safeDecel can be smaller than the origSafeDecel, since the call to maximumSafeStopSpeed() above
+                // can result in corrupted values (leading to intersecting trajectories) if, e.g. leader and follower are fast (leader still faster) and the gap is very small,
+                // such that braking harder than myDecel is required.
+
+                let mut safeDecel = EMERGENCY_DECEL_AMPLIFIER * self.calculate_emergency_deceleration(gap, egoSpeed, predSpeed, predMaxDecel);
+                // Don't be riskier than the usual method (myDecel <= safeDecel may occur, because a headway>0 is used above)
+                safeDecel = max2(safeDecel, self.myDecel);
+                // don't brake harder than originally planned (possible due to euler/ballistic mismatch)
+                safeDecel = min2(safeDecel, origSafeDecel);
+                x = egoSpeed - accel2speed(safeDecel);
+                if MSGlobals::semi_implicit_euler_update() {
+                    x = max2(x, 0.);
+                }
+            }
+        }
+        x
     }
 
     /// C++: `double MSCFModel_EIDM::maximumSafeStopSpeed(double, double, double, bool, double) const` [const]
@@ -214,7 +299,28 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn maximum_safe_stop_speed(&self, gap: f64, decel: f64, currentSpeed: f64, onInsertion: bool, headway: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::maximumSafeStopSpeed")
+        let vsafe;
+        if MSGlobals::semi_implicit_euler_update() {
+            let g = gap - NUMERICAL_EPS;
+            if g < 0. {
+                return 0.;
+            }
+            let a = 1.;
+            let b = headway * (2. * (self.get_current_accel(currentSpeed) * self.myDecel).sqrt()) - 0.;
+            let c = -(1. + decel / (2. * self.get_current_accel(currentSpeed))).sqrt() * g * (2. * (self.get_current_accel(currentSpeed) * self.myDecel).sqrt());
+            // with decel/myAccel, the intended deceleration is decel
+            // with decel/(2*myAccel), the intended deceleration is decel/2
+            // with the IIDM, if gap=s, then the acceleration is zero and if gap<s, then the term currentSpeed/vMax is not present
+
+            // decel is positive, but is intended as negative value here, therefore + instead of -
+            // quadratic formula
+            vsafe = (-b + (b * b - 4. * a * c).sqrt()) / (2. * a);
+        } else {
+            // Not Done/checked yet for the ballistic update model!!!!
+            vsafe = self.maximum_safe_stop_speed_ballistic(gap, decel, currentSpeed, onInsertion, headway);
+        }
+
+        vsafe
     }
 
     /// C++: `double MSCFModel_EIDM::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -399,7 +505,124 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::finalizeSpeed")
+        // finalizeSpeed is only called once every timestep!
+
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+        // save old v for optional acceleration computation
+        let oldV = veh.get_speed();
+
+        // Check whether the speed update results from a stop calculation, if so, run _v-function again with the saved variables from stopSpeed
+        let mut _vPos = vPos;
+        if (vPos <= SUMO_CONST_HALTING_SPEED && vPos <= oldV) || !(vPos > oldV + accel2speed(vars.realacc) - NUMERICAL_EPS && vPos < oldV + accel2speed(vars.realacc) + NUMERICAL_EPS) {
+            for it in vars.stop.iter() {
+                if vPos > oldV + accel2speed(it.0) - NUMERICAL_EPS && vPos < oldV + accel2speed(it.0) + NUMERICAL_EPS {
+                    _vPos = self.v(veh, it.1, oldV, 0., vars.v0_int, false, 1, MSCFModel_CalcReason::CURRENT);
+                }
+            }
+        }
+
+        // process stops (includes update of stopping state)
+        let vStop = min2(_vPos, veh.m().process_next_stop(_vPos));
+        // apply deceleration bounds
+        let vMinEmergency = self.min_next_speed_emergency(oldV, veh);
+        // _vPos contains the uppper bound on safe speed. allow emergency braking here
+        let vMin = min2(self.min_next_speed(oldV, veh), max2(_vPos, vMinEmergency));
+        // apply planned speed constraints and acceleration constraints
+        let mut vMax = min2(self.max_next_speed(oldV, veh), vStop);
+        vMax = max2(vMin, vMax);
+
+        // apply further speed adaptations
+        let mut vNext = self.patch_speed_before_lceidm(veh, vMin, vMax, vars.cast::<MSCFModel_VehicleVariables>());
+
+        if MSGlobals::semi_implicit_euler_update() {
+
+            // The model does not directly use vNext from patchSpeed (like the original MSCFModel::finalizeSpeed function),
+            // but rather slowly adapts to vNext.
+            vNext = veh.m().get_lane_change_model().patch_speed(vMin, vNext, vMax, self);
+
+            // Bound the positive change of the acceleration with myJerkmax
+            if vNext > oldV && oldV > CLUTCH_ENGAGE_SPEED * 2. && vars.t_off + self.myTaccmax + NUMERICAL_EPS < steps2time(MSNet::get_instance().get_current_time_step()) {
+                // At junctions with minor priority acceleration will still jump because after finalizeSpeed "MAX2(vNext, vSafeMin)" is called, vSafeMin is higher and vNext from finalizeSpeed is then ignored!!!
+                // If we put this jmax-Part into _v-function (via old calc_gap implementation), then vehicle can't drive over junction because it thinks it won't make it in time before a foe may appear!
+                if self.myJerkmax * ts() + veh.get_acceleration() < 0. { // If driver wants to accelerate, but is still decelerating, then we use a factor of 2!
+                    vNext = max2(oldV + min2(vNext - oldV, (self.myJerkmax * 2. * ts() + veh.get_acceleration()) * ts()), 0.); // change in acceleration (jerk) is bounded by myJerkmax*2
+                } else {
+                    vNext = max2(oldV + min2(vNext - oldV, (self.myJerkmax * ts() + veh.get_acceleration()) * ts()), 0.); // change in acceleration (jerk) is bounded by myJerkmax
+                }
+            } else if vNext <= oldV && vNext < vMax - NUMERICAL_EPS && oldV > CLUTCH_ENGAGE_SPEED * 2. {
+                // Slowing down the deceleration like this may be critical!!! Vehicle can also not come back from Emergency braking fast enough!
+                // Workaround letting the vehicle not brake hard for Lane Change reasons (vNext), but only for safety Car following / stopping reasons (vMax)!
+                vNext = max2(oldV + min2(vMax - oldV, max2(vNext - oldV, (-self.myJerkmax * ts() + veh.get_acceleration()) * ts())), 0.);
+            }
+
+        } else {
+            // Not Done/checked yet for the ballistic update model!!!!
+
+            // for ballistic update, negative vnext must be allowed to
+            // indicate a stop within the coming timestep (i.e., to attain negative values)
+            vNext = veh.m().get_lane_change_model().patch_speed(vMin, vMax, vMax, self);
+            // (Leo) finalizeSpeed() is responsible for assuring that the next
+            // velocity is chosen in accordance with maximal decelerations.
+            // At this point vNext may also be negative indicating a stop within next step.
+            // Moreover, because maximumSafeStopSpeed() does not consider deceleration bounds
+            // vNext can be a large negative value at this point. We cap vNext here.
+            vNext = max2(vNext, vMin);
+        }
+
+        // Driving off correction term: First we check for StartupDelay, then calculate Speed with SlowToStartTerm
+        // Apply Startup delay (time) before driving off
+        let mut addTime: SUMOTime = (vars.myap_update as SUMOTime) * delta_t();
+        if self.myStartupDelay + addTime - (veh.get_time_since_startup() - delta_t()) < delta_t() {
+            addTime = 0;
+        }
+        let vDelay = self.apply_startup_delay(veh, vMin, vNext, addTime);
+        // Apply the slow to start term to the acceleration/speed when driving off
+        vNext = self.slow_to_start_term(veh, vDelay, oldV, vNext, vars.cast::<MSCFModel_VehicleVariables>());
+
+        // Update the desired speed
+        self.internalspeedlimit(veh, oldV);
+
+        if vNext > EST_REAC_THRESHOLD { // update the Wiener-Prozess variables
+            vars.m().myw_gap = (-ts() / self.myTPersEstimate).exp() * vars.myw_gap + (2. * ts() / self.myTPersEstimate).sqrt() * with_default(|r| r.rand_norm(0., 0.5)); // variance of 1 can create very high values and may be too high!
+            vars.m().myw_speed = (-ts() / self.myTPersEstimate).exp() * vars.myw_speed + (2. * ts() / self.myTPersEstimate).sqrt() * with_default(|r| r.rand_norm(0., 0.5)); // variance of 1 can create very high values and may be too high!
+            vars.m().myw_error = (-ts() / self.myTPersDrive).exp() * vars.myw_error + (2. * ts() / self.myTPersDrive).sqrt() * with_default(|r| r.rand_norm(0., 1.));
+        } // else all those w_... are zero by default
+
+        // Update the Action-point reaction time
+        if vars.myap_update == 0 { // Update all saved acceleration variables for further calculcation between two action points
+            vars.m().lastacc = vars.minaccel;
+            vars.m().wouldacc = vars.minaccel;
+            vars.m().lastrealacc = vars.realacc;
+            vars.m().lastleaderacc = vars.realleaderacc;
+        }
+
+        // Set myap_update back to 0 when maximal reaction time is reached,
+        // else add 1 for the next time step
+        if vars.myap_update as f64 >= self.myTreaction / ts() - 1. - NUMERICAL_EPS {
+            vars.m().myap_update = 0;
+        } else {
+            vars.m().myap_update = vars.myap_update + 1;
+        }
+
+        // Here the acceleration the vehicle would adapt to without a reaction time is compared to the last acceleration update at the last action point.
+        // If between two action points the vehicle would like to brake harder than -myEpsilonacc, then an action point is called for the next time step (myap_update = 0).
+        // This update is only used when wouldacc becomes myEpsilonacc lower than lastacc! When accelerating (wouldacc > lastacc), always the maximal reaction time is used!
+        if (vars.wouldacc - vars.lastacc) < -self.myEpsilonacc || vars.wouldacc < -self.get_emergency_decel() || (oldV < EST_REAC_THRESHOLD && vNext < oldV) {
+            // When this if-clause holds, then the driver should react immediately!
+            // 1. When the change in deceleration is lower than -myEpsilonacc
+            // 2. When the intended deceleration is lower than emergencyDecel
+            // 3. When the vehicle is slow and decelerating
+            vars.m().myap_update = 0;
+        }
+
+        // Set the "inner" variables of the car-following model back to the default values for the next time step
+        vars.m().minaccel = 100.;
+        vars.m().realacc = 100.;
+        vars.m().realleaderacc = 100.;
+
+        vars.m().stop.clear();
+
+        vNext
     }
 
     /// C++: `double MSCFModel_EIDM::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -440,7 +663,19 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_EIDM::followSpeed")
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+        // This update-variable is used to check what called followSpeed (LC- or CF-model), see enum CalcReason for more information
+        // Here we don't directly use gComputeLC, which is also 0 and 1, because in freeSpeed we have another call (update = 2),
+        // which is needed to differentiate between the different cases/calculations/needed output/saved variables
+        let mut update = 1;
+        let mut _vUsage = usage;
+        if MSGlobals::compute_lc() {
+            _vUsage = MSCFModel_CalcReason::LANE_CHANGE;
+        }
+        if _vUsage == MSCFModel_CalcReason::LANE_CHANGE || _vUsage == MSCFModel_CalcReason::FUTURE {
+            update = 0;
+        }
+        self.v(veh, gap2pred, speed, predSpeed, vars.v0_int, true, update, _vUsage)
     }
 
     /// C++: `double MSCFModel_EIDM::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -488,7 +723,20 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_EIDM::stopSpeed")
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+        // This update-variable is used to check what called stopSpeed (LC- or CF-model), see enum CalcReason for more information
+        // Here we don't directly use gComputeLC, which is also 0 and 1, because in freeSpeed we have another call (update = 2),
+        // which is needed to differentiate between the different cases/calculations/needed output/saved variables
+        let mut update = 1;
+        let mut _vUsage = usage;
+        if MSGlobals::compute_lc() {
+            _vUsage = MSCFModel_CalcReason::LANE_CHANGE;
+        }
+        if _vUsage == MSCFModel_CalcReason::LANE_CHANGE || _vUsage == MSCFModel_CalcReason::FUTURE || usage == MSCFModel_CalcReason::CURRENT_WAIT {
+            update = 0;
+        }
+        // From Sumo_IDM-implementation: no maximumSafeStopSpeed fallback here (see C++)
+        self.v(veh, gap, speed, 0., vars.v0_int, false, update, _vUsage)
     }
 
     /// C++: `double MSCFModel_EIDM::freeSpeed(const MSVehicle *const, double, double, double, const bool, const CalcReason) const` [const, virtual]
