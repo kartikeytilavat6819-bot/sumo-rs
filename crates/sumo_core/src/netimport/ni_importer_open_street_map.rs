@@ -6,6 +6,14 @@ use utils::xml::sumo_sax_reader::SUMOSAXReader;
 use utils::xml::sumo_sax_handler;
 use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
 use utils::{write_errorf, write_messagef, write_warningf};
+use utils::common::std_defs::{g_precision, SUMO_CONST_LANE_WIDTH};
+use utils::common::string_utils::starts_with;
+use utils::common::to_string::join_to_string_prec;
+
+// C++ NBEdge::UNSPECIFIED_* constants
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
+const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
+const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
 // shortcut: NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION is not ported as a const yet (nb_traffic_light_definition.rs keeps it as a comment); mirrors NBTrafficLightDefinition.cpp:49, switch to the ported constant when it lands
 const OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
 
@@ -20,6 +28,15 @@ const NBEDGE_TURN_SIGN_SHIFT_TAXI: i32 = 16;
 const NBEDGE_TURN_SIGN_SHIFT_BICYCLE: i32 = 24;
 
 /// SAX reader results: a ProcessError is thrown in C++ and propagates to the caller, so panic here.
+// C++ MAX2/MIN2 macros (ties return the second operand for MAX2, as in the macro)
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
 fn sax_result(r: Result<bool, ProcessError>) -> bool {
     r.unwrap_or_else(|e| panic!("{e}"))
 }
@@ -3483,7 +3500,142 @@ impl NIImporter_OpenStreetMap {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn reconstruct_layer_elevation(&mut self, layerElevation: f64, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_OpenStreetMap::reconstructLayerElevation")
+        let nc: Ptr<NBNodeCont> = Ptr::from_mut(nb.get_node_cont());
+        // reconstruct elevation from layer info
+        // build a map of raising and lowering forces (attractor and distance)
+        // for all nodes unknownElevation
+        let mut layerForces: BTreeMap<Ptr<NBNode>, Vec<(f64, f64)>> = BTreeMap::new();
+
+        // collect all nodes that belong to a way with layer information
+        let mut knownElevation: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        for myEdge in self.myEdges.values() {
+            let e = *myEdge;
+            if e.myLayer != 0 {
+                for j in e.myCurrentNodes.iter() {
+                    let node = nc.m().retrieve(&j.to_string());
+                    if !node.is_null() {
+                        knownElevation.insert(node);
+                        layerForces.entry(node).or_default().push((e.myLayer as f64 * layerElevation, utils::geom::POSITION_EPS));
+                    }
+                }
+            }
+        }
+        // layer data only provides a lower bound on elevation since it is used to
+        // resolve the relation among overlapping ways.
+        // Perform a sanity check for steep inclines and raise the knownElevation if necessary
+        let mut knownEleMax: BTreeMap<Ptr<NBNode>, f64> = BTreeMap::new();
+        for it in knownElevation.iter() {
+            let mut eleMax = -f64::MAX;
+            let primaryLayers = layerForces.entry(*it).or_default().clone();
+            for primaryLayer in primaryLayers.iter() {
+                eleMax = max2(eleMax, primaryLayer.0);
+            }
+            knownEleMax.insert(*it, eleMax);
+        }
+        let gradeThreshold = opt::get_float("osm.layer-elevation.max-grade") / 100.0;
+        let mut changed = true;
+        while changed {
+            changed = false;
+            for it in knownElevation.iter() {
+                let neighbors = self.get_neighboring_nodes(*it, knownEleMax[it] / gradeThreshold * 3.0, &knownElevation);
+                for (neighborNode, neighborVal) in neighbors.iter() {
+                    if knownElevation.contains(neighborNode) {
+                        let grade = (knownEleMax[it] - knownEleMax[neighborNode]).abs() / max2(utils::geom::POSITION_EPS, neighborVal.0);
+                        if grade > gradeThreshold * 50.0 / 3.6 / neighborVal.1 {
+                            // raise the lower node to the higher level
+                            let eleMax = max2(knownEleMax[it], knownEleMax[neighborNode]);
+                            if knownEleMax[it] < eleMax {
+                                knownEleMax.insert(*it, eleMax);
+                            } else {
+                                knownEleMax.insert(*neighborNode, eleMax);
+                            }
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // collect all nodes within a grade-dependent range around knownElevation-nodes and apply knowElevation forces
+        let mut unknownElevation: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        for it in knownElevation.iter() {
+            let eleMax = knownEleMax[it];
+            let maxDist = eleMax.abs() * 100.0 / layerElevation;
+            let neighbors = self.get_neighboring_nodes(*it, maxDist, &knownElevation);
+            for (neighborNode, neighborVal) in neighbors.iter() {
+                if !knownElevation.contains(neighborNode) {
+                    unknownElevation.insert(*neighborNode);
+                    layerForces.entry(*neighborNode).or_default().push((eleMax, neighborVal.0));
+                }
+            }
+        }
+
+        // apply forces to ground-level nodes (neither in knownElevation nor unknownElevation)
+        for it in unknownElevation.iter() {
+            let mut eleMax = -f64::MAX;
+            let primaryLayers = layerForces.entry(*it).or_default().clone();
+            for primaryLayer in primaryLayers.iter() {
+                eleMax = max2(eleMax, primaryLayer.0);
+            }
+            let maxDist = eleMax.abs() * 100.0 / layerElevation;
+            let neighbors = self.get_neighboring_nodes(*it, maxDist, &knownElevation);
+            for (neighborNode, neighborVal) in neighbors.iter() {
+                if !knownElevation.contains(neighborNode) && !unknownElevation.contains(neighborNode) {
+                    layerForces.entry(*it).or_default().push((0.0, neighborVal.0));
+                }
+            }
+        }
+        // compute the elevation for each node as the weighted average of all forces
+        let mut nodeElevation: BTreeMap<Ptr<NBNode>, f64> = BTreeMap::new();
+        for (layerForceNode, forces) in layerForces.iter() {
+            if knownElevation.contains(layerForceNode) {
+                // use the maximum value
+                nodeElevation.insert(*layerForceNode, knownEleMax[layerForceNode]);
+            } else if forces.len() == 1 {
+                nodeElevation.insert(*layerForceNode, forces[0].0);
+            } else {
+                // use the weighted sum
+                let mut distSum = 0.0;
+                for force in forces.iter() {
+                    distSum += force.1;
+                }
+                let mut weightSum = 0.0;
+                let mut elevation = 0.0;
+                for force in forces.iter() {
+                    let weight = (distSum - force.1) / distSum;
+                    weightSum += weight;
+                    elevation += force.0 * weight;
+                }
+                nodeElevation.insert(*layerForceNode, elevation / weightSum);
+            }
+        }
+        // apply node elevations
+        for (n, z) in nodeElevation.iter() {
+            let n = *n;
+            let newPos = n.get_position().clone() + Position::new3(0.0, 0.0, *z);
+            let t = n.get_type();
+            n.m().reinit(&newPos, t, false);
+        }
+
+        // apply way elevation to all edges that had layer information
+        let edges: Vec<Ptr<NBEdge>> = nb.get_edge_cont().myEdges.values().copied().collect();
+        for edge in edges {
+            let geom = edge.get_geometry().clone();
+            let length = geom.length2d();
+            let zFrom = *nodeElevation.entry(edge.get_from_node()).or_insert(0.0);
+            let zTo = *nodeElevation.entry(edge.get_to_node()).or_insert(0.0);
+            // XXX if the from- or to-node was part of multiple ways with
+            // different layers, reconstruct the layer value from origID
+            let mut dist = 0.0;
+            let mut newGeom = PositionVector(Vec::new());
+            for (idx, itPos) in geom.iter().enumerate() {
+                if idx != 0 {
+                    dist += itPos.distance_to2d(&geom[idx - 1]);
+                }
+                newGeom.push(*itPos + Position::new3(0.0, 0.0, zFrom + (zTo - zFrom) * dist / length));
+            }
+            edge.m().set_geometry(&newGeom, false);
+        }
     }
 
     /// C++: `std::map<NBNode *, std::pair<double, double>> NIImporter_OpenStreetMap::getNeighboringNodes(NBNode *, double, const std::set<NBNode *> &)` [private]
@@ -3527,7 +3679,34 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn get_neighboring_nodes(&mut self, node: Ptr<NBNode>, maxDist: f64, knownElevation: &BTreeSet<Ptr<NBNode>>) -> BTreeMap<Ptr<NBNode>, (f64, f64)> {
-        todo!("port NIImporter_OpenStreetMap::getNeighboringNodes")
+        let mut result: BTreeMap<Ptr<NBNode>, (f64, f64)> = BTreeMap::new();
+        let mut visited: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut open: Vec<Ptr<NBNode>> = Vec::new();
+        open.push(node);
+        result.insert(node, (0.0, 0.0));
+        while let Some(n) = open.pop() {
+            if visited.contains(&n) {
+                continue;
+            }
+            visited.insert(n);
+            let edges = n.get_edges().clone();
+            for e in edges.iter() {
+                let s = if n.has_incoming(*e) { e.get_from_node() } else { e.get_to_node() };
+                let dist = result[&n].0 + e.get_geometry().length2d();
+                let speed = max2(e.get_speed(), result[&n].1);
+                if !result.contains_key(&s) {
+                    result.insert(s, (dist, speed));
+                } else {
+                    let cur = result[&s];
+                    result.insert(s, (min2(dist, cur.0), max2(speed, cur.1)));
+                }
+                if dist < maxDist && !knownElevation.contains(&s) {
+                    open.push(s);
+                }
+            }
+        }
+        result.remove(&node);
+        result
     }
 
     /// C++: `std::string NIImporter_OpenStreetMap::usableType(const std::string &, const std::string &, NBTypeCont &)` [private]
@@ -3634,7 +3813,98 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn usable_type(&mut self, type_: &str, id: &str, tc: &mut NBTypeCont) -> String {
-        todo!("port NIImporter_OpenStreetMap::usableType")
+        if tc.knows(type_) {
+            return type_.to_string();
+        }
+        if self.myUnusableTypes.contains(type_) {
+            return String::new();
+        }
+        if self.myKnownCompoundTypes.contains_key(type_) {
+            return self.myKnownCompoundTypes[type_].clone();
+        }
+        // this edge has a type which does not yet exist in the TypeContainer
+        let mut tok = StringTokenizer::with_token(type_, compoundTypeSeparator, false);
+        let mut types: Vec<String> = Vec::new();
+        while tok.has_next() {
+            let t = tok.next().unwrap_or_else(|e| panic!("{e}"));
+            if tc.knows(&t) {
+                if !types.contains(&t) {
+                    types.push(t);
+                }
+            } else if tok.size() > 1 {
+                if !starts_with(&t, "service.") {
+                    write_warningf!("Discarding unknown compound '%' in type '%' (first occurrence for edge '%').", t, type_, id);
+                }
+            }
+        }
+        if types.is_empty() {
+            if !starts_with(type_, "service.") {
+                write_warningf!("Discarding unusable type '%' (first occurrence for edge '%').", type_, id);
+            }
+            self.myUnusableTypes.insert(type_.to_string());
+            return String::new();
+        }
+        let newType = types.join(compoundTypeSeparator);
+        if tc.knows(&newType) {
+            self.myKnownCompoundTypes.insert(type_.to_string(), newType.clone());
+            return newType;
+        } else if self.myKnownCompoundTypes.contains_key(&newType) {
+            return self.myKnownCompoundTypes[&newType].clone();
+        } else {
+            // build a new type by merging all values
+            let mut numLanes: i32 = 0;
+            let mut maxSpeed: f64 = 0.0;
+            let mut prio: i32 = 0;
+            let mut width: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut sidewalkWidth: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut bikelaneWidth: f64 = NBEDGE_UNSPECIFIED_WIDTH;
+            let mut defaultIsOneWay = true;
+            let mut permissions: SVCPermissions = 0;
+            let mut spreadType = LaneSpreadFunction::RIGHT;
+            let mut discard = true;
+            let mut hadDiscard = false;
+            for type2 in types.iter() {
+                if !tc.get_edge_type_shall_be_discarded(type2) {
+                    numLanes = std::cmp::max(numLanes, tc.get_edge_type_num_lanes(type2));
+                    maxSpeed = max2(maxSpeed, tc.get_edge_type_speed(type2));
+                    prio = std::cmp::max(prio, tc.get_edge_type_priority(type2));
+                    defaultIsOneWay &= tc.get_edge_type_is_one_way(type2);
+                    permissions |= tc.get_edge_type_permissions(type2);
+                    spreadType = tc.get_edge_type_spread_type(type2);
+                    width = max2(width, tc.get_edge_type_width(type2));
+                    sidewalkWidth = max2(sidewalkWidth, tc.get_edge_type_sidewalk_width(type2));
+                    bikelaneWidth = max2(bikelaneWidth, tc.get_edge_type_bike_lane_width(type2));
+                    discard = false;
+                } else {
+                    hadDiscard = true;
+                }
+            }
+            if hadDiscard && permissions == 0 {
+                discard = true;
+            }
+            if discard {
+                write_warningf!("Discarding compound type '%' (first occurrence for edge '%').", newType, id);
+                self.myUnusableTypes.insert(newType.clone());
+                return String::new();
+            }
+            if width != NBEDGE_UNSPECIFIED_WIDTH {
+                width = max2(width, SUMO_CONST_LANE_WIDTH);
+            }
+            // ensure pedestrians don't run into trains
+            if sidewalkWidth == NBEDGE_UNSPECIFIED_WIDTH && (permissions & SVC_PEDESTRIAN) != 0 && (permissions & SVC_RAIL_CLASSES) != 0 {
+                sidewalkWidth = opt::get_float("default.sidewalk-width");
+            }
+
+            write_messagef!("Adding new type '%' (first occurrence for edge '%').", type_, id);
+            tc.insert_edge_type(&newType, numLanes, maxSpeed, prio, permissions, spreadType, width, defaultIsOneWay, sidewalkWidth, bikelaneWidth, 0.0, 0.0, 0.0);
+            for type3 in types.iter() {
+                if !tc.get_edge_type_shall_be_discarded(type3) {
+                    tc.copy_edge_type_restrictions_and_attrs(type3, &newType);
+                }
+            }
+            self.myKnownCompoundTypes.insert(type_.to_string(), newType.clone());
+            newType
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::extendRailwayDistances(Edge *, NBTypeCont &)` [private]
@@ -3703,7 +3973,60 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn extend_railway_distances(&mut self, e: Ptr<NIImporter_OpenStreetMap_Edge>, tc: &mut NBTypeCont) {
-        todo!("port NIImporter_OpenStreetMap::extendRailwayDistances")
+        let id = e.id.to_string();
+        let type_ = self.usable_type(&e.myHighWayType, &id, tc);
+        if type_ != "" && is_railway(tc.get_edge_type_permissions(&type_)) {
+            let mut nodes: Vec<Ptr<NIImporter_OpenStreetMap_NIOSMNode>> = Vec::new();
+            let mut usablePositions: Vec<f64> = Vec::new();
+            let mut usableIndex: Vec<usize> = Vec::new();
+            for n in e.myCurrentNodes.iter() {
+                let node = self.myOSMNodes[n];
+                node.m().positionMeters = Self::interpret_distance(node);
+                if node.positionMeters != f64::MAX {
+                    usablePositions.push(node.positionMeters);
+                    usableIndex.push(nodes.len());
+                }
+                nodes.push(node);
+            }
+            if usablePositions.is_empty() {
+                return;
+            }
+            let mut forward = true;
+            if usablePositions.len() == 1 {
+                write_warningf!("Ambiguous railway kilometrage direction for way '%' (assuming forward)", id);
+            } else {
+                forward = usablePositions[0] < usablePositions[usablePositions.len() - 1];
+            }
+            // check for consistency
+            for i in 1..usablePositions.len() {
+                if (usablePositions[i - 1] < usablePositions[i]) != forward {
+                    write_warningf!("Inconsistent railway kilometrage direction for way '%': % (skipping)", id, join_to_string_prec(&usablePositions, " ", g_precision()));
+                    return;
+                }
+            }
+            if nodes.len() > usablePositions.len() {
+                // complete missing values
+                let mut shape = PositionVector(Vec::new());
+                for node in nodes.iter() {
+                    shape.push(Position::new3(node.lon, node.lat, 0.0));
+                }
+                if !NBNetBuilder::transform_coordinates(&mut shape, true, Ptr::null()) {
+                    return; // error will be given later
+                }
+                let sign = if forward { 1.0 } else { -1.0 };
+                // extend backward before first usable value
+                let first = usableIndex[0];
+                for i in (0..first).rev() {
+                    nodes[i].m().positionMeters = nodes[i + 1].positionMeters - sign * shape[i].distance_to2d(&shape[i + 1]);
+                }
+                // extend forward
+                for i in (first + 1)..nodes.len() {
+                    if nodes[i].positionMeters == f64::MAX {
+                        nodes[i].m().positionMeters = nodes[i - 1].positionMeters + sign * shape[i].distance_to2d(&shape[i - 1]);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `double NIImporter_OpenStreetMap::interpretDistance(NIOSMNode *)` [static, private]
@@ -3725,7 +4048,20 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn interpret_distance(node: Ptr<NIImporter_OpenStreetMap_NIOSMNode>) -> f64 {
-        todo!("port NIImporter_OpenStreetMap::interpretDistance")
+        if !node.position.is_empty() {
+            let parsed = if starts_with(&node.position, "mi:") {
+                utils::common::string_utils::to_double(&node.position[3..]).map(|v| v * 1609.344) // meters per mile
+            } else {
+                utils::common::string_utils::to_double(&node.position).map(|v| v * 1000.0)
+            };
+            match parsed {
+                Ok(v) => return v,
+                Err(_) => {
+                    write_warningf!("Value of railway:position is not numeric ('%') in node '%'.", node.position, node.id.to_string());
+                }
+            }
+        }
+        f64::MAX
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyChangeProhibition(NBEdge *, int)` [static, protected]
@@ -3745,7 +4081,19 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_change_prohibition(e: Ptr<NBEdge>, changeProhibition: i32) {
-        todo!("port NIImporter_OpenStreetMap::applyChangeProhibition")
+        let mut changeProhibition = changeProhibition;
+        let multiLane = changeProhibition > 3;
+        let mut lane: i32 = 0;
+        while changeProhibition > 0 && lane < e.get_num_lanes() {
+            let code = changeProhibition % 4; // only look at the last 2 bits
+            let changeLeft: SVCPermissions = if (code & NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_LEFT as i32) == 0 { SVC_ALL } else { SVC_AUTHORITY };
+            let changeRight: SVCPermissions = if (code & NIImporter_OpenStreetMap_ChangeType::CHANGE_NO_RIGHT as i32) == 0 { SVC_ALL } else { SVC_AUTHORITY };
+            e.m().set_permitted_changing(lane, changeLeft, changeRight);
+            if multiLane {
+                changeProhibition = changeProhibition >> 2;
+            }
+            lane += 1;
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyLaneUse(NBEdge *, NIImporter_OpenStreetMap::Edge *, const bool)` [protected]
@@ -3776,7 +4124,28 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_lane_use(&mut self, e: Ptr<NBEdge>, nie: Ptr<NIImporter_OpenStreetMap_Edge>, forward: bool) {
-        todo!("port NIImporter_OpenStreetMap::applyLaneUse")
+        if self.myImportLaneAccess {
+            let numLanes = e.get_num_lanes();
+            let lefthand = opt::get_bool("lefthand");
+            let designated: &Vec<bool> = if forward { &nie.myDesignatedLaneForward } else { &nie.myDesignatedLaneBackward };
+            let allowed: &Vec<SVCPermissions> = if forward { &nie.myAllowedLaneForward } else { &nie.myAllowedLaneBackward };
+            let disallowed: &Vec<SVCPermissions> = if forward { &nie.myDisallowedLaneForward } else { &nie.myDisallowedLaneBackward };
+            for lane in 0..numLanes {
+                // laneUse stores from left to right
+                let i = if lefthand { lane } else { numLanes - 1 - lane };
+                // Extra allowed SVCs for this lane or none if no info was present for the lane
+                let extraAllowed: SVCPermissions = if (i as usize) < allowed.len() { allowed[i as usize] } else { SVC_IGNORING };
+                // Extra disallowed SVCs for this lane or none if no info was present for the lane
+                let extraDisallowed: SVCPermissions = if (i as usize) < disallowed.len() { disallowed[i as usize] } else { SVC_IGNORING };
+                if (i as usize) < designated.len() && designated[i as usize] {
+                    // if designated, delete all permissions
+                    e.m().set_permissions(SVC_IGNORING, lane);
+                    e.m().prefer_vehicle_class(lane, extraAllowed);
+                }
+                let permissions = (e.get_permissions(lane) | extraAllowed) & (!extraDisallowed);
+                e.m().set_permissions(permissions, lane);
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::mergeTurnSigns(std::vector<int> &, std::vector<int>)` [static, protected]
@@ -3792,7 +4161,13 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn merge_turn_signs(signs: &mut Vec<i32>, signs2: Vec<i32>) {
-        todo!("port NIImporter_OpenStreetMap::mergeTurnSigns")
+        if signs.is_empty() {
+            signs.extend(signs2);
+        } else {
+            for i in 0..std::cmp::min(signs.len(), signs2.len()) {
+                signs[i] |= signs2[i];
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenStreetMap::applyTurnSigns(NBEdge *, const std::vector<int> &)` [protected]
@@ -3815,7 +4190,19 @@ impl NIImporter_OpenStreetMap {
     // }
     #[allow(unused_variables)]
     pub fn apply_turn_signs(&mut self, e: Ptr<NBEdge>, turnSigns: &Vec<i32>) {
-        todo!("port NIImporter_OpenStreetMap::applyTurnSigns")
+        if self.myImportTurnSigns && turnSigns.len() > 0 {
+            // no sidewalks and bike lanes have been added yet
+            if turnSigns.len() as i32 == e.get_num_lanes() {
+                for i in 0..turnSigns.len() {
+                    // laneUse stores from left to right
+                    let laneIndex = e.get_num_lanes() - 1 - i as i32;
+                    let lane = e.m().get_lane_struct(laneIndex);
+                    lane.turnSigns = turnSigns[i];
+                }
+            } else {
+                write_warningf!("Ignoring turn sign information for % lanes on edge % with % driving lanes", turnSigns.len(), e.get_id(), e.get_num_lanes());
+            }
+        }
     }
 
 }
@@ -3890,7 +4277,26 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
     //             node(nullptr) { }
     #[allow(unused_variables)]
     pub fn new(_id: i64, _lon: f64, _lat: f64) -> Self {
-        todo!("port NIOSMNode::NIOSMNode")
+        Self {
+            base: Parameterised::new(),
+            id: _id,
+            lon: _lon,
+            lat: _lat,
+            ele: 0.0,
+            tlsControlled: false,
+            pedestrianCrossing: false,
+            railwayCrossing: false,
+            railwaySignal: NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32,
+            railwayBufferStop: false,
+            ptStopPosition: false,
+            ptStopLength: 0.0,
+            name: String::new(),
+            permissions: SVC_IGNORING,
+            position: String::new(),
+            positionMeters: f64::MAX,
+            myRailDirection: NIImporter_OpenStreetMap_WayType::WAY_UNKNOWN as i32,
+            node: Ptr::null(),
+        }
     }
 
     /// C++: `NIOSMNode & NIOSMNode::operator=(const NIOSMNode &)` [private]
@@ -3898,7 +4304,8 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIImporter_OpenStreetMap_NIOSMNode) -> &mut NIImporter_OpenStreetMap_NIOSMNode {
-        todo!("port NIOSMNode::operator=")
+        // C++ declares this as `= delete`, so no caller can reach it.
+        panic!("NIImporter_OpenStreetMap::NIOSMNode::operator= is deleted in C++")
     }
 
 }
