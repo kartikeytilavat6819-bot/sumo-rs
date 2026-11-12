@@ -9,7 +9,7 @@ pub struct RORouteDef {
     /// C++ base class `Named`
     pub base: Named,
     /// precomputed route for out-of-order computation
-    pub myPrecomputed: Rc<RORoute>,
+    pub myPrecomputed: Option<Rc<RORoute>>,
     /// Index of the route used within the last step
     pub myLastUsed: i32,
     /// The alternatives
@@ -37,6 +37,8 @@ impl std::ops::DerefMut for RORouteDef {
 // C++ static members of RORouteDef (port as module-level statics, see AGENTS.md):
 //   static bool RORouteDef::myUsingJTRR;
 //   static bool RORouteDef::mySkipNewRoutes;
+static MY_USING_JTRR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static MY_SKIP_NEW_ROUTES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 impl RORouteDef {
     /// C++: `void RORouteDef::RORouteDef(const std::string &, const int, const bool, const bool)`
@@ -50,7 +52,16 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, lastUsed: i32, tryRepair: bool, mayBeDisconnected: bool) -> Self {
-        todo!("port RORouteDef::RORouteDef")
+        RORouteDef {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            myPrecomputed: None,
+            myLastUsed: lastUsed,
+            myAlternatives: Vec::new(),
+            myNewRoute: false,
+            myTryRepair: tryRepair,
+            myMayBeDisconnected: mayBeDisconnected,
+            myDiscardSilent: false,
+        }
     }
 
     /// C++: `void RORouteDef::~RORouteDef() noexcept` [virtual]
@@ -58,7 +69,7 @@ impl RORouteDef {
     // virtual ~RORouteDef() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RORouteDef::~RORouteDef")
+        // C++ destructor body is empty
     }
 
     /// C++: `void RORouteDef::addLoadedAlternative(std::shared_ptr<RORoute>)`
@@ -68,7 +79,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn add_loaded_alternative(&mut self, alternative: Rc<RORoute>) {
-        todo!("port RORouteDef::addLoadedAlternative")
+        self.myAlternatives.push(alternative);
     }
 
     /// C++: `void RORouteDef::addAlternativeDef(const RORouteDef *)`
@@ -80,7 +91,9 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn add_alternative_def(&mut self, alternative: Ptr<RORouteDef>) {
-        todo!("port RORouteDef::addAlternativeDef")
+        for a in alternative.myAlternatives.iter() {
+            self.myAlternatives.push(a.clone());
+        }
     }
 
     /// C++: `void RORouteDef::validateAlternatives(const ROVehicle *, MsgHandler *)`
@@ -100,7 +113,19 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn validate_alternatives(&mut self, veh: Ptr<ROVehicle>, errorHandler: Ptr<MsgHandler>) {
-        todo!("port RORouteDef::validateAlternatives")
+        let mut i: usize = 0;
+        while i < self.myAlternatives.len() {
+            if (i as i32 != self.myLastUsed || MY_SKIP_NEW_ROUTES.load(std::sync::atomic::Ordering::Relaxed))
+                && !self.myAlternatives[i].is_permitted(veh, errorHandler)
+            {
+                self.myAlternatives.remove(i);
+                if self.myLastUsed > i as i32 {
+                    self.myLastUsed -= 1;
+                }
+            } else {
+                i += 1;
+            }
+        }
     }
 
     /// C++: `std::shared_ptr<RORoute> RORouteDef::buildCurrentRoute(SUMOAbstractRouter<ROEdge, ROVehicle> &, SUMOTime, const ROVehicle &) const` [const]
@@ -114,8 +139,11 @@ impl RORouteDef {
     //     return myPrecomputed;
     // }
     #[allow(unused_variables)]
-    pub fn build_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle) -> Rc<RORoute> {
-        todo!("port RORouteDef::buildCurrentRoute")
+    pub fn build_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle) -> Option<Rc<RORoute>> {
+        if self.myPrecomputed.is_none() {
+            self.pre_compute_current_route(router, begin, veh);
+        }
+        self.myPrecomputed.clone()
     }
 
     /// C++: `void RORouteDef::preComputeCurrentRoute(SUMOAbstractRouter<ROEdge, ROVehicle> &, SUMOTime, const ROVehicle &) const` [const]
@@ -507,7 +535,7 @@ impl RORouteDef {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn add_alternative(&mut self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, arg1: Ptr<ROVehicle>, current: Rc<RORoute>, begin: SUMOTime, errorHandler: Ptr<MsgHandler>) -> Rc<RORoute> {
+    pub fn add_alternative(&mut self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, arg1: Ptr<ROVehicle>, current: Rc<RORoute>, begin: SUMOTime, errorHandler: Ptr<MsgHandler>) -> Option<Rc<RORoute>> {
         todo!("port RORouteDef::addAlternative")
     }
 
@@ -518,7 +546,7 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<ROEdge> {
-        todo!("port RORouteDef::getOrigin")
+        self.myAlternatives.last().unwrap().get_first()
     }
 
     /// C++: `const ROEdge * RORouteDef::getDestination() const` [const]
@@ -528,7 +556,7 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn get_destination(&self) -> Ptr<ROEdge> {
-        todo!("port RORouteDef::getDestination")
+        self.myAlternatives.last().unwrap().get_last()
     }
 
     /// C++: `std::shared_ptr<const RORoute> RORouteDef::getFirstRoute() const` [const]
@@ -539,8 +567,11 @@ impl RORouteDef {
     //         return myAlternatives.front();
     //     }
     #[allow(unused_variables)]
-    pub fn get_first_route(&self) -> Rc<RORoute> {
-        todo!("port RORouteDef::getFirstRoute")
+    pub fn get_first_route(&self) -> Option<Rc<RORoute>> {
+        if self.myAlternatives.is_empty() {
+            return None;
+        }
+        Some(self.myAlternatives[0].clone())
     }
 
     /// C++: `std::shared_ptr<const RORoute> RORouteDef::getUsedRoute() const` [const]
@@ -549,7 +580,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn get_used_route(&self) -> Rc<RORoute> {
-        todo!("port RORouteDef::getUsedRoute")
+        self.myAlternatives[self.myLastUsed as usize].clone()
     }
 
     /// C++: `OutputDevice & RORouteDef::writeXMLDefinition(OutputDevice &, const ROVehicle *const, bool, bool, bool, bool) const` [const]
@@ -570,7 +601,16 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_definition(&self, dev: &mut OutputDevice, veh: Ptr<ROVehicle>, asAlternatives: bool, withExitTimes: bool, withCost: bool, withLength: bool) -> &mut OutputDevice {
-        todo!("port RORouteDef::writeXMLDefinition")
+        if asAlternatives {
+            dev.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_LAST, &self.myLastUsed);
+            for i in 0..self.myAlternatives.len() {
+                self.myAlternatives[i].write_xml_definition(dev, veh, true, true, withExitTimes, withLength, "");
+            }
+            dev.close_tag("");
+            dev
+        } else {
+            self.myAlternatives[self.myLastUsed as usize].write_xml_definition(dev, veh, withCost, false, withExitTimes, withLength, "")
+        }
     }
 
     /// C++: `RORouteDef * RORouteDef::copy(const std::string &, const SUMOTime) const` [const]
@@ -588,7 +628,18 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn copy(&self, id: &str, stopOffset: SUMOTime) -> Ptr<RORouteDef> {
-        todo!("port RORouteDef::copy")
+        let mut result = Box::new(RORouteDef::new(id, 0, self.myTryRepair, self.myMayBeDisconnected));
+        for route in self.myAlternatives.iter() {
+            let col: Ptr<RGBColor> = if route.get_color().is_null() {
+                Ptr::null()
+            } else {
+                Ptr::from_raw(Box::into_raw(Box::new(*route.get_color().get().unwrap())))
+            };
+            let mut newRoute = Rc::new(RORoute::new(id, route.get_costs(), route.get_probability(), route.get_edge_vector(), col, route.get_stops()));
+            Rc::get_mut(&mut newRoute).unwrap().add_stop_offset(stopOffset);
+            result.add_loaded_alternative(newRoute);
+        }
+        Ptr::from_raw(Box::into_raw(result))
     }
 
     /// C++: `double RORouteDef::getOverallProb() const` [const]
@@ -603,7 +654,11 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn get_overall_prob(&self) -> f64 {
-        todo!("port RORouteDef::getOverallProb")
+        let mut sum = 0.;
+        for r in self.myAlternatives.iter() {
+            sum += r.get_probability();
+        }
+        sum
     }
 
     /// C++: `bool RORouteDef::discardSilent() const` [const]
@@ -613,7 +668,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn discard_silent(&self) -> bool {
-        todo!("port RORouteDef::discardSilent")
+        self.myDiscardSilent
     }
 
     /// C++: `void RORouteDef::setUsingJTRR()` [static]
@@ -622,7 +677,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_using_jtrr() {
-        todo!("port RORouteDef::setUsingJTRR")
+        MY_USING_JTRR.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// C++: `void RORouteDef::setSkipNew()` [static]
@@ -631,7 +686,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn set_skip_new() {
-        todo!("port RORouteDef::setSkipNew")
+        MY_SKIP_NEW_ROUTES.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// C++: `bool RORouteDef::backTrack(SUMOAbstractRouter<ROEdge, ROVehicle> &, ConstROEdgeVector::const_iterator &, int, const ROEdge *, ConstROEdgeVector &, const ROVehicle &, SUMOTime)` [static, protected]
