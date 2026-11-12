@@ -2928,7 +2928,24 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn plan_movements(&mut self, t: SUMOTime) {
-        todo!("port MSLane::planMovements")
+        debug_assert!(self.myVehicles.len() != 0);
+        let mut cumulatedVehLength: f64 = 0.;
+        let mut leaders = MSLeaderInfo::new(self.myWidth, Ptr::null(), 0.);
+
+        // iterate over myVehicles, myPartialVehicles, and myManeuverReservations merge-sort style
+        // reverse iterators are represented by the number of elements already consumed from the back
+        // shortcut: assert(MSGlobals::gLateralResolution || myManeuverReservations.size() == 0) skipped, gLateralResolution not ported
+        let mut veh: usize = 0;
+        let mut vehPart: usize = 0;
+        let mut vehRes: usize = 0;
+        while veh < self.myVehicles.len() {
+            let v = self.myVehicles[self.myVehicles.len() - 1 - veh];
+            self.update_leader_info(v, &mut vehPart, &mut vehRes, &mut leaders); // 36ns with 8 threads, 9ns with 1
+            v.m().plan_move(t, &leaders, cumulatedVehLength); // 4800ns with 8 threads, 3100 with 1
+            cumulatedVehLength += v.get_vehicle_type().get_length_with_gap();
+            leaders.add_leader(v, false, 0.);
+            veh += 1;
+        }
     }
 
     /// C++: `void MSLane::setJunctionApproaches() const` [const, virtual]
@@ -3000,8 +3017,52 @@ impl MSLane {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn update_leader_info(&self, veh: Ptr<MSVehicle>, vehPart: &mut Unmapped /* VehCont::reverse_iterator */, vehRes: &mut Unmapped /* VehCont::reverse_iterator */, ahead: &mut MSLeaderInfo) {
-        todo!("port MSLane::updateLeaderInfo")
+    pub fn update_leader_info(&self, veh: Ptr<MSVehicle>, vehPart: &mut usize /* VehCont::reverse_iterator: count consumed from the back */, vehRes: &mut usize /* VehCont::reverse_iterator: count consumed from the back */, ahead: &mut MSLeaderInfo) {
+        let nPart = self.myPartialVehicles.len();
+        let nRes = self.myManeuverReservations.len();
+        let mut morePartialVehsAhead = *vehPart != nPart;
+        let mut moreReservationsAhead = *vehRes != nRes;
+        let mut nextToConsiderIsPartial: bool;
+
+        // Determine relevant leaders for veh
+        while moreReservationsAhead || morePartialVehsAhead {
+            // reverse iterator *it refers to index len-1-consumed
+            let partVeh: Option<Ptr<MSVehicle>> = if morePartialVehsAhead { Some(self.myPartialVehicles[nPart - 1 - *vehPart]) } else { None };
+            let resVeh: Option<Ptr<MSVehicle>> = if moreReservationsAhead { Some(self.myManeuverReservations[nRes - 1 - *vehRes]) } else { None };
+            if (resVeh.map_or(true, |r| r.get_position_on_lane_2(Ptr::new(self)) <= veh.get_position_on_lane()))
+                && (partVeh.map_or(true, |p| p.get_position_on_lane_2(Ptr::new(self)) <= veh.get_position_on_lane()))
+            {
+                // All relevant downstream vehicles have been collected.
+                break;
+            }
+
+            // Check whether next farthest relevant vehicle downstream is a partial vehicle or a maneuver reservation
+            if moreReservationsAhead && !morePartialVehsAhead {
+                nextToConsiderIsPartial = false;
+            } else if morePartialVehsAhead && !moreReservationsAhead {
+                nextToConsiderIsPartial = true;
+            } else {
+                // Add farthest downstream vehicle first
+                nextToConsiderIsPartial = partVeh.unwrap().get_position_on_lane_2(Ptr::new(self)) > resVeh.unwrap().get_position_on_lane_2(Ptr::new(self));
+            }
+
+            // Add appropriate leader information
+            if nextToConsiderIsPartial {
+                let part = partVeh.unwrap();
+                let latOffset = part.get_lat_offset(Ptr::new(self));
+                if !(MSGlobals::lane_change_duration() > 0 && part.get_lane_change_model_2().is_opposite() && !part.get_lane_change_model_2().is_changing_lanes()) {
+                    ahead.add_leader(part, false, latOffset);
+                }
+                *vehPart += 1;
+                morePartialVehsAhead = *vehPart != nPart;
+            } else {
+                let res = resVeh.unwrap();
+                let latOffset = res.get_lat_offset(Ptr::new(self));
+                ahead.add_leader(res, false, latOffset);
+                *vehRes += 1;
+                moreReservationsAhead = *vehRes != nRes;
+            }
+        }
     }
 
     /// C++: `void MSLane::executeMovements(const SUMOTime)` [virtual]
