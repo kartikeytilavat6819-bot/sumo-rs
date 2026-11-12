@@ -1,6 +1,7 @@
 //! Port of netimport/NIImporter_SUMO.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::NETWORK_VERSION;
 use std::cell::RefCell;
 use utils::common::msg_handler::{progress_begin_message, progress_time_message, write_error, write_warning};
 
@@ -580,7 +581,7 @@ impl NIImporter_SUMO {
             myCheckLaneFoesAll: false,
             myCheckLaneFoesRoundabout: true,
             myTlsIgnoreInternalJunctionJam: false,
-            myDefaultSpreadType: LaneSpreadFunctions.get_string(LaneSpreadFunction::RIGHT).unwrap().to_string(),
+            myDefaultSpreadType: LaneSpreadFunctions.get_string(LaneSpreadFunction::RIGHT).to_string(),
             myGeomAvoidOverlap: false,
             myJunctionsHigherSpeed: false,
             myInternalJunctionsVehicleWidth: utils::options::options_cont::get_float("internal-junctions.vehicle-width"),
@@ -2058,7 +2059,7 @@ impl NIImporter_SUMO {
             } else if matches!(type_, SumoXMLNodeType::INTERNAL) {
                 write_warning(&format!(
                     "Invalid node type '{}' for junction '{}' in input network",
-                    NodeTypes.get_string(SumoXMLNodeType::INTERNAL).unwrap(),
+                    NodeTypes.get_string(SumoXMLNodeType::INTERNAL),
                     id
                 ));
                 type_ = SumoXMLNodeType::UNKNOWN;
