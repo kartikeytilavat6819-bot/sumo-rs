@@ -429,6 +429,15 @@ thread_local! {
     static MY_RNGS: std::cell::RefCell<Vec<SumoRNG>> = std::cell::RefCell::new(Vec::new());
     /// C++: `MSLane::myExtrapolateSubstepDepart`
     static MY_EXTRAPOLATE_SUBSTEP_DEPART: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    static MY_COLLISION_ACTION: std::cell::Cell<MSLane_CollisionAction> = std::cell::Cell::new(MSLane_CollisionAction::COLLISION_ACTION_TELEPORT);
+    static MY_INTERMODAL_COLLISION_ACTION: std::cell::Cell<MSLane_CollisionAction> = std::cell::Cell::new(MSLane_CollisionAction::COLLISION_ACTION_WARN);
+    static MY_CHECK_JUNCTION_COLLISIONS: std::cell::Cell<bool> = std::cell::Cell::new(false);
+    static MY_CHECK_JUNCTION_COLLISION_MIN_GAP: std::cell::Cell<f64> = std::cell::Cell::new(0.);
+}
+
+/// C++ static `MSLane::myCheckJunctionCollisionMinGap` (set by initCollisionOptions)
+fn check_junction_collision_min_gap() -> f64 {
+    MY_CHECK_JUNCTION_COLLISION_MIN_GAP.with(|c| c.get())
 }
 
 impl MSLane {
@@ -3764,7 +3773,198 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn detect_collisions(&mut self, timestep: SUMOTime, stage: &str) {
-        todo!("port MSLane::detectCollisions")
+        self.myNeedsCollisionCheck = false;
+        if MSLane::get_collision_action() == MSLane_CollisionAction::COLLISION_ACTION_NONE {
+            return;
+        }
+
+        // determinism: C++ std::set<const MSVehicle*, ComparatorNumericalIdLess> orders by numerical ID; BTreeSet here orders by pointer
+        let mut toRemove: BTreeSet<Ptr<MSVehicle>> = BTreeSet::new();
+        let mut toTeleport: BTreeSet<Ptr<MSVehicle>> = BTreeSet::new();
+        if self.must_check_junction_collisions() {
+            self.myNeedsCollisionCheck = true; // always check
+            debug_assert!(self.myLinks.len() == 1);
+            let foeLanes: Vec<Ptr<MSLane>> = self.myLinks[0].get_foe_lanes().clone();
+            // save the iterator, it might get modified, see #8842
+            let end = self.any_vehicles_end();
+            let mut veh = self.any_vehicles_begin();
+            while veh.ne_op(&end) {
+                let collider = veh.op_();
+                veh.op__2();
+                let colliderBoundary: PositionVector = collider.get_bounding_box(check_junction_collision_min_gap());
+                for foeLane in foeLanes.iter().copied() {
+                    let foeEnd = foeLane.any_vehicles_end();
+                    let mut it_veh = foeLane.any_vehicles_begin();
+                    while it_veh.ne_op(&foeEnd) {
+                        let victim = it_veh.op_();
+                        it_veh.op__2();
+                        if victim == collider {
+                            // may happen if the vehicles lane and shadow lane are siblings
+                            continue;
+                        }
+                        if MSGlobals::ignore_junction_blocker() < SUMOTime::MAX {
+                            if collider.get_waiting_time(false) >= MSGlobals::ignore_junction_blocker()
+                                || victim.get_waiting_time(false) >= MSGlobals::ignore_junction_blocker() {
+                                // ignored vehicles should not tigger collision
+                                continue;
+                            }
+                        }
+
+                        if colliderBoundary.overlaps_with(&victim.get_bounding_box(0.), 0.) {
+                            // make a detailed check
+                            let _boundingPoly = collider.get_bounding_poly(0.);
+                            if collider.get_bounding_poly(check_junction_collision_min_gap()).overlaps_with(&victim.get_bounding_poly(0.), 0.) {
+                                // junction leader is the victim (collider must still be on junction)
+                                debug_assert!(self.is_internal());
+                                if victim.get_lane().is_internal() && victim.is_leader(self.myLinks[0], collider, -1.) {
+                                    foeLane.handle_collision_between(timestep, stage, victim, collider, -1., 0., &mut toRemove, &mut toTeleport);
+                                } else {
+                                    self.handle_collision_between(timestep, stage, collider, victim, -1., 0., &mut toRemove, &mut toTeleport);
+                                }
+                            }
+                        }
+                    }
+                    self.detect_pedestrian_junction_collision(collider, &colliderBoundary, foeLane, timestep, stage, &mut toRemove, &mut toTeleport);
+                }
+                let walkingAreaFoe = self.myLinks[0].m().get_walking_area_foe();
+                if !walkingAreaFoe.is_null() {
+                    self.detect_pedestrian_junction_collision(collider, &colliderBoundary, walkingAreaFoe, timestep, stage, &mut toRemove, &mut toTeleport);
+                }
+                let walkingAreaFoeExit = self.myLinks[0].m().get_walking_area_foe_exit();
+                if !walkingAreaFoeExit.is_null() {
+                    self.detect_pedestrian_junction_collision(collider, &colliderBoundary, walkingAreaFoeExit, timestep, stage, &mut toRemove, &mut toTeleport);
+                }
+            }
+        }
+
+        if MSLane::get_intermodal_collision_action() != MSLane_CollisionAction::COLLISION_ACTION_NONE && self.myEdge.get_persons().len() > 0 && self.has_pedestrians() {
+            let v_end = self.any_vehicles_end();
+            let mut it_v = self.any_vehicles_begin();
+            while it_v.ne_op(&v_end) {
+                let v = it_v.op_();
+                it_v.op__2();
+                let mut back = v.get_back_position_on_lane(Ptr::new(self));
+                let length = v.get_vehicle_type().get_length();
+                let right = v.get_right_side_on_edge(Ptr::new(self)) - self.get_right_side_on_edge();
+                if v.get_lane() == self.get_bidi_lane() {
+                    // use the front position for checking
+                    back -= length;
+                }
+                let leader = self.next_blocking(back, right, right + v.get_vehicle_type().get_width(), 0., false);
+                if !leader.0.is_null() && leader.1 < length && !leader.0.is_jammed() {
+                    if v.get_vehicle_type().get_gui_shape() == SUMOVehicleShape::AIRCRAFT {
+                        // aircraft wings and body are above walking level
+                        continue;
+                    }
+                    let gap = leader.1 - length;
+                    self.handle_intermodal_collision_between(timestep, stage, v, leader.0.cast::<MSTransportable>(), gap, "sharedLane", &mut toRemove, &mut toTeleport);
+                }
+            }
+        }
+
+        if self.myVehicles.len() == 0 {
+            return;
+        }
+        if !MSGlobals::sublane() {
+            // no sublanes
+            let n = self.myVehicles.len();
+            // C++ reverse iteration: pred runs over indices n-1..1, veh is pred-1
+            for i in (1..n).rev() {
+                let pred = self.myVehicles[i];
+                let veh = self.myVehicles[i - 1];
+                self.detect_collision_between(timestep, stage, veh, pred, &mut toRemove, &mut toTeleport);
+            }
+            if self.myPartialVehicles.len() > 0 {
+                let lastVeh = self.myVehicles[0];
+                let partial = self.myPartialVehicles[0];
+                self.detect_collision_between(timestep, stage, lastVeh, partial, &mut toRemove, &mut toTeleport);
+            }
+            let bidiLane = self.get_bidi_lane();
+            if !bidiLane.is_null() {
+                // bidirectional railway
+                if bidiLane.get_vehicle_number_with_partials() > 0 {
+                    for i in 0..self.myVehicles.len() {
+                        let veh = self.myVehicles[i];
+                        let high = veh.get_position_on_lane_2(Ptr::new(self));
+                        let mut low = veh.get_back_position_on_lane(Ptr::new(self));
+                        if stage == STAGE_MOVEMENTS {
+                            // use previous back position to catch trains that
+                            // "jump" through each other
+                            low -= utils::common::time::speed2dist(veh.get_speed());
+                        }
+                        let end2 = bidiLane.any_vehicles_end();
+                        let mut veh2_it = bidiLane.any_vehicles_begin();
+                        while veh2_it.ne_op(&end2) {
+                            let veh2 = veh2_it.op_();
+                            veh2_it.op__2();
+                            // self-collisions might legitemately occur when a long train loops back on itself
+                            if veh == veh2 && !veh.is_rail() {
+                                continue;
+                            }
+                            if veh.get_lane() == veh2.get_lane() || veh.get_lane() == veh2.get_back_lane() || veh.get_back_lane() == veh2.get_lane() {
+                                // vehicles are not in a bidi relation
+                                continue;
+                            }
+                            let low2 = self.myLength - veh2.get_position_on_lane_2(bidiLane);
+                            let mut high2 = self.myLength - veh2.get_back_position_on_lane(bidiLane);
+                            if stage == STAGE_MOVEMENTS {
+                                // use previous back position to catch trains that
+                                // "jump" through each other
+                                high2 += utils::common::time::speed2dist(veh2.get_speed());
+                            }
+                            if !(high < low2 || high2 < low) {
+                                // the faster vehicle is at fault
+                                let mut collider = veh;
+                                let mut victim = veh2;
+                                if collider.get_speed() < victim.get_speed() {
+                                    std::mem::swap(&mut victim, &mut collider);
+                                }
+                                self.handle_collision_between(timestep, stage, collider, victim, -1., 0., &mut toRemove, &mut toTeleport);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // in the sublane-case it is insufficient to check the vehicles ordered
+            // by their front position as there might be more than 2 vehicles next to each
+            // other on the same lane; a pairwise check over all vehicles is used
+            // XXX quick hack: check each in myVehicles against all others
+            let end = self.any_vehicles_end();
+            let mut veh = self.any_vehicles_begin();
+            while veh.ne_op(&end) {
+                let follow = veh.op_();
+                veh.op__2();
+                let end2 = self.any_vehicles_end();
+                let mut veh2 = self.any_vehicles_begin();
+                while veh2.ne_op(&end2) {
+                    let lead = veh2.op_();
+                    veh2.op__2();
+                    if lead == follow {
+                        continue;
+                    }
+                    if lead.get_position_on_lane_2(Ptr::new(self)) < follow.get_position_on_lane_2(Ptr::new(self)) {
+                        continue;
+                    }
+                    if self.detect_collision_between(timestep, stage, follow, lead, &mut toRemove, &mut toTeleport) {
+                        // XXX what about collisions with multiple leaders at once?
+                        break;
+                    }
+                }
+            }
+        }
+
+        // determinism: iteration order follows Ptr ordering here, C++ uses numerical ID order
+        for veh in toRemove.iter().copied().collect::<Vec<Ptr<MSVehicle>>>() {
+            let vehLane = veh.get_mutable_lane();
+            vehLane.m().remove_vehicle(veh, MSMoveReminder_Notification::NOTIFICATION_TELEPORT, false);
+            if toTeleport.contains(&veh) {
+                MSVehicleTransfer::get_instance().m().add(timestep, veh);
+            } else {
+                veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION);
+                MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(veh.cast::<SUMOVehicle>(), true);
+            }
+        }
     }
 
     /// C++: `bool MSLane::appropriate(const MSVehicle *) const` [const, virtual]
@@ -4126,9 +4326,17 @@ impl MSLane {
     //         into.Insert(cmin, cmax, l);
     //     }
     // }
+    // shortcut: RTREE template parameter replaced by an insert closure (cmin, cmax, lane), since no generic RTree is wired to MSLane yet
     #[allow(unused_variables)]
-    pub fn fill() {
-        todo!("port MSLane::fill")
+    pub fn fill<F: FnMut(&[f32; 2], &[f32; 2], Ptr<MSLane>)>(mut into: F) {
+        let lanes: Vec<Ptr<MSLane>> = MY_DICT.with(|d| d.borrow().values().copied().collect());
+        for l in lanes {
+            let mut b = l.get_shape_2().get_box_boundary();
+            b.grow(3.);
+            let cmin = [b.xmin() as f32, b.ymin() as f32];
+            let cmax = [b.xmax() as f32, b.ymax() as f32];
+            into(&cmin, &cmax, l);
+        }
     }
 
     /// C++: `void MSLane::initRNGs(const OptionsCont &)` [static]
@@ -6815,7 +7023,13 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_emissions(&self) -> f64 {
-        todo!("port MSLane::getEmissions")
+        // shortcut: ET template collapsed; MSBaseVehicle::get_emissions is itself a shortcut returning 0 until PollutantsInterface is wired
+        let mut ret = 0.;
+        for v in self.get_vehicles_secure().iter() {
+            ret += v.get_emissions();
+        }
+        self.release_vehicles();
+        ret
     }
 
     /// C++: `double MSLane::getHarmonoise_NoiseEmissions() const` [const]
@@ -6837,7 +7051,18 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_harmonoise_noise_emissions(&self) -> f64 {
-        todo!("port MSLane::getHarmonoise_NoiseEmissions")
+        let mut ret = 0.;
+        let vehs = self.get_vehicles_secure();
+        if vehs.len() == 0 {
+            self.release_vehicles();
+            return 0.;
+        }
+        for v in vehs.iter() {
+            let sv = v.get_harmonoise_noise_emissions();
+            ret += 10f64.powf(sv / 10.);
+        }
+        self.release_vehicles();
+        crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::sum(ret)
     }
 
     /// C++: `void MSLane::setRightSideOnEdge(double, int)`
@@ -6848,7 +7073,8 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn set_right_side_on_edge(&mut self, value: f64, rightmostSublane: i32) {
-        todo!("port MSLane::setRightSideOnEdge")
+        self.myRightSideOnEdge = value;
+        self.myRightmostSublane = rightmostSublane;
     }
 
     /// C++: `void MSLane::initRestrictions()`
@@ -6860,7 +7086,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn init_restrictions(&mut self) {
-        todo!("port MSLane::initRestrictions")
+        // simplify unit testing without MSNet instance
+        self.myRestrictions = if MSGlobals::unit_tests() {
+            Ptr::null()
+        } else {
+            MSNet::get_instance().get_restrictions(self.myEdge.get_edge_type())
+        };
     }
 
     /// C++: `void MSLane::checkBufferType()`
@@ -6876,7 +7107,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn check_buffer_type(&mut self) {
-        todo!("port MSLane::checkBufferType")
+        // shortcut: C++ myVehBuffer.unsetCondition() only matters for the MFXSynchQue wait condition; myVehBuffer is a plain Vec here, so nothing to unset, upgrade with the multi-threaded sim
+        let _ = MSGlobals::num_sim_threads();
     }
 
     /// C++: `double MSLane::getRightSideOnEdge() const` [const]
@@ -6916,7 +7148,19 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn sort_partial_vehicles(&mut self) {
-        todo!("port MSLane::sortPartialVehicles")
+        if self.myPartialVehicles.len() > 1 {
+            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
+            self.myPartialVehicles.sort_by(|a, b| {
+                if natSorter.call_op(*a, *b) != 0 {
+                    std::cmp::Ordering::Less
+                } else if natSorter.call_op(*b, *a) != 0 {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+        }
     }
 
     /// C++: `void MSLane::sortManeuverReservations()`
@@ -6940,7 +7184,19 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn sort_maneuver_reservations(&mut self) {
-        todo!("port MSLane::sortManeuverReservations")
+        if self.myManeuverReservations.len() > 1 {
+            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
+            self.myManeuverReservations.sort_by(|a, b| {
+                if natSorter.call_op(*a, *b) != 0 {
+                    std::cmp::Ordering::Less
+                } else if natSorter.call_op(*b, *a) != 0 {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+        }
     }
 
     /// C++: `MSLane * MSLane::getOpposite() const` [const]
@@ -7149,7 +7405,11 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn must_check_junction_collisions(&self) -> bool {
-        todo!("port MSLane::mustCheckJunctionCollisions")
+        MY_CHECK_JUNCTION_COLLISIONS.with(|c| c.get())
+            && self.myEdge.is_internal()
+            && (self.myLinks[0].get_foe_lanes().len() > 0
+                || !self.myLinks[0].m().get_walking_area_foe().is_null()
+                || !self.myLinks[0].m().get_walking_area_foe_exit().is_null())
     }
 
     /// C++: `std::vector<StopWatch<std::chrono::nanoseconds>> & MSLane::getStopWatch()`
@@ -7407,7 +7667,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_collision_action() -> MSLane_CollisionAction {
-        todo!("port MSLane::getCollisionAction")
+        MY_COLLISION_ACTION.with(|c| c.get())
     }
 
     /// C++: `CollisionAction MSLane::getIntermodalCollisionAction()` [static]
@@ -7416,7 +7676,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_intermodal_collision_action() -> MSLane_CollisionAction {
-        todo!("port MSLane::getIntermodalCollisionAction")
+        MY_INTERMODAL_COLLISION_ACTION.with(|c| c.get())
     }
 
     /// C++: `DepartSpeedDefinition & MSLane::getDefaultDepartSpeedDefinition()` [static]
