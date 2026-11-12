@@ -196,14 +196,10 @@ fn notification_string(reason: MSMoveReminder_Notification) -> &'static str {
 // shortcut: MSLogicJunction::LinkBits is still Unmapped (= ()) in ms_logic_junction.rs, so the foe bitset
 // content is unavailable; the ported MSJunctionLogic::getFoesFor returns an empty dummy set, so testing
 // any bit yields false. Upgrade when the typedef is mapped to a real bitset.
-trait LinkBitsTest {
-    fn test(&self, bit: i32) -> bool;
-}
-
-impl LinkBitsTest for MSLogicJunction_LinkBits {
-    fn test(&self, _bit: i32) -> bool {
-        false
-    }
+fn link_bits_test(bits: &MSLogicJunction_LinkBits, bit: i32) -> bool {
+    let _ = bit;
+    let _ = bits;
+    false
 }
 
 /// `dynamic_cast<const MSRailSignal*>(logic)`: null unless the logic is a rail signal.
@@ -746,8 +742,9 @@ impl MSDriveWay {
             //&& myForward.front()->isInternal() && other.myForward.front()->isInternal()
             && !self.myOrigin.get_junction().get_logic().is_null()
         {
-            let foes = self.myOrigin.get_junction().get_logic().get_foes_for(self.myOrigin.get_index());
-            if foes.test(other.myOrigin.get_index()) {
+            let logic = self.myOrigin.get_junction().get_logic();
+            let foes = logic.get_foes_for(self.myOrigin.get_index());
+            if link_bits_test(foes, other.myOrigin.get_index()) {
                 // switch/crossing is also a rail_signal (direct control)
                 if !(self.myForward.front().unwrap().is_internal() && other.myForward.front().unwrap().is_internal()) {
                     return false;
@@ -764,7 +761,7 @@ impl MSDriveWay {
                     if !link.is_null() && link.get_tl_logic().is_null() {
                         // switch/crossing is also a rail_signal (direct control) but own link is uncontrolled
                         let logic = lane.get_to_junction().get_logic();
-                        if !logic.is_null() && logic.get_foes_for(link.get_index()).test(other.myOrigin.get_index()) {
+                        if !logic.is_null() && link_bits_test(logic.get_foes_for(link.get_index()), other.myOrigin.get_index()) {
                             // and links are in conflict
                             return true;
                         }
@@ -1310,7 +1307,7 @@ impl MSDriveWay {
         let items = MY_SIDING_DRIVEWAYS.with(|m| m.borrow().get(&end).cloned());
         if let Some(items) = items {
             for (dw, foe) in items.iter() {
-                if !dw.myTrains.is_empty() && !foe.myTrains.is_empty() && self.bidi_blocked_by(foe) {
+                if !dw.myTrains.is_empty() && !foe.myTrains.is_empty() && self.bidi_blocked_by(&*foe) {
                     // we found two driveways that are in conflict and
                     // could make use of this siding. Inserting a vehicle here could create deadlock.
                     let mveh = veh.cast::<MSVehicle>();
@@ -1799,7 +1796,7 @@ impl MSDriveWay {
                 if self.myFoundJump
                     && prev.get_bidi_edge() != next
                     && !prev.get_bidi_edge().is_null()
-                    && prev.is_connected_to(&next, SVC_RAIL_CLASSES & prev.get_permissions(), false)
+                    && prev.is_connected_to(&*next, SVC_RAIL_CLASSES & prev.get_permissions(), false)
                 {
                     return false;
                 }
@@ -2361,7 +2358,7 @@ impl MSDriveWay {
                     foe.m().myFoes.push(dw);
                 }
             } else {
-                if foe.bidi_blocked_by_end(&dwm) {
+                if foe.bidi_blocked_by_end(&*dwm) {
                     foe.m().myFoes.push(dw);
                     foe.m().add_sidings(dw, false);
                 } else {
@@ -2369,7 +2366,7 @@ impl MSDriveWay {
                 }
                 if foe != dw {
                     // check for movingBlock
-                    if dwm.bidi_blocked_by_end(&foe) {
+                    if dwm.bidi_blocked_by_end(&*foe) {
                         dwm.myFoes.push(foe);
                         dwm.add_sidings(foe, false);
                     } else {
@@ -2800,7 +2797,38 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn has_link_conflict(&self, closest: &MSRailSignal_Approaching, foeLink: Ptr<MSLink>) -> bool {
-        todo!("port MSDriveWay::hasLinkConflict")
+        if !foeLink.get_approaching_2().is_empty() {
+            let foe = foeLink.get_closest();
+            if foe.0 == closest.0 {
+                return false;
+            }
+            let foe_tll = foeLink.get_tl_logic();
+            assert!(!foe_tll.is_null());
+            let foe_rs = as_rail_signal(foe_tll);
+            if !foe_rs.is_null() {
+                let foe_drive_way: Ptr<MSDriveWay> =
+                    Ptr::from_mut(foe_rs.m().retrieve_drive_way_for_veh(foeLink.get_tl_index(), foe.0));
+                let mut occupied: MSEdgeVector = Vec::new();
+                let foe_or_sub_foe = self.get_foe_or_sub_foe(foe_drive_way);
+                if foe_drive_way.foe_drive_way_occupied(false, foe.0, &mut occupied)
+                    || !foe_rs.constraints_allow(foe.0, false)
+                    || !self.overlap(&*foe_drive_way)
+                    || foe_or_sub_foe.is_null()
+                    || self.can_use_siding(closest.0, foe_or_sub_foe, Ptr::null()).0
+                {
+                    return false;
+                }
+                let yield_ = Self::must_yield(closest, &foe);
+                if MSRailSignal::store_vehicles() {
+                    MSRailSignal::rival_vehicles().push(foe.0);
+                    if yield_ {
+                        MSRailSignal::priority_vehicles().push(foe.0);
+                    }
+                }
+                return yield_;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSDriveWay::overlap(const MSDriveWay &) const` [const, protected]
@@ -2823,7 +2851,20 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn overlap(&self, other: &MSDriveWay) -> bool {
-        todo!("port MSDriveWay::overlap")
+        for i in 0..self.myCoreSize {
+            for j in 0..other.myCoreSize {
+                let edge = self.myRoute[i as usize];
+                let edge2 = other.myRoute[j as usize];
+                if edge.get_to_junction() == edge2.get_to_junction()
+                    || edge.get_to_junction() == edge2.get_from_junction()
+                    || edge.get_from_junction() == edge2.get_from_junction()
+                {
+                    // XXX might be rail_crossing with parallel tracks
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSDriveWay::buildRoute(const MSLink *, MSRouteIterator, MSRouteIterator, LaneVisitedMap &, std::set<MSLink *, MSLink::ComparatorNumericalLaneIdLess> &)` [protected]
@@ -3220,7 +3261,46 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn check_flanks(&self, originLink: Ptr<MSLink>, lanes: &Vec<Ptr<MSLane>>, visited: &MSRailSignal_LaneVisitedMap, allFoes: bool, movingBlock: bool, flankSwitches: &mut BTreeSet<Ptr<MSLink>>) {
-        todo!("port MSDriveWay::checkFlanks")
+        let reverse_origin_link = if !originLink.is_null()
+            && !originLink.get_lane().get_bidi_lane().is_null()
+            && !originLink.get_lane_before().get_bidi_lane().is_null()
+        {
+            originLink
+                .get_lane()
+                .get_bidi_lane()
+                .get_link_to(originLink.get_lane_before().get_bidi_lane())
+        } else {
+            Ptr::null()
+        };
+        let reverse_origin_link = if !reverse_origin_link.is_null() {
+            reverse_origin_link.get_corresponding_exit_link()
+        } else {
+            Ptr::null()
+        };
+        for i in 0..lanes.len() {
+            let lane = lanes[i];
+            let prev = if i > 0 { Some(lanes[i - 1]) } else { None };
+            let next = if i + 1 < lanes.len() { Some(lanes[i + 1]) } else { None };
+            if lane.is_internal() {
+                continue;
+            }
+            for ili in lane.get_incoming_lanes().iter() {
+                if ili.viaLink == originLink
+                    || ili.viaLink == reverse_origin_link
+                    || ili.viaLink.get_direction() == LinkDirection::TURN
+                    || ili.viaLink.get_direction() == LinkDirection::TURN_LEFTHAND
+                    || (originLink.is_null() && i == 0 && movingBlock)
+                {
+                    continue;
+                }
+                if Some(ili.lane) != prev && Some(ili.lane) != next {
+                    flankSwitches.insert(ili.viaLink);
+                } else if allFoes {
+                    // link is part of the driveway, find foes that cross the driveway without entering
+                    self.check_crossing_flanks(ili.viaLink, visited, flankSwitches);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::checkCrossingFlanks(MSLink *, const LaneVisitedMap &, std::set<MSLink *, MSLink::ComparatorNumericalLaneIdLess> &) const` [const, protected]
@@ -3267,7 +3347,39 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn check_crossing_flanks(&self, dwLink: Ptr<MSLink>, visited: &MSRailSignal_LaneVisitedMap, flankSwitches: &mut BTreeSet<Ptr<MSLink>>) {
-        todo!("port MSDriveWay::checkCrossingFlanks")
+        let junction = dwLink.get_junction();
+        if junction.is_null() {
+            return; // unregulated junction;
+        }
+        let logic = junction.get_logic();
+        if logic.is_null() {
+            return; // unregulated junction;
+        }
+        for &in_edge in junction.get_incoming().iter() {
+            if in_edge.is_internal() {
+                continue;
+            }
+            for &in_lane in in_edge.get_lanes().iter() {
+                let in_bidi = in_lane.get_bidi_lane();
+                if is_railway_or_shared(in_lane.get_permissions())
+                    && !visited.contains(&in_lane)
+                    && (in_bidi.is_null() || !visited.contains(&in_bidi))
+                {
+                    for &link in in_lane.get_link_cont().iter() {
+                        if link.get_index() >= 0
+                            && link_bits_test(logic.get_foes_for(dwLink.get_index()), link.get_index())
+                            && !visited.contains(&link.get_lane())
+                        {
+                            if link.get_via_lane().is_null() {
+                                flankSwitches.insert(link);
+                            } else {
+                                flankSwitches.insert(*link.get_via_lane().get_link_cont().first().unwrap());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::findFlankProtection(MSLink *, MSLink *, const std::vector<const MSLane *> &)` [protected]
@@ -3340,7 +3452,46 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn find_flank_protection(&mut self, link: Ptr<MSLink>, origLink: Ptr<MSLink>, flank: &Vec<Ptr<MSLane>>) {
-        todo!("port MSDriveWay::findFlankProtection")
+        if !link.get_corresponding_entry_link().get_tl_logic().is_null()
+            && link.get_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL
+        {
+            let entry = link.get_corresponding_entry_link();
+            // guarded by signal
+            // @note, technically it's enough to collect links from foe driveways
+            // but this also adds "unused" conflict links which may aid comprehension
+            self.myConflictLinks.push(entry);
+            self.add_foes(entry);
+        } else {
+            let lane = link.get_lane_before();
+            let mut pred_links: Vec<Ptr<MSLink>> = Vec::new();
+            for ili in lane.get_incoming_lanes().iter() {
+                if !ili.viaLink.is_turnaround() {
+                    pred_links.push(ili.viaLink);
+                }
+            }
+            if pred_links.len() > 1 {
+                // this is a switch
+                self.add_switch_foes(link);
+                for &pred in pred_links.iter() {
+                    self.add_switch_foes(pred);
+                }
+            } else if pred_links.len() == 1 {
+                if Self::is_switch(link) {
+                    self.add_switch_foes(link);
+                } else {
+                    // continue upstream via single predecessor
+                    self.find_flank_protection(pred_links[0], origLink, flank);
+                }
+            }
+            // check for insertions
+            let edge = Ptr::new(lane.get_edge());
+            let departures = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().get(&edge).cloned().unwrap_or_default());
+            for foe in departures {
+                if self.flank_conflict(&*foe) || self.crossing_conflict(&*foe) {
+                    self.myFoes.push(foe);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::addFoes(const MSLink *)` [protected]
@@ -3373,7 +3524,20 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_foes(&mut self, link: Ptr<MSLink>) {
-        todo!("port MSDriveWay::addFoes")
+        let rs = as_rail_signal(link.get_tl_logic());
+        if !rs.is_null() {
+            let this_ptr = Ptr::new(&*self);
+            for foe in rs.retrieve_drive_ways(link.get_tl_index()) {
+                if foe != this_ptr
+                    && (self.flank_conflict(&*foe)
+                        || foe.flank_conflict(&*self)
+                        || self.crossing_conflict(&*foe)
+                        || foe.crossing_conflict(&*self))
+                {
+                    self.myFoes.push(foe);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::addSidings(MSDriveWay *, bool)` [protected]
@@ -3537,7 +3701,178 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_sidings(&mut self, foe: Ptr<MSDriveWay>, addToFoe: bool) {
-        todo!("port MSDriveWay::addSidings")
+        let self_ptr = Ptr::from_mut(self);
+        let foe_route: Vec<Ptr<MSEdge>> = if foe.is_sub_drive_way() {
+            foe.myParent.myRoute.clone()
+        } else {
+            foe.myRoute.clone()
+        };
+        let mut foe_end_bidi = foe.myForward.back().unwrap().get_edge().get_bidi_edge();
+        let mut foe_forward_normals = 0;
+        for &lane in foe.myForward.iter() {
+            if lane.is_normal() {
+                foe_forward_normals += 1;
+            }
+        }
+        if foe_forward_normals == foe_route.len() as i32 {
+            return;
+        }
+        let mut foe_search_beg = foe_forward_normals as usize;
+        let foe_search_end = foe_route.len();
+        if foe_end_bidi.is_null() {
+            panic!(
+                "{}",
+                ProcessError::new(format!(
+                    "checkSiding {} foe={} noBidi\n",
+                    self.base2.get_id(),
+                    foe.base2.get_id()
+                ))
+            );
+        }
+        // if foe is a subDriveway, the forward section may end on an internal edge which would not be found on myRoute
+        foe_end_bidi = foe_end_bidi.get_normal_successor();
+        let foe_forward_edges: BTreeSet<Ptr<MSEdge>> =
+            foe_route[..foe_forward_normals as usize].iter().copied().collect();
+        let mut forward_normals = 0;
+        for &lane in self.myForward.iter() {
+            if lane.is_normal() {
+                forward_normals += 1;
+                if foe_forward_edges.contains(&Ptr::new(lane.get_edge())) {
+                    return;
+                }
+            }
+        }
+        let mut i = 0;
+        let mut start: Vec<i32> = Vec::new();
+        let mut length: Vec<f64> = Vec::new();
+        let mut intermediate_rs: Vec<Vec<i32>> = Vec::new();
+        while i < self.myRoute.len() as i32 {
+            if self.myRoute[i as usize] == foe_end_bidi {
+                break;
+            }
+            i += 1;
+        }
+        if i == self.myRoute.len() as i32 {
+            panic!(
+                "{}",
+                ProcessError::new(format!(
+                    "checkSiding {} foe={} foeEndBidi={} not on route\n",
+                    self.base2.get_id(),
+                    foe.base2.get_id(),
+                    foe_end_bidi.get_id()
+                ))
+            );
+        }
+        let mut next = self.myRoute[i as usize];
+        i -= 1;
+        // look backward along our route starting at the final edge of the foe dw
+        while i >= 0 {
+            let cur = self.myRoute[i as usize];
+            let cur_has_rs = Self::has_rs(cur, next);
+            if cur_has_rs {
+                let found = if foe_search_beg < foe_search_end {
+                    foe_route[foe_search_beg..].iter().position(|e| *e == cur.get_bidi_edge())
+                } else {
+                    None
+                };
+                if found.is_none() {
+                    // we found a rail signal in a safe spot (not on the foe route)
+                    start.push(i);
+                    length.push(0.0);
+                    intermediate_rs.push(Vec::new());
+                }
+            }
+            if !start.is_empty() {
+                // move further backwards along the route to find the spot where it merges again with the foe route
+                let it_find = if foe_search_beg < foe_search_end {
+                    foe_route[foe_search_beg..].iter().position(|e| *e == cur.get_bidi_edge())
+                } else {
+                    None
+                };
+                if let Some(rel) = it_find {
+                    let it_find = foe_search_beg + rel;
+                    let first_index = i + 1;
+                    if addToFoe {
+                        // indices must be mapped onto foe route;
+                        let first = self.myRoute[first_index as usize];
+                        let it_first = foe_route.iter().position(|e| *e == first);
+                        if let Some(it_first) = it_first {
+                            for j in 0..length.len() {
+                                let last = self.myRoute[start[j] as usize];
+                                let it_last = foe_route[it_first..].iter().position(|e| *e == last);
+                                if let Some(it_last) = it_last {
+                                    let it_last = it_first + it_last;
+                                    // @todo are intermediateRS relevant here?
+                                    let foe_sidings = foe.m().mySidings.entry(self_ptr).or_default();
+                                    foe_sidings.insert(
+                                        0,
+                                        MSDriveWay_Siding::new(
+                                            it_first as i32,
+                                            it_last as i32,
+                                            length[j],
+                                            Vec::new(),
+                                        ),
+                                    );
+                                    if foe_sidings.len() > 2 {
+                                        foe_sidings.pop(); // only need the first 2 sidings
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // pick up further rail signals between the start of the siding and the start of the current driveway
+                        let mut further_rs: Vec<i32> = Vec::new();
+                        if cur_has_rs {
+                            further_rs.push(i);
+                        }
+                        let mut next2 = cur;
+                        let mut i2 = i - 1;
+                        while i2 >= forward_normals {
+                            let cur2 = self.myRoute[i2 as usize];
+                            if Self::has_rs(cur2, next2) {
+                                further_rs.push(i2);
+                            }
+                            next2 = cur2;
+                            i2 -= 1;
+                        }
+                        let my_sidings = self.mySidings.entry(foe).or_default();
+                        for j in 0..length.len() {
+                            intermediate_rs[j].extend(further_rs.iter().copied());
+                            my_sidings.insert(
+                                0,
+                                MSDriveWay_Siding::new(first_index, start[j], length[j], intermediate_rs[j].clone()),
+                            );
+                            if my_sidings.len() > 2 {
+                                my_sidings.pop(); // only need the first 2 sidings
+                            }
+                        }
+                    }
+                    start.clear();
+                    length.clear();
+                    intermediate_rs.clear();
+                    foe_search_beg = it_find;
+                } else {
+                    for j in 0..length.len() {
+                        length[j] += cur.get_length();
+                        if cur_has_rs && i != start[j] {
+                            intermediate_rs[j].push(i);
+                        }
+                    }
+                }
+            }
+            next = cur;
+            i -= 1;
+        }
+        // register in mySidingDriveways
+        let dw = if addToFoe { foe } else { self_ptr };
+        let dw_foe = if addToFoe { self_ptr } else { foe };
+        let sidings = dw.mySidings.get(&dw_foe).cloned();
+        if let Some(sidings) = sidings {
+            for siding in sidings.iter() {
+                let end_edge = dw.myRoute[siding.end as usize];
+                MY_SIDING_DRIVEWAYS.with(|m| m.borrow_mut().entry(end_edge).or_default().push((dw, dw_foe)));
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::addBidiFoes(const MSRailSignal *, bool)` [protected]
@@ -3599,7 +3934,35 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_foes(&mut self, ownSignal: Ptr<MSRailSignal>, extended: bool) {
-        todo!("port MSDriveWay::addBidiFoes")
+        let bidi_lanes: Vec<Ptr<MSLane>> = if extended {
+            self.myBidiExtended.clone()
+        } else {
+            self.myBidi.clone()
+        };
+        for &bidi in bidi_lanes.iter() {
+            for ili in bidi.get_incoming_lanes().iter() {
+                let rs = as_rail_signal(ili.viaLink.get_tl_logic());
+                if !rs.is_null()
+                    && rs != own_signal
+                    && bidi_lanes.contains(&ili.lane)
+                {
+                    self.add_foes(ili.viaLink);
+                }
+            }
+            let bidi_edge = Ptr::new(bidi.get_edge());
+            let departures = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().get(&bidi_edge).cloned().unwrap_or_default());
+            for foe in departures {
+                if self.flank_conflict(&*foe) {
+                    self.myFoes.push(foe);
+                }
+            }
+            let departure_ends = MY_DEPARTURE_DRIVEWAYS_ENDS.with(|m| m.borrow().get(&bidi_edge).cloned().unwrap_or_default());
+            for foe in departure_ends {
+                if self.flank_conflict(&*foe) {
+                    self.myFoes.push(foe);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::addParallelFoes(const MSLink *, const MSEdge *)` [protected]
@@ -3629,7 +3992,14 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_parallel_foes(&mut self, link: Ptr<MSLink>, first: Ptr<MSEdge>) {
-        todo!("port MSDriveWay::addParallelFoes")
+        if !link.is_null() {
+            self.add_foes(link);
+        } else {
+            let foes = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().get(&first).cloned().unwrap_or_default());
+            for foe in foes {
+                self.myFoes.push(foe);
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::addReversalFoes(bool)` [protected]
@@ -3703,7 +4073,47 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_reversal_foes(&mut self, movingBlock: bool) {
-        todo!("port MSDriveWay::addReversalFoes")
+        let mut forward: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
+        for &lane in self.myForward.iter() {
+            if lane.is_normal() {
+                forward.insert(Ptr::new(lane.get_edge()));
+            }
+        }
+        let this_ptr = Ptr::new(&*self);
+        let route = self.myRoute.clone();
+        let mut i = 0;
+        for &e in route.iter() {
+            if forward.contains(&e) && !movingBlock {
+                // reversals in our own forward can be ignored because each driveway
+                // is automatically a foe of itself by default
+                continue;
+            }
+            if i == self.myCoreSize {
+                break;
+            }
+            i += 1;
+            let foes = MY_REVERSAL_DRIVE_WAYS.with(|m| m.borrow().get(&e).cloned().unwrap_or_default());
+            for foe in foes {
+                // check whether the foe reverses into our own forward section
+                // (it might reverse again or disappear via arrival)
+                if self.forward_route_conflict(forward.clone(), &*foe, false) {
+                    let mut foe_forward: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
+                    for &lane in foe.myForward.iter() {
+                        if lane.is_normal() {
+                            foe_forward.insert(Ptr::new(lane.get_edge()));
+                            if !lane.get_bidi_lane().is_null() {
+                                foe_forward.insert(lane.get_edge().get_bidi_edge());
+                            }
+                        }
+                    }
+                    if foe.m().forward_route_conflict(foe_forward, &*self, true) {
+                        self.myFoes.push(foe);
+                    }
+                } else if movingBlock && foe == this_ptr {
+                    self.myFoes.push(foe);
+                }
+            }
+        }
     }
 
     /// C++: `bool MSDriveWay::buildSubFoe(MSDriveWay *, bool)` [protected]
@@ -3965,7 +4375,193 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn build_sub_foe(&mut self, foe: Ptr<MSDriveWay>, movingBlock: bool) -> bool {
-        todo!("port MSDriveWay::buildSubFoe")
+        // Subdriveways (Teilfahrstraße) model the resolution of a driving conflict
+        // before a vehicle has left the driveway. This is possible when the driveway diverges from the foe
+        // driveway at an earlier point (switch or crossing).
+        //
+        // We already know that the last edge of this driveway doesn't impact the foe (unless the driveway ends within the block).
+        // Remove further edges from the end of the driveway (myForward) until the point of conflict is found.
+        //
+        // For movingBlock the logic is changed:
+        // We remove the conflict-free part as before but then keep removing the conflict part until another non-conconflit part is found
+        let self_ptr = Ptr::from_mut(self);
+        if self.myForward.len() < foe.myForward.len()
+            && self.myForward[..] == foe.myForward[..self.myForward.len()]
+        {
+            foe.m().myFoes.push(self_ptr);
+            return true;
+        }
+        let mut sub_last = self.myForward.len() as i32 - 2;
+        if movingBlock && *self.myForward.back().unwrap() == *foe.myForward.back().unwrap() {
+            sub_last += 1;
+        }
+        let mut found_conflict = false;
+        let mut flank_c = false;
+        let mut zipper_c = false;
+        let mut cross_c = false;
+        while sub_last >= 0 {
+            let lane = self.myForward[sub_last as usize];
+            let tmp_origin = if sub_last > 0 {
+                self.myForward[sub_last as usize - 1].get_link_to(lane)
+            } else {
+                self.myOrigin
+            };
+            let mut tmp = MSDriveWay::new(tmp_origin, "tmp", true);
+            tmp.myForward.push(lane);
+            tmp.myBidi = self.myBidi.clone();
+            tmp.myBidiExtended = self.myBidiExtended.clone();
+            tmp.myBidiExtendedSorted = self.myBidiExtendedSorted.clone();
+            tmp.myRoute.push(lane.get_next_normal());
+            tmp.myCoreSize = 1;
+            flank_c = tmp.flank_conflict(&*foe);
+            let bidi_conflict = foe.myBidi.contains(&lane);
+            cross_c = tmp.crossing_conflict(&*foe);
+            if flank_c || cross_c || bidi_conflict {
+                found_conflict = true;
+                if !movingBlock || bidi_conflict {
+                    break;
+                }
+                if ((flank_c && lane.get_from_junction().get_type() == SumoXMLNodeType::ZIPPER)
+                    || (!flank_c && lane.get_to_junction().get_type() == SumoXMLNodeType::ZIPPER))
+                    && (self.is_depart_driveway()
+                        || self.get_forward_distance(if flank_c { sub_last - 1 } else { sub_last })
+                            > MY_MOVING_BLOCK_MAX_DIST.with(|d| d.get()))
+                {
+                    zipper_c = true;
+                    found_conflict = false;
+                    if !flank_c && cross_c {
+                        return false;
+                    }
+                }
+                if !flank_c && cross_c {
+                    break;
+                }
+            } else if found_conflict {
+                break;
+            }
+            sub_last -= 1;
+        }
+        if self.bidi_blocked_by_end(&*foe) && self.bidi_blocked_by(&*self) && foe.forward_end_on_route(self_ptr) {
+            let forward_end = std::cmp::min(self.myForwardEdgeCount as usize, self.myRoute.len());
+            let forward: ConstMSEdgeVector = self.myRoute[..forward_end].to_vec();
+            let foe_beg = std::cmp::min(foe.myForwardEdgeCount as usize, foe.myRoute.len());
+            let foe_end = std::cmp::min(foe.myRoute.len(), foe.myForwardEdgeCount as usize + forward.len());
+            let foe_after_forward: ConstMSEdgeVector = foe.myRoute[foe_beg..foe_end].to_vec();
+            // @todo the check for forwardRouteConflict correctly reduces waiting in
+            // test rail/reversal/consecutive_before_reversal but creates deadlock in
+            // test rail/reversal/reversal_onRoute_beyond_core3b
+            if forward == foe_after_forward {
+                foe.m().myFoes.push(self_ptr);
+                // foe will get the sidings
+                self.add_sidings(foe, true);
+                return true;
+            }
+        }
+        if sub_last < 0 {
+            if movingBlock && zipper_c {
+                return false;
+            } else if Ptr::new(self.myForward.back().unwrap().get_edge()) == *self.myRoute.back().unwrap()
+                && foe.forward_end_on_route(self_ptr)
+            {
+                // driveway ends in the middle of the block and only the final edge overlaps with the foe driveWay
+                foe.m().myFoes.push(self_ptr);
+            } else if foe.myTerminateRoute {
+                if self.bidi_blocked_by_end(&*foe) && self.bidi_blocked_by(&*self) && foe.forward_end_on_route(self_ptr) {
+                    foe.m().myFoes.push(self_ptr);
+                    // foe will get the sidings
+                    self.add_sidings(foe, true);
+                }
+            } else if self.myTerminateRoute && self.myBidi.len() <= self.myForward.len() {
+                foe.m().myFoes.push(self_ptr);
+                return true;
+            } else if foe.myReversals.len() % 2 == 1 {
+                // foe has an odd number of reversals
+            } else {
+                // no point of conflict found
+                // #ifdef SUBDRIVEWAY_WARN_NOCONFLICT
+                // WRITE_WARNINGF("No point of conflict found between driveway '%' and driveway '%' when creating sub-driveway", getID(), foe->getID());
+                // #endif
+            }
+            return false;
+        }
+        let sub_size = sub_last + 1;
+        for &cand in self.mySubDriveWays.iter() {
+            if cand.myForward.len() as i32 == sub_size {
+                // can re-use existing sub-driveway
+                foe.m().myFoes.push(cand);
+                if foe.bidi_blocked_by_end(&*cand) {
+                    foe.m().add_sidings(cand, false);
+                }
+                cand.m().myFoes.push(foe);
+                return true;
+            }
+        }
+        let forward: Vec<Ptr<MSLane>> = self.myForward[..sub_size as usize].to_vec();
+        let mut route: Vec<Ptr<MSEdge>> = Vec::new();
+        for &lane in forward.iter() {
+            if lane.is_normal() {
+                route.push(Ptr::new(lane.get_edge()));
+            }
+        }
+        if route.is_empty() {
+            if sub_size == 1
+                && cross_c
+                && forward.front().unwrap().get_from_junction() == foe.myForward.front().unwrap().get_from_junction()
+                && forward.front().unwrap().get_from_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL
+            {
+                assert!(self.myForward.front().unwrap().is_internal());
+                // sub-driveway ends after a single internal lane but since the route cannot be empty we add the next edge
+                route.push(foe.myForward.front().unwrap().get_edge().get_normal_successor());
+            } else {
+                return false;
+            }
+        }
+        if self.myRoute.len() > route.len() {
+            // route continues. make sure the subDriveway does not end with a reversal
+            let last_normal = *route.back().unwrap();
+            let next_normal = self.myRoute[route.len()];
+            if last_normal.get_bidi_edge() == next_normal {
+                return false;
+            }
+        }
+        // shortcut: the sub-driveway is allocated with Box::leak (see build_drive_way)
+        let sub = Ptr::from_mut(Box::leak(Box::new(MSDriveWay::new(
+            self.myOrigin,
+            &format!("{}.{}", self.base2.get_id(), self.mySubDriveWays.len()),
+            false,
+        ))));
+        sub.m().base.myLane = self.myLane;
+        sub.m().myParent = self_ptr;
+        sub.m().myForward = forward;
+        sub.m().myRoute = route.clone();
+        sub.m().myCoreSize = route.len() as i32;
+        self.myLane.m().add_move_reminder(sub.cast::<MSMoveReminder>(), false);
+
+        // copy trains that are currently on this driveway (and associated entry events)
+        for &veh in self.myTrains.iter() {
+            let mveh = veh.cast::<MSVehicle>();
+            if route.contains(&mveh.get_edge()) {
+                sub.m().myTrains.insert(veh);
+                // non-zero is enough to avoid superfluous activation via activateReminders (and removal)
+                let pos = sub.myRoute.front().unwrap().get_length();
+                veh.cast::<MSBaseVehicle>()
+                    .m()
+                    .add_reminder(sub.cast::<MSMoveReminder>(), pos);
+                for ve in self.myVehicleEvents.iter() {
+                    if ve.id == mveh.get_id() {
+                        sub.m().myVehicleEvents.push(ve.clone());
+                    }
+                }
+            }
+        }
+
+        foe.m().myFoes.push(sub);
+        if foe.bidi_blocked_by_end(&*sub) {
+            foe.m().add_sidings(sub, false);
+        }
+        sub.m().myFoes.push(foe);
+        self.mySubDriveWays.push(sub);
+        true
     }
 
     /// C++: `void MSDriveWay::addConflictLink(const MSLink *)` [protected]
@@ -3987,7 +4583,18 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_conflict_link(&mut self, link: Ptr<MSLink>) {
-        todo!("port MSDriveWay::addConflictLink")
+        if !link.get_tl_logic().is_null() {
+            // ignore links that originate on myBidi
+            // and also links from the same junction as my own link
+            let origin = link.get_lane_before();
+            if !self.myBidi.contains(&origin) {
+                if link.get_junction() != self.myRoute.front().unwrap().get_from_junction()
+                    && !self.myConflictLinks.contains(&link)
+                {
+                    self.myConflictLinks.push(link);
+                }
+            }
+        }
     }
 
     /// C++: `std::pair<bool, const MSDriveWay *> MSDriveWay::canUseSiding(const SUMOVehicle *, const MSDriveWay *, const MSEdge *) const` [const, protected]
@@ -4113,7 +4720,114 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn can_use_siding(&self, ego: Ptr<SUMOVehicle>, foe: Ptr<MSDriveWay>, recurseSidingEnd: Ptr<MSEdge>) -> (bool, Ptr<MSDriveWay>) {
-        todo!("port MSDriveWay::canUseSiding")
+        let self_ptr = Ptr::new(self);
+        let sidings = self.mySidings.get(&foe).cloned();
+        if let Some(sidings) = sidings {
+            for siding in sidings.iter() {
+                // assume siding is usuable when computing state for unapproached signal (ego == nullptr)
+                let long_enough = ego.is_null() || siding.length >= ego.cast::<MSVehicle>().get_length();
+                if long_enough {
+                    // if the siding is already "reserved" by another vehicle we cannot use it here
+                    let siding_end = self.myRoute[siding.end as usize];
+                    let mut check_next = false;
+                    let siding_approaches = MY_ENDING_DRIVEWAYS.with(|m| m.borrow().get(&siding_end).cloned().unwrap_or_default());
+                    for siding_approach in siding_approaches.iter() {
+                        if !siding_approach.myTrains.is_empty()
+                            && *siding_approach.myTrains.iter().next().unwrap() == ego
+                            && siding_end == recurseSidingEnd
+                        {
+                            // check next siding if if exists
+                            check_next = true;
+                            continue;
+                        }
+                        let occupied_by_other = !siding_approach.myTrains.is_empty()
+                            && *siding_approach.myTrains.iter().next().unwrap() != ego;
+                        let currently_checked = MY_CURRENT_SIDING_CHECK.with(|c| c.borrow().contains(&siding_end));
+                        if occupied_by_other || currently_checked {
+                            // possibly the foe vehicle can use the other part of the siding
+                            if recurseSidingEnd.is_null() {
+                                let mut foe_veh = Ptr::null();
+                                if !foe.myTrains.is_empty() {
+                                    foe_veh = *foe.myTrains.iter().next().unwrap();
+                                } else if !foe.myOrigin.is_null() && !foe.myOrigin.get_approaching_2().is_empty() {
+                                    foe_veh = foe.myOrigin.get_closest().0;
+                                }
+                                if foe_veh.is_null() {
+                                    utils::write_warningf!(
+                                        "Invalid call to canUseSiding dw=% foe=% ego=% time=%",
+                                        self.base2.get_id().to_string(),
+                                        foe.base2.get_id().to_string(),
+                                        if ego.is_null() { "NULL".to_string() } else { ego.get_id().to_string() },
+                                        time2string(MSNet::get_instance().get_current_time_step())
+                                    );
+                                    continue;
+                                }
+                                let foe2 = if foe.is_sub_drive_way() { foe.myParent } else { foe };
+                                let this2 = foe2.get_foe_or_sub_foe(self_ptr);
+                                if !this2.is_null() && foe2.can_use_siding(foe_veh, this2, siding_end).0 {
+                                    continue;
+                                }
+                            }
+                            // @todo: in principle it might still be possible to continue if vehicle that approaches the siding can safely leave the situation (#18416)
+                            return (false, *siding_approach);
+                        }
+                    }
+                    // vehicles approaching intermediate driveways could also make the siding unusable but would not show up as sidingApproaches
+                    for &i in siding.intermediateEnds.iter() {
+                        let intermediate_end = self.myRoute[i as usize];
+                        let intermediate_approaches =
+                            MY_ENDING_DRIVEWAYS.with(|m| m.borrow().get(&intermediate_end).cloned().unwrap_or_default());
+                        for intermediate_approach in intermediate_approaches.iter() {
+                            if !intermediate_approach.myTrains.is_empty()
+                                && (*intermediate_approach.myTrains.iter().next().unwrap() != ego
+                                    || intermediate_end == recurseSidingEnd)
+                            {
+                                let on_approach = *intermediate_approach.myTrains.iter().next().unwrap();
+                                let m_on_approach = on_approach.cast::<MSVehicle>();
+                                let route_edges = m_on_approach.get_route().get_edges();
+                                let cur = std::cmp::min(*m_on_approach.get_current_route_edge(), route_edges.len());
+                                let uses_siding = route_edges[cur..].contains(&siding_end);
+                                if !uses_siding {
+                                    // intermediate vehicle does not make use of the siding
+                                    continue;
+                                }
+                                // possibly the foe vehicle can use the other part of the siding
+                                if recurseSidingEnd.is_null() {
+                                    let mut foe_veh = Ptr::null();
+                                    if !foe.myTrains.is_empty() {
+                                        foe_veh = *foe.myTrains.iter().next().unwrap();
+                                    } else if !foe.myOrigin.is_null() && !foe.myOrigin.get_approaching_2().is_empty() {
+                                        foe_veh = foe.myOrigin.get_closest().0;
+                                    }
+                                    if foe_veh.is_null() {
+                                        utils::write_warningf!(
+                                            "Invalid call to canUseSiding dw=% foe=% ego=% time=%",
+                                            self.base2.get_id().to_string(),
+                                            foe.base2.get_id().to_string(),
+                                            if ego.is_null() { "NULL".to_string() } else { ego.get_id().to_string() },
+                                            time2string(MSNet::get_instance().get_current_time_step())
+                                        );
+                                        continue;
+                                    }
+                                    let foe2 = if foe.is_sub_drive_way() { foe.myParent } else { foe };
+                                    let this2 = foe2.get_foe_or_sub_foe(self_ptr);
+                                    if !this2.is_null() && foe2.can_use_siding(foe_veh, this2, intermediate_end).0 {
+                                        continue;
+                                    }
+                                }
+                                // @todo: in principle it might still be possible to continue if vehicle that approaches the siding can safely leave the situation
+                                return (false, *intermediate_approach);
+                            }
+                        }
+                    }
+                    if check_next {
+                        continue;
+                    }
+                    return (true, Ptr::null());
+                }
+            }
+        }
+        (false, Ptr::null())
     }
 
     /// C++: `const MSDriveWay * MSDriveWay::getFoeOrSubFoe(const MSDriveWay *) const` [const, protected]
@@ -4133,7 +4847,16 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_foe_or_sub_foe(&self, dw: Ptr<MSDriveWay>) -> Ptr<MSDriveWay> {
-        todo!("port MSDriveWay::getFoeOrSubFoe")
+        if self.myFoes.contains(&dw) {
+            return dw;
+        }
+        for &sub in dw.mySubDriveWays.iter() {
+            let foe = self.get_foe_or_sub_foe(sub);
+            if !foe.is_null() {
+                return foe;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `bool MSDriveWay::forwardEndOnRoute(const MSDriveWay *) const` [const, protected]
@@ -4144,7 +4867,8 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn forward_end_on_route(&self, foe: Ptr<MSDriveWay>) -> bool {
-        todo!("port MSDriveWay::forwardEndOnRoute")
+        let foe_forward_end = Ptr::new(foe.myForward.back().unwrap().get_normal_predecessor_lane().get_edge());
+        self.myRoute.contains(&foe_forward_end)
     }
 
     /// C++: `void MSDriveWay::addSwitchFoes(MSLink *)` [protected]
@@ -4177,7 +4901,18 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_switch_foes(&mut self, link: Ptr<MSLink>) {
-        todo!("port MSDriveWay::addSwitchFoes")
+        let foes = MY_SWITCH_DRIVE_WAYS.with(|m| m.borrow().get(&link).cloned().unwrap_or_default());
+        let this_ptr = Ptr::new(&*self);
+        for foe in foes {
+            if foe != this_ptr
+                && (self.flank_conflict(&*foe)
+                    || foe.flank_conflict(&*self)
+                    || self.crossing_conflict(&*foe)
+                    || foe.crossing_conflict(&*self))
+            {
+                self.myFoes.push(foe);
+            }
+        }
     }
 
     /// C++: `bool MSDriveWay::haveSubTrains() const` [const, protected]
@@ -4192,7 +4927,12 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn have_sub_trains(&self) -> bool {
-        todo!("port MSDriveWay::haveSubTrains")
+        for &sub in self.mySubDriveWays.iter() {
+            if !sub.myTrains.is_empty() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double MSDriveWay::getForwardDistance(int) const` [const, protected]
@@ -4208,7 +4948,12 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_forward_distance(&self, lastIndex: i32) -> f64 {
-        todo!("port MSDriveWay::getForwardDistance")
+        assert!(lastIndex < self.myForward.len() as i32);
+        let mut result = 0.0;
+        for i in 0..=lastIndex {
+            result += self.myForward[i as usize].get_length();
+        }
+        result
     }
 
     /// C++: `int MSDriveWay::matchesPastRoute(SUMOVehicle &) const` [const, protected]
@@ -4231,7 +4976,22 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn matches_past_route(&self, sveh: &mut SUMOVehicle) -> i32 {
-        todo!("port MSDriveWay::matchesPastRoute")
+        // look backwards along the route to find the driveway lane
+        let mveh = Ptr::from_mut(sveh).cast::<MSVehicle>();
+        let route_edges = mveh.get_route().get_edges();
+        let position = mveh.get_route_position();
+        let mut i = position;
+        while i >= 0 {
+            if route_edges[i as usize] == self.myLane.get_next_normal() {
+                if self.match_(route_edges, i as usize, route_edges.len()) {
+                    // driveway is still valid after rerouting
+                    return position - i;
+                }
+                break;
+            }
+            i -= 1;
+        }
+        -1
     }
 
     /// C++: `void MSDriveWay::enterDriveWay(SUMOVehicle &, Notification)` [protected]
@@ -4253,7 +5013,24 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn enter_drive_way(&mut self, sveh: &mut SUMOVehicle, reason: MSMoveReminder_Notification) {
-        todo!("port MSDriveWay::enterDriveWay")
+        let sveh_ptr = Ptr::from_mut(sveh);
+        self.myTrains.insert(sveh_ptr);
+        if !self.myOrigin.is_null() {
+            MSRailSignalControl::get_instance().notify_approach(self.myOrigin);
+        }
+        for &foe in self.myFoes.iter() {
+            if !foe.myOrigin.is_null() {
+                MSRailSignalControl::get_instance().notify_approach(foe.myOrigin);
+            }
+        }
+        if MY_WRITE_VEHICLES.with(|w| w.get()) {
+            self.myVehicleEvents.push(MSDriveWay_VehicleEvent::new(
+                MSNet::get_instance().get_current_time_step(),
+                true,
+                &sveh_ptr.get_id().to_string(),
+                reason,
+            ));
+        }
     }
 
     /// C++: `bool MSDriveWay::hasJoin(const SUMOVehicle *, const SUMOVehicle *)` [static, protected]
@@ -4300,7 +5077,30 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn has_join(ego: Ptr<SUMOVehicle>, foe: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSDriveWay::hasJoin")
+        if !ego.is_null() && !MSGlobals::use_meso_sim() {
+            let mego = ego.cast::<MSVehicle>();
+            let mfoe = foe.cast::<MSVehicle>();
+            let mut join_vehicle = String::new();
+            let stop = mego.get_next_stop_parameter();
+            if !stop.is_null() {
+                join_vehicle = stop.join.clone();
+            }
+            if join_vehicle == "" && !mego.has_departed() && mego.get_stops().len() > 1 {
+                // check one more stop
+                join_vehicle = mego.get_stops()[1].pars.join.clone();
+            }
+            if join_vehicle != "" {
+                if mfoe.get_id() == join_vehicle && mfoe.is_stopped() {
+                    return true;
+                }
+            }
+            let foe_stop = mfoe.get_next_stop_parameter();
+            let foe_join = if foe_stop.is_null() { String::new() } else { foe_stop.join.clone() };
+            if mfoe.is_stopped() && foe_join == ego.get_id() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool MSDriveWay::isSwitch(const MSLink *)` [static, protected]
@@ -4328,7 +5128,27 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn is_switch(link: Ptr<MSLink>) -> bool {
-        todo!("port MSDriveWay::isSwitch")
+        for &other in link.get_lane_before().get_normal_predecessor_lane().get_link_cont().iter() {
+            if other.get_lane() != link.get_lane() && !other.is_turnaround() {
+                return true;
+            }
+        }
+        for ili in link.get_lane().get_incoming_lanes().iter() {
+            if ili.viaLink != link && !ili.viaLink.is_turnaround() {
+                return true;
+            }
+        }
+        let bidi = link.get_lane().get_bidi_lane();
+        if !bidi.is_null() {
+            for &other in bidi.get_link_cont().iter() {
+                if other.get_lane() != link.get_lane_before().get_normal_predecessor_lane().get_bidi_lane()
+                    && !other.is_turnaround()
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSDriveWay::_saveState(OutputDevice &) const` [const, protected]
@@ -4350,7 +5170,20 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn save_state_2(&self, out: &mut OutputDevice) {
-        todo!("port MSDriveWay::_saveState")
+        if !self.myTrains.is_empty() || self.have_sub_trains() {
+            if self.is_sub_drive_way() {
+                out.open_tag_id(SUMO_TAG_SUBDRIVEWAY);
+            } else {
+                out.open_tag_id(SUMO_TAG_DRIVEWAY);
+            }
+            out.write_attr(SUMO_ATTR_ID, &self.base2.get_id().to_string());
+            out.write_attr(SUMO_ATTR_EDGES, &edge_ids(&self.myRoute));
+            if !self.myTrains.is_empty() {
+                let train_ids: Vec<String> = self.myTrains.iter().map(|v| v.get_id().to_string()).collect();
+                out.write_attr(SUMO_ATTR_VEHICLES, &utils::common::to_string::join_to_string(&train_ids, " "));
+            }
+            out.close_tag("");
+        }
     }
 
     /// C++: `std::string MSDriveWay::getTLLinkID(const MSLink *)` [static, protected]
@@ -4361,7 +5194,7 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_tl_link_id(link: Ptr<MSLink>) -> String {
-        todo!("port MSDriveWay::getTLLinkID")
+        format!("{}_{}", link.get_tl_logic().get_id(), link.get_tl_index())
     }
 
     /// C++: `std::string MSDriveWay::getJunctionLinkID(const MSLink *)` [static, protected]
@@ -4372,7 +5205,7 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_junction_link_id(link: Ptr<MSLink>) -> String {
-        todo!("port MSDriveWay::getJunctionLinkID")
+        format!("{}_{}", link.get_junction().get_id(), link.get_index())
     }
 
     /// C++: `std::string MSDriveWay::formatVisitedMap(const LaneVisitedMap &)` [static, protected]
@@ -4398,7 +5231,22 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn format_visited_map(visited: &MSRailSignal_LaneVisitedMap) -> String {
-        todo!("port MSDriveWay::formatVisitedMap")
+        // UNUSED_PARAMETER(visited);
+        /*
+        std::vector<const MSLane*> lanes(visited.size(), nullptr);
+        for (auto item : visited) {
+            lanes[item.second] = item.first;
+        }
+        for (auto it = lanes.begin(); it != lanes.end();) {
+            if (*it == nullptr) {
+                it = lanes.erase(it);
+            } else {
+                it++;
+            }
+        }
+        return toString(lanes);
+        */
+        "dummy".to_string()
     }
 
     /// C++: `void MSDriveWay::appendMapIndex(LaneVisitedMap &, const MSLane *)` [static, protected]
@@ -4411,7 +5259,9 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn append_map_index(map: &mut MSRailSignal_LaneVisitedMap, lane: Ptr<MSLane>) {
-        todo!("port MSDriveWay::appendMapIndex")
+        // avoid undefined behavior from evaluation order
+        let tmp = map.len() as i32;
+        map.insert(lane, tmp);
     }
 
 }
@@ -4429,7 +5279,7 @@ impl MSDriveWay_Siding {
     // Siding(int s, int e, double l, std::vector<int> iEnds) : start(s), end(e), length(l), intermediateEnds(iEnds) {}
     #[allow(unused_variables)]
     pub fn new(s: i32, e: i32, l: f64, iEnds: Vec<i32>) -> Self {
-        todo!("port Siding::Siding")
+        MSDriveWay_Siding { start: s, end: e, length: l, intermediateEnds: iEnds }
     }
 
 }
@@ -4448,7 +5298,12 @@ impl MSDriveWay_VehicleEvent {
     //             time(_time), isEntry(_isEntry), id(_id), reason(_reason) {}
     #[allow(unused_variables)]
     pub fn new(_time: SUMOTime, _isEntry: bool, _id: &str, _reason: MSMoveReminder_Notification) -> Self {
-        todo!("port VehicleEvent::VehicleEvent")
+        MSDriveWay_VehicleEvent {
+            time: _time,
+            isEntry: _isEntry,
+            id: _id.to_string(),
+            reason: _reason,
+        }
     }
 
 }
