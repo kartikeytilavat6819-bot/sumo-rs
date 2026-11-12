@@ -11,6 +11,28 @@ pub type NBNodeCont_NodeClusters = Vec<NodeSet>;
 /// C++ typedef `std::map<std::string, NBNode *> NBNodeCont::NodeCont`
 pub type NBNodeCont_NodeCont = BTreeMap<String, Ptr<NBNode>>;
 
+use utils::common::to_string::join_to_string;
+
+/// C++ `std::set<NBNode*, ComparatorIdLess>` iterates in id order, but NodeSet orders by address:
+/// iterate through this wherever the C++ iteration order matters.
+// determinism: C++ NodeSet iteration is by node id, so sort by id here
+fn nodes_by_id(nodes: &NodeSet) -> Vec<Ptr<NBNode>> {
+    let mut v: Vec<Ptr<NBNode>> = nodes.iter().copied().collect();
+    v.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+    v
+}
+
+/// C++ `joinNamedToString(nodes, sep)`: ids in NodeSet (id) order
+fn join_node_ids(nodes: &NodeSet, sep: &str) -> String {
+    nodes_by_id(nodes).iter().map(|n| n.get_id().to_string()).collect::<Vec<_>>().join(sep)
+}
+
+/// C++ `delete node`
+fn delete_node(node: Ptr<NBNode>) {
+    node.m().drop_();
+    drop(unsafe { Box::from_raw(node.as_raw()) });
+}
+
 /// C++ class `NBNodeCont::JoinCluster` (netbuild/NBNodeCont.h)
 pub struct NBNodeCont_JoinCluster {
     pub cluster: BTreeSet<String>,
@@ -54,7 +76,20 @@ impl NBNodeCont {
     // NBNodeCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBNodeCont::NBNodeCont")
+        // shortcut: NamedRTree is not ported (myRTree is a placeholder), so position queries scan myNodes; upgrade when NamedRTree lands
+        NBNodeCont {
+            myNodes: BTreeMap::new(),
+            myExtractedNodes: BTreeMap::new(),
+            myJoinExclusions: BTreeSet::new(),
+            myClusters2Join: Vec::new(),
+            myJoinedClusters: Vec::new(),
+            myJoined: BTreeSet::new(),
+            mySplit: BTreeSet::new(),
+            myGuessedTLS: BTreeSet::new(),
+            myUnsetTLS: BTreeSet::new(),
+            myRTree: (),
+            myRailComponents: Vec::new(),
+        }
     }
 
     /// C++: `void NBNodeCont::~NBNodeCont()`
@@ -62,7 +97,8 @@ impl NBNodeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBNodeCont::~NBNodeCont")
+        // C++ ~NBNodeCont() { clear(); }
+        self.clear();
     }
 
     /// C++: `bool NBNodeCont::insert(const std::string &, const Position &, NBDistrict *)`
@@ -82,7 +118,13 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert(&mut self, id: &str, position: &Position, district: Ptr<NBDistrict>) -> bool {
-        todo!("port NBNodeCont::insert")
+        if self.myNodes.contains_key(id) {
+            return false;
+        }
+        let node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new_2(id, position, district))));
+        self.myNodes.insert(id.to_string(), node);
+        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        true
     }
 
     /// C++: `bool NBNodeCont::insert(NBNode *)`
@@ -101,7 +143,13 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert_2(&mut self, node: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeCont::insert")
+        let id = node.get_id().to_string();
+        if self.myNodes.contains_key(&id) {
+            return false;
+        }
+        self.myNodes.insert(id, node);
+        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        true
     }
 
     /// C++: `bool NBNodeCont::erase(NBNode *)`
@@ -117,7 +165,12 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn erase(&mut self, node: Ptr<NBNode>) -> bool {
-        todo!("port NBNodeCont::erase")
+        if self.extract(node, false) {
+            delete_node(node);
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool NBNodeCont::extract(NBNode *, bool)`
@@ -139,7 +192,17 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn extract(&mut self, node: Ptr<NBNode>, remember: bool) -> bool {
-        todo!("port NBNodeCont::extract")
+        let id = node.get_id().to_string();
+        if !self.myNodes.contains_key(&id) {
+            return false;
+        }
+        self.myNodes.remove(&id);
+        // shortcut: NamedRTree not ported, nothing to remove from the position index
+        node.m().remove_traffic_lights(false);
+        if remember {
+            self.myExtractedNodes.insert(node.get_id().to_string(), node);
+        }
+        true
     }
 
     /// C++: `NBNode * NBNodeCont::retrieve(const std::string &) const` [const]
@@ -154,7 +217,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve(&self, id: &str) -> Ptr<NBNode> {
-        todo!("port NBNodeCont::retrieve")
+        self.myNodes.get(id).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `std::vector<NBNode *> NBNodeCont::retrieveByPos(const Position &, const double) const` [const]
@@ -180,7 +243,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_by_pos(&self, position: &Position, offset: f64) -> Vec<Ptr<NBNode>> {
-        todo!("port NBNodeCont::retrieveByPos")
+        // shortcut: NamedRTree not ported, candidates come from a scan of myNodes (id order, C++ uses address order); upgrade when NamedRTree lands
+        let mut result = Vec::new();
+        for node in self.myNodes.values() {
+            let p = node.get_position();
+            if (p.x() - position.x()).abs() <= offset && (p.y() - position.y()).abs() <= offset {
+                result.push(*node);
+            }
+        }
+        result
     }
 
     /// C++: `std::map<std::string, NBNode *>::const_iterator NBNodeCont::begin() const` [const]
@@ -218,7 +289,15 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_join_exclusion(&mut self, ids: &Vec<String>) {
-        todo!("port NBNodeCont::addJoinExclusion")
+        for nodeID in ids {
+            // error handling has to take place here since joinExclusions could be
+            // loaded from multiple files / command line
+            if self.myJoined.contains(nodeID) {
+                write_warningf!("Ignoring join exclusion for junction '%' since it already occurred in a list of nodes to be joined.", nodeID);
+            } else {
+                self.myJoinExclusions.insert(nodeID.clone());
+            }
+        }
     }
 
     /// C++: `std::string NBNodeCont::createUnusedID(const std::string &, const std::string &)`
@@ -234,7 +313,13 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn create_unused_id(&mut self, base: &str, sep: &str) -> String {
-        todo!("port NBNodeCont::createUnusedID")
+        let mut result = base.to_string();
+        let mut i = 0;
+        while self.myNodes.contains_key(&result) {
+            result = format!("{}{}{}", base, sep, i);
+            i += 1;
+        }
+        result
     }
 
     /// C++: `std::string NBNodeCont::createClusterId(const NodeSet &, const std::string &)`
@@ -248,7 +333,8 @@ impl NBNodeCont {
     //     }
     #[allow(unused_variables)]
     pub fn create_cluster_id(&mut self, cluster: &NodeSet, prefix: &str) -> String {
-        todo!("port NBNodeCont::createClusterId")
+        let clusterIds: BTreeSet<String> = cluster.iter().map(|j| j.get_id().to_string()).collect();
+        self.create_cluster_id_2(&clusterIds, prefix)
     }
 
     /// C++: `std::string NBNodeCont::createClusterId(const std::set<std::string> &, const std::string &)`
@@ -272,7 +358,19 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn create_cluster_id_2(&mut self, cluster: &BTreeSet<String>, prefix: &str) -> String {
-        todo!("port NBNodeCont::createClusterId")
+        let mut maxIds = utils::options::options_cont::get_int("max-join-ids");
+        if maxIds <= 0 {
+            maxIds = cluster.len() as i32;
+        }
+        if cluster.len() as i32 > maxIds {
+            let mut clusterIt = cluster.iter();
+            let mut result = format!("{}{}", prefix, clusterIt.next().unwrap());
+            for _i in 1..maxIds {
+                result += &format!("_{}", clusterIt.next().unwrap());
+            }
+            return format!("{}_#{}more", result, cluster.len() as i32 - maxIds);
+        }
+        format!("{}{}", prefix, join_to_string(cluster, "_"))
     }
 
     /// C++: `void NBNodeCont::addCluster2Join(const std::set<std::string> &, NBNode *, const bool)`
@@ -305,7 +403,27 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn add_cluster2_join(&mut self, cluster: &BTreeSet<String>, node: Ptr<NBNode>, resetConnections: bool) {
-        todo!("port NBNodeCont::addCluster2Join")
+        // error handling has to take place here since joins could be loaded from multiple files
+        let mut join = NBNodeCont_JoinCluster { cluster: BTreeSet::new(), node, resetConnections };
+        for nodeID in cluster {
+            if self.myJoinExclusions.contains(nodeID) {
+                write_warningf!("Ignoring join-cluster because junction '%' was already excluded from joining.", nodeID);
+                return;
+            } else if self.myJoined.contains(nodeID) {
+                write_warningf!("Ignoring join-cluster because junction '%' already occurred in another join-cluster.", nodeID);
+                return;
+            } else if !self.retrieve(nodeID).is_null() {
+                join.cluster.insert(nodeID.clone());
+            } else {
+                write_errorf!("Unknown junction '%' in join-cluster.", nodeID);
+            }
+        }
+        if join.cluster.len() > 1 {
+            self.myJoined.extend(join.cluster.iter().cloned());
+            self.myClusters2Join.push(join);
+        } else {
+            write_warningf!("Ignoring join-cluster '%' because it has size '%'.", node.get_id(), join.cluster.len());
+        }
     }
 
     /// C++: `int NBNodeCont::joinLoadedClusters(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &)`

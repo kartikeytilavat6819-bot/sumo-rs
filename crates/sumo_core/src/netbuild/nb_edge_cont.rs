@@ -5,6 +5,12 @@ use crate::prelude::*;
 /// C++ typedef `std::map<std::string, NBEdge *> NBEdgeCont::EdgeCont`
 pub type NBEdgeCont_EdgeCont = BTreeMap<String, Ptr<NBEdge>>;
 
+/// C++ `delete edge`: runs the destructor body, then frees the object (edges are Box-allocated)
+fn delete_edge(edge: Ptr<NBEdge>) {
+    edge.m().drop_();
+    drop(unsafe { Box::from_raw(edge.as_raw()) });
+}
+
 /// C++ class `NBEdgeCont::MinLaneComparatorIdLess` (netbuild/NBEdgeCont.h)
 pub struct NBEdgeCont_MinLaneComparatorIdLess {
 }
@@ -20,7 +26,10 @@ impl NBEdgeCont_MinLaneComparatorIdLess {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, a: &(Ptr<NBEdge>, i32), b: &(Ptr<NBEdge>, i32)) -> bool {
-        todo!("port MinLaneComparatorIdLess::operator()")
+        if a.0.get_id() == b.0.get_id() {
+            return a.1 < b.1;
+        }
+        a.0.get_id() < b.0.get_id()
     }
 
 }
@@ -81,7 +90,29 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn new(tc: &mut NBTypeCont) -> Self {
-        todo!("port NBEdgeCont::NBEdgeCont")
+        NBEdgeCont {
+            myTypeCont: Ptr::from_mut(tc),
+            myConnections: BTreeMap::new(),
+            myEdges: BTreeMap::new(),
+            myExtractedEdges: BTreeMap::new(),
+            myEdgeCemetery: BTreeSet::new(),
+            myIgnoredEdges: BTreeSet::new(),
+            myEdgesSplit: BTreeMap::new(),
+            myWasSplit: BTreeSet::new(),
+            // C++ leaves these two uninitialised; applyOptions always sets them
+            myEdgesMinSpeed: -1.0,
+            myRemoveEdgesAfterLoading: false,
+            myEdges2Keep: BTreeSet::new(),
+            myEdges2Remove: BTreeSet::new(),
+            myVehicleClasses2Keep: 0,
+            myVehicleClasses2Remove: 0,
+            myTypes2Keep: BTreeSet::new(),
+            myTypes2Remove: BTreeSet::new(),
+            myPruningBoundary: utils::geom::position_vector::PositionVector::default(),
+            myNeedGeoTransformedPruningBoundary: false,
+            myRoundabouts: BTreeSet::new(),
+            myGuessedRoundabouts: BTreeSet::new(),
+        }
     }
 
     /// C++: `void NBEdgeCont::~NBEdgeCont()`
@@ -89,7 +120,8 @@ impl NBEdgeCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBEdgeCont::~NBEdgeCont")
+        // C++ ~NBEdgeCont() { clear(); }
+        self.clear();
     }
 
     /// C++: `void NBEdgeCont::applyOptions(OptionsCont &)`
@@ -179,7 +211,86 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_options(&mut self, oc: &mut OptionsCont) {
-        todo!("port NBEdgeCont::applyOptions")
+        // set edges dismiss/accept options
+        self.myEdgesMinSpeed = oc.get_float("keep-edges.min-speed").unwrap();
+        self.myRemoveEdgesAfterLoading = oc.exists("keep-edges.postload") && oc.get_bool("keep-edges.postload").unwrap();
+        // we possibly have to load the edges to keep/remove
+        if oc.is_set("keep-edges.input-file", true).unwrap() {
+            super::nb_helpers::NBHelpers::load_edges_from_file(&oc.get_string("keep-edges.input-file").unwrap(), &mut self.myEdges2Keep);
+        }
+        if oc.is_set("remove-edges.input-file", true).unwrap() {
+            super::nb_helpers::NBHelpers::load_edges_from_file(&oc.get_string("remove-edges.input-file").unwrap(), &mut self.myEdges2Remove);
+        }
+        if oc.is_set("keep-edges.explicit", true).unwrap() {
+            let edges = oc.get_string_vector("keep-edges.explicit").unwrap().clone();
+            self.myEdges2Keep.extend(edges);
+        }
+        if oc.is_set("remove-edges.explicit", true).unwrap() {
+            let edges = oc.get_string_vector("remove-edges.explicit").unwrap().clone();
+            self.myEdges2Remove.extend(edges);
+        }
+        if oc.exists("keep-edges.by-vclass") && oc.is_set("keep-edges.by-vclass", true).unwrap() {
+            self.myVehicleClasses2Keep = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("keep-edges.by-vclass").unwrap()).unwrap();
+        }
+        if oc.exists("remove-edges.by-vclass") && oc.is_set("remove-edges.by-vclass", true).unwrap() {
+            self.myVehicleClasses2Remove = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(oc.get_string_vector("remove-edges.by-vclass").unwrap()).unwrap();
+        }
+        if oc.exists("keep-edges.by-type") && oc.is_set("keep-edges.by-type", true).unwrap() {
+            let types = oc.get_string_vector("keep-edges.by-type").unwrap().clone();
+            self.myTypes2Keep.extend(types);
+        }
+        if oc.exists("remove-edges.by-type") && oc.is_set("remove-edges.by-type", true).unwrap() {
+            let types = oc.get_string_vector("remove-edges.by-type").unwrap().clone();
+            self.myTypes2Remove.extend(types);
+        }
+
+        if oc.is_set("keep-edges.in-boundary", true).unwrap() || oc.is_set("keep-edges.in-geo-boundary", true).unwrap() {
+            let use_in_boundary = oc.is_set("keep-edges.in-boundary", true).unwrap();
+            let key = if use_in_boundary { "keep-edges.in-boundary" } else { "keep-edges.in-geo-boundary" };
+            let poly_plain_string = oc.get_value_string(key).unwrap();
+            // try interpreting the boundary like shape attribute with spaces
+            let boundary_shape = utils::geom::geom_conv_helper::parse_shape_reporting(&poly_plain_string, "pruning-boundary", None, false, false);
+            if let Some(boundary_shape) = boundary_shape {
+                if boundary_shape.len() < 2 {
+                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
+                } else if boundary_shape.len() == 2 {
+                    // prunning boundary (box)
+                    self.myPruningBoundary.push(boundary_shape[0]);
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(boundary_shape[1].x(), boundary_shape[0].y()));
+                    self.myPruningBoundary.push(boundary_shape[1]);
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(boundary_shape[0].x(), boundary_shape[1].y()));
+                } else {
+                    self.myPruningBoundary = boundary_shape;
+                }
+            } else {
+                // maybe positions are separated by ',' instead of ' '
+                let poly_s = oc.get_string_vector(key).unwrap().clone();
+                let mut poly: Vec<f64> = Vec::new();
+                for i in poly_s.iter() {
+                    poly.push(utils::common::string_utils::to_double(i).unwrap()); // !!! may throw something anyhow...
+                }
+                if poly.len() < 4 {
+                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: need at least 2 coordinates"));
+                } else if poly.len() % 2 != 0 {
+                    panic!("{}", utils::common::util_exceptions::ProcessError::new("Invalid boundary: malformed coordinate"));
+                } else if poly.len() == 4 {
+                    // prunning boundary (box)
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(poly[0], poly[1]));
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(poly[2], poly[1]));
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(poly[2], poly[3]));
+                    self.myPruningBoundary.push(utils::geom::position::Position::new(poly[0], poly[3]));
+                } else {
+                    let mut j = 0;
+                    while j < poly.len() {
+                        let x = poly[j];
+                        let y = poly[j + 1];
+                        j += 2;
+                        self.myPruningBoundary.push(utils::geom::position::Position::new(x, y));
+                    }
+                }
+            }
+            self.myNeedGeoTransformedPruningBoundary = oc.is_set("keep-edges.in-geo-boundary", true).unwrap();
+        }
     }
 
     /// C++: `void NBEdgeCont::clear()`
@@ -201,7 +312,18 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn clear(&mut self) {
-        todo!("port NBEdgeCont::clear")
+        for e in self.myEdges.values() {
+            delete_edge(*e);
+        }
+        self.myEdges.clear();
+        for e in self.myExtractedEdges.values() {
+            delete_edge(*e);
+        }
+        self.myExtractedEdges.clear();
+        for e in self.myEdgeCemetery.iter() {
+            delete_edge(*e);
+        }
+        self.myEdgeCemetery.clear();
     }
 
     /// C++: `bool NBEdgeCont::insert(NBEdge *, bool)`
@@ -227,7 +349,21 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn insert(&mut self, edge: Ptr<NBEdge>, ignorePrunning: bool) -> bool {
-        todo!("port NBEdgeCont::insert")
+        if self.myEdges.contains_key(edge.get_id()) {
+            return false;
+        }
+        if !ignorePrunning && self.ignore_filter_match(edge) {
+            edge.get_from_node().m().remove_edge(edge, true);
+            edge.get_to_node().m().remove_edge(edge, true);
+            self.myIgnoredEdges.insert(edge.get_id().to_string());
+            delete_edge(edge);
+        } else {
+            if utils::options::options_cont::exists("dismiss-vclasses") && utils::options::options_cont::get_bool("dismiss-vclasses") {
+                edge.m().dismiss_vehicle_class_information();
+            }
+            self.myEdges.insert(edge.get_id().to_string(), edge);
+        }
+        true
     }
 
     /// C++: `NBEdge * NBEdgeCont::retrieve(const std::string &, bool) const` [const]
@@ -249,7 +385,15 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve(&self, id: &str, retrieveExtracted: bool) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::retrieve")
+        if let Some(e) = self.myEdges.get(id) {
+            return *e;
+        }
+        if retrieveExtracted {
+            if let Some(e) = self.myExtractedEdges.get(id) {
+                return *e;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `NBEdge * NBEdgeCont::retrievePossiblySplit(const std::string &, bool) const` [const]
@@ -273,7 +417,20 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_possibly_split(&self, id: &str, downstream: bool) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::retrievePossiblySplit")
+        let edge = self.retrieve(id, false);
+        if !edge.is_null() {
+            return edge;
+        }
+        // NOTE: (TODO) for multiply split edges (e.g. 15[0][0]) one could try recursion
+        if !self.retrieve(&format!("{id}[0]"), false).is_null() && !self.retrieve(&format!("{id}[1]"), false).is_null() {
+            // Edge was split during the netbuilding process
+            if downstream {
+                return self.retrieve(&format!("{id}[1]"), false);
+            } else {
+                return self.retrieve(&format!("{id}[0]"), false);
+            }
+        }
+        edge
     }
 
     /// C++: `NBEdge * NBEdgeCont::retrievePossiblySplit(const std::string &, const std::string &, bool) const` [const]
@@ -308,7 +465,30 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_possibly_split_2(&self, id: &str, hint: &str, incoming: bool) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::retrievePossiblySplit")
+        // try to retrieve using the given name (iterative)
+        let edge = self.retrieve(id, false);
+        if !edge.is_null() {
+            return edge;
+        }
+        // now, we did not find it; we have to look over all possibilities
+        // check whether at least the hint was not splitted
+        let hintedge = self.retrieve(hint, false);
+        let hints: EdgeVector = if hintedge.is_null() {
+            self.get_generated_from(hint)
+        } else {
+            vec![hintedge]
+        };
+        let candidates = self.get_generated_from(id);
+        for curr_hint in hints.iter() {
+            for poss_searched in candidates.iter() {
+                let node = if incoming { poss_searched.get_to_node() } else { poss_searched.get_from_node() };
+                let cont = if incoming { node.get_outgoing_edges() } else { node.get_incoming_edges() };
+                if cont.contains(curr_hint) {
+                    return *poss_searched;
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `NBEdge * NBEdgeCont::retrievePossiblySplit(const std::string &, double) const` [const]
@@ -358,7 +538,41 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_possibly_split_3(&self, id: &str, pos: f64) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::retrievePossiblySplit")
+        // check whether the edge was not split, yet
+        let edge = self.retrieve(id, false);
+        if !edge.is_null() {
+            return edge;
+        }
+        let mut max_length: i32 = 0;
+        let tid = format!("{id}[");
+        for key in self.myEdges.keys() {
+            if key.starts_with(&tid) {
+                max_length = std::cmp::max(max_length, key.len() as i32);
+            }
+        }
+        // find the part of the edge which matches the position
+        let mut seen: f64 = 0.0;
+        let mut names: Vec<String> = Vec::new();
+        names.push(format!("{id}[1]"));
+        names.push(format!("{id}[0]"));
+        while let Some(cid) = names.pop() {
+            // retrieve the first subelement (to follow)
+            let sub = self.retrieve(&cid, false);
+            // The edge was splitted; check its subparts within the next step
+            if sub.is_null() {
+                if (cid.len() as i32) + 3 < max_length {
+                    names.push(format!("{cid}[1]"));
+                    names.push(format!("{cid}[0]"));
+                }
+            } else {
+                // an edge with the name was found, check whether the position lies within it
+                seen += sub.get_length();
+                if seen >= pos {
+                    return sub;
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void NBEdgeCont::erase(NBDistrictCont &, NBEdge *)`
@@ -370,7 +584,8 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn erase(&mut self, dc: &mut NBDistrictCont, edge: Ptr<NBEdge>) {
-        todo!("port NBEdgeCont::erase")
+        self.extract(dc, edge, false);
+        delete_edge(edge);
     }
 
     /// C++: `void NBEdgeCont::extract(NBDistrictCont &, NBEdge *, bool)`
@@ -395,7 +610,21 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn extract(&mut self, dc: &mut NBDistrictCont, edge: Ptr<NBEdge>, remember: bool) {
-        todo!("port NBEdgeCont::extract")
+        if remember {
+            let id = edge.get_id().to_string();
+            if let Some(prev_extracted) = self.myExtractedEdges.get(&id).copied() {
+                if edge != prev_extracted {
+                    self.myEdgeCemetery.insert(prev_extracted);
+                    self.myExtractedEdges.insert(id, edge);
+                }
+            } else {
+                self.myExtractedEdges.insert(id, edge);
+            }
+        }
+        self.myEdges.remove(edge.get_id());
+        edge.get_from_node().m().remove_edge(edge, true);
+        edge.get_to_node().m().remove_edge(edge, true);
+        dc.remove_from_sinks_and_sources(edge);
     }
 
     /// C++: `std::map<std::string, NBEdge *>::const_iterator NBEdgeCont::begin() const` [const]
@@ -404,8 +633,8 @@ impl NBEdgeCont {
     //         return myEdges.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn begin(&self) -> Unmapped /* std::map<std::string, NBEdge *>::const_iterator */ {
-        todo!("port NBEdgeCont::begin")
+    pub fn begin(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBEdge>> {
+        self.myEdges.iter()
     }
 
     /// C++: `std::map<std::string, NBEdge *>::const_iterator NBEdgeCont::end() const` [const]
@@ -414,8 +643,9 @@ impl NBEdgeCont {
     //         return myEdges.end();
     //     }
     #[allow(unused_variables)]
-    pub fn end(&self) -> Unmapped /* std::map<std::string, NBEdge *>::const_iterator */ {
-        todo!("port NBEdgeCont::end")
+    pub fn end(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBEdge>> {
+        // shortcut: C++ iterator pair cannot be compared in Rust, end() is an exhausted iterator; callers iterate begin() instead, upgrade if a caller needs the C++ iterator protocol
+        self.myEdges.iter().skip(self.myEdges.len())
     }
 
     /// C++: `void NBEdgeCont::processSplits(NBEdge *, std::vector<Split>, NBNodeCont &, NBDistrictCont &, NBTrafficLightLogicCont &)`
@@ -736,7 +966,13 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn create_unused_id(&mut self, base: &str, sep: &str) -> String {
-        todo!("port NBEdgeCont::createUnusedID")
+        let mut result = base.to_string();
+        let mut i: i32 = 0;
+        while self.myEdges.contains_key(&result) {
+            result = format!("{}{}{}", base, sep, i);
+            i += 1;
+        }
+        result
     }
 
     /// C++: `int NBEdgeCont::size() const` [const]
@@ -746,7 +982,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBEdgeCont::size")
+        self.myEdges.len() as i32
     }
 
     /// C++: `std::vector<std::string> NBEdgeCont::getAllNames() const` [const]
@@ -761,7 +997,7 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_all_names(&self) -> Vec<String> {
-        todo!("port NBEdgeCont::getAllNames")
+        self.myEdges.keys().cloned().collect()
     }
 
     /// C++: `const std::pair<NBEdge *, NBEdge *> * NBEdgeCont::getSplit(const NBEdge *const) const` [const]
@@ -775,7 +1011,11 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_split(&self, origEdge: Ptr<NBEdge>) -> Ptr<(Ptr<NBEdge>, Ptr<NBEdge>)> {
-        todo!("port NBEdgeCont::getSplit")
+        // pointer into the map value, like C++ `&split->second`
+        match self.myEdgesSplit.get(&origEdge) {
+            Some(split) => Ptr::new(split),
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `NBEdge * NBEdgeCont::getSplitBase(const std::string &) const` [const]
@@ -793,7 +1033,15 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn get_split_base(&self, edgeID: &str) -> Ptr<NBEdge> {
-        todo!("port NBEdgeCont::getSplitBase")
+        let mut longest: Ptr<NBEdge> = Ptr::null();
+        for item in self.myEdgesSplit.keys() {
+            if item.get_id() == edgeID {
+                if longest.is_null() || longest.get_loaded_length() < item.get_loaded_length() {
+                    longest = *item;
+                }
+            }
+        }
+        longest
     }
 
     /// C++: `int NBEdgeCont::getNumEdgeSplits() const` [const]
@@ -803,7 +1051,7 @@ impl NBEdgeCont {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_edge_splits(&self) -> i32 {
-        todo!("port NBEdgeCont::getNumEdgeSplits")
+        self.myEdgesSplit.len() as i32
     }
 
     /// C++: `int NBEdgeCont::removeUnwishedEdges(NBDistrictCont &)`
@@ -826,7 +1074,19 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_unwished_edges(&mut self, dc: &mut NBDistrictCont) -> i32 {
-        todo!("port NBEdgeCont::removeUnwishedEdges")
+        let mut to_remove: EdgeVector = Vec::new();
+        for item in self.myEdges.values() {
+            let edge = *item;
+            if !self.myEdges2Keep.contains(edge.get_id()) {
+                edge.get_from_node().m().remove_edge(edge, true);
+                edge.get_to_node().m().remove_edge(edge, true);
+                to_remove.push(edge);
+            }
+        }
+        for j in to_remove.iter() {
+            self.erase(dc, *j);
+        }
+        to_remove.len() as i32
     }
 
     /// C++: `void NBEdgeCont::splitGeometry(NBDistrictCont &, NBNodeCont &)`
