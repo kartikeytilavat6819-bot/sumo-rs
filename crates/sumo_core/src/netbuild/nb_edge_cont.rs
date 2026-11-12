@@ -1157,8 +1157,8 @@ impl NBEdgeCont {
             *geoms_second.at_mut(0) = node.get_position().clone();
         }
         // build and insert the edges
-        let one = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_3(firstEdgeName, edge.myFrom, node, edge, &geoms_first, noLanesFirstEdge))));
-        let two = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new_3(secondEdgeName, node, edge.myTo, edge, &geoms_second, noLanesSecondEdge))));
+        let one = Ptr::from_raw(Box::into_raw(NBEdge::new_3(firstEdgeName, edge.myFrom, node, edge, &geoms_first, noLanesFirstEdge)));
+        let two = Ptr::from_raw(Box::into_raw(NBEdge::new_3(secondEdgeName, node, edge.myTo, edge, &geoms_second, noLanesSecondEdge)));
         if utils::options::options_cont::get_bool("output.original-names") {
             let origID = edge.get_lane_struct_2(0).base.get_parameter(SUMO_PARAM_ORIGID, edge.get_id());
             if firstEdgeName != origID {

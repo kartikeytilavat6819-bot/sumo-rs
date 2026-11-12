@@ -722,7 +722,7 @@ impl NIImporter_DlrNavteq_EdgesHandler {
         let e: Ptr<NBEdge>;
         if interID == "-1" {
             let type_ = if self.myTypeCont.knows(&navTeqTypeId) { navTeqTypeId.clone() } else { String::new() };
-            e = Ptr::from_mut(Box::leak(Box::new(NBEdge::new(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, LaneSpreadFunction::RIGHT, &streetName))));
+            e = Ptr::from_mut(Box::leak(NBEdge::new(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, LaneSpreadFunction::RIGHT, &streetName)));
         } else {
             let mut geoms: PositionVector = self.myGeoms.m().entry(interID.clone()).or_default().clone();
             if self.get_column(&st, EdgesHandler_ColumnName::CONNECTION, "0".to_string()) == "1" {
@@ -732,7 +732,7 @@ impl NIImporter_DlrNavteq_EdgesHandler {
             geoms.push(*to.get_position());
             let origID = if get_bool("output.original-names") { id.clone() } else { String::new() };
             let type_ = if self.myTypeCont.knows(&navTeqTypeId) { navTeqTypeId.clone() } else { String::new() };
-            e = Ptr::from_mut(Box::leak(Box::new(NBEdge::new_2(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, geoms, LaneSpreadFunction::CENTER, &streetName, &origID, false))));
+            e = Ptr::from_mut(Box::leak(NBEdge::new_2(&id, from, to, type_, speed, UNSPECIFIED_FRICTION, numLanes, priority, UNSPECIFIED_WIDTH, UNSPECIFIED_OFFSET, geoms, LaneSpreadFunction::CENTER, &streetName, &origID, false)));
         }
 
         //Import length or edges from input file

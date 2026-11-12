@@ -388,7 +388,7 @@ impl NIImporter_ITSUMO_Handler {
             for section in self.mySections.clone() {
                 for ls in section.m().laneSets.clone() {
                     let lsm = ls.m();
-                    let edge = Ptr::from_raw(Box::into_raw(Box::new(NBEdge::new(
+                    let edge = Ptr::from_raw(Box::into_raw(NBEdge::new(
                         &lsm.id,
                         lsm.from,
                         lsm.to,
@@ -401,7 +401,7 @@ impl NIImporter_ITSUMO_Handler {
                         NBEDGE_UNSPECIFIED_OFFSET,
                         LaneSpreadFunction::RIGHT,
                         "",
-                    ))));
+                    )));
                     if !self.myNetBuilder.m().get_edge_cont().insert(edge, false) {
                         unsafe { drop(Box::from_raw(edge.as_raw())) };
                         write_error(&format!("Could not add edge '{}'. Probably declared twice.", lsm.id));

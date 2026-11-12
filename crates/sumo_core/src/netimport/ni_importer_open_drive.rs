@@ -1553,7 +1553,7 @@ impl NIImporter_OpenDrive {
                     let edge = NBEdge::new_2(&format!("-{}", id), sFrom, sTo, e.laneSections[j].rightType.clone(), defaultSpeed,
                         NBEDGE_UNSPECIFIED_FRICTION, e.laneSections[j].rightLaneNumber, priorityR, NBEDGE_UNSPECIFIED_WIDTH, NBEDGE_UNSPECIFIED_OFFSET,
                         rightGeom.clone(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
-                    currRight = Ptr::from_raw(Box::into_raw(Box::new(edge)));
+                    currRight = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
                     // determinism: C++ std::sort is unstable; the comparator only orders by |id|
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT).or_default());
@@ -1608,7 +1608,7 @@ impl NIImporter_OpenDrive {
                     let edge = NBEdge::new_2(&id, sTo, sFrom, e.laneSections[j].leftType.clone(), defaultSpeed,
                         NBEDGE_UNSPECIFIED_FRICTION, e.laneSections[j].leftLaneNumber, priorityL, NBEDGE_UNSPECIFIED_WIDTH, NBEDGE_UNSPECIFIED_OFFSET,
                         leftGeom.reverse(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
-                    currLeft = Ptr::from_raw(Box::into_raw(Box::new(edge)));
+                    currLeft = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
                     // determinism: C++ std::sort is unstable; the comparator only orders by |id|
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT).or_default());
