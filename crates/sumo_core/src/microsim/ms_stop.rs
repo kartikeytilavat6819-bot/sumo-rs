@@ -381,7 +381,7 @@ impl MSStop {
     /// return minimum stop duration when starting stop at time
     // SUMOTime
     // MSStop::getMinDuration(SUMOTime time) const {
-    //     if (MSGlobals::gUseStopEnded && pars.ended >= 0) {
+    //     if (use_stop_ended() && pars.ended >= 0) {
     //         return pars.ended - time;
     //     }
     //     if (pars.until >= 0) {
@@ -396,7 +396,7 @@ impl MSStop {
     // }
     #[allow(unused_variables)]
     pub fn get_min_duration(&self, time: SUMOTime) -> SUMOTime {
-        if MSGlobals::gUseStopEnded && self.pars.ended >= 0 {
+        if use_stop_ended() && self.pars.ended >= 0 {
             return self.pars.ended - time;
         }
         if self.pars.until >= 0 {
@@ -414,11 +414,11 @@ impl MSStop {
     /// return until / ended time
     // SUMOTime
     // MSStop::getUntil() const {
-    //     return MSGlobals::gUseStopEnded && pars.ended >= 0 ? pars.ended : pars.until;
+    //     return use_stop_ended() && pars.ended >= 0 ? pars.ended : pars.until;
     // }
     #[allow(unused_variables)]
     pub fn get_until(&self) -> SUMOTime {
-        if MSGlobals::gUseStopEnded && self.pars.ended >= 0 {
+        if use_stop_ended() && self.pars.ended >= 0 {
             self.pars.ended
         } else {
             self.pars.until
@@ -429,11 +429,11 @@ impl MSStop {
     /// return arrival / started time
     // SUMOTime
     // MSStop::getArrival() const {
-    //     return MSGlobals::gUseStopStarted && pars.started >= 0 ? pars.started : pars.arrival;
+    //     return use_stop_started() && pars.started >= 0 ? pars.started : pars.arrival;
     // }
     #[allow(unused_variables)]
     pub fn get_arrival(&self) -> SUMOTime {
-        if MSGlobals::gUseStopStarted && self.pars.started >= 0 {
+        if use_stop_started() && self.pars.started >= 0 {
             self.pars.started
         } else {
             self.pars.arrival
@@ -546,8 +546,8 @@ impl MSStop {
     //     ncPars.lane = lane->getID();
     //     ncPars.startPos = sp->getBeginLanePosition();
     //     ncPars.endPos = sp->getEndLanePosition();
-    //     if (MSGlobals::gUseMesoSim) {
-    //         segment = MSGlobals::gMesoNet->getSegmentForEdge(lane->getEdge(), sp->getEndLanePosition());
+    //     if (use_meso_sim()) {
+    //         segment = meso_net()->getSegmentForEdge(lane->getEdge(), sp->getEndLanePosition());
     //     }
     //     switch (sp->getElement()) {
     //         case SUMO_TAG_BUS_STOP:
@@ -585,8 +585,8 @@ impl MSStop {
         self.pars.lane = lane.get_id().to_string();
         self.pars.startPos = sp.get_begin_lane_position();
         self.pars.endPos = sp.get_end_lane_position();
-        if MSGlobals::gUseMesoSim {
-            self.segment = MSGlobals::gMesoNet.m().get_segment_for_edge(lane.get_edge(), sp.get_end_lane_position());
+        if use_meso_sim() {
+            self.segment = meso_net().m().get_segment_for_edge(lane.get_edge(), sp.get_end_lane_position());
         }
         match sp.get_element() {
             SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP => {

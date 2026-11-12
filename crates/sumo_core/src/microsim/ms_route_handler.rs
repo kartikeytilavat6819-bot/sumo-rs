@@ -1,6 +1,7 @@
 //! Port of microsim/MSRouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, DEFAULT_CONTAINER_TRANSHIP_SPEED, DEFAULT_VTYPE_ID, SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER, SVC_PEDESTRIAN};
 
 /// C++ enum `MSRouteHandler::ObjectTypeEnum`
@@ -89,7 +90,7 @@ fn parse_geo_edges(pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
 // shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
 fn tag_to_string(tag: SumoXMLTag) -> String {
-    utils::xml::sumo_xml_definitions_gen::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
+    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
 }
 
 /// Parser and container for routes during their loading
@@ -666,7 +667,7 @@ impl MSRouteHandler {
     // void
     // MSRouteHandler::closeVehicleTypeDistribution() {
     //     if (myCurrentVTypeDistribution != nullptr) {
-    //         if (MSGlobals::gStateLoaded && MSNet::getInstance()->getVehicleControl().hasVTypeDistribution(myCurrentVTypeDistributionID)) {
+    //         if (state_loaded() && MSNet::getInstance()->getVehicleControl().hasVTypeDistribution(myCurrentVTypeDistributionID)) {
     //             myCurrentVTypeDistribution = nullptr;
     //             delete myCurrentVTypeDistribution;
     //             return;
@@ -686,7 +687,7 @@ impl MSRouteHandler {
     pub fn close_vehicle_type_distribution(&mut self) {
         if !self.myCurrentVTypeDistribution.is_null() {
             let net = MSNet::get_instance();
-            if MSGlobals::gStateLoaded && net.m().get_vehicle_control().has_v_type_distribution(&self.myCurrentVTypeDistributionID) {
+            if state_loaded() && net.m().get_vehicle_control().has_v_type_distribution(&self.myCurrentVTypeDistributionID) {
                 // C++ nulls the pointer and then deletes nullptr, so the distribution is not freed here either
                 self.myCurrentVTypeDistribution = Ptr::null();
                 return;
@@ -903,7 +904,7 @@ impl MSRouteHandler {
     //             ConstMSEdgeVector tmpEdges = myActiveRoute;
     //             auto tmpStops = myActiveRouteStops;
     //
-    //             if (MSGlobals::gCheckRoutes) {
+    //             if (check_routes()) {
     //                 SUMOVehicleClass vClass = SVC_IGNORING;
     //                 std::string errSuffix = ".";
     //                 if (myVehicleParameter != nullptr) {
@@ -961,7 +962,7 @@ impl MSRouteHandler {
     //         myActiveRoute.clear();
     //         ConstMSRoutePtr constRoute = std::shared_ptr<const MSRoute>(route);
     //         if (!MSRoute::dictionary(myActiveRouteID, constRoute)) {
-    //             if (!MSGlobals::gStateLoaded) {
+    //             if (!state_loaded()) {
     //                 if (myVehicleParameter != nullptr) {
     //                     if (MSNet::getInstance()->getVehicleControl().getVehicle(myVehicleParameter->id) == nullptr) {
     //                         throw ProcessError("Another route for " + type + " '" + myVehicleParameter->id + "' exists.");
@@ -1002,10 +1003,8 @@ impl MSRouteHandler {
             let mustReroute = self.myActiveRoute.len() == 0 && self.myActiveRouteStops.len() != 0;
             if mustReroute {
                 // implicit route from stops
-                for stop in self.myActiveRouteStops.iter() {
-                    let edge = MSEdge::dictionary_2(&stop.edge);
-                    self.myActiveRoute.push(edge);
-                }
+                let stopEdges: Vec<Ptr<MSEdge>> = self.myActiveRouteStops.iter().map(|stop| MSEdge::dictionary_2(&stop.edge)).collect();
+                self.myActiveRoute.extend(stopEdges);
             }
             if self.myActiveRoute.len() == 0 {
                 delete_ptr(self.myActiveRouteColor);
@@ -1033,7 +1032,7 @@ impl MSRouteHandler {
                 let tmpEdges: ConstMSEdgeVector = self.myActiveRoute.clone();
                 let tmpStops: StopParVector = self.myActiveRouteStops.clone();
 
-                if MSGlobals::gCheckRoutes {
+                if check_routes() {
                     let mut vClass = SVC_IGNORING;
                     let mut errSuffix = ".".to_string();
                     if !self.myVehicleParameter.is_null() {
@@ -1119,7 +1118,7 @@ impl MSRouteHandler {
             self.myActiveRoute.clear();
             let constRoute: ConstMSRoutePtr = Rc::new(route);
             if !MSRoute::dictionary(&self.myActiveRouteID, constRoute.clone()) {
-                if !MSGlobals::gStateLoaded {
+                if !state_loaded() {
                     if !self.myVehicleParameter.is_null() {
                         let net = MSNet::get_instance();
                         if net.m().get_vehicle_control().get_vehicle(&self.myVehicleParameter.id).is_null() {
@@ -1251,7 +1250,7 @@ impl MSRouteHandler {
     // MSRouteHandler::closeRouteDistribution() {
     //     if (myCurrentRouteDistribution != nullptr) {
     //         const bool haveSameID = MSRoute::dictionary(myCurrentRouteDistributionID, &myParsingRNG) != nullptr;
-    //         if (MSGlobals::gStateLoaded && haveSameID) {
+    //         if (state_loaded() && haveSameID) {
     //             delete myCurrentRouteDistribution;
     //             myCurrentRouteDistribution = nullptr;
     //             return;
@@ -1272,7 +1271,7 @@ impl MSRouteHandler {
     pub fn close_route_distribution(&mut self) {
         if !self.myCurrentRouteDistribution.is_null() {
             let haveSameID = MSRoute::has_route(&self.myCurrentRouteDistributionID);
-            if MSGlobals::gStateLoaded && haveSameID {
+            if state_loaded() && haveSameID {
                 delete_ptr(self.myCurrentRouteDistribution);
                 self.myCurrentRouteDistribution = Ptr::null();
                 return;
@@ -1380,10 +1379,10 @@ impl MSRouteHandler {
     //     if (vehControl.getVehicle(myVehicleParameter->id) == nullptr) {
     //         MSVehicleControl::VehicleDefinitionSource source = (myAmLoadingState) ? MSVehicleControl::VehicleDefinitionSource::STATE : MSVehicleControl::VehicleDefinitionSource::ROUTEFILE;
     //         try {
-    //             vehicle = vehControl.buildVehicle(myVehicleParameter, route, vtype, !MSGlobals::gCheckRoutes, source, !myAmLoadingState);
+    //             vehicle = vehControl.buildVehicle(myVehicleParameter, route, vtype, !check_routes(), source, !myAmLoadingState);
     //         } catch (const ProcessError& e) {
     //             myVehicleParameter = nullptr;
-    //             if (!MSGlobals::gCheckRoutes) {
+    //             if (!check_routes()) {
     //                 WRITE_WARNING(e.what());
     //                 vehControl.deleteVehicle(vehicle, true);
     //                 myVehicleParameter = nullptr;
@@ -1431,7 +1430,7 @@ impl MSRouteHandler {
     //                     // resample type
     //                     vtype = vehControl.getVType(myVehicleParameter->vtypeid, &myParsingRNG);
     //                 }
-    //                 vehicle = vehControl.buildVehicle(newPars, route, vtype, !MSGlobals::gCheckRoutes, source, !myAmLoadingState);
+    //                 vehicle = vehControl.buildVehicle(newPars, route, vtype, !check_routes(), source, !myAmLoadingState);
     //                 vehControl.addVehicle(newPars->id, vehicle);
     //             }
     //             myVehicleParameter = nullptr;
@@ -1442,7 +1441,7 @@ impl MSRouteHandler {
     //         }
     //     } else {
     //         // strange: another vehicle with the same id already exists
-    //         if (!MSGlobals::gStateLoaded) {
+    //         if (!state_loaded()) {
     //             // and was not loaded while loading a simulation state
     //             // -> error
     //             std::string veh_id = myVehicleParameter->id;
@@ -1550,7 +1549,7 @@ impl MSRouteHandler {
             }
         };
 
-        if route.mustReroute() {
+        if route.must_reroute() {
             self.myVehicleParameter.m().parametersSet |= VEHPARS_FORCE_REROUTE;
             if self.myVehicleParameter.stops.len() > 0 {
                 route = self.add_vehicle_stops_to_implicit_route(route, false);
@@ -1596,7 +1595,7 @@ impl MSRouteHandler {
                     self.myVehicleParameter,
                     route.clone(),
                     vtype,
-                    !MSGlobals::gCheckRoutes,
+                    !check_routes(),
                     source,
                     !self.myAmLoadingState,
                 )
@@ -1605,7 +1604,7 @@ impl MSRouteHandler {
                 Ok(v) => vehicle = v,
                 Err(payload) => {
                     self.myVehicleParameter = Ptr::null();
-                    if !MSGlobals::gCheckRoutes {
+                    if !check_routes() {
                         utils::common::msg_handler::write_warning(&exception_what(&payload));
                         vehControl.delete_vehicle(vehicle, true, false);
                         self.myVehicleParameter = Ptr::null();
@@ -1635,7 +1634,7 @@ impl MSRouteHandler {
                             let i = i as usize;
                             let replacedAt = vals[i].get_replaced_time();
                             let cmd = Box::into_raw(Box::new(Command_RouteReplacement::new(vehicle.get_id(), vals[i + 1].clone())));
-                            let cmd: Ptr<()> = Ptr::from_raw(cmd as *mut ());
+                            let cmd: Ptr<dyn Command> = Ptr::from_raw(cmd as *mut dyn Command);
                             if replacedAt >= 0 && replacedAt == self.myVehicleParameter.depart {
                                 // routing in the insertion step happens *after* insertion
                                 net.m().get_end_of_timestep_events().m().add_event(cmd, replacedAt);
@@ -1663,7 +1662,7 @@ impl MSRouteHandler {
                         // resample type
                         vtype = vehControl.get_v_type(&self.myVehicleParameter.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
                     }
-                    vehicle = vehControl.build_vehicle(newPars, route.clone(), vtype, !MSGlobals::gCheckRoutes, source, !self.myAmLoadingState);
+                    vehicle = vehControl.build_vehicle(newPars, route.clone(), vtype, !check_routes(), source, !self.myAmLoadingState);
                     let newId = newPars.m().id.clone();
                     vehControl.add_vehicle(&newId, vehicle);
                 }
@@ -1675,7 +1674,7 @@ impl MSRouteHandler {
             }
         } else {
             // strange: another vehicle with the same id already exists
-            if !MSGlobals::gStateLoaded {
+            if !state_loaded() {
                 // and was not loaded while loading a simulation state -> error
                 let veh_id = self.myVehicleParameter.id.clone();
                 self.delete_active_plan_and_vehicle_parameter();
@@ -1711,7 +1710,7 @@ impl MSRouteHandler {
     //         if (!MSNet::getInstance()->getVehicleControl().addVType(vehType)) {
     //             const std::string id = vehType->getID();
     //             delete vehType;
-    //             if (!MSGlobals::gStateLoaded) {
+    //             if (!state_loaded()) {
     //                 throw ProcessError(TLF("Another vehicle type (or distribution) with the id '%' exists.", id));
     //             }
     //         }
@@ -1740,12 +1739,14 @@ impl MSRouteHandler {
         let mut vehType: Ptr<MSVehicleType> = Ptr::null();
         let net = MSNet::get_instance();
         if self.myCurrentVTypeRef.is_empty() {
-            vehType = MSVehicleType::build(self.myCurrentVType.m(), &self.get_file_name());
+            // shortcut: SUMOSAXHandler base is Unmapped so getFileName() is unreachable, upgrade when SUMORouteHandler.base is ported
+            let fileName: String = panic!("SUMOSAXHandler::getFileName not ported");
+            vehType = MSVehicleType::build(self.myCurrentVType.m(), &fileName);
             vehType.m().check();
             if !net.m().get_vehicle_control().add_v_type(vehType) {
                 let id = vehType.get_id().to_string();
                 delete_ptr(vehType);
-                if !MSGlobals::gStateLoaded {
+                if !state_loaded() {
                     throw_process_error(format!("Another vehicle type (or distribution) with the id '{}' exists.", id));
                 }
             }
@@ -1878,7 +1879,7 @@ impl MSRouteHandler {
     //         if (MSNet::getInstance()->getInsertionControl().addFlow(myVehicleParameter)) {
     //             registerLastDepart();
     //         } else {
-    //             if (MSGlobals::gStateLoaded) {
+    //             if (state_loaded()) {
     //                 delete myVehicleParameter;
     //             } else {
     //                 throw ProcessError(TLF("Another flow with the id '%' exists.", myVehicleParameter->id));
@@ -1928,7 +1929,7 @@ impl MSRouteHandler {
                 self.myVehicleParameter.routeid, self.myVehicleParameter.id
             )),
         };
-        if route.mustReroute() {
+        if route.must_reroute() {
             self.myVehicleParameter.m().parametersSet |= VEHPARS_FORCE_REROUTE;
             if self.myVehicleParameter.stops.len() > 0 {
                 route = self.add_vehicle_stops_to_implicit_route(route, true);
@@ -1968,7 +1969,7 @@ impl MSRouteHandler {
         if self.myAddVehiclesDirectly || self.check_last_depart() {
             if net.m().get_insertion_control().add_flow(self.myVehicleParameter, -1) {
                 self.register_last_depart();
-            } else if MSGlobals::gStateLoaded {
+            } else if state_loaded() {
                 delete_ptr(self.myVehicleParameter);
             } else {
                 throw_process_error(format!("Another flow with the id '{}' exists.", self.myVehicleParameter.id));
@@ -2007,7 +2008,7 @@ impl MSRouteHandler {
     //             WRITE_ERROR(TLF("The % '%' is not known%.", toString(tag), id, errorSuffix));
     //         }
     //     }
-    //     if (!ok && MSGlobals::gCheckRoutes) {
+    //     if (!ok && check_routes()) {
     //         throw ProcessError(TLF("Invalid stop definition%.", errorSuffix));
     //     }
     //     return toStop;
@@ -2026,7 +2027,7 @@ impl MSRouteHandler {
                 write_errorf!("The % '%' is not known%.", tag_to_string(tag), id, errorSuffix);
             }
         }
-        if !ok && MSGlobals::gCheckRoutes {
+        if !ok && check_routes() {
             throw_process_error(format!("Invalid stop definition{}.", errorSuffix));
         }
         toStop
@@ -2051,7 +2052,7 @@ impl MSRouteHandler {
     //         SUMOVehicleParameter::Stop stop;
     //         bool ok = parseStop(stop, attrs, errorSuffix, MsgHandler::getErrorInstance());
     //         if (!ok) {
-    //             if (MSGlobals::gCheckRoutes) {
+    //             if (check_routes()) {
     //                 throw ProcessError();
     //             }
     //             return result;
@@ -2085,7 +2086,7 @@ impl MSRouteHandler {
     //             stop.edge = attrs.getOpt<std::string>(SUMO_ATTR_EDGE, nullptr, ok, "");
     //             if (ok && stop.edge != "") { // edge is given directly
     //                 edge = MSEdge::dictionary(stop.edge);
-    //                 if (edge == nullptr || (edge->isInternal() && !MSGlobals::gUsingInternalLanes)) {
+    //                 if (edge == nullptr || (edge->isInternal() && !using_internal_lanes())) {
     //                     throw ProcessError(TLF("The edge '%' for a stop is not known%.", stop.edge, errorSuffix));
     //                 }
     //             } else if (ok && stop.lane != "") { // lane is given directly
@@ -2099,7 +2100,7 @@ impl MSRouteHandler {
     //                 } else {
     //                     edge = &stopLane->getEdge();
     //                 }
-    //                 if (stopLane == nullptr || (stopLane->isInternal() && !MSGlobals::gUsingInternalLanes)) {
+    //                 if (stopLane == nullptr || (stopLane->isInternal() && !using_internal_lanes())) {
     //                     throw ProcessError(TLF("The lane '%' for a stop is not known%.", stop.lane, errorSuffix));
     //                 }
     //             } else if (ok && ((attrs.hasAttribute(SUMO_ATTR_X) && attrs.hasAttribute(SUMO_ATTR_Y))
@@ -2151,7 +2152,7 @@ impl MSRouteHandler {
     //                     }
     //                 } else {
     //                     const std::string msg = TLF("A stop must be placed on a busStop, a chargingStation, an overheadWireSegment, a containerStop, a parkingArea, an edge or a lane%.", errorSuffix);
-    //                     if (MSGlobals::gCheckRoutes) {
+    //                     if (check_routes()) {
     //                         throw ProcessError(msg);
     //                     } else {
     //                         WRITE_WARNING(msg);
@@ -2170,7 +2171,7 @@ impl MSRouteHandler {
     //             stop.startPos = attrs.getOpt<double>(SUMO_ATTR_STARTPOS, nullptr, ok, MAX2(0., stop.endPos - MIN_STOP_LENGTH));
     //             if (!myAmLoadingState) {
     //                 const bool friendlyPos = attrs.getOpt<bool>(SUMO_ATTR_FRIENDLY_POS, nullptr, ok, !attrs.hasAttribute(SUMO_ATTR_STARTPOS) && !attrs.hasAttribute(SUMO_ATTR_ENDPOS))
-    //                                          || !MSGlobals::gCheckRoutes;
+    //                                          || !check_routes();
     //                 if (!ok || (checkStopPos(stop.startPos, stop.endPos, edge->getLength(), 0, friendlyPos) != StopPos::STOPPOS_VALID)) {
     //                     throw ProcessError(TLF("Invalid start or end position for stop on %'%.",
     //                                            stop.lane != "" ? ("lane '" + stop.lane) : ("edge '" + stop.edge), errorSuffix));
@@ -2260,11 +2261,12 @@ impl MSRouteHandler {
             } else {
                 format!(" in route '{}'", self.myActiveRouteID)
             };
-            let mut stop = SUMOVehicleParameter_Stop::new();
+            // shortcut: SUMOVehicleParameter::Stop default ctor is not ported, upgrade when SUMOVehicleParameter_Stop gets a new()
+            let mut stop: SUMOVehicleParameter_Stop = panic!("SUMOVehicleParameter::Stop() ctor not ported");
             let ok = self.parse_stop(&mut stop, attrs, errorSuffix.clone(), Ptr::null());
             // shortcut: MsgHandler::getErrorInstance() has no accessor yet, parseStop reports to a null handler until it does
             if !ok {
-                if MSGlobals::gCheckRoutes {
+                if check_routes() {
                     throw_process_error_default();
                 }
                 return result;
@@ -2295,7 +2297,7 @@ impl MSRouteHandler {
                 if ok && stop.edge != "" {
                     // edge is given directly
                     edge = MSEdge::dictionary_2(&stop.edge);
-                    if edge.is_null() || (edge.is_internal() && !MSGlobals::gUsingInternalLanes) {
+                    if edge.is_null() || (edge.is_internal() && !using_internal_lanes()) {
                         throw_process_error(format!("The edge '{}' for a stop is not known{}.", stop.edge, errorSuffix));
                     }
                 } else if ok && stop.lane != "" {
@@ -2310,7 +2312,7 @@ impl MSRouteHandler {
                     } else {
                         edge = Ptr::from_mut(stopLane.m().get_edge());
                     }
-                    if stopLane.is_null() || (stopLane.is_internal() && !MSGlobals::gUsingInternalLanes) {
+                    if stopLane.is_null() || (stopLane.is_internal() && !using_internal_lanes()) {
                         throw_process_error(format!("The lane '{}' for a stop is not known{}.", stop.lane, errorSuffix));
                     }
                 } else if ok && ((attrs.has_attribute(SUMO_ATTR_X) && attrs.has_attribute(SUMO_ATTR_Y)) || (attrs.has_attribute(SUMO_ATTR_LON) && attrs.has_attribute(SUMO_ATTR_LAT))) {
@@ -2341,10 +2343,10 @@ impl MSRouteHandler {
                     if ok {
                         edge = geoEdges[0];
                         if geo {
-                            utils::geom::geo_conv_helper::GeoConvHelper::get_final().x2cartesian_const(&mut pos);
+                            utils::geom::geo_conv_helper::GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos));
                         }
                         stop.parametersSet |= STOP_END_SET;
-                        stop.endPos = edge.get_lanes()[0].get_shape().nearest_offset_to_point2D(pos, false);
+                        stop.endPos = edge.get_lanes()[0].get_shape(false).nearest_offset_to_point2d(&pos, false);
                     } else {
                         throw_process_error(format!("Could not map stop position '{}' to the network{}.", pos, errorSuffix));
                     }
@@ -2374,7 +2376,7 @@ impl MSRouteHandler {
                             "A stop must be placed on a busStop, a chargingStation, an overheadWireSegment, a containerStop, a parkingArea, an edge or a lane{}.",
                             errorSuffix
                         );
-                        if MSGlobals::gCheckRoutes {
+                        if check_routes() {
                             throw_process_error(msg);
                         } else {
                             utils::common::msg_handler::write_warning(&msg);
@@ -2396,7 +2398,7 @@ impl MSRouteHandler {
                         SUMO_ATTR_FRIENDLY_POS,
                         "",
                         &mut ok,
-                        !attrs.has_attribute(SUMO_ATTR_STARTPOS) && !attrs.has_attribute(SUMO_ATTR_ENDPOS) || !MSGlobals::gCheckRoutes,
+                        !attrs.has_attribute(SUMO_ATTR_STARTPOS) && !attrs.has_attribute(SUMO_ATTR_ENDPOS) || !check_routes(),
                         true,
                     );
                     if !ok || SUMORouteHandler::check_stop_pos(&mut stop.startPos, &mut stop.endPos, edge.get_length(), 0.0, friendlyPos) != SUMORouteHandler_StopPos::STOPPOS_VALID {
@@ -2704,7 +2706,7 @@ impl MSRouteHandler {
                 self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
                 // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the trip stage is not pushed onto it until SUMORouteHandler is fixed
                 if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
-                    self.myActiveTransportablePlan.last().unwrap().m().mark_set(VEHPARS_ARRIVALPOS_SET);
+                    self.myActiveTransportablePlan.last().unwrap().m().mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
             }
             self.myActiveRoute.clear();
@@ -2833,7 +2835,8 @@ impl MSRouteHandler {
                     self.myActiveRoute = route.get_edges().clone();
                 } else {
                     let edges: String = attrs.get(SUMO_ATTR_EDGES, &self.myVehicleParameter.id, &mut ok, true);
-                    MSEdge::parse_edges_list(&edges, &mut self.myActiveRoute, &self.myActiveRouteID);
+                    let routeID = self.myActiveRouteID.clone();
+                    MSEdge::parse_edges_list(&edges, &mut self.myActiveRoute, &routeID);
                 }
                 if self.myActiveTransportablePlan.is_empty() {
                     let mut initialDepartPos = self.myVehicleParameter.departPos;
@@ -2903,10 +2906,10 @@ impl MSRouteHandler {
                     stage.set_exit_times(Ptr::from_raw(Box::into_raw(Box::new(exitTimes))));
                 }
                 if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
-                    stage.mark_set(VEHPARS_ARRIVALPOS_SET);
+                    stage.mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
                 let raw = Box::into_raw(Box::new(stage));
-                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
+                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
                 // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the walk stage is not pushed onto it until SUMORouteHandler is fixed
                 self.myActiveRoute.clear();
             }));
@@ -3095,7 +3098,8 @@ impl MSRouteHandler {
 
             if attrs.has_attribute(SUMO_ATTR_EDGES) {
                 let edges: String = attrs.get(SUMO_ATTR_EDGES, &cid, &mut ok, true);
-                MSEdge::parse_edges_list(&edges, &mut self.myActiveRoute, &self.myActiveRouteID);
+                let routeID = self.myActiveRouteID.clone();
+                MSEdge::parse_edges_list(&edges, &mut self.myActiveRoute, &routeID);
             } else {
                 // set 'from':
                 if attrs.has_attribute(SUMO_ATTR_FROM) {
@@ -3170,7 +3174,7 @@ impl MSRouteHandler {
             let arrivalPos: f64 = attrs.get_opt(SUMO_ATTR_ARRIVALPOS, &cid, &mut ok, arrivalDefault, true);
             let stage = MSStageTranship::new(&self.myActiveRoute, cs, speed, departPos, arrivalPos);
             let raw = Box::into_raw(Box::new(stage));
-            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
+            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
             // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the tranship stage is not pushed onto it until SUMORouteHandler is fixed
             self.myActiveRoute.clear();
         }));
@@ -3319,7 +3323,7 @@ impl MSRouteHandler {
     // void
     // MSRouteHandler::initLaneTree(NamedRTree* tree) {
     //     for (const auto& edge : MSEdge::getAllEdges()) {
-    //         if (edge->isNormal() || MSGlobals::gUsingInternalLanes) {
+    //         if (edge->isNormal() || using_internal_lanes()) {
     //             for (MSLane* lane : edge->getLanes()) {
     //                 Boundary b = lane->getShape().getBoxBoundary();
     //                 const float cmin[2] = {(float) b.xmin(), (float) b.ymin()};
@@ -3651,7 +3655,7 @@ impl MSRouteHandler {
     //             myVehicleParameter->id = (baseID
     //                                       + (i >= 0 ? "." + toString(i) : "")
     //                                       + (j > 0 ? "." + toString(j) : ""));
-    //             if (MSGlobals::gStateLoaded && tc.get(myVehicleParameter->id) != nullptr) {
+    //             if (state_loaded() && tc.get(myVehicleParameter->id) != nullptr) {
     //                 return numCreated;
     //             }
     //             myVehicleParameter->depart = depart += net->getInsertionControl().computeRandomDepartOffset();
@@ -3724,7 +3728,7 @@ impl MSRouteHandler {
                     if j > 0 { format!(".{}", j) } else { String::new() }
                 );
                 self.myVehicleParameter.m().id = idStr.clone();
-                if MSGlobals::gStateLoaded && !tc.get(&idStr).is_null() {
+                if state_loaded() && !tc.get(&idStr).is_null() {
                     return numCreated;
                 }
                 depart += net.m().get_insertion_control().compute_random_depart_offset();

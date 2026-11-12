@@ -128,8 +128,8 @@ impl MSStateHandler {
     //     std::map<SumoXMLAttr, std::string> attrs;
     //     attrs[SUMO_ATTR_VERSION] = VERSION_STRING;
     //     attrs[SUMO_ATTR_TIME] = time2string(step);
-    //     attrs[SUMO_ATTR_TYPE] = MSGlobals::gUseMesoSim ? "meso" : "micro";
-    //     if (MSGlobals::gUseMesoSim) {
+    //     attrs[SUMO_ATTR_TYPE] = use_meso_sim() ? "meso" : "micro";
+    //     if (use_meso_sim()) {
     //         attrs[SUMO_ATTR_COUNT] = toString(MELoop::getEventCounter());
     //     }
     //     if (OptionsCont::getOptions().getBool("save-state.constraints")) {
@@ -141,7 +141,7 @@ impl MSStateHandler {
     //     out.writeXMLHeader("snapshot", "state_file.xsd", attrs);
     //     if (OptionsCont::getOptions().getBool("save-state.rng")) {
     //         saveRNGs(out);
-    //         if (!MSGlobals::gUseMesoSim) {
+    //         if (!use_meso_sim()) {
     //             MSNet::getInstance()->getEdgeControl().saveState(out);
     //         }
     //     }
@@ -167,8 +167,8 @@ impl MSStateHandler {
     //     }
     //     MSVehicleTransfer::getInstance()->saveState(out);
     //     for (MSEdge* const edge : MSEdge::getAllEdges()) {
-    //         if (MSGlobals::gUseMesoSim) {
-    //             for (MESegment* s = MSGlobals::gMesoNet->getSegmentForEdge(*edge); s != nullptr; s = s->getNextSegment()) {
+    //         if (use_meso_sim()) {
+    //             for (MESegment* s = meso_net()->getSegmentForEdge(*edge); s != nullptr; s = s->getNextSegment()) {
     //                 s->saveState(out);
     //             }
     //         } else {
@@ -277,9 +277,9 @@ impl MSStateHandler {
     //             if (OptionsCont::getOptions().getBool("device.rerouting.bike-speeds")) {
     //                 MSRoutingEngine::initEdgeWeights(SVC_BICYCLE);
     //             }
-    //             if (MSGlobals::gUseMesoSim) {
+    //             if (use_meso_sim()) {
     //                 for (const MSEdge* e : MSEdge::getAllEdges()) {
-    //                     for (MESegment* segment = MSGlobals::gMesoNet->getSegmentForEdge(*e); segment != nullptr; segment = segment->getNextSegment()) {
+    //                     for (MESegment* segment = meso_net()->getSegmentForEdge(*e); segment != nullptr; segment = segment->getNextSegment()) {
     //                         segment->resetCachedSpeeds();
     //                     }
     //                 }
@@ -339,7 +339,7 @@ impl MSStateHandler {
     //             const std::string& segmentID = attrs.getString(SUMO_ATTR_ID);
     //             const MSEdge* const edge = MSEdge::dictionary(segmentID.substr(0, segmentID.rfind(":")));
     //             int idx = StringUtils::toInt(segmentID.substr(segmentID.rfind(":") + 1));
-    //             mySegment = MSGlobals::gMesoNet->getSegmentForEdge(*edge);
+    //             mySegment = meso_net()->getSegmentForEdge(*edge);
     //             while (idx-- > 0 && mySegment != nullptr) {
     //                 mySegment = mySegment->getNextSegment();
     //             }
@@ -370,7 +370,7 @@ impl MSStateHandler {
     //                     myArrived.erase(v);
     //                 }
     //             }
-    //             if (MSGlobals::gUseMesoSim) {
+    //             if (use_meso_sim()) {
     //                 if (myQueIndex >= mySegment->numQueues()) {
     //                     throw ProcessError(TLF("Invalid queue index '%' on segment '%'. Check for consistency of lane numbers and queue options.", myQueIndex, mySegment->getID()));
     //                 }
@@ -413,7 +413,7 @@ impl MSStateHandler {
     //             const double latOffset = attrs.getOpt<double>(SUMO_ATTR_POSITION_LAT, nullptr, ok, 0);
     //             SUMOVehicle* veh = vc.getVehicle(vehID);
     //             myCurrentLink->setApproaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, latOffset);
-    //             if (!MSGlobals::gUseMesoSim) {
+    //             if (!use_meso_sim()) {
     //                 MSVehicle* microVeh = dynamic_cast<MSVehicle*>(veh);
     //                 microVeh->loadPreviousApproaching(myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
     //             }
@@ -561,7 +561,7 @@ impl MSStateHandler {
     //                 // state was created with active option --keep-after-arrival
     //                 vc.deleteKeptVehicle(v);
     //             }
-    //             if (!MSGlobals::gUseMesoSim) {
+    //             if (!use_meso_sim()) {
     //                 for (MSVehicleControl::constVehIt i = vc.loadedVehBegin(); i != vc.loadedVehEnd(); ++i) {
     //                     MSVehicle* microVeh = dynamic_cast<MSVehicle*>((*i).second);
     //                     if (microVeh->hasDeparted() && microVeh->getLane() != nullptr) {
@@ -570,7 +570,7 @@ impl MSStateHandler {
     //                     }
     //                 }
     //             }
-    //             if (MSGlobals::gUseMesoSim && myMesoEventCounter >= 0) {
+    //             if (use_meso_sim() && myMesoEventCounter >= 0) {
     //                 MELoop::setEventCounter(myMesoEventCounter);
     //             }
     //             MSDevice_Taxi::finalizeLoadState();
@@ -664,7 +664,7 @@ impl MSStateHandler {
     //             myReminderAttrs.pop_back();
     //         }
     //         if (myCFMAttrs != nullptr) {
-    //             assert(!MSGlobals::gUseMesoSim);
+    //             assert(!use_meso_sim());
     //             MSVehicle* microVeh = dynamic_cast<MSVehicle*>(v);
     //             const MSCFModel::VehicleVariables* vars = microVeh->getCarFollowVariables();
     //             if (vars != nullptr) {
@@ -717,7 +717,7 @@ impl MSStateHandler {
     // }
     #[allow(unused_variables)]
     pub fn save_rn_gs(out: &mut OutputDevice) {
-        out.open_tag(SUMO_TAG_RNGSTATE);
+        out.open_tag_id(SUMO_TAG_RNGSTATE);
         out.write_attr(SUMO_ATTR_DEFAULT, &utils::common::rand_helper::with_default(|rng| rng.save_state()));
         out.write_attr(SUMO_ATTR_RNG_ROUTEHANDLER, &SUMORouteHandler::get_parsing_rng().m().save_state());
         // shortcut: FlowRNG (MSInsertionControl::getFlowRNG), MSDevice/BTreceiver/OUProcess/ToC RNGs and MSLane::saveRNGStates are not ported, their states are not written yet

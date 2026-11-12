@@ -695,3 +695,10 @@ impl MSRoute {
 
 }
 
+
+/// C++ compares `const MSRoute*` by pointer in RandomDistributor, so equality is identity
+impl PartialEq for MSRoute {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}

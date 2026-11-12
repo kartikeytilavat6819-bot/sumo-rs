@@ -1,6 +1,7 @@
 //! Port of microsim/MSTrainHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::INVALID_DOUBLE;
 
 // shortcut: these constants are C++ file-local/class statics (MSTrainHelper.cpp/.h), kept here until a shared home exists
 const PEDESTRIAN_RADIUS_EXTRA_TOLERANCE: f64 = 0.01;
@@ -430,7 +431,7 @@ impl MSTrainHelper {
     //                                || (myTrain->getVClass() & (SVC_RAIL_ELECTRIC | SVC_RAIL_FAST | SVC_RAIL)) == 0 ? 0 : 1;
     //
     //     const double lateralOffset = (myTrain->isParking() && myTrain->getNextStopParameter()->posLat == INVALID_DOUBLE
-    //                                   ? (myTrain->getLane()->getWidth() * (MSGlobals::gLefthand ? -1 : 1))
+    //                                   ? (myTrain->getLane()->getWidth() * (lefthand() ? -1 : 1))
     //                                   : -myTrain->getLateralPositionOnLane());
     //
     //     for (int i = 0; i < myNumCarriages; ++i) {
@@ -511,7 +512,7 @@ impl MSTrainHelper {
         };
 
         let lateralOffset = if self.myTrain.is_parking() && self.myTrain.get_next_stop_parameter().posLat == INVALID_DOUBLE {
-            lane.get_width() * (if MSGlobals::gLefthand { -1.0 } else { 1.0 })
+            lane.get_width() * (if lefthand() { -1.0 } else { 1.0 })
         } else {
             -self.myTrain.get_lateral_position_on_lane()
         };

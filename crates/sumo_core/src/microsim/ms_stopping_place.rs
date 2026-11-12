@@ -206,7 +206,7 @@ impl MSStoppingPlace {
     #[allow(unused_variables)]
     pub fn get_center_pos(&self) -> Position {
         let lane = self.myLane;
-        lane.get_shape().position_at_offset(
+        lane.get_shape(false).position_at_offset(
             lane.interpolate_lane_pos_to_geometry_pos((self.myBegPos + self.myEndPos) / 2.0),
             lane.get_width() / 2.0 + 0.5,
         )
@@ -382,7 +382,7 @@ impl MSStoppingPlace {
     //             row = 1 + myTransportableCapacity / getTransportablesAbreast();
     //         }
     //     }
-    //     const double lefthandSign = (MSGlobals::gLefthand ? -1 : 1);
+    //     const double lefthandSign = (lefthand() ? -1 : 1);
     //     return myLane.getShape().positionAtOffset(myLane.interpolateLanePosToGeometryPos(lanePos),
     //             lefthandSign * (myLane.getWidth() / 2 + row * myTransportableDepth + fabs(cos(myAngle)) * myTransportableWidth / 2));
     // }
@@ -398,9 +398,9 @@ impl MSStoppingPlace {
                 row = 1 + self.myTransportableCapacity / self.get_transportables_abreast();
             }
         }
-        let lefthandSign = if MSGlobals::gLefthand { -1.0 } else { 1.0 };
+        let lefthandSign = if lefthand() { -1.0 } else { 1.0 };
         let lane = self.myLane;
-        lane.get_shape().position_at_offset(
+        lane.get_shape(false).position_at_offset(
             lane.interpolate_lane_pos_to_geometry_pos(lanePos),
             lefthandSign
                 * (lane.get_width() / 2.0 + row as f64 * self.myTransportableDepth + self.myAngle.cos().abs() * self.myTransportableWidth / 2.0),
@@ -598,8 +598,8 @@ impl MSStoppingPlace {
         }
         let mut length = length;
         if length < 0.0 {
-            let accPos = lane.geometry_position_at_offset((startPos + endPos) / 2.0);
-            let stopPos = self.myLane.geometry_position_at_offset((self.myBegPos + self.myEndPos) / 2.0);
+            let accPos = lane.geometry_position_at_offset((startPos + endPos) / 2.0, 0.);
+            let stopPos = self.myLane.geometry_position_at_offset((self.myBegPos + self.myEndPos) / 2.0, 0.);
             length = accPos.distance_to(&stopPos);
         }
         self.myAccessPos.push(MSStoppingPlace_Access {

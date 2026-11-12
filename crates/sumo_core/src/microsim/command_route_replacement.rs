@@ -123,3 +123,9 @@ impl Command_RouteReplacement {
 
 }
 
+
+impl Command for Command_RouteReplacement {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        Command_RouteReplacement::execute(self, currentTime)
+    }
+}
