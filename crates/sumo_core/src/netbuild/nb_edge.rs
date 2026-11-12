@@ -5623,8 +5623,8 @@ impl NBEdge {
         self.myGeom.append(&e.myGeom, 2.0);
         for i in 0..self.myLanes.len() {
             self.myLanes[i].customShape.append(&e.myLanes[i].customShape, 2.0);
-            if self.myLanes[i].hasParameter(SUMO_PARAM_ORIGID)
-                || e.myLanes[i].hasParameter(SUMO_PARAM_ORIGID)
+            if self.myLanes[i].has_parameter(SUMO_PARAM_ORIGID)
+                || e.myLanes[i].has_parameter(SUMO_PARAM_ORIGID)
                 || utils::options::options_cont::get_bool("output.original-names")
             {
                 let origID = self.myLanes[i].get_parameter(SUMO_PARAM_ORIGID, self.get_id());
@@ -5658,14 +5658,14 @@ impl NBEdge {
         self.myTurnDestination = e.myTurnDestination;
         self.myPossibleTurnDestination = e.myPossibleTurnDestination;
         self.myConnectionsToDelete = e.myConnectionsToDelete.clone();
-        let removedNodes = e.get_parameter(SUMO_PARAM_REMOVED_NODES, "");
+        let removedNodes = e.base2.get_parameter(SUMO_PARAM_REMOVED_NODES, "");
         self.update_removed_nodes(&removedNodes);
         // set the node
         self.myTo = e.myTo;
         self.myTurnSignTarget = e.myTurnSignTarget.clone();
         self.myToBorder = e.myToBorder.clone();
-        let parameters = e.get_parameters_map().clone();
-        self.merge_parameters(&parameters, " ", true);
+        let parameters = e.base2.get_parameters_map().clone();
+        self.base2.merge_parameters(&parameters, " ", true);
         if e.mySignalPosition != Position::INVALID {
             self.mySignalPosition = e.mySignalPosition;
         }
@@ -5687,13 +5687,13 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn update_removed_nodes(&mut self, removed: &str) {
-        let mut result = self.get_parameter(SUMO_PARAM_REMOVED_NODES, "");
+        let mut result = self.base2.get_parameter(SUMO_PARAM_REMOVED_NODES, "");
         if !result.is_empty() && !removed.is_empty() {
             result += " ";
         }
         result += removed;
         if !result.is_empty() {
-            self.set_parameter(SUMO_PARAM_REMOVED_NODES, &result);
+            self.base2.set_parameter(SUMO_PARAM_REMOVED_NODES, &result);
         }
     }
 
