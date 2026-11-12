@@ -22,6 +22,10 @@ const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
 const JUNCTION_TAZ_MISSING_HELP: &str = "\nSet option '--junction-taz' or load a TAZ-file";
 // shortcut: STOP_INDEX_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const STOP_INDEX_REPEAT: i32 = -3;
+const STOP_INDEX_END: i32 = -1;
+// shortcut: MSPModel constants belong to MSPModel.h, not ported yet, move them there
+const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
+const RANDOM_POS_LAT: f64 = -f64::MAX;
 
 // shortcut: these constants belong to SUMOVehicleParameter.h / MSStage.h / SUMOVehicleParameter.h, not ported yet, move them there
 const STOP_END_SET: i32 = 2;
@@ -2861,7 +2865,7 @@ impl MSRouteHandler {
                     && planBack.get_destination().get_to_junction() != front.get_from_junction()
                     && planBack.get_destination().get_to_junction() != front.get_to_junction()
                 {
-                    if planBack.get_destination_stop().is_null() || planBack.get_destination_stop().get_access_pos(front) < 0.0 {
+                    if planBack.get_destination_stop().is_null() || planBack.get_destination_stop().get_access_pos(front, Ptr::null()) < 0.0 {
                         throw_process_error(format!(
                             "Disconnected plan for person '{}' ({} not connected to {}).",
                             self.myVehicleParameter.id,
@@ -3246,7 +3250,69 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_walk_positions(&mut self, attrs: &SUMOSAXAttributes, personID: &str, fromEdge: Ptr<MSEdge>, toEdge: &Ptr<MSEdge>, departPos: &mut f64, arrivalPos: &mut f64, bs: &mut Ptr<MSStoppingPlace>, lastStage: Ptr<MSStage>, ok: &mut bool) {
-        todo!("port MSRouteHandler::parseWalkPositions")
+        // C++ try/catch(ProcessError&): deleteActivePlanAndVehicleParameter, then rethrow
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let rng = SUMORouteHandler::get_parsing_rng();
+            let description = format!("person '{}' walking from edge '{}'", personID, fromEdge.get_id());
+
+            if attrs.has_attribute(SUMO_ATTR_DEPARTPOS) {
+                utils::common::msg_handler::write_warning("The attribute departPos is no longer supported for walks, please use the person attribute, the arrivalPos of the previous step or explicit stops.");
+            }
+            *departPos = 0.0;
+            if !lastStage.is_null() {
+                if !lastStage.get_destination_stop().is_null() {
+                    *departPos = lastStage.get_destination_stop().get_access_pos(fromEdge, rng);
+                } else if lastStage.get_destination() == fromEdge {
+                    *departPos = lastStage.get_arrival_pos();
+                } else if lastStage.get_destination().get_to_junction() == fromEdge.get_to_junction() {
+                    *departPos = fromEdge.get_length();
+                }
+            }
+
+            *bs = self.retrieve_stopping_place(attrs, &format!(" {}", description), Ptr::null());
+            if !bs.is_null() {
+                let stopEdge = if !toEdge.is_null() { *toEdge } else { Ptr::from_mut(bs.get_lane().get_edge()) };
+                *arrivalPos = bs.get_access_pos(stopEdge, rng);
+                if *arrivalPos < 0.0 {
+                    throw_process_error(format!(
+                        "Bus stop '{}' is not connected to arrival edge '{}' for {}.",
+                        bs.get_id(),
+                        toEdge.get_id(),
+                        description
+                    ));
+                }
+                if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
+                    let length = if !toEdge.is_null() { toEdge.get_length() } else { bs.get_lane().get_length() };
+                    let arrStr: String = attrs.get(SUMO_ATTR_ARRIVALPOS, &description, ok, true);
+                    let arrPos = SUMOVehicleParserHelper::parse_walk_pos(SUMO_ATTR_ARRIVALPOS, self.myHardFail, &description, length, &arrStr, rng);
+                    if arrPos >= bs.get_begin_lane_position() && arrPos < bs.get_end_lane_position() {
+                        *arrivalPos = arrPos;
+                    } else {
+                        // toString(SUMO_ATTR_BUS_STOP) is "busStop"
+                        write_warningf!(
+                            "Ignoring arrivalPos for % because it is outside the given stop '%'.",
+                            description,
+                            "busStop"
+                        );
+                        *arrivalPos = bs.get_access_pos(Ptr::from_mut(bs.get_lane().get_edge()), rng);
+                    }
+                }
+            } else {
+                if toEdge.is_null() {
+                    throw_process_error(format!("No destination edge for {}.", description));
+                }
+                if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
+                    let arrStr: String = attrs.get(SUMO_ATTR_ARRIVALPOS, &description, ok, true);
+                    *arrivalPos = SUMOVehicleParserHelper::parse_walk_pos(SUMO_ATTR_ARRIVALPOS, self.myHardFail, &description, toEdge.get_length(), &arrStr, rng);
+                } else {
+                    *arrivalPos = toEdge.get_length() / 2.0;
+                }
+            }
+        }));
+        if let Err(payload) = result {
+            self.delete_active_plan_and_vehicle_parameter();
+            std::panic::resume_unwind(payload);
+        }
     }
 
     /// C++: `void MSRouteHandler::initLaneTree(NamedRTree *)` [virtual, protected]
@@ -3265,7 +3331,8 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        todo!("port MSRouteHandler::initLaneTree")
+        // shortcut: NamedRTree is not ported, lanes are not inserted into the tree until it is (the tree only serves map matching)
+        let _ = tree;
     }
 
     /// C++: `MSEdge * MSRouteHandler::retrieveEdge(const std::string &)` [virtual, protected]
@@ -3275,7 +3342,7 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_edge(&mut self, id: &str) -> Ptr<MSEdge> {
-        todo!("port MSRouteHandler::retrieveEdge")
+        MSEdge::dictionary_2(id)
     }
 
     /// C++: `SumoRNG * MSRouteHandler::getRNG()` [virtual, protected]
@@ -3285,7 +3352,7 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_rng(&mut self) -> Ptr<SumoRNG> {
-        todo!("port MSRouteHandler::getRNG")
+        SUMORouteHandler::get_parsing_rng()
     }
 
     /// C++: `const SUMOVTypeParameter * MSRouteHandler::getVTypeParameter(const std::string &)` [virtual, protected]
@@ -3296,7 +3363,13 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_v_type_parameter(&mut self, refid: &str) -> Ptr<SUMOVTypeParameter> {
-        todo!("port MSRouteHandler::getVTypeParameter")
+        let net = MSNet::get_instance();
+        let t = net.m().get_vehicle_control().get_v_type(refid, Ptr::null(), false);
+        if !t.is_null() {
+            Ptr::new(t.get_parameter())
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `void MSRouteHandler::deleteActivePlanAndVehicleParameter()` [private]
@@ -3314,7 +3387,13 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn delete_active_plan_and_vehicle_parameter(&mut self) {
-        todo!("port MSRouteHandler::deleteActivePlanAndVehicleParameter")
+        let plan = self.myActiveTransportablePlan;
+        if !plan.is_null() {
+            // shortcut: C++ `delete s` on each stage is a virtual delete, stages are leaked until the concrete stage type is known here
+            delete_ptr(plan);
+        }
+        delete_ptr(self.myVehicleParameter);
+        self.reset_active_plan_and_vehicle_parameter();
     }
 
     /// C++: `void MSRouteHandler::resetActivePlanAndVehicleParameter()` [private]
@@ -3327,7 +3406,9 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn reset_active_plan_and_vehicle_parameter(&mut self) {
-        todo!("port MSRouteHandler::resetActivePlanAndVehicleParameter")
+        self.myVehicleParameter = Ptr::null();
+        self.myActiveTransportablePlan = Ptr::null();
+        self.myActiveType = MSRouteHandler_ObjectTypeEnum::UNDEFINED;
     }
 
     /// C++: `void MSRouteHandler::closeTransportableFlow()` [private]
@@ -3384,7 +3465,69 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_transportable_flow(&mut self) {
-        todo!("port MSRouteHandler::closeTransportableFlow")
+        // C++ try/catch(ProcessError&): deleteActivePlanAndVehicleParameter, then rethrow
+        // the closure returns true for the early `return` of the C++ body (which skips resetting myStartTriggeredInFlow)
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> bool {
+            let fid = self.myVehicleParameter.id.clone();
+            if self.myActiveTransportablePlan.is_empty() {
+                throw_process_error(format!("{}Flow '{}' has no plan.", self.myActiveTypeName, fid));
+            }
+            let net = MSNet::get_instance();
+            // let's check whether this transportable (person/container) had to depart before the simulation starts
+            if !(self.myAddVehiclesDirectly || self.check_last_depart())
+                || (self.myVehicleParameter.depart <= net.m().get_state_loader_time() && !self.myAmLoadingState)
+            {
+                self.delete_active_plan_and_vehicle_parameter();
+                return true;
+            }
+            // instantiate all persons/containers of this flow
+            let mut i: i32 = 0;
+            self.register_last_depart();
+            let baseID = self.myVehicleParameter.id.clone();
+            if self.myVehicleParameter.repetitionProbability > 0.0 {
+                if self.myVehicleParameter.repetitionEnd == i64::MAX {
+                    throw_process_error(format!("probabilistic {}Flow '{}' must specify end time", self.myActiveTypeName, fid));
+                } else {
+                    let mut t = self.myVehicleParameter.depart;
+                    while t < self.myVehicleParameter.repetitionEnd {
+                        if SUMORouteHandler::get_parsing_rng().m().rand() < self.myVehicleParameter.repetitionProbability {
+                            // type existence has been checked on opening
+                            let type_ = net.m().get_vehicle_control().get_v_type(&self.myVehicleParameter.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
+                            self.add_flow_transportable(t, type_, &baseID, i);
+                            i += 1;
+                        }
+                        t += utils::common::time::time2steps(1.0);
+                    }
+                }
+            } else {
+                let depart = self.myVehicleParameter.depart;
+                if self.myVehicleParameter.repetitionOffset < 0 {
+                    // poisson: randomize first depart
+                    self.myVehicleParameter.m().increment_flow(1.0, SUMORouteHandler::get_parsing_rng());
+                }
+                while (i as i64) < self.myVehicleParameter.repetitionNumber
+                    && (self.myVehicleParameter.repetitionNumber != i64::MAX
+                        || depart + self.myVehicleParameter.repetitionTotalOffset <= self.myVehicleParameter.repetitionEnd)
+                {
+                    // type existence has been checked on opening
+                    let type_ = net.m().get_vehicle_control().get_v_type(&self.myVehicleParameter.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
+                    self.add_flow_transportable(depart + self.myVehicleParameter.repetitionTotalOffset, type_, &baseID, i);
+                    self.myVehicleParameter.m().increment_flow(1.0, SUMORouteHandler::get_parsing_rng());
+                    i += 1;
+                }
+            }
+            self.reset_active_plan_and_vehicle_parameter();
+            false
+        }));
+        match result {
+            Ok(true) => return,
+            Ok(false) => {}
+            Err(payload) => {
+                self.delete_active_plan_and_vehicle_parameter();
+                std::panic::resume_unwind(payload);
+            }
+        }
+        self.myStartTriggeredInFlow = false;
     }
 
     /// C++: `void MSRouteHandler::closeTransportable()` [private]
@@ -3424,7 +3567,49 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_transportable(&mut self) {
-        todo!("port MSRouteHandler::closeTransportable")
+        // C++ try/catch(ProcessError&): deleteActivePlanAndVehicleParameter, then rethrow
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if self.myActiveTransportablePlan.is_empty() {
+                let mut error = format!("{} '{}' has no plan.", self.myActiveTypeName, self.myVehicleParameter.id);
+                // error[0] = toupper(error[0])
+                let first = error[..1].to_uppercase();
+                error.replace_range(..1, &first);
+                throw_process_error(error);
+            }
+            let net = MSNet::get_instance();
+            // let's check whether this transportable had to depart before the simulation starts
+            if !(self.myAddVehiclesDirectly || self.check_last_depart())
+                || (self.myVehicleParameter.depart <= net.m().get_state_loader_time() && !self.myAmLoadingState)
+            {
+                self.delete_active_plan_and_vehicle_parameter();
+                return;
+            }
+            // type existence has been checked on opening
+            let type_ = net.m().get_vehicle_control().get_v_type(&self.myVehicleParameter.vtypeid, SUMORouteHandler::get_parsing_rng(), false);
+            if self.myActiveType == MSRouteHandler_ObjectTypeEnum::PERSON
+                && type_.get_vehicle_class() != SVC_PEDESTRIAN
+                && !type_.get_parameter().was_set(VTYPEPARS_VEHICLECLASS_SET)
+            {
+                write_warningf!(
+                    "Person '%' receives type '%' which implicitly uses unsuitable vClass '%'.",
+                    self.myVehicleParameter.id,
+                    type_.get_id().to_string(),
+                    get_vehicle_class_names(type_.get_vehicle_class(), false)
+                );
+            }
+            let id = self.myVehicleParameter.id.clone();
+            let created = self.add_flow_transportable(self.myVehicleParameter.depart, type_, &id, -1);
+            self.register_last_depart();
+            if created > 0 {
+                self.reset_active_plan_and_vehicle_parameter();
+            } else {
+                self.delete_active_plan_and_vehicle_parameter();
+            }
+        }));
+        if let Err(payload) = result {
+            self.delete_active_plan_and_vehicle_parameter();
+            std::panic::resume_unwind(payload);
+        }
     }
 
     /// C++: `int MSRouteHandler::addFlowTransportable(SUMOTime, MSVehicleType *, const std::string &, int)` [private]
@@ -3492,7 +3677,89 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_flow_transportable(&mut self, depart: SUMOTime, type_: Ptr<MSVehicleType>, baseID: &str, i: i32) -> i32 {
-        todo!("port MSRouteHandler::addFlowTransportable")
+        // C++ try/catch(ProcessError&): deleteActivePlanAndVehicleParameter, then rethrow
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> i32 {
+            let mut numCreated: i32 = 0;
+            let mut depart = depart;
+            let net = MSNet::get_instance();
+            let isPerson = self.myActiveType == MSRouteHandler_ObjectTypeEnum::PERSON;
+            let tc: &mut MSTransportableControl = if isPerson {
+                net.m().get_person_control()
+            } else {
+                net.m().get_container_control()
+            };
+            let vc = net.m().get_vehicle_control();
+            let quota = vc.get_quota(vc.get_scale() * type_.get_parameter().scale, tc.get_loaded_number());
+            if quota == 0 {
+                tc.add_discarded();
+            }
+            for j in 0..quota {
+                if i > 0 || j > 0 {
+                    // copy parameter and plan because the transportable takes over responsibility
+                    self.myVehicleParameter = Ptr::from_raw(Box::into_raw(Box::new((*self.myVehicleParameter).clone())));
+                    let copyPlan = Ptr::from_raw(Box::into_raw(Box::new(Vec::<Ptr<MSStage>>::new())));
+                    let mut lastStage: Ptr<MSStage> = Ptr::null();
+                    for s in self.myActiveTransportablePlan.iter() {
+                        let cloned = s.m().clone();
+                        copyPlan.m().push(cloned);
+                        if !lastStage.is_null()
+                            && s.get_stage_type() == MSStageType::WALKING
+                            && !lastStage.get_destination_stop().is_null()
+                        {
+                            // shortcut: C++ static_cast<MSStageMoving*> of the copied walk needs a checked downcast from MSStage, its departPos is not reset until it exists
+                        }
+                        lastStage = *s;
+                    }
+                    self.myActiveTransportablePlan = copyPlan;
+                    if self.myVehicleParameter.departPosProcedure == DepartPosDefinition::RANDOM {
+                        let length = self.myActiveTransportablePlan.first().unwrap().get_destination().get_length();
+                        let initialDepartPos = SUMORouteHandler::get_parsing_rng().m().rand_max(length);
+                        self.myActiveTransportablePlan.first().unwrap().m().set_arrival_pos(initialDepartPos);
+                    }
+                }
+                let idStr = format!(
+                    "{}{}{}",
+                    baseID,
+                    if i >= 0 { format!(".{}", i) } else { String::new() },
+                    if j > 0 { format!(".{}", j) } else { String::new() }
+                );
+                self.myVehicleParameter.m().id = idStr.clone();
+                if MSGlobals::gStateLoaded && !tc.get(&idStr).is_null() {
+                    return numCreated;
+                }
+                depart += net.m().get_insertion_control().compute_random_depart_offset();
+                self.myVehicleParameter.m().depart = depart;
+                let transportable = if isPerson {
+                    tc.build_person(self.myVehicleParameter, type_, self.myActiveTransportablePlan, SUMORouteHandler::get_parsing_rng())
+                } else {
+                    tc.build_container(self.myVehicleParameter, type_, self.myActiveTransportablePlan)
+                };
+                numCreated += 1;
+                if !tc.add(transportable) {
+                    let error = format!("Another {} with the id '{}' exists.", self.myActiveTypeName, idStr);
+                    delete_ptr(transportable);
+                    self.reset_active_plan_and_vehicle_parameter();
+                    throw_process_error(error);
+                } else if net.m().has_persons()
+                    && !net.m().get_person_control().get(&idStr).is_null()
+                    && net.m().has_containers()
+                    && !net.m().get_container_control().get(&idStr).is_null()
+                {
+                    write_warningf!(
+                        "There exists a person and a container with the same id '%'. Starting with SUMO 1.9.0 this is an error.",
+                        idStr
+                    );
+                }
+            }
+            numCreated
+        }));
+        match result {
+            Ok(n) => n,
+            Err(payload) => {
+                self.delete_active_plan_and_vehicle_parameter();
+                std::panic::resume_unwind(payload);
+            }
+        }
     }
 
     /// C++: `double MSRouteHandler::interpretDepartPosLat(const std::string &, int, const std::string &)` [private]
@@ -3538,7 +3805,37 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn interpret_depart_pos_lat(&mut self, value: &str, departLane: i32, element: &str) -> f64 {
-        todo!("port MSRouteHandler::interpretDepartPosLat")
+        let mut pos = UNSPECIFIED_POS_LAT;
+        if value == "" {
+            return pos;
+        }
+        let mut error = String::new();
+        let mut dpd = DepartPosLatDefinition::DEFAULT;
+        if SUMOVehicleParameter::parse_depart_pos_lat(value, element, &self.myVehicleParameter.id, &mut pos, &mut dpd, &mut error) {
+            if dpd != DepartPosLatDefinition::GIVEN {
+                let lane = MSStageMoving::check_depart_lane(self.myActiveRoute[0], SVC_IGNORING, departLane, &self.myVehicleParameter.id);
+                if lane.is_null() {
+                    throw_process_error(format!(
+                        "Could not find departure lane for walk of person '{}' when interpreting departPosLat",
+                        self.myVehicleParameter.id
+                    ));
+                }
+                let usableWidth = lane.get_width() - 0.5;
+                match dpd {
+                    DepartPosLatDefinition::RIGHT => pos = -usableWidth / 2.0,
+                    DepartPosLatDefinition::LEFT => pos = usableWidth / 2.0,
+                    DepartPosLatDefinition::CENTER => pos = 0.0,
+                    // @note must be randomized for every person individually when loading a personFlow
+                    DepartPosLatDefinition::RANDOM | DepartPosLatDefinition::FREE | DepartPosLatDefinition::RANDOM_FREE => {
+                        pos = RANDOM_POS_LAT
+                    }
+                    _ => {}
+                }
+            }
+        } else {
+            throw_process_error(error);
+        }
+        pos
     }
 
     /// C++: `ConstMSRoutePtr MSRouteHandler::addVehicleStopsToImplicitRoute(ConstMSRoutePtr, bool)` [private]
@@ -3576,7 +3873,47 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle_stops_to_implicit_route(&mut self, route: ConstMSRoutePtr, isPermanent: bool) -> ConstMSRoutePtr {
-        todo!("port MSRouteHandler::addVehicleStopsToImplicitRoute")
+        // the route was defined without edges and its current edges were
+        // derived from route-stops.
+        // We may need to add additional edges for the vehicle-stops
+        let mut edges: ConstMSEdgeVector = route.get_edges().clone();
+        let routeStops: &StopParVector = route.get_stops();
+        for stop in self.myVehicleParameter.stops.iter() {
+            let stopEdge = MSEdge::dictionary_2(&stop.edge);
+            if stop.index == 0 {
+                if edges.first().copied() != Some(stopEdge) || routeStops.first().unwrap().endPos < stop.endPos {
+                    edges.insert(0, stopEdge);
+                }
+            } else if stop.index == STOP_INDEX_END {
+                if edges.last().copied() != Some(stopEdge) || routeStops.last().unwrap().endPos > stop.endPos {
+                    edges.push(stopEdge);
+                }
+            } else {
+                write_warningf!(
+                    "Could not merge vehicle stops for vehicle '%' into implicitly defined route '%'",
+                    self.myVehicleParameter.id,
+                    route.get_id()
+                );
+            }
+        }
+        let color = Ptr::from_raw(Box::into_raw(Box::new(route.get_color().clone())));
+        let newRoute: ConstMSRoutePtr = Rc::new(MSRoute::new(
+            &format!("!{}", self.myVehicleParameter.id),
+            &edges,
+            isPermanent,
+            color,
+            routeStops,
+            -1,
+            0,
+        ));
+        if !MSRoute::dictionary(newRoute.get_id(), newRoute.clone()) {
+            throw_process_error(format!(
+                "Could not adapt implicit route for {}  '{}'",
+                if isPermanent { "flow" } else { "vehicle" },
+                self.myVehicleParameter.id
+            ));
+        }
+        newRoute
     }
 
     /// C++: `void MSRouteHandler::MSRouteHandler(const MSRouteHandler &)` [private]
@@ -3584,7 +3921,8 @@ impl MSRouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &MSRouteHandler) -> Self {
-        todo!("port MSRouteHandler::MSRouteHandler")
+        // C++ copy constructor is deleted ("Invalidated"), copying is a programming error
+        panic!("MSRouteHandler copy constructor is invalidated in C++ and must not be used");
     }
 
     /// C++: `MSRouteHandler & MSRouteHandler::operator=(const MSRouteHandler &)` [private]
@@ -3592,7 +3930,8 @@ impl MSRouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSRouteHandler) -> &mut MSRouteHandler {
-        todo!("port MSRouteHandler::operator=")
+        // C++ assignment operator is deleted ("Invalidated"), assignment is a programming error
+        panic!("MSRouteHandler assignment operator is invalidated in C++ and must not be used");
     }
 
     /// C++: `void MSRouteHandler::addRideOrTransport(const SUMOSAXAttributes &, const SumoXMLTag)` [private]
