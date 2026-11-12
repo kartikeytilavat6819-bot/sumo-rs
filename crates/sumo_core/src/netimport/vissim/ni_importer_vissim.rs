@@ -86,6 +86,18 @@ pub struct NIImporter_Vissim {
     pub myNetBuilder: Ptr<NBNetBuilder>,
 }
 
+/// GenericSAXHandler base shared by all VISSIM handlers (C++ `GenericSAXHandler(vissimTags, ..., "vissim - file")`)
+fn vissim_base_handler() -> GenericSAXHandler {
+    GenericSAXHandler::new(
+        VISSIM_TAGS,
+        NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_NOTHING as i32,
+        VISSIM_ATTRS,
+        NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NOTHING as i32,
+        "vissim - file",
+        "",
+    )
+}
+
 // C++ static members of NIImporter_Vissim (port as module-level statics, see AGENTS.md):
 //   static SequentialStringBijection::Entry[] NIImporter_Vissim::vissimTags;
 //   static SequentialStringBijection::Entry[] NIImporter_Vissim::vissimAttrs;
@@ -872,7 +884,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     //                         "vissim - file") {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NIVissimXMLHandler_ConflictArea::NIVissimXMLHandler_ConflictArea")
+        Self { base: vissim_base_handler() }
     }
 
     /// C++: `void NIVissimXMLHandler_ConflictArea::~NIVissimXMLHandler_ConflictArea() noexcept` [virtual]
@@ -880,7 +892,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     // NIImporter_Vissim::NIVissimXMLHandler_ConflictArea::~NIVissimXMLHandler_ConflictArea() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_ConflictArea::~NIVissimXMLHandler_ConflictArea")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_ConflictArea::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -912,7 +924,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(c: &NIImporter_Vissim_NIVissimXMLHandler_ConflictArea) -> Self {
-        todo!("port NIVissimXMLHandler_ConflictArea::NIVissimXMLHandler_ConflictArea")
+        panic!("NIVissimXMLHandler_ConflictArea copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_ConflictArea & NIVissimXMLHandler_ConflictArea::operator=(const NIVissimXMLHandler_ConflictArea &)` [private]
@@ -920,7 +932,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, c: &NIImporter_Vissim_NIVissimXMLHandler_ConflictArea) -> &mut NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
-        todo!("port NIVissimXMLHandler_ConflictArea::operator=")
+        panic!("NIVissimXMLHandler_ConflictArea assignment operator is private and invalidated in C++")
     }
 
 }
@@ -963,7 +975,8 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // }
     #[allow(unused_variables)]
     pub fn new(elemData: &mut NIImporter_Vissim_nodeMap) -> Self {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::NIVissimXMLHandler_Fahrzeugklassendefinition")
+        elemData.clear();
+        Self { base: vissim_base_handler(), myElemData: Ptr::from_mut(elemData), myHierarchyLevel: 0, myLastNodeID: 0 }
     }
 
     /// C++: `void NIVissimXMLHandler_Fahrzeugklassendefinition::~NIVissimXMLHandler_Fahrzeugklassendefinition() noexcept` [virtual]
@@ -971,7 +984,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_Fahrzeugklassendefinition::~NIVissimXMLHandler_Fahrzeugklassendefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::~NIVissimXMLHandler_Fahrzeugklassendefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Fahrzeugklassendefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1041,7 +1054,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(f: &NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::NIVissimXMLHandler_Fahrzeugklassendefinition")
+        panic!("NIVissimXMLHandler_Fahrzeugklassendefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Fahrzeugklassendefinition & NIVissimXMLHandler_Fahrzeugklassendefinition::operator=(const NIVissimXMLHandler_Fahrzeugklassendefinition &)` [private]
@@ -1049,7 +1062,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, f: &NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::operator=")
+        panic!("NIVissimXMLHandler_Fahrzeugklassendefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1092,7 +1105,8 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // }
     #[allow(unused_variables)]
     pub fn new(elemData: &mut NIImporter_Vissim_nodeMap) -> Self {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition")
+        elemData.clear();
+        Self { base: vissim_base_handler(), myElemData: Ptr::from_mut(elemData), myHierarchyLevel: 0, myLastNodeID: 0 }
     }
 
     /// C++: `void NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::~NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition() noexcept` [virtual]
@@ -1100,7 +1114,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // NIImporter_Vissim::NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::~NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::~NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1155,7 +1169,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(vW: &NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition")
+        panic!("NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition & NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::operator=(const NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition &)` [private]
@@ -1163,7 +1177,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, vW: &NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::operator=")
+        panic!("NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1198,7 +1212,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NIVissimXMLHandler_Parkplatzdefinition::NIVissimXMLHandler_Parkplatzdefinition")
+        Self { base: vissim_base_handler() }
     }
 
     /// C++: `void NIVissimXMLHandler_Parkplatzdefinition::~NIVissimXMLHandler_Parkplatzdefinition() noexcept` [virtual]
@@ -1206,7 +1220,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_Parkplatzdefinition::~NIVissimXMLHandler_Parkplatzdefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Parkplatzdefinition::~NIVissimXMLHandler_Parkplatzdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Parkplatzdefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1249,7 +1263,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(z: &NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Parkplatzdefinition::NIVissimXMLHandler_Parkplatzdefinition")
+        panic!("NIVissimXMLHandler_Parkplatzdefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Parkplatzdefinition & NIVissimXMLHandler_Parkplatzdefinition::operator=(const NIVissimXMLHandler_Parkplatzdefinition &)` [private]
@@ -1257,7 +1271,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, z: &NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
-        todo!("port NIVissimXMLHandler_Parkplatzdefinition::operator=")
+        panic!("NIVissimXMLHandler_Parkplatzdefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1300,7 +1314,8 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn new(elemData: &mut NIImporter_Vissim_nodeMap) -> Self {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::NIVissimXMLHandler_Routenentscheidungsdefinition")
+        elemData.clear();
+        Self { base: vissim_base_handler(), myElemData: Ptr::from_mut(elemData), myHierarchyLevel: 0, myLastNodeID: 0 }
     }
 
     /// C++: `void NIVissimXMLHandler_Routenentscheidungsdefinition::~NIVissimXMLHandler_Routenentscheidungsdefinition() noexcept` [virtual]
@@ -1308,7 +1323,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_Routenentscheidungsdefinition::~NIVissimXMLHandler_Routenentscheidungsdefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::~NIVissimXMLHandler_Routenentscheidungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Routenentscheidungsdefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1352,7 +1367,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(r: &NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::NIVissimXMLHandler_Routenentscheidungsdefinition")
+        panic!("NIVissimXMLHandler_Routenentscheidungsdefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Routenentscheidungsdefinition & NIVissimXMLHandler_Routenentscheidungsdefinition::operator=(const NIVissimXMLHandler_Routenentscheidungsdefinition &)` [private]
@@ -1360,7 +1375,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, r: &NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::operator=")
+        panic!("NIVissimXMLHandler_Routenentscheidungsdefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1407,7 +1422,8 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // }
     #[allow(unused_variables)]
     pub fn new(elemData: &mut NIImporter_Vissim_nodeMap) -> Self {
-        todo!("port NIVissimXMLHandler_Streckendefinition::NIVissimXMLHandler_Streckendefinition")
+        // C++ leaves myLastNodeID uninitialized; 0 is used here
+        Self { base: vissim_base_handler(), myElemData: Ptr::from_mut(elemData), myHierarchyLevel: 0, isConnector: false, myLastNodeID: 0 }
     }
 
     /// C++: `void NIVissimXMLHandler_Streckendefinition::~NIVissimXMLHandler_Streckendefinition() noexcept` [virtual]
@@ -1415,7 +1431,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_Streckendefinition::~NIVissimXMLHandler_Streckendefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Streckendefinition::~NIVissimXMLHandler_Streckendefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Streckendefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1592,7 +1608,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Streckendefinition::NIVissimXMLHandler_Streckendefinition")
+        panic!("NIVissimXMLHandler_Streckendefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Streckendefinition & NIVissimXMLHandler_Streckendefinition::operator=(const NIVissimXMLHandler_Streckendefinition &)` [private]
@@ -1600,7 +1616,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
-        todo!("port NIVissimXMLHandler_Streckendefinition::operator=")
+        panic!("NIVissimXMLHandler_Streckendefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1643,7 +1659,8 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn new(elemData: &mut NIImporter_Vissim_nodeMap) -> Self {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::NIVissimXMLHandler_VWunschentscheidungsdefinition")
+        elemData.clear();
+        Self { base: vissim_base_handler(), myElemData: Ptr::from_mut(elemData), myHierarchyLevel: 0, myLastNodeID: 0 }
     }
 
     /// C++: `void NIVissimXMLHandler_VWunschentscheidungsdefinition::~NIVissimXMLHandler_VWunschentscheidungsdefinition() noexcept` [virtual]
@@ -1651,7 +1668,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_VWunschentscheidungsdefinition::~NIVissimXMLHandler_VWunschentscheidungsdefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::~NIVissimXMLHandler_VWunschentscheidungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_VWunschentscheidungsdefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1686,7 +1703,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(vW: &NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition) -> Self {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::NIVissimXMLHandler_VWunschentscheidungsdefinition")
+        panic!("NIVissimXMLHandler_VWunschentscheidungsdefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_VWunschentscheidungsdefinition & NIVissimXMLHandler_VWunschentscheidungsdefinition::operator=(const NIVissimXMLHandler_VWunschentscheidungsdefinition &)` [private]
@@ -1694,7 +1711,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, vW: &NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_VWunschentscheidungsdefinition {
-        todo!("port NIVissimXMLHandler_VWunschentscheidungsdefinition::operator=")
+        panic!("NIVissimXMLHandler_VWunschentscheidungsdefinition assignment operator is private and invalidated in C++")
     }
 
 }
@@ -1729,7 +1746,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NIVissimXMLHandler_Zuflussdefinition::NIVissimXMLHandler_Zuflussdefinition")
+        Self { base: vissim_base_handler() }
     }
 
     /// C++: `void NIVissimXMLHandler_Zuflussdefinition::~NIVissimXMLHandler_Zuflussdefinition() noexcept` [virtual]
@@ -1737,7 +1754,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     // NIImporter_Vissim::NIVissimXMLHandler_Zuflussdefinition::~NIVissimXMLHandler_Zuflussdefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimXMLHandler_Zuflussdefinition::~NIVissimXMLHandler_Zuflussdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NIVissimXMLHandler_Zuflussdefinition::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -1767,7 +1784,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(z: &NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition) -> Self {
-        todo!("port NIVissimXMLHandler_Zuflussdefinition::NIVissimXMLHandler_Zuflussdefinition")
+        panic!("NIVissimXMLHandler_Zuflussdefinition copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIVissimXMLHandler_Zuflussdefinition & NIVissimXMLHandler_Zuflussdefinition::operator=(const NIVissimXMLHandler_Zuflussdefinition &)` [private]
@@ -1775,7 +1792,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, z: &NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition) -> &mut NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
-        todo!("port NIVissimXMLHandler_Zuflussdefinition::operator=")
+        panic!("NIVissimXMLHandler_Zuflussdefinition assignment operator is private and invalidated in C++")
     }
 
 }
