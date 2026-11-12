@@ -19,6 +19,8 @@ const DEFAULT_LENGTH_WITH_GAP: f64 = 7.5;
 const DEFAULT_STATIC_MINDUR: SUMOTime = 0;
 const NO_DETECTOR: &str = "NO_DETECTOR";
 const DEFAULT_CONDITION: &str = "DEFAULT";
+// C++ MSActuatedTrafficLightLogic::OPERATOR_PRECEDENCE
+const OPERATOR_PRECEDENCE: &[&str] = &["**", "^", "*", "/", "+", "-", "%", "=", "==", "!=", "<", ">", "<=", ">=", "and", "&&", "or", "||"];
 use super::ms_phase_definition::OVERRIDE_DURATION;
 // C++ RGBColor::ORANGE / RGBColor::GREEN (the loop keeps a pointer to them, so they need statics)
 static RGB_ORANGE: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::ORANGE;
@@ -151,7 +153,8 @@ pub struct MSActuatedTrafficLightLogic {
     /// The loaded functions
     pub myFunctions: MSActuatedTrafficLightLogic_FunctionMap,
     /// The function call stack;
-    pub myStack: Vec<BTreeMap<String, f64>>,
+    // C++ `mutable` (written by const evaluation methods)
+    pub myStack: std::cell::RefCell<Vec<BTreeMap<String, f64>>>,
     /// the conditions which shall be listed in GUITLLogicPhasesTrackerWindow
     pub myListedConditions: BTreeSet<String>,
     /// whether the next switch time was requested via TraCI
@@ -208,7 +211,7 @@ impl MSActuatedTrafficLightLogic {
             myConditions: conditions.clone(),
             myAssignments: assignments.clone(),
             myFunctions: functions.clone(),
-            myStack: Vec::new(),
+            myStack: std::cell::RefCell::new(Vec::new()),
             myListedConditions: BTreeSet::new(),
             myTraCISwitch: false,
             mySwitchingRules: Vec::new(),
@@ -250,7 +253,7 @@ impl MSActuatedTrafficLightLogic {
         if this.base2.has_parameter("extra-detectors") {
             // shortcut: retrieveDetExpression needs the typed detector containers (MSDetectorControl::getTypedDetectors is still Unmapped); extra-detectors are not resolved, upgrade when that container is mapped
         }
-        this.myStack.push(BTreeMap::new());
+        this.myStack.get_mut().push(BTreeMap::new());
         this
     }
 
@@ -2115,7 +2118,66 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn eval_expression(&self, condition: &str) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::evalExpression")
+        // find the matching closing bracket of the first opening one
+        if let Some(bracketOpen) = condition.find('(') {
+            let mut bracketClose: Option<usize> = None;
+            let mut open: i32 = 1;
+            for i in (bracketOpen + 1)..condition.len() {
+                let c = condition.as_bytes()[i] as char;
+                if c == '(' {
+                    open += 1;
+                } else if c == ')' {
+                    open -= 1;
+                    if open == 0 {
+                        bracketClose = Some(i);
+                        break;
+                    }
+                }
+            }
+            let Some(bracketClose) = bracketClose else {
+                panic!("{}", ProcessError::new(format!("Unmatched parentheses in condition {}'", condition)));
+            };
+            let mut cond2: String = condition.to_string();
+            let inBracket: &str = &condition[bracketOpen + 1..bracketClose];
+            let bracketVal: f64 = self.eval_expression(inBracket);
+            // shortcut: C++ wraps nested evaluation errors with the outer condition; errors here panic instead of throwing, so that wrapping is not reproduced
+            cond2.replace_range(bracketOpen..=bracketClose, &utils::common::to_string::to_string(&bracketVal));
+            return self.eval_expression(&cond2);
+        }
+        let tokens: Vec<String> = utils::common::string_tokenizer::StringTokenizer::new(condition).get_vector();
+        if tokens.len() == 0 {
+            panic!("{}", ProcessError::new(format!("Invalid empty condition '{}'", condition)));
+        } else if tokens.len() == 1 {
+            return self.eval_atomic_expression(&tokens[0]);
+        } else if tokens.len() == 2 {
+            if tokens[0] == "not" {
+                return if self.eval_atomic_expression(&tokens[1]) == 0.0 { 1.0 } else { 0.0 };
+            } else {
+                panic!("{}", ProcessError::new(format!("Unsupported condition '{}'", condition)));
+            }
+        } else if tokens.len() == 3 {
+            // infix expression
+            let a: f64 = self.eval_atomic_expression(&tokens[0]);
+            let b: f64 = self.eval_atomic_expression(&tokens[2]);
+            let o: String = tokens[1].clone();
+            return self.eval_ternary_expression(a, &o, b, condition);
+        } else {
+            let iEnd: usize = tokens.len() - 1;
+            for o in OPERATOR_PRECEDENCE.iter() {
+                for i in 1..iEnd {
+                    if tokens[i] == *o {
+                        let val: f64 = self.eval_ternary_expression(
+                            self.eval_atomic_expression(&tokens[i - 1]), o,
+                            self.eval_atomic_expression(&tokens[i + 1]), condition);
+                        let mut newTokens: Vec<String> = tokens[..i - 1].to_vec();
+                        newTokens.push(utils::common::to_string::to_string(&val));
+                        newTokens.extend_from_slice(&tokens[i + 2..]);
+                        return self.eval_expression(&utils::common::to_string::to_string(&newTokens));
+                    }
+                }
+            }
+            panic!("{}", ProcessError::new(format!("Parsing expressions with {} elements ('{}') is not supported", tokens.len(), condition)));
+        }
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::evalTernaryExpression(double, const std::string &, double, const std::string &) const` [const, protected]
@@ -2160,7 +2222,41 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn eval_ternary_expression(&self, a: f64, o: &str, b: f64, condition: &str) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::evalTernaryExpression")
+        if o == "=" || o == "==" {
+            (a == b) as i32 as f64
+        } else if o == "<" {
+            (a < b) as i32 as f64
+        } else if o == ">" {
+            (a > b) as i32 as f64
+        } else if o == "<=" {
+            (a <= b) as i32 as f64
+        } else if o == ">=" {
+            (a >= b) as i32 as f64
+        } else if o == "!=" {
+            (a != b) as i32 as f64
+        } else if o == "or" || o == "||" {
+            (a != 0.0 || b != 0.0) as i32 as f64
+        } else if o == "and" || o == "&&" {
+            (a != 0.0 && b != 0.0) as i32 as f64
+        } else if o == "+" {
+            a + b
+        } else if o == "-" {
+            a - b
+        } else if o == "*" {
+            a * b
+        } else if o == "/" {
+            if b == 0.0 {
+                utils::write_errorf!("Division by 0 in condition '%'", condition);
+                return 0.0;
+            }
+            a / b
+        } else if o == "%" {
+            a % b
+        } else if o == "**" || o == "^" {
+            a.powf(b)
+        } else {
+            panic!("{}", ProcessError::new(format!("Unsupported operator '{}' in condition '{}'", o, condition)));
+        }
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::evalAtomicExpression(const std::string &) const` [const, protected]
@@ -2268,7 +2364,85 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn eval_atomic_expression(&self, expr: &str) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::evalAtomicExpression")
+        if expr.len() == 0 {
+            panic!("{}", ProcessError::new("Invalid empty expression"));
+        } else if expr.as_bytes()[0] == b'!' {
+            return if self.eval_atomic_expression(&expr[1..]) == 0.0 { 1.0 } else { 0.0 };
+        } else if expr.as_bytes()[0] == b'-' {
+            return -self.eval_atomic_expression(&expr[1..]);
+        }
+        // check for 'operator:'
+        match expr.find(':') {
+            None => {
+                if let Some(cond) = self.myConditions.get(expr) {
+                    // symbol lookup
+                    return self.eval_expression(cond);
+                }
+                // look at stack
+                if let Some(v) = self.myStack.borrow().last().and_then(|m| m.get(expr)).copied() {
+                    return v;
+                }
+                // must be a number
+                utils::common::string_utils::to_double(expr).unwrap_or_else(|e| panic!("{}", e))
+            }
+            Some(pos) => {
+                let fun: &str = &expr[..pos];
+                let arg: &str = &expr[pos + 1..];
+                if fun == "z" || fun == "a" || fun == "w" || fun == "d" {
+                    // shortcut: detector expressions need the typed detector containers (MSDetectorControl::getTypedDetectors is still Unmapped), so they cannot be evaluated yet; upgrade when that container is mapped
+                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' in expression '{}'", arg, expr)));
+                } else if fun == "g" || fun == "r" {
+                    if let Ok(linkIndex) = utils::common::string_utils::to_int(arg) {
+                        if linkIndex >= 0 && linkIndex < self.myNumLinks {
+                            let times: &Vec<SUMOTime> = if fun == "g" { &self.myLinkGreenTimes } else { &self.myLinkRedTimes };
+                            if times.is_empty() {
+                                return 0.0;
+                            }
+                            let now = MSNet::get_instance().get_current_time_step();
+                            if self.myLastTrySwitchTime < now {
+                                // times are only updated at the start of a phase where
+                                // switching is possible (i.e. not during minDur).
+                                // If somebody is looking at those values in the tracker
+                                // this would be confusing
+                                let ls: LinkState = self.get_current_phase_def().get_signal_state(linkIndex);
+                                if (fun == "g" && (ls == LINKSTATE_TL_GREEN_MAJOR || ls == LINKSTATE_TL_GREEN_MINOR))
+                                    || (fun == "r" && (ls == LINKSTATE_TL_RED || ls == LINKSTATE_TL_REDYELLOW)) {
+                                    let currentGreen: SUMOTime = now - self.myLastTrySwitchTime;
+                                    return steps2time(times[linkIndex as usize] + currentGreen);
+                                } else {
+                                    return 0.0;
+                                }
+                            } else {
+                                return steps2time(times[linkIndex as usize]);
+                            }
+                        }
+                    }
+                    panic!("{}", ProcessError::new(format!("Invalid link index '{}' in expression '{}'", arg, expr)));
+                } else if fun == "p" {
+                    if let Ok(linkIndex) = utils::common::string_utils::to_int(arg) {
+                        if linkIndex >= 0 && linkIndex < self.myNumLinks {
+                            let mut approachingPersons: f64 = 0.0;
+                            for link in self.get_links_at(linkIndex).clone() {
+                                let aPersons = link.get_approaching_persons();
+                                if !aPersons.is_null() {
+                                    approachingPersons += aPersons.len() as f64;
+                                }
+                            }
+                            return approachingPersons;
+                        }
+                    }
+                    panic!("{}", ProcessError::new(format!("Invalid link index '{}' in expression '{}'", arg, expr)));
+                } else if fun == "c" {
+                    let now = MSNet::get_instance().get_current_time_step();
+                    return steps2time(self.map_time_in_cycle(now));
+                } else {
+                    if !self.myFunctions.contains_key(fun) {
+                        panic!("{}", ProcessError::new(format!("Unsupported function '{}' in expression '{}'", fun, expr)));
+                    }
+                    return self.eval_custom_function(fun, arg);
+                }
+            }
+        }
     }
 
     /// C++: `double MSActuatedTrafficLightLogic::evalCustomFunction(const std::string &, const std::string &) const` [const, protected]
@@ -2301,7 +2475,35 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn eval_custom_function(&self, fun: &str, arg: &str) -> f64 {
-        todo!("port MSActuatedTrafficLightLogic::evalCustomFunction")
+        let args: Vec<String> = arg.split(',').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
+        let f = self.myFunctions.get(fun).unwrap_or_else(|| panic!("{}", ProcessError::new(format!("Unsupported function '{}'", fun))));
+        if args.len() as i32 != f.nArgs {
+            panic!("{}", ProcessError::new(format!("Function '{}' requires {} arguments but {} were given", fun, f.nArgs, args.len())));
+        }
+        let mut args2: Vec<f64> = Vec::new();
+        for a in args.iter() {
+            args2.push(self.eval_expression(a));
+        }
+        // new stack frame, initialised as a copy of the current top frame
+        {
+            let mut stack = self.myStack.borrow_mut();
+            let top: BTreeMap<String, f64> = stack.last().cloned().unwrap_or_default();
+            stack.push(top);
+            let frame = stack.last_mut().unwrap();
+            frame.insert("$0".to_string(), 0.0);
+            for (i, v) in args2.iter().enumerate() {
+                frame.insert(format!("${}", i + 1), *v);
+            }
+        }
+        // shortcut: C++ wraps errors of the function body with the function name and arguments; errors here panic instead of throwing, so that wrapping is not reproduced
+        let mut empty: MSActuatedTrafficLightLogic_ConditionMap = BTreeMap::new();
+        self.execute_assignments(&f.assignments, &mut empty, &self.myConditions);
+        let result: f64 = {
+            let stack = self.myStack.borrow();
+            stack.last().and_then(|m| m.get("$0")).copied().unwrap_or(0.0)
+        };
+        self.myStack.borrow_mut().pop();
+        result
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::executeAssignments(const AssignmentMap &, ConditionMap &, const ConditionMap &) const` [const, protected]
@@ -2325,7 +2527,19 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn execute_assignments(&self, assignments: &MSActuatedTrafficLightLogic_AssignmentMap, conditions: &mut MSActuatedTrafficLightLogic_ConditionMap, forbidden: &MSActuatedTrafficLightLogic_ConditionMap) {
-        todo!("port MSActuatedTrafficLightLogic::executeAssignments")
+        for assignment in assignments.iter() {
+            if self.eval_expression(&assignment.1) != 0.0 {
+                let id: String = assignment.0.clone();
+                let val: f64 = self.eval_expression(&assignment.2);
+                if let Some(c) = conditions.get_mut(&id) {
+                    *c = utils::common::to_string::to_string(&val);
+                } else if forbidden.contains_key(&id) {
+                    panic!("{}", ProcessError::new(format!("Modifying global condition '{}' is forbidden", id)));
+                } else {
+                    self.myStack.borrow_mut().last_mut().unwrap().insert(id, val);
+                }
+            }
+        }
     }
 
     /// C++: `int MSActuatedTrafficLightLogic::getDetectorPriority(const InductLoopInfo &) const` [const, protected]
@@ -2672,7 +2886,8 @@ impl MSActuatedTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn retrieve_det_expression(&self) -> Ptr<Unmapped /* T */> {
-        todo!("port MSActuatedTrafficLightLogic::retrieveDetExpression")
+        // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so detectors cannot be looked up by id; upgrade when that container is mapped
+        panic!("MSActuatedTrafficLightLogic::retrieveDetExpression: detector lookup by id is not ported yet")
     }
 
     /// C++: `std::set<int> MSActuatedTrafficLightLogic::getMultiNextTargets() const` [const, protected]
