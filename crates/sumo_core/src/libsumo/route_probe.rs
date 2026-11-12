@@ -44,8 +44,9 @@ impl RouteProbe {
     #[allow(unused_variables)]
     pub fn sample_last_route_id(probeID: &str) -> String {
         let rp = Self::get_route_probe(probeID);
-        let route = rp.sample_route(true);
-        // shortcut: MSRouteProbe::sampleRoute returns Rc<MSRoute>, which cannot be nullptr, so the "did not collect any routes yet" throw is skipped; upgrade when sampleRoute returns Option
+        let Some(route) = rp.sample_route(true) else {
+            panic!("RouteProbe '{}' did not collect any routes yet", probeID);
+        };
         route.base.get_id().to_string()
     }
 
@@ -62,8 +63,9 @@ impl RouteProbe {
     #[allow(unused_variables)]
     pub fn sample_current_route_id(probeID: &str) -> String {
         let rp = Self::get_route_probe(probeID);
-        let route = rp.sample_route(false);
-        // shortcut: MSRouteProbe::sampleRoute returns Rc<MSRoute>, which cannot be nullptr, so the "did not collect any routes yet" throw is skipped; upgrade when sampleRoute returns Option
+        let Some(route) = rp.sample_route(false) else {
+            panic!("RouteProbe '{}' did not collect any routes yet", probeID);
+        };
         route.base.get_id().to_string()
     }
 
