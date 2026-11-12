@@ -1,6 +1,9 @@
 //! Port of netimport/vissim/tempstructs/NIVissimConnectionCluster.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::io::Write as _;
+use utils::common::msg_handler::write_warning;
+use utils::geom::geom_helper;
 
 /// C++ typedef `std::vector<NIVissimConnection *> NodeSubCluster::ConnectionCont`
 pub type NodeSubCluster_ConnectionCont = Vec<Ptr<NIVissimConnection>>;
@@ -26,6 +29,49 @@ fn remove_double_i32(v: &mut Vec<i32>) {
         } else {
             seen.push(*x);
             true
+        }
+    });
+}
+
+/// C++ `myClusters[idx]`
+fn cluster_at(idx: usize) -> Ptr<NIVissimConnectionCluster> {
+    MY_CLUSTERS.with(|c| c.borrow()[idx])
+}
+
+/// C++ `myClusters.size()`
+fn cluster_count() -> usize {
+    MY_CLUSTERS.with(|c| c.borrow().len())
+}
+
+/// C++ `delete *k;` followed by `myClusters.erase(find(myClusters.begin(), myClusters.end(), *k))`
+fn erase_and_delete_cluster(k: Ptr<NIVissimConnectionCluster>) {
+    MY_CLUSTERS.with(|c| {
+        let mut v = c.borrow_mut();
+        let pos = v.iter().position(|x| *x == k);
+        if let Some(p) = pos {
+            v.remove(p);
+        }
+    });
+    drop(unsafe { Box::from_raw(k.as_raw()) });
+}
+
+/// C++ `VectorHelper<int>::subSetExists`: true when some element of v1 also occurs in v2
+fn sub_set_exists_i32(v1: &Vec<i32>, v2: &Vec<i32>) -> bool {
+    v1.iter().any(|x| v2.contains(x))
+}
+
+/// C++ `std::sort(v.begin(), v.end(), same_direction_sorter(angle))`; callers only use the first element
+fn sort_by_same_direction(v: &mut Vec<Ptr<NIVissimConnection>>, angle: f64) {
+    // determinism: std::sort is introsort (unstable above 16 elements); up to 16 elements it is an
+    // insertion sort, which keeps equal elements in input order like slice::sort_by does
+    let sorter = NIVissimConnectionCluster_same_direction_sorter::new(angle);
+    v.sort_by(|a, b| {
+        if sorter.call_op(*a, *b) != 0 {
+            std::cmp::Ordering::Less
+        } else if sorter.call_op(*b, *a) != 0 {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
         }
     });
 }
@@ -190,7 +236,9 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn overlaps_with(&self, c: Ptr<NIVissimConnectionCluster>, offset: f64) -> bool {
-        todo!("port NIVissimConnectionCluster::overlapsWith")
+        debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
+        debug_assert!(c.myBoundary.xmax() >= c.myBoundary.xmin());
+        c.myBoundary.overlaps_with(&self.myBoundary, offset)
     }
 
     /// C++: `bool NIVissimConnectionCluster::hasNodeCluster() const` [const]
@@ -200,7 +248,7 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn has_node_cluster(&self) -> bool {
-        todo!("port NIVissimConnectionCluster::hasNodeCluster")
+        self.myNodeCluster != -1
     }
 
     /// C++: `NBNode * NIVissimConnectionCluster::getNBNode() const` [const]
@@ -210,7 +258,7 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_nb_node(&self) -> Ptr<NBNode> {
-        todo!("port NIVissimConnectionCluster::getNBNode")
+        NIVissimNodeCluster::dictionary_3(self.myNodeCluster).get_nb_node()
     }
 
     /// C++: `bool NIVissimConnectionCluster::around(const Position &, double) const` [const]
@@ -221,7 +269,8 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn around(&self, p: &Position, offset: f64) -> bool {
-        todo!("port NIVissimConnectionCluster::around")
+        debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
+        self.myBoundary.around(p, offset)
     }
 
     /// C++: `double NIVissimConnectionCluster::getPositionForEdge(int) const` [const]
@@ -291,7 +340,52 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_position_for_edge(&self, edgeid: i32) -> f64 {
-        todo!("port NIVissimConnectionCluster::getPositionForEdge")
+        // return the middle of the connections when there are any
+        if self.myConnections.len() != 0 {
+            let mut sum: f64 = 0.0;
+            let mut part: i32 = 0;
+            for i in self.myConnections.iter() {
+                let c = NIVissimConnection::dictionary_2(*i);
+                if c.get_from_edge_id() == edgeid {
+                    part += 1;
+                    sum += c.get_from_position();
+                }
+                if c.get_to_edge_id() == edgeid {
+                    part += 1;
+                    sum += c.get_to_position();
+                }
+            }
+            if part > 0 {
+                return sum / (part as f64);
+            }
+        }
+        // use the position of the node if possible
+        if self.myNodeCluster >= 0 {
+            // try to find the nearest point on the edge
+            //  !!! only the main geometry is regarded
+            let node = NIVissimNodeDef::dictionary_2(self.myNodeCluster);
+            if !node.is_null() {
+                let pos = node.get_edge_position(edgeid);
+                if pos >= 0.0 {
+                    return pos;
+                }
+            }
+        }
+        // what else?
+        write_warning("NIVissimConnectionCluster: how to get an edge's position?");
+        // !!!
+        debug_assert!(self.myBoundary.xmin() <= self.myBoundary.xmax());
+        let edge = NIVissimEdge::dictionary_3(edgeid);
+        if !self.myEdges.contains(&edgeid) {
+            // C++: throw 1 (edge does not exist)
+            panic!("NIVissimConnectionCluster::getPositionForEdge: edge {} does not exist (C++ throws 1)", edgeid);
+        }
+        let edge_geom = edge.get_geometry();
+        // C++ crossPoint throws 1 when there is no crossing; Option::None maps to that
+        let p = geom_helper::cross_point(&self.myBoundary, edge_geom)
+            .expect("GeomHelper::crossPoint: no crossing (C++ throws 1)");
+        // C++ default for perpendicular is true
+        geom_helper::nearest_offset_on_line_to_point2d(edge_geom.front(), edge_geom.back(), &p, true)
     }
 
     /// C++: `const std::vector<int> & NIVissimConnectionCluster::getConnections() const` [const]
@@ -300,7 +394,7 @@ impl NIVissimConnectionCluster {
     //     }
     #[allow(unused_variables)]
     pub fn get_connections(&self) -> &Vec<i32> {
-        todo!("port NIVissimConnectionCluster::getConnections")
+        &self.myConnections
     }
 
     /// C++: `PositionVector NIVissimConnectionCluster::getIncomingContinuationGeometry(NIVissimEdge *) const` [const]
@@ -326,7 +420,22 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_continuation_geometry(&self, e: Ptr<NIVissimEdge>) -> PositionVector {
-        todo!("port NIVissimConnectionCluster::getIncomingContinuationGeometry")
+        // collect connection where this edge is the incoming one
+        let mut edge_is_incoming: Vec<Ptr<NIVissimConnection>> = Vec::new();
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            if c.get_from_edge_id() == e.get_id() {
+                edge_is_incoming.push(c);
+            }
+        }
+        //
+        if edge_is_incoming.is_empty() {
+            return PositionVector::default();
+        }
+        // sort connected edges in same direction
+        sort_by_same_direction(&mut edge_is_incoming, e.get_geometry().begin_end_angle());
+        let c = edge_is_incoming[0];
+        c.base2.get_geometry().clone()
     }
 
     /// C++: `PositionVector NIVissimConnectionCluster::getOutgoingContinuationGeometry(NIVissimEdge *) const` [const]
@@ -352,7 +461,22 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_outgoing_continuation_geometry(&self, e: Ptr<NIVissimEdge>) -> PositionVector {
-        todo!("port NIVissimConnectionCluster::getOutgoingContinuationGeometry")
+        // collect connection where this edge is the outgoing one
+        let mut edge_is_outgoing: Vec<Ptr<NIVissimConnection>> = Vec::new();
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            if c.get_to_edge_id() == e.get_id() {
+                edge_is_outgoing.push(c);
+            }
+        }
+        //
+        if edge_is_outgoing.is_empty() {
+            return PositionVector::default();
+        }
+        // sort connected edges in same direction
+        sort_by_same_direction(&mut edge_is_outgoing, e.get_geometry().begin_end_angle());
+        let c = edge_is_outgoing[0];
+        c.base2.get_geometry().clone()
     }
 
     /// C++: `NIVissimConnection * NIVissimConnectionCluster::getIncomingContinuation(NIVissimEdge *) const` [const]
@@ -577,7 +701,7 @@ impl NIVissimConnectionCluster {
     //     into << "---------------------------" << std::endl;
     // }
     #[allow(unused_variables)]
-    pub fn debug_out(into: &mut Unmapped /* std::ostream */) {
+    pub fn debug_out(into: &mut dyn std::io::Write) {
         todo!("port NIVissimConnectionCluster::_debugOut")
     }
 
