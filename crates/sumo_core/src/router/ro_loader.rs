@@ -2,6 +2,31 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `MsgHandler::getErrorInstance()->wasInformed()`
+fn error_informed() -> bool {
+    utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| h.was_informed())
+}
+
+/// C++ `MIN2(a, b)` for SUMOTime
+fn min2t(a: SUMOTime, b: SUMOTime) -> SUMOTime {
+    if a < b { a } else { b }
+}
+
+// shortcut: XMLSubSys::runParser needs RONetHandler to implement SaxHandler (and setFileName through GenericSAXHandler), not ported yet
+fn run_net_parser_unwired(handler: &mut RONetHandler, file: &str) {
+    panic!("ROLoader: cannot parse network file '{}', RONetHandler is not a SaxHandler yet", file);
+}
+
+// shortcut: XMLSubSys::runParser needs RORouteHandler to implement SaxHandler, not ported yet
+fn run_route_parser_unwired(handler: Ptr<RORouteHandler>, file: &str) {
+    panic!("ROLoader: cannot parse route file '{}', RORouteHandler is not a SaxHandler yet", file);
+}
+
+// shortcut: SAXWeightsHandler is not ported, weight files cannot be parsed yet
+fn run_weights_parser_unwired(optionName: &str) {
+    panic!("ROLoader: cannot load weights from option '{}', SAXWeightsHandler is not ported yet", optionName);
+}
+
 /// Obtains edge travel times from a weights handler and stores them within the edges
 /// C++ class `ROLoader::EdgeFloatTimeLineRetriever_EdgeTravelTime` (router/ROLoader.h)
 pub struct ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
@@ -29,7 +54,10 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // EdgeFloatTimeLineRetriever_EdgeTravelTime(RONet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        Self {
+            base: (),
+            myNet: Ptr::from_mut(net),
+        }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime() noexcept` [virtual]
@@ -37,7 +65,7 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // ~EdgeFloatTimeLineRetriever_EdgeTravelTime() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        // C++ destructor has no body
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -60,7 +88,16 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight")
+        let e = self.myNet.get_edge(id);
+        if !e.is_null() {
+            e.m().add_travel_time(val, beg, end);
+        } else if !id.starts_with(':') {
+            if utils::options::options_cont::get_bool("ignore-errors") {
+                write_warningf!("Trying to set a weight for the unknown edge '%'.", id);
+            } else {
+                write_errorf!("Trying to set a weight for the unknown edge '%'.", id);
+            }
+        }
     }
 
 }
@@ -92,7 +129,10 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
     // EdgeFloatTimeLineRetriever_EdgeWeight(RONet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeWeight::EdgeFloatTimeLineRetriever_EdgeWeight")
+        Self {
+            base: (),
+            myNet: Ptr::from_mut(net),
+        }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeWeight::~EdgeFloatTimeLineRetriever_EdgeWeight() noexcept` [virtual]
@@ -100,7 +140,7 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
     // ~EdgeFloatTimeLineRetriever_EdgeWeight() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeWeight::~EdgeFloatTimeLineRetriever_EdgeWeight")
+        // C++ destructor has no body
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeWeight::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -123,7 +163,16 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeWeight::addEdgeWeight")
+        let e = self.myNet.get_edge(id);
+        if !e.is_null() {
+            e.m().add_effort(val, beg, end);
+        } else if !id.starts_with(':') {
+            if utils::options::options_cont::get_bool("ignore-errors") {
+                write_warningf!("Trying to set a weight for the unknown edge '%'.", id);
+            } else {
+                write_errorf!("Trying to set a weight for the unknown edge '%'.", id);
+            }
+        }
     }
 
 }
@@ -152,7 +201,12 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &mut OptionsCont, emptyDestinationsAllowed: bool, logSteps: bool) -> Self {
-        todo!("port ROLoader::ROLoader")
+        ROLoader {
+            myOptions: Ptr::from_mut(oc),
+            myEmptyDestinationsAllowed: emptyDestinationsAllowed,
+            myLogSteps: logSteps,
+            myLoaders: SUMORouteLoaderControl::new(if oc.exists("unsorted-input") && oc.get_bool("unsorted-input").unwrap_or_else(|e| panic!("{e}")) { 0 } else { utils::common::time::delta_t() }),
+        }
     }
 
     /// C++: `void ROLoader::~ROLoader()` [virtual]
@@ -160,7 +214,7 @@ impl ROLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROLoader::~ROLoader")
+        // C++ destructor has no body (the route loaders are owned by myLoaders and freed by its owner)
     }
 
     /// C++: `void ROLoader::loadNet(RONet &, ROAbstractEdgeBuilder &)` [virtual]
@@ -226,7 +280,54 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn load_net(&mut self, toFill: &mut RONet, eb: &mut ROAbstractEdgeBuilder) {
-        todo!("port ROLoader::loadNet")
+        let file = self.myOptions.get_string("net-file").unwrap_or_else(|e| panic!("{e}"));
+        if file == "" {
+            panic!("Missing definition of network to load!");
+        }
+        if !utils::common::file_helpers::is_readable(&file) {
+            panic!("The network file '{}' is not accessible.", file);
+        }
+        let opts = self.myOptions;
+        let ignoreInternal = !opts.exists("no-internal-links") || opts.get_bool("no-internal-links").unwrap_or_else(|e| panic!("{e}"));
+        let minorPenalty = if opts.exists("weights.minor-penalty") { opts.get_float("weights.minor-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
+        let tlsPenalty = if opts.exists("weights.tls-penalty") { opts.get_float("weights.tls-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
+        let turnaroundPenalty = if opts.exists("weights.turnaround-penalty") { opts.get_float("weights.turnaround-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
+        let mut handler = RONetHandler::new(toFill, eb, ignoreInternal, minorPenalty, tlsPenalty, turnaroundPenalty);
+        run_net_parser_unwired(&mut handler, &file);
+        if !utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner()).is_empty() {
+            let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner());
+            let names = utils::common::to_string::to_string_prec(&*seen, utils::common::std_defs::g_precision());
+            write_warningf!("Deprecated vehicle classes '%' in input network.", names);
+            seen.clear();
+        }
+        if opts.is_set("additional-files", false).unwrap_or(false) {
+            let files = utils::options::options_cont::get_string_vector("additional-files");
+            for fileIt in files.iter() {
+                if !utils::common::file_helpers::is_readable(fileIt) {
+                    panic!("The additional file '{}' is not accessible.", fileIt);
+                }
+                // shortcut: PROGRESS_BEGIN/DONE status lines are not printed, progress reporting is not ported
+                run_net_parser_unwired(&mut handler, fileIt);
+            }
+        }
+        if opts.exists("junction-taz") && utils::options::options_cont::get_bool("junction-taz") {
+            // create a TAZ for every junction
+            toFill.add_junction_taz(eb);
+        }
+        toFill.set_bidi_edges(handler.get_bidi_map());
+        if opts.exists("restriction-params") && opts.is_set("restriction-params", false).unwrap_or(false) {
+            toFill.set_param_restrictions();
+            let paramKeys = utils::options::options_cont::get_string_vector("restriction-params");
+            for (_, edge) in toFill.get_edge_map().iter() {
+                edge.m().cache_param_restrictions(&paramKeys);
+            }
+        }
+        if toFill.has_speed_restrictions() {
+            for (_, edge) in toFill.get_edge_map().iter() {
+                let restrictions = toFill.get_restrictions(edge.get_type());
+                edge.m().set_speed_restrictions(restrictions);
+            }
+        }
     }
 
     /// C++: `bool ROLoader::loadWeights(RONet &, const std::string &, const std::string &, const bool, const bool)`
@@ -273,7 +374,17 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn load_weights(&mut self, net: &mut RONet, optionName: &str, measure: &str, useLanes: bool, boundariesOverride: bool) -> bool {
-        todo!("port ROLoader::loadWeights")
+        // check whether the file exists
+        if !self.myOptions.is_usable_file_list(optionName).unwrap_or_else(|e| panic!("{e}")) {
+            return false;
+        }
+        // shortcut: SAXWeightsHandler and its ToRetrieveDefinition are not ported, the weight files cannot be parsed yet
+        run_weights_parser_unwired(optionName);
+        // build edge-internal time lines
+        for (_, edge) in net.get_edge_map().iter() {
+            edge.m().build_time_lines(measure, boundariesOverride);
+        }
+        true
     }
 
     /// C++: `void ROLoader::openRoutes(RONet &)`
@@ -308,7 +419,32 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn open_routes(&mut self, net: &mut RONet) {
-        todo!("port ROLoader::openRoutes")
+        // build loader
+        // load relevant elements from additional file
+        let mut ok = self.open_typed_routes("additional-files", net, true);
+        // load sumo routes, trips, and flows
+        ok &= self.open_typed_routes("route-files", net, false);
+        // check
+        if ok {
+            let begin = utils::common::time::string2time(&self.myOptions.get_string("begin").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
+            self.myLoaders.load_next(begin);
+            if !net.further_stored() {
+                if error_informed() {
+                    panic!("{}", "");
+                } else if !net.have_skipped_routes() {
+                    let error = "No route input specified or all routes were invalid.";
+                    if utils::options::options_cont::get_bool("ignore-errors") {
+                        write_warning(error);
+                    } else {
+                        panic!("{}", error);
+                    }
+                }
+            }
+            // skip routes prior to the begin time
+            if !utils::options::options_cont::get_bool("unsorted-input") {
+                write_message(&format!("Skipped until: {}", utils::common::time::time2string(self.myLoaders.get_first_load_time())));
+            }
+        }
     }
 
     /// C++: `void ROLoader::processRoutes(const SUMOTime, const SUMOTime, const SUMOTime, RONet &, const RORouterProvider &)`
@@ -349,7 +485,35 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn process_routes(&mut self, start: SUMOTime, end: SUMOTime, increment: SUMOTime, net: &mut RONet, provider: &RORouterProvider) {
-        todo!("port ROLoader::processRoutes")
+        let absNo = end - start;
+        let endGiven = !self.myOptions.is_default("end");
+        // skip routes that begin before the simulation's begin
+        // loop till the end
+        let firstStep = self.myLoaders.get_first_load_time();
+        let mut lastStep = firstStep;
+        let mut time = min2t(firstStep, end);
+        while time <= end {
+            self.write_stats(time, start, absNo, endGiven);
+            self.myLoaders.load_next(time);
+            if !net.further_stored() || error_informed() {
+                break;
+            }
+            lastStep = net.save_and_remove_routes_until(self.myOptions.m(), provider, time);
+            if time == end || (!net.further_stored() && self.myLoaders.have_all_loaded()) || error_informed() {
+                break;
+            }
+            if time < end && time > end - increment {
+                time = end;
+            } else {
+                time += increment;
+            }
+        }
+        if self.myLogSteps {
+            write_messagef!("Routes found between time steps % and %.", utils::common::time::time2string(firstStep), utils::common::time::time2string(lastStep));
+        }
+        if !net.have_processed_routes() && (net.have_skipped_routes() || net.further_stored()) && !error_informed() {
+            write_warningf!("No routes found between begin time % and end time %.", utils::common::time::time2string(start), utils::common::time::time2string(end));
+        }
     }
 
     /// C++: `SUMORouteHandler * ROLoader::getRouteHandler()`
@@ -364,7 +528,12 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn get_route_handler(&mut self) -> Ptr<SUMORouteHandler> {
-        todo!("port ROLoader::getRouteHandler")
+        let loader = self.myLoaders.get_first_loader();
+        if !loader.is_null() {
+            loader.m().get_route_handler()
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `bool ROLoader::openTypedRoutes(const std::string &, RONet &, const bool)` [protected]
@@ -398,7 +567,40 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn open_typed_routes(&mut self, optionName: &str, net: &mut RONet, readAll: bool) -> bool {
-        todo!("port ROLoader::openTypedRoutes")
+        // check whether the current loader is wished
+        //  and the file(s) can be used
+        if !self.myOptions.is_usable_file_list(optionName).unwrap_or_else(|e| panic!("{e}")) {
+            return !self.myOptions.is_set(optionName, true).unwrap_or_else(|e| panic!("{e}"));
+        }
+        let files = utils::options::options_cont::get_string_vector(optionName);
+        for fileIt in files.iter() {
+            let emptyDestinationsAllowed = self.myEmptyDestinationsAllowed;
+            let repair = utils::options::options_cont::get_bool("repair");
+            let ignoreErrors = utils::options::options_cont::get_bool("ignore-errors");
+            // the C++ try/catch around the handler construction: a ProcessError is reported and the loader fails
+            let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                RORouteHandler::new(net, fileIt, repair, emptyDestinationsAllowed, ignoreErrors, !readAll)
+            }));
+            let handler = match built {
+                Ok(h) => Ptr::from_raw(Box::into_raw(Box::new(h))),
+                Err(payload) => {
+                    let what = payload
+                        .downcast_ref::<String>()
+                        .cloned()
+                        .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+                        .unwrap_or_default();
+                    write_errorf!("The loader for % from file '%' could not be initialised (%).", optionName, fileIt, what);
+                    return false;
+                }
+            };
+            if readAll {
+                // shortcut: RORouteHandler does not implement SaxHandler yet, so the file cannot be parsed here
+                run_route_parser_unwired(handler, fileIt);
+            } else {
+                self.myLoaders.add(Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoader::new(Ptr::new(&handler.base))))));
+            }
+        }
+        true
     }
 
     /// C++: `void ROLoader::writeStats(const SUMOTime, const SUMOTime, const SUMOTime, bool)` [protected]
@@ -415,7 +617,20 @@ impl ROLoader {
     // }
     #[allow(unused_variables)]
     pub fn write_stats(&mut self, time: SUMOTime, start: SUMOTime, absNo: SUMOTime, endGiven: bool) {
-        todo!("port ROLoader::writeStats")
+        if self.myLogSteps {
+            if endGiven {
+                let perc = (time - start) as f64 / absNo as f64;
+                print!(
+                    "Reading up to time step: {}  ({}/{} = {}% done)       \r",
+                    utils::common::time::time2string(time),
+                    utils::common::time::time2string(time - start),
+                    utils::common::time::time2string(absNo),
+                    utils::common::to_string::f64_to_string_prec(perc * 100., utils::common::std_defs::g_precision())
+                );
+            } else {
+                print!("Reading up to time step: {}\r", utils::common::time::time2string(time));
+            }
+        }
     }
 
     /// C++: `void ROLoader::ROLoader(const ROLoader &)` [private]
@@ -423,7 +638,8 @@ impl ROLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROLoader) -> Self {
-        todo!("port ROLoader::ROLoader")
+        // C++ declares this copy constructor private and never defines it, so it can not be called
+        panic!("ROLoader copy constructor is private and not defined in C++");
     }
 
     /// C++: `ROLoader & ROLoader::operator=(const ROLoader &)` [private]
@@ -431,7 +647,8 @@ impl ROLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROLoader) -> &mut ROLoader {
-        todo!("port ROLoader::operator=")
+        // C++ declares this assignment operator private and never defines it, so it can not be called
+        panic!("ROLoader assignment operator is private and not defined in C++");
     }
 
 }
