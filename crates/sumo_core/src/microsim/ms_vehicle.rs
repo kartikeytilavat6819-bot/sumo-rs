@@ -4313,7 +4313,11 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self, accumulated: bool) -> SUMOTime {
-        todo!("port MSVehicle::getWaitingTime")
+        if !accumulated {
+            return self.myWaitingTime;
+        }
+        // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used (same as the collector constructor)
+        self.myWaitingTimeCollector.cumulated_waiting_time(300 * 1000)
     }
 
     /// C++: `SUMOTime MSVehicle::getWaitingTimeFor(const MSLink *) const` [const]
@@ -4325,7 +4329,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time_for(&self, link: Ptr<MSLink>) -> SUMOTime {
-        todo!("port MSVehicle::getWaitingTimeFor")
+        // this vehicle currently has the highest priority on the allway_stop
+        if link == self.myHaveStoppedFor {
+            SUMOTIME_MAX
+        } else {
+            self.get_waiting_time(false)
+        }
     }
 
     /// C++: `SUMOTime MSVehicle::getTimeSinceStartup() const` [const]
@@ -4335,7 +4344,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_since_startup(&self) -> SUMOTime {
-        todo!("port MSVehicle::getTimeSinceStartup")
+        self.myTimeSinceStartup
     }
 
     /// C++: `double MSVehicle::getTimeSinceStartupSeconds() const` [const]
@@ -4344,7 +4353,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_since_startup_seconds(&self) -> f64 {
-        todo!("port MSVehicle::getTimeSinceStartupSeconds")
+        steps2time(self.myTimeSinceStartup)
     }
 
     /// C++: `SUMOTime MSVehicle::getTimeLoss() const` [const, virtual]
@@ -4354,7 +4363,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss(&self) -> SUMOTime {
-        todo!("port MSVehicle::getTimeLoss")
+        time2steps(self.myTimeLoss)
     }
 
     /// C++: `double MSVehicle::getAccumulatedWaitingSeconds() const` [const]
@@ -4364,7 +4373,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_accumulated_waiting_seconds(&self) -> f64 {
-        todo!("port MSVehicle::getAccumulatedWaitingSeconds")
+        steps2time(self.get_waiting_time(true))
     }
 
     /// C++: `double MSVehicle::getTimeLossSeconds() const` [const, virtual]
@@ -4374,7 +4383,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss_seconds(&self) -> f64 {
-        todo!("port MSVehicle::getTimeLossSeconds")
+        self.myTimeLoss
     }
 
     /// C++: `double MSVehicle::getStopDelay() const` [const, virtual]
