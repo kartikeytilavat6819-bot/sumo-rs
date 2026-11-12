@@ -227,7 +227,7 @@ impl NIXMLNodesHandler {
             if !NBNetBuilder::transform_coordinates(&mut shape, true, from_srs) {
                 write_error(&tlf!("Unable to project node shape at node '%'.", node.base.get_id()));
             }
-            if shape.size() > 2 {
+            if shape.len() > 2 {
                 shape.close_polygon();
             }
             node.m().set_custom_shape(&shape);

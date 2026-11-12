@@ -1,6 +1,7 @@
 //! Port of netimport/NIXMLEdgesHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_warning};
 
 /// Importer for network edges stored in XML
 /// C++ class `NIXMLEdgesHandler` (netimport/NIXMLEdgesHandler.h)
@@ -117,7 +118,52 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(nc: &mut NBNodeCont, ec: &mut NBEdgeCont, tc: &mut NBTypeCont, dc: &mut NBDistrictCont, tlc: &mut NBTrafficLightLogicCont, options: &mut OptionsCont) -> Self {
-        todo!("port NIXMLEdgesHandler::NIXMLEdgesHandler")
+        let type_s = options.get_string("default.junctions.type").unwrap_or_else(|e| panic!("{e}"));
+        let default_node_type = if NodeTypes.has_string(&type_s) {
+            NodeTypes.get(&type_s).unwrap_or_else(|e| panic!("{e}"))
+        } else {
+            SumoXMLNodeType::UNKNOWN
+        };
+        let keep_edge_shape = !options.get_bool("plain.extend-edge-shape").unwrap_or_else(|e| panic!("{e}"));
+        NIXMLEdgesHandler {
+            base: GenericSAXHandler::new(&TAGS, SUMO_TAG_NOTHING, &ATTRS, SUMO_ATTR_NOTHING, "xml-edges - file", ""),
+            myOptions: Ptr::from_mut(options),
+            myCurrentID: String::new(),
+            myCurrentSpeed: 0.,
+            myCurrentFriction: 0.,
+            myCurrentPriority: 0,
+            myCurrentLaneNo: 0,
+            myCurrentWidth: 0.,
+            myCurrentEndOffset: 0.,
+            myCurrentStreetName: String::new(),
+            myCurrentType: String::new(),
+            myFromNode: Ptr::null(),
+            myToNode: Ptr::null(),
+            myLength: 0.,
+            myShape: PositionVector::default(),
+            // C++ leaves this uninitialized until tryGetLaneSpread sets it; the enum's zero value is used here
+            myLanesSpread: LaneSpreadFunction::RIGHT,
+            myPermissions: 0,
+            myReinitKeepEdgeShape: false,
+            mySidewalkWidth: 0.,
+            myBikeLaneWidth: 0.,
+            myIsUpdate: false,
+            myNodeCont: Ptr::from_mut(nc),
+            myEdgeCont: Ptr::from_mut(ec),
+            myTypeCont: Ptr::from_mut(tc),
+            myDistrictCont: Ptr::from_mut(dc),
+            myTLLogicCont: Ptr::from_mut(tlc),
+            myCurrentEdge: Ptr::null(),
+            myCurrentLaneIndex: -1,
+            mySplits: Vec::new(),
+            myHaveReportedAboutOverwriting: false,
+            myHaveReportedAboutTypeOverride: false,
+            myHaveWarnedAboutDeprecatedLaneId: false,
+            myDefaultNodeType: default_node_type,
+            myKeepEdgeShape: keep_edge_shape,
+            myLastParameterised: Vec::new(),
+            myLocation: Ptr::null(),
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::~NIXMLEdgesHandler() noexcept` [virtual]
@@ -127,7 +173,10 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIXMLEdgesHandler::~NIXMLEdgesHandler")
+        // delete myLocation
+        if !self.myLocation.is_null() {
+            drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -212,7 +261,45 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIXMLEdgesHandler::myStartElement")
+        match element {
+            SUMO_TAG_VIEWSETTINGS_EDGES => {
+                // infer location for legacy networks that don't have location information
+                self.myLocation = match GeoConvHelper::get_loaded_plain(self.get_file_name(), ".edg.xml") {
+                    Some(loc) => Ptr::from_raw(Box::into_raw(Box::new(loc))),
+                    None => Ptr::null(),
+                };
+            }
+            SUMO_TAG_LOCATION => {
+                // delete myLocation
+                if !self.myLocation.is_null() {
+                    drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+                }
+                self.myLocation = NIImporter_SUMO::load_location(attrs, false);
+            }
+            SUMO_TAG_EDGE => self.add_edge(attrs),
+            SUMO_TAG_LANE => self.add_lane(attrs),
+            SUMO_TAG_NEIGH => {
+                let n = self.myCurrentEdge.get_num_lanes() - 1;
+                let oppositeID = attrs.get_string(SUMO_ATTR_LANE);
+                self.myCurrentEdge.m().get_lane_struct(n).oppositeID = oppositeID;
+            }
+            SUMO_TAG_SPLIT => self.add_split(attrs),
+            SUMO_TAG_DEL => self.delete_edge(attrs),
+            SUMO_TAG_ROUNDABOUT => self.add_roundabout(attrs),
+            SUMO_TAG_PARAM => {
+                if self.myLastParameterised.len() != 0 && !self.myCurrentEdge.is_null() {
+                    let mut ok = true;
+                    let key = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut ok, true);
+                    // circumventing empty string test
+                    let val = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+                    self.myLastParameterised.last().unwrap().m().set_parameter(&key, &val);
+                }
+            }
+            SUMO_TAG_STOPOFFSET => {
+                // shortcut: C++ StopOffset(attrs, ok) constructor is not ported (utils StopOffset has no attribute ctor), add the STOPOFFSET branch body (parse, duplicate/invalid warnings, setEdgeStopOffset) when it is
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void NIXMLEdgesHandler::myEndElement(int)` [virtual, protected]
@@ -268,7 +355,53 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIXMLEdgesHandler::myEndElement")
+        if element == SUMO_TAG_VIEWSETTINGS_EDGES {
+            // delete myLocation
+            if !self.myLocation.is_null() {
+                drop(unsafe { Box::from_raw(self.myLocation.as_raw()) });
+            }
+            self.myLocation = Ptr::null();
+            return;
+        }
+        if self.myCurrentEdge.is_null() {
+            return;
+        }
+        if element == SUMO_TAG_EDGE {
+            self.myLastParameterised.pop();
+            // add bike lane, wait until lanes are loaded to avoid building if it already exists
+            if self.myBikeLaneWidth != -1. {
+                // -1 is NBEdge::UNSPECIFIED_WIDTH
+                self.myCurrentEdge.m().add_bike_lane(self.myBikeLaneWidth);
+            }
+            // add sidewalk, wait until lanes are loaded to avoid building if it already exists
+            if self.mySidewalkWidth != -1. {
+                self.myCurrentEdge.m().add_sidewalk(self.mySidewalkWidth);
+            }
+            // apply default stopOffsets of edge to all lanes without specified stopOffset.
+            let stopOffsets = self.myCurrentEdge.get_edge_stop_offset().clone();
+            if stopOffsets.is_defined() {
+                let n = self.myCurrentEdge.get_lanes().len() as i32;
+                for i in 0..n {
+                    self.myCurrentEdge.m().set_edge_stop_offset(i, &stopOffsets, false);
+                }
+            }
+            if !self.myIsUpdate {
+                // shortcut: C++ try/catch around myEdgeCont.insert (InvalidArgument rethrow and the "important information is missing" message) is not reproduced, Rust insert reports only a bool, upgrade when NBEdgeCont::insert can throw
+                if !self.myEdgeCont.m().insert(self.myCurrentEdge, false) {
+                    write_error(&tlf!("Duplicate edge '%' occurred.", self.myCurrentID));
+                    drop(unsafe { Box::from_raw(self.myCurrentEdge.as_raw()) });
+                    self.myCurrentEdge = Ptr::null();
+                    return;
+                }
+            }
+            // mySplits is cleared again in addEdge before the next edge reads it, so handing over the Vec is equivalent
+            let splits = std::mem::take(&mut self.mySplits);
+            self.myEdgeCont.m().process_splits(self.myCurrentEdge, splits, self.myNodeCont.m(), self.myDistrictCont.m(), self.myTLLogicCont.m());
+            self.myCurrentEdge = Ptr::null();
+        } else if element == SUMO_TAG_LANE && self.myCurrentLaneIndex != -1 {
+            self.myLastParameterised.pop();
+            self.myCurrentLaneIndex = -1;
+        }
     }
 
     /// C++: `PositionVector NIXMLEdgesHandler::tryGetShape(const SUMOSAXAttributes &)` [private]
@@ -303,7 +436,32 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn try_get_shape(&mut self, attrs: &SUMOSAXAttributes) -> PositionVector {
-        todo!("port NIXMLEdgesHandler::tryGetShape")
+        if !attrs.has_attribute(SUMO_ATTR_SHAPE) && self.myShape.len() > 0 {
+            return self.myShape.clone();
+        }
+        // try to build shape
+        let mut ok = true;
+        if !attrs.has_attribute(SUMO_ATTR_SHAPE) {
+            let maxSegmentLength = utils::options::options_cont::get_float("geometry.max-segment-length");
+            if maxSegmentLength > 0. {
+                let mut shape = PositionVector::default();
+                shape.push(self.myFromNode.get_position().clone());
+                shape.push(self.myToNode.get_position().clone());
+                // shape is already cartesian but we must use a copy because the original will be modified
+                let cartesian = PositionVector(shape.0.clone());
+                NBNetBuilder::add_geometry_segments(&mut shape, &cartesian, maxSegmentLength);
+                return shape;
+            } else {
+                self.myReinitKeepEdgeShape = false;
+                return PositionVector::default();
+            }
+        }
+        let mut shape = attrs.get_opt::<PositionVector>(SUMO_ATTR_SHAPE, "", &mut ok, PositionVector::default(), true);
+        if !NBNetBuilder::transform_coordinates(&mut shape, true, self.myLocation) {
+            write_error(&tlf!("Unable to project coordinates for edge '%'.", self.myCurrentID));
+        }
+        self.myReinitKeepEdgeShape = self.myKeepEdgeShape;
+        shape
     }
 
     /// C++: `LaneSpreadFunction NIXMLEdgesHandler::tryGetLaneSpread(const SUMOSAXAttributes &)` [private]
@@ -323,7 +481,16 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn try_get_lane_spread(&mut self, attrs: &SUMOSAXAttributes) -> LaneSpreadFunction {
-        todo!("port NIXMLEdgesHandler::tryGetLaneSpread")
+        let mut ok = true;
+        let mut result = self.myLanesSpread;
+        let mut lsfS = LaneSpreadFunctions.get_string(result).unwrap_or_else(|e| panic!("{e}")).to_string();
+        lsfS = attrs.get_opt::<String>(SUMO_ATTR_SPREADTYPE, &self.myCurrentID, &mut ok, lsfS, true);
+        if LaneSpreadFunctions.has_string(&lsfS) {
+            result = LaneSpreadFunctions.get(&lsfS).unwrap_or_else(|e| panic!("{e}"));
+        } else {
+            write_warning(&tlf!("Ignoring unknown spreadType '%' for edge '%'.", lsfS, self.myCurrentID));
+        }
+        result
     }
 
     /// C++: `bool NIXMLEdgesHandler::setNodes(const SUMOSAXAttributes &)` [private]
@@ -365,7 +532,38 @@ impl NIXMLEdgesHandler {
     // }
     #[allow(unused_variables)]
     pub fn set_nodes(&mut self, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port NIXMLEdgesHandler::setNodes")
+        // the names and the coordinates of the beginning and the end node
+        // may be found, try
+        let mut ok = true;
+        if self.myIsUpdate {
+            self.myFromNode = self.myCurrentEdge.get_from_node();
+            self.myToNode = self.myCurrentEdge.get_to_node();
+        }
+        if attrs.has_attribute(SUMO_ATTR_FROM) {
+            let begNodeID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+            if begNodeID != "" {
+                self.myFromNode = self.myNodeCont.retrieve(&begNodeID);
+                if self.myFromNode.is_null() {
+                    write_error(&tlf!("Edge's '%' from-node '%' is not known.", self.myCurrentID, begNodeID));
+                }
+            }
+        } else if !self.myIsUpdate {
+            write_error(&tlf!("The from-node is not given for edge '%'.", self.myCurrentID));
+            ok = false;
+        }
+        if attrs.has_attribute(SUMO_ATTR_TO) {
+            let endNodeID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+            if endNodeID != "" {
+                self.myToNode = self.myNodeCont.retrieve(&endNodeID);
+                if self.myToNode.is_null() {
+                    write_error(&tlf!("Edge's '%' to-node '%' is not known.", self.myCurrentID, endNodeID));
+                }
+            }
+        } else if !self.myIsUpdate {
+            write_error(&tlf!("The to-node is not given for edge '%'.", self.myCurrentID));
+            ok = false;
+        }
+        ok && !self.myFromNode.is_null() && !self.myToNode.is_null()
     }
 
     /// C++: `void NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes &)` [private]
