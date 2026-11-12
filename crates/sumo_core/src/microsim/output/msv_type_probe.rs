@@ -1,6 +1,8 @@
 //! Port of microsim/output/MSVTypeProbe.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, g_precision_geo};
+use utils::common::time::time2string;
 
 /// Writes positions of vehicles that have a certain (named) type
 /// C++ class `MSVTypeProbe` (microsim/output/MSVTypeProbe.h)
@@ -30,6 +32,13 @@ impl std::ops::DerefMut for MSVTypeProbe {
     }
 }
 
+impl Command for MSVTypeProbe {
+    /// C++ `MSVTypeProbe::execute` (the virtual override)
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSVTypeProbe::execute(self, currentTime)
+    }
+}
+
 impl MSVTypeProbe {
     /// C++: `void MSVTypeProbe::MSVTypeProbe(const std::string &, const std::string &, OutputDevice &, SUMOTime)`
     /// Constructor
@@ -40,9 +49,22 @@ impl MSVTypeProbe {
     //     MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(this);
     //     myOutputDevice.writeXMLHeader("vehicle-type-probes", "vtypeprobe_file.xsd");
     // }
+    // Returns Box<Self>: the constructor registers `this` with the end-of-timestep events.
     #[allow(unused_variables)]
-    pub fn new(id: &str, vType: &str, od: &mut OutputDevice, frequency: SUMOTime) -> Self {
-        todo!("port MSVTypeProbe::MSVTypeProbe")
+    pub fn new(id: &str, vType: &str, od: &mut OutputDevice, frequency: SUMOTime) -> Box<Self> {
+        let mut b = Box::new(MSVTypeProbe {
+            base: Named::new(id),
+            base2: (),
+            myVType: vType.to_string(),
+            myOutputDevice: Ptr::from_mut(od),
+            myFrequency: frequency,
+        });
+        let cmd: *mut dyn Command = &mut *b;
+        let net = MSNet::get_instance();
+        let events = net.m().get_end_of_timestep_events();
+        events.m().add_event(Ptr::from_raw(cmd), -1);
+        b.myOutputDevice.m().write_xml_header("vehicle-type-probes", "vtypeprobe_file.xsd", BTreeMap::new(), true);
+        b
     }
 
     /// C++: `void MSVTypeProbe::~MSVTypeProbe() noexcept` [virtual]
@@ -51,7 +73,7 @@ impl MSVTypeProbe {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVTypeProbe::~MSVTypeProbe")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOTime MSVTypeProbe::execute(SUMOTime)` [virtual]
@@ -97,7 +119,44 @@ impl MSVTypeProbe {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSVTypeProbe::execute")
+        self.myOutputDevice.m().open_tag_id(SUMO_TAG_TIMESTEP);
+        self.myOutputDevice.m().write_attr(SUMO_ATTR_TIME, &time2string(currentTime));
+        self.myOutputDevice.m().write_attr(SUMO_ATTR_ID, self.get_id());
+        self.myOutputDevice.m().write_attr("vType", self.myVType.as_str());
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        for v in vc.myVehicleDict.values() {
+            let veh: Ptr<SUMOVehicle> = *v;
+            // shortcut: dynamic_cast<const MSVehicle*> has no runtime check; every entry of myVehicleDict is an MSVehicle, upgrade when other SUMOVehicle kinds are stored there
+            let microVeh: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
+            if self.myVType.is_empty() || self.myVType == microVeh.get_vehicle_type().get_id() {
+                if microVeh.is_on_road() {
+                    let mut pos: Position = microVeh.get_position(0.0);
+                    self.myOutputDevice.m().open_tag_id(SUMO_TAG_VEHICLE);
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_ID, microVeh.get_id());
+                    if !microVeh.is_null() {
+                        self.myOutputDevice.m().write_attr(SUMO_ATTR_LANE, microVeh.get_lane().get_id());
+                    }
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_POSITION, &microVeh.get_position_on_lane());
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_X, &pos.x());
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_Y, &pos.y());
+                    if net.m().has_elevation() {
+                        self.myOutputDevice.m().write_attr(SUMO_ATTR_Z, &pos.z());
+                    }
+                    if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
+                        GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
+                        self.myOutputDevice.m().set_precision(g_precision_geo());
+                        self.myOutputDevice.m().write_attr(SUMO_ATTR_LAT, &pos.y());
+                        self.myOutputDevice.m().write_attr(SUMO_ATTR_LON, &pos.x());
+                        self.myOutputDevice.m().set_precision(g_precision());
+                    }
+                    self.myOutputDevice.m().write_attr(SUMO_ATTR_SPEED, &microVeh.get_speed());
+                    self.myOutputDevice.m().close_tag("");
+                }
+            }
+        }
+        self.myOutputDevice.m().close_tag("");
+        self.myFrequency
     }
 
     /// C++: `void MSVTypeProbe::MSVTypeProbe(const MSVTypeProbe &)` [private]
