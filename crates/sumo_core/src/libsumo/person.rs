@@ -2067,7 +2067,66 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Person::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_POSITION => wrapper.m().wrap_position(objID, variable, &Self::get_position(objID, false)),
+            VAR_POSITION3D => wrapper.m().wrap_position(objID, variable, &Self::get_position(objID, true)),
+            VAR_ANGLE => wrapper.m().wrap_double(objID, variable, Self::get_angle(objID)),
+            VAR_SLOPE => wrapper.m().wrap_double(objID, variable, Self::get_slope(objID)),
+            VAR_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_speed(objID)),
+            VAR_ROAD_ID => wrapper.m().wrap_string(objID, variable, &Self::get_road_id(objID)),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_lane_position(objID)),
+            VAR_ARRIVALPOS => wrapper.m().wrap_double(objID, variable, Self::get_arrival_pos(objID)),
+            VAR_COLOR => wrapper.m().wrap_color(objID, variable, &Self::get_color(objID)),
+            VAR_WAITING_TIME => wrapper.m().wrap_double(objID, variable, Self::get_waiting_time(objID)),
+            VAR_IMPATIENCE => wrapper.m().wrap_double(objID, variable, Self::get_impatience(objID)),
+            VAR_TYPE => wrapper.m().wrap_string(objID, variable, &Self::get_type_id(objID)),
+            VAR_SPEED_FACTOR => wrapper.m().wrap_double(objID, variable, Self::get_speed_factor(objID)),
+            VAR_NEXT_EDGE => wrapper.m().wrap_string(objID, variable, &Self::get_next_edge(objID)),
+            VAR_EDGES => {
+                let nextStageIndex = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_edges(objID, nextStageIndex))
+            }
+            VAR_STAGE => {
+                let nextStageIndex = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_stage(objID, variable, &Self::get_stage(objID, nextStageIndex))
+            }
+            VAR_STAGES_REMAINING => wrapper.m().wrap_int(objID, variable, Self::get_remaining_stages(objID)),
+            VAR_VEHICLE => wrapper.m().wrap_string(objID, variable, &Self::get_vehicle(objID)),
+            VAR_MAXSPEED => {
+                // integrate desiredMaxSpeed and individual speedFactor
+                wrapper.m().wrap_double(objID, variable, Self::get_max_speed(objID))
+            }
+            DISTANCE_REQUEST => {
+                let mut roadPos = TraCIRoadPosition::new(String::new(), INVALID_DOUBLE_VALUE, INVALID_INT_VALUE);
+                let mut pos = Position::new(0., 0.);
+                if Helper::read_distance_request(paramData.m(), &mut roadPos, &mut pos) == POSITION_ROADMAP {
+                    wrapper.m().wrap_double(objID, variable, Self::get_walking_distance(objID, &roadPos.edgeID, roadPos.pos, roadPos.laneIndex))
+                } else {
+                    wrapper.m().wrap_double(objID, variable, Self::get_walking_distance2_d(objID, pos.x(), pos.y()))
+                }
+            }
+            VAR_PARAMETER => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StoHelp::read_typed_string(paramData.m(), "");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            VAR_TAXI_RESERVATIONS => {
+                let onlyNew = StoHelp::read_typed_int(paramData.m(), "");
+                wrapper.m().wrap_reservation_vector(objID, variable, &Self::get_taxi_reservations(onlyNew))
+            }
+            SPLIT_TAXI_RESERVATIONS => {
+                let personIDs = StoHelp::read_typed_string_list(paramData.m(), "");
+                wrapper.m().wrap_string(objID, variable, &Self::split_taxi_reservation(objID.to_string(), &personIDs))
+            }
+            // C++ passes the type ID as the object ID to VehicleType::handleVariable
+            _ => VehicleType::handle_variable(&Self::get_type_id(objID), variable, wrapper, paramData),
+        }
     }
 
     /// C++: `MSPerson * Person::getPerson(const std::string &)` [static, private]
