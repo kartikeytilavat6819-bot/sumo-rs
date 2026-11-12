@@ -138,11 +138,6 @@ fn lane_ids(v: &[Ptr<MSLane>]) -> String {
     v.iter().map(|l| l.get_id().to_string()).collect::<Vec<_>>().join(" ")
 }
 
-/// `joinNamedToString(std::vector<const MSDriveWay*>, " ")`: the driveway ids joined by " ".
-fn drive_way_ids(v: &[Ptr<MSDriveWay>]) -> String {
-    v.iter().map(|d| d.base2.get_id().to_string()).collect::<Vec<_>>().join(" ")
-}
-
 /// `joinNamedToStringSorting(std::set<const MSDriveWay*>, " ")`: the sorted driveway ids joined by " ".
 fn drive_way_ids_sorted(v: &BTreeSet<Ptr<MSDriveWay>>) -> String {
     let mut ids: Vec<String> = v.iter().map(|d| d.base2.get_id().to_string()).collect();
@@ -2686,7 +2681,7 @@ impl MSDriveWay {
                 None => return,
             }
         } else {
-            let parent_id = &id[..id.rfind('.').unwrap_or(0)];
+            let parent_id = &id[..id.rfind('.').unwrap_or(id.len())];
             let parent = MY_DRIVE_WAY_LOOKUP.with(|m| m.borrow().get(parent_id).copied());
             let parent = match parent {
                 Some(p) => p,
