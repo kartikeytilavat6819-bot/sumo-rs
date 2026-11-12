@@ -1,6 +1,13 @@
 //! Port of microsim/lcmodels/MSLCHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::{accel2speed, speed2dist};
+use utils::geom::POSITION_EPS;
+
+/// C++ `MAX2(a, b)` (utils/common/StdDefs.h): `a > b ? a : b`
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
 
 /// A lane change model developed by J. Erdmann
 /// C++ class `MSLCHelper` (microsim/lcmodels/MSLCHelper.h)
@@ -208,7 +215,134 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_roundabout_dist_bonus(veh: &MSVehicle, bonusParam: f64, curr: &MSVehicle_LaneQ, neigh: &MSVehicle_LaneQ, best: &MSVehicle_LaneQ) -> f64 {
-        todo!("port MSLCHelper::getRoundaboutDistBonus")
+        // DEBUG_WANTS_CHANGE output is compiled out (macro not defined), so it is not ported.
+        if Ptr::new(veh).m().get_lane_change_model().is_opposite() {
+            return 0.0;
+        }
+        let inner: &MSVehicle_LaneQ = if neigh.lane.get_index() > curr.lane.get_index() { neigh } else { curr };
+        if neigh.lane == inner.lane && curr.bestContinuations.len() < neigh.bestContinuations.len() {
+            // the current lane does not continue to the roundabout and we need a strategic change first.
+            return 0.0;
+        }
+
+        let mut roundaboutJunctionsAhead: i32 = 0;
+        let mut enteredRoundabout = false;
+        let mut seen: f64 = -veh.get_position_on_lane();
+
+        // first check using only normal lanes
+        for i in 0..best.bestContinuations.len() {
+            let mut lane: Ptr<MSLane> = best.bestContinuations[i];
+            if lane.is_null() {
+                lane = veh.get_lane();
+            }
+            if (!enteredRoundabout || lane.get_edge().is_roundabout()) && i >= inner.bestContinuations.len() {
+                // no bonus if we cannot continue on the inner lane until leaving the roundabout
+                return 0.0;
+            }
+            if seen > 300.0 {
+                // avoid long look-ahead
+                return 0.0;
+            }
+            let junction = lane.get_edge().get_to_junction();
+            if lane.get_edge().is_roundabout() {
+                enteredRoundabout = true;
+                if junction.get_incoming().len() + junction.get_outgoing().len() > 2 {
+                    roundaboutJunctionsAhead += 1;
+                }
+            } else if enteredRoundabout {
+                // only check the first roundabout
+                break;
+            }
+            seen += lane.get_length();
+        }
+        // no bonus if we want to take the next exit
+        if roundaboutJunctionsAhead < 2 {
+            return 0.0;
+        }
+        // compute bonus value based on jamming and exact distances (taking into
+        // account internal lanes)
+        let mut occupancyOuter: f64 = 0.0;
+        let mut occupancyInner: f64 = 0.0;
+        let mut distanceInRoundabout: f64 = 0.0;
+        let mut prevNormal: Ptr<MSLane> = Ptr::default();
+        let mut prevInner: Ptr<MSLane> = Ptr::default();
+        enteredRoundabout = false;
+        for i in 0..best.bestContinuations.len() {
+            let lane: Ptr<MSLane> = best.bestContinuations[i];
+            if lane.is_null() {
+                continue;
+            }
+            if lane.get_edge().is_roundabout() {
+                enteredRoundabout = true;
+            } else if enteredRoundabout {
+                // only check the first roundabout
+                break;
+            }
+            let mut via: Ptr<MSLane> = Ptr::default();
+            if !prevNormal.is_null() {
+                for &link in prevNormal.get_link_cont().iter() {
+                    if link.get_lane() == lane {
+                        via = link.get_via_lane();
+                    }
+                }
+            }
+            if enteredRoundabout {
+                distanceInRoundabout += lane.get_length();
+                if !via.is_null() {
+                    distanceInRoundabout += via.get_length();
+                }
+            }
+            // discount vehicles that are upstream from ego
+            let upstreamDiscount: f64 = if std::ptr::eq(lane.get_edge() as *const MSEdge, veh.get_lane().get_edge() as *const MSEdge) {
+                (lane.get_length() - veh.get_position_on_lane()) / lane.get_length()
+            } else {
+                1.0
+            };
+            prevNormal = lane;
+            occupancyOuter += upstreamDiscount * lane.get_brutto_veh_len_sum();
+            if !via.is_null() {
+                occupancyOuter += via.get_brutto_veh_len_sum();
+            }
+            if i < inner.bestContinuations.len() {
+                let innerLane: Ptr<MSLane> = inner.bestContinuations[i];
+                occupancyInner += upstreamDiscount * innerLane.get_brutto_veh_len_sum();
+                if !prevInner.is_null() {
+                    for &link in prevInner.get_link_cont().iter() {
+                        if link.get_lane() == innerLane && !link.get_via_lane().is_null() {
+                            occupancyInner += link.get_via_lane().get_brutto_veh_len_sum();
+                        }
+                    }
+                }
+                prevInner = innerLane;
+            }
+        }
+
+        if curr.bestLaneOffset.abs() > 1 && enteredRoundabout {
+            let bGap = veh.get_car_follow_model().brake_gap_2(
+                veh.get_speed() + accel2speed(veh.get_car_follow_model().get_max_accel()),
+                veh.get_car_follow_model().get_max_decel(),
+                veh.get_action_step_length_secs(),
+            );
+            let reservation = Ptr::new(veh).m().get_lane_change_model().get_extra_reservation(curr.bestLaneOffset, 0.0);
+            let leftSpace = distanceInRoundabout - reservation - veh.get_position_on_lane();
+            if bGap > leftSpace {
+                return 0.0;
+            }
+        }
+
+        let maxOccupancy = max2(occupancyInner, occupancyOuter);
+        // give some bonus for using the inside lane at equal occupancy
+        let bonus = roundaboutJunctionsAhead as f64 * 7.5;
+        let relativeJam = (occupancyOuter - occupancyInner + bonus) / (maxOccupancy + bonus);
+        // no bonus if the inner lane or the left lane entering the roundabout is jammed
+        let mut jamFactor = max2(0.0, relativeJam);
+        if veh.get_lane().get_edge().is_roundabout() && curr.lane.get_index() > neigh.lane.get_index() {
+            // only use jamFactor when deciding to move to the inside lane but prefer
+            // staying inside if the distance allows it
+            jamFactor = 1.0;
+        }
+        let result = distanceInRoundabout * jamFactor * bonusParam * 9.0; // the 9 is abitrary and only there for backward compatibility
+        result
     }
 
     /// C++: `bool MSLCHelper::updateBlockerLength(const MSVehicle &, MSVehicle *, int, double, bool, double &)` [static]
@@ -283,7 +417,35 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn update_blocker_length(veh: &MSVehicle, blocker: Ptr<MSVehicle>, lcaCounter: i32, leftSpace: f64, reliefConnection: bool, leadingBlockerLength: &mut f64) -> bool {
-        todo!("port MSLCHelper::updateBlockerLength")
+        // DEBUG_SAVE_BLOCKER_LENGTH output is compiled out, so it is not ported.
+        if !blocker.is_null() && (blocker.m().get_lane_change_model().get_own_state() & lcaCounter) != 0 {
+            // is there enough space in front of us for the blocker?
+            let required = blocker.get_vehicle_type().get_length_with_gap() + veh.get_vehicle_type().get_min_gap();
+            let potential = leftSpace - veh.get_car_follow_model().brake_gap_2(
+                veh.get_speed(),
+                veh.get_car_follow_model().get_max_decel(),
+                0.0,
+            );
+            if required <= potential {
+                // save at least his length in myLeadingBlockerLength
+                *leadingBlockerLength = max2(required, *leadingBlockerLength);
+            } else {
+                // we cannot save enough space for the blocker. It needs to save
+                // space for ego instead
+                let required2 = veh.get_vehicle_type().get_length_with_gap() + blocker.get_vehicle_type().get_min_gap();
+                let foeLeftSpace = leftSpace - veh.get_position_on_lane() + blocker.get_position_on_lane() - POSITION_EPS;
+                let canReserve = blocker.m().get_lane_change_model().save_blocker_length(required2, foeLeftSpace);
+                if !canReserve && !reliefConnection {
+                    let blockerState = blocker.m().get_lane_change_model().get_own_state();
+                    if (blockerState & LCA_STRATEGIC) != 0 && (blockerState & LCA_URGENT) != 0 {
+                        // reserve anyway and try to avoid deadlock with emergency deceleration
+                        *leadingBlockerLength = max2(required, *leadingBlockerLength);
+                    }
+                }
+                return canReserve;
+            }
+        }
+        true
     }
 
     /// C++: `bool MSLCHelper::canSaveBlockerLength(const MSVehicle &, double, double)` [static]
@@ -299,7 +461,13 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn can_save_blocker_length(veh: &MSVehicle, requested: f64, leftSpace: f64) -> bool {
-        todo!("port MSLCHelper::canSaveBlockerLength")
+        let potential = leftSpace - veh.get_car_follow_model().brake_gap_2(
+            veh.get_speed(),
+            veh.get_car_follow_model().get_max_decel(),
+            veh.get_action_step_length_secs(),
+        );
+        // DEBUG_SAVE_BLOCKER_LENGTH output is compiled out, so it is not ported.
+        potential >= requested
     }
 
     /// C++: `bool MSLCHelper::divergentRoute(const MSVehicle &, const MSVehicle &)` [static]
@@ -313,7 +481,11 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn divergent_route(v1: &MSVehicle, v2: &MSVehicle) -> bool {
-        todo!("port MSLCHelper::divergentRoute")
+        // a sufficient, but not necessary condition for divergence
+        v1.get_lane().is_internal()
+            && v2.get_lane().is_internal()
+            && v1.get_lane().get_edge().get_from_junction() == v2.get_lane().get_edge().get_from_junction()
+            && !std::ptr::eq(v1.get_lane().get_edge() as *const MSEdge, v2.get_lane().get_edge() as *const MSEdge)
     }
 
     /// C++: `double MSLCHelper::getSpeedPreservingSecureGap(const MSVehicle &, const MSVehicle &, double, double)` [static]
@@ -340,7 +512,45 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_preserving_secure_gap(leader: &MSVehicle, follower: &MSVehicle, currentGap: f64, leaderPlannedSpeed: f64) -> f64 {
-        todo!("port MSLCHelper::getSpeedPreservingSecureGap")
+        // whatever speed the follower choses in the next step, it will change both
+        // the secureGap and the required followSpeed.
+        // Let's assume the leader maintains speed
+        let nextGap = currentGap + speed2dist(leaderPlannedSpeed - follower.get_speed());
+        let sGap = follower.get_car_follow_model().get_secure_gap(
+            Ptr::new(follower),
+            Ptr::new(leader),
+            follower.get_speed(),
+            leaderPlannedSpeed,
+            leader.get_car_follow_model().get_max_decel(),
+        );
+        if nextGap >= sGap {
+            // follower may still accelerate
+            let nextGapMin = currentGap
+                + speed2dist(leaderPlannedSpeed - follower.get_car_follow_model().max_next_speed(follower.get_speed(), Ptr::new(follower)));
+            let vSafe = follower.get_car_follow_model().follow_speed(
+                Ptr::new(follower),
+                follower.get_speed(),
+                nextGapMin,
+                leaderPlannedSpeed,
+                leader.get_car_follow_model().get_max_decel(),
+                Ptr::default(),
+                MSCFModel_CalcReason::CURRENT,
+            );
+            max2(vSafe, follower.get_speed())
+        } else {
+            // follower must brake. The following brakes conservatively since the actual gap will be lower due to braking.
+            let vSafe = follower.get_car_follow_model().follow_speed(
+                Ptr::new(follower),
+                follower.get_speed(),
+                nextGap,
+                leaderPlannedSpeed,
+                leader.get_car_follow_model().get_max_decel(),
+                Ptr::default(),
+                MSCFModel_CalcReason::CURRENT,
+            );
+            // avoid emergency deceleration
+            max2(vSafe, follower.get_car_follow_model().min_next_speed(follower.get_speed(), Ptr::new(follower)))
+        }
     }
 
     /// C++: `bool MSLCHelper::isBidiLeader(const MSVehicle *, const std::vector<MSLane *> &)` [static]
@@ -362,7 +572,19 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_leader(leader: Ptr<MSVehicle>, cont: &Vec<Ptr<MSLane>>) -> bool {
-        todo!("port MSLCHelper::isBidiLeader")
+        if leader.is_null() {
+            return false;
+        }
+        let lane1 = leader.get_lane().get_normal_successor_lane().get_bidi_lane();
+        let lane2 = leader.get_lane().get_normal_predecessor_lane().get_bidi_lane();
+        if lane1.is_null() && lane2.is_null() {
+            return false;
+        }
+        let mut result = cont.iter().any(|&l| l == lane1);
+        if !result && lane1 != lane2 && !lane2.is_null() {
+            result = cont.iter().any(|&l| l == lane2);
+        }
+        result
     }
 
     /// C++: `bool MSLCHelper::isBidiFollower(const MSVehicle *, const MSVehicle *)` [static]
@@ -385,7 +607,22 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_follower(ego: Ptr<MSVehicle>, follower: Ptr<MSVehicle>) -> bool {
-        todo!("port MSLCHelper::isBidiFollower")
+        if follower.is_null() {
+            return false;
+        }
+        let mut result = false;
+        let lane1 = follower.get_lane().get_normal_successor_lane().get_bidi_lane();
+        let lane2 = follower.get_lane().get_normal_predecessor_lane().get_bidi_lane();
+        let route = ego.get_route().get_edges();
+        if !lane1.is_null() {
+            let edge1 = Ptr::new(lane1.get_edge());
+            result = route.iter().any(|&e| e == edge1);
+        }
+        if !result && lane1 != lane2 && !lane2.is_null() {
+            let edge2 = Ptr::new(lane2.get_edge());
+            result = route.iter().any(|&e| e == edge2);
+        }
+        result
     }
 
     /// C++: `bool MSLCHelper::unwillingToHelp(const MSVehicle &, double, const MSVehicle &)` [static]
@@ -418,7 +655,21 @@ impl MSLCHelper {
     // }
     #[allow(unused_variables)]
     pub fn unwilling_to_help(ego: &MSVehicle, plannedSpeed: f64, nv: &MSVehicle) -> bool {
-        todo!("port MSLCHelper::unwillingToHelp")
+        let nvPtr = Ptr::new(nv);
+        let nvLcm = nvPtr.m().get_lane_change_model();
+        if nvLcm.get_cooperative_help_time() < 0 || ego.get_waiting_time(false) < nvLcm.get_cooperative_help_time() {
+            // ego vehicle has not been waiting long enough to be eligible for unconditional help
+            if nvLcm.get_cooperative_help_threshold() >= 0.0 && (nv.get_speed() - plannedSpeed) > nvLcm.get_cooperative_help_threshold() {
+                // neighhbor not willing to help because ego is much slower
+                return true;
+            }
+            let nvLaneMax = nv.get_lane().get_vehicle_max_speed(nvPtr.cast::<SUMOTrafficObject>());
+            if nv.get_speed() / nvLaneMax < nvLcm.get_cooperative_min_speed() {
+                // neighbor not willing to help because it is already to slow and does not want to disturb the flow
+                return true;
+            }
+        }
+        false
     }
 
 }

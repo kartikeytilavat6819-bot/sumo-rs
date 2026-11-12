@@ -13,7 +13,7 @@ impl MSIdling {
     // MSIdling() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSIdling::MSIdling")
+        MSIdling {}
     }
 
     /// C++: `void MSIdling::~MSIdling() noexcept` [virtual]
@@ -21,7 +21,8 @@ impl MSIdling {
     // virtual ~MSIdling() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSIdling::~MSIdling")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `void MSIdling::idle(MSDevice_Taxi *)` [virtual, pure virtual]
@@ -29,10 +30,15 @@ impl MSIdling {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn idle(&mut self, taxi: Ptr<MSDevice_Taxi>) {
-        todo!("port MSIdling::idle")
+        panic!("MSIdling::idle is pure virtual; subclasses implement it")
     }
 
 }
+
+// C++ static/defined stop flags (SUMOVehicleParameter.h), parametersSet is i64
+const STOP_END_SET: i64 = 2;
+const STOP_TRIGGER_SET: i64 = 2 << 4;
+const STOP_PARKING_SET: i64 = 2 << 5;
 
 /// C++ class `MSIdling_RandomCircling` (microsim/devices/MSIdling.h)
 #[repr(C)]
@@ -119,7 +125,44 @@ impl MSIdling_RandomCircling {
     // }
     #[allow(unused_variables)]
     pub fn idle(&mut self, taxi: Ptr<MSDevice_Taxi>) {
-        todo!("port MSIdling_RandomCircling::idle")
+        let veh: &mut SUMOVehicle = taxi.get_holder();
+        let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+        let edges: ConstMSEdgeVector = veh.get_route().get_edges().clone();
+        let mut newEdges: ConstMSEdgeVector = Vec::new();
+        let mut remainingDist = -veh.get_position_on_lane();
+        let mut remainingEdges = 0;
+        let mut routePos = veh.get_route_position();
+        let routeLength = edges.len() as i32;
+        while routePos + 1 < routeLength && (remainingEdges < 2 || remainingDist < 200.0) {
+            let edge = edges[routePos as usize];
+            remainingDist += edge.get_length();
+            remainingEdges += 1;
+            routePos += 1;
+            newEdges.push(edge);
+        }
+        let mut lastEdge = *edges.last().unwrap();
+        newEdges.push(lastEdge);
+        let mut added = 0;
+        while remainingEdges < 2 || remainingDist < 200.0 {
+            remainingDist += lastEdge.get_length();
+            remainingEdges += 1;
+            let mut successors: MSEdgeVector = lastEdge.get_successors(vehB.get_v_class()).clone();
+            successors.retain(|e| e.get_function() != SumoXMLEdgeFunc::CONNECTOR);
+            // shortcut: the gRoutingPreferences filter (device.taxi.idleMinPref via getFloatParam/getPreference) is skipped, it only runs when routing preferences are enabled; upgrade when they are ported
+            if successors.is_empty() {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ends idling in a cul-de-sac", veh.get_id()));
+                break;
+            } else {
+                let nextIndex = vehB.get_rng().m().rand_int(successors.len() as i32) as usize;
+                newEdges.push(successors[nextIndex]);
+                lastEdge = *newEdges.last().unwrap();
+                added += 1;
+            }
+        }
+        if added > 0 {
+            //std::cout << SIMTIME << " circleVeh=" << veh.getID() << "  newEdges=" << toString(newEdges) << "\n";
+            vehB.m().replace_route_edges(&mut newEdges, -1.0, 0.0, "taxi:idling:randomCircling", false, false, false, Ptr::default());
+        }
     }
 
 }
@@ -234,7 +277,80 @@ impl MSIdling_Stop {
     // }
     #[allow(unused_variables)]
     pub fn idle(&mut self, taxi: Ptr<MSDevice_Taxi>) {
-        todo!("port MSIdling_Stop::idle")
+        let now = MSNet::get_instance().m().get_current_time_step();
+        let veh: &mut SUMOVehicle = taxi.get_holder();
+        let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+        if !vehB.has_stops() {
+            let mut errorOut = String::new();
+            let mut brakeGap = 0.0;
+            let stopPos: (Ptr<MSLane>, f64);
+            if use_meso_sim() {
+                // stops are only checked in MESegment::receive so we need to put this onto the next segment
+                let route = vehB.get_route();
+                let riIdx = *vehB.get_current_route_edge();
+                let mut curSeg = meso_net().m().get_segment_for_edge(route.get_edges()[riIdx], vehB.get_position_on_lane());
+                let mut stopSeg = curSeg.get_next_segment();
+                if stopSeg.is_null() {
+                    if riIdx + 1 < route.get_edges().len() {
+                        stopSeg = meso_net().m().get_segment_for_edge(route.get_edges()[riIdx + 1], 0.0);
+                    } else {
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Idle taxi '%' has no next segment to stop. time=%.", veh.get_id(), time2string(now)));
+                        return;
+                    }
+                }
+                // determine offset of stopSeg
+                let mut stopOffset = 0.0;
+                let stopEdge = stopSeg.get_edge();
+                let mut seg = meso_net().m().get_segment_for_edge(stopEdge, 0.0);
+                while seg != stopSeg {
+                    stopOffset += seg.get_length();
+                    seg = seg.get_next_segment();
+                }
+                stopPos = (stopEdge.get_lanes()[0], stopOffset);
+            } else {
+                // shortcut: CarFollowModel::brakeGap(speed, decel, headway) takes three arguments in C++, the ported base MSCFModel::brake_gap takes one, upgrade when MSCFModel gets the virtual 3-arg brakeGap
+                panic!("MSIdling_Stop: micro brakeGap(speed, decel, headway) is not ported on MSCFModel yet");
+            }
+            if !stopPos.0.is_null() {
+                let mut stop = SUMOVehicleParameter_Stop::default();
+                if use_meso_sim() {
+                    stop.edge = stopPos.0.get_edge().get_id().to_string();
+                } else {
+                    stop.lane = stopPos.0.get_id().to_string();
+                }
+                stop.startPos = f64::max(0.0, stopPos.1 - utils::geom::POSITION_EPS);
+                stop.endPos = stopPos.1;
+                if use_meso_sim() {
+                    // meso needs the stop to be on the next segment
+                    stop.startPos += utils::geom::POSITION_EPS;
+                    stop.endPos += utils::geom::POSITION_EPS;
+                }
+                stop.actType = "idling".to_string();
+                vehB.m().add_traci_stop(stop, &mut errorOut);
+                if errorOut != "" {
+                    utils::common::msg_handler::write_warning(&errorOut);
+                }
+            } else {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Idle taxi '%' could not stop within %m", veh.get_id(), brakeGap.to_string()));
+            }
+        }
+        if vehB.has_stops() {
+            let containerCapacity = veh.get_vehicle_type().get_container_capacity();
+            let stop = vehB.m().get_next_stop_mutable();
+            if containerCapacity > 0 {
+                stop.containerTriggered = true;
+                stop.pars.containerTriggered = true;
+            } else {
+                stop.triggered = true;
+                stop.pars.triggered = true;
+            }
+            stop.pars.parametersSet |= STOP_TRIGGER_SET | STOP_PARKING_SET | STOP_END_SET;
+            stop.pars.parking = ParkingType::OFFROAD;
+            if use_meso_sim() {
+                // MEVehicle: register triggered stop
+                Ptr::from_mut(veh).cast::<MEVehicle>().m().may_proceed();
+            }
+        }
     }
 
 }
@@ -265,7 +381,11 @@ impl MSIdling_TaxiStand {
     // MSIdling_TaxiStand(MSTriggeredRerouter* rerouter) : myRerouter(rerouter) {}
     #[allow(unused_variables)]
     pub fn new(rerouter: Ptr<MSTriggeredRerouter>) -> Self {
-        todo!("port MSIdling_TaxiStand::MSIdling_TaxiStand")
+        MSIdling_TaxiStand {
+            base: MSIdling {},
+            myRerouter: rerouter,
+            myHaveWarned: false,
+        }
     }
 
     /// C++: `void MSIdling_TaxiStand::idle(MSDevice_Taxi *)` [virtual]
@@ -338,7 +458,70 @@ impl MSIdling_TaxiStand {
     // }
     #[allow(unused_variables)]
     pub fn idle(&mut self, taxi: Ptr<MSDevice_Taxi>) {
-        todo!("port MSIdling_TaxiStand::idle")
+        let veh: &mut SUMOVehicle = taxi.get_holder();
+        let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+        let now = MSNet::get_instance().m().get_current_time_step();
+        let rerouteDef = self.myRerouter.m().get_current_reroute(now, veh);
+        if rerouteDef.is_null() || rerouteDef.parkProbs.get_vals().len() == 0 {
+            if !self.myHaveWarned {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Could not determine taxi stand for vehicle '%' at time=%", veh.get_id(), time2string(now)));
+                self.myHaveWarned = true;
+            }
+            return;
+        }
+        let mut lastStop: Option<&mut MSStop> = None;
+        if vehB.has_stops() {
+            let n = vehB.get_stops().len() as i32;
+            lastStop = Some(vehB.m().get_stop(n - 1));
+        }
+        if lastStop.as_ref().map_or(true, |s| s.parkingarea.is_null()) {
+            let pa = rerouteDef.parkProbs.get_vals()[0].cast::<MSParkingArea>();
+            let mut stop = SUMOVehicleParameter_Stop::default();
+            stop.lane = pa.get_lane().get_id().to_string();
+            stop.startPos = pa.get_begin_lane_position();
+            stop.endPos = pa.get_end_lane_position();
+            if veh.get_vehicle_type().get_container_capacity() > 0 {
+                stop.containerTriggered = true;
+            } else {
+                stop.triggered = true;
+            }
+            stop.actType = "idling".to_string();
+            stop.parkingarea = pa.get_id().to_string();
+            stop.parking = ParkingType::OFFROAD;
+            stop.index = vehB.get_stops().len() as i32;
+            let mut error = String::new();
+            if !vehB.m().insert_stop(stop.index, stop, "taxi:taxistand", false, &mut error) {
+                utils::common::msg_handler::write_warning(&format!("Stop insertion failed for idling taxi '{}' ({}).", veh.get_id(), error));
+            } else {
+                //std::cout << SIMTIME << " taxistandsVeh=" << veh.getID() << "  driving to parkingArea " << pa->getID() << "\n";
+                self.myRerouter.m().trigger_routing(veh, MSMoveReminder_Notification::NOTIFICATION_PARKING_REROUTE);
+            }
+        } else if !use_meso_sim() {
+            //std::cout << SIMTIME << " taxistandsVeh=" << veh.getID() << "  already driving to parkingArea\n";
+            let pa = lastStop.as_ref().unwrap().parkingarea;
+            if vehB.is_stopped_triggered() && !pa.is_null() && pa.must_advance(vehB.get_v_class()) {
+                let vehPos = veh.get_position_on_lane();
+                let targetPos = pa.get_last_free_pos(veh, vehPos);
+                if targetPos > vehPos + utils::geom::POSITION_EPS {
+                    vehB.m().abort_next_stop(0);
+                    self.idle(taxi);
+                } else {
+                    let follower = vehB.get_follower(0.0);
+                    if !follower.0.is_null() && follower.0.get_waiting_time(false) > delta_t() {
+                        // advance in queue to unblock follower
+                        let mut stop = vehB.get_next_stop().pars.clone();
+                        vehB.m().abort_next_stop(0);
+                        let mut loopedRoute: ConstMSEdgeVector = Vec::new();
+                        let router = MSRoutingEngine::get_router_tt(vehB.get_rng_index(), vehB.get_v_class(), &());
+                        router.compute_looped(vehB.get_edge(), vehB.get_edge(), Ptr::from_mut(veh), now, &mut loopedRoute, false);
+                        vehB.m().replace_route_edges(&mut loopedRoute, -1.0, 0.0, "taxi:idling_unblock", false, false, false, Ptr::default());
+                        stop.index = 1;
+                        let mut error = String::new();
+                        vehB.m().add_stop(&stop, &mut error, 0, Ptr::default());
+                    }
+                }
+            }
+        }
     }
 
 }

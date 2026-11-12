@@ -29,8 +29,11 @@ impl MSDispatch_TraCI {
     //         MSDispatch(params)
     //     { }
     #[allow(unused_variables)]
-    pub fn new(params: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSDispatch_TraCI::MSDispatch_TraCI")
+    pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
+        Self {
+            base: MSDispatch::new(params),
+            myReservationLookup: StringBijection::default(),
+        }
     }
 
     /// C++: `Reservation * MSDispatch_TraCI::addReservation(MSTransportable *, SUMOTime, SUMOTime, SUMOTime, const MSEdge *, double, const MSStoppingPlace *, const MSEdge *, double, const MSStoppingPlace *, std::string, const std::string &, int, int)` [virtual]
@@ -56,7 +59,11 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn add_reservation(&mut self, person: Ptr<MSTransportable>, reservationTime: SUMOTime, pickupTime: SUMOTime, earliestPickupTime: SUMOTime, from: Ptr<MSEdge>, fromPos: f64, fromStop: Ptr<MSStoppingPlace>, to: Ptr<MSEdge>, toPos: f64, toStop: Ptr<MSStoppingPlace>, group: String, line: &str, maxCapacity: i32, maxContainerCapacity: i32) -> Ptr<Reservation> {
-        todo!("port MSDispatch_TraCI::addReservation")
+        let res = self.base.add_reservation(person, reservationTime, pickupTime, earliestPickupTime, from, fromPos, fromStop, to, toPos, toStop, group, line, maxCapacity, maxContainerCapacity);
+        if !self.myReservationLookup.has(res) {
+            self.myReservationLookup.insert(&res.id, res, true).unwrap_or_else(|e| std::panic::panic_any(e));
+        }
+        res
     }
 
     /// C++: `std::string MSDispatch_TraCI::removeReservation(MSTransportable *, const MSEdge *, double, const MSEdge *, double, std::string)` [virtual]
@@ -76,7 +83,13 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn remove_reservation(&mut self, person: Ptr<MSTransportable>, from: Ptr<MSEdge>, fromPos: f64, to: Ptr<MSEdge>, toPos: f64, group: String) -> String {
-        todo!("port MSDispatch_TraCI::removeReservation")
+        let removedID = self.base.remove_reservation(person, from, fromPos, to, toPos, group);
+        if self.myReservationLookup.has_string(&removedID) {
+            // warning! res is already deleted
+            let res = self.myReservationLookup.get(&removedID).unwrap_or_else(|e| std::panic::panic_any(e));
+            self.myReservationLookup.remove(&removedID, res);
+        }
+        removedID
     }
 
     /// C++: `void MSDispatch_TraCI::computeDispatch(SUMOTime, const std::vector<MSDevice_Taxi *> &)` [virtual]
@@ -84,7 +97,7 @@ impl MSDispatch_TraCI {
     // void computeDispatch(SUMOTime /*now*/, const std::vector<MSDevice_Taxi*>& /*fleet*/) override {}
     #[allow(unused_variables)]
     pub fn compute_dispatch(&mut self, arg0: SUMOTime, arg1: &Vec<Ptr<MSDevice_Taxi>>) {
-        todo!("port MSDispatch_TraCI::computeDispatch")
+        // do nothing (dispatch happens via TraCI calls)
     }
 
     /// C++: `void MSDispatch_TraCI::interpretDispatch(MSDevice_Taxi *, const std::vector<std::string> &)`
@@ -116,7 +129,26 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn interpret_dispatch(&mut self, taxi: Ptr<MSDevice_Taxi>, reservationsIDs: &Vec<String>) {
-        todo!("port MSDispatch_TraCI::interpretDispatch")
+        let mut reservations: Vec<Ptr<Reservation>> = Vec::new();
+        for resID in reservationsIDs.iter() {
+            if self.myReservationLookup.has_string(resID) {
+                reservations.push(self.myReservationLookup.get(resID).unwrap_or_else(|e| std::panic::panic_any(e)));
+            } else {
+                std::panic::panic_any(ProcessError::InvalidArgument(format!("Reservation id '{}' is not known", resID)));
+            }
+        }
+        // shortcut: C++ catches ProcessError from dispatch and rethrows InvalidArgument; the Rust dispatch reports its errors directly
+        if reservations.len() == 1 {
+            taxi.m().dispatch(&*reservations[0]);
+        } else {
+            taxi.m().dispatch_shared(reservations.clone());
+        }
+        // in case of ride sharing the same reservation may occur multiple times
+        // determinism: std::set<const Reservation*> orders by pointer, BTreeSet<Ptr<_>> orders by address the same way
+        let unique: BTreeSet<Ptr<Reservation>> = reservations.iter().cloned().collect();
+        for res in unique.iter() {
+            self.served_reservation(*res, taxi);
+        }
     }
 
     /// C++: `std::string MSDispatch_TraCI::splitReservation(std::string, std::vector<std::string>)`
@@ -165,7 +197,55 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn split_reservation(&mut self, resID: String, personIDs: Vec<String>) -> String {
-        todo!("port MSDispatch_TraCI::splitReservation")
+        if self.myReservationLookup.has_string(&resID) {
+            let res: Ptr<Reservation> = self.myReservationLookup.get(&resID).unwrap_or_else(|e| std::panic::panic_any(e));
+            if self.base.myRunningReservations.get(&res.group).map_or(false, |m| m.contains_key(&res.id)) {
+                std::panic::panic_any(ProcessError::InvalidArgument(format!("Cannot split reservation '{}' after dispatch", resID)));
+            }
+            let mut allPersons: BTreeSet<String> = BTreeSet::new();
+            for t in res.persons.values() {
+                allPersons.insert(t.get_id().to_string());
+            }
+            for p in personIDs.iter() {
+                if !allPersons.contains(p) {
+                    std::panic::panic_any(ProcessError::InvalidArgument(format!("Person '{}' is not part of reservation '{}'", p, resID)));
+                }
+            }
+            if personIDs.len() == allPersons.len() {
+                std::panic::panic_any(ProcessError::InvalidArgument(format!("Cannot remove all person from reservation '{}'", resID)));
+            }
+            let mut split: Vec<Ptr<MSTransportable>> = Vec::new();
+            for p in personIDs.iter() {
+                let key = res.persons.iter().find(|(_, t)| t.get_id() == p.as_str()).map(|(k, _)| *k);
+                if let Some(k) = key {
+                    if let Some(t) = res.m().persons.remove(&k) {
+                        split.push(t);
+                    }
+                }
+            }
+            let newId = self.myReservationCount.to_string();
+            self.myReservationCount += 1;
+            let newRes: Ptr<Reservation> = Ptr::from_mut(Box::leak(Box::new(Reservation::new(
+                &newId,
+                &split,
+                res.reservationTime,
+                res.pickupTime,
+                res.earliestPickupTime,
+                res.from,
+                res.fromPos,
+                res.fromStop,
+                res.to,
+                res.toPos,
+                res.toStop,
+                &res.group,
+                &res.line,
+            ))));
+            self.base.myGroupReservations.entry(res.group.clone()).or_default().push(newRes);
+            self.myReservationLookup.insert(&newRes.id, newRes, true).unwrap_or_else(|e| std::panic::panic_any(e));
+            newRes.id.clone()
+        } else {
+            std::panic::panic_any(ProcessError::InvalidArgument(format!("Reservation id '{}' is not known", resID)));
+        }
     }
 
     /// C++: `void MSDispatch_TraCI::fulfilledReservation(const Reservation *)` [virtual]
@@ -178,7 +258,9 @@ impl MSDispatch_TraCI {
     // }
     #[allow(unused_variables)]
     pub fn fulfilled_reservation(&mut self, res: Ptr<Reservation>) {
-        todo!("port MSDispatch_TraCI::fulfilledReservation")
+        self.myReservationLookup.remove(&res.id, res);
+        self.base.fulfilled_reservation(res);
+        self.base.myHasServableReservations = self.myReservationLookup.size() > 0;
     }
 
     /// C++: `MSDispatch_TraCI & MSDispatch_TraCI::operator=(const MSDispatch_TraCI &)` [private]
@@ -186,7 +268,7 @@ impl MSDispatch_TraCI {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDispatch_TraCI) -> &mut MSDispatch_TraCI {
-        todo!("port MSDispatch_TraCI::operator=")
+        panic!("MSDispatch_TraCI assignment operator is private and undefined in C++")
     }
 
 }

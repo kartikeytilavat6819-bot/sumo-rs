@@ -14,7 +14,7 @@ impl MSVehicleDevice_ComparatorNumericalVehicleIdLess {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, a: Ptr<MSVehicleDevice>, b: Ptr<MSVehicleDevice>) -> bool {
-        todo!("port ComparatorNumericalVehicleIdLess::operator()")
+        a.myHolder.get_numerical_id() < b.myHolder.get_numerical_id()
     }
 
 }
@@ -51,7 +51,11 @@ impl MSVehicleDevice {
     //     }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        todo!("port MSVehicleDevice::MSVehicleDevice")
+        Self {
+            base: MSMoveReminder::new(id, Ptr::default(), false),
+            base2: MSDevice::new(id),
+            myHolder: Ptr::from_mut(holder),
+        }
     }
 
     /// C++: `void MSVehicleDevice::~MSVehicleDevice() noexcept` [virtual]
@@ -59,7 +63,7 @@ impl MSVehicleDevice {
     // virtual ~MSVehicleDevice() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicleDevice::~MSVehicleDevice")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOVehicle & MSVehicleDevice::getHolder() const` [const]
@@ -69,7 +73,7 @@ impl MSVehicleDevice {
     //     }
     #[allow(unused_variables)]
     pub fn get_holder(&self) -> &mut SUMOVehicle {
-        todo!("port MSVehicleDevice::getHolder")
+        self.myHolder.m()
     }
 
     /// C++: `SUMOVehicle::NumericalID MSVehicleDevice::getNumericalID() const` [const]
@@ -78,7 +82,7 @@ impl MSVehicleDevice {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> SUMOTrafficObject_NumericalID {
-        todo!("port MSVehicleDevice::getNumericalID")
+        self.myHolder.get_numerical_id()
     }
 
     /// C++: `void MSVehicleDevice::MSVehicleDevice(const MSVehicleDevice &)` [private]
@@ -86,7 +90,7 @@ impl MSVehicleDevice {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSVehicleDevice) -> Self {
-        todo!("port MSVehicleDevice::MSVehicleDevice")
+        panic!("MSVehicleDevice copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSVehicleDevice & MSVehicleDevice::operator=(const MSVehicleDevice &)` [private]
@@ -94,7 +98,7 @@ impl MSVehicleDevice {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSVehicleDevice) -> &mut MSVehicleDevice {
-        todo!("port MSVehicleDevice::operator=")
+        panic!("MSVehicleDevice assignment operator is private and undefined in C++")
     }
 
 }

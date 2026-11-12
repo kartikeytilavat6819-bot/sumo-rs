@@ -24,7 +24,9 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn new(handler: Ptr<SUMORouteHandler>) -> Self {
-        todo!("port SUMORouteLoader::SUMORouteLoader")
+        // shortcut: parseFirst(handler) needs SUMORouteHandler as &mut dyn SaxHandler, but it has no SaxHandler impl yet (base is Unmapped SUMOSAXHandler), upgrade when sumo_route_handler.rs is ported
+        let _ = handler;
+        panic!("SUMORouteLoader: SUMORouteHandler does not implement SaxHandler yet")
     }
 
     /// C++: `void SUMORouteLoader::~SUMORouteLoader()`
@@ -32,7 +34,7 @@ impl SUMORouteLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SUMORouteLoader::~SUMORouteLoader")
+        // implicit C++ destructor: members are raw pointers and a bool, nothing to free
     }
 
     /// C++: `SUMOTime SUMORouteLoader::loadUntil(SUMOTime)`
@@ -58,7 +60,14 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn load_until(&mut self, time: SUMOTime) -> SUMOTime {
-        todo!("port SUMORouteLoader::loadUntil")
+        if !self.myMoreAvailable {
+            return SUMOTIME_MAX;
+        }
+        while self.myHandler.get_last_depart() <= time {
+            // shortcut: parseNext(myHandler) needs SUMORouteHandler as &mut dyn SaxHandler, not implemented yet, upgrade when sumo_route_handler.rs is ported
+            panic!("SUMORouteLoader::loadUntil: SUMORouteHandler does not implement SaxHandler yet");
+        }
+        self.myHandler.get_last_depart()
     }
 
     /// C++: `bool SUMORouteLoader::moreAvailable() const` [const]
@@ -69,7 +78,7 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn more_available(&self) -> bool {
-        todo!("port SUMORouteLoader::moreAvailable")
+        self.myMoreAvailable
     }
 
     /// C++: `SUMOTime SUMORouteLoader::getFirstDepart() const` [const]
@@ -80,7 +89,7 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn get_first_depart(&self) -> SUMOTime {
-        todo!("port SUMORouteLoader::getFirstDepart")
+        self.myHandler.get_first_depart()
     }
 
     /// C++: `SUMORouteHandler * SUMORouteLoader::getRouteHandler()`
@@ -89,7 +98,7 @@ impl SUMORouteLoader {
     //     }
     #[allow(unused_variables)]
     pub fn get_route_handler(&mut self) -> Ptr<SUMORouteHandler> {
-        todo!("port SUMORouteLoader::getRouteHandler")
+        self.myHandler
     }
 
 }
