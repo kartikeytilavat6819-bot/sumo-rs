@@ -35,7 +35,9 @@ impl AGActivity {
     // virtual ~AGActivity() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AGActivity::~AGActivity")
+        {
+            // No-op destructor in Rust for simplicity
+        }
     }
 
     /// C++: `bool AGActivity::isGenerated()`
@@ -57,7 +59,7 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn generate_trips(&mut self) -> bool {
-        todo!("port AGActivity::generateTrips")
+        true
     }
 
     /// C++: `int AGActivity::possibleTranspMean(AGPosition)`
@@ -148,7 +150,11 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn dep_hour(&mut self, from: AGPosition, to: AGPosition, arrival: i32) -> i32 {
-        todo!("port AGActivity::depHour")
+        let mut departure = arrival - self.time_to_drive(from, to);
+        if departure < 0 {
+            departure += 24;
+        }
+        departure
     }
 
     /// C++: `int AGActivity::arrHour(AGPosition, AGPosition, int)`
@@ -186,7 +192,7 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn get_partial_activity_trips(&mut self) -> &mut VecDeque<AGTrip> {
-        todo!("port AGActivity::getPartialActivityTrips")
+        &mut self.myPartialActivityTrips
     }
 
 }

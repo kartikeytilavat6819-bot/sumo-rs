@@ -132,6 +132,7 @@ pub type StopParVector = Vec<SUMOVehicleParameter_Stop>;
 
 /// Structure representing possible vehicle parameter
 /// C++ class `SUMOVehicleParameter` (utils/vehicle/SUMOVehicleParameter.h)
+#[derive(Clone)]
 pub struct SUMOVehicleParameter {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -1406,6 +1407,7 @@ impl SUMOVehicleParameter {
 
 /// Definition of vehicle stop (position and duration)
 /// C++ class `SUMOVehicleParameter::Stop` (utils/vehicle/SUMOVehicleParameter.h)
+#[derive(Clone)]
 pub struct SUMOVehicleParameter_Stop {
     /// C++ base class `Parameterised`
     pub base: Parameterised,

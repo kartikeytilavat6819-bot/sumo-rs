@@ -859,7 +859,7 @@ impl MSDevice_Taxi {
             // check how often existing customers appear in the new reservations
             let mut nOccur: BTreeMap<Ptr<MSTransportable>, i32> = BTreeMap::new();
             for &res in reservations.iter() {
-                for &person in res.persons.iter() {
+                for &person in res.persons.values() {
                     if self.myCustomers.contains(&person) {
                         *nOccur.entry(person).or_insert(0) += 1;
                         if !self.myCurrentReservations.contains(&res) {
@@ -900,9 +900,9 @@ impl MSDevice_Taxi {
                 if !redundantPickup.is_empty() {
                     let mut i = 0;
                     while i < reservations.len() {
-                        let isRedundant = reservations[i].persons.iter().any(|p| redundantPickup.contains(p));
+                        let isRedundant = reservations[i].persons.values().any(|p| redundantPickup.contains(p));
                         if isRedundant {
-                            for p in reservations[i].persons.iter() {
+                            for p in reservations[i].persons.values() {
                                 redundantPickup.remove(p);
                             }
                             reservations.remove(i);
@@ -934,7 +934,7 @@ impl MSDevice_Taxi {
         for &res in reservations.iter() {
             self.myCurrentReservations.insert(res);
             let mut isPickup = false;
-            for &person in res.persons.iter() {
+            for &person in res.persons.values() {
                 if !self.myCustomers.contains(&person) {
                     self.myCustomers.insert(person);
                     isPickup = true;
@@ -942,9 +942,9 @@ impl MSDevice_Taxi {
                 }
             }
             if isPickup {
-                let action = format!("pickup {} ({})", ids_to_string(res.persons.iter()), res.id);
+                let action = format!("pickup {} ({})", ids_to_string(res.persons.values()), res.id);
                 self.prepare_stop(&mut tmpEdges, &mut stops, &mut lastPos, res.from, res.fromPos, res.fromStop, &action, res, isPickup);
-                for &transportable in res.persons.iter() {
+                for &transportable in res.persons.values() {
                     if transportable.is_person() {
                         stops.last_mut().unwrap().triggered = true;
                     } else {
@@ -953,7 +953,7 @@ impl MSDevice_Taxi {
                     stops.last_mut().unwrap().permitted.insert(transportable.get_id().to_string());
                     stops.last_mut().unwrap().parametersSet |= STOP_PERMITTED_SET | STOP_TRIGGER_SET;
                 }
-                for &t in res.persons.iter() {
+                for &t in res.persons.values() {
                     stops.last_mut().unwrap().awaitedPersons.insert(t.get_id().to_string());
                 }
 
@@ -963,7 +963,7 @@ impl MSDevice_Taxi {
                     stops.last_mut().unwrap().duration = time2steps(d);
                 }
             } else {
-                let action = format!("dropOff {} ({})", ids_to_string(res.persons.iter()), res.id);
+                let action = format!("dropOff {} ({})", ids_to_string(res.persons.values()), res.id);
                 self.prepare_stop(&mut tmpEdges, &mut stops, &mut lastPos, res.to, res.toPos, res.toStop, &action, res, isPickup);
                 // pay and collect bags
                 let d = holder.get_float_param("device.taxi.dropOffDuration", false, 60.0, false);
@@ -1119,7 +1119,7 @@ impl MSDevice_Taxi {
         // check whether a single reservation has been fulfilled or another customer is part of the reservation
         let current: Vec<Ptr<Reservation>> = self.myCurrentReservations.iter().copied().collect();
         for res in current {
-            let fulfilled = res.persons.len() == 1 && res.persons.contains(&t);
+            let fulfilled = res.persons.len() == 1 && res.persons.values().any(|p| *p == t);
             if fulfilled {
                 // remove reservation from the current dispatch
                 self.myLastDispatch.retain(|x| *x != res);
@@ -1228,7 +1228,7 @@ impl MSDevice_Taxi {
             self.myState &= !(MSDevice_Taxi_TaxiState::PICKUP as i32);
         }
         for res in self.myCurrentReservations.iter() {
-            for cand in res.persons.iter() {
+            for cand in res.persons.values() {
                 if *cand == t {
                     res.m().state = Reservation_ReservationState::ONBOARD;
                     break;
@@ -1317,7 +1317,7 @@ impl MSDevice_Taxi {
             // check whether a single reservation has been fulfilled
             let current: Vec<Ptr<Reservation>> = self.myCurrentReservations.iter().copied().collect();
             for res in current {
-                let fulfilled = res.persons.iter().all(|t| !self.myCustomers.contains(t));
+                let fulfilled = res.persons.values().all(|t| !self.myCustomers.contains(t));
                 if fulfilled {
                     MY_DISPATCHER.with(|d| *d.borrow()).m().fulfilled_reservation(res);
                     self.myCurrentReservations.remove(&res);

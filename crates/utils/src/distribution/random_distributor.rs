@@ -55,6 +55,9 @@ impl<T: PartialEq + Clone> RandomDistributor<T> {
         false
     }
 
+}
+
+impl<T: Clone> RandomDistributor<T> {
     /// Draw a sample; `None` uses the default RNG
     pub fn get(&self, which: Option<&mut SumoRNG>) -> Result<T, ProcessError> {
         if self.my_prob == 0. {

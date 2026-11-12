@@ -10,7 +10,7 @@ until mkdir "$LOCK" 2>/dev/null; do sleep 5; done   # one merge run at a time; m
 trap 'rmdir "$LOCK"' EXIT
 export PATH="$HOME/.cargo/bin:$PATH" CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target-main CARGO_BUILD_JOBS=8
 for id in "$@"; do
-  case "$id" in worktree-agent-*|fix-*) br=$id; wt="" ;; *) br=worktree-agent-$id; wt=.claude/worktrees/agent-$id ;; esac
+  case "$id" in worktree-agent-*|fix-*|local-fill) br=$id; wt="" ;; *) br=worktree-agent-$id; wt=.claude/worktrees/agent-$id ;; esac
   if [ -n "$wt" ] && [ -d "$wt" ] && [ -n "$(git -C "$wt" status --porcelain -- crates)" ]; then
     git -C "$wt" add -A crates && git -C "$wt" commit -qm "Leftover edits (committed on agent's behalf)" -m "Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>"
   fi

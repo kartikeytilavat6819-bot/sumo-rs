@@ -44,7 +44,9 @@ impl RODFDetectorHandler {
     // RODFDetectorHandler::~RODFDetectorHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFDetectorHandler::~RODFDetectorHandler")
+        {
+            // Destructor logic here if needed
+        }
     }
 
     /// C++: `void RODFDetectorHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]

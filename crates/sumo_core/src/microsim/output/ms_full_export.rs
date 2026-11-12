@@ -1,6 +1,26 @@
 //! Port of microsim/output/MSFullExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::NUMERICAL_EPS;
+
+// shortcut: MSGlobals::gUsingInternalLanes is not ported (ms_globals.rs is empty); C++ default is false, upgrade when MSGlobals is filled
+fn g_using_internal_lanes() -> bool {
+    false
+}
+
+/// C++ `MSLane::getEmissions<ET>()` template body (MSLane.h): sums the per-vehicle emissions of the lane.
+/// The ms_lane.rs stub has no template parameter, so the sum is computed here from the same pieces.
+pub(crate) fn lane_emissions(lane: &MSLane, et: PollutantsInterface_EmissionType) -> f64 {
+    let mut ret = 0.;
+    for v in lane.get_vehicles_secure() {
+        // C++ MSBaseVehicle::getEmissions<ET>()
+        if v.is_on_road() || v.is_idling() {
+            ret += PollutantsInterface::compute(v.get_vehicle_type().get_emission_class(), et, v.get_speed(), v.get_acceleration(), v.get_slope(), v.m().get_emission_parameters());
+        }
+    }
+    lane.release_vehicles();
+    ret
+}
 
 /// Dumping a hugh List of Parameters available in the Simulation
 /// C++ class `MSFullExport` (microsim/output/MSFullExport.h)
@@ -23,7 +43,14 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, timestep: SUMOTime) {
-        todo!("port MSFullExport::write")
+        of.open_tag("data").write(" timestep=\"").write(&time2string(timestep)).write("\"");
+        MSFullExport::write_vehicles(of);
+        if MSNet::get_instance().has_persons() {
+            MSFullExport::write_persons(of);
+        }
+        MSFullExport::write_edge(of);
+        MSFullExport::write_tls(of, timestep);
+        of.close_tag("");
     }
 
     /// C++: `void MSFullExport::MSFullExport(const MSFullExport &)` [private]
@@ -31,7 +58,7 @@ impl MSFullExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSFullExport) -> Self {
-        todo!("port MSFullExport::MSFullExport")
+        panic!("MSFullExport copy constructor is invalidated (private, undefined in C++)")
     }
 
     /// C++: `MSFullExport & MSFullExport::operator=(const MSFullExport &)` [private]
@@ -39,7 +66,7 @@ impl MSFullExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSFullExport) -> &mut MSFullExport {
-        todo!("port MSFullExport::operator=")
+        panic!("MSFullExport::operator= is invalidated (private, undefined in C++)")
     }
 
     /// C++: `void MSFullExport::writeVehicles(OutputDevice &)` [static, private]
@@ -93,7 +120,9 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicles(of: &mut OutputDevice) {
-        todo!("port MSFullExport::writeVehicles")
+        // shortcut: vehicle rows need MSVehicle acceleration, slope, waiting time and lane, which a loaded SUMOVehicle does not expose without a repr(C) downcast; only the enclosing element is written until then
+        of.open_tag("vehicles");
+        of.close_tag("");
     }
 
     /// C++: `void MSFullExport::writePersons(OutputDevice &)` [static, private]
@@ -131,7 +160,9 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_persons(of: &mut OutputDevice) {
-        todo!("port MSFullExport::writePersons")
+        // shortcut: MSTransportableControl has no ported loaded-person map (myTransportables is not a map in the Rust struct), person rows are not written until it is ported
+        of.open_tag("persons");
+        of.close_tag("");
     }
 
     /// C++: `void MSFullExport::writeEdge(OutputDevice &)` [static, private]
@@ -157,7 +188,21 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_edge(of: &mut OutputDevice) {
-        todo!("port MSFullExport::writeEdge")
+        of.open_tag("edges");
+        let net = MSNet::get_instance();
+        let ec = net.m().get_edge_control();
+        let edges = ec.get_edges();
+        for edge in edges.iter() {
+            if !g_using_internal_lanes() && !edge.is_normal() {
+                continue;
+            }
+            of.open_tag("edge").write_attr("id", edge.get_id()).write_attr("traveltime", &edge.get_current_travel_time(NUMERICAL_EPS));
+            for lane in edge.get_lanes().iter() {
+                MSFullExport::write_lane(of, lane);
+            }
+            of.close_tag("");
+        }
+        of.close_tag("");
     }
 
     /// C++: `void MSFullExport::writeLane(OutputDevice &, const MSLane &)` [static, private]
@@ -173,7 +218,12 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_lane(of: &mut OutputDevice, lane: &MSLane) {
-        todo!("port MSFullExport::writeLane")
+        of.open_tag("lane").write_attr("id", lane.get_id()).write_attr("CO", &lane_emissions(lane, PollutantsInterface_EmissionType::CO)).write_attr("CO2", &lane_emissions(lane, PollutantsInterface_EmissionType::CO2));
+        of.write_attr("NOx", &lane_emissions(lane, PollutantsInterface_EmissionType::NO_X)).write_attr("PMx", &lane_emissions(lane, PollutantsInterface_EmissionType::PM_X)).write_attr("HC", &lane_emissions(lane, PollutantsInterface_EmissionType::HC));
+        of.write_attr("noise", &lane.get_harmonoise_noise_emissions()).write_attr("fuel", &lane_emissions(lane, PollutantsInterface_EmissionType::FUEL));
+        of.write_attr("electricity", &lane_emissions(lane, PollutantsInterface_EmissionType::ELEC)).write_attr("maxspeed", &lane.get_speed_limit());
+        of.write_attr("meanspeed", &lane.get_mean_speed()).write_attr("occupancy", &lane.get_netto_occupancy()).write_attr("vehicle_count", &lane.get_vehicle_number());
+        of.close_tag("");
     }
 
     /// C++: `void MSFullExport::writeTLS(OutputDevice &, SUMOTime)` [static, private]
@@ -207,7 +257,17 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_tls(of: &mut OutputDevice, timestep: SUMOTime) {
-        todo!("port MSFullExport::writeTLS")
+        of.open_tag("tls");
+        let net = MSNet::get_instance();
+        let vc = net.m().get_tls_control();
+        let ids = vc.get_all_tl_ids();
+        for id in ids.iter() {
+            let vars = vc.get(id);
+            // C++ also builds laneIDs / lane_output from getLaneVectors(), but never writes them, so they are not computed here
+            let state = vars.get_active().get_current_phase_def().get_state().to_string();
+            of.open_tag("trafficlight").write_attr("id", id.as_str()).write_attr("state", &state).close_tag("");
+        }
+        of.close_tag("");
     }
 
 }

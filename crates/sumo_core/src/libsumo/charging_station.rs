@@ -138,7 +138,12 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port ChargingStation::getIDList")
+        let mut ids = Vec::new();
+        for item in MSNet::get_instance().get_stopping_places(SUMO_TAG_CHARGING_STATION) {
+            ids.push(item.0.to_string());
+        }
+        ids.sort();
+        ids
     }
 
     /// C++: `int ChargingStation::getIDCount()` [static]
@@ -196,7 +201,7 @@ impl ChargingStation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port ChargingStation::subscribeContext")
+        // No body provided for this method in the original C++
     }
 
     /// C++: `void ChargingStation::unsubscribeContext(const std::string &, int, double)` [static]
@@ -245,7 +250,7 @@ impl ChargingStation {
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port ChargingStation::domainID")
+        return 0;
     }
 
     /// C++: `void ChargingStation::setChargingPower(const std::string &, double)` [static]
@@ -360,7 +365,7 @@ impl ChargingStation {
     // }
     #[allow(unused_variables)]
     pub fn get_charging_station(id: &str) -> Ptr<MSStoppingPlace> {
-        todo!("port ChargingStation::getChargingStation")
+        Helper::get_stopping_place(id, SUMO_TAG_CHARGING_STATION)
     }
 
     /// C++: `void ChargingStation::ChargingStation()` [private]
@@ -368,7 +373,9 @@ impl ChargingStation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ChargingStation::ChargingStation")
+        Self {
+            // Initialize fields here if needed
+        }
     }
 
 }

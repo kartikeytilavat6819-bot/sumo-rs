@@ -83,3 +83,19 @@ same output text, same floating-point results.
   `let v: Ptr<MSVehicle> = sumo_vehicle_ptr.cast::<MSVehicle>();`. Same for upcasts.
 - dynamic_cast's runtime type check is not available: only cast where the C++ logic guarantees the
   type (e.g. after checking a type flag / id prefix); otherwise leave a `// shortcut:` note.
+
+### MSGlobals
+
+- C++ `MSGlobals::gComputeLC` -> `MSGlobals::compute_lc()` (setter `MSGlobals::set_compute_lc(v)`): every
+  MSGlobals static is ported (microsim/ms_globals.rs) as snake_case without the `g`. Don't stub them anymore.
+- Passing a derived object where the C++ expects a base reference: pass `&ptr` and let Deref coerce
+  (MSVehicle -> MSBaseVehicle -> SUMOVehicle are embedded bases).
+
+### Constructors that register `this`
+
+- If the C++ constructor (or an init() it calls) stores `this` anywhere (registers with a lane/node/edge,
+  adds itself to a container, sets a back-pointer), the Rust `new` MUST return `Box<Self>`: build the
+  struct, `let mut b = Box::new(..)`, then do the registering steps with `Ptr::from_box(&b)` / `Ptr::from_mut(&mut *b)`,
+  and return `b`. Returning `Self` by value makes those stored pointers dangle when the caller moves it.
+- Callers keep the Box alive for the object's lifetime (store it in the owning container, or `Box::leak`
+  with a `// shortcut:` note where C++ ownership is unclear).

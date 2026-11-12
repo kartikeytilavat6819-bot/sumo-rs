@@ -70,7 +70,13 @@ impl MSElecHybridExport {
     // }
     #[allow(unused_variables)]
     pub fn write(of: &mut OutputDevice, veh: Ptr<SUMOVehicle>, timestep: SUMOTime, precision: i32) {
-        todo!("port MSElecHybridExport::write")
+        of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, &time2string(timestep));
+        of.set_precision(precision);
+        if !veh.is_on_road() {
+            return;
+        }
+        // shortcut: getDevice(typeid(MSDevice_ElecHybrid)) takes an unmapped type_info and the result must be downcast to MSDevice_ElecHybrid (no repr(C) layout yet); the battery and vehicle attributes are not written until then
+        of.close_tag("");
     }
 
     /// C++: `void MSElecHybridExport::writeAggregated(OutputDevice &, SUMOTime, int)` [static]
@@ -150,7 +156,10 @@ impl MSElecHybridExport {
     // }
     #[allow(unused_variables)]
     pub fn write_aggregated(of: &mut OutputDevice, timestep: SUMOTime, precision: i32) {
-        todo!("port MSElecHybridExport::writeAggregated")
+        of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, &time2string(timestep));
+        of.set_precision(precision);
+        // shortcut: the vehicle rows need the getDevice(typeid(MSDevice_ElecHybrid)) lookup (unmapped type_info) and MSVehicle attributes; no rows are written until those exist
+        of.close_tag("");
     }
 
     /// C++: `void MSElecHybridExport::MSElecHybridExport(const MSElecHybridExport &)` [private]
@@ -158,7 +167,7 @@ impl MSElecHybridExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSElecHybridExport) -> Self {
-        todo!("port MSElecHybridExport::MSElecHybridExport")
+        panic!("MSElecHybridExport copy constructor is invalidated (private, undefined in C++)")
     }
 
     /// C++: `MSElecHybridExport & MSElecHybridExport::operator=(const MSElecHybridExport &)` [private]
@@ -166,7 +175,7 @@ impl MSElecHybridExport {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSElecHybridExport) -> &mut MSElecHybridExport {
-        todo!("port MSElecHybridExport::operator=")
+        panic!("MSElecHybridExport::operator= is invalidated (private, undefined in C++)")
     }
 
 }

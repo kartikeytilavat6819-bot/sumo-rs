@@ -155,6 +155,40 @@ impl FromAttr for Boundary {
         Ok(Boundary::new(to_double(st[0])?, to_double(st[1])?, to_double(st[2])?, to_double(st[3])?))
     }
 }
+// the real geom::Position / geom::Boundary (same parsing as the stand-ins above)
+impl FromAttr for crate::geom::position::Position {
+    fn invalid_return() -> Self {
+        Self::default()
+    }
+    fn from_attr(value: &str) -> Result<Self, ProcessError> {
+        // only the first position is used
+        if let Some(first) = tokenize_white(value).first() {
+            let pos = tokenize(first, ",");
+            // check that position has X-Y or X-Y-Z
+            if pos.len() != 2 && pos.len() != 3 {
+                return Err(ProcessError::Format("is not a valid position".into()));
+            }
+            let x = to_double(pos[0])?;
+            let y = to_double(pos[1])?;
+            let z = if pos.len() == 3 { to_double(pos[2])? } else { 0. };
+            return Ok(crate::geom::position::Position::new3(x, y, z));
+        }
+        // empty positions aren't allowed
+        Err(ProcessError::Format("is not a valid position".into()))
+    }
+}
+impl FromAttr for crate::geom::boundary::Boundary {
+    fn invalid_return() -> Self {
+        Self::default()
+    }
+    fn from_attr(value: &str) -> Result<Self, ProcessError> {
+        let st = tokenize(value, ",");
+        if st.len() != 4 {
+            return Err(ProcessError::Format("is not a valid boundary".into()));
+        }
+        Ok(crate::geom::boundary::Boundary::from_xy(to_double(st[0])?, to_double(st[1])?, to_double(st[2])?, to_double(st[3])?))
+    }
+}
 macro_rules! from_bijection {
     ($t:ty, $invalid:expr, $bij:expr, $msg:literal) => {
         impl FromAttr for $t {

@@ -1,8 +1,40 @@
 //! Port of microsim/devices/MSDevice_Transportable.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::time::{delta_t, time2steps, time2string};
+
+/// C++ `dynamic_cast<MSStageDriving*>(stage)`
+// shortcut: the stage hierarchy has no runtime downcast yet (MSStage carries no subtype tag), so no stage is
+// treated as MSStageDriving; passenger boarding/unboarding through this path is inert until the downcast exists
+fn stage_driving(stage: Ptr<MSStage>) -> Option<Ptr<MSStageDriving>> {
+    let _ = stage;
+    None
+}
+
+/// C++ `dynamic_cast<MSBaseVehicle*>(...)` on a SUMOVehicle (the base is embedded, so this is an upcast of a container)
+// shortcut: SUMOVehicle -> MSBaseVehicle downcast is not expressible yet; returns null, so the join-vehicle and
+// changeAttached paths are skipped until the vehicle hierarchy provides the downcast
+fn base_vehicle_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
+    let _ = veh;
+    Ptr::default()
+}
+
+/// C++ `static_cast<MSDevice_Taxi*>(veh.getDevice(typeid(MSDevice_Taxi)))`
+// shortcut: device lookup by C++ type id is not ported; no taxi device is found, so taxi customer hooks are skipped
+fn taxi_device_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSDevice_Taxi> {
+    let _ = veh;
+    Ptr::default()
+}
+
+/// C++ `istringstream >> x`: whitespace token parsed as T, default on failure
+fn next_as<T: std::str::FromStr + Default>(bis: &mut std::str::SplitWhitespace) -> T {
+    bis.next().and_then(|s| s.parse::<T>().ok()).unwrap_or_default()
+}
 
 /// C++ class `MSDevice_Transportable` (microsim/devices/MSDevice_Transportable.h)
+// repr(C): the base sits at offset 0 so device pointers can be upcast to MSVehicleDevice (C++ implicit upcast)
+#[repr(C)]
 pub struct MSDevice_Transportable {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,
@@ -42,7 +74,10 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>, isContainer: bool) -> Ptr<MSDevice_Transportable> {
-        todo!("port MSDevice_Transportable::buildVehicleDevices")
+        let id = if isContainer { format!("container_{}", v.get_id()) } else { format!("person_{}", v.get_id()) };
+        let device = Ptr::from_mut(Box::leak(Box::new(MSDevice_Transportable::new(v, &id, isContainer))));
+        into.push(Ptr::from_raw(device.as_raw() as *mut MSVehicleDevice));
+        device
     }
 
     /// C++: `void MSDevice_Transportable::~MSDevice_Transportable() noexcept` [virtual]
@@ -67,7 +102,20 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Transportable::~MSDevice_Transportable")
+        // flush any unfortunate riders still remaining
+        while let Some(&transportable) = self.myTransportables.first() {
+            let kind = if self.myAmContainer { "Removing container '" } else { "Removing person '" };
+            write_warning(&format!("{}{}' at removal of vehicle '{}'", kind, transportable.get_id(), self.myHolder.get_id()));
+            if let Some(stage) = stage_driving(transportable.get_current_stage()) {
+                stage.m().set_vehicle(Ptr::default());
+            }
+            if self.myAmContainer {
+                MSNet::get_instance().m().get_container_control().erase(transportable);
+            } else {
+                MSNet::get_instance().m().get_person_control().erase(transportable);
+            }
+            self.myTransportables.remove(0);
+        }
     }
 
     /// C++: `bool MSDevice_Transportable::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -160,7 +208,94 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Transportable::notifyMove")
+        let holder = self.myHolder;
+        let net = MSNet::get_instance();
+        let currentTime = net.get_current_time_step();
+        if self.myStopped {
+            if !holder.is_stopped() {
+                let freeFlowTimeCorrection = if crate::microsim::ms_globals::use_meso_sim() { time2steps(newPos / newSpeed) } else { 0 };
+                for transportable in self.myTransportables.iter() {
+                    transportable.m().set_departed(currentTime - freeFlowTimeCorrection);
+                }
+                self.myStopped = false;
+            }
+        } else {
+            if holder.is_stopped() {
+                self.myStopped = true;
+                let stop = holder.m().get_next_stop_mutable();
+                let joinVeh = base_vehicle_of(net.m().get_vehicle_control().get_vehicle(&stop.pars.join));
+                let boardingDuration = holder.get_vehicle_type().get_loading_duration(!self.myAmContainer);
+                let mut numUnloaded = 0;
+                let mut i = 0usize;
+                while i < self.myTransportables.len() {
+                    let transportable = self.myTransportables[i];
+                    let stage = stage_driving(transportable.get_current_stage());
+                    let canLeave = stage.is_some_and(|s| s.m().can_leave_vehicle(transportable, &*holder, &*stop));
+                    if canLeave && !Self::will_transfer_at_join(transportable, joinVeh) {
+                        let timeForNext: &mut SUMOTime = if self.myAmContainer { &mut stop.timeToLoadNextContainer } else { &mut stop.timeToBoardNextPerson };
+                        let taxiDevice = taxi_device_of(holder);
+                        if !taxiDevice.is_null() && *timeForNext == 0 && !crate::microsim::ms_globals::use_meso_sim() {
+                            // taxi passengers must leave at the end of the stop duration
+                            *timeForNext = stop.pars.started + stop.pars.duration;
+                        }
+                        if *timeForNext - delta_t() > currentTime {
+                            // try deboarding again in the next step
+                            self.myStopped = false;
+                            break;
+                        }
+                        if let Some(stage) = stage {
+                            let destinationStop = stage.get_destination_stop();
+                            if !destinationStop.is_null() {
+                                destinationStop.m().add_transportable(transportable, -1);
+                            }
+                        }
+
+                        let mut arrivalTime = currentTime;
+                        if crate::microsim::ms_globals::use_meso_sim() {
+                            // no boarding / unboarding time in meso
+                            arrivalTime += 1;
+                        } else {
+                            let boardingTime = ((boardingDuration as f64) * transportable.get_vehicle_type().get_boarding_factor()) as SUMOTime;
+                            if *timeForNext > currentTime - delta_t() {
+                                *timeForNext += boardingTime;
+                            } else {
+                                *timeForNext = currentTime + boardingTime;
+                            }
+                        }
+                        //ensure that vehicle stops long enough for deboarding
+                        stop.duration = std::cmp::max(stop.duration, *timeForNext - currentTime);
+
+                        holder.m().remove_transportable_mass(transportable);
+                        self.myTransportables.remove(i); // erase first in case proceed throws an exception
+                        numUnloaded += 1;
+                        if !taxiDevice.is_null() {
+                            taxiDevice.m().customer_arrived(transportable);
+                        }
+                        if !transportable.m().proceed(net, arrivalTime, false) {
+                            if self.myAmContainer {
+                                net.m().get_container_control().erase(transportable);
+                            } else {
+                                net.m().get_person_control().erase(transportable);
+                            }
+                        }
+                        if MSStopOut::active() {
+                            let vehicle = holder;
+                            if self.myAmContainer {
+                                MSStopOut::get_instance().m().unloaded_containers(vehicle, 1);
+                            } else {
+                                MSStopOut::get_instance().m().unloaded_persons(vehicle, 1);
+                            }
+                        }
+                        continue;
+                    }
+                    i += 1;
+                }
+                if numUnloaded != 0 {
+                    self.change_attached();
+                }
+            }
+        }
+        true
     }
 
     /// C++: `bool MSDevice_Transportable::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -181,7 +316,17 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Transportable::notifyEnter")
+        if matches!(reason, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
+            let currentTime = MSNet::get_instance().get_current_time_step();
+            for transportable in self.myTransportables.iter() {
+                transportable.m().set_departed(currentTime);
+            }
+        }
+        if crate::microsim::ms_globals::use_meso_sim() {
+            // to trigger vehicle leaving
+            self.notify_move(veh, -1., -1., -1.);
+        }
+        true
     }
 
     /// C++: `bool MSDevice_Transportable::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -210,7 +355,29 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Transportable::notifyLeave")
+        if (reason as i32) >= (MSMoveReminder_Notification::NOTIFICATION_ARRIVED as i32) {
+            let net = MSNet::get_instance();
+            while !self.myTransportables.is_empty() {
+                let transportable = self.myTransportables[0];
+                let tc = if self.myAmContainer { net.m().get_container_control() } else { net.m().get_person_control() };
+                if transportable.get_destination() != veh.get_edge() {
+                    write_warningf!(
+                        "Teleporting % '%' from vehicle destination edge '%' to intended destination edge '%' time=%",
+                        if self.myAmContainer { "container" } else { "person" },
+                        transportable.get_id(),
+                        veh.get_edge().get_id(),
+                        transportable.get_destination().get_id(),
+                        time2string(net.get_current_time_step())
+                    );
+                    tc.register_teleport_wrong_dest();
+                }
+                if !transportable.m().proceed(net, net.get_current_time_step(), true) {
+                    tc.erase(transportable);
+                }
+                self.myTransportables.remove(0);
+            }
+        }
+        true
     }
 
     /// C++: `const std::string MSDevice_Transportable::deviceName() const` [const, virtual]
@@ -220,7 +387,7 @@ impl MSDevice_Transportable {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Transportable::deviceName")
+        if self.myAmContainer { "container".to_string() } else { "person".to_string() }
     }
 
     /// C++: `std::string MSDevice_Transportable::getParameter(const std::string &) const` [const, virtual]
@@ -238,7 +405,12 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Transportable::getParameter")
+        if key == "IDList" {
+            let ids: Vec<String> = self.myTransportables.iter().map(|t| t.get_id().to_string()).collect();
+            return ids.join(" ");
+        }
+        // C++ throws InvalidArgument here; the skeleton signature has no error channel
+        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
     }
 
     /// C++: `void MSDevice_Transportable::addTransportable(MSTransportable *)`
@@ -265,7 +437,23 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSDevice_Transportable::addTransportable")
+        let holder = self.myHolder;
+        if self.myTransportables.is_empty() {
+            self.myOriginalType = Ptr::new(holder.get_vehicle_type());
+        }
+        self.myTransportables.push(transportable);
+        if MSStopOut::active() {
+            if self.myAmContainer {
+                MSStopOut::get_instance().m().loaded_containers(holder, 1);
+            } else {
+                MSStopOut::get_instance().m().loaded_persons(holder, 1);
+            }
+        }
+        let taxiDevice = taxi_device_of(holder);
+        if !taxiDevice.is_null() {
+            taxiDevice.m().customer_entered(transportable);
+        }
+        self.change_attached();
     }
 
     /// C++: `void MSDevice_Transportable::removeTransportable(MSTransportable *)`
@@ -292,7 +480,22 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSDevice_Transportable::removeTransportable")
+        if let Some(pos) = self.myTransportables.iter().position(|t| *t == transportable) {
+            let holder = self.myHolder;
+            self.myTransportables.remove(pos);
+            if MSStopOut::active() && holder.is_stopped() {
+                if self.myAmContainer {
+                    MSStopOut::get_instance().m().unloaded_containers(holder, 1);
+                } else {
+                    MSStopOut::get_instance().m().unloaded_persons(holder, 1);
+                }
+            }
+            let taxiDevice = taxi_device_of(holder);
+            if !taxiDevice.is_null() {
+                taxiDevice.m().customer_arrived(transportable);
+            }
+            self.change_attached();
+        }
     }
 
     /// C++: `bool MSDevice_Transportable::anyLeavingAtStop(const MSStop &) const` [const]
@@ -308,7 +511,13 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn any_leaving_at_stop(&self, stop: &MSStop) -> bool {
-        todo!("port MSDevice_Transportable::anyLeavingAtStop")
+        for t in self.myTransportables.iter() {
+            let stage = stage_driving(t.get_current_stage());
+            if stage.is_some_and(|s| s.m().can_leave_vehicle(*t, &*self.myHolder, stop)) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSDevice_Transportable::transferAtSplitOrJoin(MSBaseVehicle *)`
@@ -343,7 +552,33 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn transfer_at_split_or_join(&mut self, otherVeh: Ptr<MSBaseVehicle>) {
-        todo!("port MSDevice_Transportable::transferAtSplitOrJoin")
+        let net = MSNet::get_instance();
+        let holder = self.myHolder;
+        let stop = holder.get_next_stop();
+        // C++ SUMOVehicle base view of otherVeh (MSBaseVehicle embeds its SUMOVehicle as `base`)
+        let otherSV: Ptr<SUMOVehicle> = Ptr::from_mut(&mut otherVeh.m().base);
+        let mut i = 0usize;
+        while i < self.myTransportables.len() {
+            let t = self.myTransportables[i];
+            if t.get_num_remaining_stages() > 1 {
+                let stage = stage_driving(t.get_current_stage());
+                if stage.is_some_and(|s| s.m().can_leave_vehicle(t, &*holder, stop)) {
+                    let stage2 = stage_driving(t.get_next_stage(1));
+                    if let Some(stage2) = stage2.filter(|s| s.is_waiting_for(otherSV)) {
+                        self.myTransportables.remove(i); // erase first
+                        // proceeding registers t as waiting on edge
+                        t.m().proceed(net, net.get_current_time_step(), false);
+                        let tc = if t.is_person() { net.m().get_person_control() } else { net.m().get_container_control() };
+                        tc.abort_waiting_for_vehicle(t);
+                        t.get_edge().remove_transportable(t);
+                        otherVeh.m().add_transportable(t);
+                        stage2.m().set_vehicle(otherSV);
+                        continue;
+                    }
+                }
+            }
+            i += 1;
+        }
     }
 
     /// C++: `void MSDevice_Transportable::saveState(OutputDevice &) const` [const, virtual]
@@ -367,7 +602,18 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDevice_Transportable::saveState")
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.base.get_id());
+        let mut nextPerson: SUMOTime = 0;
+        let mut nextContainer: SUMOTime = 0;
+        if self.myHolder.is_stopped() {
+            nextPerson = self.myHolder.get_next_stop().timeToBoardNextPerson;
+            nextContainer = self.myHolder.get_next_stop().timeToLoadNextContainer;
+        }
+        // C++ `internals << myStopped` writes a bool as 0/1
+        let internals = format!("{} {} {}", self.myStopped as i32, nextPerson, nextContainer);
+        out.write_attr(SUMO_ATTR_STATE, &internals);
+        out.close_tag("");
     }
 
     /// C++: `void MSDevice_Transportable::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -390,7 +636,19 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSDevice_Transportable::loadState")
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        // C++ `bis >> bool` reads a 0/1 integer
+        self.myStopped = next_as::<i32>(&mut bis) != 0;
+        let nextPerson: SUMOTime = next_as(&mut bis);
+        let nextContainer: SUMOTime = next_as(&mut bis);
+        if nextPerson != 0 || nextContainer != 0 {
+            debug_assert!(self.myHolder.has_stops());
+            let stop = self.myHolder.m().get_next_stop_mutable();
+            stop.timeToBoardNextPerson = nextPerson;
+            stop.timeToLoadNextContainer = nextContainer;
+            stop.duration = std::cmp::max(stop.duration, std::cmp::max(nextPerson, nextContainer) - MSNet::get_instance().get_current_time_step());
+        }
     }
 
     /// C++: `int MSDevice_Transportable::size() const` [const]
@@ -400,7 +658,7 @@ impl MSDevice_Transportable {
     //     }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port MSDevice_Transportable::size")
+        self.myTransportables.len() as i32
     }
 
     /// C++: `const std::vector<MSTransportable *> & MSDevice_Transportable::getTransportables() const` [const]
@@ -410,7 +668,7 @@ impl MSDevice_Transportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_transportables(&self) -> &Vec<Ptr<MSTransportable>> {
-        todo!("port MSDevice_Transportable::getTransportables")
+        &self.myTransportables
     }
 
     /// C++: `std::vector<Position> & MSDevice_Transportable::getUnboardingPositions()`
@@ -419,7 +677,7 @@ impl MSDevice_Transportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_unboarding_positions(&mut self) -> &mut Vec<Position> {
-        todo!("port MSDevice_Transportable::getUnboardingPositions")
+        &mut self.myUnboardingPositions
     }
 
     /// C++: `bool MSDevice_Transportable::willTransferAtJoin(const MSTransportable *, const MSBaseVehicle *)` [static]
@@ -434,7 +692,11 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn will_transfer_at_join(t: Ptr<MSTransportable>, joinVeh: Ptr<MSBaseVehicle>) -> bool {
-        todo!("port MSDevice_Transportable::willTransferAtJoin")
+        if !joinVeh.is_null() && t.get_num_remaining_stages() > 1 {
+            // C++ dereferences dynamic_cast<MSStageDriving*>(getNextStage(1)) without a null check
+            return stage_driving(t.get_next_stage(1)).is_some_and(|s| s.is_waiting_for(Ptr::from_mut(&mut joinVeh.m().base)));
+        }
+        false
     }
 
     /// C++: `void MSDevice_Transportable::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -452,7 +714,10 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        todo!("port MSDevice_Transportable::notifyMoveInternal")
+        // C++ const_cast<SUMOTrafficObject&>(veh): the object is the holder vehicle, which the device owns
+        let vp: Ptr<SUMOTrafficObject> = Ptr::from_raw(veh as *const SUMOTrafficObject as *mut SUMOTrafficObject);
+        let maxSpeed = veh.get_edge().get_vehicle_max_speed(vp);
+        self.notify_move(vp.m(), -1., travelledDistanceFrontOnLane, maxSpeed);
     }
 
     /// C++: `void MSDevice_Transportable::changeAttached()` [protected]
@@ -486,7 +751,40 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn change_attached(&mut self) {
-        todo!("port MSDevice_Transportable::changeAttached")
+        if !self.myLoadedType.is_null() {
+            let loaded = self.myLoadedType;
+            let perAttached = if self.myAmContainer { loaded.get_container_capacity() } else { loaded.get_person_capacity() };
+            if perAttached > 0 {
+                let holder = self.myHolder;
+                let veh = base_vehicle_of(holder);
+                let oldVC = holder.get_v_class();
+                // C++ integer division before ceil()
+                let numAttached = ((self.myTransportables.len() as i32 / perAttached) as f64).ceil();
+                if numAttached > 0. {
+                    // shortcut: the singular-type update needs the MSBaseVehicle downcast (see base_vehicle_of)
+                    if !veh.is_null() {
+                        let stype = veh.m().get_singular_type();
+                        stype.set_v_class(loaded.get_vehicle_class());
+                        stype.set_gui_shape(loaded.get_gui_shape());
+                        let length = self.myOriginalType.get_length() + numAttached * loaded.get_length();
+                        stype.set_length(&length);
+                        stype.set_mass(self.myOriginalType.get_mass() + numAttached * loaded.get_mass());
+                        let mut sparamPtr = Ptr::new(stype.get_parameter());
+                        let sparam = sparamPtr.m();
+                        sparam.carriageLength = loaded.get_parameter().carriageLength;
+                        sparam.locomotiveLength = loaded.get_parameter().locomotiveLength;
+                        sparam.carriageGap = loaded.get_parameter().carriageGap;
+                    }
+                } else {
+                    holder.m().replace_vehicle_type(self.myOriginalType);
+                }
+                if oldVC != holder.get_v_class() && !veh.is_null() {
+                    let info = format!("device.{}.loadedType", self.device_name());
+                    let router = holder.get_router_tt();
+                    veh.m().reroute(MSNet::get_instance().get_current_time_step(), &info, router, false, false, false, Ptr::default());
+                }
+            }
+        }
     }
 
     /// C++: `void MSDevice_Transportable::MSDevice_Transportable(SUMOVehicle &, const std::string &, const bool)` [private]
@@ -509,7 +807,28 @@ impl MSDevice_Transportable {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, isContainer: bool) -> Self {
-        todo!("port MSDevice_Transportable::MSDevice_Transportable")
+        let deviceName = if isContainer { "container" } else { "person" };
+        let key = format!("device.{}.loadedType", deviceName);
+        let loadedTypeID = holder.get_string_param(&key, false, "");
+        let mut myLoadedType: Ptr<MSVehicleType> = Ptr::default();
+        if loadedTypeID != "" {
+            myLoadedType = MSNet::get_instance().m().get_vehicle_control().get_v_type(&loadedTypeID, MSDevice::get_equipment_rng(), false);
+            if myLoadedType.is_null() {
+                // C++ throws InvalidArgument (TLF text); the skeleton signature has no error channel
+                panic!("Vehicle type '{}' in parameter '{}' of vehicle '{}' is not known.", loadedTypeID, key, holder.get_id());
+            }
+        }
+        let myStopped = holder.is_stopped();
+        let myOriginalType = Ptr::new(holder.get_vehicle_type());
+        Self {
+            base: MSVehicleDevice::new(holder, id),
+            myAmContainer: isContainer,
+            myTransportables: Vec::new(),
+            myStopped,
+            myUnboardingPositions: Vec::new(),
+            myOriginalType,
+            myLoadedType,
+        }
     }
 
     /// C++: `void MSDevice_Transportable::MSDevice_Transportable(const MSDevice_Transportable &)` [private]
@@ -517,7 +836,8 @@ impl MSDevice_Transportable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Transportable) -> Self {
-        todo!("port MSDevice_Transportable::MSDevice_Transportable")
+        // C++ declares this copy constructor private and never defines it: any use is a link error there
+        panic!("MSDevice_Transportable is not copyable (C++ declares the copy constructor private and undefined)")
     }
 
     /// C++: `MSDevice_Transportable & MSDevice_Transportable::operator=(const MSDevice_Transportable &)` [private]
@@ -525,7 +845,8 @@ impl MSDevice_Transportable {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Transportable) -> &mut MSDevice_Transportable {
-        todo!("port MSDevice_Transportable::operator=")
+        // C++ declares the assignment operator private and never defines it
+        panic!("MSDevice_Transportable is not assignable (C++ declares operator= private and undefined)")
     }
 
 }

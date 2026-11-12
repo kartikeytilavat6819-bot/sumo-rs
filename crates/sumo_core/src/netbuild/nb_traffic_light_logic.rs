@@ -47,7 +47,15 @@ impl NBTrafficLightLogic {
     //     myType(type) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, subid: &str, noLinks: i32, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        todo!("port NBTrafficLightLogic::NBTrafficLightLogic")
+        Self {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myNumLinks: noLinks,
+            mySubID: subid.to_string(),
+            myOffset: offset,
+            myPhases: Vec::new(),
+            myType: type_,
+        }
     }
 
     /// C++: `void NBTrafficLightLogic::NBTrafficLightLogic(const NBTrafficLightLogic *)`
@@ -63,7 +71,17 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(logic: Ptr<NBTrafficLightLogic>) -> Self {
-        todo!("port NBTrafficLightLogic::NBTrafficLightLogic")
+        let mut ret = Self {
+            base: Named::new(logic.get_id()),
+            base2: Parameterised::new(),
+            myNumLinks: logic.myNumLinks,
+            mySubID: logic.get_program_id().to_string(),
+            myOffset: logic.get_offset(),
+            myPhases: logic.myPhases.clone(),
+            myType: logic.get_type(),
+        };
+        ret.base2.update_parameters(logic.base2.get_parameters_map());
+        ret
     }
 
     /// C++: `void NBTrafficLightLogic::~NBTrafficLightLogic() noexcept` [virtual]
@@ -71,7 +89,7 @@ impl NBTrafficLightLogic {
     // NBTrafficLightLogic::~NBTrafficLightLogic() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBTrafficLightLogic::~NBTrafficLightLogic")
+        // C++ destructor body is empty
     }
 
     /// C++: `void NBTrafficLightLogic::addStep(const SUMOTime, const std::string &, const std::vector<int> &, const std::string &, const int)`
@@ -90,7 +108,8 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn add_step(&mut self, duration: SUMOTime, state: &str, next: &Vec<i32>, name: &str, index: i32) {
-        todo!("port NBTrafficLightLogic::addStep")
+        use crate::netbuild::nb_traffic_light_definition::NBTrafficLightDefinition_UNSPECIFIED_DURATION as U;
+        self.add_step_2(duration, state, U, U, U, U, U, U, U, name, next, index)
     }
 
     /// C++: `void NBTrafficLightLogic::addStep(const SUMOTime, const std::string &, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const SUMOTime, const std::string &, const std::vector<int> &, int)`
@@ -123,7 +142,25 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn add_step_2(&mut self, duration: SUMOTime, state: &str, minDur: SUMOTime, maxDur: SUMOTime, earliestEnd: SUMOTime, latestEnd: SUMOTime, vehExt: SUMOTime, yellow: SUMOTime, red: SUMOTime, name: &str, next: &Vec<i32>, index: i32) {
-        todo!("port NBTrafficLightLogic::addStep")
+        // check state size
+        if self.myNumLinks == 0 {
+            // initialize
+            self.myNumLinks = state.len() as i32;
+        } else if state.len() as i32 != self.myNumLinks {
+            panic!("{}", ProcessError::new(format!("When adding phase to tlLogic '{}': state length of {} does not match declared number of links {}", self.get_id(), state.len(), self.myNumLinks)));
+        }
+        // check state contents
+        if let Some(illegal) = state.find(|c: char| !utils::xml::sumo_xml_definitions::ALLOWED_TLS_LINKSTATES.contains(c)) {
+            let ch = state[illegal..].chars().next().unwrap();
+            panic!("{}", ProcessError::new(format!("When adding phase: illegal character '{}' in state", ch)));
+        }
+        // interpret index
+        let mut index = index;
+        if index < 0 || index >= self.myPhases.len() as i32 {
+            // insert at the end
+            index = self.myPhases.len() as i32;
+        }
+        self.myPhases.insert(index as usize, NBTrafficLightLogic_PhaseDefinition::new(duration, state, minDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, next, name));
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseState(int, int, LinkState)`
@@ -137,7 +174,10 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_state(&mut self, phaseIndex: i32, tlIndex: i32, linkState: LinkState) {
-        todo!("port NBTrafficLightLogic::setPhaseState")
+        let phaseState = &mut self.myPhases[phaseIndex as usize].state;
+        let i = tlIndex as usize;
+        // C++ writes one char in place; the state is ASCII so byte index == char index
+        phaseState.replace_range(i..i + 1, &((linkState as u8) as char).to_string());
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseDuration(int, SUMOTime)`
@@ -149,7 +189,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_duration(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseDuration")
+        self.myPhases[phaseIndex as usize].duration = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseMinDuration(int, SUMOTime)`
@@ -161,7 +201,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_min_duration(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseMinDuration")
+        self.myPhases[phaseIndex as usize].minDur = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseMaxDuration(int, SUMOTime)`
@@ -173,7 +213,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_max_duration(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseMaxDuration")
+        self.myPhases[phaseIndex as usize].maxDur = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseEarliestEnd(int, SUMOTime)`
@@ -185,7 +225,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_earliest_end(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseEarliestEnd")
+        self.myPhases[phaseIndex as usize].earliestEnd = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseLatestEnd(int, SUMOTime)`
@@ -197,7 +237,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_latest_end(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseLatestEnd")
+        self.myPhases[phaseIndex as usize].latestEnd = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseVehExt(int, SUMOTime)`
@@ -209,7 +249,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_veh_ext(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseVehExt")
+        self.myPhases[phaseIndex as usize].vehExt = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseYellow(int, SUMOTime)`
@@ -221,7 +261,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_yellow(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseYellow")
+        self.myPhases[phaseIndex as usize].yellow = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseRed(int, SUMOTime)`
@@ -233,7 +273,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_red(&mut self, phaseIndex: i32, duration: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setPhaseRed")
+        self.myPhases[phaseIndex as usize].red = duration;
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseNext(int, const std::vector<int> &)`
@@ -245,7 +285,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_next(&mut self, phaseIndex: i32, next: &Vec<i32>) {
-        todo!("port NBTrafficLightLogic::setPhaseNext")
+        self.myPhases[phaseIndex as usize].next = next.clone();
     }
 
     /// C++: `void NBTrafficLightLogic::setPhaseName(int, const std::string &)`
@@ -257,7 +297,7 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_phase_name(&mut self, phaseIndex: i32, name: &str) {
-        todo!("port NBTrafficLightLogic::setPhaseName")
+        self.myPhases[phaseIndex as usize].name = name.to_string();
     }
 
     /// C++: `void NBTrafficLightLogic::overrideState(int, const char)`
@@ -271,7 +311,10 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn override_state(&mut self, phaseIndex: i32, c: i8) {
-        todo!("port NBTrafficLightLogic::overrideState")
+        let p = &mut self.myPhases[phaseIndex as usize];
+        let ch = (c as u8) as char;
+        // every byte of the (ASCII) state is replaced by c
+        p.state = p.state.chars().map(|_| ch).collect();
     }
 
     /// C++: `void NBTrafficLightLogic::deletePhase(int)`
@@ -285,7 +328,10 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn delete_phase(&mut self, index: i32) {
-        todo!("port NBTrafficLightLogic::deletePhase")
+        if index >= self.myPhases.len() as i32 {
+            panic!("{}", InvalidArgument(format!("Index {} out of range for logic with {} phases.", index, self.myPhases.len())).0);
+        }
+        self.myPhases.remove(index as usize);
     }
 
     /// C++: `void NBTrafficLightLogic::swapPhase(int, int)`
@@ -306,7 +352,14 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn swap_phase(&mut self, indexPhaseA: i32, indexPhaseB: i32) {
-        todo!("port NBTrafficLightLogic::swapPhase")
+        if indexPhaseA >= self.myPhases.len() as i32 {
+            panic!("{}", InvalidArgument(format!("Index {} out of range for logic with {} phases.", indexPhaseA, self.myPhases.len())).0);
+        }
+        if indexPhaseB >= self.myPhases.len() as i32 {
+            panic!("{}", InvalidArgument(format!("Index {} out of range for logic with {} phases.", indexPhaseB, self.myPhases.len())).0);
+        }
+        // declare auxiliar PhaseDefinition and swap
+        self.myPhases.swap(indexPhaseA as usize, indexPhaseB as usize);
     }
 
     /// C++: `void NBTrafficLightLogic::swapfirstPhase()`
@@ -319,7 +372,8 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn swapfirst_phase(&mut self) {
-        todo!("port NBTrafficLightLogic::swapfirstPhase")
+        let firstPhase = self.myPhases.remove(0);
+        self.myPhases.push(firstPhase);
     }
 
     /// C++: `void NBTrafficLightLogic::swaplastPhase()`
@@ -332,7 +386,8 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn swaplast_phase(&mut self) {
-        todo!("port NBTrafficLightLogic::swaplastPhase")
+        let lastPhase = self.myPhases.pop().unwrap();
+        self.myPhases.insert(0, lastPhase);
     }
 
     /// C++: `void NBTrafficLightLogic::setStateLength(int, LinkState)`
@@ -352,7 +407,18 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn set_state_length(&mut self, numLinks: i32, fill: LinkState) {
-        todo!("port NBTrafficLightLogic::setStateLength")
+        if self.myNumLinks > numLinks {
+            for p in self.myPhases.iter_mut() {
+                // substr(0, numLinks) clamps like C++
+                p.state = p.state.chars().take(numLinks as usize).collect();
+            }
+        } else {
+            let add: String = std::iter::repeat((fill as u8) as char).take((numLinks - self.myNumLinks) as usize).collect();
+            for p in self.myPhases.iter_mut() {
+                p.state.push_str(&add);
+            }
+        }
+        self.myNumLinks = numLinks;
     }
 
     /// C++: `void NBTrafficLightLogic::deleteStateIndex(int)`
@@ -368,7 +434,10 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn delete_state_index(&mut self, index: i32) {
-        todo!("port NBTrafficLightLogic::deleteStateIndex")
+        for p in self.myPhases.iter_mut() {
+            p.state.remove(index as usize);
+        }
+        self.myNumLinks -= 1;
     }
 
     /// C++: `void NBTrafficLightLogic::resetPhases()`
@@ -380,7 +449,8 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn reset_phases(&mut self) {
-        todo!("port NBTrafficLightLogic::resetPhases")
+        self.myNumLinks = 0;
+        self.myPhases.clear();
     }
 
     /// C++: `void NBTrafficLightLogic::closeBuilding(bool)`
@@ -428,7 +498,43 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn close_building(&mut self, checkVarDurations: bool) {
-        todo!("port NBTrafficLightLogic::closeBuilding")
+        use crate::netbuild::nb_traffic_light_definition::NBTrafficLightDefinition_UNSPECIFIED_DURATION as U;
+        let mut i: i32 = 0;
+        while i < self.myPhases.len() as i32 - 1 {
+            let iu = i as usize;
+            if self.myPhases[iu].state != self.myPhases[iu + 1].state || self.myPhases[iu].next.len() > 0 || self.myPhases[iu + 1].next.len() > 0 || self.myPhases[iu].name != self.myPhases[iu + 1].name {
+                i += 1;
+                continue;
+            }
+            let nextDuration = self.myPhases[iu + 1].duration;
+            self.myPhases[iu].duration += nextDuration;
+            if self.myPhases[iu + 1].minDur != U {
+                if self.myPhases[iu].minDur != U {
+                    let v = self.myPhases[iu + 1].minDur;
+                    self.myPhases[iu].minDur += v;
+                } else {
+                    self.myPhases[iu].minDur = self.myPhases[iu + 1].minDur;
+                }
+            }
+            if self.myPhases[iu + 1].maxDur != U {
+                if self.myPhases[iu].maxDur != U {
+                    let v = self.myPhases[iu + 1].maxDur;
+                    self.myPhases[iu].maxDur += v;
+                } else {
+                    self.myPhases[iu].maxDur = self.myPhases[iu + 1].maxDur;
+                }
+            }
+            self.myPhases.remove(iu + 1);
+        }
+        // check if actuated lights are defined correctly
+        if checkVarDurations {
+            if self.myType != TrafficLightType::STATIC {
+                let found = self.myPhases.iter().any(|p| p.minDur != U || p.maxDur != U);
+                if !found {
+                    write_warningf!("Non-static traffic light '%' does not define variable phase length.", self.get_id());
+                }
+            }
+        }
     }
 
     /// C++: `SUMOTime NBTrafficLightLogic::getDuration() const` [const]
@@ -443,7 +549,11 @@ impl NBTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port NBTrafficLightLogic::getDuration")
+        let mut duration: SUMOTime = 0;
+        for p in self.myPhases.iter() {
+            duration += p.duration;
+        }
+        duration
     }
 
     /// C++: `void NBTrafficLightLogic::setOffset(SUMOTime)`
@@ -453,7 +563,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_offset(&mut self, offset: SUMOTime) {
-        todo!("port NBTrafficLightLogic::setOffset")
+        self.myOffset = offset;
     }
 
     /// C++: `const std::string & NBTrafficLightLogic::getProgramID() const` [const]
@@ -463,7 +573,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_program_id(&self) -> &str {
-        todo!("port NBTrafficLightLogic::getProgramID")
+        &self.mySubID
     }
 
     /// C++: `const std::vector<PhaseDefinition> & NBTrafficLightLogic::getPhases() const` [const]
@@ -473,7 +583,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_phases(&self) -> &Vec<NBTrafficLightLogic_PhaseDefinition> {
-        todo!("port NBTrafficLightLogic::getPhases")
+        &self.myPhases
     }
 
     /// C++: `void NBTrafficLightLogic::copyPhase(const int, const int)`
@@ -483,7 +593,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn copy_phase(&mut self, origin: i32, destination: i32) {
-        todo!("port NBTrafficLightLogic::copyPhase")
+        self.myPhases[destination as usize] = self.myPhases[origin as usize].clone();
     }
 
     /// C++: `SUMOTime NBTrafficLightLogic::getOffset() const` [const]
@@ -493,7 +603,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_offset(&self) -> SUMOTime {
-        todo!("port NBTrafficLightLogic::getOffset")
+        self.myOffset
     }
 
     /// C++: `int NBTrafficLightLogic::getNumLinks()`
@@ -503,7 +613,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_num_links(&mut self) -> i32 {
-        todo!("port NBTrafficLightLogic::getNumLinks")
+        self.myNumLinks
     }
 
     /// C++: `TrafficLightType NBTrafficLightLogic::getType() const` [const]
@@ -513,7 +623,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> TrafficLightType {
-        todo!("port NBTrafficLightLogic::getType")
+        self.myType
     }
 
     /// C++: `void NBTrafficLightLogic::setType(TrafficLightType)`
@@ -523,7 +633,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: TrafficLightType) {
-        todo!("port NBTrafficLightLogic::setType")
+        self.myType = type_;
     }
 
     /// C++: `void NBTrafficLightLogic::setProgramID(const std::string &)`
@@ -533,7 +643,7 @@ impl NBTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
-        todo!("port NBTrafficLightLogic::setProgramID")
+        self.mySubID = programID.to_string();
     }
 
     /// C++: `NBTrafficLightLogic & NBTrafficLightLogic::operator=(const NBTrafficLightLogic &)` [private]
@@ -541,13 +651,15 @@ impl NBTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBTrafficLightLogic) -> &mut NBTrafficLightLogic {
-        todo!("port NBTrafficLightLogic::operator=")
+        // C++ declares operator= private with no definition, so it can never be called
+        unreachable!("NBTrafficLightLogic::operator= is declared private and not defined in C++")
     }
 
 }
 
 /// The definition of a single phase of the logic
 /// C++ class `NBTrafficLightLogic::PhaseDefinition` (netbuild/NBTrafficLightLogic.h)
+#[derive(Clone)]
 pub struct NBTrafficLightLogic_PhaseDefinition {
     /// The duration of the phase in s
     pub duration: SUMOTime,
@@ -593,7 +705,19 @@ impl NBTrafficLightLogic_PhaseDefinition {
     //         { }
     #[allow(unused_variables)]
     pub fn new(duration_: SUMOTime, state_: &str, minDur_: SUMOTime, maxDur_: SUMOTime, earliestEnd_: SUMOTime, latestEnd_: SUMOTime, vehExt_: SUMOTime, yellow_: SUMOTime, red_: SUMOTime, next_: &Vec<i32>, name_: &str) -> Self {
-        todo!("port PhaseDefinition::PhaseDefinition")
+        Self {
+            duration: duration_,
+            state: state_.to_string(),
+            minDur: minDur_,
+            maxDur: maxDur_,
+            earliestEnd: earliestEnd_,
+            latestEnd: latestEnd_,
+            vehExt: vehExt_,
+            yellow: yellow_,
+            red: red_,
+            next: next_.clone(),
+            name: name_.to_string(),
+        }
     }
 
     /// C++: `void PhaseDefinition::~PhaseDefinition() noexcept`
@@ -601,7 +725,7 @@ impl NBTrafficLightLogic_PhaseDefinition {
     // ~PhaseDefinition() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PhaseDefinition::~PhaseDefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool PhaseDefinition::operator!=(const PhaseDefinition &) const` [const]
@@ -618,7 +742,14 @@ impl NBTrafficLightLogic_PhaseDefinition {
     //         }
     #[allow(unused_variables)]
     pub fn ne_op(&self, pd: &NBTrafficLightLogic_PhaseDefinition) -> bool {
-        todo!("port PhaseDefinition::operator!=")
+        pd.duration != self.duration
+            || pd.minDur != self.minDur
+            || pd.maxDur != self.maxDur
+            || pd.earliestEnd != self.earliestEnd
+            || pd.latestEnd != self.latestEnd
+            || pd.state != self.state
+            || pd.next != self.next
+            || pd.name != self.name
     }
 
 }

@@ -699,7 +699,7 @@ impl MSDevice_Battery {
     //     return myChargeType;
     // }
     #[allow(unused_variables)]
-    pub fn get_charge_type(&self) -> MSChargingStation_ChargeType {
+    pub fn get_charge_type(&self) -> ChargeType {
         todo!("port MSDevice_Battery::getChargeType")
     }
 

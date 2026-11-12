@@ -25,7 +25,13 @@ impl RODFRouteCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFRouteCont::~RODFRouteCont")
+        for route in &mut self.myRoutes {
+            // Drop each route
+        }
+        
+        for (_, count) in &mut self.myConnectionOccurrences {
+            // Drop each connection occurrence count
+        }
     }
 
     /// C++: `void RODFRouteCont::addRouteDesc(RODFRouteDesc &)`
@@ -101,7 +107,7 @@ impl RODFRouteCont {
     //     }
     #[allow(unused_variables)]
     pub fn get(&mut self) -> &mut Vec<RODFRouteDesc> {
-        todo!("port RODFRouteCont::get")
+        &mut self.myRoutes
     }
 
     /// C++: `void RODFRouteCont::sortByDistance()`
@@ -176,7 +182,9 @@ impl RODFRouteCont_by_distance_sorter {
     // explicit by_distance_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port by_distance_sorter::by_distance_sorter")
+        {
+            Self {}
+        }
     }
 
     /// C++: `int by_distance_sorter::operator()(const RODFRouteDesc &, const RODFRouteDesc &)`

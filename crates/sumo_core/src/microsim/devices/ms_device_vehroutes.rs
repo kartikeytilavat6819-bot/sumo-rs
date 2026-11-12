@@ -1,9 +1,28 @@
 //! Port of microsim/devices/MSDevice_Vehroutes.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
+use utils::common::std_defs::g_precision;
+use utils::common::string_utils::to_long;
+use utils::common::time::time2string;
+use utils::common::to_string::to_string;
+use utils::iodevices::output_device::OutputDeviceRef;
+use utils::options::options_cont::{get_bool, is_default, is_set, with_options};
+/// C++ `#define`d flags from utils/vehicle/SUMOVehicleParameter.h (not exported by the port yet)
+const VEHPARS_DEPARTLANE_SET: i64 = 2 << 1;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const VEHPARS_DEPARTSPEED_SET: i64 = 2 << 3;
+const VEHPARS_DEPARTPOSLAT_SET: i64 = 2 << 21;
+const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_Vehroutes` (microsim/devices/MSDevice_Vehroutes.h)
+// repr(C): the base sits at offset 0 so device pointers can be upcast to MSVehicleDevice (C++ implicit upcast)
+#[repr(C)]
 pub struct MSDevice_Vehroutes {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,
@@ -12,9 +31,9 @@ pub struct MSDevice_Vehroutes {
     /// Whether the currently used route is valid/complete
     pub myCurrentValid: bool,
     /// Prior routes
-    pub myReplacedRoutes: i32,
+    pub myReplacedRoutes: Vec<MSDevice_Vehroutes_RouteReplaceInfo>,
     /// The times at which the vehicle exits an edge
-    pub myExits: i32,
+    pub myExits: Vec<SUMOTime>,
     /// The maximum number of routes to report
     pub myMaxRoutes: i32,
     /// The last edge the exit time was saved for
@@ -30,10 +49,10 @@ pub struct MSDevice_Vehroutes {
     /// The lateral depart position
     pub myDepartPosLat: f64,
     /// the edges that were passed before the current stop
-    pub myPriorEdges: i32,
+    pub myPriorEdges: Vec<Ptr<MSEdge>>,
     /// the cost of the initial route if not set (cannot be stored in the route because it may be shared)
     pub myInitialCost: f64,
-    pub myStopOut: Unmapped /* OutputDevice_String */,
+    pub myStopOut: OutputDevice,
 }
 
 impl std::ops::Deref for MSDevice_Vehroutes {
@@ -62,6 +81,72 @@ impl std::ops::DerefMut for MSDevice_Vehroutes {
 //   static bool MSDevice_Vehroutes::myWriteInternal;
 //   static StateListener MSDevice_Vehroutes::myStateListener;
 //   static SortedRouteInfo MSDevice_Vehroutes::myRouteInfos;
+
+// Plain bools: atomics keep them Sync; the single-threaded sim uses Relaxed.
+static MY_SAVE_EXITS: AtomicBool = AtomicBool::new(false);
+static MY_LAST_ROUTE_ONLY: AtomicBool = AtomicBool::new(false);
+static MY_DUA_STYLE: AtomicBool = AtomicBool::new(false);
+static MY_WRITE_COSTS: AtomicBool = AtomicBool::new(false);
+static MY_SORTED: AtomicBool = AtomicBool::new(false);
+static MY_INTENDED_DEPART: AtomicBool = AtomicBool::new(false);
+static MY_ROUTE_LENGTH: AtomicBool = AtomicBool::new(false);
+static MY_SKIP_PT_LINES: AtomicBool = AtomicBool::new(false);
+static MY_INCLUDE_INCOMPLETE: AtomicBool = AtomicBool::new(false);
+static MY_WRITE_STOP_PRIOR_EDGES: AtomicBool = AtomicBool::new(false);
+static MY_WRITE_INTERNAL: AtomicBool = AtomicBool::new(false);
+
+// Pointer-holding statics live per thread and are leaked once, so their address stays stable
+// (C++ passes `&myStateListener` to MSNet and hands out `&myRouteInfos`).
+thread_local! {
+    static MY_STATE_LISTENER: std::cell::Cell<Ptr<MSDevice_Vehroutes_StateListener>> = std::cell::Cell::new(Ptr::default());
+    static MY_ROUTE_INFOS: std::cell::Cell<Ptr<MSDevice_Vehroutes_SortedRouteInfo>> = std::cell::Cell::new(Ptr::default());
+}
+
+/// C++ static `myStateListener`
+fn my_state_listener() -> Ptr<MSDevice_Vehroutes_StateListener> {
+    MY_STATE_LISTENER.with(|c| {
+        if c.get().is_null() {
+            let l = MSDevice_Vehroutes_StateListener { base: MSNet_VehicleStateListener::new(), myDevices: BTreeMap::new() };
+            c.set(Ptr::from_mut(Box::leak(Box::new(l))));
+        }
+        c.get()
+    })
+}
+
+/// C++ static `myRouteInfos`
+fn my_route_infos() -> Ptr<MSDevice_Vehroutes_SortedRouteInfo> {
+    MY_ROUTE_INFOS.with(|c| {
+        if c.get().is_null() {
+            c.set(Ptr::from_mut(Box::leak(Box::new(MSDevice_Vehroutes_SortedRouteInfo::new()))));
+        }
+        c.get()
+    })
+}
+
+/// The device registry keeps the Rc alive for the whole run, so the raw pointer stays valid (C++ `OutputDevice&`)
+fn device_ptr(od: &OutputDeviceRef) -> Ptr<OutputDevice> {
+    Ptr::from_raw(od.as_ptr())
+}
+
+/// C++ `MSNet::getInstance()->getCurrentTimeStep()` (SIMSTEP)
+fn sim_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+
+/// C++ `istringstream >> x`: whitespace token parsed as T, default on failure
+fn next_as<T: std::str::FromStr + Default>(bis: &mut std::str::SplitWhitespace) -> T {
+    bis.next().and_then(|s| s.parse::<T>().ok()).unwrap_or_default()
+}
+
+/// C++ `istringstream >> string`
+fn next_str(bis: &mut std::str::SplitWhitespace) -> String {
+    bis.next().unwrap_or("").to_string()
+}
+
+/// Allocates a device for the lifetime of the run (C++ `new MSDevice_Vehroutes(...)`)
+fn new_device(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Ptr<MSDevice_Vehroutes> {
+    Ptr::from_mut(Box::leak(Box::new(MSDevice_Vehroutes::new(holder, id, maxRoutes))))
+}
 
 impl MSDevice_Vehroutes {
     /// C++: `void MSDevice_Vehroutes::init()` [static]
@@ -92,7 +177,26 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn init() {
-        todo!("port MSDevice_Vehroutes::init")
+        if is_set("vehroute-output") {
+            OutputDevice::create_device_by_option("vehroute-output", "routes", "routes_file.xsd", -1).unwrap();
+            let od = OutputDevice::get_device_by_option("vehroute-output").unwrap();
+            if !od.borrow().is_xml() {
+                write_warningf!("Vehroute output does not fully support tabular formats. Sorting and stop output will not work.");
+            }
+            MY_SAVE_EXITS.store(get_bool("vehroute-output.exit-times"), Relaxed);
+            MY_LAST_ROUTE_ONLY.store(get_bool("vehroute-output.last-route"), Relaxed);
+            MY_DUA_STYLE.store(get_bool("vehroute-output.dua"), Relaxed);
+            MY_WRITE_COSTS.store(get_bool("vehroute-output.cost"), Relaxed);
+            MY_SORTED.store(MY_DUA_STYLE.load(Relaxed) || get_bool("vehroute-output.sorted"), Relaxed);
+            MY_INTENDED_DEPART.store(get_bool("vehroute-output.intended-depart"), Relaxed);
+            MY_ROUTE_LENGTH.store(get_bool("vehroute-output.route-length"), Relaxed);
+            MY_SKIP_PT_LINES.store(get_bool("vehroute-output.skip-ptlines"), Relaxed);
+            MY_INCLUDE_INCOMPLETE.store(get_bool("vehroute-output.incomplete"), Relaxed);
+            MY_WRITE_STOP_PRIOR_EDGES.store(get_bool("vehroute-output.stop-edges"), Relaxed);
+            MY_WRITE_INTERNAL.store(get_bool("vehroute-output.internal"), Relaxed);
+            MSNet::get_instance().m().add_vehicle_state_listener(Ptr::from_raw(my_state_listener().as_raw() as *mut MSNet_VehicleStateListener));
+            my_route_infos().m().routeOut = device_ptr(&od);
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::insertOptions(OptionsCont &)` [static]
@@ -104,15 +208,37 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Vehroutes::insertOptions")
+        oc.add_option_sub_topic("Vehroutes Device");
+        MSDevice::insert_default_assignment_options("vehroute", "Vehroutes Device", oc, false);
     }
 
     /// C++: `MSDevice_Vehroutes * MSDevice_Vehroutes::buildVehicleDevices(SUMOVehicle &, int &, int)` [static]
     /// Build devices for the given vehicle, if needed
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut i32, maxRoutes: i32) -> Ptr<MSDevice_Vehroutes> {
-        todo!("port MSDevice_Vehroutes::buildVehicleDevices")
+    pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>, maxRoutes: i32) -> Ptr<MSDevice_Vehroutes> {
+        let vp = Ptr::from_mut(v);
+        let id = format!("vehroute_{}", vp.get_id());
+        if maxRoutes < i32::MAX {
+            return new_device(vp.m(), &id, maxRoutes);
+        }
+        if MY_SKIP_PT_LINES.load(Relaxed) && !vp.get_parameter().line.is_empty() {
+            return Ptr::null();
+        }
+        let hasOption = is_set("vehroute-output");
+        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is still todo!() with no arguments in ms_device.rs, upgrade when it is ported
+        let equipped: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported yet");
+        if equipped {
+            let mut maxRoutes = maxRoutes;
+            if MY_LAST_ROUTE_ONLY.load(Relaxed) {
+                maxRoutes = 0;
+            }
+            let dev = new_device(vp.m(), &id, maxRoutes);
+            my_state_listener().m().myDevices.insert(vp.get_numerical_id(), (vp, dev));
+            into.push(Ptr::from_raw(dev.as_raw() as *mut MSVehicleDevice));
+            return dev;
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSDevice_Vehroutes::writePendingOutput(const bool)` [static]
@@ -177,7 +303,59 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn write_pending_output(includeUnfinished: bool) {
-        todo!("port MSDevice_Vehroutes::writePendingOutput")
+        let net = MSNet::get_instance();
+
+        if !includeUnfinished {
+            if MY_SORTED.load(Relaxed) {
+                for routeInfo in my_route_infos().m().routeXML.values() {
+                    for rouXML in routeInfo.values() {
+                        my_route_infos().routeOut.m().write(rouXML);
+                    }
+                }
+                if net.has_persons() {
+                    let personRouteInfos = net.m().get_person_control().get_route_info();
+                    if personRouteInfos.routeOut != my_route_infos().routeOut {
+                        for routeInfo in personRouteInfos.routeXML.values() {
+                            for rouXML in routeInfo.values() {
+                                personRouteInfos.routeOut.m().write(rouXML);
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        for (_, (vehicle, device)) in my_state_listener().myDevices.iter() {
+            if vehicle.has_departed() {
+                if vehicle.is_stopped() {
+                    device.m().notify_stop_ended();
+                }
+                device.write_output(false);
+            }
+        }
+        // unfinished persons
+        if net.has_persons() {
+            // shortcut: MSTransportableControl::loadedBegin/loadedEnd are Unmapped iterators, so the
+            // loop that erases still-loaded persons is skipped; port it once the iterator is mapped
+        }
+        // Flush any remaining sorted outputs that may still be buffered
+        if MY_SORTED.load(Relaxed) {
+            for routeInfo in my_route_infos().m().routeXML.values() {
+                for rouXML in routeInfo.values() {
+                    my_route_infos().routeOut.m().write(rouXML);
+                }
+            }
+            if net.has_persons() {
+                let personRouteInfos = net.m().get_person_control().get_route_info();
+                if personRouteInfos.routeOut != my_route_infos().routeOut {
+                    for routeInfo in personRouteInfos.routeXML.values() {
+                        for rouXML in routeInfo.values() {
+                            personRouteInfos.routeOut.m().write(rouXML);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::~MSDevice_Vehroutes()` [virtual]
@@ -185,7 +363,7 @@ impl MSDevice_Vehroutes {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Vehroutes::~MSDevice_Vehroutes")
+        my_state_listener().m().myDevices.remove(&self.myHolder.get_numerical_id());
     }
 
     /// C++: `bool MSDevice_Vehroutes::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -221,7 +399,33 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Vehroutes::notifyEnter")
+        let this = Ptr::from_mut(self);
+        if matches!(reason, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
+            let key = veh.get_numerical_id();
+            if MY_SORTED.load(Relaxed) && my_state_listener().myDevices.get(&key).is_some_and(|e| e.1 == this) {
+                let departure = if MY_INTENDED_DEPART.load(Relaxed) { this.myHolder.get_parameter().depart } else { sim_step() };
+                *my_route_infos().m().departureCounts.entry(departure).or_insert(0) += 1;
+            }
+            if !crate::microsim::ms_globals::use_meso_sim() {
+                // C++ static_cast<MSVehicle&>(veh): the notified object is the holder, so its lane/lateral data are read from it
+                this.m().myDepartLane = veh.get_lane().get_index();
+                this.m().myDepartPosLat = this.myHolder.get_lateral_position_on_lane();
+            }
+            this.m().myDepartSpeed = veh.get_speed();
+            this.m().myDepartPos = veh.get_position_on_lane();
+        }
+        if MY_WRITE_STOP_PRIOR_EDGES.load(Relaxed) {
+            if crate::microsim::ms_globals::use_meso_sim() {
+                let e = veh.get_edge();
+                if this.myPriorEdges.is_empty() || *this.myPriorEdges.last().unwrap() != e {
+                    this.m().myPriorEdges.push(e);
+                }
+            } else {
+                this.m().myPriorEdges.push(Ptr::from_mut(enteredLane.get_edge()));
+            }
+        }
+        this.m().myLastRouteIndex = this.myHolder.get_route_position();
+        true
     }
 
     /// C++: `bool MSDevice_Vehroutes::notifyLeave(SUMOTrafficObject &, double, Notification, const MSLane *)` [virtual]
@@ -229,7 +433,20 @@ impl MSDevice_Vehroutes {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Vehroutes::notifyLeave")
+        if MY_SAVE_EXITS.load(Relaxed)
+            && !matches!(
+                reason,
+                MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE | MSMoveReminder_Notification::NOTIFICATION_PARKING | MSMoveReminder_Notification::NOTIFICATION_SEGMENT
+            )
+        {
+            // C++ dynamic_cast<MSBaseVehicle&>(veh).getCurrentEdge() when writing internal edges
+            let edge = if MY_WRITE_INTERNAL.load(Relaxed) { veh.get_current_edge() } else { veh.get_edge() };
+            if self.myLastSavedAt != edge {
+                self.myExits.push(sim_step());
+                self.myLastSavedAt = edge;
+            }
+        }
+        true
     }
 
     /// C++: `const std::string MSDevice_Vehroutes::deviceName() const` [const, virtual]
@@ -239,7 +456,7 @@ impl MSDevice_Vehroutes {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Vehroutes::deviceName")
+        "vehroute".to_string()
     }
 
     /// C++: `void MSDevice_Vehroutes::notifyStopEnded()` [virtual]
@@ -276,7 +493,36 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn notify_stop_ended(&mut self) {
-        todo!("port MSDevice_Vehroutes::notifyStopEnded")
+        let mut stop = self.myHolder.get_stops().front().unwrap().pars.clone();
+        let closeLater = MY_WRITE_STOP_PRIOR_EDGES.load(Relaxed) || MY_SAVE_EXITS.load(Relaxed);
+        if MY_SAVE_EXITS.load(Relaxed) {
+            // prevent duplicate output
+            stop.parametersSet &= !(STOP_STARTED_SET | STOP_ENDED_SET);
+        }
+        stop.write(&mut self.myStopOut, !closeLater, true);
+        if MY_WRITE_STOP_PRIOR_EDGES.load(Relaxed) {
+            // calculate length
+            let mut priorEdgesLength = 0.0;
+            for i in 0..self.myPriorEdges.len() {
+                if i == 0 {
+                    priorEdgesLength += self.myPriorEdges[i].get_length();
+                } else if self.myPriorEdges[i].get_id() != self.myPriorEdges[i - 1].get_id() {
+                    priorEdgesLength += self.myPriorEdges[i].get_length();
+                }
+            }
+            let priorEdgeIDs: Vec<String> = self.myPriorEdges.iter().map(|e| e.get_id().to_string()).collect();
+            self.myStopOut.write_attr("priorEdges", &priorEdgeIDs);
+            self.myPriorEdges.clear();
+            self.myStopOut.write_attr("priorEdgesLength", &priorEdgesLength);
+        }
+        if MY_SAVE_EXITS.load(Relaxed) {
+            self.myStopOut.write_attr(SUMO_ATTR_STARTED, &time2string(stop.started));
+            let ended = if stop.ended < 0 { "-1".to_string() } else { time2string(stop.ended) };
+            self.myStopOut.write_attr(SUMO_ATTR_ENDED, &ended);
+        }
+        if closeLater {
+            self.myStopOut.close_tag("");
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::generateOutput(OutputDevice *) const` [const, virtual]
@@ -287,7 +533,7 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_Vehroutes::generateOutput")
+        self.write_output(true);
     }
 
     /// C++: `ConstMSRoutePtr MSDevice_Vehroutes::getRoute(int) const` [const]
@@ -301,8 +547,13 @@ impl MSDevice_Vehroutes {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_route(&self, index: i32) -> ConstMSRoutePtr {
-        todo!("port MSDevice_Vehroutes::getRoute")
+    // Returns Option because C++ returns nullptr for an out-of-range index (ConstMSRoutePtr is a non-null Rc)
+    pub fn get_route(&self, index: i32) -> Option<ConstMSRoutePtr> {
+        if index >= 0 && (index as usize) < self.myReplacedRoutes.len() {
+            Some(self.myReplacedRoutes[index as usize].route.clone())
+        } else {
+            None
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::saveState(OutputDevice &) const` [const, virtual]
@@ -339,7 +590,35 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSDevice_Vehroutes::saveState")
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.base.get_id());
+        let mut internals: Vec<String> = Vec::new();
+        if !crate::microsim::ms_globals::use_meso_sim() {
+            internals.push(to_string(&self.myDepartLane));
+            internals.push(to_string(&self.myDepartPosLat));
+        }
+        internals.push(to_string(&self.myDepartSpeed));
+        internals.push(to_string(&self.myDepartPos));
+        internals.push(to_string(&self.myInitialCost));
+        internals.push(to_string(&self.myReplacedRoutes.len()));
+        for r in &self.myReplacedRoutes {
+            let replacedOnEdge = if r.edge.is_null() { "!NULL".to_string() } else { r.edge.get_id().to_string() };
+            internals.push(replacedOnEdge);
+            internals.push(to_string(&r.time));
+            internals.push(r.route.get_id().to_string());
+            internals.push(r.info.clone());
+            internals.push(to_string(&r.lastRouteIndex));
+            internals.push(to_string(&r.newRouteIndex));
+            internals.push(to_string(&r.isValid));
+        }
+        // C++ toString(std::vector<std::string>) joins with " "
+        out.write_attr(SUMO_ATTR_STATE, &internals.join(" "));
+        if MY_SAVE_EXITS.load(Relaxed) && !self.myExits.is_empty() {
+            let exits: Vec<String> = self.myExits.iter().map(|t| time2string(*t)).collect();
+            out.write_attr(SUMO_ATTR_EXITTIMES, &exits);
+            out.write_attr(SUMO_ATTR_EDGE, self.myLastSavedAt.get_id());
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSDevice_Vehroutes::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -391,7 +670,46 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSDevice_Vehroutes::loadState")
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        if !crate::microsim::ms_globals::use_meso_sim() {
+            self.myDepartLane = next_as(&mut bis);
+            self.myDepartPosLat = next_as(&mut bis);
+        }
+        self.myDepartSpeed = next_as(&mut bis);
+        self.myDepartPos = next_as(&mut bis);
+        self.myInitialCost = next_as(&mut bis);
+        let size: i32 = next_as(&mut bis);
+        for _ in 0..size {
+            let edgeID = next_str(&mut bis);
+            let time: SUMOTime = next_as(&mut bis);
+            let routeID = next_str(&mut bis);
+            let info = next_str(&mut bis);
+            let lastIndex: i32 = next_as(&mut bis);
+            let newIndex: i32 = next_as(&mut bis);
+            // C++ `bis >> myCurrentValid` reads a 0/1 integer
+            self.myCurrentValid = next_as::<i32>(&mut bis) != 0;
+
+            // shortcut: MSRoute::dictionary(id) lookup (returns the route) is not ported yet, only the insert form
+            let foundRoute: Option<ConstMSRoutePtr> = panic!("shortcut: MSRoute::dictionary(id) getter is not ported yet, only the insert form exists");
+            if let Some(route) = foundRoute {
+                let edge = MSEdge::dictionary_2(&edgeID);
+                self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(edge, time, route, &info, lastIndex, newIndex, self.myCurrentValid));
+            }
+        }
+        if MY_SAVE_EXITS.load(Relaxed) && attrs.has_attribute(SUMO_ATTR_EXITTIMES) {
+            let mut ok = true;
+            let times = attrs.get::<Vec<String>>(SUMO_ATTR_EXITTIMES, "", &mut ok, true);
+            for t in &times {
+                self.myExits.push(to_long(t).unwrap());
+            }
+            if attrs.has_attribute(SUMO_ATTR_EDGE) {
+                self.myLastSavedAt = MSEdge::dictionary_2(&attrs.get_string(SUMO_ATTR_EDGE));
+            }
+        }
+        if self.myHolder.has_departed() {
+            self.myLastRouteIndex = self.myHolder.get_route_position();
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::registerTransportableDepart(SUMOTime)` [static]
@@ -401,14 +719,30 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn register_transportable_depart(depart: SUMOTime) {
-        todo!("port MSDevice_Vehroutes::registerTransportableDepart")
+        *my_route_infos().m().departureCounts.entry(depart).or_insert(0) += 1;
     }
 
     /// C++: `void MSDevice_Vehroutes::writeSortedOutput(SortedRouteInfo *, SUMOTime, const SUMOTrafficObject::NumericalID, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn write_sorted_output(routeInfo: Ptr<MSDevice_Vehroutes_SortedRouteInfo>, depart: SUMOTime, id: SUMOTrafficObject_NumericalID, xmlOutput: &str) {
-        todo!("port MSDevice_Vehroutes::writeSortedOutput")
+        let mut routeInfo = routeInfo;
+        if routeInfo.routeOut == my_route_infos().routeOut {
+            routeInfo = my_route_infos();
+        }
+        routeInfo.m().routeXML.entry(depart).or_default().insert(id, xmlOutput.to_string());
+        *routeInfo.m().departureCounts.entry(depart).or_insert(0) -= 1;
+        // flush leading entries whose departure count reached zero, in time order
+        while let Some((&time, &count)) = routeInfo.departureCounts.iter().next() {
+            if count != 0 {
+                break;
+            }
+            let xmls = routeInfo.m().routeXML.remove(&time).unwrap_or_default();
+            for rouXML in xmls.values() {
+                routeInfo.routeOut.m().write(rouXML);
+            }
+            routeInfo.m().departureCounts.remove(&time);
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::MSDevice_Vehroutes(SUMOVehicle &, const std::string &, int)` [private]
@@ -434,7 +768,30 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Self {
-        todo!("port MSDevice_Vehroutes::MSDevice_Vehroutes")
+        let currentRoute = holder.get_route_ptr();
+        let mut this = MSDevice_Vehroutes {
+            base: MSVehicleDevice::new(holder, id),
+            myCurrentRoute: currentRoute,
+            myCurrentValid: false,
+            myReplacedRoutes: Vec::new(),
+            myExits: Vec::new(),
+            myMaxRoutes: maxRoutes,
+            myLastSavedAt: Ptr::default(),
+            myLastRouteIndex: -1,
+            myDepartLane: -1,
+            myDepartPos: -1.0,
+            myDepartSpeed: -1.0,
+            myDepartPosLat: 0.0,
+            myPriorEdges: Vec::new(),
+            myInitialCost: -1.0,
+            myStopOut: OutputDevice::new_string(2),
+        };
+        let mut dummyMsg = String::new();
+        this.myCurrentValid = this.myHolder.has_valid_route(&mut dummyMsg, this.myCurrentRoute.clone());
+        if this.myCurrentRoute.get_costs() < 0.0 && MY_WRITE_COSTS.load(Relaxed) {
+            this.myInitialCost = this.myHolder.get_router_tt().recompute_costs(this.myCurrentRoute.get_edges(), this.myHolder, sim_step(), Ptr::default());
+        }
+        this
     }
 
     /// C++: `void MSDevice_Vehroutes::writeXMLRoute(OutputDevice &, int) const` [const, private]
@@ -536,7 +893,106 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_route(&self, os: &mut OutputDevice, index: i32) {
-        todo!("port MSDevice_Vehroutes::writeXMLRoute")
+        if index == 0
+            && !MY_INCLUDE_INCOMPLETE.load(Relaxed)
+            && self.myReplacedRoutes[0].route.size() == 2
+            && self.myReplacedRoutes[0].route.get_edges().first().unwrap().is_taz_connector()
+            && self.myReplacedRoutes[0].route.get_edges().last().unwrap().is_taz_connector()
+        {
+            return;
+        }
+        // check if a previous route shall be written
+        let routesToSkip = if self.myHolder.get_parameter().was_set(VEHPARS_FORCE_REROUTE) { 1 } else { 0 };
+        os.open_tag_id(SUMO_TAG_ROUTE);
+        if index >= 0 {
+            debug_assert!((self.myReplacedRoutes.len() as i32) > index);
+            let iu = index as usize;
+            if MY_DUA_STYLE.load(Relaxed) || MY_WRITE_COSTS.load(Relaxed) {
+                let mut cost = self.myReplacedRoutes[iu].route.get_costs();
+                if cost < 0.0 && index == 0 {
+                    cost = self.myInitialCost;
+                }
+                os.write_attr(SUMO_ATTR_COST, &cost);
+            }
+            if MY_WRITE_COSTS.load(Relaxed) {
+                os.write_attr(SUMO_ATTR_SAVINGS, &self.myReplacedRoutes[iu].route.get_savings());
+            }
+            // write edge on which the vehicle was when the route was valid
+            let replacedOnEdge = if self.myReplacedRoutes[iu].edge.is_null() { "" } else { self.myReplacedRoutes[iu].edge.get_id() };
+            os.write_attr("replacedOnEdge", replacedOnEdge);
+            if self.myReplacedRoutes[iu].lastRouteIndex > 0 {
+                // do not write the default
+                os.write_attr(SUMO_ATTR_REPLACED_ON_INDEX, &self.myReplacedRoutes[iu].lastRouteIndex);
+            }
+            // write the reason for replacement
+            os.write_attr("reason", self.myReplacedRoutes[iu].info.as_str());
+
+            // write the time at which the route was replaced
+            os.write_attr(SUMO_ATTR_REPLACED_AT_TIME, &time2string(self.myReplacedRoutes[iu].time));
+            os.write_attr(SUMO_ATTR_PROB, "0");
+            let mut edgesD = OutputDevice::new_string(0);
+            // always write the part that was actually driven and the rest of the current route that wasn't yet driven
+            let mut start = 0;
+            for i in routesToSkip..index {
+                let ri = i as usize;
+                if !self.myReplacedRoutes[ri].edge.is_null() {
+                    let end = self.myReplacedRoutes[ri].lastRouteIndex;
+                    self.myReplacedRoutes[ri].route.write_edge_i_ds(&mut edgesD, start, end, MY_WRITE_INTERNAL.load(Relaxed), self.myHolder.get_v_class());
+                }
+                start = self.myReplacedRoutes[ri].newRouteIndex;
+            }
+            self.myReplacedRoutes[iu].route.write_edge_i_ds(&mut edgesD, start, -1, MY_WRITE_INTERNAL.load(Relaxed), self.myHolder.get_v_class());
+            let mut edgesS = edgesD.get_string();
+            edgesS.pop(); // remove last ' '
+            os.write_attr(SUMO_ATTR_EDGES, &edgesS);
+            if MY_ROUTE_LENGTH.load(Relaxed) {
+                let includeInternalLengths = crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links();
+                let route = self.myReplacedRoutes[iu].route.clone();
+                let routeLength = route.get_distance_between_2(
+                    self.myHolder.get_depart_pos(),
+                    route.get_edges().last().unwrap().get_length(),
+                    &route.begin(),
+                    &route.end(),
+                    includeInternalLengths,
+                );
+                os.write_attr("routeLength", &routeLength);
+            }
+        } else {
+            if MY_DUA_STYLE.load(Relaxed) || MY_WRITE_COSTS.load(Relaxed) {
+                os.write_attr(SUMO_ATTR_COST, &self.myHolder.get_route().get_costs());
+            }
+            if MY_WRITE_COSTS.load(Relaxed) {
+                os.write_attr(SUMO_ATTR_SAVINGS, &self.myHolder.get_route().get_savings());
+            }
+            let mut edgesD = OutputDevice::new_string(0);
+            let mut numWritten: i32 = 0;
+            let mut start = 0;
+            if self.myHolder.get_number_reroutes() > 0 {
+                debug_assert!((self.myReplacedRoutes.len() as i32) <= self.myHolder.get_number_reroutes());
+                for i in routesToSkip..(self.myReplacedRoutes.len() as i32) {
+                    let ri = i as usize;
+                    if !self.myReplacedRoutes[ri].edge.is_null() {
+                        let end = self.myReplacedRoutes[ri].lastRouteIndex;
+                        numWritten += self.myReplacedRoutes[ri].route.write_edge_i_ds(&mut edgesD, start, end, MY_WRITE_INTERNAL.load(Relaxed), self.myHolder.get_v_class());
+                    }
+                    start = self.myReplacedRoutes[ri].newRouteIndex;
+                }
+            }
+            numWritten += self.myCurrentRoute.write_edge_i_ds(&mut edgesD, start, -1, MY_WRITE_INTERNAL.load(Relaxed), self.myHolder.get_v_class());
+            let mut edgesS = edgesD.get_string();
+            edgesS.pop(); // remove last ' '
+            os.write_attr(SUMO_ATTR_EDGES, &edgesS);
+
+            if MY_SAVE_EXITS.load(Relaxed) {
+                let mut exits: Vec<String> = self.myExits.iter().map(|t| time2string(*t)).collect();
+                debug_assert!(numWritten >= self.myExits.len() as i32);
+                for _ in 0..(numWritten - self.myExits.len() as i32) {
+                    exits.push("-1".to_string());
+                }
+                os.write_attr(SUMO_ATTR_EXITTIMES, &exits);
+            }
+        }
+        os.close_tag("");
     }
 
     /// C++: `void MSDevice_Vehroutes::writeOutput(const bool) const` [const, private]
@@ -654,7 +1110,128 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn write_output(&self, hasArrived: bool) {
-        todo!("port MSDevice_Vehroutes::writeOutput")
+        let routeOutRef = OutputDevice::get_device_by_option("vehroute-output").unwrap();
+        let routeOut = device_ptr(&routeOutRef);
+        let mut stringOut = OutputDevice::new_string(1);
+        let od: Ptr<OutputDevice> = if MY_SORTED.load(Relaxed) && routeOut.is_xml() { Ptr::from_mut(&mut stringOut) } else { routeOut };
+        let mut tmp: SUMOVehicleParameter = self.myHolder.get_parameter().clone();
+        tmp.depart = if MY_INTENDED_DEPART.load(Relaxed) { self.myHolder.get_parameter().depart } else { self.myHolder.get_departure() };
+        if !crate::microsim::ms_globals::use_meso_sim() {
+            if tmp.was_set(VEHPARS_DEPARTLANE_SET) {
+                tmp.departLaneProcedure = DepartLaneDefinition::GIVEN;
+                tmp.departLane = self.myDepartLane;
+            }
+            if tmp.was_set(VEHPARS_DEPARTPOSLAT_SET) {
+                tmp.departPosLatProcedure = if matches!(tmp.departPosLatProcedure, DepartPosLatDefinition::RANDOM) {
+                    DepartPosLatDefinition::GIVEN_VEHROUTE
+                } else {
+                    DepartPosLatDefinition::GIVEN
+                };
+                tmp.departPosLat = self.myDepartPosLat;
+            }
+        }
+        if tmp.was_set(VEHPARS_DEPARTPOS_SET) {
+            tmp.departPosProcedure = if !matches!(tmp.departPosProcedure, DepartPosDefinition::GIVEN | DepartPosDefinition::STOP) {
+                DepartPosDefinition::GIVEN_VEHROUTE
+            } else {
+                DepartPosDefinition::GIVEN
+            };
+            tmp.departPos = self.myDepartPos;
+        }
+        if tmp.was_set(VEHPARS_DEPARTSPEED_SET) {
+            tmp.departSpeedProcedure = if !matches!(tmp.departSpeedProcedure, DepartSpeedDefinition::GIVEN | DepartSpeedDefinition::LIMIT) {
+                DepartSpeedDefinition::GIVEN_VEHROUTE
+            } else {
+                DepartSpeedDefinition::GIVEN
+            };
+            tmp.departSpeed = self.myDepartSpeed;
+        }
+        if get_bool("vehroute-output.speedfactor") || (is_default("vehroute-output.speedfactor") && tmp.was_set(VEHPARS_DEPARTSPEED_SET)) {
+            tmp.parametersSet |= VEHPARS_SPEEDFACTOR_SET;
+            tmp.speedFactor = self.myHolder.get_chosen_speed_factor();
+        }
+
+        let typeID = if self.myHolder.get_vehicle_type().get_id() != DEFAULT_VTYPE_ID { self.myHolder.get_vehicle_type().get_id().to_string() } else { String::new() };
+        with_options(|oc| tmp.write(od.m(), oc, SUMO_TAG_VEHICLE, &typeID));
+        if hasArrived {
+            od.m().write_attr("arrival", &time2string(MSNet::get_instance().get_current_time_step()));
+        }
+        if MY_ROUTE_LENGTH.load(Relaxed) {
+            let includeInternalLengths = crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links();
+            let finalPos = if hasArrived { self.myHolder.get_arrival_pos() } else { self.myHolder.get_position_on_lane() };
+            let route = self.myHolder.get_route();
+            let routeLength = route.get_distance_between_2(
+                self.myHolder.get_depart_pos(),
+                finalPos,
+                &route.begin(),
+                self.myHolder.get_current_route_edge(),
+                includeInternalLengths,
+            );
+            od.m().write_attr("routeLength", &routeLength);
+        }
+        if MY_DUA_STYLE.load(Relaxed) {
+            let routeDist = MSRoute::dist_dictionary(&format!("!{}", self.myHolder.get_id()));
+            if !routeDist.is_null() {
+                let routes = routeDist.get_vals();
+                let mut index = 0usize;
+                while index < routes.len() && !Rc::ptr_eq(&routes[index], &self.myCurrentRoute) {
+                    index += 1;
+                }
+                od.m().open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_LAST, &index);
+                let probs = routeDist.get_probs();
+                for i in 0..routes.len() {
+                    od.m().set_precision(g_precision());
+                    od.m().open_tag_id(SUMO_TAG_ROUTE);
+                    od.m().write_attr(SUMO_ATTR_COST, &routes[i].get_costs());
+                    if MY_WRITE_COSTS.load(Relaxed) {
+                        od.m().write_attr(SUMO_ATTR_SAVINGS, &routes[i].get_savings());
+                    }
+                    od.m().set_precision(8);
+                    od.m().write_attr(SUMO_ATTR_PROB, &probs[i]);
+                    od.m().set_precision(g_precision());
+                    let mut edgesD = OutputDevice::new_string(0);
+                    routes[i].write_edge_i_ds(&mut edgesD, 0, -1, MY_WRITE_INTERNAL.load(Relaxed), self.myHolder.get_v_class());
+                    let mut edgesS = edgesD.get_string();
+                    edgesS.pop(); // remove last ' '
+                    od.m().write_attr(SUMO_ATTR_EDGES, &edgesS);
+                    od.m().close_tag("");
+                }
+                od.m().close_tag("");
+            } else {
+                self.write_xml_route(od.m(), -1);
+            }
+        } else {
+            let routesToSkip = if self.myHolder.get_parameter().was_set(VEHPARS_FORCE_REROUTE)
+                && !MY_INCLUDE_INCOMPLETE.load(Relaxed)
+                && !self.myReplacedRoutes.is_empty()
+                && !self.myReplacedRoutes[0].isValid
+            {
+                1
+            } else {
+                0
+            };
+            if (self.myReplacedRoutes.len() as i32) > routesToSkip {
+                od.m().open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION);
+                for i in routesToSkip..(self.myReplacedRoutes.len() as i32) {
+                    self.write_xml_route(od.m(), i);
+                }
+                self.write_xml_route(od.m(), -1);
+                od.m().close_tag("");
+            } else {
+                self.write_xml_route(od.m(), -1);
+            }
+        }
+        if routeOut.is_xml() {
+            od.m().write(&self.myStopOut.get_string());
+        }
+        // shortcut: Parameterised::writeParams is not ported yet, upgrade with utils/common/Parameterised
+        panic!("shortcut: writeParams(dev) not ported");
+        od.m().close_tag("");
+        od.m().lf();
+        if MY_SORTED.load(Relaxed) && routeOut.is_xml() {
+            // numerical id reflects loading order
+            MSDevice_Vehroutes::write_sorted_output(my_route_infos(), tmp.depart, self.myHolder.get_numerical_id(), &stringOut.get_string());
+        }
     }
 
     /// C++: `void MSDevice_Vehroutes::addRoute(const std::string &)` [private]
@@ -679,7 +1256,25 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn add_route(&mut self, info: &str) {
-        todo!("port MSDevice_Vehroutes::addRoute")
+        if self.myMaxRoutes > 0 {
+            let edge = if self.myHolder.has_departed() { self.myHolder.get_edge() } else { Ptr::default() };
+            let routeIndex = if self.myHolder.has_departed() { self.myHolder.get_route_position() } else { 0 };
+            self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(
+                edge,
+                sim_step(),
+                self.myCurrentRoute.clone(),
+                info,
+                self.myLastRouteIndex,
+                routeIndex,
+                self.myCurrentValid,
+            ));
+            if (self.myReplacedRoutes.len() as i32) > self.myMaxRoutes {
+                self.myReplacedRoutes.remove(0);
+            }
+        }
+        let mut dummyMsg = String::new();
+        self.myCurrentRoute = self.myHolder.get_route_ptr();
+        self.myCurrentValid = self.myHolder.has_valid_route(&mut dummyMsg, self.myCurrentRoute.clone());
     }
 
     /// C++: `void MSDevice_Vehroutes::MSDevice_Vehroutes(const MSDevice_Vehroutes &)` [private]
@@ -687,7 +1282,8 @@ impl MSDevice_Vehroutes {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Vehroutes) -> Self {
-        todo!("port MSDevice_Vehroutes::MSDevice_Vehroutes")
+        // C++ declares this copy constructor private and never defines it: any use is a link error there
+        panic!("MSDevice_Vehroutes is not copyable (C++ declares the copy constructor private and undefined)")
     }
 
     /// C++: `MSDevice_Vehroutes & MSDevice_Vehroutes::operator=(const MSDevice_Vehroutes &)` [private]
@@ -695,7 +1291,8 @@ impl MSDevice_Vehroutes {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Vehroutes) -> &mut MSDevice_Vehroutes {
-        todo!("port MSDevice_Vehroutes::operator=")
+        // C++ declares the assignment operator private and never defines it
+        panic!("MSDevice_Vehroutes is not assignable (C++ declares operator= private and undefined)")
     }
 
 }
@@ -731,7 +1328,15 @@ impl MSDevice_Vehroutes_RouteReplaceInfo {
     //         {}
     #[allow(unused_variables)]
     pub fn new(edge_: Ptr<MSEdge>, time_: SUMOTime, route_: ConstMSRoutePtr, info_: &str, lastRouteIndex_: i32, newRouteIndex_: i32, isValid_: bool) -> Self {
-        todo!("port RouteReplaceInfo::RouteReplaceInfo")
+        Self {
+            edge: edge_,
+            time: time_,
+            route: route_,
+            info: info_.to_string(),
+            lastRouteIndex: lastRouteIndex_,
+            newRouteIndex: newRouteIndex_,
+            isValid: isValid_,
+        }
     }
 
     /// C++: `void RouteReplaceInfo::~RouteReplaceInfo() noexcept`
@@ -739,7 +1344,7 @@ impl MSDevice_Vehroutes_RouteReplaceInfo {
     // ~RouteReplaceInfo() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RouteReplaceInfo::~RouteReplaceInfo")
+        // the C++ destructor body is empty; the Rc route and String are released by Rust's drop glue
     }
 
 }
@@ -750,21 +1355,27 @@ pub struct MSDevice_Vehroutes_SortedRouteInfo {
     /// route output device
     pub routeOut: Ptr<OutputDevice>,
     /// Map needed to sort vehicles by departure time
-    pub departureCounts: i32,
+    pub departureCounts: BTreeMap<SUMOTime, i32>,
     /// pregenerated route output sorted by time and creation
-    pub routeXML: i32,
+    pub routeXML: BTreeMap<SUMOTime, BTreeMap<SUMOTrafficObject_NumericalID, String>>,
 }
 
 impl MSDevice_Vehroutes_SortedRouteInfo {
+    /// C++ default member initialisers: `routeOut = nullptr`, empty maps
+    pub fn new() -> Self {
+        Self { routeOut: Ptr::default(), departureCounts: BTreeMap::new(), routeXML: BTreeMap::new() }
+    }
 }
 
 /// A class that is notified about reroutings
 /// C++ class `MSDevice_Vehroutes::StateListener` (microsim/devices/MSDevice_Vehroutes.h)
+// repr(C): the base sits at offset 0 so the listener can be passed as MSNet::VehicleStateListener
+#[repr(C)]
 pub struct MSDevice_Vehroutes_StateListener {
     /// C++ base class `MSNet::VehicleStateListener`
     pub base: MSNet_VehicleStateListener,
-    /// A map for internal notification
-    pub myDevices: i32,
+    /// A map for internal notification, keyed by numerical id (C++ ComparatorNumericalIdLess order)
+    pub myDevices: BTreeMap<SUMOTrafficObject_NumericalID, (Ptr<SUMOVehicle>, Ptr<MSDevice_Vehroutes>)>,
 }
 
 impl std::ops::Deref for MSDevice_Vehroutes_StateListener {
@@ -785,7 +1396,7 @@ impl MSDevice_Vehroutes_StateListener {
     // ~StateListener() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port StateListener::~StateListener")
+        // the C++ destructor body is empty; the device map is released by Rust's drop glue
     }
 
     /// C++: `void StateListener::vehicleStateChanged(const SUMOVehicle *const, MSNet::VehicleState, const std::string &)` [virtual]
@@ -801,7 +1412,11 @@ impl MSDevice_Vehroutes_StateListener {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_state_changed(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
-        todo!("port StateListener::vehicleStateChanged")
+        if matches!(to, MSNet_VehicleState::NEWROUTE) {
+            if let Some((_, device)) = self.myDevices.get(&vehicle.get_numerical_id()) {
+                device.m().add_route(info);
+            }
+        }
     }
 
 }
