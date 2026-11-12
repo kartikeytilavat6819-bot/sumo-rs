@@ -2642,7 +2642,188 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn inform_follower(&mut self, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, dir: i32, neighFollow: &(Ptr<MSVehicle>, f64), remainingSeconds: f64, plannedSpeed: f64) {
-        todo!("port MSLCM_LC2013::informFollower")
+        let nv = neighFollow.0;
+        let plannedAccel = speed2accel(max2(min2(self.myVehicle.get_car_follow_model().get_max_accel(), plannedSpeed - self.myVehicle.get_speed()), -self.myVehicle.get_car_follow_model().get_max_decel()));
+
+        // decide whether we will request help to cut in before the follower or allow to be overtaken
+        if !nv.is_null() && MSLCHelper::unwilling_to_help(&*self.myVehicle, plannedSpeed, &*nv) {
+            // @note: this check needs to come first because even if the follower is not blocking, getSpeedPreservingSecureGap may request a slow-down
+            return;
+        }
+
+        if (blocked & LCA_BLOCKED_BY_FOLLOWER) != 0 && !nv.is_null() {
+            if MSLCHelper::divergent_route(&*self.myVehicle, &*nv) {
+                return;
+            }
+            // are we fast enough to cut in without any help?
+            if max2(plannedSpeed, 0.) - nv.get_speed() >= HELP_OVERTAKE {
+                let neededGap = nv.get_car_follow_model().get_secure_gap(nv, self.myVehicle, nv.get_speed(), plannedSpeed, self.myVehicle.get_car_follow_model().get_max_decel());
+                if (neededGap - neighFollow.1) / remainingSeconds < (max2(plannedSpeed, 0.) - nv.get_speed()) {
+                    // follower might even accelerate but not to much
+                    msgPass.inform_neigh_follower(new_info((max2(plannedSpeed, 0.) - HELP_OVERTAKE, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                    return;
+                }
+            }
+
+            // PARAMETERS
+            // assume other vehicle will assume the equivalent of 1 second of
+            // maximum deceleration to help us (will probably be spread over
+            // multiple seconds)
+            let helpDecel = nv.get_car_follow_model().get_max_decel() * HELP_DECEL_FACTOR;
+
+            // follower's new speed in next step
+            let neighNewSpeed: f64;
+            // follower's new speed after 1s.
+            let neighNewSpeed1s: f64;
+            // velocity difference, gap after follower-deceleration
+            let dv: f64;
+            let decelGap: f64;
+
+            if MSGlobals::semi_implicit_euler_update() {
+                // euler
+                neighNewSpeed = max2(0., nv.get_speed() - accel2speed(helpDecel));
+                neighNewSpeed1s = max2(0., nv.get_speed() - helpDecel);
+                dv = plannedSpeed - neighNewSpeed1s;
+                decelGap = neighFollow.1 + dv;
+            } else {
+                // ballistic
+                neighNewSpeed = nv.get_speed() - accel2speed(helpDecel);
+                neighNewSpeed1s = nv.get_speed() - helpDecel;
+
+                dv = self.myVehicle.get_speed() - nv.get_speed(); // current velocity difference
+                decelGap = MSCFModel::gap_extrapolation(1., neighFollow.1, self.myVehicle.get_speed(),
+                    nv.get_speed(), plannedAccel, -helpDecel, self.myVehicle.get_max_speed_on_lane(), nv.get_max_speed_on_lane());
+            }
+
+            let secureGap = nv.get_car_follow_model().get_secure_gap(nv, self.myVehicle, max2(neighNewSpeed1s, 0.),
+                max2(plannedSpeed, 0.), self.myVehicle.get_car_follow_model().get_max_decel());
+
+            let onRampThreshold = self.myVehicle.get_lane().get_speed_limit() * 0.8 * self.myExperimentalParam1 * (1. - self.myVehicle.get_impatience());
+
+            // prevent vehicles on an on ramp stopping the main flow
+            if dir == LCA_MLEFT
+                && self.myVehicle.get_lane().is_accel_lane()
+                && neighNewSpeed1s < onRampThreshold {
+                return;
+            }
+
+            if decelGap > 0. && decelGap >= secureGap {
+                // if the blocking follower brakes it could help
+                // how hard does it actually need to be?
+                // to be safe in the next step the following equation has to hold for the follower's vsafe:
+                //   vsafe <= followSpeed(gap=currentGap - SPEED2DIST(vsafe), ...)
+                let vsafe1: f64;
+                let mut vsafe: f64;
+
+                if MSGlobals::semi_implicit_euler_update() {
+                    // euler
+                    // we compute an upper bound on vsafe by doing the computation twice
+                    vsafe1 = max2(neighNewSpeed, nv.get_car_follow_model().follow_speed(
+                        nv, nv.get_speed(), neighFollow.1 + speed2dist(plannedSpeed), plannedSpeed, self.myVehicle.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT));
+                    vsafe = max2(neighNewSpeed, nv.get_car_follow_model().follow_speed(
+                        nv, nv.get_speed(), neighFollow.1 + speed2dist(plannedSpeed - vsafe1), plannedSpeed, self.myVehicle.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT));
+                } else {
+                    // ballistic
+                    // XXX: This block should actually do as well for euler update (TODO: test!), refs #2575
+                    // we compute an upper bound on vsafe
+                    // next step's gap without help deceleration (nv's speed assumed constant)
+                    let mut nextGap = MSCFModel::gap_extrapolation(ts(),
+                        neighFollow.1, self.myVehicle.get_speed(),
+                        nv.get_speed(), plannedAccel, 0.,
+                        self.myVehicle.get_max_speed_on_lane(), nv.get_max_speed_on_lane());
+
+                    // NOTE: the second argument of MIN2() can get larger than nv->getSpeed()
+                    vsafe1 = min2(nv.get_speed(), max2(neighNewSpeed,
+                        nv.get_car_follow_model().follow_speed(nv,
+                            nv.get_speed(), nextGap,
+                            max2(0., plannedSpeed),
+                            self.myVehicle.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT)));
+
+                    // next step's gap with possibly less than maximal help deceleration (in case vsafe1 > neighNewSpeed)
+                    let decel2 = speed2accel(nv.get_speed() - vsafe1);
+                    nextGap = MSCFModel::gap_extrapolation(ts(),
+                        neighFollow.1, self.myVehicle.get_speed(),
+                        nv.get_speed(), plannedAccel, -decel2,
+                        self.myVehicle.get_max_speed_on_lane(), nv.get_max_speed_on_lane());
+
+                    // vsafe = MAX(neighNewSpeed, safe speed assuming next_gap)
+                    // Thus, the gap resulting from vsafe is larger or equal to next_gap
+                    vsafe = min2(nv.get_speed(), max2(neighNewSpeed,
+                        nv.get_car_follow_model().follow_speed(nv,
+                            nv.get_speed(), nextGap,
+                            max2(0., plannedSpeed),
+                            self.myVehicle.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT)));
+
+                    debug_assert!(vsafe >= vsafe1 - utils::geom::NUMERICAL_EPS);
+
+                    // For subsecond simulation, this might not lead to secure gaps for a long time,
+                    // we seek to establish a secure gap as soon as possible
+                    let nextSecureGap = nv.get_car_follow_model().get_secure_gap(nv, self.myVehicle, vsafe, plannedSpeed, self.myVehicle.get_car_follow_model().get_max_decel());
+
+                    if nextGap < nextSecureGap {
+                        // establish a secureGap as soon as possible
+                        vsafe = neighNewSpeed;
+                    }
+                }
+                msgPass.inform_neigh_follower(new_info((vsafe, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+
+            } else if (MSGlobals::semi_implicit_euler_update() && dv > 0. && dv * remainingSeconds > (secureGap - decelGap + utils::geom::POSITION_EPS))
+                || (!MSGlobals::semi_implicit_euler_update() && dv > 0. && dv * (remainingSeconds - 1.) > secureGap - decelGap + utils::geom::POSITION_EPS)
+            {
+                // NOTE: This case corresponds to the situation, where some time is left to perform the lc
+                msgPass.inform_neigh_follower(new_info((neighNewSpeed, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+            } else if dir == LCA_MRIGHT && nv.m().get_lane_change_model().avoid_overtake_right(self.myVehicle, false) {
+                // XXX: check if this requires a special treatment for the ballistic update, refs. #2575
+                let vhelp = max2(neighNewSpeed, HELP_OVERTAKE);
+                msgPass.inform_neigh_follower(new_info((vhelp, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+            } else {
+                let mut vhelp = max2(nv.get_speed(), self.myVehicle.get_speed() + HELP_OVERTAKE);
+                if nv.get_speed() > self.myVehicle.get_speed() &&
+                    ((dir == LCA_MRIGHT && self.myVehicle.get_waiting_seconds() > LCA_RIGHT_IMPATIENCE) // NOTE: it might be considered to use myVehicle.getAccumulatedWaitingSeconds() instead (Leo). Refs. #2578
+                    || (dir == LCA_MLEFT && plannedSpeed > CUT_IN_LEFT_SPEED_THRESHOLD) // VARIANT_22 (slowDownLeft)
+                    // XXX this is a hack to determine whether the vehicles is on an on-ramp. This information should be retrieved from the network itself
+                    || (dir == LCA_MLEFT && self.myVehicle.get_lane().get_length() > MAX_ONRAMP_LENGTH))
+                {
+                    // let the follower slow down to increase the likelihood that later vehicles will be slow enough to help
+                    // follower should still be fast enough to open a gap
+                    vhelp = max2(neighNewSpeed, self.myVehicle.get_speed() + HELP_OVERTAKE);
+                    if MSGlobals::semi_implicit_euler_update() {
+                        // euler
+                        if (nv.get_speed() - self.myVehicle.get_speed()) / helpDecel < remainingSeconds {
+                            msgPass.inform_neigh_follower(new_info((vhelp, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                            return;
+                        }
+                    } else {
+                        // ballistic (this block is a bit different to the logic in the euler part, but in general suited to work on euler as well.. must be tested <- TODO, refs. #2575)
+                        // estimate gap after remainingSeconds.
+                        // Assumptions:
+                        // (A1) leader continues with currentSpeed.
+                        // (A2) follower breaks with helpDecel.
+                        let gapAfterRemainingSecs = MSCFModel::gap_extrapolation(
+                            remainingSeconds, neighFollow.1, self.myVehicle.get_speed(), nv.get_speed(), 0., -helpDecel, self.myVehicle.get_max_speed_on_lane(), nv.get_max_speed_on_lane());
+                        let secureGapAfterRemainingSecs = nv.get_car_follow_model().get_secure_gap(nv, self.myVehicle,
+                            max2(nv.get_speed() - remainingSeconds * helpDecel, 0.), self.myVehicle.get_speed(), self.myVehicle.get_car_follow_model().get_max_decel());
+                        if gapAfterRemainingSecs >= secureGapAfterRemainingSecs { // XXX: here it would be wise to check whether there is enough space for eventual braking if the maneuver doesn't succeed
+                            // NOTE: ballistic uses neighNewSpeed instead of vhelp, see my note above. (Leo)
+                            msgPass.inform_neigh_follower(new_info((neighNewSpeed, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                            return;
+                        }
+                    }
+                }
+
+                msgPass.inform_neigh_follower(new_info((vhelp, dir | LCA_AMBLOCKINGFOLLOWER)), self.myVehicle);
+                // This follower is supposed to overtake us. Slow down smoothly to allow this.
+                let overtakeDist = Self::overtake_distance(nv, self.myVehicle, neighFollow.1, vhelp, plannedSpeed);
+                // speed difference to create a sufficiently large gap
+                let needDV = overtakeDist / remainingSeconds;
+                // make sure the deceleration is not to strong
+                self.add_lc_speed_advice(max2(vhelp - needDV, self.myVehicle.get_speed() - accel2speed(self.myVehicle.get_car_follow_model().get_max_decel())), dir);
+            }
+        } else if !neighFollow.0.is_null() && (blocked & LCA_BLOCKED_BY_LEADER) != 0 {
+            // we are not blocked by the follower now, make sure it remains that way
+            let vsafe = MSLCHelper::get_speed_preserving_secure_gap(&*self.myVehicle, &*neighFollow.0, neighFollow.1, plannedSpeed);
+            msgPass.inform_neigh_follower(new_info((vsafe, dir)), self.myVehicle);
+        }
     }
 
     /// C++: `double MSLCM_LC2013::overtakeDistance(const MSVehicle *, const MSVehicle *, const double, double, double)` [static, protected]
