@@ -1,6 +1,10 @@
 //! Port of netgen/NGEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::rand_helper::with_default;
+use utils::common::sumo_vehicle_class::is_railway;
+use utils::options::options_cont::{get_bool, get_float, get_string};
+use utils::xml::sumo_xml_definitions::LaneSpreadFunctions;
 
 /// C++ typedef `std::list<NGEdge *> NGEdgeList`
 pub type NGEdgeList = VecDeque<Ptr<NGEdge>>;
@@ -39,9 +43,18 @@ impl NGEdge {
     //     myStartNode->addLink(this);
     //     myEndNode->addLink(this);
     // }
+    // Returns Box<Self>: the constructor registers `this` with both nodes via addLink.
     #[allow(unused_variables)]
-    pub fn new(id: &str, startNode: Ptr<NGNode>, endNode: Ptr<NGNode>, reverseID: &str) -> Self {
-        todo!("port NGEdge::NGEdge")
+    pub fn new(id: &str, startNode: Ptr<NGNode>, endNode: Ptr<NGNode>, reverseID: &str) -> Box<Self> {
+        let b = Box::new(NGEdge {
+            base: Named::new(id),
+            myStartNode: startNode,
+            myEndNode: endNode,
+            myReverseID: if reverseID == "" { format!("-{id}") } else { reverseID.to_string() },
+        });
+        startNode.m().add_link(Ptr::from_box(&b));
+        endNode.m().add_link(Ptr::from_box(&b));
+        b
     }
 
     /// C++: `void NGEdge::~NGEdge() noexcept` [virtual]
@@ -52,7 +65,10 @@ impl NGEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NGEdge::~NGEdge")
+        let this = Ptr::from_mut(self);
+        let (start, end) = (self.myStartNode, self.myEndNode);
+        start.m().remove_link(this);
+        end.m().remove_link(this);
     }
 
     /// C++: `NGNode * NGEdge::getStartNode() const` [const]
@@ -62,7 +78,7 @@ impl NGEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_node(&self) -> Ptr<NGNode> {
-        todo!("port NGEdge::getStartNode")
+        self.myStartNode
     }
 
     /// C++: `NGNode * NGEdge::getEndNode() const` [const]
@@ -72,7 +88,7 @@ impl NGEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_node(&self) -> Ptr<NGNode> {
-        todo!("port NGEdge::getEndNode")
+        self.myEndNode
     }
 
     /// C++: `NBEdge * NGEdge::buildNBEdge(NBNetBuilder &, std::string, const bool) const` [const]
@@ -122,7 +138,46 @@ impl NGEdge {
     // }
     #[allow(unused_variables)]
     pub fn build_nb_edge(&self, nb: &mut NBNetBuilder, type_: String, reversed: bool) -> Ptr<NBEdge> {
-        todo!("port NGEdge::buildNBEdge")
+        let mut type_ = type_;
+        if get_bool("random-type") && nb.get_type_cont().size() > 1 {
+            let n = nb.get_type_cont().size();
+            let idx = with_default(|r| r.rand_int(n));
+            type_ = nb.get_type_cont().begin().nth(idx as usize).unwrap().0.clone();
+        }
+        let mut priority = nb.get_type_cont().get_edge_type_priority(&type_);
+        if priority > 1 && get_bool("rand.random-priority") {
+            priority = with_default(|r| r.rand_int(priority)) + 1;
+        }
+        let mut lanenumber = nb.get_type_cont().get_edge_type_num_lanes(&type_);
+        if lanenumber > 1 && get_bool("rand.random-lanenumber") {
+            lanenumber = with_default(|r| r.rand_int(lanenumber)) + 1;
+        }
+
+        let permissions: SVCPermissions = nb.get_type_cont().get_edge_type_permissions(&type_);
+        let mut lsf: LaneSpreadFunction = nb.get_type_cont().get_edge_type_spread_type(&type_);
+        if lsf == LaneSpreadFunction::SPREAD_UNKNOWN {
+            lsf = LaneSpreadFunctions.get(&get_string("default.spreadtype")).unwrap();
+        }
+        if is_railway(permissions) && nb.get_type_cont().get_edge_type_is_one_way(&type_) {
+            lsf = LaneSpreadFunction::CENTER;
+        }
+        let maxSegmentLength: f64 = get_float("geometry.max-segment-length");
+        let from: Ptr<NBNode> = nb.get_node_cont().retrieve(if reversed { self.myEndNode.get_id() } else { self.myStartNode.get_id() });
+        let to: Ptr<NBNode> = nb.get_node_cont().retrieve(if reversed { self.myStartNode.get_id() } else { self.myEndNode.get_id() });
+        let mut shape: PositionVector = PositionVector::default();
+        if maxSegmentLength > 0.0 {
+            shape.push(from.get_position().clone());
+            shape.push(to.get_position().clone());
+            // shape is already cartesian but we must use a copy because the original will be modified
+            let copy = PositionVector::from(shape.to_vec());
+            NBNetBuilder::add_geometry_segments(&mut shape, &copy, maxSegmentLength);
+        }
+        let id: &str = if reversed { self.myReverseID.as_str() } else { self.get_id() };
+        let speed = nb.get_type_cont().get_edge_type_speed(&type_);
+        let width = nb.get_type_cont().get_edge_type_width(&type_);
+        let mut result = NBEdge::new_2(id, from, to, type_, speed, UNSPECIFIED_FRICTION, lanenumber, priority, width, UNSPECIFIED_OFFSET, shape, lsf, "", "", false);
+        result.set_permissions(permissions, -1);
+        Ptr::from_raw(Box::into_raw(result))
     }
 
 }

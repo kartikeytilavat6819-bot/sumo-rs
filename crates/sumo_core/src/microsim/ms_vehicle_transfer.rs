@@ -441,8 +441,26 @@ impl MSVehicleTransfer {
     //     MSNet::getInstance()->getInsertionControl().alreadyDeparted(veh);
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime, vc: &mut MSVehicleControl) {
-        todo!("port MSVehicleTransfer::loadState")
+    // Returns Result: C++ attrs.getLong() throws ProcessError, which must propagate to the SAX handler.
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime, vc: &mut MSVehicleControl) -> Result<(), ProcessError> {
+        // shortcut: dynamic_cast<MSVehicle*> has no runtime check here; a null result still means "deleted" as in C++
+        let veh: Ptr<MSVehicle> = vc.get_vehicle(attrs.get_string(SUMO_ATTR_ID).as_str()).cast::<MSVehicle>();
+        if veh.is_null() {
+            // deleted
+            return Ok(());
+        }
+        let proceedTime: SUMOTime = attrs.get_long(SUMO_ATTR_DEPART)? as SUMOTime;
+        let parkingLane: Ptr<MSLane> = if attrs.has_attribute(SUMO_ATTR_PARKING) { MSLane::dictionary_2(attrs.get_string(SUMO_ATTR_PARKING).as_str()) } else { Ptr::null() };
+        let mut ok = true;
+        let jumping: bool = attrs.get_opt::<bool>(SUMO_ATTR_JUMP, veh.get_id(), &mut ok, false, true);
+        self.myVehicles.push(MSVehicleTransfer_VehicleInformation::new(-1, veh, proceedTime - offset, !parkingLane.is_null(), jumping));
+        if !parkingLane.is_null() {
+            parkingLane.m().add_parking(veh.cast::<MSBaseVehicle>());
+            veh.m().set_tentative_lane_and_position(parkingLane, veh.get_position_on_lane(), 0.0);
+            veh.m().process_next_stop(veh.get_speed());
+        }
+        MSNet::get_instance().m().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
+        Ok(())
     }
 
     /// C++: `MSVehicleTransfer * MSVehicleTransfer::getInstance()` [static]
