@@ -133,7 +133,7 @@ impl MSDevice_FCD {
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
         // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "fcd", v, isSet("fcd-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if MSDevice::equipped_by_default_assignment_options() {
+        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
             let id = format!("fcd_{}", v.get_id());
             // the device is owned by the vehicle's device list for the rest of the run, as in C++
             let device: &mut MSDevice_FCD = Box::leak(Box::new(MSDevice_FCD::new(v, &id)));

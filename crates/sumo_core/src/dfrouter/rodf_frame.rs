@@ -229,7 +229,7 @@ impl RODFFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options() -> bool {
-        todo!("port RODFFrame::checkOptions")
+        true
     }
 
 }

@@ -83,3 +83,10 @@ same output text, same floating-point results.
   `let v: Ptr<MSVehicle> = sumo_vehicle_ptr.cast::<MSVehicle>();`. Same for upcasts.
 - dynamic_cast's runtime type check is not available: only cast where the C++ logic guarantees the
   type (e.g. after checking a type flag / id prefix); otherwise leave a `// shortcut:` note.
+
+### MSGlobals
+
+- C++ `MSGlobals::gComputeLC` -> `MSGlobals::compute_lc()` (setter `MSGlobals::set_compute_lc(v)`): every
+  MSGlobals static is ported (microsim/ms_globals.rs) as snake_case without the `g`. Don't stub them anymore.
+- Passing a derived object where the C++ expects a base reference: pass `&ptr` and let Deref coerce
+  (MSVehicle -> MSBaseVehicle -> SUMOVehicle are embedded bases).

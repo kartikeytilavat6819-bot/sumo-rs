@@ -121,7 +121,7 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_people_older_than(&mut self, age: i32) -> i32 {
-        todo!("port AGDataAndStatistics::getPeopleOlderThan")
+        self.inhabitants - self.get_people_younger_than(age)
     }
 
     /// C++: `int AGDataAndStatistics::getPeopleYoungerThan(int)`
@@ -131,7 +131,7 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_people_younger_than(&mut self, age: i32) -> i32 {
-        todo!("port AGDataAndStatistics::getPeopleYoungerThan")
+        (self.inhabitants as f64 * self.get_prop_younger_than(age) + 0.5) as i32
     }
 
     /// C++: `double AGDataAndStatistics::getPropYoungerThan(int)`
@@ -156,7 +156,21 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_prop_younger_than(&mut self, age: i32) -> f64 {
-        todo!("port AGDataAndStatistics::getPropYoungerThan")
+        let mut sum = 0.0;
+        let mut previous_age = 0;
+        let mut prop = 0.0;
+        
+        for (&age, &value) in self.population.iter() {
+            if age < age {
+                sum += value;
+            } else if age >= age && previous_age < age {
+                prop = ((age - previous_age) as f64 / (age - previous_age) as f64);
+                sum += prop * value;
+                break;
+            }
+            previous_age = age;
+        }
+        sum
     }
 
     /// C++: `void AGDataAndStatistics::consolidateStat()`
@@ -265,7 +279,13 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn poisson(&mut self, mean: f64, occ: i32) -> f64 {
-        todo!("port AGDataAndStatistics::poisson")
+        use std::f64::consts::E;
+        
+        fn factorial(n: i32) -> f64 {
+            (1..=n).fold(1.0, |acc, x| acc * x as f64)
+        }
+        
+        E.powf(-mean) * mean.powi(occ) / factorial(occ)
     }
 
     /// C++: `int AGDataAndStatistics::factorial(int)` [private]
@@ -279,7 +299,10 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn factorial(&mut self, n: i32) -> i32 {
-        todo!("port AGDataAndStatistics::factorial")
+        if n > 0 {
+            return n * self.factorial(n - 1);
+        }
+        1
     }
 
     /// C++: `void AGDataAndStatistics::normalizeMapProb(std::map<int, double> *)` [private]

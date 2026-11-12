@@ -27,7 +27,7 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn add_trip(&mut self, t: AGTrip, tripSet: Ptr<VecDeque<AGTrip>>) {
-        todo!("port AGActivities::addTrip")
+        self.trips.push_back(t);
     }
 
     /// C++: `void AGActivities::addTrips(std::list<AGTrip>, std::list<AGTrip> *)`
@@ -289,7 +289,9 @@ impl AGActivities {
     // }
     #[allow(unused_variables)]
     pub fn generate_name(&mut self, i: i32, prefix: String) -> String {
-        todo!("port AGActivities::generateName")
+        let mut os = String::new();
+        os.push_str(&i.to_string());
+        prefix + &os
     }
 
 }

@@ -8,7 +8,7 @@ pub struct MSDevice_Bluelight {
     /// C++ base class `MSVehicleDevice`
     pub base: MSVehicleDevice,
     pub myInfluencedVehicles: BTreeSet<String>,
-    pub myInfluencedTypes: Unmapped /* Parameterised::Map */,
+    pub myInfluencedTypes: utils::common::parameterised::ParameterisedMap /* Parameterised::Map */,
     /// reaction distance of other vehicle (i.e. due to different noise levels of the siren)
     pub myReactionDist: f64,
     /// min gap reduction of other vehicles
@@ -42,7 +42,13 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Bluelight::insertOptions")
+        oc.add_option_sub_topic("Bluelight Device");
+        MSDevice::insert_default_assignment_options("bluelight", "Bluelight Device", oc, false);
+
+        oc.do_register("device.bluelight.reactiondist", SumoOption::float(25.0));
+        oc.add_description("device.bluelight.reactiondist", "Bluelight Device", "Set the distance at which other drivers react to the blue light and siren sound");
+        oc.do_register("device.bluelight.mingapfactor", SumoOption::float(1.));
+        oc.add_description("device.bluelight.mingapfactor", "Bluelight Device", "Reduce the minGap for reacting vehicles by the given factor");
     }
 
     /// C++: `void MSDevice_Bluelight::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -72,7 +78,8 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Bluelight::~MSDevice_Bluelight")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `bool MSDevice_Bluelight::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -306,7 +313,7 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Bluelight::notifyEnter")
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_Bluelight::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -324,7 +331,7 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_Bluelight::notifyLeave")
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_Bluelight::deviceName() const` [const, virtual]
@@ -334,7 +341,7 @@ impl MSDevice_Bluelight {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Bluelight::deviceName")
+        "bluelight".to_string()
     }
 
     /// C++: `std::string MSDevice_Bluelight::getParameter(const std::string &) const` [const, virtual]
@@ -348,7 +355,11 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Bluelight::getParameter")
+        if key == "reactiondist" {
+            return utils::common::to_string::f64_to_string(self.myReactionDist);
+        }
+        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
+        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
     }
 
     /// C++: `void MSDevice_Bluelight::setParameter(const std::string &, const std::string &)` [virtual]
@@ -369,7 +380,16 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_Bluelight::setParameter")
+        let doubleValue = match utils::common::string_utils::to_double(value) {
+            Ok(d) => d,
+            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
+            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+        };
+        if key == "reactiondist" {
+            self.myReactionDist = doubleValue;
+        } else {
+            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+        }
     }
 
     /// C++: `void MSDevice_Bluelight::generateOutput(OutputDevice *) const` [const, virtual]
@@ -383,7 +403,10 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_Bluelight::generateOutput")
+        if !tripinfoOut.is_null() {
+            tripinfoOut.m().open_tag("bluelight");
+            tripinfoOut.m().close_tag("");
+        }
     }
 
     /// C++: `void MSDevice_Bluelight::MSDevice_Bluelight(SUMOVehicle &, const std::string &, const double, const double)` [private]
@@ -402,7 +425,7 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, reactionDist: f64, minGapFactor: f64) -> Self {
-        todo!("port MSDevice_Bluelight::MSDevice_Bluelight")
+        unreachable!("MSDevice_Bluelight copy constructor is private and undefined in C++")
     }
 
     /// C++: `void MSDevice_Bluelight::resetVehicle(MSVehicle *, const std::string &)` [private]
@@ -447,7 +470,7 @@ impl MSDevice_Bluelight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Bluelight) -> &mut MSDevice_Bluelight {
-        todo!("port MSDevice_Bluelight::operator=")
+        unreachable!("MSDevice_Bluelight assignment operator is private and undefined in C++")
     }
 
 }

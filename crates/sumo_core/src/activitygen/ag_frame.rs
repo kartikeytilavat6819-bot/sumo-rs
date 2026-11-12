@@ -68,7 +68,7 @@ impl AGFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options() -> bool {
-        todo!("port AGFrame::checkOptions")
+        true
     }
 
 }

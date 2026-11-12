@@ -557,7 +557,7 @@ impl NBPTLineCont {
                     continue;
                 }
                 if stop.get_lines().len() > 0 {
-                    let reverseStop = sc.get_reverse_stop(stop.clone(), ec);
+                    let reverseStop = sc.get_reverse_stop(stop.clone(), ec).unwrap();
                     sc.insert(reverseStop.clone(), false);
                     line.m().replace_stop(stop.clone(), reverseStop.clone());
                     stop = reverseStop;
