@@ -22,6 +22,9 @@ pub struct NBConnection {
     pub myTlIndex2: i32,
 }
 
+/// C++ `NBConnection::InvalidTlIndex`
+pub const NBCONNECTION_INVALID_TL_INDEX: i32 = -1;
+
 // C++ static members of NBConnection (port as module-level statics, see AGENTS.md):
 //   static const int NBConnection::InvalidTlIndex;
 //   static const NBConnection NBConnection::InvalidConnection;
@@ -82,7 +85,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn new(from: Ptr<NBEdge>, to: Ptr<NBEdge>) -> Self {
-        todo!("port NBConnection::NBConnection")
+        Self { myFrom: from, myTo: to, myFromID: from.base.get_id().to_string(), myToID: to.base.get_id().to_string(), myFromLane: -1, myToLane: -1, myTlIndex: NBCONNECTION_INVALID_TL_INDEX, myTlIndex2: NBCONNECTION_INVALID_TL_INDEX }
     }
 
     /// C++: `void NBConnection::NBConnection(NBEdge *, int, NBEdge *, int, int, int)`
@@ -102,7 +105,10 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn new_2(from: Ptr<NBEdge>, fromLane: i32, to: Ptr<NBEdge>, toLane: i32, tlIndex: i32, tlIndex2: i32) -> Self {
-        todo!("port NBConnection::NBConnection")
+        let mut c = Self { myFrom: from, myTo: to, myFromID: String::new(), myToID: String::new(), myFromLane: fromLane, myToLane: toLane, myTlIndex: tlIndex, myTlIndex2: tlIndex2 };
+        c.myFromID = from.get().map_or_else(String::new, |f| f.base.get_id().to_string());
+        c.myToID = to.get().map_or_else(String::new, |f| f.base.get_id().to_string());
+        c
     }
 
     /// C++: `void NBConnection::NBConnection(const std::string &, NBEdge *, const std::string &, NBEdge *)`
@@ -117,7 +123,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn new_3(fromID: &str, from: Ptr<NBEdge>, toID: &str, to: Ptr<NBEdge>) -> Self {
-        todo!("port NBConnection::NBConnection")
+        Self { myFrom: from, myTo: to, myFromID: fromID.to_string(), myToID: toID.to_string(), myFromLane: -1, myToLane: -1, myTlIndex: NBCONNECTION_INVALID_TL_INDEX, myTlIndex2: NBCONNECTION_INVALID_TL_INDEX }
     }
 
     /// C++: `void NBConnection::NBConnection(const NBConnection &)`
@@ -131,7 +137,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn new_4(c: &NBConnection) -> Self {
-        todo!("port NBConnection::NBConnection")
+        Self { myFrom: c.myFrom, myTo: c.myTo, myFromID: c.myFromID.clone(), myToID: c.myToID.clone(), myFromLane: c.myFromLane, myToLane: c.myToLane, myTlIndex: c.myTlIndex, myTlIndex2: c.myTlIndex2 }
     }
 
     /// C++: `void NBConnection::~NBConnection()` [virtual]
@@ -139,7 +145,7 @@ impl NBConnection {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBConnection::~NBConnection")
+        // implicit C++ destructor: nothing to release
     }
 
     /// C++: `NBEdge * NBConnection::getFrom() const` [const]
@@ -150,7 +156,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_from(&self) -> Ptr<NBEdge> {
-        todo!("port NBConnection::getFrom")
+        self.myFrom
     }
 
     /// C++: `NBEdge * NBConnection::getTo() const` [const]
@@ -161,7 +167,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_to(&self) -> Ptr<NBEdge> {
-        todo!("port NBConnection::getTo")
+        self.myTo
     }
 
     /// C++: `bool NBConnection::replaceFrom(NBEdge *, NBEdge *)`
@@ -181,7 +187,16 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn replace_from(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>) -> bool {
-        todo!("port NBConnection::replaceFrom")
+        if self.myFrom == which {
+            self.myFrom = by;
+            if !self.myFrom.is_null() {
+                self.myFromID = self.myFrom.base.get_id().to_string();
+            } else {
+                self.myFromID = "invalidFrom".to_string();
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool NBConnection::replaceFrom(NBEdge *, int, NBEdge *, int)`
@@ -205,7 +220,19 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn replace_from_2(&mut self, which: Ptr<NBEdge>, whichLane: i32, by: Ptr<NBEdge>, byLane: i32) -> bool {
-        todo!("port NBConnection::replaceFrom")
+        if self.myFrom == which && (self.myFromLane == whichLane || self.myFromLane < 0 || whichLane < 0) {
+            self.myFrom = by;
+            if !self.myFrom.is_null() {
+                self.myFromID = self.myFrom.base.get_id().to_string();
+            } else {
+                self.myFromID = "invalidFrom".to_string();
+            }
+            if byLane >= 0 {
+                self.myFromLane = byLane;
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool NBConnection::replaceTo(NBEdge *, NBEdge *)`
@@ -225,7 +252,16 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn replace_to(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>) -> bool {
-        todo!("port NBConnection::replaceTo")
+        if self.myTo == which {
+            self.myTo = by;
+            if !self.myTo.is_null() {
+                self.myToID = self.myTo.base.get_id().to_string();
+            } else {
+                self.myToID = "invalidTo".to_string();
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool NBConnection::replaceTo(NBEdge *, int, NBEdge *, int)`
@@ -249,7 +285,19 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn replace_to_2(&mut self, which: Ptr<NBEdge>, whichLane: i32, by: Ptr<NBEdge>, byLane: i32) -> bool {
-        todo!("port NBConnection::replaceTo")
+        if self.myTo == which && (self.myToLane == whichLane || self.myFromLane < 0 || whichLane < 0) {
+            self.myTo = by;
+            if !self.myTo.is_null() {
+                self.myToID = self.myTo.base.get_id().to_string();
+            } else {
+                self.myToID = "invalidTo".to_string();
+            }
+            if byLane >= 0 {
+                self.myToLane = byLane;
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `void NBConnection::shiftLaneIndex(NBEdge *, int, int)`
@@ -264,7 +312,11 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn shift_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
-        todo!("port NBConnection::shiftLaneIndex")
+        if self.myFrom == edge && self.myFromLane > threshold {
+            self.myFromLane += offset;
+        } else if self.myTo == edge && self.myToLane > threshold {
+            self.myToLane += offset;
+        }
     }
 
     /// C++: `bool NBConnection::check(const NBEdgeCont &)`
@@ -277,7 +329,9 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn check(&mut self, ec: &NBEdgeCont) -> bool {
-        todo!("port NBConnection::check")
+        self.myFrom = self.check_from(ec);
+        self.myTo = self.check_to(ec);
+        !self.myFrom.is_null() && !self.myTo.is_null()
     }
 
     /// C++: `int NBConnection::getFromLane() const` [const]
@@ -288,7 +342,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_from_lane(&self) -> i32 {
-        todo!("port NBConnection::getFromLane")
+        self.myFromLane
     }
 
     /// C++: `int NBConnection::getToLane() const` [const]
@@ -299,7 +353,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_to_lane(&self) -> i32 {
-        todo!("port NBConnection::getToLane")
+        self.myToLane
     }
 
     /// C++: `int NBConnection::getTLIndex() const` [const]
@@ -309,7 +363,7 @@ impl NBConnection {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_index(&self) -> i32 {
-        todo!("port NBConnection::getTLIndex")
+        self.myTlIndex
     }
 
     /// C++: `int NBConnection::getTLIndex2() const` [const]
@@ -318,7 +372,7 @@ impl NBConnection {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_index2(&self) -> i32 {
-        todo!("port NBConnection::getTLIndex2")
+        self.myTlIndex2
     }
 
     /// C++: `void NBConnection::setTLIndex(int)`
@@ -327,7 +381,7 @@ impl NBConnection {
     //     }
     #[allow(unused_variables)]
     pub fn set_tl_index(&mut self, tlIndex: i32) {
-        todo!("port NBConnection::setTLIndex")
+        self.myTlIndex = tlIndex;
     }
 
     /// C++: `void NBConnection::setTLIndex2(int)`
@@ -336,7 +390,7 @@ impl NBConnection {
     //     }
     #[allow(unused_variables)]
     pub fn set_tl_index2(&mut self, tlIndex: i32) {
-        todo!("port NBConnection::setTLIndex2")
+        self.myTlIndex2 = tlIndex;
     }
 
     /// C++: `std::string NBConnection::getID() const` [const]
@@ -349,7 +403,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> String {
-        todo!("port NBConnection::getID")
+        format!("{}_{}->{}_{}", self.myFromID, self.myFromLane, self.myToID, self.myToLane)
     }
 
     /// C++: `bool NBConnection::operator==(const NBConnection &) const` [const]
@@ -364,7 +418,7 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn eq_op(&self, c: &NBConnection) -> bool {
-        todo!("port NBConnection::operator==")
+        self == c
     }
 
     /// C++: `bool NBConnection::operator!=(const NBConnection &) const` [const]
@@ -374,7 +428,7 @@ impl NBConnection {
     //     }
     #[allow(unused_variables)]
     pub fn ne_op(&self, c: &NBConnection) -> bool {
-        todo!("port NBConnection::operator!=")
+        !self.eq_op(c)
     }
 
     /// C++: `NBEdge * NBConnection::checkFrom(const NBEdgeCont &)` [private]
@@ -391,7 +445,13 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn check_from(&mut self, ec: &NBEdgeCont) -> Ptr<NBEdge> {
-        todo!("port NBConnection::checkFrom")
+        let e = ec.retrieve(&self.myFromID, false);
+        // ok, the edge was not changed
+        if e == self.myFrom {
+            return self.myFrom;
+        }
+        // try to get the edge
+        ec.retrieve_possibly_split_2(&self.myFromID, &self.myToID, true)
     }
 
     /// C++: `NBEdge * NBConnection::checkTo(const NBEdgeCont &)` [private]
@@ -408,7 +468,13 @@ impl NBConnection {
     // }
     #[allow(unused_variables)]
     pub fn check_to(&mut self, ec: &NBEdgeCont) -> Ptr<NBEdge> {
-        todo!("port NBConnection::checkTo")
+        let e = ec.retrieve(&self.myToID, false);
+        // ok, the edge was not changed
+        if e == self.myTo {
+            return self.myTo;
+        }
+        // try to get the edge
+        ec.retrieve_possibly_split_2(&self.myToID, &self.myFromID, false)
     }
 
 }
@@ -429,7 +495,7 @@ impl NBConnection {
 // }
 #[allow(unused_variables)]
 pub fn lt_op(c1: &NBConnection, c2: &NBConnection) -> bool {
-    todo!("port operator<")
+    c1 < c2
 }
 
 /// C++: `std::ostream &(std::ostream &, const NBConnection &) operator<<`
@@ -445,7 +511,15 @@ pub fn lt_op(c1: &NBConnection, c2: &NBConnection) -> bool {
 //     return os;
 // }
 #[allow(unused_variables)]
-pub fn shl_op(os: &mut Unmapped /* std::ostream */, c: &NBConnection) -> &'static mut Unmapped /* std::ostream */ {
-    todo!("port operator<<")
+pub fn shl_op<'a>(os: &'a mut String /* std::ostream */, c: &NBConnection) -> &'a mut String /* std::ostream */ {
+    os.push_str(&format!(
+        "Con(from={} fromLane={} to={} toLane={} tlIndex={})",
+        Named::get_id_secure(c.get_from().get().map(|e| &e.base), "NULL"),
+        c.get_from_lane(),
+        Named::get_id_secure(c.get_to().get().map(|e| &e.base), "NULL"),
+        c.get_to_lane(),
+        c.get_tl_index(),
+    ));
+    os
 }
 
