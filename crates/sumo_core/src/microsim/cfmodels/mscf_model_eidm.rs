@@ -13,6 +13,10 @@ use utils::common::rand_helper::with_default;
 const EST_REAC_THRESHOLD: f64 = 3.;
 /// C++ `#define ClutchEngageSpeed 0.5` (MSCFModel_EIDM.cpp): below this speed a vehicle is "slow to start"
 const CLUTCH_ENGAGE_SPEED: f64 = 0.5;
+/// C++ `#define EIDM_POS_ACC_EPS 0.05` (MSCFModel_EIDM.cpp): slack number for smoother position, speed and acceleration update
+const EIDM_POS_ACC_EPS: f64 = 0.05;
+/// C++ `#define SPEED_EPS 0.01` (config.h.cmake)
+const SPEED_EPS: f64 = 0.01;
 
 /// The Extended Intelligent Driver Model (EIDM) car-following model
 /// C++ class `MSCFModel_EIDM` (microsim/cfmodels/MSCFModel_EIDM.h)
@@ -840,7 +844,64 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_EIDM::freeSpeed")
+        // @ToDo: Set new internal speed limit/desired speed <maxSpeed> here and change it over time in internalspeedlimit()!
+
+        if maxSpeed < 0. {
+            // can occur for ballistic update (in context of driving at red light)
+            return maxSpeed;
+        }
+
+        // This update-variable is used to check what called freeSpeed (LC- or CF-model), see enum CalcReason for more information
+        // Here we don't directly use gComputeLC, which is also 0 and 1, because we have another call (update = 2),
+        // which is needed to differentiate between the different cases/calculations/needed output/saved variables
+        let mut update = 1;
+        let mut _vUsage = usage;
+        if MSGlobals::compute_lc() {
+            _vUsage = MSCFModel_CalcReason::LANE_CHANGE;
+        }
+        if _vUsage == MSCFModel_CalcReason::LANE_CHANGE || _vUsage == MSCFModel_CalcReason::FUTURE {
+            update = 0;
+        }
+
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+
+        // shortcut: the C++ GLOSA speed-advice override of `seen` (veh->getDevice(typeid(MSDevice_GLOSA))) is not ported, because get_device takes an Unmapped type_info; upgrade when device lookup by type is ported
+        let mut seen = seen;
+
+        let vSafe;
+        if onInsertion {
+            // Needed for the Insertion-Calculation to check, if insertion at this "speed" is possible to reach "maxSpeed" in the given distance "seen" (vehicle can max decelerate with myDecel!)!
+            vSafe = Self::free_speed_2(speed, self.myDecel, seen, maxSpeed, onInsertion);
+        } else {
+            // driver needs to brake, because he is faster than the desired speed limit <maxSpeed> on the next lane or the next upcoming event (e.g. red light violation)
+            // The adaption/braking starts when the <seen> time-distance is lower than myTpreview+myTreaction
+            if maxSpeed < speed && seen < speed * (self.myTpreview + self.myTreaction) {
+
+                update = if update == 0 { 0 } else { 2 };
+
+                let remaining_time = max3((seen - speed * self.myTreaction) / speed, self.myTreaction / 2., ts()); // The remaining time is at least a time step or the reaction time of the driver
+                let mut targetDecel = (speed - maxSpeed) / remaining_time; // The needed constant deceleration to reach maxSpeed before reaching the next lane/event
+
+                // targetDecel is not set immediatly, if the vehicle is far enough away from the event (bounded by myJerkmax)
+                if remaining_time > self.myTpreview - targetDecel / self.myJerkmax {
+                    targetDecel = (self.myTpreview - remaining_time) * self.myJerkmax;
+                }
+
+                // calculate distance which would result in the accel-value targetDecel at this <speed> and leaderspeed <0>
+                let secGap;
+                if vars.myap_update == 0 || update == 0 { // at action point update
+                    secGap = self.internalsecuregap(veh, speed, 0., targetDecel);
+                } else { // between two action points
+                    secGap = self.internalsecuregap(veh, vars.myv_est + vars.lastrealacc * vars.myap_update as f64 * ts(), 0., targetDecel);
+                }
+
+                vSafe = self.v(veh, max2(seen, secGap), speed, 0., vars.v0_int, true, update, _vUsage);
+            } else { // when the <speed> is lower than <maxSpeed> or the next lane/event is not seen with myTpreview+myTreaction yet
+                vSafe = self.v(veh, 500., speed, maxSpeed, vars.v0_int, true, update, _vUsage);
+            }
+        }
+
+        vSafe
     }
 
     /// C++: `double MSCFModel_EIDM::freeSpeed(const double, const double, const double, const double, const bool)` [static]
@@ -907,7 +968,60 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn free_speed_2(currentSpeed: f64, decel: f64, dist: f64, maxSpeed: f64, onInsertion: bool) -> f64 {
-        todo!("port MSCFModel_EIDM::freeSpeed")
+        // C++ parameter `targetSpeed`
+        let targetSpeed = maxSpeed;
+        if MSGlobals::semi_implicit_euler_update() {
+            // adapt speed to succeeding lane, no reaction time is involved
+            // when breaking for y steps the following distance g is covered
+            // (drive with v in the final step)
+            // g = (y^2 + y) * 0.5 * b + y * v
+            // y = ((((sqrt((b + 2.0*v)*(b + 2.0*v) + 8.0*b*g)) - b)*0.5 - v)/b)
+            let v = speed2dist(targetSpeed);
+            if dist < v {
+                return targetSpeed;
+            }
+            let b = accel2dist(decel);
+            let bv = b + 2.0 * v;
+            let y = max2(0.0, (((bv * bv + 8.0 * b * dist).sqrt() - b) * 0.5 - v) / b);
+            let yFull = y.floor();
+            let exactGap = (yFull * yFull + yFull) * 0.5 * b + yFull * v + (if y > yFull { v } else { 0.0 });
+            let fullSpeedGain = (yFull + (if onInsertion { 1. } else { 0. })) * accel2speed(decel);
+            dist2speed(max2(0.0, dist - exactGap) / (yFull + 1.)) + fullSpeedGain + targetSpeed
+        } else {
+            // ballistic update (Leo)
+            // calculate maximum next speed vN that is adjustable to vT=targetSpeed after a distance d=dist
+            // and given a maximal deceleration b=decel, denote the current speed by v0.
+            // the distance covered by a trajectory that attains vN in the next timestep and decelerates afterwards
+            // with b is given as
+            // d = 0.5*dt*(v0+vN) + (t-dt)*vN - 0.5*b*(t-dt)^2, (1)
+            // where time t of arrival at d with speed vT is
+            // t = dt + (vN-vT)/b.  (2)
+            // We insert (2) into (1) to obtain
+            // d = 0.5*dt*(v0+vN) + vN*(vN-vT)/b - 0.5*b*((vN-vT)/b)^2
+            // 0 = (dt*b*v0 - vT*vT - 2*b*d) + dt*b*vN + vN*vN
+            // and solve for vN
+
+            let dt = if onInsertion { 0. } else { ts() }; // handles case that vehicle is inserted just now (at the end of move)
+            let v0 = currentSpeed;
+            let vT = targetSpeed;
+            let b = decel;
+            let d = dist - NUMERICAL_EPS; // prevent returning a value > targetSpeed due to rounding errors
+
+            // Solvability for positive vN (if d is small relative to v0):
+            // 1) If 0.5*(v0+vT)*dt > d, we set vN=vT.
+            // (In case vT<v0, this implies that on the interpolated trajectory there are points beyond d where
+            //  the interpolated velocity is larger than vT, but at least on the temporal discretization grid, vT is not exceeded)
+            // 2) We ignore the (possible) constraint vN >= v0 - b*dt, which could lead to a problem if v0 - t*b > vT.
+            //    (finalizeSpeed() is responsible for assuring that the next velocity is chosen in accordance with maximal decelerations)
+
+            if 0.5 * (v0 + vT) * dt >= d {
+                return vT; // (#)
+            }
+
+            let q = (dt * v0 - 2. * d) * b - vT * vT; // (q < 0 is fulfilled because of (#))
+            let p = 0.5 * b * dt;
+            -p + (p * p - q).sqrt()
+        }
     }
 
     /// C++: `double MSCFModel_EIDM::interactionGap(const MSVehicle *const, double) const` [const, virtual]
@@ -928,7 +1042,17 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn interaction_gap(&self, arg0: Ptr<MSVehicle>, vL: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::interactionGap")
+        // Resolve the IDM equation to gap. Assume predecessor has
+        // speed != 0 and that vsafe will be the current speed plus acceleration,
+        // i.e that with this gap there will be no interaction.
+        let acc = self.get_current_accel(arg0.get_speed()) * (1. - (arg0.get_speed() / arg0.get_lane().get_vehicle_max_speed(traffic_object(arg0))).powf(self.myDelta));
+        let vNext = arg0.get_speed() + acc;
+        let gap = (vNext - vL) * (arg0.get_speed() + vL) / (2. * self.myDecel) + vL;
+
+        // Don't allow timeHeadWay < deltaT situations.
+        max2(gap, speed2dist(vNext))
+
+        // Only needed for old Lane Change Model????
     }
 
     /// C++: `double MSCFModel_EIDM::getSecureGap(const MSVehicle *const, const MSVehicle *const, const double, const double, const double) const` [const, virtual]
@@ -948,7 +1072,12 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, arg1: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::getSecureGap")
+        // SecureGap depends on v0 and may be higher than just looking at s* (In case of the IDM)
+        let delta_v = speed - leaderSpeed;
+        let s = max2(0.0, speed * self.myHeadwayTime + speed * delta_v / (2. * (self.get_current_accel(speed) * self.myDecel).sqrt())); // is calculated without MinGap because it is compared to a gap without MinGap!
+
+        let erg = ((s * s) / (self.myDecel / self.get_current_accel(speed) + 1.0)).sqrt();
+        min2(s, erg)
     }
 
     /// C++: `double MSCFModel_EIDM::brakeGap(const double, const double, const double) const` [const, virtual]
@@ -967,7 +1096,16 @@ impl MSCFModel_EIDM {
     //     }
     #[allow(unused_variables)]
     pub fn brake_gap(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::brakeGap")
+        if MSGlobals::compute_lc() {
+            self.base.brake_gap_2(speed, decel, headwayTime)
+        } else {
+            // myDecel + 1.0 does not work correctly with the junction model and impatience > 0.
+            // Vehicles may first be disregarded because their own arrivalTimeBraking is high (TIME2STEPS(30)).
+            // This is amplified by this brakeGap-Term, because they "think" they could still brake in time (low brakeGap),
+            // but actually 1.0 was only added for braking at traffic lights. But then when seen < brakeGap(v) happens (see MSVehicle: arrivalTimeBraking),
+            // they realize, that they will soon arrive at the junction and other vehicles are notified to maybe then brake hard!
+            self.base.brake_gap_2(speed, max2(decel, self.myDecel + 1.0), headwayTime)
+        }
     }
 
     /// C++: `double MSCFModel_EIDM::maxNextSafeMin(double, const MSVehicle *const) const` [const, virtual]
@@ -979,7 +1117,8 @@ impl MSCFModel_EIDM {
     //     }
     #[allow(unused_variables)]
     pub fn max_next_safe_min(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_EIDM::maxNextSafeMin")
+        // UNUSED_PARAMETER(speed); UNUSED_PARAMETER(veh);
+        0.
     }
 
     /// C++: `double MSCFModel_EIDM::maximumLaneSpeedCF(const MSVehicle *const, double, double) const` [const, virtual]
@@ -989,7 +1128,7 @@ impl MSCFModel_EIDM {
     //     }
     #[allow(unused_variables)]
     pub fn maximum_lane_speed_cf(&self, arg0: Ptr<MSVehicle>, maxSpeed: f64, arg2: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::maximumLaneSpeedCF")
+        maxSpeed
     }
 
     /// C++: `int MSCFModel_EIDM::getModelID() const` [const, virtual]
@@ -999,7 +1138,7 @@ impl MSCFModel_EIDM {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_EIDM::getModelID")
+        SUMO_TAG_CF_EIDM as i32
     }
 
     /// C++: `MSCFModel * MSCFModel_EIDM::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -1010,7 +1149,8 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_EIDM::duplicate")
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_EIDM::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `VehicleVariables * MSCFModel_EIDM::createVehicleVariables() const` [const, virtual]
@@ -1038,7 +1178,29 @@ impl MSCFModel_EIDM {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_EIDM::createVehicleVariables")
+        // shortcut: allocated with Box::into_raw like C++ `new`; the owning vehicle must free it once ported
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_EIDM_VehicleVariables {
+            base: MSCFModel_VehicleVariables {},
+            minaccel: 100.,
+            wouldacc: 100.,
+            lastacc: 0.,
+            realacc: 100.,
+            lastrealacc: 0.,
+            realleaderacc: 100.,
+            lastleaderacc: 0.,
+            v0_int: 0.,
+            v0_old: 0.,
+            t_off: -10.,
+            myw_gap: 0.,
+            myw_speed: 0.,
+            myw_error: 0.,
+            myv_est_l: 0.,
+            myv_est: 0.,
+            mys_est: 0.,
+            myrespectMinGap: true,
+            myap_update: 0,
+            stop: Vec::new(),
+        })) as *mut MSCFModel_VehicleVariables)
     }
 
     /// C++: `double MSCFModel_EIDM::patchSpeedBeforeLCEIDM(const MSVehicle *, double, double, const VehicleVariables *) const` [const, private]
@@ -1077,7 +1239,29 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lceidm(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64, vars: Ptr<MSCFModel_VehicleVariables>) -> f64 {
-        todo!("port MSCFModel_EIDM::patchSpeedBeforeLCEIDM")
+        let vars = vars.cast::<MSCFModel_EIDM_VehicleVariables>();
+        // dawdling/drivingerror is now calculated here (in finalizeSpeed, not in stop-/follow-/freeSpeed anymore):
+        // Instead of just multiplying mySigmaerror with vars->myw_error, we add a factor depending on the criticality of the situation,
+        // measured with s*/gap. Because when the driver drives "freely" (nothing in front) he may dawdle more than in e.g. congested traffic!
+        let Accel_vMax = self.get_current_accel(vMax);
+        let mut s = max2(0., vars.myv_est * self.myHeadwayTime + vars.myv_est * (vars.myv_est - vars.myv_est_l) / (2. * (Accel_vMax * self.myDecel).sqrt()));
+        if vars.myrespectMinGap {
+            s += self.myType.get_min_gap() + EIDM_POS_ACC_EPS;
+        } else {
+            let minGapStop_EPS = 0.05 + 0.20 * max2(0.25, self.get_current_accel(0.0));
+            s += minGapStop_EPS + EIDM_POS_ACC_EPS;
+        }
+        let intensity = min3(Accel_vMax, 1.5, max2(vMax - 0.5 * Accel_vMax, 0.0));
+        let criticality = min2(max2(s / vars.mys_est - 0.5, -0.4), 0.0);
+
+        let drivingerror = self.mySigmaerror * vars.myw_error * intensity * (2.75 * 2.75 * criticality * criticality + 1.0);
+
+        // else: the vehicle is very slow and we do not add driving error (= 0), because
+        // we should not prevent vehicles from driving just due to dawdling
+        // if someone is starting, he should definitely start
+
+        let vDawdle = max2(vMin, vMax + accel2speed(drivingerror));
+        vDawdle
     }
 
     /// C++: `double MSCFModel_EIDM::slowToStartTerm(MSVehicle *const, const double, const double, const double, VehicleVariables *) const` [const, private]
@@ -1116,7 +1300,40 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn slow_to_start_term(&self, veh: Ptr<MSVehicle>, newSpeed: f64, currentSpeed: f64, vMax: f64, vars: Ptr<MSCFModel_VehicleVariables>) -> f64 {
-        todo!("port MSCFModel_EIDM::slowToStartTerm")
+        let vars = vars.cast::<MSCFModel_EIDM_VehicleVariables>();
+        // Drive Off Activation and Term
+
+        if newSpeed == 0. || newSpeed <= currentSpeed {
+            return newSpeed;
+        }
+
+        let mut remainingDelay = 0.0;
+        if newSpeed != vMax {
+            remainingDelay = steps2time(delta_t() - (self.myStartupDelay - (veh.get_time_since_startup() - delta_t())));
+        }
+
+        let mut v_corr = currentSpeed;
+        for i in 0..self.myIterations {
+            let i = i as f64;
+            // @ToDo: Check if all clauses are still needed or if we need to add more for all possible drive off cases?!
+            // When we reach this point, "newSpeed > currentSpeed" already holds
+            // SIMTIME - remainingDelay - TS * (myIterations - i - 1.) / myIterations
+            let t_now = steps2time(MSNet::get_instance().get_current_time_step()) - remainingDelay - ts() * (self.myIterations as f64 - i - 1.) / self.myIterations as f64;
+            // Activation of the Drive Off term, when
+            if currentSpeed < CLUTCH_ENGAGE_SPEED && // The start speed is lower than ClutchEngageSpeed m/s
+                    vars.t_off + 4. - NUMERICAL_EPS < t_now && // the last activation is at least 4 seconds ago
+                    vars.myap_update == 0 && // the last activation is at least 4 seconds ago AND an Action Point was reached
+                    veh.get_acceleration() < min2(self.get_current_accel(currentSpeed) / 4., 0.2) { // the driver hasn't started accelerating yet (<0.2)
+                vars.m().t_off = t_now; // activate the drive off term
+            }
+            // Calculation of the Drive Off term
+            if vars.t_off + self.myTaccmax + NUMERICAL_EPS > t_now {
+                v_corr = v_corr + (newSpeed - currentSpeed) / self.myIterations as f64 * ((((t_now - vars.t_off) * 2. / self.myTaccmax - self.myMbegin) * self.myMflatness).tanh() + 1.) / 2.;
+            } else {
+                v_corr = v_corr + (newSpeed - currentSpeed) / self.myIterations as f64;
+            }
+        }
+        v_corr
     }
 
     /// C++: `double MSCFModel_EIDM::_v(const MSVehicle *const, const double, const double, const double, const double, const bool, const int, const CalcReason) const` [const, private]
@@ -1474,7 +1691,296 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, gap2pred: f64, mySpeed: f64, predSpeed: f64, desSpeed: f64, respectMinGap: bool, update: i32, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_EIDM::_v")
+        let egoSpeed = mySpeed;
+        let mut v0 = max2(NUMERICAL_EPS, desSpeed);
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+
+        // @ToDo: Where to put such an insertion function/update, which only needs to be calculated once at the first step?????!
+        // For the first iteration
+        if vars.v0_old == 0. {
+            vars.m().v0_old = max2(NUMERICAL_EPS, veh.get_lane().get_vehicle_max_speed(traffic_object(veh)));
+            vars.m().v0_int = max2(NUMERICAL_EPS, veh.get_lane().get_vehicle_max_speed(traffic_object(veh)));
+            v0 = max2(NUMERICAL_EPS, veh.get_lane().get_vehicle_max_speed(traffic_object(veh)));
+        }
+
+        let mut wantedacc = 0.;
+        let mut a_free = 0.;
+        let mut wouldacc = 0.;
+        let mut woulds = 0.;
+        let mut woulda_free = 0.;
+
+        let mut estSpeed = 0.;
+        let mut estleaderSpeed = 0.;
+        let mut estGap = 0.;
+        let mut current_estSpeed;
+        let mut current_estGap;
+        let mut current_estleaderSpeed;
+        let mut acc = 0.;
+        let mut a_leader = NUMERICAL_EPS; // Default without a leader, should not be 0!
+        let mut newSpeed = egoSpeed;
+        let mut lastrespectMinGap = respectMinGap;
+        let minGapStop_EPS = 0.05 + 0.20 * max2(0.25, self.get_current_accel(0.0));
+
+        // When doing the Follow-Calculation in adapttoLeader (MSVehicle.cpp) the mingap gets subtracted from the current gap (maybe this is needed for the Krauss-Model!).
+        // For the IDM this Mingap is needed or else the vehicle will stop at two times mingap behind the leader!
+        let current_gap;
+        if respectMinGap {
+            current_gap = max2(NUMERICAL_EPS, gap2pred + max2(NUMERICAL_EPS, self.myType.get_min_gap() - 0.25)); // 0.25m tolerance because of reaction time and estimated variables
+        } else {
+            // gap2pred may go to 0 when offset is reached (e.g. 1m Offset -> gap2pred=0, when vehicle stands at 0.95m, gap2pred is still 0 and does not become -0.05m (negative)!)
+            current_gap = max2(NUMERICAL_EPS, gap2pred + minGapStop_EPS);
+        }
+
+        let mut newGap = current_gap;
+
+        let N = self.myIterations as f64;
+        for i in 0..self.myIterations {
+            let i = i as f64;
+            // myap_update * TS - TS * (myIterations - i - 1.) / myIterations
+            let ap_term = vars.myap_update as f64 * ts() - ts() * (N - i - 1.) / N;
+
+            // Using Action-Point reaction time: update the variables, when myap_update is zero and update is 1
+            current_estSpeed = newSpeed;
+            if respectMinGap {
+                current_estleaderSpeed = max2(predSpeed - newGap * self.mySigmaleader * vars.myw_speed, 0.0); // estimated variable with Wiener Prozess
+            } else {
+                // @ToDo: Use this??? driver would always know, that junctions, traffic lights, etc. have v=0!
+                // @ToDo: With estimated variables predSpeed > 0 is possible! > 0 may result in oscillating
+                current_estleaderSpeed = predSpeed;
+            }
+            if update == 2 { // For freeSpeed
+                current_estGap = newGap; // not-estimated variable
+            } else {
+                if respectMinGap {
+                    current_estGap = newGap * (self.mySigmagap * vars.myw_gap).exp(); // estimated variable with Wiener Prozess
+                } else {
+                    current_estGap = newGap * (self.mySigmagap * vars.myw_gap * min2(current_estSpeed / EST_REAC_THRESHOLD, 1.0)).exp(); // estimated variable with Wiener Prozess
+                }
+            }
+
+            if vars.myap_update == 0 && usage == MSCFModel_CalcReason::CURRENT { // update variables with current observation
+                estSpeed = current_estSpeed;
+                estleaderSpeed = current_estleaderSpeed; // estimated variable with Wiener Prozess
+                estGap = current_estGap; // estimated variable with Wiener Prozess
+            } else if usage == MSCFModel_CalcReason::CURRENT { // use stored variables (reaction time)
+                estSpeed = max2(vars.myv_est + vars.lastrealacc * ap_term, 0.0);
+                if update == 2 { // For freeSpeed
+                    estGap = newGap; // not-estimated variable
+                    estleaderSpeed = max2(vars.myv_est_l + vars.lastleaderacc * ap_term - vars.mys_est * self.mySigmaleader * vars.myw_speed, 0.0);
+                } else {
+                    lastrespectMinGap = vars.myrespectMinGap;
+                    if lastrespectMinGap {
+                        estleaderSpeed = max2(vars.myv_est_l + vars.lastleaderacc * ap_term - vars.mys_est * self.mySigmaleader * vars.myw_speed, 0.0);
+                        estGap = vars.mys_est * (self.mySigmagap * vars.myw_gap).exp() - ((vars.myv_est + estSpeed) / 2. - (vars.myv_est_l + estleaderSpeed) / 2.) * ap_term; // estimated variable with Wiener Prozess
+                    } else {
+                        // @ToDo: Use this??? driver would always know, that junctions, traffic lights, etc. have v=0!
+                        // @ToDo: With estimated variables predSpeed > 0 is possible! > 0 may result in oscillating
+                        estleaderSpeed = vars.myv_est_l;
+                        estGap = vars.mys_est * (self.mySigmagap * vars.myw_gap * min2(current_estSpeed / EST_REAC_THRESHOLD, 1.0)).exp() - ((vars.myv_est + estSpeed) / 2. - (vars.myv_est_l + estleaderSpeed) / 2.) * ap_term; // estimated variable with Wiener Prozess
+                    }
+                }
+            } else { // use actual variables without reaction time
+                estSpeed = current_estSpeed;
+                estleaderSpeed = current_estleaderSpeed; // estimated variable with Wiener Prozess
+                estGap = current_estGap; // estimated variable with Wiener Prozess
+            }
+
+            // ToDo: The headway can change for IDMM based on the scenario, should something like that also be integrated here???
+            let headwayTime = self.myHeadwayTime;
+
+            let Accel_estSpeed = self.get_current_accel(estSpeed);
+            let Accel_current_estSpeed = self.get_current_accel(current_estSpeed);
+
+            let mut s = max2(0., estSpeed * headwayTime + estSpeed * (estSpeed - estleaderSpeed) / (2. * (Accel_estSpeed * self.myDecel).sqrt()));
+            if lastrespectMinGap {
+                s += self.myType.get_min_gap() + EIDM_POS_ACC_EPS;
+            } else {
+                s += minGapStop_EPS + EIDM_POS_ACC_EPS;
+            }
+
+            // Because of the reaction time and estimated variables, s* can become lower than gap when the vehicle needs to brake/is braking, that results in the vehicle accelerating again...
+            // Here: When the gap is very small, s* is influenced to then always be bigger than the gap. With this there are no oscillations in accel at small gaps!
+            if lastrespectMinGap {
+                // The allowed position error when coming to a stop behind a leader is higher with higher timesteps (approx. 0.5m at 1.0s timstep, 0.1m at 0.1s)
+                if estGap < self.myType.get_min_gap() + (ts() * 10. + 1.) * EIDM_POS_ACC_EPS && estSpeed < EST_REAC_THRESHOLD && s < estGap * (1. + 2. * EIDM_POS_ACC_EPS / Accel_estSpeed).sqrt() {
+                    s = estGap * (1. + 2. * EIDM_POS_ACC_EPS / Accel_estSpeed).sqrt();
+                }
+            } else {
+                if estGap < minGapStop_EPS + 2. * EIDM_POS_ACC_EPS && s < estGap * (1. + EIDM_POS_ACC_EPS / Accel_estSpeed).sqrt() {
+                    // when the vehicle wants to stop (stopSpeed), it may take long to come to a full stop
+                    // To lower this stop time, we restrict the deceleration to always be higher than 0.05m/s^2 when stopping
+                    s = estGap * (1. + EIDM_POS_ACC_EPS / Accel_estSpeed).sqrt();
+                }
+            }
+
+            // IIDM calculation from the original Treiber/Kesting publication:
+            // With the saved variables from the last Action Point
+            if estSpeed <= v0 {
+                a_free = Accel_estSpeed * (1. - (estSpeed / v0).powf(self.myDelta));
+                if s >= estGap {
+                    wantedacc = Accel_estSpeed * (1. - (s * s) / (estGap * estGap));
+                } else {
+                    wantedacc = a_free * (1. - (s / estGap).powf(2. * Accel_estSpeed / a_free));
+                }
+            } else { // estSpeed > v0
+                a_free = -self.myDecel * (1. - (v0 / estSpeed).powf(Accel_estSpeed * self.myDelta / self.myDecel));
+                if s >= estGap {
+                    wantedacc = a_free + Accel_estSpeed * (1. - (s * s) / (estGap * estGap));
+                } else {
+                    wantedacc = a_free;
+                }
+            }
+            wantedacc = speed2accel(max2(0.0, estSpeed + accel2speed(wantedacc)) - estSpeed);
+
+            // IIDM calculation from the original Treiber/Kesting publication:
+            // With the current variables (what would the acceleration be without reaction time)
+            if usage == MSCFModel_CalcReason::CURRENT {
+                woulds = max2(0., current_estSpeed * headwayTime + current_estSpeed * (current_estSpeed - current_estleaderSpeed) / (2. * (Accel_current_estSpeed * self.myDecel).sqrt())); // s_soll
+                if respectMinGap {
+                    woulds += self.myType.get_min_gap() + EIDM_POS_ACC_EPS; // when behind a vehicle use MinGap and when at a junction then not????
+                } else {
+                    woulds += minGapStop_EPS + EIDM_POS_ACC_EPS;
+                }
+
+                if current_estSpeed <= v0 {
+                    woulda_free = Accel_current_estSpeed * (1. - (current_estSpeed / v0).powf(self.myDelta));
+                    if woulds >= current_estGap {
+                        wouldacc = Accel_current_estSpeed * (1. - (woulds * woulds) / (current_estGap * current_estGap));
+                    } else {
+                        wouldacc = woulda_free * (1. - (woulds / current_estGap).powf(2. * Accel_current_estSpeed / woulda_free));
+                    }
+                } else { // current_estSpeed > v0
+                    woulda_free = -self.myDecel * (1. - (v0 / current_estSpeed).powf(Accel_current_estSpeed * self.myDelta / self.myDecel));
+                    if woulds >= current_estGap {
+                        wouldacc = woulda_free + Accel_current_estSpeed * (1. - (woulds * woulds) / (current_estGap * current_estGap));
+                    } else {
+                        wouldacc = woulda_free;
+                    }
+                }
+                wouldacc = speed2accel(max2(0.0, current_estSpeed + accel2speed(wouldacc)) - current_estSpeed);
+            }
+
+            // @ToDo: calc_gap is just estGap here, used to have an extra calc_gap calculation (like jmax), but doesn't work well here with the junction calculation:
+            // IIDM calculation -NOT- from the original Treiber/Kesting publication:
+            // Resulting acceleration also with the correct drive off term.
+            let calc_gap = estGap;
+
+            // IIDM calculation from the original Treiber/Kesting publication:
+            // Resulting acceleration also with the correct drive off term.
+            if estSpeed <= v0 {
+                a_free = Accel_estSpeed * (1. - (estSpeed / v0).powf(self.myDelta));
+                if s >= calc_gap {
+                    acc = Accel_estSpeed * (1. - (s * s) / (calc_gap * calc_gap));
+                } else {
+                    acc = a_free * (1. - (s / calc_gap).powf(2. * Accel_estSpeed / a_free));
+                }
+            } else { // estSpeed > v0
+                a_free = -self.myDecel * (1. - (v0 / estSpeed).powf(Accel_estSpeed * self.myDelta / self.myDecel));
+                if s >= calc_gap {
+                    acc = a_free + Accel_estSpeed * (1. - (s * s) / (calc_gap * calc_gap));
+                } else {
+                    acc = a_free;
+                }
+            }
+
+            let mut a_cah = 0.;
+            // Coolness from Enhanced Intelligent Driver Model, when gap "jump" to a smaller gap accurs
+            // @ToDo: Maybe without usage == CalcReason::CURRENT??? To let all calculations profit from Coolness??? (e.g. also lane change calculation)
+            if vars.minaccel > wantedacc - NUMERICAL_EPS && usage == MSCFModel_CalcReason::CURRENT {
+
+                let leader = veh.get_leader(estGap + 25., true).0;
+                if !leader.is_null() && lastrespectMinGap && estleaderSpeed >= SPEED_EPS {
+                    a_leader = min2(leader.get_acceleration(), Accel_estSpeed);
+                    // Change a_leader to lower values when far away from leader or else far away leaders influence the ego-vehicle!
+                    if estGap > s * 3. / 2. { // maybe estGap > 2*s???
+                        a_leader = a_leader * (s * 3. / 2.) / estGap;
+                    }
+                }
+
+                // speed of the leader shouldnt become zero, because then problems with the calculation occur
+                if estleaderSpeed < SPEED_EPS {
+                    estleaderSpeed = SPEED_EPS;
+                }
+
+                if vars.t_off + self.myTaccmax + NUMERICAL_EPS < (steps2time(MSNet::get_instance().get_current_time_step()) - ts() * (N - i - 1.) / N) && egoSpeed > SUMO_CONST_HALTING_SPEED {
+
+                    // Enhanced Intelligent Driver Model
+                    if estleaderSpeed * (estSpeed - estleaderSpeed) <= -2. * estGap * a_leader {
+                        a_cah = (estSpeed * estSpeed * a_leader) / (estleaderSpeed * estleaderSpeed - 2. * estGap * a_leader);
+                    } else {
+                        if estSpeed - estleaderSpeed >= 0. {
+                            a_cah = a_leader - ((estSpeed - estleaderSpeed) * (estSpeed - estleaderSpeed)) / (2. * estGap);
+                        } else {
+                            a_cah = a_leader;
+                        }
+                    }
+
+                    if acc >= a_cah {
+                        // do nothing, meaning acc = acc_IDM;
+                    } else {
+                        acc = (1. - self.myCcoolness) * acc + self.myCcoolness * (a_cah + self.myDecel * ((acc - a_cah) / self.myDecel).tanh());
+                    }
+                }
+            }
+
+            newSpeed = max2(0.0, current_estSpeed + accel2speed(acc) / N);
+
+            // We cannot rely on sub-timesteps, because the here calculated "sub"-gap will not match the "full"-gap calculation of the Euler/Ballistic Update.
+            // The "full"-gap is only calculated with the last measured newSpeed, while the "sub"-gap uses all "sub"-newSpeeds
+            // Example: In the last iteration-step newSpeed becomes 0. Therefore in the Euler Update, the vehicle does not move for the whole timestep!
+            // Example: But in the "sub"-gaps the vehicle may have moved. Therefore, stops can sometimes not be reached
+            newGap = max2(NUMERICAL_EPS, newGap - max2(0., speed2dist(newSpeed - predSpeed) / N));
+
+            // To always reach stops in high-timestep simulations, we adapt the speed to the actual distance that is covered:
+            // This may only be needed for Euler Update...
+            if self.myIterations > 1 && newSpeed < EST_REAC_THRESHOLD * ts() && !lastrespectMinGap {
+                newSpeed = max2(0.0, predSpeed + dist2speed(current_gap - newGap) * N / (i + 1.));
+            }
+        }
+
+        // The "real" acceleration after iterations
+        acc = speed2accel(min2(newSpeed, self.max_next_speed(egoSpeed, veh)) - veh.get_speed());
+
+        // wantedacc is already calculated at this point. acc may still change (because of coolness and drive off), but the ratio should stay the same!
+        // this means when vars->minaccel > wantedacc stands, so should vars->minaccel > acc!
+        // When updating at an Action Point, store the observed variables for the next time steps until the next Action Point.
+        if vars.minaccel > wantedacc - NUMERICAL_EPS && vars.myap_update == 0 && usage == MSCFModel_CalcReason::CURRENT {
+            vars.m().myv_est_l = predSpeed;
+            vars.m().myv_est = egoSpeed;
+            if update == 2 { // For freeSpeed
+                vars.m().mys_est = current_gap + self.myTreaction * egoSpeed;
+            } else {
+                vars.m().mys_est = current_gap;
+            }
+            vars.m().myrespectMinGap = respectMinGap;
+        }
+
+        if usage == MSCFModel_CalcReason::CURRENT && vars.wouldacc > wouldacc {
+            vars.m().wouldacc = wouldacc;
+        }
+
+        // It can happen that wantedacc ist higher than previous calculated wantedacc, BUT acc is lower than prev calculated values!
+        // This often occurs because of "coolness"+Iteration and in this case "acc" is set to the previous (higher) calculated value!
+        if vars.realacc > acc && vars.minaccel <= wantedacc - NUMERICAL_EPS && usage == MSCFModel_CalcReason::CURRENT {
+            acc = vars.realacc;
+            newSpeed = max2(0.0, egoSpeed + accel2speed(acc));
+        }
+
+        // Capture the relevant variables, because it was determined, that this call will result in the acceleration update (vars->minaccel > wantedacc)
+        if vars.minaccel > wantedacc - NUMERICAL_EPS && usage == MSCFModel_CalcReason::CURRENT {
+            vars.m().minaccel = wantedacc;
+            if vars.realacc > acc {
+                vars.m().realacc = acc;
+            }
+            vars.m().realleaderacc = a_leader;
+        }
+
+        // Save the parameters for a potential update in finalizeSpeed, when _v was called in a stopSpeed-function!!!
+        if vars.minaccel > wantedacc - NUMERICAL_EPS && usage == MSCFModel_CalcReason::CURRENT_WAIT && !respectMinGap {
+            vars.m().stop.push((acc, gap2pred));
+        }
+
+        max2(0., newSpeed)
     }
 
     /// C++: `void MSCFModel_EIDM::internalspeedlimit(MSVehicle *const, const double) const` [const, private]
@@ -1612,7 +2118,121 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn internalspeedlimit(&self, veh: Ptr<MSVehicle>, oldV: f64) {
-        todo!("port MSCFModel_EIDM::internalspeedlimit")
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+
+        let mut v_limcurr = vars.v0_int; // model internal desired speed limit
+        let v_limprev = vars.v0_old; // previous desired speed limit for calculation reasons
+
+        let mut lane = veh.get_lane();
+        let bestLaneConts = veh.get_best_lanes_continuation();
+        let mut view = 1;
+        let mut link = MSLane::succ_link_sec(&*veh, view, &*lane, bestLaneConts);
+        let mut seen = lane.get_length() - veh.get_position_on_lane();
+        let mut v0 = lane.get_vehicle_max_speed(traffic_object(veh)); // current desired lane speed
+        // shortcut: the C++ GLOSA device lookup (veh->getDevice(typeid(MSDevice_GLOSA))) is not ported (get_device takes an Unmapped type_info), so speed advice is treated as inactive; upgrade when device lookup by type is ported
+        let activeGLOSA = false;
+
+        // @ToDo: nextTurn is only defined in sublane-model calculation?!
+        // When driving on the last lane/link, the vehicle shouldn't adapt to the lane after anymore.
+        // Otherwise we check the <seen> time-distance and whether is lower than myTpreview
+        if !lane.is_link_end(&mut link) && (seen < oldV * self.myTpreview || seen < v0 * self.myTpreview / 2. || activeGLOSA) {
+            let mut speedlim = 200.;
+            loop { // loop over all upcoming edges/lanes/links until the <seen> time-distance is higher than myTpreview
+                if !lane.is_link_end(&mut link) && (seen < oldV * self.myTpreview || seen < v0 * self.myTpreview / 2.) { // @ToDo: add && (*link)->havePriority()???
+                    // @ToDo: When vehicles already brake because of a minor link, it may not be necessary to adapt the internal desired speed when turning...
+                    // @ToDo: It can't be done via (*link)->havePriority() (vehicle will not brake for other vehicles, so it needs to brake for curve radius),
+                    // @ToDo: because then turning at traffic lights or somewhere else might be missing (traffic light links don't have priority definition?!)
+                    let dir = lane.get_link_cont()[link].get_direction();
+                    match dir {
+                        LinkDirection::NODIR => {}
+                        LinkDirection::STRAIGHT => {}
+                        LinkDirection::TURN => {
+                            speedlim = 4.;
+                        }
+                        LinkDirection::TURN_LEFTHAND => {
+                            speedlim = 4.;
+                        }
+                        LinkDirection::LEFT => {
+                            speedlim = 8.;
+                        }
+                        LinkDirection::RIGHT => {
+                            speedlim = 6.;
+                        }
+                        LinkDirection::PARTLEFT => {
+                            speedlim = 12.;
+                        }
+                        LinkDirection::PARTRIGHT => {
+                            speedlim = 12.;
+                        }
+                    }
+
+                    if v0 > speedlim * veh.get_chosen_speed_factor() + NUMERICAL_EPS {
+                        v0 = speedlim * veh.get_chosen_speed_factor();
+                    }
+
+                    if lane.get_link_cont()[link].get_via_lane().is_null() {
+                        view += 1;
+                    }
+                    lane = lane.get_link_cont()[link].get_via_lane_or_lane();
+                    // @ToDo: Previously: (seen < oldV*myTpreview / 2 || seen < v0*myTpreview / 4)! Changed freeSpeed, so also changed v0-calculation here.
+                    // @ToDo: Vehicle now decelerates to new Speedlimit before reaching new edge (not /2 anymore)!
+                    // @ToDo: v0 for changing speed limits when seen < oldV*myTpreview, not seen < oldV*myTpreview/2 anymore!!!
+                    if v0 > lane.get_vehicle_max_speed(traffic_object(veh)) {
+                        // activeGLOSA is always false in this port (see shortcut above), so only the non-GLOSA branch is reachable
+                        v0 = lane.get_vehicle_max_speed(traffic_object(veh));
+                    }
+                    seen += lane.get_length();
+                    link = MSLane::succ_link_sec(&*veh, view, &*lane, bestLaneConts);
+                } else {
+                    break;
+                }
+            }
+
+            if !(v_limprev < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS) || // if v_limprev!=v0, then the upcoming v0 is different, than the old desired v_limprev and therefore v0_int must change slowly to the new v0
+                    (v_limprev < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS && !(v_limprev < v_limcurr + NUMERICAL_EPS && v_limprev > v_limcurr - NUMERICAL_EPS)) { // When v_limprev==v0, but v_limprev!=v_limcurr, then we may have a special case and need to slowly change v_limcurr to v0
+
+                if (v_limcurr < v_limprev + NUMERICAL_EPS && v_limcurr < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS) || // important when v_limcurr < v0 < v_limprev --> v_limcurr was decreasing, but needs to suddenly increase again
+                        (v_limcurr > v_limprev - NUMERICAL_EPS && v_limcurr > v0 - NUMERICAL_EPS && v_limprev < v0 + NUMERICAL_EPS) { // important when v_limcurr > v0 > v_limprev --> v_limcurr was increasing, but needs to suddenly decrease again
+                    vars.m().v0_old = v_limcurr;
+                } else {
+                    if v_limcurr >= v0 - NUMERICAL_EPS { // v_limcurr is too high and needs to decrease
+                        v_limcurr = max2(v0, v_limcurr - (v_limprev - v0) * ts() / self.myTpreview);
+                    } else { // v_limcurr is too low and needs to increase
+                        v_limcurr = min2(v0, v_limcurr - (v_limprev - v0) * ts() / self.myTpreview);
+                    }
+                }
+
+                // when v_limcurr reaches v0, then update v_limprev=v0
+                if v_limcurr < v0 + NUMERICAL_EPS && v_limcurr > v0 - NUMERICAL_EPS {
+                    vars.m().v0_old = v0;
+                    vars.m().v0_int = v0;
+                } else { // else just update the internal desired speed with v_limcurr
+                    vars.m().v0_int = v_limcurr;
+                }
+            }
+
+        } else if !(v_limprev < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS) || // if v_limprev!=v0, then the upcoming v0 is different, than the old desired v_limprev and therefore v0_int must change slowly to the new v0
+                (v_limprev < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS && !(v_limprev < v_limcurr + NUMERICAL_EPS && v_limprev > v_limcurr - NUMERICAL_EPS)) { // When v_limprev==v0, but v_limprev!=v_limcurr, then we may have a special case and need to slowly change v_limcurr to v0
+
+            if (v_limcurr < v_limprev + NUMERICAL_EPS && v_limcurr < v0 + NUMERICAL_EPS && v_limprev > v0 - NUMERICAL_EPS) || // important when v_limcurr < v0 < v_limprev --> v_limcurr was decreasing, but needs to suddenly increase again
+                    (v_limcurr > v_limprev - NUMERICAL_EPS && v_limcurr > v0 - NUMERICAL_EPS && v_limprev < v0 + NUMERICAL_EPS) { // important when v_limcurr > v0 > v_limprev --> v_limcurr was increasing, but needs to suddenly decrease again
+                vars.m().v0_old = v_limcurr;
+            } else {
+                if v_limcurr >= v0 - NUMERICAL_EPS { // v_limcurr is too high and needs to decrease
+                    v_limcurr = max2(v0, v_limcurr - (v_limprev - v0) * ts() / self.myTpreview);
+                } else { // v_limcurr is too low and needs to increase
+                    v_limcurr = min2(v0, v_limcurr - (v_limprev - v0) * ts() / self.myTpreview);
+                }
+            }
+
+            // when v_limcurr reaches v0, then update v_limprev=v0
+            if v_limcurr < v0 + NUMERICAL_EPS && v_limcurr > v0 - NUMERICAL_EPS {
+                vars.m().v0_old = v0;
+                vars.m().v0_int = v0;
+            } else { // else just update the internal desired speed with v_limcurr
+                vars.m().v0_int = v_limcurr;
+            }
+        }
     }
 
     /// C++: `double MSCFModel_EIDM::internalsecuregap(const MSVehicle *const, const double, const double, const double) const` [const, private]
@@ -1639,7 +2259,24 @@ impl MSCFModel_EIDM {
     // }
     #[allow(unused_variables)]
     pub fn internalsecuregap(&self, veh: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, targetDecel: f64) -> f64 {
-        todo!("port MSCFModel_EIDM::internalsecuregap")
+        // SecureGap depends on v0 and may be higher than just looking at s* (In case of the IDM)
+        // internalsecuregap uses a targetDecel instead of myDecel!
+        let vars = veh.get_car_follow_variables().cast::<MSCFModel_EIDM_VehicleVariables>();
+        let Accel_speed = self.get_current_accel(speed);
+        let delta_v = speed - leaderSpeed;
+        let s = max2(0.0, speed * self.myHeadwayTime + speed * delta_v / (2. * (Accel_speed * self.myDecel).sqrt())); // is calculated without MinGap because it is compared to a gap without MinGap!
+        // For the IDM: - pow(speed / veh->getLane()->getVehicleMaxSpeed(veh), myDelta)) must be added to (myDecel / myAccel + 1)!
+        // the secure gap is calculated using -myDecel as secure maximal acceleration (using myDecel/myAccel)!
+
+        let erg;
+        if speed <= vars.v0_int {
+            erg = ((s * s) / (max2(targetDecel / Accel_speed + 1.0, 1.0))).sqrt();
+        } else { // speed > v0
+            let a_free = -self.myDecel * (1.0 - (vars.v0_int / speed).powf(Accel_speed * self.myDelta / self.myDecel));
+            erg = ((s * s) / (max2(targetDecel / Accel_speed + 1.0 + a_free / Accel_speed, 1.0))).sqrt();
+        }
+
+        erg
     }
 
     /// C++: `MSCFModel_EIDM & MSCFModel_EIDM::operator=(const MSCFModel_EIDM &)` [private]
@@ -1647,7 +2284,8 @@ impl MSCFModel_EIDM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSCFModel_EIDM) -> &mut MSCFModel_EIDM {
-        todo!("port MSCFModel_EIDM::operator=")
+        // shortcut: C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
+        panic!("MSCFModel_EIDM::operator= is private and not defined in C++")
     }
 
 }
@@ -1721,7 +2359,33 @@ impl MSCFModel_EIDM_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "EIDM");
+        // C++ ostream default precision (6) for doubles; bool streams as 0/1
+        let parts = vec![
+            f64_to_string_prec(self.minaccel, 6),
+            f64_to_string_prec(self.wouldacc, 6),
+            f64_to_string_prec(self.lastacc, 6),
+            f64_to_string_prec(self.realacc, 6),
+            f64_to_string_prec(self.lastrealacc, 6),
+            f64_to_string_prec(self.realleaderacc, 6),
+            f64_to_string_prec(self.lastleaderacc, 6),
+            f64_to_string_prec(self.v0_int, 6),
+            f64_to_string_prec(self.v0_old, 6),
+            f64_to_string_prec(self.t_off, 6),
+            f64_to_string_prec(self.myw_gap, 6),
+            f64_to_string_prec(self.myw_speed, 6),
+            f64_to_string_prec(self.myw_error, 6),
+            f64_to_string_prec(self.myv_est_l, 6),
+            f64_to_string_prec(self.myv_est, 6),
+            f64_to_string_prec(self.mys_est, 6),
+            (self.myrespectMinGap as i32).to_string(),
+            self.myap_update.to_string(),
+        ];
+        let internals = parts.join(" ");
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -1754,8 +2418,34 @@ impl MSCFModel_EIDM_VehicleVariables {
     //     bis >> myap_update;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "EIDM" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for EIDM", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        let mut next_f64 = || bis.next().and_then(|s| s.parse::<f64>().ok());
+        if let Some(v) = next_f64() { self.minaccel = v; }
+        if let Some(v) = next_f64() { self.wouldacc = v; }
+        if let Some(v) = next_f64() { self.lastacc = v; }
+        if let Some(v) = next_f64() { self.realacc = v; }
+        if let Some(v) = next_f64() { self.lastrealacc = v; }
+        if let Some(v) = next_f64() { self.realleaderacc = v; }
+        if let Some(v) = next_f64() { self.lastleaderacc = v; }
+        if let Some(v) = next_f64() { self.v0_int = v; }
+        if let Some(v) = next_f64() { self.v0_old = v; }
+        if let Some(v) = next_f64() { self.t_off = v; }
+        if let Some(v) = next_f64() { self.myw_gap = v; }
+        if let Some(v) = next_f64() { self.myw_speed = v; }
+        if let Some(v) = next_f64() { self.myw_error = v; }
+        if let Some(v) = next_f64() { self.myv_est_l = v; }
+        if let Some(v) = next_f64() { self.myv_est = v; }
+        if let Some(v) = next_f64() { self.mys_est = v; }
+        if let Some(v) = bis.next().and_then(|s| s.parse::<i32>().ok()) { self.myrespectMinGap = v != 0; }
+        if let Some(v) = bis.next().and_then(|s| s.parse::<i32>().ok()) { self.myap_update = v; }
+        Ok(())
     }
 
 }
