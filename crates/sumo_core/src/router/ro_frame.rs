@@ -213,7 +213,201 @@ impl ROFrame {
     // }
     #[allow(unused_variables)]
     pub fn fill_options(oc: &mut OptionsCont, isDUA: bool, isMA: bool) {
-        todo!("port ROFrame::fillOptions")
+        // register options
+        // register I/O options
+        oc.do_register_abbr("output-file", 'o', SumoOption::file_name());
+        oc.add_synonyme("output-file", "output", false);
+        oc.add_description("output-file", "Output", "Write generated routes to FILE");
+
+        oc.do_register("vtype-output", SumoOption::file_name());
+        if !isMA {
+            oc.add_synonyme("vtype-output", "vtype", false);
+        }
+        oc.add_description("vtype-output", "Output", "Write used vehicle types into separate FILE");
+
+        oc.do_register("keep-vtype-distributions", SumoOption::bool(false));
+        oc.add_description("keep-vtype-distributions", "Output", "Keep vTypeDistribution ids when writing vehicles and their types");
+
+        oc.do_register("emissions.volumetric-fuel", SumoOption::bool(false));
+        oc.add_description("emissions.volumetric-fuel", "Output", "Return fuel consumption values in (legacy) unit l instead of mg");
+
+        oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
+        oc.add_synonyme("net-file", "net", false);
+        oc.add_description("net-file", "Input", "Use FILE as SUMO-network to route on");
+
+        oc.do_register("named-routes", SumoOption::bool(false));
+        oc.add_description("named-routes", "Output", "Write vehicles that reference routes by their id");
+
+        oc.do_register_abbr("additional-files", 'a', SumoOption::file_name());
+        oc.add_synonyme("additional-files", "d", true);
+        oc.add_synonyme("additional-files", "additional", false);
+        oc.add_synonyme("additional-files", "taz-files", false);
+        oc.add_synonyme("additional-files", "districts", true);
+        oc.add_description("additional-files", "Input", "Read additional network data (districts, bus stops) from FILE(s)");
+
+        oc.do_register_abbr("route-files", 'r', SumoOption::file_name());
+        oc.add_synonyme("route-files", "flow-files", true);
+        oc.add_synonyme("route-files", "flows", true);
+        oc.add_synonyme("route-files", "f", true);
+        oc.add_synonyme("route-files", "alternative-files", true);
+        oc.add_synonyme("route-files", "alternatives-files", true);
+        oc.add_synonyme("route-files", "trip-files", true);
+        oc.add_synonyme("route-files", "trips", true);
+        if isDUA {
+            // to make the transition from --trip-files easier, but has a conflict with jtrrouter
+            oc.add_synonyme("route-files", "t", true);
+        }
+        oc.add_description("route-files", "Input", "Read sumo routes, alternatives, flows, and trips from FILE(s)");
+
+        oc.do_register("phemlight-path", SumoOption::file_name_with(vec!["./PHEMlight/".to_string()]));
+        oc.add_description("phemlight-path", "Input", "Determines where to load PHEMlight definitions from");
+
+        oc.do_register("phemlight-year", SumoOption::integer(0));
+        oc.add_description("phemlight-year", "Input", "Enable fleet age modeling with the given reference year in PHEMlight5");
+
+        oc.do_register("phemlight-temperature", SumoOption::float(utils::common::std_defs::INVALID_DOUBLE));
+        oc.add_description("phemlight-temperature", "Input", "Set ambient temperature to correct NOx emissions in PHEMlight5");
+
+        if isDUA || isMA {
+            oc.do_register_abbr("weight-files", 'w', SumoOption::file_name());
+            oc.add_synonyme("weight-files", "weights", false);
+            oc.add_description("weight-files", "Input", "Read network weights from FILE(s)");
+
+            oc.do_register("lane-weight-files", SumoOption::file_name());
+            oc.add_description("lane-weight-files", "Input", "Read lane-based network weights from FILE(s)");
+
+            oc.do_register_abbr("weight-attribute", 'x', SumoOption::string_with("traveltime"));
+            oc.add_synonyme("weight-attribute", "measure", true);
+            oc.add_description("weight-attribute", "Input", "Name of the xml attribute which gives the edge weight");
+        }
+
+        // shortcut: SystemFrame::addReportOptions not ported yet (report options such as log/verbose are missing), add when SystemFrame lands
+        // register the time settings
+        oc.do_register_abbr("begin", 'b', SumoOption::string_typed("0", "TIME"));
+        oc.add_description("begin", "Time", "Defines the begin time; Previous trips will be discarded");
+
+        oc.do_register_abbr("end", 'e', SumoOption::string_typed("-1", "TIME"));
+        oc.add_description("end", "Time", "Defines the end time; Later trips will be discarded; Defaults to the maximum time that SUMO can represent");
+
+        // register the processing options
+        oc.do_register("ignore-errors", SumoOption::bool(false));
+        oc.add_synonyme("ignore-errors", "continue-on-unbuild", true);
+        oc.add_synonyme("ignore-errors", "dismiss-loading-errors", true);
+        oc.add_description("ignore-errors", "Report", "Continue if a route could not be build");
+
+        oc.do_register("max-alternatives", SumoOption::integer(5));
+        oc.add_description("max-alternatives", "Processing", "Prune the number of alternatives to INT");
+
+        oc.do_register("with-taz", SumoOption::bool(false));
+        oc.add_description("with-taz", "Processing", "Use origin and destination zones (districts) for in- and output");
+
+        oc.do_register("junction-taz", SumoOption::bool(false));
+        oc.add_description("junction-taz", "Input", "Initialize a TAZ for every junction to use attributes toJunction and fromJunction");
+
+        if !isMA {
+            oc.do_register("unsorted-input", SumoOption::bool(false));
+            oc.add_synonyme("unsorted-input", "unsorted", false);
+            oc.add_description("unsorted-input", "Processing", "Assume input is unsorted");
+
+            oc.do_register_abbr("route-steps", 's', SumoOption::string_typed("200", "TIME"));
+            oc.add_description("route-steps", "Processing", "Load routes for the next number of seconds ahead");
+
+            oc.do_register("no-internal-links", SumoOption::bool(false));
+            oc.add_description("no-internal-links", "Processing", "Disable (junction) internal links");
+
+            oc.do_register("randomize-flows", SumoOption::bool(false));
+            oc.add_description("randomize-flows", "Processing", "generate random departure times for flow input");
+
+            oc.do_register("remove-loops", SumoOption::bool(false));
+            oc.add_description("remove-loops", "Processing", "Remove loops within the route; Remove turnarounds at start and end of the route");
+
+            oc.do_register("repair", SumoOption::bool(false));
+            oc.add_description("repair", "Processing", "Tries to correct a false route");
+
+            oc.do_register("repair.from", SumoOption::bool(false));
+            oc.add_description("repair.from", "Processing", "Tries to correct an invalid starting edge by using the first usable edge instead");
+
+            oc.do_register("repair.to", SumoOption::bool(false));
+            oc.add_description("repair.to", "Processing", "Tries to correct an invalid destination edge by using the last usable edge instead");
+
+            oc.do_register("repair.max-detour-factor", SumoOption::float(10.));
+            oc.add_description("repair.max-detour-factor", "Processing", "Backtrack on route if the detour is longer than the gap by FACTOR");
+
+            oc.do_register("mapmatch.distance", SumoOption::float(100.));
+            oc.add_description("mapmatch.distance", "Processing", "Maximum distance when mapping input coordinates (fromXY etc.) to the road network");
+
+            oc.do_register("mapmatch.junctions", SumoOption::bool(false));
+            oc.add_description("mapmatch.junctions", "Processing", "Match positions to junctions instead of edges");
+
+            oc.do_register("mapmatch.taz", SumoOption::bool(false));
+            oc.add_description("mapmatch.taz", "Processing", "Match positions to taz instead of edges");
+
+            oc.do_register("bulk-routing", SumoOption::bool(false));
+            oc.add_description("bulk-routing", "Processing", "Aggregate routing queries with the same origin");
+        }
+
+        oc.do_register("routing-threads", SumoOption::integer(0));
+        oc.add_description("routing-threads", "Processing", "The number of parallel execution threads used for routing");
+
+        if isDUA || isMA {
+            oc.do_register("routing-algorithm", SumoOption::string_with("dijkstra"));
+            oc.add_description("routing-algorithm", "Processing", "Select among routing algorithms ['dijkstra', 'astar', 'CH', 'CHWrapper', 'CCH']");
+        }
+
+        oc.do_register("restriction-params", SumoOption::string_vector());
+        oc.add_description("restriction-params", "Processing", "Comma separated list of param keys to compare for additional restrictions");
+
+        if isDUA || isMA {
+            oc.do_register("weights.interpolate", SumoOption::bool(false));
+            oc.add_synonyme("weights.interpolate", "interpolate", true);
+            oc.add_description("weights.interpolate", "Processing", "Interpolate edge weights at interval boundaries");
+
+            oc.do_register("weights.expand", SumoOption::bool(false));
+            oc.add_synonyme("weights.expand", "expand-weights", true);
+            oc.add_description("weights.expand", "Processing", "Expand the end of the last loaded weight interval to infinity");
+        }
+
+        oc.do_register("weights.minor-penalty", SumoOption::float(1.5));
+        oc.add_description("weights.minor-penalty", "Processing", "Apply the given time penalty when computing routing costs for minor-link internal lanes");
+
+        oc.do_register("weights.tls-penalty", SumoOption::float(0.));
+        oc.add_description("weights.tls-penalty", "Processing", "Apply the given time penalty when computing routing costs across a traffic light");
+
+        oc.do_register("weights.turnaround-penalty", SumoOption::float(5.0));
+        oc.add_description("weights.turnaround-penalty", "Processing", "Apply the given time penalty when computing routing costs for turnaround internal lanes");
+
+        oc.do_register("weights.reversal-penalty", SumoOption::float(60.));
+        oc.add_description("weights.reversal-penalty", "Processing", "Apply the given time penalty when computing routing costs for train reversal. Negative values disable reversal");
+
+        if !isMA {
+            // register defaults options
+            oc.do_register("departlane", SumoOption::string());
+            oc.add_description("departlane", "Defaults", "Assigns a default depart lane");
+
+            oc.do_register("departpos", SumoOption::string());
+            oc.add_description("departpos", "Defaults", "Assigns a default depart position");
+
+            oc.do_register("departspeed", SumoOption::string());
+            oc.add_description("departspeed", "Defaults", "Assigns a default depart speed");
+
+            oc.do_register("arrivallane", SumoOption::string());
+            oc.add_description("arrivallane", "Defaults", "Assigns a default arrival lane");
+
+            oc.do_register("arrivalpos", SumoOption::string());
+            oc.add_description("arrivalpos", "Defaults", "Assigns a default arrival position");
+
+            oc.do_register("arrivalspeed", SumoOption::string());
+            oc.add_description("arrivalspeed", "Defaults", "Assigns a default arrival speed");
+        }
+        oc.do_register("defaults-override", SumoOption::bool(false));
+        oc.add_description("defaults-override", "Defaults", "Defaults will override given values");
+
+        // register report options
+        oc.do_register("stats-period", SumoOption::integer(-1));
+        oc.add_description("stats-period", "Report", "Defines how often statistics shall be printed");
+
+        oc.do_register("no-step-log", SumoOption::bool(false));
+        oc.add_description("no-step-log", "Report", "Disable console output of route parsing step");
     }
 
     /// C++: `bool ROFrame::checkOptions(OptionsCont &)` [static]
@@ -243,7 +437,25 @@ impl ROFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        todo!("port ROFrame::checkOptions")
+        // check whether the output is valid and can be build
+        if !oc.is_set("output-file", true).unwrap() {
+            utils::common::msg_handler::write_error("No output specified.");
+            return false;
+        }
+        //
+        if oc.get_int("max-alternatives").unwrap() < 1 {
+            utils::common::msg_handler::write_error("A positive number of alternatives must be enabled.");
+            return false;
+        }
+        // the port is built without HAVE_FOX (headless), so the parallel routing check applies
+        if oc.get_int("routing-threads").unwrap() > 1 {
+            utils::common::msg_handler::write_error("Parallel routing is only possible when compiled with Fox.");
+            return false;
+        }
+        if oc.exists("mapmatch.junctions") && oc.get_bool("mapmatch.junctions").unwrap() && oc.is_default("junction-taz") {
+            oc.set_default("junction-taz", "true").unwrap();
+        }
+        true
     }
 
 }
