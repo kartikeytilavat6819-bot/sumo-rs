@@ -1015,7 +1015,13 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::collectLinks")
+        if self.base.myControlledLinks.len() == 0 {
+            // maybe we only loaded a different program for a default traffic light.
+            // Try to build links now.
+            let mut links = std::mem::take(&mut self.base.myControlledLinks);
+            self.base.collect_all_links(&mut links);
+            self.base.myControlledLinks = links;
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::collectEdges()` [virtual, protected]
@@ -1065,7 +1071,44 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_edges(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::collectEdges")
+        if self.base.myControlledLinks.len() == 0 {
+            self.base.collect_edges();
+        }
+        self.base.myIncomingEdges.clear();
+        let mut myOutgoing: EdgeVector = Vec::new();
+        // collect the edges from the participating nodes
+        for node in self.base.myControlledNodes.iter() {
+            self.base.myIncomingEdges.extend(node.get_incoming_edges().iter().copied());
+            myOutgoing.extend(node.get_outgoing_edges().iter().copied());
+        }
+        // check which of the edges are completely within the junction
+        // and which are uncontrolled as well (we already know myControlledLinks)
+        let mut j: usize = 0;
+        while j < self.base.myIncomingEdges.len() {
+            let edge = self.base.myIncomingEdges[j];
+            edge.m().set_inside_tls(false); // reset
+            // an edge lies within the logic if it is outgoing as well as incoming
+            if myOutgoing.contains(&edge) {
+                if !self.base.myControlledInnerEdges.contains(edge.get_id()) {
+                    let mut controlled = false;
+                    for it in self.base.myControlledLinks.iter() {
+                        if it.get_from() == edge {
+                            controlled = true;
+                            break;
+                        }
+                    }
+                    if controlled {
+                        self.base.myControlledInnerEdges.insert(edge.get_id().to_string());
+                    } else {
+                        self.base.myEdgesWithin.push(edge);
+                        edge.m().set_inside_tls(true);
+                        j += 1; //j = myIncomingEdges.erase(j);
+                        continue;
+                    }
+                }
+            }
+            j += 1;
+        }
     }
 
     /// C++: `NBTrafficLightLogic * NBLoadedSUMOTLDef::myCompute(int)` [virtual, protected]
@@ -1083,7 +1126,14 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTimeSeconds: i32) -> Ptr<NBTrafficLightLogic> {
-        todo!("port NBLoadedSUMOTLDef::myCompute")
+        // @todo what to do with those parameters?
+        let _ = brakingTimeSeconds;
+        self.base.init_extra_conflicts();
+        self.reconstruct_logic();
+        self.myTLLogic.m().close_building(false);
+        self.patch_if_crossings_added();
+        self.myTLLogic.m().close_building(true);
+        Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new_2(self.myTLLogic))))
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::amInvalid() const` [const, virtual, protected]
@@ -1109,7 +1159,23 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn am_invalid(&self) -> bool {
-        todo!("port NBLoadedSUMOTLDef::amInvalid")
+        if self.base.myControlledLinks.len() == 0 {
+            return true;
+        }
+        if self.base.myIncomingEdges.len() == 0 {
+            return true;
+        }
+        if self.myReconstructRemovedConnections {
+            // check whether at least one connection is valid
+            for con in self.base.myControlledLinks.iter() {
+                if self.is_valid(con) {
+                    return false;
+                }
+            }
+            // all invalid
+            return true;
+        }
+        false
     }
 
     /// C++: `void NBLoadedSUMOTLDef::initNeedsContRelation() const` [const, virtual, protected]
@@ -1166,7 +1232,69 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        todo!("port NBLoadedSUMOTLDef::initNeedsContRelation")
+        let me = Ptr::new(self);
+        if !self.am_invalid() && !self.base.myNeedsContRelationReady {
+            me.m().base.myNeedsContRelation.clear();
+            me.m().base.myExtraConflicts.clear();
+            if self.base.myType == TrafficLightType::NEMA {
+                me.m().base.init_needs_cont_relation();
+                me.m().base.init_extra_conflicts();
+            } else {
+                let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
+                let phases: Vec<String> = self.myTLLogic.m().get_phases().iter().map(|p| p.state.clone()).collect();
+                for state in phases.iter() {
+                    // C++ std::string operator[] at size() yields '\0'
+                    let at = |i: i32| -> u8 { state.as_bytes().get(i as usize).copied().unwrap_or(0) };
+                    for c1 in self.base.myControlledLinks.iter() {
+                        let i1 = c1.get_tl_index();
+                        if i1 == NBCONNECTION_INVALID_TL_INDEX
+                            || (at(i1) != b'g' && at(i1) != b's')
+                            || c1.get_from().is_null()
+                            || c1.get_to().is_null()
+                        {
+                            continue;
+                        }
+                        for c2 in self.base.myControlledLinks.iter() {
+                            let i2 = c2.get_tl_index();
+                            if i2 != NBCONNECTION_INVALID_TL_INDEX
+                                && i2 != i1
+                                && (at(i2) == b'G' || at(i2) == b'g')
+                                && !c2.get_from().is_null()
+                                && !c2.get_to().is_null()
+                            {
+                                let rightTurnConflict = NBNode::right_turn_conflict(
+                                    c1.get_from(),
+                                    c1.get_to(),
+                                    c1.get_from_lane(),
+                                    c2.get_from(),
+                                    c2.get_to(),
+                                    c2.get_from_lane(),
+                                );
+                                let forbidden = self.base.forbids(c2.get_from(), c2.get_to(), c1.get_from(), c1.get_to(), true, controlledWithin);
+                                let isFoes = self.base.foes(c2.get_from(), c2.get_to(), c1.get_from(), c1.get_to())
+                                    && !c2.get_from().is_turning_direction_at(c2.get_to());
+                                let hasContRel = (forbidden && at(i1) != b's') || rightTurnConflict;
+                                if hasContRel {
+                                    me.m().base.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                                        c1.get_from(),
+                                        c1.get_to(),
+                                        c2.get_from(),
+                                        c2.get_to(),
+                                    ));
+                                }
+                                // shortcut: NBEdge::get_connection returns CHBuilder_Connection, which has no indirectLeft field in this port, so indirectLeft is taken as false, upgrade: port NBEdge::getConnection returning NBEdge_Connection
+                                let indirectLeft = false;
+                                if isFoes && (at(i1) == b's' || (!hasContRel && at(i2) == b'G' && !indirectLeft)) {
+                                    me.m().base.myExtraConflicts.insert((i1, i2));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        me.m().base.myNeedsContRelationReady = true;
+        me.m().base.myExtraConflictsReady = true;
     }
 
     /// C++: `int NBLoadedSUMOTLDef::getMaxIndex()` [virtual, protected]
@@ -1188,7 +1316,18 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        todo!("port NBLoadedSUMOTLDef::getMaxIndex")
+        let mut maxIndex: i32 = -1;
+        for c in self.base.myControlledLinks.iter() {
+            maxIndex = std::cmp::max(maxIndex, c.get_tl_index());
+            maxIndex = std::cmp::max(maxIndex, c.get_tl_index2());
+        }
+        for n in self.base.myControlledNodes.iter() {
+            for c in n.get_crossings() {
+                maxIndex = std::cmp::max(maxIndex, c.tlLinkIndex);
+                maxIndex = std::cmp::max(maxIndex, c.tlLinkIndex2);
+            }
+        }
+        maxIndex
     }
 
     /// C++: `int NBLoadedSUMOTLDef::getMaxValidIndex()` [virtual, protected]
@@ -1199,7 +1338,7 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_max_valid_index(&mut self) -> i32 {
-        todo!("port NBLoadedSUMOTLDef::getMaxValidIndex")
+        self.myTLLogic.m().get_num_links() - 1
     }
 
     /// C++: `std::string NBLoadedSUMOTLDef::getStates(int)` [protected]
@@ -1216,7 +1355,13 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_states(&mut self, index: i32) -> String {
-        todo!("port NBLoadedSUMOTLDef::getStates")
+        assert!(index >= 0);
+        assert!(index <= self.get_max_valid_index());
+        let mut result = String::new();
+        for pd in self.myTLLogic.m().get_phases().iter() {
+            result.push(pd.state.as_bytes()[index as usize] as char);
+        }
+        result
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::isUsed(int) const` [const, protected]
@@ -1239,7 +1384,19 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn is_used(&self, index: i32) -> bool {
-        todo!("port NBLoadedSUMOTLDef::isUsed")
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() == index || c.get_tl_index2() == index {
+                return true;
+            }
+        }
+        for n in self.base.myControlledNodes.iter() {
+            for c in n.get_crossings() {
+                if c.tlLinkIndex == index || c.tlLinkIndex2 == index {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `std::set<const NBEdge *> NBLoadedSUMOTLDef::getEdgesUsingIndex(int) const` [const, protected]
@@ -1256,7 +1413,13 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn get_edges_using_index(&self, index: i32) -> BTreeSet<Ptr<NBEdge>> {
-        todo!("port NBLoadedSUMOTLDef::getEdgesUsingIndex")
+        let mut result: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() == index || c.get_tl_index2() == index {
+                result.insert(c.get_from());
+            }
+        }
+        result
     }
 
     /// C++: `void NBLoadedSUMOTLDef::patchIfCrossingsAdded()` [private]
@@ -1317,7 +1480,78 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn patch_if_crossings_added(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::patchIfCrossingsAdded")
+        let size = self.myTLLogic.m().get_num_links();
+        let mut noLinksAll: i32 = 0;
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() != NBCONNECTION_INVALID_TL_INDEX {
+                noLinksAll = std::cmp::max(noLinksAll, c.get_tl_index() + 1);
+            }
+        }
+        let numNormalLinks = noLinksAll;
+        let mut oldCrossings: i32 = 0;
+        // collect crossings
+        let mut customIndex = false;
+        let mut crossings: Vec<Ptr<NBNode_Crossing>> = Vec::new();
+        for n in self.base.myControlledNodes.iter() {
+            let c: Vec<Ptr<NBNode_Crossing>> = n.get_crossings();
+            // set tl indices for crossings
+            customIndex |= n.m().set_crossing_tl_indices(self.get_id(), noLinksAll, false);
+            crossings.extend(c.iter().copied());
+            noLinksAll += c.len() as i32;
+            oldCrossings += n.num_crossings_from_sumo_net();
+        }
+        if crossings.len() as i32 != oldCrossings {
+            let phases: Vec<NBTrafficLightLogic_PhaseDefinition> = self.myTLLogic.m().get_phases().clone();
+            // do not rebuilt crossing states there are custom indices and the state string is long enough
+            if phases.len() > 0
+                && ((phases[0].state.len() as i32) < noLinksAll || ((phases[0].state.len() as i32) > noLinksAll && !customIndex))
+            {
+                // collect edges
+                let mut fromEdges: EdgeVector = vec![Ptr::null(); numNormalLinks as usize];
+                let mut toEdges: EdgeVector = vec![Ptr::null(); numNormalLinks as usize];
+                let mut fromLanes: Vec<i32> = vec![0; size as usize];
+                self.collect_edge_vectors(&mut fromEdges, &mut toEdges, &mut fromLanes);
+                let crossingDefaultState: String = "r".repeat(crossings.len());
+
+                // rebuild the logic (see NBOwnTLDef.cpp::myCompute)
+                let newLogicObj = NBTrafficLightLogic::new(self.get_id(), self.get_program_id(), 0, self.base.myOffset, self.base.myType);
+                let newLogic: Ptr<NBTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(newLogicObj)));
+                let brakingTime: SUMOTime = utils::common::time::time2steps(
+                    self.base.compute_braking_time(utils::options::options_cont::get_float("tls.yellow.min-decel")) as f64,
+                );
+                for phase in phases.iter() {
+                    let len = std::cmp::min(numNormalLinks as usize, phase.state.len());
+                    let state = format!("{}{}", &phase.state[..len], crossingDefaultState);
+                    let _ = NBOwnTLDef::add_pedestrian_phases(
+                        newLogic,
+                        phase.duration,
+                        phase.minDur,
+                        phase.maxDur,
+                        phase.earliestEnd,
+                        phase.latestEnd,
+                        state,
+                        &crossings,
+                        &fromEdges,
+                        &toEdges,
+                    );
+                }
+                NBOwnTLDef::add_pedestrian_scramble(
+                    newLogic,
+                    noLinksAll,
+                    utils::common::time::time2steps(10.0),
+                    brakingTime,
+                    &crossings,
+                    &fromEdges,
+                    &toEdges,
+                );
+
+                // delete myTLLogic
+                delete_tl_logic(self.myTLLogic);
+                self.myTLLogic = newLogic;
+            } else if phases.len() == 0 {
+                write_warningf!("Could not patch tlLogic '%' for changed crossings", self.get_id());
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::collectEdgeVectors(EdgeVector &, EdgeVector &, std::vector<int> &) const` [const, private]
@@ -1343,7 +1577,25 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_edge_vectors(&self, fromEdges: &mut EdgeVector, toEdges: &mut EdgeVector, fromLanes: &mut Vec<i32>) {
-        todo!("port NBLoadedSUMOTLDef::collectEdgeVectors")
+        assert!(fromEdges.len() > 0);
+        assert!(fromEdges.len() == toEdges.len());
+        let size = fromEdges.len() as i32;
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() != NBCONNECTION_INVALID_TL_INDEX {
+                if c.get_tl_index() >= size {
+                    std::panic::panic_any(ProcessError::new(format!(
+                        "Invalid linkIndex {} for traffic light '{}' with {} links.",
+                        c.get_tl_index(),
+                        self.get_id(),
+                        size
+                    )));
+                }
+                let idx = c.get_tl_index() as usize;
+                fromEdges[idx] = c.get_from();
+                toEdges[idx] = c.get_to();
+                fromLanes[idx] = c.get_from_lane();
+            }
+        }
     }
 
     /// C++: `void NBLoadedSUMOTLDef::reconstructLogic()` [private]
@@ -1459,7 +1711,101 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn reconstruct_logic(&mut self) {
-        todo!("port NBLoadedSUMOTLDef::reconstructLogic")
+        let netedit = NBNetBuilder::running_netedit();
+        if self.myReconstructAddedConnections {
+            self.myReconstructAddedConnections = false;
+            // do not rebuild the logic when running netedit and all links are already covered by the program
+            if !self.myPhasesLoaded && !(netedit && self.has_valid_indices()) {
+                // rebuild the logic from scratch
+                // XXX if a connection with the same from- and to-edge already exisits, its states could be copied instead
+                let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.base.myControlledNodes, 0, self.base.get_type());
+                dummy.set_participants_information();
+                let programID: String = self.base.get_program_id().to_string();
+                dummy.set_program_id(&programID);
+                dummy.set_tl_controlling_information();
+                let newLogic: Ptr<NBTrafficLightLogic> = utils::options::options_cont::with_options(|oc| dummy.compute(oc));
+                self.base.myIncomingEdges = dummy.get_incoming_edges().clone();
+                self.base.myControlledLinks = dummy.get_controlled_links().iter().map(NBConnection::new_4).collect();
+                for n in self.base.myControlledNodes.iter() {
+                    n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
+                }
+                delete_tl_logic(self.myTLLogic);
+                self.myTLLogic = newLogic;
+                if !newLogic.is_null() {
+                    newLogic.m().set_id(self.get_id());
+                    newLogic.m().set_type(self.base.get_type());
+                    let offset = self.base.get_offset();
+                    newLogic.m().set_offset(offset);
+                    self.set_tl_controlling_information();
+                    // reset crossing custom indices
+                    for n in self.base.myControlledNodes.iter() {
+                        for c in n.get_crossings() {
+                            c.m().customTLIndex = NBCONNECTION_INVALID_TL_INDEX;
+                        }
+                    }
+                }
+            } else {
+                self.set_tl_controlling_information();
+            }
+        }
+        if self.myReconstructRemovedConnections {
+            self.myReconstructRemovedConnections = false;
+            // for each connection, check whether it is still valid
+            let mut idx: usize = 0;
+            while idx < self.base.myControlledLinks.len() {
+                let con = NBConnection::new_4(&self.base.myControlledLinks[idx]);
+                if self.is_valid(&con) {
+                    idx += 1;
+                } else {
+                    // remove connection
+                    let removed = con.get_tl_index();
+                    self.base.myControlledLinks.remove(idx);
+                    // no automatic modificaions when running netedit
+                    if !self.myPhasesLoaded && !(netedit && self.has_valid_indices()) {
+                        // shift index off successive connections and remove entry from all phases if the tlIndex was only used by this connection
+                        let mut exclusive = true;
+                        for other in self.base.myControlledLinks.iter() {
+                            if other.ne_op(&con) && other.get_tl_index() == removed {
+                                exclusive = false;
+                                break;
+                            }
+                        }
+                        if exclusive {
+                            // shift indices above the removed index downward
+                            for other in self.base.myControlledLinks.iter_mut() {
+                                if other.get_tl_index() > removed {
+                                    other.set_tl_index(other.get_tl_index() - 1);
+                                }
+                            }
+                            // shift crossing custom indices above the removed index downward
+                            for n in self.base.myControlledNodes.iter() {
+                                for c in n.get_crossings() {
+                                    if c.customTLIndex > removed {
+                                        c.m().customTLIndex -= 1;
+                                    }
+                                }
+                            }
+                            // rebuild the logic
+                            let newLogic: Ptr<NBTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new(
+                                self.get_id(),
+                                self.get_program_id(),
+                                0,
+                                self.base.myOffset,
+                                self.base.myType,
+                            ))));
+                            for phase in self.myTLLogic.m().get_phases().iter() {
+                                let mut newState: String = phase.state.clone();
+                                newState.remove(removed as usize);
+                                newLogic.m().add_step(phase.duration, &newState, &Vec::new(), "", -1);
+                            }
+                            delete_tl_logic(self.myTLLogic);
+                            self.myTLLogic = newLogic;
+                        }
+                    }
+                }
+            }
+            self.set_tl_controlling_information();
+        }
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::hasValidIndices() const` [const, private]
@@ -1483,7 +1829,20 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn has_valid_indices(&self) -> bool {
-        todo!("port NBLoadedSUMOTLDef::hasValidIndices")
+        for c in self.base.myControlledLinks.iter() {
+            if c.get_tl_index() == NBCONNECTION_INVALID_TL_INDEX {
+                return false;
+            }
+        }
+        for n in self.base.myControlledNodes.iter() {
+            for c in n.get_crossings() {
+                if c.tlLinkIndex == NBCONNECTION_INVALID_TL_INDEX {
+                    return false;
+                }
+            }
+        }
+        // method getMaxIndex() is const but cannot be declare as such due to inheritance
+        Ptr::new(self).m().get_max_index() < self.myTLLogic.m().get_num_links()
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::isValid(const NBConnection &) const` [const, private]
@@ -1499,7 +1858,11 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn is_valid(&self, con: &NBConnection) -> bool {
-        todo!("port NBLoadedSUMOTLDef::isValid")
+        self.base.myIncomingEdges.contains(&con.get_from())
+            // connection still exists
+            && con.get_from().has_connection_to(con.get_to(), con.get_to_lane(), con.get_from_lane())
+            // connection is still set to be controlled
+            && con.get_from().may_be_tls_controlled(con.get_from_lane(), con.get_to(), con.get_to_lane())
     }
 
 }
@@ -1516,7 +1879,7 @@ impl NBLoadedSUMOTLDef_connection_equal {
     // connection_equal(const NBConnection& c) : myC(c) {}
     #[allow(unused_variables)]
     pub fn new(c: &NBConnection) -> Self {
-        todo!("port connection_equal::connection_equal")
+        Self { myC: Ptr::new(c) }
     }
 
     /// C++: `bool connection_equal::operator()(const NBConnection &) const` [const]
@@ -1526,7 +1889,10 @@ impl NBLoadedSUMOTLDef_connection_equal {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c: &NBConnection) -> bool {
-        todo!("port connection_equal::operator()")
+        c.get_from() == self.myC.get_from()
+            && c.get_to() == self.myC.get_to()
+            && c.get_from_lane() == self.myC.get_from_lane()
+            && c.get_to_lane() == self.myC.get_to_lane()
     }
 
 }
