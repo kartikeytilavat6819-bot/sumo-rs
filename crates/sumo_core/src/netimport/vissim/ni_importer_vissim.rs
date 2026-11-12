@@ -89,6 +89,56 @@ pub struct NIImporter_Vissim {
 // C++ static members of NIImporter_Vissim (port as module-level statics, see AGENTS.md):
 //   static SequentialStringBijection::Entry[] NIImporter_Vissim::vissimTags;
 //   static SequentialStringBijection::Entry[] NIImporter_Vissim::vissimAttrs;
+const VISSIM_TAGS: &[(&str, i32)] = &[
+    ("network", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_NETWORK as i32),
+    ("lanes", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LANES as i32),
+    ("lane", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LANE as i32),
+    ("link", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINK as i32),
+    ("links", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINKS as i32),
+    ("points3D", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_POINTS3D as i32),
+    ("point3D", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_POINT3D as i32),
+    ("linkPolyPoint", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINKPOLYPOINT as i32),
+    ("linkPolyPts", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINKPOLYPTS as i32),
+    ("fromLinkEndPt", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_FROM as i32),
+    ("toLinkEndPt", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_TO as i32),
+    ("vehicleInput", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_VEHICLE_INPUT as i32),
+    ("parkingLot", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_PARKINGLOT as i32),
+    ("vehicleClass", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_VEHICLE_CLASS as i32),
+    ("intObjectRef", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_INTOBJECTREF as i32),
+    ("desSpeedDecision", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_SPEED_DECISION as i32),
+    ("desSpeedDistribution", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_SPEED_DIST as i32),
+    ("speedDistributionDataPoint", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_DATAPOINT as i32),
+    ("vehicleRoutingDecisionStatic", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_DECISION_STATIC as i32),
+    ("vehicleRouteStatic", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_ROUTE_STATIC as i32),
+    ("conflictArea", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_CA as i32),
+    ("", NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_NOTHING as i32),
+];
+const VISSIM_ATTRS: &[(&str, i32)] = &[
+    ("no", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32),
+    ("name", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32),
+    ("x", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_X as i32),
+    ("y", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_Y as i32),
+    ("zOffset", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZOFFSET as i32),
+    ("surch1", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZUSCHLAG1 as i32),
+    ("surch2", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZUSCHLAG2 as i32),
+    ("width", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_WIDTH as i32),
+    ("linkBehavType", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINKBEHAVETYPE as i32),
+    ("lane", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LANE as i32),
+    ("pos", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_POS as i32),
+    ("link", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK as i32),
+    ("intLink", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_INTLINK as i32),
+    ("relFlow", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_PERCENTAGE as i32),
+    ("zone", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DISTRICT as i32),
+    ("color", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_COLOR as i32),
+    ("key", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_KEY as i32),
+    ("fx", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_FX as i32),
+    ("destLink", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DESTLINK as i32),
+    ("destPos", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DESTPOS as i32),
+    ("link1", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK1 as i32),
+    ("link2", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK2 as i32),
+    ("status", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_STATUS as i32),
+    ("", NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NOTHING as i32),
+];
 
 impl NIImporter_Vissim {
     /// C++: `void NIImporter_Vissim::loadNetwork(const OptionsCont &, NBNetBuilder &)` [static]
@@ -102,7 +152,11 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn load_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NIImporter_Vissim::loadNetwork")
+        if !oc.is_set("vissim-file", true).unwrap_or(false) {
+            return;
+        }
+        let mut importer = NIImporter_Vissim::new(nb);
+        importer.load(oc);
     }
 
     /// C++: `void NIImporter_Vissim::NIImporter_Vissim(NBNetBuilder &)` [protected]
@@ -122,8 +176,34 @@ impl NIImporter_Vissim {
     //     myColorMap["keine"] = RGBColor::WHITE;
     // }
     #[allow(unused_variables)]
-    pub fn new(nb: &mut NBNetBuilder) -> Self {
-        todo!("port NIImporter_Vissim::NIImporter_Vissim")
+    pub fn new(nb: &mut NBNetBuilder) -> Box<Self> {
+        // buildParsers hands `*this` to the parsers, so the importer must not move after construction: return the Box
+        let mut b = Box::new(NIImporter_Vissim {
+            elementData: BTreeMap::new(),
+            myKnownElements: BTreeMap::new(),
+            myParsers: BTreeMap::new(),
+            myColorMap: BTreeMap::new(),
+            myLastSecure: String::new(),
+            myNetBuilder: Ptr::from_mut(nb),
+        });
+        b.insert_known_elements();
+        b.build_parsers();
+        let colors: [(&str, RGBColor); 10] = [
+            ("blau", RGBColor::new(77, 77, 255, 255)),
+            ("gelb", RGBColor::YELLOW),
+            ("grau", RGBColor::GREY),
+            ("lila", RGBColor::MAGENTA),
+            ("gruen", RGBColor::GREEN),
+            ("rot", RGBColor::RED),
+            ("schwarz", RGBColor::BLACK),
+            ("tuerkis", RGBColor::CYAN),
+            ("weiss", RGBColor::WHITE),
+            ("keine", RGBColor::WHITE),
+        ];
+        for (name, color) in colors {
+            b.myColorMap.insert(name.to_string(), color);
+        }
+        b
     }
 
     /// C++: `void NIImporter_Vissim::~NIImporter_Vissim()` [protected]
@@ -131,7 +211,20 @@ impl NIImporter_Vissim {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIImporter_Vissim::~NIImporter_Vissim")
+        // shortcut: the parsers are leaked (C++ deletes them here); freeing needs the concrete subclass type, so they are not freed
+        NIVissimAbstractEdge::clear_dict();
+        NIVissimClosures::clear_dict();
+        NIVissimDistrictConnection::clear_dict();
+        NIVissimDisturbance::clear_dict();
+        NIVissimNodeCluster::clear_dict();
+        NIVissimNodeDef::clear_dict();
+        NIVissimSource::clear_dict();
+        NIVissimTL::clear_dict();
+        NIVissimTrafficDescription::clear_dict();
+        NIVissimVehTypeClass::clear_dict();
+        NIVissimVehicleType::clear_dict();
+        NIVissimConnectionCluster::clear_dict();
+        NIVissimConflictArea::clear_dict();
     }
 
     /// C++: `void NIImporter_Vissim::load(const OptionsCont &)` [protected]
@@ -230,7 +323,11 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn admit_continue(&mut self, tag: &str) -> bool {
-        todo!("port NIImporter_Vissim::admitContinue")
+        if !self.myKnownElements.contains_key(tag) {
+            return true;
+        }
+        self.myLastSecure = tag.to_string();
+        false
     }
 
     /// C++: `bool NIImporter_Vissim::readContents(std::istream &)` [private]
@@ -333,7 +430,42 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn post_load_build(&mut self, offset: f64) {
-        todo!("port NIImporter_Vissim::postLoadBuild")
+        // close the loading process
+        NIVissimBoundedClusterObject::close_loading();
+        NIVissimConnection::dict_assign_to_edges();
+        NIVissimDisturbance::dict_set_disturbances();
+        // build district->connections map
+        NIVissimDistrictConnection::dict_build_district_connections();
+        // build clusters of connections with the same direction and a similar position along the streets
+        NIVissimEdge::build_connection_clusters();
+        // check whether further nodes (connection clusters by now) must be added
+        NIVissimDistrictConnection::dict_check_edge_ends();
+        // join clusters when overlapping (different streets are possible)
+        NIVissimEdge::dict_check_edges2_join();
+        NIVissimConnectionCluster::join_by_same_edges(offset);
+        // build nodes from clusters
+        NIVissimNodeCluster::set_current_virt_id(NIVissimNodeDef::get_max_id());
+        NIVissimConnectionCluster::build_node_clusters();
+        // the C++ passes several containers of the same builder into one call; they are disjoint fields
+        let nbp = self.myNetBuilder.as_raw();
+        macro_rules! nbc {
+            ($f:ident) => {
+                // SAFETY: the builder outlives the importer and the containers are disjoint fields
+                unsafe { (*nbp).$f() }
+            };
+        }
+        NIVissimNodeCluster::build_nb_nodes(nbc!(get_node_cont));
+        NIVissimDistrictConnection::dict_build_district_nodes(nbc!(get_district_cont), nbc!(get_node_cont));
+        NIVissimEdge::dict_propagate_speeds();
+        NIVissimEdge::dict_build_nb_edges(nbc!(get_district_cont), nbc!(get_node_cont), nbc!(get_edge_cont), offset);
+        if utils::options::options_cont::get_bool("vissim.report-unset-speeds") {
+            NIVissimEdge::report_unset_speeds();
+        }
+        NIVissimDistrictConnection::dict_build_districts(nbc!(get_district_cont), nbc!(get_edge_cont), nbc!(get_node_cont));
+        NIVissimConnection::dict_build_nb_edge_connections(nbc!(get_edge_cont));
+        NIVissimNodeCluster::dict_add_disturbances(nbc!(get_district_cont), nbc!(get_node_cont), nbc!(get_edge_cont));
+        NIVissimConflictArea::set_priority_regulation(nbc!(get_edge_cont));
+        NIVissimTL::dict_set_signals(nbc!(get_tl_logic_cont), nbc!(get_edge_cont));
     }
 
     /// C++: `void NIImporter_Vissim::insertKnownElements()` [private]
@@ -409,7 +541,70 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn insert_known_elements(&mut self) {
-        todo!("port NIImporter_Vissim::insertKnownElements")
+        let m = &mut self.myKnownElements;
+        m.insert("kennung".to_string(), NIVissimElement::VE_Kennungszeile);
+        m.insert("zufallszahl".to_string(), NIVissimElement::VE_Startzufallszahl);
+        m.insert("simulationsdauer".to_string(), NIVissimElement::VE_Simdauer);
+        m.insert("startuhrzeit".to_string(), NIVissimElement::VE_Startuhrzeit);
+        m.insert("simulationsrate".to_string(), NIVissimElement::VE_SimRate);
+        m.insert("zeitschritt".to_string(), NIVissimElement::VE_Zeitschrittfaktor);
+        m.insert("linksverkehr".to_string(), NIVissimElement::VE_Linksverkehr);
+        m.insert("dynuml".to_string(), NIVissimElement::VE_DynUml);
+        m.insert("stau".to_string(), NIVissimElement::VE_Stauparameterdefinition);
+        m.insert("gelbverhalten".to_string(), NIVissimElement::VE_Gelbverhaltendefinition);
+        m.insert("strecke".to_string(), NIVissimElement::VE_Streckendefinition);
+        m.insert("verbindung".to_string(), NIVissimElement::VE_Verbindungsdefinition);
+        m.insert("richtungsentscheidung".to_string(), NIVissimElement::VE_Richtungsentscheidungsdefinition);
+        m.insert("routenentscheidung".to_string(), NIVissimElement::VE_Routenentscheidungsdefinition);
+        m.insert("vwunschentscheidung".to_string(), NIVissimElement::VE_VWunschentscheidungsdefinition);
+        m.insert("langsamfahrbereich".to_string(), NIVissimElement::VE_Langsamfahrbereichdefinition);
+        m.insert("zufluss".to_string(), NIVissimElement::VE_Zuflussdefinition);
+        m.insert("fahrzeugtyp".to_string(), NIVissimElement::VE_Fahrzeugtypdefinition);
+        m.insert("fahrzeugklasse".to_string(), NIVissimElement::VE_Fahrzeugklassendefinition);
+        m.insert("zusammensetzung".to_string(), NIVissimElement::VE_Verkehrszusammensetzungsdefinition);
+        m.insert("vwunsch".to_string(), NIVissimElement::VE_Geschwindigkeitsverteilungsdefinition);
+        m.insert("laengen".to_string(), NIVissimElement::VE_Laengenverteilungsdefinition);
+        m.insert("zeiten".to_string(), NIVissimElement::VE_Zeitenverteilungsdefinition);
+        m.insert("baujahre".to_string(), NIVissimElement::VE_Baujahrverteilungsdefinition);
+        m.insert("leistungen".to_string(), NIVissimElement::VE_Laufleistungsverteilungsdefinition);
+        m.insert("massen".to_string(), NIVissimElement::VE_Massenverteilungsdefinition);
+        m.insert("leistungen".to_string(), NIVissimElement::VE_Leistungsverteilungsdefinition);
+        m.insert("maxbeschleunigung".to_string(), NIVissimElement::VE_Maxbeschleunigungskurvedefinition);
+        m.insert("wunschbeschleunigung".to_string(), NIVissimElement::VE_Wunschbeschleunigungskurvedefinition);
+        m.insert("maxverzoegerung".to_string(), NIVissimElement::VE_Maxverzoegerungskurvedefinition);
+        m.insert("wunschverzoegerung".to_string(), NIVissimElement::VE_Wunschverzoegerungskurvedefinition);
+        m.insert("querverkehrsstoerung".to_string(), NIVissimElement::VE_Querverkehrsstoerungsdefinition);
+        m.insert("lsa".to_string(), NIVissimElement::VE_Lichtsignalanlagendefinition);
+        m.insert("signalgruppe".to_string(), NIVissimElement::VE_Signalgruppendefinition);
+        m.insert("signalgeber".to_string(), NIVissimElement::VE_Signalgeberdefinition);
+        m.insert("lsakopplung".to_string(), NIVissimElement::VE_LSAKopplungdefinition);
+        m.insert("detektor".to_string(), NIVissimElement::VE_Detektorendefinition);
+        m.insert("haltestelle".to_string(), NIVissimElement::VE_Haltestellendefinition);
+        m.insert("linie".to_string(), NIVissimElement::VE_Liniendefinition);
+        m.insert("stopschild".to_string(), NIVissimElement::VE_Stopschilddefinition);
+        m.insert("messung".to_string(), NIVissimElement::VE_Messungsdefinition);
+        m.insert("reisezeit".to_string(), NIVissimElement::VE_Reisezeitmessungsdefinition);
+        m.insert("verlustzeit".to_string(), NIVissimElement::VE_Verlustzeitmessungsdefinition);
+        m.insert("querschnittsmessung".to_string(), NIVissimElement::VE_Querschnittsmessungsdefinition);
+        m.insert("stauzaehler".to_string(), NIVissimElement::VE_Stauzaehlerdefinition);
+        m.insert("auswertung".to_string(), NIVissimElement::VE_Auswertungsdefinition);
+        m.insert("fenster".to_string(), NIVissimElement::VE_Fensterdefinition);
+        m.insert("motiv".to_string(), NIVissimElement::VE_Gefahrenwarnsystemdefinition);
+        m.insert("parkplatz".to_string(), NIVissimElement::VE_Parkplatzdefinition);
+        m.insert("knoten".to_string(), NIVissimElement::VE_Knotendefinition);
+        m.insert("teapac".to_string(), NIVissimElement::VE_TEAPACdefinition);
+        m.insert("netzobjekt".to_string(), NIVissimElement::VE_Netzobjektdefinition);
+        m.insert("richtungspfeil".to_string(), NIVissimElement::VE_Richtungspfeildefinition);
+        m.insert("raute".to_string(), NIVissimElement::VE_Rautedefinition);
+        m.insert("fahrverhalten".to_string(), NIVissimElement::VE_Fahrverhaltendefinition);
+        m.insert("fahrtverlaufdateien".to_string(), NIVissimElement::VE_Fahrtverlaufdateien);
+        m.insert("emission".to_string(), NIVissimElement::VE_Emission);
+        m.insert("einheit".to_string(), NIVissimElement::VE_Einheitendefinition);
+        m.insert("streckentyp".to_string(), NIVissimElement::VE_Streckentypdefinition);
+        m.insert("kantensperrung".to_string(), NIVissimElement::VE_Kantensperrung);
+        m.insert("kante".to_string(), NIVissimElement::VE_Kantensperrung);
+        m.insert("advance".to_string(), NIVissimElement::VE_DUMMY);
+        m.insert("temperatur".to_string(), NIVissimElement::VE_DUMMY);
     }
 
     /// C++: `void NIImporter_Vissim::buildParsers()` [private]
@@ -541,7 +736,93 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn build_parsers(&mut self) {
-        todo!("port NIImporter_Vissim::buildParsers")
+        // shortcut: parsers are leaked for the importer's lifetime (C++ deletes them in the destructor)
+        fn leak_parser<T>(p: T) -> Ptr<NIImporter_Vissim_VissimSingleTypeParser> {
+            Ptr::from_mut(Box::leak(Box::new(p))).cast()
+        }
+        // the parsers keep a reference to myColorMap, which lives inside *this, exactly as the C++ reference does
+        let colorMap: *mut NIImporter_Vissim_ColorMap = &mut self.myColorMap;
+        // SAFETY: the parser only dereferences the color map through its Ptr while the importer is alive
+        let p = leak_parser(NIVissimSingleTypeParser_Simdauer::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Simdauer, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Startuhrzeit::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Startuhrzeit, p);
+        let p = leak_parser(NIVissimSingleTypeParser_DynUml::new(self));
+        self.myParsers.insert(NIVissimElement::VE_DynUml, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Streckendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Streckendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Verbindungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Verbindungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Richtungsentscheidungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Richtungsentscheidungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Routenentscheidungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Routenentscheidungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_VWunschentscheidungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_VWunschentscheidungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Langsamfahrbereichdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Langsamfahrbereichdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Zuflussdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Zuflussdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Fahrzeugtypdefinition::new(self, unsafe { &mut *colorMap }));
+        self.myParsers.insert(NIVissimElement::VE_Fahrzeugtypdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Fahrzeugklassendefinition::new(self, unsafe { &mut *colorMap }));
+        self.myParsers.insert(NIVissimElement::VE_Fahrzeugklassendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Geschwindigkeitsverteilungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Laengenverteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Laengenverteilungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Zeitenverteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Zeitenverteilungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Querverkehrsstoerungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Lichtsignalanlagendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Lichtsignalanlagendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Signalgruppendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Signalgruppendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Stopschilddefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Stopschilddefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Knotendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Knotendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Signalgeberdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Signalgeberdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Detektordefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Detektorendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Haltestellendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Haltestellendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Liniendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Liniendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Reisezeitmessungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Reisezeitmessungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Querschnittsmessungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Querschnittsmessungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Messungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Messungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Verlustzeitmessungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Verlustzeitmessungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Stauzaehlerdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Stauzaehlerdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Rautedefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Rautedefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Richtungspfeildefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Richtungspfeildefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Parkplatzdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Parkplatzdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Fahrverhaltendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Fahrverhaltendefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Streckentypdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Streckentypdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Kennungszeile::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Kennungszeile, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Fensterdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Fensterdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Auswertungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Auswertungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Zusammensetzungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Verkehrszusammensetzungsdefinition, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Kantensperrung::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Kantensperrung, p);
+        let p = leak_parser(NIVissimSingleTypeParser_Startzufallszahl::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Startzufallszahl, p);
     }
 
     /// C++: `void NIImporter_Vissim::NIImporter_Vissim(const NIImporter_Vissim &)` [private]
@@ -549,7 +830,7 @@ impl NIImporter_Vissim {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NIImporter_Vissim) -> Self {
-        todo!("port NIImporter_Vissim::NIImporter_Vissim")
+        panic!("NIImporter_Vissim copy constructor is private and invalidated in C++")
     }
 
     /// C++: `NIImporter_Vissim & NIImporter_Vissim::operator=(const NIImporter_Vissim &)` [private]
@@ -557,7 +838,7 @@ impl NIImporter_Vissim {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NIImporter_Vissim) -> &mut NIImporter_Vissim {
-        todo!("port NIImporter_Vissim::operator=")
+        panic!("NIImporter_Vissim assignment operator is private and invalidated in C++")
     }
 
 }
