@@ -33,7 +33,22 @@ impl PCTypeMap {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont) -> Self {
-        todo!("port PCTypeMap::PCTypeMap")
+        fn or_panic<T>(r: Result<T, ProcessError>) -> T {
+            r.unwrap_or_else(|e| panic!("{e}"))
+        }
+        // shortcut: C++ leaves myDefaultType.angle and imgFile uninitialized; zero and empty are used here
+        let myDefaultType = PCTypeMap_TypeDef {
+            id: or_panic(oc.get_string("type")),
+            color: RGBColor::parse_color(&or_panic(oc.get_string("color"))).unwrap_or_else(|e| panic!("{e}")),
+            icon: or_panic(oc.get_string("icon")),
+            layer: or_panic(oc.get_float("layer")),
+            angle: 0.,
+            imgFile: String::new(),
+            discard: or_panic(oc.get_bool("discard")),
+            allowFill: if or_panic(oc.get_bool("fill")) { PCTypeMap_Filltype::FILL } else { PCTypeMap_Filltype::NOFILL },
+            prefix: or_panic(oc.get_string("prefix")),
+        };
+        Self { myTypes: BTreeMap::new(), myDefaultType }
     }
 
     /// C++: `void PCTypeMap::~PCTypeMap()`
@@ -41,7 +56,7 @@ impl PCTypeMap {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PCTypeMap::~PCTypeMap")
+        // C++ body is empty: the default destructor only releases the map
     }
 
     /// C++: `bool PCTypeMap::add(const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, double, double, const std::string &, bool, Filltype)`
@@ -68,7 +83,22 @@ impl PCTypeMap {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, id: &str, newid: &str, color: &str, prefix: &str, icon: &str, layer: f64, angle: f64, imgFile: &str, discard: bool, allowFill: PCTypeMap_Filltype) -> bool {
-        todo!("port PCTypeMap::add")
+        if self.has(id) {
+            return false;
+        }
+        let td = PCTypeMap_TypeDef {
+            id: newid.to_string(),
+            color: RGBColor::parse_color(color).unwrap_or_else(|e| panic!("{e}")),
+            icon: icon.to_string(),
+            layer,
+            angle,
+            imgFile: imgFile.to_string(),
+            discard,
+            allowFill,
+            prefix: prefix.to_string(),
+        };
+        self.myTypes.insert(id.to_string(), td);
+        true
     }
 
     /// C++: `const TypeDef & PCTypeMap::get(const std::string &)`
@@ -76,7 +106,8 @@ impl PCTypeMap {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get(&mut self, id: &str) -> &PCTypeMap_TypeDef {
-        todo!("port PCTypeMap::get")
+        // C++ dereferences find(id)->second without checking, which is undefined for an unknown id; panic instead
+        &self.myTypes[id]
     }
 
     /// C++: `bool PCTypeMap::has(const std::string &)`
@@ -87,7 +118,7 @@ impl PCTypeMap {
     // }
     #[allow(unused_variables)]
     pub fn has(&mut self, id: &str) -> bool {
-        todo!("port PCTypeMap::has")
+        self.myTypes.contains_key(id)
     }
 
     /// C++: `const TypeDef & PCTypeMap::getDefault()`
@@ -97,7 +128,7 @@ impl PCTypeMap {
     //     }
     #[allow(unused_variables)]
     pub fn get_default(&mut self) -> &PCTypeMap_TypeDef {
-        todo!("port PCTypeMap::getDefault")
+        &self.myDefaultType
     }
 
     /// C++: `const std::map<std::string, TypeDef> & PCTypeMap::getTypes() const` [const]
@@ -107,7 +138,7 @@ impl PCTypeMap {
     //     }
     #[allow(unused_variables)]
     pub fn get_types(&self) -> &BTreeMap<String, PCTypeMap_TypeDef> {
-        todo!("port PCTypeMap::getTypes")
+        &self.myTypes
     }
 
 }

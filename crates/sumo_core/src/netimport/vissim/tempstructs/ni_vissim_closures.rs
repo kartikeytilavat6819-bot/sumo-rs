@@ -15,6 +15,9 @@ pub struct NIVissimClosures {
 
 // C++ static members of NIVissimClosures (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimClosures::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimClosures_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimClosures {
     /// C++: `void NIVissimClosures::NIVissimClosures(const std::string &, int, int, std::vector<int> &)`
@@ -25,14 +28,19 @@ impl NIVissimClosures {
     //       myOverEdges(overEdges) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, from_node: i32, to_node: i32, overEdges: &mut Vec<i32>) -> Self {
-        todo!("port NIVissimClosures::NIVissimClosures")
+        Self {
+            myID: id.to_string(),
+            myFromNode: from_node,
+            myToNode: to_node,
+            myOverEdges: overEdges.clone(),
+        }
     }
 
     /// C++: `void NIVissimClosures::~NIVissimClosures()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimClosures::~NIVissimClosures")
+        // C++ body is implicit: nothing to release beyond the members
     }
 
     /// C++: `bool NIVissimClosures::dictionary(const std::string &, int, int, std::vector<int> &)` [static]
@@ -50,7 +58,14 @@ impl NIVissimClosures {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, from_node: i32, to_node: i32, overEdges: &mut Vec<i32>) -> bool {
-        todo!("port NIVissimClosures::dictionary")
+        // C++ `new` followed by `delete` on failure: the Box is dropped when the insert is refused
+        let mut o = Box::new(Self::new(id, from_node, to_node, overEdges));
+        if !Self::dictionary_2(id, Ptr::from_mut(&mut *o)) {
+            return false;
+        }
+        // kept alive for the dictionary, freed by clear_dict
+        Box::leak(o);
+        true
     }
 
     /// C++: `bool NIVissimClosures::dictionary(const std::string &, NIVissimClosures *)` [static]
@@ -65,7 +80,14 @@ impl NIVissimClosures {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(name: &str, o: Ptr<NIVissimClosures>) -> bool {
-        todo!("port NIVissimClosures::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if d.contains_key(name) {
+                return false;
+            }
+            d.insert(name.to_string(), o);
+            true
+        })
     }
 
     /// C++: `NIVissimClosures * NIVissimClosures::dictionary(const std::string &)` [static]
@@ -79,7 +101,7 @@ impl NIVissimClosures {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(name: &str) -> Ptr<NIVissimClosures> {
-        todo!("port NIVissimClosures::dictionary")
+        MY_DICT.with(|d| d.borrow().get(name).copied().unwrap_or_default())
     }
 
     /// C++: `void NIVissimClosures::clearDict()` [static]
@@ -92,7 +114,12 @@ impl NIVissimClosures {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimClosures::clearDict")
+        MY_DICT.with(|d| {
+            for (_, o) in std::mem::take(&mut *d.borrow_mut()) {
+                // SAFETY: every entry is created by dictionary() through Box::leak, so Box::from_raw frees it once
+                drop(unsafe { Box::from_raw(o.as_raw()) });
+            }
+        });
     }
 
     /// C++: `void NIVissimClosures::NIVissimClosures(const NIVissimClosures &)` [private]
@@ -100,7 +127,7 @@ impl NIVissimClosures {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NIVissimClosures) -> Self {
-        todo!("port NIVissimClosures::NIVissimClosures")
+        panic!("NIVissimClosures copy constructor is private and never defined in C++")
     }
 
     /// C++: `NIVissimClosures & NIVissimClosures::operator=(const NIVissimClosures &)` [private]
@@ -108,7 +135,7 @@ impl NIVissimClosures {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NIVissimClosures) -> &mut NIVissimClosures {
-        todo!("port NIVissimClosures::operator=")
+        panic!("NIVissimClosures assignment operator is private and never defined in C++")
     }
 
 }
