@@ -147,6 +147,11 @@ fn copy_pstate(p: &MSPModel_Striping_PState) -> MSPModel_Striping_PState {
 
 /// C++ NUMERICAL_EPS-style constant `MSPModel::SAFETY_GAP` (MSPModel.cpp)
 const SAFETY_GAP: f64 = 1.0;
+/// C++ `MSPModel::SIDEWALK_OFFSET` (MSPModel.cpp)
+const SIDEWALK_OFFSET: f64 = 3.0;
+/// C++ `MSPModel::UNSPECIFIED_POS_LAT` / `RANDOM_POS_LAT` (MSPModel.cpp)
+const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
+const RANDOM_POS_LAT: f64 = -f64::MAX;
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
 // shortcut: local copy because the Rust getSidewalk template (utils/router/intermodal_edge.rs) is still todo!(); use it once ported
@@ -2750,7 +2755,8 @@ impl MSPModel_Striping_PState {
     // ~PState() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PState::~PState")
+        // C++ `~PState() {}` has an empty body
+        let _ = self;
     }
 
     /// C++: `Position PState::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -2788,7 +2794,22 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, stage: &MSStageMoving, now: SUMOTime) -> Position {
-        todo!("port PState::getPosition")
+        if self.myRemoteXYPos != Position::INVALID {
+            return self.myRemoteXYPos;
+        }
+        if self.myLane.is_null() {
+            // pedestrian has already finished
+            return Position::INVALID;
+        }
+        let lateral_offset = -self.get_lat_offset(); // the minus is hunting me in my dreams but seems to be here for historical reasons
+        if self.myWalkingAreaPath.is_null() {
+            stage.get_lane_position(self.myLane, self.myEdgePos, lateral_offset)
+        } else if self.myWalkingAreaPath.angleOverride == utils::common::std_defs::INVALID_DOUBLE {
+            self.myWalkingAreaPath.shape.position_at_offset(self.myEdgePos, lateral_offset)
+        } else {
+            let rotationOffset = if self.myDir == MSPMODEL_FORWARD { 0. } else { utils::geom::geom_helper::deg2rad(180.) };
+            self.myWalkingAreaPath.shape.side_position_at_angle(self.myEdgePos, lateral_offset, self.myWalkingAreaPath.angleOverride + rotationOffset)
+        }
     }
 
     /// C++: `double PState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -2820,7 +2841,31 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        todo!("port PState::getAngle")
+        if self.myAngle != f64::MAX {
+            return self.myAngle;
+        }
+        if self.myLane.is_null() {
+            // pedestrian has already finished
+            return 0.;
+        }
+        if !self.myWalkingAreaPath.is_null() && self.myWalkingAreaPath.angleOverride != utils::common::std_defs::INVALID_DOUBLE {
+            return self.myWalkingAreaPath.angleOverride;
+        }
+        let shp: &PositionVector = if self.myWalkingAreaPath.is_null() { self.myLane.get_shape_2() } else { &self.myWalkingAreaPath.shape };
+        let geomX = if self.myWalkingAreaPath.is_null() { self.myLane.interpolate_lane_pos_to_geometry_pos(self.myEdgePos) } else { self.myEdgePos };
+        let mut angle = shp.rotation_at_offset(geomX) + (if self.myDir == MSPMODEL_BACKWARD { std::f64::consts::PI } else { 0. });
+        if self.myDir == MSPMODEL_BACKWARD {
+            angle += self.mySpeedLat.atan2(f64::max(self.mySpeed, utils::geom::NUMERICAL_EPS));
+        } else {
+            // myDir == MSPModel::FORWARD
+            angle -= self.mySpeedLat.atan2(f64::max(self.mySpeed, utils::geom::NUMERICAL_EPS));
+        }
+        if angle > std::f64::consts::PI {
+            angle -= 2. * std::f64::consts::PI;
+        }
+        // C++ `mutable` cache
+        Ptr::new(self).m().myAngle = angle;
+        angle
     }
 
     /// C++: `const MSEdge * PState::getNextEdge(const MSStageMoving &) const` [const, virtual]
@@ -2877,7 +2922,41 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn move_to(&mut self, p: Ptr<MSPerson>, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, t: SUMOTime) {
-        todo!("port PState::moveTo")
+        let mut newEdges: ConstMSEdgeVector = Vec::new(); // keep route
+        let mut routeOffset: i32 = 0;
+        let mut laneOnRoute = false;
+        let mut lanePos = lanePos;
+        let laneEdge = Ptr::from_mut(lane.get_edge());
+        let laneOnJunction = if lane.is_normal() { Ptr::null() } else { laneEdge.get_to_junction() };
+        let route: Vec<Ptr<MSEdge>> = self.myStage.get_route().clone();
+        for edge in route.iter() {
+            if *edge == laneEdge || edge.get_to_junction() == laneOnJunction || edge.get_from_junction() == laneOnJunction {
+                laneOnRoute = true;
+                break;
+            }
+            routeOffset += 1;
+        }
+        if !laneOnRoute {
+            panic!("{}", format!("Lane '{}' is not on the route of person '{}'.", lane.get_id(), self.get_id()));
+        }
+        let mut pos = lane.geometry_position_at_offset(lanePos, lanePosLat);
+        if lane.is_walking_area() && (self.myWalkingAreaPath.is_null() || self.myWalkingAreaPath.lane != lane) {
+            // entered new walkingarea. Determine path to guess position
+            let prevEdge = route[routeOffset as usize];
+            let nextEdge = if ((routeOffset + 1) as usize) < route.len() { route[(routeOffset + 1) as usize] } else { Ptr::null() };
+            let guessed = MSPModel_Striping::guess_path(laneEdge, prevEdge, nextEdge);
+            let maxPos = guessed.shape.length() - utils::geom::NUMERICAL_EPS;
+            if lanePos > maxPos + utils::geom::POSITION_EPS || lanePos < -utils::geom::POSITION_EPS {
+                panic!("{}", format!("Lane position {} cannot be mapped onto walkingarea '{}' (fromLane='{}' toLane='{}') for person '{}' time={}.",
+                    utils::common::to_string::f64_to_string_prec(lanePos, 6), lane.get_id(), guessed.from.get_id(), guessed.to.get_id(), self.get_id(),
+                    utils::common::time::time2string(t)));
+            }
+            // give some slack
+            lanePos = f64::min(maxPos, f64::max(utils::geom::NUMERICAL_EPS, lanePos));
+            pos = guessed.shape.position_at_offset(lanePos, lanePosLat);
+        }
+        let angle = utils::geom::geom_helper::navi_degree(p.cast::<MSTransportable>().get_position(0.).angle_to2d(&pos));
+        self.move_to_xy(p, pos, lane, lanePos, lanePosLat, angle, routeOffset, &newEdges, t);
     }
 
     /// C++: `void PState::moveToXY(MSPerson *, Position, MSLane *, double, double, double, int, const ConstMSEdgeVector &, SUMOTime)` [virtual]
@@ -3018,7 +3097,93 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn move_to_xy(&mut self, p: Ptr<MSPerson>, pos: Position, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, angle: f64, routeOffset: i32, edges: &ConstMSEdgeVector, t: SUMOTime) {
-        todo!("port PState::moveToXY")
+        let pm: Ptr<MSPModel_Striping> = MSNet::get_instance().m().get_person_control().get_movement_model().cast::<MSPModel_Striping>();
+        debug_assert!(p == self.myPerson);
+        let oldAngle = utils::geom::geom_helper::navi_degree(self.get_angle(&*self.myStage, t));
+        let oldX = self.myEdgePos - utils::common::time::speed2dist(self.mySpeed * self.myDir as f64);
+        let tmp = self.myEdgePos;
+        self.myEdgePos = oldX;
+        let oldPos = self.get_position(&*self.myStage, t);
+        self.myEdgePos = tmp;
+        self.myAngle = utils::geom::geom_helper::from_navi_degree(angle);
+        if lane != self.myLane && !self.myLane.is_null() && !lane.is_null() {
+            pm.m().remove(Ptr::from_mut(self).cast::<MSTransportableStateAdapter>());
+            pm.m().register_active();
+        }
+        if !lane.is_null() && lanePosLat.abs() < (0.5 * (lane.get_width() + p.get_vehicle_type().get_width()) + SIDEWALK_OFFSET) {
+            self.myRemoteXYPos = Position::INVALID;
+            let old = self.myStage.get_edge();
+            let oldLane = self.myLane;
+            if lane != self.myLane {
+                pm.m().myActiveLanes.entry(lane).or_default().push(Ptr::from_mut(self).cast::<MSPModel_InteractingState>());
+            }
+            if edges.is_empty() {
+                self.myStage.m().set_route_index(p.cast::<MSTransportable>(), routeOffset);
+            } else {
+                self.myStage.m().replace_route(p.cast::<MSTransportable>(), edges, routeOffset);
+            }
+            if !lane.get_edge().is_normal() {
+                self.myStage.m().move_to_next_edge(p.cast::<MSTransportable>(), t, self.myDir, Ptr::from_mut(lane.m().get_edge()), false);
+            }
+            self.myLane = lane;
+            let lateral_offset = (lane.get_width() - stripe_width()) * 0.5;
+            if lane.is_walking_area() {
+                if self.myWalkingAreaPath.is_null() || self.myWalkingAreaPath.lane != lane {
+                    self.myWalkingAreaPath = MSPModel_Striping::guess_path(Ptr::from_mut(lane.m().get_edge()), old, self.myStage.get_next_route_edge());
+                }
+                let relPos = self.myWalkingAreaPath.shape.transform_to_vector_coordinates(&pos, false);
+                if relPos == Position::INVALID {
+                    utils::common::msg_handler::write_warning(&format!("Could not map position {} onto lane '{}' (fromLane='{}' toLane='{}') for person '{}' time={}.",
+                        pos, self.myLane.get_id(), self.myWalkingAreaPath.from.get_id(), self.myWalkingAreaPath.to.get_id(), self.get_id(),
+                        utils::common::time::time2string(t)));
+                    self.myRemoteXYPos = pos;
+                } else {
+                    self.myEdgePos = relPos.x();
+                    self.myPosLat = lateral_offset + relPos.y();
+                }
+            } else {
+                self.myWalkingAreaPath = Ptr::null();
+                self.myEdgePos = lanePos;
+                self.myPosLat = lateral_offset - lanePosLat;
+                lane.m().require_collision_check();
+            }
+            let angleDiff = utils::geom::geom_helper::get_min_angle_diff(angle, oldAngle);
+            let nre = self.myStage.get_next_route_edge();
+            if !nre.is_null() {
+                if self.myStage.get_edge().get_to_junction() == nre.get_from_junction() || self.myStage.get_edge().get_to_junction() == nre.get_to_junction() {
+                    self.myDir = MSPMODEL_FORWARD;
+                } else {
+                    self.myDir = MSPMODEL_BACKWARD;
+                }
+            } else {
+                // guess from angle
+                if angleDiff <= 90. {
+                    // keep direction
+                    if self.myDir == MSPMODEL_UNDEFINED_DIRECTION {
+                        self.myDir = MSPMODEL_FORWARD;
+                    }
+                } else {
+                    // change direction
+                    self.myDir = if self.myDir == MSPMODEL_BACKWARD { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
+                }
+            }
+            // update next lane info (after guessing direction)
+            if oldLane.is_null() || Ptr::from_mut(oldLane.m().get_edge()) != Ptr::from_mut(self.myLane.m().get_edge()) {
+                let sidewalk = get_sidewalk(Ptr::from_mut(self.myLane.m().get_edge()), p.get_v_class());
+                // assume that we will eventually move back onto the sidewalk if there is one
+                let nli = MSPModel_Striping::get_next_lane(&*self, if sidewalk.is_null() { self.myLane } else { sidewalk }, Ptr::null());
+                self.myNLI = nli;
+                self.myStage.m().activate_entry_reminders(p.cast::<MSTransportable>(), false);
+            }
+            if oldLane == self.myLane {
+                self.mySpeed = utils::common::time::dist2speed((oldX - self.myEdgePos).abs());
+            } else {
+                self.mySpeed = utils::common::time::dist2speed(oldPos.distance_to2d(&pos));
+            }
+        } else {
+            self.myRemoteXYPos = pos;
+            self.mySpeed = utils::common::time::dist2speed(oldPos.distance_to2d(&pos));
+        }
     }
 
     /// C++: `double PState::getMinX(const bool) const` [const, virtual]
@@ -3531,7 +3696,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn stripe(&self) -> i32 {
-        todo!("port PState::stripe")
+        std::cmp::min(std::cmp::max(0, Self::stripe_2(self.myPosLat)), MSPModel_Striping::num_stripes(self.myLane) - 1)
     }
 
     /// C++: `int PState::otherStripe() const` [const]
@@ -3541,21 +3706,30 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn other_stripe(&self) -> i32 {
-        todo!("port PState::otherStripe")
+        std::cmp::min(std::cmp::max(0, self.other_stripe_2(self.myPosLat)), MSPModel_Striping::num_stripes(self.myLane) - 1)
     }
 
     /// C++: `int PState::stripe(const double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn stripe_2(relY: f64) -> i32 {
-        todo!("port PState::stripe")
+        (relY / stripe_width() + 0.5).floor() as i32
     }
 
     /// C++: `int PState::otherStripe(const double) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn other_stripe_2(&self, relY: f64) -> i32 {
-        todo!("port PState::otherStripe")
+        let s = Self::stripe_2(relY);
+        let offset = relY - s as f64 * stripe_width();
+        let threshold = f64::max(utils::geom::NUMERICAL_EPS, stripe_width() - SQUEEZE * self.get_width());
+        if offset > threshold {
+            s + 1
+        } else if offset < -threshold {
+            s - 1
+        } else {
+            s
+        }
     }
 
     /// C++: `double PState::distanceTo(const Obstacle &, const bool) const` [const]
@@ -3579,7 +3753,18 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn distance_to(&self, obs: &MSPModel_Striping_Obstacle, includeMinGap: bool) -> f64 {
-        todo!("port PState::distanceTo")
+        // check for overlap
+        let maxX = self.get_max_x(includeMinGap);
+        let minX = self.get_min_x(includeMinGap);
+        if (obs.xFwd >= maxX && obs.xBack <= maxX) || (obs.xFwd <= maxX && obs.xFwd >= minX) {
+            // avoid blocking by itself on looped route
+            return if obs.type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED && obs.description == self.myPerson.get_id() { DIST_FAR_AWAY } else { DIST_OVERLAP };
+        }
+        if self.myDir == MSPMODEL_FORWARD {
+            if obs.xFwd < minX { DIST_BEHIND } else { obs.xBack - maxX }
+        } else {
+            if obs.xBack > maxX { DIST_BEHIND } else { minX - obs.xFwd }
+        }
     }
 
     /// C++: `void PState::mergeObstacles(Obstacles &, const Obstacles &)`
@@ -3607,7 +3792,20 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn merge_obstacles(&mut self, into: &mut MSPModel_Striping_Obstacles, obs2: &MSPModel_Striping_Obstacles) {
-        todo!("port PState::mergeObstacles")
+        // shortcut: gDebugFlag1 debug output (GUI-only) is not ported
+        for i in 0..into.len() {
+            let dO = self.distance_to(&obs2[i], obs2[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED);
+            let dI = self.distance_to(&into[i], into[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED);
+            if dO < dI {
+                into[i] = obs2[i].clone();
+            } else if dO == dI
+                && into[i].type_ != MSPModel_Striping_ObstacleType::OBSTACLE_PED
+                && into[i].type_ != MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE
+                && (obs2[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED || obs2[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE)
+            {
+                into[i] = obs2[i].clone();
+            }
+        }
     }
 
     /// C++: `void PState::mergeObstacles(Obstacles &, const Obstacles &, int, int)` [static]
@@ -3631,7 +3829,20 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn merge_obstacles_2(into: &mut MSPModel_Striping_Obstacles, obs2: &MSPModel_Striping_Obstacles, dir: i32, offset: i32) {
-        todo!("port PState::mergeObstacles")
+        for i in 0..into.len() {
+            let i2 = i as i32 + offset;
+            if i2 >= 0 && (i2 as usize) < obs2.len() {
+                if dir == MSPMODEL_FORWARD {
+                    if obs2[i2 as usize].xBack < into[i].xBack {
+                        into[i] = obs2[i2 as usize].clone();
+                    }
+                } else {
+                    if obs2[i2 as usize].xFwd > into[i].xFwd {
+                        into[i] = obs2[i2 as usize].clone();
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool PState::ignoreRed(const MSLink *) const` [const]
@@ -3655,7 +3866,17 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn ignore_red(&self, link: Ptr<MSLink>) -> bool {
-        todo!("port PState::ignoreRed")
+        if link.have_red() {
+            let ignoreRedTime = self.myPerson.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME, -1.);
+            if ignoreRedTime >= 0. {
+                let redDuration = utils::common::time::steps2time(MSNet::get_instance().get_current_time_step() - link.get_last_state_change());
+                ignoreRedTime > redDuration
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
     /// C++: `bool PState::stopForYellow(const MSLink *) const` [const]
@@ -3680,7 +3901,18 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn stop_for_yellow(&self, link: Ptr<MSLink>) -> bool {
-        todo!("port PState::stopForYellow")
+        // main use case is at rail_crossing
+        if link.have_yellow() {
+            let ignoreYellowTime = self.myPerson.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME, -1.);
+            if ignoreYellowTime >= 0. {
+                let yellowDuration = utils::common::time::steps2time(MSNet::get_instance().get_current_time_step() - link.get_last_state_change());
+                ignoreYellowTime < yellowDuration
+            } else {
+                true
+            }
+        } else {
+            false
+        }
     }
 
     /// C++: `double PState::getWidth() const` [const, virtual]
@@ -3711,7 +3943,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn is_remote_controlled(&self) -> bool {
-        todo!("port PState::isRemoteControlled")
+        self.myPerson.has_influencer() && self.myPerson.m().get_influencer().is_remote_controlled()
     }
 
     /// C++: `void PState::saveState(std::ostringstream &)` [virtual]
@@ -3817,7 +4049,10 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn reverse(&mut self, pathLength: f64, usableWidth: f64) {
-        todo!("port PState::reverse")
+        self.myEdgePos = pathLength - self.myEdgePos;
+        self.myPosLat = usableWidth - self.myPosLat;
+        self.myDir = -self.myWalkingAreaPath.dir;
+        self.mySpeedLat = -self.mySpeedLat;
     }
 
     /// C++: `void PState::reset(const double, const double)`
@@ -3831,7 +4066,11 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self, edgePos: f64, latPos: f64) {
-        todo!("port PState::reset")
+        self.myEdgePos = edgePos;
+        self.myPosLat = latPos;
+        self.myDir = MSPMODEL_UNDEFINED_DIRECTION; // only an obstacle, speed may be orthogonal to dir
+        self.mySpeed = 0.;
+        self.mySpeedLat = 0.;
     }
 
     /// C++: `void PState::PState()` [protected]
@@ -3840,7 +4079,28 @@ impl MSPModel_Striping_PState {
     //     MSPModel_InteractingState(nullptr, nullptr, nullptr) {}
     #[allow(unused_variables)]
     pub fn new_3() -> Self {
-        todo!("port PState::PState")
+        // MSPModel_InteractingState(nullptr, nullptr, nullptr) inlined: all-default state
+        MSPModel_Striping_PState {
+            base: MSPModel_InteractingState {
+                base: MSTransportableStateAdapter {},
+                myPerson: Ptr::null(),
+                myStage: Ptr::null(),
+                myLane: Ptr::null(),
+                myEdgePos: 0.,
+                myPosLat: 0.,
+                myDir: MSPMODEL_UNDEFINED_DIRECTION,
+                mySpeed: 0.,
+                mySpeedLat: 0.,
+                myWaitingToEnter: false,
+                myWaitingTime: 0,
+                myTotalWaitingTime: 0,
+                myAmJammed: false,
+                myRemoteXYPos: Position::INVALID,
+                myAngle: f64::MAX,
+            },
+            myNLI: MSPModel_Striping_NextLaneInfo::new_2(),
+            myWalkingAreaPath: Ptr::null(),
+        }
     }
 
     /// C++: `PState & PState::operator=(const PState &)` [private]
@@ -3985,7 +4245,15 @@ impl MSPModel_Striping_WalkingAreaPath {
     //         }
     #[allow(unused_variables)]
     pub fn new(_from: Ptr<MSLane>, _walkingArea: Ptr<MSLane>, _to: Ptr<MSLane>, _shape: &PositionVector, _dir: i32, _angleOverride: f64) -> Self {
-        todo!("port WalkingAreaPath::WalkingAreaPath")
+        MSPModel_Striping_WalkingAreaPath {
+            from: _from,
+            to: _to,
+            lane: _walkingArea,
+            shape: _shape.clone(),
+            dir: _dir,
+            angleOverride: _angleOverride,
+            length: _shape.length(),
+        }
     }
 
 }
