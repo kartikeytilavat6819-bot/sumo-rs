@@ -13088,7 +13088,10 @@ impl MSVehicle_WaitingTimeCollector {
     // MSVehicle::WaitingTimeCollector::WaitingTimeCollector(SUMOTime memory) : myMemorySize(memory) {}
     #[allow(unused_variables)]
     pub fn new(memory: SUMOTime) -> Self {
-        todo!("port WaitingTimeCollector::WaitingTimeCollector")
+        MSVehicle_WaitingTimeCollector {
+            myMemorySize: memory,
+            myWaitingIntervals: VecDeque::new(),
+        }
     }
 
     /// C++: `SUMOTime WaitingTimeCollector::cumulatedWaitingTime(SUMOTime) const` [const]
@@ -13114,7 +13117,24 @@ impl MSVehicle_WaitingTimeCollector {
     // }
     #[allow(unused_variables)]
     pub fn cumulated_waiting_time(&self, memory: SUMOTime) -> SUMOTime {
-        todo!("port WaitingTimeCollector::cumulatedWaitingTime")
+        let mut memorySpan = memory;
+        debug_assert!(memorySpan <= self.myMemorySize);
+        if memorySpan == -1 {
+            memorySpan = self.myMemorySize;
+        }
+        let mut totalWaitingTime: SUMOTime = 0;
+        for interval in self.myWaitingIntervals.iter() {
+            if interval.1 >= memorySpan {
+                if interval.0 >= memorySpan {
+                    break;
+                } else {
+                    totalWaitingTime += memorySpan - interval.0;
+                }
+            } else {
+                totalWaitingTime += interval.1 - interval.0;
+            }
+        }
+        totalWaitingTime
     }
 
     /// C++: `void WaitingTimeCollector::passTime(SUMOTime, bool)`
@@ -13150,7 +13170,31 @@ impl MSVehicle_WaitingTimeCollector {
     // }
     #[allow(unused_variables)]
     pub fn pass_time(&mut self, dt: SUMOTime, waiting: bool) {
-        todo!("port WaitingTimeCollector::passTime")
+        let n = self.myWaitingIntervals.len();
+        let startNewInterval = n == 0 || self.myWaitingIntervals[0].0 != 0;
+        let mut i: usize = 0;
+        while i < n {
+            self.myWaitingIntervals[i].0 += dt;
+            if self.myWaitingIntervals[i].0 >= self.myMemorySize {
+                break;
+            }
+            self.myWaitingIntervals[i].1 += dt;
+            i += 1;
+        }
+        // remove intervals beyond memorySize
+        let d = n - i;
+        for _ in 0..d {
+            self.myWaitingIntervals.pop_back();
+        }
+        if !waiting {
+            return;
+        } else if !startNewInterval {
+            if let Some(first) = self.myWaitingIntervals.front_mut() {
+                first.0 = 0;
+            }
+        } else {
+            self.myWaitingIntervals.push_front((0, dt));
+        }
     }
 
     /// C++: `const std::string WaitingTimeCollector::getState() const` [const]
@@ -13165,7 +13209,11 @@ impl MSVehicle_WaitingTimeCollector {
     // }
     #[allow(unused_variables)]
     pub fn get_state(&self) -> String {
-        todo!("port WaitingTimeCollector::getState")
+        let mut state = format!("{} {}", self.myMemorySize, self.myWaitingIntervals.len());
+        for interval in self.myWaitingIntervals.iter() {
+            state.push_str(&format!(" {} {}", interval.0, interval.1));
+        }
+        state
     }
 
     /// C++: `void WaitingTimeCollector::setState(const std::string &)`
@@ -13182,7 +13230,19 @@ impl MSVehicle_WaitingTimeCollector {
     // }
     #[allow(unused_variables)]
     pub fn set_state(&mut self, state: &str) {
-        todo!("port WaitingTimeCollector::setState")
+        // shortcut: C++ istringstream stops at the first unparsable token; here unparsable tokens are skipped
+        let mut tokens = state.split_whitespace().filter_map(|t| t.parse::<i64>().ok());
+        if let Some(memory) = tokens.next() {
+            self.myMemorySize = memory;
+        }
+        let mut numIntervals = tokens.next().unwrap_or(0);
+        while numIntervals > 0 {
+            match (tokens.next(), tokens.next()) {
+                (Some(begin), Some(end)) => self.myWaitingIntervals.push_back((begin, end)),
+                _ => break,
+            }
+            numIntervals -= 1;
+        }
     }
 
 }
