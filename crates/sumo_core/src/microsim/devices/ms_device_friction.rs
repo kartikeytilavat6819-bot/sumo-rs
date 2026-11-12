@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice_Friction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::INVALID_DOUBLE;
 
 /// A device which collects info on current friction Coefficient on the road
 /// C++ class `MSDevice_Friction` (microsim/devices/MSDevice_Friction.h)
@@ -44,7 +45,12 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_Friction::insertOptions")
+        oc.add_option_sub_topic("Friction Device");
+        MSDevice::insert_default_assignment_options("friction", "Friction Device", oc, false);
+        oc.do_register("device.friction.stdDev", SumoOption::float(0.1)); //default .1
+        oc.add_description("device.friction.stdDev", "Friction Device", "The measurement noise parameter which can be applied to the friction device");
+        oc.do_register("device.friction.offset", SumoOption::float(0.)); //default no offset
+        oc.add_description("device.friction.offset", "Friction Device", "The measurement offset parameter which can be applied to the friction device -> e.g. to force false measurements");
     }
 
     /// C++: `void MSDevice_Friction::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -62,7 +68,18 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_Friction::buildVehicleDevices")
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "friction", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            // build the device
+            let id = format!("friction_{}", v.get_id());
+            let stdDev = v.get_float_param("device.friction.stdDev", false, INVALID_DOUBLE, true); // stdDev noise deviation
+            let offset = v.get_float_param("device.friction.offset", false, INVALID_DOUBLE, true); // static offset
+            // shortcut: device is leaked; the vehicle's device list will own it once MSVehicle device ownership is ported, upgrade then
+            let device: &mut MSDevice_Friction = Box::leak(Box::new(MSDevice_Friction::new(v, &id, stdDev, offset)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_Friction::~MSDevice_Friction() noexcept` [virtual]
@@ -71,7 +88,7 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_Friction::~MSDevice_Friction")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSDevice_Friction::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -85,7 +102,9 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_Friction::notifyMove")
+        self.myRawFriction = self.myHolder.get_lane().get_friction_coefficient();
+        self.myMeasuredFrictionCoefficient = self.myOffset + self.myHolder.get_rng().m().rand_norm(self.myRawFriction, self.myStdDeviation);
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_Friction::deviceName() const` [const, virtual]
@@ -95,7 +114,7 @@ impl MSDevice_Friction {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_Friction::deviceName")
+        "friction".to_string()
     }
 
     /// C++: `std::string MSDevice_Friction::getParameter(const std::string &) const` [const, virtual]
@@ -115,7 +134,17 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_Friction::getParameter")
+        if key == "frictionCoefficient" {
+            return utils::common::to_string::to_string(&self.myMeasuredFrictionCoefficient);
+        } else if key == "stdDev" {
+            return utils::common::to_string::to_string(&self.myStdDeviation);
+        } else if key == "offset" {
+            return utils::common::to_string::to_string(&self.myOffset);
+        } else if key == "rawFriction" {
+            return utils::common::to_string::to_string(&self.myRawFriction);
+        }
+        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
+        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
     }
 
     /// C++: `void MSDevice_Friction::setParameter(const std::string &, const std::string &)` [virtual]
@@ -139,7 +168,20 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_Friction::setParameter")
+        let doubleValue = match utils::common::string_utils::to_double(value) {
+            Ok(d) => d,
+            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
+            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+        };
+        if key == "frictionCoefficient" {
+            self.myMeasuredFrictionCoefficient = doubleValue;
+        } else if key == "stdDev" {
+            self.myStdDeviation = doubleValue;
+        } else if key == "offset" {
+            self.myOffset = doubleValue;
+        } else {
+            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+        }
     }
 
     /// C++: `double MSDevice_Friction::getMeasuredFriction()`
@@ -148,7 +190,7 @@ impl MSDevice_Friction {
     //     }
     #[allow(unused_variables)]
     pub fn get_measured_friction(&mut self) -> f64 {
-        todo!("port MSDevice_Friction::getMeasuredFriction")
+        self.myMeasuredFrictionCoefficient
     }
 
     /// C++: `void MSDevice_Friction::MSDevice_Friction(SUMOVehicle &, const std::string &, double, double)` [private]
@@ -162,7 +204,13 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, stdDev: f64, offset: f64) -> Self {
-        todo!("port MSDevice_Friction::MSDevice_Friction")
+        MSDevice_Friction {
+            base: MSVehicleDevice::new(holder, id),
+            myMeasuredFrictionCoefficient: 1.,
+            myRawFriction: 1.,
+            myStdDeviation: stdDev,
+            myOffset: offset,
+        }
     }
 
     /// C++: `void MSDevice_Friction::MSDevice_Friction(const MSDevice_Friction &)` [private]
