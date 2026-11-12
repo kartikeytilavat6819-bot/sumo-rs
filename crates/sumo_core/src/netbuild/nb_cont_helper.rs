@@ -1,6 +1,10 @@
 //! Port of netbuild/NBContHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::netbuild::nb_helpers::NBHelpers;
+
+// C++ static NBEdge::ANGLE_LOOKAHEAD (netbuild/NBEdge.cpp:78); NBEdge.rs has no port of it yet
+const NBEDGE_ANGLE_LOOKAHEAD: f64 = 10.0;
 
 /// NBContHelper Some static helper methods that traverse a sorted list of edges in both directions
 /// C++ class `NBContHelper` (netbuild/NBContHelper.h)
@@ -18,8 +22,11 @@ impl NBContHelper {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn next_cw(edges: &EdgeVector, from: &mut Unmapped /* EdgeVector::const_iterator */) {
-        todo!("port NBContHelper::nextCW")
+    pub fn next_cw(edges: &EdgeVector, from: &mut usize) {
+        *from += 1;
+        if *from == edges.len() {
+            *from = 0;
+        }
     }
 
     /// C++: `void NBContHelper::nextCCW(const EdgeVector &, EdgeVector::const_iterator &)` [static]
@@ -33,8 +40,12 @@ impl NBContHelper {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn next_ccw(edges: &EdgeVector, from: &mut Unmapped /* EdgeVector::const_iterator */) {
-        todo!("port NBContHelper::nextCCW")
+    pub fn next_ccw(edges: &EdgeVector, from: &mut usize) {
+        if *from == 0 {
+            *from = edges.len() - 1;
+        } else {
+            *from -= 1;
+        }
     }
 
     /// C++: `double NBContHelper::getMaxSpeed(const EdgeVector &)` [static]
@@ -53,7 +64,16 @@ impl NBContHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(edges: &EdgeVector) -> f64 {
-        todo!("port NBContHelper::getMaxSpeed")
+        if edges.len() == 0 {
+            return -1.0;
+        }
+        let mut ret = edges[0].get_speed();
+        for i in 1..edges.len() {
+            if edges[i].get_speed() > ret {
+                ret = edges[i].get_speed();
+            }
+        }
+        ret
     }
 
     /// C++: `double NBContHelper::getMinSpeed(const EdgeVector &)` [static]
@@ -72,7 +92,16 @@ impl NBContHelper {
     // }
     #[allow(unused_variables)]
     pub fn get_min_speed(edges: &EdgeVector) -> f64 {
-        todo!("port NBContHelper::getMinSpeed")
+        if edges.len() == 0 {
+            return -1.0;
+        }
+        let mut ret = edges[0].get_speed();
+        for i in 1..edges.len() {
+            if edges[i].get_speed() < ret {
+                ret = edges[i].get_speed();
+            }
+        }
+        ret
     }
 
     /// C++: `std::ostream & NBContHelper::out(std::ostream &, const std::vector<bool> &)` [static]
@@ -85,8 +114,11 @@ impl NBContHelper {
     //     return os;
     // }
     #[allow(unused_variables)]
-    pub fn out(os: &mut Unmapped /* std::ostream */, v: &Vec<bool>) -> &'static mut Unmapped /* std::ostream */ {
-        todo!("port NBContHelper::out")
+    pub fn out<'a>(os: &'a mut String, v: &Vec<bool>) -> &'a mut String {
+        for b in v.iter() {
+            os.push(if *b { '1' } else { '0' });
+        }
+        os
     }
 
     /// C++: `NBEdge * NBContHelper::findConnectingEdge(const EdgeVector &, NBNode *, NBNode *)` [static]
@@ -103,7 +135,12 @@ impl NBContHelper {
     // }
     #[allow(unused_variables)]
     pub fn find_connecting_edge(edges: &EdgeVector, from: Ptr<NBNode>, to: Ptr<NBNode>) -> Ptr<NBEdge> {
-        todo!("port NBContHelper::findConnectingEdge")
+        for e in edges.iter() {
+            if e.get_to_node() == to && e.get_from_node() == from {
+                return *e;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `double NBContHelper::maxSpeed(const EdgeVector &)` [static]
@@ -121,7 +158,11 @@ impl NBContHelper {
     // }
     #[allow(unused_variables)]
     pub fn max_speed(ev: &EdgeVector) -> f64 {
-        todo!("port NBContHelper::maxSpeed")
+        let mut max = ev[0].get_speed();
+        for i in 1..ev.len() {
+            max = if max > ev[i].get_speed() { max } else { ev[i].get_speed() };
+        }
+        max
     }
 
 }
@@ -139,7 +180,7 @@ impl NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter {
     // explicit edge_by_angle_to_nodeShapeCentroid_sorter(const NBNode* n) : myNode(n) {}
     #[allow(unused_variables)]
     pub fn new(n: Ptr<NBNode>) -> Self {
-        todo!("port edge_by_angle_to_nodeShapeCentroid_sorter::edge_by_angle_to_nodeShapeCentroid_sorter")
+        Self { myNode: n }
     }
 
     /// C++: `bool edge_by_angle_to_nodeShapeCentroid_sorter::operator()(const NBEdge *, const NBEdge *) const` [const]
@@ -184,7 +225,39 @@ impl NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port edge_by_angle_to_nodeShapeCentroid_sorter::operator()")
+        let angle1 = e1.get_angle_at_node_to_center(self.myNode);
+        let angle2 = e2.get_angle_at_node_to_center(self.myNode);
+        let absDiff = (angle1 - angle2).abs();
+
+        // cannot trust the angle difference hence a heuristic:
+        if absDiff < 2.0 || absDiff > (360.0 - 2.0) {
+            let sameDir = (e1.get_from_node() == self.myNode && e2.get_from_node() == self.myNode)
+                || (e1.get_to_node() == self.myNode && e2.get_to_node() == self.myNode);
+            if sameDir {
+                // put edges that allow pedestrians on the 'outside', but be aware if both allow / disallow
+                let e1Peds = (e1.get_permissions(-1) & SVC_PEDESTRIAN) != 0;
+                let e2Peds = (e2.get_permissions(-1) & SVC_PEDESTRIAN) != 0;
+                if e1.get_to_node() == self.myNode {
+                    if e1Peds && !e2Peds {
+                        return true;
+                    } else if !e1Peds && e2Peds {
+                        return false;
+                    }
+                } else {
+                    if !e1Peds && e2Peds {
+                        return true;
+                    } else if e1Peds && !e2Peds {
+                        return false;
+                    }
+                }
+                // break ties to ensure strictly weak ordering
+                return e1.get_id() < e2.get_id();
+            } else {
+                // sort incoming before outgoing, no need to break ties here
+                return e1.get_to_node() == self.myNode;
+            }
+        }
+        angle1 < angle2
     }
 
 }
@@ -200,7 +273,7 @@ impl NBContHelper_edge_by_priority_sorter {
     // edge_by_priority_sorter(SVCPermissions permissions) : myPermissions(permissions) {}
     #[allow(unused_variables)]
     pub fn new(permissions: SVCPermissions) -> Self {
-        todo!("port edge_by_priority_sorter::edge_by_priority_sorter")
+        Self { myPermissions: permissions }
     }
 
     /// C++: `int edge_by_priority_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -216,7 +289,13 @@ impl NBContHelper_edge_by_priority_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_by_priority_sorter::operator()")
+        if e1.get_priority() != e2.get_priority() {
+            return (e1.get_priority() > e2.get_priority()) as i32;
+        }
+        if e1.get_speed() != e2.get_speed() {
+            return (e1.get_speed() > e2.get_speed()) as i32;
+        }
+        (e1.get_num_lanes_that_allow(self.myPermissions, false) > e2.get_num_lanes_that_allow(self.myPermissions, false)) as i32
     }
 
 }
@@ -245,7 +324,9 @@ impl NBContHelper_edge_opposite_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>, n: Ptr<NBNode>, regardPriority: bool) -> Self {
-        todo!("port edge_opposite_direction_sorter::edge_opposite_direction_sorter")
+        let mut s = Self { myNode: n, myEdge: e, myAngle: 0.0, myRegardPriority: regardPriority };
+        s.myAngle = s.get_edge_angle_at(e, n);
+        s
     }
 
     /// C++: `int edge_opposite_direction_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -259,7 +340,11 @@ impl NBContHelper_edge_opposite_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_opposite_direction_sorter::operator()")
+        if !self.myRegardPriority || e1.get_priority() == e2.get_priority() || e1 == self.myEdge || e2 == self.myEdge {
+            (self.get_diff(e1) > self.get_diff(e2)) as i32
+        } else {
+            (e1.get_priority() > e2.get_priority()) as i32
+        }
     }
 
     /// C++: `double edge_opposite_direction_sorter::getDiff(const NBEdge *const) const` [const, protected]
@@ -269,7 +354,7 @@ impl NBContHelper_edge_opposite_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn get_diff(&self, e: Ptr<NBEdge>) -> f64 {
-        todo!("port edge_opposite_direction_sorter::getDiff")
+        utils::geom::geom_helper::angle_diff(self.get_edge_angle_at(e, self.myNode), self.myAngle).abs()
     }
 
     /// C++: `double edge_opposite_direction_sorter::getEdgeAngleAt(const NBEdge *const, const NBNode *const) const` [const, protected]
@@ -283,7 +368,11 @@ impl NBContHelper_edge_opposite_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn get_edge_angle_at(&self, e: Ptr<NBEdge>, n: Ptr<NBNode>) -> f64 {
-        todo!("port edge_opposite_direction_sorter::getEdgeAngleAt")
+        if e.get_from_node() == n {
+            e.get_geometry().angle_at2d(0)
+        } else {
+            e.get_geometry().at(-1).angle_to2d(e.get_geometry().at(-2))
+        }
     }
 
 }
@@ -305,7 +394,10 @@ impl NBContHelper_edge_similar_direction_sorter {
     //         {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>, outgoing: bool) -> Self {
-        todo!("port edge_similar_direction_sorter::edge_similar_direction_sorter")
+        Self {
+            myCompareOutgoing: outgoing,
+            myAngle: if outgoing { e.get_shape_end_angle() } else { e.get_shape_start_angle() },
+        }
     }
 
     /// C++: `int edge_similar_direction_sorter::operator()(const NBEdge *, const NBEdge *) const` [const]
@@ -324,7 +416,16 @@ impl NBContHelper_edge_similar_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port edge_similar_direction_sorter::operator()")
+        let d1 = self.angle_diff(if self.myCompareOutgoing { e1.get_shape_start_angle() } else { e1.get_shape_end_angle() }, self.myAngle);
+        let d2 = self.angle_diff(if self.myCompareOutgoing { e2.get_shape_start_angle() } else { e2.get_shape_end_angle() }, self.myAngle);
+        if (d1.abs() - d2.abs()).abs() < utils::geom::NUMERICAL_EPS {
+            if (d1 - d2).abs() > utils::geom::NUMERICAL_EPS {
+                return (d1 < d2) as i32;
+            } else {
+                return (e1.get_numerical_id() < e2.get_numerical_id()) as i32;
+            }
+        }
+        (d1.abs() < d2.abs()) as i32
     }
 
     /// C++: `double edge_similar_direction_sorter::angleDiff(const double, const double) const` [const, private]
@@ -340,7 +441,14 @@ impl NBContHelper_edge_similar_direction_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn angle_diff(&self, angle1: f64, angle2: f64) -> f64 {
-        todo!("port edge_similar_direction_sorter::angleDiff")
+        let mut d = angle2 - angle1;
+        while d >= 180.0 {
+            d -= 360.0;
+        }
+        while d < -180.0 {
+            d += 360.0;
+        }
+        d
     }
 
 }
@@ -357,7 +465,7 @@ impl NBContHelper_edge_with_destination_finder {
     //     : myDestinationNode(dest) {}
     #[allow(unused_variables)]
     pub fn new(dest: Ptr<NBNode>) -> Self {
-        todo!("port edge_with_destination_finder::edge_with_destination_finder")
+        Self { myDestinationNode: dest }
     }
 
     /// C++: `bool edge_with_destination_finder::operator()(NBEdge *) const` [const]
@@ -367,7 +475,7 @@ impl NBContHelper_edge_with_destination_finder {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port edge_with_destination_finder::operator()")
+        e.get_to_node() == self.myDestinationNode
     }
 
     /// C++: `edge_with_destination_finder & edge_with_destination_finder::operator=(const edge_with_destination_finder &)` [private]
@@ -375,7 +483,8 @@ impl NBContHelper_edge_with_destination_finder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBContHelper_edge_with_destination_finder) -> &mut NBContHelper_edge_with_destination_finder {
-        todo!("port edge_with_destination_finder::operator=")
+        self.myDestinationNode = s.myDestinationNode;
+        self
     }
 
 }
@@ -392,7 +501,7 @@ impl NBContHelper_node_with_incoming_finder {
     //     : myEdge(e) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>) -> Self {
-        todo!("port node_with_incoming_finder::node_with_incoming_finder")
+        Self { myEdge: e }
     }
 
     /// C++: `bool node_with_incoming_finder::operator()(const NBNode *const) const` [const]
@@ -403,7 +512,7 @@ impl NBContHelper_node_with_incoming_finder {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, n: Ptr<NBNode>) -> bool {
-        todo!("port node_with_incoming_finder::operator()")
+        n.get_incoming_edges().iter().any(|x| *x == self.myEdge)
     }
 
 }
@@ -420,7 +529,7 @@ impl NBContHelper_node_with_outgoing_finder {
     //     : myEdge(e) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>) -> Self {
-        todo!("port node_with_outgoing_finder::node_with_outgoing_finder")
+        Self { myEdge: e }
     }
 
     /// C++: `bool node_with_outgoing_finder::operator()(const NBNode *const) const` [const]
@@ -431,7 +540,7 @@ impl NBContHelper_node_with_outgoing_finder {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, n: Ptr<NBNode>) -> bool {
-        todo!("port node_with_outgoing_finder::operator()")
+        n.get_outgoing_edges().iter().any(|x| *x == self.myEdge)
     }
 
 }
@@ -448,7 +557,7 @@ impl NBContHelper_opposite_finder {
     //             : myReferenceEdge(edge) { }
     #[allow(unused_variables)]
     pub fn new(edge: Ptr<NBEdge>) -> Self {
-        todo!("port opposite_finder::opposite_finder")
+        Self { myReferenceEdge: edge }
     }
 
     /// C++: `bool opposite_finder::operator()(NBEdge *) const` [const]
@@ -458,7 +567,7 @@ impl NBContHelper_opposite_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port opposite_finder::operator()")
+        e.is_turning_direction_at(self.myReferenceEdge) || self.myReferenceEdge.is_turning_direction_at(e)
     }
 
 }
@@ -476,7 +585,7 @@ impl NBContHelper_relative_incoming_edge_sorter {
     // explicit relative_incoming_edge_sorter(NBEdge* e) : myAngle(e->getStartAngle()) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>) -> Self {
-        todo!("port relative_incoming_edge_sorter::relative_incoming_edge_sorter")
+        Self { myAngle: e.get_start_angle() }
     }
 
     /// C++: `void relative_incoming_edge_sorter::relative_incoming_edge_sorter(double)`
@@ -484,7 +593,7 @@ impl NBContHelper_relative_incoming_edge_sorter {
     // explicit relative_incoming_edge_sorter(double angle) : myAngle(angle) {}
     #[allow(unused_variables)]
     pub fn new_2(angle: f64) -> Self {
-        todo!("port relative_incoming_edge_sorter::relative_incoming_edge_sorter")
+        Self { myAngle: angle }
     }
 
     /// C++: `bool relative_incoming_edge_sorter::operator()(const NBEdge *, const NBEdge *) const` [const]
@@ -521,7 +630,32 @@ impl NBContHelper_relative_incoming_edge_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port relative_incoming_edge_sorter::operator()")
+        let mut relAngle1 = NBHelpers::norm_rel_angle(self.myAngle, e1.get_end_angle());
+        let mut relAngle2 = NBHelpers::norm_rel_angle(self.myAngle, e2.get_end_angle());
+        let length1 = e1.get_geometry().length2d();
+        let length2 = e2.get_geometry().length2d();
+
+        let mut lookAhead = 2.0 * NBEDGE_ANGLE_LOOKAHEAD;
+        while (relAngle1 - relAngle2).abs() < 3.0 {
+            // look at further geometry segments to resolve ambiguity
+            let offset1 = f64::max(0.0, f64::min(length1, length1 - lookAhead));
+            let offset2 = f64::max(0.0, f64::min(length2, length2 - lookAhead));
+            let referencePos1 = e1.get_geometry().position_at_offset2d(offset1, 0.0, false);
+            let referencePos2 = e2.get_geometry().position_at_offset2d(offset2, 0.0, false);
+            let angle1 = utils::geom::geom_helper::legacy_degree(referencePos1.angle_to2d(e1.get_to_node().get_position()), true);
+            let angle2 = utils::geom::geom_helper::legacy_degree(referencePos2.angle_to2d(e2.get_to_node().get_position()), true);
+            relAngle1 = NBHelpers::norm_rel_angle(self.myAngle, angle1);
+            relAngle2 = NBHelpers::norm_rel_angle(self.myAngle, angle2);
+            if lookAhead > f64::max(length1, length2) {
+                break;
+            }
+            lookAhead *= 2.0;
+        }
+        if (relAngle1 - relAngle2).abs() < utils::geom::NUMERICAL_EPS {
+            // need to break ties for windows debug version, numerical id may be -1 for both
+            return e1.get_id() > e2.get_id();
+        }
+        relAngle1 > relAngle2
     }
 
 }
@@ -539,7 +673,7 @@ impl NBContHelper_relative_outgoing_edge_sorter {
     // explicit relative_outgoing_edge_sorter(NBEdge* e) : myAngle(e->getEndAngle()) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>) -> Self {
-        todo!("port relative_outgoing_edge_sorter::relative_outgoing_edge_sorter")
+        Self { myAngle: e.get_end_angle() }
     }
 
     /// C++: `void relative_outgoing_edge_sorter::relative_outgoing_edge_sorter(double)`
@@ -547,7 +681,7 @@ impl NBContHelper_relative_outgoing_edge_sorter {
     // explicit relative_outgoing_edge_sorter(double angle) : myAngle(angle) {}
     #[allow(unused_variables)]
     pub fn new_2(angle: f64) -> Self {
-        todo!("port relative_outgoing_edge_sorter::relative_outgoing_edge_sorter")
+        Self { myAngle: angle }
     }
 
     /// C++: `bool relative_outgoing_edge_sorter::operator()(const NBEdge *, const NBEdge *) const` [const]
@@ -584,7 +718,32 @@ impl NBContHelper_relative_outgoing_edge_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port relative_outgoing_edge_sorter::operator()")
+        let mut relAngle1 = NBHelpers::norm_rel_angle(self.myAngle, e1.get_start_angle());
+        let mut relAngle2 = NBHelpers::norm_rel_angle(self.myAngle, e2.get_start_angle());
+        let length1 = e1.get_geometry().length2d();
+        let length2 = e2.get_geometry().length2d();
+
+        let mut lookAhead = 2.0 * NBEDGE_ANGLE_LOOKAHEAD;
+        while (relAngle1 - relAngle2).abs() < 3.0 {
+            // look at further geometry segments to resolve ambiguity
+            let offset1 = f64::max(0.0, f64::min(length1, lookAhead));
+            let offset2 = f64::max(0.0, f64::min(length2, lookAhead));
+            let referencePos1 = e1.get_geometry().position_at_offset2d(offset1, 0.0, false);
+            let referencePos2 = e2.get_geometry().position_at_offset2d(offset2, 0.0, false);
+            let angle1 = utils::geom::geom_helper::legacy_degree(e1.get_from_node().get_position().angle_to2d(&referencePos1), true);
+            let angle2 = utils::geom::geom_helper::legacy_degree(e2.get_from_node().get_position().angle_to2d(&referencePos2), true);
+            relAngle1 = NBHelpers::norm_rel_angle(self.myAngle, angle1);
+            relAngle2 = NBHelpers::norm_rel_angle(self.myAngle, angle2);
+            if lookAhead > f64::max(length1, length2) {
+                break;
+            }
+            lookAhead *= 2.0;
+        }
+        if (relAngle1 - relAngle2).abs() < utils::geom::NUMERICAL_EPS {
+            // need to break ties for windows debug version, numerical id may be -1 for both
+            return e1.get_id() > e2.get_id();
+        }
+        relAngle1 > relAngle2
     }
 
 }
@@ -600,7 +759,7 @@ impl NBContHelper_same_connection_edge_sorter {
     // explicit same_connection_edge_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port same_connection_edge_sorter::same_connection_edge_sorter")
+        Self {}
     }
 
     /// C++: `int same_connection_edge_sorter::operator()(NBEdge *, NBEdge *) const` [const]
@@ -621,7 +780,13 @@ impl NBContHelper_same_connection_edge_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> i32 {
-        todo!("port same_connection_edge_sorter::operator()")
+        let mm1 = self.get_min_max_rel_angles(e1);
+        let mm2 = self.get_min_max_rel_angles(e2);
+        if mm1.0 == mm2.0 && mm1.1 == mm2.1 {
+            // ok, let's simply sort them arbitrarily
+            return (e1.get_id() < e2.get_id()) as i32;
+        }
+        ((mm1.0 >= mm2.0 && mm1.1 >= mm2.1) as i32)
     }
 
     /// C++: `std::pair<double, double> same_connection_edge_sorter::getMinMaxRelAngles(NBEdge *) const` [const]
@@ -643,7 +808,18 @@ impl NBContHelper_same_connection_edge_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn get_min_max_rel_angles(&self, e: Ptr<NBEdge>) -> (f64, f64) {
-        todo!("port same_connection_edge_sorter::getMinMaxRelAngles")
+        let mut min = 360.0;
+        let mut max = 360.0;
+        for i in e.get_connected_edges().iter() {
+            let angle = NBHelpers::norm_rel_angle(e.get_total_angle(), i.get_total_angle());
+            if min == 360.0 || min > angle {
+                min = angle;
+            }
+            if max == 360.0 || max < angle {
+                max = angle;
+            }
+        }
+        (min, max)
     }
 
 }
@@ -660,7 +836,13 @@ impl NBContHelper_same_connection_edge_sorter {
 //     return os;
 // }
 #[allow(unused_variables)]
-pub fn shl_op(os: &mut Unmapped /* std::ostream */, ev: &EdgeVector) -> &'static mut Unmapped /* std::ostream */ {
-    todo!("port operator<<")
+pub fn shl_op<'a>(os: &'a mut String, ev: &EdgeVector) -> &'a mut String {
+    for (i, e) in ev.iter().enumerate() {
+        if i > 0 {
+            os.push_str(", ");
+        }
+        os.push_str(e.get_id());
+    }
+    os
 }
 

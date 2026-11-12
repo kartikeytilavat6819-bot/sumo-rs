@@ -18,7 +18,7 @@ impl NBDistrictCont {
     // NBDistrictCont::NBDistrictCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NBDistrictCont::NBDistrictCont")
+        Self { myDistricts: BTreeMap::new() }
     }
 
     /// C++: `void NBDistrictCont::~NBDistrictCont()`
@@ -26,7 +26,7 @@ impl NBDistrictCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBDistrictCont::~NBDistrictCont")
+        // C++ destructor has no body; the map and its Ptr entries need no explicit release
     }
 
     /// C++: `bool NBDistrictCont::insert(NBDistrict *const)`
@@ -42,7 +42,12 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn insert(&mut self, district: Ptr<NBDistrict>) -> bool {
-        todo!("port NBDistrictCont::insert")
+        let id = district.get_id().to_string();
+        if self.myDistricts.contains_key(&id) {
+            return false;
+        }
+        self.myDistricts.insert(id, district);
+        true
     }
 
     /// C++: `NBDistrict * NBDistrictCont::retrieve(const std::string &) const` [const]
@@ -57,7 +62,10 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve(&self, id: &str) -> Ptr<NBDistrict> {
-        todo!("port NBDistrictCont::retrieve")
+        match self.myDistricts.get(id) {
+            Some(d) => *d,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `std::map<std::string, NBDistrict *>::const_iterator NBDistrictCont::begin() const` [const]
@@ -66,8 +74,8 @@ impl NBDistrictCont {
     //         return myDistricts.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn begin(&self) -> Unmapped /* std::map<std::string, NBDistrict *>::const_iterator */ {
-        todo!("port NBDistrictCont::begin")
+    pub fn begin(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBDistrict>> {
+        self.myDistricts.iter()
     }
 
     /// C++: `std::map<std::string, NBDistrict *>::const_iterator NBDistrictCont::end() const` [const]
@@ -76,8 +84,12 @@ impl NBDistrictCont {
     //         return myDistricts.end();
     //     }
     #[allow(unused_variables)]
-    pub fn end(&self) -> Unmapped /* std::map<std::string, NBDistrict *>::const_iterator */ {
-        todo!("port NBDistrictCont::end")
+    pub fn end(&self) -> std::collections::btree_map::Iter<'_, String, Ptr<NBDistrict>> {
+        // C++ end(): an iterator past the last element. Rust iterators have no past-the-end
+        // position, so return an exhausted iterator of the same type.
+        let mut it = self.myDistricts.iter();
+        while it.next().is_some() {}
+        it
     }
 
     /// C++: `int NBDistrictCont::size() const` [const]
@@ -88,7 +100,7 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn size(&self) -> i32 {
-        todo!("port NBDistrictCont::size")
+        self.myDistricts.len() as i32
     }
 
     /// C++: `bool NBDistrictCont::addSource(const std::string &, NBEdge *const, double)`
@@ -104,7 +116,11 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn add_source(&mut self, dist: &str, source: Ptr<NBEdge>, weight: f64) -> bool {
-        todo!("port NBDistrictCont::addSource")
+        let o = self.retrieve(dist);
+        if o.is_null() {
+            return false;
+        }
+        o.m().add_source(source, weight)
     }
 
     /// C++: `bool NBDistrictCont::addSink(const std::string &, NBEdge *const, double)`
@@ -120,7 +136,11 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn add_sink(&mut self, dist: &str, destination: Ptr<NBEdge>, weight: f64) -> bool {
-        todo!("port NBDistrictCont::addSink")
+        let o = self.retrieve(dist);
+        if o.is_null() {
+            return false;
+        }
+        o.m().add_sink(destination, weight)
     }
 
     /// C++: `void NBDistrictCont::removeFromSinksAndSources(NBEdge *const)`
@@ -133,7 +153,9 @@ impl NBDistrictCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_from_sinks_and_sources(&mut self, e: Ptr<NBEdge>) {
-        todo!("port NBDistrictCont::removeFromSinksAndSources")
+        for d in self.myDistricts.values() {
+            d.m().remove_from_sinks_and_sources(e);
+        }
     }
 
     /// C++: `void NBDistrictCont::NBDistrictCont(const NBDistrictCont &)` [private]
@@ -141,7 +163,7 @@ impl NBDistrictCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NBDistrictCont) -> Self {
-        todo!("port NBDistrictCont::NBDistrictCont")
+        Self { myDistricts: s.myDistricts.clone() }
     }
 
     /// C++: `NBDistrictCont & NBDistrictCont::operator=(const NBDistrictCont &)` [private]
@@ -149,7 +171,8 @@ impl NBDistrictCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBDistrictCont) -> &mut NBDistrictCont {
-        todo!("port NBDistrictCont::operator=")
+        self.myDistricts = s.myDistricts.clone();
+        self
     }
 
 }
