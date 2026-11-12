@@ -97,7 +97,88 @@ impl StorageHelper {
     //     }
     #[allow(unused_variables)]
     pub fn to_storage(v: &TraCIResult) -> Rc<Storage> {
-        todo!("port StorageHelper::toStorage")
+        // C++ `(const TraCIDouble&)v` style downcasts: the subclass embeds TraCIResult as its first field
+        let mut result = Storage::new();
+        if v.result_type == POSITION_ROADMAP || v.result_type == POSITION_2D || v.result_type == POSITION_3D {
+            Self::write_compound(&mut result, 2);
+        }
+        if v.result_type != -1 {
+            result.write_unsigned_byte(v.result_type).unwrap();
+        }
+        match v.result_type {
+            TYPE_STRING => {
+                let s = unsafe { &*(v as *const TraCIResult as *const TraCIString) };
+                result.write_string(&s.get_string());
+            }
+            TYPE_DOUBLE => {
+                let d = unsafe { &*(v as *const TraCIResult as *const TraCIDouble) };
+                result.write_double(d.value);
+            }
+            TYPE_INTEGER => {
+                let i = unsafe { &*(v as *const TraCIResult as *const TraCIInt) };
+                result.write_int(i.value);
+            }
+            TYPE_BYTE => {
+                let i = unsafe { &*(v as *const TraCIResult as *const TraCIInt) };
+                result.write_byte(i.value).unwrap();
+            }
+            TYPE_UBYTE => {
+                let i = unsafe { &*(v as *const TraCIResult as *const TraCIInt) };
+                result.write_unsigned_byte(i.value).unwrap();
+            }
+            POSITION_ROADMAP => {
+                let rp = unsafe { &*(v as *const TraCIResult as *const TraCIRoadPosition) };
+                result.write_string(&rp.edgeID);
+                result.write_double(rp.pos);
+                result.write_unsigned_byte(rp.laneIndex).unwrap();
+            }
+            POSITION_2D => {
+                let p = unsafe { &*(v as *const TraCIResult as *const TraCIPosition) };
+                result.write_double(p.x);
+                result.write_double(p.y);
+            }
+            POSITION_3D => {
+                let p = unsafe { &*(v as *const TraCIResult as *const TraCIPosition) };
+                result.write_double(p.x);
+                result.write_double(p.y);
+                result.write_double(p.z);
+            }
+            -1 => {
+                // a hack for transfering multiple values
+                let pl = &unsafe { &*(v as *const TraCIResult as *const TraCIStringDoublePairList) }.value;
+                let tisb = pl.len() == 2 && pl[0].0 != "";
+                Self::write_compound(&mut result, if pl.len() == 2 && !tisb { 2 } else { pl.len() as i32 + 1 });
+                if pl.len() == 1 {
+                    Self::write_typed_double(&mut result, pl[0].1);
+                    Self::write_typed_string(&mut result, &pl[0].0);
+                } else if pl.len() == 2 {
+                    if tisb {
+                        Self::write_typed_int(&mut result, (pl[0].1 + 0.5) as i32);
+                        Self::write_typed_string(&mut result, &pl[0].0);
+                        Self::write_typed_unsigned_byte(&mut result, (pl[1].1 + 0.5) as i32);
+                    } else {
+                        Self::write_typed_double(&mut result, pl[0].1);
+                        Self::write_typed_double(&mut result, pl[1].1);
+                    }
+                } else if pl.len() == 3 {
+                    Self::write_typed_double(&mut result, pl[0].1);
+                    Self::write_typed_double(&mut result, pl[1].1);
+                    Self::write_typed_double(&mut result, pl[2].1);
+                    Self::write_typed_string(&mut result, &pl[2].0);
+                } else if pl.len() == 4 {
+                    Self::write_typed_double(&mut result, pl[0].1);
+                    Self::write_typed_double(&mut result, pl[1].1);
+                    Self::write_typed_double(&mut result, pl[2].1);
+                    Self::write_typed_double(&mut result, pl[3].1);
+                    Self::write_typed_string(&mut result, &pl[3].0);
+                }
+            }
+            _ => throw_traci(&format!("Unknown type {}", utils::common::to_string::to_hex(v.result_type as u32 as u64, 0, 4))),
+        }
+        if v.result_type == POSITION_ROADMAP || v.result_type == POSITION_2D || v.result_type == POSITION_3D {
+            result.write_unsigned_byte(REQUEST_DRIVINGDIST).unwrap();
+        }
+        Rc::new(result)
     }
 
     /// C++: `int StorageHelper::readTypedInt(tcpip::Storage &, const std::string &)` [static]

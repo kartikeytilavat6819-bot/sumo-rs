@@ -32,7 +32,24 @@ impl RODUAFrame {
     // }
     #[allow(unused_variables)]
     pub fn fill_options() {
-        todo!("port RODUAFrame::fillOptions")
+        utils::options::options_cont::with_options(|oc| {
+            oc.add_call_example("-c <CONFIGURATION>", "run routing with options from file");
+
+            // insert options sub-topics
+            // shortcut: SystemFrame::addConfigurationOptions is not ported yet, its configuration options are missing, upgrade when system_frame is ported
+            oc.add_option_sub_topic("Input");
+            oc.add_option_sub_topic("Output");
+            oc.add_option_sub_topic("Processing");
+            oc.add_option_sub_topic("Defaults");
+            oc.add_option_sub_topic("Time");
+
+            // insert options
+            ROFrame::fill_options(oc, true, false);
+        });
+        RODUAFrame::add_import_options();
+        RODUAFrame::add_dua_options();
+        // add rand options
+        // shortcut: RandHelper::insertRandOptions is not ported yet, the random options are missing, upgrade when rand_helper registers them
     }
 
     /// C++: `bool RODUAFrame::checkOptions()` [static]
@@ -121,7 +138,83 @@ impl RODUAFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options() -> bool {
-        todo!("port RODUAFrame::checkOptions")
+        utils::options::options_cont::with_options(|oc| {
+            let mut ok = ROFrame::check_options(oc);
+
+            let mut p = SUMOVehicleParameter::new();
+            let mut error = String::new();
+            if oc.is_set("departlane", true).unwrap() && !SUMOVehicleParameter::parse_depart_lane(&oc.get_string("departlane").unwrap(), "option", "departlane", &mut p.departLane, &mut p.departLaneProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+            if oc.is_set("departpos", true).unwrap() && !SUMOVehicleParameter::parse_depart_pos(&oc.get_string("departpos").unwrap(), "option", "departpos", &mut p.departPos, &mut p.departPosProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+            if oc.is_set("departspeed", true).unwrap() && !SUMOVehicleParameter::parse_depart_speed(&oc.get_string("departspeed").unwrap(), "option", "departspeed", &mut p.departSpeed, &mut p.departSpeedProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+            if oc.is_set("arrivallane", true).unwrap() && !SUMOVehicleParameter::parse_arrival_lane(&oc.get_string("arrivallane").unwrap(), "option", "arrivallane", &mut p.arrivalLane, &mut p.arrivalLaneProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+            if oc.is_set("arrivalpos", true).unwrap() && !SUMOVehicleParameter::parse_arrival_pos(&oc.get_string("arrivalpos").unwrap(), "option", "arrivalpos", &mut p.arrivalPos, &mut p.arrivalPosProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+            if oc.is_set("arrivalspeed", true).unwrap() && !SUMOVehicleParameter::parse_arrival_speed(&oc.get_string("arrivalspeed").unwrap(), "option", "arrivalspeed", &mut p.arrivalSpeed, &mut p.arrivalSpeedProcedure, &mut error) {
+                utils::common::msg_handler::write_error(&error);
+                ok = false;
+            }
+
+            if oc.get_string("routing-algorithm").unwrap() != "dijkstra" && oc.get_string("weight-attribute").unwrap() != "traveltime" {
+                utils::common::msg_handler::write_error(&format!("Routing algorithm '{}' does not support weight-attribute '{}'.", oc.get_string("routing-algorithm").unwrap(), oc.get_string("weight-attribute").unwrap()));
+                return false;
+            }
+            if oc.get_bool("bulk-routing").unwrap() && (oc.get_string("routing-algorithm").unwrap() == "CH" || oc.get_string("routing-algorithm").unwrap() == "CHWrapper") {
+                utils::common::msg_handler::write_error(&format!("Routing algorithm '{}' does not support bulk routing.", oc.get_string("routing-algorithm").unwrap()));
+                return false;
+            }
+            if oc.is_default("routing-algorithm") && (oc.is_set("astar.all-distances", true).unwrap() || oc.is_set("astar.landmark-distances", true).unwrap() || oc.is_set("astar.save-landmark-distances", true).unwrap()) {
+                oc.set_default("routing-algorithm", "astar").unwrap();
+            }
+            if !oc.is_default("weights.random-factor") && (oc.is_set("astar.all-distances", true).unwrap() || oc.is_set("astar.landmark-distances", true).unwrap() || oc.is_set("astar.save-landmark-distances", true).unwrap()) {
+                utils::common::msg_handler::write_warning("The option --weights.random-factor should not be used together with astar and precomputed distances.");
+            }
+
+            if oc.get_string("route-choice-method").unwrap() != "gawron" && oc.get_string("route-choice-method").unwrap() != "logit" {
+                utils::common::msg_handler::write_error(&format!("Invalid route choice method '{}'.", oc.get_string("route-choice-method").unwrap()));
+                return false;
+            }
+            if oc.get_bool("logit").unwrap() {
+                utils::common::msg_handler::write_warning("The --logit option is deprecated, please use --route-choice-method logit.");
+                oc.set("route-choice-method", "logit", false).unwrap();
+            }
+
+            if oc.is_set("output-file", true).unwrap() && !oc.is_set("alternatives-output", true).unwrap() {
+                let filename = oc.get_string("output-file").unwrap();
+                let len = filename.len();
+                if len > 4 && filename.ends_with(".xml") {
+                    oc.set_default("alternatives-output", &format!("{}.alt.xml", &filename[..len - 4])).unwrap();
+                } else if len > 7 && filename.ends_with(".xml.gz") {
+                    oc.set_default("alternatives-output", &format!("{}.alt.xml.gz", &filename[..len - 7])).unwrap();
+                } else if len > 3 && filename.ends_with(".gz") {
+                    oc.set_default("alternatives-output", &format!("{}.alt.gz", &filename[..len - 3])).unwrap();
+                } else {
+                    utils::common::msg_handler::write_warning("Cannot derive file name for alternatives output, skipping it.");
+                }
+            }
+            if oc.get_bool("write-trips.junctions").unwrap() {
+                if oc.is_default("write-trips") {
+                    oc.set_default("write-trips", "true").unwrap();
+                } else if !oc.get_bool("write-trips").unwrap() {
+                    utils::common::msg_handler::write_warning("Option --write-trips.junctions takes no affect when --write-trips is disabled.");
+                }
+            }
+            // shortcut: gTaxiClasses lives privately in microsim/devices/ms_device_taxi.rs with no public setter, the taxi class mask is not set here, upgrade when that module exposes it
+            ok
+        })
     }
 
     /// C++: `void RODUAFrame::addImportOptions()` [static, protected]
@@ -183,7 +276,59 @@ impl RODUAFrame {
     // }
     #[allow(unused_variables)]
     pub fn add_import_options() {
-        todo!("port RODUAFrame::addImportOptions")
+        utils::options::options_cont::with_options(|oc| {
+            oc.do_register("alternatives-output", SumoOption::file_name());
+            oc.add_synonyme("alternatives-output", "alternatives", false);
+            oc.add_description("alternatives-output", "Output", "Write generated route alternatives to FILE");
+
+            oc.do_register("intermodal-network-output", SumoOption::file_name());
+            oc.add_description("intermodal-network-output", "Output", "Write edge splits and connectivity to FILE");
+
+            oc.do_register("intermodal-weight-output", SumoOption::file_name());
+            oc.add_description("intermodal-weight-output", "Output", "Write intermodal edges with lengths and travel times to FILE");
+
+            oc.do_register("write-trips", SumoOption::bool(false));
+            oc.add_description("write-trips", "Output", "Write trips instead of vehicles (for validating trip input)");
+
+            oc.do_register("write-trips.geo", SumoOption::bool(false));
+            oc.add_description("write-trips.geo", "Output", "Write trips with geo-coordinates");
+
+            oc.do_register("write-trips.junctions", SumoOption::bool(false));
+            oc.add_description("write-trips.junctions", "Output", "Write trips with fromJunction and toJunction");
+
+            oc.do_register("write-costs", SumoOption::bool(false));
+            oc.add_description("write-costs", "Output", "Include the cost attribute in route output");
+
+            // register further processing options
+            // ! The subtopic "Processing" must be initialised earlier !
+            oc.do_register("weights.random-factor", SumoOption::float(1.0));
+            oc.add_description("weights.random-factor", "Processing", "Edge weights for routing are dynamically disturbed by a random factor drawn uniformly from [1,FLOAT)");
+
+            oc.do_register("weight-period", SumoOption::string_typed("3600", "TIME"));
+            oc.add_description("weight-period", "Processing", "Aggregation period for the given weight files; triggers rebuilding of Contraction Hierarchy");
+
+            oc.do_register("weights.priority-factor", SumoOption::float(0.0));
+            oc.add_description("weights.priority-factor", "Processing", "Consider edge priorities in addition to travel times, weighted by factor");
+
+            oc.do_register("astar.all-distances", SumoOption::file_name());
+            oc.add_description("astar.all-distances", "Processing", "Initialize lookup table for astar from the given file (generated by marouter --all-pairs-output)");
+
+            oc.do_register("astar.landmark-distances", SumoOption::file_name());
+            oc.add_description("astar.landmark-distances", "Processing", "Initialize lookup table for astar ALT-variant from the given file");
+
+            oc.do_register("astar.save-landmark-distances", SumoOption::file_name());
+            oc.add_description("astar.save-landmark-distances", "Processing", "Save lookup table for astar ALT-variant to the given file");
+
+            oc.do_register("scale", SumoOption::float(1.0));
+            oc.add_description("scale", "Processing", "Scale demand by the given factor (by discarding or duplicating vehicles)");
+
+            oc.do_register("scale-suffix", SumoOption::string_with("."));
+            oc.add_description("scale-suffix", "Processing", "Suffix to be added when creating ids for cloned vehicles");
+
+            oc.do_register("taxi.vclasses", SumoOption::string_vector_with(vec!["taxi".to_string()]));
+            oc.add_synonyme("taxi.vclasses", "device.taxi.vclasses", false);
+            oc.add_description("taxi.vclasses", "Processing", "Network permissions that can be accessed by taxis");
+        });
     }
 
     /// C++: `void RODUAFrame::addDUAOptions()` [static, protected]
@@ -269,7 +414,83 @@ impl RODUAFrame {
     // }
     #[allow(unused_variables)]
     pub fn add_dua_options() {
-        todo!("port RODUAFrame::addDUAOptions")
+        utils::options::options_cont::with_options(|oc| {
+            // register Gawron's DUE-settings
+            oc.do_register("gawron.beta", SumoOption::float(0.9));
+            oc.add_synonyme("gawron.beta", "gBeta", true);
+            oc.add_description("gawron.beta", "Processing", "Use FLOAT as Gawron's beta");
+
+            oc.do_register("gawron.a", SumoOption::float(0.5));
+            oc.add_synonyme("gawron.a", "gA", true);
+            oc.add_description("gawron.a", "Processing", "Use FLOAT as Gawron's a");
+
+            oc.do_register("exit-times", SumoOption::bool(false));
+            oc.add_description("exit-times", "Output", "Write exit times (weights) for each edge");
+
+            oc.do_register("route-length", SumoOption::bool(false));
+            oc.add_description("route-length", "Output", "Include total route length in the output");
+
+            oc.do_register("keep-all-routes", SumoOption::bool(false));
+            oc.add_description("keep-all-routes", "Processing", "Save routes with near zero probability");
+
+            oc.do_register("skip-new-routes", SumoOption::bool(false));
+            oc.add_description("skip-new-routes", "Processing", "Only reuse routes from input, do not calculate new ones");
+
+            oc.do_register("keep-route-probability", SumoOption::float(0.0));
+            oc.add_description("keep-route-probability", "Processing", "The probability of keeping the old route");
+
+            oc.do_register("ptline-routing", SumoOption::bool(false));
+            oc.add_description("ptline-routing", "Processing", "Route all public transport input");
+
+            oc.do_register("keep-flows", SumoOption::bool(false));
+            oc.add_description("keep-flows", "Processing", "Write flows instead of expanding them into vehicles");
+
+            oc.do_register("route-choice-method", SumoOption::string_with("gawron"));
+            oc.add_description("route-choice-method", "Processing", "Choose a route choice method: gawron, logit, or lohse");
+
+            oc.do_register("logit", SumoOption::bool(false)); // deprecated
+            oc.add_description("logit", "Processing", "Use c-logit model (deprecated in favor of --route-choice-method logit)");
+
+            oc.do_register("logit.beta", SumoOption::float(-1.0));
+            oc.add_synonyme("logit.beta", "lBeta", true);
+            oc.add_description("logit.beta", "Processing", "Use FLOAT as logit's beta");
+
+            oc.do_register("logit.gamma", SumoOption::float(1.0));
+            oc.add_synonyme("logit.gamma", "lGamma", true);
+            oc.add_description("logit.gamma", "Processing", "Use FLOAT as logit's gamma");
+
+            oc.do_register("logit.theta", SumoOption::float(-1.0));
+            oc.add_synonyme("logit.theta", "lTheta", true);
+            oc.add_description("logit.theta", "Processing", "Use FLOAT as logit's theta (negative values mean auto-estimation)");
+
+            oc.do_register("persontrip.walkfactor", SumoOption::float(0.75));
+            oc.add_description("persontrip.walkfactor", "Processing", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
+
+            oc.do_register("persontrip.walk-opposite-factor", SumoOption::float(1.0));
+            oc.add_description("persontrip.walk-opposite-factor", "Processing", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
+
+            oc.do_register("persontrip.transfer.car-walk", SumoOption::string_vector_with(vec!["parkingAreas".to_string()]));
+            oc.add_description("persontrip.transfer.car-walk", "Processing",
+                               "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
+
+            oc.do_register("persontrip.transfer.taxi-walk", SumoOption::string_vector());
+            oc.add_description("persontrip.transfer.taxi-walk", "Processing", "Where taxis can drop off customers ('allJunctions, 'ptStops')");
+
+            oc.do_register("persontrip.transfer.walk-taxi", SumoOption::string_vector());
+            oc.add_description("persontrip.transfer.walk-taxi", "Processing", "Where taxis can pick up customers ('allJunctions, 'ptStops')");
+
+            oc.do_register("persontrip.taxi.waiting-time", SumoOption::string_typed("300", "TIME"));
+            oc.add_description("persontrip.taxi.waiting-time", "Processing", "Estimated time for taxi pickup");
+
+            oc.do_register("persontrip.ride-public-line", SumoOption::bool(false));
+            oc.add_description("persontrip.ride-public-line", "Processing", "Only use the intended public transport line rather than any alternative line that stops at the destination");
+
+            oc.do_register("railway.max-train-length", SumoOption::float(1000.0));
+            oc.add_description("railway.max-train-length", "Processing", "Use FLOAT as a maximum train length when initializing the railway router");
+
+            oc.do_register("max-traveltime", SumoOption::string_typed("-1", "TIME"));
+            oc.add_description("max-traveltime", "Processing", "Declare routing failure if traveltime exceeds the given positive TIME");
+        });
     }
 
 }
