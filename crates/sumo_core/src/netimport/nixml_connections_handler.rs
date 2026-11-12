@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::{MsgType, with_instance, write_error, write_warning};
+use utils::tlf;
 use utils::common::std_defs::NETWORK_VERSION;
 use utils::common::string_utils::to_int_secure;
 
@@ -408,10 +409,10 @@ impl NIXMLConnectionsHandler {
         if from.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_USER {
             // maybe we are patching an existing connection
             // shortcut: NBEdge::getConnectionsFromLane is not ported yet and returns CHBuilder_Connection, not NBEdge_Connection; panics here until nb_edge.rs types myConnections as Vec<NBEdge_Connection>
-            let existing: Vec<NBEdge_Connection> = panic!("shortcut: NBEdge::getConnectionsFromLane not ported");
+            let mut existing: Vec<NBEdge_Connection> = panic!("shortcut: NBEdge::getConnectionsFromLane not ported");
             if existing.len() > 0 {
                 assert!(existing.len() == 1);
-                defaultCon = existing[0].clone();
+                defaultCon = existing.remove(0);
                 // remove the original so we can insert the replacement
                 from.m().remove_from_connections_2(&defaultCon);
             } else {

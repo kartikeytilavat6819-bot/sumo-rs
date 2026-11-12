@@ -394,9 +394,9 @@ impl MultiEntryExit {
     #[allow(unused_variables)]
     pub fn get_detector(detID: &str) -> Ptr<MSE3Collector> {
         // shortcut: C++ dynamic_cast is replaced by a cast, valid because only ENTRY_EXIT-typed detectors are looked up; MSE3Collector needs #[repr(C)] (base first), upgrade when mse3_collector.rs adds it
-        let e3 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ENTRY_EXIT_DETECTOR).get(id).copied().unwrap_or(Ptr::null()).cast::<MSE3Collector>();
+        let e3 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ENTRY_EXIT_DETECTOR).get(detID).copied().unwrap_or(Ptr::null()).cast::<MSE3Collector>();
         if e3.is_null() {
-            panic!("{}", format!("Multi entry exit detector '{}' is not known", id));
+            panic!("{}", format!("Multi entry exit detector '{}' is not known", detID));
         }
         e3
     }

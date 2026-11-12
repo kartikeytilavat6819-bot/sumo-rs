@@ -380,7 +380,7 @@ impl MSLaneSpeedTrigger {
     //         return myInstances;
     //     }
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static BTreeMap<String, Ptr<MSLaneSpeedTrigger>> {
+    pub fn get_instances() -> BTreeMap<String, Ptr<MSLaneSpeedTrigger>> {
         // returned by value, as in MSTriggeredRerouter: the C++ static map lives in a thread_local RefCell
         MY_INSTANCES.with(|m| m.borrow().clone())
     }

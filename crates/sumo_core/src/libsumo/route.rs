@@ -189,7 +189,7 @@ impl Route {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn add(routeID: &str, edges: &Vec<String>) {
+    pub fn add(routeID: &str, edgeIDs: &Vec<String>) {
         let mut edges: ConstMSEdgeVector = Vec::new();
         if edgeIDs.len() == 0 {
             panic!("{}", format!("Cannot add route '{}' without edges.", routeID));
