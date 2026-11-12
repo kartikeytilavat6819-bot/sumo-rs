@@ -2498,7 +2498,42 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn plan_move(&mut self, t: SUMOTime, ahead: &MSLeaderInfo, lengthsInFront: f64) {
-        todo!("port MSVehicle::planMove")
+        // debug-only blocks (#ifdef DEBUG_PLAN_MOVE / DEBUG_ACTIONSTEPS / DEBUG_EXEC_MOVE) are not ported
+        // Update the driver state
+        if !self.myDriverState.is_null() {
+            self.myDriverState.m().update();
+            let actionStepLength = self.myDriverState.m().get_driver_state().get_action_step_length();
+            self.set_action_step_length(actionStepLength, false);
+        }
+
+        let me = Ptr::from_mut(self);
+        self.myStopSpeed = self.get_car_follow_model().max_next_speed(self.myStopSpeed, me);
+        if !self.check_action_step(t) {
+            // During non-action passed drive items still need to be removed
+            // @todo rather work with updating myCurrentDriveItem (refs #3714)
+            self.remove_passed_drive_items();
+            return;
+        }
+        std::mem::swap(&mut self.myLFLinkLanesPrev, &mut self.myLFLinkLanes);
+        if !self.myInfluencer.is_null() {
+            self.myInfluencer.m().update_remote_control_route(Ptr::from_mut(self));
+        }
+        // planMoveInternal and checkRewindLinkLanes take the vectors by reference while being methods on self
+        let lfLinks = Ptr::from_mut(&mut self.myLFLinkLanes);
+        let stopDist = Ptr::from_mut(&mut self.myStopDist);
+        let stopSpeed = Ptr::from_mut(&mut self.myStopSpeed);
+        let nextTurn = Ptr::from_mut(&mut self.myNextTurn);
+        self.plan_move_internal(t, ahead, lfLinks.m(), stopDist.m(), stopSpeed.m(), nextTurn.m());
+        self.check_rewind_link_lanes(lengthsInFront, lfLinks.m());
+        self.myNextDriveItem = 0;
+        // shortcut: MSGlobals::gModelParkingManoeuver is not ported, always false until it is
+        let gModelParkingManoeuver = false;
+        if gModelParkingManoeuver {
+            if self.get_manoeuvre_type() == MSVehicle_ManoeuvreType::MANOEUVRE_EXIT && self.manoeuvre_is_complete() {
+                self.set_manoeuvre_type(MSVehicle_ManoeuvreType::MANOEUVRE_NONE);
+            }
+        }
+        self.myLaneChangeModel.m().reset_changed();
     }
 
     /// C++: `void MSVehicle::setApproachingForAllLinks()`
@@ -2563,7 +2598,48 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_approaching_for_all_links(&mut self) {
-        todo!("port MSVehicle::setApproachingForAllLinks")
+        if !self.myActionStep {
+            return;
+        }
+        self.remove_approaching_information(&self.myLFLinkLanesPrev);
+        let me = Ptr::from_mut(self).cast::<SUMOVehicle>();
+        for i in 0..self.myLFLinkLanes.len() {
+            let link = self.myLFLinkLanes[i].myLink;
+            if !link.is_null() {
+                if link.m().get_state() == LINKSTATE_ALLWAY_STOP {
+                    let tieBraker = self.get_rng().m().rand_int(2) as SUMOTime; // tie braker
+                    self.myLFLinkLanes[i].myArrivalTime += tieBraker;
+                }
+                let dpi = &self.myLFLinkLanes[i];
+                link.m().set_approaching(me, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.get_leave_speed(), dpi.mySetRequest, dpi.myArrivalSpeedBraking, self.get_waiting_time_for(dpi.myLink), dpi.myDistance, self.get_lateral_position_on_lane());
+            }
+        }
+        if self.is_rail() {
+            for dpi in self.myLFLinkLanes.iter() {
+                if !dpi.myLink.is_null() && !dpi.myLink.m().get_tl_logic().is_null() && matches!(dpi.myLink.m().get_tl_logic().m().get_logic_type(), TrafficLightType::RAIL_SIGNAL) {
+                    MSRailSignalControl::get_instance().notify_approach(dpi.myLink);
+                }
+            }
+        }
+        if !self.myLaneChangeModel.m().get_shadow_lane().is_null() {
+            // register on all shadow links
+            for i in 0..self.myLFLinkLanes.len() {
+                let link = self.myLFLinkLanes[i].myLink;
+                if !link.is_null() {
+                    let mut parallelLink = link.m().get_parallel_link(self.myLaneChangeModel.m().get_shadow_direction());
+                    if parallelLink.is_null() && self.myLaneChangeModel.m().is_opposite() && link.m().is_entry_link() {
+                        // register on opposite direction entry link to warn foes at minor side road
+                        parallelLink = link.m().get_opposite_direction_link();
+                    }
+                    if !parallelLink.is_null() {
+                        let dpi = &self.myLFLinkLanes[i];
+                        let latOffset = self.get_lane().m().get_right_side_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_right_side_on_edge();
+                        parallelLink.m().set_approaching(me, dpi.myArrivalTime, dpi.myArrivalSpeed, dpi.get_leave_speed(), dpi.mySetRequest, dpi.myArrivalSpeedBraking, self.get_waiting_time_for(dpi.myLink), dpi.myDistance, latOffset);
+                        self.myLaneChangeModel.m().set_shadow_approaching_information(parallelLink);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::registerInsertionApproach(MSLink *, double)`
@@ -2580,7 +2656,13 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn register_insertion_approach(&mut self, link: Ptr<MSLink>, dist: f64) {
-        todo!("port MSVehicle::registerInsertionApproach")
+        let mut dpi = MSVehicle_DriveProcessItem::new_2(0.0, dist, 0.0);
+        dpi.myLink = link;
+        let arrivalSpeedBraking = self.get_car_follow_model().get_minimal_arrival_speed_euler(dist, self.get_speed());
+        link.m().set_approaching(Ptr::from_mut(self).cast::<SUMOVehicle>(), SUMOTIME_MAX, 0.0, 0.0, false, arrivalSpeedBraking, 0, dpi.myDistance, 0.0);
+        // ensure cleanup in the next step
+        self.myLFLinkLanes.push(dpi);
+        MSRailSignalControl::get_instance().notify_approach(link);
     }
 
     /// C++: `bool MSVehicle::executeMove()`
@@ -9282,7 +9364,7 @@ impl MSVehicle {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn plan_move_internal(&self, t: SUMOTime, ahead: MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
+    pub fn plan_move_internal(&self, t: SUMOTime, ahead: &MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
         todo!("port MSVehicle::planMoveInternal")
     }
 
@@ -9543,7 +9625,13 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn remove_approaching_information(&self, lfLinks: &MSVehicle_DriveItemVector) {
-        todo!("port MSVehicle::removeApproachingInformation")
+        for dpi in lfLinks.iter() {
+            if !dpi.myLink.is_null() {
+                dpi.myLink.m().remove_approaching(Ptr::new(self).cast::<SUMOVehicle>());
+            }
+        }
+        // unregister on all shadow links
+        self.myLaneChangeModel.m().remove_shadow_approaching_information();
     }
 
     /// C++: `void MSVehicle::adaptToLeader(const std::pair<const MSVehicle *, double>, double, DriveProcessItem *const, double &, double &) const` [const, protected]
