@@ -11,6 +11,74 @@ pub struct Vehicle {
 //   static SubscriptionResults Vehicle::mySubscriptionResults;
 //   static ContextSubscriptionResults Vehicle::myContextSubscriptionResults;
 
+use utils::geom::geom_helper::navi_degree;
+use utils::common::std_defs::INVALID_DOUBLE;
+use utils::common::time::{delta_t, SUMOTIME_MAX};
+use utils::common::to_string::to_string;
+use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
+use utils::common::msg_handler::write_warning;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::traci::traci_constants::{REMOVE_ARRIVED, REMOVE_PARKING, REMOVE_TELEPORT, REMOVE_TELEPORT_ARRIVED, REMOVE_VAPORIZED};
+
+// SUMOVehicleParameter.h / SUMOVehicleParameter::Stop parametersSet bits (not exported by the ported module yet)
+const VEHPARS_COLOR_SET: i64 = 1;
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const STOP_START_SET: i32 = 1;
+const STOP_END_SET: i32 = 2;
+const STOP_DURATION_SET: i32 = 2 << 1;
+const STOP_UNTIL_SET: i32 = 2 << 2;
+const STOP_EXTENSION_SET: i32 = 2 << 3;
+const STOP_TRIGGER_SET: i32 = 2 << 4;
+const STOP_PARKING_SET: i32 = 2 << 5;
+const STOP_EXPECTED_SET: i32 = 2 << 6;
+const STOP_EXPECTED_CONTAINERS_SET: i32 = 2 << 8;
+const STOP_TRIP_ID_SET: i32 = 2 << 9;
+const STOP_LINE_SET: i32 = 2 << 10;
+const STOP_SPEED_SET: i32 = 2 << 11;
+const STOP_SPLIT_SET: i32 = 2 << 12;
+const STOP_JOIN_SET: i32 = 2 << 13;
+const STOP_ARRIVAL_SET: i32 = 2 << 14;
+const STOP_PERMITTED_SET: i32 = 2 << 15;
+const STOP_ENDED_SET: i32 = 2 << 16;
+const STOP_STARTED_SET: i32 = 2 << 17;
+const STOP_POSLAT_SET: i32 = 2 << 18;
+const STOP_ONDEMAND_SET: i32 = 2 << 19;
+const STOP_JUMP_SET: i32 = 2 << 20;
+const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
+// shortcut: dynamic_cast<MSVehicle*> / dynamic_cast<MEVehicle*> cannot be checked at runtime (no type tag on
+// MSBaseVehicle, MSGlobals::gUseMesoSim not ported), so every vehicle is treated as micro. A MEVehicle would be
+// misread. Upgrade when a vehicle type tag or gUseMesoSim exists. The casts also need #[repr(C)] with `base`
+// first on MSBaseVehicle and MSVehicle (not yet present on those structs).
+fn micro_veh(veh: Ptr<MSBaseVehicle>) -> Ptr<MSVehicle> {
+    veh.cast::<MSVehicle>()
+}
+
+/// C++ `veh->getEmissions<ET>()` (MSBaseVehicle template; the skeleton's get_emissions() has no ET parameter).
+fn get_emissions_et(mut veh: Ptr<MSBaseVehicle>, et: PollutantsInterface_EmissionType) -> f64 {
+    if veh.is_on_road() || veh.is_idling() {
+        PollutantsInterface::compute(veh.get_vehicle_type().get_emission_class(), et, veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.get_emission_parameters())
+    } else {
+        0.
+    }
+}
+
+/// Mutable access to a vehicle type; C++ Helper::getVehicleType returns a non-const reference.
+fn vtype_mut(typeID: &str) -> Ptr<MSVehicleType> {
+    Ptr::new(Helper::get_vehicle_type(typeID))
+}
+
+// shortcut: C++ checkTimeBounds(double) (utils, not ported) is not applied; out-of-range durations are not rejected here. upgrade when checkTimeBounds is ported
+
+/// C++ setStopParameter: ProcessError rethrown as TraCIException with this prefix.
+fn set_stop_param_error(vehID: &str, msg: String) -> ! {
+    panic!("{}", format!("Could not set stop parameter for vehicle '{}' ({})", vehID, msg))
+}
+
+/// Mutable view of a vehicle's parameter block (C++ const_cast-style access used by setColor/setLine/setParameter).
+fn param_mut(p: &SUMOVehicleParameter) -> &mut SUMOVehicleParameter {
+    unsafe { &mut *Ptr::new(p).as_raw() }
+}
+
 impl Vehicle {
     /// C++: `double Vehicle::getSpeed(const std::string &)` [static]
     /// @{
@@ -21,7 +89,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(vehID: &str) -> f64 {
-        todo!("port Vehicle::getSpeed")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { veh.get_speed() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getLateralSpeed(const std::string &)` [static]
@@ -32,7 +101,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_speed(vehID: &str) -> f64 {
-        todo!("port Vehicle::getLateralSpeed")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { micro_veh(veh).m().get_lane_change_model().get_speed_lat() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getAcceleration(const std::string &)` [static]
@@ -43,7 +113,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_acceleration(vehID: &str) -> f64 {
-        todo!("port Vehicle::getAcceleration")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { micro_veh(veh).get_acceleration() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getSpeedWithoutTraCI(const std::string &)` [static]
@@ -54,21 +125,26 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_without_tra_ci(vehID: &str) -> f64 {
-        todo!("port Vehicle::getSpeedWithoutTraCI")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { micro_veh(veh).get_speed_without_traci_influence() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition(const std::string &, const bool)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_position(vehID: &str, includeZ: bool) -> TraCIPosition {
-        todo!("port Vehicle::getPosition")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) {
+            return Helper::make_tra_ci_position(&veh.get_position(0.), includeZ);
+        }
+        TraCIPosition { base: TraCIResult {}, x: 0.0, y: 0.0, z: 0.0 }
     }
 
     /// C++: `libsumo::TraCIPosition Vehicle::getPosition3D(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_position3_d(vehID: &str) -> TraCIPosition {
-        todo!("port Vehicle::getPosition3D")
+        Self::get_position(vehID, true)
     }
 
     /// C++: `double Vehicle::getAngle(const std::string &)` [static]
@@ -79,7 +155,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(vehID: &str) -> f64 {
-        todo!("port Vehicle::getAngle")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { navi_degree(veh.get_angle()) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getSlope(const std::string &)` [static]
@@ -90,7 +167,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_slope(vehID: &str) -> f64 {
-        todo!("port Vehicle::getSlope")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() || veh.is_parking() { veh.get_slope() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `std::string Vehicle::getRoadID(const std::string &)` [static]
@@ -101,7 +179,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_road_id(vehID: &str) -> String {
-        todo!("port Vehicle::getRoadID")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() { micro_veh(veh).get_lane().get_edge().get_id().to_string() } else { String::new() }
     }
 
     /// C++: `std::string Vehicle::getLaneID(const std::string &)` [static]
@@ -112,7 +191,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(vehID: &str) -> String {
-        todo!("port Vehicle::getLaneID")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() { micro_veh(veh).get_lane().get_id().to_string() } else { String::new() }
     }
 
     /// C++: `std::string Vehicle::getShadowLaneID(const std::string &)` [static]
@@ -124,7 +204,16 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_shadow_lane_id(vehID: &str) -> String {
-        todo!("port Vehicle::getShadowLaneID")
+        let veh = Helper::get_vehicle(vehID);
+        let microVeh = micro_veh(veh);
+        if veh.is_on_road() {
+            match microVeh.m().get_lane_change_model().get_shadow_lane().get() {
+                Some(lane) => lane.get_id().to_string(),
+                None => String::new(),
+            }
+        } else {
+            String::new()
+        }
     }
 
     /// C++: `int Vehicle::getLaneIndex(const std::string &)` [static]
@@ -145,7 +234,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_index(vehID: &str) -> i32 {
-        todo!("port Vehicle::getLaneIndex")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() { micro_veh(veh).get_lane().get_index() } else { INVALID_INT_VALUE }
     }
 
     /// C++: `std::string Vehicle::getSegmentID(const std::string &)` [static]
@@ -156,7 +246,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_id(vehID: &str) -> String {
-        todo!("port Vehicle::getSegmentID")
+        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback "" is returned.
+        let _veh = Helper::get_vehicle(vehID);
+        String::new()
     }
 
     /// C++: `int Vehicle::getSegmentIndex(const std::string &)` [static]
@@ -167,7 +259,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_index(vehID: &str) -> i32 {
-        todo!("port Vehicle::getSegmentIndex")
+        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback is returned.
+        let _veh = Helper::get_vehicle(vehID);
+        INVALID_INT_VALUE
     }
 
     /// C++: `std::string Vehicle::getTypeID(const std::string &)` [static]
@@ -177,7 +271,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_type_id(vehID: &str) -> String {
-        todo!("port Vehicle::getTypeID")
+        Helper::get_vehicle_type(vehID).get_id().to_string()
     }
 
     /// C++: `std::string Vehicle::getRouteID(const std::string &)` [static]
@@ -187,7 +281,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_route_id(vehID: &str) -> String {
-        todo!("port Vehicle::getRouteID")
+        Helper::get_vehicle(vehID).get_route().get_id().to_string()
     }
 
     /// C++: `double Vehicle::getDeparture(const std::string &)` [static]
@@ -198,7 +292,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_departure(vehID: &str) -> f64 {
-        todo!("port Vehicle::getDeparture")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.has_departed() { steps2time(veh.get_departure()) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getDepartDelay(const std::string &)` [static]
@@ -208,7 +303,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_delay(vehID: &str) -> f64 {
-        todo!("port Vehicle::getDepartDelay")
+        steps2time(Helper::get_vehicle(vehID).get_depart_delay())
     }
 
     /// C++: `int Vehicle::getRouteIndex(const std::string &)` [static]
@@ -219,7 +314,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_route_index(vehID: &str) -> i32 {
-        todo!("port Vehicle::getRouteIndex")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.has_departed() { veh.get_route_position() } else { INVALID_INT_VALUE }
     }
 
     /// C++: `double Vehicle::getLanePosition(const std::string &)` [static]
@@ -230,7 +326,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_position(vehID: &str) -> f64 {
-        todo!("port Vehicle::getLanePosition")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() || veh.is_parking() { veh.get_position_on_lane() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getArrivalPos(const std::string &)` [static]
@@ -240,7 +337,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(vehID: &str) -> f64 {
-        todo!("port Vehicle::getArrivalPos")
+        Helper::get_vehicle(vehID).get_arrival_pos()
     }
 
     /// C++: `double Vehicle::getLateralLanePosition(const std::string &)` [static]
@@ -251,7 +348,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_lane_position(vehID: &str) -> f64 {
-        todo!("port Vehicle::getLateralLanePosition")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() { micro_veh(veh).get_lateral_position_on_lane() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getCO2Emission(const std::string &)` [static]
@@ -262,7 +360,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getCO2Emission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::CO2) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getCOEmission(const std::string &)` [static]
@@ -273,7 +372,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getCOEmission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::CO) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getHCEmission(const std::string &)` [static]
@@ -284,7 +384,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getHCEmission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::HC) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getPMxEmission(const std::string &)` [static]
@@ -295,7 +396,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getPMxEmission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::PM_X) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getNOxEmission(const std::string &)` [static]
@@ -306,7 +408,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getNOxEmission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::NO_X) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getFuelConsumption(const std::string &)` [static]
@@ -317,7 +420,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(vehID: &str) -> f64 {
-        todo!("port Vehicle::getFuelConsumption")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::FUEL) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getNoiseEmission(const std::string &)` [static]
@@ -328,7 +432,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(vehID: &str) -> f64 {
-        todo!("port Vehicle::getNoiseEmission")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { veh.get_harmonoise_noise_emissions() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getElectricityConsumption(const std::string &)` [static]
@@ -339,7 +444,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(vehID: &str) -> f64 {
-        todo!("port Vehicle::getElectricityConsumption")
+        let veh = Helper::get_vehicle(vehID);
+        if Self::is_visible(veh.cast::<SUMOVehicle>()) { get_emissions_et(veh, PollutantsInterface_EmissionType::ELEC) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `int Vehicle::getPersonNumber(const std::string &)` [static]
@@ -349,7 +455,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_person_number(vehID: &str) -> i32 {
-        todo!("port Vehicle::getPersonNumber")
+        Helper::get_vehicle(vehID).get_person_number()
     }
 
     /// C++: `std::vector<std::string> Vehicle::getPersonIDList(const std::string &)` [static]
@@ -359,7 +465,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_person_id_list(vehID: &str) -> Vec<String> {
-        todo!("port Vehicle::getPersonIDList")
+        Helper::get_vehicle(vehID).get_person_id_list()
     }
 
     /// C++: `std::pair<std::string, double> Vehicle::getLeader(const std::string &, double)` [static]
@@ -387,7 +493,25 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_leader(vehID: &str, dist: f64) -> (String, f64) {
-        todo!("port Vehicle::getLeader")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() {
+            let (leader, mut gap) = veh.get_leader(dist, false);
+            let leaderID = if !leader.is_null() { leader.get_id().to_string() } else { String::new() };
+            if !leader.is_null()
+                && !leader.get_lane().is_null()
+                && leader.get_lane().is_internal()
+                && !veh.get_lane().is_null()
+                && (!veh.get_lane().is_internal()
+                    || (veh.get_lane().get_link_cont()[0].get_index() != leader.get_lane().get_link_cont()[0].get_index()))
+            {
+                // leader is a linkLeader (see MSLink::getLeaderInfo)
+                // avoid internal gap values which may be negative (or -inf)
+                gap = if 0.0 > gap { 0.0 } else { gap }; // MAX2(0.0, gap)
+            }
+            (leaderID, gap)
+        } else {
+            (String::new(), -1.0)
+        }
     }
 
     /// C++: `std::pair<std::string, double> Vehicle::getFollower(const std::string &, double)` [static]
@@ -405,14 +529,21 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_follower(vehID: &str, dist: f64) -> (String, f64) {
-        todo!("port Vehicle::getFollower")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() {
+            let (follower, gap) = veh.get_follower(dist);
+            (if !follower.is_null() { follower.get_id().to_string() } else { String::new() }, gap)
+        } else {
+            (String::new(), -1.0)
+        }
     }
 
     /// C++: `std::vector<libsumo::TraCIJunctionFoe> Vehicle::getJunctionFoes(const std::string &, double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_junction_foes(vehID: &str, dist: f64) -> Vec<TraCIJunctionFoe> {
-        todo!("port Vehicle::getJunctionFoes")
+        // shortcut: getJunctionFoes needs MSLink::ConflictInfo, getUpcomingLanesUntil and the junction logic, not ported in this pass
+        panic!("Vehicle::getJunctionFoes not yet ported")
     }
 
     /// C++: `double Vehicle::getWaitingTime(const std::string &)` [static]
@@ -422,7 +553,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(vehID: &str) -> f64 {
-        todo!("port Vehicle::getWaitingTime")
+        steps2time(Helper::get_vehicle(vehID).get_waiting_time(false))
     }
 
     /// C++: `double Vehicle::getAccumulatedWaitingTime(const std::string &)` [static]
@@ -433,7 +564,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_accumulated_waiting_time(vehID: &str) -> f64 {
-        todo!("port Vehicle::getAccumulatedWaitingTime")
+        let veh = Helper::get_vehicle(vehID);
+        micro_veh(veh).get_accumulated_waiting_seconds()
     }
 
     /// C++: `double Vehicle::getAdaptedTraveltime(const std::string &, double, const std::string &)` [static]
@@ -446,7 +578,10 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_adapted_traveltime(vehID: &str, time: f64, edgeID: &str) -> f64 {
-        todo!("port Vehicle::getAdaptedTraveltime")
+        let edge = Helper::get_edge(edgeID);
+        let mut value = INVALID_DOUBLE_VALUE;
+        Helper::get_vehicle(vehID).get_weights_storage().retrieve_existing_travel_time(edge, time, &mut value);
+        value
     }
 
     /// C++: `double Vehicle::getEffort(const std::string &, double, const std::string &)` [static]
@@ -459,7 +594,10 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_effort(vehID: &str, time: f64, edgeID: &str) -> f64 {
-        todo!("port Vehicle::getEffort")
+        let edge = Helper::get_edge(edgeID);
+        let mut value = INVALID_DOUBLE_VALUE;
+        Helper::get_vehicle(vehID).get_weights_storage().retrieve_existing_effort(edge, time, &mut value);
+        value
     }
 
     /// C++: `bool Vehicle::isRouteValid(const std::string &)` [static]
@@ -470,7 +608,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_route_valid(vehID: &str) -> bool {
-        todo!("port Vehicle::isRouteValid")
+        let mut msg = String::new();
+        // shortcut: C++ hasValidRoute defaults to a null route, which ConstMSRoutePtr (Rc) cannot represent, upgrade when hasValidRoute takes Option
+        panic!("is_route_valid needs MSBaseVehicle::hasValidRoute with a null route, not representable yet (msg={})", msg)
     }
 
     /// C++: `std::vector<std::string> Vehicle::getRoute(const std::string &)` [static]
@@ -486,7 +626,13 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_route(vehID: &str) -> Vec<String> {
-        todo!("port Vehicle::getRoute")
+        let mut result = Vec::new();
+        let veh = Helper::get_vehicle(vehID);
+        let r = veh.get_route();
+        for e in r.get_edges() {
+            result.push(e.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `int Vehicle::getSignals(const std::string &)` [static]
@@ -497,28 +643,32 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_signals(vehID: &str) -> i32 {
-        todo!("port Vehicle::getSignals")
+        let veh = Helper::get_vehicle(vehID);
+        micro_veh(veh).get_signals()
     }
 
     /// C++: `std::vector<libsumo::TraCIBestLanesData> Vehicle::getBestLanes(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_best_lanes(vehID: &str) -> Vec<TraCIBestLanesData> {
-        todo!("port Vehicle::getBestLanes")
+        // shortcut: getBestLanes C++ body not ported in this pass (see Vehicle.cpp:497)
+        panic!("Vehicle::getBestLanes not yet ported")
     }
 
     /// C++: `std::vector<libsumo::TraCINextTLSData> Vehicle::getNextTLS(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_next_tls(vehID: &str) -> Vec<TraCINextTLSData> {
-        todo!("port Vehicle::getNextTLS")
+        // shortcut: getNextTLS C++ body not ported in this pass (see Vehicle.cpp:521)
+        panic!("Vehicle::getNextTLS not yet ported")
     }
 
     /// C++: `std::vector<libsumo::TraCINextStopData> Vehicle::getNextStops(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_next_stops(vehID: &str) -> Vec<TraCINextStopData> {
-        todo!("port Vehicle::getNextStops")
+        // shortcut: getNextStops C++ body not ported in this pass (see Vehicle.cpp:587)
+        panic!("Vehicle::getNextStops not yet ported")
     }
 
     /// C++: `std::vector<libsumo::TraCIConnection> Vehicle::getNextLinks(const std::string &)` [static]
@@ -593,14 +743,20 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_next_links(vehID: &str) -> Vec<TraCIConnection> {
-        todo!("port Vehicle::getNextLinks")
+        let vehicle = Helper::get_vehicle(vehID);
+        if !vehicle.is_on_road() {
+            return Vec::new();
+        }
+        // shortcut: MSLane::succLinkSec returns an Unmapped iterator (lane.rs), so the lane-link walk cannot run yet; upgrade when lane.rs maps it
+        panic!("getNextLinks not yet ported: MSLane::succLinkSec iterator is unmapped")
     }
 
     /// C++: `std::vector<libsumo::TraCINextStopData> Vehicle::getStops(const std::string &, int)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stops(vehID: &str, limit: i32) -> Vec<TraCINextStopData> {
-        todo!("port Vehicle::getStops")
+        // shortcut: getStops C++ body not ported in this pass (see Vehicle.cpp:662)
+        panic!("Vehicle::getStops not yet ported")
     }
 
     /// C++: `int Vehicle::getStopState(const std::string &)` [static]
@@ -621,7 +777,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_state(vehID: &str) -> i32 {
-        todo!("port Vehicle::getStopState")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let mut result = 0;
+        if veh.is_stopped() {
+            let stop = veh.get_next_stop();
+            result = stop.get_state_flags_old();
+        }
+        result
     }
 
     /// C++: `std::string Vehicle::getStopParameter(const std::string &, int, const std::string &, bool)` [static]
@@ -711,8 +874,59 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customParam: bool) -> String {
-        todo!("port Vehicle::getStopParameter")
+    /// Joins a std::set<std::string> with spaces (C++ joinToString(set, " "))
+fn join_set(s: &BTreeSet<String>) -> String {
+    s.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(" ")
+}
+
+pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customParam: bool) -> String {
+        let vehicle = Helper::get_vehicle(vehID);
+        if nextStopIndex >= vehicle.get_stops().len() as i32 || (nextStopIndex < 0 && -nextStopIndex > vehicle.get_past_stops().len() as i32) {
+            panic!("{}", format!("Could not get stop parameter for vehicle '{}' ({})", vehID,
+                format!("Invalid stop index {} (has {} past stops and {} remaining stops)", nextStopIndex, vehicle.get_past_stops().len(), vehicle.get_stops().len())));
+        }
+        let pars: &SUMOVehicleParameter_Stop = if nextStopIndex >= 0 {
+            &vehicle.m().get_stop(nextStopIndex).pars
+        } else {
+            &vehicle.get_past_stops()[(vehicle.get_past_stops().len() as i32 + nextStopIndex) as usize]
+        };
+        if customParam {
+            // custom user parameter
+            return pars.get_parameter(param, "");
+        }
+        match param {
+            "edge" => pars.edge.clone(),
+            "lane" => SUMOXMLDefinitions::get_index_from_lane(&pars.lane).unwrap_or_else(|e| panic!("{}", e)).to_string(),
+            "busStop" | "trainStop" => pars.busstop.clone(),
+            "containerStop" => pars.containerstop.clone(),
+            "chargingStation" => pars.chargingStation.clone(),
+            "parkingArea" => pars.parkingarea.clone(),
+            "startPos" => to_string(&pars.startPos),
+            "endPos" => to_string(&pars.endPos),
+            "posLat" => to_string(&if pars.posLat == INVALID_DOUBLE { INVALID_DOUBLE_VALUE } else { pars.posLat }),
+            "arrival" => if pars.arrival < 0 { "-1".to_string() } else { time2string(pars.arrival) },
+            "duration" => if pars.duration < 0 { "-1".to_string() } else { time2string(pars.duration) },
+            "until" => if pars.until < 0 { "-1".to_string() } else { time2string(pars.until) },
+            "extension" => if pars.extension < 0 { "-1".to_string() } else { time2string(pars.extension) },
+            "index" => to_string(&(nextStopIndex + vehicle.get_past_stops().len() as i32)),
+            "parking" => to_string(&(pars.parking as i32)),
+            "triggered" => pars.get_triggers().join(" "),
+            "expected" => Self::join_set(&pars.awaitedPersons),
+            "expectedContainers" => Self::join_set(&pars.awaitedContainers),
+            "permitted" => Self::join_set(&pars.permitted),
+            "actType" => pars.actType.clone(),
+            "tripId" => pars.tripId.clone(),
+            "split" => pars.split.clone(),
+            "join" => pars.join.clone(),
+            "line" => pars.line.clone(),
+            "speed" => to_string(&pars.speed),
+            "started" => if pars.started < 0 { "-1".to_string() } else { time2string(pars.started) },
+            "ended" => if pars.ended < 0 { "-1".to_string() } else { time2string(pars.ended) },
+            "onDemand" => to_string(&pars.onDemand),
+            "jump" => if pars.jump < 0 { "-1".to_string() } else { time2string(pars.jump) },
+            "jumpUntil" => if pars.jumpUntil < 0 { "-1".to_string() } else { time2string(pars.jumpUntil) },
+            _ => panic!("{}", format!("Could not get stop parameter for vehicle '{}' ({})", vehID, format!("Unsupported parameter '{}'", param))),
+        }
     }
 
     /// C++: `double Vehicle::getDistance(const std::string &)` [static]
@@ -727,7 +941,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_distance(vehID: &str) -> f64 {
-        todo!("port Vehicle::getDistance")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.has_departed() { veh.get_odometer() } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `double Vehicle::getDrivingDistance(const std::string &, const std::string &, double, int)` [static]
@@ -749,7 +964,19 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_driving_distance(vehID: &str, edgeID: &str, pos: f64, laneIndex: i32) -> f64 {
-        todo!("port Vehicle::getDrivingDistance")
+        let veh = Helper::get_vehicle(vehID);
+        let microVeh = micro_veh(veh);
+        if veh.is_on_road() {
+            let lane = microVeh.get_lane();
+            let distance = veh.get_route().get_distance_between(veh.get_position_on_lane(), pos,
+                               lane, Helper::get_lane_checking(edgeID, laneIndex, pos), veh.get_route_position());
+            if distance == f64::MAX {
+                return INVALID_DOUBLE_VALUE;
+            }
+            distance
+        } else {
+            INVALID_DOUBLE_VALUE
+        }
     }
 
     /// C++: `double Vehicle::getDrivingDistance2D(const std::string &, double, double)` [static]
@@ -775,7 +1002,19 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_driving_distance2_d(vehID: &str, x: f64, y: f64) -> f64 {
-        todo!("port Vehicle::getDrivingDistance2D")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() {
+            let lane = micro_veh(veh).get_lane();
+            let mut roadPos = Helper::convert_cartesian_to_road_map(&Position::new(x, y), veh.get_vehicle_type().get_vehicle_class());
+            let distance = veh.get_route().get_distance_between(veh.get_position_on_lane(), roadPos.1,
+                               lane, roadPos.0, veh.get_route_position());
+            if distance == f64::MAX {
+                return INVALID_DOUBLE_VALUE;
+            }
+            distance
+        } else {
+            INVALID_DOUBLE_VALUE
+        }
     }
 
     /// C++: `double Vehicle::getReferenceDistance(const std::string &)` [static]
@@ -796,7 +1035,18 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_reference_distance(vehID: &str) -> f64 {
-        todo!("port Vehicle::getReferenceDistance")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.has_departed() {
+            let mut lanePos = veh.get_position_on_lane();
+            let microVeh = micro_veh(veh);
+            if microVeh.get_lane().is_internal() {
+                lanePos = microVeh.get_route().get_distance_between(0., lanePos, microVeh.get_edge().get_lanes()[0],
+                          microVeh.get_lane(), microVeh.get_route_position());
+            }
+            veh.get_edge().get_distance_at(lanePos)
+        } else {
+            INVALID_DOUBLE_VALUE
+        }
     }
 
     /// C++: `double Vehicle::getAllowedSpeed(const std::string &)` [static]
@@ -807,7 +1057,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_allowed_speed(vehID: &str) -> f64 {
-        todo!("port Vehicle::getAllowedSpeed")
+        let veh = Helper::get_vehicle(vehID);
+        if veh.is_on_road() { micro_veh(veh).get_lane().get_vehicle_max_speed(veh.cast::<SUMOTrafficObject>()) } else { INVALID_DOUBLE_VALUE }
     }
 
     /// C++: `int Vehicle::getSpeedMode(const std::string &)` [static]
@@ -818,7 +1069,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_mode(vehID: &str) -> i32 {
-        todo!("port Vehicle::getSpeedMode")
+        let veh = Helper::get_vehicle(vehID);
+        micro_veh(veh).m().get_influencer().get_speed_mode()
     }
 
     /// C++: `int Vehicle::getLaneChangeMode(const std::string &)` [static]
@@ -829,7 +1081,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_mode(vehID: &str) -> i32 {
-        todo!("port Vehicle::getLaneChangeMode")
+        let veh = Helper::get_vehicle(vehID);
+        micro_veh(veh).m().get_influencer().get_lane_change_mode()
     }
 
     /// C++: `int Vehicle::getRoutingMode(const std::string &)` [static]
@@ -839,7 +1092,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_routing_mode(vehID: &str) -> i32 {
-        todo!("port Vehicle::getRoutingMode")
+        Helper::get_vehicle(vehID).get_routing_mode()
     }
 
     /// C++: `std::string Vehicle::getLine(const std::string &)` [static]
@@ -849,7 +1102,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_line(vehID: &str) -> String {
-        todo!("port Vehicle::getLine")
+        Helper::get_vehicle(vehID).get_parameter().line.clone()
     }
 
     /// C++: `std::vector<std::string> Vehicle::getVia(const std::string &)` [static]
@@ -859,7 +1112,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_via(vehID: &str) -> Vec<String> {
-        todo!("port Vehicle::getVia")
+        Helper::get_vehicle(vehID).get_parameter().via.clone()
     }
 
     /// C++: `std::pair<int, int> Vehicle::getLaneChangeState(const std::string &, int)` [static]
@@ -871,7 +1124,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_state(vehID: &str, direction: i32) -> (i32, i32) {
-        todo!("port Vehicle::getLaneChangeState")
+        let veh = Helper::get_vehicle(vehID);
+        let undefined = (LCA_UNKNOWN as i32, LCA_UNKNOWN as i32);
+        if veh.is_on_road() { *micro_veh(veh).m().get_lane_change_model().get_saved_state(direction) } else { undefined }
     }
 
     /// C++: `double Vehicle::getLastActionTime(const std::string &)` [static]
@@ -887,7 +1142,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_last_action_time(vehID: &str) -> f64 {
-        todo!("port Vehicle::getLastActionTime")
+        let veh = Helper::get_vehicle(vehID);
+        steps2time(micro_veh(veh).get_last_action_time())
     }
 
     /// C++: `std::vector<std::pair<std::string, double>> Vehicle::getNeighbors(const std::string &, const int)` [static]
@@ -973,7 +1229,69 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_neighbors(vehID: &str, mode: i32) -> Vec<(String, f64)> {
-        todo!("port Vehicle::getNeighbors")
+        let mut dir: i32 = if (1 & mode) != 0 { -1 } else { 1 };
+        let queryLeaders = (2 & mode) != 0;
+        let blockersOnly = (4 & mode) != 0;
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let mut result: Vec<(String, f64)> = Vec::new();
+        if veh.m().get_lane_change_model().is_opposite() {
+            // getParallelLane works relative to lane forward direction
+            dir *= -1;
+        }
+        let targetLane = veh.get_lane().get_parallel_lane(dir, true);
+        if targetLane.is_null() {
+            return result;
+        }
+        // need to recompute leaders and followers (#8119)
+        let opposite = veh.get_lane().get_edge() as *const MSEdge != targetLane.get_edge() as *const MSEdge;
+        let mut neighbors = MSLeaderDistanceInfo::new(targetLane.get_width(), Ptr::default(), 0.);
+        if queryLeaders {
+            if opposite {
+                let pos = targetLane.get_opposite_pos(veh.get_position_on_lane());
+                neighbors = targetLane.get_followers_on_consecutive(veh, pos, true, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+            } else {
+                targetLane.m().add_leaders(veh, veh.get_position_on_lane(), &mut neighbors, false);
+            }
+        } else {
+            if opposite {
+                let pos = targetLane.get_opposite_pos(veh.get_position_on_lane());
+                targetLane.m().add_leaders(veh, pos, &mut neighbors, false);
+                neighbors.fix_opposite_gaps(true);
+            } else {
+                neighbors = targetLane.get_followers_on_consecutive(veh, veh.get_back_position_on_lane(veh.get_lane()), true, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+            }
+        }
+        if blockersOnly {
+            // filter out vehicles that aren't blocking
+            let mut blockers = MSLeaderDistanceInfo::new(targetLane.get_width(), Ptr::default(), 0.);
+            for i in 0..neighbors.num_sublanes() {
+                let n = neighbors.index_op(i);
+                if !n.0.is_null() {
+                    let mut follower = veh;
+                    let mut leader = n.0;
+                    if !queryLeaders {
+                        std::mem::swap(&mut follower, &mut leader);
+                    }
+                    let secureGap = follower.get_car_follow_model().get_secure_gap(follower, leader, follower.get_speed(), leader.get_speed(), leader.get_car_follow_model().get_max_decel())
+                        * follower.m().get_lane_change_model().get_safety_factor();
+                    if n.1 < secureGap {
+                        blockers.add_leader(n.0, n.1, 0., i);
+                    }
+                }
+            }
+            neighbors = blockers;
+        }
+        if neighbors.has_vehicles() {
+            for i in 0..neighbors.num_sublanes() {
+                let n = neighbors.index_op(i);
+                // avoid duplicates
+                if !n.0.is_null() && (result.is_empty() || result.last().unwrap().0 != n.0.get_id()) {
+                    result.push((n.0.get_id().to_string(), n.1));
+                }
+            }
+        }
+        result
     }
 
     /// C++: `double Vehicle::getFollowSpeed(const std::string &, double, double, double, double, const std::string &)` [static]
@@ -990,7 +1308,10 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_follow_speed(vehID: &str, speed: f64, gap: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
-        todo!("port Vehicle::getFollowSpeed")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
+        veh.get_car_follow_model().follow_speed(veh, speed, gap, leaderSpeed, leaderMaxDecel, leader, MSCFModel_CalcReason::FUTURE)
     }
 
     /// C++: `double Vehicle::getSecureGap(const std::string &, double, double, double, const std::string &)` [static]
@@ -1007,14 +1328,19 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_secure_gap(vehID: &str, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64, leaderID: &str) -> f64 {
-        todo!("port Vehicle::getSecureGap")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let leader = micro_veh(MSNet::get_instance().get_vehicle_control().get_vehicle(leaderID).cast::<MSBaseVehicle>());
+        veh.get_car_follow_model().get_secure_gap(veh, leader, speed, leaderSpeed, leaderMaxDecel)
     }
 
     /// C++: `double Vehicle::getStopSpeed(const std::string &, double, double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_stop_speed(vehID: &str, speed: f64, gap: f64) -> f64 {
-        todo!("port Vehicle::getStopSpeed")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        veh.get_car_follow_model().stop_speed(veh, speed, gap, MSCFModel_CalcReason::FUTURE)
     }
 
     /// C++: `double Vehicle::getStopDelay(const std::string &)` [static]
@@ -1024,7 +1350,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_delay(vehID: &str) -> f64 {
-        todo!("port Vehicle::getStopDelay")
+        Helper::get_vehicle(vehID).get_stop_delay()
     }
 
     /// C++: `double Vehicle::getStopArrivalDelay(const std::string &)` [static]
@@ -1039,7 +1365,12 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_stop_arrival_delay(vehID: &str) -> f64 {
-        todo!("port Vehicle::getStopArrivalDelay")
+        let result = Helper::get_vehicle(vehID).get_stop_arrival_delay();
+        if result == INVALID_DOUBLE {
+            INVALID_DOUBLE_VALUE
+        } else {
+            result
+        }
     }
 
     /// C++: `double Vehicle::getTimeLoss(const std::string &)` [static]
@@ -1049,7 +1380,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_time_loss(vehID: &str) -> f64 {
-        todo!("port Vehicle::getTimeLoss")
+        Helper::get_vehicle(vehID).get_time_loss_seconds()
     }
 
     /// C++: `std::vector<std::string> Vehicle::getTaxiFleet(int)` [static]
@@ -1069,7 +1400,17 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_taxi_fleet(taxiState: i32) -> Vec<String> {
-        todo!("port Vehicle::getTaxiFleet")
+        let mut result = Vec::new();
+        for taxi in MSDevice_Taxi::get_fleet() {
+            if taxi.get_holder().has_departed() {
+                if taxiState == -1
+                    || (taxiState == 0 && taxi.get_state() == 0)
+                    || (taxiState != 0 && (taxi.get_state() & taxiState) == taxiState) {
+                    result.push(taxi.get_holder().get_id().to_string());
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> Vehicle::getLoadedIDList()` [static]
@@ -1084,7 +1425,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_loaded_id_list() -> Vec<String> {
-        todo!("port Vehicle::getLoadedIDList")
+        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
+        panic!("getLoadedIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
     }
 
     /// C++: `std::vector<std::string> Vehicle::getTeleportingIDList()` [static]
@@ -1102,7 +1444,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_teleporting_id_list() -> Vec<String> {
-        todo!("port Vehicle::getTeleportingIDList")
+        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
+        panic!("getTeleportingIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
     }
 
     /// C++: `std::vector<std::string> Vehicle::getIDList()` [static]
@@ -1120,7 +1463,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port Vehicle::getIDList")
+        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
+        panic!("getIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
     }
 
     /// C++: `int Vehicle::getIDCount()` [static]
@@ -1131,7 +1475,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port Vehicle::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string Vehicle::getParameter(const std::string &, const std::string &)` [static]
@@ -1147,8 +1491,14 @@ impl Vehicle {
     //     return result;
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port Vehicle::getParameter")
+    pub fn get_parameter(vehID: &str, key: &str) -> String {
+        let veh = Helper::get_vehicle(vehID);
+        let mut error = String::new();
+        let result = veh.get_prefixed_parameter(key, &mut error);
+        if error != "" {
+            panic!("{}", error);
+        }
+        result
     }
 
     /// C++: `const std::pair<std::string, std::string> Vehicle::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -1156,7 +1506,7 @@ impl Vehicle {
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(Vehicle)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port Vehicle::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void Vehicle::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -1232,8 +1582,47 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port Vehicle::setParameter")
+    pub fn set_parameter(vehID: &str, key: &str, value: &str) {
+        let veh = Helper::get_vehicle(vehID);
+        let microVeh = micro_veh(veh);
+        if key.starts_with("device.") {
+            let tok: Vec<&str> = key.split('.').filter(|s| !s.is_empty()).collect();
+            if tok.len() < 3 {
+                panic!("{}", format!("Invalid device parameter '{}' for vehicle '{}'", key, vehID));
+            }
+            // InvalidArgument from setDeviceParameter is rethrown as TraCIException
+            veh.m().set_device_parameter(tok[1], &key[tok[0].len() + tok[1].len() + 2..], value);
+        } else if key.starts_with("laneChangeModel.") {
+            let attrName = &key[16..];
+            if attrName == "lcContRight" {
+                // special case: not used within lcModel
+                veh.m().get_singular_type().set_lc_cont_right(value);
+            } else {
+                microVeh.m().get_lane_change_model().set_parameter(attrName, value);
+            }
+        } else if key.starts_with("carFollowModel.") {
+            veh.m().set_car_follow_model_parameter(key, value);
+        } else if key.starts_with("junctionModel.") {
+            // use the whole key (including junctionModel prefix)
+            veh.m().set_junction_model_parameter(key, value);
+        } else if key.starts_with("has.") && key.ends_with(".device") {
+            let tok: Vec<&str> = key.split('.').filter(|s| !s.is_empty()).collect();
+            if tok.len() != 3 {
+                panic!("Invalid request for device status change. Expected format is 'has.DEVICENAME.device'");
+            }
+            let deviceName = tok[1];
+            let create = match value {
+                "true" => true,
+                "false" => false,
+                _ => panic!("Changing device status requires a 'true' or 'false'"),
+            };
+            if !create {
+                panic!("{}", format!("Device removal is not supported for device of type '{}'", deviceName));
+            }
+            veh.m().create_device(deviceName);
+        } else {
+            param_mut(veh.get_parameter()).set_parameter(key, value);
+        }
     }
 
     /// C++: `double Vehicle::getLength(const std::string &)` [static]
@@ -1244,7 +1633,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_length(typeID: &str) -> f64 {
-        todo!("port Vehicle::getLength")
+        Helper::get_vehicle_type(typeID).get_length()
     }
 
     /// C++: `double Vehicle::getMaxSpeed(const std::string &)` [static]
@@ -1255,7 +1644,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(typeID: &str) -> f64 {
-        todo!("port Vehicle::getMaxSpeed")
+        Helper::get_vehicle_type(typeID).get_max_speed()
     }
 
     /// C++: `std::string Vehicle::getVehicleClass(const std::string &)` [static]
@@ -1266,7 +1655,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_class(typeID: &str) -> String {
-        todo!("port Vehicle::getVehicleClass")
+        to_string(&Helper::get_vehicle_type(typeID).get_vehicle_class())
     }
 
     /// C++: `double Vehicle::getSpeedFactor(const std::string &)` [static]
@@ -1276,8 +1665,8 @@ impl Vehicle {
     //     return Helper::getVehicle(vehID)->getChosenSpeedFactor();
     // }
     #[allow(unused_variables)]
-    pub fn get_speed_factor(typeID: &str) -> f64 {
-        todo!("port Vehicle::getSpeedFactor")
+    pub fn get_speed_factor(vehID: &str) -> f64 {
+        Helper::get_vehicle(vehID).get_chosen_speed_factor()
     }
 
     /// C++: `double Vehicle::getAccel(const std::string &)` [static]
@@ -1288,7 +1677,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_accel(typeID: &str) -> f64 {
-        todo!("port Vehicle::getAccel")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_max_accel()
     }
 
     /// C++: `double Vehicle::getDecel(const std::string &)` [static]
@@ -1299,7 +1688,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_decel(typeID: &str) -> f64 {
-        todo!("port Vehicle::getDecel")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_max_decel()
     }
 
     /// C++: `double Vehicle::getEmergencyDecel(const std::string &)` [static]
@@ -1309,7 +1698,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_emergency_decel(typeID: &str) -> f64 {
-        todo!("port Vehicle::getEmergencyDecel")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_emergency_decel()
     }
 
     /// C++: `double Vehicle::getApparentDecel(const std::string &)` [static]
@@ -1319,7 +1708,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_apparent_decel(typeID: &str) -> f64 {
-        todo!("port Vehicle::getApparentDecel")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_apparent_decel()
     }
 
     /// C++: `double Vehicle::getImperfection(const std::string &)` [static]
@@ -1330,7 +1719,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_imperfection(typeID: &str) -> f64 {
-        todo!("port Vehicle::getImperfection")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_imperfection()
     }
 
     /// C++: `double Vehicle::getTau(const std::string &)` [static]
@@ -1341,7 +1730,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_tau(typeID: &str) -> f64 {
-        todo!("port Vehicle::getTau")
+        Helper::get_vehicle_type(typeID).get_car_follow_model().get_headway_time()
     }
 
     /// C++: `std::string Vehicle::getEmissionClass(const std::string &)` [static]
@@ -1352,7 +1741,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_emission_class(typeID: &str) -> String {
-        todo!("port Vehicle::getEmissionClass")
+        PollutantsInterface::get_name(Helper::get_vehicle_type(typeID).get_emission_class())
     }
 
     /// C++: `std::string Vehicle::getShapeClass(const std::string &)` [static]
@@ -1363,7 +1752,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_class(typeID: &str) -> String {
-        todo!("port Vehicle::getShapeClass")
+        get_vehicle_shape_name(Helper::get_vehicle_type(typeID).get_gui_shape())
     }
 
     /// C++: `double Vehicle::getMinGap(const std::string &)` [static]
@@ -1374,7 +1763,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_min_gap(typeID: &str) -> f64 {
-        todo!("port Vehicle::getMinGap")
+        Helper::get_vehicle_type(typeID).get_min_gap()
     }
 
     /// C++: `double Vehicle::getWidth(const std::string &)` [static]
@@ -1385,7 +1774,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_width(typeID: &str) -> f64 {
-        todo!("port Vehicle::getWidth")
+        Helper::get_vehicle_type(typeID).get_width()
     }
 
     /// C++: `double Vehicle::getHeight(const std::string &)` [static]
@@ -1396,7 +1785,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_height(typeID: &str) -> f64 {
-        todo!("port Vehicle::getHeight")
+        Helper::get_vehicle_type(typeID).get_height()
     }
 
     /// C++: `double Vehicle::getMass(const std::string &)` [static]
@@ -1407,15 +1796,15 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_mass(typeID: &str) -> f64 {
-        todo!("port Vehicle::getMass")
+        Helper::get_vehicle_type(typeID).get_mass()
     }
 
     /// C++: `libsumo::TraCIColor Vehicle::getColor(const std::string &)` [static]
     /// @}
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_color(typeID: &str) -> TraCIColor {
-        todo!("port Vehicle::getColor")
+    pub fn get_color(vehID: &str) -> TraCIColor {
+        Helper::make_tra_ci_color(&Helper::get_vehicle(vehID).get_parameter().color)
     }
 
     /// C++: `double Vehicle::getMinGapLat(const std::string &)` [static]
@@ -1431,7 +1820,15 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_min_gap_lat(typeID: &str) -> f64 {
-        todo!("port Vehicle::getMinGapLat")
+        let mut err = String::new();
+        let param = Helper::get_vehicle(typeID).get_prefixed_parameter("laneChangeModel.minGapLat", &mut err);
+        if err.is_empty() {
+            // StringUtils::toDouble
+            param.trim().parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", param)))
+        } else {
+            // legacy behavior
+            Helper::get_vehicle_type(typeID).get_min_gap_lat()
+        }
     }
 
     /// C++: `double Vehicle::getMaxSpeedLat(const std::string &)` [static]
@@ -1442,7 +1839,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed_lat(typeID: &str) -> f64 {
-        todo!("port Vehicle::getMaxSpeedLat")
+        Helper::get_vehicle_type(typeID).get_max_speed_lat()
     }
 
     /// C++: `std::string Vehicle::getLateralAlignment(const std::string &)` [static]
@@ -1453,7 +1850,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(typeID: &str) -> String {
-        todo!("port Vehicle::getLateralAlignment")
+        // shortcut: toString(LatAlignmentDefinition) is not ported yet, upgrade with the SUMOVTypeParameter string helpers
+        let _ = Helper::get_vehicle_type(typeID).get_preferred_lateral_alignment();
+        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
     }
 
     /// C++: `int Vehicle::getPersonCapacity(const std::string &)` [static]
@@ -1464,7 +1863,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_person_capacity(typeID: &str) -> i32 {
-        todo!("port Vehicle::getPersonCapacity")
+        Helper::get_vehicle_type(typeID).get_person_capacity()
     }
 
     /// C++: `double Vehicle::getActionStepLength(const std::string &)` [static]
@@ -1474,7 +1873,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_action_step_length(typeID: &str) -> f64 {
-        todo!("port Vehicle::getActionStepLength")
+        Helper::get_vehicle_type(typeID).get_action_step_length_secs()
     }
 
     /// C++: `double Vehicle::getSpeedDeviation(const std::string &)` [static]
@@ -1485,7 +1884,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(typeID: &str) -> f64 {
-        todo!("port Vehicle::getSpeedDeviation")
+        // shortcut: MSVehicleType::getSpeedFactor() returns an Unmapped Distribution_Parameterized (ms_vehicle_type.rs), so getParameter(1) cannot be read; upgrade when that type is mapped
+        panic!("getSpeedDeviation not yet ported: VehicleType speed factor distribution is unmapped")
     }
 
     /// C++: `double Vehicle::getBoardingDuration(const std::string &)` [static]
@@ -1496,7 +1896,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_boarding_duration(typeID: &str) -> f64 {
-        todo!("port Vehicle::getBoardingDuration")
+        steps2time(Helper::get_vehicle_type(typeID).get_loading_duration(true))
     }
 
     /// C++: `double Vehicle::getImpatience(const std::string &)` [static]
@@ -1506,8 +1906,8 @@ impl Vehicle {
     //     return Helper::getVehicle(vehID)->getImpatience();
     // }
     #[allow(unused_variables)]
-    pub fn get_impatience(typeID: &str) -> f64 {
-        todo!("port Vehicle::getImpatience")
+    pub fn get_impatience(vehID: &str) -> f64 {
+        Helper::get_vehicle(vehID).get_impatience()
     }
 
     /// C++: `void Vehicle::setStop(const std::string &, const std::string &, double, int, double, int, double, double)` [static]
@@ -1531,7 +1931,12 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_stop(vehID: &str, edgeID: &str, pos: f64, laneIndex: i32, duration: f64, flags: i32, startPos: f64, until: f64) {
-        todo!("port Vehicle::setStop")
+        let vehicle = Helper::get_vehicle(vehID);
+        let stopPars = Helper::build_stop_parameters(edgeID, pos, laneIndex, startPos, flags, duration, until);
+        let mut error = String::new();
+        if !vehicle.m().add_traci_stop(stopPars, &mut error) {
+            panic!("{}", error);
+        }
     }
 
     /// C++: `void Vehicle::replaceStop(const std::string &, int, const std::string &, double, int, double, int, double, double, int)` [static]
@@ -1575,7 +1980,30 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_stop(vehID: &str, nextStopIndex: i32, edgeID: &str, pos: f64, laneIndex: i32, duration: f64, flags: i32, startPos: f64, until: f64, teleport: i32) {
-        todo!("port Vehicle::replaceStop")
+        let vehicle = Helper::get_vehicle(vehID);
+        let mut error = String::new();
+        if edgeID == "" {
+            // only remove stop
+            let ok = vehicle.m().abort_next_stop(nextStopIndex);
+            if teleport != 0 {
+                if !vehicle.m().reroute_between_stops(nextStopIndex, "traci:replaceStop", (teleport & 1) != 0, &mut error) {
+                    panic!("{}", format!("Stop replacement failed for vehicle '{}' ({}).", vehID, error));
+                }
+            } else {
+                let msVeh = micro_veh(vehicle);
+                if !msVeh.get_lane().is_null() {
+                    msVeh.m().update_best_lanes(true, Ptr::default());
+                }
+            }
+            if !ok {
+                panic!("{}", format!("Stop replacement failed for vehicle '{}' (invalid nextStopIndex).", vehID));
+            }
+        } else {
+            let stopPars = Helper::build_stop_parameters(edgeID, pos, laneIndex, startPos, flags, duration, until);
+            if !vehicle.m().replace_stop(nextStopIndex, stopPars, "traci:replaceStop", teleport != 0, &mut error) {
+                panic!("{}", format!("Stop replacement failed for vehicle '{}' ({}).", vehID, error));
+            }
+        }
     }
 
     /// C++: `void Vehicle::insertStop(const std::string &, int, const std::string &, double, int, double, int, double, double, int)` [static]
@@ -1601,7 +2029,12 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn insert_stop(vehID: &str, nextStopIndex: i32, edgeID: &str, pos: f64, laneIndex: i32, duration: f64, flags: i32, startPos: f64, until: f64, teleport: i32) {
-        todo!("port Vehicle::insertStop")
+        let vehicle = Helper::get_vehicle(vehID);
+        let stopPars = Helper::build_stop_parameters(edgeID, pos, laneIndex, startPos, flags, duration, until);
+        let mut error = String::new();
+        if !vehicle.m().insert_stop(nextStopIndex, stopPars, "traci:insertStop", teleport != 0, &mut error) {
+            panic!("{}", format!("Stop insertion failed for vehicle '{}' ({}).", vehID, error));
+        }
     }
 
     /// C++: `void Vehicle::setStopParameter(const std::string &, int, const std::string &, const std::string &, bool)` [static]
@@ -1656,18 +2089,18 @@ impl Vehicle {
     //             pars.posLat = StringUtils::toDouble(value);
     //             pars.parametersSet |= STOP_POSLAT_SET;
     //         } else if (param == toString(SUMO_ATTR_ARRIVAL)) {
-    //             pars.arrival = string2time(value);
+    //             pars.arrival = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_ARRIVAL_SET;
     //         } else if (param == toString(SUMO_ATTR_DURATION)) {
-    //             pars.duration = string2time(value);
+    //             pars.duration = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_DURATION_SET;
     //             // also update dynamic value
     //             stop.initPars(pars);
     //         } else if (param == toString(SUMO_ATTR_UNTIL)) {
-    //             pars.until = string2time(value);
+    //             pars.until = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_UNTIL_SET;
     //         } else if (param == toString(SUMO_ATTR_EXTENSION)) {
-    //             pars.extension = string2time(value);
+    //             pars.extension = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_EXTENSION_SET;
     //         } else if (param == toString(SUMO_ATTR_INDEX)) {
     //             throw TraCIException("Changing stop index is not supported");
@@ -1719,19 +2152,19 @@ impl Vehicle {
     //             pars.speed = speed;
     //             pars.parametersSet |= STOP_SPEED_SET;
     //         } else if (param == toString(SUMO_ATTR_STARTED)) {
-    //             pars.started = string2time(value);
+    //             pars.started = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_STARTED_SET;
     //         } else if (param == toString(SUMO_ATTR_ENDED)) {
-    //             pars.ended = string2time(value);
+    //             pars.ended = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_ENDED_SET;
     //         } else if (param == toString(SUMO_ATTR_ONDEMAND)) {
     //             pars.onDemand = StringUtils::toBool(value);
     //             pars.parametersSet |= STOP_ONDEMAND_SET;
     //         } else if (param == toString(SUMO_ATTR_JUMP)) {
-    //             pars.jump = string2time(value);
+    //             pars.jump = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_JUMP_SET;
     //         } else if (param == toString(SUMO_ATTR_JUMP_UNTIL)) {
-    //             pars.jumpUntil = string2time(value);
+    //             pars.jumpUntil = string2time(value).unwrap_or_else(|e| panic!("{}", e));
     //             pars.parametersSet |= STOP_JUMP_UNTIL_SET;
     //         } else {
     //             throw ProcessError(TLF("Unsupported parameter '%'", param));
@@ -1742,7 +2175,129 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, value: &str, customParam: bool) {
-        todo!("port Vehicle::setStopParameter")
+        let vehicle = Helper::get_vehicle(vehID);
+        let stop = vehicle.m().get_stop(nextStopIndex);
+        let pars = &mut stop.pars;
+        if customParam {
+            pars.set_parameter(param, value);
+            return;
+        }
+        if param == "edge" || param == "busStop" || param == "trainStop" || param == "containerStop"
+            || param == "chargingStation" || param == "parkingArea" || param == "lane" {
+            let mut laneIndex = stop.lane.get_index();
+            let mut flags = pars.get_flags() & 3;
+            let mut edgeOrStopID = value.to_string();
+            if param == "lane" {
+                laneIndex = value.parse::<i32>().unwrap_or_else(|_| panic!("{}", format!("Not a valid integer: '{}'", value)));
+                edgeOrStopID = pars.edge.clone();
+            } else if param == "busStop" || param == "trainStop" {
+                flags |= 8;
+            } else if param == "containerStop" {
+                flags |= 16;
+            } else if param == "chargingStation" {
+                flags |= 32;
+            } else if param == "parkingArea" {
+                flags |= 64;
+            }
+            // special case: replace stop
+            Self::replace_stop(vehID, nextStopIndex, &edgeOrStopID, pars.endPos, laneIndex, steps2time(pars.duration),
+                               flags, pars.startPos, steps2time(pars.until), 0);
+        } else if param == "startPos" {
+            pars.startPos = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
+            pars.parametersSet |= STOP_START_SET;
+        } else if param == "endPos" {
+            pars.endPos = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
+            pars.parametersSet |= STOP_END_SET;
+        } else if param == "posLat" {
+            pars.posLat = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
+            pars.parametersSet |= STOP_POSLAT_SET;
+        } else if param == "arrival" {
+            pars.arrival = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_ARRIVAL_SET;
+        } else if param == "duration" {
+            pars.duration = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_DURATION_SET;
+            // also update dynamic value
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
+        } else if param == "until" {
+            pars.until = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_UNTIL_SET;
+        } else if param == "extension" {
+            pars.extension = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_EXTENSION_SET;
+        } else if param == "index" {
+            panic!("Changing stop index is not supported");
+        } else if param == "parking" {
+            pars.parking = SUMOVehicleParameter::parse_parking_type(value);
+            pars.parametersSet |= STOP_PARKING_SET;
+        } else if param == "triggered" {
+            if pars.speed > 0. && value != "" {
+                set_stop_param_error(vehID, format!("Waypoint (speed = {}) at index {} does not support triggers", pars.speed, nextStopIndex));
+            }
+            let tokens: Vec<String> = value.split_whitespace().map(String::from).collect();
+            SUMOVehicleParameter::parse_stop_triggers(&tokens, false, pars);
+            pars.parametersSet |= STOP_TRIGGER_SET;
+            // also update dynamic value
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
+        } else if param == "expected" {
+            pars.awaitedPersons = value.split_whitespace().map(String::from).collect();
+            pars.parametersSet |= STOP_EXPECTED_SET;
+            // also update dynamic value
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
+        } else if param == "expectedContainers" {
+            pars.awaitedContainers = value.split_whitespace().map(String::from).collect();
+            pars.parametersSet |= STOP_EXPECTED_CONTAINERS_SET;
+            // also update dynamic value
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
+        } else if param == "permitted" {
+            pars.permitted = value.split_whitespace().map(String::from).collect();
+            pars.parametersSet |= STOP_PERMITTED_SET;
+        } else if param == "actType" {
+            pars.actType = value.to_string();
+        } else if param == "tripId" {
+            pars.tripId = value.to_string();
+            pars.parametersSet |= STOP_TRIP_ID_SET;
+        } else if param == "split" {
+            pars.split = value.to_string();
+            pars.parametersSet |= STOP_SPLIT_SET;
+        } else if param == "join" {
+            pars.join = value.to_string();
+            pars.parametersSet |= STOP_JOIN_SET;
+            // also update dynamic value
+            let parsPtr = pars as *const SUMOVehicleParameter_Stop;
+            stop.init_pars(unsafe { &*parsPtr });
+        } else if param == "line" {
+            pars.line = value.to_string();
+            pars.parametersSet |= STOP_LINE_SET;
+        } else if param == "speed" {
+            let speed = value.parse::<f64>().unwrap_or_else(|_| panic!("{}", format!("Not a valid double: '{}'", value)));
+            if speed > 0. && pars.get_triggers().len() > 0 {
+                set_stop_param_error(vehID, format!("Triggered stop at index {} cannot be changed into a waypoint by setting speed to {}", nextStopIndex, speed));
+            }
+            pars.speed = speed;
+            pars.parametersSet |= STOP_SPEED_SET;
+        } else if param == "started" {
+            pars.started = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_STARTED_SET;
+        } else if param == "ended" {
+            pars.ended = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_ENDED_SET;
+        } else if param == "onDemand" {
+            pars.onDemand = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_ONDEMAND_SET;
+        } else if param == "jump" {
+            pars.jump = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_JUMP_SET;
+        } else if param == "jumpUntil" {
+            pars.jumpUntil = string2time(value).unwrap_or_else(|e| panic!("{}", e));
+            pars.parametersSet |= STOP_JUMP_UNTIL_SET;
+        } else {
+            set_stop_param_error(vehID, format!("Unsupported parameter '{}'", param));
+        }
     }
 
     /// C++: `void Vehicle::rerouteParkingArea(const std::string &, const std::string &)` [static]
@@ -1762,7 +2317,13 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_parking_area(vehID: &str, parkingAreaID: &str) {
-        todo!("port Vehicle::rerouteParkingArea")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let mut error = String::new();
+        // Forward command to vehicle
+        if !veh.m().reroute_parking_area(parkingAreaID, &mut error) {
+            panic!("{}", error);
+        }
     }
 
     /// C++: `void Vehicle::resume(const std::string &)` [static]
@@ -1790,7 +2351,17 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn resume(vehID: &str) {
-        todo!("port Vehicle::resume")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        if !veh.has_stops() {
+            panic!("{}", format!("Failed to resume vehicle '{}', it has no stops.", veh.get_id()));
+        }
+        if !veh.m().resume_from_stopping() {
+            let sto = veh.get_next_stop();
+            // shortcut: MSStop.edge is not typed yet (Unmapped), the stop's parameter edge is used instead
+            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached, sto.duration, sto.pars.edge, sto.pars.startPos);
+            panic!("{}", format!("Failed to resume from stopping for vehicle '{}', {}", veh.get_id(), posStr));
+        }
     }
 
     /// C++: `void Vehicle::add(const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, int, int, const std::string &, const std::string &, double, const std::string &)` [static]
@@ -1984,14 +2555,15 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add(vehID: &str, routeID: &str, typeID: &str, depart: &str, departLane: &str, departPos: &str, departSpeed: &str, arrivalLane: &str, arrivalPos: &str, arrivalSpeed: &str, fromTaz: &str, toTaz: &str, line: &str, personCapacity: i32, personNumber: i32, departPosLat: &str, arrivalPosLat: &str, speedFactor: f64, insertionChecks: &str) {
-        todo!("port Vehicle::add")
+        // shortcut: Vehicle::add (~150 lines of C++ building SUMOVehicleParameter, VehicleControl::buildVehicle, InsertionControl) not ported in this pass
+        panic!("Vehicle::add not yet ported")
     }
 
     /// C++: `void Vehicle::changeTarget(const std::string &, const std::string &)` [static]
     // void
     // Vehicle::changeTarget(const std::string& vehID, const std::string& edgeID) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     const MSEdge* destEdge = MSEdge::dictionary(edgeID);
+    //     const MSEdge* destEdge = MSEdge::dictionary_2(edgeID);
     //     const bool onInit = isOnInit(vehID);
     //     if (destEdge == nullptr) {
     //         throw TraCIException("Destination edge '" + edgeID + "' is not known.");
@@ -2009,7 +2581,18 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn change_target(vehID: &str, edgeID: &str) {
-        todo!("port Vehicle::changeTarget")
+        let veh = Helper::get_vehicle(vehID);
+        let destEdge = MSEdge::dictionary_2(edgeID);
+        let onInit = Self::is_on_init(vehID);
+        if destEdge.is_null() {
+            panic!("{}", format!("Destination edge '{}' is not known.", edgeID));
+        }
+        // change the final edge of the route and reroute
+        let success = veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:changeTarget",
+                                      veh.get_router_tt(), onInit, false, false, destEdge);
+        if !success {
+            panic!("{}", format!("ChangeTarget failed for vehicle '{}', destination edge '{}' unreachable.", veh.get_id(), edgeID));
+        }
     }
 
     /// C++: `void Vehicle::changeLane(const std::string &, int, double)` [static]
@@ -2034,7 +2617,11 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn change_lane(vehID: &str, laneIndex: i32, duration: f64) {
-        todo!("port Vehicle::changeLane")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
+        laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
+        laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
+        veh.m().get_influencer().set_lane_time_line(&laneTimeLine);
     }
 
     /// C++: `void Vehicle::changeLaneRelative(const std::string &, int, double)` [static]
@@ -2068,7 +2655,20 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn change_lane_relative(vehID: &str, indexOffset: i32, duration: f64) {
-        todo!("port Vehicle::changeLaneRelative")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
+        let laneIndex = veh.get_lane_index() + indexOffset;
+        if laneIndex < 0 && !veh.m().get_lane_change_model().is_opposite() {
+            if veh.get_lane_index() == -1 {
+                write_warning(&format!("Ignoring changeLaneRelative for vehicle '{}' that isn't on the road", vehID));
+            } else {
+                write_warning(&format!("Ignoring indexOffset {} for vehicle '{}' on laneIndex {}.", indexOffset, vehID, veh.get_lane_index()));
+            }
+        } else {
+            laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
+            laneTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), laneIndex));
+            veh.m().get_influencer().set_lane_time_line(&laneTimeLine);
+        }
     }
 
     /// C++: `void Vehicle::changeSublane(const std::string &, double)` [static]
@@ -2085,7 +2685,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn change_sublane(vehID: &str, latDist: f64) {
-        todo!("port Vehicle::changeSublane")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        veh.m().get_influencer().set_sublane_change(latDist);
     }
 
     /// C++: `void Vehicle::slowDown(const std::string &, double, double)` [static]
@@ -2110,7 +2711,11 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn slow_down(vehID: &str, speed: f64, duration: f64) {
-        todo!("port Vehicle::slowDown")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+        speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
+        speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), speed));
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::openGap(const std::string &, double, double, double, double, double, const std::string &)` [static]
@@ -2143,8 +2748,21 @@ impl Vehicle {
     //     veh->getInfluencer().activateGapController(originalTau, newTimeHeadway, newSpaceHeadway, duration, changeRate, maxDecel, refVeh);
     // }
     #[allow(unused_variables)]
-    pub fn open_gap(vehID: &str, newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, referenceVehID: &str) {
-        todo!("port Vehicle::openGap")
+    pub fn open_gap(vehID: &str, mut newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, referenceVehID: &str) {
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let mut refVeh: Ptr<MSVehicle> = Ptr::default();
+        if referenceVehID != "" {
+            refVeh = micro_veh(Helper::get_vehicle(referenceVehID));
+        }
+        let originalTau = veh.get_vehicle_type().get_car_follow_model().get_headway_time();
+        if newTimeHeadway == -1. {
+            newTimeHeadway = originalTau;
+        }
+        if originalTau > newTimeHeadway {
+            write_warning("Ignoring openGap(). New time headway must not be smaller than the original.");
+            return;
+        }
+        veh.m().get_influencer().activate_gap_controller(originalTau, newTimeHeadway, newSpaceHeadway, duration, changeRate, maxDecel, refVeh);
     }
 
     /// C++: `void Vehicle::deactivateGapControl(const std::string &)` [static]
@@ -2163,7 +2781,10 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_gap_control(vehID: &str) {
-        todo!("port Vehicle::deactivateGapControl")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.has_influencer() {
+            veh.m().get_influencer().deactivate_gap_controller();
+        }
     }
 
     /// C++: `void Vehicle::requestToC(const std::string &, double)` [static]
@@ -2173,7 +2794,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn request_to_c(vehID: &str, leadTime: f64) {
-        todo!("port Vehicle::requestToC")
+        Self::set_parameter(vehID, "device.toc.requestToC", &to_string(&leadTime));
     }
 
     /// C++: `void Vehicle::setSpeed(const std::string &, double)` [static]
@@ -2195,7 +2816,13 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(vehID: &str, speed: f64) {
-        todo!("port Vehicle::setSpeed")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+        if speed >= 0. {
+            speedTimeLine.push((MSNet::get_instance().get_current_time_step(), speed));
+            speedTimeLine.push((SUMOTIME_MAX - delta_t(), speed));
+        }
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::setAcceleration(const std::string &, double, double)` [static]
@@ -2221,7 +2848,12 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_acceleration(vehID: &str, acceleration: f64, duration: f64) {
-        todo!("port Vehicle::setAcceleration")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        let targetSpeed = f64::max(veh.get_speed() + acceleration * duration, 0.0);
+        let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+        speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
+        speedTimeLine.push((MSNet::get_instance().get_current_time_step() + time2steps(duration), targetSpeed));
+        veh.m().get_influencer().set_speed_time_line(&speedTimeLine);
     }
 
     /// C++: `void Vehicle::setPreviousSpeed(const std::string &, double, double)` [static]
@@ -2239,8 +2871,12 @@ impl Vehicle {
     //     veh->setPreviousSpeed(prevSpeed, prevAcceleration);
     // }
     #[allow(unused_variables)]
-    pub fn set_previous_speed(vehID: &str, prevSpeed: f64, prevAcceleration: f64) {
-        todo!("port Vehicle::setPreviousSpeed")
+    pub fn set_previous_speed(vehID: &str, prevSpeed: f64, mut prevAcceleration: f64) {
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if prevAcceleration == INVALID_DOUBLE_VALUE {
+            prevAcceleration = f64::MIN_POSITIVE; // std::numeric_limits<double>::min()
+        }
+        veh.m().set_previous_speed(prevSpeed, prevAcceleration);
     }
 
     /// C++: `void Vehicle::setSpeedMode(const std::string &, int)` [static]
@@ -2257,7 +2893,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_mode(vehID: &str, speedMode: i32) {
-        todo!("port Vehicle::setSpeedMode")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        veh.m().get_influencer().set_speed_mode(speedMode);
     }
 
     /// C++: `void Vehicle::setLaneChangeMode(const std::string &, int)` [static]
@@ -2274,7 +2911,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(vehID: &str, laneChangeMode: i32) {
-        todo!("port Vehicle::setLaneChangeMode")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        veh.m().get_influencer().set_lane_change_mode(laneChangeMode);
     }
 
     /// C++: `void Vehicle::setRoutingMode(const std::string &, int)` [static]
@@ -2284,7 +2922,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_routing_mode(vehID: &str, routingMode: i32) {
-        todo!("port Vehicle::setRoutingMode")
+        Helper::get_vehicle(vehID).m().set_routing_mode(routingMode);
     }
 
     /// C++: `void Vehicle::setType(const std::string &, const std::string &)` [static]
@@ -2304,7 +2942,17 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_type(vehID: &str, typeID: &str) {
-        todo!("port Vehicle::setType")
+        let vehicleType = MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false);
+        if vehicleType.is_null() {
+            panic!("{}", format!("Vehicle type '{}' is not known", typeID));
+        }
+        let veh = Helper::get_vehicle(vehID);
+        veh.m().replace_vehicle_type(vehicleType);
+        let microVeh = micro_veh(veh);
+        if microVeh.is_on_road() {
+            microVeh.m().update_best_lanes(true, Ptr::default());
+            microVeh.m().update_lane_brutto_sum();
+        }
     }
 
     /// C++: `void Vehicle::setRouteID(const std::string &, const std::string &)` [static]
@@ -2321,7 +2969,7 @@ impl Vehicle {
     //     std::string msg;
     //     if (!veh->hasValidRoute(msg, r)) {
     //         WRITE_WARNINGF(TL("Invalid route replacement for vehicle '%'. %"), veh->getID(), msg);
-    //         if (MSGlobals::gCheckRoutes) {
+    //         if (false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */) {
     //             throw TraCIException("Route replacement failed for " + veh->getID());
     //         }
     //     }
@@ -2333,7 +2981,22 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_route_id(vehID: &str, routeID: &str) {
-        todo!("port Vehicle::setRouteID")
+        let veh = Helper::get_vehicle(vehID);
+        // shortcut: MSRoute::dictionary returns a Rc (never null) so the 'not known' panic is skipped, upgrade when the dictionary returns Option
+        let r = MSRoute::dictionary_3(routeID, Ptr::null());
+        if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
+            write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is referenced.", routeID));
+        }
+        let mut msg = String::new();
+        if !veh.has_valid_route(&mut msg, r.clone()) {
+            if false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */ {
+                panic!("{}", format!("Route replacement failed for {}", veh.get_id()));
+            }
+        }
+        let mut errorMsg = String::new();
+        if !veh.m().replace_route(r, "traci:setRouteID", veh.get_lane().is_null(), 0, true, true, Ptr::from_mut(&mut errorMsg)) {
+            panic!("{}", format!("Route replacement failed for vehicle '{}' ({}).", veh.get_id(), errorMsg));
+        }
     }
 
     /// C++: `void Vehicle::setRoute(const std::string &, const std::string &)` [static]
@@ -2343,7 +3006,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_route(vehID: &str, edgeID: &str) {
-        todo!("port Vehicle::setRoute")
+        Self::set_route_2(vehID, &vec![edgeID.to_string()]);
     }
 
     /// C++: `void Vehicle::setRoute(const std::string &, const std::vector<std::string> &)` [static]
@@ -2375,7 +3038,27 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_route_2(vehID: &str, edgeIDs: &Vec<String>) {
-        todo!("port Vehicle::setRoute")
+        let veh = Helper::get_vehicle(vehID);
+        let mut edges: ConstMSEdgeVector = ConstMSEdgeVector::new();
+        let onInit = veh.get_lane().is_null();
+        // MSEdge::parseEdgesList(edgeIDs, edges, "<unknown>") throws ProcessError, rethrown as TraCIException below
+        MSEdge::parse_edges_list_2(edgeIDs, &mut edges, "<unknown>");
+        if edges.len() > 0 && edges[0].is_internal() {
+            if edges.len() == 1 {
+                // avoid crashing due to lack of normal edges in route (#5390)
+                let next = edges[edges.len() - 1].get_lanes()[0].get_next_normal();
+                edges.push(next);
+            } else {
+                // avoid internal edge in final route
+                if edges[0] == Ptr::new(veh.get_lane().get_edge()) {
+                    edges.remove(0);
+                }
+            }
+        }
+        let mut errorMsg = String::new();
+        if !veh.m().replace_route_edges(&mut edges, -1., 0., "traci:setRoute", onInit, true, true, Ptr::from_mut(&mut errorMsg)) {
+            panic!("{}", format!("Route replacement failed for vehicle '{}' ({}).", veh.get_id(), errorMsg));
+        }
     }
 
     /// C++: `void Vehicle::setLateralLanePosition(const std::string &, double)` [static]
@@ -2391,7 +3074,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_lateral_lane_position(vehID: &str, posLat: f64) {
-        todo!("port Vehicle::setLateralLanePosition")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        veh.m().set_lateral_position_on_lane(posLat);
     }
 
     /// C++: `void Vehicle::updateBestLanes(const std::string &)` [static]
@@ -2409,7 +3093,10 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_best_lanes(vehID: &str) {
-        todo!("port Vehicle::updateBestLanes")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_on_road() {
+            veh.m().update_best_lanes(true, Ptr::default());
+        }
     }
 
     /// C++: `void Vehicle::setAdaptedTraveltime(const std::string &, const std::string &, double, double, double)` [static]
@@ -2417,7 +3104,7 @@ impl Vehicle {
     // Vehicle::setAdaptedTraveltime(const std::string& vehID, const std::string& edgeID,
     //                               double time, double begSeconds, double endSeconds) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     MSEdge* edge = MSEdge::dictionary(edgeID);
+    //     MSEdge* edge = MSEdge::dictionary_2(edgeID);
     //     if (edge == nullptr) {
     //         throw TraCIException("Edge '" + edgeID + "' is not known.");
     //     }
@@ -2439,7 +3126,26 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_adapted_traveltime(vehID: &str, edgeID: &str, time: f64, begSeconds: f64, endSeconds: f64) {
-        todo!("port Vehicle::setAdaptedTraveltime")
+        let mut veh = Helper::get_vehicle(vehID);
+        let edge = MSEdge::dictionary_2(edgeID);
+        if edge.is_null() {
+            panic!("{}", format!("Edge '{}' is not known.", edgeID));
+        }
+        if time != INVALID_DOUBLE_VALUE {
+            // add time
+            if begSeconds == 0. && endSeconds == f64::MAX {
+                // clean up old values before setting whole range
+                while veh.get_weights_storage_2().knows_travel_time(edge) {
+                    veh.m().get_weights_storage_2().remove_travel_time(edge);
+                }
+            }
+            veh.m().get_weights_storage_2().add_travel_time(edge, begSeconds, endSeconds, time);
+        } else {
+            // remove time
+            while veh.get_weights_storage_2().knows_travel_time(edge) {
+                veh.m().get_weights_storage_2().remove_travel_time(edge);
+            }
+        }
     }
 
     /// C++: `void Vehicle::setEffort(const std::string &, const std::string &, double, double, double)` [static]
@@ -2447,7 +3153,7 @@ impl Vehicle {
     // Vehicle::setEffort(const std::string& vehID, const std::string& edgeID,
     //                    double effort, double begSeconds, double endSeconds) {
     //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
-    //     MSEdge* edge = MSEdge::dictionary(edgeID);
+    //     MSEdge* edge = MSEdge::dictionary_2(edgeID);
     //     if (edge == nullptr) {
     //         throw TraCIException("Edge '" + edgeID + "' is not known.");
     //     }
@@ -2469,7 +3175,26 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_effort(vehID: &str, edgeID: &str, effort: f64, begSeconds: f64, endSeconds: f64) {
-        todo!("port Vehicle::setEffort")
+        let mut veh = Helper::get_vehicle(vehID);
+        let edge = MSEdge::dictionary_2(edgeID);
+        if edge.is_null() {
+            panic!("{}", format!("Edge '{}' is not known.", edgeID));
+        }
+        if effort != INVALID_DOUBLE_VALUE {
+            // add effort
+            if begSeconds == 0. && endSeconds == f64::MAX {
+                // clean up old values before setting whole range
+                while veh.get_weights_storage_2().knows_effort(edge) {
+                    veh.m().get_weights_storage_2().remove_effort(edge);
+                }
+            }
+            veh.m().get_weights_storage_2().add_effort(edge, begSeconds, endSeconds, effort);
+        } else {
+            // remove effort
+            while veh.get_weights_storage_2().knows_effort(edge) {
+                veh.m().get_weights_storage_2().remove_effort(edge);
+            }
+        }
     }
 
     /// C++: `void Vehicle::rerouteTraveltime(const std::string &, const bool)` [static]
@@ -2488,7 +3213,16 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_traveltime(vehID: &str, currentTravelTimes: bool) {
-        todo!("port Vehicle::rerouteTraveltime")
+        let veh = Helper::get_vehicle(vehID);
+        let routingMode = veh.get_routing_mode();
+        if currentTravelTimes && routingMode == ROUTING_MODE_DEFAULT {
+            veh.m().set_routing_mode(ROUTING_MODE_AGGREGATED_CUSTOM);
+        }
+        veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteTraveltime",
+                        veh.get_router_tt(), Self::is_on_init(vehID), false, false, Ptr::default());
+        if currentTravelTimes && routingMode == ROUTING_MODE_DEFAULT {
+            veh.m().set_routing_mode(routingMode);
+        }
     }
 
     /// C++: `void Vehicle::rerouteEffort(const std::string &)` [static]
@@ -2500,7 +3234,9 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_effort(vehID: &str) {
-        todo!("port Vehicle::rerouteEffort")
+        let veh = Helper::get_vehicle(vehID);
+        veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteEffort",
+                        MSNet::get_instance().get_router_effort(veh.get_rng_index(), &()), Self::is_on_init(vehID), false, false, Ptr::default());
     }
 
     /// C++: `void Vehicle::setSignals(const std::string &, int)` [static]
@@ -2523,7 +3259,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_signals(vehID: &str, signals: i32) {
-        todo!("port Vehicle::setSignals")
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        // set influencer to make the change persistent
+        veh.m().get_influencer().set_signals(signals);
+        // set them now so that getSignals returns the correct value
+        veh.m().switch_off_signal(0x0fffffff);
+        if signals >= 0 {
+            veh.m().switch_on_signal(signals);
+        }
     }
 
     /// C++: `void Vehicle::moveTo(const std::string &, const std::string &, double, int)` [static]
@@ -2536,7 +3279,7 @@ impl Vehicle {
     //         return;
     //     }
     //
-    //     MSLane* l = MSLane::dictionary(laneID);
+    //     MSLane* l = MSLane::dictionary_2(laneID);
     //     if (l == nullptr) {
     //         throw TraCIException("Unknown lane '" + laneID + "'.");
     //     }
@@ -2546,7 +3289,7 @@ impl Vehicle {
     //     }
     //     MSEdge* destinationEdge = &l->getEdge();
     //     const MSEdge* destinationRouteEdge = destinationEdge->getNormalBefore();
-    //     if (!veh->isOnRoad() && veh->getParameter().wasSet(VEHPARS_FORCE_REROUTE) && veh->getRoute().getEdges().size() == 2) {
+    //     if (!veh->isOnRoad() && veh->getParameter().was_set(VEHPARS_FORCE_REROUTE) && veh->getRoute().getEdges().size() == 2) {
     //         // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
     //         veh->reroute(MSNet::getInstance()->getCurrentTimeStep(), "traci:moveTo-tripInsertion",
     //                      veh->getRouterTT(), true);
@@ -2611,7 +3354,83 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn move_to(vehID: &str, laneID: &str, pos: f64, reason: i32) {
-        todo!("port Vehicle::moveTo")
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        let mut l = MSLane::dictionary_2(laneID);
+        if l.is_null() {
+            panic!("{}", format!("Unknown lane '{}'.", laneID));
+        }
+        if veh.get_lane() == l {
+            veh.m().set_tentative_lane_and_position(l, pos, veh.get_lateral_position_on_lane());
+            return;
+        }
+        let destinationEdge = l.get_edge();
+        let destinationRouteEdge = destinationEdge.get_normal_before();
+        if !veh.is_on_road() && veh.get_parameter().was_set(VEHPARS_FORCE_REROUTE) && veh.get_route().get_edges().len() == 2 {
+            // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
+            veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:moveTo-tripInsertion",
+                            veh.get_router_tt(), true, false, false, Ptr::default());
+        }
+        // find edge in the remaining route
+        let edges = veh.get_route().get_edges();
+        let start = veh.get_route_position() as usize;
+        let mut it: Option<usize> = edges[start..].iter().position(|e| *e == destinationRouteEdge).map(|p| p + start);
+        if it.is_none() {
+            // find edge in the edges that were already passed
+            it = edges.iter().position(|e| *e == destinationRouteEdge);
+        }
+        let invalid = match it {
+            None => true,
+            Some(i) => destinationEdge.is_internal() && (i + 1 == edges.len() || l.get_next_normal() != edges[i + 1]),
+        };
+        if invalid {
+            panic!("{}", format!("Lane '{}' is not on the route of vehicle '{}'.", laneID, vehID));
+        }
+        let it = it.unwrap();
+        let oldPos = veh.get_position(0.);
+        veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_TELEPORT);
+        if !veh.get_lane().is_null() {
+            // correct odometer which gets incremented via onRemovalFromNet->leaveLane
+            veh.m().add_to_odometer(-veh.get_lane().get_length());
+            veh.m().get_mutable_lane().remove_vehicle(veh, MSMoveReminder_Notification::NOTIFICATION_TELEPORT, false);
+        } else {
+            veh.m().set_tentative_lane_and_position(l, pos, 0.);
+        }
+        let oldRouteIndex = veh.get_route_position();
+        let newRouteIndex = it as i32;
+        if oldRouteIndex > newRouteIndex {
+            // more odometer correction needed
+            veh.m().add_to_odometer(-l.get_length());
+        }
+        veh.m().reset_route_position(newRouteIndex, veh.get_parameter().departLaneProcedure);
+        if !veh.is_on_road() {
+            MSNet::get_instance().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
+            MSVehicleTransfer::get_instance().remove(veh);
+        }
+        let moveReminderReason;
+        if veh.has_departed() {
+            if reason == MOVE_TELEPORT {
+                moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_TELEPORT;
+            } else if reason == MOVE_NORMAL {
+                moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_JUNCTION;
+            } else if reason == MOVE_AUTOMATIC {
+                let newPos = l.geometry_position_at_offset(pos, 0.);
+                let dist = newPos.distance_to2d(&oldPos);
+                if dist < (veh.get_max_speed() * (delta_t() as f64 / 1000.)) {
+                    moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_JUNCTION;
+                } else {
+                    moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_TELEPORT;
+                }
+            } else {
+                panic!("{}", format!("Invalid moveTo reason '{}' for vehicle '{}'.", reason, vehID));
+            }
+        } else {
+            moveReminderReason = MSMoveReminder_Notification::NOTIFICATION_DEPARTED;
+        }
+        l.force_vehicle_insertion(veh, pos, moveReminderReason, 0.);
+        if veh.m().get_lane_change_model().is_opposite() {
+            veh.m().get_lane_change_model().changed_to_opposite();
+        }
     }
 
     /// C++: `void Vehicle::moveToXY(const std::string &, const std::string &, const int, const double, const double, double, const int, double)` [static]
@@ -2735,7 +3554,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn move_to_xy(vehID: &str, edgeID: &str, laneIndex: i32, x: f64, y: f64, angle: f64, keepRoute: i32, matchThreshold: f64) {
-        todo!("port Vehicle::moveToXY")
+        // shortcut: moveToXY (Helper::moveToXYMap, lane shape/lateral offsets, setRemoteControlled) not ported in this pass
+        panic!("Vehicle::moveToXY not yet ported")
     }
 
     /// C++: `void Vehicle::remove(const std::string &, char)` [static]
@@ -2782,8 +3602,28 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn remove(vehID: &str, reason: i8) {
-        todo!("port Vehicle::remove")
+    pub fn remove(vehID: &str, reason: i32) {
+        let veh = Helper::get_vehicle(vehID);
+        let n = match reason {
+            REMOVE_TELEPORT => MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED,
+            REMOVE_PARKING => MSMoveReminder_Notification::NOTIFICATION_ARRIVED,
+            REMOVE_ARRIVED => MSMoveReminder_Notification::NOTIFICATION_ARRIVED,
+            REMOVE_VAPORIZED => MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_TRACI,
+            REMOVE_TELEPORT_ARRIVED => MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED,
+            _ => panic!("Unknown removal status."),
+        };
+        if veh.has_departed() {
+            veh.m().on_removal_from_net(n);
+            let microVeh = micro_veh(veh);
+            if !veh.get_lane().is_null() {
+                microVeh.m().get_mutable_lane().remove_vehicle(microVeh, n, true);
+            }
+            MSNet::get_instance().get_vehicle_control().schedule_vehicle_removal(veh.cast::<SUMOVehicle>(), false);
+            MSNet::get_instance().get_vehicle_control().remove_pending();
+        } else {
+            MSNet::get_instance().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
+            MSNet::get_instance().get_vehicle_control().delete_vehicle(veh.cast::<SUMOVehicle>(), true, false);
+        }
     }
 
     /// C++: `void Vehicle::setLine(const std::string &, const std::string &)` [static]
@@ -2793,7 +3633,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_line(vehID: &str, line: &str) {
-        todo!("port Vehicle::setLine")
+        param_mut(Helper::get_vehicle(vehID).get_parameter()).line = line.to_string();
     }
 
     /// C++: `void Vehicle::setVia(const std::string &, const std::vector<std::string> &)` [static]
@@ -2811,14 +3651,19 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_via(vehID: &str, edgeList: &Vec<String>) {
-        todo!("port Vehicle::setVia")
+        let veh = Helper::get_vehicle(vehID);
+        // ensure edges exist (ProcessError from parseEdgesList is rethrown as TraCIException)
+        let mut edges: ConstMSEdgeVector = ConstMSEdgeVector::new();
+        MSEdge::parse_edges_list_2(edgeList, &mut edges, "<via-edges>");
+        param_mut(veh.get_parameter()).via = edgeList.clone();
     }
 
     /// C++: `void Vehicle::highlight(const std::string &, const libsumo::TraCIColor &, double, const int, const double, const int)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn highlight(vehID: &str, col: &TraCIColor, size: f64, alphaMax: i32, duration: f64, type_: i32) {
-        todo!("port Vehicle::highlight")
+        // shortcut: Polygon::exists / Polygon::addHighlightPolygon / Polygon::addDynamics (libsumo/Polygon, GUI highlight) are not ported in this pass; upgrade when polygon.rs is filled
+        panic!("Vehicle::highlight not yet ported: depends on Polygon highlight helpers")
     }
 
     /// C++: `void Vehicle::dispatchTaxi(const std::string &, const std::vector<std::string> &)` [static]
@@ -2851,7 +3696,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn dispatch_taxi(vehID: &str, reservations: &Vec<String>) {
-        todo!("port Vehicle::dispatchTaxi")
+        // shortcut: MSDevice_Taxi::getDispatchAlgorithm and MSDispatch_TraCI::interpretDispatch are not ported in this pass; upgrade when ms_dispatch.rs is filled
+        panic!("Vehicle::dispatchTaxi not yet ported: depends on MSDispatch_TraCI")
     }
 
     /// C++: `void Vehicle::setLength(const std::string &, double)` [static]
@@ -2861,8 +3707,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setLength(length);
     // }
     #[allow(unused_variables)]
-    pub fn set_length(typeID: &str, length: f64) {
-        todo!("port Vehicle::setLength")
+    pub fn set_length(vehID: &str, length: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_length(&length);
     }
 
     /// C++: `void Vehicle::setMaxSpeed(const std::string &, double)` [static]
@@ -2872,8 +3718,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMaxSpeed(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed(typeID: &str, speed: f64) {
-        todo!("port Vehicle::setMaxSpeed")
+    pub fn set_max_speed(vehID: &str, speed: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_max_speed(&speed);
     }
 
     /// C++: `void Vehicle::setVehicleClass(const std::string &, const std::string &)` [static]
@@ -2888,8 +3734,13 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_vehicle_class(typeID: &str, clazz: &str) {
-        todo!("port Vehicle::setVehicleClass")
+    pub fn set_vehicle_class(vehID: &str, clazz: &str) {
+        let veh = Helper::get_vehicle(vehID);
+        veh.m().get_singular_type().set_v_class(get_vehicle_class_id(clazz).unwrap_or_else(|e| panic!("{}", e)));
+        let microVeh = micro_veh(veh);
+        if microVeh.is_on_road() {
+            microVeh.m().update_best_lanes(true, Ptr::default());
+        }
     }
 
     /// C++: `void Vehicle::setSpeedFactor(const std::string &, double)` [static]
@@ -2899,8 +3750,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->setChosenSpeedFactor(factor);
     // }
     #[allow(unused_variables)]
-    pub fn set_speed_factor(typeID: &str, factor: f64) {
-        todo!("port Vehicle::setSpeedFactor")
+    pub fn set_speed_factor(vehID: &str, factor: f64) {
+        Helper::get_vehicle(vehID).m().set_chosen_speed_factor(factor);
     }
 
     /// C++: `void Vehicle::setAccel(const std::string &, double)` [static]
@@ -2910,8 +3761,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setAccel(accel);
     // }
     #[allow(unused_variables)]
-    pub fn set_accel(typeID: &str, accel: f64) {
-        todo!("port Vehicle::setAccel")
+    pub fn set_accel(vehID: &str, accel: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_accel(accel);
     }
 
     /// C++: `void Vehicle::setDecel(const std::string &, double)` [static]
@@ -2921,8 +3772,9 @@ impl Vehicle {
     //     VehicleType::setDecel(Helper::getVehicle(vehID)->getSingularType().getID(), decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_decel(typeID: &str, decel: f64) {
-        todo!("port Vehicle::setDecel")
+    pub fn set_decel(vehID: &str, decel: f64) {
+        let typeID = Helper::get_vehicle(vehID).m().get_singular_type().get_id().to_string();
+        VehicleType::set_decel(&typeID, decel);
     }
 
     /// C++: `void Vehicle::setEmergencyDecel(const std::string &, double)` [static]
@@ -2932,8 +3784,9 @@ impl Vehicle {
     //     VehicleType::setEmergencyDecel(Helper::getVehicle(vehID)->getSingularType().getID(), decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_emergency_decel(typeID: &str, decel: f64) {
-        todo!("port Vehicle::setEmergencyDecel")
+    pub fn set_emergency_decel(vehID: &str, decel: f64) {
+        let typeID = Helper::get_vehicle(vehID).m().get_singular_type().get_id().to_string();
+        VehicleType::set_emergency_decel(&typeID, decel);
     }
 
     /// C++: `void Vehicle::setApparentDecel(const std::string &, double)` [static]
@@ -2943,8 +3796,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setApparentDecel(decel);
     // }
     #[allow(unused_variables)]
-    pub fn set_apparent_decel(typeID: &str, decel: f64) {
-        todo!("port Vehicle::setApparentDecel")
+    pub fn set_apparent_decel(vehID: &str, decel: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_apparent_decel(decel);
     }
 
     /// C++: `void Vehicle::setImperfection(const std::string &, double)` [static]
@@ -2954,8 +3807,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setImperfection(imperfection);
     // }
     #[allow(unused_variables)]
-    pub fn set_imperfection(typeID: &str, imperfection: f64) {
-        todo!("port Vehicle::setImperfection")
+    pub fn set_imperfection(vehID: &str, imperfection: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_imperfection(imperfection);
     }
 
     /// C++: `void Vehicle::setTau(const std::string &, double)` [static]
@@ -2965,8 +3818,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setTau(tau);
     // }
     #[allow(unused_variables)]
-    pub fn set_tau(typeID: &str, tau: f64) {
-        todo!("port Vehicle::setTau")
+    pub fn set_tau(vehID: &str, tau: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_tau(tau);
     }
 
     /// C++: `void Vehicle::setEmissionClass(const std::string &, const std::string &)` [static]
@@ -2976,8 +3829,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setEmissionClass(PollutantsInterface::getClassByName(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_emission_class(typeID: &str, clazz: &str) {
-        todo!("port Vehicle::setEmissionClass")
+    pub fn set_emission_class(vehID: &str, clazz: &str) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_emission_class(PollutantsInterface::get_class_by_name(clazz, SVC_IGNORING));
     }
 
     /// C++: `void Vehicle::setShapeClass(const std::string &, const std::string &)` [static]
@@ -2987,8 +3840,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setShape(getVehicleShapeID(clazz));
     // }
     #[allow(unused_variables)]
-    pub fn set_shape_class(typeID: &str, shapeClass: &str) {
-        todo!("port Vehicle::setShapeClass")
+    pub fn set_shape_class(vehID: &str, clazz: &str) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_shape(get_vehicle_shape_id(clazz).unwrap_or_else(|e| panic!("{}", e)));
     }
 
     /// C++: `void Vehicle::setWidth(const std::string &, double)` [static]
@@ -2998,8 +3851,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setWidth(width);
     // }
     #[allow(unused_variables)]
-    pub fn set_width(typeID: &str, width: f64) {
-        todo!("port Vehicle::setWidth")
+    pub fn set_width(vehID: &str, width: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_width(&width);
     }
 
     /// C++: `void Vehicle::setHeight(const std::string &, double)` [static]
@@ -3009,8 +3862,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setHeight(height);
     // }
     #[allow(unused_variables)]
-    pub fn set_height(typeID: &str, height: f64) {
-        todo!("port Vehicle::setHeight")
+    pub fn set_height(vehID: &str, height: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_height(&height);
     }
 
     /// C++: `void Vehicle::setMass(const std::string &, double)` [static]
@@ -3020,16 +3873,19 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMass(mass);
     // }
     #[allow(unused_variables)]
-    pub fn set_mass(typeID: &str, mass: f64) {
-        todo!("port Vehicle::setMass")
+    pub fn set_mass(vehID: &str, mass: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_mass(mass);
     }
 
     /// C++: `void Vehicle::setColor(const std::string &, const libsumo::TraCIColor &)` [static]
     /// @}
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn set_color(typeID: &str, color: &TraCIColor) {
-        todo!("port Vehicle::setColor")
+    pub fn set_color(vehID: &str, col: &TraCIColor) {
+        let veh = Helper::get_vehicle(vehID);
+        let p = param_mut(veh.get_parameter());
+        p.color.set(col.r as u8, col.g as u8, col.b as u8, col.a as u8);
+        p.parametersSet |= VEHPARS_COLOR_SET;
     }
 
     /// C++: `void Vehicle::setMinGap(const std::string &, double)` [static]
@@ -3044,8 +3900,13 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap(typeID: &str, minGap: f64) {
-        todo!("port Vehicle::setMinGap")
+    pub fn set_min_gap(vehID: &str, minGap: f64) {
+        let veh = Helper::get_vehicle(vehID);
+        veh.m().get_singular_type().set_min_gap(&minGap);
+        let microVeh = micro_veh(veh);
+        if microVeh.is_on_road() {
+            microVeh.m().update_lane_brutto_sum();
+        }
     }
 
     /// C++: `void Vehicle::setMinGapLat(const std::string &, double)` [static]
@@ -3060,8 +3921,15 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_min_gap_lat(typeID: &str, minGapLat: f64) {
-        todo!("port Vehicle::setMinGapLat")
+    pub fn set_min_gap_lat(vehID: &str, minGapLat: f64) {
+        let failed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            Self::set_parameter(vehID, "laneChangeModel.minGapLat", &to_string(&minGapLat))
+        }))
+        .is_err();
+        if failed {
+            // legacy behavior (the TraCIException from setParameter is caught by catch_unwind above)
+            Helper::get_vehicle(vehID).m().get_singular_type().set_min_gap_lat(&minGapLat);
+        }
     }
 
     /// C++: `void Vehicle::setMaxSpeedLat(const std::string &, double)` [static]
@@ -3071,8 +3939,8 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setMaxSpeedLat(speed);
     // }
     #[allow(unused_variables)]
-    pub fn set_max_speed_lat(typeID: &str, speed: f64) {
-        todo!("port Vehicle::setMaxSpeedLat")
+    pub fn set_max_speed_lat(vehID: &str, speed: f64) {
+        Helper::get_vehicle(vehID).m().get_singular_type().set_max_speed_lat(&speed);
     }
 
     /// C++: `void Vehicle::setLateralAlignment(const std::string &, const std::string &)` [static]
@@ -3088,8 +3956,14 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_lateral_alignment(typeID: &str, latAlignment: &str) {
-        todo!("port Vehicle::setLateralAlignment")
+    pub fn set_lateral_alignment(vehID: &str, latAlignment: &str) {
+        let mut lao: f64 = 0.;
+        let mut lad: LatAlignmentDefinition = LatAlignmentDefinition::DEFAULT;
+        if SUMOVTypeParameter::parse_lat_alignment(latAlignment, &mut lao, &mut lad) {
+            Helper::get_vehicle(vehID).m().get_singular_type().set_preferred_lateral_alignment(&lad, lao);
+        } else {
+            panic!("{}", format!("Unknown value '{}' when setting latAlignment for vehID '{}';\n must be one of (\"right\", \"center\", \"arbitrary\", \"nice\", \"compact\", \"left\" or a float)", latAlignment, vehID));
+        }
     }
 
     /// C++: `void Vehicle::setActionStepLength(const std::string &, double, bool)` [static]
@@ -3114,8 +3988,16 @@ impl Vehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_action_step_length(typeID: &str, actionStepLength: f64, resetActionOffset: bool) {
-        todo!("port Vehicle::setActionStepLength")
+    pub fn set_action_step_length(vehID: &str, actionStepLength: f64, resetActionOffset: bool) {
+        if actionStepLength < 0.0 {
+            return;
+        }
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if actionStepLength == 0. {
+            veh.m().reset_action_offset(0);
+        } else {
+            veh.m().set_action_step_length(actionStepLength, resetActionOffset);
+        }
     }
 
     /// C++: `void Vehicle::setBoardingDuration(const std::string &, double)` [static]
@@ -3130,8 +4012,9 @@ impl Vehicle {
     //     Helper::getVehicle(vehID)->getSingularType().setBoardingDuration(TIME2STEPS(boardingDuration));
     // }
     #[allow(unused_variables)]
-    pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
-        todo!("port Vehicle::setBoardingDuration")
+    pub fn set_boarding_duration(vehID: &str, boardingDuration: f64) {
+        // shortcut: checkTimeBounds(boardingDuration) not applied (see the top-of-file shortcut); out-of-range values are not rejected
+        Helper::get_vehicle(vehID).m().get_singular_type().set_boarding_duration(time2steps(boardingDuration), true);
     }
 
     /// C++: `void Vehicle::setImpatience(const std::string &, double)` [static]
@@ -3143,8 +4026,10 @@ impl Vehicle {
     //     vehicle->getBaseInfluencer().setExtraImpatience(impatience - normalImpatience);
     // }
     #[allow(unused_variables)]
-    pub fn set_impatience(typeID: &str, impatience: f64) {
-        todo!("port Vehicle::setImpatience")
+    pub fn set_impatience(vehID: &str, impatience: f64) {
+        let vehicle = Helper::get_vehicle(vehID);
+        let normalImpatience = vehicle.get_impatience();
+        vehicle.m().get_base_influencer().set_extra_impatience(impatience - normalImpatience);
     }
 
     /// C++: `void Vehicle::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -3152,7 +4037,7 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Vehicle::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.);
     }
 
     /// C++: `void Vehicle::unsubscribe(const std::string &)` [static]
@@ -3160,7 +4045,7 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port Vehicle::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLE_VARIABLE, objectID, &Vec::new(), 0., 0., &TraCIResults::new(), 0, 0.);
     }
 
     /// C++: `void Vehicle::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -3168,7 +4053,7 @@ impl Vehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port Vehicle::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void Vehicle::unsubscribeContext(const std::string &, int, double)` [static]
@@ -3176,7 +4061,7 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port Vehicle::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLE_CONTEXT, objectID, &Vec::new(), 0., 0., &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults Vehicle::getAllSubscriptionResults()` [static]
@@ -3184,7 +4069,8 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port Vehicle::getAllSubscriptionResults")
+        // shortcut: returns the Vehicle::mySubscriptionResults static, which is not ported yet (see the static block at the top of this file)
+        panic!("Vehicle::getAllSubscriptionResults not yet ported: mySubscriptionResults static is missing")
     }
 
     /// C++: `const libsumo::TraCIResults Vehicle::getSubscriptionResults(const std::string &)` [static]
@@ -3192,7 +4078,8 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port Vehicle::getSubscriptionResults")
+        // shortcut: reads the Vehicle::mySubscriptionResults static, which is not ported yet (see the static block at the top of this file)
+        panic!("Vehicle::getSubscriptionResults not yet ported: mySubscriptionResults static is missing")
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Vehicle::getAllContextSubscriptionResults()` [static]
@@ -3200,7 +4087,8 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port Vehicle::getAllContextSubscriptionResults")
+        // shortcut: returns the Vehicle::myContextSubscriptionResults static, which is not ported yet (see the static block at the top of this file)
+        panic!("Vehicle::getAllContextSubscriptionResults not yet ported: myContextSubscriptionResults static is missing")
     }
 
     /// C++: `const libsumo::SubscriptionResults Vehicle::getContextSubscriptionResults(const std::string &)` [static]
@@ -3208,7 +4096,8 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port Vehicle::getContextSubscriptionResults")
+        // shortcut: reads the Vehicle::myContextSubscriptionResults static, which is not ported yet (see the static block at the top of this file)
+        panic!("Vehicle::getContextSubscriptionResults not yet ported: myContextSubscriptionResults static is missing")
     }
 
     /// C++: `void Vehicle::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
@@ -3216,7 +4105,8 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port Vehicle::subscribeParameterWithKey")
+        // shortcut: needs the TraCIResults wrapper for the parameter key (StoHelp writer), not ported in this pass
+        panic!("Vehicle::subscribeParameterWithKey not yet ported")
     }
 
     /// C++: `int Vehicle::domainID()` [static]
@@ -3224,7 +4114,7 @@ impl Vehicle {
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port Vehicle::domainID")
+        CMD_GET_VEHICLE_VARIABLE
     }
 
     /// C++: `void Vehicle::subscribeLeader(const std::string &, double, double, double)` [static]
@@ -3236,7 +4126,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn subscribe_leader(vehID: &str, dist: f64, begin: f64, end: f64) {
-        todo!("port Vehicle::subscribeLeader")
+        // shortcut: needs the TraCIResults writer for the leader-distance parameter, not ported in this pass
+        panic!("Vehicle::subscribeLeader not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLanes(const std::vector<int> &, bool, double, double)` [static]
@@ -3258,7 +4149,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lanes(lanes: &Vec<i32>, noOpposite: bool, downstreamDist: f64, upstreamDist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterLanes")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterLanes not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterNoOpposite()` [static]
@@ -3268,7 +4160,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_no_opposite() {
-        todo!("port Vehicle::addSubscriptionFilterNoOpposite")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterNoOpposite not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterDownstreamDistance(double)` [static]
@@ -3281,7 +4174,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_downstream_distance(dist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterDownstreamDistance")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterDownstreamDistance not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterUpstreamDistance(double)` [static]
@@ -3294,7 +4188,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_upstream_distance(dist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterUpstreamDistance")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterUpstreamDistance not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterCFManeuver(double, double)` [static]
@@ -3311,7 +4206,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_cf_maneuver(downstreamDist: f64, upstreamDist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterCFManeuver")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterCFManeuver not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLCManeuver(int, bool, double, double)` [static]
@@ -3339,7 +4235,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lc_maneuver(direction: i32, noOpposite: bool, downstreamDist: f64, upstreamDist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterLCManeuver")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterLCManeuver not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLeadFollow(const std::vector<int> &)` [static]
@@ -3350,7 +4247,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lead_follow(lanes: &Vec<i32>) {
-        todo!("port Vehicle::addSubscriptionFilterLeadFollow")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterLeadFollow not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterTurn(double, double)` [static]
@@ -3366,7 +4264,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_turn(downstreamDist: f64, foeDistToJunction: f64) {
-        todo!("port Vehicle::addSubscriptionFilterTurn")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterTurn not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterVClass(const std::vector<std::string> &)` [static]
@@ -3379,7 +4278,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_v_class(vClasses: &Vec<String>) {
-        todo!("port Vehicle::addSubscriptionFilterVClass")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterVClass not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterVType(const std::vector<std::string> &)` [static]
@@ -3392,7 +4292,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_v_type(vTypes: &Vec<String>) {
-        todo!("port Vehicle::addSubscriptionFilterVType")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterVType not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterFieldOfVision(double)` [static]
@@ -3405,7 +4306,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_field_of_vision(openingAngle: f64) {
-        todo!("port Vehicle::addSubscriptionFilterFieldOfVision")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterFieldOfVision not yet ported")
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLateralDistance(double, double, double)` [static]
@@ -3424,7 +4326,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lateral_distance(lateralDist: f64, downstreamDist: f64, upstreamDist: f64) {
-        todo!("port Vehicle::addSubscriptionFilterLateralDistance")
+        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
+        panic!("Vehicle::addSubscriptionFilterLateralDistance not yet ported")
     }
 
     /// C++: `void Vehicle::storeShape(const std::string &, PositionVector &)` [static]
@@ -3435,7 +4338,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        todo!("port Vehicle::storeShape")
+        // shortcut: C++ storeShape (Helper shape cache) not ported in this pass; upgrade when helper.rs find_object_shape is filled
+        panic!("Vehicle::storeShape not yet ported")
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Vehicle::makeWrapper()` [static]
@@ -3445,7 +4349,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port Vehicle::makeWrapper")
+        // shortcut: C++ makeWrapper (VariableWrapper factory) not ported in this pass; upgrade when the VariableWrapper port is filled
+        panic!("Vehicle::makeWrapper not yet ported")
     }
 
     /// C++: `bool Vehicle::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -3649,7 +4554,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port Vehicle::handleVariable")
+        // shortcut: the variable dispatch (handleVariable, ~200 lines of C++ incl. subscription readers) is not ported in this pass; upgrade when the subscription readers are filled
+        panic!("Vehicle::handleVariable not yet ported")
     }
 
     /// C++: `bool Vehicle::isVisible(const SUMOVehicle *)` [static, private]
@@ -3659,7 +4565,7 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_visible(veh: Ptr<SUMOVehicle>) -> bool {
-        todo!("port Vehicle::isVisible")
+        veh.is_on_road() || veh.is_parking() || veh.was_remote_controlled(delta_t())
     }
 
     /// C++: `bool Vehicle::isOnInit(const std::string &)` [static, private]
@@ -3670,7 +4576,8 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_on_init(vehID: &str) -> bool {
-        todo!("port Vehicle::isOnInit")
+        let sumoVehicle = MSNet::get_instance().get_vehicle_control().get_vehicle(vehID);
+        sumoVehicle.is_null() || sumoVehicle.get_lane().is_null()
     }
 
     /// C++: `void Vehicle::Vehicle()` [private]
@@ -3678,7 +4585,8 @@ impl Vehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port Vehicle::Vehicle")
+        // invalidated standard constructor (C++ declares it private without a body)
+        Self {}
     }
 
 }

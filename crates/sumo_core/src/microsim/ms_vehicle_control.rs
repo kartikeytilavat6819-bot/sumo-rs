@@ -1,6 +1,44 @@
 //! Port of microsim/MSVehicleControl.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::{get_scaling_quota, SUMO_CONST_HALTING_SPEED};
+use utils::common::sumo_vehicle_class::{DEFAULT_BIKETYPE_ID, DEFAULT_CONTAINERTYPE_ID, DEFAULT_PEDTYPE_ID, DEFAULT_RAILTYPE_ID, DEFAULT_TAXITYPE_ID, DEFAULT_VTYPE_ID, DEFAULT_VTYPES, SVC_BICYCLE, SVC_CONTAINER, SVC_IGNORING, SVC_NON_ROAD, SVC_PASSENGER, SVC_PEDESTRIAN, SVC_RAIL, SVC_RAIL_CLASSES, SVC_ROAD_MOTOR_CLASSES, SVC_TAXI};
+use utils::common::time::{delta_t, stepfloor, steps2time, string2time, SUMOTIME_MAX};
+use utils::common::to_string::f64_to_string;
+use utils::options::options_cont::{get_float, get_string, is_set};
+
+// VTYPEPARS_VEHICLECLASS_SET bit from utils/vehicle/SUMOVTypeParameter.h (not exported by the ported module yet)
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+
+// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
+fn g_use_meso_sim() -> bool {
+    false
+}
+
+/// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
+// shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
+fn as_base(v: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
+    v.cast::<MSBaseVehicle>()
+}
+
+/// C++ `static_cast<MSVehicle*>(SUMOVehicle*)`
+// shortcut: this cast needs MSVehicle to be #[repr(C)] with `base` first (not done in ms_vehicle.rs yet)
+fn as_ms_vehicle(v: Ptr<SUMOVehicle>) -> Ptr<MSVehicle> {
+    v.cast::<MSVehicle>()
+}
+
+/// C++ `MSVehicleControl::DeleteKeptVehicle`/`MSVehicleControl` copy and assignment are private and never defined
+fn invalid_copy() -> ! {
+    panic!("MSVehicleControl copy/assignment is private and never defined in C++")
+}
+
+fn max_of(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min_of(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
 
 /// C++ enum `MSVehicleControl::VehicleDefinitionSource`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -45,19 +83,28 @@ impl std::ops::DerefMut for MSVehicleControl_DeleteKeptVehicle {
     }
 }
 
+impl Command for MSVehicleControl_DeleteKeptVehicle {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSVehicleControl_DeleteKeptVehicle::execute(self, currentTime)
+    }
+}
+
 impl MSVehicleControl_DeleteKeptVehicle {
     /// C++: `void DeleteKeptVehicle::DeleteKeptVehicle(SUMOVehicle *)`
     // DeleteKeptVehicle(SUMOVehicle* veh) : myVehicle(veh) {}
     #[allow(unused_variables)]
     pub fn new(veh: Ptr<SUMOVehicle>) -> Self {
-        todo!("port DeleteKeptVehicle::DeleteKeptVehicle")
+        MSVehicleControl_DeleteKeptVehicle {
+            base: (),
+            myVehicle: veh,
+        }
     }
 
     /// C++: `void DeleteKeptVehicle::~DeleteKeptVehicle() noexcept` [virtual]
     // ~DeleteKeptVehicle() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port DeleteKeptVehicle::~DeleteKeptVehicle")
+        // C++ destructor is empty
     }
 
     /// C++: `SUMOTime DeleteKeptVehicle::execute(SUMOTime)` [virtual]
@@ -68,7 +115,8 @@ impl MSVehicleControl_DeleteKeptVehicle {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port DeleteKeptVehicle::execute")
+        MSNet::get_instance().m().get_vehicle_control().delete_vehicle(self.myVehicle, false, true);
+        0
     }
 
     /// C++: `DeleteKeptVehicle & DeleteKeptVehicle::operator=(const DeleteKeptVehicle &)` [private]
@@ -76,7 +124,7 @@ impl MSVehicleControl_DeleteKeptVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSVehicleControl_DeleteKeptVehicle) -> &mut MSVehicleControl_DeleteKeptVehicle {
-        todo!("port DeleteKeptVehicle::operator=")
+        invalid_copy()
     }
 
 }
@@ -117,7 +165,7 @@ pub struct MSVehicleControl {
     /// Dictionary of vehicle types
     pub myVTypeDict: MSVehicleControl_VTypeDictType,
     /// A distribution of vehicle types (probability->vehicle type)
-    pub myVTypeDistDict: RONet_VTypeDistDictType,
+    pub myVTypeDistDict: MSVehicleControl_VTypeDistDictType,
     /// Inverse lookup from vehicle type to distributions it is a member of
     pub myVTypeToDist: BTreeMap<String, BTreeSet<String>>, // C++: std::map<std::string, std::set<std::string>>
     /// the default vehicle types which may still be replaced
@@ -171,7 +219,42 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSVehicleControl::MSVehicleControl")
+        let mut s = MSVehicleControl {
+            myLoadedVehNo: 0,
+            myRunningVehNo: 0,
+            myEndedVehNo: 0,
+            myDiscarded: 0,
+            myCollisions: 0,
+            myTeleportsCollision: 0,
+            myTeleportsJam: 0,
+            myTeleportsYield: 0,
+            myTeleportsWrongLane: 0,
+            myEmergencyStops: 0,
+            myEmergencyBrakingCount: 0,
+            myStoppedVehicles: 0,
+            myTotalDepartureDelay: 0.,
+            myTotalTravelTime: 0.,
+            myVehicleDict: BTreeMap::new(),
+            myVTypeDict: BTreeMap::new(),
+            myVTypeDistDict: BTreeMap::new(),
+            myVTypeToDist: BTreeMap::new(),
+            myReplaceableDefaultVTypes: BTreeSet::new(),
+            myWaitingForTransportable: 0,
+            myScale: 0.,
+            myKeepTime: 0,
+            myMaxSpeedFactor: 1.,
+            myMinDeceleration: SUMOVTypeParameter::get_default_decel(SVC_IGNORING),
+            myMinDecelerationRail: SUMOVTypeParameter::get_default_decel(SVC_RAIL),
+            myMaxMinGap: 0.,
+            // shortcut: C++ myPendingRemovals(gNumSimThreads > 1) is a locking container flag; a plain Vec is used
+            myPTVehicles: Vec::new(),
+            myPendingRemovals: Vec::new(),
+        };
+
+        s.init_default_types();
+        s.myScale = get_float("scale") as f64;
+        s.myKeepTime = string2time(&get_string("keep-after-arrival")).unwrap_or_else(|e| panic!("{}", e));
+        s
     }
 
     /// C++: `void MSVehicleControl::~MSVehicleControl()` [virtual]
@@ -179,7 +262,7 @@ impl MSVehicleControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicleControl::~MSVehicleControl")
+        self.clear_state(false);
     }
 
     /// C++: `SUMOVehicle * MSVehicleControl::buildVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const bool, const VehicleDefinitionSource, bool)` [virtual]
@@ -195,7 +278,15 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle(&mut self, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
-        todo!("port MSVehicleControl::buildVehicle")
+        let rng = if source == MSVehicleControl_VehicleDefinitionSource::ROUTEFILE {
+            SUMORouteHandler::get_parsing_rng()
+        } else {
+            Ptr::null()
+        };
+        let speedFactor = type_.compute_chosen_speed_deviation(defs.speedFactor, rng, -1.);
+        let built: Ptr<MSVehicle> = Ptr::from_mut(Box::leak(Box::new(MSVehicle::new(defs, route, type_, speedFactor))));
+        self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        Ptr::from_mut(&mut built.m().base.base)
     }
 
     /// C++: `bool MSVehicleControl::addVehicle(const std::string &, SUMOVehicle *)` [virtual]
@@ -217,7 +308,18 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle(&mut self, id: &str, v: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSVehicleControl::addVehicle")
+        if !self.myVehicleDict.contains_key(id) {
+            // id not in myVehicleDict.
+            self.myVehicleDict.insert(id.to_string(), v);
+            self.handle_triggered_depart(v, true);
+            let bv = as_base(v);
+            let pars = bv.get_parameter();
+            if bv.get_v_class() != SVC_TAXI && !pars.line.is_empty() && pars.repetitionNumber < 0 {
+                self.myPTVehicles.push(v);
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `SUMOVehicle * MSVehicleControl::getVehicle(const std::string &) const` [const]
@@ -232,7 +334,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle(&self, id: &str) -> Ptr<SUMOVehicle> {
-        todo!("port MSVehicleControl::getVehicle")
+        self.myVehicleDict.get(id).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `void MSVehicleControl::deleteVehicle(SUMOVehicle *, bool, bool)` [virtual]
@@ -255,8 +357,20 @@ impl MSVehicleControl {
     //     delete veh;
     // }
     #[allow(unused_variables)]
-    pub fn delete_vehicle(&mut self, v: Ptr<SUMOVehicle>, discard: bool, wasKept: bool) {
-        todo!("port MSVehicleControl::deleteVehicle")
+    pub fn delete_vehicle(&mut self, veh: Ptr<SUMOVehicle>, discard: bool, wasKept: bool) {
+        if !wasKept {
+            self.myEndedVehNo += 1;
+            if discard {
+                self.myDiscarded += 1;
+            }
+        }
+        if !veh.is_null() {
+            self.myVehicleDict.remove(&veh.get_id().to_string());
+        }
+        if let Some(ptVehIt) = self.myPTVehicles.iter().position(|p| *p == veh) {
+            self.myPTVehicles.remove(ptVehIt);
+        }
+        // shortcut: C++ `delete veh` is not done, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
     }
 
     /// C++: `void MSVehicleControl::deleteKeptVehicle(SUMOVehicle *)`
@@ -268,7 +382,11 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn delete_kept_vehicle(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSVehicleControl::deleteKeptVehicle")
+        self.myEndedVehNo += 1;
+        let execTimeStep = MSNet::get_instance().m().get_current_time_step() + self.myKeepTime;
+        let event = MSVehicleControl_DeleteKeptVehicle::new(veh);
+        let cmd: *mut dyn Command = Box::into_raw(Box::new(event));
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd), execTimeStep);
     }
 
     /// C++: `void MSVehicleControl::fixVehicleCounts()`
@@ -279,7 +397,9 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn fix_vehicle_counts(&mut self) {
-        todo!("port MSVehicleControl::fixVehicleCounts")
+        self.myLoadedVehNo += 1;
+        self.myEndedVehNo += 1;
+        self.myDiscarded += 1;
     }
 
     /// C++: `void MSVehicleControl::scheduleVehicleRemoval(SUMOVehicle *, bool)`
@@ -293,7 +413,10 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn schedule_vehicle_removal(&mut self, veh: Ptr<SUMOVehicle>, checkDuplicate: bool) {
-        todo!("port MSVehicleControl::scheduleVehicleRemoval")
+        debug_assert!(self.myRunningVehNo > 0);
+        if !checkDuplicate || !self.is_pending_removal(veh) {
+            self.myPendingRemovals.push(veh);
+        }
     }
 
     /// C++: `void MSVehicleControl::removePending()`
@@ -337,7 +460,42 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn remove_pending(&mut self) {
-        todo!("port MSVehicleControl::removePending")
+        let tripinfoOut: Ptr<OutputDevice> = if is_set("tripinfo-output") {
+            match OutputDevice::get_device_by_option("tripinfo-output") {
+                Ok(dev) => Ptr::from_raw(dev.as_ptr()),
+                Err(e) => panic!("{}", e),
+            }
+        } else {
+            Ptr::null()
+        };
+        // std::sort with ComparatorNumericalIdLess; numerical ids are unique so ties cannot occur
+        let mut vehs = std::mem::take(&mut self.myPendingRemovals);
+        vehs.sort_by_key(|v| as_base(*v).get_numerical_id());
+        for veh in vehs.iter().copied() {
+            self.myTotalTravelTime += steps2time(MSNet::get_instance().m().get_current_time_step() - veh.get_departure());
+            self.myRunningVehNo -= 1;
+            MSNet::get_instance().m().inform_vehicle_state_listener(veh, MSNet_VehicleState::ARRIVED, "");
+            // vehicle is equipped with tripinfo device (not all vehicles are)
+            // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
+            let hasTripinfo = !tripinfoOut.is_null();
+            for dev in veh.get_devices().iter() {
+                // shortcut: C++ virtual dispatch to the device subclass is not available, calls MSDevice's base generateOutput, upgrade when devices are trait objects
+                dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+            }
+            if !tripinfoOut.is_null() && hasTripinfo {
+                // close tag after tripinfo (possibly including emissions from another device) have been written
+                tripinfoOut.m().close_tag("");
+            }
+            if self.myKeepTime == 0 {
+                self.delete_vehicle(veh, false, false);
+            } else {
+                self.delete_kept_vehicle(veh);
+            }
+        }
+        if !tripinfoOut.is_null() {
+            // there seem to be people who think reading an unfinished xml is a good idea ;-)
+            tripinfoOut.m().flush();
+        }
     }
 
     /// C++: `constVehIt MSVehicleControl::loadedVehBegin() const` [const]
@@ -346,8 +504,9 @@ impl MSVehicleControl {
     //         return myVehicleDict.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_veh_begin(&self) -> MSVehicleControl_constVehIt {
-        todo!("port MSVehicleControl::loadedVehBegin")
+    pub fn loaded_veh_begin(&self) -> usize {
+        // shortcut: C++ map const_iterator is modeled as an index into myVehicleDict (BTreeMap has no begin/end iterator pair here), upgrade when callers take real iterators
+        0
     }
 
     /// C++: `constVehIt MSVehicleControl::loadedVehEnd() const` [const]
@@ -356,8 +515,9 @@ impl MSVehicleControl {
     //         return myVehicleDict.end();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_veh_end(&self) -> MSVehicleControl_constVehIt {
-        todo!("port MSVehicleControl::loadedVehEnd")
+    pub fn loaded_veh_end(&self) -> usize {
+        // shortcut: see loadedVehBegin; the end position is the number of loaded vehicles
+        self.myVehicleDict.len()
     }
 
     /// C++: `void MSVehicleControl::handleTriggeredDepart(SUMOVehicle *, bool)`
@@ -394,7 +554,34 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn handle_triggered_depart(&mut self, v: Ptr<SUMOVehicle>, add: bool) {
-        todo!("port MSVehicleControl::handleTriggeredDepart")
+        let bv = as_base(v);
+        let pars = bv.get_parameter();
+        if pars.departProcedure == DepartDefinition::TRIGGERED || pars.departProcedure == DepartDefinition::CONTAINER_TRIGGERED || pars.departProcedure == DepartDefinition::SPLIT {
+            let firstEdge: Ptr<MSEdge> = v.get_route().get_edges()[pars.departEdge as usize];
+            if add {
+                if !g_use_meso_sim() {
+                    // position will be checked against person position later
+                    as_ms_vehicle(v).m().set_tentative_lane_and_position(Ptr::null(), pars.departPos, 0.);
+                }
+                if firstEdge.is_taz_connector() {
+                    for out in firstEdge.get_successors(SVC_IGNORING).iter() {
+                        out.add_waiting(v);
+                    }
+                } else {
+                    firstEdge.add_waiting(v);
+                }
+                self.register_one_waiting();
+            } else {
+                if firstEdge.is_taz_connector() {
+                    for out in firstEdge.get_successors(SVC_IGNORING).iter() {
+                        out.remove_waiting(v);
+                    }
+                } else {
+                    firstEdge.remove_waiting(v);
+                }
+                self.unregister_one_waiting();
+            }
+        }
     }
 
     /// C++: `void MSVehicleControl::vehicleDeparted(const SUMOVehicle &)`
@@ -420,7 +607,23 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_departed(&mut self, v: &SUMOVehicle) {
-        todo!("port MSVehicleControl::vehicleDeparted")
+        let bv: Ptr<MSBaseVehicle> = Ptr::new(v).cast::<MSBaseVehicle>();
+        self.myRunningVehNo += 1;
+        self.myTotalDepartureDelay += steps2time(v.get_departure() - stepfloor(bv.get_parameter().depart));
+        MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::new(v), MSNet_VehicleState::DEPARTED, "");
+        self.myMaxSpeedFactor = max_of(self.myMaxSpeedFactor, bv.get_chosen_speed_factor());
+        self.myMaxMinGap = max_of(self.myMaxMinGap, bv.get_vehicle_type().get_min_gap());
+        let maxDecel = bv.get_vehicle_type().get_car_follow_model().get_max_decel();
+        if (bv.get_v_class() & (SVC_PEDESTRIAN | SVC_NON_ROAD)) == 0 {
+            // only  worry about deceleration of road users
+            self.myMinDeceleration = min_of(self.myMinDeceleration, maxDecel);
+        } else if (bv.get_v_class() & SVC_RAIL_CLASSES) != 0 {
+            self.myMinDecelerationRail = min_of(self.myMinDecelerationRail, maxDecel);
+            if (bv.get_edge().get_permissions() & SVC_ROAD_MOTOR_CLASSES) != 0 {
+                // shared rail/road
+                self.myMinDeceleration = min_of(self.myMinDeceleration, maxDecel);
+            }
+        }
     }
 
     /// C++: `int MSVehicleControl::getLoadedVehicleNo() const` [const]
@@ -430,7 +633,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_loaded_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getLoadedVehicleNo")
+        self.myLoadedVehNo
     }
 
     /// C++: `int MSVehicleControl::getHaltingVehicleNo() const` [const, virtual]
@@ -448,7 +651,14 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_halting_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getHaltingVehicleNo")
+        let mut result = 0;
+        for veh in self.myVehicleDict.values() {
+            let mv = as_ms_vehicle(*veh);
+            if (mv.is_on_road() || mv.is_remote_controlled()) && mv.get_speed() < SUMO_CONST_HALTING_SPEED {
+                result += 1;
+            }
+        }
+        result
     }
 
     /// C++: `std::pair<double, double> MSVehicleControl::getVehicleMeanSpeeds() const` [const, virtual]
@@ -474,7 +684,23 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_mean_speeds(&self) -> (f64, f64) {
-        todo!("port MSVehicleControl::getVehicleMeanSpeeds")
+        let mut speedSum = 0.;
+        let mut relSpeedSum = 0.;
+        let mut count = 0;
+        for veh in self.myVehicleDict.values() {
+            let mv = as_ms_vehicle(*veh);
+            if (mv.is_on_road() || mv.is_remote_controlled()) && !mv.base.is_stopped() {
+                count += 1;
+                speedSum += mv.get_speed();
+                let limit = mv.base.get_edge().get_speed_limit();
+                relSpeedSum += if limit > 0. { mv.get_speed() / limit } else { 0. };
+            }
+        }
+        if count > 0 {
+            (speedSum / count as f64, relSpeedSum / count as f64)
+        } else {
+            (-1., -1.)
+        }
     }
 
     /// C++: `double MSVehicleControl::getVehicleMeanSpeed() const` [const]
@@ -483,7 +709,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_mean_speed(&self) -> f64 {
-        todo!("port MSVehicleControl::getVehicleMeanSpeed")
+        self.get_vehicle_mean_speeds().0
     }
 
     /// C++: `double MSVehicleControl::getVehicleMeanSpeedRelative() const` [const]
@@ -492,7 +718,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_mean_speed_relative(&self) -> f64 {
-        todo!("port MSVehicleControl::getVehicleMeanSpeedRelative")
+        self.get_vehicle_mean_speeds().1
     }
 
     /// C++: `int MSVehicleControl::getEndedVehicleNo() const` [const]
@@ -502,7 +728,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_ended_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getEndedVehicleNo")
+        self.myEndedVehNo
     }
 
     /// C++: `int MSVehicleControl::getArrivedVehicleNo() const` [const]
@@ -512,7 +738,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrived_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getArrivedVehicleNo")
+        self.myEndedVehNo - self.myDiscarded
     }
 
     /// C++: `int MSVehicleControl::getDiscardedVehicleNo() const` [const]
@@ -522,7 +748,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_discarded_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getDiscardedVehicleNo")
+        self.myDiscarded
     }
 
     /// C++: `int MSVehicleControl::getRunningVehicleNo() const` [const]
@@ -532,7 +758,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_running_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getRunningVehicleNo")
+        self.myRunningVehNo
     }
 
     /// C++: `int MSVehicleControl::getDepartedVehicleNo() const` [const]
@@ -542,7 +768,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_departed_vehicle_no(&self) -> i32 {
-        todo!("port MSVehicleControl::getDepartedVehicleNo")
+        self.myRunningVehNo + self.myEndedVehNo - self.myDiscarded
     }
 
     /// C++: `int MSVehicleControl::getQuota(double, int) const` [const]
@@ -559,7 +785,15 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_quota(&self, frac: f64, loaded: i32) -> i32 {
-        todo!("port MSVehicleControl::getQuota")
+        let frac = if frac < 0. { self.myScale } else { frac };
+        let origLoaded: i32 = if loaded < 1 {
+            // the vehicle in question has already been loaded, hence  the '-1'
+            if frac > 1. { (self.myLoadedVehNo as f64 / frac) as i32 } else { self.myLoadedVehNo - 1 }
+        } else {
+            // given transportable number reflects only previously loaded
+            if frac > 1. { (loaded as f64 / frac) as i32 } else { loaded }
+        };
+        get_scaling_quota(frac, origLoaded as i64)
     }
 
     /// C++: `int MSVehicleControl::getActiveVehicleCount() const` [const]
@@ -569,7 +803,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_active_vehicle_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getActiveVehicleCount")
+        self.myLoadedVehNo - (self.myWaitingForTransportable + self.myEndedVehNo)
     }
 
     /// C++: `int MSVehicleControl::getTriggeredVehicleCount() const` [const]
@@ -579,7 +813,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_triggered_vehicle_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getTriggeredVehicleCount")
+        self.myWaitingForTransportable
     }
 
     /// C++: `int MSVehicleControl::getCollisionCount() const` [const]
@@ -589,7 +823,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_collision_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getCollisionCount")
+        self.myCollisions
     }
 
     /// C++: `int MSVehicleControl::getTeleportsCollisions() const` [const]
@@ -599,7 +833,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_collisions(&self) -> i32 {
-        todo!("port MSVehicleControl::getTeleportsCollisions")
+        self.myTeleportsCollision
     }
 
     /// C++: `int MSVehicleControl::getTeleportsJam() const` [const]
@@ -609,7 +843,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_jam(&self) -> i32 {
-        todo!("port MSVehicleControl::getTeleportsJam")
+        self.myTeleportsJam
     }
 
     /// C++: `int MSVehicleControl::getTeleportsYield() const` [const]
@@ -619,7 +853,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_yield(&self) -> i32 {
-        todo!("port MSVehicleControl::getTeleportsYield")
+        self.myTeleportsYield
     }
 
     /// C++: `int MSVehicleControl::getTeleportsWrongLane() const` [const]
@@ -629,7 +863,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_teleports_wrong_lane(&self) -> i32 {
-        todo!("port MSVehicleControl::getTeleportsWrongLane")
+        self.myTeleportsWrongLane
     }
 
     /// C++: `int MSVehicleControl::getTeleportCount() const` [const]
@@ -640,7 +874,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_teleport_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getTeleportCount")
+        self.myTeleportsCollision + self.myTeleportsJam + self.myTeleportsYield + self.myTeleportsWrongLane
     }
 
     /// C++: `int MSVehicleControl::getEmergencyStops() const` [const]
@@ -650,7 +884,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_emergency_stops(&self) -> i32 {
-        todo!("port MSVehicleControl::getEmergencyStops")
+        self.myEmergencyStops
     }
 
     /// C++: `int MSVehicleControl::getEmergencyBrakingCount() const` [const]
@@ -660,7 +894,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_emergency_braking_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getEmergencyBrakingCount")
+        self.myEmergencyBrakingCount
     }
 
     /// C++: `int MSVehicleControl::getStoppedVehiclesCount() const` [const]
@@ -670,7 +904,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_stopped_vehicles_count(&self) -> i32 {
-        todo!("port MSVehicleControl::getStoppedVehiclesCount")
+        self.myStoppedVehicles
     }
 
     /// C++: `double MSVehicleControl::getTotalDepartureDelay() const` [const]
@@ -680,7 +914,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_departure_delay(&self) -> f64 {
-        todo!("port MSVehicleControl::getTotalDepartureDelay")
+        self.myTotalDepartureDelay
     }
 
     /// C++: `double MSVehicleControl::getTotalTravelTime() const` [const]
@@ -690,7 +924,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_travel_time(&self) -> f64 {
-        todo!("port MSVehicleControl::getTotalTravelTime")
+        self.myTotalTravelTime
     }
 
     /// C++: `bool MSVehicleControl::addVType(MSVehicleType *)`
@@ -705,7 +939,11 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn add_v_type(&mut self, vehType: Ptr<MSVehicleType>) -> bool {
-        todo!("port MSVehicleControl::addVType")
+        if self.check_v_type(vehType.get_id()) {
+            self.myVTypeDict.insert(vehType.get_id().to_string(), vehType);
+            return true;
+        }
+        false
     }
 
     /// C++: `void MSVehicleControl::removeVType(const MSVehicleType *)`
@@ -721,7 +959,12 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn remove_v_type(&mut self, vehType: Ptr<MSVehicleType>) {
-        todo!("port MSVehicleControl::removeVType")
+        let id = vehType.get_id().to_string();
+        self.myVTypeDict.remove(&id);
+        if self.myVTypeToDist.contains_key(&id) {
+            self.myVTypeToDist.remove(&id);
+        }
+        // shortcut: C++ `delete vehType` is not done, types are Box::leak'ed by MSVehicleType::build, upgrade when type ownership is Box-based
     }
 
     /// C++: `bool MSVehicleControl::addVTypeDistribution(const std::string &, RandomDistributor<MSVehicleType *> *)`
@@ -744,7 +987,15 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn add_v_type_distribution(&mut self, id: &str, vehTypeDistribution: Ptr<RandomDistributor<Ptr<MSVehicleType>>>) -> bool {
-        todo!("port MSVehicleControl::addVTypeDistribution")
+        if self.check_v_type(id) {
+            self.myVTypeDistDict.insert(id.to_string(), vehTypeDistribution);
+            let vehTypes: Vec<Ptr<MSVehicleType>> = vehTypeDistribution.get_vals().to_vec();
+            for vehType in vehTypes {
+                self.myVTypeToDist.entry(vehType.get_id().to_string()).or_default().insert(id.to_string());
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSVehicleControl::hasVType(const std::string &) const` [const]
@@ -755,7 +1006,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn has_v_type(&self, id: &str) -> bool {
-        todo!("port MSVehicleControl::hasVType")
+        self.myVTypeDict.contains_key(id) || self.myVTypeDistDict.contains_key(id)
     }
 
     /// C++: `bool MSVehicleControl::hasVTypeDistribution(const std::string &) const` [const]
@@ -766,7 +1017,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn has_v_type_distribution(&self, id: &str) -> bool {
-        todo!("port MSVehicleControl::hasVTypeDistribution")
+        self.myVTypeDistDict.contains_key(id)
     }
 
     /// C++: `MSVehicleType * MSVehicleControl::getVType(const std::string &, SumoRNG *, bool)`
@@ -788,7 +1039,21 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_v_type(&mut self, id: &str, rng: Ptr<SumoRNG>, readOnly: bool) -> Ptr<MSVehicleType> {
-        todo!("port MSVehicleControl::getVType")
+        match self.myVTypeDict.get(id).copied() {
+            None => match self.myVTypeDistDict.get(id).copied() {
+                None => Ptr::null(),
+                Some(dist) => dist
+                    .m()
+                    .get(if rng.is_null() { None } else { Some(rng.m()) })
+                    .unwrap_or_else(|e| panic!("{}", e)),
+            },
+            Some(vt) => {
+                if !readOnly && self.myReplaceableDefaultVTypes.remove(id) {
+                    vt.m().check();
+                }
+                vt
+            }
+        }
     }
 
     /// C++: `void MSVehicleControl::insertVTypeIDs(std::vector<std::string> &) const` [const]
@@ -805,7 +1070,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn insert_v_type_i_ds(&self, into: &mut Vec<String>) {
-        todo!("port MSVehicleControl::insertVTypeIDs")
+        into.reserve(into.len() + self.myVTypeDict.len() + self.myVTypeDistDict.len());
+        for id in self.myVTypeDict.keys() {
+            into.push(id.clone());
+        }
+        for id in self.myVTypeDistDict.keys() {
+            into.push(id.clone());
+        }
     }
 
     /// C++: `const std::set<std::string> MSVehicleControl::getVTypeDistributionMembership(const std::string &) const` [const]
@@ -820,7 +1091,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_v_type_distribution_membership(&self, id: &str) -> BTreeSet<String> {
-        todo!("port MSVehicleControl::getVTypeDistributionMembership")
+        self.myVTypeToDist.get(id).cloned().unwrap_or_default()
     }
 
     /// C++: `const RandomDistributor<MSVehicleType *> * MSVehicleControl::getVTypeDistribution(const std::string &) const` [const]
@@ -835,7 +1106,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_v_type_distribution(&self, typeDistID: &str) -> Ptr<RandomDistributor<Ptr<MSVehicleType>>> {
-        todo!("port MSVehicleControl::getVTypeDistribution")
+        self.myVTypeDistDict.get(typeDistID).copied().unwrap_or(Ptr::null())
     }
 
     /// C++: `const std::vector<MSVehicleType *> MSVehicleControl::getPedestrianTypes() const` [const]
@@ -851,7 +1122,11 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_types(&self) -> Vec<Ptr<MSVehicleType>> {
-        todo!("port MSVehicleControl::getPedestrianTypes")
+        self.myVTypeDict
+            .values()
+            .filter(|t| t.get_vehicle_class() == SVC_PEDESTRIAN)
+            .copied()
+            .collect()
     }
 
     /// C++: `void MSVehicleControl::registerOneWaiting()`
@@ -861,7 +1136,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_one_waiting(&mut self) {
-        todo!("port MSVehicleControl::registerOneWaiting")
+        self.myWaitingForTransportable += 1;
     }
 
     /// C++: `void MSVehicleControl::unregisterOneWaiting()`
@@ -871,7 +1146,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn unregister_one_waiting(&mut self) {
-        todo!("port MSVehicleControl::unregisterOneWaiting")
+        self.myWaitingForTransportable -= 1;
     }
 
     /// C++: `void MSVehicleControl::countCollision(bool)`
@@ -884,7 +1159,10 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn count_collision(&mut self, teleport: bool) {
-        todo!("port MSVehicleControl::countCollision")
+        self.myCollisions += 1;
+        if teleport {
+            self.myTeleportsCollision += 1;
+        }
     }
 
     /// C++: `void MSVehicleControl::registerTeleportJam()`
@@ -894,7 +1172,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_teleport_jam(&mut self) {
-        todo!("port MSVehicleControl::registerTeleportJam")
+        self.myTeleportsJam += 1;
     }
 
     /// C++: `void MSVehicleControl::registerTeleportYield()`
@@ -904,7 +1182,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_teleport_yield(&mut self) {
-        todo!("port MSVehicleControl::registerTeleportYield")
+        self.myTeleportsYield += 1;
     }
 
     /// C++: `void MSVehicleControl::registerTeleportWrongLane()`
@@ -914,7 +1192,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_teleport_wrong_lane(&mut self) {
-        todo!("port MSVehicleControl::registerTeleportWrongLane")
+        self.myTeleportsWrongLane += 1;
     }
 
     /// C++: `void MSVehicleControl::registerEmergencyStop()`
@@ -924,7 +1202,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_emergency_stop(&mut self) {
-        todo!("port MSVehicleControl::registerEmergencyStop")
+        self.myEmergencyStops += 1;
     }
 
     /// C++: `void MSVehicleControl::registerEmergencyBraking()`
@@ -934,7 +1212,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_emergency_braking(&mut self) {
-        todo!("port MSVehicleControl::registerEmergencyBraking")
+        self.myEmergencyBrakingCount += 1;
     }
 
     /// C++: `void MSVehicleControl::registerStopStarted()`
@@ -944,7 +1222,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_stop_started(&mut self) {
-        todo!("port MSVehicleControl::registerStopStarted")
+        self.myStoppedVehicles += 1;
     }
 
     /// C++: `void MSVehicleControl::registerStopEnded()`
@@ -954,7 +1232,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn register_stop_ended(&mut self) {
-        todo!("port MSVehicleControl::registerStopEnded")
+        self.myStoppedVehicles -= 1;
     }
 
     /// C++: `void MSVehicleControl::setState(int, int, int, double, double, double, double)`
@@ -971,7 +1249,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn set_state(&mut self, runningVehNo: i32, loadedVehNo: i32, endedVehNo: i32, totalDepartureDelay: f64, totalTravelTime: f64, maxSpeedFactor: f64, minDecel: f64) {
-        todo!("port MSVehicleControl::setState")
+        self.myRunningVehNo = runningVehNo;
+        self.myLoadedVehNo = loadedVehNo;
+        self.myEndedVehNo = endedVehNo;
+        self.myTotalDepartureDelay = totalDepartureDelay;
+        self.myTotalTravelTime = totalTravelTime;
+        self.myMaxSpeedFactor = maxSpeedFactor;
+        self.myMinDeceleration = minDecel;
     }
 
     /// C++: `void MSVehicleControl::saveState(OutputDevice &)`
@@ -1014,7 +1298,39 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSVehicleControl::saveState")
+        out.open_tag_id(SUMO_TAG_DELAY);
+        out.write_attr(SUMO_ATTR_NUMBER, &self.myRunningVehNo);
+        out.write_attr(SUMO_ATTR_BEGIN, &self.myLoadedVehNo);
+        out.write_attr(SUMO_ATTR_END, &self.myEndedVehNo);
+        out.write_attr(SUMO_ATTR_DEPART, &self.myTotalDepartureDelay);
+        out.write_attr(SUMO_ATTR_TIME, &self.myTotalTravelTime);
+        out.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.myMaxSpeedFactor);
+        out.write_attr(SUMO_ATTR_DECEL, &self.myMinDeceleration);
+        let loaderTime = MSNet::get_instance().m().get_loader_time();
+        if loaderTime > 0 && loaderTime != SUMOTIME_MAX {
+            out.write_attr(SUMO_ATTR_LOADERTIME, &MSNet::get_instance().m().get_loader_time());
+        }
+        out.close_tag("");
+        // save vehicle types
+        for (id, item) in self.myVTypeDict.iter() {
+            if !self.myReplaceableDefaultVTypes.contains(id) {
+                item.get_parameter().write(out);
+            }
+        }
+        for (id, item) in self.myVTypeDistDict.iter() {
+            out.open_tag_id(SUMO_TAG_VTYPE_DISTRIBUTION).write_attr(SUMO_ATTR_ID, id.as_str());
+            let vals: Vec<String> = item.get_vals().iter().map(|t| t.get_id().to_string()).collect();
+            out.write_attr(SUMO_ATTR_VTYPES, vals.join(" ").as_str());
+            let probs: Vec<String> = item.get_probs().iter().map(|p| f64_to_string(*p)).collect();
+            out.write_attr(SUMO_ATTR_PROBS, probs.join(" ").as_str());
+            out.close_tag("");
+        }
+        let mut sortedVehs: Vec<Ptr<SUMOVehicle>> = self.myVehicleDict.values().copied().collect();
+        // determinism: ComparatorNumericalIdLess; numerical ids are unique
+        sortedVehs.sort_by_key(|v| as_base(*v).get_numerical_id());
+        for veh in sortedVehs {
+            veh.m().save_state(out);
+        }
     }
 
     /// C++: `void MSVehicleControl::clearState(const bool)`
@@ -1056,7 +1372,28 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, reinit: bool) {
-        todo!("port MSVehicleControl::clearState")
+        // shortcut: C++ deletes the vehicles, distributions and types here; they are Box::leak'ed and are not freed
+        self.myVehicleDict.clear();
+        self.myVTypeDistDict.clear();
+        self.myVTypeDict.clear();
+        self.myPendingRemovals.clear(); // could be leftovers from MSVehicleTransfer::checkInsertions (teleport beyond arrival)
+        if reinit {
+            self.init_default_types();
+        }
+        self.myLoadedVehNo = 0;
+        self.myRunningVehNo = 0;
+        self.myEndedVehNo = 0;
+        self.myDiscarded = 0;
+        self.myCollisions = 0;
+        self.myTeleportsCollision = 0;
+        self.myTeleportsJam = 0;
+        self.myTeleportsYield = 0;
+        self.myTeleportsWrongLane = 0;
+        self.myEmergencyStops = 0;
+        self.myEmergencyBrakingCount = 0;
+        self.myStoppedVehicles = 0;
+        self.myTotalDepartureDelay = 0.;
+        self.myTotalTravelTime = 0.;
     }
 
     /// C++: `void MSVehicleControl::discountStateRemoved(int)`
@@ -1068,7 +1405,9 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn discount_state_removed(&mut self, n: i32) {
-        todo!("port MSVehicleControl::discountStateRemoved")
+        self.myRunningVehNo -= n;
+        self.myDiscarded += n;
+        self.myEndedVehNo += n;
     }
 
     /// C++: `void MSVehicleControl::discountRoutingVehicle()`
@@ -1079,7 +1418,9 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn discount_routing_vehicle(&mut self) {
-        todo!("port MSVehicleControl::discountRoutingVehicle")
+        self.myLoadedVehNo -= 1;
+        self.myEndedVehNo -= 1;
+        self.myDiscarded -= 1;
     }
 
     /// C++: `void MSVehicleControl::abortWaiting()`
@@ -1122,7 +1463,39 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn abort_waiting(&mut self) {
-        todo!("port MSVehicleControl::abortWaiting")
+        for (id, veh) in self.myVehicleDict.iter() {
+            let mut waitReason = String::new();
+            if veh.is_stopped_triggered() {
+                let stop = veh.get_next_stop();
+                if stop.triggered {
+                    waitReason = "for a person that will never come".to_string();
+                } else if stop.containerTriggered {
+                    waitReason = "for a container that will never come".to_string();
+                } else if stop.joinTriggered {
+                    if !stop.pars.join.is_empty() {
+                        waitReason = format!("to be joined to vehicle '{}'", stop.pars.join);
+                    } else {
+                        waitReason = "for a joining vehicle that will never come".to_string();
+                    }
+                } else {
+                    waitReason = "for an unknown trigger".to_string();
+                }
+            } else if !veh.has_departed() {
+                let departProcedure = as_base(*veh).get_parameter().departProcedure;
+                if departProcedure == DepartDefinition::SPLIT {
+                    waitReason = "for a train from which to split".to_string();
+                } else if departProcedure == DepartDefinition::TRIGGERED {
+                    waitReason = "at insertion for a person that will never come".to_string();
+                } else if departProcedure == DepartDefinition::CONTAINER_TRIGGERED {
+                    waitReason = "at insertion for a container that will never come".to_string();
+                } else {
+                    waitReason = "for an unknown departure trigger".to_string();
+                }
+            } else {
+                waitReason = "for an unknown reason".to_string();
+            }
+            utils::write_warningf!("Vehicle '%' aborted waiting %.", id.as_str(), waitReason.as_str());
+        }
     }
 
     /// C++: `double MSVehicleControl::getMaxSpeedFactor() const` [const]
@@ -1132,7 +1505,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed_factor(&self) -> f64 {
-        todo!("port MSVehicleControl::getMaxSpeedFactor")
+        self.myMaxSpeedFactor
     }
 
     /// C++: `double MSVehicleControl::getMinDeceleration() const` [const]
@@ -1142,7 +1515,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_deceleration(&self) -> f64 {
-        todo!("port MSVehicleControl::getMinDeceleration")
+        self.myMinDeceleration
     }
 
     /// C++: `double MSVehicleControl::getMinDecelerationRail() const` [const]
@@ -1152,7 +1525,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_deceleration_rail(&self) -> f64 {
-        todo!("port MSVehicleControl::getMinDecelerationRail")
+        self.myMinDecelerationRail
     }
 
     /// C++: `double MSVehicleControl::getMaxMinGap() const` [const]
@@ -1162,7 +1535,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_min_gap(&self) -> f64 {
-        todo!("port MSVehicleControl::getMaxMinGap")
+        self.myMaxMinGap
     }
 
     /// C++: `void MSVehicleControl::adaptIntermodalRouter(MSTransportableRouter &) const` [const]
@@ -1176,7 +1549,15 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn adapt_intermodal_router(&self, router: &mut MSTransportableRouter) {
-        todo!("port MSVehicleControl::adaptIntermodalRouter")
+        for veh in self.myPTVehicles.iter() {
+            // add single vehicles with line attribute which are not part of a flow
+            let bv = as_base(*veh);
+            let pars = bv.get_parameter();
+            let route: ConstMSRoutePtr = MSRoute::dictionary_3(&pars.routeid, Ptr::null());
+            // shortcut: ConstMSRoutePtr is an Rc, so a null route cannot be represented and the nullptr branch is dropped, upgrade when dictionary returns Option
+            let stops: Ptr<StopParVector> = Ptr::new(route.get_stops());
+            router.get_network().m().add_schedule(pars, stops);
+        }
     }
 
     /// C++: `void MSVehicleControl::setScale(double)`
@@ -1186,7 +1567,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn set_scale(&mut self, scale: f64) {
-        todo!("port MSVehicleControl::setScale")
+        self.myScale = scale;
     }
 
     /// C++: `double MSVehicleControl::getScale() const` [const]
@@ -1196,7 +1577,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_scale(&self) -> f64 {
-        todo!("port MSVehicleControl::getScale")
+        self.myScale
     }
 
     /// C++: `void MSVehicleControl::secureVehicles()` [virtual]
@@ -1204,7 +1585,7 @@ impl MSVehicleControl {
     // virtual void secureVehicles() {}
     #[allow(unused_variables)]
     pub fn secure_vehicles(&mut self) {
-        todo!("port MSVehicleControl::secureVehicles")
+        // C++ virtual body is empty (locking is handled by subclasses)
     }
 
     /// C++: `void MSVehicleControl::releaseVehicles()` [virtual]
@@ -1212,7 +1593,7 @@ impl MSVehicleControl {
     // virtual void releaseVehicles() {}
     #[allow(unused_variables)]
     pub fn release_vehicles(&mut self) {
-        todo!("port MSVehicleControl::releaseVehicles")
+        // C++ virtual body is empty (locking is handled by subclasses)
     }
 
     /// C++: `void MSVehicleControl::initDefaultTypes()` [private]
@@ -1246,7 +1627,30 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn init_default_types(&mut self) {
-        todo!("port MSVehicleControl::initDefaultTypes")
+        let mut defType = SUMOVTypeParameter::new(DEFAULT_VTYPE_ID, SVC_PASSENGER);
+        self.myVTypeDict.insert(DEFAULT_VTYPE_ID.to_string(), MSVehicleType::build(&mut defType, ""));
+
+        let mut defPedType = SUMOVTypeParameter::new(DEFAULT_PEDTYPE_ID, SVC_PEDESTRIAN);
+        defPedType.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+        self.myVTypeDict.insert(DEFAULT_PEDTYPE_ID.to_string(), MSVehicleType::build(&mut defPedType, ""));
+
+        let mut defBikeType = SUMOVTypeParameter::new(DEFAULT_BIKETYPE_ID, SVC_BICYCLE);
+        defBikeType.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+        self.myVTypeDict.insert(DEFAULT_BIKETYPE_ID.to_string(), MSVehicleType::build(&mut defBikeType, ""));
+
+        let mut defTaxiType = SUMOVTypeParameter::new(DEFAULT_TAXITYPE_ID, SVC_TAXI);
+        defTaxiType.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+        self.myVTypeDict.insert(DEFAULT_TAXITYPE_ID.to_string(), MSVehicleType::build(&mut defTaxiType, ""));
+
+        let mut defRailType = SUMOVTypeParameter::new(DEFAULT_RAILTYPE_ID, SVC_RAIL);
+        defRailType.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+        self.myVTypeDict.insert(DEFAULT_RAILTYPE_ID.to_string(), MSVehicleType::build(&mut defRailType, ""));
+
+        let mut defContainerType = SUMOVTypeParameter::new(DEFAULT_CONTAINERTYPE_ID, SVC_CONTAINER);
+        defContainerType.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+        self.myVTypeDict.insert(DEFAULT_CONTAINERTYPE_ID.to_string(), MSVehicleType::build(&mut defContainerType, ""));
+
+        self.myReplaceableDefaultVTypes = DEFAULT_VTYPES.iter().map(|s| s.to_string()).collect();
     }
 
     /// C++: `bool MSVehicleControl::checkVType(const std::string &)` [private]
@@ -1265,7 +1669,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn check_v_type(&mut self, id: &str) -> bool {
-        todo!("port MSVehicleControl::checkVType")
+        if self.myReplaceableDefaultVTypes.remove(id) {
+            // shortcut: C++ `delete myVTypeDict[id]` is not done, see clearState
+            self.myVTypeDict.remove(id);
+        } else if self.myVTypeDict.contains_key(id) || self.myVTypeDistDict.contains_key(id) {
+            return false;
+        }
+        true
     }
 
     /// C++: `bool MSVehicleControl::isPendingRemoval(SUMOVehicle *)` [private]
@@ -1280,7 +1690,7 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn is_pending_removal(&mut self, veh: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSVehicleControl::isPendingRemoval")
+        self.myPendingRemovals.contains(&veh)
     }
 
     /// C++: `void MSVehicleControl::initVehicle(MSBaseVehicle *, const bool, bool, const VehicleDefinitionSource)` [protected]
@@ -1300,7 +1710,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn init_vehicle(&mut self, built: Ptr<MSBaseVehicle>, ignoreStopErrors: bool, addRouteStops: bool, source: MSVehicleControl_VehicleDefinitionSource) {
-        todo!("port MSVehicleControl::initVehicle")
+        self.myLoadedVehNo += 1;
+        // shortcut: C++ catches ProcessError here only to delete `built` and rethrow; the error propagates unchanged and `built` is leaked
+        built.m().init_devices();
+        if source != MSVehicleControl_VehicleDefinitionSource::STATE {
+            built.m().add_stops(ignoreStopErrors, Ptr::null(), addRouteStops);
+        }
+        MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut built.m().base), MSNet_VehicleState::BUILT, "");
     }
 
     /// C++: `void MSVehicleControl::MSVehicleControl(const MSVehicleControl &)` [private]
@@ -1308,7 +1724,7 @@ impl MSVehicleControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &MSVehicleControl) -> Self {
-        todo!("port MSVehicleControl::MSVehicleControl")
+        invalid_copy()
     }
 
     /// C++: `MSVehicleControl & MSVehicleControl::operator=(const MSVehicleControl &)` [private]
@@ -1316,7 +1732,7 @@ impl MSVehicleControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSVehicleControl) -> &mut MSVehicleControl {
-        todo!("port MSVehicleControl::operator=")
+        invalid_copy()
     }
 
 }

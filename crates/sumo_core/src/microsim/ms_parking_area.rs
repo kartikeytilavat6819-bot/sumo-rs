@@ -1,6 +1,47 @@
 //! Port of microsim/MSParkingArea.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_event_control::Command;
+use crate::microsim::ms_globals;
+use crate::utils::vehicle::sumo_vehicle_parameter::{DepartPosDefinition, SUMOVehicleParameter};
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+use utils::common::time::time2string;
+use utils::geom::geom_helper::{calculate_lot_space_angle, calculate_lot_space_position, calculate_lot_space_slope, deg2rad, rad2deg};
+use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
+use utils::xml::sumo_xml_definitions::{Tags, SUMO_TAG_PARKING_AREA};
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `MSNet::getInstance()->getCurrentTimeStep()` (macro `SIMSTEP`)
+fn simstep() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+
+/// C++ `WrappingCommand<MSParkingArea>` wrapping `MSParkingArea::updateOccupancy`
+pub struct MSParkingArea_UpdateOccupancyCommand {
+    pub area: Ptr<MSParkingArea>,
+}
+
+impl Command for MSParkingArea_UpdateOccupancyCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        self.area.m().update_occupancy(currentTime)
+    }
+}
+
+/// C++ `if (myUpdateEvent == nullptr) { myUpdateEvent = new WrappingCommand<MSParkingArea>(this, &MSParkingArea::updateOccupancy); MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(myUpdateEvent); }`
+fn schedule_update_event(area: &mut MSParkingArea) {
+    if !area.myUpdateEvent {
+        area.myUpdateEvent = true;
+        let cmd: &mut MSParkingArea_UpdateOccupancyCommand = Box::leak(Box::new(MSParkingArea_UpdateOccupancyCommand { area: Ptr::from_mut(area) }));
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(cmd as &mut dyn Command), -1);
+    }
+}
 
 /// Representation of a single lot space
 /// C++ class `MSParkingArea::LotSpaceDefinition` (microsim/MSParkingArea.h)
@@ -43,7 +84,18 @@ impl MSParkingArea_LotSpaceDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port LotSpaceDefinition::LotSpaceDefinition")
+        MSParkingArea_LotSpaceDefinition {
+            index: -1,
+            vehicle: Ptr::null(),
+            position: Position::default(),
+            rotation: 0.0,
+            slope: 0.0,
+            width: 0.0,
+            length: 0.0,
+            endPos: 0.0,
+            manoeuverAngle: 0.0,
+            sideIsLHS: false,
+        }
     }
 
     /// C++: `void LotSpaceDefinition::LotSpaceDefinition(int, SUMOVehicle *, double, double, double, double, double, double, double)`
@@ -62,7 +114,18 @@ impl MSParkingArea_LotSpaceDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(index: i32, vehicle: Ptr<SUMOVehicle>, x: f64, y: f64, z: f64, rotation: f64, slope: f64, width: f64, length: f64) -> Self {
-        todo!("port LotSpaceDefinition::LotSpaceDefinition")
+        MSParkingArea_LotSpaceDefinition {
+            index,
+            vehicle,
+            position: Position::new3(x, y, z),
+            rotation,
+            slope,
+            width,
+            length,
+            endPos: 0.0,
+            manoeuverAngle: 0.0,
+            sideIsLHS: false,
+        }
     }
 
 }
@@ -121,7 +184,8 @@ pub struct MSParkingArea {
     pub myDepartPos: f64,
     pub myDepartPosDefinition: DepartPosDefinition,
     /// Event for updating the occupancy
-    pub myUpdateEvent: Ptr<Unmapped /* Command */>,
+    /// whether the end-of-timestep updateOccupancy command is pending (C++ `myUpdateEvent != nullptr`)
+    pub myUpdateEvent: bool,
 }
 
 impl std::ops::Deref for MSParkingArea {
@@ -195,7 +259,68 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, lines: &Vec<String>, badges: &Vec<String>, lane: &mut MSLane, begPos: f64, endPos: f64, capacity: i32, width: f64, length: f64, angle: f64, name: &str, onRoad: bool, departPos: &str, lefthand: bool, reservable: bool) -> Self {
-        todo!("port MSParkingArea::MSParkingArea")
+        let mut me = MSParkingArea {
+            base: MSStoppingPlace::new(id, SUMO_TAG_PARKING_AREA, lines, lane, begPos, endPos, name.to_string(), 0, 0.0, &RGBColor::INVISIBLE, 90.0),
+            myLastFreeLot: -1,
+            myRoadSideCapacity: capacity,
+            myCapacity: 0,
+            myOnRoad: onRoad,
+            myReservable: reservable,
+            myWidth: width,
+            myLength: length,
+            myAngle: if lefthand { -angle } else { angle },
+            mySpaceOccupancies: Vec::new(),
+            myShape: PositionVector::default(),
+            myAcceptedBadges: badges.iter().cloned().collect(),
+            myEgressBlocked: false,
+            myReservationTime: -1,
+            myLastReservationTime: -1,
+            myReservations: 0,
+            myLastReservations: 0,
+            myReservationMaxLength: 0.0,
+            myLastReservationMaxLength: 0.0,
+            myReservedVehicles: BTreeSet::new(),
+            myRemoteReservedVehicles: BTreeSet::new(),
+            myLastRemoteReservedVehicles: BTreeSet::new(),
+            myMaxVehLength: 0.0,
+            myNumAlternatives: 0,
+            myLastStepOccupancy: 0,
+            myDepartPos: -1.0,
+            myDepartPosDefinition: DepartPosDefinition::DEFAULT,
+            myUpdateEvent: false,
+        };
+        // initialize unspecified defaults
+        if me.myWidth == 0.0 {
+            me.myWidth = SUMO_CONST_LANE_WIDTH;
+        }
+        if departPos != "" {
+            let mut error = String::new();
+            let mut pos: f64 = -1.0;
+            let mut dpd = DepartPosDefinition::DEFAULT;
+            let id = me.base.base.get_id().to_string();
+            let element = format!("{}", Tags.get_string(me.myElement));
+            if !SUMOVehicleParameter::parse_depart_pos(departPos, &element, &id, &mut pos, &mut dpd, &mut error) {
+                panic!("{}", ProcessError::new(error));
+            }
+            me.myDepartPos = pos;
+            me.myDepartPosDefinition = dpd;
+            if !matches!(me.myDepartPosDefinition, DepartPosDefinition::GIVEN) {
+                // maybe allow other methods at a later time
+                panic!("{}", ProcessError::new(format!("Only a numerical departPos is supported for {} '{}'", element, id)));
+            } else if me.myDepartPos < 0.0 || me.myDepartPos > lane.get_length() {
+                panic!("{}", ProcessError::new(format!("Invalid departPos for {} '{}'", element, id)));
+            }
+        }
+        let offset: f64 = if ms_globals::lefthand() != lefthand { -1.0 } else { 1.0 };
+        me.myShape = lane.get_shape_2().get_subpart(
+            lane.interpolate_lane_pos_to_geometry_pos(begPos),
+            lane.interpolate_lane_pos_to_geometry_pos(endPos),
+        );
+        if !me.myOnRoad {
+            me.myShape.move2side((lane.get_width() / 2.0 + me.myWidth / 2.0) * offset, 100.0);
+        }
+        me.set_roadside_capacity(capacity);
+        me
     }
 
     /// C++: `void MSParkingArea::~MSParkingArea() noexcept` [virtual]
@@ -203,7 +328,7 @@ impl MSParkingArea {
     // MSParkingArea::~MSParkingArea() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSParkingArea::~MSParkingArea")
+        // C++ destructor body is empty
     }
 
     /// C++: `int MSParkingArea::getCapacity() const` [const]
@@ -214,7 +339,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_capacity(&self) -> i32 {
-        todo!("port MSParkingArea::getCapacity")
+        self.myCapacity
     }
 
     /// C++: `bool MSParkingArea::parkOnRoad() const` [const]
@@ -225,7 +350,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn park_on_road(&self) -> bool {
-        todo!("port MSParkingArea::parkOnRoad")
+        self.myOnRoad
     }
 
     /// C++: `bool MSParkingArea::mustAdvance(SUMOVehicleClass) const` [const]
@@ -236,7 +361,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn must_advance(&self, svc: SUMOVehicleClass) -> bool {
-        todo!("port MSParkingArea::mustAdvance")
+        self.myOnRoad && self.cannot_change(svc)
     }
 
     /// C++: `bool MSParkingArea::isReservable() const` [const]
@@ -246,7 +371,7 @@ impl MSParkingArea {
     //     }
     #[allow(unused_variables)]
     pub fn is_reservable(&self) -> bool {
-        todo!("port MSParkingArea::isReservable")
+        self.myReservable
     }
 
     /// C++: `int MSParkingArea::getLotIndex(const SUMOVehicle *) const` [const]
@@ -275,7 +400,25 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_lot_index(&self, veh: Ptr<SUMOVehicle>) -> i32 {
-        todo!("port MSParkingArea::getLotIndex")
+        if veh.get_position_on_lane() > self.myLastFreePos {
+            // vehicle has gone past myLastFreePos and we need to find the actual lot
+            let mut closestLot: i32 = -1;
+            for i in 0..self.mySpaceOccupancies.len() {
+                let lsd = &self.mySpaceOccupancies[i];
+                if lsd.vehicle.is_null() {
+                    closestLot = i as i32;
+                    if lsd.endPos >= veh.get_position_on_lane() {
+                        return i as i32;
+                    }
+                }
+            }
+            return closestLot;
+        }
+        if self.myOnRoad && self.myLastFreePos - veh.get_position_on_lane() > POSITION_EPS {
+            // for on-road parking we need to be precise
+            return -1;
+        }
+        self.myLastFreeLot
     }
 
     /// C++: `int MSParkingArea::getOccupancy() const` [const]
@@ -286,7 +429,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy(&self) -> i32 {
-        todo!("port MSParkingArea::getOccupancy")
+        (self.myEndPositions.len() as i32) - (if self.myEgressBlocked { 1 } else { 0 })
     }
 
     /// C++: `int MSParkingArea::getOccupancyIncludingBlocked() const` [const]
@@ -297,7 +440,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy_including_blocked(&self) -> i32 {
-        todo!("port MSParkingArea::getOccupancyIncludingBlocked")
+        self.myEndPositions.len() as i32
     }
 
     /// C++: `int MSParkingArea::getOccupancyIncludingReservations(const SUMOVehicle *) const` [const]
@@ -311,7 +454,11 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy_including_reservations(&self, forVehicle: Ptr<SUMOVehicle>) -> i32 {
-        todo!("port MSParkingArea::getOccupancyIncludingReservations")
+        let reservedLocal = self.myReservedVehicles.contains(&forVehicle);
+        let reservedRemote = self.myRemoteReservedVehicles.contains(&forVehicle);
+        (self.myEndPositions.len() as i32)
+            + (if reservedLocal { 0 } else { self.myReservations })
+            + (if reservedRemote { 0 } else { self.myRemoteReservedVehicles.len() as i32 })
     }
 
     /// C++: `int MSParkingArea::getOccupancyIncludingRemoteReservations(const SUMOVehicle *) const` [const]
@@ -322,7 +469,8 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_occupancy_including_remote_reservations(&self, forVehicle: Ptr<SUMOVehicle>) -> i32 {
-        todo!("port MSParkingArea::getOccupancyIncludingRemoteReservations")
+        let reservedRemote = self.myRemoteReservedVehicles.contains(&forVehicle) as i32;
+        self.get_occupancy() + (self.myRemoteReservedVehicles.len() as i32) - reservedRemote
     }
 
     /// C++: `int MSParkingArea::getLastStepOccupancy() const` [const]
@@ -333,7 +481,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy(&self) -> i32 {
-        todo!("port MSParkingArea::getLastStepOccupancy")
+        self.myLastStepOccupancy
     }
 
     /// C++: `int MSParkingArea::getLastStepOccupancyIncludingRemoteReservations(const SUMOVehicle *) const` [const]
@@ -344,7 +492,8 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_occupancy_including_remote_reservations(&self, forVehicle: Ptr<SUMOVehicle>) -> i32 {
-        todo!("port MSParkingArea::getLastStepOccupancyIncludingRemoteReservations")
+        let reservedRemote = self.myLastRemoteReservedVehicles.contains(&forVehicle) as i32;
+        self.myLastStepOccupancy + (self.myLastRemoteReservedVehicles.len() as i32) - reservedRemote
     }
 
     /// C++: `void MSParkingArea::accept(std::string)`
@@ -355,7 +504,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn accept(&mut self, badge: String) {
-        todo!("port MSParkingArea::accept")
+        self.myAcceptedBadges.insert(badge);
     }
 
     /// C++: `void MSParkingArea::accept(std::vector<std::string>)`
@@ -366,7 +515,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn accept_2(&mut self, badges: Vec<String>) {
-        todo!("port MSParkingArea::accept")
+        self.myAcceptedBadges.extend(badges);
     }
 
     /// C++: `void MSParkingArea::refuse(std::string)`
@@ -377,7 +526,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn refuse(&mut self, badge: String) {
-        todo!("port MSParkingArea::refuse")
+        self.myAcceptedBadges.remove(&badge);
     }
 
     /// C++: `bool MSParkingArea::accepts(SUMOVehicle *) const` [const, virtual]
@@ -398,7 +547,16 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn accepts(&self, veh: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSParkingArea::accepts")
+        if self.myAcceptedBadges.len() == 0 {
+            return true;
+        } else {
+            for badge in veh.get_parking_badges().iter() {
+                if self.myAcceptedBadges.contains(badge) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     /// C++: `void MSParkingArea::enter(SUMOVehicle *, const bool)` [virtual]
@@ -431,7 +589,21 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn enter(&mut self, veh: Ptr<SUMOVehicle>, parking: bool) {
-        todo!("port MSParkingArea::enter")
+        self.remove_space_reservation(veh);
+        let beg = veh.get_position_on_lane() + veh.get_vehicle_type().get_min_gap();
+        let end = veh.get_position_on_lane() - veh.get_vehicle_type().get_length();
+        schedule_update_event(self);
+        let mut lotIndex = self.get_lot_index(veh);
+        if lotIndex < 0 {
+            write_warning(&format!("Unsuitable parking position for vehicle '{}' at parkingArea '{}' time={}", veh.get_id(), self.base.base.get_id(), time2string(simstep())));
+            lotIndex = self.myLastFreeLot;
+        }
+        self.mySpaceOccupancies[lotIndex as usize].vehicle = veh;
+        self.myEndPositions.insert(veh, (beg, end));
+        self.compute_last_free_pos();
+        self.myMaxVehLength = max2(self.myMaxVehLength, veh.get_length());
+        // current search ends here
+        veh.m().set_number_parking_reroutes(0);
     }
 
     /// C++: `void MSParkingArea::leaveFrom(SUMOVehicle *)` [virtual]
@@ -460,7 +632,23 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn leave_from(&mut self, what: Ptr<SUMOVehicle>) {
-        todo!("port MSParkingArea::leaveFrom")
+        debug_assert!(self.myEndPositions.contains_key(&what));
+        schedule_update_event(self);
+        for lsd in self.mySpaceOccupancies.iter_mut() {
+            if lsd.vehicle == what {
+                lsd.vehicle = Ptr::null();
+                break;
+            }
+        }
+        if what.get_length() == self.myMaxVehLength {
+            let mut maxLen = 0.0;
+            for (item, _) in self.myEndPositions.iter() {
+                maxLen = max2(maxLen, item.get_length());
+            }
+            self.myMaxVehLength = maxLen;
+        }
+        self.myEndPositions.remove(&what);
+        self.compute_last_free_pos();
     }
 
     /// C++: `void MSParkingArea::addSpaceReservation(const SUMOVehicle *)`
@@ -475,7 +663,8 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn add_space_reservation(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSParkingArea::addSpaceReservation")
+        self.myRemoteReservedVehicles.insert(veh);
+        schedule_update_event(self);
     }
 
     /// C++: `void MSParkingArea::removeSpaceReservation(const SUMOVehicle *)`
@@ -489,7 +678,8 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn remove_space_reservation(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSParkingArea::removeSpaceReservation")
+        self.myRemoteReservedVehicles.remove(&veh);
+        schedule_update_event(self);
     }
 
     /// C++: `const std::set<const SUMOVehicle *> & MSParkingArea::getRemoteReservedVehicles() const` [const]
@@ -498,7 +688,7 @@ impl MSParkingArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_remote_reserved_vehicles(&self) -> &BTreeSet<Ptr<SUMOVehicle>> {
-        todo!("port MSParkingArea::getRemoteReservedVehicles")
+        &self.myRemoteReservedVehicles
     }
 
     /// C++: `SUMOTime MSParkingArea::updateOccupancy(SUMOTime)`
@@ -512,7 +702,10 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn update_occupancy(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSParkingArea::updateOccupancy")
+        self.myLastStepOccupancy = self.get_occupancy();
+        self.myLastRemoteReservedVehicles = self.myRemoteReservedVehicles.clone();
+        self.myUpdateEvent = false;
+        0
     }
 
     /// C++: `double MSParkingArea::getLastFreePos(const SUMOVehicle &, double) const` [const, virtual]
@@ -581,7 +774,39 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_free_pos(&self, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
-        todo!("port MSParkingArea::getLastFreePos")
+        if self.myCapacity == self.myEndPositions.len() as i32 {
+            // keep enough space so that  parking vehicles can leave
+            return self.myLastFreePos - forVehicle.get_vehicle_type().get_min_gap() - POSITION_EPS;
+        } else if self.must_advance(forVehicle.get_v_class()) {
+            // vehicles cannot overtake so we must fill from the downstream end
+            let mut skipN: i32 = if simstep() == self.myReservationTime { self.myReservations - 1 } else { 0 };
+            for lsd in self.mySpaceOccupancies.iter().rev() {
+                if lsd.vehicle.is_null() {
+                    if skipN > 0 {
+                        // skip reservations
+                        skipN -= 1;
+                        continue;
+                    }
+                    return lsd.endPos;
+                }
+            }
+            // should not happen
+            return brakePos;
+        } else {
+            let minPos = min2(self.myEndPos, brakePos);
+            if self.myLastFreePos >= minPos {
+                return self.myLastFreePos;
+            } else {
+                // find free pos after minPos
+                for lsd in self.mySpaceOccupancies.iter() {
+                    if lsd.vehicle.is_null() && lsd.endPos >= minPos {
+                        return lsd.endPos;
+                    }
+                }
+                // shouldn't happen. No good solution seems possible
+                return brakePos;
+            }
+        }
     }
 
     /// C++: `double MSParkingArea::getLastFreePosWithReservation(SUMOTime, const SUMOVehicle &, double)`
@@ -684,7 +909,62 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_free_pos_with_reservation(&mut self, t: SUMOTime, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
-        todo!("port MSParkingArea::getLastFreePosWithReservation")
+        // do not perform reservation when far away
+        if forVehicle.get_lane() != self.myLane || forVehicle.get_position_on_lane() < (self.myBegPos - self.myMaxVehLength - forVehicle.get_vehicle_type().get_min_gap()) {
+            // for different lanes, do not consider reservations to avoid lane-order
+            // dependency in parallel simulation
+            if self.myNumAlternatives > 0 && self.get_occupancy() == self.get_capacity() {
+                // ensure that the vehicle reaches the rerouter lane
+                if self.mySpaceOccupancies.len() > 0 {
+                    let s0 = &self.mySpaceOccupancies[0];
+                    let waitPos = s0.endPos - s0.vehicle.get_length() - forVehicle.get_vehicle_type().get_min_gap() - NUMERICAL_EPS;
+                    return max2(waitPos, min2(POSITION_EPS, self.myEndPos));
+                } else {
+                    return max2(self.myBegPos, min2(POSITION_EPS, self.myEndPos));
+                }
+            } else {
+                // check if there is a reservation from the last time step
+                // (this could also be in myReserations, if myLane wasn't processed before the forVehicle-lane)
+                let last = t - delta_t();
+                if self.myLastReservationTime == last || self.myReservationTime == last {
+                    let res = if self.myLastReservationTime == last { self.myLastReservations } else { self.myReservations };
+                    if self.myCapacity <= self.get_occupancy() + res {
+                        let maxLen = if self.myLastReservationTime == last { self.myLastReservationMaxLength } else { self.myReservationMaxLength };
+                        return self.mySpaceOccupancies[0].endPos - maxLen - forVehicle.get_vehicle_type().get_min_gap() - NUMERICAL_EPS;
+                    }
+                }
+                return self.get_last_free_pos(forVehicle, brakePos);
+            }
+        }
+        if t > self.myReservationTime {
+            self.myLastReservationTime = self.myReservationTime;
+            self.myLastReservations = self.myReservations;
+            self.myLastReservationMaxLength = self.myReservationMaxLength;
+            self.myReservationTime = t;
+            self.myReservations = 1;
+            self.myReservationMaxLength = forVehicle.get_vehicle_type().get_length();
+            self.myReservedVehicles.clear();
+            self.myReservedVehicles.insert(Ptr::new(forVehicle));
+            for lsd in self.mySpaceOccupancies.iter() {
+                if !lsd.vehicle.is_null() {
+                    self.myReservationMaxLength = max2(self.myReservationMaxLength, lsd.vehicle.get_vehicle_type().get_length());
+                }
+            }
+            return self.get_last_free_pos(forVehicle, brakePos);
+        } else {
+            if self.myCapacity > self.get_occupancy() + self.myReservations {
+                self.myReservations += 1;
+                self.myReservationMaxLength = max2(self.myReservationMaxLength, forVehicle.get_vehicle_type().get_length());
+                self.myReservedVehicles.insert(Ptr::new(forVehicle));
+                return self.get_last_free_pos(forVehicle, brakePos);
+            } else {
+                if self.myCapacity == 0 {
+                    return self.get_last_free_pos(forVehicle, brakePos);
+                } else {
+                    return self.mySpaceOccupancies[0].endPos - self.myReservationMaxLength - forVehicle.get_vehicle_type().get_min_gap() - NUMERICAL_EPS;
+                }
+            }
+        }
     }
 
     /// C++: `Position MSParkingArea::getVehiclePosition(const SUMOVehicle &) const` [const]
@@ -700,7 +980,13 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_position(&self, forVehicle: &SUMOVehicle) -> Position {
-        todo!("port MSParkingArea::getVehiclePosition")
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                return lsd.position;
+            }
+        }
+        Position::INVALID
     }
 
     /// C++: `double MSParkingArea::getInsertionPosition(const SUMOVehicle &) const` [const]
@@ -719,7 +1005,16 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_insertion_position(&self, forVehicle: &SUMOVehicle) -> f64 {
-        todo!("port MSParkingArea::getInsertionPosition")
+        if matches!(self.myDepartPosDefinition, DepartPosDefinition::GIVEN) {
+            return self.myDepartPos;
+        }
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                return lsd.endPos;
+            }
+        }
+        -1.0
     }
 
     /// C++: `double MSParkingArea::getVehicleAngle(const SUMOVehicle &) const` [const]
@@ -735,7 +1030,13 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_angle(&self, forVehicle: &SUMOVehicle) -> f64 {
-        todo!("port MSParkingArea::getVehicleAngle")
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                return (lsd.rotation - 90.0) * std::f64::consts::PI / 180.0;
+            }
+        }
+        0.0
     }
 
     /// C++: `double MSParkingArea::getVehicleSlope(const SUMOVehicle &) const` [const]
@@ -751,7 +1052,13 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_slope(&self, forVehicle: &SUMOVehicle) -> f64 {
-        todo!("port MSParkingArea::getVehicleSlope")
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                return lsd.slope;
+            }
+        }
+        0.0
     }
 
     /// C++: `int MSParkingArea::getLastFreeLotAngle() const` [const]
@@ -770,7 +1077,12 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_free_lot_angle(&self) -> i32 {
-        todo!("port MSParkingArea::getLastFreeLotAngle")
+        let lsd = &self.mySpaceOccupancies[self.myLastFreeLot as usize];
+        if lsd.sideIsLHS {
+            (lsd.manoeuverAngle as i32).abs() % 180
+        } else {
+            ((lsd.manoeuverAngle as i32).abs() % 180 - 180).abs() % 180
+        }
     }
 
     /// C++: `double MSParkingArea::getLastFreeLotGUIAngle() const` [const]
@@ -789,7 +1101,12 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_last_free_lot_gui_angle(&self) -> f64 {
-        todo!("port MSParkingArea::getLastFreeLotGUIAngle")
+        let lsd = &self.mySpaceOccupancies[self.myLastFreeLot as usize];
+        if lsd.manoeuverAngle > 180.0 {
+            deg2rad(lsd.manoeuverAngle - 360.0)
+        } else {
+            deg2rad(lsd.manoeuverAngle)
+        }
     }
 
     /// C++: `int MSParkingArea::getManoeuverAngle(const SUMOVehicle &) const` [const]
@@ -809,7 +1126,17 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_manoeuver_angle(&self, forVehicle: &SUMOVehicle) -> i32 {
-        todo!("port MSParkingArea::getManoeuverAngle")
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                if lsd.sideIsLHS {
+                    return (lsd.manoeuverAngle as i32).abs() % 180;
+                } else {
+                    return ((lsd.manoeuverAngle as i32).abs() % 180 - 180).abs() % 180;
+                }
+            }
+        }
+        0
     }
 
     /// C++: `double MSParkingArea::getGUIAngle(const SUMOVehicle &) const` [const]
@@ -829,7 +1156,17 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_gui_angle(&self, forVehicle: &SUMOVehicle) -> f64 {
-        todo!("port MSParkingArea::getGUIAngle")
+        let me = Ptr::new(forVehicle);
+        for lsd in self.mySpaceOccupancies.iter() {
+            if lsd.vehicle == me {
+                if lsd.manoeuverAngle > 180.0 {
+                    return deg2rad(lsd.manoeuverAngle - 360.0);
+                } else {
+                    return deg2rad(lsd.manoeuverAngle);
+                }
+            }
+        }
+        0.0
     }
 
     /// C++: `void MSParkingArea::addLotEntry(double, double, double, double, double, double, double)` [virtual]
@@ -879,7 +1216,45 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn add_lot_entry(&mut self, x: f64, y: f64, z: f64, width: f64, length: f64, angle: f64, slope: f64) {
-        todo!("port MSParkingArea::addLotEntry")
+        // create LotSpaceDefinition
+        let mut lsd = MSParkingArea_LotSpaceDefinition::new_2(self.mySpaceOccupancies.len() as i32, Ptr::null(), x, y, z, angle, slope, width, length);
+        // If we are modelling parking set the end position to the lot position relative to the lane
+        // rather than the end of the parking area - this results in vehicles stopping nearer the space
+        // and re-entering the lane nearer the space. (If we are not modelling parking the vehicle will usually
+        // enter the space and re-enter at the end of the parking area.)
+        if ms_globals::model_parking_manoeuver() {
+            let offset = self.get_lane().get_shape_2().nearest_offset_to_point2d(&lsd.position, true);
+            if offset < self.get_begin_lane_position() {
+                lsd.endPos = self.get_begin_lane_position() + POSITION_EPS;
+            } else {
+                if self.get_lane().get_length() > offset {
+                    lsd.endPos = offset;
+                } else {
+                    lsd.endPos = self.get_lane().get_length() - POSITION_EPS;
+                }
+            }
+            // Work out the angle of the lot relative to the lane  (-90 adjusts for the way the bay is drawn )
+            let mut relativeAngle = (lsd.rotation - 90.0) % 360.0 - rad2deg(self.get_lane().get_shape_2().rotation_at_offset(lsd.endPos)) % 360.0 + 0.5;
+            if relativeAngle < 0.0 {
+                relativeAngle += 360.0;
+            }
+            lsd.manoeuverAngle = relativeAngle;
+            // if p2.y is -ve the lot is on LHS of lane relative to lane direction
+            // we need to know this because it inverts the complexity of the parking manoeuver
+            let p2 = self.get_lane().get_shape_2().transform_to_vector_coordinates(&lsd.position, false);
+            if p2.y() < 0.0 + POSITION_EPS {
+                lsd.sideIsLHS = true;
+            } else {
+                lsd.sideIsLHS = false;
+            }
+        } else {
+            lsd.endPos = self.myEndPos;
+            lsd.manoeuverAngle = (angle as i32) as f64; // unused unless gModelParkingManoeuver is true
+            lsd.sideIsLHS = true;
+        }
+        self.mySpaceOccupancies.push(lsd);
+        self.myCapacity += 1;
+        self.compute_last_free_pos();
     }
 
     /// C++: `double MSParkingArea::getWidth() const` [const]
@@ -890,7 +1265,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port MSParkingArea::getWidth")
+        self.myWidth
     }
 
     /// C++: `double MSParkingArea::getLength() const` [const]
@@ -901,7 +1276,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSParkingArea::getLength")
+        self.myLength
     }
 
     /// C++: `double MSParkingArea::getAngle() const` [const]
@@ -912,7 +1287,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port MSParkingArea::getAngle")
+        self.myAngle
     }
 
     /// C++: `void MSParkingArea::notifyEgressBlocked()`
@@ -923,7 +1298,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn notify_egress_blocked(&mut self) {
-        todo!("port MSParkingArea::notifyEgressBlocked")
+        self.compute_last_free_pos();
     }
 
     /// C++: `int MSParkingArea::getNumAlternatives() const` [const]
@@ -934,7 +1309,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_num_alternatives(&self) -> i32 {
-        todo!("port MSParkingArea::getNumAlternatives")
+        self.myNumAlternatives
     }
 
     /// C++: `void MSParkingArea::setNumAlternatives(int)`
@@ -945,7 +1320,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_num_alternatives(&mut self, alternatives: i32) {
-        todo!("port MSParkingArea::setNumAlternatives")
+        self.myNumAlternatives = if self.myNumAlternatives > alternatives { self.myNumAlternatives } else { alternatives };
     }
 
     /// C++: `std::vector<std::string> MSParkingArea::getAcceptedBadges() const` [const]
@@ -957,7 +1332,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_accepted_badges(&self) -> Vec<String> {
-        todo!("port MSParkingArea::getAcceptedBadges")
+        self.myAcceptedBadges.iter().cloned().collect()
     }
 
     /// C++: `void MSParkingArea::setAcceptedBadges(const std::vector<std::string> &)`
@@ -969,7 +1344,8 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_accepted_badges(&mut self, badges: &Vec<String>) {
-        todo!("port MSParkingArea::setAcceptedBadges")
+        self.myAcceptedBadges.clear();
+        self.myAcceptedBadges.extend(badges.iter().cloned());
     }
 
     /// C++: `const std::vector<LotSpaceDefinition> & MSParkingArea::getSpaceOccupancies() const` [const]
@@ -977,7 +1353,7 @@ impl MSParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_space_occupancies(&self) -> &Vec<MSParkingArea_LotSpaceDefinition> {
-        todo!("port MSParkingArea::getSpaceOccupancies")
+        &self.mySpaceOccupancies
     }
 
     /// C++: `const PositionVector & MSParkingArea::getShape() const` [const]
@@ -988,7 +1364,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port MSParkingArea::getShape")
+        &self.myShape
     }
 
     /// C++: `void MSParkingArea::setRoadsideCapacity(int)` [protected]
@@ -1022,7 +1398,30 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_roadside_capacity(&mut self, capactity: i32) {
-        todo!("port MSParkingArea::setRoadsideCapacity")
+        // reinit parking lot generation process
+        self.myRoadSideCapacity = capactity;
+        // Initialize space occupancies if there is a road-side capacity
+        // The overall number of lots is fixed and each lot accepts one vehicle regardless of size
+        let spaceDim = if self.myRoadSideCapacity > 0 { self.myLane.interpolate_lane_pos_to_geometry_pos((self.myEndPos - self.myBegPos) / self.myRoadSideCapacity as f64) } else { 7.5 };
+        let spaceOffset = if self.myRoadSideCapacity > 0 { (self.myEndPos - self.myBegPos) / self.myRoadSideCapacity as f64 } else { 7.5 };
+        if self.myLength == 0.0 {
+            self.myLength = spaceDim;
+        }
+        self.mySpaceOccupancies.clear();
+        self.myCapacity = 0;
+        for i in 0..self.myRoadSideCapacity {
+            // calculate pos, angle and slope of parking lot space
+            let pos = calculate_lot_space_position(&self.myShape, i, spaceDim, self.myAngle, self.myWidth, self.myLength);
+            let spaceAngle = calculate_lot_space_angle(&self.myShape, i, spaceDim, self.myAngle);
+            let spaceSlope = calculate_lot_space_slope(&self.myShape, i, spaceDim);
+            // add lotEntry
+            self.add_lot_entry(pos.x(), pos.y(), pos.z(), self.myWidth, self.myLength, spaceAngle, spaceSlope);
+            // update endPos
+            let endPos = min2(self.myEndPos, self.myBegPos + max2(POSITION_EPS, spaceOffset * ((i + 1) as f64)));
+            self.mySpaceOccupancies.last_mut().unwrap().endPos = endPos;
+        }
+        // recompute after modifying the last endPos
+        self.compute_last_free_pos();
     }
 
     /// C++: `bool MSParkingArea::cannotChange(SUMOVehicleClass) const` [const, protected]
@@ -1036,7 +1435,10 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn cannot_change(&self, svc: SUMOVehicleClass) -> bool {
-        todo!("port MSParkingArea::cannotChange")
+        let left = self.myLane.get_parallel_lane(1, false);
+        let right = self.myLane.get_parallel_lane(-1, false);
+        (left.is_null() || !left.allows_vehicle_class(svc) || !self.myLane.allows_changing_left(svc))
+            && (right.is_null() || !right.allows_vehicle_class(svc) || !self.myLane.allows_changing_right(svc))
     }
 
     /// C++: `void MSParkingArea::computeLastFreePos()` [protected]
@@ -1069,7 +1471,28 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn compute_last_free_pos(&mut self) {
-        todo!("port MSParkingArea::computeLastFreePos")
+        self.myLastFreeLot = -1;
+        self.myLastFreePos = self.myBegPos;
+        self.myEgressBlocked = false;
+        for i in 0..self.mySpaceOccupancies.len() {
+            let index = self.mySpaceOccupancies[i].index;
+            let endPos = self.mySpaceOccupancies[i].endPos;
+            let vehicle = self.mySpaceOccupancies[i].vehicle;
+            if vehicle.is_null() || (self.get_occupancy() == self.get_capacity() && vehicle.remaining_stop_duration() <= 0 && !vehicle.is_stopped_triggered()) {
+                if vehicle.is_null() {
+                    self.myLastFreeLot = index;
+                    self.myLastFreePos = endPos;
+                } else {
+                    // vehicle wants to exit the parking area
+                    self.myLastFreeLot = index;
+                    self.myLastFreePos = endPos - vehicle.get_vehicle_type().get_length() - POSITION_EPS;
+                    self.myEgressBlocked = true;
+                }
+                break;
+            } else {
+                self.myLastFreePos = min2(self.myLastFreePos, endPos - vehicle.get_vehicle_type().get_length() - NUMERICAL_EPS);
+            }
+        }
     }
 
     /// C++: `void MSParkingArea::MSParkingArea(const MSParkingArea &)` [private]
@@ -1077,7 +1500,8 @@ impl MSParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSParkingArea) -> Self {
-        todo!("port MSParkingArea::MSParkingArea")
+        // MSParkingArea(const MSParkingArea&) = delete; the C++ copy constructor is deleted and has no body
+        panic!("MSParkingArea copy constructor is deleted in C++ (MSParkingArea(const MSParkingArea&) = delete)")
     }
 
     /// C++: `MSParkingArea & MSParkingArea::operator=(const MSParkingArea &)` [private]
@@ -1085,7 +1509,8 @@ impl MSParkingArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSParkingArea) -> &mut MSParkingArea {
-        todo!("port MSParkingArea::operator=")
+        // MSParkingArea& operator=(const MSParkingArea&) = delete; no body in C++
+        panic!("MSParkingArea::operator= is deleted in C++ (MSParkingArea& operator=(const MSParkingArea&) = delete)")
     }
 
 }

@@ -1,6 +1,11 @@
 //! Port of libsumo/VehicleType.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::string_utils::starts_with;
+use utils::common::sumo_vehicle_class::{get_vehicle_class_id, get_vehicle_shape_id, get_vehicle_shape_name, SUMO_VEHICLE_CLASS_STRINGS};
+use utils::common::time::{steps2time, time2steps};
+use utils::common::to_string::to_string;
 
 /// C++ class `libsumo::VehicleType` (libsumo/VehicleType.h)
 pub struct VehicleType {
@@ -11,6 +16,36 @@ pub struct VehicleType {
 //   static SubscriptionResults VehicleType::mySubscriptionResults;
 //   static ContextSubscriptionResults VehicleType::myContextSubscriptionResults;
 
+thread_local! {
+    /// C++ static `VehicleType::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `VehicleType::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
+/// Unwraps a ProcessError-returning utility the way C++ propagates the exception.
+fn unwrap_or_panic<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{}", e))
+}
+
+/// C++ `toString(SUMOVehicleClass)` (utils/common/ToString.h)
+fn vehicle_class_to_string(vc: SUMOVehicleClass) -> String {
+    SUMO_VEHICLE_CLASS_STRINGS.get_string(vc).unwrap().to_string()
+}
+
+/// C++ `toString(LatAlignmentDefinition)` (utils/common/ToString.h)
+fn lat_alignment_to_string(lad: LatAlignmentDefinition) -> &'static str {
+    match lad {
+        LatAlignmentDefinition::RIGHT => "right",
+        LatAlignmentDefinition::CENTER => "center",
+        LatAlignmentDefinition::ARBITRARY => "arbitrary",
+        LatAlignmentDefinition::NICE => "nice",
+        LatAlignmentDefinition::COMPACT => "compact",
+        LatAlignmentDefinition::LEFT => "left",
+        LatAlignmentDefinition::GIVEN | LatAlignmentDefinition::DEFAULT => "",
+    }
+}
+
 impl VehicleType {
     /// C++: `double VehicleType::getLength(const std::string &)` [static]
     // double
@@ -19,7 +54,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_length(typeID: &str) -> f64 {
-        todo!("port VehicleType::getLength")
+        Self::get_v_type(typeID.to_string()).get_length()
     }
 
     /// C++: `double VehicleType::getMaxSpeed(const std::string &)` [static]
@@ -29,7 +64,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed(typeID: &str) -> f64 {
-        todo!("port VehicleType::getMaxSpeed")
+        Self::get_v_type(typeID.to_string()).get_max_speed()
     }
 
     /// C++: `std::string VehicleType::getVehicleClass(const std::string &)` [static]
@@ -39,7 +74,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_class(typeID: &str) -> String {
-        todo!("port VehicleType::getVehicleClass")
+        vehicle_class_to_string(Self::get_v_type(typeID.to_string()).get_vehicle_class())
     }
 
     /// C++: `double VehicleType::getSpeedFactor(const std::string &)` [static]
@@ -49,7 +84,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_factor(typeID: &str) -> f64 {
-        todo!("port VehicleType::getSpeedFactor")
+        panic!("shortcut: VehicleType::getSpeedFactor needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
     }
 
     /// C++: `double VehicleType::getAccel(const std::string &)` [static]
@@ -59,7 +94,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_accel(typeID: &str) -> f64 {
-        todo!("port VehicleType::getAccel")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_max_accel()
     }
 
     /// C++: `double VehicleType::getDecel(const std::string &)` [static]
@@ -69,7 +104,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_decel(typeID: &str) -> f64 {
-        todo!("port VehicleType::getDecel")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_max_decel()
     }
 
     /// C++: `double VehicleType::getEmergencyDecel(const std::string &)` [static]
@@ -79,7 +114,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_emergency_decel(typeID: &str) -> f64 {
-        todo!("port VehicleType::getEmergencyDecel")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_emergency_decel()
     }
 
     /// C++: `double VehicleType::getApparentDecel(const std::string &)` [static]
@@ -89,7 +124,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_apparent_decel(typeID: &str) -> f64 {
-        todo!("port VehicleType::getApparentDecel")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_apparent_decel()
     }
 
     /// C++: `double VehicleType::getImperfection(const std::string &)` [static]
@@ -99,7 +134,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_imperfection(typeID: &str) -> f64 {
-        todo!("port VehicleType::getImperfection")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_imperfection()
     }
 
     /// C++: `double VehicleType::getTau(const std::string &)` [static]
@@ -109,7 +144,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_tau(typeID: &str) -> f64 {
-        todo!("port VehicleType::getTau")
+        Self::get_v_type(typeID.to_string()).get_car_follow_model().get_headway_time()
     }
 
     /// C++: `std::string VehicleType::getEmissionClass(const std::string &)` [static]
@@ -119,7 +154,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_emission_class(typeID: &str) -> String {
-        todo!("port VehicleType::getEmissionClass")
+        PollutantsInterface::get_name(Self::get_v_type(typeID.to_string()).get_emission_class())
     }
 
     /// C++: `std::string VehicleType::getShapeClass(const std::string &)` [static]
@@ -129,7 +164,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_class(typeID: &str) -> String {
-        todo!("port VehicleType::getShapeClass")
+        get_vehicle_shape_name(Self::get_v_type(typeID.to_string()).get_gui_shape())
     }
 
     /// C++: `double VehicleType::getMinGap(const std::string &)` [static]
@@ -139,7 +174,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_min_gap(typeID: &str) -> f64 {
-        todo!("port VehicleType::getMinGap")
+        Self::get_v_type(typeID.to_string()).get_min_gap()
     }
 
     /// C++: `double VehicleType::getWidth(const std::string &)` [static]
@@ -149,7 +184,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_width(typeID: &str) -> f64 {
-        todo!("port VehicleType::getWidth")
+        Self::get_v_type(typeID.to_string()).get_width()
     }
 
     /// C++: `double VehicleType::getHeight(const std::string &)` [static]
@@ -159,7 +194,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_height(typeID: &str) -> f64 {
-        todo!("port VehicleType::getHeight")
+        Self::get_v_type(typeID.to_string()).get_height()
     }
 
     /// C++: `double VehicleType::getMass(const std::string &)` [static]
@@ -169,14 +204,14 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_mass(typeID: &str) -> f64 {
-        todo!("port VehicleType::getMass")
+        Self::get_v_type(typeID.to_string()).get_mass()
     }
 
     /// C++: `libsumo::TraCIColor VehicleType::getColor(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_color(typeID: &str) -> TraCIColor {
-        todo!("port VehicleType::getColor")
+        Helper::make_tra_ci_color(Self::get_v_type(typeID.to_string()).get_color())
     }
 
     /// C++: `double VehicleType::getMinGapLat(const std::string &)` [static]
@@ -186,7 +221,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_min_gap_lat(typeID: &str) -> f64 {
-        todo!("port VehicleType::getMinGapLat")
+        Self::get_v_type(typeID.to_string()).get_min_gap_lat()
     }
 
     /// C++: `double VehicleType::getMaxSpeedLat(const std::string &)` [static]
@@ -196,7 +231,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_max_speed_lat(typeID: &str) -> f64 {
-        todo!("port VehicleType::getMaxSpeedLat")
+        Self::get_v_type(typeID.to_string()).get_max_speed_lat()
     }
 
     /// C++: `std::string VehicleType::getLateralAlignment(const std::string &)` [static]
@@ -210,7 +245,12 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(typeID: &str) -> String {
-        todo!("port VehicleType::getLateralAlignment")
+        let v = Self::get_v_type(typeID.to_string());
+        if *v.get_preferred_lateral_alignment() != LatAlignmentDefinition::GIVEN {
+            lat_alignment_to_string(*v.get_preferred_lateral_alignment()).to_string()
+        } else {
+            to_string(&v.get_preferred_lateral_alignment_offset())
+        }
     }
 
     /// C++: `int VehicleType::getPersonCapacity(const std::string &)` [static]
@@ -220,7 +260,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_person_capacity(typeID: &str) -> i32 {
-        todo!("port VehicleType::getPersonCapacity")
+        Self::get_v_type(typeID.to_string()).get_person_capacity()
     }
 
     /// C++: `double VehicleType::getActionStepLength(const std::string &)` [static]
@@ -230,7 +270,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_action_step_length(typeID: &str) -> f64 {
-        todo!("port VehicleType::getActionStepLength")
+        Self::get_v_type(typeID.to_string()).get_action_step_length_secs()
     }
 
     /// C++: `double VehicleType::getSpeedDeviation(const std::string &)` [static]
@@ -240,7 +280,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(typeID: &str) -> f64 {
-        todo!("port VehicleType::getSpeedDeviation")
+        panic!("shortcut: VehicleType::getSpeedDeviation needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
     }
 
     /// C++: `double VehicleType::getBoardingDuration(const std::string &)` [static]
@@ -250,7 +290,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_boarding_duration(typeID: &str) -> f64 {
-        todo!("port VehicleType::getBoardingDuration")
+        steps2time(Self::get_v_type(typeID.to_string()).get_boarding_duration(true))
     }
 
     /// C++: `double VehicleType::getImpatience(const std::string &)` [static]
@@ -260,7 +300,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_impatience(typeID: &str) -> f64 {
-        todo!("port VehicleType::getImpatience")
+        Self::get_v_type(typeID.to_string()).get_impatience()
     }
 
     /// C++: `std::vector<std::string> VehicleType::getIDList()` [static]
@@ -272,7 +312,9 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port VehicleType::getIDList")
+        let mut ids: Vec<String> = Vec::new();
+        MSNet::get_instance().m().get_vehicle_control().insert_v_type_i_ds(&mut ids);
+        ids
     }
 
     /// C++: `int VehicleType::getIDCount()` [static]
@@ -282,7 +324,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port VehicleType::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string VehicleType::getParameter(const std::string &, const std::string &)` [static]
@@ -307,15 +349,19 @@ impl VehicleType {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port VehicleType::getParameter")
+    pub fn get_parameter(typeID: &str, key: &str) -> String {
+        if starts_with(key, "junctionModel.") {
+            panic!("shortcut: VehicleType::getParameter junctionModel branch needs SUMOVTypeParameter::AllowedJMAttrs, which is not ported")
+        } else {
+            Self::get_v_type(typeID.to_string()).get_parameter().get_parameter(key, "")
+        }
     }
 
     /// C++: `const std::pair<std::string, std::string> VehicleType::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(VehicleType)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port VehicleType::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void VehicleType::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -342,7 +388,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port VehicleType::setParameter")
+        panic!("shortcut: VehicleType::setParameter needs mutable access to MSVehicleType::getParameter, which is not ported")
     }
 
     /// C++: `void VehicleType::setLength(const std::string &, double)` [static]
@@ -352,7 +398,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_length(typeID: &str, length: f64) {
-        todo!("port VehicleType::setLength")
+        Self::get_v_type(typeID.to_string()).m().set_length(&length);
     }
 
     /// C++: `void VehicleType::setMaxSpeed(const std::string &, double)` [static]
@@ -362,7 +408,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(typeID: &str, speed: f64) {
-        todo!("port VehicleType::setMaxSpeed")
+        Self::get_v_type(typeID.to_string()).m().set_max_speed(&speed);
     }
 
     /// C++: `void VehicleType::setVehicleClass(const std::string &, const std::string &)` [static]
@@ -372,7 +418,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_vehicle_class(typeID: &str, clazz: &str) {
-        todo!("port VehicleType::setVehicleClass")
+        Self::get_v_type(typeID.to_string()).m().set_v_class(unwrap_or_panic(get_vehicle_class_id(clazz)));
     }
 
     /// C++: `void VehicleType::setSpeedFactor(const std::string &, double)` [static]
@@ -382,7 +428,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_factor(typeID: &str, factor: f64) {
-        todo!("port VehicleType::setSpeedFactor")
+        Self::get_v_type(typeID.to_string()).m().set_speed_factor(&factor);
     }
 
     /// C++: `void VehicleType::setAccel(const std::string &, double)` [static]
@@ -392,7 +438,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_accel(typeID: &str, accel: f64) {
-        todo!("port VehicleType::setAccel")
+        Self::get_v_type(typeID.to_string()).m().set_accel(accel);
     }
 
     /// C++: `void VehicleType::setDecel(const std::string &, double)` [static]
@@ -411,7 +457,16 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_decel(typeID: &str, decel: f64) {
-        todo!("port VehicleType::setDecel")
+        let mut v = Self::get_v_type(typeID.to_string());
+        v.m().set_decel(decel);
+        // automatically raise emergencyDecel to ensure it is at least as high as decel
+        if decel > v.get_car_follow_model().get_emergency_decel() {
+            if v.get_parameter().cfParameter.contains_key(&SUMO_ATTR_EMERGENCYDECEL) {
+                // notify user only if emergencyDecel was previously specified
+                write_warning(&format!("Automatically setting emergencyDecel to {} for vType '{}' to match decel.", to_string(&decel), typeID));
+            }
+            v.m().set_emergency_decel(decel);
+        }
     }
 
     /// C++: `void VehicleType::setEmergencyDecel(const std::string &, double)` [static]
@@ -425,7 +480,11 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_emergency_decel(typeID: &str, decel: f64) {
-        todo!("port VehicleType::setEmergencyDecel")
+        let mut v = Self::get_v_type(typeID.to_string());
+        v.m().set_emergency_decel(decel);
+        if decel < v.get_car_follow_model().get_max_decel() {
+            write_warning(&format!("New value of emergencyDecel ({}) is lower than decel ({})", to_string(&decel), to_string(&v.get_car_follow_model().get_max_decel())));
+        }
     }
 
     /// C++: `void VehicleType::setApparentDecel(const std::string &, double)` [static]
@@ -435,7 +494,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_apparent_decel(typeID: &str, decel: f64) {
-        todo!("port VehicleType::setApparentDecel")
+        Self::get_v_type(typeID.to_string()).m().set_apparent_decel(decel);
     }
 
     /// C++: `void VehicleType::setImperfection(const std::string &, double)` [static]
@@ -445,7 +504,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_imperfection(typeID: &str, imperfection: f64) {
-        todo!("port VehicleType::setImperfection")
+        Self::get_v_type(typeID.to_string()).m().set_imperfection(imperfection);
     }
 
     /// C++: `void VehicleType::setTau(const std::string &, double)` [static]
@@ -455,7 +514,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_tau(typeID: &str, tau: f64) {
-        todo!("port VehicleType::setTau")
+        Self::get_v_type(typeID.to_string()).m().set_tau(tau);
     }
 
     /// C++: `void VehicleType::setEmissionClass(const std::string &, const std::string &)` [static]
@@ -465,7 +524,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_emission_class(typeID: &str, clazz: &str) {
-        todo!("port VehicleType::setEmissionClass")
+        Self::get_v_type(typeID.to_string()).m().set_emission_class(PollutantsInterface::get_class_by_name(clazz, SVC_IGNORING));
     }
 
     /// C++: `void VehicleType::setShapeClass(const std::string &, const std::string &)` [static]
@@ -475,7 +534,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_class(typeID: &str, shapeClass: &str) {
-        todo!("port VehicleType::setShapeClass")
+        Self::get_v_type(typeID.to_string()).m().set_shape(unwrap_or_panic(get_vehicle_shape_id(shapeClass)));
     }
 
     /// C++: `void VehicleType::setWidth(const std::string &, double)` [static]
@@ -485,7 +544,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_width(typeID: &str, width: f64) {
-        todo!("port VehicleType::setWidth")
+        Self::get_v_type(typeID.to_string()).m().set_width(&width);
     }
 
     /// C++: `void VehicleType::setHeight(const std::string &, double)` [static]
@@ -495,7 +554,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_height(typeID: &str, height: f64) {
-        todo!("port VehicleType::setHeight")
+        Self::get_v_type(typeID.to_string()).m().set_height(&height);
     }
 
     /// C++: `void VehicleType::setMass(const std::string &, double)` [static]
@@ -505,14 +564,14 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_mass(typeID: &str, mass: f64) {
-        todo!("port VehicleType::setMass")
+        Self::get_v_type(typeID.to_string()).m().set_mass(mass);
     }
 
     /// C++: `void VehicleType::setColor(const std::string &, const libsumo::TraCIColor &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_color(typeID: &str, color: &TraCIColor) {
-        todo!("port VehicleType::setColor")
+        Self::get_v_type(typeID.to_string()).m().set_color(&Helper::make_rgb_color(color));
     }
 
     /// C++: `void VehicleType::setMinGap(const std::string &, double)` [static]
@@ -522,7 +581,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_min_gap(typeID: &str, minGap: f64) {
-        todo!("port VehicleType::setMinGap")
+        Self::get_v_type(typeID.to_string()).m().set_min_gap(&minGap);
     }
 
     /// C++: `void VehicleType::setMinGapLat(const std::string &, double)` [static]
@@ -532,7 +591,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_min_gap_lat(typeID: &str, minGapLat: f64) {
-        todo!("port VehicleType::setMinGapLat")
+        Self::get_v_type(typeID.to_string()).m().set_min_gap_lat(&minGapLat);
     }
 
     /// C++: `void VehicleType::setMaxSpeedLat(const std::string &, double)` [static]
@@ -542,7 +601,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed_lat(typeID: &str, speed: f64) {
-        todo!("port VehicleType::setMaxSpeedLat")
+        Self::get_v_type(typeID.to_string()).m().set_max_speed_lat(&speed);
     }
 
     /// C++: `void VehicleType::setLateralAlignment(const std::string &, const std::string &)` [static]
@@ -558,7 +617,14 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_lateral_alignment(typeID: &str, latAlignment: &str) {
-        todo!("port VehicleType::setLateralAlignment")
+        let mut lao: f64 = 0.0;
+        let mut lad = LatAlignmentDefinition::DEFAULT;
+        if SUMOVTypeParameter::parse_lat_alignment(latAlignment, &mut lao, &mut lad) {
+            Self::get_v_type(typeID.to_string()).m().set_preferred_lateral_alignment(&lad, lao);
+        } else {
+            let msg = format!("Unknown value '{}' when setting latAlignment for vType '{}';\n must be one of (\"right\", \"center\", \"arbitrary\", \"nice\", \"compact\", \"left\" or a float)", latAlignment, typeID);
+            panic!("{}", msg);
+        }
     }
 
     /// C++: `void VehicleType::setActionStepLength(const std::string &, double, bool)` [static]
@@ -568,7 +634,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_action_step_length(typeID: &str, actionStepLength: f64, resetActionOffset: bool) {
-        todo!("port VehicleType::setActionStepLength")
+        Self::get_v_type(typeID.to_string()).m().set_action_step_length(SUMOVehicleParserHelper::process_action_step_length(actionStepLength), resetActionOffset);
     }
 
     /// C++: `void VehicleType::setBoardingDuration(const std::string &, double)` [static]
@@ -583,7 +649,8 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
-        todo!("port VehicleType::setBoardingDuration")
+        // shortcut: checkTimeBounds (utils/common/SUMOTime.h) is not ported, so out-of-range durations are not rejected, upgrade when checkTimeBounds is ported
+        Self::get_v_type(typeID.to_string()).m().set_boarding_duration(time2steps(boardingDuration), true);
     }
 
     /// C++: `void VehicleType::setImpatience(const std::string &, double)` [static]
@@ -593,7 +660,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_impatience(typeID: &str, impatience: f64) {
-        todo!("port VehicleType::setImpatience")
+        Self::get_v_type(typeID.to_string()).m().set_impatience(impatience);
     }
 
     /// C++: `void VehicleType::copy(const std::string &, const std::string &)` [static]
@@ -603,7 +670,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn copy(origTypeID: &str, newTypeID: &str) {
-        todo!("port VehicleType::copy")
+        Self::get_v_type(origTypeID.to_string()).duplicate_type(newTypeID, true);
     }
 
     /// C++: `void VehicleType::setSpeedDeviation(const std::string &, double)` [static]
@@ -613,7 +680,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_deviation(typeID: &str, deviation: f64) {
-        todo!("port VehicleType::setSpeedDeviation")
+        Self::get_v_type(typeID.to_string()).m().set_speed_deviation(&deviation);
     }
 
     /// C++: `double VehicleType::getScale(const std::string &)` [static]
@@ -623,7 +690,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_scale(typeID: &str) -> f64 {
-        todo!("port VehicleType::getScale")
+        Self::get_v_type(typeID.to_string()).get_parameter().scale
     }
 
     /// C++: `void VehicleType::setScale(const std::string &, double)` [static]
@@ -633,77 +700,77 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_scale(typeID: &str, value: f64) {
-        todo!("port VehicleType::setScale")
+        Self::get_v_type(typeID.to_string()).m().set_scale(value);
     }
 
     /// C++: `void VehicleType::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port VehicleType::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void VehicleType::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port VehicleType::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void VehicleType::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port VehicleType::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void VehicleType::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port VehicleType::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults VehicleType::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port VehicleType::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults VehicleType::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port VehicleType::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults VehicleType::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port VehicleType::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults VehicleType::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port VehicleType::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void VehicleType::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port VehicleType::subscribeParameterWithKey")
+        panic!("shortcut: VehicleType::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int VehicleType::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port VehicleType::domainID")
+        CMD_GET_VEHICLETYPE_VARIABLE
     }
 
     /// C++: `MSVehicleType * VehicleType::getVType(std::string)` [static]
@@ -717,7 +784,12 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_v_type(id: String) -> Ptr<MSVehicleType> {
-        todo!("port VehicleType::getVType")
+        let t = MSNet::get_instance().m().get_vehicle_control().get_v_type(&id, Ptr::null(), false);
+        if t.is_null() {
+            let msg = format!("Vehicle type '{}' is not known", id);
+            panic!("{}", msg);
+        }
+        t
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> VehicleType::makeWrapper()` [static]
@@ -727,7 +799,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port VehicleType::makeWrapper")
+        panic!("shortcut: VehicleType::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool VehicleType::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -737,7 +809,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port VehicleType::handleVariable")
+        Self::handle_variable_with_id(objID, objID, variable, wrapper, paramData)
     }
 
     /// C++: `bool VehicleType::handleVariableWithID(const std::string &, const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -812,7 +884,47 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable_with_id(objID: &str, typeID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port VehicleType::handleVariableWithID")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_LENGTH => wrapper.m().wrap_double(objID, variable, Self::get_length(typeID)),
+            VAR_HEIGHT => wrapper.m().wrap_double(objID, variable, Self::get_height(typeID)),
+            VAR_MASS => wrapper.m().wrap_double(objID, variable, Self::get_mass(typeID)),
+            VAR_MINGAP => wrapper.m().wrap_double(objID, variable, Self::get_min_gap(typeID)),
+            VAR_MAXSPEED => wrapper.m().wrap_double(objID, variable, Self::get_max_speed(typeID)),
+            VAR_ACCEL => wrapper.m().wrap_double(objID, variable, Self::get_accel(typeID)),
+            VAR_DECEL => wrapper.m().wrap_double(objID, variable, Self::get_decel(typeID)),
+            VAR_EMERGENCY_DECEL => wrapper.m().wrap_double(objID, variable, Self::get_emergency_decel(typeID)),
+            VAR_APPARENT_DECEL => wrapper.m().wrap_double(objID, variable, Self::get_apparent_decel(typeID)),
+            VAR_ACTIONSTEPLENGTH => wrapper.m().wrap_double(objID, variable, Self::get_action_step_length(typeID)),
+            VAR_IMPERFECTION => wrapper.m().wrap_double(objID, variable, Self::get_imperfection(typeID)),
+            VAR_TAU => wrapper.m().wrap_double(objID, variable, Self::get_tau(typeID)),
+            VAR_SPEED_FACTOR => wrapper.m().wrap_double(objID, variable, Self::get_speed_factor(typeID)),
+            VAR_SPEED_DEVIATION => wrapper.m().wrap_double(objID, variable, Self::get_speed_deviation(typeID)),
+            VAR_VEHICLECLASS => wrapper.m().wrap_string(objID, variable, &Self::get_vehicle_class(typeID)),
+            VAR_EMISSIONCLASS => wrapper.m().wrap_string(objID, variable, &Self::get_emission_class(typeID)),
+            VAR_SHAPECLASS => wrapper.m().wrap_string(objID, variable, &Self::get_shape_class(typeID)),
+            VAR_WIDTH => wrapper.m().wrap_double(objID, variable, Self::get_width(typeID)),
+            VAR_COLOR => wrapper.m().wrap_color(objID, variable, &Self::get_color(typeID)),
+            VAR_MINGAP_LAT => wrapper.m().wrap_double(objID, variable, Self::get_min_gap_lat(typeID)),
+            VAR_MAXSPEED_LAT => wrapper.m().wrap_double(objID, variable, Self::get_max_speed_lat(typeID)),
+            VAR_LATALIGNMENT => wrapper.m().wrap_string(objID, variable, &Self::get_lateral_alignment(typeID)),
+            VAR_PERSON_CAPACITY => wrapper.m().wrap_int(objID, variable, Self::get_person_capacity(typeID)),
+            VAR_BOARDING_DURATION => wrapper.m().wrap_double(objID, variable, Self::get_boarding_duration(typeID)),
+            VAR_IMPATIENCE => wrapper.m().wrap_double(objID, variable, Self::get_impatience(typeID)),
+            VAR_SCALE => wrapper.m().wrap_double(objID, variable, Self::get_scale(typeID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `void VehicleType::VehicleType()` [private]
@@ -820,7 +932,7 @@ impl VehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port VehicleType::VehicleType")
+        panic!("libsumo::VehicleType cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }

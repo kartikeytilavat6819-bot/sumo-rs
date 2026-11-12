@@ -1,6 +1,106 @@
 //! Port of microsim/MSVehicleType.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::sync::atomic::{AtomicI32, Ordering as AtomicOrdering};
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::{g_precision_random, round_decimal};
+use utils::common::string_utils::to_bool;
+use utils::common::sumo_vehicle_class::{get_vehicle_class_names, parse_vehicle_classes_vec, SVC_IGNORING, SVC_PEDESTRIAN};
+use utils::common::time::{delta_t, steps2time, ts};
+use utils::common::to_string::{f64_to_string, f64_to_string_default};
+use utils::common::util_exceptions::ProcessError;
+use utils::options::options_cont::{get_bool, get_float, get_string_vector, is_default};
+
+// C++ static `int MSVehicleType::myNextIndex = 0;`
+static MY_NEXT_INDEX: AtomicI32 = AtomicI32::new(0);
+
+// VTYPEPARS_*_SET bits from utils/vehicle/SUMOVTypeParameter.h (the ported SUMOVTypeParameter module does not export them yet)
+const VTYPEPARS_LENGTH_SET: i64 = 1;
+const VTYPEPARS_MINGAP_SET: i64 = 1 << 1;
+const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
+const VTYPEPARS_PROBABILITY_SET: i64 = 1 << 3;
+const VTYPEPARS_SPEEDFACTOR_SET: i64 = 1 << 4;
+const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
+const VTYPEPARS_COLOR_SET: i64 = 1 << 6;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+const VTYPEPARS_WIDTH_SET: i64 = 1 << 8;
+const VTYPEPARS_HEIGHT_SET: i64 = 1 << 9;
+const VTYPEPARS_SHAPE_SET: i64 = 1 << 10;
+const VTYPEPARS_IMPATIENCE_SET: i64 = 1 << 13;
+const VTYPEPARS_MAXSPEED_LAT_SET: i64 = 1 << 20;
+const VTYPEPARS_LATALIGNMENT_SET: i64 = 1 << 21;
+const VTYPEPARS_MINGAP_LAT_SET: i64 = 1 << 22;
+const VTYPEPARS_ACTIONSTEPLENGTH_SET: i64 = 1 << 23;
+const VTYPEPARS_BOARDING_DURATION: i64 = 1 << 16;
+const VTYPEPARS_MASS_SET: i64 = 1i64 << 32;
+const VTYPEPARS_PARKING_BADGES_SET: i64 = 1i64 << 37;
+
+// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty); these return the C++ defaults, upgrade once MSGlobals is filled
+fn g_action_step_length() -> SUMOTime {
+    0
+}
+fn g_use_meso_sim() -> bool {
+    false
+}
+
+/// C++ implicit copy constructor of SUMOVTypeParameter (the ported struct has no Clone impl)
+fn copy_sumo_vtype_parameter(p: &SUMOVTypeParameter) -> SUMOVTypeParameter {
+    SUMOVTypeParameter {
+        base: p.base.clone(),
+        id: p.id.clone(),
+        length: p.length.clone(),
+        minGap: p.minGap.clone(),
+        maxSpeed: p.maxSpeed.clone(),
+        desiredMaxSpeed: p.desiredMaxSpeed.clone(),
+        actionStepLength: p.actionStepLength.clone(),
+        defaultProbability: p.defaultProbability.clone(),
+        speedFactor: p.speedFactor.clone(),
+        emissionClass: p.emissionClass.clone(),
+        mass: p.mass.clone(),
+        color: p.color.clone(),
+        vehicleClass: p.vehicleClass.clone(),
+        impatience: p.impatience.clone(),
+        personCapacity: p.personCapacity.clone(),
+        containerCapacity: p.containerCapacity.clone(),
+        boardingDuration: p.boardingDuration.clone(),
+        loadingDuration: p.loadingDuration.clone(),
+        scale: p.scale.clone(),
+        width: p.width.clone(),
+        height: p.height.clone(),
+        shape: p.shape.clone(),
+        osgFile: p.osgFile.clone(),
+        imgFile: p.imgFile.clone(),
+        carriageImages: p.carriageImages.clone(),
+        cfModel: p.cfModel.clone(),
+        cfParameter: p.cfParameter.clone(),
+        lcParameter: p.lcParameter.clone(),
+        jmParameter: p.jmParameter.clone(),
+        lcModel: p.lcModel.clone(),
+        maxSpeedLat: p.maxSpeedLat.clone(),
+        latAlignmentOffset: p.latAlignmentOffset.clone(),
+        latAlignmentProcedure: p.latAlignmentProcedure.clone(),
+        minGapLat: p.minGapLat.clone(),
+        scaleVisual: p.scaleVisual.clone(),
+        carriageLength: p.carriageLength.clone(),
+        locomotiveLength: p.locomotiveLength.clone(),
+        carriageGap: p.carriageGap.clone(),
+        carriageDoors: p.carriageDoors.clone(),
+        carriageDoorWidth: p.carriageDoorWidth.clone(),
+        maxPlatformDistance: p.maxPlatformDistance.clone(),
+        timeToTeleport: p.timeToTeleport.clone(),
+        timeToTeleportBidi: p.timeToTeleportBidi.clone(),
+        speedFactorPremature: p.speedFactorPremature.clone(),
+        frontSeatPos: p.frontSeatPos.clone(),
+        seatingWidth: p.seatingWidth.clone(),
+        parkingBadges: p.parkingBadges.clone(),
+        boardingFactor: p.boardingFactor.clone(),
+        parametersSet: p.parametersSet.clone(),
+        saved: p.saved.clone(),
+        onlyReferenced: p.onlyReferenced.clone(),
+        paramRestrictions: p.paramRestrictions.clone(),
+        myManoeuverAngleTimes: p.myManoeuverAngleTimes.clone(),
+    }
+}
 
 /// The car-following model and parameter
 /// C++ class `MSVehicleType` (microsim/MSVehicleType.h)
@@ -48,7 +148,25 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn new(parameter: &SUMOVTypeParameter) -> Self {
-        todo!("port MSVehicleType::MSVehicleType")
+        let mut v = MSVehicleType {
+            myParameter: copy_sumo_vtype_parameter(parameter),
+            myEnergyParams: EnergyParams::new(Ptr::new(parameter)),
+            myCachedActionStepLengthSecs: 0.,
+            myWarnedActionStepLengthTauOnce: false,
+            myWarnedActionStepLengthBallisticOnce: false,
+            myWarnedStepLengthTauOnce: false,
+            myIndex: MY_NEXT_INDEX.fetch_add(1, AtomicOrdering::Relaxed),
+            myCarFollowModel: Ptr::null(),
+            myOriginalType: Ptr::null(),
+        };
+        debug_assert!(v.get_length() > 0.);
+        debug_assert!(v.get_max_speed() > 0.);
+        // Check if actionStepLength was set by user, if not init to global default
+        if !v.was_set(VTYPEPARS_ACTIONSTEPLENGTH_SET) {
+            v.myParameter.actionStepLength = g_action_step_length();
+        }
+        v.myCachedActionStepLengthSecs = steps2time(v.myParameter.actionStepLength);
+        v
     }
 
     /// C++: `void MSVehicleType::~MSVehicleType()` [virtual]
@@ -56,7 +174,7 @@ impl MSVehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicleType::~MSVehicleType")
+        // shortcut: C++ `delete myCarFollowModel` is not done, the model is Box::leak'ed by build()/duplicate_type() and has no owner to free it, upgrade when vehicle types are owned by MSVehicleControl
     }
 
     /// C++: `bool MSVehicleType::wasSet(long long) const` [const]
@@ -66,7 +184,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn was_set(&self, what: i64) -> bool {
-        todo!("port MSVehicleType::wasSet")
+        (self.myParameter.parametersSet & what) != 0
     }
 
     /// C++: `const std::string & MSVehicleType::getID() const` [const]
@@ -76,7 +194,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port MSVehicleType::getID")
+        &self.myParameter.id
     }
 
     /// C++: `int MSVehicleType::getNumericalID() const` [const]
@@ -86,7 +204,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port MSVehicleType::getNumericalID")
+        self.myIndex
     }
 
     /// C++: `double MSVehicleType::getLength() const` [const]
@@ -96,7 +214,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port MSVehicleType::getLength")
+        self.myParameter.length
     }
 
     /// C++: `double MSVehicleType::getLengthWithGap() const` [const]
@@ -106,7 +224,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_length_with_gap(&self) -> f64 {
-        todo!("port MSVehicleType::getLengthWithGap")
+        self.myParameter.length + self.myParameter.minGap
     }
 
     /// C++: `double MSVehicleType::getMinGap() const` [const]
@@ -116,7 +234,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_gap(&self) -> f64 {
-        todo!("port MSVehicleType::getMinGap")
+        self.myParameter.minGap
     }
 
     /// C++: `double MSVehicleType::getMinGapLat() const` [const]
@@ -126,7 +244,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_min_gap_lat(&self) -> f64 {
-        todo!("port MSVehicleType::getMinGapLat")
+        self.myParameter.minGapLat
     }
 
     /// C++: `const MSCFModel & MSVehicleType::getCarFollowModel() const` [const]
@@ -136,7 +254,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_car_follow_model(&self) -> &MSCFModel {
-        todo!("port MSVehicleType::getCarFollowModel")
+        &*self.myCarFollowModel
     }
 
     /// C++: `MSCFModel & MSVehicleType::getCarFollowModel()`
@@ -146,7 +264,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_car_follow_model_2(&mut self) -> &mut MSCFModel {
-        todo!("port MSVehicleType::getCarFollowModel")
+        self.myCarFollowModel.m()
     }
 
     /// C++: `LaneChangeModel MSVehicleType::getLaneChangeModel() const` [const]
@@ -155,7 +273,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_change_model(&self) -> LaneChangeModel {
-        todo!("port MSVehicleType::getLaneChangeModel")
+        self.myParameter.lcModel.clone()
     }
 
     /// C++: `double MSVehicleType::getMaxSpeed() const` [const]
@@ -165,7 +283,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self) -> f64 {
-        todo!("port MSVehicleType::getMaxSpeed")
+        self.myParameter.maxSpeed
     }
 
     /// C++: `double MSVehicleType::getDesiredMaxSpeed() const` [const]
@@ -175,7 +293,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_desired_max_speed(&self) -> f64 {
-        todo!("port MSVehicleType::getDesiredMaxSpeed")
+        self.myParameter.desiredMaxSpeed
     }
 
     /// C++: `double MSVehicleType::computeChosenSpeedDeviation(double, SumoRNG *, const double) const` [const]
@@ -188,7 +306,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn compute_chosen_speed_deviation(&self, speedFactorOverride: f64, rng: Ptr<SumoRNG>, minDev: f64) -> f64 {
-        todo!("port MSVehicleType::computeChosenSpeedDeviation")
+        if speedFactorOverride < 0. {
+            // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized::sample(rng) is unavailable; uses its mean 1.0 with no deviation until that field is mapped
+            round_decimal(if minDev > 1.0 { minDev } else { 1.0 }, g_precision_random())
+        } else {
+            speedFactorOverride
+        }
     }
 
     /// C++: `double MSVehicleType::getDefaultProbability() const` [const]
@@ -198,7 +321,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_default_probability(&self) -> f64 {
-        todo!("port MSVehicleType::getDefaultProbability")
+        self.myParameter.defaultProbability
     }
 
     /// C++: `SUMOVehicleClass MSVehicleType::getVehicleClass() const` [const]
@@ -208,7 +331,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle_class(&self) -> SUMOVehicleClass {
-        todo!("port MSVehicleType::getVehicleClass")
+        self.myParameter.vehicleClass
     }
 
     /// C++: `SUMOEmissionClass MSVehicleType::getEmissionClass() const` [const]
@@ -218,7 +341,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_emission_class(&self) -> SUMOEmissionClass {
-        todo!("port MSVehicleType::getEmissionClass")
+        self.myParameter.emissionClass.clone()
     }
 
     /// C++: `double MSVehicleType::getMass() const` [const]
@@ -228,7 +351,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_mass(&self) -> f64 {
-        todo!("port MSVehicleType::getMass")
+        self.myEnergyParams.get_double(SUMO_ATTR_MASS)
     }
 
     /// C++: `const RGBColor & MSVehicleType::getColor() const` [const]
@@ -238,7 +361,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_color(&self) -> &RGBColor {
-        todo!("port MSVehicleType::getColor")
+        &self.myParameter.color
     }
 
     /// C++: `const std::vector<std::string> & MSVehicleType::getParkingBadges() const` [const]
@@ -248,7 +371,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_parking_badges(&self) -> &Vec<String> {
-        todo!("port MSVehicleType::getParkingBadges")
+        &self.myParameter.parkingBadges
     }
 
     /// C++: `const Distribution_Parameterized & MSVehicleType::getSpeedFactor() const` [const]
@@ -258,7 +381,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_factor(&self) -> &Unmapped /* Distribution_Parameterized */ {
-        todo!("port MSVehicleType::getSpeedFactor")
+        &self.myParameter.speedFactor
     }
 
     /// C++: `SUMOTime MSVehicleType::getActionStepLength() const` [const]
@@ -268,7 +391,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_action_step_length(&self) -> SUMOTime {
-        todo!("port MSVehicleType::getActionStepLength")
+        self.myParameter.actionStepLength
     }
 
     /// C++: `double MSVehicleType::getActionStepLengthSecs() const` [const]
@@ -278,7 +401,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_action_step_length_secs(&self) -> f64 {
-        todo!("port MSVehicleType::getActionStepLengthSecs")
+        self.myCachedActionStepLengthSecs
     }
 
     /// C++: `double MSVehicleType::getImpatience() const` [const]
@@ -288,7 +411,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_impatience(&self) -> f64 {
-        todo!("port MSVehicleType::getImpatience")
+        self.myParameter.impatience
     }
 
     /// C++: `double MSVehicleType::getWidth() const` [const]
@@ -298,7 +421,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
-        todo!("port MSVehicleType::getWidth")
+        self.myParameter.width
     }
 
     /// C++: `double MSVehicleType::getSeatingWidth() const` [const]
@@ -308,7 +431,11 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_seating_width(&self) -> f64 {
-        todo!("port MSVehicleType::getSeatingWidth")
+        if self.myParameter.seatingWidth >= 0. {
+            self.myParameter.seatingWidth
+        } else {
+            self.myParameter.width
+        }
     }
 
     /// C++: `double MSVehicleType::getHeight() const` [const]
@@ -318,7 +445,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_height(&self) -> f64 {
-        todo!("port MSVehicleType::getHeight")
+        self.myParameter.height
     }
 
     /// C++: `SUMOVehicleShape MSVehicleType::getGuiShape() const` [const]
@@ -328,7 +455,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_gui_shape(&self) -> SUMOVehicleShape {
-        todo!("port MSVehicleType::getGuiShape")
+        self.myParameter.shape.clone()
     }
 
     /// C++: `std::string MSVehicleType::getOSGFile() const` [const]
@@ -338,7 +465,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_osg_file(&self) -> String {
-        todo!("port MSVehicleType::getOSGFile")
+        self.myParameter.osgFile.clone()
     }
 
     /// C++: `std::string MSVehicleType::getImgFile() const` [const]
@@ -348,7 +475,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_img_file(&self) -> String {
-        todo!("port MSVehicleType::getImgFile")
+        self.myParameter.imgFile.clone()
     }
 
     /// C++: `int MSVehicleType::getPersonCapacity() const` [const]
@@ -358,7 +485,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_person_capacity(&self) -> i32 {
-        todo!("port MSVehicleType::getPersonCapacity")
+        self.myParameter.personCapacity
     }
 
     /// C++: `int MSVehicleType::getContainerCapacity() const` [const]
@@ -368,7 +495,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_container_capacity(&self) -> i32 {
-        todo!("port MSVehicleType::getContainerCapacity")
+        self.myParameter.containerCapacity
     }
 
     /// C++: `SUMOTime MSVehicleType::getLoadingDuration(const bool) const` [const]
@@ -378,7 +505,11 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_loading_duration(&self, isPerson: bool) -> SUMOTime {
-        todo!("port MSVehicleType::getLoadingDuration")
+        if isPerson {
+            self.myParameter.boardingDuration
+        } else {
+            self.myParameter.loadingDuration
+        }
     }
 
     /// C++: `SUMOTime MSVehicleType::getBoardingDuration(const bool) const` [const]
@@ -388,7 +519,11 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_boarding_duration(&self, isPerson: bool) -> SUMOTime {
-        todo!("port MSVehicleType::getBoardingDuration")
+        if isPerson {
+            self.myParameter.boardingDuration
+        } else {
+            self.myParameter.loadingDuration
+        }
     }
 
     /// C++: `double MSVehicleType::getBoardingFactor() const` [const]
@@ -398,7 +533,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_boarding_factor(&self) -> f64 {
-        todo!("port MSVehicleType::getBoardingFactor")
+        self.myParameter.boardingFactor
     }
 
     /// C++: `double MSVehicleType::getMaxSpeedLat() const` [const]
@@ -408,7 +543,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed_lat(&self) -> f64 {
-        todo!("port MSVehicleType::getMaxSpeedLat")
+        self.myParameter.maxSpeedLat
     }
 
     /// C++: `const LatAlignmentDefinition & MSVehicleType::getPreferredLateralAlignment() const` [const]
@@ -418,7 +553,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_preferred_lateral_alignment(&self) -> &LatAlignmentDefinition {
-        todo!("port MSVehicleType::getPreferredLateralAlignment")
+        &self.myParameter.latAlignmentProcedure
     }
 
     /// C++: `double MSVehicleType::getPreferredLateralAlignmentOffset() const` [const]
@@ -428,7 +563,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_preferred_lateral_alignment_offset(&self) -> f64 {
-        todo!("port MSVehicleType::getPreferredLateralAlignmentOffset")
+        self.myParameter.latAlignmentOffset
     }
 
     /// C++: `double MSVehicleType::getFrontSeatPos() const` [const]
@@ -438,7 +573,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_front_seat_pos(&self) -> f64 {
-        todo!("port MSVehicleType::getFrontSeatPos")
+        self.myParameter.frontSeatPos
     }
 
     /// C++: `void MSVehicleType::setAccel(double)`
@@ -453,7 +588,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_accel(&mut self, accel: f64) {
-        todo!("port MSVehicleType::setAccel")
+        let mut accel = accel;
+        if !self.myOriginalType.is_null() && accel < 0. {
+            accel = self.myOriginalType.get_car_follow_model().get_max_accel();
+        }
+        self.myCarFollowModel.m().set_max_accel(accel);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_ACCEL, f64_to_string(accel));
     }
 
     /// C++: `void MSVehicleType::setDecel(double)`
@@ -468,7 +608,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_decel(&mut self, decel: f64) {
-        todo!("port MSVehicleType::setDecel")
+        let mut decel = decel;
+        if !self.myOriginalType.is_null() && decel < 0. {
+            decel = self.myOriginalType.get_car_follow_model().get_max_decel();
+        }
+        self.myCarFollowModel.m().set_max_decel(decel);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_DECEL, f64_to_string(decel));
     }
 
     /// C++: `void MSVehicleType::setEmergencyDecel(double)`
@@ -483,7 +628,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_emergency_decel(&mut self, emergencyDecel: f64) {
-        todo!("port MSVehicleType::setEmergencyDecel")
+        let mut emergencyDecel = emergencyDecel;
+        if !self.myOriginalType.is_null() && emergencyDecel < 0. {
+            emergencyDecel = self.myOriginalType.get_car_follow_model().get_emergency_decel();
+        }
+        self.myCarFollowModel.m().set_emergency_decel(emergencyDecel);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_EMERGENCYDECEL, f64_to_string(emergencyDecel));
     }
 
     /// C++: `void MSVehicleType::setApparentDecel(double)`
@@ -498,7 +648,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_apparent_decel(&mut self, apparentDecel: f64) {
-        todo!("port MSVehicleType::setApparentDecel")
+        let mut apparentDecel = apparentDecel;
+        if !self.myOriginalType.is_null() && apparentDecel < 0. {
+            apparentDecel = self.myOriginalType.get_car_follow_model().get_apparent_decel();
+        }
+        self.myCarFollowModel.m().set_apparent_decel(apparentDecel);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_APPARENTDECEL, f64_to_string(apparentDecel));
     }
 
     /// C++: `void MSVehicleType::setMaxAccelProfile(std::vector<std::pair<double, double>>)`
@@ -547,7 +702,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_max_accel_profile(&mut self, accelProfile: Vec<(f64, f64)>) {
-        todo!("port MSVehicleType::setMaxAccelProfile")
+        // The C++ body of this method is entirely inside a comment block, so it is a no-op in SUMO
+        let _ = accelProfile;
     }
 
     /// C++: `void MSVehicleType::setDesAccelProfile(std::vector<std::pair<double, double>>)`
@@ -596,7 +752,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_des_accel_profile(&mut self, accelProfile: Vec<(f64, f64)>) {
-        todo!("port MSVehicleType::setDesAccelProfile")
+        // The C++ body of this method is entirely inside a comment block, so it is a no-op in SUMO
+        let _ = accelProfile;
     }
 
     /// C++: `void MSVehicleType::setImperfection(double)`
@@ -611,7 +768,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_imperfection(&mut self, imperfection: f64) {
-        todo!("port MSVehicleType::setImperfection")
+        let mut imperfection = imperfection;
+        if !self.myOriginalType.is_null() && imperfection < 0. {
+            imperfection = self.myOriginalType.get_car_follow_model().get_imperfection();
+        }
+        self.myCarFollowModel.m().set_imperfection(imperfection);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_SIGMA, f64_to_string(imperfection));
     }
 
     /// C++: `void MSVehicleType::setTau(double)`
@@ -626,7 +788,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_tau(&mut self, tau: f64) {
-        todo!("port MSVehicleType::setTau")
+        let mut tau = tau;
+        if !self.myOriginalType.is_null() && tau < 0. {
+            tau = self.myOriginalType.get_car_follow_model().get_headway_time();
+        }
+        self.myCarFollowModel.m().set_headway_time(tau);
+        self.myParameter.cfParameter.insert(SUMO_ATTR_TAU, f64_to_string(tau));
     }
 
     /// C++: `void MSVehicleType::setLength(const double &)`
@@ -642,7 +809,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_length(&mut self, length: &f64) {
-        todo!("port MSVehicleType::setLength")
+        if !self.myOriginalType.is_null() && *length < 0. {
+            self.myParameter.length = self.myOriginalType.get_length();
+        } else {
+            self.myParameter.length = *length;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_LENGTH_SET;
     }
 
     /// C++: `void MSVehicleType::setHeight(const double &)`
@@ -658,7 +830,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_height(&mut self, height: &f64) {
-        todo!("port MSVehicleType::setHeight")
+        if !self.myOriginalType.is_null() && *height < 0. {
+            self.myParameter.height = self.myOriginalType.get_height();
+        } else {
+            self.myParameter.height = *height;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_HEIGHT_SET;
     }
 
     /// C++: `void MSVehicleType::setMinGap(const double &)`
@@ -674,7 +851,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_min_gap(&mut self, minGap: &f64) {
-        todo!("port MSVehicleType::setMinGap")
+        if !self.myOriginalType.is_null() && *minGap < 0. {
+            self.myParameter.minGap = self.myOriginalType.get_min_gap();
+        } else {
+            self.myParameter.minGap = *minGap;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_MINGAP_SET;
     }
 
     /// C++: `void MSVehicleType::setMinGapLat(const double &)`
@@ -690,7 +872,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_min_gap_lat(&mut self, minGapLat: &f64) {
-        todo!("port MSVehicleType::setMinGapLat")
+        if !self.myOriginalType.is_null() && *minGapLat < 0. {
+            self.myParameter.minGapLat = self.myOriginalType.get_min_gap_lat();
+        } else {
+            self.myParameter.minGapLat = *minGapLat;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_MINGAP_LAT_SET;
     }
 
     /// C++: `void MSVehicleType::setMaxSpeed(const double &)`
@@ -706,7 +893,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed(&mut self, maxSpeed: &f64) {
-        todo!("port MSVehicleType::setMaxSpeed")
+        if !self.myOriginalType.is_null() && *maxSpeed < 0. {
+            self.myParameter.maxSpeed = self.myOriginalType.get_max_speed();
+        } else {
+            self.myParameter.maxSpeed = *maxSpeed;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_MAXSPEED_SET;
     }
 
     /// C++: `void MSVehicleType::setMaxSpeedLat(const double &)`
@@ -722,7 +914,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_max_speed_lat(&mut self, maxSpeedLat: &f64) {
-        todo!("port MSVehicleType::setMaxSpeedLat")
+        if !self.myOriginalType.is_null() && *maxSpeedLat < 0. {
+            self.myParameter.maxSpeedLat = self.myOriginalType.get_max_speed_lat();
+        } else {
+            self.myParameter.maxSpeedLat = *maxSpeedLat;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_MAXSPEED_LAT_SET;
     }
 
     /// C++: `void MSVehicleType::setVClass(SUMOVehicleClass)`
@@ -734,7 +931,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_v_class(&mut self, vclass: SUMOVehicleClass) {
-        todo!("port MSVehicleType::setVClass")
+        self.myParameter.vehicleClass = vclass;
+        self.myParameter.parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
     }
 
     /// C++: `void MSVehicleType::setGUIShape(SUMOVehicleShape)`
@@ -746,7 +944,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_gui_shape(&mut self, shape: SUMOVehicleShape) {
-        todo!("port MSVehicleType::setGUIShape")
+        self.myParameter.shape = shape.clone();
+        self.myParameter.parametersSet |= VTYPEPARS_SHAPE_SET;
     }
 
     /// C++: `void MSVehicleType::setDefaultProbability(const double &)`
@@ -762,7 +961,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_default_probability(&mut self, prob: &f64) {
-        todo!("port MSVehicleType::setDefaultProbability")
+        if !self.myOriginalType.is_null() && *prob < 0. {
+            self.myParameter.defaultProbability = self.myOriginalType.get_default_probability();
+        } else {
+            self.myParameter.defaultProbability = *prob;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_PROBABILITY_SET;
     }
 
     /// C++: `void MSVehicleType::setSpeedFactor(const double &)`
@@ -778,7 +982,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_factor(&mut self, factor: &f64) {
-        todo!("port MSVehicleType::setSpeedFactor")
+        // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized parameter 0 (and the original's value) cannot be set, upgrade when that field is mapped
+        self.myParameter.parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
     }
 
     /// C++: `void MSVehicleType::setSpeedDeviation(const double &)`
@@ -794,7 +999,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_speed_deviation(&mut self, dev: &f64) {
-        todo!("port MSVehicleType::setSpeedDeviation")
+        // shortcut: SUMOVTypeParameter::speedFactor is Unmapped, so Distribution_Parameterized parameter 1 (and the original's value) cannot be set, upgrade when that field is mapped
+        self.myParameter.parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
     }
 
     /// C++: `void MSVehicleType::setActionStepLength(const SUMOTime, bool)`
@@ -835,7 +1041,40 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_action_step_length(&mut self, actionStepLength: SUMOTime, resetActionOffset: bool) {
-        todo!("port MSVehicleType::setActionStepLength")
+        debug_assert!(actionStepLength >= 0);
+        self.myParameter.parametersSet |= VTYPEPARS_ACTIONSTEPLENGTH_SET;
+
+        if self.myParameter.actionStepLength == actionStepLength {
+            return;
+        }
+
+        let previousActionStepLength = self.myParameter.actionStepLength;
+        self.myParameter.actionStepLength = actionStepLength;
+        self.myCachedActionStepLengthSecs = steps2time(self.myParameter.actionStepLength);
+        self.check();
+
+        if self.is_vehicle_specific() {
+            // don't perform vehicle lookup for singular vtype
+            return;
+        }
+
+        // For non-singular vType reset all vehicle's actionOffsets
+        // Iterate through vehicles
+        // determinism: C++ iterates the loaded-vehicle std::map in key order, as does this BTreeMap
+        let self_ptr: *const MSVehicleType = self;
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        for vehPtr in vc.myVehicleDict.values() {
+            let mut veh: Ptr<MSVehicle> = vehPtr.cast::<MSVehicle>();
+            if std::ptr::eq(veh.get_vehicle_type(), self_ptr) {
+                // Found vehicle of this type. Perform requested actionOffsetReset
+                if resetActionOffset {
+                    veh.m().reset_action_offset(0);
+                } else {
+                    veh.m().update_action_offset(previousActionStepLength, actionStepLength);
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicleType::setEmissionClass(SUMOEmissionClass)`
@@ -847,7 +1086,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_emission_class(&mut self, eclass: SUMOEmissionClass) {
-        todo!("port MSVehicleType::setEmissionClass")
+        self.myParameter.emissionClass = eclass;
+        self.myParameter.parametersSet |= VTYPEPARS_EMISSIONCLASS_SET;
     }
 
     /// C++: `void MSVehicleType::setMass(double)`
@@ -860,7 +1100,9 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_mass(&mut self, mass: f64) {
-        todo!("port MSVehicleType::setMass")
+        self.myParameter.mass = mass;
+        self.myParameter.parametersSet |= VTYPEPARS_MASS_SET;
+        self.myEnergyParams.set_mass(mass);
     }
 
     /// C++: `void MSVehicleType::setColor(const RGBColor &)`
@@ -872,7 +1114,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_color(&mut self, color: &RGBColor) {
-        todo!("port MSVehicleType::setColor")
+        self.myParameter.color = color.clone();
+        self.myParameter.parametersSet |= VTYPEPARS_COLOR_SET;
     }
 
     /// C++: `void MSVehicleType::setParkingBadges(const std::vector<std::string> &)`
@@ -884,7 +1127,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_parking_badges(&mut self, badges: &Vec<String>) {
-        todo!("port MSVehicleType::setParkingBadges")
+        self.myParameter.parkingBadges = badges.clone();
+        self.myParameter.parametersSet |= VTYPEPARS_PARKING_BADGES_SET;
     }
 
     /// C++: `void MSVehicleType::setWidth(const double &)`
@@ -900,7 +1144,12 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_width(&mut self, width: &f64) {
-        todo!("port MSVehicleType::setWidth")
+        if !self.myOriginalType.is_null() && *width < 0. {
+            self.myParameter.width = self.myOriginalType.get_width();
+        } else {
+            self.myParameter.width = *width;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_WIDTH_SET;
     }
 
     /// C++: `void MSVehicleType::setShape(SUMOVehicleShape)`
@@ -912,7 +1161,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_shape(&mut self, shape: SUMOVehicleShape) {
-        todo!("port MSVehicleType::setShape")
+        self.myParameter.shape = shape.clone();
+        self.myParameter.parametersSet |= VTYPEPARS_SHAPE_SET;
     }
 
     /// C++: `void MSVehicleType::setBoardingDuration(SUMOTime, bool)`
@@ -932,7 +1182,14 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_boarding_duration(&mut self, duration: SUMOTime, isPerson: bool) {
-        todo!("port MSVehicleType::setBoardingDuration")
+        if !self.myOriginalType.is_null() && duration < 0 {
+            self.myParameter.boardingDuration = self.myOriginalType.get_boarding_duration(isPerson);
+        } else if isPerson {
+            self.myParameter.boardingDuration = duration;
+        } else {
+            self.myParameter.loadingDuration = duration;
+        }
+        self.myParameter.parametersSet |= VTYPEPARS_BOARDING_DURATION;
     }
 
     /// C++: `void MSVehicleType::setImpatience(const double)`
@@ -944,7 +1201,8 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_impatience(&mut self, impatience: f64) {
-        todo!("port MSVehicleType::setImpatience")
+        self.myParameter.impatience = impatience;
+        self.myParameter.parametersSet |= VTYPEPARS_IMPATIENCE_SET;
     }
 
     /// C++: `void MSVehicleType::setPreferredLateralAlignment(const LatAlignmentDefinition &, double)`
@@ -957,7 +1215,9 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_preferred_lateral_alignment(&mut self, latAlignment: &LatAlignmentDefinition, latAlignmentOffset: f64) {
-        todo!("port MSVehicleType::setPreferredLateralAlignment")
+        self.myParameter.latAlignmentProcedure = *latAlignment;
+        self.myParameter.latAlignmentOffset = latAlignmentOffset;
+        self.myParameter.parametersSet |= VTYPEPARS_LATALIGNMENT_SET;
     }
 
     /// C++: `void MSVehicleType::setScale(double)`
@@ -970,7 +1230,9 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_scale(&mut self, value: f64) {
-        todo!("port MSVehicleType::setScale")
+        self.myParameter.scale = value;
+        let vtypeid = self.get_id().to_string();
+        MSNet::get_instance().m().get_insertion_control().update_scale(vtypeid);
     }
 
     /// C++: `void MSVehicleType::setLcContRight(const std::string &)`
@@ -981,7 +1243,7 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_lc_cont_right(&mut self, value: &str) {
-        todo!("port MSVehicleType::setLcContRight")
+        self.myParameter.lcParameter.insert(SUMO_ATTR_LCA_CONTRIGHT, value.to_string());
     }
 
     /// C++: `MSVehicleType * MSVehicleType::build(SUMOVTypeParameter &, const std::string &)` [static]
@@ -1076,7 +1338,57 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn build(from: &mut SUMOVTypeParameter, fileName: &str) -> Ptr<MSVehicleType> {
-        todo!("port MSVehicleType::build")
+        if from.has_parameter("vehicleMass") {
+            if (from.parametersSet & VTYPEPARS_MASS_SET) != 0 {
+                utils::write_warningf!("The vType '%' has a 'mass' attribute and a 'vehicleMass' parameter. The 'mass' attribute will take precedence.", from.id);
+            } else {
+                utils::write_warningf!("The vType '%' has a 'vehicleMass' parameter, which is deprecated. Please use the 'mass' attribute (for the empty mass) and the 'loading' parameter, if needed.", from.id);
+                from.mass = from.get_double("vehicleMass", from.mass);
+                from.parametersSet |= VTYPEPARS_MASS_SET;
+            }
+        }
+        // the unique_ptr ensures the type is deleted if an exception occurs
+        let vtype: Ptr<MSVehicleType> = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(from))));
+        let decel = from.get_cf_param(SUMO_ATTR_DECEL, SUMOVTypeParameter::get_default_decel(from.vehicleClass));
+        let emergencyDecel = from.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(from.vehicleClass, decel, crate::microsim::cfmodels::mscf_model::g_default_emergency_decel()));
+        // by default decel and apparentDecel are identical
+        let apparentDecel = from.get_cf_param(SUMO_ATTR_APPARENTDECEL, decel);
+
+        if emergencyDecel < decel {
+            utils::write_warningf!("Value of 'emergencyDecel' (%) should be higher than 'decel' (%) for vType '%'.", f64_to_string(emergencyDecel), f64_to_string(decel), from.id);
+        }
+        if emergencyDecel < apparentDecel {
+            utils::write_warningf!("Value of 'emergencyDecel' (%) is lower than 'apparentDecel' (%) for vType '%' may cause collisions.", f64_to_string(emergencyDecel), f64_to_string(apparentDecel), from.id);
+        }
+
+        let cf: Ptr<MSCFModel> = match from.cfModel {
+            SUMO_TAG_CF_IDM => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_IDM::new(vtype, false))).base),
+            SUMO_TAG_CF_IDMM => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_IDM::new(vtype, true))).base),
+            SUMO_TAG_CF_BKERNER => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Kerner::new(vtype))).base),
+            SUMO_TAG_CF_KRAUSS_ORIG1 => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_KraussOrig1::new(vtype))).base),
+            SUMO_TAG_CF_KRAUSS_PLUS_SLOPE => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_KraussPS::new(vtype))).base),
+            SUMO_TAG_CF_KRAUSSX => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_KraussX::new(vtype))).base),
+            SUMO_TAG_CF_EIDM => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_EIDM::new(vtype))).base),
+            SUMO_TAG_CF_SMART_SK => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_SmartSK::new(vtype))).base),
+            SUMO_TAG_CF_DANIEL1 => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Daniel1::new(vtype))).base),
+            SUMO_TAG_CF_PWAGNER2009 => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_PWag2009::new(vtype))).base),
+            SUMO_TAG_CF_WIEDEMANN => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Wiedemann::new(vtype))).base),
+            SUMO_TAG_CF_W99 => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_W99::new(vtype))).base),
+            SUMO_TAG_CF_RAIL => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Rail::new(vtype))).base),
+            SUMO_TAG_CF_ACC => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_ACC::new(vtype))).base),
+            SUMO_TAG_CF_CACC => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_CACC::new(vtype))).base),
+            SUMO_TAG_CF_CC => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_CC::new(vtype))).base),
+            SUMO_TAG_CF_NASCH => {
+                let sigma = from.get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(from.vehicleClass));
+                Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_NaSch::new(vtype, sigma))).base)
+            }
+            // SUMO_TAG_CF_KRAUSS and default
+            _ => Ptr::from_mut(&mut Box::leak(Box::new(MSCFModel_Krauss::new(vtype))).base),
+        };
+        vtype.m().myCarFollowModel = cf;
+        // init Rail visualization parameters
+        vtype.m().myParameter.init_rail_visualization_parameters(fileName.to_string());
+        vtype
     }
 
     /// C++: `SUMOTime MSVehicleType::getEntryManoeuvreTime(const int) const` [const]
@@ -1087,7 +1399,7 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_entry_manoeuvre_time(&self, angle: i32) -> SUMOTime {
-        todo!("port MSVehicleType::getEntryManoeuvreTime")
+        self.myParameter.get_entry_manoeuvre_time(angle)
     }
 
     /// C++: `SUMOTime MSVehicleType::getExitManoeuvreTime(const int) const` [const]
@@ -1098,7 +1410,7 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_exit_manoeuvre_time(&self, angle: i32) -> SUMOTime {
-        todo!("port MSVehicleType::getExitManoeuvreTime")
+        self.myParameter.get_exit_manoeuvre_time(angle)
     }
 
     /// C++: `MSVehicleType * MSVehicleType::buildSingularType(const std::string &) const` [const]
@@ -1109,7 +1421,7 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn build_singular_type(&self, id: &str) -> Ptr<MSVehicleType> {
-        todo!("port MSVehicleType::buildSingularType")
+        self.duplicate_type(id, false)
     }
 
     /// C++: `MSVehicleType * MSVehicleType::duplicateType(const std::string &, bool) const` [const]
@@ -1130,7 +1442,18 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn duplicate_type(&self, id: &str, persistent: bool) -> Ptr<MSVehicleType> {
-        todo!("port MSVehicleType::duplicateType")
+        let mut vtype: Ptr<MSVehicleType> = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&self.myParameter))));
+        vtype.m().myParameter.id = id.to_string();
+        let cf = self.myCarFollowModel.duplicate(vtype);
+        vtype.m().myCarFollowModel = cf;
+        if !persistent {
+            vtype.m().myOriginalType = Ptr::new(self);
+        }
+        if !MSNet::get_instance().m().get_vehicle_control().add_v_type(vtype) {
+            let singular = if persistent { "".to_string() } else { "singular ".to_string() };
+            panic!("{}", ProcessError::new(utils::tlf!("could not add %type %", singular, vtype.get_id())));
+        }
+        vtype
     }
 
     /// C++: `bool MSVehicleType::isVehicleSpecific() const` [const]
@@ -1140,7 +1463,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn is_vehicle_specific(&self) -> bool {
-        todo!("port MSVehicleType::isVehicleSpecific")
+        !self.myOriginalType.is_null()
     }
 
     /// C++: `const std::string & MSVehicleType::getOriginalID() const` [const]
@@ -1150,7 +1473,11 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_id(&self) -> &str {
-        todo!("port MSVehicleType::getOriginalID")
+        if !self.myOriginalType.is_null() {
+            self.myOriginalType.get_id()
+        } else {
+            self.get_id()
+        }
     }
 
     /// C++: `const SUMOVTypeParameter & MSVehicleType::getParameter() const` [const]
@@ -1159,7 +1486,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVTypeParameter {
-        todo!("port MSVehicleType::getParameter")
+        &self.myParameter
     }
 
     /// C++: `void MSVehicleType::check()`
@@ -1215,7 +1542,56 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn check(&mut self) {
-        todo!("port MSVehicleType::check")
+        if !self.myWarnedActionStepLengthTauOnce
+            && self.myParameter.actionStepLength != delta_t()
+            && steps2time(self.myParameter.actionStepLength) > self.get_car_follow_model().get_headway_time()
+        {
+            self.myWarnedActionStepLengthTauOnce = true;
+            let s = format!("Given action step length {} for vehicle type '{}' is larger than its parameter tau (={})! This may lead to collisions. (This warning is only issued once per vehicle type).",
+                f64_to_string_default(steps2time(self.myParameter.actionStepLength)),
+                self.get_id(),
+                f64_to_string_default(self.get_car_follow_model().get_headway_time()));
+            write_warning(&s);
+        }
+        if !self.myWarnedActionStepLengthBallisticOnce
+            && self.myParameter.actionStepLength != delta_t()
+            && crate::microsim::cfmodels::mscf_model::g_semi_implicit_euler_update()
+        {
+            self.myWarnedActionStepLengthBallisticOnce = true;
+            let warning2;
+            if is_default("step-method.ballistic") {
+                warning2 = " Setting it now to avoid collisions.";
+                // shortcut: MSGlobals::gSemiImplicitEulerUpdate cannot be written (MSGlobals not ported), so the flag is not switched off here
+            } else {
+                warning2 = " This may cause collisions.";
+            }
+            utils::write_warningf!(&format!("Action step length '%' is used for vehicle type '%' but step-method.ballistic was not set.{}", warning2),
+                steps2time(self.myParameter.actionStepLength), self.get_id());
+        }
+        if !self.myWarnedStepLengthTauOnce && ts() > self.get_car_follow_model().get_headway_time()
+            && !g_use_meso_sim()
+        {
+            self.myWarnedStepLengthTauOnce = true;
+            utils::write_warningf!("Value of tau=% in vehicle type '%' lower than simulation step size may cause collisions.",
+                self.get_car_follow_model().get_headway_time(), self.get_id());
+        }
+        if g_use_meso_sim() && self.get_vehicle_class() != SVC_PEDESTRIAN && !get_bool("meso-lane-queue") {
+            let ignoreVClasses = parse_vehicle_classes_vec(&get_string_vector("meso-ignore-lanes-by-vclass")).unwrap_or_else(|e| panic!("{}", e));
+            if (ignoreVClasses & self.get_vehicle_class()) != 0 {
+                utils::write_warningf!("Vehicle class '%' of vType '%' is set as ignored by option --meso-ignore-lanes-by-vclass to ensure default vehicle capacity. Set option --meso-lane-queue for multi-modal meso simulation",
+                    get_vehicle_class_names(self.get_vehicle_class(), false), self.get_id());
+            }
+        }
+        if (self.myParameter.parametersSet & VTYPEPARS_EMISSIONCLASS_SET) == 0 && !get_bool("device.battery.track-fuel")
+            && (get_float("device.battery.probability") == 1.
+                || self.myParameter.get_double("device.battery.probability", -1.) == 1.
+                || to_bool(&self.myParameter.get_parameter("has.battery.device", "false")).unwrap_or_else(|e| panic!("{}", e)))
+        {
+            self.myParameter.emissionClass = PollutantsInterface::get_class_by_name("Energy", SVC_IGNORING);
+            self.myParameter.parametersSet |= VTYPEPARS_EMISSIONCLASS_SET;
+            utils::write_messagef!("The battery device is active for vType '%' but no emission class is set. The emission class Energy/unknown will be used, please consider setting an explicit emission class!",
+                self.get_id());
+        }
     }
 
     /// C++: `const EnergyParams * MSVehicleType::getEmissionParameters() const` [const]
@@ -1225,7 +1601,7 @@ impl MSVehicleType {
     //     }
     #[allow(unused_variables)]
     pub fn get_emission_parameters(&self) -> Ptr<EnergyParams> {
-        todo!("port MSVehicleType::getEmissionParameters")
+        Ptr::new(&self.myEnergyParams)
     }
 
     /// C++: `void MSVehicleType::MSVehicleType(const MSVehicleType &)` [private]
@@ -1233,7 +1609,7 @@ impl MSVehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSVehicleType) -> Self {
-        todo!("port MSVehicleType::MSVehicleType")
+        panic!("MSVehicleType copy constructor is private and never defined in C++")
     }
 
     /// C++: `MSVehicleType & MSVehicleType::operator=(const MSVehicleType &)` [private]
@@ -1241,7 +1617,7 @@ impl MSVehicleType {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSVehicleType) -> &mut MSVehicleType {
-        todo!("port MSVehicleType::operator=")
+        panic!("MSVehicleType assignment operator is private and never defined in C++")
     }
 
 }
