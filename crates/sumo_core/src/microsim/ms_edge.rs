@@ -2534,7 +2534,7 @@ impl MSEdge {
     //     return it->second;
     // }
     #[allow(unused_variables)]
-    pub fn dictionary_2(id: &Unmapped /* std::string_view */) -> Ptr<MSEdge> {
+    pub fn dictionary_2(id: &str) -> Ptr<MSEdge> {
         todo!("port MSEdge::dictionary")
     }
 
