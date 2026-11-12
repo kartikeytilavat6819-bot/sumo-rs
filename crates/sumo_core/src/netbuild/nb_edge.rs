@@ -2246,7 +2246,40 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn shift_position_at_node(&mut self, node: Ptr<NBNode>, opposite: Ptr<NBEdge>) -> bool {
-        todo!("port NBEdge::shiftPositionAtNode")
+        if self.myLaneSpreadFunction == LaneSpreadFunction::CENTER
+            && !utils::common::sumo_vehicle_class::is_railway(self.get_permissions(-1))
+            && !utils::common::sumo_vehicle_class::is_railway(opposite.get_permissions(-1))
+            && self.get_bidi_edge().is_null()
+        {
+            let i: i32 = if node == self.myTo { -1 } else { 0 };
+            let i2: i32 = if node == self.myTo { 0 } else { -1 };
+            let dist = self.myGeom.at(i).distance_to2d(node.get_position());
+            let neededOffset = self.get_total_width() / 2.0;
+            let dist2 = {
+                let a = self.myGeom.distance2d(opposite.get_geometry().at(i2), false);
+                let b = opposite.get_geometry().distance2d(self.myGeom.at(i), false);
+                if a < b { a } else { b } // MIN2
+            };
+            let neededOffset2 = neededOffset + (if opposite.get_lane_spread_function() == LaneSpreadFunction::CENTER { opposite.get_total_width() / 2.0 } else { 0.0 });
+            let missing = neededOffset - dist;
+            let missing2 = neededOffset2 - dist2;
+            let mut shift = 0.0;
+            if missing > 0.0 && missing2 > 0.0 {
+                shift = if missing < missing2 { missing } else { missing2 }; // MIN2
+            } else if missing2 != 0.0 {
+                shift = missing2;
+            }
+            if shift > 0.0 {
+                let mut tmp = self.myGeom.clone();
+                // C++ try/catch(InvalidArgument) with a warning is unreachable: move2side() does not throw
+                tmp.move2side(shift, 100.0);
+                tmp.at_mut(i).round(utils::common::std_defs::g_precision());
+                *self.myGeom.at_mut(i) = *tmp.at(i);
+                self.compute_angle();
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `Position NBEdge::geometryPositionAtOffset(double) const` [const]
@@ -2261,7 +2294,11 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn geometry_position_at_offset(&self, offset: f64) -> Position {
-        todo!("port NBEdge::geometryPositionAtOffset")
+        if self.myLoadedLength > 0.0 {
+            self.myGeom.position_at_offset(offset * self.myLength / self.myLoadedLength, 0.0)
+        } else {
+            self.myGeom.position_at_offset(offset, 0.0)
+        }
     }
 
     /// C++: `void NBEdge::computeEdgeShape(double)`
@@ -2318,7 +2355,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_shape(&self, i: i32) -> &PositionVector {
-        todo!("port NBEdge::getLaneShape")
+        &self.myLanes[i as usize].shape
     }
 
     /// C++: `void NBEdge::setLaneSpreadFunction(LaneSpreadFunction)`
@@ -2329,7 +2366,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_spread_function(&mut self, spread: LaneSpreadFunction) {
-        todo!("port NBEdge::setLaneSpreadFunction")
+        self.myLaneSpreadFunction = spread;
     }
 
     /// C++: `LaneSpreadFunction NBEdge::getLaneSpreadFunction() const` [const]
@@ -2340,7 +2377,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_spread_function(&self) -> LaneSpreadFunction {
-        todo!("port NBEdge::getLaneSpreadFunction")
+        self.myLaneSpreadFunction
     }
 
     /// C++: `void NBEdge::reduceGeometry(const double)`
@@ -2367,7 +2404,23 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn reduce_geometry(&mut self, minDist: f64) {
-        todo!("port NBEdge::reduceGeometry")
+        // attempt symmetrical removal for forward and backward direction
+        // (very important for bidiRail)
+        if self.myFrom.get_id() < self.myTo.get_id() {
+            let mut reverse = self.myGeom.reverse();
+            reverse.remove_double_points(minDist, true, 0, 0, true);
+            self.myGeom = reverse.reverse();
+            for lane in self.myLanes.iter_mut() {
+                reverse = lane.customShape.reverse();
+                reverse.remove_double_points(minDist, true, 0, 0, true);
+                lane.customShape = reverse.reverse();
+            }
+        } else {
+            self.myGeom.remove_double_points(minDist, true, 0, 0, true);
+            for lane in self.myLanes.iter_mut() {
+                lane.customShape.remove_double_points(minDist, true, 0, 0, true);
+            }
+        }
     }
 
     /// C++: `void NBEdge::checkGeometry(const double, bool, const double, bool, bool)`
