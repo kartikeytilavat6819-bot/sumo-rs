@@ -1,12 +1,50 @@
 //! Port of netload/NLHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::time::{sumotime_max_period, time2steps};
 
-/// C++ typedef `int NLHandler::JunctionGraph`
-pub type NLHandler_JunctionGraph = i32;
+/// C++ typedef `std::map<std::string, std::pair<std::string, std::string> > NLHandler::JunctionGraph`
+pub type NLHandler_JunctionGraph = BTreeMap<String, (String, String)>;
 
-/// C++ typedef `int NLHandler::LaneVector`
-pub type NLHandler_LaneVector = i32;
+/// C++ typedef `std::vector<MSLane*> NLHandler::LaneVector`
+pub type NLHandler_LaneVector = Vec<Ptr<MSLane>>;
+
+/// C++ `toString(SumoXMLTag)`: the canonical name of a tag
+// shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
+fn tag_to_string(tag: SumoXMLTag) -> String {
+    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
+}
+
+/// C++ `throw InvalidArgument(msg)`; caught by `try_catch_args`
+fn throw_invalid_argument(msg: String) -> ! {
+    std::panic::panic_any(ProcessError::InvalidArgument(msg))
+}
+
+/// C++ `try { body } catch (InvalidArgument& e) {...} catch (IOError& e) {...}`:
+/// Err(e.what()) when one of those is thrown, other exceptions keep propagating
+fn try_catch_args<R>(body: impl FnOnce() -> R) -> Result<R, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)).map_err(|payload| {
+        let what = match payload.downcast_ref::<ProcessError>() {
+            Some(e @ (ProcessError::InvalidArgument(_) | ProcessError::IOError(_))) => Some(e.to_string()),
+            _ => payload.downcast_ref::<utils::geom::InvalidArgument>().map(|e| e.0.clone()),
+        };
+        match what {
+            Some(w) => w,
+            None => std::panic::resume_unwind(payload),
+        }
+    })
+}
+
+/// C++ `throw` of a ProcessError result that the caller does not catch locally
+fn unwrap_or_throw<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
+}
+
+/// C++ implicit `MSStoppingPlace*` -> `Parameterised*` conversion (base2 is the Parameterised part)
+fn stopping_place_as_parameterised(p: Ptr<MSStoppingPlace>) -> Ptr<Parameterised> {
+    Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
+}
 
 /// The XML-Handler for network loading
 /// C++ class `NLHandler` (netload/NLHandler.h)
@@ -44,7 +82,7 @@ pub struct NLHandler {
     pub myCurrentIsBroken: bool,
     pub myHaveWarnedAboutInvalidTLType: bool,
     pub myLastEdgeParameters: Parameterised,
-    pub myLastParameterised: i32,
+    pub myLastParameterised: Vec<Ptr<Parameterised>>,
     /// whether the loaded network contains internal lanes
     pub myHaveSeenInternalEdge: bool,
     /// Whether the network was built with higher speed on junctions
@@ -58,7 +96,7 @@ pub struct NLHandler {
     /// whether tls params were loaded
     pub myHaveSeenTLSParams: bool,
     /// the loaded network version
-    pub myNetworkVersion: Unmapped /* MMVersion */,
+    pub myNetworkVersion: (i32, f64) /* MMVersion */,
     /// whether the location element was already loadee
     pub myNetIsLoaded: bool,
     /// rail signal for which constraints are being loaded
@@ -107,7 +145,40 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, net: &mut MSNet, detBuilder: &mut NLDetectorBuilder, triggerBuilder: &mut NLTriggerBuilder, edgeBuilder: &mut NLEdgeControlBuilder, junctionBuilder: &mut NLJunctionControlBuilder) -> Self {
-        todo!("port NLHandler::NLHandler")
+        let myActionBuilder = NLDiscreteEventBuilder::new(net);
+        NLHandler {
+            base: MSRouteHandler::new(file, true),
+            myNet: Ptr::from_mut(net),
+            myActionBuilder,
+            myCurrentIsInternalToSkip: false,
+            myDetectorBuilder: Ptr::from_mut(detBuilder),
+            myTriggerBuilder: Ptr::from_mut(triggerBuilder),
+            myEdgeControlBuilder: Ptr::from_mut(edgeBuilder),
+            myJunctionControlBuilder: Ptr::from_mut(junctionBuilder),
+            myCurrentDistrictID: String::new(),
+            myAmParsingTLLogicOrJunction: false,
+            myCurrentWAUTID: String::new(),
+            myCurrentTypeID: String::new(),
+            myNetworkOffset: Position::default(),
+            myOrigBoundary: Boundary::default(),
+            myConvBoundary: Boundary::default(),
+            myCurrentIsBroken: false,
+            myHaveWarnedAboutInvalidTLType: false,
+            myLastEdgeParameters: Parameterised::new(),
+            myLastParameterised: Vec::new(),
+            myHaveSeenInternalEdge: false,
+            myHaveJunctionHigherSpeeds: false,
+            myHaveSeenDefaultLength: false,
+            myHaveSeenNeighs: false,
+            myHaveSeenAdditionalSpeedRestrictions: false,
+            myHaveSeenTLSParams: false,
+            myNetworkVersion: (0, 0.0),
+            myNetIsLoaded: false,
+            myConstrainedSignal: Ptr::null(),
+            myCurrentLink: Ptr::null(),
+            myJunctionGraph: BTreeMap::new(),
+            myPreviousEdgeIdx: 0,
+        }
     }
 
     /// C++: `void NLHandler::~NLHandler()` [virtual]
@@ -115,7 +186,7 @@ impl NLHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLHandler::~NLHandler")
+        // C++: `NLHandler::~NLHandler() {}`; the Rust fields are dropped by their own destructors
     }
 
     /// C++: `bool NLHandler::haveSeenInternalEdge() const` [const]
@@ -124,7 +195,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_internal_edge(&self) -> bool {
-        todo!("port NLHandler::haveSeenInternalEdge")
+        self.myHaveSeenInternalEdge
     }
 
     /// C++: `bool NLHandler::hasJunctionHigherSpeeds() const` [const]
@@ -133,7 +204,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn has_junction_higher_speeds(&self) -> bool {
-        todo!("port NLHandler::hasJunctionHigherSpeeds")
+        self.myHaveJunctionHigherSpeeds
     }
 
     /// C++: `bool NLHandler::haveSeenDefaultLength() const` [const]
@@ -142,7 +213,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_default_length(&self) -> bool {
-        todo!("port NLHandler::haveSeenDefaultLength")
+        self.myHaveSeenDefaultLength
     }
 
     /// C++: `bool NLHandler::haveSeenNeighs() const` [const]
@@ -151,7 +222,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_neighs(&self) -> bool {
-        todo!("port NLHandler::haveSeenNeighs")
+        self.myHaveSeenNeighs
     }
 
     /// C++: `bool NLHandler::haveSeenAdditionalSpeedRestrictions() const` [const]
@@ -160,7 +231,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_additional_speed_restrictions(&self) -> bool {
-        todo!("port NLHandler::haveSeenAdditionalSpeedRestrictions")
+        self.myHaveSeenAdditionalSpeedRestrictions
     }
 
     /// C++: `bool NLHandler::haveSeenTLSParams() const` [const]
@@ -169,7 +240,7 @@ impl NLHandler {
     //     }
     #[allow(unused_variables)]
     pub fn have_seen_tls_params(&self) -> bool {
-        todo!("port NLHandler::haveSeenTLSParams")
+        self.myHaveSeenTLSParams
     }
 
     /// C++: `MMVersion NLHandler::networkVersion() const` [const]
@@ -177,8 +248,8 @@ impl NLHandler {
     //         return myNetworkVersion;
     //     }
     #[allow(unused_variables)]
-    pub fn network_version(&self) -> Unmapped /* MMVersion */ {
-        todo!("port NLHandler::networkVersion")
+    pub fn network_version(&self) -> (i32, f64) /* MMVersion */ {
+        self.myNetworkVersion
     }
 
     /// C++: `Parameterised * NLHandler::addPredecessorConstraint(int, const SUMOSAXAttributes &, MSRailSignal *)` [static]
@@ -235,7 +306,45 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_predecessor_constraint(element: i32, attrs: &SUMOSAXAttributes, rs: Ptr<MSRailSignal>) -> Ptr<Parameterised> {
-        todo!("port NLHandler::addPredecessorConstraint")
+        if rs.is_null() {
+            throw_invalid_argument(format!("Rail signal '{}' constraint must occur within a railSignalConstraints element", tag_to_string(element)));
+        }
+        let mut ok = true;
+        let tripId = attrs.get::<String>(SUMO_ATTR_TRIP_ID, "", &mut ok, true);
+        let signalID = attrs.get::<String>(SUMO_ATTR_TLID, "", &mut ok, true);
+        let foesString = attrs.get::<String>(SUMO_ATTR_FOES, "", &mut ok, true);
+        let foes: Vec<String> = StringTokenizer::new(&foesString).get_vector();
+        let limit = attrs.get_opt::<i32>(SUMO_ATTR_LIMIT, "", &mut ok, foes.len() as i32, true);
+        let active = attrs.get_opt::<bool>(SUMO_ATTR_ACTIVE, "", &mut ok, true, true);
+
+        let tlsControl = MSNet::get_instance().m().get_tls_control();
+        if !tlsControl.knows(&signalID) {
+            throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
+        }
+        // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, so a non-rail-signal TLS is not rejected, upgrade when MSTrafficLightLogic exposes its subtype
+        let signal: Ptr<MSRailSignal> = tlsControl.get(&signalID).get_default().cast::<MSRailSignal>();
+        if signal.is_null() {
+            throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
+        }
+        let type_ = match element {
+            SUMO_TAG_PREDECESSOR => MSRailSignalConstraint_ConstraintType::PREDECESSOR,
+            SUMO_TAG_INSERTION_PREDECESSOR => MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR,
+            SUMO_TAG_FOE_INSERTION => MSRailSignalConstraint_ConstraintType::FOE_INSERTION,
+            SUMO_TAG_INSERTION_ORDER => MSRailSignalConstraint_ConstraintType::INSERTION_ORDER,
+            SUMO_TAG_BIDI_PREDECESSOR => MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR,
+            _ => throw_invalid_argument(format!("Unsupported rail signal constraint '{}'", tag_to_string(element))),
+        };
+        let mut result: Ptr<Parameterised> = Ptr::null();
+        if ok {
+            for foe in foes {
+                // C++ `new`: the constraint lives on for the whole simulation
+                let c: Ptr<MSRailSignalConstraint_Predecessor> = Ptr::from_raw(Box::into_raw(Box::new(MSRailSignalConstraint_Predecessor::new(type_, signal, &foe, limit, active))));
+                rs.m().add_constraint(&tripId, c.cast::<MSRailSignalConstraint>());
+                // XXX if there are multiple foes, only one constraint will receive the parameters
+                result = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*c.as_raw()).base.base) });
+            }
+        }
+        result
     }
 
     /// C++: `void NLHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -486,7 +595,158 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::myStartElement")
+        let result = try_catch_args(|| match element {
+            SUMO_TAG_NET => {
+                let mut ok = true;
+                set_lefthand(attrs.get_opt::<bool>(SUMO_ATTR_LEFTHAND, "", &mut ok, false, true));
+                self.myHaveJunctionHigherSpeeds = attrs.get_opt::<bool>(SUMO_ATTR_HIGHER_SPEED, "", &mut ok, false, true);
+                self.myNetworkVersion = unwrap_or_throw(utils::common::string_utils::to_version(&attrs.get::<String>(SUMO_ATTR_VERSION, "", &mut ok, false)));
+            }
+            SUMO_TAG_EDGE => self.begin_edge_parsing(attrs),
+            SUMO_TAG_LANE => self.add_lane(attrs),
+            SUMO_TAG_NEIGH => {
+                if !self.myCurrentIsInternalToSkip {
+                    self.myEdgeControlBuilder.m().add_neigh(attrs.get_string(SUMO_ATTR_LANE));
+                }
+                self.myHaveSeenNeighs = true;
+            }
+            SUMO_TAG_JUNCTION => {
+                self.open_junction(attrs);
+                self.init_junction_logic(attrs);
+            }
+            SUMO_TAG_PHASE => self.add_phase(attrs),
+            SUMO_TAG_CONDITION => self.add_condition(attrs),
+            SUMO_TAG_ASSIGNMENT => self.add_assignment(attrs),
+            SUMO_TAG_FUNCTION => self.add_function(attrs),
+            SUMO_TAG_CONNECTION => self.add_connection(attrs),
+            SUMO_TAG_CONFLICT => self.add_conflict(attrs),
+            SUMO_TAG_TLLOGIC => self.init_traffic_light_logic(attrs),
+            SUMO_TAG_REQUEST => self.add_request(attrs),
+            SUMO_TAG_WAUT => self.open_waut(attrs),
+            SUMO_TAG_WAUT_SWITCH => self.add_waut_switch(attrs),
+            SUMO_TAG_WAUT_JUNCTION => self.add_waut_junction(attrs),
+            SUMO_TAG_E1DETECTOR | SUMO_TAG_INDUCTION_LOOP => self.add_e1_detector(attrs),
+            SUMO_TAG_E2DETECTOR | SUMO_TAG_LANE_AREA_DETECTOR => self.add_e2_detector(attrs),
+            SUMO_TAG_E3DETECTOR | SUMO_TAG_ENTRY_EXIT_DETECTOR => self.begin_e3_detector(attrs),
+            SUMO_TAG_DET_ENTRY => self.add_e3_entry(attrs),
+            SUMO_TAG_DET_EXIT => self.add_e3_exit(attrs),
+            SUMO_TAG_INSTANT_INDUCTION_LOOP => self.add_instant_e1_detector(attrs),
+            SUMO_TAG_VSS => {
+                let file = self.get_file_name().to_string();
+                self.myTriggerBuilder.m().parse_and_build_lane_speed_trigger(self.myNet.m(), attrs, &file);
+            }
+            SUMO_TAG_CALIBRATOR => {
+                let file = self.get_file_name().to_string();
+                self.myTriggerBuilder.m().parse_and_build_calibrator(self.myNet.m(), attrs, &file);
+            }
+            SUMO_TAG_REROUTER => self.myTriggerBuilder.m().parse_and_build_rerouter(self.myNet.m(), attrs),
+            SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP | SUMO_TAG_CONTAINER_STOP => {
+                self.myTriggerBuilder.m().parse_and_build_stopping_place(self.myNet.m(), attrs, element);
+                let stop = self.myTriggerBuilder.m().get_current_stop();
+                self.myLastParameterised.push(stopping_place_as_parameterised(stop));
+            }
+            SUMO_TAG_PARKING_SPACE => self.myTriggerBuilder.m().parse_and_add_lot_entry(attrs),
+            SUMO_TAG_PARKING_AREA => {
+                self.myTriggerBuilder.m().parse_and_begin_parking_area(self.myNet.m(), attrs);
+                let stop = self.myTriggerBuilder.m().get_current_stop();
+                self.myLastParameterised.push(stopping_place_as_parameterised(stop));
+            }
+            SUMO_TAG_ACCESS => self.myTriggerBuilder.m().add_access(self.myNet.m(), attrs),
+            SUMO_TAG_CHARGING_STATION => {
+                self.myTriggerBuilder.m().parse_and_build_charging_station(self.myNet.m(), attrs);
+                let stop = self.myTriggerBuilder.m().get_current_stop();
+                self.myLastParameterised.push(stopping_place_as_parameterised(stop));
+            }
+            SUMO_TAG_OVERHEAD_WIRE_SEGMENT => self.myTriggerBuilder.m().parse_and_build_overhead_wire_segment(self.myNet.m(), attrs),
+            SUMO_TAG_OVERHEAD_WIRE_SECTION => self.myTriggerBuilder.m().parse_and_build_overhead_wire_section(self.myNet.m(), attrs),
+            SUMO_TAG_TRACTION_SUBSTATION => self.myTriggerBuilder.m().parse_and_build_traction_substation(self.myNet.m(), attrs),
+            SUMO_TAG_OVERHEAD_WIRE_CLAMP => self.myTriggerBuilder.m().parse_and_build_overhead_wire_clamp(self.myNet.m(), attrs),
+            SUMO_TAG_VTYPEPROBE => self.add_v_type_probe_detector(attrs),
+            SUMO_TAG_ROUTEPROBE => self.add_route_probe_detector(attrs),
+            SUMO_TAG_MEANDATA_EDGE => self.add_edge_lane_mean_data(attrs, SUMO_TAG_MEANDATA_EDGE),
+            SUMO_TAG_MEANDATA_LANE => self.add_edge_lane_mean_data(attrs, SUMO_TAG_MEANDATA_LANE),
+            SUMO_TAG_TIMEDEVENT => {
+                let file = self.get_file_name().to_string();
+                unwrap_or_throw(self.myActionBuilder.add_action(attrs, &file));
+            }
+            SUMO_TAG_VAPORIZER => self.myTriggerBuilder.m().build_vaporizer(attrs),
+            SUMO_TAG_LOCATION => self.set_location(attrs),
+            SUMO_TAG_TAZ => self.add_district(attrs),
+            SUMO_TAG_TAZSOURCE => self.add_district_edge(attrs, true),
+            SUMO_TAG_TAZSINK => self.add_district_edge(attrs, false),
+            SUMO_TAG_ROUNDABOUT => self.add_roundabout(attrs),
+            SUMO_TAG_TYPE => {
+                let mut ok = true;
+                self.myCurrentTypeID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+            }
+            SUMO_TAG_RESTRICTION => {
+                let mut ok = true;
+                let svc = unwrap_or_throw(utils::common::sumo_vehicle_class::get_vehicle_class_id(&attrs.get::<String>(SUMO_ATTR_VCLASS, &self.myCurrentTypeID, &mut ok, true)));
+                let speed = attrs.get::<f64>(SUMO_ATTR_SPEED, &self.myCurrentTypeID, &mut ok, true);
+                if ok {
+                    self.myNet.m().add_restriction(&self.myCurrentTypeID, svc, speed);
+                }
+                if self.myNetIsLoaded {
+                    self.myHaveSeenAdditionalSpeedRestrictions = true;
+                }
+            }
+            SUMO_TAG_PREFERENCE => {
+                let mut ok = true;
+                let routingType = attrs.get::<String>(SUMO_ATTR_ROUTINGTYPE, "", &mut ok, true);
+                let prio = attrs.get::<f64>(SUMO_ATTR_PRIORITY, &routingType, &mut ok, true);
+                if prio <= 0.0 {
+                    throw_invalid_argument(format!("In preference for routingType '{}', priority must be positve", routingType));
+                }
+                if attrs.has_attribute(SUMO_ATTR_VCLASSES) {
+                    let vclasses = attrs.get::<String>(SUMO_ATTR_VCLASSES, &routingType, &mut ok, true);
+                    for className in StringTokenizer::new(&vclasses).get_vector() {
+                        let svc = unwrap_or_throw(utils::common::sumo_vehicle_class::get_vehicle_class_id(&className));
+                        self.myNet.m().add_preference(&routingType, svc, prio);
+                    }
+                } else if !attrs.has_attribute(SUMO_ATTR_VTYPES) {
+                    // general preferenze applying to all types and vClasses
+                    self.myNet.m().add_preference_2(&routingType, String::new(), prio);
+                }
+                if attrs.has_attribute(SUMO_ATTR_VTYPES) {
+                    let vtypes = attrs.get::<String>(SUMO_ATTR_VTYPES, &routingType, &mut ok, true);
+                    for typeName in StringTokenizer::new(&vtypes).get_vector() {
+                        self.myNet.m().add_preference_2(&routingType, typeName, prio);
+                    }
+                }
+            }
+            SUMO_TAG_STOPOFFSET => {
+                // shortcut: the StopOffset(attrs, ok) constructor is not ported (utils/common/sumo_vehicle_class.rs), so stop offsets from the net file are not applied yet; upgrade when it is
+                let _ = attrs;
+            }
+            SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
+                let mut ok = true;
+                let signalID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                let tls = MSNet::get_instance().m().get_tls_control();
+                if !tls.knows(&signalID) {
+                    throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
+                }
+                // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
+                self.myConstrainedSignal = tls.get(&signalID).get_default().cast::<MSRailSignal>();
+                if self.myConstrainedSignal.is_null() {
+                    throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
+                }
+            }
+            SUMO_TAG_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
+                let p = NLHandler::add_predecessor_constraint(element, attrs, self.myConstrainedSignal);
+                self.myLastParameterised.push(p);
+            }
+            SUMO_TAG_DEADLOCK => self.add_deadlock(attrs),
+            SUMO_TAG_ROUTEPART => self.add_deadlock_route(attrs),
+            _ => {}
+        });
+        if let Err(what) = result {
+            self.myCurrentIsBroken = true;
+            write_error(&what);
+        }
+        self.base.my_start_element(element, attrs);
+        if element == SUMO_TAG_PARAM && !self.myCurrentIsBroken {
+            self.add_param(attrs);
+        }
     }
 
     /// C++: `void NLHandler::myEndElement(int)` [virtual, protected]
@@ -599,7 +859,89 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NLHandler::myEndElement")
+        match element {
+            SUMO_TAG_EDGE => self.close_edge(),
+            SUMO_TAG_LANE => {
+                self.myEdgeControlBuilder.m().close_lane();
+                if !self.myCurrentIsInternalToSkip && !self.myCurrentIsBroken {
+                    self.myLastParameterised.pop();
+                }
+            }
+            SUMO_TAG_JUNCTION => {
+                if !self.myCurrentIsBroken {
+                    let basePath = self.get_file_name().to_string();
+                    if let Err(what) = try_catch_args(|| self.myJunctionControlBuilder.m().close_junction(&basePath)) {
+                        write_error(&what);
+                    }
+                }
+                self.myAmParsingTLLogicOrJunction = false;
+            }
+            SUMO_TAG_TLLOGIC => {
+                if !self.myCurrentIsBroken {
+                    let basePath = self.get_file_name().to_string();
+                    if let Err(what) = try_catch_args(|| self.myJunctionControlBuilder.m().close_traffic_light_logic(&basePath)) {
+                        for phase in self.myJunctionControlBuilder.get_loaded_phases().clone() {
+                            // C++ `delete phase`
+                            if !phase.is_null() {
+                                drop(unsafe { Box::from_raw(phase.as_raw()) });
+                            }
+                        }
+                        write_error(&what);
+                    }
+                }
+                self.myAmParsingTLLogicOrJunction = false;
+            }
+            SUMO_TAG_FUNCTION => self.close_function(),
+            SUMO_TAG_WAUT => self.close_waut(),
+            SUMO_TAG_RAILSIGNAL_CONSTRAINTS => self.myConstrainedSignal = Ptr::null(),
+            SUMO_TAG_E1DETECTOR | SUMO_TAG_INDUCTION_LOOP | SUMO_TAG_INSTANT_INDUCTION_LOOP | SUMO_TAG_E2DETECTOR | SUMO_TAG_LANE_AREA_DETECTOR => {
+                if !self.myCurrentIsBroken {
+                    self.myLastParameterised.pop();
+                }
+            }
+            SUMO_TAG_E3DETECTOR | SUMO_TAG_ENTRY_EXIT_DETECTOR => {
+                self.end_e3_detector();
+                if !self.myCurrentIsBroken {
+                    self.myLastParameterised.pop();
+                }
+            }
+            SUMO_TAG_PARKING_AREA => {
+                self.myTriggerBuilder.m().update_parking_area_default_capacity();
+                self.myTriggerBuilder.m().end_parking_area();
+                self.myLastParameterised.pop();
+            }
+            SUMO_TAG_BUS_STOP | SUMO_TAG_TRAIN_STOP | SUMO_TAG_CONTAINER_STOP | SUMO_TAG_CHARGING_STATION => {
+                self.myTriggerBuilder.m().end_stopping_place();
+                self.myLastParameterised.pop();
+            }
+            SUMO_TAG_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
+                self.myLastParameterised.pop();
+            }
+            SUMO_TAG_NET => {
+                // build junction graph
+                for (edgeID, (fromID, toID)) in self.myJunctionGraph.iter() {
+                    let edge = MSEdge::dictionary_2(edgeID);
+                    let from = self.myJunctionControlBuilder.m().retrieve(fromID.clone());
+                    let to = self.myJunctionControlBuilder.m().retrieve(toID.clone());
+                    if from.is_null() {
+                        write_error(&format!("Unknown from-node '{}' for edge '{}'.", fromID, edgeID));
+                        return;
+                    }
+                    if to.is_null() {
+                        write_error(&format!("Unknown to-node '{}' for edge '{}'.", toID, edgeID));
+                        return;
+                    }
+                    if !edge.is_null() {
+                        edge.m().set_junctions(from, to);
+                        from.m().add_outgoing(edge);
+                        to.m().add_incoming(edge);
+                    }
+                }
+                self.myNetIsLoaded = true;
+            }
+            _ => {}
+        }
+        // shortcut: MSRouteHandler::myEndElement is not ported (no end-element hook on MSRouteHandler), so the base step is skipped; upgrade when microsim/ms_route_handler.rs ports it
     }
 
     /// C++: `void NLHandler::addParam(const SUMOSAXAttributes &)` [protected]
@@ -623,7 +965,23 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_param(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addParam")
+        let mut ok = true;
+        let key = attrs.get::<String>(SUMO_ATTR_KEY, "", &mut ok, true);
+        // circumventing empty string test
+        let val = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
+        if let Some(last) = self.myLastParameterised.last() {
+            if !last.is_null() {
+                last.m().set_parameter(&key, &val);
+            }
+        }
+        // set
+        if ok && self.myAmParsingTLLogicOrJunction {
+            debug_assert!(!key.is_empty());
+            self.myJunctionControlBuilder.m().add_param(&key, &val);
+            if self.myNetIsLoaded {
+                self.myHaveSeenTLSParams = true;
+            }
+        }
     }
 
     /// C++: `void NLHandler::addE1Detector(const SUMOSAXAttributes &)` [virtual, protected]
@@ -669,7 +1027,39 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_e1_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addE1Detector")
+        self.myCurrentIsBroken = false;
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let period = attrs.get_opt_period(&id, &mut ok, sumotime_max_period(), true);
+        let position = attrs.get::<f64>(SUMO_ATTR_POSITION, &id, &mut ok, true);
+        let length = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, &id, &mut ok, 0.0, true);
+        let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut ok, false, true);
+        let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let vTypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        let nextEdges = attrs.get_opt::<String>(SUMO_ATTR_NEXT_EDGES, &id, &mut ok, String::new(), true);
+        let mesoTLS = attrs.get_opt::<bool>(SUMO_ATTR_MESO_TLS, &id, &mut ok, false, true);
+        let lane = attrs.get::<String>(SUMO_ATTR_LANE, &id, &mut ok, true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let detectPersonsString = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, &id, &mut ok, String::new(), true);
+        let detectPersons = self.parse_detect_persons(&detectPersonsString, &id, &mut ok);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            let det = self.myDetectorBuilder.m().build_induct_loop(&id, &lane, position, length, period, &check_for_relativity(&file, &handlerFile), friendlyPos, name, &vTypes, &nextEdges, mesoTLS, detectPersons);
+            self.myLastParameterised.push(det);
+        });
+        if let Err(what) = result {
+            self.myCurrentIsBroken = true;
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addInstantE1Detector(const SUMOSAXAttributes &)` [virtual, protected]
@@ -709,7 +1099,36 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_instant_e1_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addInstantE1Detector")
+        self.myCurrentIsBroken = false;
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let position = attrs.get::<f64>(SUMO_ATTR_POSITION, &id, &mut ok, true);
+        let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut ok, false, true);
+        let lane = attrs.get::<String>(SUMO_ATTR_LANE, &id, &mut ok, true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let vTypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        let nextEdges = attrs.get_opt::<String>(SUMO_ATTR_NEXT_EDGES, &id, &mut ok, String::new(), true);
+        let detectPersonsString = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, &id, &mut ok, String::new(), true);
+        let detectPersons = self.parse_detect_persons(&detectPersonsString, &id, &mut ok);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            let det = self.myDetectorBuilder.m().build_instant_induct_loop(&id, &lane, position, &check_for_relativity(&file, &handlerFile), friendlyPos, name, &vTypes, &nextEdges, detectPersons);
+            self.myLastParameterised.push(det);
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
+        self.myCurrentIsBroken = true;
     }
 
     /// C++: `void NLHandler::addE2Detector(const SUMOSAXAttributes &)` [virtual, protected]
@@ -904,7 +1323,160 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_e2_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addE2Detector")
+        self.myCurrentIsBroken = false;
+        // check whether this is a detector connected to a tls and optionally to a link
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let lsaid = attrs.get_opt::<String>(SUMO_ATTR_TLID, &id, &mut ok, String::new(), true);
+        let toLane = attrs.get_opt::<String>(SUMO_ATTR_TO, &id, &mut ok, String::new(), true);
+        let haltingTimeThreshold = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut ok, time2steps(1.0), true);
+        let haltingSpeedThreshold = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, &id, &mut ok, (5.0f32 / 3.6f32) as f64, true);
+        let jamDistThreshold = attrs.get_opt::<f64>(SUMO_ATTR_JAM_DIST_THRESHOLD, &id, &mut ok, 10.0f32 as f64, true);
+        let mut position = attrs.get_opt::<f64>(SUMO_ATTR_POSITION, &id, &mut ok, f64::MAX, true);
+        let length = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, &id, &mut ok, f64::MAX, true);
+        let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &id, &mut ok, false, true);
+        let showDetector = attrs.get_opt::<bool>(SUMO_ATTR_SHOW_DETECTOR, &id, &mut ok, true, true);
+        let contStr = attrs.get_opt::<String>(SUMO_ATTR_CONT, &id, &mut ok, String::new(), true);
+        if contStr != "" {
+            write_warning(&format!("Ignoring deprecated argument 'cont' for E2 detector '{}'", id));
+        }
+        let mut lane = attrs.get_opt::<String>(SUMO_ATTR_LANE, &id, &mut ok, String::new(), true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let vTypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        let nextEdges = attrs.get_opt::<String>(SUMO_ATTR_NEXT_EDGES, &id, &mut ok, String::new(), true);
+
+        let mut endPosition = attrs.get_opt::<f64>(SUMO_ATTR_ENDPOS, &id, &mut ok, f64::MAX, true);
+        let lanes = attrs.get_opt::<String>(SUMO_ATTR_LANES, &id, &mut ok, String::new(), true); // lanes has priority to lane
+        let detectPersonsString = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, &id, &mut ok, String::new(), true);
+        let detectPersons = self.parse_detect_persons(&detectPersonsString, &id, &mut ok);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+
+        let mut lanesGiven = lanes != "";
+        let mut laneGiven = lane != "";
+        if !(lanesGiven || laneGiven) {
+            // in absence of any lane-specification assume specification by id
+            write_warning("Trying to specify detector's lane by the given id since the argument 'lane' is missing.");
+            lane = id.clone();
+            laneGiven = true;
+        }
+        let lengthGiven = length != f64::MAX;
+        let mut posGiven = position != f64::MAX;
+        let endPosGiven = endPosition != f64::MAX;
+        let lsaGiven = lsaid != "";
+        let toLaneGiven = toLane != "";
+
+        let mut clane: Ptr<MSLane> = Ptr::null();
+        let mut clanes: Vec<Ptr<MSLane>> = Vec::new();
+        if lanesGiven {
+            // If lanes is given, endPos and startPos are required. lane, and length are ignored
+            let seps = " ,\t\n";
+            let mut st = StringTokenizer::with_token(&lanes, seps, true);
+            while st.has_next() {
+                let nextLaneID = unwrap_or_throw(st.next());
+                if nextLaneID.contains(|c| seps.contains(c)) {
+                    continue;
+                }
+                clane = self.myDetectorBuilder.m().get_lane_checking(&nextLaneID, SUMO_TAG_E2DETECTOR, &id);
+                clanes.push(clane);
+            }
+            if clanes.is_empty() {
+                throw_invalid_argument(format!("Malformed argument 'lanes' for E2Detector '{}'.\nSpecify 'lanes' as a sequence of lane-IDs separated by whitespace or comma (',')", id));
+            }
+            if laneGiven {
+                write_warning(&format!("Ignoring argument 'lane' for E2Detector '{}' since argument 'lanes' was given.\nUsage combinations for positional specification: [lane, pos, length], [lane, endPos, length], or [lanes, pos, endPos]", id));
+            }
+            if lengthGiven {
+                write_warning(&format!("Ignoring argument 'length' for E2Detector '{}' since argument 'lanes' was given.\nUsage combinations for positional specification: [lane, pos, length], [lane, endPos, length], or [lanes, pos, endPos]", id));
+            }
+            if !posGiven {
+                // assuming start pos == lane start
+                position = 0.0;
+                write_warning(&format!("Missing argument 'pos' for E2Detector '{}'. Assuming detector start == lane start of lane '{}'.", id, clanes[0].get_id()));
+            }
+            if !endPosGiven {
+                // assuming end pos == lane end
+                endPosition = clanes[clanes.len() - 1].get_length();
+                write_warning(&format!("Missing argument 'endPos' for E2Detector '{}'. Assuming detector end == lane end of lane '{}'.", id, clanes[clanes.len() - 1].get_id()));
+            }
+        } else {
+            if !laneGiven {
+                throw_invalid_argument(format!("Missing argument 'lane' for E2Detector '{}'.\nUsage combinations for positional specification: [lane, pos, length], [lane, endPos, length], or [lanes, pos, endPos]", id));
+            }
+            clane = self.myDetectorBuilder.m().get_lane_checking(&lane, SUMO_TAG_E2DETECTOR, &id);
+
+            if posGiven {
+                // start pos is given
+                if endPosGiven && lengthGiven {
+                    write_warning(&format!("Ignoring argument 'endPos' for E2Detector '{}' since argument 'pos' was given.\nUsage combinations for positional specification: [lane, pos, length], [lane, endPos, length], or [lanes, pos, endPos]", id));
+                    endPosition = f64::MAX;
+                }
+                if !lengthGiven && !endPosGiven {
+                    write_warning(&format!("Missing arguments 'length'/'endPos' for E2Detector '{}'. Assuming detector end == lane end of lane '{}'.", id, lane));
+                    endPosition = clane.get_length();
+                }
+            } else if endPosGiven {
+                // endPos is given, pos is not given
+                if !lengthGiven {
+                    write_warning(&format!("Missing arguments 'length'/'pos' for E2Detector '{}'. Assuming detector start == lane start of lane '{}'.", id, lane));
+                }
+            } else {
+                if lengthGiven && (length - clane.get_length()).abs() > utils::geom::NUMERICAL_EPS {
+                    throw_invalid_argument(format!("Incomplete positional specification for E2Detector '{}'.\nUsage combinations for positional specification: [lane, pos, length], [lane, endPos, length], or [lanes, pos, endPos]", id));
+                }
+                endPosition = clane.get_length();
+                position = 0.0;
+                write_warning(&format!("Missing arguments 'pos'/'endPos' for E2Detector '{}'. Assuming that the detector covers the whole lane '{}'.", id, lane));
+            }
+        }
+
+        // Period
+        let mut period: SUMOTime;
+        if !lsaGiven {
+            period = attrs.get_opt_period(&id, &mut ok, sumotime_max_period(), true);
+            if !ok {
+                self.myCurrentIsBroken = true;
+                return;
+            }
+        } else {
+            period = attrs.get_period(&id, &mut ok, false);
+        }
+
+        // TLS
+        let mut tlls: Ptr<MSTLLogicControl_TLSLogicVariants> = Ptr::null();
+        if lsaGiven {
+            tlls = Ptr::from_mut(self.myJunctionControlBuilder.m().get_tl_logic(&lsaid));
+            if tlls.m().get_active().is_null() {
+                throw_invalid_argument(format!("The detector '{}' refers to an unknown lsa '{}'.", id, lsaid));
+            }
+            if period != -1 {
+                write_warning(&format!("Ignoring argument 'period' for E2Detector '{}' since argument 'tl' was given.", id));
+                period = -1;
+            }
+        }
+
+        // Link
+        let mut cToLane: Ptr<MSLane> = Ptr::null();
+        if toLaneGiven {
+            cToLane = self.myDetectorBuilder.m().get_lane_checking(&toLane, SUMO_TAG_E2DETECTOR, &id);
+        }
+
+        // File
+        // shortcut: checkForRelativity does not throw IOError in the port, so the C++ try/catch around it is not needed
+        let filename = check_for_relativity(&file, &self.get_file_name().to_string());
+
+        // Build detector
+        let det: Ptr<Parameterised> = if lanesGiven {
+            // specification by a lane sequence
+            self.myDetectorBuilder.m().build_e2_detector_2(&id, clanes, position, endPosition, &filename, period, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, &vTypes, &nextEdges, detectPersons, friendlyPos, showDetector, tlls, cToLane)
+        } else {
+            // specification by start or end lane
+            self.myDetectorBuilder.m().build_e2_detector(&id, clane, position, endPosition, length, &filename, period, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, name, &vTypes, &nextEdges, detectPersons, friendlyPos, showDetector, tlls, cToLane)
+        };
+        self.myLastParameterised.push(det);
     }
 
     /// C++: `void NLHandler::beginE3Detector(const SUMOSAXAttributes &)` [protected]
@@ -944,7 +1516,33 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn begin_e3_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::beginE3Detector")
+        self.myCurrentIsBroken = false;
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let period = attrs.get_opt_period(&id, &mut ok, sumotime_max_period(), true);
+        let haltingTimeThreshold = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, &id, &mut ok, time2steps(1.0), true);
+        let haltingSpeedThreshold = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, &id, &mut ok, (5.0f32 / 3.6f32) as f64, true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let name = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        let vTypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        let nextEdges = attrs.get_opt::<String>(SUMO_ATTR_NEXT_EDGES, &id, &mut ok, String::new(), true);
+        let openEntry = attrs.get_opt::<bool>(SUMO_ATTR_OPEN_ENTRY, &id, &mut ok, false, true);
+        let expectArrival = attrs.get_opt::<bool>(SUMO_ATTR_EXPECT_ARRIVAL, &id, &mut ok, false, true);
+        let detectPersonsString = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, &id, &mut ok, String::new(), true);
+        let detectPersons = self.parse_detect_persons(&detectPersonsString, &id, &mut ok);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            let det = self.myDetectorBuilder.m().begin_e3_detector(&id, &check_for_relativity(&file, &handlerFile), period, haltingSpeedThreshold, haltingTimeThreshold, name, &vTypes, &nextEdges, detectPersons, openEntry, expectArrival);
+            self.myLastParameterised.push(det);
+        });
+        if let Err(what) = result {
+            self.myCurrentIsBroken = true;
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addE3Entry(const SUMOSAXAttributes &)` [protected]
@@ -962,7 +1560,15 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_e3_entry(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addE3Entry")
+        let mut ok = true;
+        let e3id = self.myDetectorBuilder.m().get_current_e3_id();
+        let position = attrs.get::<f64>(SUMO_ATTR_POSITION, &e3id, &mut ok, true);
+        let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &e3id, &mut ok, false, true);
+        let lane = attrs.get::<String>(SUMO_ATTR_LANE, &e3id, &mut ok, true);
+        if !ok {
+            return;
+        }
+        self.myDetectorBuilder.m().add_e3_entry(&lane, position, friendlyPos);
     }
 
     /// C++: `void NLHandler::addE3Exit(const SUMOSAXAttributes &)` [protected]
@@ -980,7 +1586,15 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_e3_exit(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addE3Exit")
+        let mut ok = true;
+        let e3id = self.myDetectorBuilder.m().get_current_e3_id();
+        let position = attrs.get::<f64>(SUMO_ATTR_POSITION, &e3id, &mut ok, true);
+        let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, &e3id, &mut ok, false, true);
+        let lane = attrs.get::<String>(SUMO_ATTR_LANE, &e3id, &mut ok, true);
+        if !ok {
+            return;
+        }
+        self.myDetectorBuilder.m().add_e3_exit(&lane, position, friendlyPos);
     }
 
     /// C++: `void NLHandler::endE3Detector()` [virtual, protected]
@@ -995,7 +1609,10 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn end_e3_detector(&mut self) {
-        todo!("port NLHandler::endE3Detector")
+        let result = try_catch_args(|| self.myDetectorBuilder.m().end_e3_detector());
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addVTypeProbeDetector(const SUMOSAXAttributes &)` [virtual, protected]
@@ -1021,7 +1638,22 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_v_type_probe_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addVTypeProbeDetector")
+        write_warning("VTypeProbes are deprecated. Use fcd-output devices (assigned to the vType) instead.");
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let period = attrs.get_opt_period(&id, &mut ok, sumotime_max_period(), true);
+        let type_ = attrs.get_string_secure(SUMO_ATTR_TYPE, "");
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        if !ok {
+            return;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            self.myDetectorBuilder.m().build_v_type_probe(&id, &type_, period, &check_for_relativity(&file, &handlerFile));
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addRouteProbeDetector(const SUMOSAXAttributes &)` [virtual, protected]
@@ -1049,7 +1681,23 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_route_probe_detector(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addRouteProbeDetector")
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let period = attrs.get_opt_period(&id, &mut ok, sumotime_max_period(), true);
+        let begin = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_BEGIN, &id, &mut ok, -1, true);
+        let edge = attrs.get::<String>(SUMO_ATTR_EDGE, &id, &mut ok, true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let vTypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        if !ok {
+            return;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            self.myDetectorBuilder.m().build_route_probe(&id, &edge, period, begin, &check_for_relativity(&file, &handlerFile), &vTypes);
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addEdgeLaneMeanData(const SUMOSAXAttributes &, int)` [virtual, protected]
@@ -1137,7 +1785,101 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_lane_mean_data(&mut self, attrs: &SUMOSAXAttributes, objecttype: i32) {
-        todo!("port NLHandler::addEdgeLaneMeanData")
+        let mut ok = true;
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        let maxTravelTime = attrs.get_opt::<f64>(SUMO_ATTR_MAX_TRAVELTIME, &id, &mut ok, 100000.0, true);
+        let minSamples = attrs.get_opt::<f64>(SUMO_ATTR_MIN_SAMPLES, &id, &mut ok, 0.0, true);
+        let haltingSpeedThreshold = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, &id, &mut ok, utils::geom::POSITION_EPS, true);
+        let haltingSpeedThresholdRel = attrs.get_opt::<f64>(SUMO_ATTR_HALTING_SPEED_THRESHOLD_RELATIVE, &id, &mut ok, 0.0, true);
+        let excludeEmpty = attrs.get_opt::<String>(SUMO_ATTR_EXCLUDE_EMPTY, &id, &mut ok, "false".to_string(), true);
+        let withInternal = attrs.get_opt::<bool>(SUMO_ATTR_WITH_INTERNAL, &id, &mut ok, false, true);
+        let trackVehicles = attrs.get_opt::<bool>(SUMO_ATTR_TRACK_VEHICLES, &id, &mut ok, false, true);
+        let detectPersonsString = attrs.get_opt::<String>(SUMO_ATTR_DETECT_PERSONS, &id, &mut ok, String::new(), true);
+        let file = attrs.get::<String>(SUMO_ATTR_FILE, &id, &mut ok, true);
+        let type_ = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut ok, String::new(), true);
+        let mut vtypes = attrs.get_opt::<String>(SUMO_ATTR_VTYPES, &id, &mut ok, String::new(), true);
+        let writeAttributes = attrs.get_opt::<String>(SUMO_ATTR_WRITE_ATTRIBUTES, &id, &mut ok, String::new(), true);
+        let period = attrs.get_opt_period(&id, &mut ok, -1, true);
+        let begin = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_BEGIN, &id, &mut ok, unwrap_or_throw(utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))), true);
+        let end = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_END, &id, &mut ok, unwrap_or_throw(utils::common::time::string2time(&utils::options::options_cont::get_string("end"))), true);
+        let mut edgeIDs: Vec<String> = attrs.get_opt::<Vec<String>>(SUMO_ATTR_EDGES, &id, &mut ok, Vec::new(), true);
+        let edgesFile = attrs.get_opt::<String>(SUMO_ATTR_EDGESFILE, &id, &mut ok, String::new(), true);
+        let aggregateStr = attrs.get_opt::<String>(SUMO_ATTR_AGGREGATE, &id, &mut ok, "false".to_string(), true);
+        let mut aggregate = AggregateType::NO;
+        if aggregateStr == "taz" {
+            aggregate = AggregateType::TAZ;
+        } else if unwrap_or_throw(utils::common::string_utils::to_bool(&aggregateStr)) {
+            aggregate = AggregateType::YES;
+        }
+        if !ok {
+            return;
+        }
+        let mut detectPersons: i32 = 0;
+        for mode in StringTokenizer::new(&detectPersonsString).get_vector() {
+            if PersonModeValues.has_string(&mode) {
+                detectPersons |= unwrap_or_throw(PersonModeValues.get(&mode)) as i32;
+            } else {
+                write_error(&format!("Invalid person mode '{}' in edgeData definition '{}'", mode, id));
+                return;
+            }
+        }
+        if edgesFile != "" {
+            // shortcut: reads the whole file at once instead of streaming tokens with operator>>, same tokens for ordinary text files
+            match std::fs::read_to_string(&edgesFile) {
+                Ok(content) => {
+                    for name in content.split_whitespace() {
+                        // maybe we're loading an edge-selection
+                        if let Some(edgeID) = name.strip_prefix("edge:") {
+                            edgeIDs.push(edgeID.to_string());
+                        } else {
+                            edgeIDs.push(name.to_string());
+                        }
+                    }
+                }
+                Err(_) => std::panic::panic_any(ProcessError::new(format!("Could not load names of edges for edgeData definition '{}' from '{}'.", id, edgesFile))),
+            }
+        }
+        let mut edges: Vec<Ptr<MSEdge>> = Vec::new();
+        for edgeID in &edgeIDs {
+            let edge = MSEdge::dictionary_2(edgeID);
+            if edge.is_null() {
+                write_error(&format!("Unknown edge '{}' in edgeData definition '{}'", edgeID, id));
+                return;
+            }
+            edges.push(edge);
+        }
+        let mut useLanes = objecttype == SUMO_TAG_MEANDATA_LANE;
+        if useLanes && use_meso_sim() && !utils::options::options_cont::get_bool("meso-lane-queue") {
+            write_warning(&format!("LaneData '{}' requested for mesoscopic simulation but --meso-lane-queue is not active. Falling back to edgeData.", id));
+            useLanes = false;
+        }
+        let handlerFile = self.get_file_name().to_string();
+        let result = try_catch_args(|| {
+            self.myDetectorBuilder.m().create_edge_lane_mean_data(
+                &id,
+                period,
+                begin,
+                end,
+                &type_,
+                useLanes,
+                &excludeEmpty,
+                withInternal,
+                trackVehicles,
+                detectPersons,
+                maxTravelTime,
+                minSamples,
+                haltingSpeedThreshold,
+                haltingSpeedThresholdRel,
+                &vtypes,
+                &writeAttributes,
+                edges,
+                aggregate,
+                &check_for_relativity(&file, &handlerFile),
+            );
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::addDeadlock(const SUMOSAXAttributes &)` [virtual, protected]
@@ -1160,7 +1902,20 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_deadlock(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addDeadlock")
+        let mut ok = true;
+        let signalIDs = attrs.get::<Vec<String>>(SUMO_ATTR_SIGNALS, "", &mut ok, true);
+        let mut signals: Vec<Ptr<MSRailSignal>> = Vec::new();
+        for id in signalIDs {
+            let tll = self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().get_active(&id);
+            // shortcut: dynamic_cast<const MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
+            let rs = tll.cast::<MSRailSignal>();
+            if !rs.is_null() {
+                signals.push(rs);
+            } else {
+                throw_invalid_argument(format!("Rail signal '{}' in {} is not known", id, tag_to_string(SUMO_TAG_DEADLOCK)));
+            }
+        }
+        MSRailSignalControl::get_instance().load_deadlock_check(signals);
     }
 
     /// C++: `void NLHandler::addDeadlockRoute(const SUMOSAXAttributes &)` [virtual, protected]
@@ -1173,7 +1928,10 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_deadlock_route(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::addDeadlockRoute")
+        let mut ok = true;
+        let mut edges: ConstMSEdgeVector = Vec::new();
+        MSEdge::parse_edges_list(&attrs.get::<String>(SUMO_ATTR_EDGES, "deadlock", &mut ok, true), &mut edges, "deadlock");
+        MSRailSignalControl::get_instance().load_deadlock_route(&edges);
     }
 
     /// C++: `void NLHandler::closeEdge()` [virtual, protected]
@@ -1195,7 +1953,20 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn close_edge(&mut self) {
-        todo!("port NLHandler::closeEdge")
+        self.myLastParameterised.clear();
+        // omit internal edges if not wished and broken edges
+        if self.myCurrentIsInternalToSkip || self.myCurrentIsBroken {
+            return;
+        }
+        let result = try_catch_args(|| {
+            let e = self.myEdgeControlBuilder.m().close_edge();
+            let id = e.get_id().to_string();
+            MSEdge::dictionary(&id, e);
+            e.m().base2.update_parameters(self.myLastEdgeParameters.get_parameters_map());
+        });
+        if let Err(what) = result {
+            write_error(&what);
+        }
     }
 
     /// C++: `void NLHandler::beginEdgeParsing(const SUMOSAXAttributes &)` [private]
@@ -1277,7 +2048,78 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn begin_edge_parsing(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port NLHandler::beginEdgeParsing")
+        let mut ok = true;
+        self.myCurrentIsBroken = false;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        // parse the function
+        let func = attrs.get_opt::<SumoXMLEdgeFunc>(SUMO_ATTR_FUNCTION, &id, &mut ok, SumoXMLEdgeFunc::NORMAL, true);
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        // omit internal edges if not wished
+        if id.starts_with(':') {
+            self.myHaveSeenInternalEdge = true;
+            if !using_internal_lanes() && (func == SumoXMLEdgeFunc::CROSSING || func == SumoXMLEdgeFunc::WALKINGAREA) {
+                self.myCurrentIsInternalToSkip = true;
+                return;
+            }
+            let junctionID = utils::xml::sumo_xml_definitions::get_junction_id_from_internal_edge(&id);
+            self.myJunctionGraph.insert(id.clone(), (junctionID.clone(), junctionID));
+        } else {
+            self.myHaveSeenDefaultLength |= !attrs.has_attribute(SUMO_ATTR_LENGTH);
+            let from = attrs.get::<String>(SUMO_ATTR_FROM, &id, &mut ok, true);
+            let to = attrs.get::<String>(SUMO_ATTR_TO, &id, &mut ok, true);
+            self.myJunctionGraph.insert(id.clone(), (from, to));
+        }
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        self.myCurrentIsInternalToSkip = false;
+        // get the street name
+        let streetName = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, String::new(), true);
+        // get the edge type
+        let edgeType = attrs.get_opt::<String>(SUMO_ATTR_TYPE, &id, &mut ok, String::new(), true);
+        let routingType = attrs.get_opt::<String>(SUMO_ATTR_ROUTINGTYPE, &id, &mut ok, String::new(), true);
+        // get the edge priority (only for visualization)
+        let priority = attrs.get_opt::<i32>(SUMO_ATTR_PRIORITY, &id, &mut ok, -1, true); // default taken from netbuild/NBFrame option 'default.priority'
+        // get the bidi-edge
+        let bidi = attrs.get_opt::<String>(SUMO_ATTR_BIDI, &id, &mut ok, String::new(), true);
+        // get the kilometrage/mileage (for visualization and output)
+        let distance = attrs.get_opt::<f64>(SUMO_ATTR_DISTANCE, &id, &mut ok, 0.0, true);
+
+        if !ok {
+            self.myCurrentIsBroken = true;
+            return;
+        }
+        let result = try_catch_args(|| {
+            self.myEdgeControlBuilder.m().begin_edge_parsing(&id, func, &streetName, &edgeType, &routingType, priority, &bidi, distance);
+        });
+        if let Err(what) = result {
+            write_error(&what);
+            self.myCurrentIsBroken = true;
+        }
+
+        if func == SumoXMLEdgeFunc::CROSSING {
+            // get the crossingEdges attribute (to implement the other side of the road pushbutton)
+            let crossingEdges = attrs.get_opt::<String>(SUMO_ATTR_CROSSING_EDGES, &id, &mut ok, String::new(), true);
+            if !crossingEdges.is_empty() {
+                let mut crossingEdgesVector: Vec<String> = Vec::new();
+                let mut edges = StringTokenizer::new(&crossingEdges);
+                while edges.has_next() {
+                    crossingEdgesVector.push(unwrap_or_throw(edges.next()));
+                }
+                self.myEdgeControlBuilder.m().add_crossing_edges(&crossingEdgesVector);
+            }
+        }
+        self.myLastEdgeParameters.clear_parameter();
+        self.myLastParameterised.push(Ptr::from_mut(&mut self.myLastEdgeParameters));
     }
 
     /// C++: `void NLHandler::addLane(const SUMOSAXAttributes &)` [private]
