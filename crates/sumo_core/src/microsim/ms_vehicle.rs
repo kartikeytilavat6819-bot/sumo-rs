@@ -17,6 +17,7 @@ fn max2(a: f64, b: f64) -> f64 {
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
 const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
 const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
+const STOPPING_PLACE_OFFSET: f64 = 0.5; // MSVehicle.cpp
 
 /// C++ implicit upcast MSVehicle& -> SUMOTrafficObject& (MSVehicle derives from SUMOVehicle, which derives from SUMOTrafficObject)
 #[allow(dead_code)]
@@ -7689,7 +7690,258 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_next_stop(&mut self, currentVelocity: f64) -> f64 {
-        todo!("port MSVehicle::processNextStop")
+        if self.myStops.is_empty() {
+            // no stops; pass
+            return currentVelocity;
+        }
+
+        let this = Ptr::from_mut(self);
+        let stop = Ptr::from_mut(self.myStops.front_mut().unwrap());
+        let time = MSNet::get_instance().get_current_time_step();
+        if stop.reached {
+            stop.m().duration -= self.get_action_step_length();
+            if self.get_speed() > 0. {
+                // re-enter stopping places to correct waiting position (except for parkingArea since it's place-based)
+                if !stop.busstop.is_null() {
+                    stop.busstop.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                }
+                if !stop.containerstop.is_null() {
+                    stop.containerstop.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                }
+                if !stop.chargingStation.is_null() {
+                    stop.chargingStation.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                }
+                if stop.get_speed() <= 0. {
+                    stop.m().entryPos = self.get_position_on_lane();
+                }
+            }
+
+            if stop.duration <= 0 && !stop.pars.join.is_empty() {
+                // join this train (part) to another one
+                let joinVeh = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.join).cast::<MSVehicle>();
+                if !joinVeh.is_null() && joinVeh.has_departed() && (joinVeh.m().join_train_part(this) || joinVeh.m().join_train_part_front(this)) {
+                    stop.m().joinTriggered = false;
+                    if self.myAmRegisteredAsWaiting {
+                        MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                        self.myAmRegisteredAsWaiting = false;
+                    }
+                    // avoid collision warning before this vehicle is removed (joinVeh was already made longer)
+                    self.myCollisionImmunity = time2steps(100.);
+                    // mark this vehicle as arrived
+                    self.myArrivalPos = self.get_position_on_lane();
+                    self.myParameter.m().arrivalEdge = self.get_route_position();
+                    // handle transportables that want to continue in the other vehicle
+                    if !self.myPersonDevice.is_null() {
+                        self.myPersonDevice.m().transfer_at_split_or_join(joinVeh.cast::<MSBaseVehicle>());
+                    }
+                    if !self.myContainerDevice.is_null() {
+                        self.myContainerDevice.m().transfer_at_split_or_join(joinVeh.cast::<MSBaseVehicle>());
+                    }
+                }
+            }
+            self.board_transportables(stop.m());
+            // shortcut: MSDevice_Taxi customer cancellation (getDevice(typeid(MSDevice_Taxi)) when time > stop.endBoarding) is skipped, the type-id device lookup is Unmapped, upgrade when a typed device lookup exists
+            if !self.keep_stopping(false) && self.is_on_road() {
+                self.resume_from_stopping();
+                if self.is_rail() && self.has_stops() {
+                    // stay on the current lane in case of a double stop
+                    let nextStop = self.get_next_stop();
+                    if nextStop.edge == self.myCurrEdge {
+                        let stopSpeed = self.get_car_follow_model().stop_speed(this, self.get_speed(), nextStop.pars.endPos - self.myState.myPos, MSCFModel_CalcReason::CURRENT);
+                        return stopSpeed;
+                    }
+                }
+            } else {
+                if stop.triggered {
+                    if self.get_vehicle_type().get_person_capacity() == self.get_person_number() {
+                        write_warningf!("Vehicle '%' ignores triggered stop on lane '%' due to capacity constraints.", self.get_id(), stop.lane.get_id());
+                        stop.m().triggered = false;
+                    } else if !self.myAmRegisteredAsWaiting && stop.duration <= delta_t() {
+                        // we can only register after waiting for one step. otherwise we might falsely signal a deadlock
+                        MSNet::get_instance().m().get_vehicle_control().register_one_waiting();
+                        self.myAmRegisteredAsWaiting = true;
+                    }
+                }
+                if stop.containerTriggered {
+                    if self.get_vehicle_type().get_container_capacity() == self.get_container_number() {
+                        write_warningf!("Vehicle '%' ignores container triggered stop on lane '%' due to capacity constraints.", self.get_id(), stop.lane.get_id());
+                        stop.m().containerTriggered = false;
+                    } else if stop.containerTriggered && !self.myAmRegisteredAsWaiting && stop.duration <= delta_t() {
+                        // we can only register after waiting for one step. otherwise we might falsely signal a deadlock
+                        MSNet::get_instance().m().get_vehicle_control().register_one_waiting();
+                        self.myAmRegisteredAsWaiting = true;
+                    }
+                }
+                // joining only takes place after stop duration is over
+                if stop.joinTriggered && !self.myAmRegisteredAsWaiting && stop.duration <= (if stop.pars.extension >= 0 { -stop.pars.extension } else { 0 }) {
+                    if stop.pars.extension >= 0 {
+                        write_warningf!("Vehicle '%' aborts joining after extension of %s at time %.", self.get_id(), steps2time(stop.pars.extension), time2string(MSNet::get_instance().get_current_time_step()));
+                        stop.m().joinTriggered = false;
+                    } else {
+                        // keep stopping indefinitely but ensure that simulation terminates
+                        MSNet::get_instance().m().get_vehicle_control().register_one_waiting();
+                        self.myAmRegisteredAsWaiting = true;
+                    }
+                }
+                if stop.get_speed() > 0. {
+                    //waypoint mode
+                    if stop.duration == 0 {
+                        return stop.get_speed();
+                    } else {
+                        // stop for 'until' (computed in planMove)
+                        return currentVelocity;
+                    }
+                } else {
+                    // brake
+                    if crate::microsim::ms_globals::semi_implicit_euler_update() || stop.get_speed() > 0. {
+                        return 0.;
+                    } else {
+                        // ballistic:
+                        return self.get_speed() - self.get_car_follow_model().get_max_decel();
+                    }
+                }
+            }
+        } else {
+            if stop.pars.onDemand && !stop.skipOnDemand && self.myStopDist <= self.get_car_follow_model().brake_gap(self.myLane.get_vehicle_max_speed(this.cast::<SUMOTrafficObject>())) {
+                let net = MSNet::get_instance();
+                let noExits = ((self.myPersonDevice.is_null() || !self.myPersonDevice.any_leaving_at_stop(&stop)) && (self.myContainerDevice.is_null() || !self.myContainerDevice.any_leaving_at_stop(&stop)));
+                let noEntries = ((!net.has_persons() || !net.m().get_person_control().has_any_waiting(stop.get_edge(), this.cast::<SUMOVehicle>())) && (!net.has_containers() || !net.m().get_container_control().has_any_waiting(stop.get_edge(), this.cast::<SUMOVehicle>())));
+                if noExits && noEntries {
+                    //std::cout << " skipOnDemand\n";
+                    stop.m().skipOnDemand = true;
+                    // bestLanes must be extended past this stop
+                    self.update_best_lanes(true, Ptr::null());
+                }
+            }
+            // is the next stop on the current lane?
+            if stop.edge == self.myCurrEdge {
+                // get the stopping position
+                let useStoppingPlace = !stop.busstop.is_null() || !stop.containerstop.is_null() || !stop.parkingarea.is_null();
+                let mut fitsOnStoppingPlace = true;
+                if !stop.skipOnDemand {
+                    // no need to check available space if we skip it anyway
+                    if !stop.busstop.is_null() {
+                        fitsOnStoppingPlace &= stop.busstop.fits(self.myState.myPos, &*this);
+                    }
+                    if !stop.containerstop.is_null() {
+                        fitsOnStoppingPlace &= stop.containerstop.fits(self.myState.myPos, &*this);
+                    }
+                    // if the stop is a parking area we check if there is a free position on the area
+                    if !stop.parkingarea.is_null() {
+                        fitsOnStoppingPlace &= self.myState.myPos > stop.parkingarea.get_begin_lane_position();
+                        if stop.parkingarea.get_occupancy() >= stop.parkingarea.get_capacity() {
+                            fitsOnStoppingPlace = false;
+                            // trigger potential parkingZoneReroute
+                            let oldParkingArea = stop.parkingarea;
+                            for rem in self.myLane.get_move_reminders().iter() {
+                                if rem.is_parking_rerouter() {
+                                    rem.m().notify_enter(this.m(), MSMoveReminder_Notification::NOTIFICATION_PARKING_REROUTE, self.myLane);
+                                }
+                            }
+                            if self.myStops.is_empty() || self.myStops.front().unwrap().parkingarea != oldParkingArea {
+                                // rerouted, keep driving
+                                return currentVelocity;
+                            }
+                        } else if stop.parkingarea.get_occupancy_including_reservations(this.cast::<SUMOVehicle>()) >= stop.parkingarea.get_capacity() {
+                            fitsOnStoppingPlace = false;
+                        } else if stop.parkingarea.park_on_road() && stop.parkingarea.get_lot_index(this.cast::<SUMOVehicle>()) < 0 {
+                            fitsOnStoppingPlace = false;
+                        }
+                    }
+                }
+                let targetPos = self.myState.myPos + self.myStopDist + (if stop.get_speed() > 0. { stop.pars.startPos - stop.pars.endPos } else { 0. });
+                let mut reachedThreshold = (if useStoppingPlace { targetPos - STOPPING_PLACE_OFFSET } else { stop.get_reached_threshold() }) - utils::geom::NUMERICAL_EPS;
+                if !stop.busstop.is_null() && stop.get_speed() <= 0. && self.get_waiting_time(false) > delta_t() && self.myLane == stop.lane {
+                    // count (long) busStop as reached when fully within and jammed before the designated spot
+                    reachedThreshold = min2(reachedThreshold, stop.pars.startPos + self.get_length());
+                }
+                let posReached = self.myState.pos() >= reachedThreshold && currentVelocity <= stop.get_speed() + SUMO_const_haltingSpeed && self.myLane == stop.lane;
+                if posReached && !fitsOnStoppingPlace && MSStopOut::active() {
+                    MSStopOut::get_instance().m().stop_blocked(this.cast::<SUMOVehicle>(), time);
+                }
+                if fitsOnStoppingPlace && posReached && (!crate::microsim::ms_globals::model_parking_manoeuver() || self.myManoeuvre.entry_manoeuvre_is_complete(this)) {
+                    // ok, we may stop (have reached the stop)  and either we are not modelling maneuvering or have completed entry
+                    stop.m().reached = true;
+                    if !stop.startedFromState {
+                        stop.m().pars.started = time;
+                    }
+                    if MSStopOut::active() {
+                        MSStopOut::get_instance().m().stop_started(this.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), time);
+                    }
+                    self.myLane.get_edge().add_waiting(this.cast::<SUMOVehicle>());
+                    MSNet::get_instance().m().inform_vehicle_state_listener(this.cast::<SUMOVehicle>(), MSNet_VehicleState::STARTING_STOP, "");
+                    MSNet::get_instance().m().get_vehicle_control().register_stop_started();
+                    // compute stopping time
+                    stop.m().duration = stop.get_min_duration(time);
+                    stop.m().endBoarding = if stop.pars.extension >= 0 { time + stop.duration + stop.pars.extension } else { i64::MAX };
+                    // shortcut: MSDevice_Taxi extension of endBoarding (getDevice(typeid(MSDevice_Taxi)) with stop.pars.extension >= 0) is skipped, the type-id device lookup is Unmapped
+                    if stop.get_speed() > 0. {
+                        // ignore duration parameter in waypoint mode unless 'until' or 'ended' are set
+                        if stop.get_until() > time {
+                            stop.m().duration = stop.get_until() - time;
+                        } else {
+                            stop.m().duration = 0;
+                        }
+                    } else {
+                        stop.m().entryPos = self.get_position_on_lane();
+                    }
+                    if !stop.busstop.is_null() {
+                        // let the bus stop know the vehicle
+                        stop.busstop.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                    }
+                    if !stop.containerstop.is_null() {
+                        // let the container stop know the vehicle
+                        stop.containerstop.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                    }
+                    if !stop.parkingarea.is_null() && stop.get_speed() <= 0. {
+                        // let the parking area know the vehicle
+                        stop.parkingarea.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                    }
+                    if !stop.chargingStation.is_null() {
+                        // let the container stop know the vehicle
+                        stop.chargingStation.m().enter(this.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                    }
+
+                    if !stop.pars.tripId.is_empty() {
+                        self.myParameter.m().set_parameter("tripId", &stop.pars.tripId);
+                    }
+                    if !stop.pars.line.is_empty() {
+                        self.myParameter.m().line = stop.pars.line.clone();
+                    }
+                    if !stop.pars.split.is_empty() {
+                        // split the train
+                        let splitVeh = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.split).cast::<MSVehicle>();
+                        if splitVeh.is_null() {
+                            write_warningf!("Vehicle '%' to split from vehicle '%' is not known. time=%.", stop.pars.split, self.get_id(), time2string(time));
+                        } else {
+                            MSNet::get_instance().m().get_insertion_control().add(splitVeh.cast::<SUMOVehicle>());
+                            splitVeh.get_route().get_edges()[0].remove_waiting(splitVeh.cast::<SUMOVehicle>());
+                            MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                            let newLength = max2(self.get_vehicle_type().get_length() - splitVeh.get_vehicle_type().get_length(), self.get_vehicle_type().get_parameter().locomotiveLength);
+                            self.get_singular_type().set_length(&newLength);
+                            // handle transportables that want to continue in the split part
+                            if !self.myPersonDevice.is_null() {
+                                self.myPersonDevice.m().transfer_at_split_or_join(splitVeh.cast::<MSBaseVehicle>());
+                            }
+                            if !self.myContainerDevice.is_null() {
+                                self.myContainerDevice.m().transfer_at_split_or_join(splitVeh.cast::<MSBaseVehicle>());
+                            }
+                            if splitVeh.get_parameter().departPosProcedure == DepartPosDefinition::SPLIT_FRONT {
+                                let backShift = splitVeh.get_length() + self.get_vehicle_type().get_min_gap();
+                                self.myState.myPos -= backShift;
+                                self.myState.myBackPos -= backShift;
+                            }
+                        }
+                    }
+
+                    self.board_transportables(stop.m());
+                    if stop.pars.posLat != utils::common::std_defs::INVALID_DOUBLE {
+                        self.myState.myPosLat = stop.pars.posLat;
+                    }
+                }
+            }
+        }
+        currentVelocity
     }
 
     /// C++: `std::pair<const MSVehicle *const, double> MSVehicle::getLeader(double, bool) const` [const, virtual]
@@ -7932,7 +8184,55 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn unsafe_link_ahead(&self, lane: Ptr<MSLane>, zipperDist: f64) -> bool {
-        todo!("port MSVehicle::unsafeLinkAhead")
+        use utils::xml::sumo_xml_definitions::LINKSTATE_ZIPPER;
+        let mut lane = lane;
+        let mut seen = self.myLane.get_length() - self.get_position_on_lane();
+        let dist = max2(zipperDist, self.get_car_follow_model().brake_gap_2(self.get_speed(), self.get_car_follow_model().get_max_decel(), 0.));
+        if seen < dist {
+            let bestLaneConts = self.get_best_lanes_continuation_2(lane);
+            let mut view: i32 = 1;
+            let mut link: usize = MSLane::succ_link_sec(self, view, &lane, bestLaneConts);
+            let mut di: usize = 0;
+            while !lane.is_link_end(&mut link) && seen <= dist {
+                let curLink = lane.myLinks[link];
+                if (!lane.is_internal()
+                    && ((curLink.get_state() == LINKSTATE_ZIPPER && seen < curLink.get_foe_visibility_distance())
+                        || !curLink.have_priority()))
+                    || (lane.is_internal() && zipperDist > 0.)
+                {
+                    // find the drive item corresponding to this link
+                    let mut found = false;
+                    while di != self.myLFLinkLanes.len() && !found {
+                        if !self.myLFLinkLanes[di].myLink.is_null() {
+                            let diPredLane = self.myLFLinkLanes[di].myLink.get_lane_before();
+                            if !diPredLane.is_null() {
+                                if Ptr::from_mut(diPredLane.get_edge()) == Ptr::from_mut(lane.get_edge()) {
+                                    found = true;
+                                }
+                            }
+                        }
+                        if !found {
+                            di += 1;
+                        }
+                    }
+                    if found {
+                        let leaveTime = curLink.get_leave_time(self.myLFLinkLanes[di].myArrivalTime, self.myLFLinkLanes[di].myArrivalSpeed, self.myLFLinkLanes[di].get_leave_speed(), self.get_vehicle_type().get_length());
+                        let entry = curLink.get_corresponding_entry_link();
+                        if entry.has_approaching_foe(self.myLFLinkLanes[di].myArrivalTime, leaveTime, self.myLFLinkLanes[di].myArrivalSpeed, self.get_car_follow_model().get_max_decel()) {
+                            return true;
+                        }
+                    }
+                    // no drive item is found if the vehicle aborts its request within dist
+                }
+                lane = curLink.get_via_lane_or_lane();
+                if !lane.get_edge().is_internal() {
+                    view += 1;
+                }
+                seen += lane.get_length();
+                link = MSLane::succ_link_sec(self, view, &lane, bestLaneConts);
+            }
+        }
+        false
     }
 
     /// C++: `bool MSVehicle::passingMinor() const` [const]
@@ -8064,7 +8364,77 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_parking_area(&mut self, parkingAreaID: &str, errorMsg: &mut String) -> bool {
-        todo!("port MSVehicle::rerouteParkingArea")
+        // this function is based on MSTriggeredRerouter::rerouteParkingArea in order to keep
+        // consistency in the behaviour.
+        let this = Ptr::from_mut(self);
+        let time = MSNet::get_instance().get_current_time_step();
+
+        // get vehicle params
+        let destParkArea = self.get_next_parking_area();
+        let lastEdge = self.get_route().get_last_edge();
+
+        if destParkArea.is_null() {
+            // not driving towards a parking area
+            *errorMsg = format!("Vehicle {} is not driving to a parking area so it cannot be rerouted.", self.get_id());
+            return false;
+        }
+
+        // if the current route ends at the parking area, the new route will also and at the new area
+        let newDestination = Ptr::from_mut(destParkArea.get_lane().get_edge()) == lastEdge
+            && self.get_arrival_pos() >= destParkArea.get_begin_lane_position()
+            && self.get_arrival_pos() <= destParkArea.get_end_lane_position();
+
+        // retrieve info on the new parking area
+        let newParkingArea = MSNet::get_instance().get_stopping_place(parkingAreaID, SumoXMLTag::SUMO_TAG_PARKING_AREA).cast::<MSParkingArea>();
+
+        if newParkingArea.is_null() {
+            *errorMsg = format!("Parking area ID {} not found in the network.", parkingAreaID);
+            return false;
+        }
+
+        let newEdge = Ptr::from_mut(newParkingArea.get_lane().get_edge());
+
+        // Compute the route from the current edge to the parking area edge
+        // shortcut: SUMOAbstractRouter::compute(from, fromPos, to, toPos, ...) position overload is not ported, routes are computed edge to edge without the lane positions, upgrade when the position-aware compute is ported
+        let mut edgesToPark: Vec<Ptr<MSEdge>> = Vec::new();
+        this.m().get_router_tt().compute(self.get_edge(), newEdge, this.cast::<SUMOVehicle>(), time, &mut edgesToPark, false);
+
+        // Compute the route from the parking area edge to the end of the route
+        let mut edgesFromPark: Vec<Ptr<MSEdge>> = Vec::new();
+        if !newDestination {
+            this.m().get_router_tt().compute(newEdge, lastEdge, this.cast::<SUMOVehicle>(), time, &mut edgesFromPark, false);
+        } else {
+            // adapt plans of any riders
+            for i in 0..this.get_persons().len() {
+                let p = this.get_persons()[i];
+                p.m().reroute_parking_area(this.m().get_next_parking_area().cast::<MSStoppingPlace>(), newParkingArea.cast::<MSStoppingPlace>());
+            }
+        }
+
+        // we have a new destination, let's replace the vehicle route
+        let mut edges: Vec<Ptr<MSEdge>> = edgesToPark.clone();
+        if edgesFromPark.len() > 0 {
+            edges.extend_from_slice(&edgesFromPark[1..]);
+        }
+
+        if newDestination && self.get_parameter().arrivalPosProcedure != ArrivalPosDefinition::DEFAULT {
+            let mut newParameter = self.get_parameter().clone();
+            newParameter.arrivalPosProcedure = ArrivalPosDefinition::GIVEN;
+            newParameter.arrivalPos = newParkingArea.get_end_lane_position();
+            // shortcut: C++ `new SUMOVehicleParameter` is handed to replaceParameter; the allocation is leaked until ownership is ported
+            this.m().replace_parameter(Ptr::from_mut(Box::leak(Box::new(newParameter))));
+        }
+        let routeCost = this.m().get_router_tt().recompute_costs(&edges, this.cast::<SUMOVehicle>(), time, Ptr::null());
+        let prevEdges: Vec<Ptr<MSEdge>> = self.get_route().get_edges()[self.myCurrEdge..].to_vec();
+        let savings = this.m().get_router_tt().recompute_costs(&prevEdges, this.cast::<SUMOVehicle>(), time, Ptr::null());
+        if this.m().replace_parking_area(newParkingArea, errorMsg) {
+            let onInit = self.myLane.is_null();
+            this.m().replace_route_edges(&mut edges, routeCost, savings, "TraCI:parkingAreaReroute", onInit, false, false, Ptr::null());
+        } else {
+            write_warningf!("Vehicle '%' could not reroute to new parkingArea '%' reason=%, time=%.", self.get_id(), newParkingArea.get_id(), errorMsg, time2string(time));
+            return false;
+        }
+        true
     }
 
     /// C++: `bool MSVehicle::addTraciStop(SUMOVehicleParameter::Stop, std::string &)` [virtual]
@@ -8080,7 +8450,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_traci_stop(&mut self, stop: SUMOVehicleParameter_Stop, errorMsg: &mut String) -> bool {
-        todo!("port MSVehicle::addTraciStop")
+        let numStops = self.myStops.len();
+        let result = self.base.add_traci_stop(stop, errorMsg);
+        if !self.myLane.is_null() && numStops != self.myStops.len() {
+            self.update_best_lanes(true, Ptr::null());
+        }
+        result
     }
 
     /// C++: `bool MSVehicle::handleCollisionStop(MSStop &, const double)` [virtual]
@@ -8111,7 +8486,22 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
-        todo!("port MSVehicle::handleCollisionStop")
+        if self.myCurrEdge == stop.edge && distToStop + POSITION_EPS < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.) {
+            if distToStop < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_emergency_decel(), 0.) {
+                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0., true);
+                self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
+                self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
+                self.myCachedPosition = Position::INVALID;
+                if self.myState.myPos < self.get_vehicle_type().get_length() {
+                    self.compute_further_lanes(self.myLane, self.myState.myPos, true);
+                    self.myAngle = self.compute_angle();
+                    if self.myLaneChangeModel.is_opposite() {
+                        self.myAngle += std::f64::consts::PI;
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `bool MSVehicle::resumeFromStopping()` [virtual]
@@ -8183,7 +8573,70 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn resume_from_stopping(&mut self) -> bool {
-        todo!("port MSVehicle::resumeFromStopping")
+        if self.is_stopped() {
+            if self.myAmRegisteredAsWaiting {
+                MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                self.myAmRegisteredAsWaiting = false;
+            }
+            let this = Ptr::from_mut(self);
+            let stop = Ptr::from_mut(self.myStops.front_mut().unwrap());
+            // we have waited long enough and fulfilled any passenger-requirements
+            if !stop.busstop.is_null() {
+                // inform bus stop about leaving it
+                stop.busstop.m().leave_from(this.cast::<SUMOVehicle>());
+            }
+            // we have waited long enough and fulfilled any container-requirements
+            if !stop.containerstop.is_null() {
+                // inform container stop about leaving it
+                stop.containerstop.m().leave_from(this.cast::<SUMOVehicle>());
+            }
+            if !stop.parkingarea.is_null() && stop.get_speed() <= 0. {
+                // inform parking area about leaving it
+                stop.parkingarea.m().leave_from(this.cast::<SUMOVehicle>());
+            }
+            if !stop.chargingStation.is_null() {
+                // inform charging station about leaving it
+                stop.chargingStation.m().leave_from(this.cast::<SUMOVehicle>());
+            }
+            // the current stop is no longer valid
+            self.myLane.get_edge().remove_waiting(this.cast::<SUMOVehicle>());
+            // MSStopOut needs to know whether the stop had a loaded 'ended' value so we call this before replacing the value
+            if stop.pars.started == -1 {
+                // waypoint edge was passed in a single step
+                stop.m().pars.started = MSNet::get_instance().get_current_time_step();
+            }
+            if MSStopOut::active() {
+                MSStopOut::get_instance().m().stop_ended(this.cast::<SUMOVehicle>(), &stop, false);
+            }
+            stop.m().pars.ended = MSNet::get_instance().get_current_time_step();
+            for rem in &self.myMoveReminders {
+                rem.0.m().notify_stop_ended();
+            }
+            if stop.pars.collision && crate::microsim::ms_lane::MSLane::get_collision_action() == crate::microsim::ms_lane::MSLane_CollisionAction::COLLISION_ACTION_WARN {
+                self.myCollisionImmunity = time2steps(5.); // leave the conflict area
+            }
+            if stop.pars.posLat != utils::common::std_defs::INVALID_DOUBLE && crate::microsim::ms_globals::lateral_resolution() <= 0. {
+                // reset lateral position to default
+                self.myState.myPosLat = 0.;
+            }
+            let wasWaypoint = stop.get_speed() > 0.;
+            let mut pastStop = stop.pars.clone();
+            pastStop.routeIndex = stop.edge as i32;
+            self.myPastStops.push(pastStop);
+            self.myStops.pop_front();
+            self.myStopDist = f64::MAX;
+            // do not count the stopping time towards gridlock time.
+            // Other outputs use an independent counter and are not affected.
+            self.myWaitingTime = 0;
+            self.myStopSpeed = self.get_car_follow_model().max_next_speed(self.get_speed(), this);
+            // maybe the next stop is on the same edge; let's rebuild best lanes
+            self.update_best_lanes(true, Ptr::null());
+            // continue as wished...
+            MSNet::get_instance().m().inform_vehicle_state_listener(this.cast::<SUMOVehicle>(), MSNet_VehicleState::ENDING_STOP, "");
+            MSNet::get_instance().m().get_vehicle_control().register_stop_ended();
+            return !wasWaypoint;
+        }
+        false
     }
 
     /// C++: `double MSVehicle::updateFurtherLanes(std::vector<MSLane *> &, std::vector<double> &, const std::vector<MSLane *> &)`
