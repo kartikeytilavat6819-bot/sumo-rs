@@ -14,7 +14,7 @@ impl NBPTPlatform {
     // }
     #[allow(unused_variables)]
     pub fn new(position: Position, d: f64) -> Self {
-        todo!("port NBPTPlatform::NBPTPlatform")
+        Self { myPos: position, myLength: d }
     }
 
     /// C++: `const Position & NBPTPlatform::getPos() const` [const]
@@ -24,7 +24,7 @@ impl NBPTPlatform {
     // }
     #[allow(unused_variables)]
     pub fn get_pos(&self) -> &Position {
-        todo!("port NBPTPlatform::getPos")
+        &self.myPos
     }
 
     /// C++: `void NBPTPlatform::reshiftPosition(const double, const double)`
@@ -34,7 +34,7 @@ impl NBPTPlatform {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, offsetX: f64, offsetY: f64) {
-        todo!("port NBPTPlatform::reshiftPosition")
+        self.myPos.add_xyz(offsetX, offsetY, 0.0);
     }
 
     /// C++: `double NBPTPlatform::getLength() const` [const]
@@ -44,7 +44,7 @@ impl NBPTPlatform {
     // }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port NBPTPlatform::getLength")
+        self.myLength
     }
 
 }
