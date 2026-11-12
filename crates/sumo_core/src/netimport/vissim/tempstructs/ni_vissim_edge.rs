@@ -57,6 +57,11 @@ impl std::ops::DerefMut for NIVissimEdge {
 //   static DictType NIVissimEdge::myDict;
 //   static int NIVissimEdge::myMaxID;
 //   static std::vector<std::string> NIVissimEdge::myLanesWithMissingSpeeds;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimEdge_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_MAX_ID: std::cell::Cell<i32> = const { std::cell::Cell::new(0) };
+    static MY_LANES_WITH_MISSING_SPEEDS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
 
 impl NIVissimEdge {
     /// C++: `void NIVissimEdge::NIVissimEdge(int, const std::string &, const std::string &, std::vector<double>, double, double, double, const PositionVector &, const NIVissimClosedLanesVector &)`
@@ -82,8 +87,33 @@ impl NIVissimEdge {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: i32, name: &str, type_: &str, laneWidths: Vec<f64>, zuschlag1: f64, zuschlag2: f64, length: f64, geom: &PositionVector, clv: &NIVissimClosedLanesVector) -> Self {
-        todo!("port NIVissimEdge::NIVissimEdge")
+    pub fn new(id: i32, name: &str, type_: &str, laneWidths: Vec<f64>, zuschlag1: f64, zuschlag2: f64, length: f64, geom: &PositionVector, clv: &NIVissimClosedLanesVector) -> Box<Self> {
+        // the base constructor registers `this` in its dictionary, so the object must stay at a fixed address: return the Box
+        let myNoLanes = laneWidths.len() as i32;
+        let b = Box::new(Self {
+            base: NIVissimAbstractEdge::new(id, geom),
+            myName: name.to_string(),
+            myType: type_.to_string(),
+            myNoLanes,
+            myLaneWidths: laneWidths,
+            myZuschlag1: zuschlag1,
+            myZuschlag2: zuschlag2,
+            myClosedLanes: clv.clone(),
+            myConnectionClusters: Vec::new(),
+            myIncomingConnections: Vec::new(),
+            myOutgoingConnections: Vec::new(),
+            myDistrictConnections: Vec::new(),
+            myPatchedSpeeds: Vec::new(),
+            myLaneSpeeds: vec![-1.0; myNoLanes as usize],
+            myToTreatAsSame: Vec::new(),
+            myAmWithinJunction: false,
+        });
+        MY_MAX_ID.with(|m| {
+            if m.get() < id {
+                m.set(id);
+            }
+        });
+        b
     }
 
     /// C++: `void NIVissimEdge::~NIVissimEdge() noexcept` [virtual]
@@ -96,7 +126,10 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimEdge::~NIVissimEdge")
+        for c in self.myClosedLanes.drain(..) {
+            // SAFETY: each NIVissimClosedLaneDef was allocated by its creator and is owned by this edge only
+            drop(unsafe { Box::from_raw(c.as_raw()) });
+        }
     }
 
     /// C++: `void NIVissimEdge::setNodeCluster(int)` [virtual]
@@ -106,16 +139,14 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_node_cluster(&mut self, nodeid: i32) {
-        todo!("port NIVissimEdge::setNodeCluster")
+        self.myNode = nodeid;
     }
 
     /// C++: `void NIVissimEdge::buildGeom()` [virtual]
     // void
     // NIVissimEdge::buildGeom() {}
     #[allow(unused_variables)]
-    pub fn build_geom(&mut self) {
-        todo!("port NIVissimEdge::buildGeom")
-    }
+    pub fn build_geom(&mut self) {}
 
     /// C++: `void NIVissimEdge::addIncomingConnection(int)`
     /// Adds a connection where this edge is the destination
@@ -125,7 +156,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_incoming_connection(&mut self, id: i32) {
-        todo!("port NIVissimEdge::addIncomingConnection")
+        self.myIncomingConnections.push(id);
     }
 
     /// C++: `void NIVissimEdge::addOutgoingConnection(int)`
@@ -136,7 +167,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_outgoing_connection(&mut self, id: i32) {
-        todo!("port NIVissimEdge::addOutgoingConnection")
+        self.myOutgoingConnections.push(id);
     }
 
     /// C++: `Position NIVissimEdge::getBegin2D() const` [const]
@@ -147,7 +178,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_begin2_d(&self) -> Position {
-        todo!("port NIVissimEdge::getBegin2D")
+        *self.myGeom.at(0)
     }
 
     /// C++: `Position NIVissimEdge::getEnd2D() const` [const]
@@ -158,7 +189,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_end2_d(&self) -> Position {
-        todo!("port NIVissimEdge::getEnd2D")
+        *self.myGeom.at(-1)
     }
 
     /// C++: `double NIVissimEdge::getLength() const` [const]
@@ -169,7 +200,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port NIVissimEdge::getLength")
+        self.myGeom.length()
     }
 
     /// C++: `void NIVissimEdge::checkDistrictConnectionExistanceAt(double)`
@@ -186,7 +217,9 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn check_district_connection_existance_at(&mut self, pos: f64) {
-        todo!("port NIVissimEdge::checkDistrictConnectionExistanceAt")
+        if !self.myDistrictConnections.contains(&pos) {
+            self.myDistrictConnections.push(pos);
+        }
     }
 
     /// C++: `void NIVissimEdge::mergedInto(NIVissimConnectionCluster *, NIVissimConnectionCluster *)`
@@ -205,7 +238,12 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn merged_into(&mut self, old: Ptr<NIVissimConnectionCluster>, act: Ptr<NIVissimConnectionCluster>) {
-        todo!("port NIVissimEdge::mergedInto")
+        if let Some(i) = self.myConnectionClusters.iter().position(|c| *c == old) {
+            self.myConnectionClusters.remove(i);
+        }
+        if !self.myConnectionClusters.iter().any(|c| *c == act) {
+            self.myConnectionClusters.push(act);
+        }
     }
 
     /// C++: `void NIVissimEdge::removeFromConnectionCluster(NIVissimConnectionCluster *)`
@@ -218,7 +256,11 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_from_connection_cluster(&mut self, c: Ptr<NIVissimConnectionCluster>) {
-        todo!("port NIVissimEdge::removeFromConnectionCluster")
+        let i = self.myConnectionClusters.iter().position(|x| *x == c);
+        debug_assert!(i.is_some());
+        if let Some(i) = i {
+            self.myConnectionClusters.remove(i);
+        }
     }
 
     /// C++: `void NIVissimEdge::addToConnectionCluster(NIVissimConnectionCluster *)`
@@ -232,7 +274,9 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_to_connection_cluster(&mut self, c: Ptr<NIVissimConnectionCluster>) {
-        todo!("port NIVissimEdge::addToConnectionCluster")
+        if !self.myConnectionClusters.iter().any(|x| *x == c) {
+            self.myConnectionClusters.push(c);
+        }
     }
 
     /// C++: `void NIVissimEdge::setSpeed(int, int)`
@@ -245,7 +289,10 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_speed(&mut self, lane: i32, speedDist: i32) {
-        todo!("port NIVissimEdge::setSpeed")
+        while (self.myPatchedSpeeds.len() as i32) <= lane {
+            self.myPatchedSpeeds.push(-1);
+        }
+        self.myPatchedSpeeds[lane as usize] = speedDist;
     }
 
     /// C++: `bool NIVissimEdge::addToTreatAsSame(NIVissimEdge *)`
@@ -279,7 +326,16 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_to_treat_as_same(&mut self, e: Ptr<NIVissimEdge>) -> bool {
-        todo!("port NIVissimEdge::addToTreatAsSame")
+        if e.as_raw() == (self as *mut NIVissimEdge) {
+            return false;
+        }
+        // check whether this edge already knows about the other
+        if !self.myToTreatAsSame.iter().any(|x| *x == e) {
+            self.myToTreatAsSame.push(e);
+            true
+        } else {
+            false // !!! check this
+        }
     }
 
     /// C++: `NIVissimConnection * NIVissimEdge::getConnectionTo(NIVissimEdge *)`
@@ -302,7 +358,19 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_connection_to(&mut self, e: Ptr<NIVissimEdge>) -> Ptr<NIVissimConnection> {
-        todo!("port NIVissimEdge::getConnectionTo")
+        for &id in self.myIncomingConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(id);
+            if c.get_from_edge_id() == e.get_id() {
+                return c;
+            }
+        }
+        for &id in self.myOutgoingConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(id);
+            if c.get_to_edge_id() == e.get_id() {
+                return c;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `const std::vector<NIVissimEdge *> & NIVissimEdge::getToTreatAsSame() const` [const]
@@ -312,7 +380,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_to_treat_as_same(&self) -> &Vec<Ptr<NIVissimEdge>> {
-        todo!("port NIVissimEdge::getToTreatAsSame")
+        &self.myToTreatAsSame
     }
 
     /// C++: `bool NIVissimEdge::wasWithinAJunction() const` [const]
@@ -322,7 +390,7 @@ impl NIVissimEdge {
     //     }
     #[allow(unused_variables)]
     pub fn was_within_a_junction(&self) -> bool {
-        todo!("port NIVissimEdge::wasWithinAJunction")
+        self.myAmWithinJunction
     }
 
     /// C++: `NIVissimEdge * NIVissimEdge::getBestIncoming() const` [const]
@@ -343,7 +411,11 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_best_incoming(&self) -> Ptr<NIVissimEdge> {
-        todo!("port NIVissimEdge::getBestIncoming")
+        if !self.myIncomingConnections.is_empty() {
+            let c = NIVissimConnection::dictionary_2(self.myIncomingConnections[0]);
+            return Self::dictionary_3(c.get_from_edge_id());
+        }
+        Ptr::null()
     }
 
     /// C++: `NIVissimEdge * NIVissimEdge::getBestOutgoing() const` [const]
@@ -364,7 +436,11 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_best_outgoing(&self) -> Ptr<NIVissimEdge> {
-        todo!("port NIVissimEdge::getBestOutgoing")
+        if !self.myOutgoingConnections.is_empty() {
+            let c = NIVissimConnection::dictionary_2(self.myOutgoingConnections[0]);
+            return Self::dictionary_3(c.get_to_edge_id());
+        }
+        Ptr::null()
     }
 
     /// C++: `bool NIVissimEdge::dictionary(int, const std::string &, const std::string &, int, double, double, double, const PositionVector &, const NIVissimClosedLanesVector &)` [static]
@@ -385,7 +461,13 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, type_: &str, noLanes: i32, zuschlag1: f64, zuschlag2: f64, length: f64, geom: &PositionVector, clv: &NIVissimClosedLanesVector) -> bool {
-        todo!("port NIVissimEdge::dictionary")
+        let mut o = NIVissimEdge::new(id, name, type_, vec![crate::netbuild::nb_edge::UNSPECIFIED_WIDTH; noLanes as usize], zuschlag1, zuschlag2, length, geom, clv);
+        if !Self::dictionary_2(id, Ptr::from_mut(&mut *o)) {
+            return false; // o is dropped here, like C++ `delete o`
+        }
+        // shortcut: the dictionary owns the edge for the rest of the run (C++ deletes it in clearDict, not yet ported), so leak the Box
+        Box::leak(o);
+        true
     }
 
     /// C++: `bool NIVissimEdge::dictionary(int, NIVissimEdge *)` [static]
@@ -401,7 +483,15 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, o: Ptr<NIVissimEdge>) -> bool {
-        todo!("port NIVissimEdge::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if let std::collections::btree_map::Entry::Vacant(e) = d.entry(id) {
+                e.insert(o);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// C++: `NIVissimEdge * NIVissimEdge::dictionary(int)` [static]
@@ -416,7 +506,7 @@ impl NIVissimEdge {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimEdge> {
-        todo!("port NIVissimEdge::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimEdge::buildConnectionClusters()` [static]
