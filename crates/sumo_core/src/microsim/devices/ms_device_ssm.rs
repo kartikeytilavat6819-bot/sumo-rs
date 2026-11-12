@@ -52,11 +52,12 @@ impl MSDevice_SSM_SSMParameterWarning {
 /// C++ typedef `int MSDevice_SSM::EncounterQueue`
 pub type MSDevice_SSM_EncounterQueue = i32;
 
-/// C++ typedef `int MSDevice_SSM::EncounterVector`
-pub type MSDevice_SSM_EncounterVector = i32;
+/// C++ typedef `std::vector<Encounter*> MSDevice_SSM::EncounterVector`
+pub type MSDevice_SSM_EncounterVector = Vec<Ptr<MSDevice_SSM_Encounter>>;
 
-/// C++ typedef `int MSDevice_SSM::FoeInfoMap`
-pub type MSDevice_SSM_FoeInfoMap = i32;
+/// C++ typedef `std::map<const MSVehicle*, FoeInfo*> MSDevice_SSM::FoeInfoMap`
+// determinism: C++ std::map orders by pointer value; BTreeMap over Ptr (Ord by address) keeps that order.
+pub type MSDevice_SSM_FoeInfoMap = BTreeMap<Ptr<MSVehicle>, Ptr<MSDevice_SSM_FoeInfo>>;
 
 /// C++ typedef `bool compare::value_type`
 pub type compare_value_type = bool;
@@ -82,7 +83,7 @@ impl Encounter_ConflictPointInfo {
     //                 time(time), pos(x), type(type), value(ssmValue), speed(speed) {}
     #[allow(unused_variables)]
     pub fn new(time: f64, x: Position, type_: MSDevice_SSM_EncounterType, ssmValue: f64, speed: f64) -> Self {
-        todo!("port ConflictPointInfo::ConflictPointInfo")
+        Self { time, pos: x, type_, value: ssmValue, speed }
     }
 
 }
@@ -108,27 +109,27 @@ pub struct MSDevice_SSM_Encounter {
     /// Times when the foe vehicle entered/left the conflict area. Currently only applies for crossing situations. Used for PET calculation. (May be defined for merge conflicts in the future)
     pub foeConflictExitTime: f64,
     /// time points corresponding to the trajectories
-    pub timeSpan: i32,
+    pub timeSpan: Vec<f64>,
     /// Evolution of the encounter classification (
-    pub typeSpan: i32,
+    pub typeSpan: Vec<i32>,
     /// Trajectory of the ego vehicle
     pub egoTrajectory: Encounter_Trajectory,
     /// Trajectory of the foe vehicle
     pub foeTrajectory: Encounter_Trajectory,
     /// Evolution of the ego vehicle's distance to the conflict point
-    pub egoDistsToConflict: i32,
+    pub egoDistsToConflict: Vec<f64>,
     /// Evolution of the foe vehicle's distance to the conflict point
-    pub foeDistsToConflict: i32,
+    pub foeDistsToConflict: Vec<f64>,
     /// Predicted location of the conflict: In case of MERGING and CROSSING: entry point to conflict area for follower In case of FOLLOWING: position of leader's back
     pub conflictPointSpan: PositionVector,
     /// All values for TTC
-    pub TTCspan: i32,
+    pub TTCspan: Vec<f64>,
     /// All values for DRAC
-    pub DRACspan: i32,
+    pub DRACspan: Vec<f64>,
     /// All values for MDRAC
-    pub MDRACspan: i32,
+    pub MDRACspan: Vec<f64>,
     /// All values for PPET
-    pub PPETspan: i32,
+    pub PPETspan: Vec<f64>,
     /// @{
     pub minTTC: Encounter_ConflictPointInfo,
     pub maxDRAC: Encounter_ConflictPointInfo,
@@ -169,7 +170,38 @@ impl MSDevice_SSM_Encounter {
     // }
     #[allow(unused_variables)]
     pub fn new(_ego: Ptr<MSVehicle>, _foe: Ptr<MSVehicle>, _begin: f64, extraTime: f64) -> Self {
-        todo!("port Encounter::Encounter")
+        let invalid_info = || Encounter_ConflictPointInfo::new(INVALID_DOUBLE, Position::INVALID, MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_NOCONFLICT_AHEAD, INVALID_DOUBLE, INVALID_DOUBLE);
+        Self {
+            ego: _ego,
+            foe: _foe,
+            egoID: _ego.get_id().to_string(),
+            foeID: _foe.get_id().to_string(),
+            begin: _begin,
+            end: -INVALID_DOUBLE,
+            currentType: MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_NOCONFLICT_AHEAD,
+            remainingExtraTime: extraTime,
+            egoConflictEntryTime: INVALID_DOUBLE,
+            egoConflictExitTime: INVALID_DOUBLE,
+            foeConflictEntryTime: INVALID_DOUBLE,
+            foeConflictExitTime: INVALID_DOUBLE,
+            timeSpan: Vec::new(),
+            typeSpan: Vec::new(),
+            egoTrajectory: Encounter_Trajectory { x: PositionVector(Vec::new()), lane: Vec::new(), lanePos: Vec::new(), v: PositionVector(Vec::new()) },
+            foeTrajectory: Encounter_Trajectory { x: PositionVector(Vec::new()), lane: Vec::new(), lanePos: Vec::new(), v: PositionVector(Vec::new()) },
+            egoDistsToConflict: Vec::new(),
+            foeDistsToConflict: Vec::new(),
+            conflictPointSpan: PositionVector(Vec::new()),
+            TTCspan: Vec::new(),
+            DRACspan: Vec::new(),
+            MDRACspan: Vec::new(),
+            PPETspan: Vec::new(),
+            minTTC: invalid_info(),
+            maxDRAC: invalid_info(),
+            maxMDRAC: invalid_info(),
+            PET: invalid_info(),
+            minPPET: invalid_info(),
+            closingRequested: false,
+        }
     }
 
     /// C++: `void Encounter::~Encounter()`
@@ -177,7 +209,7 @@ impl MSDevice_SSM_Encounter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Encounter::~Encounter")
+        // C++ destructor only logs under DEBUG_ENCOUNTER; members are dropped implicitly.
     }
 
     /// C++: `void Encounter::add(double, EncounterType, Position, std::string, double, Position, Position, std::string, double, Position, Position, double, double, double, double, std::pair<double, double>, double, double)`
@@ -185,7 +217,63 @@ impl MSDevice_SSM_Encounter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add(&mut self, time: f64, type_: MSDevice_SSM_EncounterType, egoX: Position, egoLane: String, egoLanePos: f64, egoV: Position, foeX: Position, foeLane: String, foeLanePos: f64, foeV: Position, conflictPoint: Position, egoDistToConflict: f64, foeDistToConflict: f64, ttc: f64, drac: f64, pet: (f64, f64), ppet: f64, mdrac: f64) {
-        todo!("port Encounter::add")
+        let origin = Position::new(0., 0.);
+        self.currentType = type_;
+        self.timeSpan.push(time);
+        self.typeSpan.push(type_ as i32);
+        self.egoTrajectory.x.push(egoX);
+        self.egoTrajectory.lane.push(egoLane);
+        self.egoTrajectory.lanePos.push(egoLanePos);
+        self.egoTrajectory.v.push(egoV);
+        self.foeTrajectory.x.push(foeX);
+        self.foeTrajectory.lane.push(foeLane);
+        self.foeTrajectory.lanePos.push(foeLanePos);
+        self.foeTrajectory.v.push(foeV);
+        self.conflictPointSpan.push(conflictPoint);
+        self.egoDistsToConflict.push(egoDistToConflict);
+        self.foeDistsToConflict.push(foeDistToConflict);
+
+        self.TTCspan.push(ttc);
+        if ttc != INVALID_DOUBLE && (ttc < self.minTTC.value || self.minTTC.value == INVALID_DOUBLE) {
+            self.minTTC.value = ttc;
+            self.minTTC.time = time;
+            self.minTTC.pos = conflictPoint;
+            self.minTTC.type_ = if ttc <= 0. { MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_COLLISION } else { type_ };
+            self.minTTC.speed = egoV.distance_to(&origin);
+        }
+
+        self.DRACspan.push(drac);
+        if drac != INVALID_DOUBLE && (drac > self.maxDRAC.value || self.maxDRAC.value == INVALID_DOUBLE) {
+            self.maxDRAC.value = drac;
+            self.maxDRAC.time = time;
+            self.maxDRAC.pos = conflictPoint;
+            self.maxDRAC.type_ = type_;
+            self.maxDRAC.speed = egoV.distance_to(&origin);
+        }
+
+        if pet.0 != INVALID_DOUBLE && (self.PET.value >= pet.1 || self.PET.value == INVALID_DOUBLE) {
+            self.PET.value = pet.1;
+            self.PET.time = pet.0;
+            self.PET.pos = conflictPoint;
+            self.PET.type_ = if self.PET.value <= 0. { MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_COLLISION } else { type_ };
+            self.PET.speed = egoV.distance_to(&origin);
+        }
+        self.PPETspan.push(ppet);
+        if ppet != INVALID_DOUBLE && (ppet < self.minPPET.value || self.minPPET.value == INVALID_DOUBLE) {
+            self.minPPET.value = ppet;
+            self.minPPET.time = time;
+            self.minPPET.pos = conflictPoint;
+            self.minPPET.type_ = if ppet <= 0. { MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_COLLISION } else { type_ };
+            self.minPPET.speed = egoV.distance_to(&origin);
+        }
+        self.MDRACspan.push(mdrac);
+        if mdrac != INVALID_DOUBLE && (mdrac > self.maxMDRAC.value || self.maxMDRAC.value == INVALID_DOUBLE) {
+            self.maxMDRAC.value = mdrac;
+            self.maxMDRAC.time = time;
+            self.maxMDRAC.pos = conflictPoint;
+            self.maxMDRAC.type_ = type_;
+            self.maxMDRAC.speed = egoV.distance_to(&origin);
+        }
     }
 
     /// C++: `std::size_t Encounter::size() const` [const]
@@ -195,7 +283,7 @@ impl MSDevice_SSM_Encounter {
     //         }
     #[allow(unused_variables)]
     pub fn size(&self) -> usize {
-        todo!("port Encounter::size")
+        self.timeSpan.len()
     }
 
     /// C++: `void Encounter::resetExtraTime(double)`
@@ -206,7 +294,7 @@ impl MSDevice_SSM_Encounter {
     // }
     #[allow(unused_variables)]
     pub fn reset_extra_time(&mut self, value: f64) {
-        todo!("port Encounter::resetExtraTime")
+        self.remainingExtraTime = value;
     }
 
     /// C++: `void Encounter::countDownExtraTime(double)`
@@ -217,7 +305,7 @@ impl MSDevice_SSM_Encounter {
     // }
     #[allow(unused_variables)]
     pub fn count_down_extra_time(&mut self, amount: f64) {
-        todo!("port Encounter::countDownExtraTime")
+        self.remainingExtraTime -= amount;
     }
 
     /// C++: `double Encounter::getRemainingExtraTime() const` [const]
@@ -228,7 +316,7 @@ impl MSDevice_SSM_Encounter {
     // }
     #[allow(unused_variables)]
     pub fn get_remaining_extra_time(&self) -> f64 {
-        todo!("port Encounter::getRemainingExtraTime")
+        self.remainingExtraTime
     }
 
     /// C++: `void Encounter::Encounter(const Encounter &)` [private]
@@ -236,7 +324,8 @@ impl MSDevice_SSM_Encounter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_SSM_Encounter) -> Self {
-        todo!("port Encounter::Encounter")
+        // C++ declares this constructor private and never defines it: any use is a compile error in C++.
+        panic!("MSDevice_SSM::Encounter copy constructor is private and invalidated")
     }
 
     /// C++: `Encounter & Encounter::operator=(const Encounter &)` [private]
@@ -244,7 +333,8 @@ impl MSDevice_SSM_Encounter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_SSM_Encounter) -> &mut MSDevice_SSM_Encounter {
-        todo!("port Encounter::operator=")
+        // C++ declares this operator private and never defines it: any use is a compile error in C++.
+        panic!("MSDevice_SSM::Encounter assignment operator is private and invalidated")
     }
 
 }
@@ -298,7 +388,29 @@ impl MSDevice_SSM_EncounterApproachInfo {
     // }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<MSDevice_SSM_Encounter>) -> Self {
-        todo!("port EncounterApproachInfo::EncounterApproachInfo")
+        Self {
+            encounter: e,
+            type_: MSDevice_SSM_EncounterType::ENCOUNTER_TYPE_NOCONFLICT_AHEAD,
+            conflictPoint: Position::INVALID,
+            egoConflictEntryDist: INVALID_DOUBLE,
+            foeConflictEntryDist: INVALID_DOUBLE,
+            egoConflictExitDist: INVALID_DOUBLE,
+            foeConflictExitDist: INVALID_DOUBLE,
+            egoEstimatedConflictEntryTime: INVALID_DOUBLE,
+            foeEstimatedConflictEntryTime: INVALID_DOUBLE,
+            egoEstimatedConflictExitTime: INVALID_DOUBLE,
+            foeEstimatedConflictExitTime: INVALID_DOUBLE,
+            egoConflictAreaLength: INVALID_DOUBLE,
+            foeConflictAreaLength: INVALID_DOUBLE,
+            ttc: INVALID_DOUBLE,
+            drac: INVALID_DOUBLE,
+            mdrac: INVALID_DOUBLE,
+            pet: (INVALID_DOUBLE, INVALID_DOUBLE),
+            ppet: INVALID_DOUBLE,
+            // not initialised in the C++ constructor: std::pair default-initialises to (nullptr, 0.)
+            egoConflictEntryCrossSection: (Ptr::default(), 0.),
+            foeConflictEntryCrossSection: (Ptr::default(), 0.),
+        }
     }
 
 }
@@ -315,7 +427,7 @@ impl MSDevice_SSM_FoeInfo {
     // virtual ~FoeInfo() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FoeInfo::~FoeInfo")
+        // C++ virtual destructor is empty (`virtual ~FoeInfo() {}`): nothing to release.
     }
 
 }
@@ -414,6 +526,13 @@ impl std::ops::DerefMut for MSDevice_SSM {
 //   static const int MSDevice_SSM::FOE_ENCOUNTERTYPES;
 //   static const int MSDevice_SSM::EGO_ENCOUNTERTYPES;
 
+thread_local! {
+    /// C++ static `MSDevice_SSM::myEdgeFilter` (std::set<const MSEdge*>; ordered by pointer)
+    pub static MY_EDGE_FILTER: std::cell::RefCell<BTreeSet<Ptr<MSEdge>>> = std::cell::RefCell::new(BTreeSet::new());
+    /// C++ static `MSDevice_SSM::myEdgeFilterActive`
+    pub static MY_EDGE_FILTER_ACTIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
 impl MSDevice_SSM {
     /// C++: `std::string MSDevice_SSM::encounterToString(EncounterType)` [static]
     // static std::string encounterToString(EncounterType type) {
@@ -467,7 +586,32 @@ impl MSDevice_SSM {
     //     }
     #[allow(unused_variables)]
     pub fn encounter_to_string(type_: MSDevice_SSM_EncounterType) -> String {
-        todo!("port MSDevice_SSM::encounterToString")
+        use MSDevice_SSM_EncounterType::*;
+        let s = match type_ {
+            ENCOUNTER_TYPE_NOCONFLICT_AHEAD => "NOCONFLICT_AHEAD",
+            ENCOUNTER_TYPE_FOLLOWING => "FOLLOWING",
+            ENCOUNTER_TYPE_FOLLOWING_FOLLOWER => "FOLLOWING_FOLLOWER",
+            ENCOUNTER_TYPE_FOLLOWING_LEADER => "FOLLOWING_LEADER",
+            ENCOUNTER_TYPE_ON_ADJACENT_LANES => "ON_ADJACENT_LANES",
+            ENCOUNTER_TYPE_MERGING => "MERGING",
+            ENCOUNTER_TYPE_MERGING_LEADER => "MERGING_LEADER",
+            ENCOUNTER_TYPE_MERGING_FOLLOWER => "MERGING_FOLLOWER",
+            ENCOUNTER_TYPE_MERGING_ADJACENT => "MERGING_ADJACENT",
+            ENCOUNTER_TYPE_CROSSING => "CROSSING",
+            ENCOUNTER_TYPE_CROSSING_LEADER => "CROSSING_LEADER",
+            ENCOUNTER_TYPE_CROSSING_FOLLOWER => "CROSSING_FOLLOWER",
+            ENCOUNTER_TYPE_EGO_ENTERED_CONFLICT_AREA => "EGO_ENTERED_CONFLICT_AREA",
+            ENCOUNTER_TYPE_FOE_ENTERED_CONFLICT_AREA => "FOE_ENTERED_CONFLICT_AREA",
+            ENCOUNTER_TYPE_EGO_LEFT_CONFLICT_AREA => "EGO_LEFT_CONFLICT_AREA",
+            ENCOUNTER_TYPE_FOE_LEFT_CONFLICT_AREA => "FOE_LEFT_CONFLICT_AREA",
+            ENCOUNTER_TYPE_BOTH_ENTERED_CONFLICT_AREA => "BOTH_ENTERED_CONFLICT_AREA",
+            ENCOUNTER_TYPE_BOTH_LEFT_CONFLICT_AREA => "BOTH_LEFT_CONFLICT_AREA",
+            ENCOUNTER_TYPE_FOLLOWING_PASSED => "FOLLOWING_PASSED",
+            ENCOUNTER_TYPE_MERGING_PASSED => "MERGING_PASSED",
+            ENCOUNTER_TYPE_ONCOMING => "ONCOMING",
+            ENCOUNTER_TYPE_COLLISION => "COLLISION",
+        };
+        s.to_string()
     }
 
     /// C++: `void MSDevice_SSM::insertOptions(OptionsCont &)` [static]
@@ -505,7 +649,35 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_SSM::insertOptions")
+        oc.add_option_sub_topic("SSM Device");
+        MSDevice::insert_default_assignment_options("ssm", "SSM Device", oc, false);
+
+        // custom options
+        oc.do_register("device.ssm.measures", SumoOption::string_with(""));
+        oc.add_description("device.ssm.measures", "SSM Device", "Specifies which measures will be logged (as a space or comma-separated sequence of IDs in ('TTC', 'DRAC', 'PET', 'PPET', 'MDRAC'))");
+        oc.do_register("device.ssm.thresholds", SumoOption::string_with(""));
+        oc.add_description("device.ssm.thresholds", "SSM Device", "Specifies space or comma-separated thresholds corresponding to the specified measures (see documentation and watch the order!). Only events exceeding the thresholds will be logged.");
+        oc.do_register("device.ssm.trajectories", SumoOption::bool(false));
+        oc.add_description("device.ssm.trajectories", "SSM Device", "Specifies whether trajectories will be logged (if false, only the extremal values and times are reported).");
+        oc.do_register("device.ssm.range", SumoOption::float(50.));
+        oc.add_description("device.ssm.range", "SSM Device", "Specifies the detection range in meters. For vehicles below this distance from the equipped vehicle, SSM values are traced.");
+        // DEFAULT_EXTRA_TIME (MSDevice_SSM.cpp) = 5. seconds
+        oc.do_register("device.ssm.extratime", SumoOption::float(5.));
+        oc.add_description("device.ssm.extratime", "SSM Device", "Specifies the time in seconds to be logged after a conflict is over. Required >0 if PET is to be calculated for crossing conflicts.");
+        oc.do_register("device.ssm.mdrac.prt", SumoOption::float(1.));
+        oc.add_description("device.ssm.mdrac.prt", "SSM Device", "Specifies the perception reaction time for MDRAC computation.");
+        oc.do_register("device.ssm.file", SumoOption::string_with(""));
+        oc.add_description("device.ssm.file", "SSM Device", "Give a global default filename for the SSM output");
+        oc.do_register("device.ssm.geo", SumoOption::bool(false));
+        oc.add_description("device.ssm.geo", "SSM Device", "Whether to use coordinates of the original reference system in output");
+        oc.do_register("device.ssm.write-positions", SumoOption::bool(false));
+        oc.add_description("device.ssm.write-positions", "SSM Device", "Whether to write positions (coordinates) for each timestep");
+        oc.do_register("device.ssm.write-lane-positions", SumoOption::bool(false));
+        oc.add_description("device.ssm.write-lane-positions", "SSM Device", "Whether to write lanes and their positions for each timestep");
+        oc.do_register("device.ssm.write-na", SumoOption::bool(true));
+        oc.add_description("device.ssm.write-na", "SSM Device", "Whether to write conflict outputs with no data as NA values or skip it");
+        oc.do_register("device.ssm.exclude-conflict-types", SumoOption::string_with(""));
+        oc.add_description("device.ssm.exclude-conflict-types", "SSM Device", "Which conflicts will be excluded from the log according to the conflict type they have been classified (combination of values in 'ego', 'foe' , '', any numerical valid conflict type code). An empty value will log all and 'ego'/'foe' refer to a certain conflict type subset.");
     }
 
     /// C++: `void MSDevice_SSM::buildVehicleDevices(SUMOVehicle &, int &)` [static]
@@ -556,7 +728,15 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn update_and_write_output(&mut self) {
-        todo!("port MSDevice_SSM::updateAndWriteOutput")
+        if self.base.myHolder.is_on_road() {
+            self.update();
+            // Write out past conflicts
+            self.flush_conflicts(false);
+        } else {
+            self.reset_encounters();
+            // Write out past conflicts
+            self.flush_conflicts(true);
+        }
     }
 
     /// C++: `std::string MSDevice_SSM::getParameter(const std::string &) const` [const, virtual]
@@ -617,7 +797,54 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_SSM::getParameter")
+        if key == "minTTC" && !self.myComputeTTC {
+            panic!("{}", InvalidArgument("Measure TTC is not tracked by ssm device".to_string()).0);
+        }
+        if key == "maxDRAC" && !self.myComputeDRAC {
+            panic!("{}", InvalidArgument("Measure DRAC is not tracked by ssm device".to_string()).0);
+        }
+        if key == "maxMDRAC" && !self.myComputeMDRAC {
+            panic!("{}", InvalidArgument("Measure MDRAC is not tracked by ssm device".to_string()).0);
+        }
+        if key == "minPET" && !self.myComputePET {
+            panic!("{}", InvalidArgument("Measure PET is not tracked by ssm device".to_string()).0);
+        }
+        if key == "minPPET" && !self.myComputePPET {
+            panic!("{}", InvalidArgument("Measure PPET is not tracked by ssm device".to_string()).0);
+        }
+        if key == "minTTC" || key == "maxDRAC" || key == "maxMDRAC" || key == "minPET" || key == "minPPET" {
+            let mut value = INVALID_DOUBLE;
+            let mut minTTC = INVALID_DOUBLE;
+            let mut minPET = INVALID_DOUBLE;
+            let mut maxDRAC = -INVALID_DOUBLE;
+            let mut maxMDRAC = -INVALID_DOUBLE;
+            let mut minPPET = INVALID_DOUBLE;
+            // MIN2/MAX2 macros: (a < b ? a : b) and (a > b ? a : b)
+            for e in self.myActiveEncounters.iter() {
+                minTTC = if minTTC < e.minTTC.value { minTTC } else { e.minTTC.value };
+                minPET = if minPET < e.PET.value { minPET } else { e.PET.value };
+                maxDRAC = if maxDRAC > e.maxDRAC.value { maxDRAC } else { e.maxDRAC.value };
+                maxMDRAC = if maxMDRAC > e.maxMDRAC.value { maxMDRAC } else { e.maxMDRAC.value };
+                minPPET = if minPPET < e.minPPET.value { minPPET } else { e.minPPET.value };
+            }
+            if key == "minTTC" {
+                value = minTTC;
+            } else if key == "maxDRAC" {
+                value = maxDRAC;
+            } else if key == "maxMDRAC" {
+                value = maxMDRAC;
+            } else if key == "minPET" {
+                value = minPET;
+            } else if key == "minPPET" {
+                value = minPPET;
+            }
+            if value.abs() == INVALID_DOUBLE {
+                return String::new();
+            } else {
+                return utils::common::to_string::to_string(&value);
+            }
+        }
+        panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
     }
 
     /// C++: `void MSDevice_SSM::setParameter(const std::string &, const std::string &)` [virtual]
@@ -638,7 +865,15 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_SSM::setParameter")
+        let doubleValue = match utils::common::string_utils::to_double(value) {
+            Ok(d) => d,
+            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'.", key, self.device_name())).0),
+        };
+        if false || key == "foo" {
+            let _ = doubleValue;
+        } else {
+            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
+        }
     }
 
     /// C++: `void MSDevice_SSM::update()` [private]
@@ -690,7 +925,27 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self) {
-        todo!("port MSDevice_SSM::update")
+        // Scan surroundings for other vehicles
+        let mut foes: MSDevice_SSM_FoeInfoMap = BTreeMap::new();
+        let mut scan = true;
+        if MY_EDGE_FILTER_ACTIVE.with(|c| c.get()) {
+            // Is the ego vehicle inside the filtered edge subset?
+            let egoEdge = Ptr::from_mut(self.myHolderMS.get_lane().get_edge());
+            scan = MY_EDGE_FILTER.with(|f| f.borrow().contains(&egoEdge));
+        }
+        if scan {
+            MSDevice_SSM::find_surrounding_vehicles(&*self.myHolderMS, self.myRange, &mut foes);
+        }
+
+        // Update encounters and conflicts -> removes all foes (and deletes corresponding FoeInfos) for which already a corresponding encounter exists
+        self.process_encounters(&mut foes, false);
+
+        // Make new encounters for all foes, which were not removed by processEncounters (and deletes corresponding FoeInfos)
+        self.create_encounters(&mut foes);
+        foes.clear();
+
+        // Compute "global SSMs" (only computed once per time-step)
+        self.compute_global_measures();
     }
 
     /// C++: `void MSDevice_SSM::writeOutConflict(Encounter *)` [private]
@@ -846,7 +1101,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn to_geo(x: &mut Position) {
-        todo!("port MSDevice_SSM::toGeo")
+        GeoConvHelper::with_final(|g| g.cartesian2geo(x));
     }
 
     /// C++: `void MSDevice_SSM::toGeo(PositionVector &)` [static, private]
@@ -861,7 +1116,11 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn to_geo_2(x: &mut PositionVector) {
-        todo!("port MSDevice_SSM::toGeo")
+        for x in x.iter_mut() {
+            if *x != Position::INVALID {
+                MSDevice_SSM::to_geo(x);
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::cleanup()` [static]
@@ -1247,7 +1506,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_SSM::notifyEnter")
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_SSM::notifyLeave(SUMOTrafficObject &, double, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -1269,7 +1528,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_SSM::notifyLeave")
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_SSM::deviceName() const` [const, virtual]
@@ -1279,7 +1538,7 @@ impl MSDevice_SSM {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_SSM::deviceName")
+        "ssm".to_string()
     }
 
     /// C++: `void MSDevice_SSM::generateOutput(OutputDevice *) const` [const, virtual]
@@ -1292,7 +1551,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_SSM::generateOutput")
+        // C++ body is only comments (closeTag on myOutputFile is disabled upstream): nothing to do.
     }
 
     /// C++: `void MSDevice_SSM::MSDevice_SSM(SUMOVehicle &, const std::string &, std::string, int, bool, double, double, bool, bool, bool, int)` [private]
@@ -3532,8 +3791,8 @@ impl MSDevice_SSM {
 /// C++ class `Encounter::Trajectory` (microsim/devices/MSDevice_SSM.h)
 pub struct Encounter_Trajectory {
     pub x: PositionVector,
-    pub lane: i32,
-    pub lanePos: i32,
+    pub lane: Vec<String>,
+    pub lanePos: Vec<f64>,
     pub v: PositionVector,
 }
 
