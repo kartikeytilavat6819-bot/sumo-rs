@@ -3426,6 +3426,7 @@ impl Helper_LaneUtility {
 
 /// @}
 /// C++ class `libsumo::Helper::SubscriptionWrapper` (libsumo/Helper.h)
+#[repr(C)] // base must stay first: Simulation::handleVariable downcasts the VariableWrapper to this type
 pub struct Helper_SubscriptionWrapper {
     /// C++ base class `VariableWrapper`
     pub base: VariableWrapper,
