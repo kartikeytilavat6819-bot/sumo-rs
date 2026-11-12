@@ -1,6 +1,7 @@
 //! Port of microsim/transportables/MSPModel_Striping.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::sumo_vehicle_class::{SVC_IGNORING, SVC_PEDESTRIAN};
 
 /// C++ enum `MSPModel_Striping::ObstacleType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -80,6 +81,100 @@ impl std::ops::DerefMut for MSPModel_Striping {
 //   static std::map<const MSEdge *, std::vector<const MSLane *>> MSPModel_Striping::myWalkingAreaFoes;
 //   static MinNextLengths MSPModel_Striping::myMinNextLengths;
 
+/// Module-level storage for the mutable C++ static members (get/set pairs, like MSGlobals)
+macro_rules! striping_static {
+    ($name:ident, $get:ident, $set:ident, $ty:ty, $default:expr) => {
+        thread_local! { static $name: std::cell::Cell<$ty> = const { std::cell::Cell::new($default) }; }
+        pub fn $get() -> $ty {
+            $name.with(|c| c.get())
+        }
+        pub fn $set(v: $ty) {
+            $name.with(|c| c.set(v))
+        }
+    };
+}
+striping_static!(STRIPE_WIDTH, stripe_width, set_stripe_width, f64, 0.);
+striping_static!(DAWDLING, dawdling, set_dawdling, f64, 0.);
+striping_static!(MIN_GAP_TO_VEHICLE, min_gap_to_vehicle, set_min_gap_to_vehicle, f64, 0.);
+striping_static!(MY_WALKING_AREA_DETAIL, my_walking_area_detail, set_my_walking_area_detail, i32, 0);
+striping_static!(JAM_TIME, jam_time, set_jam_time, SUMOTime, 0);
+striping_static!(JAM_TIME_CROSSING, jam_time_crossing, set_jam_time_crossing, SUMOTime, 0);
+striping_static!(JAM_TIME_NARROW, jam_time_narrow, set_jam_time_narrow, SUMOTime, 0);
+striping_static!(JAM_FACTOR, jam_factor, set_jam_factor, f64, 0.);
+striping_static!(MY_LEGACY_POS_LAT, my_legacy_pos_lat, set_my_legacy_pos_lat, bool, false);
+striping_static!(RESERVE_FOR_ONCOMING_FACTOR, reserve_for_oncoming_factor, set_reserve_for_oncoming_factor, f64, 0.);
+striping_static!(RESERVE_FOR_ONCOMING_FACTOR_JUNCTIONS, reserve_for_oncoming_factor_junctions, set_reserve_for_oncoming_factor_junctions, f64, 0.);
+striping_static!(RESERVE_FOR_ONCOMING_MAX, reserve_for_oncoming_max, set_reserve_for_oncoming_max, f64, 0.);
+striping_static!(USE_NET_SPEEDS, use_net_speeds, set_use_net_speeds, bool, false);
+
+// determinism: the C++ maps are ordered by pointer value; Ptr's Ord compares addresses the same way
+thread_local! {
+    static MY_WALKING_AREA_PATHS: std::cell::RefCell<MSPModel_Striping_WalkingAreaPaths> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_WALKING_AREA_FOES: std::cell::RefCell<BTreeMap<Ptr<MSEdge>, Vec<Ptr<MSLane>>>> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_MIN_NEXT_LENGTHS: std::cell::RefCell<MSPModel_Striping_MinNextLengths> = std::cell::RefCell::new(BTreeMap::new());
+}
+
+/// Lookup in myWalkingAreaPaths. Returned pointers stay valid because the map is only filled in initWalkingAreaPaths.
+fn lookup_walking_area_path(before: Ptr<MSLane>, after: Ptr<MSLane>) -> Option<Ptr<MSPModel_Striping_WalkingAreaPath>> {
+    MY_WALKING_AREA_PATHS.with(|m| m.borrow().get(&(before, after)).map(|p| Ptr::new(p)))
+}
+
+/// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
+// shortcut: local copy because the Rust getSidewalk template (utils/router/intermodal_edge.rs) is still todo!(); use it once ported
+fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    if edge.is_null() {
+        return Ptr::null();
+    }
+    // prefer lanes that are exclusive to pedestrians
+    let lanes = edge.get_lanes();
+    for lane in lanes.iter() {
+        if lane.get_permissions() == svc {
+            return *lane;
+        }
+    }
+    for lane in lanes.iter() {
+        if lane.allows_vehicle_class(svc) {
+            return *lane;
+        }
+    }
+    if svc != SVC_PEDESTRIAN {
+        // persons should always be able to use the sidewalk
+        for lane in lanes.iter() {
+            if lane.get_permissions() == SVC_PEDESTRIAN {
+                return *lane;
+            }
+        }
+        for lane in lanes.iter() {
+            if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
+                return *lane;
+            }
+        }
+    }
+    Ptr::null()
+}
+
+// C++ constants (static const double members)
+pub const LOOKAHEAD_SAMEDIR: f64 = 4.0; // seconds
+pub const LOOKAHEAD_ONCOMING: f64 = 10.0; // seconds
+pub const LOOKAHEAD_ONCOMING_DIST: f64 = 10.0; // m
+pub const LOOKAROUND_VEHICLES: f64 = 60.0; // meters
+pub const LATERAL_PENALTY: f64 = -1.; // meters
+pub const OBSTRUCTED_PENALTY: f64 = -300000.; // meters
+pub const INAPPROPRIATE_PENALTY: f64 = -20000.; // meters
+pub const ONCOMING_CONFLICT_PENALTY: f64 = -1000.; // meters
+pub const OBSTRUCTION_THRESHOLD: f64 = OBSTRUCTED_PENALTY * 0.5; // despite obstruction, additional utility may have been added
+pub const SQUEEZE: f64 = 0.7;
+pub const MAX_WAIT_TOLERANCE: f64 = 120.; // seconds
+pub const LATERAL_SPEED_FACTOR: f64 = 0.4;
+pub const MIN_STARTUP_DIST: f64 = 0.4; // meters
+pub const DIST_FAR_AWAY: f64 = 10000.;
+pub const DIST_BEHIND: f64 = 1000.;
+pub const DIST_OVERLAP: f64 = -1.;
+// C++ MSPModel::FORWARD / BACKWARD / UNDEFINED_DIRECTION
+const MSPMODEL_FORWARD: i32 = 1;
+const MSPMODEL_BACKWARD: i32 = -1;
+const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+
 impl MSPModel_Striping {
     /// C++: `void MSPModel_Striping::MSPModel_Striping(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
@@ -119,7 +214,50 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
-        todo!("port MSPModel_Striping::MSPModel_Striping")
+        let s = MSPModel_Striping {
+            base: MSPModel_Interacting {
+                base: MSPModel {},
+                myNumActivePedestrians: 0,
+                myActiveLanes: BTreeMap::new(),
+                myAmActive: false,
+                myApproachedCrossings: BTreeSet::new(),
+            },
+        };
+        set_my_walking_area_detail(oc.get_int("pedestrian.striping.walkingarea-detail").unwrap());
+        Self::init_walking_area_paths(net);
+        // configurable parameters
+        set_stripe_width(oc.get_float("pedestrian.striping.stripe-width").unwrap());
+        let defaultPedType = net.m().get_vehicle_control().get_v_type(utils::common::sumo_vehicle_class::DEFAULT_PEDTYPE_ID, Ptr::null(), true);
+        if !defaultPedType.is_null() && defaultPedType.get_width() > stripe_width() {
+            utils::write_warningf!("Pedestrian vType '%' width % is larger than pedestrian.striping.stripe-width and this may cause collisions with vehicles.",
+                utils::common::sumo_vehicle_class::DEFAULT_PEDTYPE_ID, defaultPedType.get_width());
+        }
+
+        set_dawdling(oc.get_float("pedestrian.striping.dawdling").unwrap());
+        set_min_gap_to_vehicle(oc.get_float("pedestrian.striping.mingap-to-vehicle").unwrap());
+        set_reserve_for_oncoming_factor(oc.get_float("pedestrian.striping.reserve-oncoming").unwrap());
+        set_reserve_for_oncoming_factor_junctions(oc.get_float("pedestrian.striping.reserve-oncoming.junctions").unwrap());
+        set_reserve_for_oncoming_max(oc.get_float("pedestrian.striping.reserve-oncoming.max").unwrap());
+        // beginning with 1.20.0, sensible default speeds were set for crossings and walkingareas
+        // shortcut: MMVersion is not ported (MSNet::myVersion is a () placeholder), so the net version check
+        // (networkVersion >= 1.20) is assumed to hold; upgrade when MMVersion is ported and compare it here
+        set_use_net_speeds(true);
+
+        set_jam_time(utils::common::time::string2time(&oc.get_string("pedestrian.striping.jamtime").unwrap()).unwrap());
+        if jam_time() <= 0 {
+            set_jam_time(utils::common::time::SUMOTIME_MAX);
+        }
+        set_jam_time_crossing(utils::common::time::string2time(&oc.get_string("pedestrian.striping.jamtime.crossing").unwrap()).unwrap());
+        if jam_time_crossing() <= 0 {
+            set_jam_time_crossing(utils::common::time::SUMOTIME_MAX);
+        }
+        set_jam_time_narrow(utils::common::time::string2time(&oc.get_string("pedestrian.striping.jamtime.narrow").unwrap()).unwrap());
+        if jam_time_narrow() <= 0 {
+            set_jam_time_narrow(utils::common::time::SUMOTIME_MAX);
+        }
+        set_jam_factor(oc.get_float("pedestrian.striping.jamfactor").unwrap());
+        set_my_legacy_pos_lat(oc.get_bool("pedestrian.striping.legacy-departposlat").unwrap());
+        s
     }
 
     /// C++: `void MSPModel_Striping::~MSPModel_Striping() noexcept` [virtual]
@@ -130,7 +268,9 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_Striping::~MSPModel_Striping")
+        MY_WALKING_AREA_PATHS.with(|m| m.borrow_mut().clear()); // need to recompute when lane pointers change
+        MY_WALKING_AREA_FOES.with(|m| m.borrow_mut().clear());
+        MY_MIN_NEXT_LENGTHS.with(|m| m.borrow_mut().clear());
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_Striping::add(MSTransportable *, MSStageMoving *, SUMOTime)` [virtual]
@@ -165,7 +305,32 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel_Striping::add")
+        if !transportable.is_person() {
+            // containers are not supported (TODO add a warning here?)
+            return Ptr::null();
+        }
+        let person: Ptr<MSPerson> = transportable.cast::<MSPerson>();
+        let net = MSNet::get_instance();
+        if !self.myAmActive {
+            let cmd: Ptr<dyn crate::microsim::ms_event_control::Command> =
+                Ptr::from_mut(Box::leak(Box::new(MSPModel_Striping_MovePedestrians::new(Ptr::from_mut(self)))) as &mut dyn crate::microsim::ms_event_control::Command);
+            net.m().get_begin_of_timestep_events().m().add_event(cmd, net.get_current_time_step() + utils::common::time::delta_t());
+            self.myAmActive = true;
+        }
+        debug_assert!(person.get_current_stage_type() == MSStageType::WALKING);
+        let lane = MSStageMoving::check_depart_lane(person.get_edge(), person.get_v_class(), stage.get_depart_lane(), person.get_id());
+        if lane.is_null() {
+            if utils::options::options_cont::get_bool("ignore-route-errors") {
+                utils::write_warningf!("Person '%' could not find sidewalk on edge '%', time=%.", person.get_id(), person.get_edge().get_id(), utils::common::time::time2string(net.get_current_time_step()));
+                return Ptr::null();
+            } else {
+                panic!("{}", utils::tlf!("Person '%' could not find sidewalk on edge '%', time=%.", person.get_id(), person.get_edge().get_id(), utils::common::time::time2string(net.get_current_time_step())));
+            }
+        }
+        let ped: Ptr<MSPModel_InteractingState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_Striping_PState::new(person, stage, lane)))).cast::<MSPModel_InteractingState>();
+        self.myActiveLanes.entry(lane).or_default().push(ped);
+        self.myNumActivePedestrians += 1;
+        ped.cast::<MSTransportableStateAdapter>()
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_Striping::loadState(MSTransportable *, MSStageMoving *, std::istringstream &)` [virtual]
@@ -195,7 +360,7 @@ impl MSPModel_Striping {
     //     }
     #[allow(unused_variables)]
     pub fn pos_lat_conversion(posLat: f64, laneWidth: f64) -> f64 {
-        todo!("port MSPModel_Striping::posLatConversion")
+        0.5 * (laneWidth - stripe_width()) - posLat
     }
 
     /// C++: `void MSPModel_Striping::moveInDirection(SUMOTime, std::set<MSPerson *> &, int)` [protected]
@@ -565,7 +730,45 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn arrive_and_advance(&mut self, pedestrians: &mut MSPModel_Interacting_Pedestrians, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32) {
-        todo!("port MSPModel_Striping::arriveAndAdvance")
+        // advance to the next lane / arrive at destination
+        // determinism: C++ std::sort is unstable; ties are resolved by the id comparison in by_xpos_sorter
+        let sorter = MSPModel_Striping_by_xpos_sorter::new(dir);
+        pedestrians.sort_by(|a, b| {
+            if sorter.call_op(*a, *b) {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(*b, *a) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        // can't use iterators because we do concurrent modification
+        let mut i: usize = 0;
+        while i < pedestrians.len() {
+            let p = pedestrians[i].cast::<MSPModel_Striping_PState>();
+            if p.is_remote_controlled() {
+                i += 1;
+                continue;
+            }
+            if p.get_direction() == dir && p.dist_to_lane_end() < 0. {
+                // moveToNextLane may trigger re-insertion (for consecutive
+                // walks) so erase must be called first
+                pedestrians.remove(i);
+                // C++ does i-- and the loop's ++i, so the next pedestrian is now at index i
+                p.m().move_to_next_lane(currentTime);
+                if !p.get_lane().is_null() {
+                    changedLane.insert(p.get_person());
+                    self.myActiveLanes.entry(p.get_lane()).or_default().push(p.cast::<MSPModel_InteractingState>());
+                    p.get_stage().m().activate_entry_reminders(p.get_person().cast::<MSTransportable>(), false);
+                } else {
+                    // end walking stage and destroy PState
+                    p.get_stage().m().move_to_next_edge(p.get_person().cast::<MSTransportable>(), currentTime, dir, Ptr::null(), false);
+                    self.myNumActivePedestrians -= 1;
+                }
+                continue;
+            }
+            i += 1;
+        }
     }
 
     /// C++: `const ActiveLanes & MSPModel_Striping::getActiveLanes()` [protected]
@@ -574,7 +777,7 @@ impl MSPModel_Striping {
     //     }
     #[allow(unused_variables)]
     pub fn get_active_lanes(&mut self) -> &MSPModel_Interacting_ActiveLanes {
-        todo!("port MSPModel_Striping::getActiveLanes")
+        &self.myActiveLanes
     }
 
     /// C++: `void MSPModel_Striping::DEBUG_PRINT(const Obstacles &)` [static, private]
@@ -590,7 +793,11 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn debug_print(obs: &MSPModel_Striping_Obstacles) {
-        todo!("port MSPModel_Striping::DEBUG_PRINT")
+        // shortcut: C++ ostream default float formatting is not reproduced; Rust Display is used (debug output only)
+        for o in obs.iter() {
+            print!("({} x=({},{}) s={})   ", o.description, o.xBack, o.xFwd, o.speed);
+        }
+        println!();
     }
 
     /// C++: `int MSPModel_Striping::connectedDirection(const MSLane *, const MSLane *)` [static, private]
@@ -609,7 +816,15 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn connected_direction(from: Ptr<MSLane>, to: Ptr<MSLane>) -> i32 {
-        todo!("port MSPModel_Striping::connectedDirection")
+        if from.is_null() || to.is_null() {
+            return MSPMODEL_UNDEFINED_DIRECTION;
+        } else if !from.get_link_to(to).is_null() {
+            return MSPMODEL_FORWARD;
+        } else if !to.get_link_to(from).is_null() {
+            return MSPMODEL_BACKWARD;
+        } else {
+            return MSPMODEL_UNDEFINED_DIRECTION;
+        }
     }
 
     /// C++: `NextLaneInfo MSPModel_Striping::getNextLane(const PState &, const MSLane *, const MSLane *)` [static, private]
@@ -643,8 +858,24 @@ impl MSPModel_Striping {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_next_walking_area(currentLane: Ptr<MSLane>, dir: i32, link: &Ptr<MSLink>) -> Ptr<MSLane> {
-        todo!("port MSPModel_Striping::getNextWalkingArea")
+    pub fn get_next_walking_area(currentLane: Ptr<MSLane>, dir: i32, link: &mut Ptr<MSLink>) -> Ptr<MSLane> {
+        if dir == MSPMODEL_FORWARD {
+            for l in currentLane.get_link_cont().iter() {
+                if l.get_lane().is_walking_area() {
+                    *link = *l;
+                    return l.get_lane();
+                }
+            }
+        } else {
+            let laneInfos = currentLane.get_incoming_lanes();
+            for it in laneInfos.iter() {
+                if it.lane.is_walking_area() {
+                    *link = it.viaLink;
+                    return it.lane;
+                }
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSPModel_Striping::initWalkingAreaPaths(const MSNet *)` [static, private]
@@ -772,7 +1003,18 @@ impl MSPModel_Striping {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_walking_area_path(walkingArea: Ptr<MSEdge>, before: Ptr<MSLane>, after: Ptr<MSLane>) -> Ptr<MSPModel_Striping_WalkingAreaPath> {
-        todo!("port MSPModel_Striping::getWalkingAreaPath")
+        debug_assert!(walkingArea.is_walking_area());
+        if let Some(p) = lookup_walking_area_path(before, after) {
+            return p;
+        }
+        // this can happen in case of moveToXY where before can point anywhere
+        // or when a person starts directly on a walking area (before == nullptr)
+        for pred in walkingArea.get_predecessors().iter() {
+            if let Some(p) = lookup_walking_area_path(get_sidewalk(*pred, SVC_PEDESTRIAN), after) {
+                return p;
+            }
+        }
+        Self::get_arbitrary_path(walkingArea)
     }
 
     /// C++: `const WalkingAreaPath * MSPModel_Striping::getArbitraryPath(const MSEdge *)` [static, private]
@@ -780,14 +1022,47 @@ impl MSPModel_Striping {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_arbitrary_path(walkingArea: Ptr<MSEdge>) -> Ptr<MSPModel_Striping_WalkingAreaPath> {
-        todo!("port MSPModel_Striping::getArbitraryPath")
+        debug_assert!(walkingArea.is_walking_area());
+        let mut lanes: Vec<Ptr<MSLane>> = Vec::new();
+        for pred in walkingArea.get_predecessors().iter() {
+            lanes.push(get_sidewalk(*pred, SVC_PEDESTRIAN));
+        }
+        for succ in walkingArea.get_successors(SVC_IGNORING).iter() {
+            lanes.push(get_sidewalk(*succ, SVC_PEDESTRIAN));
+        }
+        if lanes.len() < 1 {
+            panic!("{}", utils::tlf!("Invalid walkingarea '%' does not allow continuation.", walkingArea.get_id()));
+        }
+        // shortcut: C++ dereferences end() when the key is missing (undefined behaviour); this panics instead
+        lookup_walking_area_path(lanes[0], lanes[lanes.len() - 1]).unwrap_or_else(|| panic!("walking area path not found"))
     }
 
     /// C++: `const WalkingAreaPath * MSPModel_Striping::guessPath(const MSEdge *, const MSEdge *, const MSEdge *)` [static, private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn guess_path(walkingArea: Ptr<MSEdge>, before: Ptr<MSEdge>, after: Ptr<MSEdge>) -> Ptr<MSPModel_Striping_WalkingAreaPath> {
-        todo!("port MSPModel_Striping::guessPath")
+        debug_assert!(walkingArea.is_walking_area());
+        let swBefore = get_sidewalk(before, SVC_PEDESTRIAN);
+        let swAfter = get_sidewalk(after, SVC_PEDESTRIAN);
+        if let Some(p) = lookup_walking_area_path(swBefore, swAfter) {
+            return p;
+        }
+        let preds = walkingArea.get_predecessors();
+        let succs = walkingArea.get_successors(SVC_IGNORING);
+        let useBefore = !swBefore.is_null() && preds.contains(&before);
+        let useAfter = !swAfter.is_null() && succs.contains(&after);
+        if useBefore {
+            if useAfter {
+                return Self::get_walking_area_path(walkingArea, swBefore, swAfter);
+            } else if succs.len() > 0 {
+                // could also try to exploit direction
+                return Self::get_walking_area_path(walkingArea, swBefore, get_sidewalk(succs[0], SVC_PEDESTRIAN));
+            }
+        } else if useAfter && preds.len() > 0 {
+            // could also try to exploit direction
+            return Self::get_walking_area_path(walkingArea, get_sidewalk(preds[0], SVC_PEDESTRIAN), swAfter);
+        }
+        Self::get_arbitrary_path(walkingArea)
     }
 
     /// C++: `int MSPModel_Striping::numStripes(const MSLane *)` [static, private]
@@ -798,7 +1073,7 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn num_stripes(lane: Ptr<MSLane>) -> i32 {
-        todo!("port MSPModel_Striping::numStripes")
+        std::cmp::max(1, (lane.get_width() / stripe_width()).floor() as i32)
     }
 
     /// C++: `Obstacles MSPModel_Striping::getNeighboringObstacles(const Pedestrians &, int, int)` [static, private]
@@ -2629,7 +2904,7 @@ impl MSPModel_Striping_by_xpos_sorter {
     // by_xpos_sorter(int dir): myDir(dir) {}
     #[allow(unused_variables)]
     pub fn new(dir: i32) -> Self {
-        todo!("port by_xpos_sorter::by_xpos_sorter")
+        Self { myDir: dir }
     }
 
     /// C++: `bool by_xpos_sorter::operator()(const MSPModel_InteractingState *, const MSPModel_InteractingState *) const` [const]
@@ -2642,7 +2917,10 @@ impl MSPModel_Striping_by_xpos_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, p1: Ptr<MSPModel_InteractingState>, p2: Ptr<MSPModel_InteractingState>) -> bool {
-        todo!("port by_xpos_sorter::operator()")
+        if p1.get_edge_pos(0) != p2.get_edge_pos(0) {
+            return self.myDir as f64 * p1.get_edge_pos(0) > self.myDir as f64 * p2.get_edge_pos(0);
+        }
+        p1.get_id() < p2.get_id()
     }
 
 }
@@ -2667,7 +2945,15 @@ impl MSPModel_Striping_walkingarea_path_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, p1: Ptr<MSPModel_Striping_WalkingAreaPath>, p2: Ptr<MSPModel_Striping_WalkingAreaPath>) -> bool {
-        todo!("port walkingarea_path_sorter::operator()")
+        if p1.from.get_numerical_id() < p2.from.get_numerical_id() {
+            return true;
+        }
+        if p1.from.get_numerical_id() == p2.from.get_numerical_id() {
+            if p1.to.get_numerical_id() < p2.to.get_numerical_id() {
+                return true;
+            }
+        }
+        false
     }
 
 }
