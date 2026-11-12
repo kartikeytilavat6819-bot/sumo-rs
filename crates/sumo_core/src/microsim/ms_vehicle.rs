@@ -4130,7 +4130,67 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position_along_best_lanes(&self, offset: f64) -> Position {
-        todo!("port MSVehicle::getPositionAlongBestLanes")
+        if !self.is_on_road() {
+            return Position::INVALID;
+        }
+        let bestLanes = self.get_best_lanes_continuation();
+        let mut nextBestLane: usize = 0; // index into bestLanes (C++ iterator)
+        let opposite = self.myLaneChangeModel.is_opposite();
+        let mut offset = offset;
+        let mut pos = if opposite { self.myLane.get_length() - self.myState.myPos } else { self.myState.myPos };
+        let mut lane: Ptr<MSLane> = if opposite { self.myLane.get_parallel_opposite() } else { self.get_lane() };
+        debug_assert!(!lane.is_null());
+        let mut success = true;
+
+        while offset > 0.0 {
+            // take into account lengths along internal lanes
+            // (offset test first so that a lane nulled below is never dereferenced)
+            while offset > 0.0 && lane.is_internal() {
+                if offset > lane.get_length() - pos {
+                    offset -= lane.get_length() - pos;
+                    lane = lane.get_link_cont()[0].get_via_lane_or_lane();
+                    pos = 0.0;
+                    if lane.is_null() {
+                        success = false;
+                        offset = 0.0;
+                    }
+                } else {
+                    pos += offset;
+                    offset = 0.0;
+                }
+            }
+            // set nextBestLane to next non-internal lane
+            while nextBestLane < bestLanes.len() && bestLanes[nextBestLane].is_null() {
+                nextBestLane += 1;
+            }
+            if offset > 0.0 {
+                debug_assert!(!lane.is_internal());
+                debug_assert!(nextBestLane < bestLanes.len() && lane == bestLanes[nextBestLane]);
+                if offset > lane.get_length() - pos {
+                    offset -= lane.get_length() - pos;
+                    nextBestLane += 1;
+                    debug_assert!(nextBestLane >= bestLanes.len() || !bestLanes[nextBestLane].is_null());
+                    if nextBestLane >= bestLanes.len() {
+                        success = false;
+                        offset = 0.0;
+                    } else {
+                        let link = lane.get_link_to(bestLanes[nextBestLane]);
+                        debug_assert!(!link.is_null());
+                        lane = link.get_via_lane_or_lane();
+                        pos = 0.0;
+                    }
+                } else {
+                    pos += offset;
+                    offset = 0.0;
+                }
+            }
+        }
+
+        if success {
+            lane.geometry_position_at_offset(pos, -self.get_lateral_position_on_lane())
+        } else {
+            Position::INVALID
+        }
     }
 
     /// C++: `const MSLane * MSVehicle::getLane() const` [const, virtual]
@@ -4283,7 +4343,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        todo!("port MSVehicle::getNextEdgePtr")
+        if self.myLane.is_null() || self.myCurrEdge + 1 == self.myRoute.size() as usize {
+            return Ptr::default();
+        }
+        if self.myLane.is_internal() {
+            Ptr::from_mut(self.myLane.get_canonical_successor_lane().get_edge())
+        } else {
+            let nextNormal = self.succ_edge(1);
+            let nextInternal = self.myLane.get_edge().get_internal_following_edge(nextNormal, self.get_v_class());
+            if !nextInternal.is_null() { nextInternal } else { nextNormal }
+        }
     }
 
     /// C++: `ConstMSEdgeVector::const_iterator MSVehicle::getRerouteOrigin() const` [const, virtual]
@@ -4305,8 +4374,20 @@ impl MSVehicle {
     //     return myCurrEdge;
     // }
     #[allow(unused_variables)]
-    pub fn get_reroute_origin(&self) -> Unmapped /* ConstMSEdgeVector::const_iterator */ {
-        todo!("port MSVehicle::getRerouteOrigin")
+    pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
+        // too close to the next junction, so avoid an emergency brake here
+        if !self.myLane.is_null() && self.myCurrEdge + 1 != self.myRoute.size() as usize && !utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) {
+            if self.myLane.is_internal() {
+                return self.myCurrEdge + 1;
+            }
+            if self.myState.myPos > self.myLane.get_length() - self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
+                return self.myCurrEdge + 1;
+            }
+            if self.myLane.get_edge().has_change_prohibitions(self.get_v_class(), self.myLane.get_index()) {
+                return self.myCurrEdge + 1;
+            }
+        }
+        self.myCurrEdge
     }
 
     /// C++: `SUMOTime MSVehicle::getWaitingTime(const bool) const` [const, virtual]
@@ -7641,7 +7722,33 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_leader(&self, dist: f64, considerFoes: bool) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSVehicle::getLeader")
+        if self.myLane.is_null() {
+            return (Ptr::default(), -1.0);
+        }
+        let mut dist = dist;
+        if dist == 0.0 {
+            dist = self.get_car_follow_model().brake_gap(self.get_speed()) + self.get_vehicle_type().get_min_gap();
+        }
+        let mut lead: Ptr<MSVehicle> = Ptr::default();
+        let lane = self.myLane; // ensure lane does not change between getVehiclesSecure and releaseVehicles;
+        let vehs = lane.get_vehicles_secure();
+        // vehicle might be outside the road network
+        let me = Ptr::new(self);
+        if let Some(it) = vehs.iter().position(|v| *v == me) {
+            if it + 1 < vehs.len() {
+                lead = vehs[it + 1];
+            }
+        }
+        if !lead.is_null() {
+            let result = (lead, lead.get_back_position_on_lane(self.myLane) - self.get_position_on_lane() - self.get_vehicle_type().get_min_gap());
+            lane.release_vehicles();
+            return result;
+        }
+        let seen = self.myLane.get_length() - self.get_position_on_lane();
+        let bestLaneConts = self.get_best_lanes_continuation_2(self.myLane);
+        let result = self.myLane.get_leader_on_consecutive(dist, seen, self.get_speed(), self, bestLaneConts, considerFoes);
+        lane.release_vehicles();
+        result
     }
 
     /// C++: `std::pair<const MSVehicle *const, double> MSVehicle::getFollower(double) const` [const, virtual]
@@ -7658,7 +7765,14 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_follower(&self, dist: f64) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSVehicle::getFollower")
+        if self.myLane.is_null() {
+            return (Ptr::default(), -1.0);
+        }
+        let mut dist = dist;
+        if dist == 0.0 {
+            dist = self.get_car_follow_model().brake_gap_2(self.myLane.get_edge().get_speed_limit() * 2.0, 4.5, 0.0);
+        }
+        self.myLane.get_follower(Ptr::new(self), self.get_position_on_lane(), dist, MSLane_MinorLinkMode::FOLLOW_NEVER, false)
     }
 
     /// C++: `double MSVehicle::getTimeGapOnLane() const` [const]
@@ -7674,7 +7788,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_time_gap_on_lane(&self) -> f64 {
-        todo!("port MSVehicle::getTimeGapOnLane")
+        // calling getLeader with 0 would induce a dist calculation but we only want to look for the leaders on the current lane
+        let leaderInfo = self.get_leader(-1.0, false);
+        if leaderInfo.0.is_null() || self.get_speed() == 0.0 {
+            return -1.0;
+        }
+        (leaderInfo.1 + self.get_vehicle_type().get_min_gap()) / self.get_speed()
     }
 
     /// C++: `void MSVehicle::addTransportable(MSTransportable *)` [virtual]
@@ -7696,7 +7815,19 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port MSVehicle::addTransportable")
+        self.base.add_transportable(transportable);
+        if self.myStops.len() > 0 && self.myStops.front().unwrap().reached {
+            let stop = self.myStops.front_mut().unwrap();
+            if transportable.is_person() {
+                if stop.triggered && stop.numExpectedPerson > 0 {
+                    stop.numExpectedPerson -= stop.pars.awaitedPersons.contains(transportable.get_id()) as i32;
+                }
+            } else {
+                if stop.pars.containerTriggered && stop.numExpectedContainer > 0 {
+                    stop.numExpectedContainer -= stop.pars.awaitedContainers.contains(transportable.get_id()) as i32;
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicle::switchOnSignal(int)`
@@ -7706,7 +7837,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn switch_on_signal(&mut self, signal: i32) {
-        todo!("port MSVehicle::switchOnSignal")
+        self.mySignals |= signal;
     }
 
     /// C++: `void MSVehicle::switchOffSignal(int)`
@@ -7716,7 +7847,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn switch_off_signal(&mut self, signal: i32) {
-        todo!("port MSVehicle::switchOffSignal")
+        self.mySignals &= !signal;
     }
 
     /// C++: `int MSVehicle::getSignals() const` [const]
@@ -7726,7 +7857,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_signals(&self) -> i32 {
-        todo!("port MSVehicle::getSignals")
+        self.mySignals
     }
 
     /// C++: `bool MSVehicle::signalSet(int) const` [const]
@@ -7736,7 +7867,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn signal_set(&self, which: i32) -> bool {
-        todo!("port MSVehicle::signalSet")
+        (self.mySignals & which) != 0
     }
 
     /// C++: `bool MSVehicle::unsafeLinkAhead(const MSLane *, double) const` [const]
@@ -7821,7 +7952,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn passing_minor(&self) -> bool {
-        todo!("port MSVehicle::passingMinor")
+        // or on approach to minor link below visibility distance
+        if self.myLane.is_null() {
+            return false;
+        }
+        if self.myLane.get_edge().is_internal() {
+            return !self.myLane.get_incoming_lanes()[0].viaLink.have_priority();
+        } else if self.myLFLinkLanes.len() > 0 && !self.myLFLinkLanes[0].myLink.is_null() {
+            let link = self.myLFLinkLanes[0].myLink;
+            return !link.have_priority() && self.myLFLinkLanes[0].myDistance <= link.get_foe_visibility_distance();
+        }
+        false
     }
 
     /// C++: `double MSVehicle::getSpeedWithoutTraciInfluence() const` [const]
@@ -7836,7 +7977,11 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_without_traci_influence(&self) -> f64 {
-        todo!("port MSVehicle::getSpeedWithoutTraciInfluence")
+        if !self.myInfluencer.is_null() && self.myInfluencer.get_original_speed() >= 0.0 {
+            // influencer original speed is -1 on initialization
+            return self.myInfluencer.get_original_speed();
+        }
+        self.myState.mySpeed
     }
 
     /// C++: `bool MSVehicle::rerouteParkingArea(const std::string &, std::string &)`
@@ -8220,7 +8365,8 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_exit_manoeuvre(&mut self) -> bool {
-        todo!("port MSVehicle::setExitManoeuvre")
+        let veh = Ptr::from_mut(self);
+        self.myManoeuvre.configure_exit_manoeuvre(veh)
     }
 
     /// C++: `void MSVehicle::setManoeuvreType(const MSVehicle::ManoeuvreType)`
@@ -8231,7 +8377,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_manoeuvre_type(&mut self, mType: MSVehicle_ManoeuvreType) {
-        todo!("port MSVehicle::setManoeuvreType")
+        self.myManoeuvre.set_manoeuvre_type(mType);
     }
 
     /// C++: `bool MSVehicle::manoeuvreIsComplete() const` [const]
@@ -8242,7 +8388,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn manoeuvre_is_complete(&self) -> bool {
-        todo!("port MSVehicle::manoeuvreIsComplete")
+        self.myManoeuvre.manoeuvre_is_complete_2()
     }
 
     /// C++: `MSVehicle::ManoeuvreType MSVehicle::getManoeuvreType() const` [const]
@@ -8253,7 +8399,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_manoeuvre_type(&self) -> MSVehicle_ManoeuvreType {
-        todo!("port MSVehicle::getManoeuvreType")
+        self.myManoeuvre.get_manoeuvre_type()
     }
 
     /// C++: `BaseInfluencer & MSVehicle::getBaseInfluencer()` [virtual]
@@ -8261,28 +8407,33 @@ impl MSVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        todo!("port MSVehicle::getBaseInfluencer")
+        &mut self.get_influencer().base
     }
 
     /// C++: `Influencer & MSVehicle::getInfluencer()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_influencer(&mut self) -> &mut MSVehicle_Influencer {
-        todo!("port MSVehicle::getInfluencer")
+        if self.myInfluencer.is_null() {
+            // shortcut: C++ owns myInfluencer and deletes it in the destructor; Box::leak keeps it alive for the process, upgrade with an owned field
+            self.myInfluencer = Ptr::from_mut(Box::leak(Box::new(MSVehicle_Influencer::new())));
+        }
+        self.myInfluencer.m()
     }
 
     /// C++: `const BaseInfluencer * MSVehicle::getBaseInfluencer() const` [const, virtual]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer_2(&self) -> Ptr<MSBaseVehicle_BaseInfluencer> {
-        todo!("port MSVehicle::getBaseInfluencer")
+        // Influencer derives from BaseInfluencer and its base is the first field (#[repr(C)])
+        self.myInfluencer.cast::<MSBaseVehicle_BaseInfluencer>()
     }
 
     /// C++: `const Influencer * MSVehicle::getInfluencer() const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_influencer_2(&self) -> Ptr<MSVehicle_Influencer> {
-        todo!("port MSVehicle::getInfluencer")
+        self.myInfluencer
     }
 
     /// C++: `bool MSVehicle::hasInfluencer() const` [const, virtual]
@@ -8291,7 +8442,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        todo!("port MSVehicle::hasInfluencer")
+        !self.myInfluencer.is_null()
     }
 
     /// C++: `int MSVehicle::influenceChangeDecision(int)`
@@ -8309,7 +8460,14 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn influence_change_decision(&mut self, state: i32) -> i32 {
-        todo!("port MSVehicle::influenceChangeDecision")
+        let mut state = state;
+        if self.has_influencer() {
+            let currentTime = MSNet::get_instance().get_current_time_step();
+            let edge = self.myLane;
+            let laneIndex = self.get_lane_index();
+            state = self.get_influencer().influence_change_decision(currentTime, edge.get_edge(), laneIndex, state);
+        }
+        state
     }
 
     /// C++: `void MSVehicle::setRemoteState(Position)`
@@ -8320,7 +8478,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_remote_state(&mut self, xyPos: Position) {
-        todo!("port MSVehicle::setRemoteState")
+        self.myCachedPosition = xyPos;
     }
 
     /// C++: `int MSVehicle::nextLinkPriority(const std::vector<MSLane *> &)` [static]
