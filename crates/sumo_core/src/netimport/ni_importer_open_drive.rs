@@ -15,6 +15,103 @@ thread_local! {
 const UNSET_CONNECTION: i32 = 100000;
 // C++ NIImporter_OpenDrive.h: `#define UNSET_LANEVALIDITY 100000`
 const UNSET_LANEVALIDITY: i32 = 100000;
+
+/// C++ static NIImporter_OpenDrive::openDriveTags (SequentialStringBijection::Entry[]), terminated by the empty entry
+const OPEN_DRIVE_TAGS: &[(&str, i32)] = &[
+    ("header", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_HEADER as i32),
+    ("road", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ROAD as i32),
+    ("predecessor", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_PREDECESSOR as i32),
+    ("successor", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SUCCESSOR as i32),
+    ("geometry", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_GEOMETRY as i32),
+    ("line", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LINE as i32),
+    ("spiral", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SPIRAL as i32),
+    ("arc", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ARC as i32),
+    ("laneSection", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANESECTION as i32),
+    ("laneOffset", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANEOFFSET as i32),
+    ("left", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT as i32),
+    ("center", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_CENTER as i32),
+    ("right", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT as i32),
+    ("lane", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANE as i32),
+    ("access", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ACCESS as i32),
+    ("signal", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SIGNAL as i32),
+    ("signalReference", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SIGNALREFERENCE as i32),
+    ("controller", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_CONTROLLER as i32),
+    ("control", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_CONTROL as i32),
+    ("validity", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_VALIDITY as i32),
+    ("semantics", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SEMANTICS as i32),
+    ("priority", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_PRIORITY as i32),
+    ("junction", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_JUNCTION as i32),
+    ("connection", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_CONNECTION as i32),
+    ("laneLink", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANELINK as i32),
+    ("width", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_WIDTH as i32),
+    ("speed", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SPEED as i32),
+    ("elevation", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ELEVATION as i32),
+    ("geoReference", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_GEOREFERENCE as i32),
+    ("offset", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_OFFSET as i32),
+    ("object", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_OBJECT as i32),
+    ("repeat", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_REPEAT as i32),
+    ("include", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_INCLUDE as i32),
+    ("", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_NOTHING as i32),
+];
+/// C++ static NIImporter_OpenDrive::openDriveAttrs (SequentialStringBijection::Entry[]), terminated by the empty entry
+const OPEN_DRIVE_ATTRS: &[(&str, i32)] = &[
+    ("revMajor", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_REVMAJOR as i32),
+    ("revMinor", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_REVMINOR as i32),
+    ("id", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_ID as i32),
+    ("length", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_LENGTH as i32),
+    ("width", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_WIDTH as i32),
+    ("radius", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_RADIUS as i32),
+    ("distance", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_DISTANCE as i32),
+    ("tStart", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_TSTART as i32),
+    ("tEnd", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_TEND as i32),
+    ("widthStart", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_WIDTHSTART as i32),
+    ("widthEnd", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_WIDTHEND as i32),
+    ("junction", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_JUNCTION as i32),
+    ("elementType", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_ELEMENTTYPE as i32),
+    ("elementId", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_ELEMENTID as i32),
+    ("contactPoint", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CONTACTPOINT as i32),
+    ("s", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_S as i32),
+    ("t", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_T as i32),
+    ("x", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_X as i32),
+    ("y", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_Y as i32),
+    ("z", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_Z as i32),
+    ("hdg", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_HDG as i32),
+    ("curvStart", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CURVSTART as i32),
+    ("curvEnd", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CURVEND as i32),
+    ("curvature", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CURVATURE as i32),
+    ("a", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_A as i32),
+    ("b", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_B as i32),
+    ("c", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_C as i32),
+    ("d", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_D as i32),
+    ("aU", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_AU as i32),
+    ("bU", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_BU as i32),
+    ("cU", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CU as i32),
+    ("dU", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_DU as i32),
+    ("aV", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_AV as i32),
+    ("bV", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_BV as i32),
+    ("cV", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CV as i32),
+    ("dV", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_DV as i32),
+    ("pRange", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_PRANGE as i32),
+    ("type", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_TYPE as i32),
+    ("level", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_LEVEL as i32),
+    ("orientation", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_ORIENTATION as i32),
+    ("dynamic", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_DYNAMIC as i32),
+    ("incomingRoad", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_INCOMINGROAD as i32),
+    ("connectingRoad", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_CONNECTINGROAD as i32),
+    ("from", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_FROM as i32),
+    ("to", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_TO as i32),
+    ("fromLane", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_FROMLANE as i32),
+    ("toLane", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_TOLANE as i32),
+    ("max", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_MAX as i32),
+    ("sOffset", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_SOFFSET as i32),
+    ("rule", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_RULE as i32),
+    ("restriction", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_RESTRICTION as i32),
+    ("name", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_NAME as i32),
+    ("signalId", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_SIGNALID as i32),
+    ("file", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_FILE as i32),
+    ("unit", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_UNIT as i32),
+    ("", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_NOTHING as i32),
+];
 // shortcut: NBEdge::UNSPECIFIED_* constants are not ported as Rust items; values copied from NBEdge.cpp
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
 const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
@@ -1823,7 +1920,25 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn new(tc: &NBTypeCont, edges: &mut BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) -> Self {
-        todo!("port NIImporter_OpenDrive::NIImporter_OpenDrive")
+        Self {
+            base: GenericSAXHandler::new(OPEN_DRIVE_TAGS, NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_NOTHING as i32, OPEN_DRIVE_ATTRS, NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_NOTHING as i32, "opendrive", ""),
+            myTypeContainer: Ptr::new(tc),
+            myCurrentEdge: NIImporter_OpenDrive_OpenDriveEdge::new("", "", "", -1.0),
+            myCurrentController: NIImporter_OpenDrive_OpenDriveController::new("", String::new()),
+            myEdges: Ptr::from_mut(edges),
+            myElementStack: Vec::new(),
+            myCurrentLaneDirection: NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_NOTHING,
+            myCurrentJunctionID: String::new(),
+            myCurrentIncomingRoad: String::new(),
+            myCurrentConnectingRoad: String::new(),
+            myCurrentContactPoint: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_UNKNOWN,
+            myConnectionWasEmpty: false,
+            mySignals: BTreeMap::new(),
+            myControllers: BTreeMap::new(),
+            myJunctions2Controllers: BTreeMap::new(),
+            myOffset: Position::new(0.0, 0.0),
+            myUseCurrentNode: false,
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::~NIImporter_OpenDrive() noexcept` [virtual, protected]
@@ -1832,7 +1947,7 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIImporter_OpenDrive::~NIImporter_OpenDrive")
+        // C++ destructor body is empty: nothing to release
     }
 
     /// C++: `void NIImporter_OpenDrive::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -4626,7 +4741,7 @@ impl NIImporter_OpenDrive_same_position_finder {
     // explicit same_position_finder(double pos) : myPosition(pos) { }
     #[allow(unused_variables)]
     pub fn new(pos: f64) -> Self {
-        todo!("port same_position_finder::same_position_finder")
+        Self { myPosition: pos }
     }
 
     /// C++: `bool same_position_finder::operator()(const std::pair<double, LaneAttributeChange> &)`
@@ -4636,7 +4751,7 @@ impl NIImporter_OpenDrive_same_position_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, ps: &(f64, NIImporter_OpenDrive_LaneAttributeChange)) -> bool {
-        todo!("port same_position_finder::operator()")
+        ps.0 == self.myPosition
     }
 
 }
@@ -4652,7 +4767,7 @@ impl NIImporter_OpenDrive_sections_by_s_sorter {
     // explicit sections_by_s_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port sections_by_s_sorter::sections_by_s_sorter")
+        Self {}
     }
 
     /// C++: `int sections_by_s_sorter::operator()(const OpenDriveLaneSection &, const OpenDriveLaneSection &)`
@@ -4662,7 +4777,7 @@ impl NIImporter_OpenDrive_sections_by_s_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, ls1: &NIImporter_OpenDrive_OpenDriveLaneSection, ls2: &NIImporter_OpenDrive_OpenDriveLaneSection) -> i32 {
-        todo!("port sections_by_s_sorter::operator()")
+        (ls1.s < ls2.s) as i32
     }
 
 }
