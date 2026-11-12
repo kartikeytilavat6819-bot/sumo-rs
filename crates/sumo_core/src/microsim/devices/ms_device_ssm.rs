@@ -525,6 +525,13 @@ impl std::ops::DerefMut for MSDevice_SSM {
 //   static const int MSDevice_SSM::FOE_ENCOUNTERTYPES;
 //   static const int MSDevice_SSM::EGO_ENCOUNTERTYPES;
 
+thread_local! {
+    /// C++ static `MSDevice_SSM::myEdgeFilter` (std::set<const MSEdge*>; ordered by pointer)
+    pub static MY_EDGE_FILTER: std::cell::RefCell<BTreeSet<Ptr<MSEdge>>> = std::cell::RefCell::new(BTreeSet::new());
+    /// C++ static `MSDevice_SSM::myEdgeFilterActive`
+    pub static MY_EDGE_FILTER_ACTIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+}
+
 impl MSDevice_SSM {
     /// C++: `std::string MSDevice_SSM::encounterToString(EncounterType)` [static]
     // static std::string encounterToString(EncounterType type) {
@@ -917,7 +924,27 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self) {
-        todo!("port MSDevice_SSM::update")
+        // Scan surroundings for other vehicles
+        let mut foes: MSDevice_SSM_FoeInfoMap = BTreeMap::new();
+        let mut scan = true;
+        if MY_EDGE_FILTER_ACTIVE.with(|c| c.get()) {
+            // Is the ego vehicle inside the filtered edge subset?
+            let egoEdge = Ptr::from_mut(self.myHolderMS.get_lane().get_edge());
+            scan = MY_EDGE_FILTER.with(|f| f.borrow().contains(&egoEdge));
+        }
+        if scan {
+            MSDevice_SSM::find_surrounding_vehicles(&*self.myHolderMS, self.myRange, &mut foes);
+        }
+
+        // Update encounters and conflicts -> removes all foes (and deletes corresponding FoeInfos) for which already a corresponding encounter exists
+        self.process_encounters(&mut foes, false);
+
+        // Make new encounters for all foes, which were not removed by processEncounters (and deletes corresponding FoeInfos)
+        self.create_encounters(&mut foes);
+        foes.clear();
+
+        // Compute "global SSMs" (only computed once per time-step)
+        self.compute_global_measures();
     }
 
     /// C++: `void MSDevice_SSM::writeOutConflict(Encounter *)` [private]
@@ -1073,7 +1100,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn to_geo(x: &mut Position) {
-        todo!("port MSDevice_SSM::toGeo")
+        GeoConvHelper::with_final(|g| g.cartesian2geo(x));
     }
 
     /// C++: `void MSDevice_SSM::toGeo(PositionVector &)` [static, private]
@@ -1088,7 +1115,11 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn to_geo_2(x: &mut PositionVector) {
-        todo!("port MSDevice_SSM::toGeo")
+        for x in x.iter_mut() {
+            if *x != Position::INVALID {
+                MSDevice_SSM::to_geo(x);
+            }
+        }
     }
 
     /// C++: `void MSDevice_SSM::cleanup()` [static]
