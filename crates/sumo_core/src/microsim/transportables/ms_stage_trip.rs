@@ -2,8 +2,22 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+use utils::common::msg_handler::write_warning;
+use utils::options::options_cont;
+
+const VEHPARS_VTYPE_SET: i64 = 2;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
+const VEHPARS_ARRIVALSPEED_SET: i64 = 2 << 13;
+
+// C++ MSGlobals::gUseMesoSim is set from the "mesosim" option
+fn g_use_meso_sim() -> bool {
+    options_cont::get_bool("mesosim")
+}
+
 /// A "placeholder" stage storing routing info which will result in real stages when routed
 /// C++ class `MSStageTrip` (microsim/transportables/MSStageTrip.h)
+#[repr(C)]
 pub struct MSStageTrip {
     /// C++ base class `MSStage`
     pub base: MSStage,
@@ -69,7 +83,22 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn new(origin: Ptr<MSEdge>, fromStop: Ptr<MSStoppingPlace>, destination: Ptr<MSEdge>, toStop: Ptr<MSStoppingPlace>, duration: SUMOTime, modeSet: SVCPermissions, vTypes: &str, speed: f64, walkFactor: f64, group: &str, departPosLat: f64, hasArrivalPos: bool, arrivalPos: f64) -> Self {
-        todo!("port MSStageTrip::MSStageTrip")
+        MSStageTrip {
+            base: MSStage::new(MSStageType::TRIP, destination, toStop, arrivalPos, 0.0, group),
+            myOrigin: origin,
+            myOriginStop: fromStop,
+            myDuration: duration,
+            myModeSet: modeSet,
+            myVTypes: vTypes.to_string(),
+            mySpeed: speed,
+            myWalkFactor: walkFactor,
+            myDepartPos: 0.,
+            myDepartPosLat: departPosLat,
+            myHaveArrivalPos: hasArrivalPos,
+            myComputedStages: Vec::new(),
+            myRoutingError: String::new(),
+            myVehicleToAdd: Ptr::null(),
+        }
     }
 
     /// C++: `void MSStageTrip::~MSStageTrip() noexcept` [virtual]
@@ -77,7 +106,7 @@ impl MSStageTrip {
     // MSStageTrip::~MSStageTrip() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSStageTrip::~MSStageTrip")
+        // empty C++ destructor body
     }
 
     /// C++: `MSStage * MSStageTrip::clone() const` [const, virtual]
@@ -92,7 +121,13 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<MSStage> {
-        todo!("port MSStageTrip::clone")
+        let clon = MSStageTrip::new(self.myOrigin, self.myOriginStop,
+            self.myDestination, self.myDestinationStop, self.myDuration,
+            self.myModeSet, &self.myVTypes, self.mySpeed, self.myWalkFactor, &self.myGroup,
+            self.myDepartPosLat, self.myHaveArrivalPos, self.myArrivalPos);
+        let clonPtr = Ptr::from_mut(Box::leak(Box::new(clon))).cast::<MSStage>();
+        clonPtr.m().set_parameters(self);
+        clonPtr
     }
 
     /// C++: `const MSEdge * MSStageTrip::getEdge() const` [const, virtual]
@@ -102,7 +137,7 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSStageTrip::getEdge")
+        self.myOrigin
     }
 
     /// C++: `MSStoppingPlace * MSStageTrip::getOriginStop() const` [const, virtual]
@@ -111,7 +146,7 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn get_origin_stop(&self) -> Ptr<MSStoppingPlace> {
-        todo!("port MSStageTrip::getOriginStop")
+        self.myOriginStop
     }
 
     /// C++: `double MSStageTrip::getEdgePos(SUMOTime) const` [const, virtual]
@@ -121,7 +156,7 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        todo!("port MSStageTrip::getEdgePos")
+        self.myDepartPos
     }
 
     /// C++: `Position MSStageTrip::getPosition(SUMOTime) const` [const, virtual]
@@ -132,7 +167,8 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, now: SUMOTime) -> Position {
-        todo!("port MSStageTrip::getPosition")
+        // may be called concurrently while the trip is still being routed
+        self.get_edge_position(self.myOrigin, self.myDepartPos, ROADSIDE_OFFSET * (if crate::microsim::ms_globals::lefthand() { -1. } else { 1. }))
     }
 
     /// C++: `double MSStageTrip::getAngle(SUMOTime) const` [const, virtual]
@@ -143,7 +179,8 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, now: SUMOTime) -> f64 {
-        todo!("port MSStageTrip::getAngle")
+        // may be called concurrently while the trip is still being routed
+        self.get_edge_angle(self.myOrigin, self.myDepartPos) + std::f64::consts::PI / 2. * (if crate::microsim::ms_globals::lefthand() { -1. } else { 1. })
     }
 
     /// C++: `double MSStageTrip::getDistance() const` [const, virtual]
@@ -153,7 +190,8 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        todo!("port MSStageTrip::getDistance")
+        // invalid
+        -1.
     }
 
     /// C++: `std::string MSStageTrip::getStageDescription(const bool) const` [const, virtual]
@@ -163,7 +201,7 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn get_stage_description(&self, isPerson: bool) -> String {
-        todo!("port MSStageTrip::getStageDescription")
+        "trip".to_string()
     }
 
     /// C++: `std::string MSStageTrip::getOriginDescription() const` [const]
@@ -175,7 +213,11 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_origin_description(&self) -> String {
-        todo!("port MSStageTrip::getOriginDescription")
+        if !self.myOriginStop.is_null() {
+            format!("{} '{}'", utils::xml::sumo_xml_definitions::Tags.get_string(self.myOriginStop.get_element()), self.myOriginStop.get_id())
+        } else {
+            format!("edge '{}'", self.myOrigin.get_id())
+        }
     }
 
     /// C++: `std::string MSStageTrip::getDestinationDescription() const` [const]
@@ -187,7 +229,11 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_destination_description(&self) -> String {
-        todo!("port MSStageTrip::getDestinationDescription")
+        if !self.myDestinationStop.is_null() {
+            format!("{} '{}'", utils::xml::sumo_xml_definitions::Tags.get_string(self.myDestinationStop.get_element()), self.myDestinationStop.get_id())
+        } else {
+            format!("edge '{}'", self.myDestination.get_id())
+        }
     }
 
     /// C++: `std::string MSStageTrip::getStageSummary(const bool) const` [const, virtual]
@@ -197,7 +243,7 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_stage_summary(&self, isPerson: bool) -> String {
-        todo!("port MSStageTrip::getStageSummary")
+        format!("trip from {} to {}", self.get_origin_description(), self.get_destination_description())
     }
 
     /// C++: `std::vector<SUMOVehicle *> MSStageTrip::getVehicles(MSVehicleControl &, MSTransportable *, const MSEdge *)`
@@ -262,7 +308,68 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles(&mut self, vehControl: &mut MSVehicleControl, transportable: Ptr<MSTransportable>, origin: Ptr<MSEdge>) -> Vec<Ptr<SUMOVehicle>> {
-        todo!("port MSStageTrip::getVehicles")
+        let tid = transportable.get_id().to_string();
+        let mut pars: Vec<SUMOVehicleParameter> = Vec::new();
+        for vtype in self.myVTypes.split_whitespace() {
+            let idx = pars.len();
+            let mut p = SUMOVehicleParameter::new();
+            p.vtypeid = vtype.to_string();
+            p.parametersSet |= VEHPARS_VTYPE_SET;
+            p.departProcedure = DepartDefinition::TRIGGERED;
+            p.id = format!("{}_{}", tid, idx);
+            pars.push(p);
+        }
+        if pars.is_empty() {
+            if (self.myModeSet & SVC_PASSENGER) != 0 {
+                let mut p = SUMOVehicleParameter::new();
+                p.id = format!("{}_0", tid);
+                p.departProcedure = DepartDefinition::TRIGGERED;
+                pars.push(p);
+            }
+            if (self.myModeSet & SVC_TAXI) != 0 {
+                for (_, vt) in MSDevice_Taxi::get_taxi_types().iter() {
+                    let mut p = SUMOVehicleParameter::new();
+                    p.vtypeid = vt.clone();
+                    p.id = format!("{}_taxi_{}", tid, vt);
+                    p.line = "taxi".to_string();
+                    pars.push(p);
+                }
+            }
+            if (self.myModeSet & SVC_BICYCLE) != 0 {
+                let mut p = SUMOVehicleParameter::new();
+                p.vtypeid = DEFAULT_BIKETYPE_ID.to_string();
+                p.id = format!("{}_b0", tid);
+                p.departProcedure = DepartDefinition::TRIGGERED;
+                pars.push(p);
+            }
+        }
+        let routeDummy: std::rc::Rc<MSRoute> = std::rc::Rc::new(MSRoute::new(&format!("{}_0", tid), &vec![origin], false, Ptr::null(), &Vec::new(), -1, -1));
+        let mut result: Vec<Ptr<SUMOVehicle>> = Vec::new();
+        for mut vehPar in pars {
+            let isTaxi = vehPar.line == "taxi" && (self.myModeSet & SVC_TAXI) != 0;
+            if self.myDepartPos != 0. {
+                vehPar.departPosProcedure = DepartPosDefinition::GIVEN;
+                vehPar.departPos = self.myDepartPos;
+                vehPar.parametersSet |= VEHPARS_DEPARTPOS_SET;
+            }
+            vehPar.parametersSet |= VEHPARS_ARRIVALPOS_SET;
+            vehPar.arrivalPosProcedure = ArrivalPosDefinition::GIVEN;
+            vehPar.parametersSet |= VEHPARS_ARRIVALSPEED_SET;
+            vehPar.arrivalSpeedProcedure = ArrivalSpeedDefinition::GIVEN;
+            vehPar.arrivalSpeed = 0.;
+            let vtype = vehControl.get_v_type(&vehPar.vtypeid, Ptr::null(), false);
+            if vtype.get_vehicle_class() != SVC_IGNORING && (origin.get_permissions() & vtype.get_vehicle_class()) == 0 && !isTaxi {
+                write_warning(&format!("Ignoring vehicle type '{}' when routing person '{}' because it is not allowed on the start edge.", vtype.get_id(), tid));
+            } else {
+                let parPtr = Ptr::from_mut(Box::leak(Box::new(vehPar)));
+                result.push(vehControl.build_vehicle(parPtr, routeDummy.clone(), vtype, !crate::microsim::ms_globals::check_routes(), MSVehicleControl_VehicleDefinitionSource::ROUTEFILE, true));
+            }
+        }
+        if result.is_empty() {
+            // walking only but may use access infrastructure
+            result.push(Ptr::null());
+        }
+        result
     }
 
     /// C++: `const std::string MSStageTrip::reroute(const SUMOTime, MSTransportableRouter &, MSTransportable *const, MSStage *, const MSEdge *, const MSEdge *, std::vector<MSStage *> &)`
@@ -453,7 +560,174 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, time: SUMOTime, router: &mut MSTransportableRouter, transportable: Ptr<MSTransportable>, previous: Ptr<MSStage>, origin: Ptr<MSEdge>, destination: Ptr<MSEdge>, stages: &mut Vec<Ptr<MSStage>>) -> String {
-        todo!("port MSStageTrip::reroute")
+        let mut origin = origin;
+        let mut previous = previous;
+        if origin.is_taz_connector() && origin.get_successors(SVC_IGNORING).is_empty() {
+            // previous stage ended at a taz sink-edge
+            origin = transportable.get_next_stage(-1).get_destination();
+        }
+        let vehControl = MSNet::get_instance().m().get_vehicle_control();
+        let mut minCost = f64::MAX;
+        let mut minResult: Vec<IntermodalRouter_TripItem> = Vec::new();
+        let mut minVehicle: Ptr<SUMOVehicle> = Ptr::null();
+        // shortcut: the parallel path (pre-collecting vehicles under a lock) is not ported, routing is always serial
+        let vehicles = self.get_vehicles(vehControl, transportable, origin);
+        for mut vehicle in vehicles {
+            let mut result: Vec<IntermodalRouter_TripItem> = Vec::new();
+            let mut departPos = previous.get_arrival_pos();
+            let prevStop = previous.get_destination_stop();
+            if g_use_meso_sim() && !prevStop.is_null() {
+                departPos = (prevStop.get_begin_lane_position() + prevStop.get_end_lane_position()) / 2.;
+            }
+            let prevStopID = if prevStop.is_null() { String::new() } else { prevStop.get_id().to_string() };
+            let destStopID = if self.myDestinationStop.is_null() { String::new() } else { self.myDestinationStop.get_id().to_string() };
+            let ok = router.compute(origin, destination, departPos, &prevStopID, self.myArrivalPos, &destStopID,
+                transportable.get_max_speed() * self.myWalkFactor, vehicle, transportable.get_v_type_parameter(), self.myModeSet, time, &mut result, 0.);
+            if ok {
+                let mut totalCost = 0.;
+                for item in result.iter() {
+                    totalCost += item.cost;
+                }
+                if totalCost < minCost {
+                    minCost = totalCost;
+                    minResult = result;
+                    std::mem::swap(&mut minVehicle, &mut vehicle);
+                }
+            }
+            if !vehicle.is_null() {
+                vehControl.delete_vehicle(vehicle, true, false);
+                vehControl.discount_routing_vehicle();
+            }
+        }
+        if minCost != f64::MAX {
+            let isTaxi = !minVehicle.is_null() && (self.myModeSet & SVC_TAXI) != 0 && minVehicle.get_parameter().line == "taxi";
+            let mut carUsed = false;
+            let n = minResult.len();
+            for (idx, it) in minResult.iter().enumerate() {
+                if !it.edges.is_empty() {
+                    let edges: ConstMSEdgeVector = it.edges.iter().map(|e| e.cast::<MSEdge>()).collect();
+                    // shortcut: MSNet::getStoppingPlace(id) without a category is only ported for the bus-stop category
+                    let bs = MSNet::get_instance().m().get_stopping_place(&it.destStop, SUMO_TAG_BUS_STOP);
+                    let first = edges[0];
+                    let last = edges[edges.len() - 1];
+                    let mut localArrivalPos = if !bs.is_null() { bs.get_access_pos(last, last.get_lanes()[0].get_rng()) } else { it.arrivalPos };
+                    let rideOrigin = if origin.is_taz_connector() && stages.is_empty() { first } else { Ptr::null() };
+                    if idx + 1 == n && self.myHaveArrivalPos {
+                        localArrivalPos = self.myArrivalPos;
+                    }
+                    if it.line == "" {
+                        // determine walk departPos
+                        let mut depPos = previous.get_arrival_pos();
+                        if !previous.get_destination_stop().is_null() {
+                            depPos = previous.get_destination_stop().get_access_pos(first, first.get_lanes()[0].get_rng());
+                        } else if origin.is_taz_connector() {
+                            // walk the whole length of the first edge
+                            if first.get_predecessors().contains(&origin) {
+                                depPos = 0.;
+                            } else {
+                                depPos = first.get_length();
+                            }
+                        } else if previous.get_destination() != first {
+                            if previous.get_destination().get_to_junction() == first.get_to_junction()
+                                || previous.get_destination().get_from_junction() == first.get_to_junction() {
+                                depPos = first.get_length();
+                            } else {
+                                depPos = 0.;
+                            }
+                        }
+                        if destination.is_taz_connector() {
+                            // walk the whole length of the last edge
+                            if last.get_successors(SVC_IGNORING).contains(&destination) {
+                                localArrivalPos = last.get_length();
+                            } else {
+                                localArrivalPos = 0.;
+                            }
+                        }
+                        let mut walk = MSStageWalking::new(transportable.get_id(), &edges, bs, self.myDuration, self.mySpeed, depPos, localArrivalPos, self.myDepartPosLat, -1, "");
+                        walk.set_parameters(&*self);
+                        walk.set_costs(it.cost);
+                        walk.set_trip(Ptr::from_mut(&mut *self));
+                        previous = Ptr::from_mut(Box::leak(Box::new(walk))).cast::<MSStage>();
+                        stages.push(previous);
+                    } else if isTaxi && it.line == minVehicle.get_id() {
+                        let prevEdges = previous.get_edges();
+                        if prevEdges.len() >= 2 && previous.get_destination_stop().is_null() {
+                            // determine walking direction and let the previous
+                            // stage end after entering its final edge
+                            let pLast = prevEdges[prevEdges.len() - 1];
+                            let prev = prevEdges[prevEdges.len() - 2];
+                            if pLast.get_from_junction() == prev.get_to_junction() || prev.get_from_junction() == pLast.get_from_junction() {
+                                previous.m().set_arrival_pos(pLast.get_length().min(10.0));
+                            } else {
+                                previous.m().set_arrival_pos((0.0f64).max(pLast.get_length() - 10.));
+                            }
+                        }
+                        let mut drv = MSStageDriving::new(rideOrigin, edges[edges.len() - 1], bs, localArrivalPos, 0.0, &vec!["taxi".to_string()], &self.myGroup, "", -1);
+                        drv.set_parameters(&*self);
+                        drv.set_costs(it.cost);
+                        drv.set_trip(Ptr::from_mut(&mut *self));
+                        previous = Ptr::from_mut(Box::leak(Box::new(drv))).cast::<MSStage>();
+                        stages.push(previous);
+                    } else if !minVehicle.is_null() && it.line == minVehicle.get_id() {
+                        let mut drv = MSStageDriving::new(rideOrigin, edges[edges.len() - 1], bs, localArrivalPos, 0.0, &vec![it.line.clone()], "", "", -1);
+                        drv.set_parameters(&*self);
+                        drv.set_costs(it.cost);
+                        drv.set_trip(Ptr::from_mut(&mut *self));
+                        previous = Ptr::from_mut(Box::leak(Box::new(drv))).cast::<MSStage>();
+                        stages.push(previous);
+                        let mut edgesMut = edges.clone();
+                        minVehicle.m().replace_route_edges(&mut edgesMut, -1., 0., &format!("person:{}", transportable.get_id()), true, false, true, Ptr::null());
+                        minVehicle.m().set_arrival_pos(localArrivalPos);
+                        // shortcut: SUMOVehicle has no mutable parameter accessor yet, so the vehicle's parameter arrivalPos is not updated
+                        // defer addVehicle to main thread (called from setArrived after parallel routing completes)
+                        self.myVehicleToAdd = minVehicle;
+                        carUsed = true;
+                    } else {
+                        let line = if options_cont::get_bool("persontrip.ride-public-line") { it.line.clone() } else { "ANY".to_string() };
+                        let mut drv = MSStageDriving::new(rideOrigin, edges[edges.len() - 1], bs, localArrivalPos, 0.0, &vec![line], &self.myGroup, &it.intended, time2steps(it.depart));
+                        drv.set_parameters(&*self);
+                        drv.set_costs(it.cost);
+                        drv.set_trip(Ptr::from_mut(&mut *self));
+                        previous = Ptr::from_mut(Box::leak(Box::new(drv))).cast::<MSStage>();
+                        stages.push(previous);
+                    }
+                }
+            }
+            if self.was_set(VEHPARS_ARRIVALPOS_SET as i32) && !stages.is_empty() {
+                // mark the last stage
+                stages[stages.len() - 1].m().mark_set(VEHPARS_ARRIVALPOS_SET as i32);
+            }
+            self.set_costs(minCost);
+            if !minVehicle.is_null() && (isTaxi || !carUsed) {
+                vehControl.delete_vehicle(minVehicle, true, false);
+                vehControl.discount_routing_vehicle();
+            }
+        } else {
+            // append stage so the GUI won't crash due to inconsistent state
+            let mut walk = MSStageWalking::new(transportable.get_id(), &vec![origin, destination], self.myDestinationStop, self.myDuration, self.mySpeed, previous.get_arrival_pos(), self.myArrivalPos, self.myDepartPosLat, -1, "");
+            walk.set_parameters(&*self);
+            previous = Ptr::from_mut(Box::leak(Box::new(walk))).cast::<MSStage>();
+            stages.push(previous);
+            if crate::microsim::ms_globals::check_routes() {
+                // if not pedestrians will teleport
+                return format!("No connection found between {} and {} for person '{}'.", self.getOriginDescription(), self.getDestinationDescription(), transportable.get_id());
+            }
+        }
+        if stages.is_empty() {
+            // append stage so the GUI won't crash due to inconsistent state
+            if !self.myOriginStop.is_null() && self.myOriginStop == self.myDestinationStop {
+                let w = MSStageWaiting::new(destination, self.myDestinationStop, 0, -1, previous.get_arrival_pos(), "sameStop", false, -1);
+                stages.push(Ptr::from_mut(Box::leak(Box::new(w))).cast::<MSStage>());
+            } else {
+                let walk = MSStageWalking::new(transportable.get_id(), &vec![origin, destination], self.myDestinationStop, self.myDuration, self.mySpeed, previous.get_arrival_pos(), self.myArrivalPos, self.myDepartPosLat, -1, "");
+                stages.push(Ptr::from_mut(Box::leak(Box::new(walk))).cast::<MSStage>());
+                if crate::microsim::ms_globals::check_routes() {
+                    // if not pedestrians will teleport
+                    return format!("Empty route between {} and {} for person '{}'.", self.getOriginDescription(), self.getDestinationDescription(), transportable.get_id());
+                }
+            }
+        }
+        String::new()
     }
 
     /// C++: `const std::string MSStageTrip::setArrived(MSNet *, MSTransportable *, SUMOTime, const bool)` [virtual]
@@ -490,7 +764,38 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_arrived(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, vehicleArrived: bool) -> String {
-        todo!("port MSStageTrip::setArrived")
+        self.base.set_arrived(net, transportable, now, vehicleArrived);
+        let mut stages: Vec<Ptr<MSStage>> = Vec::new();
+        let mut result: String;
+        if !self.myComputedStages.is_empty() {
+            // routing was done in proceed()
+            stages = std::mem::take(&mut self.myComputedStages);
+            result = std::mem::take(&mut self.myRoutingError);
+        } else {
+            // TRIP is at index 0 with no preceding stage, so proceed() was never called
+            self.myDepartPos = transportable.get_parameter().departPos;
+            if transportable.get_parameter().departPosProcedure == DepartPosDefinition::RANDOM {
+                // TODO we should probably use the rng of the lane here
+                self.myDepartPos = utils::common::rand_helper::with_default(|r| r.rand_max(self.myOrigin.get_length()));
+            }
+            let origin = self.myOrigin;
+            let destination = self.myDestination;
+            let depart = transportable.get_parameter().depart;
+            let mut start = MSStageWaiting::new(origin, self.myOriginStop, -1, depart, self.myDepartPos, "start", true, -1);
+            let router = net.m().get_intermodal_router(0, 0, &Default::default());
+            result = self.reroute(depart, router, transportable, Ptr::from_mut(&mut start.base), origin, destination, &mut stages);
+        }
+        if !self.myVehicleToAdd.is_null() {
+            let v = self.myVehicleToAdd;
+            net.m().get_vehicle_control().add_vehicle(v.get_id(), v);
+            self.myVehicleToAdd = Ptr::null();
+        }
+        let mut idx = 1;
+        for stage in stages {
+            transportable.m().append_stage(stage, idx);
+            idx += 1;
+        }
+        result
     }
 
     /// C++: `void MSStageTrip::setOrigin(const MSEdge *, MSStoppingPlace *, double)` [virtual]
@@ -502,7 +807,9 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn set_origin(&mut self, origin: Ptr<MSEdge>, originStop: Ptr<MSStoppingPlace>, departPos: f64) {
-        todo!("port MSStageTrip::setOrigin")
+        self.myOrigin = origin;
+        self.myOriginStop = originStop;
+        self.myDepartPos = departPos;
     }
 
     /// C++: `bool MSStageTrip::proceed(MSNet *, MSTransportable *, SUMOTime, MSStage *)` [virtual]
@@ -526,7 +833,14 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn proceed(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, previous: Ptr<MSStage>) -> bool {
-        todo!("port MSStageTrip::proceed")
+        self.myDepartPos = previous.get_arrival_pos();
+        // shortcut: the parallel TripRoutingTask path (thread pool) is not ported, so routing always runs serially here
+        let router = net.m().get_intermodal_router(0, 0, &Default::default());
+        let mut computed = std::mem::take(&mut self.myComputedStages);
+        let err = self.reroute(now, router, transportable, previous, self.myOrigin, self.myDestination, &mut computed);
+        self.myComputedStages = computed;
+        self.myRoutingError = err;
+        transportable.m().proceed(net, now, false)
     }
 
     /// C++: `void MSStageTrip::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual]
@@ -537,7 +851,7 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        todo!("port MSStageTrip::tripInfoOutput")
+        // C++ body is empty
     }
 
     /// C++: `SUMOTime MSStageTrip::getDuration() const` [const, virtual]
@@ -547,7 +861,8 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        todo!("port MSStageTrip::getDuration")
+        // trip doesn't participate in plan summary
+        0
     }
 
     /// C++: `SUMOTime MSStageTrip::getTravelTime() const` [const, virtual]
@@ -556,7 +871,7 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self) -> SUMOTime {
-        todo!("port MSStageTrip::getTravelTime")
+        0
     }
 
     /// C++: `void MSStageTrip::routeOutput(const bool, OutputDevice &, const bool, const MSStage *const, const bool, const bool) const` [const, virtual]
@@ -613,7 +928,53 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn route_output(&self, isPerson: bool, os: &mut OutputDevice, withRouteLength: bool, previous: Ptr<MSStage>, withTiming: bool, saveState: bool) {
-        todo!("port MSStageTrip::routeOutput")
+        if self.myArrived < 0 {
+            let walkFactorSet = self.myWalkFactor != options_cont::get_float("persontrip.walkfactor");
+            let groupSet = self.myGroup != options_cont::get_string("persontrip.default.group");
+            // could still be a persontrip but most likely it was a walk in the input
+            let tag = if self.myModeSet == 0 && !walkFactorSet && !groupSet { SUMO_TAG_WALK } else { SUMO_TAG_PERSONTRIP };
+            os.open_tag_id(tag);
+            if previous.is_null() || previous.get_stage_type() == MSStageType::WAITING_FOR_DEPART {
+                os.write_attr(SUMO_ATTR_FROM, self.myOrigin.get_id());
+            }
+            if self.myDestinationStop.is_null() {
+                os.write_attr(SUMO_ATTR_TO, self.myDestination.get_id());
+                if self.was_set(VEHPARS_ARRIVALPOS_SET as i32) {
+                    os.write_attr(SUMO_ATTR_ARRIVALPOS, &self.myArrivalPos);
+                }
+            } else {
+                os.write_attr(utils::xml::sumo_xml_definitions::Tags.get_string(self.myDestinationStop.get_element()), self.myDestinationStop.get_id());
+            }
+            let mut modes: Vec<&str> = Vec::new();
+            if (self.myModeSet & SVC_PASSENGER) != 0 {
+                modes.push("car");
+            }
+            if (self.myModeSet & SVC_BICYCLE) != 0 {
+                modes.push("bicycle");
+            }
+            if (self.myModeSet & SVC_TAXI) != 0 {
+                modes.push("taxi");
+            }
+            if (self.myModeSet & SVC_BUS) != 0 {
+                modes.push("public");
+            }
+            if modes.len() > 0 {
+                os.write_attr(SUMO_ATTR_MODES, &modes.join(" "));
+            }
+            if self.myVTypes.len() > 0 {
+                os.write_attr(SUMO_ATTR_VTYPES, &self.myVTypes);
+            }
+            if groupSet {
+                os.write_attr(SUMO_ATTR_GROUP, &self.myGroup);
+            }
+            if walkFactorSet {
+                os.write_attr(SUMO_ATTR_WALKFACTOR, &self.myWalkFactor);
+            }
+            if options_cont::get_bool("vehroute-output.cost") {
+                os.write_attr(SUMO_ATTR_COST, &self.get_costs());
+            }
+            os.close_tag("");
+        }
     }
 
     /// C++: `bool MSStageTrip::isWalk() const` [const, virtual]
@@ -623,7 +984,7 @@ impl MSStageTrip {
     //     }
     #[allow(unused_variables)]
     pub fn is_walk(&self) -> bool {
-        todo!("port MSStageTrip::isWalk")
+        self.myModeSet == 0
     }
 
     /// C++: `void MSStageTrip::MSStageTrip(const MSStageTrip &)` [private]
@@ -631,7 +992,7 @@ impl MSStageTrip {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSStageTrip) -> Self {
-        todo!("port MSStageTrip::MSStageTrip")
+        panic!("MSStageTrip copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSStageTrip & MSStageTrip::operator=(const MSStageTrip &)` [private]
@@ -639,7 +1000,7 @@ impl MSStageTrip {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSStageTrip) -> &mut MSStageTrip {
-        todo!("port MSStageTrip::operator=")
+        panic!("MSStageTrip assignment operator is private and invalidated in C++")
     }
 
 }
