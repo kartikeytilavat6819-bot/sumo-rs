@@ -1,7 +1,8 @@
 //! Port of libsumo/Edge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::{NUMERICAL_EPS, SUMO_CONST_HALTING_SPEED};
+use utils::geom::NUMERICAL_EPS;
+use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 use utils::common::sumo_vehicle_class::{invert_permissions, parse_vehicle_classes, parse_vehicle_classes_vec};
 // shortcut: C++ `throw TraCIException(msg)` is mapped to `panic!("{}", msg)` (unwinds where C++ throws), upgrade when libsumo has a typed TraCI error that callers can catch
 
