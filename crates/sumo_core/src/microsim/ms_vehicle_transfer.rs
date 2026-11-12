@@ -1,12 +1,21 @@
 //! Port of microsim/MSVehicleTransfer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::xml::sumo_xml_definitions_gen::{SUMO_ATTR_DEPART, SUMO_ATTR_ID, SUMO_ATTR_JUMP, SUMO_ATTR_PARKING, SUMO_TAG_VEHICLETRANSFER};
+
+// C++ static members, ported as module-level items
+pub const MSVehicleTransfer_TeleportMinSpeed: f64 = 1.0;
+thread_local! {
+    static MSVehicleTransfer_MY_INSTANCE: std::cell::Cell<Ptr<MSVehicleTransfer>> = const { std::cell::Cell::new(Ptr::null()) };
+}
 
 /// This object (each simulation owns exactly one) is responsible for the transfer of vehicles that got stuck within the network due to grid locks. It also manages vehicles that are removed from the network because of stops with the parking attribute.
 /// C++ class `MSVehicleTransfer` (microsim/MSVehicleTransfer.h)
 pub struct MSVehicleTransfer {
     /// The information about stored vehicles to move virtually
-    pub myVehicles: i32,
+    // shortcut: MFXSynchQue not ported (plain Vec, single-threaded), upgrade when MFXSynchQue is ported
+    pub myVehicles: Vec<MSVehicleTransfer_VehicleInformation>,
 }
 
 // C++ static members of MSVehicleTransfer (port as module-level statics, see AGENTS.md):
@@ -19,7 +28,7 @@ impl MSVehicleTransfer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSVehicleTransfer::~MSVehicleTransfer")
+        // destructor: the myVehicles Vec drops with the struct
     }
 
     /// C++: `void MSVehicleTransfer::add(const SUMOTime, MSVehicle *)`
@@ -48,7 +57,32 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, t: SUMOTime, veh: Ptr<MSVehicle>) {
-        todo!("port MSVehicleTransfer::add")
+        let jumping = veh.is_jumping();
+        let proceed: SUMOTime = if jumping {
+            let last = veh.get_past_stops().last().unwrap();
+            std::cmp::max(t + last.jump, last.jumpUntil)
+        } else {
+            -1
+        };
+        if veh.is_parking() {
+            veh.m().get_lane_change_model().end_lane_change_maneuver(MSMoveReminder_Notification::NOTIFICATION_PARKING);
+            MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut veh.m().base.base), MSNet_VehicleState::STARTING_PARKING, "");
+            veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_PARKING);
+        } else {
+            veh.m().get_lane_change_model().end_lane_change_maneuver(MSMoveReminder_Notification::NOTIFICATION_TELEPORT);
+            MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut veh.m().base.base), MSNet_VehicleState::STARTING_TELEPORT, "");
+            if veh.succ_edge(1).is_null() {
+                write_warning(&format!("Vehicle '{}' teleports beyond arrival edge '{}', time={}.", veh.get_id(), veh.get_edge().get_id(), time2string(t)));
+                veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED);
+                MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(Ptr::from_mut(&mut veh.m().base.base), false);
+                return;
+            }
+            veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_TELEPORT);
+            let lane0 = veh.succ_edge(1).get_lanes()[0];
+            veh.m().enter_lane_at_move(lane0, true);
+        }
+        let parking = veh.is_parking();
+        self.myVehicles.push(MSVehicleTransfer_VehicleInformation::new(t, veh, proceed, parking, jumping));
     }
 
     /// C++: `void MSVehicleTransfer::remove(MSVehicle *)`
@@ -69,7 +103,12 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, veh: Ptr<MSVehicle>) {
-        todo!("port MSVehicleTransfer::remove")
+        if let Some(pos) = self.myVehicles.iter().position(|i| i.myVeh == veh) {
+            if self.myVehicles[pos].myParking {
+                veh.m().get_mutable_lane().m().remove_parking(Ptr::from_mut(&mut veh.m().base));
+            }
+            self.myVehicles.remove(pos);
+        }
     }
 
     /// C++: `void MSVehicleTransfer::checkInsertions(SUMOTime)`
@@ -196,7 +235,143 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn check_insertions(&mut self, time: SUMOTime) {
-        todo!("port MSVehicleTransfer::checkInsertions")
+        // determinism: C++ std::sort is unstable; stable sort_by is used here
+        self.myVehicles.sort_by(|a, b| {
+            if a.lt_op(b) {
+                std::cmp::Ordering::Less
+            } else if b.lt_op(a) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        let mut i: usize = 0;
+        while i < self.myVehicles.len() {
+            // vehicle information cannot be const because we need to assign the proceed time
+            let desc = &mut self.myVehicles[i];
+
+            if desc.myParking {
+                // handle parking vehicles
+                if time != desc.myTransferTime {
+                    // avoid calling processNextStop twice in the transfer step
+                    let lane = desc.myVeh.get_lane();
+                    // lane must be locked because pedestrians may be added in during stop processing while existing passengers are being drawn simultaneously
+                    if !lane.is_null() {
+                        lane.get_vehicles_secure();
+                    }
+                    desc.myVeh.m().process_next_stop(1.0);
+                    desc.myVeh.m().update_parking_state();
+                    if !lane.is_null() {
+                        lane.release_vehicles();
+                    }
+                }
+                if desc.myVeh.keep_stopping(true) {
+                    i += 1;
+                    continue;
+                }
+                // parking finished, head back into traffic
+            }
+            let vclass = desc.myVeh.get_vehicle_type().get_vehicle_class();
+            let e = desc.myVeh.get_edge();
+            let nextEdge = desc.myVeh.succ_edge(1);
+
+            if desc.myParking {
+                let pa = desc.myVeh.get_current_parking_area();
+                let departPos = if !pa.is_null() {
+                    pa.get_insertion_position(&desc.myVeh.base.base)
+                } else {
+                    desc.myVeh.get_position_on_lane()
+                };
+                // handle parking vehicles
+                desc.myVeh.m().set_idling(true);
+                let lane = desc.myVeh.get_mutable_lane();
+                if lane.m().is_insertion_success(desc.myVeh, 0.0, departPos, desc.myVeh.get_lateral_position_on_lane(), false, MSMoveReminder_Notification::NOTIFICATION_PARKING) {
+                    MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::ENDING_PARKING, "");
+                    lane.m().remove_parking(Ptr::from_mut(&mut desc.myVeh.m().base));
+                    // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre
+                    // shortcut: MSGlobals::gModelParkingManoeuver not ported, treated as false, upgrade when ms_globals statics are ported
+                    let gModelParkingManoeuver = false;
+                    if gModelParkingManoeuver && desc.myVeh.m().set_exit_manoeuvre() {
+                        MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::MANEUVERING, "");
+                    }
+                    desc.myVeh.m().set_idling(false);
+                    self.myVehicles.remove(i);
+                } else {
+                    // blocked from entering the road - engine assumed to be idling.
+                    desc.myVeh.m().work_on_idle_reminders();
+                    if !desc.myVeh.signal_set(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 | MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32) {
+                        // signal wish to re-enter the road
+                        // shortcut: MSGlobals::gLefthand not ported, treated as false, upgrade when ms_globals statics are ported
+                        let gLefthand = false;
+                        desc.myVeh.m().switch_on_signal(if gLefthand { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 } else { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 });
+                        if !pa.is_null() {
+                            // update freePosition so other vehicles can help with insertion
+                            pa.m().notify_egress_blocked();
+                        }
+                    }
+                    i += 1;
+                }
+            } else if desc.myJumping && desc.myProceedTime > time {
+                i += 1;
+            } else {
+                let departPos = 0.0;
+                // get the lane on which this vehicle should continue
+                // first select all the lanes which allow continuation onto nextEdge
+                //   then pick the one which is least occupied
+                let l: Ptr<MSLane> = if !nextEdge.is_null() {
+                    e.get_free_lane(Ptr::from_mut(e.allowed_lanes(&nextEdge, vclass, false).m()), vclass, departPos)
+                } else {
+                    e.get_free_lane(Ptr::null(), vclass, departPos)
+                };
+                // handle teleporting vehicles, lane may be 0 because permissions were modified by a closing rerouter or TraCI
+                let busyBidi = !l.is_null() && !l.get_bidi_lane().is_null() && l.get_bidi_lane().get_vehicle_number_with_partials() > 0;
+                if !l.is_null() && !busyBidi && l.m().free_insertion(desc.myVeh.m(), l.get_speed_limit().min(desc.myVeh.get_max_speed()), 0.0, MSMoveReminder_Notification::NOTIFICATION_TELEPORT) {
+                    if !desc.myJumping {
+                        write_warning(&format!("Vehicle '{}' ends teleporting on edge '{}', time={}.", desc.myVeh.get_id(), e.get_id(), time2string(time)));
+                    }
+                    MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::ENDING_TELEPORT, "");
+                    self.myVehicles.remove(i);
+                } else if desc.myJumping {
+                    // try again later
+                    i += 1;
+                } else {
+                    // vehicle is visible while show-route is active. Make its state more obvious
+                    let _ = desc.myVeh.compute_angle();
+                    let halfWidth = desc.myVeh.get_lane().get_width() / 2.0;
+                    desc.myVeh.m().set_lateral_position_on_lane(-halfWidth);
+                    desc.myVeh.m().invalidate_cached_position();
+                    // could not insert. maybe we should proceed in virtual space
+                    if desc.myProceedTime < 0 {
+                        // initialize proceed time (delayed to avoid lane-order dependency in executeMove)
+                        desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
+                    } else if desc.myProceedTime < time {
+                        if desc.myVeh.succ_edge(1).is_null() {
+                            // shortcut: typeid(MSDevice_Taxi) cannot be expressed (get_device takes an unmapped type_info), taxis are not special-cased, upgrade when std::type_info is ported
+                            let isTaxi = false;
+                            if isTaxi {
+                                // never teleport a taxi beyond the end of it's route
+                                desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
+                            } else {
+                                write_warning(&format!("Vehicle '{}' teleports beyond arrival edge '{}', time={}.", desc.myVeh.get_id(), e.get_id(), time2string(time)));
+                                desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED, Ptr::null());
+                                MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(Ptr::from_mut(&mut desc.myVeh.m().base.base), false);
+                                self.myVehicles.remove(i);
+                            }
+                            continue;
+                        }
+                        // let the vehicle move to the next edge
+                        desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION, Ptr::null());
+                        // active move reminders (i.e. rerouters)
+                        let allowedLanes = nextEdge.allowed_lanes_2(vclass);
+                        let laneToEnter = if !allowedLanes.is_null() { allowedLanes.m()[0] } else { nextEdge.get_lanes()[0] };
+                        desc.myVeh.m().enter_lane_at_move(laneToEnter, true);
+                        // use current travel time to determine when to move the vehicle forward
+                        desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
+                    }
+                    i += 1;
+                }
+            }
+        }
     }
 
     /// C++: `void MSVehicleTransfer::saveState(OutputDevice &)`
@@ -219,7 +394,18 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSVehicleTransfer::saveState")
+        for vehInfo in self.myVehicles.iter() {
+            out.open_tag_id(SUMO_TAG_VEHICLETRANSFER);
+            out.write_attr(SUMO_ATTR_ID, vehInfo.myVeh.get_id());
+            out.write_attr(SUMO_ATTR_DEPART, &vehInfo.myProceedTime);
+            if vehInfo.myParking {
+                out.write_attr(SUMO_ATTR_PARKING, vehInfo.myVeh.get_lane().get_id());
+            }
+            if vehInfo.myJumping {
+                out.write_attr(SUMO_ATTR_JUMP, &true);
+            }
+            out.close_tag("");
+        }
     }
 
     /// C++: `void MSVehicleTransfer::clearState()`
@@ -230,7 +416,7 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSVehicleTransfer::clearState")
+        self.myVehicles.clear();
     }
 
     /// C++: `void MSVehicleTransfer::loadState(const SUMOSAXAttributes &, const SUMOTime, MSVehicleControl &)`
@@ -270,7 +456,13 @@ impl MSVehicleTransfer {
     // }
     #[allow(unused_variables)]
     pub fn get_instance() -> Ptr<MSVehicleTransfer> {
-        todo!("port MSVehicleTransfer::getInstance")
+        // shortcut: no MSGlobals/ownership teardown, the instance is leaked like the C++ singleton
+        MSVehicleTransfer_MY_INSTANCE.with(|cell| {
+            if cell.get().is_null() {
+                cell.set(Ptr::from_mut(Box::leak(Box::new(MSVehicleTransfer::new()))));
+            }
+            cell.get()
+        })
     }
 
     /// C++: `void MSVehicleTransfer::MSVehicleTransfer()` [private]
@@ -278,7 +470,10 @@ impl MSVehicleTransfer {
     // MSVehicleTransfer::MSVehicleTransfer() : myVehicles(MSGlobals::gNumSimThreads > 1) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port MSVehicleTransfer::MSVehicleTransfer")
+        Self {
+            // shortcut: MFXSynchQue (thread-safe queue, used when gNumSimThreads > 1) not ported, plain Vec is used, upgrade when MFXSynchQue is ported
+            myVehicles: Vec::new(),
+        }
     }
 
 }
@@ -305,7 +500,13 @@ impl MSVehicleTransfer_VehicleInformation {
     //             : myTransferTime(t), myVeh(veh), myProceedTime(proceedTime), myParking(parking), myJumping(jumping) { }
     #[allow(unused_variables)]
     pub fn new(t: SUMOTime, veh: Ptr<MSVehicle>, proceedTime: SUMOTime, parking: bool, jumping: bool) -> Self {
-        todo!("port VehicleInformation::VehicleInformation")
+        Self {
+            myTransferTime: t,
+            myVeh: veh,
+            myProceedTime: proceedTime,
+            myParking: parking,
+            myJumping: jumping,
+        }
     }
 
     /// C++: `bool VehicleInformation::operator<(const VehicleInformation &) const` [const]
@@ -316,7 +517,7 @@ impl MSVehicleTransfer_VehicleInformation {
     // }
     #[allow(unused_variables)]
     pub fn lt_op(&self, v2: &MSVehicleTransfer_VehicleInformation) -> bool {
-        todo!("port VehicleInformation::operator<")
+        self.myVeh.get_numerical_id() < v2.myVeh.get_numerical_id()
     }
 
 }
