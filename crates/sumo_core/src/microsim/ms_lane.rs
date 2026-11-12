@@ -9227,7 +9227,12 @@ impl MSLane_StoringVisitor {
     //             : myObjects(objects), myShape(shape), myRange(range), myDomain(domain) {}
     #[allow(unused_variables)]
     pub fn new(objects: &mut BTreeSet<Ptr<Named>>, shape: &PositionVector, range: f64, domain: i32) -> Self {
-        todo!("port StoringVisitor::StoringVisitor")
+        MSLane_StoringVisitor {
+            myObjects: Ptr::from_mut(objects),
+            myShape: Ptr::new(shape),
+            myRange: range,
+            myDomain: domain,
+        }
     }
 
     /// C++: `void StoringVisitor::add(const MSLane *const) const` [const]
@@ -9279,7 +9284,42 @@ impl MSLane_StoringVisitor {
     // }
     #[allow(unused_variables)]
     pub fn add(&self, l: Ptr<MSLane>) {
-        todo!("port StoringVisitor::add")
+        match self.myDomain {
+            CMD_GET_VEHICLE_VARIABLE => {
+                for veh in l.get_vehicles_secure() {
+                    if self.myShape.distance2d(&veh.get_position(0.), false) <= self.myRange {
+                        self.myObjects.m().insert(veh.cast::<Named>());
+                    }
+                }
+                for veh in l.get_parking_vehicles() {
+                    if self.myShape.distance2d(&veh.get_position(0.), false) <= self.myRange {
+                        self.myObjects.m().insert(veh.cast::<Named>());
+                    }
+                }
+                l.release_vehicles();
+            }
+            CMD_GET_PERSON_VARIABLE => {
+                l.get_vehicles_secure();
+                let persons = l.get_edge().get_sorted_persons(MSNet::get_instance().get_current_time_step(), true);
+                for p in persons {
+                    if self.myShape.distance2d(&p.get_position_2(), false) <= self.myRange {
+                        self.myObjects.m().insert(p.cast::<Named>());
+                    }
+                }
+                l.release_vehicles();
+            }
+            CMD_GET_EDGE_VARIABLE => {
+                if self.myShape.len() != 1 || l.get_shape_2().distance2d(&self.myShape[0], false) <= self.myRange {
+                    self.myObjects.m().insert(l.myEdge.cast::<Named>());
+                }
+            }
+            CMD_GET_LANE_VARIABLE => {
+                if self.myShape.len() != 1 || l.get_shape_2().distance2d(&self.myShape[0], false) <= self.myRange {
+                    self.myObjects.m().insert(l.cast::<Named>());
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void StoringVisitor::StoringVisitor(const StoringVisitor &)` [private]
@@ -9287,7 +9327,7 @@ impl MSLane_StoringVisitor {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &MSLane_StoringVisitor) -> Self {
-        todo!("port StoringVisitor::StoringVisitor")
+        panic!("StoringVisitor copy constructor is invalidated")
     }
 
     /// C++: `StoringVisitor & StoringVisitor::operator=(const StoringVisitor &)` [private]
@@ -9295,7 +9335,7 @@ impl MSLane_StoringVisitor {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &MSLane_StoringVisitor) -> &mut MSLane_StoringVisitor {
-        todo!("port StoringVisitor::operator=")
+        panic!("StoringVisitor assignment operator is invalidated")
     }
 
 }
@@ -9316,7 +9356,10 @@ impl MSLane_by_connections_to_sorter {
     // }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<MSEdge>) -> Self {
-        todo!("port by_connections_to_sorter::by_connections_to_sorter")
+        MSLane_by_connections_to_sorter {
+            myEdge: e,
+            myLaneDir: e.get_lanes()[0].get_shape_2().angle_at2d(0),
+        }
     }
 
     /// C++: `int by_connections_to_sorter::operator()(const MSEdge *const, const MSEdge *const) const` [const]
@@ -9356,7 +9399,17 @@ impl MSLane_by_connections_to_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, e1: Ptr<MSEdge>, e2: Ptr<MSEdge>) -> i32 {
-        todo!("port by_connections_to_sorter::operator()")
+        let ae1 = e1.allowed_lanes(&self.myEdge, utils::common::sumo_vehicle_class::SVC_IGNORING, false);
+        let ae2 = e2.allowed_lanes(&self.myEdge, utils::common::sumo_vehicle_class::SVC_IGNORING, false);
+        let mut s1 = 0.;
+        if !ae1.is_null() && ae1.len() != 0 {
+            s1 = ae1.len() as f64 + utils::geom::geom_helper::angle_diff(ae1[0].get_shape_2().angle_at2d(0), self.myLaneDir).abs() / utils::geom::geom_helper::M_PI / 2.;
+        }
+        let mut s2 = 0.;
+        if !ae2.is_null() && ae2.len() != 0 {
+            s2 = ae2.len() as f64 + utils::geom::geom_helper::angle_diff(ae2[0].get_shape_2().angle_at2d(0), self.myLaneDir).abs() / utils::geom::geom_helper::M_PI / 2.;
+        }
+        if s1 < s2 { 1 } else { 0 }
     }
 
 }
@@ -9371,7 +9424,7 @@ impl MSLane_edge_finder {
     // edge_finder(MSEdge* e) : myEdge(e) {}
     #[allow(unused_variables)]
     pub fn new(e: Ptr<MSEdge>) -> Self {
-        todo!("port edge_finder::edge_finder")
+        MSLane_edge_finder { myEdge: e }
     }
 
     /// C++: `bool edge_finder::operator()(const IncomingLaneInfo &) const` [const]
@@ -9380,7 +9433,7 @@ impl MSLane_edge_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, ili: &MSLane_IncomingLaneInfo) -> bool {
-        todo!("port edge_finder::operator()")
+        ili.lane.myEdge == self.myEdge
     }
 
 }
@@ -9398,7 +9451,10 @@ impl MSLane_incoming_lane_priority_sorter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(targetLane: Ptr<MSLane>) -> Self {
-        todo!("port incoming_lane_priority_sorter::incoming_lane_priority_sorter")
+        MSLane_incoming_lane_priority_sorter {
+            myLane: targetLane,
+            myLaneDir: targetLane.get_shape_2().angle_at2d(0),
+        }
     }
 
     /// C++: `int incoming_lane_priority_sorter::operator()(const IncomingLaneInfo &, const IncomingLaneInfo &) const` [const]
@@ -9476,7 +9532,54 @@ impl MSLane_incoming_lane_priority_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, lane1: &MSLane_IncomingLaneInfo, lane2: &MSLane_IncomingLaneInfo) -> i32 {
-        todo!("port incoming_lane_priority_sorter::operator()")
+        let mut noninternal1 = lane1.lane;
+        while noninternal1.is_internal() {
+            debug_assert!(noninternal1.get_incoming_lanes().len() == 1);
+            noninternal1 = noninternal1.get_incoming_lanes()[0].lane;
+        }
+        let mut noninternal2 = lane2.lane;
+        while noninternal2.is_internal() {
+            debug_assert!(noninternal2.get_incoming_lanes().len() == 1);
+            noninternal2 = noninternal2.get_incoming_lanes()[0].lane;
+        }
+
+        let link1 = noninternal1.get_link_to(self.myLane);
+        let link2 = noninternal2.get_link_to(self.myLane);
+
+        debug_assert!(lane1.lane.is_internal() || link1 == lane1.viaLink);
+        debug_assert!(!link1.is_null());
+        debug_assert!(!link2.is_null());
+
+        // check priority between links
+        let mut priorized1 = true;
+        let mut priorized2 = true;
+
+        for foeLink in link1.get_foe_links() {
+            if *foeLink == link2 {
+                priorized1 = false;
+                break;
+            }
+        }
+
+        for foeLink in link2.get_foe_links() {
+            // either link1 is priorized, or it should not appear in link2's foes
+            if *foeLink == link1 {
+                priorized2 = false;
+                break;
+            }
+        }
+        // if one link is subordinate, the other must be priorized (except for
+        // traffic lights where mutual response is permitted to handle stuck-on-red
+        // situation)
+        if priorized1 != priorized2 {
+            return priorized1 as i32;
+        }
+
+        // both are priorized, compare angle difference
+        let d1 = utils::geom::geom_helper::angle_diff(noninternal1.get_shape_2().angle_at2d(0), self.myLaneDir).abs();
+        let d2 = utils::geom::geom_helper::angle_diff(noninternal2.get_shape_2().angle_at2d(0), self.myLaneDir).abs();
+
+        (d2 > d1) as i32
     }
 
 }
@@ -9493,7 +9596,9 @@ impl MSLane_outgoing_lane_priority_sorter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(sourceLane: Ptr<MSLane>) -> Self {
-        todo!("port outgoing_lane_priority_sorter::outgoing_lane_priority_sorter")
+        MSLane_outgoing_lane_priority_sorter {
+            myLaneDir: sourceLane.get_shape_2().angle_at2d(0),
+        }
     }
 
     /// C++: `int outgoing_lane_priority_sorter::operator()(const MSLink *, const MSLink *) const` [const]
@@ -9534,7 +9639,30 @@ impl MSLane_outgoing_lane_priority_sorter {
     // }
     #[allow(unused_variables)]
     pub fn call_op(&self, link1: Ptr<MSLink>, link2: Ptr<MSLink>) -> i32 {
-        todo!("port outgoing_lane_priority_sorter::operator()")
+        let target1 = link1.get_lane();
+        let target2 = link2.get_lane();
+        if target2.is_null() {
+            return 1;
+        }
+        if target1.is_null() {
+            return 0;
+        }
+
+        // priority of targets
+        let priority1 = target1.myEdge.get_priority();
+        let priority2 = target2.myEdge.get_priority();
+
+        if priority1 != priority2 {
+            return (priority1 > priority2) as i32;
+        }
+
+        // if priority of targets coincides, use angle difference
+
+        // both are priorized, compare angle difference
+        let d1 = utils::geom::geom_helper::angle_diff(target1.get_shape_2().angle_at2d(0), self.myLaneDir).abs();
+        let d2 = utils::geom::geom_helper::angle_diff(target2.get_shape_2().angle_at2d(0), self.myLaneDir).abs();
+
+        (d2 > d1) as i32
     }
 
 }
