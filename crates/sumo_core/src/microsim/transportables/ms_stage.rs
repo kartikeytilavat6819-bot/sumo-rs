@@ -17,6 +17,7 @@ pub enum MSStageType {
 
 /// The "abstract" class for a single stage of a movement Contains the destination of the current movement step
 /// C++ class `MSStage` (microsim/transportables/MSStage.h)
+#[repr(C)]
 pub struct MSStage {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -615,7 +616,7 @@ impl MSStage {
     //         UNUSED_PARAMETER(transportable);
     //     }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
+    pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
         // empty C++ default body
     }
 
@@ -626,7 +627,7 @@ impl MSStage {
     //         UNUSED_PARAMETER(state);
     //     }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut Unmapped /* std::istringstream */) {
+    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
         // empty C++ default body
     }
 
