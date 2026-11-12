@@ -943,7 +943,8 @@ impl MSLane {
             DepartPosDefinition::LAST => {
                 return self.last_insertion(v, speed, posLat, patchSpeed);
             }
-            DepartPosDefinition::STOP if v.has_stops() && v.get_next_stop().edge == *v.get_current_route_edge() => {
+            // shortcut: MSStop::edge is Unmapped (MSRouteIterator), so the next stop edge is compared via its lane and the current edge
+            DepartPosDefinition::STOP if v.has_stops() && std::ptr::eq(v.get_next_stop().lane.get_edge(), v.get_edge().as_raw()) => {
                 // getLastFreePos of stopping place could return negative position to avoid blocking the stop
                 pos = 0.0f64.max(v.get_next_stop().get_end_pos(v));
             }
