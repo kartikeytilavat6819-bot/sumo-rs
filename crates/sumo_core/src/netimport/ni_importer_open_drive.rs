@@ -1679,7 +1679,7 @@ impl NIImporter_OpenDrive {
                 sFrom = sTo;
             }
             if utils::options::options_cont::is_set("polygon-output") {
-                NIImporter_OpenDrive::write_road_objects(oe.clone());
+                NIImporter_OpenDrive::write_road_objects(oe.clone())?;
             }
             if !lanesBuilt {
                 write_warningf!("Edge '%' has no lanes.", e.id);
@@ -1687,7 +1687,7 @@ impl NIImporter_OpenDrive {
         }
         if utils::options::options_cont::is_set("polygon-output") {
             for (_, item) in &innerEdges {
-                NIImporter_OpenDrive::write_road_objects(item.clone());
+                NIImporter_OpenDrive::write_road_objects(item.clone())?;
             }
         }
 
@@ -5331,7 +5331,13 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn recompute_widths(sec: &mut NIImporter_OpenDrive_OpenDriveLaneSection, start: f64, end: f64, sectionStart: f64, sectionEnd: f64) {
-        todo!("port NIImporter_OpenDrive::recomputeWidths")
+        use NIImporter_OpenDrive_OpenDriveXMLTag as T;
+        if sec.rightLaneNumber > 0 {
+            Self::recompute_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_RIGHT).or_default(), start, end, sectionStart, sectionEnd);
+        }
+        if sec.leftLaneNumber > 0 {
+            Self::recompute_widths_2(sec.lanesByDir.entry(T::OPENDRIVE_TAG_LEFT).or_default(), start, end, sectionStart, sectionEnd);
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::recomputeWidths(std::vector<OpenDriveLane> &, double, double, double, double)` [static, protected]
@@ -5413,7 +5419,35 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn recompute_widths_2(lanes: &mut Vec<NIImporter_OpenDrive_OpenDriveLane>, start: f64, end: f64, sectionStart: f64, sectionEnd: f64) {
-        todo!("port NIImporter_OpenDrive::recomputeWidths")
+        // C++ MAX2(a, b)
+        let max2 = |a: f64, b: f64| if a > b { a } else { b };
+        for k in lanes.iter_mut() {
+            let l = k;
+            if l.widthData.len() > 0 {
+                l.width = 0.0;
+                let mut sPrev: f64 = l.widthData[0].s;
+                let mut sPrevAbs: f64 = sPrev + sectionStart;
+                for idx in 0..l.widthData.len() {
+                    let it_w = l.widthData[idx].clone();
+                    let sEnd: f64 = if idx + 1 < l.widthData.len() { l.widthData[idx + 1].s } else { sectionEnd - sectionStart };
+                    let sEndAbs: f64 = sEnd + sectionStart;
+                    if sPrevAbs <= start && sEndAbs >= start {
+                        l.width = max2(l.width, it_w.compute_at(start - sectionStart));
+                    }
+                    if sPrevAbs <= end && sEndAbs >= end {
+                        l.width = max2(l.width, it_w.compute_at(end - sectionStart));
+                    }
+                    if start <= sPrevAbs && end >= sPrevAbs {
+                        l.width = max2(l.width, it_w.compute_at(sPrev));
+                    }
+                    if start <= sEndAbs && end >= sEndAbs {
+                        l.width = max2(l.width, it_w.compute_at(sEnd));
+                    }
+                    sPrev = sEnd;
+                    sPrevAbs = sEndAbs;
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setLaneAttributes(const OpenDriveEdge *, NBEdge::Lane &, const OpenDriveLane &, bool, const NBTypeCont &)` [static, protected]
@@ -5456,7 +5490,44 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_attributes(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>, sumoLane: &mut NBEdge_Lane, odLane: &NIImporter_OpenDrive_OpenDriveLane, saveOrigIDs: bool, tc: &NBTypeCont) {
-        todo!("port NIImporter_OpenDrive::setLaneAttributes")
+        // C++ MAX2 / MIN2
+        let max2 = |a: f64, b: f64| if a > b { a } else { b };
+        if saveOrigIDs {
+            sumoLane.base.set_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &format!("{}_{}", e.m().id, odLane.id));
+        }
+        sumoLane.speed = if odLane.speed != 0.0 { odLane.speed } else { tc.get_edge_type_speed(&odLane.type_) };
+        sumoLane.permissions = if odLane.permission > 0 { odLane.permission } else { tc.get_edge_type_permissions(&odLane.type_) }; // TODO: how to get the OD lane specific restriction
+        sumoLane.width = if MY_IMPORT_WIDTHS.with(|v| v.get()) && odLane.width != crate::netbuild::nb_edge::UNSPECIFIED_WIDTH { odLane.width } else { tc.get_edge_type_width(&odLane.type_) };
+        sumoLane.type_ = odLane.type_.clone();
+
+        let widthResolution: f64 = tc.get_edge_type_width_resolution(&odLane.type_);
+        let maxWidth: f64 = tc.get_edge_type_max_width(&odLane.type_);
+        let myMinWidth: f64 = MY_MIN_WIDTH.with(|v| v.get());
+
+        let forbiddenNarrow: bool = sumoLane.width < myMinWidth
+            && (sumoLane.permissions & !SVC_VULNERABLE) != 0
+            && sumoLane.width < tc.get_edge_type_width(&odLane.type_);
+
+        if sumoLane.width >= 0.0 && widthResolution > 0.0 {
+            sumoLane.width = (sumoLane.width / widthResolution + 0.5).floor() * widthResolution;
+            if forbiddenNarrow && sumoLane.width >= myMinWidth {
+                sumoLane.width -= widthResolution;
+                if sumoLane.width <= 0.0 {
+                    sumoLane.width = max2(utils::geom::POSITION_EPS, myMinWidth - utils::geom::POSITION_EPS);
+                }
+            } else if sumoLane.width == 0.0 {
+                // round up when close to 0
+                sumoLane.width = widthResolution;
+            }
+        }
+        if maxWidth > 0.0 {
+            // MIN2(sumoLane.width, maxWidth)
+            sumoLane.width = if sumoLane.width < maxWidth { sumoLane.width } else { maxWidth };
+        }
+        if forbiddenNarrow {
+            // avoid narrow passenger car lanes (especially at sections with varying width)
+            sumoLane.permissions = SVC_EMERGENCY | SVC_AUTHORITY;
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::writeRoadObjects(const OpenDriveEdge *)` [static, protected]
@@ -5507,8 +5578,48 @@ impl NIImporter_OpenDrive {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn write_road_objects(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) {
-        todo!("port NIImporter_OpenDrive::writeRoadObjects")
+    pub fn write_road_objects(e: Ptr<NIImporter_OpenDrive_OpenDriveEdge>) -> Result<(), ProcessError> {
+        use crate::utils::shapes::point_of_interest::PointOfInterest;
+        use crate::utils::shapes::shape::{DEFAULT_ANGLE, DEFAULT_HEIGHT, DEFAULT_IMG_FILE, DEFAULT_IMG_HEIGHT, DEFAULT_IMG_WIDTH, DEFAULT_LAYER, DEFAULT_NAME};
+        use crate::utils::shapes::sumo_polygon::SUMOPolygon;
+        let writeGeo = GeoConvHelper::with_loaded(|g| g.using_geo_projection())
+            && (utils::options::options_cont::is_default("proj.plain-geo") || utils::options::options_cont::get_bool("proj.plain-geo"));
+        let dev: OutputDeviceRef = OutputDevice::get_device(&utils::options::options_cont::get_string("polygon-output"), true)?;
+        dev.borrow_mut().write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        for o in e.m().objects.iter() {
+            let mut refPos: Position = e.m().geom.position_at_offset2d(o.s, -o.t, false);
+            if o.radius >= 0.0 {
+                // cicrular shape
+                // GeoConvHelper::getFinal is not ready yet
+                GeoConvHelper::with_loaded(|g| g.cartesian2geo(&mut refPos));
+                let icon: String = POIIcons.get_string(POIIcon::NONE).unwrap().to_string();
+                let mut POI = PointOfInterest::new(&o.id, &o.type_, &RGBColor::YELLOW, &refPos, true, "", -1.0, false, 0.0, &icon, DEFAULT_LAYER, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_IMG_WIDTH, DEFAULT_IMG_HEIGHT, DEFAULT_NAME, &BTreeMap::new());
+                POI.base3.set_parameter("name", &o.name);
+                POI.write_xml(&mut dev.borrow_mut(), writeGeo, 0.0, String::new(), 0.0, false, 0.0);
+            } else {
+                // rectangular shape
+                let mut centerLine = PositionVector::default();
+                centerLine.push(Position::new(-o.length / 2.0, 0.0));
+                centerLine.push(Position::new(o.length / 2.0, 0.0));
+                let roadHdg: f64 = e.m().geom.rotation_at_offset(o.s);
+                centerLine.rotate2d(roadHdg + o.hdg);
+                centerLine.add(&refPos);
+                centerLine.move2side(o.width / 2.0, 100.0);
+                let mut shape: PositionVector = centerLine.clone();
+                centerLine.move2side(-o.width, 100.0);
+                shape.append(&centerLine.reverse(), utils::geom::POSITION_EPS);
+                if writeGeo {
+                    // GeoConvHelper::getFinal is not ready yet
+                    for p in shape.iter_mut() {
+                        GeoConvHelper::with_loaded(|g| g.cartesian2geo(p));
+                    }
+                }
+                let mut poly = SUMOPolygon::new(&o.id, &o.type_, &RGBColor::YELLOW, &shape, true, true, 1.0, 7.0, DEFAULT_ANGLE, DEFAULT_IMG_FILE, DEFAULT_NAME, DEFAULT_HEIGHT, &BTreeMap::new());
+                poly.base2.set_parameter("name", &o.name);
+                poly.write_xml(&mut dev.borrow_mut(), writeGeo);
+            }
+        }
+        Ok(())
     }
 
 }
