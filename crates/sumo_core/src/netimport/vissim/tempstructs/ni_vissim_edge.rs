@@ -92,8 +92,8 @@ impl NIVissimEdge {
     pub fn new(id: i32, name: &str, type_: &str, laneWidths: Vec<f64>, zuschlag1: f64, zuschlag2: f64, length: f64, geom: &PositionVector, clv: &NIVissimClosedLanesVector) -> Box<Self> {
         // the base constructor registers `this` in its dictionary, so the object must stay at a fixed address: return the Box
         let myNoLanes = laneWidths.len() as i32;
-        let b = Box::new(Self {
-            base: NIVissimAbstractEdge::new(id, geom),
+        let mut b = Box::new(Self {
+            base: NIVissimAbstractEdge::new_unregistered(id, geom),
             myName: name.to_string(),
             myType: type_.to_string(),
             myNoLanes,
@@ -110,6 +110,8 @@ impl NIVissimEdge {
             myToTreatAsSame: Vec::new(),
             myAmWithinJunction: false,
         });
+        // base constructor's `dictionary(id, this)`, done here because the base is embedded by value
+        NIVissimAbstractEdge::dictionary(id, Ptr::from_mut(&mut b.base));
         MY_MAX_ID.with(|m| {
             if m.get() < id {
                 m.set(id);
