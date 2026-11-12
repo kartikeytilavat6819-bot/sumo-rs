@@ -1,6 +1,9 @@
 //! Port of netimport/NIImporter_OpenDrive.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_warning};
+use utils::tlf;
+use utils::xml::generic_sax_handler::SaxHandler;
 
 // C++ static members of NIImporter_OpenDrive (see comment block below the struct)
 thread_local! {
@@ -1286,7 +1289,7 @@ impl NIImporter_OpenDrive {
             edge2junction.insert(e.id.clone(), e.junction.clone());
             posMap.entry(e.junction.clone()).or_default();
             // Check if geometry is valid before adding to boundary
-            if e.geom.size() > 0 {
+            if e.geom.len() > 0 {
                 let geomBoundary = e.geom.get_box_boundary();
                 // Only add if the boundary doesn't contain NaN values
                 if geomBoundary.is_initialised()
@@ -1409,7 +1412,7 @@ impl NIImporter_OpenDrive {
         // build start/end nodes which were not defined previously
         for (_, oe) in &outerEdges {
             let e = oe.m();
-            if (e.from.is_null() || e.to.is_null()) && e.geom.size() == 0 {
+            if (e.from.is_null() || e.to.is_null()) && e.geom.len() == 0 {
                 continue;
             }
             if e.from.is_null() {
@@ -1461,7 +1464,7 @@ impl NIImporter_OpenDrive {
         // build edges
         for (_, oe) in &outerEdges {
             let e = oe.m();
-            if e.geom.size() < 2 {
+            if e.geom.len() < 2 {
                 write_warningf!("Ignoring road '%' without geometry.", e.id);
                 continue;
             }
@@ -1541,7 +1544,7 @@ impl NIImporter_OpenDrive {
                 // build lanes to right
                 let mut currRight: Ptr<NBEdge> = Ptr::default();
                 if e.laneSections[j].rightLaneNumber > 0 {
-                    let mut offsets: Vec<f64> = vec![0.0; geom.size()];
+                    let mut offsets: Vec<f64> = vec![0.0; geom.len()];
                     let mut useOffsets = false;
                     let mut rightGeom = geom.clone();
                     rightGeom.move2side(e.laneSections[j].discardedInnerWidthRight, 100.0);
@@ -1596,7 +1599,7 @@ impl NIImporter_OpenDrive {
                 // build lanes to left
                 let mut currLeft: Ptr<NBEdge> = Ptr::default();
                 if e.laneSections[j].leftLaneNumber > 0 {
-                    let mut offsets: Vec<f64> = vec![0.0; geom.size()];
+                    let mut offsets: Vec<f64> = vec![0.0; geom.len()];
                     let mut useOffsets = false;
                     let mut leftGeom = geom.clone();
                     leftGeom.move2side(-e.laneSections[j].discardedInnerWidthLeft, 100.0);
@@ -4881,3 +4884,20 @@ impl Ord for NIImporter_OpenDrive_Connection {
     }
 }
 
+impl SaxHandler for NIImporter_OpenDrive {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        NIImporter_OpenDrive::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_characters(&mut self, element: i32, chars: &str) -> Result<(), ProcessError> {
+        NIImporter_OpenDrive::my_characters(self, element, chars);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        NIImporter_OpenDrive::my_end_element(self, element);
+        Ok(())
+    }
+}
