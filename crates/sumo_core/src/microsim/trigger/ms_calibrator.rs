@@ -16,7 +16,13 @@ impl MSCalibrator_AspiredState {
     // AspiredState() : begin(-1), end(-1), q(-1.), v(-1.), vehicleParameter(0) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port AspiredState::AspiredState")
+        MSCalibrator_AspiredState {
+            begin: -1,
+            end: -1,
+            q: -1.,
+            v: -1.,
+            vehicleParameter: Ptr::null(),
+        }
     }
 
 }
@@ -46,7 +52,11 @@ impl MSCalibrator_CalibratorCommand {
     //             myCalibrator(cali) {}
     #[allow(unused_variables)]
     pub fn new(cali: Ptr<MSCalibrator>) -> Self {
-        todo!("port CalibratorCommand::CalibratorCommand")
+        // shortcut: C++ base class Command is not ported (Unmapped), its default state is left as (), upgrade when Command is ported
+        MSCalibrator_CalibratorCommand {
+            base: (),
+            myCalibrator: cali,
+        }
     }
 
     /// C++: `SUMOTime CalibratorCommand::execute(SUMOTime)` [virtual]
@@ -55,7 +65,7 @@ impl MSCalibrator_CalibratorCommand {
     //         }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port CalibratorCommand::execute")
+        self.myCalibrator.m().execute(currentTime)
     }
 
     /// C++: `SUMOTime CalibratorCommand::shiftTime(SUMOTime, SUMOTime, SUMOTime)` [virtual]
@@ -70,7 +80,8 @@ impl MSCalibrator_CalibratorCommand {
     // }
     #[allow(unused_variables)]
     pub fn shift_time(&mut self, currentTime: SUMOTime, execTime: SUMOTime, newTime: SUMOTime) -> SUMOTime {
-        todo!("port CalibratorCommand::shiftTime")
+        self.myCalibrator.m().myCurrentStateInterval = 0;
+        0
     }
 
 }
@@ -103,7 +114,8 @@ pub struct MSCalibrator {
     /// List of adaptation intervals
     pub myIntervals: Vec<MSCalibrator_AspiredState>,
     /// Iterator pointing to the current interval
-    pub myCurrentStateInterval: Unmapped /* std::vector<AspiredState>::const_iterator */,
+    /// index into myIntervals (C++ iterator); myIntervals.len() is C++ end()
+    pub myCurrentStateInterval: usize,
     pub myVehicleRemovers: Vec<Ptr<MSCalibrator_VehicleRemover>>,
     /// set of vehicle ids to remove
     pub myToRemove: BTreeSet<String>,
@@ -298,7 +310,7 @@ impl MSCalibrator {
     // }
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        todo!("port MSCalibrator::writeXMLDetectorProlog")
+        dev.write_xml_header("calibratorstats", "calibratorstats_file.xsd", BTreeMap::new(), true);
     }
 
     /// C++: `SUMOTime MSCalibrator::execute(SUMOTime)` [virtual]
@@ -505,7 +517,15 @@ impl MSCalibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_current_state_interval(&self) -> MSCalibrator_AspiredState {
-        todo!("port MSCalibrator::getCurrentStateInterval")
+        // C++ returns the aspired state by value
+        let s = &self.myIntervals[self.myCurrentStateInterval];
+        MSCalibrator_AspiredState {
+            begin: s.begin,
+            end: s.end,
+            q: s.q,
+            v: s.v,
+            vehicleParameter: s.vehicleParameter,
+        }
     }
 
     /// C++: `const MSEdge * MSCalibrator::getEdge() const` [const]
@@ -514,7 +534,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        todo!("port MSCalibrator::getEdge")
+        self.myEdge
     }
 
     /// C++: `const MSLane * MSCalibrator::getLane() const` [const]
@@ -523,7 +543,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        todo!("port MSCalibrator::getLane")
+        self.myLane
     }
 
     /// C++: `const MSRouteProbe * MSCalibrator::getRouteProbe() const` [const]
@@ -532,7 +552,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn get_route_probe(&self) -> Ptr<MSRouteProbe> {
-        todo!("port MSCalibrator::getRouteProbe")
+        self.myProbe
     }
 
     /// C++: `int MSCalibrator::passed() const` [const, virtual]
@@ -546,7 +566,8 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn passed(&self) -> i32 {
-        todo!("port MSCalibrator::passed")
+        // calibrator measures at start of segment; vaporized vehicles do not count as passed
+        self.myEdgeMeanData.nVehEntered + self.myEdgeMeanData.nVehDeparted - self.myClearedInJam - self.myRemoved
     }
 
     /// C++: `int MSCalibrator::getInserted() const` [const]
@@ -555,7 +576,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn get_inserted(&self) -> i32 {
-        todo!("port MSCalibrator::getInserted")
+        self.myEdgeMeanData.nVehDeparted
     }
 
     /// C++: `int MSCalibrator::getRemoved() const` [const]
@@ -564,7 +585,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn get_removed(&self) -> i32 {
-        todo!("port MSCalibrator::getRemoved")
+        self.myClearedInJam + self.myRemoved
     }
 
     /// C++: `void MSCalibrator::setFlow(SUMOTime, SUMOTime, double, double, SUMOVehicleParameter)`
@@ -786,7 +807,13 @@ impl MSCalibrator {
     // }
     #[allow(unused_variables)]
     pub fn total_wished(&self) -> i32 {
-        todo!("port MSCalibrator::totalWished")
+        if self.myCurrentStateInterval != self.myIntervals.len() {
+            let s = &self.myIntervals[self.myCurrentStateInterval];
+            let totalHourFraction = steps2time(s.end - s.begin) / 3600.;
+            (s.q * totalHourFraction + 0.5).floor() as i32 // round to closest int
+        } else {
+            -1
+        }
     }
 
     /// C++: `double MSCalibrator::currentFlow() const` [const, protected]
@@ -798,7 +825,9 @@ impl MSCalibrator {
     // }
     #[allow(unused_variables)]
     pub fn current_flow(&self) -> f64 {
-        todo!("port MSCalibrator::currentFlow")
+        let begin = self.myIntervals[self.myCurrentStateInterval].begin;
+        let totalHourFraction = steps2time(MSNet::get_instance().get_current_time_step() - begin) / 3600.;
+        self.passed() as f64 / totalHourFraction
     }
 
     /// C++: `double MSCalibrator::currentSpeed() const` [const, protected]
@@ -849,7 +878,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn inserted(&self) -> i32 {
-        todo!("port MSCalibrator::inserted")
+        self.myInserted
     }
 
     /// C++: `int MSCalibrator::removed() const` [const, protected]
@@ -858,7 +887,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn removed(&self) -> i32 {
-        todo!("port MSCalibrator::removed")
+        self.myRemoved
     }
 
     /// C++: `int MSCalibrator::clearedInJam() const` [const, protected]
@@ -867,7 +896,7 @@ impl MSCalibrator {
     //     }
     #[allow(unused_variables)]
     pub fn cleared_in_jam(&self) -> i32 {
-        todo!("port MSCalibrator::clearedInJam")
+        self.myClearedInJam
     }
 
     /// C++: `int MSCalibrator::remainingVehicleCapacity(int) const` [const, protected]
