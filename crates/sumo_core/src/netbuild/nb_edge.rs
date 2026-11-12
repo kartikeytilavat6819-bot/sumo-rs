@@ -72,6 +72,7 @@ static MY_VIA_SUCCESSORS: ViaSuccessorsStatic = ViaSuccessorsStatic(Vec::new());
 
 /// A structure which describes a connection between edges or lanes
 /// C++ class `NBEdge::Connection` (netbuild/NBEdge.h)
+#[derive(Clone)]
 pub struct NBEdge_Connection {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
@@ -2624,7 +2625,11 @@ impl NBEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_connections_from_lane(&self, lane: i32, to: Ptr<NBEdge>, toLane: i32) -> Vec<NBEdge_Connection> {
-        todo!("port NBEdge::getConnectionsFromLane")
+        self.myConnections
+            .iter()
+            .filter(|c| (lane < 0 || c.fromLane == lane) && (to.is_null() || to == c.toEdge) && (toLane < 0 || toLane == c.toLane))
+            .cloned()
+            .collect()
     }
 
     /// C++: `const Connection & NBEdge::getConnection(int, const NBEdge *, int) const` [const]
@@ -2632,7 +2637,10 @@ impl NBEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_connection(&self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &NBEdge_Connection {
-        todo!("port NBEdge::getConnection")
+        match self.myConnections.iter().position(|c| c.fromLane == fromLane && c.toEdge == to && c.toLane == toLane) {
+            Some(idx) => &self.myConnections[idx],
+            None => panic!("{}", ProcessError::new(format!("Connection from {}_{} to {}_{} not found", self.get_id(), fromLane, to.get_id(), toLane))),
+        }
     }
 
     /// C++: `Connection & NBEdge::getConnectionRef(int, const NBEdge *, int)`
@@ -2640,7 +2648,10 @@ impl NBEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_connection_ref(&mut self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &mut NBEdge_Connection {
-        todo!("port NBEdge::getConnectionRef")
+        match self.myConnections.iter().position(|c| c.fromLane == fromLane && c.toEdge == to && c.toLane == toLane) {
+            Some(idx) => &mut self.myConnections[idx],
+            None => panic!("{}", ProcessError::new(format!("Connection from {}_{} to {}_{} not found", self.get_id(), fromLane, to.get_id(), toLane))),
+        }
     }
 
     /// C++: `bool NBEdge::hasConnectionTo(const NBEdge *, int, int) const` [const]
@@ -2651,7 +2662,7 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn has_connection_to(&self, destEdge: Ptr<NBEdge>, destLane: i32, fromLane: i32) -> bool {
-        todo!("port NBEdge::hasConnectionTo")
+        !destEdge.is_null() && self.myConnections.iter().any(|c| NBEdge_connections_toedgelane_finder::new(destEdge, destLane, fromLane).call_op(c))
     }
 
     /// C++: `bool NBEdge::isConnectedTo(const NBEdge *, const bool) const` [const]
@@ -7475,6 +7486,7 @@ impl NBEdge {
 
 /// Superclass for NBEdge and NBEdge::Connection to initialize Router
 /// C++ class `NBRouterEdge` (netbuild/NBEdge.h)
+#[derive(Clone)]
 pub struct NBRouterEdge {
 }
 
@@ -7820,7 +7832,7 @@ impl NBEdge_connections_toedge_finder {
     //             myEdge2Find(edge2find) { }
     #[allow(unused_variables)]
     pub fn new(edge2find: Ptr<NBEdge>, hasFromLane: bool) -> Self {
-        todo!("port connections_toedge_finder::connections_toedge_finder")
+        NBEdge_connections_toedge_finder { myHasFromLane: hasFromLane, myEdge2Find: edge2find }
     }
 
     /// C++: `bool connections_toedge_finder::operator()(const Connection &) const` [const]
@@ -7830,7 +7842,7 @@ impl NBEdge_connections_toedge_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
-        todo!("port connections_toedge_finder::operator()")
+        c.toEdge == self.myEdge2Find && (!self.myHasFromLane || c.fromLane != -1)
     }
 
 }
@@ -7854,7 +7866,7 @@ impl NBEdge_connections_toedgelane_finder {
     //             myFromLane2Find(fromLane2find) { }
     #[allow(unused_variables)]
     pub fn new(edge2find: Ptr<NBEdge>, lane2find: i32, fromLane2find: i32) -> Self {
-        todo!("port connections_toedgelane_finder::connections_toedgelane_finder")
+        NBEdge_connections_toedgelane_finder { myEdge2Find: edge2find, myLane2Find: lane2find, myFromLane2Find: fromLane2find }
     }
 
     /// C++: `bool connections_toedgelane_finder::operator()(const Connection &) const` [const]
@@ -7864,7 +7876,7 @@ impl NBEdge_connections_toedgelane_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
-        todo!("port connections_toedgelane_finder::operator()")
+        c.toEdge == self.myEdge2Find && c.toLane == self.myLane2Find && (self.myFromLane2Find < 0 || c.fromLane == self.myFromLane2Find)
     }
 
 }
