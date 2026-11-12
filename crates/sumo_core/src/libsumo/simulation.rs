@@ -594,9 +594,9 @@ impl Simulation {
     #[allow(unused_variables)]
     pub fn get_net_boundary() -> TraCIPositionVector {
         let b: Boundary = GeoConvHelper::with_final(|g| g.get_conv_boundary().clone());
-        let mut tb = TraCIPositionVector { base: TraCIResult {}, value: Vec::new() };
-        let minV = TraCIPosition { base: TraCIResult {}, x: b.xmin(), y: b.ymin(), z: b.zmin() };
-        let maxV = TraCIPosition { base: TraCIResult {}, x: b.xmax(), y: b.ymax(), z: b.zmax() };
+        let mut tb = TraCIPositionVector { base: TraCIResult::new(), value: Vec::new() };
+        let minV = TraCIPosition { base: TraCIResult { result_type: if b.zmin() != INVALID_DOUBLE_VALUE { POSITION_3D } else { POSITION_2D } }, x: b.xmin(), y: b.ymin(), z: b.zmin() };
+        let maxV = TraCIPosition { base: TraCIResult { result_type: if b.zmax() != INVALID_DOUBLE_VALUE { POSITION_3D } else { POSITION_2D } }, x: b.xmax(), y: b.ymax(), z: b.zmax() };
         tb.value.push(minV);
         tb.value.push(maxV);
         tb
@@ -663,7 +663,7 @@ impl Simulation {
             panic!("Cannot convert position to road.");
         }
         TraCIRoadPosition {
-            base: TraCIResult {},
+            base: TraCIResult { result_type: POSITION_ROADMAP },
             edgeID: lane.get_edge().get_id().to_string(),
             laneIndex: lane.get_index(),
             pos: laneDist,
@@ -1076,7 +1076,7 @@ impl Simulation {
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
         let mut params: TraCIResults = TraCIResults::new();
-        params.insert(VAR_PARAMETER_WITH_KEY, as_traci_result(TraCIString { base: TraCIResult {}, value: key.to_string() }));
+        params.insert(VAR_PARAMETER_WITH_KEY, as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
         Helper::subscribe(CMD_SUBSCRIBE_SIM_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
