@@ -11,7 +11,7 @@ use crate::common::string_tokenizer::StringTokenizer;
 use crate::common::sumo_vehicle_class::{SUMOVehicleClass, SVC_IGNORING};
 use crate::common::std_defs::g_precision;
 use crate::common::time::{time2string, SUMOTime};
-use crate::common::to_string::{f64_to_string, to_string};
+use crate::common::to_string::to_string;
 use crate::common::util_exceptions::ProcessError;
 use crate::geom::position::Position;
 use crate::geom::position_vector::PositionVector;
@@ -1064,5 +1064,673 @@ impl CommonXMLStructure_PlanParameters {
         );
         crate::common::msg_handler::write_warning(&msg);
         Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CommonXMLStructure::SumoBaseObject - methods
+// ---------------------------------------------------------------------------
+
+impl Drop for CommonXMLStructure_SumoBaseObject {
+    /// C++ ~SumoBaseObject: deletes all children. Each child is detached from this (dying) parent first;
+    /// the removal from the parent's child list is done by the owner (see remove_sumo_base_object_child).
+    fn drop(&mut self) {
+        for mut child in std::mem::take(&mut self.my_sumo_base_object_children) {
+            child.my_sumo_base_object_parent = Ptr::null();
+            drop(child);
+        }
+    }
+}
+
+impl CommonXMLStructure_SumoBaseObject {
+    /// C++ SumoBaseObject(SumoBaseObject* parent). The C++ constructor also appends the new object to its
+    /// parent's children; here the caller owns the returned box and registers it with
+    /// `parent.add_sumo_base_object_child(box)`.
+    pub fn new(sumo_base_object_parent: Ptr<CommonXMLStructure_SumoBaseObject>) -> Box<CommonXMLStructure_SumoBaseObject> {
+        Box::new(CommonXMLStructure_SumoBaseObject {
+            my_sumo_base_object_parent: sumo_base_object_parent,
+            my_tag: SUMO_TAG_NOTHING,
+            my_was_created: false,
+            my_string_attributes: BTreeMap::new(),
+            my_int_attributes: BTreeMap::new(),
+            my_double_attributes: BTreeMap::new(),
+            my_bool_attributes: BTreeMap::new(),
+            my_position_attributes: BTreeMap::new(),
+            my_time_attributes: BTreeMap::new(),
+            my_color_attributes: BTreeMap::new(),
+            my_string_list_attributes: BTreeMap::new(),
+            my_double_list_attributes: BTreeMap::new(),
+            my_position_vector_attributes: BTreeMap::new(),
+            my_parameters: BTreeMap::new(),
+            my_parent_ids: BTreeMap::new(),
+            my_sumo_base_object_children: Vec::new(),
+            my_vclass: SVC_IGNORING,
+            my_vehicle_type_parameter: None,
+            my_vehicle_parameter: None,
+            my_stop_parameter: None,
+            my_typed_parameters_pending: BTreeMap::new(),
+            my_plan_parameters: CommonXMLStructure_PlanParameters::default(),
+        })
+    }
+
+    /// clear SumoBaseObject
+    pub fn clear(&mut self) {
+        // reset tag
+        self.my_tag = SUMO_TAG_NOTHING;
+        // reset vClass
+        self.my_vclass = SVC_IGNORING;
+        // clear containers
+        self.my_string_attributes.clear();
+        self.my_int_attributes.clear();
+        self.my_double_attributes.clear();
+        self.my_bool_attributes.clear();
+        self.my_position_attributes.clear();
+        self.my_time_attributes.clear();
+        self.my_color_attributes.clear();
+        self.my_string_list_attributes.clear();
+        self.my_double_list_attributes.clear();
+        self.my_position_vector_attributes.clear();
+        self.my_parent_ids.clear();
+        self.my_parameters.clear();
+        // C++ clears the child pointer list without deleting the children (they stay allocated)
+        for child in std::mem::take(&mut self.my_sumo_base_object_children) {
+            let _ = Box::leak(child);
+        }
+        // reset flags (defined typed parameters)
+        self.my_vehicle_type_parameter = None;
+        self.my_vehicle_parameter = None;
+        self.my_stop_parameter = None;
+        self.my_typed_parameters_pending.clear();
+    }
+
+    /// set SumoBaseObject tag
+    pub fn set_tag(&mut self, tag: SumoXMLTag) {
+        self.my_tag = tag;
+    }
+
+    /// mark as successfully created
+    pub fn mark_as_created(&mut self) {
+        self.my_was_created = true;
+    }
+
+    /// get XML myTag
+    pub fn get_tag(&self) -> SumoXMLTag {
+        self.my_tag
+    }
+
+    /// check if the object was successfully created in build<...> function
+    pub fn was_created(&self) -> bool {
+        self.my_was_created
+    }
+
+    /// get pointer to mySumoBaseObjectParent SumoBaseObject (if is null, then is the root)
+    pub fn get_parent_sumo_base_object(&self) -> Ptr<CommonXMLStructure_SumoBaseObject> {
+        self.my_sumo_base_object_parent
+    }
+
+    /// get all attributes in string format
+    pub fn get_all_attributes(&self) -> BTreeMap<String, String> {
+        let mut result: BTreeMap<String, String> = BTreeMap::new();
+        for (attr, value) in &self.my_string_attributes {
+            result.insert(attr_name(*attr), value.clone());
+        }
+        for (attr, value) in &self.my_int_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_double_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_bool_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_position_attributes {
+            result.insert(attr_name(*attr), value.to_string_prec(g_precision()));
+        }
+        for (attr, value) in &self.my_time_attributes {
+            result.insert(attr_name(*attr), time2string(*value));
+        }
+        for (attr, value) in &self.my_color_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_string_list_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_double_list_attributes {
+            result.insert(attr_name(*attr), to_string(value));
+        }
+        for (attr, value) in &self.my_position_vector_attributes {
+            result.insert(attr_name(*attr), value.to_string_prec(g_precision()));
+        }
+        result
+    }
+
+    /// get string attribute
+    pub fn get_string_attribute(&self, attr: SumoXMLAttr) -> Result<&String, ProcessError> {
+        match self.my_string_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "string");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get int attribute
+    pub fn get_int_attribute(&self, attr: SumoXMLAttr) -> Result<i32, ProcessError> {
+        match self.my_int_attributes.get(&attr) {
+            Some(value) => Ok(*value),
+            None => {
+                self.handle_attribute_error(attr, "int");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get double attribute
+    pub fn get_double_attribute(&self, attr: SumoXMLAttr) -> Result<f64, ProcessError> {
+        match self.my_double_attributes.get(&attr) {
+            Some(value) => Ok(*value),
+            None => {
+                self.handle_attribute_error(attr, "double");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get bool attribute
+    pub fn get_bool_attribute(&self, attr: SumoXMLAttr) -> Result<bool, ProcessError> {
+        match self.my_bool_attributes.get(&attr) {
+            Some(value) => Ok(*value),
+            None => {
+                self.handle_attribute_error(attr, "bool");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get Position attribute
+    pub fn get_position_attribute(&self, attr: SumoXMLAttr) -> Result<&Position, ProcessError> {
+        match self.my_position_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "position");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get time attribute
+    pub fn get_time_attribute(&self, attr: SumoXMLAttr) -> Result<SUMOTime, ProcessError> {
+        match self.my_time_attributes.get(&attr) {
+            Some(value) => Ok(*value),
+            None => {
+                self.handle_attribute_error(attr, "time");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get 'period' attribute
+    pub fn get_period_attribute(&self) -> Result<SUMOTime, ProcessError> {
+        let mut attr = SUMO_ATTR_PERIOD;
+        if let Some(value) = self.my_time_attributes.get(&attr) {
+            return Ok(*value);
+        }
+        // try 'freq' as alias for 'period'
+        attr = SUMO_ATTR_FREQUENCY;
+        if let Some(value) = self.my_time_attributes.get(&attr) {
+            return Ok(*value);
+        }
+        self.handle_attribute_error(SUMO_ATTR_PERIOD, "time");
+        Err(ProcessError::default_msg())
+    }
+
+    /// get color attribute
+    pub fn get_color_attribute(&self, attr: SumoXMLAttr) -> Result<&RGBColor, ProcessError> {
+        match self.my_color_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "color");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get string list attribute
+    pub fn get_string_list_attribute(&self, attr: SumoXMLAttr) -> Result<&Vec<String>, ProcessError> {
+        match self.my_string_list_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "string list");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get double list attribute
+    pub fn get_double_list_attribute(&self, attr: SumoXMLAttr) -> Result<&Vec<f64>, ProcessError> {
+        match self.my_double_list_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "double list");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get PositionVector attribute
+    pub fn get_position_vector_attribute(&self, attr: SumoXMLAttr) -> Result<&PositionVector, ProcessError> {
+        match self.my_position_vector_attributes.get(&attr) {
+            Some(value) => Ok(value),
+            None => {
+                self.handle_attribute_error(attr, "position vector");
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// get parent ID
+    pub fn get_parent_id(&self, tag: SumoXMLTag) -> Result<&String, ProcessError> {
+        match self.my_parent_ids.get(&tag) {
+            Some(value) => Ok(value),
+            None => {
+                crate::write_errorf!("Trying to get undefined parent '%' in SUMOBaseObject '%'", tag_name(tag), tag_name(self.my_tag));
+                Err(ProcessError::default_msg())
+            }
+        }
+    }
+
+    /// vehicle class
+    pub fn get_vclass(&self) -> SUMOVehicleClass {
+        self.my_vclass
+    }
+
+    /// get current vType (opaque SUMOVTypeParameter)
+    pub fn get_vehicle_type_parameter(&self) -> Result<&dyn Any, ProcessError> {
+        match &self.my_vehicle_type_parameter {
+            Some(p) => Ok(&**p),
+            None => Err(ProcessError::new("Undefined vehicleType parameter")),
+        }
+    }
+
+    /// get vehicle parameters (opaque SUMOVehicleParameter)
+    pub fn get_vehicle_parameter(&self) -> Result<&dyn Any, ProcessError> {
+        match &self.my_vehicle_parameter {
+            Some(p) => Ok(&**p),
+            None => Err(ProcessError::new("Undefined vehicle parameter")),
+        }
+    }
+
+    /// get stop parameters (opaque SUMOVehicleParameter::Stop)
+    pub fn get_stop_parameter(&self) -> Result<&dyn Any, ProcessError> {
+        match &self.my_stop_parameter {
+            Some(p) => Ok(&**p),
+            None => Err(ProcessError::new("Undefined stop parameter")),
+        }
+    }
+
+    /// get parameters
+    pub fn get_parameters(&self) -> &BTreeMap<String, String> {
+        &self.my_parameters
+    }
+
+    /// get plan parameteres
+    pub fn get_plan_parameters(&self) -> &CommonXMLStructure_PlanParameters {
+        &self.my_plan_parameters
+    }
+
+    /// get SumoBaseObject children
+    pub fn get_sumo_base_object_children(&self) -> &Vec<Box<CommonXMLStructure_SumoBaseObject>> {
+        &self.my_sumo_base_object_children
+    }
+
+    /// check if current SumoBaseObject has the given string attribute
+    pub fn has_string_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_string_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given int attribute
+    pub fn has_int_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_int_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given double attribute
+    pub fn has_double_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_double_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given bool attribute
+    pub fn has_bool_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_bool_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given bool attribute
+    pub fn has_position_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_position_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given time attribute
+    pub fn has_time_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_time_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given color attribute
+    pub fn has_color_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_color_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given string list attribute
+    pub fn has_string_list_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_string_list_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given double list attribute
+    pub fn has_double_list_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_double_list_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given positionVector attribute
+    pub fn has_position_vector_attribute(&self, attr: SumoXMLAttr) -> bool {
+        self.my_position_vector_attributes.contains_key(&attr)
+    }
+
+    /// check if current SumoBaseObject has the given parent ID
+    pub fn has_parent_id(&self, tag: SumoXMLTag) -> bool {
+        self.my_parent_ids.contains_key(&tag)
+    }
+
+    /// add string attribute into current SumoBaseObject node
+    pub fn add_string_attribute(&mut self, attr: SumoXMLAttr, value: &str) {
+        self.my_string_attributes.insert(attr, value.to_string());
+    }
+
+    /// add int attribute into current SumoBaseObject node
+    pub fn add_int_attribute(&mut self, attr: SumoXMLAttr, value: i32) {
+        self.my_int_attributes.insert(attr, value);
+    }
+
+    /// add double attribute into current SumoBaseObject node
+    pub fn add_double_attribute(&mut self, attr: SumoXMLAttr, value: f64) {
+        self.my_double_attributes.insert(attr, value);
+    }
+
+    /// add bool attribute into current SumoBaseObject node
+    pub fn add_bool_attribute(&mut self, attr: SumoXMLAttr, value: bool) {
+        self.my_bool_attributes.insert(attr, value);
+    }
+
+    /// add Position attribute into current SumoBaseObject node
+    pub fn add_position_attribute(&mut self, attr: SumoXMLAttr, value: &Position) {
+        self.my_position_attributes.insert(attr, *value);
+    }
+
+    /// add time attribute into current SumoBaseObject node
+    pub fn add_time_attribute(&mut self, attr: SumoXMLAttr, value: SUMOTime) {
+        self.my_time_attributes.insert(attr, value);
+    }
+
+    /// add color attribute into current SumoBaseObject node
+    pub fn add_color_attribute(&mut self, attr: SumoXMLAttr, value: &RGBColor) {
+        self.my_color_attributes.insert(attr, *value);
+    }
+
+    /// add string list attribute into current SumoBaseObject node
+    pub fn add_string_list_attribute(&mut self, attr: SumoXMLAttr, value: &[String]) {
+        self.my_string_list_attributes.insert(attr, value.to_vec());
+    }
+
+    /// add double list attribute into current SumoBaseObject node
+    pub fn add_double_list_attribute(&mut self, attr: SumoXMLAttr, value: &[f64]) {
+        self.my_double_list_attributes.insert(attr, value.to_vec());
+    }
+
+    /// add PositionVector attribute into current SumoBaseObject node
+    pub fn add_position_vector_attribute(&mut self, attr: SumoXMLAttr, value: &PositionVector) {
+        self.my_position_vector_attributes.insert(attr, value.clone());
+    }
+
+    /// add parameters into current SumoBaseObject node (format: key=value1|key2=value2|....)
+    pub fn add_parameters(&mut self, value: &str) {
+        let parameters = StringTokenizer::with_token(value, "|", false).get_vector();
+        for parameter in parameters {
+            // C++ indexes keyValue[0] and keyValue[1] without checking the size
+            let key_value = StringTokenizer::with_token(&parameter, "=", false).get_vector();
+            self.add_parameter(&key_value[0], &key_value[1]);
+        }
+    }
+
+    /// add parameter into current SumoBaseObject node
+    pub fn add_parameter(&mut self, key: &str, value: &str) {
+        // check if we have to insert in vType, vehicle or stop parameters
+        if self.my_vehicle_type_parameter.is_some() || self.my_vehicle_parameter.is_some() || self.my_stop_parameter.is_some() {
+            // shortcut: typed parameters are kept here until SUMOVTypeParameter/SUMOVehicleParameter are ported, then they go into those objects
+            self.my_typed_parameters_pending.insert(key.to_string(), value.to_string());
+        } else {
+            self.my_parameters.insert(key.to_string(), value.to_string());
+        }
+    }
+
+    /// add parent (string) attribute into current SumoBaseObject node
+    pub fn add_parent_id(&mut self, tag: SumoXMLTag, id: &str) {
+        self.my_parent_ids.insert(tag, id.to_string());
+    }
+
+    /// set vehicle class
+    pub fn set_vclass(&mut self, vclass: SUMOVehicleClass) {
+        self.my_vclass = vclass;
+    }
+
+    /// set vehicle type parameters (`vehicle_type_parameter` is the opaque SUMOVTypeParameter, `id` its id)
+    pub fn set_vehicle_type_parameter(&mut self, vehicle_type_parameter: Box<dyn Any>, id: &str) {
+        self.my_vehicle_type_parameter = Some(vehicle_type_parameter);
+        // set attribute id
+        self.add_string_attribute(SUMO_ATTR_ID, id);
+    }
+
+    /// set vehicle parameters (`vehicle_parameter` is the opaque SUMOVehicleParameter, `id`/`routeid` its fields)
+    pub fn set_vehicle_parameter(&mut self, vehicle_parameter: Box<dyn Any>, id: &str, routeid: &str) {
+        self.my_vehicle_parameter = Some(vehicle_parameter);
+        // set attribute id
+        if !id.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_ID, id);
+        }
+        // set attribute route
+        if !routeid.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_ROUTE, routeid);
+        }
+    }
+
+    /// add stop parameters (`stop_parameter` is the opaque SUMOVehicleParameter::Stop, the other arguments its fields)
+    #[allow(clippy::too_many_arguments)]
+    pub fn set_stop_parameter(&mut self, stop_parameter: Box<dyn Any>, edge: &str, lane: &str, busstop: &str, containerstop: &str, parkingarea: &str, charging_station: &str) {
+        self.my_stop_parameter = Some(stop_parameter);
+        // set attribute edge
+        if !edge.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_EDGE, edge);
+        }
+        // set attribute lane
+        if !lane.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_LANE, lane);
+        }
+        // set attribute busStop
+        if !busstop.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_BUS_STOP, busstop);
+        }
+        // set attribute containerstop
+        if !containerstop.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_CONTAINER_STOP, containerstop);
+        }
+        // set attribute parkingarea
+        if !parkingarea.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_PARKING_AREA, parkingarea);
+        }
+        // set attribute chargingStation
+        if !charging_station.is_empty() {
+            self.add_string_attribute(SUMO_ATTR_CHARGING_STATION, charging_station);
+        }
+    }
+
+    /// set plan parmeter
+    pub fn set_plan_parameters(&mut self, plan_parameters: &CommonXMLStructure_PlanParameters) {
+        self.my_plan_parameters = plan_parameters.clone();
+    }
+
+    /// add SumoBaseObject child (takes ownership, like C++ adding a `new` object)
+    pub fn add_sumo_base_object_child(&mut self, sumo_base_object: Box<CommonXMLStructure_SumoBaseObject>) {
+        // just add it into mySumoBaseObjectChildren
+        self.my_sumo_base_object_children.push(sumo_base_object);
+    }
+
+    /// remove SumoBaseObject child: returns the owned child, which the caller drops (C++ `delete`)
+    pub fn remove_sumo_base_object_child(&mut self, sumo_base_object: Ptr<CommonXMLStructure_SumoBaseObject>) -> Option<Box<CommonXMLStructure_SumoBaseObject>> {
+        // find sumoBaseObject
+        let idx = self.my_sumo_base_object_children.iter().position(|c| Ptr::from_box(c) == sumo_base_object)?;
+        Some(self.my_sumo_base_object_children.remove(idx))
+    }
+
+    /// handle attribute error
+    fn handle_attribute_error(&self, attr: SumoXMLAttr, attr_type: &str) {
+        crate::write_errorf!("Trying to get undefined % attribute '%' in SUMOBaseObject '%'", attr_type, attr_name(attr), tag_name(self.my_tag));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CommonXMLStructure - methods
+// ---------------------------------------------------------------------------
+
+impl CommonXMLStructure {
+    /// open SUMOBaseOBject
+    pub fn open_sumo_base_object(&mut self) {
+        // first check if root is empty
+        if self.my_sumo_base_object_root.is_null() {
+            // create root
+            let mut root = CommonXMLStructure_SumoBaseObject::new(Ptr::null());
+            // set tag
+            root.set_tag(SUMO_TAG_ROOTFILE);
+            self.my_sumo_base_object_root = Ptr::from_box(&root);
+            // update last inserted Root
+            self.my_current_sumo_base_object = self.my_sumo_base_object_root;
+            self.my_root_owner = Some(root);
+        } else {
+            // create new node
+            let new_sumo_base_object = CommonXMLStructure_SumoBaseObject::new(self.my_current_sumo_base_object);
+            let new_ptr = Ptr::from_box(&new_sumo_base_object);
+            self.my_current_sumo_base_object.m().add_sumo_base_object_child(new_sumo_base_object);
+            // update last inserted node
+            self.my_current_sumo_base_object = new_ptr;
+        }
+    }
+
+    /// close SUMOBaseOBject
+    pub fn close_sumo_base_object(&mut self) {
+        // check that myCurrentSumoBaseObject is valid
+        if !self.my_current_sumo_base_object.is_null() {
+            // check if last inserted SumoBaseObject is the root
+            if self.my_current_sumo_base_object.get_parent_sumo_base_object().is_null() {
+                // reset both pointers (C++ does not delete the root here, so it stays allocated)
+                self.my_current_sumo_base_object = Ptr::null();
+                self.my_sumo_base_object_root = Ptr::null();
+                if let Some(root) = self.my_root_owner.take() {
+                    let _ = Box::leak(root);
+                }
+            } else {
+                // update last inserted SumoBaseObject
+                self.my_current_sumo_base_object = self.my_current_sumo_base_object.get_parent_sumo_base_object();
+            }
+        }
+    }
+
+    /// abort SUMOBaseOBject
+    pub fn abort_sumo_base_object(&mut self) {
+        // delete current sumo base object and use their parent as sumo base object
+        if !self.my_current_sumo_base_object.is_null() {
+            if self.my_current_sumo_base_object == self.my_sumo_base_object_root {
+                self.my_root_owner = None;
+                self.my_current_sumo_base_object = Ptr::null();
+                self.my_sumo_base_object_root = Ptr::null();
+            } else {
+                let parent_sumo_base_object = self.my_current_sumo_base_object.get_parent_sumo_base_object();
+                let current = self.my_current_sumo_base_object;
+                // unregister and drop the current object (C++ delete)
+                parent_sumo_base_object.m().remove_sumo_base_object_child(current);
+                self.my_current_sumo_base_object = parent_sumo_base_object;
+            }
+        }
+    }
+
+    /// get SumoBaseObject root
+    pub fn get_sumo_base_object_root(&self) -> Ptr<CommonXMLStructure_SumoBaseObject> {
+        self.my_sumo_base_object_root
+    }
+
+    /// get current editedSumoBaseObject
+    pub fn get_current_sumo_base_object(&self) -> Ptr<CommonXMLStructure_SumoBaseObject> {
+        self.my_current_sumo_base_object
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plan(from: &str, to: &str) -> CommonXMLStructure_PlanParameters {
+        CommonXMLStructure_PlanParameters { from_edge: from.to_string(), to_edge: to.to_string(), ..Default::default() }
+    }
+
+    #[test]
+    fn plan_single_edge_and_counts() {
+        // from only: single-edge plan (one defined parameter)
+        let p = plan("a", "");
+        assert!(p.is_single_edge_plan());
+        assert_eq!(p.get_number_of_defined_parameters(), 1);
+        // from and to: two defined parameters, not single-edge
+        let q = plan("a", "b");
+        assert!(!q.is_single_edge_plan());
+        assert_eq!(q.get_number_of_defined_parameters(), 2);
+        assert_eq!(q.get_walk_tag(), GNE_TAG_WALK_EDGE_EDGE);
+        assert_eq!(q.get_person_trip_tag(), GNE_TAG_PERSONTRIP_EDGE_EDGE);
+        // no from: nothing defined
+        assert_eq!(CommonXMLStructure_PlanParameters::default().get_walk_tag(), SUMO_TAG_NOTHING);
+    }
+
+    #[test]
+    fn plan_consecutive_and_stops() {
+        let mut p = CommonXMLStructure_PlanParameters::default();
+        p.consecutive_edges = vec!["a".to_string(), "b".to_string()];
+        assert_eq!(p.get_number_of_defined_parameters(), 2);
+        assert_eq!(p.get_walk_tag(), GNE_TAG_WALK_EDGES);
+        assert_eq!(p.get_tranship_tag(), GNE_TAG_TRANSHIP_EDGES);
+        let mut s = CommonXMLStructure_PlanParameters::default();
+        s.to_bus_stop = "stop".to_string();
+        assert_eq!(s.get_person_stop_tag(), GNE_TAG_STOPPERSON_BUSSTOP);
+        assert_eq!(s.get_container_stop_tag(), GNE_TAG_STOPCONTAINER_BUSSTOP);
+    }
+
+    #[test]
+    fn base_object_tree_open_abort_close() {
+        let mut cxs = CommonXMLStructure::default();
+        cxs.open_sumo_base_object();
+        let root = cxs.get_sumo_base_object_root();
+        assert_eq!(root.get_tag(), SUMO_TAG_ROOTFILE);
+        cxs.open_sumo_base_object();
+        assert_eq!(root.get_sumo_base_object_children().len(), 1);
+        assert_ne!(cxs.get_current_sumo_base_object(), root);
+        cxs.abort_sumo_base_object();
+        assert_eq!(root.get_sumo_base_object_children().len(), 0);
+        assert_eq!(cxs.get_current_sumo_base_object(), root);
+        cxs.close_sumo_base_object();
+        assert!(cxs.get_sumo_base_object_root().is_null());
+        assert!(cxs.get_current_sumo_base_object().is_null());
+    }
+
+    #[test]
+    fn base_object_attributes() {
+        let mut obj = CommonXMLStructure_SumoBaseObject::new(Ptr::null());
+        obj.add_int_attribute(SUMO_ATTR_ID, 3);
+        assert!(obj.has_int_attribute(SUMO_ATTR_ID));
+        assert_eq!(obj.get_int_attribute(SUMO_ATTR_ID).unwrap(), 3);
+        assert!(obj.get_string_attribute(SUMO_ATTR_ID).is_err());
+        obj.add_parameters("k1=v1|k2=v2");
+        assert_eq!(obj.get_parameters().get("k2").map(String::as_str), Some("v2"));
     }
 }
