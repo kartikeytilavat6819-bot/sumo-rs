@@ -7556,7 +7556,40 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_in_connection_prohibitions(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, whichLaneOff: i32, byLaneOff: i32) {
-        todo!("port NBNode::replaceInConnectionProhibitions")
+        // replace in keys
+        // (restart from the beginning after each changed key, as the C++ iterator loop does)
+        loop {
+            let mut moved: Option<(NBConnection, NBConnection, NBConnectionVector)> = None;
+            for (key, value) in self.myBlockedConnections.iter() {
+                let mut c = key.clone();
+                let mut changed = false;
+                if c.replace_from_2(which, whichLaneOff, by, byLaneOff) {
+                    changed = true;
+                }
+                if c.replace_to_2(which, whichLaneOff, by, byLaneOff) {
+                    changed = true;
+                }
+                if changed {
+                    moved = Some((key.clone(), c, value.clone()));
+                    break;
+                }
+            }
+            match moved {
+                None => break,
+                Some((oldKey, newKey, value)) => {
+                    // myBlockedConnections[c] = (*j).second; myBlockedConnections.erase(j);
+                    self.myBlockedConnections.insert(newKey, value);
+                    self.myBlockedConnections.remove(&oldKey);
+                }
+            }
+        }
+        // replace in values
+        for (_, prohibiting) in self.myBlockedConnections.iter_mut() {
+            for sprohibiting in prohibiting.iter_mut() {
+                sprohibiting.replace_from_2(which, whichLaneOff, by, byLaneOff);
+                sprohibiting.replace_to_2(which, whichLaneOff, by, byLaneOff);
+            }
+        }
     }
 
     /// C++: `void NBNode::remapRemoved(NBTrafficLightLogicCont &, NBEdge *, const EdgeVector &, const EdgeVector &)` [private]
@@ -7642,7 +7675,68 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, tc: &mut NBTrafficLightLogicCont, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        todo!("port NBNode::remapRemoved")
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let blockedConnectionsTmp: NBConnectionProhibits = self.myBlockedConnections.clone();
+            let mut blockedConnectionsNew: NBConnectionProhibits = BTreeMap::new();
+            // remap in connections
+            for (blocker, blocked) in blockedConnectionsTmp.iter() {
+                // check the blocked connections first
+                // check whether any of the blocked must be changed
+                let mut blockedChanged = false;
+                let mut newBlocked: NBConnectionVector = Vec::new();
+                for sblocked in blocked.iter() {
+                    if sblocked.get_from() == removed || sblocked.get_to() == removed {
+                        blockedChanged = true;
+                    }
+                }
+                // adapt changes if so
+                if blockedChanged {
+                    for sblocked in blocked.iter() {
+                        if sblocked.get_from() == removed && sblocked.get_to() == removed {
+                            // C++: nothing is added here (the replacement code is commented out)
+                        } else if sblocked.get_from() == removed {
+                            for k in incoming.iter() {
+                                newBlocked.push(NBConnection::new(*k, sblocked.get_to()));
+                            }
+                        } else if sblocked.get_to() == removed {
+                            for k in outgoing.iter() {
+                                newBlocked.push(NBConnection::new(sblocked.get_from(), *k));
+                            }
+                        } else {
+                            newBlocked.push(NBConnection::new(sblocked.get_from(), sblocked.get_to()));
+                        }
+                    }
+                }
+                if blockedChanged {
+                    blockedConnectionsNew.insert(blocker.clone(), newBlocked);
+                    changed = true;
+                }
+                // if the blocked were kept
+                else {
+                    if blocker.get_from() == removed && blocker.get_to() == removed {
+                        changed = true;
+                        // C++: nothing is added here (the replacement code is commented out)
+                    } else if blocker.get_from() == removed {
+                        changed = true;
+                        for k in incoming.iter() {
+                            blockedConnectionsNew.insert(NBConnection::new(*k, blocker.get_to()), blocked.clone());
+                        }
+                    } else if blocker.get_to() == removed {
+                        changed = true;
+                        for k in outgoing.iter() {
+                            blockedConnectionsNew.insert(NBConnection::new(blocker.get_from(), *k), blocked.clone());
+                        }
+                    } else {
+                        blockedConnectionsNew.insert(blocker.clone(), blocked.clone());
+                    }
+                }
+            }
+            self.myBlockedConnections = blockedConnectionsNew;
+        }
+        // remap in traffic lights
+        tc.remap_removed(removed, incoming, outgoing);
     }
 
     /// C++: `bool NBNode::forbidsPedestriansAfter(std::vector<std::pair<NBEdge *, bool>>, int)` [private]
@@ -7658,7 +7752,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn forbids_pedestrians_after(&mut self, normalizedLanes: Vec<(Ptr<NBEdge>, bool)>, startIndex: i32) -> bool {
-        todo!("port NBNode::forbidsPedestriansAfter")
+        for i in (startIndex as usize)..normalizedLanes.len() {
+            if !normalizedLanes[i].1 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `EdgeVector NBNode::getEdgesSortedByAngleAtNodeCenter() const` [const, private]
@@ -7742,7 +7841,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_joined_traffic_lights(&mut self) {
-        todo!("port NBNode::removeJoinedTrafficLights")
+        let trafficLights = self.myTrafficLights.clone(); // make a copy because we will modify the original
+        for i in trafficLights.iter() {
+            // if this is the only controlled node we keep the tlDef as it is to generate a warning later
+            if i.get_nodes().len() > 1 {
+                self.myTrafficLights.remove(i);
+                i.m().remove_node(Ptr::from_mut(self));
+                i.m().set_participants_information();
+                i.m().set_tl_controlling_information();
+            }
+        }
     }
 
     /// C++: `void NBNode::displaceShapeAtWidthChange(const NBEdge *, const NBEdge::Connection &, PositionVector &, PositionVector &) const` [const, private]
@@ -7797,7 +7905,47 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn displace_shape_at_width_change(&self, from: Ptr<NBEdge>, con: &NBEdge_Connection, fromShape: &mut PositionVector, toShape: &mut PositionVector) {
-        todo!("port NBNode::displaceShapeAtWidthChange")
+        if self.is_constant_width_transition() {
+            // displace shapes
+            let in_ = self.myIncomingEdges[0];
+            let out = self.myOutgoingEdges[0];
+            let mut outCenter = out.get_lane_width_2(con.toLane) / 2.;
+            for i in 0..con.toLane {
+                outCenter += out.get_lane_width_2(i);
+            }
+            let mut inCenter = in_.get_lane_width_2(con.fromLane) / 2.;
+            for i in 0..con.fromLane {
+                inCenter += in_.get_lane_width_2(i);
+            }
+            // C++ wraps the move in try/catch(InvalidArgument); the Rust move2side does not throw, so nothing to catch
+            if in_.get_num_lanes() > out.get_num_lanes() {
+                // shift toShape so the internal lane ends straight at the displaced entry point
+                toShape.move2side(outCenter - inCenter, 100.);
+            } else {
+                // shift fromShape so the internal lane starts straight at the displaced exit point
+                fromShape.move2side(inCenter - outCenter, 100.);
+            }
+        } else {
+            let fromP = from.get_permissions(con.fromLane);
+            let toP = con.toEdge.get_permissions(con.toLane);
+            if (fromP & toP) == SVC_BICYCLE && (fromP | toP) != SVC_BICYCLE {
+                let shift = (from.get_lane_width_2(con.fromLane) - con.toEdge.get_lane_width_2(con.toLane)) / 2.;
+                if toP == SVC_BICYCLE {
+                    // let connection to dedicated bicycle lane start on the right side of a mixed lane for straight an right-going connections
+                    // (on the left side for left turns)
+                    // XXX indirect left turns should also start on the right side
+                    let dir = self.get_direction(from, con.toEdge, false);
+                    if (dir == LinkDirection::LEFT) || (dir == LinkDirection::PARTLEFT) || (dir == LinkDirection::TURN) {
+                        fromShape.move2side(-shift, 100.);
+                    } else {
+                        fromShape.move2side(shift, 100.);
+                    }
+                } else if fromP == SVC_BICYCLE {
+                    // let connection from dedicated bicycle end on the right side of a mixed lane
+                    toShape.move2side(-shift, 100.);
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNode::includes(const std::set<const NBEdge *, ComparatorIdLess> &, const std::set<const NBEdge *, ComparatorIdLess> &)` [static, private]
@@ -8092,7 +8240,39 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_straighter(&self, incoming: Ptr<NBEdge>, angle: f64, vehPerm: SVCPermissions, modeLanes: i32, candidate: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::isStraighter")
+        if !candidate.is_null() {
+            let self_ptr = Ptr::from_raw(self as *const NBNode as *mut NBNode);
+            let candAngle = NBHelpers::norm_rel_angle(incoming.get_angle_at_node(self_ptr), candidate.get_angle_at_node(self_ptr));
+            // they are too similar it does not matter
+            if (angle - candAngle).abs() < 5. {
+                return false;
+            }
+            // the other edge is at least 5 degree straighter
+            if candAngle.abs() < angle.abs() - 5. {
+                return true;
+            }
+            if angle.abs() < candAngle.abs() - 5. {
+                return false;
+            }
+            if candAngle.abs() < 44. {
+                // the lane count for the same modes is larger
+                let candModeLanes = candidate.get_num_lanes_that_allow(vehPerm, true);
+                if candModeLanes > modeLanes {
+                    return true;
+                }
+                if candModeLanes < modeLanes {
+                    return false;
+                }
+                // we would create a left turn
+                if candAngle < 0. && angle > 0. {
+                    return true;
+                }
+                if angle < 0. && candAngle > 0. {
+                    return false;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `EdgeVector NBNode::getPassengerEdges(bool) const` [const, private]
@@ -8109,7 +8289,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_passenger_edges(&self, incoming: bool) -> EdgeVector {
-        todo!("port NBNode::getPassengerEdges")
+        let mut result: EdgeVector = Vec::new();
+        let edges = if incoming { &self.myIncomingEdges } else { &self.myOutgoingEdges };
+        for e in edges.iter() {
+            if (e.get_permissions(-1) & SVC_PASSENGER) != 0 {
+                result.push(*e);
+            }
+        }
+        result
     }
 
     /// C++: `bool NBNode::isExplicitRailNoBidi(const NBEdge *, const NBEdge *)` [static, private]
@@ -8126,7 +8313,13 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_explicit_rail_no_bidi(incoming: Ptr<NBEdge>, outgoing: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::isExplicitRailNoBidi")
+        // assume explicit connections at sharp turn-arounds are either for reversal or due to a geometry glitch
+        // (but should not have been guessed)
+        // @note this function is also called from NBAlgorithms when there aren't any connections ready
+        incoming.get_step() >= NBEdge_EdgeBuildingStep::LANES2LANES_RECHECK
+            && utils::common::sumo_vehicle_class::is_railway(incoming.get_permissions(-1))
+            && utils::common::sumo_vehicle_class::is_railway(outgoing.get_permissions(-1))
+            && incoming.get_bidi_edge() != outgoing
     }
 
     /// C++: `PositionVector NBNode::cutAtShapes(const PositionVector &, const PositionVector &, const PositionVector &, const PositionVector &)` [private]
@@ -8191,7 +8384,65 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn cut_at_shapes(&mut self, cut: &PositionVector, border1: &PositionVector, border2: &PositionVector, def: &PositionVector) -> PositionVector {
-        todo!("port NBNode::cutAtShapes")
+        // VectorHelper::maxValue / minValue (first element, strict comparisons)
+        fn vec_max(v: &[f64]) -> f64 {
+            let mut m = v[0];
+            for &x in &v[1..] {
+                if x > m {
+                    m = x;
+                }
+            }
+            m
+        }
+        fn vec_min(v: &[f64]) -> f64 {
+            let mut m = v[0];
+            for &x in &v[1..] {
+                if x < m {
+                    m = x;
+                }
+            }
+            m
+        }
+        let mut is1 = cut.intersects_at_lengths2d_pv(border1);
+        let mut is2 = cut.intersects_at_lengths2d_pv(border2);
+        if is1.is_empty() && border1.len() == 2 {
+            let d1 = cut.distance2d(border1.front(), false);
+            let d2 = cut.distance2d(border1.back(), false);
+            let closer = if d1 < d2 { *border1.front() } else { *border1.back() };
+            let nOp = cut.nearest_offset_to_point2d(&closer, false);
+            if nOp <= 2. * POSITION_EPS && cut.back().distance_to2d(&closer) <= 2. * POSITION_EPS {
+                is1.push(cut.length2d());
+            } else {
+                is1.push(nOp);
+            }
+        }
+        if is2.is_empty() && border2.len() == 2 {
+            let d1 = cut.distance2d(border2.front(), false);
+            let d2 = cut.distance2d(border2.back(), false);
+            let closer = if d1 < d2 { *border2.front() } else { *border2.back() };
+            let nOp = cut.nearest_offset_to_point2d(&closer, false);
+            if nOp <= 2. * POSITION_EPS && cut.back().distance_to2d(&closer) <= 2. * POSITION_EPS {
+                is2.push(cut.length2d());
+            } else {
+                is2.push(nOp);
+            }
+        }
+        if is1.len() > 0 && is2.len() > 0 {
+            let mut of1 = vec_max(&is1);
+            let mut of2 = vec_min(&is2);
+            if of1 > of2 {
+                of1 = vec_max(&is2);
+                of2 = vec_min(&is1);
+            }
+            if of1 > of2 {
+                of2 = vec_max(&is1);
+                of1 = vec_min(&is2);
+            }
+            debug_assert!(of1 <= of2);
+            return cut.get_subpart(of1, of2);
+        } else {
+            return def.clone();
+        }
     }
 
     /// C++: `void NBNode::patchOffset_pathAcrossStreet(double &)` [private]
@@ -8351,7 +8602,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn unsignalized_operation(&self) -> bool {
-        todo!("port NBNode::unsignalizedOperation")
+        let mut railClasses: SVCPermissions = 0;
+        for e in self.myIncomingEdges.iter() {
+            railClasses |= e.get_permissions(-1) & SVC_RAIL_CLASSES;
+        }
+        debug_assert!(railClasses != 0);
+        (railClasses & MY_PERMIT_UNSIGNALIZED_CLASSES.with(|c| c.get())) == railClasses && (railClasses & MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.get())) == 0
     }
 
     /// C++: `void NBNode::recheckSpecialConnections(NBEdge *, NBEdge *, SVCPermissions)` [private]
@@ -8427,7 +8683,57 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn recheck_special_connections(&mut self, incoming: Ptr<NBEdge>, currentOutgoing: Ptr<NBEdge>, svcSpecial: SVCPermissions) {
-        todo!("port NBNode::recheckSpecialConnections")
+        // assume that left-turns and turn-arounds are better satisfied from lanes to the left
+        let specialTarget = currentOutgoing.get_special_lane(svcSpecial);
+        let dir = self.get_direction(incoming, currentOutgoing, false);
+        if incoming.get_step() <= NBEdge_EdgeBuildingStep::LANES2LANES_DONE
+            && ((specialTarget >= 0 && dir != LinkDirection::TURN) || dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT || dir == LinkDirection::STRAIGHT)
+        {
+            let mut builtConnection = false;
+            for i in 0..incoming.get_num_lanes() {
+                if incoming.get_permissions(i) == svcSpecial && incoming.get_connections_from_lane(i, currentOutgoing, -1).len() == 0 {
+                    // find a dedicated bike lane as target
+                    if specialTarget >= 0 {
+                        nbnode_set_connection_default(incoming, i, currentOutgoing, specialTarget, NBEdge_Lane2LaneInfoType::COMPUTED);
+                        builtConnection = true;
+                    } else {
+                        // do not create turns that create a conflict with neighboring lanes
+                        if self.avoid_confict(incoming, currentOutgoing, svcSpecial, dir, i) {
+                            continue;
+                        }
+                        // use any lane that allows the special class
+                        for i2 in 0..currentOutgoing.get_num_lanes() {
+                            if (currentOutgoing.get_permissions(i2) & svcSpecial) != 0 {
+                                // possibly a double-connection
+                                let allowDouble = incoming.get_permissions(i) == svcSpecial && (dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT || dir == LinkDirection::STRAIGHT);
+                                nbnode_set_connection_same_dest(incoming, i, currentOutgoing, i2, NBEdge_Lane2LaneInfoType::COMPUTED, allowDouble);
+                                builtConnection = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if !builtConnection && specialTarget >= 0 && incoming.get_connections_from_lane(-1, currentOutgoing, specialTarget).len() == 0 {
+                // find origin lane that allows bicycles
+                let mut start = 0;
+                let mut end = incoming.get_num_lanes();
+                let mut inc = 1;
+                if dir == LinkDirection::TURN || dir == LinkDirection::LEFT || dir == LinkDirection::PARTLEFT {
+                    std::mem::swap(&mut start, &mut end);
+                    inc = -1;
+                }
+                let mut i = start;
+                // note: as in C++, after the swap the loop condition i < end is false for inc = -1
+                while i < end {
+                    if (incoming.get_permissions(i) & svcSpecial) != 0 {
+                        nbnode_set_connection_default(incoming, i, currentOutgoing, specialTarget, NBEdge_Lane2LaneInfoType::COMPUTED);
+                        break;
+                    }
+                    i += inc;
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNode::avoidConfict(NBEdge *, NBEdge *, SVCPermissions, LinkDirection, int)` [private]
@@ -8465,7 +8771,35 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn avoid_confict(&mut self, incoming: Ptr<NBEdge>, currentOutgoing: Ptr<NBEdge>, svcSpecial: SVCPermissions, dir: LinkDirection, i: i32) -> bool {
-        todo!("port NBNode::avoidConfict")
+        for c in incoming.get_connections().iter() {
+            if incoming.get_permissions(c.fromLane) == svcSpecial && c.toEdge == currentOutgoing {
+                return true;
+            }
+        }
+        if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+            for c in incoming.get_connections().iter() {
+                if c.fromLane < i && (c.toEdge != currentOutgoing || incoming.get_permissions(c.fromLane) == svcSpecial) {
+                    return true;
+                }
+            }
+        } else if dir == LinkDirection::RIGHT || dir == LinkDirection::PARTRIGHT {
+            // same condition as the branch above (kept as in C++, where this branch is unreachable)
+            for c in incoming.get_connections().iter() {
+                if c.fromLane > i && (c.toEdge != currentOutgoing || incoming.get_permissions(c.fromLane) == svcSpecial) {
+                    return true;
+                }
+            }
+        } else if svcSpecial != SVC_BICYCLE && dir == LinkDirection::STRAIGHT {
+            for c in incoming.get_connections().iter() {
+                let dir2 = self.get_direction(incoming, c.toEdge, false);
+                if c.fromLane < i && (dir2 == LinkDirection::LEFT || dir2 == LinkDirection::PARTLEFT) {
+                    return true;
+                } else if c.fromLane > i && (dir2 == LinkDirection::RIGHT || dir2 == LinkDirection::PARTRIGHT) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void NBNode::NBNode(const NBNode &)` [private]
@@ -8473,7 +8807,8 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &NBNode) -> Self {
-        todo!("port NBNode::NBNode")
+        // C++ declares this copy constructor private and never defines it: copying an NBNode is invalid
+        panic!("NBNode copy constructor is invalidated in C++ (declared private, never defined)")
     }
 
     /// C++: `NBNode & NBNode::operator=(const NBNode &)` [private]
@@ -8481,7 +8816,8 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NBNode) -> &mut NBNode {
-        todo!("port NBNode::operator=")
+        // C++ declares this assignment operator private and never defines it: assigning an NBNode is invalid
+        panic!("NBNode assignment operator is invalidated in C++ (declared private, never defined)")
     }
 
 }
