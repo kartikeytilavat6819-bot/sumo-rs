@@ -1889,6 +1889,7 @@ impl MSVehicle_Influencer {
 
 /// A structure representing the best lanes for continuing the current route starting at 'lane'
 /// C++ class `MSVehicle::LaneQ` (microsim/MSVehicle.h)
+#[derive(Clone)]
 pub struct MSVehicle_LaneQ {
     /// The described lane
     pub lane: Ptr<MSLane>,
@@ -6157,7 +6158,424 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_best_lanes(&mut self, forceRebuild: bool, startLane: Ptr<MSLane>) {
-        todo!("port MSVehicle::updateBestLanes")
+        // DEBUG_BESTLANES blocks are compile-time debug output and are not ported.
+        let mut startLane = startLane;
+        if startLane.is_null() {
+            startLane = self.myLane;
+        }
+        debug_assert!(!startLane.is_null());
+        if self.myLaneChangeModel.is_opposite() {
+            // depending on the calling context, startLane might be the forward lane
+            // or the reverse-direction lane. In the latter case we need to
+            // transform it to the forward lane.
+            if self.is_opposite_lane(startLane) {
+                // use leftmost lane of forward edge
+                startLane = *startLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
+                debug_assert!(!startLane.is_null());
+            }
+        }
+        if forceRebuild {
+            self.myLastBestLanesEdge = Ptr::default();
+            self.myLastBestLanesInternalLane = Ptr::default();
+        }
+        if self.myBestLanes.len() > 0 && !forceRebuild && self.myLastBestLanesEdge == Ptr::from_mut(startLane.get_edge()) {
+            self.update_occupancy_and_current_best_lane(startLane);
+            return;
+        }
+        if startLane.get_edge().is_internal() {
+            if self.myBestLanes.len() == 0 || forceRebuild {
+                // rebuilt from previous non-internal lane (may backtrack twice if behind an internal junction)
+                let pred = startLane.get_logical_predecessor_lane();
+                self.update_best_lanes(true, pred);
+            }
+            if self.myLastBestLanesInternalLane == startLane && !forceRebuild {
+                // nothing to do on internal
+                return;
+            }
+            // adapt best lanes to fit the current internal edge:
+            // keep the entries that are reachable from this edge
+            let nextEdge = startLane.get_next_normal();
+            debug_assert!(!nextEdge.is_internal());
+            let mut it: usize = 0;
+            while it < self.myBestLanes.len() {
+                debug_assert!(self.myBestLanes[it].len() > 0);
+                if Ptr::from_mut(self.myBestLanes[it][0].lane.get_edge()) == nextEdge {
+                    // keep those lanes which are successors of internal lanes from the edge of startLane
+                    let oldLanes = std::mem::take(&mut self.myBestLanes[it]);
+                    let mut lanes: Vec<MSVehicle_LaneQ> = Vec::new();
+                    for itSource in startLane.get_edge().get_lanes().iter() {
+                        for itLane in oldLanes.iter() {
+                            if itSource.get_link_cont()[0].get_lane() == itLane.lane {
+                                lanes.push(itLane.clone());
+                                break;
+                            }
+                        }
+                    }
+                    debug_assert!(lanes.len() == startLane.get_edge().get_lanes().len());
+                    // patch invalid bestLaneOffset and updated myCurrentLaneInBestLanes
+                    let n = lanes.len() as i32;
+                    for i in 0..lanes.len() {
+                        let ii = i as i32;
+                        if ii + lanes[i].bestLaneOffset < 0 {
+                            lanes[i].bestLaneOffset = -ii;
+                        }
+                        if ii + lanes[i].bestLaneOffset >= n {
+                            lanes[i].bestLaneOffset = n - ii - 1;
+                        }
+                        debug_assert!(ii + lanes[i].bestLaneOffset >= 0);
+                        debug_assert!(ii + lanes[i].bestLaneOffset < n);
+                        if lanes[i].bestContinuations.first().map_or(false, |c| !c.is_null()) {
+                            // patch length of bestContinuation to match expectations (only once)
+                            lanes[i].bestContinuations.insert(0, Ptr::default());
+                        }
+                        if startLane.get_link_cont()[0].get_lane() == lanes[i].lane {
+                            self.myCurrentLaneInBestLanes = i;
+                        }
+                        debug_assert!(Ptr::from_mut(lanes[i].lane.get_edge()) == nextEdge);
+                    }
+                    self.myBestLanes[it] = lanes;
+                    self.myLastBestLanesInternalLane = startLane;
+                    self.update_occupancy_and_current_best_lane(startLane);
+                    return;
+                } else {
+                    // remove passed edges
+                    self.myBestLanes.remove(it);
+                }
+            }
+            debug_assert!(false, "should always find the next edge");
+        }
+        // start rebuilding
+        self.myLastBestLanesInternalLane = Ptr::default();
+        self.myLastBestLanesEdge = Ptr::from_mut(startLane.get_edge());
+        self.myBestLanes.clear();
+
+        // get information about the next stop
+        let routeSize: i32 = self.myRoute.size();
+        let mut nextStopEdge: usize = routeSize as usize; // C++ myRoute->end()
+        let mut nextStopLane: Ptr<MSLane> = Ptr::default();
+        let mut nextStopPos: f64 = 0.0;
+        if let Some(nextStop) = self.myStops.front() {
+            // shortcut: MSStop.edge is an unmapped route iterator, so the stop's route index is recovered
+            // as the first route position at or after myCurrEdge whose edge is the stop lane's edge; upgrade when MSRouteIterator is ported
+            let stopEdgePtr = Ptr::from_mut(nextStop.lane.get_edge());
+            nextStopLane = nextStop.lane;
+            if nextStop.isOpposite {
+                // target leftmost lane in forward direction
+                nextStopLane = *nextStopLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
+            }
+            nextStopEdge = (self.myCurrEdge..routeSize as usize)
+                .find(|&i| self.myRoute.index_op(i as i32) == stopEdgePtr)
+                .unwrap_or(routeSize as usize);
+            nextStopPos = nextStop.pars.startPos;
+        }
+        // myArrivalTime = -1 in the context of validating departSpeed with departLane=best
+        if self.myParameter.arrivalLaneProcedure >= ArrivalLaneDefinition::GIVEN && nextStopEdge == routeSize as usize && self.myArrivalLane >= 0 {
+            nextStopEdge = (routeSize - 1) as usize;
+            nextStopLane = self.myRoute.index_op(routeSize - 1).get_lanes()[self.myArrivalLane as usize];
+            nextStopPos = self.myArrivalPos;
+        }
+        if nextStopEdge != routeSize as usize {
+            // make sure that the "wrong" lanes get a penalty. (penalty needs to be
+            // large enough to overcome a magic threshold in MSLaneChangeModel::DK2004.cpp:383)
+            nextStopPos = max2(POSITION_EPS, min2(nextStopPos, nextStopLane.get_length() - 2.0 * POSITION_EPS));
+            if nextStopLane.is_internal() {
+                // switch to the correct lane before entering the intersection
+                nextStopPos = self.myRoute.index_op(nextStopEdge as i32).get_length();
+            }
+        }
+
+        // go forward along the next lanes; always look past stops to ensure that we
+        // know where to go once the stop ends
+        // trains do not have to deal with lane-changing for stops but their best
+        // lanes lookahead is needed for rail signal control
+        let mut seen: i32 = 0;
+        let mut seenLength: f64 = 0.0;
+        let mut progress: bool = true;
+        let vclass = self.get_v_class();
+        // bestLanes must cover the braking distance even when at the very end of the current lane to avoid unecessary slow down
+        let maxBrakeDist = startLane.get_length() + self.get_car_follow_model().get_headway_time() * self.get_max_speed() + self.get_car_follow_model().brake_gap(self.get_max_speed()) + self.get_vehicle_type().get_min_gap();
+        let lookahead = self.get_lane_change_model().get_strategic_lookahead();
+        let mut ce: usize = self.myCurrEdge;
+        while progress {
+            let mut currentLanes: Vec<MSVehicle_LaneQ> = Vec::new();
+            let mut allowed: Ptr<Vec<Ptr<MSLane>>> = Ptr::default();
+            if ce != routeSize as usize && ce + 1 != routeSize as usize {
+                let nextEdge = self.myRoute.index_op((ce + 1) as i32);
+                allowed = self.myRoute.index_op(ce as i32).allowed_lanes(&nextEdge, vclass, false);
+            }
+            let cedge = self.myRoute.index_op(ce as i32);
+            for cl in cedge.get_lanes().iter() {
+                let cl: Ptr<MSLane> = *cl;
+                let mut q = MSVehicle_LaneQ {
+                    lane: cl,
+                    length: 0.0,
+                    currentLength: 0.0,
+                    occupation: 0.0,
+                    nextOccupation: 0.0,
+                    bestLaneOffset: 0,
+                    allowsContinuation: false,
+                    bestContinuations: vec![cl],
+                };
+                q.length = if cl.allows_vehicle_class(vclass) { cedge.get_length() } else { 0.0 };
+                q.currentLength = q.length;
+                // if all lanes are forbidden (i.e. due to a dynamic closing) we want to express no preference
+                q.allowsContinuation = allowed.is_null() || allowed.get().map_or(false, |a| a.contains(&cl));
+                currentLanes.push(q);
+            }
+            if nextStopEdge == ce
+                // already past the stop edge
+                && !(ce == self.myCurrEdge && !self.myLane.is_null() && self.myLane.is_internal())
+            {
+                let normalStopLane = nextStopLane.get_normal_predecessor_lane();
+                for q in currentLanes.iter_mut() {
+                    if !nextStopLane.is_null() && normalStopLane != q.lane {
+                        q.allowsContinuation = false;
+                        q.length = nextStopPos;
+                        q.currentLength = q.length;
+                    }
+                }
+            }
+
+            seenLength += currentLanes[0].lane.get_length();
+            self.myBestLanes.push(currentLanes);
+            seen += 1;
+            ce += 1;
+            if lookahead >= 0.0 {
+                progress &= seen <= 2 || seenLength < lookahead; // custom (but we need to look at least one edge ahead)
+            } else {
+                progress &= seen <= 4 || seenLength < max2(maxBrakeDist, 3000.0); // motorway
+                progress &= seen <= 8 || seenLength < max2(maxBrakeDist, 200.0) || utils::common::sumo_vehicle_class::is_railway(vclass); // urban
+            }
+            progress &= ce != routeSize as usize;
+        }
+
+        // we are examining the last lane explicitly
+        if self.myBestLanes.len() != 0 {
+            let lastIdx = self.myBestLanes.len() - 1;
+            let mut bestLength: f64 = -1.0;
+            // minimum and maximum lane index with best length
+            let mut bestThisIndex: i32 = 0;
+            let mut bestThisMaxIndex: i32 = 0;
+            let mut index: i32 = 0;
+            for j in self.myBestLanes[lastIdx].iter() {
+                if j.length > bestLength {
+                    bestLength = j.length;
+                    bestThisIndex = index;
+                    bestThisMaxIndex = index;
+                } else if j.length == bestLength {
+                    bestThisMaxIndex = index;
+                }
+                index += 1;
+            }
+            index = 0;
+            let mut requiredChangeRightForbidden = false;
+            let mut requireChangeToLeftForbidden: i32 = -1;
+            for j in self.myBestLanes[lastIdx].iter_mut() {
+                if j.length < bestLength {
+                    if (bestThisIndex - index).abs() < (bestThisMaxIndex - index).abs() {
+                        j.bestLaneOffset = bestThisIndex - index;
+                    } else {
+                        j.bestLaneOffset = bestThisMaxIndex - index;
+                    }
+                    if !j.allowsContinuation {
+                        if j.bestLaneOffset < 0
+                            && (!j.lane.allows_changing_right(vclass) || !j.lane.get_parallel_lane(-1, false).allows_vehicle_class(vclass) || requiredChangeRightForbidden)
+                        {
+                            // this lane and all further lanes to the left cannot be used
+                            requiredChangeRightForbidden = true;
+                            j.length = 0.0;
+                        } else if j.bestLaneOffset > 0 && (!j.lane.allows_changing_left(vclass) || !j.lane.get_parallel_lane(1, false).allows_vehicle_class(vclass)) {
+                            // this lane and all previous lanes to the right cannot be used
+                            requireChangeToLeftForbidden = j.lane.get_index();
+                        }
+                    }
+                }
+                index += 1;
+            }
+            let mut i: i32 = requireChangeToLeftForbidden;
+            while i >= 0 {
+                if self.myBestLanes[lastIdx][i as usize].bestLaneOffset > 0 {
+                    self.myBestLanes[lastIdx][i as usize].length = 0.0;
+                }
+                i -= 1;
+            }
+        }
+        // go backward through the lanes
+        // track back best lane and compute the best prior lane(s)
+        let hasElecHybrid = !self.get_device(&()).is_null();
+        // Rng and contRight are read up front (side-effect free) so betterContinuation can run while myBestLanes is borrowed
+        let rng = self.get_rng();
+        let contRight = self.get_vehicle_type().get_parameter().get_lc_param(SUMO_ATTR_LCA_CONTRIGHT, 1.0);
+        let nBest = self.myBestLanes.len();
+        for ci in (0..nBest.saturating_sub(1)).rev() {
+            let (head, tail) = self.myBestLanes.split_at_mut(ci + 1);
+            let clanes: &mut Vec<MSVehicle_LaneQ> = &mut head[ci];
+            let nextLanes: &Vec<MSVehicle_LaneQ> = &tail[0];
+            let cE = Ptr::from_mut(clanes[0].lane.get_edge());
+            let mut bestConnectedLength: f64 = -1.0;
+            let mut bestLength: f64 = -1.0;
+            for j in nextLanes.iter() {
+                if j.lane.m().is_approached_from(cE) && bestConnectedLength < j.length {
+                    bestConnectedLength = j.length;
+                }
+                if bestLength < j.length {
+                    bestLength = j.length;
+                }
+            }
+            // compute index of the best lane (highest length and least offset from the best next lane)
+            let mut bestThisIndex: i32 = 0;
+            let mut bestThisMaxIndex: i32 = 0;
+            if bestConnectedLength > 0.0 {
+                for jx in 0..clanes.len() {
+                    let index = jx as i32;
+                    let mut bestConnectedNext: Ptr<MSVehicle_LaneQ> = Ptr::default();
+                    if clanes[jx].allowsContinuation {
+                        for m in nextLanes.iter() {
+                            if (m.lane.allows_vehicle_class(vclass) || m.lane.had_permission_changes()) && m.lane.m().is_approached_from_2(clanes[jx].lane, vclass) {
+                                if Self::better_continuation_with(bestConnectedNext, m, contRight, rng) {
+                                    bestConnectedNext = Ptr::new(m);
+                                }
+                            }
+                        }
+                        if let Some(bcn) = bestConnectedNext.get() {
+                            if bcn.length == bestConnectedLength && bcn.bestLaneOffset.abs() < 2 {
+                                clanes[jx].length += bestLength;
+                            } else {
+                                clanes[jx].length += bcn.length;
+                            }
+                            clanes[jx].bestLaneOffset = bcn.bestLaneOffset;
+                        }
+                    }
+                    match bestConnectedNext.get() {
+                        Some(bcn) if bcn.allowsContinuation || bcn.length > 0.0 => {
+                            clanes[jx].bestContinuations.extend(bcn.bestContinuations.iter().copied());
+                        }
+                        _ => {
+                            clanes[jx].allowsContinuation = false;
+                        }
+                    }
+                    let bti = bestThisIndex as usize;
+                    if clanes[bti].length < clanes[jx].length
+                        || (clanes[bti].length == clanes[jx].length && clanes[bti].bestLaneOffset.abs() > clanes[jx].bestLaneOffset.abs())
+                        || (clanes[bti].length == clanes[jx].length
+                            && clanes[bti].bestLaneOffset.abs() == clanes[jx].bestLaneOffset.abs()
+                            && Self::next_link_priority(&clanes[bti].bestContinuations) < Self::next_link_priority(&clanes[jx].bestContinuations))
+                    {
+                        bestThisIndex = index;
+                        bestThisMaxIndex = index;
+                    } else if clanes[bti].length == clanes[jx].length
+                        && clanes[bti].bestLaneOffset.abs() == clanes[jx].bestLaneOffset.abs()
+                        && Self::next_link_priority(&clanes[bti].bestContinuations) == Self::next_link_priority(&clanes[jx].bestContinuations)
+                    {
+                        bestThisMaxIndex = index;
+                    }
+                }
+
+                //vehicle with elecHybrid device prefers running under an overhead wire
+                if hasElecHybrid {
+                    let mut index: i32 = 0;
+                    for jx in 0..clanes.len() {
+                        let overheadWireSegmentID = MSNet::get_instance().get_stopping_place_id(clanes[jx].lane, clanes[jx].currentLength / 2.0, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+                        if overheadWireSegmentID != "" {
+                            bestThisIndex = index;
+                            bestThisMaxIndex = index;
+                        }
+                        index += 1;
+                    }
+                }
+            } else {
+                // only needed in case of disconnected routes
+                let mut bestNextIndex: usize = 0;
+                let mut bestDistToNeeded: i32 = clanes.len() as i32;
+                for jx in 0..clanes.len() {
+                    if clanes[jx].allowsContinuation {
+                        for (nextIndex, m) in nextLanes.iter().enumerate() {
+                            if m.lane.m().is_approached_from_2(clanes[jx].lane, vclass) {
+                                if bestDistToNeeded > m.bestLaneOffset.abs() {
+                                    bestDistToNeeded = m.bestLaneOffset.abs();
+                                    bestThisIndex = jx as i32;
+                                    bestThisMaxIndex = jx as i32;
+                                    bestNextIndex = nextIndex;
+                                }
+                            }
+                        }
+                    }
+                }
+                let bti = bestThisIndex as usize;
+                clanes[bti].length += nextLanes[bestNextIndex].length;
+                clanes[bti].bestContinuations.extend(nextLanes[bestNextIndex].bestContinuations.iter().copied());
+            }
+            // set bestLaneOffset for all lanes
+            let mut requiredChangeRightForbidden = false;
+            let mut requireChangeToLeftForbidden: i32 = -1;
+            for jx in 0..clanes.len() {
+                let index = jx as i32;
+                let bti = bestThisIndex as usize;
+                if clanes[jx].length < clanes[bti].length
+                    || (clanes[jx].length == clanes[bti].length && clanes[jx].bestLaneOffset.abs() > clanes[bti].bestLaneOffset.abs())
+                    || Self::next_link_priority(&clanes[jx].bestContinuations) < Self::next_link_priority(&clanes[bti].bestContinuations)
+                {
+                    if (bestThisIndex - index).abs() < (bestThisMaxIndex - index).abs() {
+                        clanes[jx].bestLaneOffset = bestThisIndex - index;
+                    } else {
+                        clanes[jx].bestLaneOffset = bestThisMaxIndex - index;
+                    }
+                    if Self::next_link_priority(&clanes[jx].bestContinuations) < Self::next_link_priority(&clanes[bti].bestContinuations) {
+                        // try to move away from the lower-priority lane before it ends
+                        clanes[jx].length = clanes[jx].currentLength;
+                    }
+                    if !clanes[jx].allowsContinuation {
+                        if clanes[jx].bestLaneOffset < 0
+                            && (!clanes[jx].lane.allows_changing_right(vclass) || !clanes[jx].lane.get_parallel_lane(-1, false).allows_vehicle_class(vclass) || requiredChangeRightForbidden)
+                        {
+                            // this lane and all further lanes to the left cannot be used
+                            requiredChangeRightForbidden = true;
+                            if clanes[jx].length == clanes[jx].currentLength {
+                                clanes[jx].length = 0.0;
+                            }
+                        } else if clanes[jx].bestLaneOffset > 0
+                            && (!clanes[jx].lane.allows_changing_left(vclass) || !clanes[jx].lane.get_parallel_lane(1, false).allows_vehicle_class(vclass))
+                        {
+                            // this lane and all previous lanes to the right cannot be used
+                            requireChangeToLeftForbidden = clanes[jx].lane.get_index();
+                        }
+                    }
+                } else {
+                    clanes[jx].bestLaneOffset = 0;
+                }
+            }
+            let mut idx: i32 = requireChangeToLeftForbidden;
+            while idx >= 0 {
+                let u = idx as usize;
+                if clanes[u].length == clanes[u].currentLength {
+                    clanes[u].length = 0.0;
+                }
+                idx -= 1;
+            }
+
+            //vehicle with elecHybrid device prefers running under an overhead wire
+            if hasElecHybrid {
+                let bti = bestThisIndex as usize;
+                let overheadWireID = MSNet::get_instance().get_stopping_place_id(clanes[bti].lane, clanes[bti].currentLength / 2.0, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+                if overheadWireID != "" {
+                    let mut index: i32 = 0;
+                    for j in clanes.iter_mut() {
+                        j.bestLaneOffset = bestThisIndex - index;
+                        index += 1;
+                    }
+                }
+            }
+        }
+        if self.myBestLanes[0][0].lane.is_internal() {
+            // route starts on an internal lane
+            if !self.myLane.is_null() {
+                startLane = self.myLane;
+            } else {
+                // vehicle not yet departed
+                startLane = self.myBestLanes[0][0].lane;
+            }
+        }
+        self.update_occupancy_and_current_best_lane(startLane);
     }
 
     /// C++: `void MSVehicle::updateLaneBruttoSum()`
@@ -6170,7 +6588,9 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_lane_brutto_sum(&mut self) {
-        todo!("port MSVehicle::updateLaneBruttoSum")
+        if !self.myLane.is_null() {
+            self.myLane.m().mark_recalculate_brutto_sum();
+        }
     }
 
     /// C++: `const std::vector<MSLane *> & MSVehicle::getBestLanesContinuation() const` [const]
@@ -7921,7 +8341,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn next_link_priority(conts: &Vec<Ptr<MSLane>>) -> i32 {
-        todo!("port MSVehicle::nextLinkPriority")
+        if conts.len() < 2 {
+            -1
+        } else {
+            let link = conts[0].get_link_to(conts[1]);
+            if !link.is_null() {
+                if link.have_priority() { 1 } else { 0 }
+            } else {
+                // disconnected route
+                -1
+            }
+        }
     }
 
     /// C++: `bool MSVehicle::isLeader(const MSLink *, const MSVehicle *, const double) const` [const]
@@ -9345,7 +9775,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_occupancy_and_current_best_lane(&mut self, startLane: Ptr<MSLane>) {
-        todo!("port MSVehicle::updateOccupancyAndCurrentBestLane")
+        let currLanes = &mut self.myBestLanes[0];
+        for i in 0..currLanes.len() {
+            let mut nextOccupation: f64 = 0.0;
+            for j in currLanes[i].bestContinuations.iter().skip(1) {
+                nextOccupation += j.get_brutto_veh_len_sum();
+            }
+            currLanes[i].nextOccupation = nextOccupation;
+            if currLanes[i].lane == startLane {
+                self.myCurrentLaneInBestLanes = i;
+            }
+        }
     }
 
     /// C++: `Position MSVehicle::validatePosition(Position, double) const` [const, protected]
@@ -11843,7 +12283,12 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_opposite_lane(&self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSVehicle::isOppositeLane")
+        if lane.is_internal() {
+            let edge = Ptr::from_mut(lane.get_link_cont()[0].get_lane().get_edge());
+            edge != self.myRoute.index_op((self.myCurrEdge + 1) as i32)
+        } else {
+            Ptr::from_mut(lane.get_edge()) != self.myRoute.index_op(self.myCurrEdge as i32)
+        }
     }
 
     /// C++: `void MSVehicle::cleanupFurtherLanes()` [protected]
@@ -11901,7 +12346,35 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn better_continuation(&self, bestConnectedNext: Ptr<MSVehicle_LaneQ>, m: &MSVehicle_LaneQ) -> bool {
-        todo!("port MSVehicle::betterContinuation")
+        let contRight = self.get_vehicle_type().get_parameter().get_lc_param(SUMO_ATTR_LCA_CONTRIGHT, 1.0);
+        Self::better_continuation_with(bestConnectedNext, m, contRight, self.get_rng())
+    }
+
+    /// Body of MSVehicle::betterContinuation with the vehicle-derived inputs passed in, so that
+    /// updateBestLanes can call it while myBestLanes is mutably borrowed.
+    pub fn better_continuation_with(bestConnectedNext: Ptr<MSVehicle_LaneQ>, m: &MSVehicle_LaneQ, contRight: f64, rng: Ptr<SumoRNG>) -> bool {
+        if bestConnectedNext.is_null() {
+            return true;
+        } else if !m.lane.get_bidi_lane().is_null() && bestConnectedNext.lane.get_bidi_lane().is_null() {
+            return false;
+        } else if !bestConnectedNext.lane.get_bidi_lane().is_null() && m.lane.get_bidi_lane().is_null() {
+            return true;
+        } else if bestConnectedNext.length < m.length {
+            return true;
+        } else if bestConnectedNext.length == m.length {
+            if bestConnectedNext.bestLaneOffset.abs() > m.bestLaneOffset.abs() {
+                return true;
+            }
+            if contRight < 1.0
+                // if we don't check for adjacency, the rightmost line will get
+                // multiple chances to be better which leads to an uninituitve distribution
+                && (m.lane.get_index() - bestConnectedNext.lane.get_index()) == 1
+                && rng.m().rand() > contRight
+            {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSVehicle::resetApproachOnReroute()` [virtual, protected]
