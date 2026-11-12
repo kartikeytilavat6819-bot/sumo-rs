@@ -1,6 +1,49 @@
 //! Port of netbuild/NBNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::f64_to_string;
+use utils::geom::POSITION_EPS;
+use utils::geom::geom_helper::{angle_diff, deg2rad, rad2deg};
+use utils::common::sumo_vehicle_class::SVC_PEDESTRIAN;
+
+// C++ static constants of NBNode (NBNode.cpp:86-94)
+const NBNODE_FORWARD: i32 = 1;
+const NBNODE_BACKWARD: i32 = -1;
+const NBNODE_AVOID_WIDE_LEFT_TURN: i32 = 1;
+const NBNODE_AVOID_WIDE_RIGHT_TURN: i32 = 2;
+const NBNODE_FOUR_CONTROL_POINTS: i32 = 4;
+const NBNODE_AVOID_INTERSECTING_LEFT_TURNS: i32 = 8;
+const NBNODE_SCURVE_IGNORE: i32 = 16;
+const NBNODE_INDIRECT_LEFT: i32 = 32;
+// C++ NBNode.cpp:60-63 (degrees / meters)
+const NBNODE_EXTEND_CROSSING_ANGLE_THRESHOLD: f64 = 35.0;
+const NBNODE_SPLIT_CROSSING_WIDTH_THRESHOLD: f64 = 1.5;
+const NBNODE_SPLIT_CROSSING_ANGLE_THRESHOLD: f64 = 5.0;
+// C++ NBEdge::UNSPECIFIED_WIDTH
+const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
+// C++ utils/common/StdDefs.h SUMO_const_laneWidth
+const NBNODE_SUMO_CONST_LANE_WIDTH: f64 = 3.2;
+
+// C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
+// nb_edge.rs / nb_node.rs expose them as statics).
+// shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
+const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.;
+const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.;
+const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
+const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
+const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
+const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
+const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+
+/// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
+fn nbnode_validate_new(id: &str, position: &Position) {
+    if !utils::xml::sumo_xml_definitions::is_valid_net_id(id) {
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
+    }
+    if position.is_nan() {
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
+    }
+}
 
 /// Computes lane-2-lane connections
 /// C++ class `NBNode::ApproachingDivider` (netbuild/NBNode.h)
@@ -89,7 +132,7 @@ impl NBNode_ApproachingDivider {
     // NBNode::ApproachingDivider::~ApproachingDivider() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ApproachingDivider::~ApproachingDivider")
+        // C++ destructor is empty; the Vec members are dropped automatically
     }
 
     /// C++: `int ApproachingDivider::numAvailableLanes() const` [const]
@@ -99,7 +142,7 @@ impl NBNode_ApproachingDivider {
     //         }
     #[allow(unused_variables)]
     pub fn num_available_lanes(&self) -> i32 {
-        todo!("port ApproachingDivider::numAvailableLanes")
+        self.myAvailableLanes.len() as i32
     }
 
     /// C++: `void ApproachingDivider::execute(const int, const int)` [virtual]
@@ -164,7 +207,75 @@ impl NBNode_ApproachingDivider {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, src: i32, dest: i32) {
-        todo!("port ApproachingDivider::execute")
+        assert!((self.myApproaching.len() as i32) > src);
+        // get the origin edge
+        let incomingEdge: Ptr<NBEdge> = self.myApproaching[src as usize];
+        if incomingEdge.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_DONE || incomingEdge.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_USER {
+            return;
+        }
+        if self.myAvailableLanes.is_empty() {
+            return;
+        }
+        let withBikes = self.myIsBikeEdge || incomingEdge.get_permissions(-1) == SVC_BICYCLE;
+        let mut approachingLanes = incomingEdge.get_connection_lanes(self.myCurrentOutgoing, withBikes, true);
+        if approachingLanes.len() > self.myAvailableLanes.len()
+            || (incomingEdge.get_special_lane(SVC_BUS) >= 0 && self.myCurrentOutgoing.get_special_lane(SVC_BUS) >= 0)
+        {
+            let withBusLanes = self.myIsBusEdge || ((incomingEdge.get_permissions(-1) & SVC_BUS) != 0 && (incomingEdge.get_permissions(-1) & !(SVC_BUS | SVC_VULNERABLE)) == 0);
+            approachingLanes = incomingEdge.get_connection_lanes(self.myCurrentOutgoing, withBikes, withBusLanes);
+        }
+        if approachingLanes.is_empty() {
+            return;
+        }
+        let mut numConnections = approachingLanes.len() as i32;
+        let mut factor: f64 = 1.;
+        let rightOnRed = incomingEdge.get_to_node().get_type() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED;
+        if self.myNumStraight == 1
+            && self.myDirections[src as usize] == LinkDirection::STRAIGHT
+            && ((incomingEdge.get_to_node().is_tl_controlled() && !rightOnRed)
+                || src == 0
+                || (incomingEdge.get_junction_priority(incomingEdge.get_to_node()) == NBEdge_JunctionPriority::MINOR_ROAD as i32 && !rightOnRed))
+        {
+            numConnections = self.myAvailableLanes.len() as i32;
+            factor = approachingLanes.len() as f64 / numConnections as f64;
+            if factor > 0.5 {
+                factor = 1.;
+            }
+        }
+        let approachedLanes = self.spread(numConnections, dest);
+        assert!(approachedLanes.len() <= self.myAvailableLanes.len());
+        // set lanes
+        let maxFrom = approachingLanes.len() as i32 - 1;
+        for i in 0..approachedLanes.len() as i32 {
+            // distribute i evenly on approaching lanes in case we are building more
+            // connections than there are lanes
+            let fromLane = approachingLanes[std::cmp::min((i as f64 * factor) as i32, maxFrom) as usize];
+            let approached = self.myAvailableLanes[approachedLanes[i as usize] as usize];
+            incomingEdge.m().set_connection(
+                fromLane,
+                self.myCurrentOutgoing,
+                approached,
+                NBEdge_Lane2LaneInfoType::COMPUTED,
+                false,
+                false,
+                KeepClear::KEEPCLEAR_UNSPECIFIED,
+                NBEDGE_UNSPECIFIED_CONTPOS,
+                NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
+                NBEDGE_UNSPECIFIED_SPEED,
+                NBEDGE_UNSPECIFIED_FRICTION,
+                NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+                &PositionVector::default(),
+                NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
+                SVC_UNSPECIFIED,
+                false,
+                "",
+                SVC_UNSPECIFIED,
+                SVC_UNSPECIFIED,
+                false,
+            );
+        }
+        // C++ `delete approachedLanes`
+        unsafe { drop(Box::from_raw(approachedLanes.as_raw())) };
     }
 
     /// C++: `std::deque<int> * ApproachingDivider::spread(int, int) const` [const]
@@ -238,7 +349,70 @@ impl NBNode_ApproachingDivider {
     // }
     #[allow(unused_variables)]
     pub fn spread(&self, numLanes: i32, dest: i32) -> Ptr<VecDeque<i32>> {
-        todo!("port ApproachingDivider::spread")
+        let mut ret: VecDeque<i32> = VecDeque::new();
+        // when only one lane is approached, we check, whether the double-value
+        //  is assigned more to the left or right lane
+        if numLanes == 1 {
+            ret.push_back(dest);
+            return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+        }
+
+        let numOutgoingLanes = self.myAvailableLanes.len() as i32;
+        //
+        ret.push_back(dest);
+        let mut noSet = 1;
+        let mut roffset = 1;
+        let mut loffset = 1;
+        while noSet < numLanes {
+            // It may be possible, that there are not enough lanes the source
+            //  lanes may be divided on
+            //  In this case, they remain unset
+            //  !!! this is only a hack. It is possible, that this yields in
+            //   uncommon divisions
+            if numOutgoingLanes == noSet {
+                return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+            }
+
+            // as due to the conversion of double->uint the numbers will be lower
+            //  than they should be, we try to append to the left side first
+            //
+            // check whether the left boundary of the approached street has
+            //  been overridden; if so, move all lanes to the right
+            if dest + loffset >= numOutgoingLanes {
+                loffset -= 1;
+                roffset += 1;
+                for x in ret.iter_mut() {
+                    *x = *x - 1;
+                }
+            }
+            // append the next lane to the left of all edges
+            //  increase the position (destination edge)
+            ret.push_back(dest + loffset);
+            noSet += 1;
+            loffset += 1;
+
+            // as above
+            if numOutgoingLanes == noSet {
+                return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+            }
+
+            // now we try to append the next lane to the right side, when needed
+            if noSet < numLanes {
+                // check whether the right boundary of the approached street has
+                //  been overridden; if so, move all lanes to the right
+                if dest < roffset {
+                    loffset += 1;
+                    roffset -= 1;
+                    for x in ret.iter_mut() {
+                        *x = *x + 1;
+                    }
+                }
+                ret.push_front(dest - roffset);
+                noSet += 1;
+                roffset += 1;
+            }
+        }
+        Ptr::from_raw(Box::into_raw(Box::new(ret)))
     }
 
     /// C++: `ApproachingDivider & ApproachingDivider::operator=(const ApproachingDivider &)` [private]
@@ -246,7 +420,8 @@ impl NBNode_ApproachingDivider {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NBNode_ApproachingDivider) -> &mut NBNode_ApproachingDivider {
-        todo!("port ApproachingDivider::operator=")
+        // C++ declares this operator private and never defines it, so any use is a bug
+        panic!("ApproachingDivider::operator= is private and undefined in C++")
     }
 
 }
@@ -321,7 +496,26 @@ impl NBNode_Crossing {
     // }
     #[allow(unused_variables)]
     pub fn new(_node: Ptr<NBNode>, _edges: &EdgeVector, _width: f64, _priority: bool, _customTLIndex: i32, _customTLIndex2: i32, _customShape: &PositionVector) -> Self {
-        todo!("port Crossing::Crossing")
+        NBNode_Crossing {
+            base: Parameterised::new(),
+            node: _node,
+            edges: _edges.clone(),
+            shape: PositionVector::default(),
+            outlineShape: PositionVector::default(),
+            customWidth: _width,
+            width: _width,
+            id: String::new(),
+            prevWalkingArea: String::new(),
+            nextWalkingArea: String::new(),
+            priority: _priority,
+            customShape: _customShape.clone(),
+            tlLinkIndex: _customTLIndex,
+            tlLinkIndex2: _customTLIndex2,
+            customTLIndex: _customTLIndex,
+            customTLIndex2: _customTLIndex2,
+            tlID: String::new(),
+            valid: true,
+        }
     }
 
 }
@@ -439,7 +633,39 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, position: &Position, type_: SumoXMLNodeType) -> Self {
-        todo!("port NBNode::NBNode")
+        let node = NBNode {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            base2: Parameterised::new(),
+            myPosition: *position,
+            myIncomingEdges: Vec::new(),
+            myOutgoingEdges: Vec::new(),
+            myAllEdges: Vec::new(),
+            myCrossings: Vec::new(),
+            myWalkingAreas: Vec::new(),
+            myWalkingAreaCustomShapes: Vec::new(),
+            myType: type_,
+            myBlockedConnections: BTreeMap::new(),
+            myDistrict: Ptr::null(),
+            myPoly: PositionVector::default(),
+            myHaveCustomPoly: false,
+            myRequest: Ptr::null(),
+            myTrafficLights: BTreeSet::new(),
+            myRadius: NBNODE_UNSPECIFIED_RADIUS,
+            myKeepClear: utils::options::options_cont::get_bool("default.junctions.keep-clear"),
+            myRightOfWay: *utils::xml::sumo_xml_definitions::RightOfWayValues
+                .get(&utils::options::options_cont::get_string("default.right-of-way"))
+                .unwrap(),
+            myFringeType: FringeType::DEFAULT,
+            myRoundaboutType: RoundaboutType::DEFAULT,
+            myName: String::new(),
+            myDiscardAllCrossings: false,
+            myCrossingsLoadedFromSumoNet: 0,
+            myDisplacementError: 0.,
+            myIsBentPriority: false,
+            myTypeWasGuessed: false,
+        };
+        nbnode_validate_new(node.get_id(), &node.myPosition);
+        node
     }
 
     /// C++: `void NBNode::NBNode(const std::string &, const Position &, NBDistrict *)`
@@ -470,7 +696,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, position: &Position, district: Ptr<NBDistrict>) -> Self {
-        todo!("port NBNode::NBNode")
+        // same member initialisation as the (id, position, type) constructor, with the district set
+        let mut node = Self::new(id, position, if district.is_null() { SumoXMLNodeType::UNKNOWN } else { SumoXMLNodeType::DISTRICT });
+        node.myDistrict = district;
+        node
     }
 
     /// C++: `void NBNode::~NBNode() noexcept` [virtual]
@@ -480,7 +709,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBNode::~NBNode")
+        // C++ `delete myRequest` (a no-op for nullptr)
+        if !self.myRequest.is_null() {
+            unsafe { drop(Box::from_raw(self.myRequest.as_raw())) };
+        }
     }
 
     /// C++: `void NBNode::reinit(const Position &, SumoXMLNodeType, bool)`
@@ -512,7 +744,27 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn reinit(&mut self, position: &Position, type_: SumoXMLNodeType, updateEdgeGeometries: bool) {
-        todo!("port NBNode::reinit")
+        self.myPosition = *position;
+        if self.myPosition.is_nan() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id())));
+        }
+        // patch type
+        self.myType = type_;
+        if !Self::is_traffic_light(self.myType) {
+            self.remove_traffic_lights(false);
+        }
+        if updateEdgeGeometries {
+            for edge in self.myIncomingEdges.clone() {
+                let mut geom = edge.get_geometry().clone();
+                *geom.at_mut(-1) = self.myPosition;
+                edge.m().set_geometry(&geom, false);
+            }
+            for edge in self.myOutgoingEdges.clone() {
+                let mut geom = edge.get_geometry().clone();
+                *geom.at_mut(0) = self.myPosition;
+                edge.m().set_geometry(&geom, false);
+            }
+        }
     }
 
     /// C++: `const Position & NBNode::getPosition() const` [const]
@@ -522,7 +774,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port NBNode::getPosition")
+        &self.myPosition
     }
 
     /// C++: `Position NBNode::getCenter() const` [const]
@@ -544,7 +796,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_center(&self) -> Position {
-        todo!("port NBNode::getCenter")
+        let mut tmp = self.myPoly.clone();
+        tmp.close_polygon();
+        if tmp.len() < 3 || tmp.around(&self.myPosition, 0.) || tmp.distance2d(&self.myPosition, false) < utils::geom::POSITION_EPS {
+            return self.myPosition;
+        }
+        self.myPoly.get_polygon_center()
     }
 
     /// C++: `const EdgeVector & NBNode::getIncomingEdges() const` [const]
@@ -554,7 +811,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getIncomingEdges")
+        &self.myIncomingEdges
     }
 
     /// C++: `const EdgeVector & NBNode::getOutgoingEdges() const` [const]
@@ -564,7 +821,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getOutgoingEdges")
+        &self.myOutgoingEdges
     }
 
     /// C++: `const EdgeVector & NBNode::getEdges() const` [const]
@@ -574,7 +831,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getEdges")
+        &self.myAllEdges
     }
 
     /// C++: `SumoXMLNodeType NBNode::getType() const` [const]
@@ -584,7 +841,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> SumoXMLNodeType {
-        todo!("port NBNode::getType")
+        self.myType
     }
 
     /// C++: `double NBNode::getRadius() const` [const]
@@ -594,7 +851,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_radius(&self) -> f64 {
-        todo!("port NBNode::getRadius")
+        self.myRadius
     }
 
     /// C++: `bool NBNode::getKeepClear() const` [const]
@@ -604,7 +861,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_keep_clear(&self) -> bool {
-        todo!("port NBNode::getKeepClear")
+        self.myKeepClear
     }
 
     /// C++: `RightOfWay NBNode::getRightOfWay() const` [const]
@@ -614,7 +871,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_right_of_way(&self) -> RightOfWay {
-        todo!("port NBNode::getRightOfWay")
+        self.myRightOfWay
     }
 
     /// C++: `FringeType NBNode::getFringeType() const` [const]
@@ -624,7 +881,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_fringe_type(&self) -> FringeType {
-        todo!("port NBNode::getFringeType")
+        self.myFringeType
     }
 
     /// C++: `RoundaboutType NBNode::getRoundaboutType() const` [const]
@@ -634,7 +891,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_roundabout_type(&self) -> RoundaboutType {
-        todo!("port NBNode::getRoundaboutType")
+        self.myRoundaboutType
     }
 
     /// C++: `const std::string & NBNode::getName() const` [const]
@@ -644,7 +901,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> &str {
-        todo!("port NBNode::getName")
+        &self.myName
     }
 
     /// C++: `void NBNode::addTrafficLight(NBTrafficLightDefinition *)`
@@ -659,7 +916,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_traffic_light(&mut self, tlDef: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBNode::addTrafficLight")
+        self.myTrafficLights.insert(tlDef);
+        // rail signals receive a temporary traffic light in order to set connection tl-linkIndex
+        if !Self::is_traffic_light(self.myType) && self.myType != SumoXMLNodeType::RAIL_SIGNAL && self.myType != SumoXMLNodeType::RAIL_CROSSING {
+            self.myType = SumoXMLNodeType::TRAFFIC_LIGHT;
+        }
     }
 
     /// C++: `void NBNode::removeTrafficLight(NBTrafficLightDefinition *)`
@@ -671,7 +932,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_traffic_light(&mut self, tlDef: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBNode::removeTrafficLight")
+        tlDef.m().remove_node(Ptr::from_mut(self));
+        self.myTrafficLights.remove(&tlDef);
     }
 
     /// C++: `void NBNode::removeTrafficLights(bool)`
@@ -689,7 +951,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_traffic_lights(&mut self, setAsPriority: bool) {
-        todo!("port NBNode::removeTrafficLights")
+        let trafficLights = self.myTrafficLights.clone(); // make a copy because we will modify the original
+        for tl in trafficLights {
+            self.remove_traffic_light(tl);
+        }
+        if setAsPriority {
+            self.myType = if !self.myRequest.is_null() {
+                SumoXMLNodeType::PRIORITY
+            } else if self.myType == SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION {
+                SumoXMLNodeType::NOJUNCTION
+            } else {
+                SumoXMLNodeType::DEAD_END
+            };
+        }
     }
 
     /// C++: `bool NBNode::isTLControlled() const` [const]
@@ -699,7 +973,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn is_tl_controlled(&self) -> bool {
-        todo!("port NBNode::isTLControlled")
+        self.myTrafficLights.len() != 0
     }
 
     /// C++: `bool NBNode::hadSignal() const` [const]
@@ -715,7 +989,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn had_signal(&self) -> bool {
-        todo!("port NBNode::hadSignal")
+        for e in self.get_incoming_edges() {
+            if e.get_signal_position() != &Position::INVALID {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `const std::set<NBTrafficLightDefinition *> & NBNode::getControllingTLS() const` [const]
@@ -725,7 +1004,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_controlling_tls(&self) -> &BTreeSet<Ptr<NBTrafficLightDefinition>> {
-        todo!("port NBNode::getControllingTLS")
+        &self.myTrafficLights
     }
 
     /// C++: `void NBNode::invalidateTLS(NBTrafficLightLogicCont &, bool, bool)`
@@ -753,7 +1032,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_tls(&mut self, tlCont: &mut NBTrafficLightLogicCont, addedConnections: bool, removedConnections: bool) {
-        todo!("port NBNode::invalidateTLS")
+        // shortcut: the dynamic_cast checks (NBLoadedSUMOTLDef / NBOwnTLDef) need RTTI, and NBTrafficLightDefinition has no type tag yet; the TL-controlled node is left unchanged, upgrade when a type tag or downcast exists
+        let _ = (tlCont, addedConnections, removedConnections);
     }
 
     /// C++: `void NBNode::shiftTLConnectionLaneIndex(NBEdge *, int, int)`
@@ -766,7 +1046,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn shift_tl_connection_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
-        todo!("port NBNode::shiftTLConnectionLaneIndex")
+        for tl in self.myTrafficLights.clone() {
+            tl.m().shift_tl_connection_lane_index(edge, offset, threshold);
+        }
     }
 
     /// C++: `int NBNode::removeSelfLoops(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &)`
@@ -803,7 +1085,33 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_self_loops(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, tc: &mut NBTrafficLightLogicCont) -> i32 {
-        todo!("port NBNode::removeSelfLoops")
+        let mut ret = 0;
+        let mut pos: usize = 0;
+        let mut j: usize = 0;
+        while j < self.myIncomingEdges.len() {
+            // skip edges which are only incoming and not outgoing
+            let dummy = self.myIncomingEdges[j];
+            if !self.myOutgoingEdges.contains(&dummy) {
+                j += 1;
+                pos += 1;
+                continue;
+            }
+            // an edge with both its origin and destination being the current
+            //  node should be removed
+            write_warning(&format!(" Removing self-looping edge '{}'", dummy.get_id()));
+            // get the list of incoming edges connected to the self-loop
+            let incomingConnected = dummy.get_incoming_edges();
+            // get the list of outgoing edges connected to the self-loop
+            let outgoingConnected = dummy.get_connected_edges();
+            // let the self-loop remap its connections
+            dummy.m().remap_connections(&incomingConnected);
+            self.remap_removed(tc, dummy, &incomingConnected, &outgoingConnected);
+            // delete the self-loop
+            ec.erase(dc, dummy);
+            j = pos;
+            ret += 1;
+        }
+        ret
     }
 
     /// C++: `void NBNode::reshiftPosition(double, double)`
@@ -821,7 +1129,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, xoff: f64, yoff: f64) {
-        todo!("port NBNode::reshiftPosition")
+        let offset = Position::new3(xoff, yoff, 0.);
+        self.myPosition.add(&offset);
+        self.myPoly.add(&offset);
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.add(&offset);
+        }
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.add(&offset);
+        }
     }
 
     /// C++: `void NBNode::roundGeometry()`
@@ -841,7 +1157,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn round_geometry(&mut self) {
-        todo!("port NBNode::roundGeometry")
+        self.myPosition.round(utils::common::std_defs::g_precision());
+        if self.myHaveCustomPoly {
+            self.myPoly.round(utils::common::std_defs::g_precision(), true);
+        }
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.round(utils::common::std_defs::g_precision(), true);
+        }
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.round(utils::common::std_defs::g_precision(), true);
+        }
     }
 
     /// C++: `void NBNode::mirrorX()`
@@ -864,7 +1189,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBNode::mirrorX")
+        self.myPosition.mul_xy(1., -1.);
+        self.myPoly.mirror_x();
+        // mirror pre-computed geometry of crossings and walkingareas
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.mirror_x();
+            c.shape.mirror_x();
+        }
+        for wa in self.myWalkingAreas.iter_mut() {
+            wa.shape.mirror_x();
+        }
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.mirror_x();
+        }
     }
 
     /// C++: `void NBNode::addIncomingEdge(NBEdge *)`
@@ -879,7 +1216,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_incoming_edge(&mut self, edge: Ptr<NBEdge>) {
-        todo!("port NBNode::addIncomingEdge")
+        assert!(!edge.is_null());
+        if !self.myIncomingEdges.contains(&edge) {
+            self.myIncomingEdges.push(edge);
+            self.myAllEdges.push(edge);
+        }
     }
 
     /// C++: `void NBNode::addOutgoingEdge(NBEdge *)`
@@ -894,7 +1235,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_outgoing_edge(&mut self, edge: Ptr<NBEdge>) {
-        todo!("port NBNode::addOutgoingEdge")
+        assert!(!edge.is_null());
+        if !self.myOutgoingEdges.contains(&edge) {
+            self.myOutgoingEdges.push(edge);
+            self.myAllEdges.push(edge);
+        }
     }
 
     /// C++: `void NBNode::computeLanes2Lanes()`
@@ -1250,7 +1595,47 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic(&mut self, ec: &NBEdgeCont) {
-        todo!("port NBNode::computeLogic")
+        // delete myRequest (possibly recomputation step)
+        if !self.myRequest.is_null() {
+            drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+        }
+        self.myRequest = Ptr::null();
+        if self.myIncomingEdges.len() == 0 || self.myOutgoingEdges.len() == 0 {
+            // no logic if nothing happens here
+            self.myType = SumoXMLNodeType::DEAD_END;
+            self.remove_joined_traffic_lights();
+            return;
+        }
+        // compute the logic if necessary or split the junction
+        if self.myType != SumoXMLNodeType::NOJUNCTION && self.myType != SumoXMLNodeType::DISTRICT && self.myType != SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION {
+            // build the request
+            self.myRequest = Ptr::from_raw(Box::into_raw(Box::new(NBRequest::new(ec, Ptr::from_mut(self), &self.myAllEdges, &self.myIncomingEdges, &self.myOutgoingEdges, &self.myBlockedConnections))));
+            // check whether it is not too large
+            let numConnections = self.num_normal_connections();
+            if numConnections >= utils::common::std_defs::SUMO_MAX_CONNECTIONS as i32 {
+                // yep -> make it untcontrolled, warn
+                if !self.myRequest.is_null() {
+                    drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+                }
+                self.myRequest = Ptr::null();
+                if self.myType == SumoXMLNodeType::TRAFFIC_LIGHT {
+                    self.myType = SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION;
+                } else {
+                    self.myType = SumoXMLNodeType::NOJUNCTION;
+                }
+                write_warning(&format!("Junction '{}' is too complicated ({} connections, max {}); will be set to {}.",
+                    self.get_id(), numConnections, utils::common::std_defs::SUMO_MAX_CONNECTIONS, NodeTypes.get_string(self.myType)));
+            } else if numConnections == 0 {
+                if !self.myRequest.is_null() {
+                    drop(unsafe { Box::from_raw(self.myRequest.as_raw()) });
+                }
+                self.myRequest = Ptr::null();
+                self.myType = SumoXMLNodeType::DEAD_END;
+                self.remove_joined_traffic_lights();
+            } else {
+                self.myRequest.m().build_bitfield_logic();
+            }
+        }
     }
 
     /// C++: `void NBNode::computeLogic2(bool)`
@@ -1263,7 +1648,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_logic2(&mut self, checkLaneFoes: bool) {
-        todo!("port NBNode::computeLogic2")
+        if !self.myRequest.is_null() {
+            self.myRequest.m().compute_logic(checkLaneFoes);
+        }
     }
 
     /// C++: `void NBNode::computeKeepClear()`
@@ -1312,7 +1699,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn write_logic(&self, into: &mut OutputDevice) -> bool {
-        todo!("port NBNode::writeLogic")
+        if !self.myRequest.is_null() {
+            self.myRequest.write_logic(into);
+            return true;
+        }
+        false
     }
 
     /// C++: `const std::string NBNode::getFoes(int) const` [const]
@@ -1327,7 +1718,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_foes(&self, linkIndex: i32) -> String {
-        todo!("port NBNode::getFoes")
+        if self.myRequest.is_null() {
+            String::new()
+        } else {
+            self.myRequest.get_foes(linkIndex).to_string()
+        }
     }
 
     /// C++: `const std::string NBNode::getResponse(int) const` [const]
@@ -1342,7 +1737,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_response(&self, linkIndex: i32) -> String {
-        todo!("port NBNode::getResponse")
+        if self.myRequest.is_null() {
+            String::new()
+        } else {
+            self.myRequest.get_response(linkIndex).to_string()
+        }
     }
 
     /// C++: `bool NBNode::hasConflict() const` [const]
@@ -1357,7 +1756,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict(&self) -> bool {
-        todo!("port NBNode::hasConflict")
+        if self.myRequest.is_null() {
+            false
+        } else {
+            self.myRequest.has_conflict()
+        }
     }
 
     /// C++: `bool NBNode::hasConflict(const NBEdge *) const` [const]
@@ -1377,7 +1780,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_conflict_2(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasConflict")
+        if self.myRequest.is_null() {
+            return false;
+        }
+        for con in e.get_connections().iter() {
+            let index = self.get_connection_index(e, con);
+            if self.myRequest.has_conflict_at_link(index) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `Position NBNode::getEmptyDir() const` [const]
@@ -1406,7 +1818,25 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_empty_dir(&self) -> Position {
-        todo!("port NBNode::getEmptyDir")
+        let mut pos = Position::new(0., 0.);
+        for e_in in self.myIncomingEdges.iter() {
+            let mut toAdd = e_in.get_from_node().get_position().clone();
+            toAdd.sub(&self.myPosition);
+            toAdd.norm2d();
+            pos.add(&toAdd);
+        }
+        for e_out in self.myOutgoingEdges.iter() {
+            let mut toAdd = e_out.get_to_node().get_position().clone();
+            toAdd.sub(&self.myPosition);
+            toAdd.norm2d();
+            pos.add(&toAdd);
+        }
+        pos.mul(-1. / ((self.myIncomingEdges.len() + self.myOutgoingEdges.len()) as f64));
+        if pos.x() == 0. && pos.y() == 0. {
+            pos = Position::new(1., 0.);
+        }
+        pos.norm2d();
+        pos
     }
 
     /// C++: `bool NBNode::hasIncoming(const NBEdge *const) const` [const]
@@ -1417,7 +1847,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_incoming(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasIncoming")
+        self.myIncomingEdges.contains(&e)
     }
 
     /// C++: `bool NBNode::hasOutgoing(const NBEdge *const) const` [const]
@@ -1428,7 +1858,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn has_outgoing(&self, e: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::hasOutgoing")
+        self.myOutgoingEdges.contains(&e)
     }
 
     /// C++: `NBEdge * NBNode::getOppositeIncoming(NBEdge *) const` [const]
@@ -1464,7 +1894,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_incoming_connections(&mut self, reallowSetting: bool) {
-        todo!("port NBNode::invalidateIncomingConnections")
+        for i in self.myIncomingEdges.iter() {
+            i.m().invalidate_connections(reallowSetting);
+        }
     }
 
     /// C++: `void NBNode::invalidateOutgoingConnections(bool)`
@@ -1477,7 +1909,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_outgoing_connections(&mut self, reallowSetting: bool) {
-        todo!("port NBNode::invalidateOutgoingConnections")
+        for i in self.myOutgoingEdges.iter() {
+            i.m().invalidate_connections(reallowSetting);
+        }
     }
 
     /// C++: `void NBNode::removeDoubleEdges()`
@@ -2105,7 +2539,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_shape(&self) -> &PositionVector {
-        todo!("port NBNode::getShape")
+        &self.myPoly
     }
 
     /// C++: `void NBNode::setCustomShape(const PositionVector &)`
@@ -2122,7 +2556,14 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_custom_shape(&mut self, shape: &PositionVector) {
-        todo!("port NBNode::setCustomShape")
+        self.myPoly = shape.clone();
+        self.myHaveCustomPoly = self.myPoly.len() > 1;
+        if self.myHaveCustomPoly {
+            let me = Ptr::from_mut(self);
+            for i in self.myAllEdges.iter() {
+                i.m().reset_node_border(me);
+            }
+        }
     }
 
     /// C++: `void NBNode::resetShape()`
@@ -2132,7 +2573,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn reset_shape(&mut self) {
-        todo!("port NBNode::resetShape")
+        self.myPoly.clear();
     }
 
     /// C++: `void NBNode::setRadius(double)`
@@ -2142,7 +2583,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_radius(&mut self, radius: f64) {
-        todo!("port NBNode::setRadius")
+        self.myRadius = radius;
     }
 
     /// C++: `void NBNode::setKeepClear(bool)`
@@ -2152,7 +2593,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_keep_clear(&mut self, keepClear: bool) {
-        todo!("port NBNode::setKeepClear")
+        self.myKeepClear = keepClear;
     }
 
     /// C++: `void NBNode::setRightOfWay(RightOfWay)`
@@ -2162,7 +2603,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_right_of_way(&mut self, rightOfWay: RightOfWay) {
-        todo!("port NBNode::setRightOfWay")
+        self.myRightOfWay = rightOfWay;
     }
 
     /// C++: `void NBNode::setFringeType(FringeType)`
@@ -2172,7 +2613,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_fringe_type(&mut self, fringeType: FringeType) {
-        todo!("port NBNode::setFringeType")
+        self.myFringeType = fringeType;
     }
 
     /// C++: `void NBNode::setRoundaboutType(RoundaboutType)`
@@ -2182,7 +2623,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_roundabout_type(&mut self, roundaboutType: RoundaboutType) {
-        todo!("port NBNode::setRoundaboutType")
+        self.myRoundaboutType = roundaboutType;
     }
 
     /// C++: `void NBNode::setName(const std::string &)`
@@ -2192,7 +2633,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_name(&mut self, name: &str) {
-        todo!("port NBNode::setName")
+        self.myName = name.to_string();
     }
 
     /// C++: `bool NBNode::hasCustomShape() const` [const]
@@ -2202,7 +2643,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn has_custom_shape(&self) -> bool {
-        todo!("port NBNode::hasCustomShape")
+        self.myHaveCustomPoly
     }
 
     /// C++: `bool NBNode::checkIsRemovable() const` [const]
@@ -2214,7 +2655,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_is_removable(&self) -> bool {
-        todo!("port NBNode::checkIsRemovable")
+        let mut reason = String::new();
+        self.check_is_removable_reporting(&mut reason)
     }
 
     /// C++: `bool NBNode::checkIsRemovableReporting(std::string &) const` [const]
@@ -2296,7 +2738,84 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_is_removable_reporting(&self, reason: &mut String) -> bool {
-        todo!("port NBNode::checkIsRemovableReporting")
+        if self.get_edges().is_empty() {
+            return true;
+        }
+        // check whether this node is included in a traffic light or crossing
+        if !self.myTrafficLights.is_empty() {
+            *reason = "TLS".to_string();
+            return false;
+        }
+        if self.myType == SumoXMLNodeType::RAIL_SIGNAL {
+            *reason = "rail_signal".to_string();
+            return false;
+        }
+        if !self.myCrossings.is_empty() {
+            *reason = "crossing".to_string();
+            return false;
+        }
+        // one in, one out -> just a geometry ...
+        if self.myOutgoingEdges.len() == 1 && self.myIncomingEdges.len() == 1 {
+            // ... if types match ...
+            if !self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], reason) {
+                let msg = format!("edges incompatible: {}", reason);
+                *reason = msg;
+                return false;
+            }
+            if self.myIncomingEdges[0].get_turn_destination(true) == self.myOutgoingEdges[0] {
+                *reason = "turnaround".to_string();
+                return false;
+            }
+            return true;
+        }
+        // two in, two out -> may be something else
+        if self.myOutgoingEdges.len() == 2 && self.myIncomingEdges.len() == 2 {
+            // check whether the origin nodes of the incoming edges differ
+            let mut origSet: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+            for i in self.myIncomingEdges.iter() {
+                origSet.insert(i.get_from_node());
+            }
+            if origSet.len() < 2 {
+                // overlapping case
+                if self.myIncomingEdges[0].get_geometry() == self.myIncomingEdges[1].get_geometry()
+                    && self.myOutgoingEdges[0].get_geometry() == self.myOutgoingEdges[1].get_geometry()
+                {
+                    return (self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], reason)
+                        && self.myIncomingEdges[1].expandable_by(self.myOutgoingEdges[1], reason))
+                        || (self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[1], reason)
+                            && self.myIncomingEdges[1].expandable_by(self.myOutgoingEdges[0], reason));
+                }
+            }
+            // check whether this node is an intermediate node of
+            //  a two-directional street
+            for i in self.myIncomingEdges.iter() {
+                // each of the edges must have an opposite direction edge
+                let opposite = i.get_turn_destination(true);
+                if !opposite.is_null() {
+                    // the other outgoing edges must be the continuation of the current
+                    let continuation = if opposite == self.myOutgoingEdges[0] {
+                        self.myOutgoingEdges[self.myOutgoingEdges.len() - 1]
+                    } else {
+                        self.myOutgoingEdges[0]
+                    };
+                    // check whether the types allow joining
+                    if !i.expandable_by(continuation, reason) {
+                        let msg = format!("edges incompatible: {}", reason);
+                        *reason = msg;
+                        return false;
+                    }
+                } else {
+                    // ok, at least one outgoing edge is not an opposite
+                    //  of an incoming one
+                    *reason = "not opposites".to_string();
+                    return false;
+                }
+            }
+            return true;
+        }
+        // ok, a real node
+        *reason = "intersection".to_string();
+        false
     }
 
     /// C++: `std::vector<std::pair<NBEdge *, NBEdge *>> NBNode::getEdgesToJoin() const` [const]
@@ -2337,7 +2856,42 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_edges_to_join(&self) -> Vec<(Ptr<NBEdge>, Ptr<NBEdge>)> {
-        todo!("port NBNode::getEdgesToJoin")
+        debug_assert!(self.check_is_removable());
+        let mut ret: Vec<(Ptr<NBEdge>, Ptr<NBEdge>)> = Vec::new();
+        // one in, one out-case
+        if self.myOutgoingEdges.len() == 1 && self.myIncomingEdges.len() == 1 {
+            ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[0]));
+            return ret;
+        }
+        if self.myIncomingEdges.len() == 2 && self.myOutgoingEdges.len() == 2 {
+            // two in, two out-case
+            if self.myIncomingEdges[0].get_geometry() == self.myIncomingEdges[1].get_geometry()
+                && self.myOutgoingEdges[0].get_geometry() == self.myOutgoingEdges[1].get_geometry()
+            {
+                // overlapping edges
+                let mut reason = String::new();
+                if self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], &mut reason) {
+                    ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[0]));
+                    ret.push((self.myIncomingEdges[1], self.myOutgoingEdges[1]));
+                } else {
+                    ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[1]));
+                    ret.push((self.myIncomingEdges[1], self.myOutgoingEdges[0]));
+                }
+                return ret;
+            }
+        }
+        for i in self.myIncomingEdges.iter() {
+            // join with the edge that is not a turning direction
+            let opposite = i.get_turn_destination(true);
+            debug_assert!(!opposite.is_null());
+            let continuation = if opposite == self.myOutgoingEdges[0] {
+                self.myOutgoingEdges[self.myOutgoingEdges.len() - 1]
+            } else {
+                self.myOutgoingEdges[0]
+            };
+            ret.push((*i, continuation));
+        }
+        ret
     }
 
     /// C++: `bool NBNode::isNearDistrict() const` [const]
@@ -2359,7 +2913,18 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_near_district(&self) -> bool {
-        todo!("port NBNode::isNearDistrict")
+        if self.is_district() {
+            return false;
+        }
+        for t in self.get_edges().iter() {
+            let other = if t.get_to_node() == Ptr::new(self) { t.get_from_node() } else { t.get_to_node() };
+            for k in other.get_edges().iter() {
+                if k.get_from_node().is_district() || k.get_to_node().is_district() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::isDistrict() const` [const]
@@ -2370,7 +2935,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_district(&self) -> bool {
-        todo!("port NBNode::isDistrict")
+        self.myType == SumoXMLNodeType::DISTRICT
     }
 
     /// C++: `bool NBNode::needsCont(const NBEdge *, const NBEdge *, const NBEdge::Connection &, const NBEdge::Connection &, bool) const` [const]
@@ -2430,7 +2995,60 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn needs_cont(&self, fromE: Ptr<NBEdge>, otherFromE: Ptr<NBEdge>, c: &NBEdge_Connection, otherC: &NBEdge_Connection, checkOnlyTLS: bool) -> bool {
-        todo!("port NBNode::needsCont")
+        let toE = c.toEdge;
+        let otherToE = otherC.toEdge;
+
+        if !checkOnlyTLS {
+            if self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT
+                || self.myType == SumoXMLNodeType::LEFT_BEFORE_RIGHT
+                || self.myType == SumoXMLNodeType::ALLWAY_STOP
+                || self.myType == SumoXMLNodeType::ZIPPER
+            {
+                return false;
+            }
+            let d1 = self.get_direction(fromE, toE, false);
+            let thisRight = d1 == LinkDirection::RIGHT || d1 == LinkDirection::PARTRIGHT;
+            let rightTurnConflict = thisRight
+                && NBNode::right_turn_conflict(fromE, toE, c.fromLane, otherFromE, otherToE, otherC.fromLane);
+            if thisRight && !rightTurnConflict {
+                return false;
+            }
+            if !self.myRequest.is_null() && self.myRequest.indirect_left_turn_conflict(fromE, c, otherFromE, otherC, false) {
+                return true;
+            }
+            if !(self.foes(otherFromE, otherToE, fromE, toE) || self.myRequest.is_null() || rightTurnConflict) {
+                // if they do not cross, no waiting place is needed
+                return false;
+            }
+            let d2 = self.get_direction(otherFromE, otherToE, false);
+            if d2 == LinkDirection::TURN {
+                return false;
+            }
+            if fromE == otherFromE && !thisRight {
+                // ignore same edge links except for right-turns
+                return false;
+            }
+            if thisRight && d2 != LinkDirection::STRAIGHT {
+                return false;
+            }
+        }
+        if !c.tlID.is_empty() {
+            debug_assert!(
+                !self.myTrafficLights.is_empty()
+                    || self.myType == SumoXMLNodeType::RAIL_CROSSING
+                    || self.myType == SumoXMLNodeType::RAIL_SIGNAL
+            );
+            for it in self.myTrafficLights.iter() {
+                if it.needs_cont(fromE, toE, otherFromE, otherToE) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if fromE.get_junction_priority(Ptr::new(self)) > 0 && otherFromE.get_junction_priority(Ptr::new(self)) > 0 {
+            return self.must_brake(fromE, toE, c.fromLane, c.toLane, false);
+        }
+        false
     }
 
     /// C++: `bool NBNode::tlsStrandedConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &) const` [const]
@@ -2445,7 +3063,13 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn tls_stranded_conflict(&self, from: Ptr<NBEdge>, c: &NBEdge_Connection, foeFrom: Ptr<NBEdge>, foe: &NBEdge_Connection) -> bool {
-        todo!("port NBNode::tlsStrandedConflict")
+        foe.haveVia
+            && self.is_tl_controlled()
+            && c.tlLinkIndex >= 0
+            && foe.tlLinkIndex >= 0
+            && !foeFrom.is_turning_direction_at(foe.toEdge)
+            && self.foes(from, c.toEdge, foeFrom, foe.toEdge)
+            && !self.needs_cont(foeFrom, from, foe, c, true)
     }
 
     /// C++: `PositionVector NBNode::computeInternalLaneShape(const NBEdge *, const NBEdge::Connection &, int, NBNode *, int) const` [const]
@@ -2535,7 +3159,90 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_internal_lane_shape(&self, fromE: Ptr<NBEdge>, con: &NBEdge_Connection, numPoints: i32, recordError: Ptr<NBNode>, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::computeInternalLaneShape")
+        let mut shapeFlag = shapeFlag;
+        if con.fromLane >= fromE.get_num_lanes() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Connection '{}' starts at a non-existant lane.", con.get_description(fromE))));
+        }
+        if con.toLane >= con.toEdge.get_num_lanes() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Connection '{}' targets a non-existant lane.", con.get_description(fromE))));
+        }
+        let mut fromShape = fromE.get_lane_shape(con.fromLane).clone();
+        let mut toShape = con.toEdge.get_lane_shape(con.toLane).clone();
+        let mut ret = PositionVector::default();
+        let mut useCustomShape = con.customShape.len() > 0;
+        if useCustomShape {
+            // ensure that the shape starts and ends at the intersection boundary
+            let mut startBorder = fromE.get_node_border(Ptr::new(self)).clone();
+            if startBorder.len() == 0 {
+                startBorder = fromShape.get_orthogonal(fromShape.back(), 1., true, 1., 90.);
+            }
+            let mut tmp = NBEdge::start_shape_at(&con.customShape, Ptr::new(self), startBorder);
+            if tmp.len() < 2 {
+                write_warning(&format!("Could not use custom shape for connection {}.", con.get_description(fromE)));
+                useCustomShape = false;
+            } else {
+                if tmp.length2d() > con.customShape.length2d() + POSITION_EPS {
+                    // shape was lengthened at the start, make sure it attaches at the center of the lane
+                    *tmp.at_mut(0) = *fromShape.back();
+                } else if !recordError.is_null() {
+                    let offset = tmp.at(0).distance_to2d(fromShape.back());
+                    if offset > fromE.get_lane_width_2(con.fromLane) / 2. {
+                        write_warning(&format!("Custom shape has distance {} to incoming lane for connection {}.", f64_to_string(offset), con.get_description(fromE)));
+                    }
+                }
+                let mut endBorder = con.toEdge.get_node_border(Ptr::new(self)).clone();
+                if endBorder.len() == 0 {
+                    endBorder = toShape.get_orthogonal(toShape.front(), 1., false, 1., 90.);
+                }
+                let rev = tmp.reverse();
+                ret = NBEdge::start_shape_at(&rev, Ptr::new(self), endBorder).reverse();
+                if ret.len() < 2 {
+                    write_warning(&format!("Could not use custom shape for connection {}.", con.get_description(fromE)));
+                    useCustomShape = false;
+                } else if ret.length2d() > tmp.length2d() + POSITION_EPS {
+                    // shape was lengthened at the end, make sure it attaches at the center of the lane
+                    *ret.at_mut(-1) = *toShape.front();
+                } else if !recordError.is_null() {
+                    let offset = ret.at(-1).distance_to2d(toShape.front());
+                    if offset > con.toEdge.get_lane_width_2(con.toLane) / 2. {
+                        write_warning(&format!("Custom shape has distance {} to outgoing lane for connection {}.", f64_to_string(offset), con.get_description(fromE)));
+                    }
+                }
+            }
+        }
+        if !useCustomShape {
+            self.displace_shape_at_width_change(fromE, con, &mut fromShape, &mut toShape);
+            let extrapolateBeg = 5. * (fromE.get_num_lanes() as f64);
+            let extrapolateEnd = 5. * (con.toEdge.get_num_lanes() as f64);
+            let dir = self.get_direction(fromE, con.toEdge, false);
+            if dir == LinkDirection::LEFT || dir == LinkDirection::TURN {
+                shapeFlag += NBNODE_AVOID_WIDE_LEFT_TURN;
+            }
+            if con.indirectLeft {
+                shapeFlag += NBNODE_INDIRECT_LEFT;
+            }
+            ret = self.compute_smooth_shape(
+                &fromShape,
+                &toShape,
+                numPoints,
+                fromE.get_turn_destination(false) == con.toEdge,
+                extrapolateBeg,
+                extrapolateEnd,
+                recordError,
+                shapeFlag,
+            );
+        }
+        let lane = fromE.get_lane_struct_2(con.fromLane);
+        if lane.endOffset > 0. {
+            let mut beg = lane.shape.get_subpart(lane.shape.length() - lane.endOffset, lane.shape.length());
+            beg.append(&ret, 2.0);
+            ret = beg;
+        }
+        if con.toEdge.is_bidi_rail(false) && con.toEdge.get_turn_destination(true).get_end_offset() > 0. {
+            let end = toShape.get_subpart(0., con.toEdge.get_turn_destination(true).get_end_offset());
+            ret.append(&end, 2.0);
+        }
+        ret
     }
 
     /// C++: `PositionVector NBNode::computeSmoothShape(const PositionVector &, const PositionVector &, int, bool, double, double, NBNode *, int) const` [const]
@@ -2571,7 +3278,30 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_smooth_shape(&self, begShape: &PositionVector, endShape: &PositionVector, numPoints: i32, isTurnaround: bool, extrapolateBeg: f64, extrapolateEnd: f64, recordError: Ptr<NBNode>, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::computeSmoothShape")
+        let mut ok = true;
+        if (shapeFlag & NBNODE_INDIRECT_LEFT) != 0 {
+            return self.indirect_left_shape(begShape, endShape, numPoints);
+        }
+        // DEG2RAD(5)
+        let init = Self::bezier_control_points(
+            begShape,
+            endShape,
+            isTurnaround,
+            extrapolateBeg,
+            extrapolateEnd,
+            &mut ok,
+            recordError,
+            5. * std::f64::consts::PI / 180.,
+            shapeFlag,
+        );
+        if init.len() == 0 {
+            let mut ret = PositionVector::default();
+            ret.push(*begShape.back());
+            ret.push(*endShape.front());
+            return ret;
+        } else {
+            return init.bezier(numPoints).smoothed_z_front(f64::MAX);
+        }
     }
 
     /// C++: `PositionVector NBNode::bezierControlPoints(const PositionVector &, const PositionVector &, bool, double, double, bool &, NBNode *, double, int)` [static]
@@ -2770,7 +3500,128 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn bezier_control_points(begShape: &PositionVector, endShape: &PositionVector, isTurnaround: bool, extrapolateBeg: f64, extrapolateEnd: f64, ok: &mut bool, recordError: Ptr<NBNode>, straightThresh: f64, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::bezierControlPoints")
+        let beg = *begShape.back();
+        let end = *endShape.front();
+        let dist = beg.distance_to2d(&end);
+        let mut init = PositionVector::default();
+        if dist < POSITION_EPS || beg.distance_to2d(begShape.at(-2)) < POSITION_EPS || end.distance_to2d(endShape.at(1)) < POSITION_EPS {
+            // typically, this node a is a simpleContinuation. see also #2539
+            return init;
+        }
+        init.push(beg);
+        if isTurnaround {
+            // turnarounds:
+            //  - end of incoming lane
+            //  - position between incoming/outgoing end/begin shifted by the distance orthogonally
+            //  - begin of outgoing lane
+            let mut center: Position = PositionVector::position_at_offset2d_seg(&beg, &end, beg.distance_to2d(&end) / 2., 0., false);
+            center.sub_xy(beg.y() - end.y(), end.x() - beg.x());
+            init.push(center);
+        } else {
+            let EXT = 100.;
+            let angle = angle_diff(begShape.angle_at2d(-2), endShape.angle_at2d(0));
+            let mut endShapeBegLine = PositionVector::from_line(*endShape.at(0), *endShape.at(1));
+            let mut begShapeEndLineRev = PositionVector::from_line(*begShape.at(-1), *begShape.at(-2));
+            endShapeBegLine.extrapolate2d(EXT, true);
+            begShapeEndLineRev.extrapolate2d(EXT, true);
+            if angle.abs() < std::f64::consts::PI / 4. {
+                // very low angle: could be an s-shape or a straight line
+                let displacementAngle = angle_diff(begShape.angle_at2d(-2), beg.angle_to2d(&end));
+                let bendDeg = rad2deg((displacementAngle - angle).abs());
+                let halfDistance = dist / 2.;
+                if displacementAngle.abs() <= straightThresh && angle.abs() <= straightThresh {
+                    return PositionVector::default();
+                } else if bendDeg > 22.5 && (bendDeg / 45.).powf(2.) / dist > 0.13 {
+                    // do not allow s-curves with extreme bends
+                    // (a linear dependency is to restrictive at low displacementAngles and too permisive at high angles)
+                    *ok = false;
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        let v = recordError.myDisplacementError.max((displacementAngle.sin() * dist).abs());
+                        recordError.m().myDisplacementError = v;
+                    }
+                    return PositionVector::default();
+                } else {
+                    let endLength = begShape.at(-2).distance_to2d(begShape.at(-1));
+                    let off1 = endLength + extrapolateBeg.min(halfDistance);
+                    init.push(PositionVector::position_at_offset2d_seg(begShapeEndLineRev.at(1), begShapeEndLineRev.at(0), off1, 0., false));
+                    let off2 = EXT - extrapolateEnd.min(halfDistance);
+                    init.push(PositionVector::position_at_offset2d_seg(endShapeBegLine.at(0), endShapeBegLine.at(1), off2, 0., false));
+                }
+            } else {
+                // turning
+                //  - end of incoming lane
+                //  - intersection of the extrapolated lanes
+                //  - begin of outgoing lane
+                // attention: if there is no intersection, use a straight line
+                let mut intersect = endShapeBegLine.intersection_position2d_pv(&begShapeEndLineRev);
+                if intersect == Position::INVALID {
+                    *ok = false;
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        // it's unclear if this error can be solved via stretching the intersection.
+                        let v = recordError.myDisplacementError.max(1.0);
+                        recordError.m().myDisplacementError = v;
+                    }
+                    return PositionVector::default();
+                }
+                let begOffset = begShapeEndLineRev.nearest_offset_to_point2d(&intersect, true);
+                let endOffset = endShapeBegLine.nearest_offset_to_point2d(&intersect, true);
+                let minControlLength = 1.0_f64.min(dist / 2.);
+                let distBeg = intersect.distance_to2d(&beg);
+                let distEnd = intersect.distance_to2d(&end);
+                let lengthenBeg = distBeg <= minControlLength;
+                let lengthenEnd = distEnd <= minControlLength;
+                if lengthenBeg && lengthenEnd {
+                    // This should be fixable with minor stretching
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        let v = recordError.myDisplacementError.max(1.0);
+                        recordError.m().myDisplacementError = v;
+                    }
+                    *ok = false;
+                    return PositionVector::default();
+                } else if (shapeFlag & NBNODE_FOUR_CONTROL_POINTS) != 0 {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - extrapolateBeg, 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - extrapolateEnd, 0., false));
+                } else if lengthenBeg || lengthenEnd {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - minControlLength, 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - minControlLength, 0., false));
+                } else if (shapeFlag & NBNODE_AVOID_WIDE_LEFT_TURN) != 0
+                    // there are two reasons for enabling special geometry rules:
+                    // 1) sharp edge angles which could cause overshoot
+                    // 2) junction geometries with a large displacement between opposite left turns
+                    //    which would cause the default geometry to overlap
+                    && ((shapeFlag & NBNODE_AVOID_INTERSECTING_LEFT_TURNS) != 0
+                        || (angle > deg2rad(95.) && (distBeg > 20. || distEnd > 20.)))
+                {
+                    let factor = if (shapeFlag & NBNODE_AVOID_INTERSECTING_LEFT_TURNS) == 0 {
+                        1.
+                    } else {
+                        0.6_f64.min(16. / dist)
+                    };
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - (distBeg * factor / 1.2).min(dist * factor / 1.8), 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - (distEnd * factor / 1.2).min(dist * factor / 1.8), 0., false));
+                } else if (shapeFlag & NBNODE_AVOID_WIDE_RIGHT_TURN) != 0 && angle < deg2rad(-95.) && (distBeg > 20. || distEnd > 20.) {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - (distBeg / 1.4).min(dist / 2.), 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - (distEnd / 1.4).min(dist / 2.), 0., false));
+                } else {
+                    let z1 = begShapeEndLineRev.position_at_offset2d(begOffset, 0., false).z();
+                    let z2 = endShapeBegLine.position_at_offset2d(endOffset, 0., false).z();
+                    let z3 = 0.5 * (beg.z() + end.z());
+                    // if z1 and z2 are on the same side in regard to z3 then we
+                    // can use their avarage. Otherwise, the intersection in 3D
+                    // is not good and we are better of using z3
+                    let z;
+                    if (z1 <= z3 && z2 <= z3) || (z1 >= z3 && z2 >= z3) {
+                        z = 0.5 * (z1 + z2);
+                    } else {
+                        z = z3;
+                    }
+                    intersect.set3(intersect.x(), intersect.y(), z);
+                    init.push(intersect);
+                }
+            }
+        }
+        init.push(end);
+        init
     }
 
     /// C++: `PositionVector NBNode::indirectLeftShape(const PositionVector &, const PositionVector &, int) const` [const]
@@ -2801,7 +3652,31 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn indirect_left_shape(&self, begShape: &PositionVector, endShape: &PositionVector, numPoints: i32) -> PositionVector {
-        todo!("port NBNode::indirectLeftShape")
+        let _ = numPoints; // UNUSED_PARAMETER
+        let mut result = PositionVector::default();
+        result.push(*begShape.back());
+        //const double angle = GeomHelper::angleDiff(begShape.angleAt2D(-2), endShape.angleAt2D(0));
+        let mut endShapeBegLine = PositionVector::from_line(*endShape.at(0), *endShape.at(1));
+        let mut begShapeEndLineRev = PositionVector::from_line(*begShape.at(-1), *begShape.at(-2));
+        endShapeBegLine.extrapolate2d(100., true);
+        begShapeEndLineRev.extrapolate2d(100., true);
+        let intersect = endShapeBegLine.intersection_position2d_pv(&begShapeEndLineRev);
+        if intersect == Position::INVALID {
+            write_warning(&format!("Could not compute indirect left turn shape at node '{}'", self.get_id()));
+        } else {
+            let mut dir = intersect;
+            dir.sub(endShape.at(0));
+            dir.norm2d();
+            let radius = if self.myRadius == NBNODE_UNSPECIFIED_RADIUS {
+                utils::options::options_cont::get_float("default.junctions.radius")
+            } else {
+                self.myRadius
+            };
+            dir = dir * radius;
+            result.push(intersect + dir);
+        }
+        result.push(*endShape.front());
+        result
     }
 
     /// C++: `double NBNode::getDisplacementError() const` [const]
@@ -2811,7 +3686,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_displacement_error(&self) -> f64 {
-        todo!("port NBNode::getDisplacementError")
+        self.myDisplacementError
     }
 
     /// C++: `void NBNode::replaceIncoming(NBEdge *, NBEdge *, int)`
@@ -2830,7 +3705,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_incoming(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBNode::replaceIncoming")
+        // replace the edge in the list of incoming nodes
+        if let Some(i) = self.myIncomingEdges.iter().position(|e| *e == which) {
+            self.myIncomingEdges[i] = by;
+            if let Some(j) = self.myAllEdges.iter().position(|e| *e == which) {
+                self.myAllEdges[j] = by;
+            }
+        }
+        // replace within the connetion prohibition dependencies
+        self.replace_in_connection_prohibitions(which, by, laneOff, 0);
     }
 
     /// C++: `void NBNode::replaceIncoming(const EdgeVector &, NBEdge *)`
@@ -2853,7 +3736,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_incoming_2(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBNode::replaceIncoming")
+        // replace edges
+        let mut laneOff: i32 = 0;
+        for i in which.iter() {
+            self.replace_incoming(*i, by, laneOff);
+            laneOff += i.get_num_lanes();
+        }
+        // removed double occurrences
+        self.remove_double_edges();
+        // check whether this node belongs to a district and the edges
+        //  must here be also remapped
+        if !self.myDistrict.is_null() {
+            self.myDistrict.m().replace_incoming(which, by);
+        }
     }
 
     /// C++: `void NBNode::replaceOutgoing(NBEdge *, NBEdge *, int)`
@@ -2876,7 +3771,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_outgoing(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBNode::replaceOutgoing")
+        // replace the edge in the list of outgoing nodes
+        if let Some(i) = self.myOutgoingEdges.iter().position(|e| *e == which) {
+            self.myOutgoingEdges[i] = by;
+            if let Some(j) = self.myAllEdges.iter().position(|e| *e == which) {
+                self.myAllEdges[j] = by;
+            }
+        }
+        // replace the edge in connections of incoming edges
+        for i in self.myIncomingEdges.iter() {
+            i.m().replace_in_connections(which, by, laneOff);
+        }
+        // replace within the connetion prohibition dependencies
+        self.replace_in_connection_prohibitions(which, by, 0, laneOff);
     }
 
     /// C++: `void NBNode::replaceOutgoing(const EdgeVector &, NBEdge *)`
@@ -2899,7 +3806,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_outgoing_2(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBNode::replaceOutgoing")
+        // replace edges
+        let mut laneOff: i32 = 0;
+        for i in which.iter() {
+            self.replace_outgoing(*i, by, laneOff);
+            laneOff += i.get_num_lanes();
+        }
+        // removed double occurrences
+        self.remove_double_edges();
+        // check whether this node belongs to a district and the edges
+        //  must here be also remapped
+        if !self.myDistrict.is_null() {
+            self.myDistrict.m().replace_outgoing(which, by);
+        }
     }
 
     /// C++: `int NBNode::guessCrossings()`
@@ -3011,7 +3930,107 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn guess_crossings(&mut self) -> i32 {
-        todo!("port NBNode::guessCrossings")
+        let mut numGuessed: i32 = 0;
+        if self.myCrossings.len() > 0 || self.myDiscardAllCrossings {
+            // user supplied crossings, do not guess
+            return numGuessed;
+        }
+        let me = Ptr::from_mut(self);
+        let allEdges = self.get_edges_sorted_by_angle_at_node_center();
+        // check for pedestrial lanes going clockwise around the node
+        let mut normalizedLanes: Vec<(Ptr<NBEdge>, bool)> = Vec::new();
+        for it in allEdges.iter() {
+            let edge = *it;
+            let lanes = edge.get_lanes();
+            if edge.get_from_node() == me {
+                for lane in lanes.iter().rev() {
+                    normalizedLanes.push((edge, (lane.permissions & SVC_PEDESTRIAN) != 0));
+                }
+            } else {
+                for lane in lanes.iter() {
+                    normalizedLanes.push((edge, (lane.permissions & SVC_PEDESTRIAN) != 0));
+                }
+            }
+        }
+        // do we even have a pedestrian lane?
+        let mut firstSidewalk: i32 = -1;
+        for i in 0..normalizedLanes.len() {
+            if normalizedLanes[i].1 {
+                firstSidewalk = i as i32;
+                break;
+            }
+        }
+        let mut hadCandidates: i32 = 0;
+        let mut connectedCandidates: Vec<i32> = Vec::new(); // number of crossings that were built for each connected candidate
+        if firstSidewalk != -1 {
+            // rotate lanes to ensure that the first one allows pedestrians
+            let fs = firstSidewalk as usize;
+            let mut tmp: Vec<(Ptr<NBEdge>, bool)> = Vec::new();
+            tmp.extend_from_slice(&normalizedLanes[fs..]);
+            tmp.extend_from_slice(&normalizedLanes[..fs]);
+            normalizedLanes = tmp;
+            // find candidates
+            let mut candidates: EdgeVector = Vec::new();
+            for i in 0..normalizedLanes.len() {
+                let edge = normalizedLanes[i].0;
+                let allowsPed = normalizedLanes[i].1;
+                if !allowsPed && (candidates.len() == 0 || candidates.last() != Some(&edge)) {
+                    candidates.push(edge);
+                } else if allowsPed {
+                    if candidates.len() > 0 {
+                        if hadCandidates > 0 || self.forbids_pedestrians_after(normalizedLanes.clone(), i as i32) {
+                            hadCandidates += 1;
+                            let n = self.check_crossing(candidates.clone(), false);
+                            numGuessed += n;
+                            if n > 0 {
+                                connectedCandidates.push(n);
+                            }
+                        }
+                        candidates.clear();
+                    }
+                }
+            }
+            if hadCandidates > 0 && candidates.len() > 0 {
+                // avoid wrapping around to the same sidewalk
+                hadCandidates += 1;
+                let n = self.check_crossing(candidates.clone(), false);
+                numGuessed += n;
+                if n > 0 {
+                    connectedCandidates.push(n);
+                }
+            }
+        }
+        // Avoid duplicate crossing between the same pair of walkingareas
+        if hadCandidates == 2 && connectedCandidates.len() == 2 {
+            // One or both of them might be split: remove the one with less splits
+            if connectedCandidates[1] <= connectedCandidates[0] {
+                numGuessed -= connectedCandidates[1];
+                let keep = self.myCrossings.len() - connectedCandidates[1] as usize;
+                self.myCrossings.truncate(keep);
+            } else {
+                numGuessed -= connectedCandidates[0];
+                self.myCrossings.drain(0..connectedCandidates[0] as usize);
+            }
+        }
+        // determinism: C++ std::sort is unstable; a stable sort_by is used here
+        let sorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(Ptr::from_mut(self), &self.myAllEdges);
+        self.myCrossings.sort_by(|a, b| {
+            if sorter.call_op(a, b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(b, a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
+        if numGuessed > 0 && self.is_simple_continuation(true, true) {
+            // avoid narrow node shape when there is a crossing
+            self.compute_node_shape(-1.);
+            for e in self.myAllEdges.iter() {
+                e.m().compute_edge_shape(-1.);
+            }
+        }
+        numGuessed
     }
 
     /// C++: `int NBNode::checkCrossing(EdgeVector, bool)`
@@ -3094,7 +4113,75 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_crossing(&mut self, candidates: EdgeVector, checkOnly: bool) -> i32 {
-        todo!("port NBNode::checkCrossing")
+        if candidates.len() == 0 {
+            // no crossing added (numCandidates=0)
+            return 0;
+        }
+        let me = Ptr::from_mut(self);
+        // check whether the edges may be part of a common crossing due to having similar angle
+        let mut prevAngle: f64 = -100000.; // dummy
+        for i in 0..candidates.len() {
+            let edge = candidates[i];
+            let angle = candidates[i].m().get_crossing_angle(me);
+            // edges should be sorted by angle but this only holds true approximately
+            if i > 0 && NBHelpers::rel_angle(angle, prevAngle).abs() > NBNODE_EXTEND_CROSSING_ANGLE_THRESHOLD {
+                return 0;
+            }
+            if !checkOnly && !self.is_tl_controlled() && self.get_type() != SumoXMLNodeType::RAIL_CROSSING && edge.get_speed() > utils::options::options_cont::get_float("crossings.guess.speed-threshold") {
+                return 0;
+            }
+            prevAngle = angle;
+        }
+        if candidates.len() == 1 || self.get_type() == SumoXMLNodeType::RAIL_CROSSING {
+            if !checkOnly {
+                let priority = self.is_tl_controlled() || (self.is_roundabout() && utils::options::options_cont::get_bool("crossings.guess.roundabout-priority"));
+                self.add_crossing(candidates, NBEDGE_UNSPECIFIED_WIDTH, priority, -1, -1, &PositionVector::default(), false, Ptr::default());
+            }
+            return 1;
+        }
+        // check for intermediate walking areas
+        prevAngle = -100000.; // dummy
+        for it in 0..candidates.len() {
+            let angle = candidates[it].m().get_crossing_angle(me);
+            if it != 0 {
+                let prev = candidates[it - 1];
+                let curr = candidates[it];
+                // compute distance between candiate edges
+                let mut intermediateWidth: f64 = 0.;
+                let mut laneI: i32;
+                let prevPos: Position;
+                if prev.get_to_node() == me {
+                    laneI = prev.get_num_lanes() - 1;
+                    prevPos = *prev.get_lanes()[laneI as usize].shape.at(-1);
+                } else {
+                    laneI = 0;
+                    prevPos = *prev.get_lanes()[laneI as usize].shape.at(0);
+                }
+                intermediateWidth -= 0.5 * prev.get_lane_width_2(laneI);
+                let currPos: Position;
+                if curr.get_from_node() == me {
+                    laneI = curr.get_num_lanes() - 1;
+                    currPos = *curr.get_lanes()[laneI as usize].shape.at(0);
+                } else {
+                    laneI = 0;
+                    currPos = *curr.get_lanes()[laneI as usize].shape.at(-1);
+                }
+                intermediateWidth -= 0.5 * curr.get_lane_width_2(laneI);
+                intermediateWidth += currPos.distance_to2d(&prevPos);
+                if NBHelpers::rel_angle(prevAngle, angle).abs() > NBNODE_SPLIT_CROSSING_ANGLE_THRESHOLD || (intermediateWidth > NBNODE_SPLIT_CROSSING_WIDTH_THRESHOLD) {
+                    // determinism: C++ leaves the evaluation order of the two operands of '+' unspecified; left-to-right here
+                    let first = self.check_crossing(candidates[..it].to_vec(), checkOnly);
+                    let second = self.check_crossing(candidates[it..].to_vec(), checkOnly);
+                    return first + second;
+                }
+            }
+            prevAngle = angle;
+        }
+        if !checkOnly {
+            let priority = self.is_tl_controlled() || (self.is_roundabout() && utils::options::options_cont::get_bool("crossings.guess.roundabout-priority"));
+            self.add_crossing(candidates, NBEDGE_UNSPECIFIED_WIDTH, priority, -1, -1, &PositionVector::default(), false, Ptr::default());
+        }
+        1
     }
 
     /// C++: `bool NBNode::checkCrossingDuplicated(EdgeVector)`
@@ -3116,7 +4203,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_crossing_duplicated(&mut self, edges: EdgeVector) -> bool {
-        todo!("port NBNode::checkCrossingDuplicated")
+        // sort edge vector
+        let mut edges = edges;
+        edges.sort();
+        // iterate over crossing to find a crossing with the same edges
+        for crossing in self.myCrossings.iter() {
+            // sort edges of crossing before compare
+            let mut edgesOfCrossing: EdgeVector = crossing.edges.clone();
+            edgesOfCrossing.sort();
+            if edgesOfCrossing == edges {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `double NBNode::buildInnerEdges()`
@@ -3145,7 +4244,25 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_inner_edges(&mut self) -> f64 {
-        todo!("port NBNode::buildInnerEdges")
+        // myDisplacementError is computed during this operation. reset first
+        self.myDisplacementError = 0.;
+        // build inner edges for vehicle movements across the junction
+        let mut noInternalNoSplits: i32 = 0;
+        for edge in self.myIncomingEdges.iter() {
+            for con in edge.get_connections().iter() {
+                if con.toEdge.is_null() {
+                    continue;
+                }
+                noInternalNoSplits += 1;
+            }
+        }
+        let mut lno: i32 = 0;
+        let mut splitNo: i32 = 0;
+        let mut maxCrossingSeconds: f64 = 0.;
+        for edge in self.myIncomingEdges.iter() {
+            maxCrossingSeconds = maxCrossingSeconds.max(edge.m().build_inner_edges(&*self, noInternalNoSplits, &mut lno, &mut splitNo));
+        }
+        maxCrossingSeconds
     }
 
     /// C++: `int NBNode::buildCrossings()`
@@ -3266,7 +4383,124 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossings(&mut self) -> i32 {
-        todo!("port NBNode::buildCrossings")
+        let me = Ptr::from_mut(self);
+        if self.myDiscardAllCrossings {
+            self.myCrossings.clear();
+        }
+        let mut index: i32 = 0;
+        let defaultWidth = utils::options::options_cont::get_float("default.crossing-width");
+        for ci in 0..self.myCrossings.len() {
+            self.myCrossings[ci].valid = true;
+            self.myCrossings[ci].tlID = String::new(); // reset for Netedit, set via setCrossingTLIndices()
+            self.myCrossings[ci].id = format!(":{}_c{}", self.get_id(), index);
+            index += 1;
+            self.myCrossings[ci].width = if self.myCrossings[ci].customWidth == NBEDGE_UNSPECIFIED_WIDTH { defaultWidth } else { self.myCrossings[ci].customWidth };
+            // reset fields, so repeated computation (Netedit) will successfully perform the checks
+            // in buildWalkingAreas (split crossings) and buildInnerEdges (sanity check)
+            self.myCrossings[ci].nextWalkingArea = String::new();
+            self.myCrossings[ci].prevWalkingArea = String::new();
+            let mut edges: EdgeVector = self.myCrossings[ci].edges.clone();
+            // sorting the edges in the right way is imperative. We want to sort
+            // them by getAngleAtNodeToCenter() but need to be extra carefull to avoid wrapping around 0 somewhere in between
+            let sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(me);
+            edges.sort_by(|a, b| {
+                if sorter.call_op(*a, *b) {
+                    std::cmp::Ordering::Less
+                } else if sorter.call_op(*b, *a) {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+            // rotate the edges so that the largest relative angle difference comes at the end
+            let mut rawAngleDiffs: Vec<f64> = Vec::new();
+            let mut maxAngleDiff: f64 = 0.;
+            let mut maxAngleDiffIndex: usize = 0; // index before maxDist
+            let n = edges.len();
+            for i in 0..n {
+                let mut diff = NBHelpers::rel_angle(edges[i].get_angle_at_node_to_center(me), edges[(i + 1) % n].get_angle_at_node_to_center(me));
+                if diff < 0. {
+                    diff += 360.;
+                }
+                let rawDiff = NBHelpers::rel_angle(edges[i].get_angle_at_node_normalized(me), edges[(i + 1) % n].get_angle_at_node_normalized(me));
+                rawAngleDiffs.push(rawDiff.abs());
+                if diff > maxAngleDiff {
+                    maxAngleDiff = diff;
+                    maxAngleDiffIndex = i;
+                }
+            }
+            if maxAngleDiff > 2. && maxAngleDiff < 360. - 2. {
+                // if the angle differences is too small, we better not rotate
+                // std::rotate(begin, begin + (idx+1)%size, end) is a left rotation by that amount
+                edges.rotate_left((maxAngleDiffIndex + 1) % n);
+            }
+            let mut diagonalCrossing = false;
+            rawAngleDiffs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            if rawAngleDiffs.len() >= 2 && rawAngleDiffs[rawAngleDiffs.len() - 2] > 30. {
+                diagonalCrossing = true;
+            }
+            // reverse to get them in CCW order (walking direction around the node)
+            edges.reverse();
+            // edges is a reference to c->edges in C++; keep the stored crossing in sync
+            self.myCrossings[ci].edges = edges.clone();
+            // compute shape
+            self.myCrossings[ci].shape = PositionVector::default();
+            let begDir: i32 = if edges[0].get_from_node() == me { NBNODE_FORWARD } else { NBNODE_BACKWARD };
+            let endDir: i32 = if edges[edges.len() - 1].get_to_node() == me { NBNODE_FORWARD } else { NBNODE_BACKWARD };
+            let mut firstNonPedLane = edges[0].get_first_non_pedestrian_lane_index(begDir, false);
+            let mut lastNonPedLane = edges[edges.len() - 1].get_first_non_pedestrian_lane_index(endDir, false);
+            if firstNonPedLane < 0 || lastNonPedLane < 0 {
+                // invalid crossing
+                let edgeIds: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+                write_warning(&format!(
+                    "Discarding invalid crossing '{}' at junction '{}' with edges [{}] (no vehicle lanes to cross).",
+                    self.myCrossings[ci].id,
+                    self.get_id(),
+                    edgeIds.join(" ")
+                ));
+                self.myCrossings[ci].valid = false;
+                // compute surrogate shape to make it visible in netedit
+                firstNonPedLane = if begDir == NBNODE_FORWARD { 0 } else { edges[0].get_num_lanes() - 1 };
+                lastNonPedLane = if endDir == NBNODE_FORWARD { 0 } else { edges[edges.len() - 1].get_num_lanes() - 1 };
+            }
+            if self.myCrossings[ci].customShape.len() != 0 {
+                self.myCrossings[ci].shape = self.myCrossings[ci].customShape.clone();
+            } else {
+                let mut crossingBegShape: PositionVector = edges[0].get_lanes()[firstNonPedLane as usize].shape.clone();
+                let mut crossingBegWidth: f64 = edges[0].get_lanes()[firstNonPedLane as usize].width;
+                let mut crossingEndShape: PositionVector = edges[edges.len() - 1].get_lanes()[lastNonPedLane as usize].shape.clone();
+                let mut crossingEndWidth: f64 = edges[edges.len() - 1].get_lanes()[lastNonPedLane as usize].width;
+                crossingBegWidth = if crossingBegWidth == NBEDGE_UNSPECIFIED_WIDTH { NBNODE_SUMO_CONST_LANE_WIDTH } else { crossingBegWidth };
+                crossingEndWidth = if crossingEndWidth == NBEDGE_UNSPECIFIED_WIDTH { NBNODE_SUMO_CONST_LANE_WIDTH } else { crossingEndWidth };
+                crossingBegShape.move2side((begDir as f64) * crossingBegWidth / 2., 100.);
+                crossingEndShape.move2side((endDir as f64) * crossingEndWidth / 2., 100.);
+                let mut offset = self.myCrossings[ci].width / 2.;
+                self.patch_offset_path_across_street(&mut offset);
+                crossingBegShape.extrapolate(offset, false, false);
+                crossingEndShape.extrapolate(offset, false, false);
+                // check if after all changes shape are NAN (in these case, discard)
+                if crossingBegShape.is_nan() || crossingEndShape.is_nan() {
+                    let edgeIds: Vec<String> = edges.iter().map(|e| e.get_id().to_string()).collect();
+                    write_warning(&format!(
+                        "Discarding invalid crossing '{}' at junction '{}' with edges [{}] (invalid shape).",
+                        self.myCrossings[ci].id,
+                        self.get_id(),
+                        edgeIds.join(" ")
+                    ));
+                    self.myCrossings[ci].valid = false;
+                } else {
+                    let begPt = *crossingBegShape.at(if begDir == NBNODE_FORWARD { 0 } else { -1 });
+                    let endPt = *crossingEndShape.at(if endDir == NBNODE_FORWARD { -1 } else { 0 });
+                    self.myCrossings[ci].shape.push(begPt);
+                    self.myCrossings[ci].shape.push(endPt);
+                }
+                if diagonalCrossing {
+                    let w = -self.myCrossings[ci].width;
+                    self.myCrossings[ci].shape.move2side(w, 100.);
+                }
+            }
+        }
+        index
     }
 
     /// C++: `void NBNode::buildWalkingAreas(int, double)`
@@ -3807,7 +5041,44 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossing_outlines(&mut self) {
-        todo!("port NBNode::buildCrossingOutlines")
+        let mut waShapes: BTreeMap<String, PositionVector> = BTreeMap::new();
+        for wa in self.myWalkingAreas.iter() {
+            waShapes.insert(wa.id.clone(), wa.shape.clone());
+        }
+        for c in self.get_crossings() {
+            let c = c.m();
+            let mut wa1 = waShapes.get(&c.prevWalkingArea).cloned().unwrap_or_default();
+            let mut wa2 = waShapes.get(&c.nextWalkingArea).cloned().unwrap_or_default();
+            if wa1.is_empty() || wa2.is_empty() {
+                continue;
+            }
+            wa1.close_polygon();
+            wa2.close_polygon();
+            let mut side1 = c.shape.clone();
+            let mut side2 = c.shape.reverse();
+            side1.move2side(c.width / 2., 100.);
+            side2.move2side(c.width / 2., 100.);
+            let side1default = side1.clone();
+            let side2default = side2.clone();
+            side1.extrapolate(POSITION_EPS, false, false);
+            side2.extrapolate(c.width, false, false);
+            side1 = self.cut_at_shapes(&side1, &wa1, &wa2, &side1default);
+            side2 = self.cut_at_shapes(&side2, &wa1, &wa2, &side2default);
+            let mut side1ex = side1.clone();
+            let mut side2ex = side2.clone();
+            side1ex.extrapolate(POSITION_EPS, false, false);
+            side2ex.extrapolate(if side2 == side2default { c.width / 2. } else { POSITION_EPS }, false, false);
+            let side3 = self.cut_at_shapes(&wa2, &side1ex, &side2ex, &PositionVector::default());
+            let side4 = self.cut_at_shapes(&wa1, &side1ex, &side2ex, &PositionVector::default());
+            c.outlineShape = side1;
+            c.outlineShape.append(&side3, POSITION_EPS);
+            c.outlineShape.append(&side2, POSITION_EPS);
+            c.outlineShape.append(&side4, POSITION_EPS);
+            c.outlineShape.remove_double_points(POSITION_EPS, false, 0, 0, false);
+            if c.outlineShape.back().almost_same(c.outlineShape.front(), POSITION_EPS) {
+                c.outlineShape.pop();
+            }
+        }
     }
 
     /// C++: `void NBNode::buildCrossingsAndWalkingAreas()`
@@ -3861,7 +5132,51 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn build_crossings_and_walking_areas(&mut self) {
-        todo!("port NBNode::buildCrossingsAndWalkingAreas")
+        self.build_crossings();
+        self.build_walking_areas(utils::options::options_cont::get_int("junctions.corner-detail"), utils::options::options_cont::get_float("walkingareas.join-dist"));
+        self.build_crossing_outlines();
+        // ensure that all crossings are properly connected
+        let mut recheck = !self.myCrossings.is_empty();
+        while recheck {
+            recheck = false;
+            let nodeID = self.get_id().to_string();
+            let mut waIDs: BTreeSet<String> = BTreeSet::new();
+            let mut numSidewalks: i32 = 0;
+            for wa in self.myWalkingAreas.iter() {
+                waIDs.insert(wa.id.clone());
+                numSidewalks += (wa.prevSidewalks.len() + wa.nextSidewalks.len()) as i32;
+            }
+            if numSidewalks < 2 {
+                // all crossings are invalid if there are fewer than 2 sidewalks involved
+                waIDs.clear();
+            }
+            for crossing in self.myCrossings.iter_mut() {
+                if !waIDs.contains(&crossing.prevWalkingArea) || !waIDs.contains(&crossing.nextWalkingArea) || !crossing.valid {
+                    if crossing.valid {
+                        let mut edgesStr = String::new();
+                        crate::netbuild::nb_cont_helper::shl_op(&mut edgesStr, &crossing.edges);
+                        utils::common::msg_handler::write_warning(&format!("Discarding invalid crossing '{}' at junction '{}' with edges [{}] (no walkingarea found).", crossing.id, nodeID, edgesStr));
+                        recheck = true;
+                    }
+                    let mut i = 0;
+                    while i < self.myWalkingAreas.len() {
+                        let wa = &mut self.myWalkingAreas[i];
+                        if let Some(pos) = wa.nextCrossings.iter().position(|x| *x == crossing.id) {
+                            wa.nextCrossings.remove(pos);
+                        }
+                        if wa.prevSidewalks.len() + wa.nextSidewalks.len() + wa.nextCrossings.len() + wa.prevCrossings.len() < 2 {
+                            self.myWalkingAreas.remove(i);
+                            recheck = true;
+                        } else {
+                            i += 1;
+                        }
+                    }
+                    crossing.valid = false;
+                    crossing.prevWalkingArea = String::new();
+                    crossing.nextWalkingArea = String::new();
+                }
+            }
+        }
     }
 
     /// C++: `EdgeVector NBNode::edgesBetween(const NBEdge *, const NBEdge *) const` [const]
@@ -3882,7 +5197,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn edges_between(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> EdgeVector {
-        todo!("port NBNode::edgesBetween")
+        let mut result: EdgeVector = Vec::new();
+        let mut it = self.myAllEdges.iter().position(|e| *e == e1).expect("edge not found in myAllEdges");
+        NBContHelper::next_cw(&self.myAllEdges, &mut it);
+        let it_end = self.myAllEdges.iter().position(|e| *e == e2).expect("edge not found in myAllEdges");
+        while it != it_end {
+            result.push(self.myAllEdges[it]);
+            NBContHelper::next_cw(&self.myAllEdges, &mut it);
+        }
+        result
     }
 
     /// C++: `bool NBNode::crossingBetween(const NBEdge *, const NBEdge *) const` [const]
@@ -3908,7 +5231,20 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn crossing_between(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::crossingBetween")
+        if e1 == e2 {
+            return false;
+        }
+        if self.myAllEdges.len() > 3 {
+            // pedestrian scramble
+            return false;
+        }
+        for c in self.get_crossings() {
+            let edges = &c.edges;
+            if edges.contains(&e1) && edges.contains(&e2) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::alreadyConnectedPaths(const NBEdge *, const NBEdge *, double) const` [const]
@@ -3934,7 +5270,20 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn already_connected_paths(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>, dist: f64) -> bool {
-        todo!("port NBNode::alreadyConnectedPaths")
+        if e1 == e2 {
+            return false;
+        }
+        if e1.get_permissions(-1) != SVC_PEDESTRIAN || e2.get_permissions(-1) != SVC_PEDESTRIAN {
+            // no paths
+            return false;
+        }
+        if e1.get_final_length() > dist && e2.get_final_length() > dist {
+            // too long
+            return false;
+        }
+        let other1 = if e1.get_from_node() == Ptr::new(self) { e1.get_to_node() } else { e1.get_from_node() };
+        let other2 = if e2.get_from_node() == Ptr::new(self) { e2.get_to_node() } else { e2.get_from_node() };
+        other1 == other2
     }
 
     /// C++: `bool NBNode::crossesFringe(const NBEdge *, const NBEdge *) const` [const]
@@ -3947,7 +5296,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn crosses_fringe(&self, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port NBNode::crossesFringe")
+        self.myFringeType != FringeType::DEFAULT
+            && self.myIncomingEdges.len() == 1
+            && self.myOutgoingEdges.len() == 1
+            && (e1.is_turning_direction_at(e2) || e2.is_turning_direction_at(e1))
     }
 
     /// C++: `const NBConnectionProhibits & NBNode::getProhibitions()`
@@ -3957,7 +5309,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_prohibitions(&mut self) -> &NBConnectionProhibits {
-        todo!("port NBNode::getProhibitions")
+        &self.myBlockedConnections
     }
 
     /// C++: `bool NBNode::geometryLike() const` [const]
@@ -3968,7 +5320,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn geometry_like(&self) -> bool {
-        todo!("port NBNode::geometryLike")
+        NBNode::geometry_like_2(&self.myIncomingEdges, &self.myOutgoingEdges)
     }
 
     /// C++: `bool NBNode::geometryLike(const EdgeVector &, const EdgeVector &)` [static]
@@ -4007,7 +5359,36 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn geometry_like_2(incoming: &EdgeVector, outgoing: &EdgeVector) -> bool {
-        todo!("port NBNode::geometryLike")
+        if incoming.len() == 1 && outgoing.len() == 1 {
+            return incoming[0].get_bidi_edge() != outgoing[0];
+        }
+        if incoming.len() == 2 && outgoing.len() == 2 {
+            // check whether the incoming and outgoing edges are pairwise (near) parallel and
+            // thus the only cross-connections could be turn-arounds
+            let in0 = incoming[0];
+            let in1 = incoming[1];
+            let out0 = outgoing[0];
+            let out1 = outgoing[1];
+            if (in0.is_turning_direction_at(out0) || in0.is_turning_direction_at(out1))
+                && (in1.is_turning_direction_at(out0) || in1.is_turning_direction_at(out1))
+            {
+                return true;
+            }
+            if in0.get_geometry() == in1.get_geometry() && out0.get_geometry() == out1.get_geometry() {
+                // overlapping edges
+                return true;
+            }
+            for inEdge in incoming.iter() {
+                let angle0 = NBHelpers::rel_angle(inEdge.get_angle_at_node(inEdge.get_to_node()), out0.get_angle_at_node(out0.get_from_node())).abs();
+                let angle1 = NBHelpers::rel_angle(inEdge.get_angle_at_node(inEdge.get_to_node()), out1.get_angle_at_node(out1.get_from_node())).abs();
+                if angle0.max(angle1) <= 160. {
+                    // neither of the outgoing edges is parallel to inEdge
+                    return false;
+                }
+            }
+            return true;
+        }
+        false
     }
 
     /// C++: `void NBNode::setRoundabout()`
@@ -4020,7 +5401,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_roundabout(&mut self) {
-        todo!("port NBNode::setRoundabout")
+        if self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT || self.myType == SumoXMLNodeType::LEFT_BEFORE_RIGHT {
+            self.myType = SumoXMLNodeType::PRIORITY;
+        }
     }
 
     /// C++: `bool NBNode::isRoundabout() const` [const]
@@ -4036,7 +5419,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_roundabout(&self) -> bool {
-        todo!("port NBNode::isRoundabout")
+        for out in self.myOutgoingEdges.iter() {
+            if out.get_junction_priority(Ptr::new(self)) == NBEdge_JunctionPriority::ROUNDABOUT as i32 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `NBNode::Crossing * NBNode::addCrossing(EdgeVector, double, bool, int, int, const PositionVector &, bool, const Parameterised *)`
@@ -4056,7 +5444,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_crossing(&mut self, edges: EdgeVector, width: f64, priority: bool, tlIndex: i32, tlIndex2: i32, customShape: &PositionVector, fromSumoNet: bool, params: Ptr<Parameterised>) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::addCrossing")
+        let mut c = Box::new(NBNode_Crossing::new(Ptr::from_mut(self), &edges, width, priority, tlIndex, tlIndex2, customShape));
+        if !params.is_null() {
+            c.update_parameters(params.get_parameters_map());
+        }
+        let cp = Ptr::from_box(&c);
+        self.myCrossings.push(c);
+        if fromSumoNet {
+            self.myCrossingsLoadedFromSumoNet += 1;
+        }
+        cp
     }
 
     /// C++: `void NBNode::addWalkingAreaShape(EdgeVector, const PositionVector &, double)`
@@ -4071,7 +5468,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_walking_area_shape(&mut self, edges: EdgeVector, shape: &PositionVector, width: f64) {
-        todo!("port NBNode::addWalkingAreaShape")
+        let mut wacs = NBNode_WalkingAreaCustomShape { edges: BTreeSet::new(), shape: shape.clone(), width };
+        wacs.edges.extend(edges.iter().copied());
+        self.myWalkingAreaCustomShapes.push(wacs);
     }
 
     /// C++: `void NBNode::removeCrossing(const EdgeVector &)`
@@ -4090,7 +5489,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_crossing(&mut self, edges: &EdgeVector) {
-        todo!("port NBNode::removeCrossing")
+        let edgeSet: BTreeSet<Ptr<NBEdge>> = edges.iter().copied().collect();
+        self.myCrossings.retain(|c| {
+            let edgeSet2: BTreeSet<Ptr<NBEdge>> = c.edges.iter().copied().collect();
+            edgeSet != edgeSet2
+        });
     }
 
     /// C++: `void NBNode::discardAllCrossings(bool)`
@@ -4105,7 +5508,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn discard_all_crossings(&mut self, rejectAll: bool) {
-        todo!("port NBNode::discardAllCrossings")
+        self.myCrossings.clear();
+        // also discard all further crossings
+        if rejectAll {
+            self.myDiscardAllCrossings = true;
+        }
     }
 
     /// C++: `void NBNode::discardWalkingareas()`
@@ -4116,7 +5523,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn discard_walkingareas(&mut self) {
-        todo!("port NBNode::discardWalkingareas")
+        self.myWalkingAreas.clear();
     }
 
     /// C++: `int NBNode::numCrossingsFromSumoNet() const` [const]
@@ -4126,7 +5533,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn num_crossings_from_sumo_net(&self) -> i32 {
-        todo!("port NBNode::numCrossingsFromSumoNet")
+        self.myCrossingsLoadedFromSumoNet
     }
 
     /// C++: `std::vector<Crossing *> NBNode::getCrossings() const` [const]
@@ -4134,7 +5541,7 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossings(&self) -> Vec<Ptr<NBNode_Crossing>> {
-        todo!("port NBNode::getCrossings")
+        self.myCrossings.iter().filter(|c| c.valid).map(|c| Ptr::from_box(c)).collect()
     }
 
     /// C++: `const std::vector<std::unique_ptr<Crossing>> & NBNode::getCrossingsIncludingInvalid() const` [const]
@@ -4143,7 +5550,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_crossings_including_invalid(&self) -> &Vec<Box<NBNode_Crossing>> {
-        todo!("port NBNode::getCrossingsIncludingInvalid")
+        &self.myCrossings
     }
 
     /// C++: `const std::vector<WalkingArea> & NBNode::getWalkingAreas() const` [const]
@@ -4153,7 +5560,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_areas(&self) -> &Vec<NBNode_WalkingArea> {
-        todo!("port NBNode::getWalkingAreas")
+        &self.myWalkingAreas
     }
 
     /// C++: `const std::vector<WalkingAreaCustomShape> & NBNode::getWalkingAreaCustomShapes() const` [const]
@@ -4162,7 +5569,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_walking_area_custom_shapes(&self) -> &Vec<NBNode_WalkingAreaCustomShape> {
-        todo!("port NBNode::getWalkingAreaCustomShapes")
+        &self.myWalkingAreaCustomShapes
     }
 
     /// C++: `Crossing * NBNode::getCrossing(const std::string &) const` [const]
@@ -4170,7 +5577,12 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossing(&self, id: &str) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::getCrossing")
+        for c in self.myCrossings.iter() {
+            if c.id == id {
+                return Ptr::from_box(c);
+            }
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Request for unknown crossing '{}'", id)));
     }
 
     /// C++: `Crossing * NBNode::getCrossing(const EdgeVector &, bool) const` [const]
@@ -4178,7 +5590,17 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_crossing_2(&self, edges: &EdgeVector, hardFail: bool) -> Ptr<NBNode_Crossing> {
-        todo!("port NBNode::getCrossing")
+        let edgeSet: BTreeSet<Ptr<NBEdge>> = edges.iter().copied().collect();
+        for crossing in self.myCrossings.iter() {
+            let edgeSet2: BTreeSet<Ptr<NBEdge>> = crossing.edges.iter().copied().collect();
+            if edgeSet == edgeSet2 {
+                return Ptr::from_box(crossing);
+            }
+        }
+        if !hardFail {
+            return Ptr::default();
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new("Request for unknown crossing for the given Edges"));
     }
 
     /// C++: `WalkingArea & NBNode::getWalkingArea(const std::string &)`
@@ -4186,7 +5608,22 @@ impl NBNode {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_walking_area(&mut self, id: &str) -> &mut NBNode_WalkingArea {
-        todo!("port NBNode::getWalkingArea")
+        if let Some(i) = self.myWalkingAreas.iter().position(|wa| wa.id == id) {
+            return &mut self.myWalkingAreas[i];
+        }
+        // not found, maybe we need to rebuild
+        self.update_surrounding_geometry();
+        self.sort_edges(true);
+        self.build_crossings_and_walking_areas();
+        if let Some(i) = self.myWalkingAreas.iter().position(|wa| wa.id == id) {
+            return &mut self.myWalkingAreas[i];
+        }
+        if !self.myWalkingAreas.is_empty() {
+            // don't crash
+            utils::common::msg_handler::write_warning(&format!("Could not retrieve walkingarea '{}' (edge ordering changed after recompute).", id));
+            return &mut self.myWalkingAreas[0];
+        }
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Request for unknown walkingarea '{}'.", id)));
     }
 
     /// C++: `bool NBNode::setCrossingTLIndices(const std::string &, int, bool)`
@@ -4209,7 +5646,23 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn set_crossing_tl_indices(&mut self, tlID: &str, startIndex: i32, ignoreCustom: bool) -> bool {
-        todo!("port NBNode::setCrossingTLIndices")
+        let mut usedCustom = false;
+        let mut startIndex = startIndex;
+        for c in self.get_crossings() {
+            let c = c.m();
+            c.tlLinkIndex = startIndex;
+            startIndex += 1;
+            c.tlID = tlID.to_string();
+            if c.customTLIndex != -1 && !ignoreCustom {
+                usedCustom |= c.tlLinkIndex != c.customTLIndex;
+                c.tlLinkIndex = c.customTLIndex;
+            }
+            if c.customTLIndex2 != -1 && !ignoreCustom {
+                usedCustom = true;
+                c.tlLinkIndex2 = c.customTLIndex2;
+            }
+        }
+        usedCustom
     }
 
     /// C++: `int NBNode::numNormalConnections() const` [const]
@@ -4229,7 +5682,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn num_normal_connections(&self) -> i32 {
-        todo!("port NBNode::numNormalConnections")
+        if self.myRequest.is_null() {
+            // could be an uncontrolled type
+            let mut result = 0;
+            for edge in self.myIncomingEdges.iter() {
+                result += edge.get_connections().len() as i32;
+            }
+            result
+        } else {
+            self.myRequest.get_sizes().1
+        }
     }
 
     /// C++: `void NBNode::avoidOverlap()`
@@ -4253,7 +5715,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn avoid_overlap(&mut self) {
-        todo!("port NBNode::avoidOverlap")
+        // simple case: edges with LaneSpreadFunction::CENTER and a (possible) turndirection at the same node
+        let mut haveModifications = false;
+        for edge in self.myIncomingEdges.clone() {
+            let turnDest = edge.get_turn_destination(true);
+            if !turnDest.is_null() {
+                haveModifications |= edge.m().shift_position_at_node(Ptr::from_mut(self), turnDest);
+                haveModifications |= turnDest.m().shift_position_at_node(Ptr::from_mut(self), edge);
+            }
+        }
+        if haveModifications {
+            crate::netbuild::nb_algorithms::NBTurningDirectionsComputer::compute_turn_directions_for_node(Ptr::from_mut(self), false);
+        }
+        // @todo: edges in the same direction with sharp angles starting/ending at the same position
     }
 
     /// C++: `bool NBNode::extraConflict(int, int) const` [const]
@@ -4269,7 +5743,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
-        todo!("port NBNode::extraConflict")
+        for def in self.myTrafficLights.iter() {
+            if def.extra_conflict(index, foeIndex) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void NBNode::sortEdges(bool)`
@@ -4392,7 +5871,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_traffic_light(type_: SumoXMLNodeType) -> bool {
-        todo!("port NBNode::isTrafficLight")
+        type_ == SumoXMLNodeType::TRAFFIC_LIGHT
+            || type_ == SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION
+            || type_ == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
     }
 
     /// C++: `bool NBNode::isTrafficLight() const` [const]
@@ -4401,7 +5882,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn is_traffic_light_2(&self) -> bool {
-        todo!("port NBNode::isTrafficLight")
+        NBNode::is_traffic_light(self.myType)
     }
 
     /// C++: `bool NBNode::isSimpleContinuation(bool, bool) const` [const]
@@ -5285,7 +6766,73 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn patch_offset_path_across_street(&mut self, offset: &mut f64) {
-        todo!("port NBNode::patchOffset_pathAcrossStreet")
+        if self.myCrossings.len() == 1 && self.myAllEdges.len() >= 3 {
+            let mut nonPedIncoming: EdgeVector = Vec::new();
+            let mut nonPedOutgoing: EdgeVector = Vec::new();
+            let mut pedIncoming: EdgeVector = Vec::new();
+            let mut pedOutgoing: EdgeVector = Vec::new();
+            for e in self.get_incoming_edges().iter() {
+                if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                    nonPedIncoming.push(*e);
+                } else {
+                    pedIncoming.push(*e);
+                }
+            }
+            for e in self.get_outgoing_edges().iter() {
+                if e.get_permissions(-1) != SVC_PEDESTRIAN {
+                    nonPedOutgoing.push(*e);
+                } else {
+                    pedOutgoing.push(*e);
+                }
+            }
+            if NBNode::geometry_like_2(&nonPedIncoming, &nonPedOutgoing) && (pedIncoming.len() > 0 || pedOutgoing.len() > 0) {
+                let mut maxAngle: f64 = 0.;
+                let mut inE = nonPedIncoming[0];
+                let mut outE = nonPedOutgoing[0];
+                if nonPedIncoming.len() == 1 {
+                    maxAngle = NBHelpers::rel_angle(inE.get_angle_at_node(Ptr::from_mut(self)), outE.get_angle_at_node(Ptr::from_mut(self))).abs();
+                } else {
+                    for in2 in nonPedIncoming.iter() {
+                        let mut minAngle: f64 = 180.;
+                        for out2 in nonPedOutgoing.iter() {
+                            let angle = NBHelpers::rel_angle(in2.get_angle_at_node(Ptr::from_mut(self)), out2.get_angle_at_node(Ptr::from_mut(self))).abs();
+                            if angle < minAngle {
+                                minAngle = angle;
+                                inE = *in2;
+                                outE = *out2;
+                            }
+                        }
+                        maxAngle = maxAngle.max(minAngle);
+                    }
+                }
+                // changing the offset only handles the simple case where the road stays straight
+                if maxAngle < 15. {
+                    let inLane = inE.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false);
+                    let outLane = outE.get_first_non_pedestrian_lane_index(NBNODE_FORWARD, false);
+                    if inLane >= 0 && outLane >= 0 {
+                        let p0 = *inE.get_lane_shape(inLane).back();
+                        let p1 = *outE.get_lane_shape(outLane).front();
+                        let mut road = PositionVector::default();
+                        road.push(p0);
+                        road.push(p1);
+                        let mid = (p0 + p1) / 2.;
+                        let mut maxPathDist: f64 = 0.;
+                        for e in pedIncoming.iter() {
+                            let roadPos = road.position_at_offset2d(road.nearest_offset_to_point2d(e.get_lane_shape(0).back(), true), 0., false);
+                            maxPathDist = maxPathDist.max(mid.distance_to2d(&roadPos));
+                        }
+                        for e in pedOutgoing.iter() {
+                            let roadPos = road.position_at_offset2d(road.nearest_offset_to_point2d(e.get_lane_shape(0).front(), true), 0., false);
+                            maxPathDist = maxPathDist.max(mid.distance_to2d(&roadPos));
+                        }
+                        // if the junction is stretched, the crossing should stay close to the paths
+                        if maxPathDist < self.myCrossings[0].width.max(4.0) {
+                            *offset = p0.distance_to2d(&p1) / 2.;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool NBNode::unsignalizedOperation() const` [const, private]
@@ -5475,7 +7022,20 @@ impl NBNode_WalkingArea {
     //         }
     #[allow(unused_variables)]
     pub fn new(_id: &str, _width: f64) -> Self {
-        todo!("port WalkingArea::WalkingArea")
+        NBNode_WalkingArea {
+            id: _id.to_string(),
+            width: _width,
+            length: utils::common::std_defs::INVALID_DOUBLE,
+            shape: PositionVector::default(),
+            nextCrossings: Vec::new(),
+            prevCrossings: Vec::new(),
+            nextSidewalks: Vec::new(),
+            prevSidewalks: Vec::new(),
+            hasCustomShape: false,
+            minNextCrossingEdges: i32::MAX,
+            minPrevCrossingEdges: i32::MAX,
+            refEdges: BTreeSet::new(),
+        }
     }
 
 }
