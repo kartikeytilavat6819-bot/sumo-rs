@@ -1,6 +1,7 @@
 //! Port of activitygen/city/AGDataAndStatistics.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::collections::BTreeMap;
 
 /// C++ class `AGDataAndStatistics` (activitygen/city/AGDataAndStatistics.h)
 pub struct AGDataAndStatistics {
@@ -52,7 +53,16 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_data_and_statistics() -> &'static mut AGDataAndStatistics {
-        todo!("port AGDataAndStatistics::getDataAndStatistics")
+        thread_local! {
+            static DS: std::cell::Cell<*mut AGDataAndStatistics> = std::cell::Cell::new(std::ptr::null_mut());
+        }
+        // shortcut: C++ function-static instance is emulated by a leaked per-thread box; aliasing is as loose as the C++ original
+        DS.with(|ds| {
+            if ds.get().is_null() {
+                ds.set(Box::leak(Box::new(AGDataAndStatistics::new())) as *mut AGDataAndStatistics);
+            }
+            unsafe { &mut *ds.get() }
+        })
     }
 
     /// C++: `int AGDataAndStatistics::getRandom(int, int)`
@@ -68,7 +78,12 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_random(&mut self, n: i32, m: i32) -> i32 {
-        todo!("port AGDataAndStatistics::getRandom")
+        if m < n {
+            return 0;
+        }
+        let mut num = utils::common::rand_helper::with_default(|r| r.rand_int(m - n));
+        num += n;
+        num
     }
 
     /// C++: `int AGDataAndStatistics::getRandomPopDistributed(int, int)`
@@ -91,7 +106,23 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_random_pop_distributed(&mut self, n: i32, m: i32) -> i32 {
-        todo!("port AGDataAndStatistics::getRandomPopDistributed")
+        let mut m = m;
+        if m < n || n >= self.limitEndAge {
+            return -1;
+        }
+        if m > self.limitEndAge {
+            m = self.limitEndAge;
+        }
+        let minV = self.get_prop_younger_than(n);
+        let maxV = self.get_prop_younger_than(m);
+        // RandHelper::rand(minV, maxV) = minV + (maxV - minV) * rand()
+        let alea = minV + (maxV - minV) * utils::common::rand_helper::rand();
+        for a in n..m {
+            if alea < self.get_prop_younger_than(a + 1) {
+                return a;
+            }
+        }
+        -1
     }
 
     /// C++: `int AGDataAndStatistics::getPoissonsNumberOfChildren(double)`
@@ -110,7 +141,16 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_poissons_number_of_children(&mut self, mean: f64) -> i32 {
-        todo!("port AGDataAndStatistics::getPoissonsNumberOfChildren")
+        const LIMIT_CHILDREN_NUMBER: i32 = 3; // C++ #define in AGDataAndStatistics.cpp
+        let alea = utils::common::rand_helper::rand();
+        let mut cumul = 0.0;
+        for nbr in 0..LIMIT_CHILDREN_NUMBER {
+            cumul += self.poisson(mean, nbr);
+            if cumul > alea {
+                return nbr;
+            }
+        }
+        LIMIT_CHILDREN_NUMBER
     }
 
     /// C++: `int AGDataAndStatistics::getPeopleOlderThan(int)`
@@ -159,16 +199,16 @@ impl AGDataAndStatistics {
         let mut sum = 0.0;
         let mut previous_age = 0;
         let mut prop = 0.0;
-        
-        for (&age, &value) in self.population.iter() {
-            if age < age {
-                sum += value;
-            } else if age >= age && previous_age < age {
-                prop = ((age - previous_age) as f64 / (age - previous_age) as f64);
-                sum += prop * value;
+
+        for (&first, &second) in self.population.iter() {
+            if first < age {
+                sum += second;
+            } else if first >= age && previous_age < age {
+                prop = (age - previous_age) as f64 / (first - previous_age) as f64;
+                sum += prop * second;
                 break;
             }
-            previous_age = age;
+            previous_age = first;
         }
         sum
     }
@@ -193,7 +233,21 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn consolidate_stat(&mut self) {
-        todo!("port AGDataAndStatistics::consolidateStat")
+        let m = Ptr::from_mut(&mut self.beginWorkHours);
+        self.normalize_map_prob(m);
+        let m = Ptr::from_mut(&mut self.endWorkHours);
+        self.normalize_map_prob(m);
+        let m = Ptr::from_mut(&mut self.population);
+        self.normalize_map_prob(m);
+        let m = Ptr::from_mut(&mut self.incoming);
+        self.normalize_map_prob(m);
+        let m = Ptr::from_mut(&mut self.outgoing);
+        self.normalize_map_prob(m);
+        self.limitEndAge = *self.population.keys().next_back().unwrap();
+
+        self.oldAgeHhProb = self.get_people_older_than(self.limitAgeRetirement) as f64 / self.get_people_older_than(self.limitAgeChildren) as f64;
+        self.secondPersProb = (self.get_people_older_than(self.limitAgeChildren) - self.households) as f64 / self.households as f64;
+        self.meanNbrChildren = self.get_people_younger_than(self.limitAgeChildren) as f64 / ((1.0 - self.oldAgeHhProb) * self.households as f64);
     }
 
     /// C++: `double AGDataAndStatistics::getInverseExpRandomValue(double, double)`
@@ -220,7 +274,23 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_inverse_exp_random_value(&mut self, mean: f64, maxVar: f64) -> f64 {
-        todo!("port AGDataAndStatistics::getInverseExpRandomValue")
+        if maxVar <= 0.0 {
+            return mean;
+        }
+        // RandHelper::rand(0.0001, 1) = minV + (maxV - minV) * rand()
+        let mut p = 0.0001 + (1.0 - 0.0001) * utils::common::rand_helper::rand();
+        //we have to scale the distribution because maxVar is different from INF
+        let scale = ((-1.0) * maxVar).exp();
+        //new p: scaled
+        p = p * (1.0 - scale) + scale; // p = [scale; 1) ==> (1-p) = (0; 1-scale]
+
+        let variation = (-1.0) * p.ln();
+        //decide the side of the mean value
+        if utils::common::rand_helper::with_default(|r| r.rand_int(1000)) < 500 {
+            mean + variation
+        } else {
+            mean - variation
+        }
     }
 
     /// C++: `int AGDataAndStatistics::getRandomCityGateByIncoming()`
@@ -241,7 +311,16 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_random_city_gate_by_incoming(&mut self) -> i32 {
-        todo!("port AGDataAndStatistics::getRandomCityGateByIncoming")
+        let alea = utils::common::rand_helper::rand();
+        let mut total = 0.0;
+        for (&k, &v) in self.incoming.iter() {
+            total += v;
+            if alea < total {
+                return k;
+            }
+        }
+        println!("ERROR: incoming at city gates not normalized");
+        0
     }
 
     /// C++: `int AGDataAndStatistics::getRandomCityGateByOutgoing()`
@@ -261,14 +340,57 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn get_random_city_gate_by_outgoing(&mut self) -> i32 {
-        todo!("port AGDataAndStatistics::getRandomCityGateByOutgoing")
+        let alea = utils::common::rand_helper::rand();
+        let mut total = 0.0;
+        for (&k, &v) in self.outgoing.iter() {
+            total += v;
+            if alea < total {
+                return k;
+            }
+        }
+        println!("ERROR: outgoing at city gates not normalized");
+        0
     }
 
     /// C++: `void AGDataAndStatistics::AGDataAndStatistics()` [private]
     // AGDataAndStatistics() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port AGDataAndStatistics::AGDataAndStatistics")
+        // C++ leaves the primitive members uninitialized; zeroed here, maps start empty
+        AGDataAndStatistics {
+            speedTimePerKm: 0.0,
+            carPreference: 0.0,
+            inhabitants: 0,
+            households: 0,
+            limitAgeChildren: 0,
+            limitAgeRetirement: 0,
+            limitEndAge: 0,
+            carRate: 0.0,
+            unemployement: 0.0,
+            laborDemand: 0.0,
+            maxFootDistance: 0.0,
+            incomingTraffic: 0,
+            outgoingTraffic: 0,
+            freeTimeActivityRate: 0.0,
+            uniformRandomTrafficRate: 0.0,
+            departureVariation: 0.0,
+            beginWorkHours: BTreeMap::new(),
+            endWorkHours: BTreeMap::new(),
+            busStations: BTreeMap::new(),
+            population: BTreeMap::new(),
+            ageSpan: BTreeMap::new(),
+            incoming: BTreeMap::new(),
+            outgoing: BTreeMap::new(),
+            workPositions: 0,
+            factorInhabitants: 0.0,
+            factorWorkPositions: 0.0,
+            oldAgeHhProb: 0.0,
+            secondPersProb: 0.0,
+            meanNbrChildren: 0.0,
+            AdultNbr: 0,
+            householdsNbr: 0,
+            hhFarFromPT: 0,
+        }
     }
 
     /// C++: `double AGDataAndStatistics::poisson(double, int)` [private]
@@ -279,13 +401,7 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn poisson(&mut self, mean: f64, occ: i32) -> f64 {
-        use std::f64::consts::E;
-        
-        fn factorial(n: i32) -> f64 {
-            (1..=n).fold(1.0, |acc, x| acc * x as f64)
-        }
-        
-        E.powf(-mean) * mean.powi(occ) / factorial(occ)
+        (-mean).exp() * mean.powf(occ as f64) / (self.factorial(occ) as f64)
     }
 
     /// C++: `int AGDataAndStatistics::factorial(int)` [private]
@@ -322,7 +438,17 @@ impl AGDataAndStatistics {
     // }
     #[allow(unused_variables)]
     pub fn normalize_map_prob(&mut self, myMap: Ptr<BTreeMap<i32, f64>>) {
-        todo!("port AGDataAndStatistics::normalizeMapProb")
+        let myMap = myMap.m();
+        let mut sum = 0.0;
+        for (_, v) in myMap.iter() {
+            sum += *v;
+        }
+        if sum == 0.0 {
+            return;
+        }
+        for (_, v) in myMap.iter_mut() {
+            *v = *v / sum;
+        }
     }
 
 }

@@ -298,8 +298,8 @@ impl AGFreeTime {
         if self.myHousehold.m().get_cars().is_empty() {
             return true;
         }
-        const TB_DAY: i32 = 800;  // AGTime(0, 8, 0).getTime()
-        const TE_DAY: i32 = 1800; // AGTime(0, 18, 0).getTime()
+        const TB_DAY: i32 = 28800;  // AGTime(0, 8, 0).getTime()
+        const TE_DAY: i32 = 64800; // AGTime(0, 18, 0).getTime()
         // hoisted out of the arr_hour() argument list: `self` is already mutably
         // borrowed as the receiver there, so `self.myHousehold.m()` cannot also be borrowed
         let home = self.myHousehold.m().get_position();
@@ -360,12 +360,12 @@ impl AGFreeTime {
         let destination = AGPosition::new_2(self.myHousehold.m().get_the_city().m().get_random_street());
         // C++ takes AGPosition by value, so every use below is a copy
         let copy_pos = |p: &AGPosition| AGPosition { street: p.street, position: p.position, pos2d: p.pos2d };
-        // TB_EVENING = 1900, TE_EVENING = 2400
-        let dep_time = self.random_time_between(back_home.max(1900), 2400);
+        // TB_EVENING = AGTime(0,19,0), TE_EVENING = AGTime(0,23,59) in seconds
+        let dep_time = self.random_time_between(back_home.max(68400), 86340);
         // evaluate the argument before the &mut self call (two-phase borrow)
         let home = self.myHousehold.m().get_position();
         let arr_time = self.arr_hour(copy_pos(&home), copy_pos(&destination), dep_time);
-        let ret_time = self.random_time_between(arr_time, 2400);
+        let ret_time = self.random_time_between(arr_time, 86340);
         if dep_time < 0 || ret_time < 0 {
             return true; // not enough time during the day
         }
@@ -414,7 +414,57 @@ impl AGFreeTime {
     // }
     #[allow(unused_variables)]
     pub fn type_from_home_night(&mut self, day: i32) -> bool {
-        todo!("port AGFreeTime::typeFromHomeNight")
+        // C++ static consts AGFreeTime::TB_NIGHT / TE_NIGHT (AGTime(0,23,0), AGTime(1,5,0) in seconds)
+        const TB_NIGHT: i32 = 82800;
+        const TE_NIGHT: i32 = 104400;
+        let backHome = self.when_back_home_this_day(day);
+        let ActivitiesNextDay = self.when_begin_activity_next_day(day); // is equal to 2 days if there is nothing the next day
+        let mut nextDay: i32 = 0;
+        if self.myHousehold.get_cars().is_empty() {
+            return true;
+        }
+        let destination = AGPosition::new_2(self.myHousehold.m().get_the_city().m().get_random_street());
+        // C++ takes AGPosition by value, so every use below is a copy
+        let copy_pos = |p: &AGPosition| AGPosition { street: p.street, position: p.position, pos2d: p.pos2d };
+
+        let depTime = self.random_time_between(backHome.max(TB_NIGHT), TE_NIGHT);
+        // evaluate the argument before the &mut self call (two-phase borrow)
+        let home = self.myHousehold.m().get_position();
+        let arrTime = self.arr_hour(copy_pos(&home), copy_pos(&destination), depTime);
+        // we have to go back home before the beginning of next day activities.
+        let lastRetTime = self.dep_hour(copy_pos(&destination), copy_pos(&home), TE_NIGHT.min(ActivitiesNextDay));
+        let retTime = self.random_time_between(arrTime, lastRetTime);
+        if depTime < 0 || retTime < 0 {
+            return true; // not enough time during the day
+        }
+        let car_name = self.myHousehold.get_cars().front().unwrap().get_name();
+
+        let mut departureTime = AGTime::new(depTime);
+        nextDay = departureTime.get_day();
+        departureTime.set_day(0);
+        let depTrip = AGTrip::new_5(
+            copy_pos(&home),
+            copy_pos(&destination),
+            car_name.clone(),
+            departureTime.get_time(),
+            day + nextDay,
+        );
+
+        // C++ quirk kept: the return trip is built from depTime, not retTime
+        let mut returnTime = AGTime::new(depTime);
+        nextDay = returnTime.get_day();
+        returnTime.set_day(0);
+        let retTrip = AGTrip::new_5(
+            copy_pos(&destination),
+            copy_pos(&home),
+            car_name,
+            returnTime.get_time(),
+            day + nextDay,
+        );
+
+        self.myPartialActivityTrips.push_back(depTrip);
+        self.myPartialActivityTrips.push_back(retTrip);
+        true
     }
 
     /// C++: `int AGFreeTime::whenBackHome()`
