@@ -344,6 +344,12 @@ impl fmt::Display for RGBColor {
     }
 }
 
+impl crate::iodevices::output_device::OutputValue for RGBColor {
+    fn to_output_string(&self, precision: i32) -> std::borrow::Cow<'_, str> {
+        std::borrow::Cow::Owned(self.to_string_prec(precision))
+    }
+}
+
 impl ToStringPrec for RGBColor {
     fn to_string_prec(&self, _accuracy: i32) -> String {
         self.to_string()
@@ -380,5 +386,14 @@ mod tests {
         assert_eq!(RGBColor::interpolate(&RGBColor::BLACK, &RGBColor::WHITE, 0.5), RGBColor::new(127, 127, 127, 255));
         assert_eq!(RGBColor::from_hsv(120., 1., 1., false), RGBColor::GREEN);
         assert!(RGBColor::parse_color("random").unwrap().is_random());
+    }
+}
+
+impl crate::xml::sumo_sax_attributes::FromAttr for RGBColor {
+    fn invalid_return() -> Self {
+        RGBColor::default()
+    }
+    fn from_attr(value: &str) -> Result<Self, ProcessError> {
+        RGBColor::parse_color(value)
     }
 }

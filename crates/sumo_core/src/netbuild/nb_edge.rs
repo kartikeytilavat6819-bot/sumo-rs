@@ -4473,7 +4473,7 @@ impl NBEdge {
     //         return myLanes[lane];
     //     }
     #[allow(unused_variables)]
-    pub fn get_lane_struct(&mut self, lane: i32) -> &mut Lane {
+    pub fn get_lane_struct(&mut self, lane: i32) -> &mut NBEdge_Lane {
         todo!("port NBEdge::getLaneStruct")
     }
 
@@ -4484,7 +4484,7 @@ impl NBEdge {
     //         return myLanes[lane];
     //     }
     #[allow(unused_variables)]
-    pub fn get_lane_struct_2(&self, lane: i32) -> &Lane {
+    pub fn get_lane_struct_2(&self, lane: i32) -> &NBEdge_Lane {
         todo!("port NBEdge::getLaneStruct")
     }
 

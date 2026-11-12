@@ -1,6 +1,18 @@
-//! Port of utils/shapes/Shape.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of utils/shapes/Shape.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Filled: faithful translation of the C++ shown above each method.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+
+// C++ static members of Shape (Shape.cpp)
+pub const DEFAULT_TYPE: &str = "";
+pub const DEFAULT_LAYER: f64 = 0.0;
+pub const DEFAULT_LINEWIDTH: f64 = 1.0;
+pub const DEFAULT_LAYER_POI: f64 = 202.0; // (double)GLO_POI
+pub const DEFAULT_ANGLE: f64 = 0.0;
+pub const DEFAULT_IMG_FILE: &str = "";
+pub const DEFAULT_IMG_WIDTH: f64 = 2.6;
+pub const DEFAULT_IMG_HEIGHT: f64 = 1.0;
+pub const DEFAULT_HEIGHT: f64 = 0.0;
+pub const DEFAULT_NAME: &str = "";
 
 /// A 2D- or 3D-Shape
 /// C++ class `Shape` (utils/shapes/Shape.h)
@@ -55,7 +67,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port Shape::Shape")
+        Shape { base: Named::new(id), myType: DEFAULT_TYPE.to_string(), myColor: RGBColor::BLACK, myLayer: DEFAULT_LAYER, myNaviDegreeAngle: DEFAULT_ANGLE, myImgFile: DEFAULT_IMG_FILE.to_string(), myName: DEFAULT_NAME.to_string() }
     }
 
     /// C++: `void Shape::Shape(const std::string &, const std::string &, const RGBColor &, double, double, const std::string &, const std::string &)`
@@ -72,7 +84,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, type_: &str, color: &RGBColor, layer: f64, angle: f64, imgFile: &str, name: &str) -> Self {
-        todo!("port Shape::Shape")
+        Shape { base: Named::new(id), myType: type_.to_string(), myColor: color.clone(), myLayer: layer, myNaviDegreeAngle: angle, myImgFile: imgFile.to_string(), myName: name.to_string() }
     }
 
     /// C++: `void Shape::~Shape() noexcept` [virtual]
@@ -80,7 +92,7 @@ impl Shape {
     // Shape::~Shape() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Shape::~Shape")
+        // C++ destructor body is empty
     }
 
     /// C++: `void Shape::writeShapeAttributes(OutputDevice &, const RGBColor &, const double) const` [const]
@@ -93,7 +105,7 @@ impl Shape {
     //     }
     //     // type
     //     if (myType != DEFAULT_TYPE) {
-    //         device.writeAttr(SUMO_ATTR_TYPE, StringUtils::escapeXML(myType));
+    //         device.writeAttr(SUMO_ATTR_TYPE, utils::common::string_utils::escape_xml(myType));
     //     }
     //     // color
     //     if (myColor != defaultColor) {
@@ -114,7 +126,30 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn write_shape_attributes(&self, device: &mut OutputDevice, defaultColor: &RGBColor, defaultLayer: f64) {
-        todo!("port Shape::writeShapeAttributes")
+        // name
+        if self.myName != DEFAULT_NAME {
+            device.write_attr(SUMO_ATTR_NAME, self.myName.as_str());
+        }
+        // type
+        if self.myType != DEFAULT_TYPE {
+            device.write_attr(SUMO_ATTR_TYPE, &utils::common::string_utils::escape_xml(&self.myType, false));
+        }
+        // color
+        if self.myColor != *defaultColor {
+            device.write_attr(SUMO_ATTR_COLOR, &self.myColor);
+        }
+        // layer
+        if self.myLayer != defaultLayer {
+            device.write_attr(SUMO_ATTR_LAYER, &self.myLayer);
+        }
+        // angle
+        if self.myNaviDegreeAngle != DEFAULT_ANGLE {
+            device.write_attr(SUMO_ATTR_ANGLE, &self.myNaviDegreeAngle);
+        }
+        // img file
+        if self.myImgFile != DEFAULT_IMG_FILE {
+            device.write_attr(SUMO_ATTR_IMGFILE, self.myImgFile.as_str());
+        }
     }
 
     /// C++: `const std::string & Shape::getShapeType() const` [const]
@@ -125,7 +160,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_type(&self) -> &str {
-        todo!("port Shape::getShapeType")
+        &self.myType
     }
 
     /// C++: `const RGBColor & Shape::getShapeColor() const` [const]
@@ -136,7 +171,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_color(&self) -> &RGBColor {
-        todo!("port Shape::getShapeColor")
+        &self.myColor
     }
 
     /// C++: `double Shape::getShapeLayer() const` [const]
@@ -147,7 +182,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_layer(&self) -> f64 {
-        todo!("port Shape::getShapeLayer")
+        self.myLayer
     }
 
     /// C++: `double Shape::getShapeNaviDegree() const` [const]
@@ -158,7 +193,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_navi_degree(&self) -> f64 {
-        todo!("port Shape::getShapeNaviDegree")
+        self.myNaviDegreeAngle
     }
 
     /// C++: `const std::string & Shape::getShapeImgFile() const` [const]
@@ -169,7 +204,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_img_file(&self) -> &str {
-        todo!("port Shape::getShapeImgFile")
+        &self.myImgFile
     }
 
     /// C++: `const std::string & Shape::getShapeName() const` [const]
@@ -180,7 +215,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn get_shape_name(&self) -> &str {
-        todo!("port Shape::getShapeName")
+        &self.myName
     }
 
     /// C++: `void Shape::setShapeType(const std::string &)`
@@ -191,7 +226,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_type(&mut self, type_: &str) {
-        todo!("port Shape::setShapeType")
+        self.myType = type_.to_string();
     }
 
     /// C++: `void Shape::setShapeColor(const RGBColor &)`
@@ -202,7 +237,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_color(&mut self, col: &RGBColor) {
-        todo!("port Shape::setShapeColor")
+        self.myColor = col.clone();
     }
 
     /// C++: `void Shape::setShapeAlpha(unsigned char)`
@@ -213,7 +248,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_alpha(&mut self, alpha: u8) {
-        todo!("port Shape::setShapeAlpha")
+        self.myColor.set_alpha(alpha);
     }
 
     /// C++: `void Shape::setShapeLayer(const double)`
@@ -224,7 +259,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_layer(&mut self, layer: f64) {
-        todo!("port Shape::setShapeLayer")
+        self.myLayer = layer;
     }
 
     /// C++: `void Shape::setShapeNaviDegree(const double)` [virtual]
@@ -235,7 +270,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_navi_degree(&mut self, angle: f64) {
-        todo!("port Shape::setShapeNaviDegree")
+        self.myNaviDegreeAngle = angle;
     }
 
     /// C++: `void Shape::setShapeImgFile(const std::string &)`
@@ -246,7 +281,7 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_img_file(&mut self, imgFile: &str) {
-        todo!("port Shape::setShapeImgFile")
+        self.myImgFile = imgFile.to_string();
     }
 
     /// C++: `void Shape::setShapeName(const std::string &)`
@@ -257,8 +292,30 @@ impl Shape {
     // }
     #[allow(unused_variables)]
     pub fn set_shape_name(&mut self, name: &str) {
-        todo!("port Shape::setShapeName")
+        self.myName = name.to_string();
     }
 
 }
 
+
+/// Helpers for the C++ pattern `GeoConvHelper *gch` = loader's helper, else getProcessing()/getFinal().
+/// `gch` is None when the loader has no helper of its own.
+pub fn gch_using_geo_projection(gch: Option<Ptr<GeoConvHelper>>, use_processing: bool) -> bool {
+    match gch {
+        Some(g) => g.using_geo_projection(),
+        None if use_processing => GeoConvHelper::with_processing(|g| g.using_geo_projection()),
+        None => GeoConvHelper::with_final(|g| g.using_geo_projection()),
+    }
+}
+
+/// `useProcessing ? getProcessing().x2cartesian(pos) : gch.x2cartesian_const(pos)`
+pub fn gch_x2cartesian(gch: Option<Ptr<GeoConvHelper>>, use_processing: bool, pos: &mut Position) -> bool {
+    if use_processing {
+        GeoConvHelper::with_processing(|g| g.x2cartesian(pos, true))
+    } else {
+        match gch {
+            Some(g) => g.x2cartesian_const(pos),
+            None => GeoConvHelper::with_final(|g| g.x2cartesian_const(pos)),
+        }
+    }
+}

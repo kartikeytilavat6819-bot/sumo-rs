@@ -1,12 +1,13 @@
-//! Port of utils/shapes/ShapeContainer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of utils/shapes/ShapeContainer.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::shape::{DEFAULT_HEIGHT, DEFAULT_NAME};
 
 /// C++ typedef `NamedObjectCont<PointOfInterest *> ShapeContainer::POIs`
-pub type ShapeContainer_POIs = Unmapped /* NamedObjectCont<PointOfInterest *> */;
+pub type ShapeContainer_POIs = BTreeMap<String, Ptr<PointOfInterest>>; // NamedObjectCont is a std::map
 
 /// C++ typedef `NamedObjectCont<SUMOPolygon *> ShapeContainer::Polygons`
-pub type ShapeContainer_Polygons = Unmapped /* NamedObjectCont<SUMOPolygon *> */;
+pub type ShapeContainer_Polygons = BTreeMap<String, Ptr<SUMOPolygon>>; // NamedObjectCont is a std::map
 
 /// Storage for geometrical objects
 /// C++ class `ShapeContainer` (utils/shapes/ShapeContainer.h)
@@ -34,7 +35,7 @@ impl ShapeContainer {
     // ShapeContainer::ShapeContainer() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port ShapeContainer::ShapeContainer")
+        ShapeContainer { myPolygons: BTreeMap::new(), myPolygonDynamics: BTreeMap::new(), myHighlightPolygons: BTreeMap::new(), myHighlightedObjects: BTreeMap::new(), myTrackingPolygons: BTreeMap::new(), myPOIs: BTreeMap::new(), myPolygonUpdateCommands: BTreeMap::new(), myListeners: Vec::new() }
     }
 
     /// C++: `void ShapeContainer::~ShapeContainer()` [virtual]
@@ -42,7 +43,7 @@ impl ShapeContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ShapeContainer::~ShapeContainer")
+        // C++ destructor: implicit, nothing to do
     }
 
     /// C++: `bool ShapeContainer::addPolygon(const std::string &, const std::string &, const RGBColor &, double, double, const std::string &, const PositionVector &, bool, bool, double, bool, const std::string &)` [virtual]
@@ -55,7 +56,7 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_polygon(&mut self, id: &str, type_: &str, color: &RGBColor, layer: f64, angle: f64, imgFile: &str, shape: &PositionVector, geo: bool, fill: bool, lineWidth: f64, ignorePruning: bool, name: &str) -> bool {
-        todo!("port ShapeContainer::addPolygon")
+        self.add(new_ptr(SUMOPolygon::new(id, type_, color, shape, geo, fill, lineWidth, layer, angle, imgFile, name, DEFAULT_HEIGHT, &BTreeMap::new())), ignorePruning)
     }
 
     /// C++: `PolygonDynamics * ShapeContainer::addPolygonDynamics(double, std::string, SUMOTrafficObject *, const std::vector<double> &, const std::vector<double> &, bool, bool)` [virtual]
@@ -100,7 +101,23 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_polygon_dynamics(&mut self, simtime: f64, polyID: String, trackedObject: Ptr<SUMOTrafficObject>, timeSpan: &Vec<f64>, alphaSpan: &Vec<f64>, looped: bool, rotate: bool) -> Ptr<PolygonDynamics> {
-        todo!("port ShapeContainer::addPolygonDynamics")
+        let p: Ptr<SUMOPolygon> = match self.myPolygons.get(&polyID) {
+            Some(p) => p.clone(),
+            None => return Ptr::null(),
+        };
+        // remove eventually existent previously
+        self.remove_polygon_dynamics(&polyID);
+
+        // Add new dynamics
+        let pd: Ptr<PolygonDynamics> = new_ptr(PolygonDynamics::new(simtime, p.clone(), trackedObject.clone(), timeSpan, alphaSpan, looped, rotate));
+        self.myPolygonDynamics.insert(polyID.clone(), pd.clone());
+
+        // Add tracking information
+        if !trackedObject.is_null() {
+            let trackedID = pd.get_tracked_object_id().to_string();
+            self.myTrackingPolygons.entry(trackedID).or_default().insert(p);
+        }
+        pd
     }
 
     /// C++: `bool ShapeContainer::removePolygonDynamics(const std::string &)` [virtual]
@@ -137,7 +154,30 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn remove_polygon_dynamics(&mut self, polyID: &str) -> bool {
-        todo!("port ShapeContainer::removePolygonDynamics")
+        let p: Ptr<SUMOPolygon> = match self.myPolygons.get(polyID) {
+            Some(p) => p.clone(),
+            None => return false,
+        };
+        if let Some(d) = self.myPolygonDynamics.get(polyID).cloned() {
+            let trackedObjID = d.get_tracked_object_id().to_string();
+            if trackedObjID != "" {
+                // Remove tracking information
+                let i = self.myTrackingPolygons.get_mut(&trackedObjID);
+                debug_assert!(i.is_some());
+                if let Some(set) = i {
+                    debug_assert!(set.contains(&p));
+                    set.remove(&p);
+                }
+                // Remove highlighting information
+                self.clear_highlights(&trackedObjID, p.clone());
+            }
+            self.myPolygonDynamics.remove(polyID);
+            // Clear existing polygon dynamics commands before adding new dynamics
+            self.cleanup_polygon_dynamics(polyID);
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool ShapeContainer::addPOI(const std::string &, const std::string &, const RGBColor &, const Position &, bool, const std::string &, double, bool, double, const std::string &, double, double, const std::string &, double, double, bool)` [virtual]
@@ -150,7 +190,7 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_poi(&mut self, id: &str, type_: &str, color: &RGBColor, pos: &Position, geo: bool, lane: &str, posOverLane: f64, friendlyPos: bool, posLat: f64, icon: &str, layer: f64, angle: f64, imgFile: &str, width: f64, height: f64, ignorePruning: bool) -> bool {
-        todo!("port ShapeContainer::addPOI")
+        self.add_2(new_ptr(PointOfInterest::new(id, type_, color, pos, geo, lane, posOverLane, friendlyPos, posLat, icon, layer, angle, imgFile, width, height, DEFAULT_NAME, &BTreeMap::new())), ignorePruning)
     }
 
     /// C++: `bool ShapeContainer::removePolygon(const std::string &, bool)` [virtual]
@@ -171,7 +211,13 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn remove_polygon(&mut self, id: &str, useLock: bool) -> bool {
-        todo!("port ShapeContainer::removePolygon")
+        self.remove_polygon_dynamics(id);
+        if let Some(p) = self.myPolygons.get(id).cloned() {
+            for listener in self.myListeners.clone() {
+                listener.m().polygon_changed(p.clone(), false, true);
+            }
+        }
+        self.myPolygons.remove(id).is_some()
     }
 
     /// C++: `bool ShapeContainer::removePOI(const std::string &)` [virtual]
@@ -188,7 +234,12 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn remove_poi(&mut self, id: &str) -> bool {
-        todo!("port ShapeContainer::removePOI")
+        if let Some(p) = self.myPOIs.get(id).cloned() {
+            for listener in self.myListeners.clone() {
+                listener.m().poi_changed(p.clone(), false, true);
+            }
+        }
+        self.myPOIs.remove(id).is_some()
     }
 
     /// C++: `void ShapeContainer::movePOI(const std::string &, const Position &)` [virtual]
@@ -205,7 +256,13 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn move_poi(&mut self, id: &str, pos: &Position) {
-        todo!("port ShapeContainer::movePOI")
+        if let Some(p) = self.myPOIs.get(id).cloned() {
+            // static_cast<Position*>(p)->set(pos)
+            p.m().base2 = pos.clone();
+            for listener in self.myListeners.clone() {
+                listener.m().poi_changed(p.clone(), false, false);
+            }
+        }
     }
 
     /// C++: `void ShapeContainer::reshapePolygon(const std::string &, const PositionVector &)` [virtual]
@@ -222,7 +279,12 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn reshape_polygon(&mut self, id: &str, shape: &PositionVector) {
-        todo!("port ShapeContainer::reshapePolygon")
+        if let Some(p) = self.myPolygons.get(id).cloned() {
+            p.m().set_shape(shape);
+            for listener in self.myListeners.clone() {
+                listener.m().polygon_changed(p.clone(), false, false);
+            }
+        }
     }
 
     /// C++: `const Polygons & ShapeContainer::getPolygons() const` [const]
@@ -232,7 +294,7 @@ impl ShapeContainer {
     //     }
     #[allow(unused_variables)]
     pub fn get_polygons(&self) -> &ShapeContainer_Polygons {
-        todo!("port ShapeContainer::getPolygons")
+        &self.myPolygons
     }
 
     /// C++: `const POIs & ShapeContainer::getPOIs() const` [const]
@@ -242,7 +304,7 @@ impl ShapeContainer {
     //     }
     #[allow(unused_variables)]
     pub fn get_po_is(&self) -> &ShapeContainer_POIs {
-        todo!("port ShapeContainer::getPOIs")
+        &self.myPOIs
     }
 
     /// C++: `SUMOTime ShapeContainer::polygonDynamicsUpdate(SUMOTime, PolygonDynamics *)` [virtual]
@@ -260,7 +322,18 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn polygon_dynamics_update(&mut self, t: SUMOTime, pd: Ptr<PolygonDynamics>) -> SUMOTime {
-        todo!("port ShapeContainer::polygonDynamicsUpdate")
+        let next = pd.m().update(t);
+        if next == 0 {
+            // Dynamics have expired => remove polygon
+            let polyID = pd.get_polygon_id().to_string();
+            // shortcut: C++ operator[] would insert null and crash here, guarded lookup used instead
+            if let Some(cmd) = self.myPolygonUpdateCommands.get(&polyID) {
+                panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+            }
+            // Don't aquire lock (in GUI case GUIShapeContainer::polygonDynamicsUpdate() does this)
+            self.remove_polygon(&polyID, false);
+        }
+        next
     }
 
     /// C++: `void ShapeContainer::addPolygonUpdateCommand(std::string, ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> *)` [virtual]
@@ -271,7 +344,7 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_polygon_update_command(&mut self, polyID: String, cmd: Ptr<Unmapped /* ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> */>) {
-        todo!("port ShapeContainer::addPolygonUpdateCommand")
+        self.myPolygonUpdateCommands.entry(polyID).or_insert(cmd);
     }
 
     /// C++: `void ShapeContainer::removeTrackers(std::string)` [virtual]
@@ -291,7 +364,10 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn remove_trackers(&mut self, objectID: String) {
-        todo!("port ShapeContainer::removeTrackers")
+        while let Some(first) = self.myTrackingPolygons.get(&objectID).and_then(|s| s.iter().next().cloned()) {
+            self.remove_polygon(first.get_id(), true);
+        }
+        self.myTrackingPolygons.remove(&objectID);
     }
 
     /// C++: `void ShapeContainer::registerHighlight(const std::string &, const int, const std::string &)` [virtual]
@@ -313,7 +389,13 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn register_highlight(&mut self, objectID: &str, type_: i32, polygonID: &str) {
-        todo!("port ShapeContainer::registerHighlight")
+        let mut toRemove = String::new();
+        self.clear_highlight(objectID, type_, &mut toRemove);
+        if toRemove != "" {
+            self.remove_polygon(&toRemove, true);
+        }
+        self.myHighlightPolygons.entry(objectID.to_string()).or_default().entry(type_).or_insert_with(|| polygonID.to_string());
+        self.myHighlightedObjects.entry(polygonID.to_string()).or_insert_with(|| objectID.to_string());
     }
 
     /// C++: `void ShapeContainer::clearState()`
@@ -327,7 +409,10 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port ShapeContainer::clearState")
+        for item in self.myPolygonUpdateCommands.values() {
+            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+        }
+        self.myPolygonUpdateCommands.clear();
     }
 
     /// C++: `void ShapeContainer::addShapeListener(ShapeListener *)`
@@ -336,7 +421,7 @@ impl ShapeContainer {
     //     }
     #[allow(unused_variables)]
     pub fn add_shape_listener(&mut self, listener: Ptr<ShapeListener>) {
-        todo!("port ShapeContainer::addShapeListener")
+        self.myListeners.push(listener);
     }
 
     /// C++: `bool ShapeContainer::add(SUMOPolygon *, bool)` [virtual, protected]
@@ -354,7 +439,16 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, poly: Ptr<SUMOPolygon>, ignorePruning: bool) -> bool {
-        todo!("port ShapeContainer::add")
+        let id = poly.get_id().to_string();
+        if self.myPolygons.contains_key(&id) {
+            // C++ deletes poly here; dropping the Ptr is the equivalent
+            return false;
+        }
+        self.myPolygons.insert(id, poly.clone());
+        for listener in self.myListeners.clone() {
+            listener.m().polygon_changed(poly.clone(), true, false);
+        }
+        true
     }
 
     /// C++: `bool ShapeContainer::add(PointOfInterest *, bool)` [virtual, protected]
@@ -372,7 +466,16 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_2(&mut self, poi: Ptr<PointOfInterest>, ignorePruning: bool) -> bool {
-        todo!("port ShapeContainer::add")
+        let id = poi.get_id().to_string();
+        if self.myPOIs.contains_key(&id) {
+            // C++ deletes poi here; dropping the Ptr is the equivalent
+            return false;
+        }
+        self.myPOIs.insert(id, poi.clone());
+        for listener in self.myListeners.clone() {
+            listener.m().poi_changed(poi.clone(), true, false);
+        }
+        true
     }
 
     /// C++: `void ShapeContainer::cleanupPolygonDynamics(const std::string &)` [virtual, protected]
@@ -387,7 +490,9 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_polygon_dynamics(&mut self, id: &str) {
-        todo!("port ShapeContainer::cleanupPolygonDynamics")
+        if let Some(cmd) = self.myPolygonUpdateCommands.remove(id) {
+            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+        }
     }
 
     /// C++: `void ShapeContainer::clearHighlight(const std::string &, const int, std::string &)` [virtual, protected]
@@ -409,7 +514,17 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn clear_highlight(&mut self, objectID: &str, type_: i32, toRemove: &mut String) {
-        todo!("port ShapeContainer::clearHighlight")
+        let mut emptied = false;
+        if let Some(inner) = self.myHighlightPolygons.get_mut(objectID) {
+            if let Some(v) = inner.remove(&type_) {
+                self.myHighlightedObjects.remove(&v);
+                *toRemove = v;
+                emptied = inner.is_empty();
+            }
+        }
+        if emptied {
+            self.myHighlightPolygons.remove(objectID);
+        }
     }
 
     /// C++: `void ShapeContainer::clearHighlights(const std::string &, SUMOPolygon *)` [virtual, protected]
@@ -434,7 +549,17 @@ impl ShapeContainer {
     // }
     #[allow(unused_variables)]
     pub fn clear_highlights(&mut self, objectID: &str, p: Ptr<SUMOPolygon>) {
-        todo!("port ShapeContainer::clearHighlights")
+        let mut emptied = false;
+        if let Some(inner) = self.myHighlightPolygons.get_mut(objectID) {
+            let found = inner.iter().find(|(_, v)| v.as_str() == p.get_id()).map(|(k, _)| *k);
+            if let Some(k) = found {
+                inner.remove(&k);
+            }
+            emptied = inner.is_empty();
+        }
+        if emptied {
+            self.myHighlightPolygons.remove(objectID);
+        }
     }
 
 }
@@ -449,7 +574,7 @@ impl ShapeListener {
     // virtual ~ShapeListener() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ShapeListener::~ShapeListener")
+        // C++ virtual destructor: empty
     }
 
     /// C++: `void ShapeListener::polygonChanged(const SUMOPolygon *const, const bool, const bool)` [virtual]
@@ -460,7 +585,8 @@ impl ShapeListener {
     //     }
     #[allow(unused_variables)]
     pub fn polygon_changed(&mut self, poly: Ptr<SUMOPolygon>, added: bool, removed: bool) {
-        todo!("port ShapeListener::polygonChanged")
+        // C++ default: UNUSED_PARAMETER only, no-op
+        let _ = (poly, added, removed);
     }
 
     /// C++: `void ShapeListener::poiChanged(const PointOfInterest *const, const bool, const bool)` [virtual]
@@ -471,8 +597,14 @@ impl ShapeListener {
     //     }
     #[allow(unused_variables)]
     pub fn poi_changed(&mut self, poi: Ptr<PointOfInterest>, added: bool, removed: bool) {
-        todo!("port ShapeListener::poiChanged")
+        // C++ default: UNUSED_PARAMETER only, no-op
+        let _ = (poi, added, removed);
     }
 
 }
 
+
+/// C++ `new T(...)` as a raw Ptr (owned by the shape container for its lifetime)
+fn new_ptr<T>(t: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(t)))
+}
