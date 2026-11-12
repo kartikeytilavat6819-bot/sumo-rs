@@ -12,6 +12,7 @@ pub type NBNodeCont_NodeClusters = Vec<NodeSet>;
 pub type NBNodeCont_NodeCont = BTreeMap<String, Ptr<NBNode>>;
 
 use utils::common::to_string::join_to_string;
+use utils::common::msg_handler::{write_message, write_warning};
 
 /// C++ `std::set<NBNode*, ComparatorIdLess>` iterates in id order, but NodeSet orders by address:
 /// iterate through this wherever the C++ iteration order matters.
@@ -1304,7 +1305,10 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn avoid_overlap(&mut self) {
-        todo!("port NBNodeCont::avoidOverlap")
+        let nodes: Vec<Ptr<NBNode>> = self.myNodes.values().copied().collect();
+        for node in nodes {
+            node.m().avoid_overlap();
+        }
     }
 
     /// C++: `int NBNodeCont::removeIsolatedRoads(NBDistrictCont &, NBEdgeCont &)`
@@ -1400,7 +1404,92 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_isolated_roads(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBNodeCont::removeIsolatedRoads")
+        let mut numRemovedEdges = 0;
+        // Warn of isolated edges, i.e. a single edge with no connection to another edge
+        let edgeNames = ec.get_all_names();
+        for name in edgeNames.iter() {
+            // Test whether this node starts at a dead end, i.e. it has only one adjacent node
+            // to which an edge exists and from which an edge may come.
+            let mut e = ec.retrieve(name, false);
+            if e.is_null() {
+                continue;
+            }
+            let from = e.get_from_node();
+            let outgoingEdges: EdgeVector = from.get_outgoing_edges().clone();
+            if outgoingEdges.len() != 1 {
+                // At this node, several edges or no edge start; so, this node is no dead end.
+                continue;
+            }
+            let incomingEdges: EdgeVector = from.get_incoming_edges().clone();
+            if incomingEdges.len() > 1 {
+                // At this node, several edges end; so, this node is no dead end.
+                continue;
+            } else if incomingEdges.len() == 1 {
+                let fromNodeOfIncomingEdge = incomingEdges[0].get_from_node();
+                let toNodeOfOutgoingEdge = outgoingEdges[0].get_to_node();
+                if fromNodeOfIncomingEdge != toNodeOfOutgoingEdge {
+                    // At this node, an edge ends which is not the inverse direction of
+                    // the starting node.
+                    continue;
+                }
+            }
+            // Now we know that the edge e starts a dead end.
+            // Next we test if the dead end is isolated, i.e. does not lead to a junction
+            let mut hasJunction = false;
+            let mut road: EdgeVector = Vec::new();
+            loop {
+                road.push(e);
+                let eOld = e;
+                let from = e.get_from_node();
+                let to = e.get_to_node();
+                let outgoingEdgesOfToNode: EdgeVector = to.get_outgoing_edges().clone();
+                let incomingEdgesOfToNode: EdgeVector = to.get_incoming_edges().clone();
+                let mut adjacentNodes: NodeSet = NodeSet::new();
+                for o in outgoingEdgesOfToNode.iter() {
+                    if o.get_to_node() != from        // The back path
+                        && o.get_to_node() != to       // A loop / dummy edge
+                    {
+                        e = *o; // Probably the next edge
+                    }
+                    adjacentNodes.insert(o.get_to_node());
+                }
+                for i in incomingEdgesOfToNode.iter() {
+                    adjacentNodes.insert(i.get_from_node());
+                }
+                adjacentNodes.remove(&to); // Omit loops
+                if adjacentNodes.len() > 2 {
+                    hasJunction = true;
+                }
+                if hasJunction || eOld == e {
+                    break;
+                }
+            }
+            if !hasJunction {
+                let mut warningString = String::new();
+                for (idx, roadEdge) in road.iter().enumerate() {
+                    if idx == 0 {
+                        warningString += roadEdge.get_id();
+                    } else {
+                        warningString += &format!(",{}", roadEdge.get_id());
+                    }
+
+                    let fromNode = roadEdge.get_from_node();
+                    let toNode = roadEdge.get_to_node();
+                    ec.erase(dc, *roadEdge);
+                    numRemovedEdges += 1;
+                    if fromNode.get_incoming_edges().len() == 0 && fromNode.get_outgoing_edges().len() == 0 {
+                        // Node is empty; can be removed
+                        self.erase(fromNode);
+                    }
+                    if toNode.get_incoming_edges().len() == 0 && toNode.get_outgoing_edges().len() == 0 {
+                        // Node is empty; can be removed
+                        self.erase(toNode);
+                    }
+                }
+                write_warningf!("Removed a road without junctions: %.", warningString);
+            }
+        }
+        numRemovedEdges
     }
 
     /// C++: `int NBNodeCont::removeComponents(NBDistrictCont &, NBEdgeCont &, const int, bool)`
@@ -1492,7 +1581,79 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_components(&mut self, dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, numKeep: i32, hasPTStops: bool) -> i32 {
-        todo!("port NBNodeCont::removeComponents")
+        self.myRailComponents.clear();
+        let mut components: Vec<EdgeSet> = Vec::new();
+        // need to use ids here to have the same ordering on all platforms
+        let mut edgesLeft: BTreeSet<String> = ec.get_all_names().into_iter().collect();
+        let mut queue: EdgeVector = Vec::new();
+        let mut toRemove: EdgeSet = EdgeSet::new();
+        let mut foundComponents = 0;
+        let mut numRemoved = 0;
+        while !edgesLeft.is_empty() {
+            let firstLeft = edgesLeft.iter().next().unwrap().clone();
+            queue.push(ec.get_by_id(&firstLeft));
+            let mut component: EdgeSet = EdgeSet::new();
+            while let Some(e) = queue.pop() {
+                component.insert(e);
+                let edgeLists: Vec<EdgeVector> = vec![
+                    e.get_from_node().get_outgoing_edges().clone(),
+                    e.get_from_node().get_incoming_edges().clone(),
+                    e.get_to_node().get_outgoing_edges().clone(),
+                    e.get_to_node().get_incoming_edges().clone(),
+                ];
+                for list in edgeLists {
+                    for edge in list {
+                        if edgesLeft.remove(edge.get_id()) {
+                            queue.push(edge);
+                        }
+                    }
+                }
+            }
+            foundComponents += 1;
+            // insert before the first component that is strictly smaller
+            let pos = components.iter().position(|c| c.len() < component.len()).unwrap_or(components.len());
+            components.insert(pos, component);
+            if components.len() as i32 > numKeep {
+                let mut recheck = false;
+                if hasPTStops {
+                    for e in components.last().unwrap().iter() {
+                        let permissions = e.get_permissions(-1);
+                        if is_railway(permissions) || is_waterway(permissions) {
+                            // recheck for connection to other components via access definitions
+                            recheck = true;
+                            break;
+                        }
+                    }
+                }
+                if !recheck {
+                    toRemove.extend(components.last().unwrap().iter().copied());
+                    numRemoved += 1;
+                } else {
+                    // determinism: C++ set<NBEdge*> is address-ordered; Ptr's Ord is used here
+                    let edgeIDs: Vec<String> = components.last().unwrap().iter().map(|e| e.get_id().to_string()).collect();
+                    self.myRailComponents.push(edgeIDs);
+                }
+                components.pop();
+            }
+        }
+        ec.remove_roundabout_edges(&toRemove);
+        // determinism: erase order follows Ptr's Ord (C++ set<NBEdge*> is address-ordered)
+        let removeList: Vec<Ptr<NBEdge>> = toRemove.iter().copied().collect();
+        for e in removeList {
+            let fromNode = e.get_from_node();
+            let toNode = e.get_to_node();
+            ec.erase(dc, e);
+            if fromNode.get_incoming_edges().is_empty() && fromNode.get_outgoing_edges().is_empty() {
+                self.erase(fromNode);
+            }
+            if toNode.get_incoming_edges().is_empty() && toNode.get_outgoing_edges().is_empty() {
+                self.erase(toNode);
+            }
+        }
+        if foundComponents > 1 {
+            write_message(&format!("Found {} components and removed {} ({} edges).", foundComponents, numRemoved, toRemove.len()));
+        }
+        toRemove.len() as i32
     }
 
     /// C++: `int NBNodeCont::removeRailComponents(NBDistrictCont &, NBEdgeCont &, NBPTStopCont &)`
