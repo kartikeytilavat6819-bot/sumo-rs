@@ -68,26 +68,6 @@ fn set_speed_factor_deviation(speedFactor: &mut DistributionParameterized, v: f6
     speedFactor.set_parameter(1, v).unwrap();
 }
 
-/// C++ `Distribution_Parameterized::toStr(accuracy)` as used by `writeAttr(SUMO_ATTR_SPEEDFACTOR, speedFactor)`
-// shortcut: the Rust DistributionParameterized::to_str is private to the utils crate, so the min/max bounds
-// (parameters 2 and 3) are not written for a bounded distribution; upgrade by making to_str pub and calling it
-fn distribution_to_str(d: &DistributionParameterized, accuracy: i32) -> String {
-    use utils::common::to_string::{join_to_string_prec, to_string, to_string_prec};
-    if d.is_dummy() {
-        return String::new();
-    }
-    let p0 = d.get_parameter(0);
-    let p1 = d.get_parameter(1);
-    if p1 < 0. {
-        // only write simple speedFactor
-        to_string(&p0)
-    } else if p1 == 0. {
-        format!("{}({},{})", d.get_id(), to_string_prec(&p0, accuracy), to_string_prec(&p1, accuracy))
-    } else {
-        format!("{}({})", d.get_id(), join_to_string_prec([p0, p1].iter(), ",", accuracy))
-    }
-}
-
 /// C++ `LinearApproxHelpers::LinearApproxMap::operator[]` on the sorted-vector representation
 fn linear_approx_map_set(map: &mut LinearApproxMap, key: f64, value: f64) {
     let pos = map.partition_point(|(k, _)| *k < key);
@@ -398,7 +378,7 @@ impl SUMOVTypeParameter {
             paramRestrictions: Vec::new(),
             myManoeuverAngleTimes: BTreeMap::new(),
         };
-        result.setManoeuverAngleTimes(vc);
+        result.set_manoeuver_angle_times(vc);
         result
     }
 
@@ -629,7 +609,7 @@ impl SUMOVTypeParameter {
             dev.write_attr(SUMO_ATTR_PROB, &self.defaultProbability);
         }
         if self.was_set(VTYPEPARS_SPEEDFACTOR_SET) {
-            dev.write_attr(SUMO_ATTR_SPEEDFACTOR, &distribution_to_str(&self.speedFactor, dev.get_precision()));
+            dev.write_attr(SUMO_ATTR_SPEEDFACTOR, &self.speedFactor.to_str(dev.get_precision()));
         }
         if self.was_set(VTYPEPARS_ACTIONSTEPLENGTH_SET) {
             // Note: action step length is only exposed in seconds to the user

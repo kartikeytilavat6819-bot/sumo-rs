@@ -46,11 +46,6 @@ pub(crate) fn traffic_object(veh: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
     Ptr::from_mut(&mut veh.m().base.base.base)
 }
 
-// shortcut: SUMOVTypeParameter::getCFProfile still returns Unmapped (`()`), so profile data is dropped; upgrade when sumov_type_parameter.rs maps LinearApproxMap
-fn profile_from_unmapped(_p: Unmapped) -> LinearApproxMap {
-    Vec::new()
-}
-
 /// C++ `LinearApproxHelpers::getInterpolatedValue` (std::map lower_bound semantics on a sorted vector)
 pub(crate) fn get_interpolated_value(map: &LinearApproxMap, axisValue: f64) -> f64 {
     let low = map.partition_point(|(k, _)| *k < axisValue);
@@ -133,9 +128,9 @@ impl MSCFModel {
         let myHeadwayTime = p.get_cf_param(SUMO_ATTR_TAU, 1.0);
         let myStartupDelay = time2steps(p.get_cf_param(SUMO_ATTR_STARTUP_DELAY, 0.0));
         let maxAccelDefault = SUMOVTypeParameter::get_default_max_accel_profile(vc, myAccel);
-        let myMaxAccelProfile = profile_from_unmapped(p.get_cf_profile(SUMO_ATTR_MAXACCEL_PROFILE, &maxAccelDefault));
+        let myMaxAccelProfile = p.get_cf_profile(SUMO_ATTR_MAXACCEL_PROFILE, &maxAccelDefault);
         let desAccelDefault = SUMOVTypeParameter::get_default_des_accel_profile(vc, myAccel);
-        let myDesAccelProfile = profile_from_unmapped(p.get_cf_profile(SUMO_ATTR_DESACCEL_PROFILE, &desAccelDefault));
+        let myDesAccelProfile = p.get_cf_profile(SUMO_ATTR_DESACCEL_PROFILE, &desAccelDefault);
         MSCFModel {
             myType: vtype,
             myAccel,

@@ -182,9 +182,8 @@ impl MSCFModel_Rail {
         }
 
         // init tabular curves
-        // shortcut: SUMOVTypeParameter::getCFProfile returns Unmapped, so tractionTable/resistanceTable from the vType are ignored and the trainType defaults are kept; upgrade when sumov_type_parameter.rs maps LinearApproxMap
-        let _ = vtype.get_parameter().get_cf_profile(SUMO_ATTR_TRACTION_TABLE, &());
-        let _ = vtype.get_parameter().get_cf_profile(SUMO_ATTR_RESISTANCE_TABLE, &());
+        this.myTrainParams.traction = vtype.get_parameter().get_cf_profile(SUMO_ATTR_TRACTION_TABLE, &this.myTrainParams.traction);
+        this.myTrainParams.resistance = vtype.get_parameter().get_cf_profile(SUMO_ATTR_RESISTANCE_TABLE, &this.myTrainParams.resistance);
 
         // init parametric curves
         this.myTrainParams.maxPower = vtype.get_parameter().get_cf_param(SUMO_ATTR_MAXPOWER, INVALID_DOUBLE);
