@@ -1,6 +1,19 @@
 //! Port of netbuild/NBNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::f64_to_string;
+use utils::geom::POSITION_EPS;
+use utils::geom::geom_helper::{angle_diff, deg2rad, rad2deg};
+
+// C++ static constants of NBNode (NBNode.cpp:86-94)
+const NBNODE_FORWARD: i32 = 1;
+const NBNODE_BACKWARD: i32 = -1;
+const NBNODE_AVOID_WIDE_LEFT_TURN: i32 = 1;
+const NBNODE_AVOID_WIDE_RIGHT_TURN: i32 = 2;
+const NBNODE_FOUR_CONTROL_POINTS: i32 = 4;
+const NBNODE_AVOID_INTERSECTING_LEFT_TURNS: i32 = 8;
+const NBNODE_SCURVE_IGNORE: i32 = 16;
+const NBNODE_INDIRECT_LEFT: i32 = 32;
 
 // C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
 // nb_edge.rs / nb_node.rs expose them as statics).
@@ -2633,7 +2646,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_is_removable(&self) -> bool {
-        todo!("port NBNode::checkIsRemovable")
+        let mut reason = String::new();
+        self.check_is_removable_reporting(&mut reason)
     }
 
     /// C++: `bool NBNode::checkIsRemovableReporting(std::string &) const` [const]
@@ -2715,7 +2729,84 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn check_is_removable_reporting(&self, reason: &mut String) -> bool {
-        todo!("port NBNode::checkIsRemovableReporting")
+        if self.get_edges().is_empty() {
+            return true;
+        }
+        // check whether this node is included in a traffic light or crossing
+        if !self.myTrafficLights.is_empty() {
+            *reason = "TLS".to_string();
+            return false;
+        }
+        if self.myType == SumoXMLNodeType::RAIL_SIGNAL {
+            *reason = "rail_signal".to_string();
+            return false;
+        }
+        if !self.myCrossings.is_empty() {
+            *reason = "crossing".to_string();
+            return false;
+        }
+        // one in, one out -> just a geometry ...
+        if self.myOutgoingEdges.len() == 1 && self.myIncomingEdges.len() == 1 {
+            // ... if types match ...
+            if !self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], reason) {
+                let msg = format!("edges incompatible: {}", reason);
+                *reason = msg;
+                return false;
+            }
+            if self.myIncomingEdges[0].get_turn_destination(true) == self.myOutgoingEdges[0] {
+                *reason = "turnaround".to_string();
+                return false;
+            }
+            return true;
+        }
+        // two in, two out -> may be something else
+        if self.myOutgoingEdges.len() == 2 && self.myIncomingEdges.len() == 2 {
+            // check whether the origin nodes of the incoming edges differ
+            let mut origSet: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+            for i in self.myIncomingEdges.iter() {
+                origSet.insert(i.get_from_node());
+            }
+            if origSet.len() < 2 {
+                // overlapping case
+                if self.myIncomingEdges[0].get_geometry() == self.myIncomingEdges[1].get_geometry()
+                    && self.myOutgoingEdges[0].get_geometry() == self.myOutgoingEdges[1].get_geometry()
+                {
+                    return (self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], reason)
+                        && self.myIncomingEdges[1].expandable_by(self.myOutgoingEdges[1], reason))
+                        || (self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[1], reason)
+                            && self.myIncomingEdges[1].expandable_by(self.myOutgoingEdges[0], reason));
+                }
+            }
+            // check whether this node is an intermediate node of
+            //  a two-directional street
+            for i in self.myIncomingEdges.iter() {
+                // each of the edges must have an opposite direction edge
+                let opposite = i.get_turn_destination(true);
+                if !opposite.is_null() {
+                    // the other outgoing edges must be the continuation of the current
+                    let continuation = if opposite == self.myOutgoingEdges[0] {
+                        self.myOutgoingEdges[self.myOutgoingEdges.len() - 1]
+                    } else {
+                        self.myOutgoingEdges[0]
+                    };
+                    // check whether the types allow joining
+                    if !i.expandable_by(continuation, reason) {
+                        let msg = format!("edges incompatible: {}", reason);
+                        *reason = msg;
+                        return false;
+                    }
+                } else {
+                    // ok, at least one outgoing edge is not an opposite
+                    //  of an incoming one
+                    *reason = "not opposites".to_string();
+                    return false;
+                }
+            }
+            return true;
+        }
+        // ok, a real node
+        *reason = "intersection".to_string();
+        false
     }
 
     /// C++: `std::vector<std::pair<NBEdge *, NBEdge *>> NBNode::getEdgesToJoin() const` [const]
@@ -2756,7 +2847,42 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_edges_to_join(&self) -> Vec<(Ptr<NBEdge>, Ptr<NBEdge>)> {
-        todo!("port NBNode::getEdgesToJoin")
+        debug_assert!(self.check_is_removable());
+        let mut ret: Vec<(Ptr<NBEdge>, Ptr<NBEdge>)> = Vec::new();
+        // one in, one out-case
+        if self.myOutgoingEdges.len() == 1 && self.myIncomingEdges.len() == 1 {
+            ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[0]));
+            return ret;
+        }
+        if self.myIncomingEdges.len() == 2 && self.myOutgoingEdges.len() == 2 {
+            // two in, two out-case
+            if self.myIncomingEdges[0].get_geometry() == self.myIncomingEdges[1].get_geometry()
+                && self.myOutgoingEdges[0].get_geometry() == self.myOutgoingEdges[1].get_geometry()
+            {
+                // overlapping edges
+                let mut reason = String::new();
+                if self.myIncomingEdges[0].expandable_by(self.myOutgoingEdges[0], &mut reason) {
+                    ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[0]));
+                    ret.push((self.myIncomingEdges[1], self.myOutgoingEdges[1]));
+                } else {
+                    ret.push((self.myIncomingEdges[0], self.myOutgoingEdges[1]));
+                    ret.push((self.myIncomingEdges[1], self.myOutgoingEdges[0]));
+                }
+                return ret;
+            }
+        }
+        for i in self.myIncomingEdges.iter() {
+            // join with the edge that is not a turning direction
+            let opposite = i.get_turn_destination(true);
+            debug_assert!(!opposite.is_null());
+            let continuation = if opposite == self.myOutgoingEdges[0] {
+                self.myOutgoingEdges[self.myOutgoingEdges.len() - 1]
+            } else {
+                self.myOutgoingEdges[0]
+            };
+            ret.push((*i, continuation));
+        }
+        ret
     }
 
     /// C++: `bool NBNode::isNearDistrict() const` [const]
@@ -2778,7 +2904,18 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_near_district(&self) -> bool {
-        todo!("port NBNode::isNearDistrict")
+        if self.is_district() {
+            return false;
+        }
+        for t in self.get_edges().iter() {
+            let other = if t.get_to_node() == Ptr::new(self) { t.get_from_node() } else { t.get_to_node() };
+            for k in other.get_edges().iter() {
+                if k.get_from_node().is_district() || k.get_to_node().is_district() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBNode::isDistrict() const` [const]
@@ -2789,7 +2926,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn is_district(&self) -> bool {
-        todo!("port NBNode::isDistrict")
+        self.myType == SumoXMLNodeType::DISTRICT
     }
 
     /// C++: `bool NBNode::needsCont(const NBEdge *, const NBEdge *, const NBEdge::Connection &, const NBEdge::Connection &, bool) const` [const]
@@ -2849,7 +2986,60 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn needs_cont(&self, fromE: Ptr<NBEdge>, otherFromE: Ptr<NBEdge>, c: &NBEdge_Connection, otherC: &NBEdge_Connection, checkOnlyTLS: bool) -> bool {
-        todo!("port NBNode::needsCont")
+        let toE = c.toEdge;
+        let otherToE = otherC.toEdge;
+
+        if !checkOnlyTLS {
+            if self.myType == SumoXMLNodeType::RIGHT_BEFORE_LEFT
+                || self.myType == SumoXMLNodeType::LEFT_BEFORE_RIGHT
+                || self.myType == SumoXMLNodeType::ALLWAY_STOP
+                || self.myType == SumoXMLNodeType::ZIPPER
+            {
+                return false;
+            }
+            let d1 = self.get_direction(fromE, toE, false);
+            let thisRight = d1 == LinkDirection::RIGHT || d1 == LinkDirection::PARTRIGHT;
+            let rightTurnConflict = thisRight
+                && NBNode::right_turn_conflict(fromE, toE, c.fromLane, otherFromE, otherToE, otherC.fromLane);
+            if thisRight && !rightTurnConflict {
+                return false;
+            }
+            if !self.myRequest.is_null() && self.myRequest.indirect_left_turn_conflict(fromE, c, otherFromE, otherC, false) {
+                return true;
+            }
+            if !(self.foes(otherFromE, otherToE, fromE, toE) || self.myRequest.is_null() || rightTurnConflict) {
+                // if they do not cross, no waiting place is needed
+                return false;
+            }
+            let d2 = self.get_direction(otherFromE, otherToE, false);
+            if d2 == LinkDirection::TURN {
+                return false;
+            }
+            if fromE == otherFromE && !thisRight {
+                // ignore same edge links except for right-turns
+                return false;
+            }
+            if thisRight && d2 != LinkDirection::STRAIGHT {
+                return false;
+            }
+        }
+        if !c.tlID.is_empty() {
+            debug_assert!(
+                !self.myTrafficLights.is_empty()
+                    || self.myType == SumoXMLNodeType::RAIL_CROSSING
+                    || self.myType == SumoXMLNodeType::RAIL_SIGNAL
+            );
+            for it in self.myTrafficLights.iter() {
+                if it.needs_cont(fromE, toE, otherFromE, otherToE) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if fromE.get_junction_priority(Ptr::new(self)) > 0 && otherFromE.get_junction_priority(Ptr::new(self)) > 0 {
+            return self.must_brake(fromE, toE, c.fromLane, c.toLane, false);
+        }
+        false
     }
 
     /// C++: `bool NBNode::tlsStrandedConflict(const NBEdge *, const NBEdge::Connection &, const NBEdge *, const NBEdge::Connection &) const` [const]
@@ -2864,7 +3054,13 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn tls_stranded_conflict(&self, from: Ptr<NBEdge>, c: &NBEdge_Connection, foeFrom: Ptr<NBEdge>, foe: &NBEdge_Connection) -> bool {
-        todo!("port NBNode::tlsStrandedConflict")
+        foe.haveVia
+            && self.is_tl_controlled()
+            && c.tlLinkIndex >= 0
+            && foe.tlLinkIndex >= 0
+            && !foeFrom.is_turning_direction_at(foe.toEdge)
+            && self.foes(from, c.toEdge, foeFrom, foe.toEdge)
+            && !self.needs_cont(foeFrom, from, foe, c, true)
     }
 
     /// C++: `PositionVector NBNode::computeInternalLaneShape(const NBEdge *, const NBEdge::Connection &, int, NBNode *, int) const` [const]
@@ -2954,7 +3150,90 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_internal_lane_shape(&self, fromE: Ptr<NBEdge>, con: &NBEdge_Connection, numPoints: i32, recordError: Ptr<NBNode>, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::computeInternalLaneShape")
+        let mut shapeFlag = shapeFlag;
+        if con.fromLane >= fromE.get_num_lanes() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Connection '{}' starts at a non-existant lane.", con.get_description(fromE))));
+        }
+        if con.toLane >= con.toEdge.get_num_lanes() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Connection '{}' targets a non-existant lane.", con.get_description(fromE))));
+        }
+        let mut fromShape = fromE.get_lane_shape(con.fromLane).clone();
+        let mut toShape = con.toEdge.get_lane_shape(con.toLane).clone();
+        let mut ret = PositionVector::default();
+        let mut useCustomShape = con.customShape.len() > 0;
+        if useCustomShape {
+            // ensure that the shape starts and ends at the intersection boundary
+            let mut startBorder = fromE.get_node_border(Ptr::new(self)).clone();
+            if startBorder.len() == 0 {
+                startBorder = fromShape.get_orthogonal(fromShape.back(), 1., true, 1., 90.);
+            }
+            let mut tmp = NBEdge::start_shape_at(&con.customShape, Ptr::new(self), startBorder);
+            if tmp.len() < 2 {
+                write_warning(&format!("Could not use custom shape for connection {}.", con.get_description(fromE)));
+                useCustomShape = false;
+            } else {
+                if tmp.length2d() > con.customShape.length2d() + POSITION_EPS {
+                    // shape was lengthened at the start, make sure it attaches at the center of the lane
+                    *tmp.at_mut(0) = *fromShape.back();
+                } else if !recordError.is_null() {
+                    let offset = tmp.at(0).distance_to2d(fromShape.back());
+                    if offset > fromE.get_lane_width_2(con.fromLane) / 2. {
+                        write_warning(&format!("Custom shape has distance {} to incoming lane for connection {}.", f64_to_string(offset), con.get_description(fromE)));
+                    }
+                }
+                let mut endBorder = con.toEdge.get_node_border(Ptr::new(self)).clone();
+                if endBorder.len() == 0 {
+                    endBorder = toShape.get_orthogonal(toShape.front(), 1., false, 1., 90.);
+                }
+                let rev = tmp.reverse();
+                ret = NBEdge::start_shape_at(&rev, Ptr::new(self), endBorder).reverse();
+                if ret.len() < 2 {
+                    write_warning(&format!("Could not use custom shape for connection {}.", con.get_description(fromE)));
+                    useCustomShape = false;
+                } else if ret.length2d() > tmp.length2d() + POSITION_EPS {
+                    // shape was lengthened at the end, make sure it attaches at the center of the lane
+                    *ret.at_mut(-1) = *toShape.front();
+                } else if !recordError.is_null() {
+                    let offset = ret.at(-1).distance_to2d(toShape.front());
+                    if offset > con.toEdge.get_lane_width_2(con.toLane) / 2. {
+                        write_warning(&format!("Custom shape has distance {} to outgoing lane for connection {}.", f64_to_string(offset), con.get_description(fromE)));
+                    }
+                }
+            }
+        }
+        if !useCustomShape {
+            self.displace_shape_at_width_change(fromE, con, &mut fromShape, &mut toShape);
+            let extrapolateBeg = 5. * (fromE.get_num_lanes() as f64);
+            let extrapolateEnd = 5. * (con.toEdge.get_num_lanes() as f64);
+            let dir = self.get_direction(fromE, con.toEdge, false);
+            if dir == LinkDirection::LEFT || dir == LinkDirection::TURN {
+                shapeFlag += NBNODE_AVOID_WIDE_LEFT_TURN;
+            }
+            if con.indirectLeft {
+                shapeFlag += NBNODE_INDIRECT_LEFT;
+            }
+            ret = self.compute_smooth_shape(
+                &fromShape,
+                &toShape,
+                numPoints,
+                fromE.get_turn_destination(false) == con.toEdge,
+                extrapolateBeg,
+                extrapolateEnd,
+                recordError,
+                shapeFlag,
+            );
+        }
+        let lane = fromE.get_lane_struct_2(con.fromLane);
+        if lane.endOffset > 0. {
+            let mut beg = lane.shape.get_subpart(lane.shape.length() - lane.endOffset, lane.shape.length());
+            beg.append(&ret, 2.0);
+            ret = beg;
+        }
+        if con.toEdge.is_bidi_rail(false) && con.toEdge.get_turn_destination(true).get_end_offset() > 0. {
+            let end = toShape.get_subpart(0., con.toEdge.get_turn_destination(true).get_end_offset());
+            ret.append(&end, 2.0);
+        }
+        ret
     }
 
     /// C++: `PositionVector NBNode::computeSmoothShape(const PositionVector &, const PositionVector &, int, bool, double, double, NBNode *, int) const` [const]
@@ -2990,7 +3269,30 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn compute_smooth_shape(&self, begShape: &PositionVector, endShape: &PositionVector, numPoints: i32, isTurnaround: bool, extrapolateBeg: f64, extrapolateEnd: f64, recordError: Ptr<NBNode>, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::computeSmoothShape")
+        let mut ok = true;
+        if (shapeFlag & NBNODE_INDIRECT_LEFT) != 0 {
+            return self.indirect_left_shape(begShape, endShape, numPoints);
+        }
+        // DEG2RAD(5)
+        let init = Self::bezier_control_points(
+            begShape,
+            endShape,
+            isTurnaround,
+            extrapolateBeg,
+            extrapolateEnd,
+            &mut ok,
+            recordError,
+            5. * std::f64::consts::PI / 180.,
+            shapeFlag,
+        );
+        if init.len() == 0 {
+            let mut ret = PositionVector::default();
+            ret.push(*begShape.back());
+            ret.push(*endShape.front());
+            return ret;
+        } else {
+            return init.bezier(numPoints).smoothed_z_front(f64::MAX);
+        }
     }
 
     /// C++: `PositionVector NBNode::bezierControlPoints(const PositionVector &, const PositionVector &, bool, double, double, bool &, NBNode *, double, int)` [static]
@@ -3189,7 +3491,128 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn bezier_control_points(begShape: &PositionVector, endShape: &PositionVector, isTurnaround: bool, extrapolateBeg: f64, extrapolateEnd: f64, ok: &mut bool, recordError: Ptr<NBNode>, straightThresh: f64, shapeFlag: i32) -> PositionVector {
-        todo!("port NBNode::bezierControlPoints")
+        let beg = *begShape.back();
+        let end = *endShape.front();
+        let dist = beg.distance_to2d(&end);
+        let mut init = PositionVector::default();
+        if dist < POSITION_EPS || beg.distance_to2d(begShape.at(-2)) < POSITION_EPS || end.distance_to2d(endShape.at(1)) < POSITION_EPS {
+            // typically, this node a is a simpleContinuation. see also #2539
+            return init;
+        }
+        init.push(beg);
+        if isTurnaround {
+            // turnarounds:
+            //  - end of incoming lane
+            //  - position between incoming/outgoing end/begin shifted by the distance orthogonally
+            //  - begin of outgoing lane
+            let mut center: Position = PositionVector::position_at_offset2d_seg(&beg, &end, beg.distance_to2d(&end) / 2., 0., false);
+            center.sub_xy(beg.y() - end.y(), end.x() - beg.x());
+            init.push(center);
+        } else {
+            let EXT = 100.;
+            let angle = angle_diff(begShape.angle_at2d(-2), endShape.angle_at2d(0));
+            let mut endShapeBegLine = PositionVector::from_line(*endShape.at(0), *endShape.at(1));
+            let mut begShapeEndLineRev = PositionVector::from_line(*begShape.at(-1), *begShape.at(-2));
+            endShapeBegLine.extrapolate2d(EXT, true);
+            begShapeEndLineRev.extrapolate2d(EXT, true);
+            if angle.abs() < std::f64::consts::PI / 4. {
+                // very low angle: could be an s-shape or a straight line
+                let displacementAngle = angle_diff(begShape.angle_at2d(-2), beg.angle_to2d(&end));
+                let bendDeg = rad2deg((displacementAngle - angle).abs());
+                let halfDistance = dist / 2.;
+                if displacementAngle.abs() <= straightThresh && angle.abs() <= straightThresh {
+                    return PositionVector::default();
+                } else if bendDeg > 22.5 && (bendDeg / 45.).powf(2.) / dist > 0.13 {
+                    // do not allow s-curves with extreme bends
+                    // (a linear dependency is to restrictive at low displacementAngles and too permisive at high angles)
+                    *ok = false;
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        let v = recordError.myDisplacementError.max((displacementAngle.sin() * dist).abs());
+                        recordError.m().myDisplacementError = v;
+                    }
+                    return PositionVector::default();
+                } else {
+                    let endLength = begShape.at(-2).distance_to2d(begShape.at(-1));
+                    let off1 = endLength + extrapolateBeg.min(halfDistance);
+                    init.push(PositionVector::position_at_offset2d_seg(begShapeEndLineRev.at(1), begShapeEndLineRev.at(0), off1, 0., false));
+                    let off2 = EXT - extrapolateEnd.min(halfDistance);
+                    init.push(PositionVector::position_at_offset2d_seg(endShapeBegLine.at(0), endShapeBegLine.at(1), off2, 0., false));
+                }
+            } else {
+                // turning
+                //  - end of incoming lane
+                //  - intersection of the extrapolated lanes
+                //  - begin of outgoing lane
+                // attention: if there is no intersection, use a straight line
+                let mut intersect = endShapeBegLine.intersection_position2d_pv(&begShapeEndLineRev);
+                if intersect == Position::INVALID {
+                    *ok = false;
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        // it's unclear if this error can be solved via stretching the intersection.
+                        let v = recordError.myDisplacementError.max(1.0);
+                        recordError.m().myDisplacementError = v;
+                    }
+                    return PositionVector::default();
+                }
+                let begOffset = begShapeEndLineRev.nearest_offset_to_point2d(&intersect, true);
+                let endOffset = endShapeBegLine.nearest_offset_to_point2d(&intersect, true);
+                let minControlLength = 1.0_f64.min(dist / 2.);
+                let distBeg = intersect.distance_to2d(&beg);
+                let distEnd = intersect.distance_to2d(&end);
+                let lengthenBeg = distBeg <= minControlLength;
+                let lengthenEnd = distEnd <= minControlLength;
+                if lengthenBeg && lengthenEnd {
+                    // This should be fixable with minor stretching
+                    if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
+                        let v = recordError.myDisplacementError.max(1.0);
+                        recordError.m().myDisplacementError = v;
+                    }
+                    *ok = false;
+                    return PositionVector::default();
+                } else if (shapeFlag & NBNODE_FOUR_CONTROL_POINTS) != 0 {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - extrapolateBeg, 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - extrapolateEnd, 0., false));
+                } else if lengthenBeg || lengthenEnd {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - minControlLength, 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - minControlLength, 0., false));
+                } else if (shapeFlag & NBNODE_AVOID_WIDE_LEFT_TURN) != 0
+                    // there are two reasons for enabling special geometry rules:
+                    // 1) sharp edge angles which could cause overshoot
+                    // 2) junction geometries with a large displacement between opposite left turns
+                    //    which would cause the default geometry to overlap
+                    && ((shapeFlag & NBNODE_AVOID_INTERSECTING_LEFT_TURNS) != 0
+                        || (angle > deg2rad(95.) && (distBeg > 20. || distEnd > 20.)))
+                {
+                    let factor = if (shapeFlag & NBNODE_AVOID_INTERSECTING_LEFT_TURNS) == 0 {
+                        1.
+                    } else {
+                        0.6_f64.min(16. / dist)
+                    };
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - (distBeg * factor / 1.2).min(dist * factor / 1.8), 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - (distEnd * factor / 1.2).min(dist * factor / 1.8), 0., false));
+                } else if (shapeFlag & NBNODE_AVOID_WIDE_RIGHT_TURN) != 0 && angle < deg2rad(-95.) && (distBeg > 20. || distEnd > 20.) {
+                    init.push(begShapeEndLineRev.position_at_offset2d(EXT - (distBeg / 1.4).min(dist / 2.), 0., false));
+                    init.push(endShapeBegLine.position_at_offset2d(EXT - (distEnd / 1.4).min(dist / 2.), 0., false));
+                } else {
+                    let z1 = begShapeEndLineRev.position_at_offset2d(begOffset, 0., false).z();
+                    let z2 = endShapeBegLine.position_at_offset2d(endOffset, 0., false).z();
+                    let z3 = 0.5 * (beg.z() + end.z());
+                    // if z1 and z2 are on the same side in regard to z3 then we
+                    // can use their avarage. Otherwise, the intersection in 3D
+                    // is not good and we are better of using z3
+                    let z;
+                    if (z1 <= z3 && z2 <= z3) || (z1 >= z3 && z2 >= z3) {
+                        z = 0.5 * (z1 + z2);
+                    } else {
+                        z = z3;
+                    }
+                    intersect.set3(intersect.x(), intersect.y(), z);
+                    init.push(intersect);
+                }
+            }
+        }
+        init.push(end);
+        init
     }
 
     /// C++: `PositionVector NBNode::indirectLeftShape(const PositionVector &, const PositionVector &, int) const` [const]
@@ -3220,7 +3643,31 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn indirect_left_shape(&self, begShape: &PositionVector, endShape: &PositionVector, numPoints: i32) -> PositionVector {
-        todo!("port NBNode::indirectLeftShape")
+        let _ = numPoints; // UNUSED_PARAMETER
+        let mut result = PositionVector::default();
+        result.push(*begShape.back());
+        //const double angle = GeomHelper::angleDiff(begShape.angleAt2D(-2), endShape.angleAt2D(0));
+        let mut endShapeBegLine = PositionVector::from_line(*endShape.at(0), *endShape.at(1));
+        let mut begShapeEndLineRev = PositionVector::from_line(*begShape.at(-1), *begShape.at(-2));
+        endShapeBegLine.extrapolate2d(100., true);
+        begShapeEndLineRev.extrapolate2d(100., true);
+        let intersect = endShapeBegLine.intersection_position2d_pv(&begShapeEndLineRev);
+        if intersect == Position::INVALID {
+            write_warning(&format!("Could not compute indirect left turn shape at node '{}'", self.get_id()));
+        } else {
+            let mut dir = intersect;
+            dir.sub(endShape.at(0));
+            dir.norm2d();
+            let radius = if self.myRadius == NBNODE_UNSPECIFIED_RADIUS {
+                utils::options::options_cont::get_float("default.junctions.radius")
+            } else {
+                self.myRadius
+            };
+            dir = dir * radius;
+            result.push(intersect + dir);
+        }
+        result.push(*endShape.front());
+        result
     }
 
     /// C++: `double NBNode::getDisplacementError() const` [const]
@@ -3230,7 +3677,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_displacement_error(&self) -> f64 {
-        todo!("port NBNode::getDisplacementError")
+        self.myDisplacementError
     }
 
     /// C++: `void NBNode::replaceIncoming(NBEdge *, NBEdge *, int)`
@@ -3249,7 +3696,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_incoming(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBNode::replaceIncoming")
+        // replace the edge in the list of incoming nodes
+        if let Some(i) = self.myIncomingEdges.iter().position(|e| *e == which) {
+            self.myIncomingEdges[i] = by;
+            if let Some(j) = self.myAllEdges.iter().position(|e| *e == which) {
+                self.myAllEdges[j] = by;
+            }
+        }
+        // replace within the connetion prohibition dependencies
+        self.replace_in_connection_prohibitions(which, by, laneOff, 0);
     }
 
     /// C++: `void NBNode::replaceIncoming(const EdgeVector &, NBEdge *)`
@@ -3272,7 +3727,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_incoming_2(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBNode::replaceIncoming")
+        // replace edges
+        let mut laneOff: i32 = 0;
+        for i in which.iter() {
+            self.replace_incoming(*i, by, laneOff);
+            laneOff += i.get_num_lanes();
+        }
+        // removed double occurrences
+        self.remove_double_edges();
+        // check whether this node belongs to a district and the edges
+        //  must here be also remapped
+        if !self.myDistrict.is_null() {
+            self.myDistrict.m().replace_incoming(which, by);
+        }
     }
 
     /// C++: `void NBNode::replaceOutgoing(NBEdge *, NBEdge *, int)`
@@ -3295,7 +3762,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_outgoing(&mut self, which: Ptr<NBEdge>, by: Ptr<NBEdge>, laneOff: i32) {
-        todo!("port NBNode::replaceOutgoing")
+        // replace the edge in the list of outgoing nodes
+        if let Some(i) = self.myOutgoingEdges.iter().position(|e| *e == which) {
+            self.myOutgoingEdges[i] = by;
+            if let Some(j) = self.myAllEdges.iter().position(|e| *e == which) {
+                self.myAllEdges[j] = by;
+            }
+        }
+        // replace the edge in connections of incoming edges
+        for i in self.myIncomingEdges.iter() {
+            i.m().replace_in_connections(which, by, laneOff);
+        }
+        // replace within the connetion prohibition dependencies
+        self.replace_in_connection_prohibitions(which, by, 0, laneOff);
     }
 
     /// C++: `void NBNode::replaceOutgoing(const EdgeVector &, NBEdge *)`
@@ -3318,7 +3797,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn replace_outgoing_2(&mut self, which: &EdgeVector, by: Ptr<NBEdge>) {
-        todo!("port NBNode::replaceOutgoing")
+        // replace edges
+        let mut laneOff: i32 = 0;
+        for i in which.iter() {
+            self.replace_outgoing(*i, by, laneOff);
+            laneOff += i.get_num_lanes();
+        }
+        // removed double occurrences
+        self.remove_double_edges();
+        // check whether this node belongs to a district and the edges
+        //  must here be also remapped
+        if !self.myDistrict.is_null() {
+            self.myDistrict.m().replace_outgoing(which, by);
+        }
     }
 
     /// C++: `int NBNode::guessCrossings()`
