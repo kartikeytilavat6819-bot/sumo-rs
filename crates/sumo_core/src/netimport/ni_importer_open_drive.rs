@@ -1360,13 +1360,13 @@ impl NIImporter_OpenDrive {
                         }
                     }
                     // set node information
-                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs);
+                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs)?;
                     continue;
                 }
                 if edge2junction.contains_key(&nid) {
                     // set node information of an internal road
                     let junction = edge2junction[&nid].clone();
-                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &junction, linkType, &mut joinedNodeIDs);
+                    NIImporter_OpenDrive::set_node_secure(nc.m(), e, &junction, linkType, &mut joinedNodeIDs)?;
                     continue;
                 }
             }
@@ -1399,7 +1399,7 @@ impl NIImporter_OpenDrive {
                         return Err(ProcessError::new(tlf!("Could not build node '%'.", nid.clone())));
                     }
                 }
-                NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs);
+                NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, linkType, &mut joinedNodeIDs)?;
             }
         }
         // we should now have start/end nodes for all outer edge-to-outer edge connections
@@ -1424,9 +1424,9 @@ impl NIImporter_OpenDrive {
                     }
                     let nid = edge2junction.entry(ie.id.clone()).or_default().clone();
                     if contactPoint == NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_START {
-                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_PREDECESSOR, &mut joinedNodeIDs);
+                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_PREDECESSOR, &mut joinedNodeIDs)?;
                     } else {
-                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR, &mut joinedNodeIDs);
+                        NIImporter_OpenDrive::set_node_secure(nc.m(), e, &nid, NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR, &mut joinedNodeIDs)?;
                     }
                 }
             }
@@ -1907,7 +1907,7 @@ impl NIImporter_OpenDrive {
                         // shortcut: C++ loops over from->getConnections() to set tlLinkIndex, signalID and controllerID;
                         // the Rust NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so this is skipped until it is ported
                         let _ = to;
-                        NIImporter_OpenDrive::get_tls_secure(from, nb);
+                        NIImporter_OpenDrive::get_tls_secure(from, nb)?;
                     } else {
                         write_warningf!("Found a traffic light signal on an unknown edge (original edge id='%').", e.id);
                         continue;
@@ -1925,7 +1925,7 @@ impl NIImporter_OpenDrive {
                     }
                     // shortcut: connection-level signalID/controllerID/tlLinkIndex assignment is skipped, see above
                     let _ = importSignalGroups;
-                    NIImporter_OpenDrive::get_tls_secure(edge, nb);
+                    NIImporter_OpenDrive::get_tls_secure(edge, nb)?;
                 }
                 // @note: tls 'signalID' parameters are set via NBTrafficLightLogicCont::setOpenDriveSignalParameters
                 // @note: OpenDRIVE controllers are applied to the signal programs in NBTrafficLightLogicCont::applyOpenDriveControllers
@@ -4664,7 +4664,61 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn revisit_lane_sections(tc: &NBTypeCont, edges: &mut BTreeMap<String, Ptr<NIImporter_OpenDrive_OpenDriveEdge>>) {
-        todo!("port NIImporter_OpenDrive::revisitLaneSections")
+        for (_, ePtr) in edges.iter() {
+            let e = ePtr.m();
+            // split by speed limits or by access restrictions
+            let mut newSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+            for section in e.laneSections.iter_mut() {
+                let mut splitSections: Vec<NIImporter_OpenDrive_OpenDriveLaneSection> = Vec::new();
+                let splitByAttrChange = section.build_attribute_changes(tc, &mut splitSections);
+                if !splitByAttrChange {
+                    newSections.push(section.clone());
+                } else {
+                    newSections.extend(splitSections);
+                }
+            }
+
+            e.laneSections = newSections;
+            let mut lastS: f64 = -1.0;
+            // check whether the lane sections are in the right order
+            let mut sorted = true;
+            for section in e.laneSections.iter() {
+                if section.s <= lastS {
+                    sorted = false;
+                    break;
+                }
+                lastS = section.s;
+            }
+            if !sorted {
+                write_warningf!("The sections of edge '%' are not sorted properly.", e.id.clone());
+                // determinism: C++ std::sort is unstable; ties on s may be ordered differently
+                let mut sorter = NIImporter_OpenDrive_sections_by_s_sorter::new();
+                e.laneSections.sort_by(|a, b| {
+                    if sorter.call_op(a, b) != 0 {
+                        std::cmp::Ordering::Less
+                    } else if sorter.call_op(b, a) != 0 {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                });
+            }
+            // check whether duplicate s-values occur
+            // but keep all lane sections for connecting roads because they are
+            // needed to establish connectivity (laneSectionsConnected)
+            // TODO recheck whether removing short sections is a good idea at all: once we parse linkage info, it will be lost.
+            if e.laneSections.len() > 1 && !e.isInner {
+                let mut j: usize = 0;
+                while j != e.laneSections.len() - 1 {
+                    if e.laneSections[j + 1].s - e.laneSections[j].s < utils::geom::POSITION_EPS {
+                        write_warningf!("Almost duplicate s-value '%' for lane sections occurred at edge '%'; first entry was removed.", e.laneSections[j].s, e.id.clone());
+                        e.laneSections.remove(j);
+                    } else {
+                        j += 1;
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NIImporter_OpenDrive::setNodeSecure(NBNodeCont &, OpenDriveEdge &, const std::string &, NIImporter_OpenDrive::LinkType, std::vector<NodeSet> &)` [static, protected]
@@ -4714,8 +4768,60 @@ impl NIImporter_OpenDrive {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_node_secure(nc: &mut NBNodeCont, e: &mut NIImporter_OpenDrive_OpenDriveEdge, nodeID: &str, lt: NIImporter_OpenDrive_LinkType, joinedNodeIDs: &mut Vec<NodeSet>) {
-        todo!("port NIImporter_OpenDrive::setNodeSecure")
+    pub fn set_node_secure(nc: &mut NBNodeCont, e: &mut NIImporter_OpenDrive_OpenDriveEdge, nodeID: &str, lt: NIImporter_OpenDrive_LinkType, joinedNodeIDs: &mut Vec<NodeSet>) -> Result<(), ProcessError> {
+        let n: Ptr<NBNode> = nc.retrieve(nodeID);
+        if n.is_null() {
+            return Err(ProcessError::new(tlf!("Could not find node '%'.", nodeID.to_string())));
+        }
+        let mut toJoin: Ptr<NBNode> = Ptr::null();
+        if lt == NIImporter_OpenDrive_LinkType::OPENDRIVE_LT_SUCCESSOR {
+            if !e.to.is_null() && e.to != n {
+                toJoin = e.to;
+            }
+            e.to = n;
+        } else {
+            if !e.from.is_null() && e.from != n {
+                toJoin = e.from;
+            }
+            e.from = n;
+        }
+        if !toJoin.is_null() {
+            // join nodes
+            // C++ keeps the last matching set for set1/set2 (pointer overwritten in the loop)
+            let mut set1: Option<usize> = None;
+            let mut set2: Option<usize> = None;
+            for (idx, joined) in joinedNodeIDs.iter().enumerate() {
+                if joined.contains(&toJoin) {
+                    set1 = Some(idx);
+                }
+                if joined.contains(&n) {
+                    set2 = Some(idx);
+                }
+            }
+            match (set1, set2) {
+                (None, None) => {
+                    let mut newSet: NodeSet = NodeSet::new();
+                    newSet.insert(n);
+                    newSet.insert(toJoin);
+                    joinedNodeIDs.push(newSet);
+                }
+                (None, Some(i2)) => {
+                    joinedNodeIDs[i2].insert(toJoin);
+                }
+                (Some(i1), None) => {
+                    joinedNodeIDs[i1].insert(n);
+                }
+                (Some(i1), Some(i2)) => {
+                    let set2Copy: NodeSet = joinedNodeIDs[i2].clone();
+                    joinedNodeIDs[i1].extend(set2Copy.iter().cloned());
+                    // erase the first set equal to *set2 (std::find by value)
+                    if let Some(pos) = joinedNodeIDs.iter().position(|s| *s == set2Copy) {
+                        joinedNodeIDs.remove(pos);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// C++: `NBTrafficLightDefinition * NIImporter_OpenDrive::getTLSSecure(NBEdge *, NBNetBuilder &)` [static, protected]
@@ -4736,8 +4842,23 @@ impl NIImporter_OpenDrive {
     //     return *toNode->getControllingTLS().begin();
     // }
     #[allow(unused_variables)]
-    pub fn get_tls_secure(inEdge: Ptr<NBEdge>, nb: &mut NBNetBuilder) -> Ptr<NBTrafficLightDefinition> {
-        todo!("port NIImporter_OpenDrive::getTLSSecure")
+    pub fn get_tls_secure(inEdge: Ptr<NBEdge>, nb: &mut NBNetBuilder) -> Result<Ptr<NBTrafficLightDefinition>, ProcessError> {
+        let toNode: Ptr<NBNode> = inEdge.m().get_to_node();
+        if !toNode.m().is_tl_controlled() {
+            let type_ = TrafficLightTypes
+                .get(&utils::options::options_cont::get_string("tls.default-type"))
+                .unwrap_or_else(|e| std::panic::panic_any(e));
+            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(toNode.m().get_id(), toNode, 0, type_)));
+            let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            if !nb.get_tl_logic_cont().insert(tlDef, false) {
+                // actually, nothing should fail here
+                drop(unsafe { Box::from_raw(raw) });
+                return Err(ProcessError::default_msg());
+            }
+            toNode.m().add_traffic_light(tlDef);
+        }
+        let first: Ptr<NBTrafficLightDefinition> = *toNode.m().get_controlling_tls().iter().next().unwrap();
+        Ok(first)
     }
 
     /// C++: `std::pair<NBEdge *, NBEdge *> NIImporter_OpenDrive::retrieveSignalEdges(NBNetBuilder &, const std::string &, const std::string &, int)` [static, protected]
@@ -4780,7 +4901,33 @@ impl NIImporter_OpenDrive {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_signal_edges(nb: &mut NBNetBuilder, fromID: &str, toID: &str, signalMinLane: i32) -> (Ptr<NBEdge>, Ptr<NBEdge>) {
-        todo!("port NIImporter_OpenDrive::retrieveSignalEdges")
+        let mut from: Ptr<NBEdge> = nb.get_edge_cont().retrieve(fromID, false);
+        let mut to: Ptr<NBEdge> = nb.get_edge_cont().retrieve(toID, false);
+        let fromReverse: Ptr<NBEdge> = nb.get_edge_cont().retrieve(&Self::reversed_edge_id(fromID), false);
+        let toReverse: Ptr<NBEdge> = nb.get_edge_cont().retrieve(&Self::reversed_edge_id(toID), false);
+
+        if from.is_null() {
+            from = fromReverse;
+        }
+        if to.is_null() {
+            to = toReverse;
+        }
+        if !from.is_null() && !to.is_null() && from.m().get_to_node() != to.m().get_from_node() {
+            if from.m().get_from_node() == to.m().get_to_node() && signalMinLane >= 0 {
+                std::mem::swap(&mut from, &mut to);
+            } else if !fromReverse.is_null() && !toReverse.is_null() && fromReverse.m().get_to_node() == toReverse.m().get_from_node() && signalMinLane <= 0 {
+                from = fromReverse;
+                to = toReverse;
+            } else {
+                if from.m().get_from_node() == to.m().get_from_node() && !fromReverse.is_null() && fromReverse.m().get_to_node() == to.m().get_from_node() {
+                    from = fromReverse;
+                }
+                if to.m().get_to_node() == from.m().get_to_node() && !toReverse.is_null() && toReverse.m().get_from_node() == from.m().get_to_node() {
+                    to = toReverse;
+                }
+            }
+        }
+        (from, to)
     }
 
     /// C++: `void NIImporter_OpenDrive::splitMinWidths(OpenDriveEdge *, const NBTypeCont &, double)` [static, protected]
