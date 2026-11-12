@@ -10,6 +10,7 @@ pub type SUMOTrafficObject_NumericalID = i64;
 
 /// Representation of a vehicle, person, or container
 /// C++ class `SUMOTrafficObject` (utils/vehicle/SUMOTrafficObject.h)
+#[repr(C)]
 pub struct SUMOTrafficObject {
     /// C++ base class `Named`
     pub base: Named,

@@ -7,6 +7,7 @@ pub type ConstMSEdgeVector = Vec<Ptr<MSEdge>>;
 
 /// Representation of a vehicle
 /// C++ class `SUMOVehicle` (utils/vehicle/SUMOVehicle.h)
+#[repr(C)]
 pub struct SUMOVehicle {
     /// C++ base class `SUMOTrafficObject`
     pub base: SUMOTrafficObject,

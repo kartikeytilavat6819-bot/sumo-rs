@@ -1910,6 +1910,7 @@ impl MSVehicle_LaneQ {
 
 /// Representation of a vehicle in the micro simulation
 /// C++ class `MSVehicle` (microsim/MSVehicle.h)
+#[repr(C)]
 pub struct MSVehicle {
     /// C++ base class `MSBaseVehicle`
     pub base: MSBaseVehicle,

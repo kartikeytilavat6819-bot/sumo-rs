@@ -219,7 +219,7 @@ impl NBEdge_Connection {
     //             return nullptr;
     //         }
     #[allow(unused_variables)]
-    pub fn get_bidi_edge(&self) -> Ptr<CHBuilder_Connection> {
+    pub fn get_bidi_edge(&self) -> Ptr<NBEdge_Connection> {
         todo!("port Connection::getBidiEdge")
     }
 
@@ -481,9 +481,9 @@ pub struct NBEdge {
     /// The mileage/kilometrage at the start of this edge in a linear coordination system
     pub myDistance: f64,
     /// List of connections to following edges
-    pub myConnections: Vec<CHBuilder_Connection>,
+    pub myConnections: Vec<NBEdge_Connection>,
     /// List of connections marked for delayed removal
-    pub myConnectionsToDelete: Vec<CHBuilder_Connection>,
+    pub myConnectionsToDelete: Vec<NBEdge_Connection>,
     /// The turn destination edge (if a connection exists)
     pub myTurnDestination: Ptr<NBEdge>,
     /// The edge that would be the turn destination if there was one
@@ -1958,7 +1958,7 @@ impl NBEdge {
     /// Returns connections from a given lane
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_connections_from_lane(&self, lane: i32, to: Ptr<NBEdge>, toLane: i32) -> Vec<CHBuilder_Connection> {
+    pub fn get_connections_from_lane(&self, lane: i32, to: Ptr<NBEdge>, toLane: i32) -> Vec<NBEdge_Connection> {
         todo!("port NBEdge::getConnectionsFromLane")
     }
 
@@ -1966,7 +1966,7 @@ impl NBEdge {
     /// Returns the specified connection (unmodifiable) This method goes through "myConnections" and returns the specified one
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_connection(&self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &CHBuilder_Connection {
+    pub fn get_connection(&self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &NBEdge_Connection {
         todo!("port NBEdge::getConnection")
     }
 
@@ -1974,7 +1974,7 @@ impl NBEdge {
     /// Returns reference to the specified connection This method goes through "myConnections" and returns the specified one
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_connection_ref(&mut self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &mut CHBuilder_Connection {
+    pub fn get_connection_ref(&mut self, fromLane: i32, to: Ptr<NBEdge>, toLane: i32) -> &mut NBEdge_Connection {
         todo!("port NBEdge::getConnectionRef")
     }
 
@@ -2013,7 +2013,7 @@ impl NBEdge {
     //         return myConnections;
     //     }
     #[allow(unused_variables)]
-    pub fn get_connections(&self) -> &Vec<CHBuilder_Connection> {
+    pub fn get_connections(&self) -> &Vec<NBEdge_Connection> {
         todo!("port NBEdge::getConnections")
     }
 
@@ -2023,7 +2023,7 @@ impl NBEdge {
     //         return myConnections;
     //     }
     #[allow(unused_variables)]
-    pub fn get_connections_2(&mut self) -> &mut Vec<CHBuilder_Connection> {
+    pub fn get_connections_2(&mut self) -> &mut Vec<NBEdge_Connection> {
         todo!("port NBEdge::getConnections")
     }
 
@@ -6113,7 +6113,7 @@ impl NBEdge {
     //     return (common > 0 && common != SVC_PEDESTRIAN);
     // }
     #[allow(unused_variables)]
-    pub fn can_move_connection(&self, con: &CHBuilder_Connection, newFromLane: i32) -> bool {
+    pub fn can_move_connection(&self, con: &NBEdge_Connection, newFromLane: i32) -> bool {
         todo!("port NBEdge::canMoveConnection")
     }
 
@@ -6685,7 +6685,7 @@ impl NBEdge {
     //     return c1.toLane < c2.toLane;
     // }
     #[allow(unused_variables)]
-    pub fn connections_sorter(c1: &CHBuilder_Connection, c2: &CHBuilder_Connection) -> bool {
+    pub fn connections_sorter(c1: &NBEdge_Connection, c2: &NBEdge_Connection) -> bool {
         todo!("port NBEdge::connections_sorter")
     }
 
@@ -6957,7 +6957,7 @@ impl NBEdge_connections_conflict_finder {
     //                     && c.toEdge == myEdge2Find);
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c: &CHBuilder_Connection) -> bool {
+    pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
         todo!("port connections_conflict_finder::operator()")
     }
 
@@ -6993,7 +6993,7 @@ impl NBEdge_connections_finder {
     //                     && (c.toLane == myLane2Find || myLane2Find == -1));
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c: &CHBuilder_Connection) -> bool {
+    pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
         todo!("port connections_finder::operator()")
     }
 
@@ -7019,7 +7019,7 @@ impl NBEdge_connections_fromlane_finder {
     //             return c.fromLane == myLane2Find;
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c: &CHBuilder_Connection) -> bool {
+    pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
         todo!("port connections_fromlane_finder::operator()")
     }
 
@@ -7059,7 +7059,7 @@ impl NBEdge_connections_relative_edgelane_sorter {
     //     return c1.toLane < c2.toLane;
     // }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c1: &CHBuilder_Connection, c2: &CHBuilder_Connection) -> i32 {
+    pub fn call_op(&self, c1: &NBEdge_Connection, c2: &NBEdge_Connection) -> i32 {
         todo!("port connections_relative_edgelane_sorter::operator()")
     }
 
@@ -7090,7 +7090,7 @@ impl NBEdge_connections_toedge_finder {
     //             return c.toEdge == myEdge2Find && (!myHasFromLane || c.fromLane != -1);
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c: &CHBuilder_Connection) -> bool {
+    pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
         todo!("port connections_toedge_finder::operator()")
     }
 
@@ -7124,7 +7124,7 @@ impl NBEdge_connections_toedgelane_finder {
     //             return c.toEdge == myEdge2Find && c.toLane == myLane2Find && (myFromLane2Find < 0 || c.fromLane == myFromLane2Find);
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, c: &CHBuilder_Connection) -> bool {
+    pub fn call_op(&self, c: &NBEdge_Connection) -> bool {
         todo!("port connections_toedgelane_finder::operator()")
     }
 
