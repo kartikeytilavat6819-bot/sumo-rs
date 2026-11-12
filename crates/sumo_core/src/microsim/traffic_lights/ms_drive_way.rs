@@ -1839,7 +1839,17 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn add_dw_deadlock(&mut self, deadlockFoes: &Vec<Ptr<MSDriveWay>>) {
-        todo!("port MSDriveWay::addDWDeadlock")
+        let mut filtered: BTreeSet<Ptr<MSDriveWay>> = BTreeSet::new();
+        // we do not need to keep any of our own foes. If any of them were occupied then
+        // foeDriveWayOccupied would return True without considering myDeadlocks
+        for &foe in deadlockFoes.iter() {
+            if !self.myFoes.contains(&foe) {
+                filtered.insert(foe);
+            }
+        }
+        if !self.myDeadlocks.contains(&filtered) {
+            self.myDeadlocks.push(filtered);
+        }
     }
 
     /// C++: `bool MSDriveWay::isDepartDriveway() const` [const]
@@ -1848,7 +1858,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn is_depart_driveway(&self) -> bool {
-        todo!("port MSDriveWay::isDepartDriveway")
+        self.myOrigin.is_null()
     }
 
     /// C++: `const MSLink * MSDriveWay::getOrigin() const` [const]
@@ -1857,7 +1867,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn get_origin(&self) -> Ptr<MSLink> {
-        todo!("port MSDriveWay::getOrigin")
+        self.myOrigin
     }
 
     /// C++: `bool MSDriveWay::hasTrain(SUMOVehicle *) const` [const]
@@ -1868,7 +1878,7 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn has_train(&self, veh: Ptr<SUMOVehicle>) -> bool {
-        todo!("port MSDriveWay::hasTrain")
+        self.myTrains.contains(&veh)
     }
 
     /// C++: `const std::vector<MSDriveWay *> & MSDriveWay::getSubDriveWays() const` [const]
@@ -1877,7 +1887,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn get_sub_drive_ways(&self) -> &Vec<Ptr<MSDriveWay>> {
-        todo!("port MSDriveWay::getSubDriveWays")
+        &self.mySubDriveWays
     }
 
     /// C++: `bool MSDriveWay::foundSignal() const` [const]
@@ -1886,7 +1896,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn found_signal(&self) -> bool {
-        todo!("port MSDriveWay::foundSignal")
+        self.myFoundSignal
     }
 
     /// C++: `bool MSDriveWay::isSubDriveWay() const` [const]
@@ -1895,7 +1905,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn is_sub_drive_way(&self) -> bool {
-        todo!("port MSDriveWay::isSubDriveWay")
+        !self.myParent.is_null()
     }
 
     /// C++: `const MSDriveWay * MSDriveWay::getParent() const` [const]
@@ -1904,7 +1914,7 @@ impl MSDriveWay {
     //     }
     #[allow(unused_variables)]
     pub fn get_parent(&self) -> Ptr<MSDriveWay> {
-        todo!("port MSDriveWay::getParent")
+        self.myParent
     }
 
     /// C++: `double MSDriveWay::getParentRemainingLength() const` [const]
@@ -1923,7 +1933,18 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_parent_remaining_length(&self) -> f64 {
-        todo!("port MSDriveWay::getParentRemainingLength")
+        let mut result = 0.0;
+        if !self.myParent.is_null() {
+            let last = *self.myForward.back().unwrap();
+            let start = self.myParent.myForward.iter().position(|l| *l == last);
+            assert!(start.is_some());
+            if let Some(start) = start {
+                for &lane in self.myParent.myForward[start..].iter() {
+                    result += lane.get_length();
+                }
+            }
+        }
+        result
     }
 
     /// C++: `void MSDriveWay::init()` [static]
@@ -1934,7 +1955,10 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn init() {
-        todo!("port MSDriveWay::init")
+        let write_vehicles = utils::options::options_cont::is_set("railsignal-vehicle-output");
+        MY_WRITE_VEHICLES.with(|w| w.set(write_vehicles));
+        let max_dist = utils::options::options_cont::get_float("railsignal.moving-block.max-dist");
+        MY_MOVING_BLOCK_MAX_DIST.with(|d| d.set(max_dist));
     }
 
     /// C++: `bool MSDriveWay::hasRS(const MSEdge *, const MSEdge *)` [static]
@@ -1954,7 +1978,17 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn has_rs(cur: Ptr<MSEdge>, next: Ptr<MSEdge>) -> bool {
-        todo!("port MSDriveWay::hasRS")
+        if cur.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+            // check if there is a controlled link between cur and next
+            for &lane in cur.get_lanes().iter() {
+                for &link in lane.get_link_cont().iter() {
+                    if Ptr::new(link.get_lane().get_edge()) == next && !link.get_tl_logic().is_null() {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool MSDriveWay::mustYield(const Approaching &, const Approaching &)` [static]
@@ -1985,7 +2019,29 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn must_yield(veh: &MSRailSignal_Approaching, foe: &MSRailSignal_Approaching) -> bool {
-        todo!("port MSDriveWay::mustYield")
+        let mveh = veh.0.cast::<MSVehicle>();
+        let mfoe = foe.0.cast::<MSVehicle>();
+        if foe.1.arrival_speed_braking == veh.1.arrival_speed_braking {
+            if foe.1.arrival_time == veh.1.arrival_time {
+                if mfoe.get_speed() == mveh.get_speed() {
+                    if foe.1.dist == veh.1.dist {
+                        if mfoe.get_waiting_time(false) == mveh.get_waiting_time(false) {
+                            return mfoe.get_numerical_id() < mveh.get_numerical_id();
+                        } else {
+                            return mfoe.get_waiting_time(false) > mveh.get_waiting_time(false);
+                        }
+                    } else {
+                        return foe.1.dist < veh.1.dist;
+                    }
+                } else {
+                    return mfoe.get_speed() > mveh.get_speed();
+                }
+            } else {
+                return foe.1.arrival_time < veh.1.arrival_time;
+            }
+        } else {
+            return foe.1.arrival_speed_braking > veh.1.arrival_speed_braking;
+        }
     }
 
     /// C++: `MSDriveWay * MSDriveWay::buildDriveWay(const std::string &, const MSLink *, MSRouteIterator, MSRouteIterator)` [static]
@@ -2198,8 +2254,161 @@ impl MSDriveWay {
     //     return dw;
     // }
     #[allow(unused_variables)]
-    pub fn build_drive_way(id: &str, link: Ptr<MSLink>, first: MSRouteIterator, end: MSRouteIterator) -> Ptr<MSDriveWay> {
-        todo!("port MSDriveWay::buildDriveWay")
+    pub fn build_drive_way(id: &str, link: Ptr<MSLink>, route: &ConstMSEdgeVector, first: MSRouteIterator, end: MSRouteIterator) -> Ptr<MSDriveWay> {
+        // collect lanes and links that are relevant for setting this signal for the current driveWay
+        // (see the C++ comment block above for the full description)
+        // shortcut: the driveway is allocated with Box::leak because the C++ code hands the pointer to the
+        // rail signal (or the departure map) without a matching delete; upgrade when ownership is modelled.
+        let dw = Ptr::from_mut(Box::leak(Box::new(MSDriveWay::new(link, id, false))));
+        let mut visited: MSRailSignal_LaneVisitedMap = BTreeMap::new();
+        let mut before: Vec<Ptr<MSLane>> = Vec::new();
+        let mut from_bidi = Ptr::null();
+        if !link.is_null() {
+            Self::append_map_index(&mut visited, link.get_lane_before());
+            from_bidi = link.get_lane_before().get_bidi_lane();
+        }
+        // list of switches that threaten the driveway and for which protection must be found
+        let mut flank_switches: BTreeSet<Ptr<MSLink>> = BTreeSet::new();
+
+        if !from_bidi.is_null() {
+            before.push(from_bidi);
+        }
+        let mut dwm = dw.m();
+        dwm.build_route(route, link, first, end, &mut visited, &mut flank_switches);
+        let bidi_ext = dwm.myBidiExtended.clone();
+        dwm.myBidiExtendedSorted = bidi_ext;
+        dwm.myBidiExtendedSorted.sort();
+        dwm.myCoreSize = dwm.myRoute.len() as i32;
+
+        let rs = if link.is_null() { Ptr::null() } else { as_rail_signal(link.get_tl_logic()) };
+        let moving_block = (!rs.is_null() && rs.is_moving_block())
+            || (rs.is_null()
+                && (utils::options::options_cont::get_bool("railsignal-moving-block")
+                    || MSRailSignalControl::is_moving_block(route[first].get_permissions())));
+
+        dwm.check_flanks(link, &dwm.myForward, &visited, true, moving_block, &mut flank_switches);
+        dwm.check_flanks(link, &dwm.myBidi, &visited, false, moving_block, &mut flank_switches);
+        dwm.check_flanks(link, &before, &visited, true, moving_block, &mut flank_switches);
+        for &fs_link in flank_switches.iter() {
+            let flank_copy = dwm.myFlank.clone();
+            dwm.find_flank_protection(fs_link, fs_link, &flank_copy);
+        }
+        let mut flank_switches_bidi_extended: BTreeSet<Ptr<MSLink>> = BTreeSet::new();
+        dwm.check_flanks(link, &dwm.myBidiExtended, &visited, false, moving_block, &mut flank_switches_bidi_extended);
+        for &flink in flank_switches_bidi_extended.iter() {
+            let ext_copy = dwm.myBidiExtended.clone();
+            dwm.find_flank_protection(flink, flink, &ext_copy);
+        }
+        if rs.is_null() || !rs.is_moving_block() {
+            dwm.myConflictLanes.extend(dwm.myForward.iter().copied());
+        }
+        dwm.myConflictLanes.extend(dwm.myBidi.iter().copied());
+        dwm.myConflictLanes.extend(dwm.myFlank.iter().copied());
+        dwm.add_bidi_foes(rs, false);
+        dwm.add_bidi_foes(rs, true);
+        if !moving_block {
+            // add driveways that start on the same signal / lane
+            dwm.add_parallel_foes(link, route[first]);
+        }
+        // add driveways that reverse along this driveways route
+        dwm.add_reversal_foes(moving_block);
+        // make foes unique and symmetrical
+        // determinism: C++ orders uniqueFoes by driveway numerical id (ComparatorNumericalIdLess) while the
+        // BTreeSet here orders by pointer address.
+        let unique_foes: BTreeSet<Ptr<MSDriveWay>> = dwm.myFoes.iter().copied().collect();
+        dwm.myFoes.clear();
+        // check for self-intersecting forward-section in movingBlock mode
+        if moving_block && !unique_foes.contains(&dw) {
+            let mut forward_junctions: BTreeMap<Ptr<MSJunction>, Vec<Ptr<MSLink>>> = BTreeMap::new();
+            let i_last = dwm.myForward.len() as i32 - 1;
+            let mut self_intersect = false;
+            for i in 0..i_last {
+                if self_intersect {
+                    break;
+                }
+                let fw = dwm.myForward[i as usize];
+                if fw.is_normal() {
+                    let fw_to = fw.get_edge().get_to_junction();
+                    let fw_link = fw.get_link_to(dwm.myForward[i as usize + 1]);
+                    if !fw_link.is_null() {
+                        let links2 = forward_junctions.get(&fw_to).cloned().unwrap_or_default();
+                        for &link2 in links2.iter() {
+                            let foe_links = fw_link.get_foe_links();
+                            let foe_links2 = link2.get_foe_links();
+                            if foe_links.contains(&link2)
+                                || foe_links2.contains(&fw_link)
+                                || fw_link.get_lane().get_bidi_lane() == link2.get_lane_before()
+                                || link2.get_lane().get_bidi_lane() == fw_link.get_lane_before()
+                            {
+                                dwm.myFoes.push(dw);
+                                self_intersect = true;
+                                break;
+                            }
+                        }
+                        forward_junctions.entry(fw_to).or_default().push(fw_link);
+                    }
+                }
+            }
+        }
+        let mut unique_c_link: BTreeSet<Ptr<MSLink>> = dwm.myConflictLinks.iter().copied().collect();
+        let last_edge = Ptr::new(dwm.myForward.back().unwrap().get_edge());
+        for &foe in unique_foes.iter() {
+            let foe_last_edge = Ptr::new(foe.myForward.back().unwrap().get_edge());
+            let same_last = foe_last_edge == last_edge;
+            if same_last && !moving_block {
+                dwm.myFoes.push(foe);
+                if foe != dw {
+                    foe.m().myFoes.push(dw);
+                }
+            } else {
+                if foe.bidi_blocked_by_end(&dwm) {
+                    foe.m().myFoes.push(dw);
+                    foe.m().add_sidings(dw, false);
+                } else {
+                    dwm.build_sub_foe(foe, moving_block);
+                }
+                if foe != dw {
+                    // check for movingBlock
+                    if dwm.bidi_blocked_by_end(&foe) {
+                        dwm.myFoes.push(foe);
+                        dwm.add_sidings(foe, false);
+                    } else {
+                        foe.m().build_sub_foe(dw, moving_block);
+                    }
+                }
+            }
+            if !link.is_null() {
+                foe.m().add_conflict_link(link);
+            }
+            // ignore links that have the same start junction
+            if foe.myRoute.front().unwrap().get_from_junction() != dwm.myRoute.front().unwrap().get_from_junction() {
+                for ili in foe.myForward.front().unwrap().get_incoming_lanes().iter() {
+                    if !ili.viaLink.get_tl_logic().is_null() {
+                        // ignore links that originate on myBidi
+                        let origin = ili.viaLink.get_lane_before();
+                        if !dwm.myBidi.contains(&origin) {
+                            unique_c_link.insert(ili.viaLink);
+                        }
+                    }
+                }
+            }
+        }
+        dwm.myConflictLinks.clear();
+        dwm.myConflictLinks.extend(unique_c_link.iter().copied());
+        MY_ENDING_DRIVEWAYS.with(|m| m.borrow_mut().entry(last_edge).or_default().push(dw));
+        if !moving_block {
+            // every driveway is it's own foe (also all driveways that depart in the same block)
+            let same_ends = MY_ENDING_DRIVEWAYS.with(|m| m.borrow().get(&last_edge).cloned().unwrap_or_default());
+            for same_end in same_ends.iter() {
+                if !unique_foes.contains(same_end) {
+                    dwm.myFoes.push(*same_end);
+                    if *same_end != dw {
+                        same_end.m().myFoes.push(dw);
+                    }
+                }
+            }
+        }
+        dw
     }
 
     /// C++: `std::string MSDriveWay::getClickableTLLinkID(const MSLink *)` [static]
@@ -2210,7 +2419,11 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_clickable_tl_link_id(link: Ptr<MSLink>) -> String {
-        todo!("port MSDriveWay::getClickableTLLinkID")
+        format!(
+            "junction '{}', link {}",
+            link.get_tl_logic().get_id(),
+            link.get_tl_index()
+        )
     }
 
     /// C++: `const MSDriveWay * MSDriveWay::getDepartureDriveway(const SUMOVehicle *, bool)` [static]
@@ -2246,7 +2459,53 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn get_departure_driveway(veh: Ptr<SUMOVehicle>, init: bool) -> Ptr<MSDriveWay> {
-        todo!("port MSDriveWay::getDepartureDriveway")
+        let mveh = veh.cast::<MSVehicle>();
+        let route_edges = mveh.get_route().get_edges();
+        let edge = if init {
+            route_edges[mveh.get_depart_edge() as usize]
+        } else {
+            mveh.get_edge()
+        };
+        if edge.get_from_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+            for &lane in edge.get_lanes().iter() {
+                for ili in lane.get_incoming_lanes().iter() {
+                    let entry = ili.viaLink.get_corresponding_entry_link();
+                    let rs = as_rail_signal(entry.get_tl_logic());
+                    if !rs.is_null() {
+                        let dw: Ptr<MSDriveWay> =
+                            Ptr::from_mut(rs.m().retrieve_drive_way_for_veh(entry.get_tl_index(), veh));
+                        if Ptr::new(dw.myForward.front().unwrap().get_edge()) == edge {
+                            return dw;
+                        }
+                    }
+                }
+            }
+        }
+        let departure_driveways = MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().get(&edge).cloned().unwrap_or_default());
+        for dw in departure_driveways.iter() {
+            let match_start = if init {
+                mveh.get_depart_edge() as usize
+            } else {
+                *mveh.get_current_route_edge()
+            };
+            if dw.match_(route_edges, match_start, route_edges.len()) {
+                return *dw;
+            }
+        }
+        let junction = edge.get_from_junction();
+        let index = MY_DEPART_DRIVEWAY_INDEX.with(|m| {
+            let e = m.borrow_mut().entry(junction).or_insert(0);
+            let v = *e;
+            *e += 1;
+            v
+        });
+        let id = format!("{}.d{}", junction.get_id(), index);
+        let dw = Self::build_drive_way(&id, Ptr::null(), route_edges, *mveh.get_current_route_edge(), route_edges.len());
+        MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow_mut().entry(edge).or_default().push(dw));
+        let end_edge = Ptr::new(dw.myForward.back().unwrap().get_edge());
+        MY_DEPARTURE_DRIVEWAYS_ENDS.with(|m| m.borrow_mut().entry(end_edge).or_default().push(dw));
+        dw.m().set_vehicle(&mveh.get_id());
+        dw
     }
 
     /// C++: `const std::vector<MSDriveWay *> & MSDriveWay::getEndingDriveWays(const MSEdge *)` [static]
@@ -2260,8 +2519,10 @@ impl MSDriveWay {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_ending_drive_ways(edge: Ptr<MSEdge>) -> &'static Vec<Ptr<MSDriveWay>> {
-        todo!("port MSDriveWay::getEndingDriveWays")
+    pub fn get_ending_drive_ways(edge: Ptr<MSEdge>) -> Vec<Ptr<MSDriveWay>> {
+        // the C++ version returns a reference into the static map; the map is thread-local here, so the
+        // callers get a copy of the vector instead.
+        MY_ENDING_DRIVEWAYS.with(|m| m.borrow().get(&edge).cloned().unwrap_or_default())
     }
 
     /// C++: `void MSDriveWay::writeDepatureBlocks(OutputDevice &, bool)` [static]
@@ -2285,7 +2546,22 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn write_depature_blocks(od: &mut OutputDevice, writeVehicles: bool) {
-        todo!("port MSDriveWay::writeDepatureBlocks")
+        let items: Vec<(Ptr<MSEdge>, Vec<Ptr<MSDriveWay>>)> =
+            MY_DEPARTURE_DRIVEWAYS.with(|m| m.borrow().iter().map(|(k, v)| (*k, v.clone())).collect());
+        for (edge, driveways) in items {
+            if !driveways.is_empty() {
+                od.open_tag("departJunction");
+                od.write_attr(SUMO_ATTR_ID, &edge.get_from_junction().get_id().to_string());
+                for &dw in driveways.iter() {
+                    if writeVehicles {
+                        dw.write_block_vehicles(od);
+                    } else {
+                        dw.write_blocks(od);
+                    }
+                }
+                od.close_tag(""); // departJunction
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::saveState(OutputDevice &)` [static]
@@ -2304,7 +2580,17 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn save_state(out: &mut OutputDevice) {
-        todo!("port MSDriveWay::saveState")
+        // all driveways are in myEndingDriveways which makes it convenient
+        let items: Vec<Vec<Ptr<MSDriveWay>>> =
+            MY_ENDING_DRIVEWAYS.with(|m| m.borrow().values().cloned().collect());
+        for driveways in items {
+            for &dw in driveways.iter() {
+                dw.save_state_2(out);
+                for &sub in dw.mySubDriveWays.iter() {
+                    sub.save_state_2(out);
+                }
+            }
+        }
     }
 
     /// C++: `void MSDriveWay::loadState(const SUMOSAXAttributes &, int)` [static]
@@ -2370,7 +2656,74 @@ impl MSDriveWay {
     // }
     #[allow(unused_variables)]
     pub fn load_state(attrs: &SUMOSAXAttributes, tag: i32) {
-        todo!("port MSDriveWay::loadState")
+        let lookup_size = MY_DRIVE_WAY_ROUTE_LOOKUP.with(|m| m.borrow().len()) as i32;
+        if lookup_size < MY_GLOBAL_DRIVE_WAY_INDEX.with(|i| i.get()) {
+            let ending: Vec<Vec<Ptr<MSDriveWay>>> =
+                MY_ENDING_DRIVEWAYS.with(|m| m.borrow().values().cloned().collect());
+            MY_DRIVE_WAY_ROUTE_LOOKUP.with(|m| {
+                let mut lookup = m.borrow_mut();
+                for driveways in ending {
+                    for dw in driveways {
+                        lookup.insert(dw.myRoute.clone(), dw);
+                    }
+                }
+            });
+        }
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        let mut ok = false;
+        let id: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        let edges: String = attrs.get(SUMO_ATTR_EDGES, &id, &mut ok, true);
+        let mut route: ConstMSEdgeVector = Vec::new();
+        if attrs.has_attribute(SUMO_ATTR_EDGES) {
+            MSEdge::parse_edges_list(&edges, &mut route, &id);
+        }
+        // missing driveways and subdriveways can be ignored. They may have been created
+        // for vehicles that are not relevant at state loading time
+        let mut dw = Ptr::null();
+        if tag == SUMO_TAG_DRIVEWAY {
+            let found = MY_DRIVE_WAY_ROUTE_LOOKUP.with(|m| m.borrow().get(&route).copied());
+            match found {
+                Some(d) => {
+                    dw = d;
+                    MY_DRIVE_WAY_LOOKUP.with(|m| m.borrow_mut().insert(id.clone(), dw));
+                }
+                None => return,
+            }
+        } else {
+            let parent_id = &id[..id.rfind('.').unwrap_or(0)];
+            let parent = MY_DRIVE_WAY_LOOKUP.with(|m| m.borrow().get(parent_id).copied());
+            let parent = match parent {
+                Some(p) => p,
+                None => return,
+            };
+            for &sub in parent.mySubDriveWays.iter() {
+                if sub.myRoute == route {
+                    dw = sub;
+                    break;
+                }
+            }
+            if dw.is_null() {
+                // missing subdriveways can be ignored. They may have been created
+                // as foes for driveways that are not relevant at state loading time
+                return;
+            }
+        }
+        let vehicles: String = attrs.get_opt(SUMO_ATTR_VEHICLES, &id, &mut ok, String::new(), true);
+        let mut tokenizer = StringTokenizer::new(&vehicles);
+        for veh_id in tokenizer.get_vector() {
+            let veh = c.get_vehicle(&veh_id);
+            if veh.is_null() {
+                panic!(
+                    "{}",
+                    ProcessError::new(utils::tlf!("Unknown vehicle '%' in driveway '%'", veh_id, id))
+                );
+            }
+            if !dw.has_train(veh) {
+                dw.m().myTrains.insert(veh);
+                veh.cast::<MSBaseVehicle>().m().add_reminder(dw.cast::<MSMoveReminder>(), 0.);
+            }
+        }
     }
 
     /// C++: `bool MSDriveWay::hasLinkConflict(const Approaching &, const MSLink *) const` [const, protected]
@@ -2660,8 +3013,163 @@ impl MSDriveWay {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn build_route(&mut self, origin: Ptr<MSLink>, next: MSRouteIterator, end: MSRouteIterator, visited: &mut MSRailSignal_LaneVisitedMap, arg4: &mut BTreeSet<Ptr<MSLink>>) {
-        todo!("port MSDriveWay::buildRoute")
+    pub fn build_route(&mut self, route: &ConstMSEdgeVector, origin: Ptr<MSLink>, next: MSRouteIterator, end: MSRouteIterator, visited: &mut MSRailSignal_LaneVisitedMap, flankSwitches: &mut BTreeSet<Ptr<MSLink>>) {
+        let mut length = 0.0;
+        let mut seek_forward_signal = true;
+        let mut seek_bidi_switch = true;
+        let mut found_unsafe_switch = false;
+        let mut next = next;
+        let mut to_lane: Ptr<MSLane> = if !origin.is_null() {
+            origin.get_via_lane_or_lane()
+        } else {
+            route[next].get_lanes().first().copied().unwrap_or(Ptr::null())
+        };
+        let warn_id = if !origin.is_null() {
+            format!("rail signal {}", Self::get_clickable_tl_link_id(origin))
+        } else {
+            format!("insertion lane '{}'", to_lane.get_id())
+        };
+        loop {
+            if length > MSGlobals::max_rail_signal_block_length() {
+                // typical block length in germany on main lines is 3-5km on branch lines up to 7km
+                // special branches that are used by one train exclusively could also be up to 20km in length
+                // minimum block size in germany is 37.5m (LZB)
+                // larger countries (USA, Russia) might see blocks beyond 20km)
+                let block_start = self.myRoute.first().copied();
+                let already_warned = match block_start {
+                    Some(e) => MY_BLOCK_LENGTH_WARNINGS.with(|w| w.borrow().contains(&e)),
+                    None => false,
+                };
+                if seek_forward_signal && !already_warned {
+                    utils::write_warningf!(
+                        "Block after % exceeds maximum length (stopped searching after edge '%' (length=%m).",
+                        warn_id.clone(),
+                        to_lane.get_edge().get_id().to_string(),
+                        length
+                    );
+                    if let Some(e) = block_start {
+                        MY_BLOCK_LENGTH_WARNINGS.with(|w| w.borrow_mut().insert(e));
+                    }
+                }
+                self.myAbortedBuild = true;
+                // length exceeded
+                return;
+            }
+            let current = Ptr::new(to_lane.get_edge());
+            if current.is_normal() {
+                self.myRoute.push(current);
+                if next != end {
+                    next += 1;
+                }
+            }
+            Self::append_map_index(visited, to_lane);
+            length += to_lane.get_length();
+            let bidi = to_lane.get_bidi_lane();
+            if seek_forward_signal {
+                if !found_unsafe_switch {
+                    self.myForward.push(to_lane);
+                    if to_lane.is_normal() {
+                        self.myForwardEdgeCount += 1;
+                    }
+                    if self.myForward.len() == 1 {
+                        self.base.myLane = to_lane;
+                        let this_ptr = Ptr::from_mut(self).cast::<MSMoveReminder>();
+                        if MSGlobals::use_meso_sim() {
+                            let edge = to_lane.get_edge();
+                            let s = MSGlobals::meso_net().m().get_segment_for_edge(&edge, 0.);
+                            s.m().add_detector(this_ptr, self.base.myLane.get_index());
+                        } else {
+                            to_lane.m().add_move_reminder(this_ptr, false);
+                        }
+                    }
+                }
+            } else if bidi.is_null() {
+                if to_lane.is_internal() && to_lane.get_incoming_lanes().first().unwrap().viaLink.is_turnaround() {
+                    // continue bidiSearch beyond turnaround
+                } else {
+                    seek_bidi_switch = false;
+                    // noBidi, abort search for bidiSwitch
+                }
+            }
+            if !bidi.is_null() {
+                if !seek_forward_signal && !found_unsafe_switch && bidi.is_normal() {
+                    // look for switch that could protect from oncoming vehicles
+                    for &link in bidi.get_link_cont().iter() {
+                        if link.get_direction() == LinkDirection::TURN {
+                            continue;
+                        }
+                        if !self.myBidi.is_empty() && link.get_via_lane_or_lane() != *self.myBidi.back().unwrap() {
+                            self.myCoreSize = self.myRoute.len() as i32 - 1;
+                            let used = bidi.get_link_to(*self.myBidi.back().unwrap());
+                            // trains along our route beyond this switch might create deadlock
+                            found_unsafe_switch = true;
+                            // the switch itself must still be guarded to ensure safety
+                            if !used.is_null() {
+                                // possibly nullptr if there was an intermediate section of unidirectional edges
+                                flankSwitches.insert(used);
+                            }
+                            break;
+                        }
+                    }
+                }
+                if found_unsafe_switch {
+                    self.myBidiExtended.push(bidi);
+                } else {
+                    self.myBidi.push(bidi);
+                }
+            }
+            let links: Vec<Ptr<MSLink>> = to_lane.get_link_cont().clone();
+            let mut next_lane = Ptr::null();
+            for &link in links.iter() {
+                if next != end && Ptr::new(link.get_lane().get_edge()) == route[next] {
+                    next_lane = link.get_via_lane_or_lane();
+                    if !link.get_tl_logic().is_null()
+                        && link.get_tl_index() >= 0
+                        && link.get_tl_logic().get_logic_type() == TrafficLightType::RAIL_SIGNAL
+                    {
+                        if link == origin {
+                            if seek_forward_signal {
+                                utils::write_warningf!(
+                                    "Found circular block after % (% edges, length %)",
+                                    warn_id.clone(),
+                                    utils::common::to_string::to_string(&self.myRoute.len()),
+                                    utils::common::to_string::to_string(&length)
+                                );
+                            }
+                            self.myAbortedBuild = true;
+                            return;
+                        }
+                        seek_forward_signal = false;
+                        self.myFoundSignal = true;
+                        seek_bidi_switch = !bidi.is_null();
+                    }
+                    if Self::is_switch(link) {
+                        // switch on driveway
+                        let this_ptr = Ptr::from_mut(self);
+                        MY_SWITCH_DRIVE_WAYS.with(|m| m.borrow_mut().entry(link).or_default().push(this_ptr));
+                    }
+                    if !link.get_lane().get_bidi_lane().is_null() && Ptr::new(link.get_lane().get_edge()) == current.get_bidi_edge() {
+                        // reversal on driveway
+                        let this_ptr = Ptr::from_mut(self);
+                        MY_REVERSAL_DRIVE_WAYS.with(|m| m.borrow_mut().entry(current).or_default().push(this_ptr));
+                        self.myReversals.push(current);
+                    }
+                    break;
+                }
+            }
+            if next_lane.is_null() {
+                if next != end {
+                    // no connection found, jump to next route edge
+                    to_lane = route[next].get_lanes().first().copied().unwrap_or(Ptr::null());
+                    self.myFoundJump = true;
+                    return;
+                } else {
+                    self.myTerminateRoute = true;
+                    return;
+                }
+            }
+            to_lane = next_lane;
+        }
     }
 
     /// C++: `void MSDriveWay::checkFlanks(const MSLink *, const std::vector<const MSLane *> &, const LaneVisitedMap &, bool, bool, std::set<MSLink *, MSLink::ComparatorNumericalLaneIdLess> &) const` [const, protected]
