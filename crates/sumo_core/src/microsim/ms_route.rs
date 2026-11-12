@@ -59,6 +59,28 @@ impl std::ops::DerefMut for MSRoute {
 thread_local! {
     static MY_DICT: std::cell::RefCell<MSRoute_RouteDict> = std::cell::RefCell::new(BTreeMap::new());
     static MY_DIST_DICT: std::cell::RefCell<MSRoute_RouteDistDict> = std::cell::RefCell::new(BTreeMap::new());
+    static NULL_ROUTE: std::cell::RefCell<Option<ConstMSRoutePtr>> = const { std::cell::RefCell::new(None) };
+}
+
+/// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) };
+    }
+}
+
+/// Stand-in for the nullptr MSRoute::dictionary returns when the id is unknown: `ConstMSRoutePtr`
+/// is a plain `Rc<MSRoute>` and cannot be null, so a leaked empty route is handed out instead.
+// shortcut: C++ nullptr return value cannot be represented through Rc<MSRoute>, callers that must
+// distinguish should check MSRoute::has_route first, upgrade when ConstMSRoutePtr becomes Option
+fn get_null_route() -> ConstMSRoutePtr {
+    NULL_ROUTE.with(|nr| {
+        let mut nr = nr.borrow_mut();
+        if nr.is_none() {
+            *nr = Some(Rc::new(MSRoute::new("", &Vec::new(), true, Ptr::null(), &Vec::new(), -1, -1)));
+        }
+        nr.clone().unwrap()
+    })
 }
 
 impl MSRoute {
@@ -691,7 +713,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, route: ConstMSRoutePtr) -> bool {
-        todo!("port MSRoute::dictionary")
+        if !MY_DICT.with(|d| d.borrow().contains_key(id)) && !MY_DIST_DICT.with(|d| d.borrow().contains_key(id)) {
+            MY_DICT.with(|d| d.borrow_mut().insert(id.to_string(), route));
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSRoute::dictionary(const std::string &, RandomDistributor<ConstMSRoutePtr> *const, const bool)` [static]
@@ -709,7 +735,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: &str, routeDist: Ptr<RandomDistributor<ConstMSRoutePtr>>, permanent: bool) -> bool {
-        todo!("port MSRoute::dictionary")
+        if !MY_DICT.with(|d| d.borrow().contains_key(id)) && !MY_DIST_DICT.with(|d| d.borrow().contains_key(id)) {
+            MY_DIST_DICT.with(|d| d.borrow_mut().insert(id.to_string(), (routeDist, permanent)));
+            return true;
+        }
+        false
     }
 
     /// C++: `ConstMSRoutePtr MSRoute::dictionary(const std::string &, SumoRNG *)` [static]
@@ -731,7 +761,28 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: &str, rng: Ptr<SumoRNG>) -> ConstMSRoutePtr {
-        todo!("port MSRoute::dictionary")
+        let route = MY_DICT.with(|d| d.borrow().get(id).cloned());
+        if let Some(r) = route {
+            return r;
+        }
+        let result = MY_DIST_DICT.with(|d| {
+            d.borrow().get(id).and_then(|(dist, _)| {
+                if (*dist).get_overall_prob() == 0.0 {
+                    None
+                } else {
+                    let which = if rng.is_null() { None } else { Some(unsafe { &mut *rng.as_raw() }) };
+                    match (*dist).get(which) {
+                        Ok(r) => Some(r),
+                        // C++ rethrows the ProcessError raised by RandomDistributor::get
+                        Err(e) => std::panic::panic_any(e),
+                    }
+                }
+            })
+        });
+        match result {
+            Some(r) => r,
+            None => get_null_route(),
+        }
     }
 
     /// C++: `bool MSRoute::hasRoute(const std::string &)` [static]
@@ -745,7 +796,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn has_route(id: &str) -> bool {
-        todo!("port MSRoute::hasRoute")
+        MY_DICT.with(|d| d.borrow().contains_key(id))
     }
 
     /// C++: `RandomDistributor<ConstMSRoutePtr> * MSRoute::distDictionary(const std::string &)` [static]
@@ -763,7 +814,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dist_dictionary(id: &str) -> Ptr<RandomDistributor<ConstMSRoutePtr>> {
-        todo!("port MSRoute::distDictionary")
+        let dist = MY_DIST_DICT.with(|d| d.borrow().get(id).map(|(p, _)| *p));
+        match dist {
+            Some(d) => d,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `void MSRoute::clear()` [static]
@@ -781,7 +836,16 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn clear() {
-        todo!("port MSRoute::clear")
+        let dists: Vec<Ptr<RandomDistributor<ConstMSRoutePtr>>> = MY_DIST_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            let v: Vec<Ptr<RandomDistributor<ConstMSRoutePtr>>> = d.values().map(|(p, _)| *p).collect();
+            d.clear();
+            v
+        });
+        for dist in dists {
+            delete_ptr(dist);
+        }
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `void MSRoute::checkDist(const std::string &)` [static]
@@ -803,7 +867,25 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn check_dist(id: &str) {
-        todo!("port MSRoute::checkDist")
+        let found = MY_DIST_DICT.with(|d| {
+            let d = d.borrow();
+            match d.get(id) {
+                Some((dist, permanent)) if !*permanent => {
+                    let rps: Vec<ConstMSRoutePtr> = dist.get_vals().to_vec();
+                    // `it` stays alive until the end of the block, so erase after the loop below
+                    Some((dist, rps))
+                }
+                _ => None,
+            }
+        });
+        if let Some((dist, rps)) = found {
+            for rp in rps {
+                let r: &MSRoute = &rp;
+                r.check_removal(false);
+            }
+            delete_ptr(dist);
+            MY_DIST_DICT.with(|d| d.borrow_mut().remove(id));
+        }
     }
 
     /// C++: `void MSRoute::insertIDs(std::vector<std::string> &)` [static]
@@ -822,7 +904,17 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn insert_i_ds(into: &mut Vec<String>) {
-        todo!("port MSRoute::insertIDs")
+        into.reserve(MY_DICT.with(|d| d.borrow().len()) + MY_DIST_DICT.with(|d| d.borrow().len()) + into.len());
+        MY_DICT.with(|d| {
+            for i in d.borrow().keys() {
+                into.push(i.clone());
+            }
+        });
+        MY_DIST_DICT.with(|d| {
+            for i in d.borrow().keys() {
+                into.push(i.clone());
+            }
+        });
     }
 
     /// C++: `MSRoute & MSRoute::operator=(const MSRoute &)` [private]
