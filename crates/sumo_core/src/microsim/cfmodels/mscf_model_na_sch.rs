@@ -1,6 +1,9 @@
 //! Port of microsim/cfmodels/MSCFModel_NaSch.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{accel2speed, dist2speed};
+use utils::geom::NUMERICAL_EPS;
 
 /// The Nagel-Schreckenberg (1992) cellular automaton car-following model
 /// C++ class `MSCFModel_NaSch` (microsim/cfmodels/MSCFModel_NaSch.h)
@@ -40,7 +43,9 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>, dawdle: f64) -> Self {
-        todo!("port MSCFModel_NaSch::MSCFModel_NaSch")
+        let base = MSCFModel::new(vtype);
+        let myCellSpeed = accel2speed(base.myAccel);
+        MSCFModel_NaSch { base, myDawdle: dawdle, myCellSpeed }
     }
 
     /// C++: `void MSCFModel_NaSch::~MSCFModel_NaSch() noexcept` [virtual]
@@ -48,7 +53,7 @@ impl MSCFModel_NaSch {
     // MSCFModel_NaSch::~MSCFModel_NaSch() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_NaSch::~MSCFModel_NaSch")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_NaSch::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -60,7 +65,7 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_NaSch::followSpeed")
+        self.vsafe(veh, speed, gap2pred)
     }
 
     /// C++: `double MSCFModel_NaSch::insertionFollowSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const) const` [const, virtual]
@@ -71,7 +76,7 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn insertion_follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_NaSch::insertionFollowSpeed")
+        self.vsafe(veh, speed, gap2pred)
     }
 
     /// C++: `double MSCFModel_NaSch::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -82,7 +87,7 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_NaSch::stopSpeed")
+        self.vsafe(veh, speed, gap2pred)
     }
 
     /// C++: `double MSCFModel_NaSch::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -98,7 +103,12 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel_NaSch::patchSpeedBeforeLC")
+        // NaSch rule 3 (randomization): with probability sigma, dawdle by exactly
+        // one cell -- not a continuously distributed amount as in the Krauss dawdle.
+        if vMax > 0. && self.myDawdle > 0. && veh.get_rng().m().rand() < self.myDawdle {
+            return max2(vMin, self.round_to_cell(vMax - self.myCellSpeed));
+        }
+        vMax
     }
 
     /// C++: `double MSCFModel_NaSch::minNextSpeedEmergency(double, const MSVehicle *const) const` [const, virtual]
@@ -115,7 +125,13 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn min_next_speed_emergency(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
-        todo!("port MSCFModel_NaSch::minNextSpeedEmergency")
+        // NaSch rule 4 (movement) permits vehicles to stop dead within a single
+        // step whenever the gap requires it, i.e. emergency deceleration is not
+        // bounded, see issue #12182 ("do not bound emergency decel").
+        if MSGlobals::semi_implicit_euler_update() {
+            return 0.;
+        }
+        -f64::MAX
     }
 
     /// C++: `int MSCFModel_NaSch::getModelID() const` [const, virtual]
@@ -125,7 +141,7 @@ impl MSCFModel_NaSch {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_NaSch::getModelID")
+        SUMO_TAG_CF_NASCH as i32
     }
 
     /// C++: `double MSCFModel_NaSch::getImperfection() const` [const, virtual]
@@ -135,7 +151,7 @@ impl MSCFModel_NaSch {
     //     }
     #[allow(unused_variables)]
     pub fn get_imperfection(&self) -> f64 {
-        todo!("port MSCFModel_NaSch::getImperfection")
+        self.myDawdle
     }
 
     /// C++: `void MSCFModel_NaSch::setImperfection(double)` [virtual]
@@ -145,7 +161,7 @@ impl MSCFModel_NaSch {
     //     }
     #[allow(unused_variables)]
     pub fn set_imperfection(&mut self, imperfection: f64) {
-        todo!("port MSCFModel_NaSch::setImperfection")
+        self.myDawdle = imperfection;
     }
 
     /// C++: `MSCFModel * MSCFModel_NaSch::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -156,7 +172,7 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_NaSch::duplicate")
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_NaSch::new(vtype, self.myDawdle))) as *mut MSCFModel)
     }
 
     /// C++: `double MSCFModel_NaSch::roundToCell(double) const` [const, protected]
@@ -170,7 +186,10 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn round_to_cell(&self, speed: f64) -> f64 {
-        todo!("port MSCFModel_NaSch::roundToCell")
+        if speed <= 0. || self.myCellSpeed <= 0. {
+            return 0.;
+        }
+        (speed / self.myCellSpeed + NUMERICAL_EPS).floor() * self.myCellSpeed
     }
 
     /// C++: `double MSCFModel_NaSch::vsafe(const MSVehicle *const, double, double) const` [const, protected]
@@ -190,7 +209,16 @@ impl MSCFModel_NaSch {
     // }
     #[allow(unused_variables)]
     pub fn vsafe(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
-        todo!("port MSCFModel_NaSch::vsafe")
+        if gap < NUMERICAL_EPS {
+            return 0.;
+        }
+        // NaSch rule 1 (acceleration) followed by rule 2 (slowing down): unlike the
+        // Krauss-derived models, the leader's speed does not enter the computation at
+        // all -- the gap alone caps how far ego may move this step, see issue #12182
+        // ("replace leaderSpeed with gap").
+        let vAccel = self.max_next_speed(speed, veh);
+        let vGapLimited = min2(vAccel, dist2speed(gap));
+        self.round_to_cell(max2(0., vGapLimited))
     }
 
 }

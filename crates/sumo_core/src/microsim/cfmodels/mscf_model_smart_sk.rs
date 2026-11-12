@@ -1,6 +1,9 @@
 //! Port of microsim/cfmodels/MSCFModel_SmartSK.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{accel2speed, ts};
+use utils::common::to_string::f64_to_string_default;
 
 /// The original Krauss (1998) car-following model and parameter
 /// C++ class `MSCFModel_SmartSK` (microsim/cfmodels/MSCFModel_SmartSK.h)
@@ -77,7 +80,29 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_SmartSK::MSCFModel_SmartSK")
+        let myDawdle = vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(vtype.get_parameter().vehicleClass));
+        let mut base = MSCFModel::new(vtype);
+        let myTauDecel = base.myDecel * base.myHeadwayTime;
+        let myTmp1 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP1, 1.0);
+        let myTmp2 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP2, 1.0);
+        let myTmp3 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP3, 1.0);
+        let myTmp4 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP4, 1.0);
+        let myTmp5 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP5, 1.0);
+        // the variable tmp1 is the acceleration delay time, e.g. two seconds (or something like this).
+        // for use in the upate process, a rule like if (v<myTmp1) vsafe = 0; is needed.
+        // To have this, we have to transform myTmp1 (which is a time) into an equivalent speed. This is done by the
+        // using the vsafe formula and computing:
+        // v(t=myTmp1) = -myTauDecel + sqrt(myTauDecel*myTauDecel + accel*(accel + decel)*t*t + accel*decel*t*TS);
+        let t = myTmp1;
+        let mut myS2Sspeed = -myTauDecel + (myTauDecel * myTauDecel + base.myAccel * (base.myAccel + base.myDecel) * t * t + base.myAccel * base.myDecel * t * ts()).sqrt();
+        if myS2Sspeed > 5.0 {
+            myS2Sspeed = 5.0;
+        }
+        // double maxDeltaGap = -0.5*ACCEL2DIST(myDecel + myAccel);
+        let maxDeltaGap = -0.5 * (base.myDecel + base.myAccel) * ts() * ts();
+        let myTmp2 = ts() / myTmp2;
+        let myTmp3 = ts().sqrt() * myTmp3;
+        MSCFModel_SmartSK { base, myDawdle, myTauDecel, myTmp1, myTmp2, myTmp3, myTmp4, myTmp5, myS2Sspeed, maxDeltaGap }
     }
 
     /// C++: `void MSCFModel_SmartSK::~MSCFModel_SmartSK() noexcept` [virtual]
@@ -85,7 +110,7 @@ impl MSCFModel_SmartSK {
     // MSCFModel_SmartSK::~MSCFModel_SmartSK() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_SmartSK::~MSCFModel_SmartSK")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_SmartSK::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -109,7 +134,14 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_SmartSK::finalizeSpeed")
+        let vNext = self.base.finalize_speed(veh, vPos);
+        self.update_my_headway(veh);
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
+        // ggOld[(int) vPos] inserts a 0 entry when the key is missing, as std::map::operator[] does
+        let gOld = *vars.m().ggOld.entry(vPos as i32).or_insert(0.);
+        vars.m().gOld = gOld;
+        vars.m().ggOld.clear();
+        vNext
     }
 
     /// C++: `double MSCFModel_SmartSK::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -140,7 +172,26 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_SmartSK::followSpeed")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
+        // if (((gap - vars->gOld) < maxDeltaGap) && (speed>=5.0) && gap>=5.0) {
+        if (gap2pred - vars.gOld) < self.maxDeltaGap {
+            let tTauTest = gap2pred / speed;
+            // allow  headway only to decrease only, never to increase. Increase is handled automatically by the headway dynamics in finalizeSpeed()!!!
+            if tTauTest < vars.myHeadway && tTauTest > ts() {
+                vars.m().myHeadway = tTauTest;
+            }
+        }
+
+        let mut vsafe = self.vsafe(veh, gap2pred, predSpeed);
+        if speed <= 0.0 && vsafe < self.myS2Sspeed {
+            vsafe = 0.;
+        }
+
+        let vNew = max2(self.get_speed_after_max_decel(speed), min2(vsafe, self.max_next_speed(speed, veh)));
+        // there must be a better place to do the following assignment!!!
+        vars.m().gOld = gap2pred;
+        vars.m().ggOld.insert(vNew as i32, gap2pred);
+        vNew
     }
 
     /// C++: `double MSCFModel_SmartSK::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -162,7 +213,17 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_SmartSK::stopSpeed")
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
+        // if (((gap - vars->gOld) < maxDeltaGap) && (speed>=5.0) && gap>=5.0) {
+        if (gap2pred - vars.gOld) < self.maxDeltaGap {
+            let tTauTest = gap2pred / speed;
+            // allow  headway only to decrease only, never to increase. Increase is handled automatically by the headway dynamics in finalizeSpeed()!!!
+            if tTauTest < vars.myHeadway && tTauTest > ts() {
+                vars.m().myHeadway = tTauTest;
+            }
+        }
+
+        max2(self.get_speed_after_max_decel(speed), min2(self.vsafe(veh, gap2pred, 0.), self.max_next_speed(speed, veh)))
     }
 
     /// C++: `int MSCFModel_SmartSK::getModelID() const` [const, virtual]
@@ -172,7 +233,7 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_SmartSK::getModelID")
+        SUMO_TAG_CF_SMART_SK as i32
     }
 
     /// C++: `double MSCFModel_SmartSK::getImperfection() const` [const, virtual]
@@ -182,7 +243,7 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn get_imperfection(&self) -> f64 {
-        todo!("port MSCFModel_SmartSK::getImperfection")
+        self.myDawdle
     }
 
     /// C++: `void MSCFModel_SmartSK::setMaxDecel(double)` [virtual]
@@ -193,7 +254,8 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn set_max_decel(&mut self, decel: f64) {
-        todo!("port MSCFModel_SmartSK::setMaxDecel")
+        self.myDecel = decel;
+        self.myTauDecel = self.myDecel * self.myHeadwayTime;
     }
 
     /// C++: `void MSCFModel_SmartSK::setImperfection(double)` [virtual]
@@ -203,7 +265,7 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn set_imperfection(&mut self, imperfection: f64) {
-        todo!("port MSCFModel_SmartSK::setImperfection")
+        self.myDawdle = imperfection;
     }
 
     /// C++: `void MSCFModel_SmartSK::setHeadwayTime(double)` [virtual]
@@ -214,7 +276,8 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn set_headway_time(&mut self, headwayTime: f64) {
-        todo!("port MSCFModel_SmartSK::setHeadwayTime")
+        self.myHeadwayTime = headwayTime;
+        self.myTauDecel = self.myDecel * headwayTime;
     }
 
     /// C++: `double MSCFModel_SmartSK::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -225,7 +288,7 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel_SmartSK::patchSpeedBeforeLC")
+        self.dawdle(veh.get_speed(), veh.get_rng())
     }
 
     /// C++: `MSCFModel * MSCFModel_SmartSK::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -236,7 +299,7 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_SmartSK::duplicate")
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_SmartSK::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `double MSCFModel_SmartSK::_vsafe(const MSVehicle *const, double, double) const` [const, virtual, private]
@@ -260,7 +323,16 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn vsafe(&self, veh: Ptr<MSVehicle>, gap: f64, predSpeed: f64) -> f64 {
-        todo!("port MSCFModel_SmartSK::_vsafe")
+        if predSpeed == 0. && gap < 0.01 {
+            return 0.;
+        }
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
+        // this is the most obvious change to the normal SK: the model uses the variable vars->myHeadway instead of the constant
+        // myHeadwayTime as the "desired headway" tau
+        let bTau = self.myDecel * vars.myHeadway;
+        let vsafe = -1. * bTau + (bTau * bTau + (predSpeed * predSpeed) + (2. * self.myDecel * gap)).sqrt();
+        debug_assert!(vsafe >= 0.);
+        vsafe
     }
 
     /// C++: `double MSCFModel_SmartSK::dawdle(double, SumoRNG *) const` [const, virtual, private]
@@ -271,7 +343,7 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn dawdle(&self, speed: f64, rng: Ptr<SumoRNG>) -> f64 {
-        todo!("port MSCFModel_SmartSK::dawdle")
+        max2(0., speed - accel2speed(self.myDawdle * self.myAccel * rng.m().rand()))
     }
 
     /// C++: `void MSCFModel_SmartSK::updateMyHeadway(const MSVehicle *const) const` [const, virtual, private]
@@ -287,7 +359,15 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn update_my_headway(&self, veh: Ptr<MSVehicle>) {
-        todo!("port MSCFModel_SmartSK::updateMyHeadway")
+        // this is the point were the preferred headway changes slowly:
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
+        let mut tTau = vars.myHeadway;
+        tTau = tTau + (self.myHeadwayTime - tTau) * self.myTmp2 + self.myTmp3 * tTau * veh.get_rng().m().rand_range(-1.0, 1.0);
+        if tTau < ts() {
+            // this ensures the SK safety condition
+            tTau = ts();
+        }
+        vars.m().myHeadway = tTau;
     }
 
     /// C++: `MSCFModel::VehicleVariables * MSCFModel_SmartSK::createVehicleVariables() const` [const, virtual, private]
@@ -299,7 +379,8 @@ impl MSCFModel_SmartSK {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_SmartSK::createVehicleVariables")
+        let vars = MSCFModel_SmartSK_SSKVehicleVariables { base: MSCFModel_VehicleVariables {}, gOld: 0.0, myHeadway: self.myHeadwayTime, ggOld: BTreeMap::new() };
+        Ptr::from_raw(Box::into_raw(Box::new(vars)) as *mut MSCFModel_VehicleVariables)
     }
 
 }
@@ -345,7 +426,17 @@ impl MSCFModel_SmartSK_SSKVehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port SSKVehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "SmartSK");
+        let mut internals = format!("{} ", f64_to_string_default(self.gOld));
+        internals.push_str(&format!("{} ", f64_to_string_default(self.myHeadway)));
+        internals.push_str(&format!("{} ", self.ggOld.len()));
+        for (k, v) in &self.ggOld {
+            internals.push_str(&format!("{} {} ", k, f64_to_string_default(*v)));
+        }
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void SSKVehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -371,8 +462,24 @@ impl MSCFModel_SmartSK_SSKVehicleVariables {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port SSKVehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "SmartSK" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for SmartSK", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        // a failed C++ stream extraction leaves 0 in the target (C++11), hence unwrap_or(0)
+        self.gOld = bis.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.);
+        self.myHeadway = bis.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.);
+        let ggOldSize: i32 = bis.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
+        for _ in 0..ggOldSize {
+            let k: i32 = bis.next().and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
+            let v: f64 = bis.next().and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.);
+            self.ggOld.insert(k, v);
+        }
+        Ok(())
     }
 
 }
