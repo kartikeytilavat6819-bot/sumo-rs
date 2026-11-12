@@ -2516,7 +2516,8 @@ impl MSVehicle {
         }
         std::mem::swap(&mut self.myLFLinkLanesPrev, &mut self.myLFLinkLanes);
         if !self.myInfluencer.is_null() {
-            self.myInfluencer.m().update_remote_control_route(Ptr::from_mut(self));
+            let influencer = self.myInfluencer;
+            influencer.m().update_remote_control_route(Ptr::from_mut(self));
         }
         // planMoveInternal and checkRewindLinkLanes take the vectors by reference while being methods on self
         let lfLinks = Ptr::from_mut(&mut self.myLFLinkLanes);
@@ -3005,7 +3006,49 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn execute_fractional_move(&mut self, dist: f64) {
-        todo!("port MSVehicle::executeFractionalMove")
+        self.myState.myPos += dist;
+        self.myState.myLastCoveredDist = dist;
+        self.myCachedPosition = Position::INVALID;
+
+        let lanes = self.get_upcoming_lanes_until(dist);
+        let t = MSNet::get_instance().m().get_current_time_step();
+        for i in 0..lanes.len() {
+            let mut link = Ptr::null();
+            if i + 1 < lanes.len() {
+                let to = lanes[i + 1];
+                let internal = to.m().is_internal();
+                for l in lanes[i].m().myLinks.iter() {
+                    if (internal && l.m().get_via_lane() == to) || (!internal && l.m().get_lane() == to) {
+                        link = *l;
+                        break;
+                    }
+                }
+            }
+            let speed = self.get_speed();
+            self.myLFLinkLanes.push(MSVehicle_DriveProcessItem::new(link, speed, speed, true, t, speed, 0.0, 0.0, dist));
+        }
+        // minimum execute move:
+        let mut passedLanes: Vec<Ptr<MSLane>> = Vec::new();
+        // Reason for a possible emergency stop
+        if lanes.len() > 1 {
+            let lane = self.myLane;
+            lane.m().remove_vehicle(Ptr::from_mut(self), MSMoveReminder_Notification::NOTIFICATION_JUNCTION, false);
+        }
+        let mut emergencyReason = String::new();
+        self.process_lane_advances(&mut passedLanes, &mut emergencyReason);
+        self.work_on_move_reminders(self.myState.myPos - self.myState.myLastCoveredDist, self.myState.myPos, self.myState.mySpeed);
+        if lanes.len() > 1 {
+            let furtherLanes = self.myFurtherLanes.clone();
+            for fl in furtherLanes {
+                fl.m().reset_partial_occupation(Ptr::from_mut(self));
+            }
+            self.myFurtherLanes.clear();
+            self.myFurtherLanesPosLat.clear();
+            let pos = self.get_position_on_lane();
+            let posLat = self.get_lateral_position_on_lane();
+            let lane = self.myLane;
+            lane.m().force_vehicle_insertion(Ptr::from_mut(self), pos, MSMoveReminder_Notification::NOTIFICATION_JUNCTION, posLat);
+        }
     }
 
     /// C++: `double MSVehicle::getDeltaPos(const double) const` [const]
@@ -3234,7 +3277,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_overlap(&self) -> f64 {
-        todo!("port MSVehicle::getLateralOverlap")
+        self.get_lateral_overlap_3(self.get_lateral_position_on_lane(), self.myLane)
     }
 
     /// C++: `double MSVehicle::getLateralOverlap(const MSLane *) const` [const]
@@ -3244,7 +3287,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_overlap_2(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getLateralOverlap")
+        self.get_lateral_overlap_3(self.get_lateral_position_on_lane(), lane)
     }
 
     /// C++: `double MSVehicle::getLateralOverlap(double, const MSLane *) const` [const]
@@ -3255,7 +3298,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_overlap_3(&self, posLat: f64, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getLateralOverlap")
+        posLat.abs() + 0.5 * self.get_vehicle_type().get_width() - 0.5 * lane.m().get_width()
     }
 
     /// C++: `double MSVehicle::getLeftSideOnEdge(const MSLane *) const` [const]
@@ -3266,7 +3309,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_left_side_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getLeftSideOnEdge")
+        self.get_center_on_edge(lane) + 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
@@ -3277,7 +3320,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_right_side_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getRightSideOnEdge")
+        self.get_center_on_edge(lane) - 0.5 * self.get_vehicle_type().get_width()
     }
 
     /// C++: `double MSVehicle::getCenterOnEdge(const MSLane *) const` [const]
@@ -3336,7 +3379,42 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_center_on_edge(&self, lane: Ptr<MSLane>) -> f64 {
-        todo!("port MSVehicle::getCenterOnEdge")
+        if lane.is_null() || std::ptr::eq(lane.m().get_edge(), self.myLane.m().get_edge()) {
+            return self.myLane.m().get_right_side_on_edge() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+        } else if lane == self.myLaneChangeModel.m().get_shadow_lane() {
+            if self.myLaneChangeModel.m().is_opposite() && !std::ptr::eq(lane.m().get_edge(), self.myLane.m().get_edge()) {
+                return lane.m().get_right_side_on_edge() + lane.m().get_width() - self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            }
+            if self.myLaneChangeModel.m().get_shadow_direction() == -1 {
+                return lane.m().get_right_side_on_edge() + lane.m().get_width() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            } else {
+                return lane.m().get_right_side_on_edge() - self.myLane.m().get_width() + self.myState.myPosLat + 0.5 * self.myLane.m().get_width();
+            }
+        } else if lane == self.myLane.m().get_bidi_lane() {
+            return lane.m().get_right_side_on_edge() - self.myState.myPosLat + 0.5 * lane.m().get_width();
+        } else {
+            debug_assert_eq!(self.myFurtherLanes.len(), self.myFurtherLanesPosLat.len());
+            for i in 0..self.myFurtherLanes.len() {
+                if self.myFurtherLanes[i] == lane {
+                    return lane.m().get_right_side_on_edge() + self.myFurtherLanesPosLat[i] + 0.5 * lane.m().get_width();
+                } else if self.myFurtherLanes[i].m().get_bidi_lane() == lane {
+                    return lane.m().get_right_side_on_edge() - self.myFurtherLanesPosLat[i] + 0.5 * lane.m().get_width();
+                }
+            }
+            let shadowFurther = self.myLaneChangeModel.m().get_shadow_further_lanes().clone();
+            for i in 0..shadowFurther.len() {
+                if shadowFurther[i] == lane {
+                    debug_assert!(!self.myLaneChangeModel.m().get_shadow_lane().is_null());
+                    return lane.m().get_right_side_on_edge() + self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] + 0.5 * lane.m().get_width()
+                        + (self.myLane.m().get_center_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_center_on_edge());
+                } else if shadowFurther[i].m().get_bidi_lane() == lane {
+                    debug_assert!(!self.myLaneChangeModel.m().get_shadow_lane().is_null());
+                    return lane.m().get_right_side_on_edge() - self.myLaneChangeModel.m().get_shadow_further_lanes_pos_lat()[i] + 0.5 * lane.m().get_width()
+                        + (self.myLane.m().get_center_on_edge() - self.myLaneChangeModel.m().get_shadow_lane().m().get_center_on_edge());
+                }
+            }
+            panic!("{}", ProcessError::new(&format!("Request lateral pos of vehicle '{}' for invalid lane '{}'", self.get_id(), utils::common::named::Named::get_id_secure(lane.get(), "NULL"))));
+        }
     }
 
     /// C++: `double MSVehicle::getLatOffset(const MSLane *) const` [const]
