@@ -401,7 +401,7 @@ impl MSDevice_GLOSA {
     //     }
     #[allow(unused_variables)]
     pub fn get_override_safety(&self) -> bool {
-        todo!("port MSDevice_GLOSA::getOverrideSafety")
+        self.myOverrideSafety
     }
 
     /// C++: `bool MSDevice_GLOSA::isSpeedAdviceActive() const` [const]
@@ -411,7 +411,7 @@ impl MSDevice_GLOSA {
     //     }
     #[allow(unused_variables)]
     pub fn is_speed_advice_active(&self) -> bool {
-        todo!("port MSDevice_GLOSA::isSpeedAdviceActive")
+        self.mySpeedAdviceActive
     }
 
     /// C++: `std::string MSDevice_GLOSA::getParameter(const std::string &) const` [const, virtual]

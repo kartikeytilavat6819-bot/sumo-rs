@@ -11610,7 +11610,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn plan_move_internal(&self, t: SUMOTime, ahead: &MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
-        // shortcut: DEBUG_PLAN_MOVE output is not ported; getDevice(typeid(MSDevice_GLOSA)) is Unmapped, so the GLOSA stop-distance override is not applied, upgrade when device lookup by type is ported
+        // shortcut: DEBUG_PLAN_MOVE output is not ported
         const CRLL_LOOK_AHEAD: f64 = 5.0;
         const DIST_TO_STOPLINE_EXPECT_PRIORITY: f64 = 1.0;
         const SUMO_const_haltingSpeed: f64 = 0.1;
@@ -12057,7 +12057,20 @@ impl MSVehicle {
             }
             laneStopOffset = max2(POSITION_EPS, laneStopOffset);
             let mut stopDist = max2(0.0, seen - laneStopOffset);
-            // shortcut: getDevice(typeid(MSDevice_GLOSA)) is Unmapped, the GLOSA override-safety stop distance is not applied
+            // getDevice(typeid(MSDevice_GLOSA)): typeid is not available, so the device type is matched by its
+            // id prefix ("glosa_" + vehID, see MSDevice_GLOSA::buildVehicleDevices)
+            let glosaOverride = yellowOrRed && {
+                let glosa: Ptr<MSDevice_GLOSA> = self
+                    .get_devices()
+                    .iter()
+                    .find(|dev| MSDevice::get_device_name(dev.base2.get_id()) == "glosa")
+                    .map(|dev| dev.cast::<MSDevice_GLOSA>())
+                    .unwrap_or_default();
+                !glosa.is_null() && glosa.get_override_safety() && glosa.is_speed_advice_active()
+            };
+            if glosaOverride {
+                stopDist = f64::MAX;
+            }
             if *myStopDist != f64::MAX {
                 stopDist = max2(stopDist, *myStopDist);
             }
