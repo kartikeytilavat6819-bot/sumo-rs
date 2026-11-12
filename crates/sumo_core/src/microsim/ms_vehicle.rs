@@ -9417,7 +9417,20 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_parking_state(&mut self) {
-        todo!("port MSVehicle::updateParkingState")
+        self.update_state(0., true);
+        // deboard while parked
+        let p = self.get_position_on_lane();
+        let personDevice = self.myPersonDevice;
+        if !personDevice.is_null() {
+            personDevice.m().notify_move(as_traffic_object(self), p, p, 0.);
+        }
+        let containerDevice = self.myContainerDevice;
+        if !containerDevice.is_null() {
+            containerDevice.m().notify_move(as_traffic_object(self), p, p, 0.);
+        }
+        for dev in self.get_devices().iter() {
+            dev.m().notify_parking();
+        }
     }
 
     /// C++: `void MSVehicle::replaceVehicleType(const MSVehicleType *)` [virtual]
@@ -9505,7 +9518,60 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port MSVehicle::saveState")
+        const STOP_STARTED_SET: i32 = 1;
+        const STOP_ENDED_SET: i32 = 2;
+        self.base.save_state(out);
+        // here starts the vehicle internal part (see loading)
+        let mut internals: Vec<String> = Vec::new();
+        internals.push(to_string(&self.myParameter.parametersSet));
+        internals.push(to_string(&self.myDeparture));
+        internals.push(to_string(&(self.myCurrEdge as i32)));
+        internals.push(to_string(&self.myDepartPos));
+        internals.push(to_string(&self.myWaitingTime));
+        internals.push(to_string(&self.myTimeLoss));
+        internals.push(to_string(&self.myLastActionTime));
+        internals.push(to_string(&self.is_stopped()));
+        internals.push(to_string(&if self.is_stopped() { self.myStops.front().unwrap().duration } else { 0 }));
+        internals.push(to_string(&self.myPastStops.len()));
+        internals.push(to_string(&self.myJunctionEntryTime));
+        internals.push(to_string(&self.myJunctionConflictEntryTime));
+        internals.push(to_string(&self.myJunctionEntryTimeNeverYield));
+        out.write_attr(SUMO_ATTR_STATE, &internals);
+        out.write_attr(SUMO_ATTR_POSITION, &vec![self.myState.myPos, self.myState.myBackPos, self.myState.myLastCoveredDist]);
+        out.write_attr(SUMO_ATTR_SPEED, &vec![self.myState.mySpeed, self.myState.myPreviousSpeed]);
+        out.write_attr(SUMO_ATTR_ANGLE, &utils::geom::geom_helper::navi_degree(self.myAngle));
+        out.write_attr(SUMO_ATTR_POSITION_LAT, &self.myState.myPosLat);
+        out.write_attr(SUMO_ATTR_WAITINGTIME, &self.myWaitingTimeCollector.get_state());
+        if self.is_stopped() && self.myStops.front().unwrap().entryPos != self.get_position_on_lane() {
+            out.write_attr(SUMO_ATTR_ENTRYPOS, &self.myStops.front().unwrap().entryPos);
+        }
+        self.myLaneChangeModel.save_state(out);
+        // save past stops
+        for stop in self.myPastStops.iter() {
+            stop.write(out, false, true);
+            // do not write started and ended twice
+            if (stop.parametersSet & STOP_STARTED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_STARTED, &time2string(stop.started));
+            }
+            if (stop.parametersSet & STOP_ENDED_SET) == 0 {
+                out.write_attr(SUMO_ATTR_ENDED, &time2string(stop.ended));
+            }
+            stop.write_params(out);
+            out.close_tag("");
+        }
+        // save upcoming stops
+        for stop in self.myStops.iter() {
+            stop.write(out);
+        }
+        // save parameters and device states
+        self.myParameter.write_params(out);
+        for dev in self.get_devices().iter() {
+            dev.m().save_state(out);
+        }
+        if !self.myCFVariables.is_null() {
+            self.myCFVariables.m().save_state(out, self.get_car_follow_model());
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSVehicle::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
