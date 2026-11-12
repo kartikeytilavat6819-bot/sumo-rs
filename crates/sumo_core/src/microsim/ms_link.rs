@@ -4,6 +4,8 @@ use crate::prelude::*;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use utils::tlf;
+use utils::geom::POSITION_EPS;
+const VEHPARS_JUNCTIONMODEL_PARAMS_SET: i64 = 2 << 28;
 
 /// C++ MAX3(a, b, c) = MAX2(c, a > b ? a : b)
 fn max3(a: f64, b: f64, c: f64) -> f64 {
@@ -1782,7 +1784,7 @@ impl MSLink {
         let foeLinks: Vec<Ptr<MSLink>> = if self.myOffFoeLinks.is_null() || self.get_corresponding_entry_link().get_state() != LINKSTATE_ALLWAY_STOP {
             self.myFoeLinks.clone()
         } else {
-            self.myOffFoeLinks.clone()
+            (*self.myOffFoeLinks).clone()
         };
         if g_use_meso_sim() && impatience == 1. && !self.myLane.get_edge().is_roundabout() {
             return true;
@@ -3038,13 +3040,13 @@ impl MSLink {
             {
                 continue;
             }
-            let uMax = foe.get_lane().get_vehicle_max_speed(foe);
+            let uMax = foe.get_lane().get_vehicle_max_speed(foe.cast::<SUMOTrafficObject>());
             let uAccel = foe.get_car_follow_model().estimate_speed_after_distance(foeDist, avi.speed, foe.get_car_follow_model().get_max_accel());
             let uEnd = min2(uMax, uAccel);
             let uAvg = (avi.speed + uEnd) / 2.;
             let tf0 = foeDist / max2(NUMERICAL_EPS, uAvg);
             let tf = max2(1.0, (tf0 / ts()).ceil() * ts());
-            let vMax = ego.get_lane().get_vehicle_max_speed(ego);
+            let vMax = ego.get_lane().get_vehicle_max_speed(ego.cast::<SUMOTrafficObject>());
             let vAccel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), ego.get_car_follow_model().get_max_accel());
             let vDecel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), -ego.get_car_follow_model().get_max_decel());
             let vEnd = min2(min2(vMax, vAccel), max2(uEnd, vDecel));
@@ -3052,9 +3054,9 @@ impl MSLink {
             let te0 = dist / max2(NUMERICAL_EPS, vAvg);
             let te = max2(1.0, (te0 / ts()).ceil() * ts());
             let tTarget = tf + ego.get_car_follow_model().get_headway_time();
-            let a = ego.get_car_follow_model().avoid_arrival_accel(dist, tTarget, vSafe, ego.get_car_follow_model().get_max_decel());
+            let a = MSCFModel::avoid_arrival_accel(dist, tTarget, vSafe, ego.get_car_follow_model().get_max_decel());
             let gap = dist - foe.get_vehicle_type().get_length() - ego.get_vehicle_type().get_min_gap() - foeDist;
-            let vFollow = ego.get_car_follow_model().follow_speed(ego, ego.get_speed(), gap, avi.speed, foe.get_car_follow_model().get_max_decel(), foe);
+            let vFollow = ego.get_car_follow_model().follow_speed(ego, ego.get_speed(), gap, avi.speed, foe.get_car_follow_model().get_max_decel(), foe, MSCFModel_CalcReason::CURRENT);
             let vSafeGap = max2(vFollow, ego.get_speed() + accel2speed(a));
             let w = min2(1.0, te / 10.);
             let maxDecel = w * ego.get_car_follow_model().get_max_decel() + (1. - w) * ego.get_car_follow_model().get_emergency_decel();
@@ -3146,27 +3148,27 @@ impl MSLink {
     pub fn write_approaching(&self, od: &mut OutputDevice, fromLaneID: String) {
         if self.myApproachingVehicles.len() > 0 {
             od.open_tag("link");
-            od.write_attr(SUMO_ATTR_FROM, fromLaneID);
+            od.write_attr(SUMO_ATTR_FROM, &fromLaneID);
             let via = if self.get_via_lane().is_null() { String::new() } else { self.get_via_lane().get_id().to_string() };
-            od.write_attr(SUMO_ATTR_VIA, via);
-            od.write_attr(SUMO_ATTR_TO, if self.get_lane().is_null() { String::new() } else { self.get_lane().get_id().to_string() });
+            od.write_attr(SUMO_ATTR_VIA, &via);
+            od.write_attr(SUMO_ATTR_TO, &(if self.get_lane().is_null() { String::new() } else { self.get_lane().get_id().to_string() }));
             // stabilize output: sort by arrival time, then by vehicle address (as std::pair does)
             let mut toSort: Vec<(SUMOTime, Ptr<SUMOVehicle>)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (it.arrivalTime, veh)).collect();
             toSort.sort();
             for &(_, veh) in toSort.iter() {
                 od.open_tag("approaching");
                 let avi = self.myApproachingVehicles.get(&veh).unwrap();
-                od.write_attr(SUMO_ATTR_ID, veh.get_id().to_string());
-                od.write_attr(SUMO_ATTR_IMPATIENCE, veh.get_impatience());
-                od.write_attr("arrivalTime", time2string(avi.arrivalTime));
-                od.write_attr("leaveTime", time2string(avi.leavingTime));
-                od.write_attr("arrivalSpeed", f64_to_string(avi.arrivalSpeed));
-                od.write_attr("arrivalSpeedBraking", f64_to_string(avi.arrivalSpeedBraking));
-                od.write_attr("leaveSpeed", f64_to_string(avi.leaveSpeed));
-                od.write_attr("willPass", avi.willPass.to_string());
-                od.close_tag();
+                od.write_attr(SUMO_ATTR_ID, &veh.get_id().to_string());
+                od.write_attr(SUMO_ATTR_IMPATIENCE, &veh.get_impatience());
+                od.write_attr("arrivalTime", &time2string(avi.arrivalTime));
+                od.write_attr("leaveTime", &time2string(avi.leavingTime));
+                od.write_attr("arrivalSpeed", &f64_to_string(avi.arrivalSpeed));
+                od.write_attr("arrivalSpeedBraking", &f64_to_string(avi.arrivalSpeedBraking));
+                od.write_attr("leaveSpeed", &f64_to_string(avi.leaveSpeed));
+                od.write_attr("willPass", &avi.willPass.to_string());
+                od.close_tag("");
             }
-            od.close_tag();
+            od.close_tag("");
         }
     }
 
@@ -3670,12 +3672,12 @@ impl MSLink {
             return false;
         }
         let param = ego.get_parameter();
-        for typeID in param.get_parameter(&toString(SUMO_ATTR_JM_IGNORE_TYPES), "").split_whitespace() {
+        for typeID in param.get_parameter(&SUMO_ATTR_JM_IGNORE_TYPES.attr_name().to_string(), "").split_whitespace() {
             if typeID == foe.get_vehicle_type().get_id() {
                 return true;
             }
         }
-        for id in param.get_parameter(&toString(SUMO_ATTR_JM_IGNORE_IDS), "").split_whitespace() {
+        for id in param.get_parameter(&SUMO_ATTR_JM_IGNORE_IDS.attr_name().to_string(), "").split_whitespace() {
             if id == foe.get_id() {
                 return true;
             }
@@ -3812,8 +3814,8 @@ impl MSLink {
             for &t in foeLane.get_edge().get_persons().iter() {
                 // shortcut: static_cast<MSPerson*>(t) relies on MSPerson being #[repr(C)] with base first, upgrade when MSEdge stores MSPerson pointers
                 let p: Ptr<MSPerson> = Ptr::from_raw(t.as_raw() as *mut MSPerson);
-                let mut dist = ego.get_position().distance_to2d(&p.base.get_position()) - p.base.get_vehicle_type().get_length();
-                let inFront = self.is_in_front(ego, &egoPath, &p.base.get_position()) || self.is_in_front(ego, &egoPath, &self.get_future_position(p, 1.));
+                let mut dist = ego.get_position(0.).distance_to2d(&p.base.get_position(0.)) - p.base.get_vehicle_type().get_length();
+                let inFront = self.is_in_front(ego, &egoPath, &p.base.get_position(0.)) || self.is_in_front(ego, &egoPath, &self.get_future_position(p, 1.));
                 if inFront {
                     dist -= max2(ego.get_vehicle_type().get_min_gap(), MSPMODEL_SAFETY_GAP);
                 }
@@ -3859,7 +3861,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_in_front(&self, ego: Ptr<MSVehicle>, egoPath: &PositionVector, pPos: &Position) -> bool {
-        let pedAngle = ego.get_position().angle_to2d(pPos);
+        let pedAngle = ego.get_position(0.).angle_to2d(pPos);
         let angleDiff = angle_diff(ego.get_angle(), pedAngle).abs();
         if angleDiff < deg2rad(75.) {
             return egoPath.distance2d(pPos, false) < ego.get_vehicle_type().get_width() + MSPMODEL_SAFETY_GAP;
@@ -3887,7 +3889,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn is_on_coming_ped(&self, ego: Ptr<MSVehicle>, p: Ptr<MSPerson>) -> f64 {
-        let pedToEgoAngle = p.base.get_position().angle_to2d(&ego.get_position());
+        let pedToEgoAngle = p.base.get_position(0.).angle_to2d(&ego.get_position(0.));
         let angleDiff = angle_diff(p.base.get_angle(), pedToEgoAngle).abs();
         if angleDiff <= deg2rad(90.) {
             angleDiff.cos()
@@ -3911,7 +3913,7 @@ impl MSLink {
         let a = p.base.get_angle();
         let dist = timeHorizon * p.base.get_max_speed();
         let offset = Position::new(a.cos() * dist, a.sin() * dist);
-        p.base.get_position() + offset
+        p.base.get_position(0.) + offset
     }
 
     /// C++: `bool MSLink::blockedByFoe(const SUMOVehicle *, const ApproachingVehicleInformation &, SUMOTime, SUMOTime, double, double, bool, double, double, SUMOTime, const SUMOTrafficObject *) const` [const, private]
