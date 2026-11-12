@@ -818,3 +818,7 @@ impl MSStateHandler_MSStateTimeHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for MSStateHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+}

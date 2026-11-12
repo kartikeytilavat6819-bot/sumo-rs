@@ -771,7 +771,7 @@ impl MSRoute {
                     None
                 } else {
                     let which = if rng.is_null() { None } else { Some(unsafe { &mut *rng.as_raw() }) };
-                    match (*dist).get(which) {
+                    match (**dist).get(which) {
                         Ok(r) => Some(r),
                         // C++ rethrows the ProcessError raised by RandomDistributor::get
                         Err(e) => std::panic::panic_any(e),

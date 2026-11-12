@@ -3729,3 +3729,7 @@ impl NLShapeHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for NLHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+}

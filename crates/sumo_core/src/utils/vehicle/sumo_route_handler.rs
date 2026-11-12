@@ -1434,3 +1434,7 @@ impl SUMORouteHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for SUMORouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+}

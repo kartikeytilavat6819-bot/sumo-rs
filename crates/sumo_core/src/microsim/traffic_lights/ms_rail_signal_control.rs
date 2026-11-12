@@ -636,7 +636,7 @@ impl MSRailSignalControl {
                 }
             }
             if to == MSNet_VehicleState::BUILT {
-                self.myMaxTrainLength = std::cmp::max(self.myMaxTrainLength, veh.get_length());
+                if veh.get_length() > self.myMaxTrainLength { self.myMaxTrainLength = veh.get_length(); }
             }
         }
     }

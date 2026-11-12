@@ -4249,3 +4249,7 @@ impl MSRouteHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for MSRouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+}

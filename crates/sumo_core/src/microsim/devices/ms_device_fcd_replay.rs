@@ -1132,3 +1132,7 @@ pub struct MSDevice_FCDReplay_TrajectoryEntry {
 impl MSDevice_FCDReplay_TrajectoryEntry {
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for MSDevice_FCDReplay_FCDHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+}

@@ -1,6 +1,8 @@
 //! Port of utils/vehicle/SUMOVehicleParserHelper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::to_int;
+use utils::geom::NUMERICAL_EPS;
 use utils::common::msg_handler::{write_error, write_warning};
 use utils::common::sumo_vehicle_class::{DEFAULT_CONTAINERTYPE_ID, DEFAULT_PEDTYPE_ID};
 use utils::common::string_utils::to_double;

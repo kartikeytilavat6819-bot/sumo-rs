@@ -1,6 +1,9 @@
 //! Port of polyconvert/PCPolyContainer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::g_precision_geo;
+use utils::options::options_cont::with_options;
 
 /// LanePos
 /// C++ class `PCPolyContainer::LanePos` (polyconvert/PCPolyContainer.h)
@@ -251,7 +254,7 @@ impl PCPolyContainer {
         if useGeo {
             out.m().set_precision(g_precision_geo());
         } else if gch.using_geo_projection() {
-            write_location(out.m());
+            crate::netwrite::nw_writer_xml::write_location(out.m());
         }
         // write polygons
         for (_, i) in self.base.myPolygons.iter() {
@@ -265,7 +268,7 @@ impl PCPolyContainer {
                 Some(it) => poi.write_xml(out.m(), useGeo, zOffset, it.laneID.clone(), it.pos, it.friendlyPos, it.posLat),
             }
         }
-        or_panic(out.m().close());
+        out.m().close();
     }
 
     /// C++: `void PCPolyContainer::saveDlrTDP(const std::string &)`
@@ -349,7 +352,7 @@ impl PCPolyContainer {
             out.m().write("\t");
             id += 1;
         }
-        or_panic(out.m().close());
+        out.m().close();
         // write polygons
         let out2: Ptr<OutputDevice> = Ptr::from_raw(OutputDevice::get_device(&format!("{}_polygons.txt", prefix), true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
         out2.m().set_precision(0);
@@ -378,7 +381,7 @@ impl PCPolyContainer {
             }
             id += 1;
         }
-        or_panic(out2.m().close());
+        out2.m().close();
     }
 
     /// C++: `int PCPolyContainer::getEnumIDFor(const std::string &)`
@@ -415,7 +418,7 @@ impl PCPolyContainer {
         // XXX duplicate of NWWriter_DlrNavteq::writeHeader()
         device.write("# Format matches Extraction version: V6.5 \n");
         let mut tmp = String::new();
-        or_panic(oc.write_configuration(&mut tmp, true, false, false, "", false, false, ""));
+        let _ = oc.write_configuration(&mut tmp, true, false, false, "", false, false, "");
         // emulates `while (!tmp.eof()) { std::getline(tmp, line); ... }` on a string cursor
         let mut cur: usize = 0;
         let mut eof = false;

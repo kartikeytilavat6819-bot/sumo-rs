@@ -86,7 +86,7 @@ impl ROVehicle {
         v.get_parameter_mutable().stops.clear();
         if !route.is_null() {
             // shortcut: getFirstRoute() returns Rc (never null), so the C++ nullptr check is not repeated
-            let first = route.get_first_route();
+            let first = route.get_first_route().expect("first route");
             for s in first.get_stops().iter() {
                 v.add_stop(s, net, errorHandler);
             }
@@ -123,7 +123,7 @@ impl ROVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_depart_edge(&self) -> Ptr<ROEdge> {
-        self.myRoute.get_first_route().get_first()
+        self.myRoute.get_first_route().expect("first route").get_first()
     }
 
     /// C++: `void ROVehicle::computeRoute(const RORouterProvider &, const bool, MsgHandler *)` [virtual]
@@ -203,7 +203,7 @@ impl ROVehicle {
         }
         routeDef.m().validate_alternatives(Ptr::from_mut(self), errorHandler);
         // shortcut: getFirstRoute() returns Rc (never null), so the C++ "everything is invalid" nullptr check is not repeated
-        let mut current = routeDef.build_current_route(router, self.get_departure_time(), self);
+        let mut current = routeDef.build_current_route(router, self.get_departure_time(), self).expect("current route");
         // shortcut: buildCurrentRoute returns Rc (never null); only the empty-route case is checked
         if current.size() == 0 {
             if !routeDef.discard_silent() {
@@ -452,7 +452,7 @@ impl ROVehicle {
     //         }
     //         if (to != nullptr) {
     //             if (writeGeoTrip) {
-    //                 Position toPos = to->getLanes()[0]->getShape().positionAtOffset2D(to->getLanes()[0]->getShape().length2D());
+    //                 Position toPos = to->getLanes()[0]->getShape().positionAtOffset2D(to->getLanes()[0]->getShape().length2d());
     //                 if (GeoConvHelper::getFinal().usingGeoProjection()) {
     //                     os.setPrecision(gPrecisionGeo);
     //                     GeoConvHelper::getFinal().cartesian2geo(toPos);
@@ -483,7 +483,7 @@ impl ROVehicle {
     //                 }
     //                 assert(viaEdge != nullptr);
     //                 if (writeGeoTrip) {
-    //                     Position viaPos = viaEdge->getLanes()[0]->getShape().positionAtOffset2D(viaEdge->getLanes()[0]->getShape().length2D() / 2);
+    //                     Position viaPos = viaEdge->getLanes()[0]->getShape().positionAtOffset2D(viaEdge->getLanes()[0]->getShape().length2d() / 2);
     //                     if (GeoConvHelper::getFinal().usingGeoProjection()) {
     //                         GeoConvHelper::getFinal().cartesian2geo(viaPos);
     //                         viaOut.push_back(toString(viaPos, gPrecisionGeo));
@@ -563,7 +563,7 @@ impl ROVehicle {
         }
         // save the route
         if writeTrip {
-            let edges: ConstROEdgeVector = self.myRoute.get_first_route().get_edge_vector().clone();
+            let edges: ConstROEdgeVector = self.myRoute.get_first_route().expect("first route").get_edge_vector().clone();
             let mut from: Ptr<ROEdge> = Ptr::null();
             let mut to: Ptr<ROEdge> = Ptr::null();
             if edges.len() > 0 {
@@ -611,7 +611,7 @@ impl ROVehicle {
             if !to.is_null() {
                 if writeGeoTrip {
                     let shape = to.get_lanes()[0].get_shape();
-                    let mut toPos = shape.position_at_offset2d(shape.length_2d(), 0., false);
+                    let mut toPos = shape.position_at_offset2d(shape.length2d(), 0., false);
                     if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
                         os.set_precision(g_precision_geo());
                         GeoConvHelper::with_final(|g| g.cartesian2geo(&mut toPos));
@@ -646,7 +646,7 @@ impl ROVehicle {
                     }
                     if writeGeoTrip {
                         let shape = viaEdge.get_lanes()[0].get_shape();
-                        let mut viaPos = shape.position_at_offset2d(shape.length_2d() / 2., 0., false);
+                        let mut viaPos = shape.position_at_offset2d(shape.length2d() / 2., 0., false);
                         if GeoConvHelper::with_final(|g| g.using_geo_projection()) {
                             GeoConvHelper::with_final(|g| g.cartesian2geo(&mut viaPos));
                             viaOut.push(to_string_prec(&viaPos, g_precision_geo()));

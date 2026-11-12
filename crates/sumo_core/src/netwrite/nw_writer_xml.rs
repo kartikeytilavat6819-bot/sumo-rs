@@ -40,7 +40,7 @@ fn get_final_geo() -> GeoConvHelper {
 
 /// GeoConvHelper::writeLocation(OutputDevice&)
 // shortcut: local copy until utils/geom/geo_conv_helper.rs ports writeLocation (it needs OutputDevice)
-fn write_location(into: &mut OutputDevice) {
+pub fn write_location(into: &mut OutputDevice) {
     let gch = get_final_geo();
     into.open_tag_id(SUMO_TAG_LOCATION);
     let prec = into.get_precision();

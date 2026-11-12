@@ -123,9 +123,9 @@ impl MSRailSignal_LinkInfo {
             // because first is short or the step-length is high)
             // lets look backward along the route
             // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
-            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10) + veh.get_length();
+            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10.0) + veh.get_length();
             let mut route_index = veh.get_route_position() - 1;
-            while look_back > 0 && route_index > 0 {
+            while look_back > 0.0 && route_index > 0 {
                 let prev_edge = edges[route_index as usize];
                 if prev_edge == first {
                     first_it = Some(route_index as usize);
@@ -149,14 +149,15 @@ impl MSRailSignal_LinkInfo {
                 if self.myDriveways.is_empty() {
                     let dummy_route: ConstMSEdgeVector = vec![self.myLink.get_lane().myEdge];
                     let id = rs.m().get_new_driveway_id();
-                    let dw = MSDriveWay::build_drive_way(&id, self.myLink, 0, dummy_route.len());
+                    let dummy_end = dummy_route.len();
+                    let dw = MSDriveWay::build_drive_way(&id, self.myLink, &dummy_route, 0, dummy_end);
                     self.myDriveways.push(dw);
                 }
                 return self.myDriveways[0].get_mut().unwrap();
             }
         };
         //std::cout << SIMTIME << " veh=" << veh->getID() << " rsl=" << getID() << " dws=" << myDriveways.size() << "\n";
-        self.get_drive_way_2(first_it, end, arg0.get_id())
+        self.get_drive_way_2(arg0.cast::<MSVehicle>().get_current_route().get_edge_vector(), first_it, end, arg0.get_id())
     }
 
     /// C++: `MSDriveWay & LinkInfo::getDriveWay(MSRouteIterator, MSRouteIterator, const std::string &)`
@@ -182,16 +183,16 @@ impl MSRailSignal_LinkInfo {
     //     return *myDriveways.back();
     // }
     #[allow(unused_variables)]
-    pub fn get_drive_way_2(&mut self, firstIt: MSRouteIterator, endIt: MSRouteIterator, info: &str) -> &mut MSDriveWay {
+    pub fn get_drive_way_2(&mut self, route: &ConstMSEdgeVector, firstIt: MSRouteIterator, endIt: MSRouteIterator, info: &str) -> &mut MSDriveWay {
         for i in 0..self.myDriveways.len() {
             let dw = self.myDriveways[i];
-            if dw.match_(firstIt, endIt) {
+            if dw.match_(route, firstIt, endIt) {
                 return dw.get_mut().unwrap();
             }
         }
         let rs: Ptr<MSRailSignal> = self.myLink.get_tl_logic().cast::<MSRailSignal>();
         let id = rs.m().get_new_driveway_id();
-        let dw = MSDriveWay::build_drive_way(&id, self.myLink, firstIt, endIt);
+        let dw = MSDriveWay::build_drive_way(&id, self.myLink, route, firstIt, endIt);
         dw.m().set_vehicle(info);
         self.myDriveways.push(dw);
         self.myDriveways.last().unwrap().get_mut().unwrap()
@@ -406,7 +407,7 @@ fn vehicle_vector_to_string(vehicles: &MSVehicleContainer_VehicleVector) -> Stri
 
 /// toString(std::vector<const MSDriveWay *>): the driveway ids joined by " "
 fn drive_way_vector_to_string(driveways: &Vec<Ptr<MSDriveWay>>) -> String {
-    driveways.iter().map(|d| d.get_id().to_string()).collect::<Vec<_>>().join(" ")
+    driveways.iter().map(|d| d.base2.get_id().to_string()).collect::<Vec<_>>().join(" ")
 }
 
 impl MSRailSignal {
@@ -1291,12 +1292,12 @@ impl MSRailSignal {
         if !junction.is_null() && junction.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
             // the link is controlled by a rail signal
             let rs: Ptr<MSRailSignal> = link.get_tl_logic().cast::<MSRailSignal>();
-            if !rs.is_null() && rs.my_constraints.len() > 0 {
+            if !rs.is_null() && rs.myConstraints.len() > 0 {
                 let trip_id = veh
                     .cast::<MSBaseVehicle>()
                     .get_parameter()
                     .get_parameter("tripId", veh.get_id());
-                if let Some(constraints) = rs.my_constraints.get(&trip_id) {
+                if let Some(constraints) = rs.myConstraints.get(&trip_id) {
                     for c in constraints {
                         if c.is_insertion_constraint() && !c.cleared() {
                             *info = c.get_description();
@@ -1304,7 +1305,7 @@ impl MSRailSignal {
                             if MSGlobals::time_to_teleport_rs_deadlock() > 0 {
                                 let foe = c.get_foe();
                                 if !foe.is_null() {
-                                    MSRailSignalControl::get_instance().add_wait_relation(veh, rs, foe, *c);
+                                    MSRailSignalControl::get_instance().add_wait_relation(veh.cast::<SUMOVehicle>(), rs, foe, *c);
                                 }
                             }
                             return true;
@@ -1435,7 +1436,7 @@ impl MSRailSignal {
             }
         }
         if prev.is_null() {
-            prev = MSDriveWay::get_departure_drive_way(ego, true);
+            prev = MSDriveWay::get_departure_driveway(ego, true);
         }
         if update && veh.has_departed() {
             let veh_ref: &mut MSBaseVehicle = veh.m();
@@ -1739,7 +1740,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_new_driveway_id(&mut self) -> String {
-        let result = self.get_id() + "." + &utils::common::to_string::to_string(&self.myDriveWayIndex);
+        let result = format!("{}.{}", self.get_id(), utils::common::to_string::to_string(&self.myDriveWayIndex));
         self.myDriveWayIndex += 1;
         result
     }
@@ -1776,7 +1777,7 @@ impl MSRailSignal {
             {
                 let li = &mut self.myLinkInfos[linkIndex as usize];
                 let driveway = li.get_drive_way(closest.0, -1);
-                *my_requested_drive_way() = driveway.get_id().to_string();
+                *my_requested_drive_way() = driveway.base2.get_id().to_string();
                 // call for side effects
                 driveway.reserve(&closest, &mut occupied);
             }
