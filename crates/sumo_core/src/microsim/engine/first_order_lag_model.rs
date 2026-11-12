@@ -100,7 +100,7 @@ impl FirstOrderLagModel {
     //     computeParameters();
     // }
     #[allow(unused_variables)]
-    pub fn load_parameters(&mut self, parameters: &Unmapped /* Parameterised::Map */) {
+    pub fn load_parameters(&mut self, parameters: &ParameterisedMap) {
         let mut tau = self.tau_s;
         self.parse_parameter(parameters, FOLM_PAR_TAU.to_string(), &mut tau);
         self.tau_s = tau;

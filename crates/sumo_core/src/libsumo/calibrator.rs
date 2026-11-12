@@ -336,7 +336,7 @@ impl Calibrator {
         let mut vehicleParams = SUMOVehicleParameter::new();
         vehicleParams.vtypeid = typeID.to_string();
         vehicleParams.routeid = routeID.to_string();
-        if MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID.to_string()).is_null() {
+        if MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false).is_null() {
             panic!("shortcut: Vehicle type '{typeID}' is not known (C++ TraCIException)");
         }
         if !SUMOVehicleParameter::parse_depart_lane(departLane, "calibrator", calibratorID, &mut vehicleParams.departLane, &mut vehicleParams.departLaneProcedure, &mut error) {
