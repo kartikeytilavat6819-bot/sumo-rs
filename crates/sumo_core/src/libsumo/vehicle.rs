@@ -3236,7 +3236,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     pub fn reroute_effort(vehID: &str) {
         let veh = Helper::get_vehicle(vehID);
         veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteEffort",
-                        MSNet::get_instance().get_router_effort(veh.get_rng_index(), &()), Self::is_on_init(vehID), false, false, Ptr::default());
+                        MSNet::get_instance().get_router_effort(veh.get_rng_index(), &Default::default()), Self::is_on_init(vehID), false, false, Ptr::default());
     }
 
     /// C++: `void Vehicle::setSignals(const std::string &, int)` [static]

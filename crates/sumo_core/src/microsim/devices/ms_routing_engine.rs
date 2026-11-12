@@ -1,6 +1,10 @@
 //! Port of microsim/devices/MSRoutingEngine.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER};
+use utils::common::time::{steps2time, string2time};
+use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_default, is_set, OptionsCont};
+use utils::common::util_exceptions::ProcessError;
 
 /// C++ typedef `int MSRoutingEngine::Prohibitions`
 pub type MSRoutingEngine_Prohibitions = i32;
@@ -66,7 +70,28 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_weight_constants(oc: &OptionsCont) {
-        todo!("port MSRoutingEngine::initWeightConstants")
+        let pf = oc_float(oc, "weights.priority-factor");
+        let mut st = state();
+        if pf != 0. {
+            st.myPriorityFactor = pf;
+            if st.myPriorityFactor < 0. {
+                std::panic::panic_any(ProcessError::new("weights.priority-factor cannot be negative."));
+            }
+            st.myMinEdgePriority = f64::MAX;
+            let mut maxEdgePriority = -f64::MAX;
+            let edges: Vec<Ptr<MSEdge>> = MSNet::get_instance().m().get_edge_control().get_edges().clone();
+            for edge in edges.iter() {
+                maxEdgePriority = max2(maxEdgePriority, edge.get_priority() as f64);
+                st.myMinEdgePriority = min2(st.myMinEdgePriority, edge.get_priority() as f64);
+            }
+            st.myEdgePriorityRange = maxEdgePriority - st.myMinEdgePriority;
+            if st.myEdgePriorityRange == 0. {
+                utils::common::msg_handler::write_warning("Option weights.priority-factor does not take effect because all edges have the same priority");
+                st.myPriorityFactor = 0.;
+            }
+        }
+        st.myDynamicRandomness = oc_bool(oc, "weights.random-factor.dynamic");
+        st.myHaveExtras = utils::common::std_defs::g_routing_preferences() || st.myPriorityFactor != 0. || weights_random_factor() != 1.;
     }
 
     /// C++: `void MSRoutingEngine::initWeightUpdate(SUMOTime)` [static]
@@ -96,7 +121,29 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_weight_update(lastAdaption: SUMOTime) {
-        todo!("port MSRoutingEngine::initWeightUpdate")
+        if state().myAdaptationInterval == -1 {
+            // myEdgeWeightSettingCommand = nullptr (the StaticCommand is not modelled, see has_edge_updates)
+            state().myLastAdaptation = lastAdaption;
+            let withTaz = get_bool("device.rerouting.with-taz");
+            let interval = string2time(&get_string("device.rerouting.adaptation-interval")).unwrap_or_else(|e| std::panic::panic_any(e));
+            let weight = get_float("device.rerouting.adaptation-weight");
+            let period = string2time(&get_string("device.rerouting.period")).unwrap_or_else(|e| std::panic::panic_any(e));
+            {
+                let mut st = state();
+                st.myWithTaz = withTaz;
+                st.myAdaptationInterval = interval;
+                st.myAdaptationWeight = weight;
+            }
+            if weight < 1. && interval > 0 {
+                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so the periodic weight update cannot be scheduled, upgrade with the event port
+                panic!("shortcut: the end-of-timestep event for adaptEdgeEfforts is not ported");
+            } else if period > 0 {
+                utils::common::msg_handler::write_warning("Rerouting is useless if the edge weights do not get updated!");
+            }
+            if let Err(e) = utils::iodevices::output_device::OutputDevice::create_device_by_option("device.rerouting.output", "weights", "meandata_file.xsd", 2) {
+                std::panic::panic_any(e);
+            }
+        }
     }
 
     /// C++: `void MSRoutingEngine::initEdgeWeights(SUMOVehicleClass, SUMOTime, int)` [static]
@@ -122,7 +169,21 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_edge_weights(svc: SUMOVehicleClass, lastAdaption: SUMOTime, index: i32) {
-        todo!("port MSRoutingEngine::initEdgeWeights")
+        let mut st = state();
+        if st.myAdaptationWeight == 0. || !is_default("device.rerouting.adaptation-steps") {
+            st.myAdaptationSteps = get_int("device.rerouting.adaptation-steps");
+        }
+        let bike = st.myBikeSpeeds && svc == SVC_BICYCLE;
+        drop(st);
+        Self::init_edge_weights_2(bike);
+        let mut st = state();
+        if lastAdaption >= 0 {
+            st.myLastAdaptation = lastAdaption;
+        }
+        if index >= 0 && st.myAdaptationSteps > 0 {
+            assert!(index < st.myAdaptationSteps);
+            st.myAdaptationStepsIndex = index;
+        }
     }
 
     /// C++: `bool MSRoutingEngine::hasEdgeUpdates()` [static]
@@ -132,7 +193,8 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn has_edge_updates() -> bool {
-        todo!("port MSRoutingEngine::hasEdgeUpdates")
+        // shortcut: myEdgeWeightSettingCommand (StaticCommand) is never set in this port because its scheduling is not ported, upgrade with the event port
+        false
     }
 
     /// C++: `SUMOTime MSRoutingEngine::getLastAdaptation()` [static]
@@ -142,7 +204,7 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_adaptation() -> SUMOTime {
-        todo!("port MSRoutingEngine::getLastAdaptation")
+        state().myLastAdaptation
     }
 
     /// C++: `bool MSRoutingEngine::haveExtras()` [static]
@@ -151,7 +213,7 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn have_extras() -> bool {
-        todo!("port MSRoutingEngine::haveExtras")
+        state().myHaveExtras
     }
 
     /// C++: `void MSRoutingEngine::applyExtras(const MSEdge *const, const SUMOVehicle *const, SUMOTime, double &)` [static]
@@ -176,7 +238,27 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn apply_extras(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, step: SUMOTime, effort: &mut f64) {
-        todo!("port MSRoutingEngine::applyExtras")
+        if weights_random_factor() != 1. {
+            let mut key: i64 = v_random_seed(v) ^ e.get_numerical_id() as i64;
+            if state().myDynamicRandomness {
+                key ^= step;
+            }
+            *effort *= 1. + utils::common::rand_helper::rand_hash(key) * (weights_random_factor() - 1.);
+        }
+        let (prioFactor, minPrio, prioRange) = {
+            let st = state();
+            (st.myPriorityFactor, st.myMinEdgePriority, st.myEdgePriorityRange)
+        };
+        if prioFactor != 0. {
+            // lower priority should result in higher effort (and the edge with
+            // minimum priority receives a factor of 1 + myPriorityFactor
+            let relativeInversePrio = 1. - ((e.get_priority() as f64 - minPrio) / prioRange);
+            *effort *= 1. + relativeInversePrio * prioFactor;
+        }
+        if utils::common::std_defs::g_routing_preferences() {
+            let pref = MSNet::get_instance().get_preference(e.get_routing_type(), v_vtype_parameter(v));
+            *effort /= pref;
+        }
     }
 
     /// C++: `ConstMSRoutePtr MSRoutingEngine::getCachedRoute(const std::pair<const MSEdge *, const MSEdge *> &)` [static]
@@ -195,7 +277,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_cached_route(key: &(Ptr<MSEdge>, Ptr<MSEdge>)) -> Option<ConstMSRoutePtr> {
-        todo!("port MSRoutingEngine::getCachedRoute")
+        // shortcut: myCachedRoutes is never populated in this port (its writers are not ported), so a miss is the only answer, upgrade with RoutingTask
+        let _ = key;
+        None
     }
 
     /// C++: `const RoutingKit::CustomizableContractionHierarchyMetric * MSRoutingEngine::getPublishedCCHMetric(SUMOVehicleClass, SUMOTime, const SUMOVehicle *)` [static]
@@ -218,7 +302,12 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_published_cch_metric(vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<SUMOVehicle>) -> Ptr<Unmapped /* RoutingKit::CustomizableContractionHierarchyMetric: foreign::routingkit metric borrows the CCH (has a lifetime) */> {
-        todo!("port MSRoutingEngine::getPublishedCCHMetric")
+        if veh.is_null() {
+            return Ptr::null();
+        }
+        // shortcut: myCCHLive is never created in this port (initCCH is not ported), so C++ takes its nullptr path here, upgrade with the CCH port
+        let _ = (vClass, time);
+        Ptr::null()
     }
 
     /// C++: `const RoutingKit::CustomizableContractionHierarchyMetric * MSRoutingEngine::getFreeflowCCHMetric(SUMOVehicleClass, SUMOTime, const SUMOVehicle *)` [static]
@@ -261,7 +350,12 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_freeflow_cch_metric(vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<SUMOVehicle>) -> Ptr<Unmapped /* RoutingKit::CustomizableContractionHierarchyMetric: foreign::routingkit metric borrows the CCH (has a lifetime) */> {
-        todo!("port MSRoutingEngine::getFreeflowCCHMetric")
+        if veh.is_null() {
+            return Ptr::null();
+        }
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portthe routing-mode and vehicle-specific checks and the creation of myCCHFreeflow need the CCH graph
+        let _ = (vClass, time);
+        panic!("shortcut: getFreeflowCCHMetric needs the CCH graph (ensureCCHGraph)")
     }
 
     /// C++: `MSCCHGraph * MSRoutingEngine::ensureCCHGraph()` [static]
@@ -275,7 +369,8 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn ensure_cch_graph() -> Ptr<MSCCHGraph> {
-        todo!("port MSRoutingEngine::ensureCCHGraph")
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portensureCCHGraph builds the shared CCH topology
+        panic!("shortcut: ensureCCHGraph is not ported")
     }
 
     /// C++: `void MSRoutingEngine::initRouter(SUMOVehicle *)` [static]
@@ -363,7 +458,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_router(vehicle: Ptr<SUMOVehicle>) {
-        todo!("port MSRoutingEngine::initRouter")
+        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderinitRouter constructs the Dijkstra/AStar/CH/CCH and railway routers
+        let _ = vehicle;
+        panic!("shortcut: initRouter needs the router types and MSRouterProvider")
     }
 
     /// C++: `void MSRoutingEngine::reroute(SUMOVehicle &, const SUMOTime, const std::string &, const bool, const bool, const Prohibitions &)` [static]
@@ -403,7 +500,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute(vehicle: &mut SUMOVehicle, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        todo!("port MSRoutingEngine::reroute")
+        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderreroute needs myRouterProvider->getVehicleRouter and SUMOVehicle::reroute
+        let _ = (vehicle, currentTime, info, onInit, silent, prohibited);
+        panic!("shortcut: reroute needs MSRouterProvider")
     }
 
     /// C++: `void MSRoutingEngine::reroute(MSTransportable &, const SUMOTime, const std::string &, const bool, const bool, const Prohibitions &)` [static]
@@ -440,7 +539,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute_2(t: &mut MSTransportable, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        todo!("port MSRoutingEngine::reroute")
+        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderreroute needs getIntermodalRouterTT and MSTransportable::reroute
+        let _ = (t, currentTime, info, onInit, silent, prohibited);
+        panic!("shortcut: reroute (person) needs MSTransportableRouter")
     }
 
     /// C++: `void MSRoutingEngine::setEdgeTravelTime(const MSEdge *const, const double)` [static]
@@ -451,7 +552,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn set_edge_travel_time(edge: Ptr<MSEdge>, travelTime: f64) {
-        todo!("port MSRoutingEngine::setEdgeTravelTime")
+        let id = edge.get_numerical_id() as usize;
+        let len = edge.get_length();
+        state().myEdgeSpeeds[id] = len / travelTime;
     }
 
     /// C++: `void MSRoutingEngine::cleanup()` [static]
@@ -488,7 +591,19 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSRoutingEngine::cleanup")
+        {
+            let mut st = state();
+            st.myAdaptationInterval = -1; // responsible for triggering initEdgeWeights
+            st.myPastEdgeSpeeds.clear();
+            st.myEdgeSpeeds.clear();
+            st.myEdgeTravelTimes.clear();
+            st.myPastEdgeBikeSpeeds.clear();
+            st.myEdgeBikeSpeeds.clear();
+            st.myAdaptationStepsIndex = 0;
+        }
+        // myCachedRoutes.clear(): the route cache is never populated in this port
+        Self::cleanup_cch();
+        // myRouterProvider = nullptr / delete: the router provider is never created in this port
     }
 
     /// C++: `void MSRoutingEngine::cleanupCCH()` [static]
@@ -511,7 +626,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_cch() {
-        todo!("port MSRoutingEngine::cleanupCCH")
+        // shortcut: the CCH graph and families are never created in this port (ensureCCHGraph and initCCH are not ported), so there is nothing to free, upgrade with the CCH port
     }
 
     /// C++: `bool MSRoutingEngine::isEnabled()` [static]
@@ -521,7 +636,8 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn is_enabled() -> bool {
-        todo!("port MSRoutingEngine::isEnabled")
+        let st = state();
+        !st.myWithTaz && st.myAdaptationInterval >= 0
     }
 
     /// C++: `MSVehicleRouter & MSRoutingEngine::getRouterTT(const int, SUMOVehicleClass, const Prohibitions &)` [static]
@@ -550,7 +666,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
-        todo!("port MSRoutingEngine::getRouterTT")
+        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProvidergetRouterTT returns the MSVehicleRouter of myRouterProvider
+        let _ = (rngIndex, svc, prohibited);
+        panic!("shortcut: getRouterTT needs MSRouterProvider and MSVehicleRouter")
     }
 
     /// C++: `MSTransportableRouter & MSRoutingEngine::getIntermodalRouterTT(const int, const Prohibitions &)` [static]
@@ -579,7 +697,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router_tt(rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSTransportableRouter {
-        todo!("port MSRoutingEngine::getIntermodalRouterTT")
+        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProvidergetIntermodalRouterTT returns the MSTransportableRouter of myRouterProvider
+        let _ = (rngIndex, prohibited);
+        panic!("shortcut: getIntermodalRouterTT needs MSRouterProvider and MSTransportableRouter")
     }
 
     /// C++: `bool MSRoutingEngine::hasBikeSpeeds()` [static]
@@ -589,7 +709,7 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn has_bike_speeds() -> bool {
-        todo!("port MSRoutingEngine::hasBikeSpeeds")
+        state().myBikeSpeeds
     }
 
     /// C++: `double MSRoutingEngine::getEffort(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -604,7 +724,15 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
-        todo!("port MSRoutingEngine::getEffort")
+        let id = e.get_numerical_id();
+        let speed = {
+            let st = state();
+            if id < st.myEdgeSpeeds.len() as i32 { Some(st.myEdgeSpeeds[id as usize]) } else { None }
+        };
+        match speed {
+            Some(s) => max2(e.get_length() / max2(s, utils::geom::NUMERICAL_EPS), e.get_minimum_travel_time(v)),
+            None => e.get_minimum_travel_time(v),
+        }
     }
 
     /// C++: `double MSRoutingEngine::getEffortBike(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -618,7 +746,15 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_effort_bike(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
-        todo!("port MSRoutingEngine::getEffortBike")
+        let id = e.get_numerical_id();
+        let speed = {
+            let st = state();
+            if id < st.myEdgeBikeSpeeds.len() as i32 { Some(st.myEdgeBikeSpeeds[id as usize]) } else { None }
+        };
+        match speed {
+            Some(s) => max2(e.get_length() / max2(s, utils::geom::NUMERICAL_EPS), e.get_minimum_travel_time(v)),
+            None => e.get_minimum_travel_time(v),
+        }
     }
 
     /// C++: `double MSRoutingEngine::getEffortExtra(const MSEdge *const, const SUMOVehicle *const, double)` [static]
@@ -632,7 +768,14 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_effort_extra(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
-        todo!("port MSRoutingEngine::getEffortExtra")
+        let bike = state().myBikeSpeeds;
+        let mut effort = if !bike || v.is_null() || v_vclass(v) != SVC_BICYCLE {
+            Self::get_effort(e, v, t)
+        } else {
+            Self::get_effort_bike(e, v, t)
+        };
+        Self::apply_extras(e, v, MSNet::get_instance().get_current_time_step(), &mut effort);
+        effort
     }
 
     /// C++: `double MSRoutingEngine::getAssumedSpeed(const MSEdge *, const SUMOVehicle *)` [static]
@@ -643,7 +786,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_assumed_speed(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>) -> f64 {
-        todo!("port MSRoutingEngine::getAssumedSpeed")
+        e_len_of(edge) / effort_func(edge, veh, 0.)
     }
 
     /// C++: `bool MSRoutingEngine::withTaz()` [static]
@@ -653,7 +796,7 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn with_taz() -> bool {
-        todo!("port MSRoutingEngine::withTaz")
+        state().myWithTaz
     }
 
     /// C++: `void MSRoutingEngine::addEdgeTravelTime(const MSEdge &, const SUMOTime)` [static]
@@ -666,7 +809,11 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_travel_time(edge: &MSEdge, travelTime: SUMOTime) {
-        todo!("port MSRoutingEngine::addEdgeTravelTime")
+        let id = edge.get_numerical_id() as usize;
+        let mut st = state();
+        let tc = &mut st.myEdgeTravelTimes[id];
+        tc.0 += travelTime;
+        tc.1 += 1;
     }
 
     /// C++: `void MSRoutingEngine::saveState(OutputDevice &)` [static]
@@ -702,7 +849,33 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn save_state(out: &mut OutputDevice) {
-        todo!("port MSRoutingEngine::saveState")
+        let st = state();
+        if st.myEdgeSpeeds.len() == 0 {
+            return;
+        }
+        out.open_tag_id(SUMO_TAG_ROUTINGENGINE);
+        out.write_attr(SUMO_ATTR_LAST, &st.myLastAdaptation);
+        out.write_attr(SUMO_ATTR_INDEX, &st.myAdaptationStepsIndex);
+        let edges: Vec<Ptr<MSEdge>> = MSNet::get_instance().m().get_edge_control().get_edges().clone();
+        for e in edges.iter() {
+            if e.is_delayed() {
+                let id = e.get_numerical_id() as usize;
+                out.open_tag_id(SUMO_TAG_EDGE);
+                out.write_attr(SUMO_ATTR_ID, e.get_id());
+                out.write_attr(SUMO_ATTR_SPEED, &st.myEdgeSpeeds[id]);
+                if st.myAdaptationSteps > 0 {
+                    out.write_attr(SUMO_ATTR_PASTSPEED, &utils::common::to_string::join_to_string(&st.myPastEdgeSpeeds[id], " "));
+                }
+                if st.myBikeSpeeds {
+                    out.write_attr(SUMO_ATTR_BIKESPEED, &st.myEdgeBikeSpeeds[id]);
+                    if st.myAdaptationSteps > 0 {
+                        out.write_attr(SUMO_ATTR_PASTBIKESPEED, &utils::common::to_string::join_to_string(&st.myPastEdgeBikeSpeeds[id], " "));
+                    }
+                }
+                out.close_tag("");
+            }
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSRoutingEngine::loadState(const SUMOSAXAttributes &)` [static]
@@ -741,7 +914,36 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn load_state(attrs: &SUMOSAXAttributes) {
-        todo!("port MSRoutingEngine::loadState")
+        let e = MSEdge::dictionary_2(&attrs.get_string(SUMO_ATTR_ID));
+        e.mark_delayed();
+        let id = e.get_numerical_id() as usize;
+        let mut checkedSteps = false;
+        let mut checkedBikeSpeeds = false;
+        let mut ok = true;
+        let mut st = state();
+        if st.myEdgeSpeeds.len() > id {
+            st.myEdgeSpeeds[id] = attrs.get::<f64>(SUMO_ATTR_SPEED, "", &mut ok, true);
+            if st.myBikeSpeeds {
+                if attrs.has_attribute(SUMO_ATTR_BIKESPEED) {
+                    st.myEdgeBikeSpeeds[id] = attrs.get::<f64>(SUMO_ATTR_BIKESPEED, "", &mut ok, true);
+                } else if !checkedBikeSpeeds {
+                    checkedBikeSpeeds = true;
+                    utils::common::msg_handler::write_warning("Bike speeds missing in loaded state");
+                }
+            }
+            if st.myAdaptationSteps > 0 {
+                let speeds: Vec<f64> = attrs.get_opt::<Vec<f64>>(SUMO_ATTR_PASTSPEED, "", &mut ok, Vec::new(), true);
+                if speeds.len() as i32 == st.myAdaptationSteps {
+                    st.myPastEdgeSpeeds[id] = speeds;
+                    if st.myBikeSpeeds && attrs.has_attribute(SUMO_ATTR_PASTBIKESPEED) {
+                        st.myPastEdgeBikeSpeeds[id] = attrs.get_opt::<Vec<f64>>(SUMO_ATTR_PASTBIKESPEED, "", &mut ok, Vec::new(), true);
+                    }
+                } else if !checkedSteps {
+                    checkedSteps = true;
+                    utils::common::msg_handler::write_warning("Number of adaptation speeds in loaded state doesn't match option --device.rerouting.adaptation-steps");
+                }
+            }
+        }
     }
 
     /// C++: `SUMOTime MSRoutingEngine::adaptEdgeEfforts(SUMOTime)` [static, private]
@@ -847,7 +1049,70 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn adapt_edge_efforts(currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSRoutingEngine::adaptEdgeEfforts")
+        Self::init_edge_weights(SVC_PASSENGER, -1, -1);
+        if state().myBikeSpeeds {
+            Self::init_edge_weights(SVC_BICYCLE, -1, -1);
+        }
+        if MSNet::get_instance().m().get_vehicle_control().get_departed_vehicle_no() == 0 {
+            return state().myAdaptationInterval;
+        }
+        // myCachedRoutes.clear(): the route cache is never populated in this port
+        let edges: Vec<Ptr<MSEdge>> = MSNet::get_instance().m().get_edge_control().get_edges().clone();
+        let sep = weights_separate_turns();
+        {
+            let mut st = state();
+            let w = st.myAdaptationWeight;
+            let newWeightFactor = 1. - w;
+            for e in edges.iter() {
+                if e.is_delayed() {
+                    let id = e.get_numerical_id() as usize;
+                    let mut currSpeed = e.get_mean_speed();
+                    if sep > 0. && e.get_num_successors() > 1 {
+                        currSpeed = patch_speed_for_turns_locked(&mut st, *e, currSpeed);
+                    }
+                    let oldSmoothedSpeed = st.myEdgeSpeeds[id];
+                    let _ = oldSmoothedSpeed; // only used by the CCH dirty marking, which is not ported
+                    if st.myAdaptationSteps > 0 {
+                        let idx = st.myAdaptationStepsIndex as usize;
+                        let steps = st.myAdaptationSteps as f64;
+                        // moving average
+                        let past = st.myPastEdgeSpeeds[id][idx];
+                        st.myEdgeSpeeds[id] += (currSpeed - past) / steps;
+                        st.myPastEdgeSpeeds[id][idx] = currSpeed;
+                        if st.myBikeSpeeds {
+                            let currBikeSpeed = e.get_mean_speed_bike();
+                            let pastBike = st.myPastEdgeBikeSpeeds[id][idx];
+                            st.myEdgeBikeSpeeds[id] += (currBikeSpeed - pastBike) / steps;
+                            st.myPastEdgeBikeSpeeds[id][idx] = currBikeSpeed;
+                        }
+                    } else {
+                        // exponential moving average
+                        if currSpeed != st.myEdgeSpeeds[id] {
+                            let cur = st.myEdgeSpeeds[id];
+                            st.myEdgeSpeeds[id] = cur * w + currSpeed * newWeightFactor;
+                        }
+                        if st.myBikeSpeeds {
+                            let currBikeSpeed = e.get_mean_speed_bike();
+                            if currBikeSpeed != st.myEdgeBikeSpeeds[id] {
+                                let curBike = st.myEdgeBikeSpeeds[id];
+                                st.myEdgeBikeSpeeds[id] = curBike * w + currBikeSpeed * newWeightFactor;
+                            }
+                        }
+                    }
+                    // sparse CCH re-customization (myCCHLive) is not ported: myCCHLive is never created here
+                }
+            }
+            if st.myAdaptationSteps > 0 {
+                st.myAdaptationStepsIndex = (st.myAdaptationStepsIndex + 1) % st.myAdaptationSteps;
+            }
+            st.myLastAdaptation = currentTime;
+        }
+        // CCH customization barrier (myCCHLive->atBarrier) is skipped: myCCHLive is never created in this port
+        if utils::options::options_cont::is_set("device.rerouting.output") {
+            // shortcut: the device.rerouting.output interval (traveltime per edge via myEffortFunc) is not ported, upgrade with the OutputDevice::getDeviceByOption port
+            panic!("shortcut: device.rerouting.output writing is not ported");
+        }
+        state().myAdaptationInterval
     }
 
     /// C++: `double MSRoutingEngine::patchSpeedForTurns(const MSEdge *, double)` [static, private]
@@ -919,7 +1184,8 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_for_turns(edge: Ptr<MSEdge>, currSpeed: f64) -> f64 {
-        todo!("port MSRoutingEngine::patchSpeedForTurns")
+        let mut st = state();
+        patch_speed_for_turns_locked(&mut st, edge, currSpeed)
     }
 
     /// C++: `void MSRoutingEngine::_initEdgeWeights(int &, int &)` [static, private]
@@ -953,8 +1219,70 @@ impl MSRoutingEngine {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_edge_weights_2(edgeSpeeds: &mut i32, pastEdgeSpeeds: &mut i32) {
-        todo!("port MSRoutingEngine::_initEdgeWeights")
+    pub fn init_edge_weights_2(bike: bool) {
+        let empty = {
+            let st = state();
+            if bike { st.myEdgeBikeSpeeds.is_empty() } else { st.myEdgeSpeeds.is_empty() }
+        };
+        if empty {
+            let useLoaded = get_bool("device.rerouting.init-with-loaded-weights");
+            let currentSecond = steps2time(MSNet::get_instance().get_current_time_step());
+            let sep = weights_separate_turns();
+            let edges: Vec<Ptr<MSEdge>> = MSNet::get_instance().m().get_edge_control().get_edges().clone();
+            // computed before taking the state lock: MSNet::get_travel_time may call back into get_effort, which locks the state
+            let values: Vec<f64> = edges
+                .iter()
+                .map(|edge| {
+                    if useLoaded {
+                        edge.get_length() / MSNet::get_travel_time(*edge, Ptr::null(), currentSecond)
+                    } else {
+                        edge.get_mean_speed()
+                    }
+                })
+                .collect();
+            let mut guard = state();
+            let st: &mut RoutingEngineState = &mut guard;
+            for (edge, value) in edges.iter().zip(values.iter().copied()) {
+                let id = edge.get_numerical_id() as usize;
+                loop {
+                    let len = if bike { st.myEdgeBikeSpeeds.len() } else { st.myEdgeSpeeds.len() };
+                    if id < len {
+                        break;
+                    }
+                    if bike {
+                        st.myEdgeBikeSpeeds.push(0.);
+                    } else {
+                        st.myEdgeSpeeds.push(0.);
+                    }
+                    if st.myAdaptationSteps > 0 {
+                        if bike {
+                            st.myPastEdgeBikeSpeeds.push(Vec::new());
+                        } else {
+                            st.myPastEdgeSpeeds.push(Vec::new());
+                        }
+                    }
+                    // C++ compares the two vectors by value; for the passenger vector the comparison is trivially true
+                    let same = if bike { st.myEdgeBikeSpeeds == st.myEdgeSpeeds } else { true };
+                    if sep != 0. && same {
+                        st.myEdgeTravelTimes.push((0, 0));
+                    }
+                }
+                if bike {
+                    st.myEdgeBikeSpeeds[id] = value;
+                } else {
+                    st.myEdgeSpeeds[id] = value;
+                }
+                if st.myAdaptationSteps > 0 {
+                    let steps = st.myAdaptationSteps as usize;
+                    if bike {
+                        st.myPastEdgeBikeSpeeds[id] = vec![value; steps];
+                    } else {
+                        st.myPastEdgeSpeeds[id] = vec![value; steps];
+                    }
+                }
+            }
+            st.myLastAdaptation = MSNet::get_instance().get_current_time_step();
+        }
     }
 
     /// C++: `SumoRNG * MSRoutingEngine::getThreadRNG()` [static, private]
@@ -962,7 +1290,8 @@ impl MSRoutingEngine {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_thread_rng() -> Ptr<SumoRNG> {
-        todo!("port MSRoutingEngine::getThreadRNG")
+        // shortcut: getThreadRNG has no C++ body in the sources scanned, upgrade with the per-thread RNG port
+        panic!("shortcut: MSRoutingEngine::getThreadRNG is not ported")
     }
 
     /// C++: `SUMOVehicle * MSRoutingEngine::buildCCHRefVehicle(const MSVehicleType *, int)` [static, private]
@@ -998,7 +1327,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn build_cch_ref_vehicle(type_: Ptr<MSVehicleType>, slot: i32) -> Ptr<SUMOVehicle> {
-        todo!("port MSRoutingEngine::buildCCHRefVehicle")
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portbuildCCHRefVehicle builds the CCH reference vehicle (MSRoute and MEVehicle/MSVehicle construction)
+        let _ = (type_, slot);
+        panic!("shortcut: buildCCHRefVehicle needs the CCH port")
     }
 
     /// C++: `void MSRoutingEngine::initCCH()` [static, private]
@@ -1039,7 +1370,8 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_cch() {
-        todo!("port MSRoutingEngine::initCCH")
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portinitCCH builds the live CCH metric family
+        panic!("shortcut: initCCH needs the CCH port")
     }
 
     /// C++: `void MSRoutingEngine::invalidateCCHEdge(const MSEdge *)` [static]
@@ -1064,7 +1396,8 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_cch_edge(e: Ptr<MSEdge>) {
-        todo!("port MSRoutingEngine::invalidateCCHEdge")
+        let _ = e;
+        // myCCHGraph is never created in this port (ensureCCHGraph is not ported), so C++ returns at its nullptr check
     }
 
     /// C++: `void MSRoutingEngine::MSRoutingEngine(const MSRoutingEngine &)` [private]
@@ -1072,7 +1405,7 @@ impl MSRoutingEngine {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &MSRoutingEngine) -> Self {
-        todo!("port MSRoutingEngine::MSRoutingEngine")
+        panic!("MSRoutingEngine copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSRoutingEngine & MSRoutingEngine::operator=(const MSRoutingEngine &)` [private]
@@ -1080,8 +1413,167 @@ impl MSRoutingEngine {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSRoutingEngine) -> &mut MSRoutingEngine {
-        todo!("port MSRoutingEngine::operator=")
+        panic!("MSRoutingEngine assignment operator is private and invalidated in C++")
     }
 
 }
 
+// ---- helpers (file-private) ----
+
+/// The numeric MSRoutingEngine statics. Statics that hold unported types (the router provider, the CCH families,
+/// the edge-weight StaticCommand and the route cache) are not modelled here (see the shortcut notes at their uses).
+struct RoutingEngineState {
+    myEdgeSpeeds: Vec<f64>,
+    myEdgeBikeSpeeds: Vec<f64>,
+    myEdgeTravelTimes: Vec<(SUMOTime, i32)>,
+    myPastEdgeSpeeds: Vec<Vec<f64>>,
+    myPastEdgeBikeSpeeds: Vec<Vec<f64>>,
+    myAdaptationSteps: i32,
+    myAdaptationStepsIndex: i32,
+    myAdaptationInterval: SUMOTime,
+    myLastAdaptation: SUMOTime,
+    myAdaptationWeight: f64,
+    myWithTaz: bool,
+    myBikeSpeeds: bool,
+    myPriorityFactor: f64,
+    myMinEdgePriority: f64,
+    myEdgePriorityRange: f64,
+    myDynamicRandomness: bool,
+    myHaveExtras: bool,
+    /// true when myEffortFunc points at getEffortExtra, false for getEffort (the C++ static default)
+    myEffortFuncIsExtra: bool,
+}
+
+// determinism: all routing-engine statics live behind one lock; callers must not hold it across another call that locks it
+static ROUTING_ENGINE_STATE: std::sync::Mutex<RoutingEngineState> = std::sync::Mutex::new(RoutingEngineState {
+    myEdgeSpeeds: Vec::new(),
+    myEdgeBikeSpeeds: Vec::new(),
+    myEdgeTravelTimes: Vec::new(),
+    myPastEdgeSpeeds: Vec::new(),
+    myPastEdgeBikeSpeeds: Vec::new(),
+    myAdaptationSteps: 0,
+    myAdaptationStepsIndex: 0,
+    myAdaptationInterval: -1,
+    myLastAdaptation: -1,
+    myAdaptationWeight: 0.,
+    myWithTaz: false,
+    myBikeSpeeds: false,
+    myPriorityFactor: 0.,
+    myMinEdgePriority: 0.,
+    myEdgePriorityRange: 0.,
+    myDynamicRandomness: false,
+    myHaveExtras: false,
+    myEffortFuncIsExtra: false,
+});
+
+fn state() -> std::sync::MutexGuard<'static, RoutingEngineState> {
+    ROUTING_ENGINE_STATE.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// MAX2 (StdDefs.h): a > b ? a : b
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// MIN2 (StdDefs.h): a < b ? a : b
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+fn oc_float(oc: &OptionsCont, name: &str) -> f64 {
+    oc.get_float(name).unwrap_or_else(|e| std::panic::panic_any(e))
+}
+
+fn oc_bool(oc: &OptionsCont, name: &str) -> bool {
+    oc.get_bool(name).unwrap_or_else(|e| std::panic::panic_any(e))
+}
+
+// shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
+fn weights_random_factor() -> f64 {
+    get_float("weights.random-factor")
+}
+
+fn weights_separate_turns() -> f64 {
+    crate::microsim::ms_globals::weights_separate_turns()
+}
+
+/// C++ myEffortFunc(e, v, t): getEffortExtra or getEffort, depending on the flag set by initRouter
+fn effort_func(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
+    let extra = state().myEffortFuncIsExtra;
+    if extra {
+        MSRoutingEngine::get_effort_extra(e, v, t)
+    } else {
+        MSRoutingEngine::get_effort(e, v, t)
+    }
+}
+
+fn e_len_of(e: Ptr<MSEdge>) -> f64 {
+    e.get_length()
+}
+
+// shortcut: SUMOVehicle does not expose getRandomSeed yet, upgrade when the vehicle base type gains it
+fn v_random_seed(_v: Ptr<SUMOVehicle>) -> i64 {
+    panic!("shortcut: SUMOVehicle::getRandomSeed is not exposed yet")
+}
+
+// shortcut: SUMOVehicle does not expose getVClass yet, upgrade when the vehicle base type gains it
+fn v_vclass(_v: Ptr<SUMOVehicle>) -> SUMOVehicleClass {
+    panic!("shortcut: SUMOVehicle::getVClass is not exposed yet")
+}
+
+// shortcut: SUMOVehicle does not expose getVTypeParameter yet, upgrade when the vehicle base type gains it
+fn v_vtype_parameter<'a>(_v: Ptr<SUMOVehicle>) -> &'a SUMOVTypeParameter {
+    panic!("shortcut: SUMOVehicle::getVTypeParameter is not exposed yet")
+}
+
+/// patchSpeedForTurns on an already locked state (the C++ function body)
+fn patch_speed_for_turns_locked(st: &mut RoutingEngineState, edge: Ptr<MSEdge>, currSpeed: f64) -> f64 {
+    let length = edge.get_length();
+    let mut maxSpeed = 0.;
+    for pair in edge.get_via_successors(SVC_IGNORING, false).iter() {
+        if pair.1.is_null() {
+            continue;
+        }
+        let tc = st.myEdgeTravelTimes[pair.1.get_numerical_id() as usize];
+        if tc.1 > 0 {
+            // C++ integer division of SUMOTime by int, then STEPS2TIME
+            let avgSpeed = length / steps2time(tc.0 / tc.1 as i64);
+            maxSpeed = max2(avgSpeed, maxSpeed);
+        }
+    }
+    if maxSpeed > 0. {
+        // perform correction
+        let sep = weights_separate_turns();
+        let correctedSpeed = sep * maxSpeed + (1. - sep) * currSpeed;
+        for pair in edge.get_via_successors(SVC_IGNORING, false).iter() {
+            if pair.1.is_null() {
+                continue;
+            }
+            let iid = pair.1.get_numerical_id() as usize;
+            let tc = st.myEdgeTravelTimes[iid];
+            if tc.1 > 0 {
+                let avgSpeed = length / steps2time(tc.0 / tc.1 as i64);
+                if avgSpeed < correctedSpeed {
+                    let mut internalTT = pair.1.get_length() / pair.1.get_speed_limit();
+                    internalTT += (length / avgSpeed - length / correctedSpeed) * sep;
+                    let origInternalSpeed = st.myEdgeSpeeds[iid];
+                    let newInternalSpeed = pair.1.get_length() / internalTT;
+                    let idx = st.myAdaptationStepsIndex as usize;
+                    let origCurrSpeed = st.myPastEdgeSpeeds[iid][idx];
+                    st.myEdgeSpeeds[iid] = newInternalSpeed;
+                    // to ensure myEdgeSpeed reverts to the speed limit when there are no updates, patch
+                    // myPastEdgeSpeeds with a virtual value that is consistent with the updated speed
+                    // note: internal edges were handled before the normal ones
+                    let steps = st.myAdaptationSteps as f64;
+                    let virtualSpeed = (newInternalSpeed - (origInternalSpeed - origCurrSpeed / steps)) * steps;
+                    st.myPastEdgeSpeeds[iid][idx] = virtualSpeed;
+                }
+                if st.myAdaptationStepsIndex == 0 {
+                    st.myEdgeTravelTimes[iid] = (0, 0);
+                }
+            }
+        }
+        return correctedSpeed;
+    }
+    currSpeed
+}
