@@ -501,7 +501,21 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_incoming_continuation(&self, e: Ptr<NIVissimEdge>) -> Ptr<NIVissimConnection> {
-        todo!("port NIVissimConnectionCluster::getIncomingContinuation")
+        // collect connection where this edge is the incoming one
+        let mut edge_is_incoming: Vec<Ptr<NIVissimConnection>> = Vec::new();
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            if c.get_from_edge_id() == e.get_id() {
+                edge_is_incoming.push(c);
+            }
+        }
+        //
+        if edge_is_incoming.is_empty() {
+            return Ptr::null();
+        }
+        // sort connected edges in same direction
+        sort_by_same_direction(&mut edge_is_incoming, e.get_geometry().begin_end_angle());
+        edge_is_incoming[0]
     }
 
     /// C++: `NIVissimConnection * NIVissimConnectionCluster::getOutgoingContinuation(NIVissimEdge *) const` [const]
@@ -526,7 +540,21 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_outgoing_continuation(&self, e: Ptr<NIVissimEdge>) -> Ptr<NIVissimConnection> {
-        todo!("port NIVissimConnectionCluster::getOutgoingContinuation")
+        // collect connection where this edge is the outgoing one
+        let mut edge_is_outgoing: Vec<Ptr<NIVissimConnection>> = Vec::new();
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            if c.get_to_edge_id() == e.get_id() {
+                edge_is_outgoing.push(c);
+            }
+        }
+        //
+        if edge_is_outgoing.is_empty() {
+            return Ptr::null();
+        }
+        // sort connected edges in same direction
+        sort_by_same_direction(&mut edge_is_outgoing, e.get_geometry().begin_end_angle());
+        edge_is_outgoing[0]
     }
 
     /// C++: `void NIVissimConnectionCluster::joinBySameEdges(double)` [static]
@@ -640,14 +668,108 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn join_by_same_edges(offset: f64) {
-        todo!("port NIVissimConnectionCluster::joinBySameEdges")
+        // determinism: C++ walks myClusters with vector iterators; here the same order is kept by index
+        let mut join_able: Vec<Ptr<NIVissimConnectionCluster>> = Vec::new();
+        let mut pos: usize = 0;
+        let mut i: usize = 0;
+        // step1 - faster but no complete
+        while i < cluster_count() {
+            join_able.clear();
+            let mut j = i + 1;
+            // check whether every combination has been processed
+            while j < cluster_count() {
+                // check whether the current clusters overlap
+                if cluster_at(i).m().joinable(cluster_at(j), offset) {
+                    join_able.push(cluster_at(j));
+                }
+                j += 1;
+            }
+            for k in join_able.iter() {
+                // add the overlaping cluster
+                cluster_at(i).m().add(*k);
+                // erase the overlaping cluster
+                erase_and_delete_cluster(*k);
+            }
+            //
+            if join_able.len() > 0 {
+                i = pos;
+                // clear temporary storages
+                join_able.clear();
+            } else {
+                i += 1;
+                pos += 1;
+            }
+        }
+        //
+        pos = 0;
+        i = 0;
+        while i < cluster_count() {
+            let mut j = i + 1;
+            // check whether every combination has been processed
+            while j < cluster_count() {
+                // check whether the current clusters overlap
+                if cluster_at(i).m().joinable(cluster_at(j), offset) {
+                    join_able.push(cluster_at(j));
+                }
+                j += 1;
+            }
+            for k in join_able.iter() {
+                // add the overlaping cluster
+                cluster_at(i).m().add(*k);
+                // erase the overlaping cluster
+                erase_and_delete_cluster(*k);
+            }
+            //
+            if join_able.len() > 0 {
+                i = 0;
+                // clear temporary storages
+                join_able.clear();
+                pos = 0;
+            } else {
+                i += 1;
+                pos += 1;
+            }
+        }
+        // check for weak district connections
+        //  (junctions made up by district connections, where prohibitions are not
+        //   modelled properly)
+        pos = 0;
+        i = 0;
+        while i < cluster_count() {
+            let mut j = i + 1;
+            // check whether every combination has been processed
+            while j < cluster_count() {
+                // check whether the current clusters overlap
+                if cluster_at(i).m().is_weak_district_conn_realisation(cluster_at(j)) {
+                    join_able.push(cluster_at(j));
+                }
+                j += 1;
+            }
+            for k in join_able.iter() {
+                // add the overlaping cluster
+                cluster_at(i).m().add(*k);
+                // erase the overlaping cluster
+                erase_and_delete_cluster(*k);
+            }
+            //
+            if join_able.len() > 0 {
+                i = 0;
+                // clear temporary storages
+                join_able.clear();
+                pos = 0;
+            } else {
+                i += 1;
+                pos += 1;
+            }
+        }
     }
 
     /// C++: `void NIVissimConnectionCluster::joinByDisturbances(double)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn join_by_disturbances(offset: f64) {
-        todo!("port NIVissimConnectionCluster::joinByDisturbances")
+        // C++ declares joinByDisturbances but never defines it; its only call site is commented out
+        panic!("NIVissimConnectionCluster::joinByDisturbances is declared but never defined in C++ (link error if called)")
     }
 
     /// C++: `void NIVissimConnectionCluster::buildNodeClusters()` [static]
@@ -682,7 +804,32 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn build_node_clusters() {
-        todo!("port NIVissimConnectionCluster::buildNodeClusters")
+        // determinism: iterate over a snapshot in the same order; dictionary_2 below never adds or removes clusters
+        let clusters = MY_CLUSTERS.with(|c| c.borrow().clone());
+        for i in clusters.iter() {
+            let mut disturbances: Vec<i32> = Vec::new();
+            let tlsid: i32 = -1;
+            let mut nodeid: i32 = -1;
+            if i.myConnections.len() > 0 {
+                i.m().recompute_boundary();
+                disturbances = NIVissimDisturbance::get_within(&i.myBoundary);
+            }
+            let nodes = i.myNodes.clone(); //NIVissimTL::getWithin((*i)->myBoundary, 5.0);
+            if nodes.len() > 1 {
+                write_warning("NIVissimConnectionCluster: More than a single node");
+                //          throw 1; // !!! eigentlich sollte hier nur eine Ampelanlage sein
+            }
+            if nodes.len() > 0 {
+                nodeid = nodes[0];
+            }
+            //
+            //
+            let id = NIVissimNodeCluster::dictionary_2(
+                nodeid, tlsid, &i.myConnections,
+                &disturbances, i.myIncomingEdges.len() < 2);
+            debug_assert!(i.myNodeCluster == id || i.myNodeCluster < 0);
+            i.m().myNodeCluster = id;
+        }
     }
 
     /// C++: `void NIVissimConnectionCluster::_debugOut(std::ostream &)` [static]
@@ -702,7 +849,17 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn debug_out(into: &mut dyn std::io::Write) {
-        todo!("port NIVissimConnectionCluster::_debugOut")
+        for i in MY_CLUSTERS.with(|c| c.borrow().clone()).iter() {
+            let connections = i.myConnections.clone();
+            for (idx, j) in connections.iter().enumerate() {
+                if idx != 0 {
+                    let _ = write!(into, ", ");
+                }
+                let _ = write!(into, "{}", j);
+            }
+            let _ = writeln!(into, "({})", i.myBoundary);
+        }
+        let _ = writeln!(into, "---------------------------");
     }
 
     /// C++: `int NIVissimConnectionCluster::getNextFreeNodeID()` [static]
@@ -712,7 +869,11 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn get_next_free_node_id() -> i32 {
-        todo!("port NIVissimConnectionCluster::getNextFreeNodeID")
+        MY_FIRST_FREE_ID.with(|c| {
+            let v = c.get();
+            c.set(v + 1);
+            v
+        })
     }
 
     /// C++: `void NIVissimConnectionCluster::clearDict()` [static]
@@ -726,7 +887,12 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimConnectionCluster::clearDict")
+        let clusters = MY_CLUSTERS.with(|c| std::mem::take(&mut *c.borrow_mut()));
+        for i in clusters.iter() {
+            // delete (*i)
+            drop(unsafe { Box::from_raw(i.as_raw()) });
+        }
+        MY_FIRST_FREE_ID.with(|c| c.set(100000));
     }
 
     /// C++: `void NIVissimConnectionCluster::add(NIVissimConnectionCluster *)` [private]
@@ -760,7 +926,27 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, c: Ptr<NIVissimConnectionCluster>) {
-        todo!("port NIVissimConnectionCluster::add")
+        debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
+        debug_assert!(c.myBoundary.xmax() >= c.myBoundary.xmin());
+        self.myBoundary.add_boundary(&c.myBoundary);
+        self.myConnections.extend_from_slice(&c.myConnections);
+        remove_double_i32(&mut self.myConnections);
+        debug_assert!(self.myNodeCluster == -1 || c.myNodeCluster == -1);
+        if self.myNodeCluster == -1 {
+            self.myNodeCluster = c.myNodeCluster;
+        }
+        // inform edges about merging
+        //  !!! merge should be done within one method
+        let this = Ptr::from_mut(&mut *self);
+        for j in c.myEdges.iter() {
+            NIVissimEdge::dictionary_3(*j).m().merged_into(c, this);
+        }
+        self.myEdges.extend_from_slice(&c.myEdges);
+        self.myIncomingEdges.extend_from_slice(&c.myIncomingEdges);
+        self.myOutgoingEdges.extend_from_slice(&c.myOutgoingEdges);
+        remove_double_i32(&mut self.myEdges);
+        remove_double_i32(&mut self.myIncomingEdges);
+        remove_double_i32(&mut self.myOutgoingEdges);
     }
 
     /// C++: `void NIVissimConnectionCluster::removeConnections(const NodeSubCluster &)` [private]
@@ -778,7 +964,14 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn remove_connections(&mut self, c: &NIVissimConnectionCluster_NodeSubCluster) {
-        todo!("port NIVissimConnectionCluster::removeConnections")
+        for conn in c.myConnections.iter() {
+            let connid = conn.base2.get_id();
+            let pos = self.myConnections.iter().position(|x| *x == connid);
+            if let Some(j) = pos {
+                self.myConnections.remove(j);
+            }
+        }
+        self.recompute_boundary();
     }
 
     /// C++: `void NIVissimConnectionCluster::recomputeBoundary()` [private]
@@ -799,7 +992,18 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn recompute_boundary(&mut self) {
-        todo!("port NIVissimConnectionCluster::recomputeBoundary")
+        self.myBoundary = Boundary::default();
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            if !c.is_null() {
+                self.myBoundary.add_pos(&c.get_from_geom_position());
+                self.myBoundary.add_pos(&c.get_to_geom_position());
+                if c.base2.get_geometry().len() != 0 {
+                    self.myBoundary.add_boundary(&c.base2.get_geometry().get_box_boundary());
+                }
+            }
+        }
+        debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
     }
 
     /// C++: `void NIVissimConnectionCluster::recheckEdges()` [private]
@@ -834,7 +1038,32 @@ impl NIVissimConnectionCluster {
     // }
     #[allow(unused_variables)]
     pub fn recheck_edges(&mut self) {
-        todo!("port NIVissimConnectionCluster::recheckEdges")
+        debug_assert!(!self.myConnections.is_empty());
+        let this = Ptr::from_mut(&mut *self);
+        // remove the cluster from all edges at first
+        for i in self.myEdges.iter() {
+            let edge = NIVissimEdge::dictionary_3(*i);
+            edge.m().remove_from_connection_cluster(this);
+        }
+        // clear edge information
+        self.myEdges.clear();
+        // recheck which edges do still participate and add edges
+        for i in self.myConnections.iter() {
+            let c = NIVissimConnection::dictionary_2(*i);
+            debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
+            if self.myBoundary.around(&c.get_from_geom_position(), 5.0) {
+                self.myEdges.push(c.get_from_edge_id());
+            }
+            debug_assert!(self.myBoundary.xmax() >= self.myBoundary.xmin());
+            if self.myBoundary.around(&c.get_to_geom_position(), 5.0) {
+                self.myEdges.push(c.get_to_edge_id());
+            }
+        }
+        // connect edges
+        for i in self.myEdges.iter() {
+            let edge = NIVissimEdge::dictionary_3(*i);
+            edge.m().add_to_connection_cluster(this);
+        }
     }
 
     /// C++: `bool NIVissimConnectionCluster::joinable(NIVissimConnectionCluster *, double)` [private]
