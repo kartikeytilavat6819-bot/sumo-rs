@@ -1,6 +1,14 @@
 //! Port of microsim/devices/MSDevice_ToC.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::f64_to_string_prec;
+use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
+
+// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
+fn g_use_meso_sim() -> bool {
+    false
+}
+
 
 /// C++ enum `MSDevice_ToC::ToCState`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -164,7 +172,7 @@ impl MSDevice_ToC {
         let lane = self.myHolderMS.get_lane();
         let lanePos = self.myHolderMS.get_position_on_lane();
         self.myEventLanes.push_back((lane.get_id().to_string(), lanePos));
-        let pos = self.myHolderMS.get_position();
+        let pos = self.myHolderMS.get_position(0.);
         self.myEventXY.push_back((pos.x(), pos.y()));
     }
 }
@@ -266,8 +274,9 @@ impl MSDevice_ToC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "toc", v, false, false)) {
-            if MSGlobals::g_use_meso_sim() {
+        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
+    if panic!("shortcut: equipped_by_default_assignment_options not ported") {
+            if g_use_meso_sim() {
                 utils::common::msg_handler::write_warning("ToC device is not supported by the mesoscopic simulation.");
                 return;
             }
@@ -327,7 +336,7 @@ impl MSDevice_ToC {
         // Close xml bodies for all existing files
         // TODO: Check if required
         for fn_ in CREATED_OUTPUT_FILES.with(|f| f.borrow().clone()) {
-            let file = OutputDevice::get_device(&fn_);
+            let file = Ptr::from_raw(OutputDevice::get_device(&fn_, true).unwrap_or_else(|e| panic!("{}", e)).as_ptr());
             file.m().close_tag("");
         }
     }
@@ -735,14 +744,14 @@ impl MSDevice_ToC {
         };
         if key == "manualType" {
             self.myManualTypeID = value.to_string();
-            let c = MSNet::get_instance().m().get_vehicle_control().get_v_type(&self.myManualTypeID, MSRouteHandler::get_parsing_rng(), false).get_color().clone();
+            let c = MSNet::get_instance().m().get_vehicle_control().get_v_type(&self.myManualTypeID, SUMORouteHandler::get_parsing_rng(), false).get_color().clone();
             self.myColorScheme.insert(MSDevice_ToC_ToCState::MANUAL, c);
             if self.myState == MSDevice_ToC_ToCState::MANUAL {
                 self.switch_holder_type(value);
             }
         } else if key == "automatedType" {
             self.myAutomatedTypeID = value.to_string();
-            let c = MSNet::get_instance().m().get_vehicle_control().get_v_type(&self.myAutomatedTypeID, MSRouteHandler::get_parsing_rng(), false).get_color().clone();
+            let c = MSNet::get_instance().m().get_vehicle_control().get_v_type(&self.myAutomatedTypeID, SUMORouteHandler::get_parsing_rng(), false).get_color().clone();
             self.myColorScheme.insert(MSDevice_ToC_ToCState::AUTOMATED, c);
             if self.myState == MSDevice_ToC_ToCState::AUTOMATED || self.myState == MSDevice_ToC_ToCState::PREPARING_TOC || self.myState == MSDevice_ToC_ToCState::MRM {
                 self.switch_holder_type(value);
@@ -795,7 +804,7 @@ impl MSDevice_ToC {
                 self.myMRMProbability = newValue;
             }
         } else if key == "mrmKeepRight" {
-            let newValue = utils::common::string_utils::to_bool(value);
+            let newValue = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
             self.myMRMKeepRight = newValue;
         } else if key == "mrmSafeSpot" {
             self.myMRMSafeSpot = value.to_string();
@@ -879,7 +888,8 @@ impl MSDevice_ToC {
         self.deschedule_mrm();
         // Start MRM process
         if self.myMRMSafeSpot != "" {
-            let mut stop = SUMOVehicleParameter_Stop::default();
+            // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
+        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
             let s = MSNet::get_instance().m().get_stopping_place(&self.myMRMSafeSpot, SUMO_TAG_PARKING_AREA);
             if s.is_null() {
                 write_warningf!("Ignoring unknown safe spot '%' for vehicle '%'.", self.myMRMSafeSpot, self.myHolder.get_id());
@@ -1099,14 +1109,14 @@ impl MSDevice_ToC {
             let nextSpeed = f64::max(0.0, currentSpeed - accel2speed(self.myMRMDecel));
             speedTimeLine.push((t, currentSpeed));
             speedTimeLine.push((t + delta_t(), nextSpeed));
-            holderPtr.m().get_influencer().set_speed_time_line(speedTimeLine);
+            holderPtr.m().get_influencer().set_speed_time_line(&speedTimeLine);
         }
         if self.myMRMKeepRight {
             // Try to change to the right
             let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
             laneTimeLine.push((MSNet::get_instance().get_current_time_step(), 0));
             laneTimeLine.push((MSNet::get_instance().get_current_time_step() + 1, 0));
-            holderPtr.m().get_influencer().set_lane_time_line(laneTimeLine);
+            holderPtr.m().get_influencer().set_lane_time_line(&laneTimeLine);
         }
         if self.myState == MSDevice_ToC_ToCState::MRM {
             delta_t()
@@ -1203,9 +1213,9 @@ impl MSDevice_ToC {
             let out = self.myOutputFile.m();
             out.open_tag(&eName);
             let id = self.myHolder.get_id().to_string();
-            out.write_attr("id", id.as_str()).write_attr("t", steps2time(eTime));
-            out.write_attr("lane", lane.as_str()).write_attr("lanePos", lanePos);
-            out.write_attr("x", x).write_attr("y", y);
+            out.write_attr("id", id.as_str()).write_attr("t", &steps2time(eTime));
+            out.write_attr("lane", lane.as_str()).write_attr("lanePos", &lanePos);
+            out.write_attr("x", &x).write_attr("y", &y);
             out.close_tag("");
             self.myEvents.pop_front();
             self.myEventLanes.pop_front();
@@ -1398,11 +1408,11 @@ impl MSDevice_ToC {
             myOriginalMaxAccel: -1.0,
         };
         if outputFilename != "" {
-            this.myOutputFile = OutputDevice::get_device(outputFilename);
+            this.myOutputFile = Ptr::from_raw(OutputDevice::get_device(outputFilename, true).unwrap_or_else(|e| panic!("{}", e)).as_ptr());
             // TODO: make xsd, include header
             // myOutputFile.writeXMLHeader("ToCDeviceLog", "ToCDeviceLog.xsd");
             if !CREATED_OUTPUT_FILES.with(|f| f.borrow().contains(outputFilename)) {
-                this.myOutputFile.m().write_xml_header("ToCDeviceLog", "");
+                this.myOutputFile.m().write_xml_header("ToCDeviceLog", "", BTreeMap::new(), true);
                 CREATED_OUTPUT_FILES.with(|f| f.borrow_mut().insert(outputFilename.to_string()));
             }
         }
@@ -1438,10 +1448,10 @@ impl MSDevice_ToC {
         // Eventually instantiate given vTypes from distributions
         if this.myState == MSDevice_ToC_ToCState::MANUAL && automatedVTypeIsDist {
             let id = this.myAutomatedTypeID.clone();
-            this.myAutomatedTypeID = vehCtrl.get_v_type(&id, MSRouteHandler::get_parsing_rng(), false).get_id().to_string();
+            this.myAutomatedTypeID = vehCtrl.get_v_type(&id, SUMORouteHandler::get_parsing_rng(), false).get_id().to_string();
         } else if this.myState == MSDevice_ToC_ToCState::AUTOMATED && manualVTypeIsDist {
             let id = this.myManualTypeID.clone();
-            this.myManualTypeID = vehCtrl.get_v_type(&id, MSRouteHandler::get_parsing_rng(), false).get_id().to_string();
+            this.myManualTypeID = vehCtrl.get_v_type(&id, SUMORouteHandler::get_parsing_rng(), false).get_id().to_string();
         }
         // shortcut: C++ inserts `this` into myInstances here; the Rust constructor returns by value, so the registration is done by the caller (buildVehicleDevices) at the final address
         this.init_color_scheme();
@@ -1465,14 +1475,14 @@ impl MSDevice_ToC {
     pub fn init_color_scheme(&mut self) {
         let netPtr = MSNet::get_instance();
         let vc = netPtr.m().get_vehicle_control();
-        let manual = vc.get_v_type(&self.myManualTypeID, MSRouteHandler::get_parsing_rng(), false).get_color().clone();
-        let automated = vc.get_v_type(&self.myAutomatedTypeID, MSRouteHandler::get_parsing_rng(), false).get_color().clone();
+        let manual = vc.get_v_type(&self.myManualTypeID, SUMORouteHandler::get_parsing_rng(), false).get_color().clone();
+        let automated = vc.get_v_type(&self.myAutomatedTypeID, SUMORouteHandler::get_parsing_rng(), false).get_color().clone();
         self.myColorScheme.insert(MSDevice_ToC_ToCState::MANUAL, manual);
         self.myColorScheme.insert(MSDevice_ToC_ToCState::AUTOMATED, automated);
-        self.myColorScheme.insert(MSDevice_ToC_ToCState::PREPARING_TOC, RGBColor::new(200, 200, 250)); // light blue
-        self.myColorScheme.insert(MSDevice_ToC_ToCState::MRM, RGBColor::new(250, 50, 50)); // red
-        self.myColorScheme.insert(MSDevice_ToC_ToCState::RECOVERING, RGBColor::new(250, 210, 150)); // light yellow
-        self.myColorScheme.insert(MSDevice_ToC_ToCState::UNDEFINED, RGBColor::new(150, 150, 150)); // gray
+        self.myColorScheme.insert(MSDevice_ToC_ToCState::PREPARING_TOC, RGBColor::new(200, 200, 250, 255)); // light blue
+        self.myColorScheme.insert(MSDevice_ToC_ToCState::MRM, RGBColor::new(250, 50, 50, 255)); // red
+        self.myColorScheme.insert(MSDevice_ToC_ToCState::RECOVERING, RGBColor::new(250, 210, 150, 255)); // light yellow
+        self.myColorScheme.insert(MSDevice_ToC_ToCState::UNDEFINED, RGBColor::new(150, 150, 150, 255)); // gray
     }
 
     /// C++: `void MSDevice_ToC::setAwareness(double)` [private]
@@ -1512,7 +1522,7 @@ impl MSDevice_ToC {
         self.myCurrentAwareness = value;
         let ds = self.myHolderMS.m().get_driver_state();
         // SAFETY: the driver state is owned by the holder; C++ calls the non-const setter through a pointer
-        unsafe { (*Rc::as_ptr(&ds) as *mut MSSimpleDriverState).as_mut().unwrap().set_awareness(value) };
+        unsafe { (Rc::as_ptr(&ds) as *mut MSSimpleDriverState).as_mut().unwrap().set_awareness(value) };
     }
 
     /// C++: `void MSDevice_ToC::setState(ToCState)` [private]
@@ -1572,7 +1582,7 @@ impl MSDevice_ToC {
         if self.myState == MSDevice_ToC_ToCState::MRM {
             // reset the vehicle's maxAccel
             let orig = self.myOriginalMaxAccel;
-            self.myHolderMS.m().get_singular_type().get_car_follow_model().set_max_accel(orig);
+            Ptr::new(self.myHolderMS.m().get_singular_type().get_car_follow_model()).m().set_max_accel(orig);
             self.reset_deliberate_l_cs();
         } else if self.myState == MSDevice_ToC_ToCState::PREPARING_TOC {
             if self.myOpenGapParams.active {
@@ -1583,7 +1593,7 @@ impl MSDevice_ToC {
                 // Aborting preparation
                 self.reset_deliberate_l_cs();
                 let orig = self.myOriginalMaxAccel;
-                self.myHolderMS.m().get_singular_type().get_car_follow_model().set_max_accel(orig);
+                Ptr::new(self.myHolderMS.m().get_singular_type().get_car_follow_model()).m().set_max_accel(orig);
             }
         } else if state == MSDevice_ToC_ToCState::PREPARING_TOC || state == MSDevice_ToC_ToCState::MRM {
             // Prevent lane changing during takeover preparation
@@ -1592,7 +1602,7 @@ impl MSDevice_ToC {
             self.myOriginalMaxAccel = self.myHolderMS.m().get_car_follow_model().get_max_accel();
             // Impose acceleration limit during preparation
             let limit = f64::min(self.myMaxPreparationAccel, self.myOriginalMaxAccel);
-            self.myHolderMS.m().get_singular_type().get_car_follow_model().set_max_accel(limit);
+            Ptr::new(self.myHolderMS.m().get_singular_type().get_car_follow_model()).m().set_max_accel(limit);
         }
         if self.myIssuedDynamicToC {
             // Reset dynamic ToC flag
@@ -1616,7 +1626,7 @@ impl MSDevice_ToC {
         let holderPtr = self.myHolder;
         let color = self.myColorScheme.get(&self.myState).cloned().unwrap();
         // const_cast on the holder parameters, as in C++
-        let p: &mut SUMOVehicleParameter = unsafe { &mut *(holderPtr.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter) };
+        let p: &mut SUMOVehicleParameter = unsafe { &mut *Ptr::new(holderPtr.get_parameter()).as_raw() };
         p.color = color;
         p.parametersSet |= VEHPARS_COLOR_SET;
     }
@@ -1697,7 +1707,7 @@ impl MSDevice_ToC {
                 let ogp = self.myOpenGapParams.clone();
                 self.myHolderMS.m().get_influencer().activate_gap_controller(originalTau,
                     ogp.newTimeHeadway, ogp.newSpaceHeadway, -1.0,
-                    ogp.changeRate, ogp.maxDecel);
+                    ogp.changeRate, ogp.maxDecel, Ptr::null());
             }
             // Record event
             if self.generates_output() {
@@ -1754,7 +1764,7 @@ impl MSDevice_ToC {
     // }
     #[allow(unused_variables)]
     pub fn switch_holder_type(&mut self, targetTypeID: &str) {
-        let targetType = MSNet::get_instance().m().get_vehicle_control().get_v_type(targetTypeID, MSRouteHandler::get_parsing_rng(), false);
+        let targetType = MSNet::get_instance().m().get_vehicle_control().get_v_type(targetTypeID, SUMORouteHandler::get_parsing_rng(), false);
         if targetType.is_null() {
             write_errorf!("vType '%' for vehicle '%' is not known.", targetTypeID, self.myHolder.get_id());
             return;
@@ -2187,7 +2197,7 @@ impl MSDevice_ToC {
     //     return var;
     // }
     #[allow(unused_variables)]
-    pub fn interpolate_variance(leadTime: f64, pMRM: f64) -> f64 {
+    pub fn interpolate_variance(mut leadTime: f64, pMRM: f64) -> f64 {
         // Calculate indices for surrounding values in lookup tables
         // Find largest p_{i-1} < pMRM < p_{i}
         let pi = match LOOKUP_RESPONSE_TIME_MRM_PROBS.iter().position(|&p| p >= pMRM) {

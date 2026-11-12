@@ -1,6 +1,24 @@
 //! Port of microsim/devices/MSDevice_Taxi.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::{f64_to_string_prec, join_to_string_sorting};
+use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
+
+// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
+fn g_use_meso_sim() -> bool {
+    false
+}
+
+thread_local! {
+    /// C++ `static SVCPermissions gTaxiClasses` in MSDevice_Taxi.cpp
+    static G_TAXI_CLASSES: std::cell::Cell<i64> = std::cell::Cell::new(0);
+}
+fn g_taxi_classes() -> i64 {
+    G_TAXI_CLASSES.with(|c| c.get())
+}
+fn set_g_taxi_classes(v: i64) {
+    G_TAXI_CLASSES.with(|c| c.set(v))
+}
 
 /// C++ enum `MSDevice_Taxi::TaxiState`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -208,7 +226,8 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "taxi", v, false, false)) {
+        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
+        if panic!("shortcut: equipped_by_default_assignment_options not ported") {
             // build the device
             let device: Ptr<MSDevice_Taxi> = Ptr::from_mut(Box::leak(Box::new(MSDevice_Taxi::new(v, &format!("taxi_{}", v.get_id())))));
             into.push(device.cast::<MSVehicleDevice>());
@@ -231,7 +250,7 @@ impl MSDevice_Taxi {
                 MY_TAXI_TYPES.with(|t| t.borrow_mut().insert(vclass, tid));
             }
             if (g_taxi_classes() as SVCPermissions & vclass) == 0 {
-                set_g_taxi_classes((g_taxi_classes() as SVCPermissions | vclass) as i32);
+                set_g_taxi_classes(g_taxi_classes() as SVCPermissions | vclass);
                 MSNet::get_instance().reset_intermodal_router();
             }
             if personCapacity < 1 && containerCapacity < 1 {
@@ -1122,7 +1141,7 @@ impl MSDevice_Taxi {
         self.myLastDispatch.retain(|x| current_reservations.contains(x));
         // if there are reservations left, go on with the dispatch
         // in meso, wait for the next dispatch cycle to avoid updating stops in this stage
-        if !MSGlobals::g_use_meso_sim() {
+        if !g_use_meso_sim() {
             let last = self.myLastDispatch.clone();
             self.dispatch_shared(last);
         }
@@ -1157,16 +1176,17 @@ impl MSDevice_Taxi {
     pub fn add_customer(&mut self, t: Ptr<MSTransportable>, res: Ptr<Reservation>) {
         self.myCustomers.insert(t);
         let holderPtr = self.myHolder;
-        let veh: &mut MSBaseVehicle = holderPtr.cast::<MSBaseVehicle>().m();
+        let holderBase = holderPtr.cast::<MSBaseVehicle>();
+        let veh: &mut MSBaseVehicle = holderBase.m();
         let tid = t.get_id().to_string();
         for stop in veh.get_stops().iter() {
             // const_cast on the stop parameters, as in C++
-            let pars: &mut SUMOVehicleParameter_Stop = unsafe { &mut *(&stop.pars as *const SUMOVehicleParameter_Stop as *mut SUMOVehicleParameter_Stop) };
-            if *stop.edge == res.from && pars.startPos <= res.fromPos && pars.endPos >= res.fromPos {
+            let pars: &mut SUMOVehicleParameter_Stop = unsafe { &mut *Ptr::new(&stop.pars).as_raw() };
+            if Ptr::new(stop.lane.get_edge()) == res.from && pars.startPos <= res.fromPos && pars.endPos >= res.fromPos {
                 pars.awaitedPersons.insert(tid.clone());
                 pars.permitted.insert(tid.clone());
                 pars.actType.push_str(&format!(" +{}", tid));
-            } else if *stop.edge == res.to && pars.startPos <= res.toPos && pars.endPos >= res.toPos {
+            } else if Ptr::new(stop.lane.get_edge()) == res.to && pars.startPos <= res.toPos && pars.endPos >= res.toPos {
                 pars.actType.push_str(&format!(" +{}", tid));
                 break;
             }
@@ -1289,7 +1309,7 @@ impl MSDevice_Taxi {
             self.myCurrentReservations.clear();
             self.check_task_swap();
             if self.is_empty() {
-                if MSGlobals::g_use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
+                if g_use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
                     { let idle = self.myIdleAlgorithm; idle.m().idle(Ptr::from_mut(self)); }
                 }
             }
@@ -1328,8 +1348,8 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        out.open_tag(SUMO_TAG_DEVICE);
-        out.write_attr(SUMO_ATTR_ID, self.get_id());
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, self.base.base2.get_id());
         let internals = format!("{} {} {} {}",
             self.myState,
             self.myCustomersServed,
@@ -1369,7 +1389,7 @@ impl MSDevice_Taxi {
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
         let mut ok = true;
-        let id = self.get_id().to_string();
+        let id = self.base.base2.get_id().to_string();
         let state = attrs.get_string(SUMO_ATTR_STATE).to_string();
         let mut bis = state.split_whitespace();
         self.myState = bis.next().and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -1437,18 +1457,17 @@ impl MSDevice_Taxi {
     #[allow(unused_variables)]
     pub fn finalize_load_state() {
         if MY_STATE_LOADED_CUSTOMERS.with(|m| m.borrow().len() > 0) {
-            let net = MSNet::get_instance();
-            let pc = if net.has_persons() { Some(net.get_person_control()) } else { None };
-            let cc = if net.has_containers() { Some(net.get_container_control()) } else { None };
+            let pc = if MSNet::get_instance().m().has_persons() { Some(Ptr::new(MSNet::get_instance().m().get_person_control())) } else { None };
+            let cc = if MSNet::get_instance().m().has_containers() { Some(Ptr::new(MSNet::get_instance().m().get_container_control())) } else { None };
             let items: Vec<(String, Ptr<MSDevice_Taxi>)> = MY_STATE_LOADED_CUSTOMERS.with(|m| m.borrow().iter().map(|(k, v)| (k.clone(), *v)).collect());
             for (id, taxi) in items {
                 let mut t: Ptr<MSTransportable> = Ptr::null();
                 if let Some(pc) = pc {
-                    t = pc.get(&id);
+                    t = pc.m().get(&id);
                 }
                 if t.is_null() {
                     if let Some(cc) = cc {
-                        t = cc.get(&id);
+                        t = cc.m().get(&id);
                     }
                 }
                 if t.is_null() {
@@ -1552,7 +1571,7 @@ impl MSDevice_Taxi {
         if key == "pickUpDuration" || key == "dropOffDuration" {
             // store as generic vehicle parameters
             let holderPtr = self.myHolder;
-            let par: &mut SUMOVehicleParameter = unsafe { &mut *(holderPtr.m().get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter) };
+            let par: &mut SUMOVehicleParameter = unsafe { &mut *Ptr::new(holderPtr.m().get_parameter()).as_raw() };
             par.set_parameter(&format!("device.taxi.{}", key), value);
         } else {
             panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
@@ -1750,17 +1769,18 @@ impl MSDevice_Taxi {
         let algo = utils::options::options_cont::get_string("device.taxi.dispatch-algorithm");
         let mut params = Parameterised::new();
         params.set_parameters_str(&utils::options::options_cont::get_string("device.taxi.dispatch-algorithm.params"), ":", ",");
+        // shortcut: dispatch constructors take Parameterised::Map as Unmapped (&()), so the parsed params are not forwarded yet; upgrade with the Parameterised port
         let pm = params.get_parameters_map();
         let dispatcher: Ptr<MSDispatch> = if algo == "greedy" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_Greedy::new(pm)))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_Greedy::new(&())))).cast::<MSDispatch>()
         } else if algo == "greedyClosest" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyClosest::new(pm)))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyClosest::new(&())))).cast::<MSDispatch>()
         } else if algo == "greedyShared" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyShared::new(pm)))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_GreedyShared::new(&())))).cast::<MSDispatch>()
         } else if algo == "routeExtension" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_RouteExtension::new(pm)))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_RouteExtension::new(&())))).cast::<MSDispatch>()
         } else if algo == "traci" {
-            Ptr::from_mut(Box::leak(Box::new(MSDispatch_TraCI::new(pm)))).cast::<MSDispatch>()
+            Ptr::from_mut(Box::leak(Box::new(MSDispatch_TraCI::new(&())))).cast::<MSDispatch>()
         } else {
             panic!("{}", ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
         };
@@ -1777,7 +1797,9 @@ impl MSDevice_Taxi {
             next = now + delay;
         }
         MY_NEXT_DISPATCH_TIME.with(|t| *t.borrow_mut() = next);
-        MSNet::get_instance().get_end_of_timestep_events().add_event(command, next);
+        // shortcut: the dispatch StaticCommand is not ported (command is a placeholder), so it cannot be scheduled; upgrade with StaticCommand
+        let _ = (command, next);
+        panic!("shortcut: triggerDispatch scheduling not ported");
     }
 
     /// C++: `void MSDevice_Taxi::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -1835,9 +1857,9 @@ impl MSDevice_Taxi {
         let algo = holder.get_string_param("device.taxi.idle-algorithm", false, "");
         let idle: Ptr<MSIdling>;
         if algo == "stop" {
-            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_Stop::new()))).cast::<MSIdling>();
+            idle = { panic!("shortcut: MSIdling_Stop constructor not ported") };
         } else if algo == "randomCircling" {
-            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_RandomCircling::new()))).cast::<MSIdling>();
+            idle = { panic!("shortcut: MSIdling_RandomCircling constructor not ported") };
             // make sure simulation terminates
             let depart = if holder.get_parameter().departProcedure == DepartDefinition::GIVEN {
                 holder.get_parameter().depart
@@ -1931,7 +1953,7 @@ impl MSDevice_Taxi {
         } else if !self.myRoutingDevice.is_null() {
             self.myRoutingDevice.m().set_active(true);
         }
-        if holder.is_stopped() && (self.is_empty() || MSGlobals::g_use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
+        if holder.is_stopped() && (self.is_empty() || g_use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
             // limit duration of stop (but only for idling-related stops)
             holder.get_next_stop_mutable().endBoarding = self.myServiceEnd;
         }
@@ -2097,7 +2119,8 @@ impl MSDevice_Taxi {
             edges.push(stopEdge);
         }
         *lastPos = stopPos;
-        let mut stop = SUMOVehicleParameter_Stop::default();
+        // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
+        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
         stop.lane = self.get_stop_lane(stopEdge, action).get_id().to_string();
         if !stopPlace.is_null() && stopPlaceEdge == stopEdge {
             stop.startPos = stopPlace.get_begin_lane_position();
@@ -2260,8 +2283,10 @@ impl MSDevice_Taxi {
                     bestSwap.m().get_holder().abort_next_stop(0);
                 }
                 let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
-                for res in self.myCurrentReservations.iter() {
-                    dispatcher.m().swapped_running(*res, Ptr::from_mut(self));
+                let me = Ptr::from_mut(self);
+                let reservations = self.myCurrentReservations.clone();
+                for res in reservations.iter() {
+                    dispatcher.m().swapped_running(*res, me);
                 }
             }
         }
