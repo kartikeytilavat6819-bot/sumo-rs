@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use utils::common::msg_handler::{write_error, write_message};
 use utils::common::sumo_vehicle_class::parse_vehicle_classes_vec;
 use utils::common::time::{SUMOTIME_MAX, delta_t, steps2time, string2time, time2steps};
 
