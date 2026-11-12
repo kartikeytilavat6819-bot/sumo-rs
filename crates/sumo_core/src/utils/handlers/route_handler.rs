@@ -61,7 +61,7 @@ fn time_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> 
     or_throw(obj.get_time_attribute(attr))
 }
 fn color_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> RGBColor {
-    *or_throw(obj.get_color_attribute(attr))
+    or_throw(obj.get_color_attribute(attr)).clone()
 }
 fn str_list_attr(obj: Ptr<CommonXMLStructure_SumoBaseObject>, attr: SumoXMLAttr) -> Vec<String> {
     or_throw(obj.get_string_list_attribute(attr)).clone()
