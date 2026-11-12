@@ -27,7 +27,16 @@ impl AGActivity {
     //         carPreference(das->carPreference) {}
     #[allow(unused_variables)]
     pub fn new(hh: Ptr<AGHousehold>, das: Ptr<AGDataAndStatistics>, prevTrips: Ptr<VecDeque<AGTrip>>, prio: i32) -> Self {
-        todo!("port AGActivity::AGActivity")
+        Self {
+            myHousehold: hh,
+            myStatData: das,
+            myPreviousTrips: prevTrips,
+            myPartialActivityTrips: VecDeque::new(),
+            activityPriority: prio,
+            genDone: false,
+            timePerKm: das.speedTimePerKm,
+            carPreference: das.carPreference,
+        }
     }
 
     /// C++: `void AGActivity::~AGActivity() noexcept` [virtual]
@@ -48,7 +57,7 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn is_generated(&mut self) -> bool {
-        todo!("port AGActivity::isGenerated")
+        self.genDone
     }
 
     /// C++: `bool AGActivity::generateTrips()` [virtual, pure virtual]
@@ -102,7 +111,42 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn possible_transp_mean(&mut self, destination: AGPosition) -> i32 {
-        todo!("port AGActivity::possibleTranspMean")
+        let FOOT = 1;
+        let BUS = 2;
+        let CAR = 4;
+
+        let mut transp = 0;
+        let home = self.myHousehold.m().get_position();
+
+        if destination.distance_to(&home) <= self.myStatData.maxFootDistance {
+            transp = FOOT;
+            if self.myHousehold.m().get_car_nbr() != 0 {
+                transp += CAR;
+            }
+            if destination.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
+                && home.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
+            {
+                transp += BUS;
+            }
+        } else if self.myHousehold.m().get_car_nbr() == 0 {
+            let d1 = destination.distance_to(&home);
+            let d2 = destination.min_distance_to_2(&self.myStatData.busStations) + home.min_distance_to_2(&self.myStatData.busStations);
+
+            if d1 > d2 {
+                transp = BUS;
+            } else {
+                transp = FOOT;
+            }
+        } else if self.myHousehold.m().get_car_nbr() != 0 { // all other cases
+            if destination.min_distance_to_2(&self.myStatData.busStations) > self.myStatData.maxFootDistance
+                || home.min_distance_to_2(&self.myStatData.busStations) > self.myStatData.maxFootDistance
+            {
+                transp = CAR;
+            } else {
+                transp = CAR + BUS;
+            }
+        }
+        transp
     }
 
     /// C++: `int AGActivity::availableTranspMeans(AGPosition, AGPosition)`
@@ -125,7 +169,20 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn available_transp_means(&mut self, from: AGPosition, to: AGPosition) -> i32 {
-        todo!("port AGActivity::availableTranspMeans")
+        let FOOT = 1;
+        let BUS = 2;
+
+        let mut available = 0;
+
+        if from.distance_to(&to) <= self.myStatData.maxFootDistance {
+            available += FOOT;
+        }
+        if from.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
+            && to.min_distance_to_2(&self.myStatData.busStations) <= self.myStatData.maxFootDistance
+        {
+            available += BUS;
+        }
+        available
     }
 
     /// C++: `int AGActivity::timeToDrive(AGPosition, AGPosition)`
@@ -137,7 +194,8 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn time_to_drive(&mut self, from: AGPosition, to: AGPosition) -> i32 {
-        todo!("port AGActivity::timeToDrive")
+        let dist = from.distance_to(&to);
+        (self.timePerKm * dist / 1000.0) as i32
     }
 
     /// C++: `int AGActivity::depHour(AGPosition, AGPosition, int)`
@@ -164,7 +222,7 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn arr_hour(&mut self, from: AGPosition, to: AGPosition, departure: i32) -> i32 {
-        todo!("port AGActivity::arrHour")
+        departure + self.time_to_drive(from, to)
     }
 
     /// C++: `int AGActivity::randomTimeBetween(int, int)`
@@ -182,7 +240,14 @@ impl AGActivity {
     // }
     #[allow(unused_variables)]
     pub fn random_time_between(&mut self, begin: i32, end: i32) -> i32 {
-        todo!("port AGActivity::randomTimeBetween")
+        if 0 > begin || begin > end {
+            return -1;
+        }
+        if begin == end {
+            return begin;
+        }
+        let tAlea = utils::common::rand_helper::with_default(|r| r.rand_int(end - begin));
+        begin + tAlea
     }
 
     /// C++: `std::list<AGTrip> & AGActivity::getPartialActivityTrips()`
