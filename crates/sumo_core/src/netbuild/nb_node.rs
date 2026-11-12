@@ -2,6 +2,27 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+// C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
+// nb_edge.rs / nb_node.rs expose them as statics).
+// shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
+const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.;
+const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.;
+const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
+const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
+const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
+const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
+const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+
+/// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
+fn nbnode_validate_new(id: &str, position: &Position) {
+    if !utils::xml::sumo_xml_definitions::is_valid_net_id(id) {
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid node id '{}'.", id)));
+    }
+    if position.is_nan() {
+        panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", position, id)));
+    }
+}
+
 /// Computes lane-2-lane connections
 /// C++ class `NBNode::ApproachingDivider` (netbuild/NBNode.h)
 pub struct NBNode_ApproachingDivider {
@@ -89,7 +110,7 @@ impl NBNode_ApproachingDivider {
     // NBNode::ApproachingDivider::~ApproachingDivider() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ApproachingDivider::~ApproachingDivider")
+        // C++ destructor is empty; the Vec members are dropped automatically
     }
 
     /// C++: `int ApproachingDivider::numAvailableLanes() const` [const]
@@ -99,7 +120,7 @@ impl NBNode_ApproachingDivider {
     //         }
     #[allow(unused_variables)]
     pub fn num_available_lanes(&self) -> i32 {
-        todo!("port ApproachingDivider::numAvailableLanes")
+        self.myAvailableLanes.len() as i32
     }
 
     /// C++: `void ApproachingDivider::execute(const int, const int)` [virtual]
@@ -164,7 +185,75 @@ impl NBNode_ApproachingDivider {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, src: i32, dest: i32) {
-        todo!("port ApproachingDivider::execute")
+        assert!((self.myApproaching.len() as i32) > src);
+        // get the origin edge
+        let incomingEdge: Ptr<NBEdge> = self.myApproaching[src as usize];
+        if incomingEdge.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_DONE || incomingEdge.get_step() == NBEdge_EdgeBuildingStep::LANES2LANES_USER {
+            return;
+        }
+        if self.myAvailableLanes.is_empty() {
+            return;
+        }
+        let withBikes = self.myIsBikeEdge || incomingEdge.get_permissions(-1) == SVC_BICYCLE;
+        let mut approachingLanes = incomingEdge.get_connection_lanes(self.myCurrentOutgoing, withBikes, true);
+        if approachingLanes.len() > self.myAvailableLanes.len()
+            || (incomingEdge.get_special_lane(SVC_BUS) >= 0 && self.myCurrentOutgoing.get_special_lane(SVC_BUS) >= 0)
+        {
+            let withBusLanes = self.myIsBusEdge || ((incomingEdge.get_permissions(-1) & SVC_BUS) != 0 && (incomingEdge.get_permissions(-1) & !(SVC_BUS | SVC_VULNERABLE)) == 0);
+            approachingLanes = incomingEdge.get_connection_lanes(self.myCurrentOutgoing, withBikes, withBusLanes);
+        }
+        if approachingLanes.is_empty() {
+            return;
+        }
+        let mut numConnections = approachingLanes.len() as i32;
+        let mut factor: f64 = 1.;
+        let rightOnRed = incomingEdge.get_to_node().get_type() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED;
+        if self.myNumStraight == 1
+            && self.myDirections[src as usize] == LinkDirection::STRAIGHT
+            && ((incomingEdge.get_to_node().is_tl_controlled() && !rightOnRed)
+                || src == 0
+                || (incomingEdge.get_junction_priority(incomingEdge.get_to_node()) == NBEdge_JunctionPriority::MINOR_ROAD as i32 && !rightOnRed))
+        {
+            numConnections = self.myAvailableLanes.len() as i32;
+            factor = approachingLanes.len() as f64 / numConnections as f64;
+            if factor > 0.5 {
+                factor = 1.;
+            }
+        }
+        let approachedLanes = self.spread(numConnections, dest);
+        assert!(approachedLanes.len() <= self.myAvailableLanes.len());
+        // set lanes
+        let maxFrom = approachingLanes.len() as i32 - 1;
+        for i in 0..approachedLanes.len() as i32 {
+            // distribute i evenly on approaching lanes in case we are building more
+            // connections than there are lanes
+            let fromLane = approachingLanes[std::cmp::min((i as f64 * factor) as i32, maxFrom) as usize];
+            let approached = self.myAvailableLanes[approachedLanes[i as usize] as usize];
+            incomingEdge.m().set_connection(
+                fromLane,
+                self.myCurrentOutgoing,
+                approached,
+                NBEdge_Lane2LaneInfoType::COMPUTED,
+                false,
+                false,
+                KeepClear::KEEPCLEAR_UNSPECIFIED,
+                NBEDGE_UNSPECIFIED_CONTPOS,
+                NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
+                NBEDGE_UNSPECIFIED_SPEED,
+                NBEDGE_UNSPECIFIED_FRICTION,
+                NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+                &PositionVector::default(),
+                NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
+                SVC_UNSPECIFIED,
+                false,
+                "",
+                SVC_UNSPECIFIED,
+                SVC_UNSPECIFIED,
+                false,
+            );
+        }
+        // C++ `delete approachedLanes`
+        unsafe { drop(Box::from_raw(approachedLanes.as_raw())) };
     }
 
     /// C++: `std::deque<int> * ApproachingDivider::spread(int, int) const` [const]
@@ -238,7 +327,70 @@ impl NBNode_ApproachingDivider {
     // }
     #[allow(unused_variables)]
     pub fn spread(&self, numLanes: i32, dest: i32) -> Ptr<VecDeque<i32>> {
-        todo!("port ApproachingDivider::spread")
+        let mut ret: VecDeque<i32> = VecDeque::new();
+        // when only one lane is approached, we check, whether the double-value
+        //  is assigned more to the left or right lane
+        if numLanes == 1 {
+            ret.push_back(dest);
+            return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+        }
+
+        let numOutgoingLanes = self.myAvailableLanes.len() as i32;
+        //
+        ret.push_back(dest);
+        let mut noSet = 1;
+        let mut roffset = 1;
+        let mut loffset = 1;
+        while noSet < numLanes {
+            // It may be possible, that there are not enough lanes the source
+            //  lanes may be divided on
+            //  In this case, they remain unset
+            //  !!! this is only a hack. It is possible, that this yields in
+            //   uncommon divisions
+            if numOutgoingLanes == noSet {
+                return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+            }
+
+            // as due to the conversion of double->uint the numbers will be lower
+            //  than they should be, we try to append to the left side first
+            //
+            // check whether the left boundary of the approached street has
+            //  been overridden; if so, move all lanes to the right
+            if dest + loffset >= numOutgoingLanes {
+                loffset -= 1;
+                roffset += 1;
+                for x in ret.iter_mut() {
+                    *x = *x - 1;
+                }
+            }
+            // append the next lane to the left of all edges
+            //  increase the position (destination edge)
+            ret.push_back(dest + loffset);
+            noSet += 1;
+            loffset += 1;
+
+            // as above
+            if numOutgoingLanes == noSet {
+                return Ptr::from_raw(Box::into_raw(Box::new(ret)));
+            }
+
+            // now we try to append the next lane to the right side, when needed
+            if noSet < numLanes {
+                // check whether the right boundary of the approached street has
+                //  been overridden; if so, move all lanes to the right
+                if dest < roffset {
+                    loffset += 1;
+                    roffset -= 1;
+                    for x in ret.iter_mut() {
+                        *x = *x + 1;
+                    }
+                }
+                ret.push_front(dest - roffset);
+                noSet += 1;
+                roffset += 1;
+            }
+        }
+        Ptr::from_raw(Box::into_raw(Box::new(ret)))
     }
 
     /// C++: `ApproachingDivider & ApproachingDivider::operator=(const ApproachingDivider &)` [private]
@@ -246,7 +398,8 @@ impl NBNode_ApproachingDivider {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NBNode_ApproachingDivider) -> &mut NBNode_ApproachingDivider {
-        todo!("port ApproachingDivider::operator=")
+        // C++ declares this operator private and never defines it, so any use is a bug
+        panic!("ApproachingDivider::operator= is private and undefined in C++")
     }
 
 }
@@ -321,7 +474,26 @@ impl NBNode_Crossing {
     // }
     #[allow(unused_variables)]
     pub fn new(_node: Ptr<NBNode>, _edges: &EdgeVector, _width: f64, _priority: bool, _customTLIndex: i32, _customTLIndex2: i32, _customShape: &PositionVector) -> Self {
-        todo!("port Crossing::Crossing")
+        NBNode_Crossing {
+            base: Parameterised::new(),
+            node: _node,
+            edges: _edges.clone(),
+            shape: PositionVector::default(),
+            outlineShape: PositionVector::default(),
+            customWidth: _width,
+            width: _width,
+            id: String::new(),
+            prevWalkingArea: String::new(),
+            nextWalkingArea: String::new(),
+            priority: _priority,
+            customShape: _customShape.clone(),
+            tlLinkIndex: _customTLIndex,
+            tlLinkIndex2: _customTLIndex2,
+            customTLIndex: _customTLIndex,
+            customTLIndex2: _customTLIndex2,
+            tlID: String::new(),
+            valid: true,
+        }
     }
 
 }
@@ -439,7 +611,39 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, position: &Position, type_: SumoXMLNodeType) -> Self {
-        todo!("port NBNode::NBNode")
+        let node = NBNode {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            base2: Parameterised::new(),
+            myPosition: *position,
+            myIncomingEdges: Vec::new(),
+            myOutgoingEdges: Vec::new(),
+            myAllEdges: Vec::new(),
+            myCrossings: Vec::new(),
+            myWalkingAreas: Vec::new(),
+            myWalkingAreaCustomShapes: Vec::new(),
+            myType: type_,
+            myBlockedConnections: BTreeMap::new(),
+            myDistrict: Ptr::null(),
+            myPoly: PositionVector::default(),
+            myHaveCustomPoly: false,
+            myRequest: Ptr::null(),
+            myTrafficLights: BTreeSet::new(),
+            myRadius: NBNODE_UNSPECIFIED_RADIUS,
+            myKeepClear: utils::options::options_cont::get_bool("default.junctions.keep-clear"),
+            myRightOfWay: *utils::xml::sumo_xml_definitions::RightOfWayValues
+                .get(&utils::options::options_cont::get_string("default.right-of-way"))
+                .unwrap(),
+            myFringeType: FringeType::DEFAULT,
+            myRoundaboutType: RoundaboutType::DEFAULT,
+            myName: String::new(),
+            myDiscardAllCrossings: false,
+            myCrossingsLoadedFromSumoNet: 0,
+            myDisplacementError: 0.,
+            myIsBentPriority: false,
+            myTypeWasGuessed: false,
+        };
+        nbnode_validate_new(node.get_id(), &node.myPosition);
+        node
     }
 
     /// C++: `void NBNode::NBNode(const std::string &, const Position &, NBDistrict *)`
@@ -470,7 +674,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, position: &Position, district: Ptr<NBDistrict>) -> Self {
-        todo!("port NBNode::NBNode")
+        // same member initialisation as the (id, position, type) constructor, with the district set
+        let mut node = Self::new(id, position, if district.is_null() { SumoXMLNodeType::UNKNOWN } else { SumoXMLNodeType::DISTRICT });
+        node.myDistrict = district;
+        node
     }
 
     /// C++: `void NBNode::~NBNode() noexcept` [virtual]
@@ -480,7 +687,10 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NBNode::~NBNode")
+        // C++ `delete myRequest` (a no-op for nullptr)
+        if !self.myRequest.is_null() {
+            unsafe { drop(Box::from_raw(self.myRequest.as_raw())) };
+        }
     }
 
     /// C++: `void NBNode::reinit(const Position &, SumoXMLNodeType, bool)`
@@ -512,7 +722,27 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn reinit(&mut self, position: &Position, type_: SumoXMLNodeType, updateEdgeGeometries: bool) {
-        todo!("port NBNode::reinit")
+        self.myPosition = *position;
+        if self.myPosition.is_nan() {
+            panic!("{}", utils::common::util_exceptions::ProcessError::new(format!("Invalid position '{}' for node '{}'", self.myPosition, self.get_id())));
+        }
+        // patch type
+        self.myType = type_;
+        if !Self::is_traffic_light(self.myType) {
+            self.remove_traffic_lights(false);
+        }
+        if updateEdgeGeometries {
+            for edge in self.myIncomingEdges.clone() {
+                let mut geom = edge.get_geometry().clone();
+                *geom.at_mut(-1) = self.myPosition;
+                edge.m().set_geometry(&geom, false);
+            }
+            for edge in self.myOutgoingEdges.clone() {
+                let mut geom = edge.get_geometry().clone();
+                *geom.at_mut(0) = self.myPosition;
+                edge.m().set_geometry(&geom, false);
+            }
+        }
     }
 
     /// C++: `const Position & NBNode::getPosition() const` [const]
@@ -522,7 +752,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port NBNode::getPosition")
+        &self.myPosition
     }
 
     /// C++: `Position NBNode::getCenter() const` [const]
@@ -544,7 +774,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn get_center(&self) -> Position {
-        todo!("port NBNode::getCenter")
+        let mut tmp = self.myPoly.clone();
+        tmp.close_polygon();
+        if tmp.len() < 3 || tmp.around(&self.myPosition, 0.) || tmp.distance2d(&self.myPosition, false) < utils::geom::POSITION_EPS {
+            return self.myPosition;
+        }
+        self.myPoly.get_polygon_center()
     }
 
     /// C++: `const EdgeVector & NBNode::getIncomingEdges() const` [const]
@@ -554,7 +789,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getIncomingEdges")
+        &self.myIncomingEdges
     }
 
     /// C++: `const EdgeVector & NBNode::getOutgoingEdges() const` [const]
@@ -564,7 +799,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getOutgoingEdges")
+        &self.myOutgoingEdges
     }
 
     /// C++: `const EdgeVector & NBNode::getEdges() const` [const]
@@ -574,7 +809,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> &EdgeVector {
-        todo!("port NBNode::getEdges")
+        &self.myAllEdges
     }
 
     /// C++: `SumoXMLNodeType NBNode::getType() const` [const]
@@ -584,7 +819,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> SumoXMLNodeType {
-        todo!("port NBNode::getType")
+        self.myType
     }
 
     /// C++: `double NBNode::getRadius() const` [const]
@@ -594,7 +829,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_radius(&self) -> f64 {
-        todo!("port NBNode::getRadius")
+        self.myRadius
     }
 
     /// C++: `bool NBNode::getKeepClear() const` [const]
@@ -604,7 +839,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_keep_clear(&self) -> bool {
-        todo!("port NBNode::getKeepClear")
+        self.myKeepClear
     }
 
     /// C++: `RightOfWay NBNode::getRightOfWay() const` [const]
@@ -614,7 +849,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_right_of_way(&self) -> RightOfWay {
-        todo!("port NBNode::getRightOfWay")
+        self.myRightOfWay
     }
 
     /// C++: `FringeType NBNode::getFringeType() const` [const]
@@ -624,7 +859,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_fringe_type(&self) -> FringeType {
-        todo!("port NBNode::getFringeType")
+        self.myFringeType
     }
 
     /// C++: `RoundaboutType NBNode::getRoundaboutType() const` [const]
@@ -634,7 +869,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_roundabout_type(&self) -> RoundaboutType {
-        todo!("port NBNode::getRoundaboutType")
+        self.myRoundaboutType
     }
 
     /// C++: `const std::string & NBNode::getName() const` [const]
@@ -644,7 +879,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&self) -> &str {
-        todo!("port NBNode::getName")
+        &self.myName
     }
 
     /// C++: `void NBNode::addTrafficLight(NBTrafficLightDefinition *)`
@@ -659,7 +894,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_traffic_light(&mut self, tlDef: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBNode::addTrafficLight")
+        self.myTrafficLights.insert(tlDef);
+        // rail signals receive a temporary traffic light in order to set connection tl-linkIndex
+        if !Self::is_traffic_light(self.myType) && self.myType != SumoXMLNodeType::RAIL_SIGNAL && self.myType != SumoXMLNodeType::RAIL_CROSSING {
+            self.myType = SumoXMLNodeType::TRAFFIC_LIGHT;
+        }
     }
 
     /// C++: `void NBNode::removeTrafficLight(NBTrafficLightDefinition *)`
@@ -671,7 +910,8 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_traffic_light(&mut self, tlDef: Ptr<NBTrafficLightDefinition>) {
-        todo!("port NBNode::removeTrafficLight")
+        tlDef.m().remove_node(Ptr::from_mut(self));
+        self.myTrafficLights.remove(&tlDef);
     }
 
     /// C++: `void NBNode::removeTrafficLights(bool)`
@@ -689,7 +929,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_traffic_lights(&mut self, setAsPriority: bool) {
-        todo!("port NBNode::removeTrafficLights")
+        let trafficLights = self.myTrafficLights.clone(); // make a copy because we will modify the original
+        for tl in trafficLights {
+            self.remove_traffic_light(tl);
+        }
+        if setAsPriority {
+            self.myType = if !self.myRequest.is_null() {
+                SumoXMLNodeType::PRIORITY
+            } else if self.myType == SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION {
+                SumoXMLNodeType::NOJUNCTION
+            } else {
+                SumoXMLNodeType::DEAD_END
+            };
+        }
     }
 
     /// C++: `bool NBNode::isTLControlled() const` [const]
@@ -699,7 +951,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn is_tl_controlled(&self) -> bool {
-        todo!("port NBNode::isTLControlled")
+        self.myTrafficLights.len() != 0
     }
 
     /// C++: `bool NBNode::hadSignal() const` [const]
@@ -715,7 +967,12 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn had_signal(&self) -> bool {
-        todo!("port NBNode::hadSignal")
+        for e in self.get_incoming_edges() {
+            if e.get_signal_position() != &Position::INVALID {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `const std::set<NBTrafficLightDefinition *> & NBNode::getControllingTLS() const` [const]
@@ -725,7 +982,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_controlling_tls(&self) -> &BTreeSet<Ptr<NBTrafficLightDefinition>> {
-        todo!("port NBNode::getControllingTLS")
+        &self.myTrafficLights
     }
 
     /// C++: `void NBNode::invalidateTLS(NBTrafficLightLogicCont &, bool, bool)`
@@ -766,7 +1023,9 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn shift_tl_connection_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
-        todo!("port NBNode::shiftTLConnectionLaneIndex")
+        for tl in self.myTrafficLights.clone() {
+            tl.m().shift_tl_connection_lane_index(edge, offset, threshold);
+        }
     }
 
     /// C++: `int NBNode::removeSelfLoops(NBDistrictCont &, NBEdgeCont &, NBTrafficLightLogicCont &)`
@@ -821,7 +1080,15 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn reshift_position(&mut self, xoff: f64, yoff: f64) {
-        todo!("port NBNode::reshiftPosition")
+        let offset = Position::new3(xoff, yoff, 0.);
+        self.myPosition.add(&offset);
+        self.myPoly.add(&offset);
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.add(&offset);
+        }
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.add(&offset);
+        }
     }
 
     /// C++: `void NBNode::roundGeometry()`
@@ -841,7 +1108,16 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn round_geometry(&mut self) {
-        todo!("port NBNode::roundGeometry")
+        self.myPosition.round(utils::common::std_defs::g_precision());
+        if self.myHaveCustomPoly {
+            self.myPoly.round(utils::common::std_defs::g_precision(), true);
+        }
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.round(utils::common::std_defs::g_precision(), true);
+        }
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.round(utils::common::std_defs::g_precision(), true);
+        }
     }
 
     /// C++: `void NBNode::mirrorX()`
@@ -864,7 +1140,19 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn mirror_x(&mut self) {
-        todo!("port NBNode::mirrorX")
+        self.myPosition.mul_xy(1., -1.);
+        self.myPoly.mirror_x();
+        // mirror pre-computed geometry of crossings and walkingareas
+        for c in self.myCrossings.iter_mut() {
+            c.customShape.mirror_x();
+            c.shape.mirror_x();
+        }
+        for wa in self.myWalkingAreas.iter_mut() {
+            wa.shape.mirror_x();
+        }
+        for wacs in self.myWalkingAreaCustomShapes.iter_mut() {
+            wacs.shape.mirror_x();
+        }
     }
 
     /// C++: `void NBNode::addIncomingEdge(NBEdge *)`
@@ -879,7 +1167,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_incoming_edge(&mut self, edge: Ptr<NBEdge>) {
-        todo!("port NBNode::addIncomingEdge")
+        assert!(!edge.is_null());
+        if !self.myIncomingEdges.contains(&edge) {
+            self.myIncomingEdges.push(edge);
+            self.myAllEdges.push(edge);
+        }
     }
 
     /// C++: `void NBNode::addOutgoingEdge(NBEdge *)`
@@ -894,7 +1186,11 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn add_outgoing_edge(&mut self, edge: Ptr<NBEdge>) {
-        todo!("port NBNode::addOutgoingEdge")
+        assert!(!edge.is_null());
+        if !self.myOutgoingEdges.contains(&edge) {
+            self.myOutgoingEdges.push(edge);
+            self.myAllEdges.push(edge);
+        }
     }
 
     /// C++: `void NBNode::computeLanes2Lanes()`
