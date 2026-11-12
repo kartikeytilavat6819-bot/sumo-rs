@@ -1,6 +1,9 @@
 //! Port of microsim/devices/MSTransportableDevice_Routing.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::to_double;
+use utils::common::time::{time2steps, time2string, SUMOTIME_MIN};
+use utils::options::options_cont::with_options;
 
 /// A device that performs person rerouting based on current edge speeds
 /// C++ class `MSTransportableDevice_Routing` (microsim/devices/MSTransportableDevice_Routing.h)
@@ -48,7 +51,17 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSTransportableDevice_Routing::insertOptions")
+        MSDevice::insert_default_assignment_options("rerouting", "Routing", oc, true);
+
+        oc.do_register("person-device.rerouting.period", SumoOption::string_typed("0", "TIME"));
+        oc.add_synonyme("person-device.rerouting.period", "person-device.routing.period", true);
+        oc.add_description("person-device.rerouting.period", "Routing", "The period with which the person shall be rerouted");
+
+        oc.do_register("person-device.rerouting.mode", SumoOption::string_with("0"));
+        oc.add_description("person-device.rerouting.mode", "Routing", "Set routing flags (8 ignores temporary blockages)");
+
+        oc.do_register("person-device.rerouting.scope", SumoOption::string_with("stage"));
+        oc.add_description("person-device.rerouting.scope", "Routing", "Which part of the person plan is to be replaced (stage, sequence, or trip)");
     }
 
     /// C++: `bool MSTransportableDevice_Routing::checkOptions(OptionsCont &)` [static]
@@ -56,7 +69,8 @@ impl MSTransportableDevice_Routing {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        todo!("port MSTransportableDevice_Routing::checkOptions")
+        // C++ declares this static but never defines it (MSDevice::checkOptions only calls MSDevice_Routing's)
+        panic!("MSTransportableDevice_Routing::checkOptions has no C++ definition")
     }
 
     /// C++: `void MSTransportableDevice_Routing::buildDevices(MSTransportable &, std::vector<MSTransportableDevice *> &)` [static]
@@ -76,7 +90,22 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn build_devices(p: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
-        todo!("port MSTransportableDevice_Routing::buildDevices")
+        let force = p.get_parameter().was_set(VEHPARS_FORCE_REROUTE);
+        let equipped = force || with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "rerouting", p.get_id(), p.get_parameter(), p.get_vehicle_type().get_parameter(), false, true)
+        });
+        if equipped {
+            // route computation is enabled
+            let period = p.get_time_param("person-device.rerouting.period", false, SUMOTIME_MIN);
+            if period > 0 {
+                MSRoutingEngine::init_weight_update(-1);
+                // build the device
+                let id = format!("routing_{}", p.get_id());
+                // shortcut: device is leaked; the person's device list will own it once person device ownership is ported, upgrade then
+                let device: &mut MSTransportableDevice_Routing = Box::leak(Box::new(MSTransportableDevice_Routing::new(p, &id, period)));
+                into.push(Ptr::from_mut(&mut device.base));
+            }
+        }
     }
 
     /// C++: `void MSTransportableDevice_Routing::~MSTransportableDevice_Routing() noexcept` [virtual]
@@ -89,7 +118,9 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTransportableDevice_Routing::~MSTransportableDevice_Routing")
+        if !self.myRerouteCommand.is_null() {
+            // shortcut: Command/WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+        }
     }
 
     /// C++: `const std::string MSTransportableDevice_Routing::deviceName() const` [const, virtual]
@@ -99,7 +130,7 @@ impl MSTransportableDevice_Routing {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSTransportableDevice_Routing::deviceName")
+        "rerouting".to_string()
     }
 
     /// C++: `void MSTransportableDevice_Routing::saveState(OutputDevice &) const` [const, virtual]
@@ -115,7 +146,11 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        todo!("port MSTransportableDevice_Routing::saveState")
+        out.open_tag_id(SUMO_TAG_DEVICE);
+        out.write_attr(SUMO_ATTR_ID, self.get_id());
+        let internals = vec![format!("{}", self.myPeriod)];
+        out.write_attr(SUMO_ATTR_STATE, &internals.join(" "));
+        out.close_tag("");
     }
 
     /// C++: `void MSTransportableDevice_Routing::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -127,7 +162,9 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port MSTransportableDevice_Routing::loadState")
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        // istringstream >> SUMOTime: whitespace-separated integer, 0 on failed extraction
+        self.myPeriod = state.split_whitespace().next().and_then(|s| s.parse::<SUMOTime>().ok()).unwrap_or(0);
     }
 
     /// C++: `void MSTransportableDevice_Routing::reroute(const SUMOTime, const bool)`
@@ -144,7 +181,16 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, currentTime: SUMOTime, onInit: bool) {
-        todo!("port MSTransportableDevice_Routing::reroute")
+        let holderPtr = self.myHolder;
+        let holder = holderPtr.m();
+        MSRoutingEngine::init_edge_weights(SVC_PEDESTRIAN, -1, -1);
+        //check whether the weights did change since the last reroute
+        if self.myLastRouting >= MSRoutingEngine::get_last_adaptation() {
+            return;
+        }
+        self.myLastRouting = currentTime;
+        // shortcut: MSRoutingEngine::reroute_2 panics until MSRouterProvider and MSTransportableRouter are ported
+        MSRoutingEngine::reroute_2(holder, currentTime, "person-device.rerouting", onInit, false, &Default::default());
     }
 
     /// C++: `std::string MSTransportableDevice_Routing::getParameter(const std::string &) const` [const, virtual]
@@ -158,7 +204,11 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSTransportableDevice_Routing::getParameter")
+        if key == "period" {
+            return time2string(self.myPeriod);
+        }
+        // C++ throws InvalidArgument
+        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
     }
 
     /// C++: `void MSTransportableDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -186,7 +236,23 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSTransportableDevice_Routing::setParameter")
+        let doubleValue: f64 = match to_double(value) {
+            Ok(v) => v,
+            // C++ throws InvalidArgument on NumberFormatException
+            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
+        };
+        if key == "period" {
+            let oldPeriod = self.myPeriod;
+            self.myPeriod = time2steps(doubleValue);
+            if self.myPeriod <= 0 {
+                // shortcut: Command deschedule skipped (no Command type); upgrade when Command exists
+            } else if oldPeriod <= 0 {
+                // shortcut: re-scheduling the WrappingCommand insertion event is not ported; upgrade when Command and MSEventControl take commands
+            }
+        } else {
+            // C++ throws InvalidArgument
+            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+        }
     }
 
     /// C++: `void MSTransportableDevice_Routing::MSTransportableDevice_Routing(MSTransportable &, const std::string &, SUMOTime)` [private]
@@ -201,7 +267,16 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str, period: SUMOTime) -> Self {
-        todo!("port MSTransportableDevice_Routing::MSTransportableDevice_Routing")
+        // C++ reads the scope from the holder before the base device is built
+        let myScope = holder.get_string_param("person-device.rerouting.scope", false, "");
+        // shortcut: the WrappingCommand reroute event is not scheduled (no Command type); upgrade when Command and MSEventControl take commands
+        MSTransportableDevice_Routing {
+            base: MSTransportableDevice::new(holder, id),
+            myPeriod: period,
+            myLastRouting: -1,
+            myRerouteCommand: Ptr::default(),
+            myScope,
+        }
     }
 
     /// C++: `SUMOTime MSTransportableDevice_Routing::wrappedRerouteCommandExecute(SUMOTime)` [private]
@@ -213,7 +288,8 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn wrapped_reroute_command_execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSTransportableDevice_Routing::wrappedRerouteCommandExecute")
+        self.reroute(currentTime, false);
+        self.myPeriod
     }
 
     /// C++: `void MSTransportableDevice_Routing::MSTransportableDevice_Routing(const MSTransportableDevice_Routing &)` [private]
@@ -221,7 +297,7 @@ impl MSTransportableDevice_Routing {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportableDevice_Routing) -> Self {
-        todo!("port MSTransportableDevice_Routing::MSTransportableDevice_Routing")
+        panic!("MSTransportableDevice_Routing copy constructor is private and invalidated in C++")
     }
 
     /// C++: `MSTransportableDevice_Routing & MSTransportableDevice_Routing::operator=(const MSTransportableDevice_Routing &)` [private]
@@ -229,7 +305,7 @@ impl MSTransportableDevice_Routing {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice_Routing) -> &mut MSTransportableDevice_Routing {
-        todo!("port MSTransportableDevice_Routing::operator=")
+        panic!("MSTransportableDevice_Routing assignment operator is private and invalidated in C++")
     }
 
 }
