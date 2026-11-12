@@ -56,8 +56,23 @@ impl MSSOTLPolicy5DStimulus {
     //     stimCoxExpDispersionOutDVal = 0;
     // }
     #[allow(unused_variables)]
-    pub fn new(keyPrefix: String, parameters: &Unmapped /* Parameterised::Map */) -> Self {
-        todo!("port MSSOTLPolicy5DStimulus::MSSOTLPolicy5DStimulus")
+    pub fn new(keyPrefix: String, parameters: &ParameterisedMap) -> Self {
+        Self {
+            base: MSSOTLPolicyDesirability::new(keyPrefix, parameters),
+            stimCoxDVal: 1.0,
+            stimOffsetInDVal: 1.0,
+            stimOffsetOutDVal: 1.0,
+            stimOffsetDispersionInDVal: 1.0,
+            stimOffsetDispersionOutDVal: 1.0,
+            stimDivInDVal: 1.0,
+            stimDivOutDVal: 1.0,
+            stimDivDispersionInDVal: 1.0,
+            stimDivDispersionOutDVal: 1.0,
+            stimCoxExpInDVal: 0.0,
+            stimCoxExpOutDVal: 0.0,
+            stimCoxExpDispersionInDVal: 0.0,
+            stimCoxExpDispersionOutDVal: 0.0,
+        }
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimCox()`
@@ -67,7 +82,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_cox(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimCox")
+        let key = format!("{}_STIM_COX", self.get_key_prefix());
+        self.get_double(&key, self.stimCoxDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimCoxDefVal(double)`
@@ -76,7 +92,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_cox_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimCoxDefVal")
+        self.stimCoxDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimOffsetIn()`
@@ -86,7 +102,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_offset_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimOffsetIn")
+        let key = format!("{}_STIM_OFFSET_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimOffsetInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimOffsetInDefVal(double)`
@@ -95,7 +112,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_offset_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimOffsetInDefVal")
+        self.stimOffsetInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimOffsetOut()`
@@ -105,7 +122,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_offset_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimOffsetOut")
+        let key = format!("{}_STIM_OFFSET_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimOffsetOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimOffsetOutDefVal(double)`
@@ -114,7 +132,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_offset_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimOffsetOutDefVal")
+        self.stimOffsetOutDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimOffsetDispersionIn()`
@@ -124,7 +142,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_offset_dispersion_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimOffsetDispersionIn")
+        let key = format!("{}_STIM_OFFSET_DISPERSION_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimOffsetDispersionInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimOffsetDispersionInDefVal(double)`
@@ -133,7 +152,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_offset_dispersion_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimOffsetDispersionInDefVal")
+        self.stimOffsetDispersionInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimOffsetDispersionOut()`
@@ -143,7 +162,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_offset_dispersion_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimOffsetDispersionOut")
+        let key = format!("{}_STIM_OFFSET_DISPERSION_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimOffsetDispersionOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimOffsetDispersionOutDefVal(double)`
@@ -152,7 +172,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_offset_dispersion_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimOffsetDispersionOutDefVal")
+        self.stimOffsetDispersionOutDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimDivisorIn()`
@@ -162,7 +182,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_divisor_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimDivisorIn")
+        let key = format!("{}_STIM_DIVISOR_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimDivInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimDivisorInDefVal(double)`
@@ -171,7 +192,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_divisor_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimDivisorInDefVal")
+        self.stimDivInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimDivisorOut()`
@@ -181,7 +202,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_divisor_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimDivisorOut")
+        let key = format!("{}_STIM_DIVISOR_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimDivOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimDivisorOutDefVal(double)`
@@ -190,7 +212,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_divisor_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimDivisorOutDefVal")
+        self.stimDivOutDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimDivisorDispersionIn()`
@@ -200,7 +222,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_divisor_dispersion_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimDivisorDispersionIn")
+        let key = format!("{}_STIM_DIVISOR_DISPERSION_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimDivDispersionInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimDivisorDispersionInDefVal(double)`
@@ -209,7 +232,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_divisor_dispersion_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimDivisorDispersionInDefVal")
+        self.stimDivDispersionInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimDivisorDispersionOut()`
@@ -219,7 +242,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_divisor_dispersion_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimDivisorDispersionOut")
+        let key = format!("{}_STIM_DIVISOR_DISPERSION_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimDivDispersionOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimDivisorDispersionOutDefVal(double)`
@@ -228,7 +252,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_divisor_dispersion_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimDivisorDispersionOutDefVal")
+        self.stimDivDispersionOutDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimCoxExpIn()`
@@ -238,7 +262,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_cox_exp_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimCoxExpIn")
+        let key = format!("{}_STIM_COX_EXP_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimCoxExpInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimCoxExpInDefVal(double)`
@@ -247,7 +272,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_cox_exp_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimCoxExpInDefVal")
+        self.stimCoxExpInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimCoxExpOut()`
@@ -257,7 +282,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_cox_exp_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimCoxExpOut")
+        let key = format!("{}_STIM_COX_EXP_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimCoxExpOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimCoxExpOutDefVal(double)`
@@ -266,7 +292,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_cox_exp_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimCoxExpOutDefVal")
+        self.stimCoxExpOutDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimCoxExpDispersionIn()`
@@ -276,7 +302,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_cox_exp_dispersion_in(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimCoxExpDispersionIn")
+        let key = format!("{}_STIM_COX_EXP_DISPERSION_IN", self.get_key_prefix());
+        self.get_double(&key, self.stimCoxExpDispersionInDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimCoxExpDispersionInDefVal(double)`
@@ -285,7 +312,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_cox_exp_dispersion_in_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimCoxExpDispersionInDefVal")
+        self.stimCoxExpDispersionInDVal = defVal;
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::getStimCoxExpDispersionOut()`
@@ -295,7 +322,8 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn get_stim_cox_exp_dispersion_out(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::getStimCoxExpDispersionOut")
+        let key = format!("{}_STIM_COX_EXP_DISPERSION_OUT", self.get_key_prefix());
+        self.get_double(&key, self.stimCoxExpDispersionOutDVal)
     }
 
     /// C++: `void MSSOTLPolicy5DStimulus::setStimCoxExpDispersionOutDefVal(double)`
@@ -304,7 +332,7 @@ impl MSSOTLPolicy5DStimulus {
     //     }
     #[allow(unused_variables)]
     pub fn set_stim_cox_exp_dispersion_out_def_val(&mut self, defVal: f64) {
-        todo!("port MSSOTLPolicy5DStimulus::setStimCoxExpDispersionOutDefVal")
+        self.stimCoxExpDispersionOutDVal = defVal;
     }
 
     /// C++: `std::string MSSOTLPolicy5DStimulus::getMessage()` [virtual]
@@ -322,7 +350,14 @@ impl MSSOTLPolicy5DStimulus {
     // }
     #[allow(unused_variables)]
     pub fn get_message(&mut self) -> String {
-        todo!("port MSSOTLPolicy5DStimulus::getMessage")
+        let stimCox = utils::common::to_string::f64_to_string_default(self.get_stim_cox());
+        let offsetIn = utils::common::to_string::f64_to_string_default(self.get_stim_offset_in());
+        let offsetOut = utils::common::to_string::f64_to_string_default(self.get_stim_offset_out());
+        let divisorIn = utils::common::to_string::f64_to_string_default(self.get_stim_divisor_in());
+        let divisorOut = utils::common::to_string::f64_to_string_default(self.get_stim_divisor_out());
+        let coxExpIn = utils::common::to_string::f64_to_string_default(self.get_stim_cox_exp_in());
+        let coxExpOut = utils::common::to_string::f64_to_string_default(self.get_stim_cox_exp_out());
+        format!(" stimCox {} StimOffsetIn {} StimOffsetOut {} StimDivisorIn {} StimDivisorOut {} StimCoxExpIn {} StimCoxExpOut {} .", stimCox, offsetIn, offsetOut, divisorIn, divisorOut, coxExpIn, coxExpOut)
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::computeDesirability(double, double)` [virtual]
@@ -333,7 +368,7 @@ impl MSSOTLPolicy5DStimulus {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability(&mut self, vehInMeasure: f64, vehOutMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::computeDesirability")
+        self.compute_desirability_2(vehInMeasure, vehOutMeasure, 0.0, 0.0)
     }
 
     /// C++: `double MSSOTLPolicy5DStimulus::computeDesirability(double, double, double, double)` [virtual]
@@ -377,7 +412,29 @@ impl MSSOTLPolicy5DStimulus {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability_2(&mut self, vehInMeasure: f64, vehOutMeasure: f64, vehInDispersionMeasure: f64, vehOutDispersionMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy5DStimulus::computeDesirability")
+        //it seems to be not enough, a strange segmentation fault appears...
+        if self.get_stim_divisor_in() == 0.0 || self.get_stim_divisor_out() == 0.0 {
+            let errorMessage = format!("INCORRECT VALUES\nStimCoxExpIn={}, StimDivisorIn={}, StimCoxExpOut={}, StimDivisorOut={}", utils::common::to_string::f64_to_string_default(self.get_stim_cox_exp_in()), utils::common::to_string::f64_to_string_default(self.get_stim_divisor_in()), utils::common::to_string::f64_to_string_default(self.get_stim_cox_exp_out()), utils::common::to_string::f64_to_string_default(self.get_stim_divisor_out()));
+            utils::common::msg_handler::write_error(&errorMessage);
+            //C++ assert(-1) is always true, so it has no effect
+            return -1.0;
+        } else {
+            let stimulus = self.get_stim_cox()
+                * (-self.get_stim_cox_exp_in()
+                    * (vehInMeasure - self.get_stim_offset_in()).powf(2.0)
+                    / self.get_stim_divisor_in()
+                    - self.get_stim_cox_exp_out()
+                        * (vehOutMeasure - self.get_stim_offset_out()).powf(2.0)
+                        / self.get_stim_divisor_out()
+                    - self.get_stim_cox_exp_dispersion_in()
+                        * (vehInDispersionMeasure - self.get_stim_offset_dispersion_in()).powf(2.0)
+                        / self.get_stim_divisor_dispersion_in()
+                    - self.get_stim_cox_exp_dispersion_out()
+                        * (vehOutDispersionMeasure - self.get_stim_offset_dispersion_out()).powf(2.0)
+                        / self.get_stim_divisor_dispersion_out())
+                    .exp();
+            return stimulus;
+        }
     }
 
 }
