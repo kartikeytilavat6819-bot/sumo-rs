@@ -13,6 +13,8 @@ thread_local! {
 
 // C++ NIImporter_OpenDrive.h: `#define UNSET_CONNECTION 100000`
 const UNSET_CONNECTION: i32 = 100000;
+// C++ NIImporter_OpenDrive.h: `#define UNSET_LANEVALIDITY 100000`
+const UNSET_LANEVALIDITY: i32 = 100000;
 // shortcut: NBEdge::UNSPECIFIED_* constants are not ported as Rust items; values copied from NBEdge.cpp
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
 const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
@@ -3962,7 +3964,7 @@ impl NIImporter_OpenDrive_OpenDriveController {
     //             id(idArg), name(nameArg) { }
     #[allow(unused_variables)]
     pub fn new(idArg: &str, nameArg: String) -> Self {
-        todo!("port OpenDriveController::OpenDriveController")
+        Self { id: idArg.to_string(), name: nameArg, signalIDs: Vec::new(), junction: String::new() }
     }
 
     /// C++: `void OpenDriveController::OpenDriveController()`
@@ -3970,7 +3972,7 @@ impl NIImporter_OpenDrive_OpenDriveController {
     // OpenDriveController() {}
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port OpenDriveController::OpenDriveController")
+        Self { id: String::new(), name: String::new(), signalIDs: Vec::new(), junction: String::new() }
     }
 
 }
@@ -4014,7 +4016,25 @@ impl NIImporter_OpenDrive_OpenDriveEdge {
     //         }
     #[allow(unused_variables)]
     pub fn new(idArg: &str, streetNameArg: &str, junctionArg: &str, lengthArg: f64) -> Self {
-        todo!("port OpenDriveEdge::OpenDriveEdge")
+        Self {
+            id: idArg.to_string(),
+            streetName: streetNameArg.to_string(),
+            junction: junctionArg.to_string(),
+            length: lengthArg,
+            links: Vec::new(),
+            geometries: Vec::new(),
+            elevations: Vec::new(),
+            offsets: Vec::new(),
+            from: Ptr::default(),
+            to: Ptr::default(),
+            geom: PositionVector::default(),
+            laneOffsets: Vec::new(),
+            laneSections: Vec::new(),
+            signals: Vec::new(),
+            connections: BTreeSet::new(),
+            objects: Vec::new(),
+            isInner: junctionArg != "" && junctionArg != "-1",
+        }
     }
 
     /// C++: `int OpenDriveEdge::getPriority(OpenDriveXMLTag) const` [const]
@@ -4043,7 +4063,26 @@ impl NIImporter_OpenDrive_OpenDriveEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_priority(&self, dir: NIImporter_OpenDrive_OpenDriveXMLTag) -> i32 {
-        todo!("port OpenDriveEdge::getPriority")
+        // for signal interpretations see https://de.wikipedia.org/wiki/Bildtafel_der_Verkehrszeichen_in_der_Bundesrepublik_Deutschland_seit_2013
+        let mut prio = 1;
+        for i in &self.signals {
+            let mut tmp = 1;
+            if i.type_ == "301" || i.type_ == "306" {
+                // priority road or local priority
+                tmp = 2;
+            }
+            if i.type_ == "205" {
+                // yield or stop
+                tmp = 0;
+            }
+            if tmp != 1 && dir == NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT && i.orientation > 0 {
+                prio = tmp;
+            }
+            if tmp != 1 && dir == NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT && i.orientation < 0 {
+                prio = tmp;
+            }
+        }
+        prio
     }
 
 }
@@ -4068,7 +4107,7 @@ impl NIImporter_OpenDrive_OpenDriveGeometry {
     //               type(OPENDRIVE_GT_UNKNOWN) { }
     #[allow(unused_variables)]
     pub fn new(lengthArg: f64, sArg: f64, xArg: f64, yArg: f64, hdgArg: f64) -> Self {
-        todo!("port OpenDriveGeometry::OpenDriveGeometry")
+        Self { length: lengthArg, s: sArg, x: xArg, y: yArg, hdg: hdgArg, type_: NIImporter_OpenDrive_GeometryType::OPENDRIVE_GT_UNKNOWN, params: Vec::new() }
     }
 
 }
@@ -4105,7 +4144,18 @@ impl NIImporter_OpenDrive_OpenDriveLane {
     //             speed(0), width(NBEdge::UNSPECIFIED_WIDTH), permission(0) { }
     #[allow(unused_variables)]
     pub fn new(idArg: i32, levelArg: &str, typeArg: &str) -> Self {
-        todo!("port OpenDriveLane::OpenDriveLane")
+        Self {
+            id: idArg,
+            level: levelArg.to_string(),
+            type_: typeArg.to_string(),
+            successor: UNSET_CONNECTION,
+            predecessor: UNSET_CONNECTION,
+            attributeChanges: Vec::new(),
+            speed: 0.0,
+            width: NBEDGE_UNSPECIFIED_WIDTH,
+            permission: 0,
+            widthData: Vec::new(),
+        }
     }
 
     /// C++: `SVCPermissions OpenDriveLane::computePermission(const NBTypeCont &, const std::vector<std::string> &, const std::vector<std::string> &) const` [const]
@@ -4223,7 +4273,24 @@ impl NIImporter_OpenDrive_OpenDriveLaneSection {
     // }
     #[allow(unused_variables)]
     pub fn new(sArg: f64) -> Self {
-        todo!("port OpenDriveLaneSection::OpenDriveLaneSection")
+        let mut lanesByDir: BTreeMap<NIImporter_OpenDrive_OpenDriveXMLTag, Vec<NIImporter_OpenDrive_OpenDriveLane>> = BTreeMap::new();
+        lanesByDir.insert(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT, Vec::new());
+        lanesByDir.insert(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT, Vec::new());
+        lanesByDir.insert(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_CENTER, Vec::new());
+        Self {
+            s: sArg,
+            sOrig: sArg,
+            length: 0.0,
+            laneMap: BTreeMap::new(),
+            lanesByDir,
+            sumoID: String::new(),
+            rightLaneNumber: 0,
+            leftLaneNumber: 0,
+            rightType: String::new(),
+            leftType: String::new(),
+            discardedInnerWidthLeft: 0.0,
+            discardedInnerWidthRight: 0.0,
+        }
     }
 
     /// C++: `void OpenDriveLaneSection::buildLaneMapping(const NBTypeCont &)`
@@ -4419,7 +4486,12 @@ impl NIImporter_OpenDrive_OpenDriveLink {
     //               elementType(OPENDRIVE_ET_UNKNOWN), contactPoint(OPENDRIVE_CP_UNKNOWN) { }
     #[allow(unused_variables)]
     pub fn new(linkTypeArg: NIImporter_OpenDrive_LinkType, elementIDArg: &str) -> Self {
-        todo!("port OpenDriveLink::OpenDriveLink")
+        Self {
+            linkType: linkTypeArg,
+            elementID: elementIDArg.to_string(),
+            elementType: NIImporter_OpenDrive_ElementType::OPENDRIVE_ET_UNKNOWN,
+            contactPoint: NIImporter_OpenDrive_ContactPoint::OPENDRIVE_CP_UNKNOWN,
+        }
     }
 
 }
@@ -4473,7 +4545,18 @@ impl NIImporter_OpenDrive_OpenDriveSignal {
     //         { }
     #[allow(unused_variables)]
     pub fn new(idArg: &str, typeArg: String, nameArg: String, orientationArg: i32, dynamicArg: bool, sArg: f64) -> Self {
-        todo!("port OpenDriveSignal::OpenDriveSignal")
+        Self {
+            id: idArg.to_string(),
+            type_: typeArg,
+            name: nameArg,
+            priority: String::new(),
+            orientation: orientationArg,
+            dynamic: dynamicArg,
+            s: sArg,
+            minLane: -UNSET_LANEVALIDITY,
+            maxLane: UNSET_LANEVALIDITY,
+            controller: String::new(),
+        }
     }
 
     /// C++: `void OpenDriveSignal::OpenDriveSignal()`
@@ -4481,7 +4564,18 @@ impl NIImporter_OpenDrive_OpenDriveSignal {
     // OpenDriveSignal() {}
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port OpenDriveSignal::OpenDriveSignal")
+        Self {
+            id: String::new(),
+            type_: String::new(),
+            name: String::new(),
+            priority: String::new(),
+            orientation: 0,
+            dynamic: false,
+            s: 0.0,
+            minLane: 0,
+            maxLane: 0,
+            controller: String::new(),
+        }
     }
 
 }
@@ -4504,7 +4598,7 @@ impl NIImporter_OpenDrive_Poly3 {
     //             s(_s), a(_a), b(_b), c(_c), d(_d) {}
     #[allow(unused_variables)]
     pub fn new(_s: f64, _a: f64, _b: f64, _c: f64, _d: f64) -> Self {
-        todo!("port Poly3::Poly3")
+        Self { s: _s, a: _a, b: _b, c: _c, d: _d }
     }
 
     /// C++: `double Poly3::computeAt(double) const` [const]
@@ -4514,7 +4608,8 @@ impl NIImporter_OpenDrive_Poly3 {
     //         }
     #[allow(unused_variables)]
     pub fn compute_at(&self, pos: f64) -> f64 {
-        todo!("port Poly3::computeAt")
+        let ds = pos - self.s;
+        self.a + self.b * ds + self.c * ds * ds + self.d * ds * ds * ds
     }
 
 }
