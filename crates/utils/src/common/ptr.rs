@@ -50,6 +50,12 @@ impl<T: ?Sized> Ptr<T> {
         debug_assert!(!self.0.is_null(), "null Ptr dereference");
         unsafe { &mut *self.0 }
     }
+    /// C++ static_cast / dynamic_cast between a class and its base (base is the first field and
+    /// both structs are #[repr(C)], so the addresses coincide, exactly like single inheritance in C++).
+    /// The caller must know the object really is a `U` (C++ dynamic_cast's runtime check is not done).
+    pub fn cast<U>(self) -> Ptr<U> {
+        Ptr(self.0 as *mut () as *mut U)
+    }
     fn addr(self) -> usize {
         self.0 as *mut () as usize
     }

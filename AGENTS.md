@@ -76,3 +76,10 @@ same output text, same floating-point results.
 - Writer agents: do NOT run cargo at all. The shared build lock makes 20 agents wait for an hour.
   Translate carefully, commit, finish. The lead compiles at merge time and sends errors to a fixer.
 - Fixer agents (told explicitly in their prompt): use your own target dir as instructed there.
+
+### Downcasts (C++ static_cast / dynamic_cast to a subclass)
+
+- Add `#[repr(C)]` to the derived struct in your file (its `base` field must stay first), then
+  `let v: Ptr<MSVehicle> = sumo_vehicle_ptr.cast::<MSVehicle>();`. Same for upcasts.
+- dynamic_cast's runtime type check is not available: only cast where the C++ logic guarantees the
+  type (e.g. after checking a type flag / id prefix); otherwise leave a `// shortcut:` note.
