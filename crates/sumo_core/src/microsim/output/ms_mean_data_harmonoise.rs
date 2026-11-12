@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Harmonoise::MSLaneMeanDataValues` (microsim/output/MSMeanData_Harmonoise.h)
+#[repr(C)] // base must be field 0 for the C++ downcasts
 pub struct MSMeanData_Harmonoise_MSLaneMeanDataValues {
     /// C++ base class `MSMeanData::MeanDataValues`
     pub base: MSMeanData_MeanDataValues,
@@ -36,7 +37,12 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     //       currentTimeN(0), meanNTemp(0), myParent(parent) {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Harmonoise>) -> Self {
-        todo!("port MSLaneMeanDataValues::MSLaneMeanDataValues")
+        MSMeanData_Harmonoise_MSLaneMeanDataValues {
+            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base)),
+            currentTimeN: 0.0,
+            meanNTemp: 0.0,
+            myParent: parent,
+        }
     }
 
     /// C++: `void MSLaneMeanDataValues::~MSLaneMeanDataValues() noexcept` [virtual]
@@ -45,7 +51,7 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSLaneMeanDataValues::~MSLaneMeanDataValues")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSLaneMeanDataValues::reset(bool)` [virtual]
@@ -60,7 +66,11 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn reset(&mut self, afterWrite: bool) {
-        todo!("port MSLaneMeanDataValues::reset")
+        self.sampleSeconds = 0.0;
+        self.currentTimeN = 0.0;
+        self.meanNTemp = 0.0;
+        self.travelledDistance = 0.0;
+        self.resetTime = MSNet::get_instance().get_current_time_step();
     }
 
     /// C++: `void MSLaneMeanDataValues::addTo(MSMeanData::MeanDataValues &) const` [const, virtual]
@@ -74,7 +84,11 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        todo!("port MSLaneMeanDataValues::addTo")
+        // C++ downcast; `base` is the first field (repr(C))
+        let v = unsafe { &mut *(val as *mut MSMeanData_MeanDataValues as *mut MSMeanData_Harmonoise_MSLaneMeanDataValues) };
+        v.sampleSeconds += self.sampleSeconds;
+        v.meanNTemp += self.meanNTemp;
+        v.travelledDistance += self.travelledDistance;
     }
 
     /// C++: `void MSLaneMeanDataValues::update()` [virtual]
@@ -86,7 +100,8 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn update(&mut self) {
-        todo!("port MSLaneMeanDataValues::update")
+        self.meanNTemp += self.currentTimeN;
+        self.currentTimeN = 0.0;
     }
 
     /// C++: `void MSLaneMeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual]
@@ -109,7 +124,20 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        todo!("port MSLaneMeanDataValues::write")
+        let noise = if self.meanNTemp != 0.0 { 10.0 * (self.meanNTemp * ts() / steps2time(period)).log10() } else { 0.0 };
+        dev.write_optional_attr_mask(SUMO_ATTR_NOISE, &noise, *attributeMask, false);
+        if self.sampleSeconds > self.myParent.myMinSamples {
+            let mut traveltime = self.myParent.myMaxTravelTime;
+            if self.travelledDistance > 0.0 {
+                // MIN2(a, b) as std::min: (b < a) ? b : a
+                let q = self.myLaneLength * self.sampleSeconds / self.travelledDistance;
+                traveltime = if q < traveltime { q } else { traveltime };
+            }
+            dev.write_optional_attr_mask(SUMO_ATTR_TRAVELTIME, &traveltime, *attributeMask, false);
+        } else if defaultTravelTime >= 0.0 {
+            // @todo default value for noise (as in C++)
+            dev.write_optional_attr_mask(SUMO_ATTR_TRAVELTIME, &defaultTravelTime, *attributeMask, false);
+        }
     }
 
     /// C++: `void MSLaneMeanDataValues::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -125,7 +153,10 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     // }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, arg1: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, arg7: f64) {
-        todo!("port MSLaneMeanDataValues::notifyMoveInternal")
+        let sn = HelpersHarmonoise::compute_noise(veh.get_vehicle_type().get_emission_class(), meanSpeedVehicleOnLane, veh.get_acceleration());
+        self.currentTimeN += 10.0_f64.powf(sn / 10.0);
+        self.sampleSeconds += timeOnLane;
+        self.travelledDistance += travelledDistanceVehicleOnLane;
     }
 
 }
@@ -166,7 +197,8 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, minSamples: f64, maxTravelTime: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        todo!("port MSMeanData_Harmonoise::MSMeanData_Harmonoise")
+        let base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, 0, minSamples, maxTravelTime, vTypes, writeAttributes, edges, aggregate);
+        Self { base }
     }
 
     /// C++: `void MSMeanData_Harmonoise::~MSMeanData_Harmonoise() noexcept` [virtual]
@@ -174,7 +206,7 @@ impl MSMeanData_Harmonoise {
     // MSMeanData_Harmonoise::~MSMeanData_Harmonoise() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSMeanData_Harmonoise::~MSMeanData_Harmonoise")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSMeanData_Harmonoise::detectorUpdate(const SUMOTime)` [virtual]
@@ -191,7 +223,14 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        todo!("port MSMeanData_Harmonoise::detectorUpdate")
+        self.base.detector_update(step);
+        for lm in &self.myMeasures {
+            for j in lm {
+                // values in myMeasures are created by this class's createValues, so the downcast is to the same type
+                let v = unsafe { &mut *(j.as_raw() as *mut MSMeanData_Harmonoise_MSLaneMeanDataValues) };
+                v.update();
+            }
+        }
     }
 
     /// C++: `std::vector<std::string> MSMeanData_Harmonoise::getAttributeNames() const` [const, virtual]
@@ -202,7 +241,7 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn get_attribute_names(&self) -> Vec<String> {
-        todo!("port MSMeanData_Harmonoise::getAttributeNames")
+        vec![utils::xml::sumo_xml_definitions_gen::Attrs.get_string(SUMO_ATTR_NOISE).to_string()]
     }
 
     /// C++: `bool MSMeanData_Harmonoise::supports(const SumoXMLAttrMask &)` [static]
@@ -213,7 +252,7 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn supports(attributeMask: &SumoXMLAttrMask) -> bool {
-        todo!("port MSMeanData_Harmonoise::supports")
+        attributeMask.test(SUMO_ATTR_NOISE)
     }
 
     /// C++: `MSMeanData::MeanDataValues * MSMeanData_Harmonoise::createValues(MSLane *const, const double, const bool) const` [const, virtual, protected]
@@ -224,7 +263,9 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        todo!("port MSMeanData_Harmonoise::createValues")
+        // shortcut: the values are leaked (C++ deletes them in ~MSMeanData), upgrade when myMeasures owns its values
+        let values = Box::leak(Box::new(MSMeanData_Harmonoise_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))));
+        Ptr::from_mut(&mut values.base)
     }
 
     /// C++: `void MSMeanData_Harmonoise::MSMeanData_Harmonoise(const MSMeanData_Harmonoise &)` [private]
@@ -232,7 +273,8 @@ impl MSMeanData_Harmonoise {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSMeanData_Harmonoise) -> Self {
-        todo!("port MSMeanData_Harmonoise::MSMeanData_Harmonoise")
+        // C++ copy constructor is private and invalidated (never called)
+        panic!("MSMeanData_Harmonoise copy constructor is invalidated");
     }
 
     /// C++: `MSMeanData_Harmonoise & MSMeanData_Harmonoise::operator=(const MSMeanData_Harmonoise &)` [private]
@@ -240,7 +282,8 @@ impl MSMeanData_Harmonoise {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSMeanData_Harmonoise) -> &mut MSMeanData_Harmonoise {
-        todo!("port MSMeanData_Harmonoise::operator=")
+        // C++ assignment operator is private and invalidated (never called)
+        panic!("MSMeanData_Harmonoise assignment operator is invalidated");
     }
 
 }
