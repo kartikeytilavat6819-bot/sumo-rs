@@ -92,7 +92,7 @@ fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
 fn edge_dictionary(id: &str) -> Ptr<MSEdge> {
     // shortcut: MSEdge::dictionary_2 still takes an Unmapped (string_view) argument, pass the id once ms_edge.rs maps it to &str
     let _ = id;
-    MSEdge::dictionary_2(&())
+    MSEdge::dictionary_2(id)
 }
 
 /// C++ `checkTimeBounds(time)` returns false where it throws TimeFormatException
@@ -312,19 +312,17 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn need_new_subscription(s: &mut Subscription, subscriptions: &mut Vec<Subscription>, modifiedSubscription: &mut Ptr<Subscription>) -> bool {
         for oi in 0..subscriptions.len() {
-            let o = &subscriptions[oi];
-            if s.commandId == o.commandId && s.id == o.id && s.beginTime == o.beginTime && s.endTime == o.endTime && s.contextDomain == o.contextDomain && s.range == o.range {
+            if s.commandId == subscriptions[oi].commandId && s.id == subscriptions[oi].id && s.beginTime == subscriptions[oi].beginTime && s.endTime == subscriptions[oi].endTime && s.contextDomain == subscriptions[oi].contextDomain && s.range == subscriptions[oi].range {
                 let mut k = 0usize;
                 for &v in s.variables.iter() {
-                    let offset = o.variables.iter().position(|&x| x == v).unwrap_or(o.variables.len());
-                    let differs = offset == o.variables.len()
-                        || o.parameters[offset].size() != s.parameters[k].size()
-                        || o.parameters[offset].as_bytes() != s.parameters[k].as_bytes();
+                    let offset = subscriptions[oi].variables.iter().position(|&x| x == v).unwrap_or(subscriptions[oi].variables.len());
+                    let differs = offset == subscriptions[oi].variables.len()
+                        || subscriptions[oi].parameters[offset].size() != s.parameters[k].size()
+                        || subscriptions[oi].parameters[offset].as_bytes() != s.parameters[k].as_bytes();
                     if differs {
                         let param = s.parameters[k].clone();
-                        let o_mut = &mut subscriptions[oi];
-                        o_mut.variables.push(v);
-                        o_mut.parameters.push(param);
+                        subscriptions[oi].variables.push(v);
+                        subscriptions[oi].parameters.push(param);
                     }
                     k += 1;
                 }
@@ -390,7 +388,7 @@ impl Helper {
                 index >>= 1;
             }
         }
-        panic!("No previous vehicle context subscription exists to apply filter type {}", to_hex(filterType as i64, 2));
+        panic!("No previous vehicle context subscription exists to apply filter type {}", to_hex(filterType as u64, 2, 8));
     }
 
     /// C++: `TraCIPositionVector Helper::makeTraCIPositionVector(const PositionVector &)` [static]
@@ -596,7 +594,7 @@ impl Helper {
                 let lane: Ptr<MSLane> = named.cast::<MSLane>(); // dynamic_cast<const MSLane*>
                 if lane.allows_vehicle_class(vClass) {
                     // @todo this may be a place where 3D is required but 2D is used
-                    let mut newDistance = lane.get_shape().distance2d(pos, false);
+                    let mut newDistance = lane.get_shape(false).distance2d(pos, false);
                     newDistance = Helper::patch_shape_distance(lane, pos, newDistance, false);
                     if newDistance < minDistance || (newDistance == minDistance && !result.0.is_null() && lane.get_id() < result.0.get_id()) {
                         minDistance = newDistance;
@@ -605,7 +603,7 @@ impl Helper {
                 }
             }
             if minDistance < f64::MAX {
-                let off = result.0.get_shape().nearest_offset_to_point2d(pos, false);
+                let off = result.0.get_shape(false).nearest_offset_to_point2d(pos, false);
                 result.1 = result.0.interpolate_geometry_pos_to_lane_pos(off);
                 break;
             }
@@ -784,22 +782,22 @@ impl Helper {
     //     newStop.until = until == INVALID_DOUBLE_VALUE ? -1 : TIME2STEPS(until);
     //     newStop.index = STOP_INDEX_FIT;
     //     if (newStop.duration >= 0) {
-    //         newStop.parametersSet |= STOP_DURATION_SET;
+    //         newStop.parametersSet |= STOP_DURATION_SET as i32;
     //     }
     //     if (newStop.until >= 0) {
-    //         newStop.parametersSet |= STOP_UNTIL_SET;
+    //         newStop.parametersSet |= STOP_UNTIL_SET as i32;
     //     }
     //     if ((flags & 1) != 0) {
     //         newStop.parking = ParkingType::OFFROAD;
-    //         newStop.parametersSet |= STOP_PARKING_SET;
+    //         newStop.parametersSet |= STOP_PARKING_SET as i32;
     //     }
     //     if ((flags & 2) != 0) {
     //         newStop.triggered = true;
-    //         newStop.parametersSet |= STOP_TRIGGER_SET;
+    //         newStop.parametersSet |= STOP_TRIGGER_SET as i32;
     //     }
     //     if ((flags & 4) != 0) {
     //         newStop.containerTriggered = true;
-    //         newStop.parametersSet |= STOP_CONTAINER_TRIGGER_SET;
+    //         newStop.parametersSet |= STOP_CONTAINER_TRIGGER_SET as i32;
     //     }
     //
     //     SumoXMLTag stoppingPlaceType = SUMO_TAG_NOTHING;
@@ -870,7 +868,7 @@ impl Helper {
     //         newStop.edge = allLanes[laneIndex]->getEdge().getID();
     //         newStop.endPos = pos;
     //         newStop.startPos = startPos;
-    //         newStop.parametersSet |= STOP_START_SET | STOP_END_SET;
+    //         newStop.parametersSet |= (STOP_START_SET | STOP_END_SET) as i32;
     //     }
     //     return newStop;
     // }
@@ -885,22 +883,22 @@ impl Helper {
         newStop.until = if until == INVALID_DOUBLE_VALUE { -1 } else { time2steps(until) };
         newStop.index = STOP_INDEX_FIT;
         if newStop.duration >= 0 {
-            newStop.parametersSet |= STOP_DURATION_SET;
+            newStop.parametersSet |= STOP_DURATION_SET as i32;
         }
         if newStop.until >= 0 {
-            newStop.parametersSet |= STOP_UNTIL_SET;
+            newStop.parametersSet |= STOP_UNTIL_SET as i32;
         }
         if (flags & 1) != 0 {
             newStop.parking = ParkingType::OFFROAD;
-            newStop.parametersSet |= STOP_PARKING_SET;
+            newStop.parametersSet |= STOP_PARKING_SET as i32;
         }
         if (flags & 2) != 0 {
             newStop.triggered = true;
-            newStop.parametersSet |= STOP_TRIGGER_SET;
+            newStop.parametersSet |= STOP_TRIGGER_SET as i32;
         }
         if (flags & 4) != 0 {
             newStop.containerTriggered = true;
-            newStop.parametersSet |= STOP_CONTAINER_TRIGGER_SET;
+            newStop.parametersSet |= STOP_CONTAINER_TRIGGER_SET as i32;
         }
 
         let mut stoppingPlaceType = SUMO_TAG_NOTHING;
@@ -960,7 +958,7 @@ impl Helper {
             newStop.edge = allLanes[laneIndex as usize].get_edge().get_id().to_string();
             newStop.endPos = pos;
             newStop.startPos = startPos;
-            newStop.parametersSet |= STOP_START_SET | STOP_END_SET;
+            newStop.parametersSet |= (STOP_START_SET | STOP_END_SET) as i32;
         }
         newStop
     }
@@ -1123,12 +1121,12 @@ impl Helper {
                     _ => SUMO_TAG_PARKING_AREA,
                 };
                 let stop = Helper::get_stopping_place(id, tag);
-                shape.push(stop.get_lane().get_shape().position_at_offset(stop.get_begin_lane_position(), 0.0));
-                shape.push(stop.get_lane().get_shape().position_at_offset(stop.get_end_lane_position(), 0.0));
+                shape.push(stop.get_lane().get_shape(false).position_at_offset(stop.get_begin_lane_position(), 0.0));
+                shape.push(stop.get_lane().get_shape(false).position_at_offset(stop.get_end_lane_position(), 0.0));
             }
             CMD_SUBSCRIBE_CALIBRATOR_CONTEXT => {
                 let calib = Calibrator::get_calibrator(id);
-                shape.push(calib.get_lane().get_shape()[0]);
+                shape.push(calib.get_lane().get_shape(false)[0]);
             }
             CMD_SUBSCRIBE_EDGE_CONTEXT => Edge::store_shape(id, shape),
             CMD_SUBSCRIBE_INDUCTIONLOOP_CONTEXT => InductionLoop::store_shape(id, shape),
@@ -1138,10 +1136,10 @@ impl Helper {
             CMD_SUBSCRIBE_MULTIENTRYEXIT_CONTEXT => {
                 let det = MultiEntryExit::get_detector(id);
                 for cs in det.get_entries().iter() {
-                    shape.push(cs.myLane.get_shape().position_at_offset(cs.myPosition, 0.0));
+                    shape.push(cs.myLane.get_shape(false).position_at_offset(cs.myPosition, 0.0));
                 }
                 for cs in det.get_exits().iter() {
-                    shape.push(cs.myLane.get_shape().position_at_offset(cs.myPosition, 0.0));
+                    shape.push(cs.myLane.get_shape(false).position_at_offset(cs.myPosition, 0.0));
                 }
             }
             CMD_SUBSCRIBE_PERSON_CONTEXT => Person::store_shape(id, shape),
@@ -1510,8 +1508,8 @@ impl Helper {
                         let lane = vehLane.get_parallel_lane(offset, false);
                         if !lane.is_null() {
                             // this is a non-opposite lane
-                            let leader = lane.get_leader(v, v.get_position_on_lane(), v.get_best_lanes_continuation(), downstreamDist).0;
-                            let follower = lane.get_follower(v, v.get_position_on_lane(), upstreamDist, MSLane_MinorLinkMode::FOLLOW_ALWAYS).0;
+                            let leader = lane.get_leader(v, v.get_position_on_lane(), v.get_best_lanes_continuation(), downstreamDist, false).0;
+                            let follower = lane.get_follower(v, v.get_position_on_lane(), upstreamDist, MSLane_MinorLinkMode::FOLLOW_ALWAYS, false).0;
                             vehs.insert(leader.cast::<SUMOTrafficObject>());
                             vehs.insert(follower.cast::<SUMOTrafficObject>());
                         } else if !disregardOppositeDirection && offset > 0 {
@@ -1533,9 +1531,9 @@ impl Helper {
                             // XXX transformations for curved geometries
                             let posOnOpposite = f64::max(0., opposite.get_length() - v.get_position_on_lane());
                             // Get leader on opposite
-                            vehs.insert(lane.get_follower(v, posOnOpposite, downstreamDist, MSLane_MinorLinkMode::FOLLOW_NEVER).0.cast::<SUMOTrafficObject>());
+                            vehs.insert(lane.get_follower(v, posOnOpposite, downstreamDist, MSLane_MinorLinkMode::FOLLOW_NEVER, false).0.cast::<SUMOTrafficObject>());
                             // Get follower (no search on consecutive lanes
-                            vehs.insert(lane.get_leader(v, posOnOpposite - v.get_length(), &Vec::new()).0.cast::<SUMOTrafficObject>());
+                            vehs.insert(lane.get_leader(v, posOnOpposite - v.get_length(), &Vec::new(), -1., false).0.cast::<SUMOTrafficObject>());
                         }
                     }
                 }
@@ -1685,7 +1683,7 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn apply_subscription_filter_lanes(s: &Subscription, vehs: &mut BTreeSet<Ptr<SUMOTrafficObject>>, filterLanes: &mut Vec<i32>, downstreamDist: f64, upstreamDist: f64, disregardOppositeDirection: bool) {
         if !s.is_vehicle_to_vehicle_context_subscription() {
-            utils::write_warningf!("Lanes filter is only feasible for context domain 'vehicle' (current is '%'), ignoring filter...", to_hex(s.contextDomain as i64, 2));
+            utils::write_warningf!("Lanes filter is only feasible for context domain 'vehicle' (current is '%'), ignoring filter...", to_hex(s.contextDomain as u64, 2, 8));
             return;
         }
         assert!(filterLanes.len() > 0);
@@ -1834,7 +1832,7 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn apply_subscription_filter_turn(s: &Subscription, vehs: &mut BTreeSet<Ptr<SUMOTrafficObject>>) {
         if !s.is_vehicle_to_vehicle_context_subscription() {
-            utils::write_warningf!("Turn filter is only feasible for context domain 'vehicle' (current is '%'), ignoring filter...", to_hex(s.contextDomain as i64, 2));
+            utils::write_warningf!("Turn filter is only feasible for context domain 'vehicle' (current is '%'), ignoring filter...", to_hex(s.contextDomain as u64, 2, 8));
             return;
         }
         // Get upcoming junctions and vialanes within downstream distance, where foe links exist or at least the link direction is not straight
@@ -2062,7 +2060,7 @@ impl Helper {
         let mut isFirstLane = true;
         let mut combinedShape = PositionVector(Vec::new());
         for lane in lanes.iter() {
-            let mut laneShape = lane.get_shape();
+            let mut laneShape: PositionVector = lane.get_shape(false).clone();
             if isFirstLane {
                 isFirstLane = false;
                 let geometryPos = lane.interpolate_lane_pos_to_geometry_pos(posOnLane);
@@ -2178,7 +2176,8 @@ impl Helper {
         let persons = my_remote_controlled_persons();
         for (id, controlled) in persons.iter() {
             if !MSNet::get_instance().m().get_person_control().get(id).is_null() {
-                controlled.m().get_influencer().post_process_remote_control(*controlled);
+                // shortcut: person remote-control post-processing (MSPerson influencer) is not ported, upgrade when it is
+                panic!("shortcut: person remote control post-processing not ported");
                 numControlled += 1;
             } else {
                 utils::write_warningf!("Person '%' was removed though being controlled by TraCI", id);
@@ -2692,7 +2691,7 @@ impl Helper {
                 if !l.allows_vehicle_class(vClass) {
                     continue;
                 }
-                if l.get_shape().length() == 0. {
+                if l.get_shape(false).length() == 0. {
                     // mapping to shapeless lanes is a bad idea
                     continue;
                 }
@@ -2702,18 +2701,18 @@ impl Helper {
                 // add some slack to avoid issues from tiny gaps between consecutive lanes
                 // except when simulating with high precision where the slack can throw of mapping
                 let slack = utils::geom::POSITION_EPS * ts();
-                let mut laneShape = l.get_shape();
+                let mut laneShape: PositionVector = l.get_shape(false).clone();
                 laneShape.extrapolate2d(slack, false);
                 let mut off = laneShape.nearest_offset_to_point2d(pos, true);
                 if off != geom_helper::INVALID_OFFSET {
                     perpendicularDist = laneShape.distance2d(pos, true);
                     perpendicularDist = Helper::patch_shape_distance(l, pos, perpendicularDist, true);
                 }
-                off = l.get_shape().nearest_offset_to_point2d(pos, perpendicular);
+                off = l.get_shape(false).nearest_offset_to_point2d(pos, perpendicular);
                 if off != geom_helper::INVALID_OFFSET {
-                    dist = l.get_shape().distance2d(pos, perpendicular);
+                    dist = l.get_shape(false).distance2d(pos, perpendicular);
                     dist = Helper::patch_shape_distance(l, pos, dist, perpendicular);
-                    langle = geom_helper::navi_degree(l.get_shape().rotation_at_offset(off));
+                    langle = geom_helper::navi_degree(l.get_shape(false).rotation_at_offset(off));
                 }
                 // cannot trust lanePos on walkingArea
                 let sameEdge = onRoad && e == Ptr::from_mut(currentLane.m().get_edge()) && currentRouteEdge.get_length() > currentLanePos + speed2dist(speed) && !e.is_walking_area();
@@ -2725,7 +2724,7 @@ impl Helper {
                 let angle2 = if useCurrentAngle { currentAngle } else { angle };
                 let angleDiff = if angle2 == INVALID_DOUBLE_VALUE || l.is_walking_area() { 0. } else { geom_helper::get_min_angle_diff(angle2, langle) };
 
-                let mut origIDMatch = l.get_parameter(SUMO_PARAM_ORIGID, l.get_id()) == origID;
+                let mut origIDMatch: bool = panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised");
                 if origIDMatch && setLateralPos && perpendicularDist > l.get_width() / 2. {
                     origIDMatch = false;
                 }
@@ -2765,7 +2764,7 @@ impl Helper {
         let u = &lane2utility.iter().find(|(l, _)| *l == bestLane).unwrap().1;
         *bestDistance = u.dist;
         *lane.m() = bestLane;
-        *lanePos = f64::max(0., f64::min(bestLane.get_length() - utils::geom::NUMERICAL_EPS, bestLane.interpolate_geometry_pos_to_lane_pos(bestLane.get_shape().nearest_offset_to_point25d(pos, false))));
+        *lanePos = f64::max(0., f64::min(bestLane.get_length() - utils::geom::NUMERICAL_EPS, bestLane.interpolate_geometry_pos_to_lane_pos(bestLane.get_shape(false).nearest_offset_to_point25d(pos, false))));
         let prevEdge = u.prevEdge;
         if u.onRoute {
             let prevEdgePos = currentRoute.iter().position(|&x| x == prevEdge).unwrap_or(currentRoute.len());
@@ -2970,11 +2969,11 @@ impl Helper {
         if !(*lane).get_edge().is_internal() {
             let lanes = (*lane).get_edge().get_lanes().clone();
             for li in lanes.iter() {
-                if li.get_parameter(SUMO_PARAM_ORIGID, li.get_id()) == origID {
+                if { panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised") } {
                     if setLateralPos {
                         // vehicle might end up on top of another lane with a big
                         // lateral offset to the lane with origID.
-                        let dist = li.get_shape().distance2d(pos, false); // get distance
+                        let dist = li.get_shape(false).distance2d(pos, false); // get distance
                         if dist < li.get_width() / 2. {
                             *lane.m() = *li;
                             break;
@@ -2988,7 +2987,7 @@ impl Helper {
         }
         // check position, stuff, we should have the best lane along the route
         let l = *lane.m();
-        *lanePos = f64::max(0., f64::min(l.get_length() - utils::geom::NUMERICAL_EPS, l.interpolate_geometry_pos_to_lane_pos(l.get_shape().nearest_offset_to_point25d(pos, false))));
+        *lanePos = f64::max(0., f64::min(l.get_length() - utils::geom::NUMERICAL_EPS, l.interpolate_geometry_pos_to_lane_pos(l.get_shape(false).nearest_offset_to_point25d(pos, false))));
         true
     }
 
@@ -3051,11 +3050,11 @@ impl Helper {
             if !candidateLane.allows_vehicle_class(vClass) {
                 continue;
             }
-            if candidateLane.get_shape().length() == 0. {
+            if candidateLane.get_shape(false).length() == 0. {
                 // mapping to shapeless lanes is a bad idea
                 continue;
             }
-            let mut dist = candidateLane.get_shape().distance2d(pos, false);
+            let mut dist = candidateLane.get_shape(false).distance2d(pos, false);
             dist = Helper::patch_shape_distance(candidateLane, pos, dist, false);
             if dist < *bestDistance || (dist == *bestDistance && candidateLane.get_numerical_id() < (*lane.m()).get_numerical_id()) {
                 // is the new distance the best one? keep then...
@@ -3094,7 +3093,7 @@ impl Helper {
     #[allow(unused_variables)]
     pub fn patch_shape_distance(lane: Ptr<MSLane>, pos: &Position, dist: f64, wasPerpendicular: bool) -> f64 {
         let mut dist = dist;
-        if !lane.is_walking_area() && (wasPerpendicular || lane.get_shape().nearest_offset_to_point25d(pos, true) != geom_helper::INVALID_OFFSET) {
+        if !lane.is_walking_area() && (wasPerpendicular || lane.get_shape(false).nearest_offset_to_point25d(pos, true) != geom_helper::INVALID_OFFSET) {
             dist = f64::max(0.0, dist - lane.get_width() * 0.5);
         }
         dist
@@ -3283,13 +3282,13 @@ impl Helper {
         }
         let handler: Rc<VariableWrapper> = match my_wrapper().get(&getCommandId) {
             Some(h) => h.clone(),
-            None => panic!("Unsupported command {} specified", to_hex(getCommandId as i64, 2)),
+            None => panic!("Unsupported command {} specified", to_hex(getCommandId as u64, 2, 8)),
         };
         let container: Ptr<VariableWrapper>;
         if s.contextDomain > 0 {
             let containerWrapper = match my_wrapper().get(&(s.commandId + 0x20)) {
                 Some(c) => c.clone(),
-                None => panic!("Unsupported domain {} specified", to_hex((s.commandId + 0x20) as i64, 2)),
+                None => panic!("Unsupported domain {} specified", to_hex((s.commandId + 0x20) as u64, 2, 8)),
             };
             container = Ptr::new(&*containerWrapper);
             container.m().set_context(Ptr::new(&s.id));
@@ -3307,7 +3306,7 @@ impl Helper {
                     } else {
                         Ptr::new(&*s.parameters[k]).m().reset_pos();
                         // shortcut: VariableWrapper::handle is Unmapped (), the variable handler dispatch is not ported yet
-                        panic!("shortcut: VariableWrapper::handle is Unmapped, cannot dispatch variable {}", to_hex(variable as i64, 2));
+                        panic!("shortcut: VariableWrapper::handle is Unmapped, cannot dispatch variable {}", to_hex(variable as u64, 2, 8));
                     }
                 }
             } else if s.contextDomain > 0 {
@@ -3618,7 +3617,7 @@ impl Helper_SubscriptionWrapper {
     // }
     #[allow(unused_variables)]
     pub fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
-        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIRoadPosition::new(value.0.clone(), value.1)));
+        self.myActiveResults.m().entry(objID.to_string()).or_default().insert(variable, as_traci_result(TraCIRoadPosition::new(value.0.clone(), value.1, INVALID_INT_VALUE)));
         true
     }
 

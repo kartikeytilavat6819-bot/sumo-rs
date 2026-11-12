@@ -614,7 +614,8 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_min_expected_number() -> i32 {
-        let net = MSNet::get_instance().m();
+        let net_ptr = MSNet::get_instance();
+        let net = net_ptr.m();
         net.get_vehicle_control().get_active_vehicle_count()
             + net.get_insertion_control().get_pending_flow_count()
             + (if net.has_persons() { net.get_person_control().get_active_count() } else { 0 })
@@ -653,10 +654,10 @@ impl Simulation {
         if isGeo {
             GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos));
         }
-        if !SumoVehicleClassStrings::has_string(vClass) {
+        if SUMO_VEHICLE_CLASS_STRINGS.get(vClass).is_err() {
             panic!("Unknown vehicle class '{}'.", vClass);
         }
-        let vc: SUMOVehicleClass = SumoVehicleClassStrings::get(vClass);
+        let vc: SUMOVehicleClass = SUMO_VEHICLE_CLASS_STRINGS.get(vClass).unwrap();
         let (lane, laneDist) = Helper::convert_cartesian_to_road_map(&pos, vc);
         if lane.is_null() {
             panic!("Cannot convert position to road.");
@@ -918,7 +919,7 @@ impl Simulation {
     pub fn get_parameter(objectID: &str, key: &str) -> String {
         // shortcut: only the generic network parameters (empty objectID, no prefix) are ported; the prefixed chargingStation./overheadWire./net./stats./parkingArea./busStop./device.tripinfo./buildConfig. branches need their owning classes
         if objectID == "" && !key.starts_with("chargingStation.") && !key.starts_with("overheadWire.") && !key.starts_with("net.") && !key.starts_with("stats.") && !key.starts_with("parkingArea.") && !key.starts_with("busStop.") && !key.starts_with("device.tripinfo.") && !key.starts_with("buildConfig.") {
-            return MSNet::get_parameter(key, "");
+            return panic!("shortcut: MSNet generic parameters not ported, upgrade when MSNet is Parameterised");
         }
         panic!("shortcut: Simulation::getParameter branch for '{}' is not ported yet", key);
     }
