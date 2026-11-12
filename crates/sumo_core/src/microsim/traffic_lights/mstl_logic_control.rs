@@ -449,12 +449,11 @@ impl MSTLLogicControl {
         // activate the first one
         if firstIndex >= 0 {
             let cmd = Box::into_raw(Box::new(MSTLLogicControl_SwitchInitCommand::new(self, wautid, firstIndex)));
-            // shortcut: the begin-of-timestep queue takes Command as Ptr<()> (Command is Unmapped), so the scheduled switch cannot run yet, upgrade when Command is ported
             MSNet::get_instance()
                 .m()
                 .get_begin_of_timestep_events()
                 .m()
-                .add_event(Ptr::from_raw(cmd as *mut ()), std::cmp::max(now, minExecTime));
+                .add_event(Ptr::from_raw(cmd as *mut dyn crate::microsim::ms_event_control::Command), std::cmp::max(now, minExecTime));
         }
     }
 
@@ -754,6 +753,12 @@ pub struct MSTLLogicControl_SwitchInitCommand {
     pub myWAUTID: String,
     /// The current index within the WAUT switch table
     pub myIndex: i32,
+}
+
+impl crate::microsim::ms_event_control::Command for MSTLLogicControl_SwitchInitCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSTLLogicControl_SwitchInitCommand::execute(self, currentTime)
+    }
 }
 
 impl std::ops::Deref for MSTLLogicControl_SwitchInitCommand {

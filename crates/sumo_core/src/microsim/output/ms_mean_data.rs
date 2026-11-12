@@ -145,7 +145,7 @@ impl MSMeanData {
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
         let attrs = OutputDevice::parse_written_attributes(&StringTokenizer::new(writeAttributes).get_vector(), &format!("meandata '{}'", id), &HashMap::new());
         let mut this = MSMeanData {
-            base: MSDetectorFileOutput::new(id, vTypes, "", detectPersons),
+            base: MSDetectorFileOutput::new(id, vTypes, "", detectPersons).unwrap(),
             myMinSamples: minSamples,
             myMaxTravelTime: maxTravelTime,
             myMeasures: Vec::new(),
@@ -1302,7 +1302,7 @@ impl MSMeanData_MeanDataValueTracker {
             return true;
         }
         let key = Ptr::from_mut(&mut *veh);
-        if self.myParent.vehicleApplies(veh) && !self.myTrackedData.contains_key(&key) {
+        if self.myParent.base.vehicle_applies(veh) && !self.myTrackedData.contains_key(&key) {
             let entry = self.myCurrentData.back().unwrap().clone();
             self.myTrackedData.insert(key, entry.clone());
             entry.myNumVehicleEntered.set(entry.myNumVehicleEntered.get() + 1);
@@ -1492,7 +1492,7 @@ impl MSMeanData_MeanDataValues {
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         // UNUSED_PARAMETER(reason), enteredLane is only used in debug output in C++
-        self.myParent.is_null() || self.myParent.vehicleApplies(veh)
+        self.myParent.is_null() || self.myParent.base.vehicle_applies(veh)
     }
 
     /// C++: `bool MeanDataValues::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
