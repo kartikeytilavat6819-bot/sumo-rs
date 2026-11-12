@@ -424,8 +424,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
         let mut landmarks: Vec<Ptr<E>> = Vec::new();
         let mut numLandMarks: i32 = 0;
         let mut haveData = false;
-        for line in text.split('
-        ') {
+        for line in text.split('\n') {
             if line == "" {
                 break;
             }
