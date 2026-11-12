@@ -9604,7 +9604,137 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_lane_advances(&mut self, passedLanes: &mut Vec<Ptr<MSLane>>, emergencyReason: &mut String) {
-        todo!("port MSVehicle::processLaneAdvances")
+        let this: Ptr<MSVehicle> = Ptr::from_mut(self);
+        for i in self.myFurtherLanes.iter().rev() {
+            passedLanes.push(*i);
+        }
+        if passedLanes.len() == 0 || passedLanes[passedLanes.len() - 1] != self.myLane {
+            passedLanes.push(self.myLane);
+        }
+
+        // let trains reverse direction
+        let mut reverseTrain = false;
+        self.check_reversal(&mut reverseTrain, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, 0.0);
+        if reverseTrain {
+            // Train is 'reversing' so toggle the logical state
+            self.myAmReversed = !self.myAmReversed;
+            // add some slack to ensure that the back of train does appear looped
+            self.myState.myPos += 2.0 * (self.myLane.get_length() - self.myState.myPos) + self.myType.get_length() + utils::geom::NUMERICAL_EPS;
+            self.myState.mySpeed = 0.0;
+        }
+
+        // move on lane(s)
+        if self.myState.myPos > self.myLane.get_length() {
+            // The vehicle has moved at least to the next lane (maybe it passed even more than one)
+            if self.myCurrEdge + 1 != self.myRoute.size() as usize {
+                let mut approachedLane: Ptr<MSLane> = self.myLane;
+                // move the vehicle forward
+                self.myNextDriveItem = 0;
+                while self.myNextDriveItem < self.myLFLinkLanes.len() && !approachedLane.is_null() && self.myState.myPos > approachedLane.get_length() {
+                    let mut link: Ptr<MSLink> = self.myLFLinkLanes[self.myNextDriveItem].myLink;
+                    let linkDist = self.myLFLinkLanes[self.myNextDriveItem].myDistance;
+                    self.myNextDriveItem += 1;
+                    // check whether the vehicle was allowed to enter lane
+                    //  otherwise it is decelerated and we do not need to test for it's
+                    //  approach on the following lanes when a lane changing is performed
+                    // proceed to the next lane
+                    if approachedLane.must_check_junction_collisions() {
+                        // vehicle moves past approachedLane within a single step, collision checking must still be done
+                        MSNet::get_instance().m().get_edge_control().check_collision_for_inactive(approachedLane);
+                    }
+                    if !link.is_null() {
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && !self.myLane.is_internal() && !self.myLane.get_bidi_lane().is_null() && link.get_lane().get_bidi_lane() == self.myLane && !reverseTrain {
+                            *emergencyReason = " because it must reverse direction".to_string();
+                            approachedLane = Ptr::null();
+                            break;
+                        }
+                        // shortcut: MSStop.edge is still an unmapped route iterator, so the rail double-stop check against myCurrEdge is skipped until MSRouteIterator is mapped
+                        let nextStopIsCurrEdge = false;
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && nextStopIsCurrEdge {
+                            // avoid skipping stop due to numerical instability
+                            // this is a special case for rail vehicles because they
+                            // continue myLFLinkLanes past stops
+                            approachedLane = self.myLane;
+                            self.myState.myPos = self.myLane.get_length();
+                            break;
+                        }
+                        approachedLane = link.get_via_lane_or_lane();
+                        if self.myInfluencer.is_null() || self.myInfluencer.get_emergency_brake_red_light() {
+                            let beyondStopLine = linkDist < link.get_lane_before().get_vehicle_stop_offset(this);
+                            if link.have_red() && !self.ignore_red(link, false) && !beyondStopLine && !reverseTrain {
+                                *emergencyReason = " because of a red traffic light".to_string();
+                                break;
+                            }
+                        }
+                        if reverseTrain && approachedLane.is_internal() {
+                            // avoid getting stuck on a slow turn-around internal lane
+                            self.myState.myPos += approachedLane.get_length();
+                        }
+                    } else if self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS {
+                        // avoid warning due to numerical instability
+                        approachedLane = self.myLane;
+                        self.myState.myPos = self.myLane.get_length();
+                    } else if reverseTrain {
+                        approachedLane = self.myRoute.get_edges()[self.myCurrEdge + 1].get_lanes()[0];
+                        link = self.myLane.get_link_to(approachedLane);
+                        assert!(!link.is_null());
+                        while !link.get_via_lane().is_null() {
+                            link = link.get_via_lane().get_link_cont()[0];
+                        }
+                        self.myNextDriveItem -= 1;
+                    } else {
+                        *emergencyReason = " because there is no connection to the next edge".to_string();
+                        approachedLane = Ptr::null();
+                        break;
+                    }
+                    if approachedLane != self.myLane && !approachedLane.is_null() {
+                        self.leave_lane(MSMoveReminder_Notification::NOTIFICATION_JUNCTION, approachedLane);
+                        self.myState.myPos -= self.myLane.get_length();
+                        assert!(self.myState.myPos > 0.0);
+                        self.enter_lane_at_move(approachedLane, false);
+                        if link.is_entry_link() {
+                            self.myJunctionEntryTime = MSNet::get_instance().get_current_time_step();
+                            self.myJunctionEntryTimeNeverYield = self.myJunctionEntryTime;
+                            self.myHaveStoppedFor = Ptr::null();
+                        }
+                        if link.is_conflict_entry_link() {
+                            self.myJunctionConflictEntryTime = MSNet::get_instance().get_current_time_step();
+                            // renew yielded request
+                            self.myJunctionEntryTime = self.myJunctionEntryTimeNeverYield;
+                        }
+                        if link.is_exit_link() {
+                            // passed junction, reset for approaching the next one
+                            self.myJunctionEntryTime = SUMOTIME_MAX;
+                            self.myJunctionEntryTimeNeverYield = SUMOTIME_MAX;
+                            self.myJunctionConflictEntryTime = SUMOTIME_MAX;
+                        }
+                        if self.has_arrived_internal(true) {
+                            break;
+                        }
+                        if self.myLaneChangeModel.m().is_changing_lanes() {
+                            if link.get_direction() == LinkDirection::LEFT || link.get_direction() == LinkDirection::RIGHT {
+                                // abort lane change
+                                utils::common::msg_handler::write_warning(&format!(
+                                    "Vehicle '{}' could not finish continuous lane change (turn lane) time={}.",
+                                    self.get_id(),
+                                    time2string(MSNet::get_instance().get_current_time_step())
+                                ));
+                                self.myLaneChangeModel.m().end_lane_change_maneuver(MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE);
+                            }
+                        }
+                        if approachedLane.get_edge().is_vaporizing() {
+                            self.leave_lane(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_VAPORIZER, Ptr::null());
+                            break;
+                        }
+                        passedLanes.push(approachedLane);
+                    }
+                }
+                // NOTE: Passed drive items will be erased in the next simstep's planMove()
+            } else if !self.has_arrived_internal(true) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS {
+                // avoid warning due to numerical instability when stopping at the end of the route
+                self.myState.myPos = self.myLane.get_length();
+            }
+        }
     }
 
     /// C++: `double MSVehicle::processTraCISpeedControl(double, double)` [protected]
