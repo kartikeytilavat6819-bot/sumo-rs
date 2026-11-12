@@ -7262,7 +7262,20 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_leader(&self, ego: Ptr<MSVehicle>, dist: f64, oppositeDir: bool, mLinkMode: MSLane_MinorLinkMode) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getOppositeLeader")
+        if !oppositeDir {
+            return self.get_leader(ego, self.get_opposite_pos(ego.get_position_on_lane()), ego.get_best_lanes_continuation_2(Ptr::new(self)), -1., false);
+        } else {
+            let egoLength = ego.get_vehicle_type().get_length();
+            let egoPos = if ego.get_lane_change_model_2().is_opposite() { ego.get_position_on_lane() } else { self.get_opposite_pos(ego.get_position_on_lane()) };
+            let mut result = self.get_follower(ego, egoPos + egoLength, dist, mLinkMode, true);
+            if !result.0.is_null() {
+                result.1 -= ego.get_vehicle_type().get_min_gap();
+                if result.0.get_lane_change_model_2().is_opposite() {
+                    result.1 -= result.0.get_vehicle_type().get_length();
+                }
+            }
+            result
+        }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getOppositeFollower(const MSVehicle *) const` [const]
@@ -7309,7 +7322,34 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_opposite_follower(&self, ego: Ptr<MSVehicle>) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getOppositeFollower")
+        if ego.get_lane_change_model_2().is_opposite() {
+            return self.get_follower(ego, self.get_opposite_pos(ego.get_position_on_lane()), -1., MSLane_MinorLinkMode::FOLLOW_NEVER, false);
+        } else {
+            let mut vehPos = self.get_opposite_pos(ego.get_position_on_lane() - ego.get_vehicle_type().get_length());
+            let mut result = self.get_leader(ego, vehPos, &Vec::new(), -1., false);
+            let mut dist = self.get_maximum_brake_dist() + self.get_opposite_pos(ego.get_position_on_lane() - self.get_length());
+            let mut next = Ptr::new(self);
+            while result.0.is_null() && dist > 0. {
+                // cannot call getLeadersOnConsecutive because succLinkSec doesn't
+                // uses the vehicle's route and doesn't work on the opposite side
+                vehPos -= next.get_length();
+                next = next.get_canonical_successor_lane();
+                if next.is_null() {
+                    break;
+                }
+                dist -= next.get_length();
+                result = next.get_leader(ego, vehPos, &Vec::new(), -1., false);
+            }
+            if !result.0.is_null() {
+                if result.0.get_lane_change_model_2().is_opposite() {
+                    result.1 -= result.0.get_vehicle_type().get_length();
+                } else if result.1 > POSITION_EPS {
+                    // follower can be safely ignored since it is going the other way
+                    return (Ptr::null(), -1.);
+                }
+            }
+            result
+        }
     }
 
     /// C++: `std::pair<MSVehicle *const, double> MSLane::getFollower(const MSVehicle *, double, double, MinorLinkMode, bool) const` [const]
@@ -7338,7 +7378,22 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_follower(&self, ego: Ptr<MSVehicle>, egoPos: f64, dist: f64, mLinkMode: MSLane_MinorLinkMode, maxSearchDist: bool) -> (Ptr<MSVehicle>, f64) {
-        todo!("port MSLane::getFollower")
+        let end = self.any_vehicles_upstream_end();
+        let mut first = self.any_vehicles_upstream_begin();
+        while first.ne_op(&end) {
+            let pred = first.op_();
+            first.op__2();
+            if pred != ego && pred.get_position_on_lane_2(Ptr::new(self)) < egoPos {
+                return (pred, egoPos - pred.get_position_on_lane_2(Ptr::new(self)) - ego.get_vehicle_type().get_length() - pred.get_vehicle_type().get_min_gap());
+            }
+        }
+        let backOffset = egoPos - ego.get_vehicle_type().get_length();
+        if dist > 0. && backOffset > dist {
+            return (Ptr::null(), -1.);
+        }
+        let followers = self.get_followers_on_consecutive(ego, backOffset, true, dist, mLinkMode, maxSearchDist);
+        let result = followers.get_closest();
+        (result.0, result.1)
     }
 
     /// C++: `void MSLane::addParking(MSBaseVehicle *)`
@@ -7418,7 +7473,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_stop_watch(&mut self) -> &mut Vec<Unmapped /* StopWatch<std::chrono::nanoseconds> */> {
-        todo!("port MSLane::getStopWatch")
+        &mut self.myStopWatch
     }
 
     /// C++: `void MSLane::changeLanes(const SUMOTime)`
@@ -7428,7 +7483,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn change_lanes(&mut self, time: SUMOTime) {
-        todo!("port MSLane::changeLanes")
+        self.myEdge.change_lanes(time);
     }
 
     /// C++: `void MSLane::saveState(OutputDevice &)`
@@ -7501,7 +7556,19 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSLane::clearState")
+        self.myVehicles.clear();
+        self.myParkingVehicles.clear();
+        self.myPartialVehicles.clear();
+        self.myManeuverReservations.clear();
+        self.myBruttoVehicleLengthSum = 0.;
+        self.myNettoVehicleLengthSum = 0.;
+        self.myBruttoVehicleLengthSumToRemove = 0.;
+        self.myNettoVehicleLengthSumToRemove = 0.;
+        self.myLeaderInfoTime = utils::common::time::SUMOTIME_MIN;
+        self.myFollowerInfoTime = utils::common::time::SUMOTIME_MIN;
+        for link in self.myLinks.iter() {
+            link.m().clear_state();
+        }
     }
 
     /// C++: `void MSLane::loadState(const std::vector<SUMOVehicle *> &)`
@@ -7520,7 +7587,16 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, vehs: &Vec<Ptr<SUMOVehicle>>) {
-        todo!("port MSLane::loadState")
+        for veh in vehs.iter() {
+            // shortcut: C++ dynamic_cast<MSVehicle*> is unchecked; loadState only receives MSVehicles from the state loader
+            let v: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
+            v.m().update_best_lanes(false, Ptr::new(self));
+            // incorporateVehicle resets the lastActionTime (which has just been loaded from state) so we must restore it
+            let lastActionTime = v.get_last_action_time();
+            let at = self.myVehicles.len();
+            self.incorporate_vehicle(v, v.get_position_on_lane(), v.get_speed(), v.get_lateral_position_on_lane(), at, MSMoveReminder_Notification::NOTIFICATION_LOAD_STATE);
+            v.m().reset_action_offset(lastActionTime - MSNet::get_instance().get_current_time_step());
+        }
     }
 
     /// C++: `bool MSLane::hasApproaching() const` [const]
@@ -7535,7 +7611,12 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn has_approaching(&self) -> bool {
-        todo!("port MSLane::hasApproaching")
+        for link in self.myLinks.iter() {
+            if link.get_approaching_2().len() > 0 {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSLane::visit(const MSLane::StoringVisitor &) const` [const]
@@ -7545,7 +7626,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn visit(&self, cont: &MSLane_StoringVisitor) {
-        todo!("port MSLane::visit")
+        cont.add(Ptr::new(self));
     }
 
     /// C++: `bool MSLane::hasPedestrians() const` [const]
@@ -7557,7 +7638,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn has_pedestrians(&self) -> bool {
-        todo!("port MSLane::hasPedestrians")
+        let net = MSNet::get_instance();
+        net.has_persons() && net.m().get_person_control().get_movement_model().m().has_pedestrians(Ptr::new(self))
     }
 
     /// C++: `std::pair<const MSPerson *, double> MSLane::nextBlocking(double, double, double, double, bool) const` [const]
@@ -7565,7 +7647,8 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn next_blocking(&self, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> (Ptr<MSPerson>, f64) {
-        todo!("port MSLane::nextBlocking")
+        let net = MSNet::get_instance();
+        net.m().get_person_control().get_movement_model().m().next_blocking(Ptr::new(self), minPos, minRight, maxLeft, stopTime, bidi)
     }
 
     /// C++: `double MSLane::getSpaceTillLastStanding(const MSVehicle *, bool &) const` [const]
@@ -7594,7 +7677,22 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_space_till_last_standing(&self, ego: Ptr<MSVehicle>, foundStopped: &mut bool) -> f64 {
-        todo!("port MSLane::getSpaceTillLastStanding")
+        // @todo if ego isn't on this lane, we could use a cached value
+        let mut lengths = 0.;
+        for last in self.myVehicles.iter().copied() {
+            if last.get_speed() < SUMO_CONST_HALTING_SPEED && !last.get_lane().get_edge().is_roundabout() && last != ego && last.is_front_on_lane(Ptr::new(self)) {
+                *foundStopped = true;
+                let lastBrakeGap = last.get_car_follow_model().brake_gap(last.get_speed());
+                let ret = last.get_back_position_on_lane_2() + lastBrakeGap - lengths;
+                return ret;
+            }
+            if MSGlobals::sublane() && ego.get_vehicle_type().get_width() + last.get_vehicle_type().get_width() < self.get_width() {
+                lengths += last.get_vehicle_type().get_length_with_gap() * (last.get_vehicle_type().get_width() + last.get_vehicle_type().get_min_gap_lat()) / self.get_width();
+            } else {
+                lengths += last.get_vehicle_type().get_length_with_gap();
+            }
+        }
+        self.get_length() - lengths
     }
 
     /// C++: `double MSLane::getMaximumBrakeDist() const` [const]
@@ -7611,7 +7709,15 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_maximum_brake_dist(&self) -> f64 {
-        todo!("port MSLane::getMaximumBrakeDist")
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        let maxSpeed = self.get_speed_limit() * vc.get_max_speed_factor();
+        // NOTE: For the euler update this is an upper bound on the actual braking distance (see ticket #860)
+        // impose a hard bound due to visibility / common sense to avoid unnecessary computation if there are strange vehicles in the fleet
+        let minDecel = if utils::common::sumo_vehicle_class::is_railway(self.myPermissions) { vc.get_min_deceleration_rail() } else { vc.get_min_deceleration() };
+        let a = maxSpeed * maxSpeed * 0.5 / minDecel + vc.get_max_min_gap();
+        let b = if self.myPermissions == utils::common::sumo_vehicle_class::SVC_SHIP { 10000.0 } else { 1000.0 };
+        if a < b { a } else { b }
     }
 
     /// C++: `const PositionVector * MSLane::getOutlineShape() const` [const]
@@ -7620,7 +7726,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_outline_shape(&self) -> Ptr<PositionVector> {
-        todo!("port MSLane::getOutlineShape")
+        self.myOutlineShape
     }
 
     /// C++: `void MSLane::initCollisionOptions(const OptionsCont &)` [static]
