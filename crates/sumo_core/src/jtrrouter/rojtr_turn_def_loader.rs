@@ -1,6 +1,6 @@
 //! Port of jtrrouter/ROJTRTurnDefLoader.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
-use utils::xml::generic_sax_handler::GenericSAXHandler;
+use utils::xml::generic_sax_handler::{GenericSAXHandler, SaxHandler};
 use crate::prelude::*;
 
 /// Loader for the of turning percentages and source/sink definitions
@@ -37,6 +37,16 @@ impl std::ops::DerefMut for ROJTRTurnDefLoader {
     }
 }
 
+impl SaxHandler for ROJTRTurnDefLoader {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        ROJTRTurnDefLoader::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}
+
 impl ROJTRTurnDefLoader {
     /// C++: `void ROJTRTurnDefLoader::ROJTRTurnDefLoader(RONet &)`
     /// Constructor
@@ -50,7 +60,16 @@ impl ROJTRTurnDefLoader {
     // {}
     #[allow(unused_variables)]
     pub fn new(net: &mut RONet) -> Self {
-        todo!("port ROJTRTurnDefLoader::ROJTRTurnDefLoader")
+        Self {
+            base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, "turn-ratio-file", ""),
+            myNet: Ptr::from_mut(net),
+            myIntervalBegin: 0.0,
+            myIntervalEnd: steps2time(SUMOTIME_MAX),
+            myEdge: Ptr::null(),
+            mySourcesAreSinks: utils::options::options_cont::get_bool("sources-are-sinks"),
+            myDiscountSources: utils::options::options_cont::get_bool("discount-sources"),
+            myHaveWarnedAboutDeprecatedFormat: false,
+        }
     }
 
     /// C++: `void ROJTRTurnDefLoader::~ROJTRTurnDefLoader() noexcept` [virtual]
@@ -58,7 +77,7 @@ impl ROJTRTurnDefLoader {
     // ROJTRTurnDefLoader::~ROJTRTurnDefLoader() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROJTRTurnDefLoader::~ROJTRTurnDefLoader")
+        // C++ destructor body is empty
     }
 
     /// C++: `void ROJTRTurnDefLoader::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -147,7 +166,80 @@ impl ROJTRTurnDefLoader {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port ROJTRTurnDefLoader::myStartElement")
+        let mut ok = true;
+        match element {
+            SUMO_TAG_INTERVAL => {
+                self.myIntervalBegin = attrs.get::<f64>(SUMO_ATTR_BEGIN, "", &mut ok, true);
+                self.myIntervalEnd = attrs.get::<f64>(SUMO_ATTR_END, "", &mut ok, true);
+            }
+            SUMO_TAG_FROMEDGE => {
+                if !self.myHaveWarnedAboutDeprecatedFormat {
+                    self.myHaveWarnedAboutDeprecatedFormat = true;
+                    // tag names as toString(SUMO_TAG_FROMEDGE/TOEDGE/EDGEREL) prints them
+                    utils::common::msg_handler::write_warning("The turn-file format with elements fromEdge, toEdge is deprecated, please use edgeRel instead.");
+                }
+                self.begin_from_edge(attrs);
+            }
+            SUMO_TAG_TOEDGE => {
+                self.add_to_edge(attrs);
+            }
+            SUMO_TAG_EDGEREL => {
+                self.add_edge_rel(attrs);
+            }
+            SUMO_TAG_SINK => {
+                if attrs.has_attribute(SUMO_ATTR_EDGES) {
+                    let edges = attrs.get::<String>(SUMO_ATTR_EDGES, "", &mut ok, true);
+                    let mut st = StringTokenizer::with_special(&edges, StringTokenizer::WHITECHARS);
+                    while st.has_next() {
+                        let id = st.next().unwrap();
+                        let edge = self.myNet.get_edge(&id);
+                        if edge.is_null() {
+                            panic!("{}", ProcessError::new(format!("The edge '{}' declared as a sink is not known.", id)));
+                        }
+                        edge.m().set_sink(true);
+                    }
+                }
+            }
+            SUMO_TAG_FLOW => {
+                let flowID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                if attrs.has_attribute(SUMO_ATTR_FROM) {
+                    let edgeID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+                    let edge = self.myNet.get_edge(&edgeID);
+                    if edge.is_null() {
+                        panic!("{}", ProcessError::new(format!("The from-edge '{}' in flow '{}' is not known.", edgeID, flowID)));
+                    }
+                    if self.mySourcesAreSinks {
+                        edge.m().set_sink(true);
+                    }
+                    if self.myDiscountSources {
+                        let pars = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_flow_attributes(SUMO_TAG_FLOW, attrs, true, true, 0, time2steps(3600.0 * 24.0), false);
+                        let numVehs: i64 = if pars.repetitionProbability > 0.0 {
+                            (steps2time(pars.repetitionEnd - pars.depart) * pars.repetitionProbability) as i64
+                        } else {
+                            pars.repetitionNumber as i64
+                        };
+                        edge.cast::<ROJTREdge>().m().change_source_flow(numVehs);
+                    }
+                } else {
+                    utils::common::msg_handler::write_warning(&format!("Ignoring flow '{}' without 'from'", flowID));
+                }
+            }
+            SUMO_TAG_SOURCE => {
+                if attrs.has_attribute(SUMO_ATTR_EDGES) {
+                    let edges = attrs.get::<String>(SUMO_ATTR_EDGES, "", &mut ok, true);
+                    let mut st = StringTokenizer::with_special(&edges, StringTokenizer::WHITECHARS);
+                    while st.has_next() {
+                        let id = st.next().unwrap();
+                        let edge = self.myNet.get_edge(&id);
+                        if edge.is_null() {
+                            panic!("{}", ProcessError::new(format!("The edge '{}' declared as a source is not known.", id)));
+                        }
+                        edge.m().set_source(true);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     /// C++: `void ROJTRTurnDefLoader::beginFromEdge(const SUMOSAXAttributes &)` [private]
@@ -170,7 +262,19 @@ impl ROJTRTurnDefLoader {
     // }
     #[allow(unused_variables)]
     pub fn begin_from_edge(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port ROJTRTurnDefLoader::beginFromEdge")
+        self.myEdge = Ptr::null();
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        //
+        self.myEdge = self.myNet.get_edge(&id).cast::<ROJTREdge>();
+        if self.myEdge.is_null() {
+            utils::common::msg_handler::write_error(&format!("The edge '{}' is not known within the network (within a 'from-edge' tag).", id));
+            return;
+        }
     }
 
     /// C++: `void ROJTRTurnDefLoader::addToEdge(const SUMOSAXAttributes &)` [private]
@@ -203,7 +307,29 @@ impl ROJTRTurnDefLoader {
     // }
     #[allow(unused_variables)]
     pub fn add_to_edge(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port ROJTRTurnDefLoader::addToEdge")
+        if self.myEdge.is_null() {
+            return;
+        }
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let id = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+        if !ok {
+            return;
+        }
+        //
+        let edge = self.myNet.get_edge(&id).cast::<ROJTREdge>();
+        if edge.is_null() {
+            utils::common::msg_handler::write_error(&format!("The edge '{}' is not known within the network (within a 'to-edge' tag).", id));
+            return;
+        }
+        let probability = attrs.get::<f64>(SUMO_ATTR_PROB, &id, &mut ok, true);
+        if ok {
+            if probability < 0.0 {
+                utils::common::msg_handler::write_error(&format!("'probability' must be positive (in definition of to-edge '{}').", id));
+            } else {
+                self.myEdge.m().add_follower_probability(edge, self.myIntervalBegin, self.myIntervalEnd, probability);
+            }
+        }
     }
 
     /// C++: `void ROJTRTurnDefLoader::addEdgeRel(const SUMOSAXAttributes &)` [private]
@@ -239,7 +365,31 @@ impl ROJTRTurnDefLoader {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_rel(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port ROJTRTurnDefLoader::addEdgeRel")
+        let mut ok = true;
+        // get the id, report an error if not given or empty...
+        let fromID = attrs.get::<String>(SUMO_ATTR_FROM, "", &mut ok, true);
+        let toID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+        let probAttr = if attrs.has_attribute(SUMO_ATTR_COUNT) && !attrs.has_attribute(SUMO_ATTR_PROB) { SUMO_ATTR_COUNT } else { SUMO_ATTR_PROB };
+        let probability = attrs.get::<f64>(probAttr, &format!("{}->{}", fromID, toID), &mut ok, true);
+        if !ok {
+            return;
+        }
+        //
+        let from = self.myNet.get_edge(&fromID).cast::<ROJTREdge>();
+        if from.is_null() {
+            utils::common::msg_handler::write_error(&format!("The edge '{}' is not known.", fromID));
+            return;
+        }
+        let to = self.myNet.get_edge(&toID).cast::<ROJTREdge>();
+        if to.is_null() {
+            utils::common::msg_handler::write_error(&format!("The edge '{}' is not known.", toID));
+            return;
+        }
+        if probability < 0.0 {
+            utils::common::msg_handler::write_error(&format!("'probability' must be positive (in edgeRelation from '{}' to '{}'.", fromID, toID));
+        } else {
+            from.m().add_follower_probability(to, self.myIntervalBegin, self.myIntervalEnd, probability);
+        }
     }
 
 }

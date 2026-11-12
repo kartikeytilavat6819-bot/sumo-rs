@@ -21,8 +21,20 @@ use crate::prelude::*;
 //     return ret;
 // }
 #[allow(unused_variables)]
-pub fn get_turning_defaults(oc: &mut OptionsCont) -> i32 {
-    todo!("port getTurningDefaults")
+pub fn get_turning_defaults(oc: &mut OptionsCont) -> Vec<f64> {
+    let mut ret: Vec<f64> = Vec::new();
+    let defs = oc.get_string_vector("turn-defaults").unwrap().clone();
+    if defs.len() < 2 {
+        panic!("{}", ProcessError::new("The defaults for turnings must be a tuple of at least two numbers divided by ','."));
+    }
+    for i in defs.iter() {
+        match utils::common::string_utils::to_double(i) {
+            Ok(val) => ret.push(val),
+            Err(e) if e.is_format() => panic!("{}", ProcessError::new("A turn default is not numeric.")),
+            Err(e) => panic!("{}", e),
+        }
+    }
+    ret
 }
 
 /// C++: `void (RONet &, ROLoader &, const int &) initNet`
@@ -38,8 +50,14 @@ pub fn get_turning_defaults(oc: &mut OptionsCont) -> i32 {
 //     }
 // }
 #[allow(unused_variables)]
-pub fn init_net(net: &mut RONet, loader: &mut ROLoader, turnDefs: &i32) {
-    todo!("port initNet")
+pub fn init_net(net: &mut RONet, loader: &mut ROLoader, turnDefs: &Vec<f64>) {
+    // load the net
+    let mut builder = crate::jtrrouter::rojtr_edge_builder::ROJTREdgeBuilder::new();
+    loader.load_net(net, &mut builder);
+    // set the turn defaults
+    for (_, i) in net.get_edge_map().iter() {
+        i.cast::<crate::jtrrouter::rojtr_edge::ROJTREdge>().m().set_turn_defaults(turnDefs);
+    }
 }
 
 /// C++: `void (RONet &, OptionsCont &) loadJTRDefinitions`
@@ -86,6 +104,41 @@ pub fn init_net(net: &mut RONet, loader: &mut ROLoader, turnDefs: &i32) {
 // }
 #[allow(unused_variables)]
 pub fn load_jtr_definitions(net: &mut RONet, oc: &mut OptionsCont) {
-    todo!("port loadJTRDefinitions")
+    // load the turning definitions (and possible sink definition)
+    if oc.is_set("turn-ratio-files", true).unwrap() {
+        let mut loader = crate::jtrrouter::rojtr_turn_def_loader::ROJTRTurnDefLoader::new(net);
+        let ratio_files = oc.get_string_vector("turn-ratio-files").unwrap().clone();
+        for i in ratio_files.iter() {
+            if !utils::xml::xml_sub_sys::run_parser(&mut loader, i, false, false, false, true).unwrap() {
+                panic!("{}", ProcessError::default_msg());
+            }
+        }
+    }
+    if oc.get_bool("sources-are-sinks").unwrap() || oc.get_bool("discount-sources").unwrap() {
+        // load all route-files and additional files to discover sink edges and flow discount values
+        let mut loader = crate::jtrrouter::rojtr_turn_def_loader::ROJTRTurnDefLoader::new(net);
+        for fileOption in ["route-files", "additional-files"] {
+            for file in oc.get_string_vector(fileOption).unwrap().clone() {
+                if !utils::xml::xml_sub_sys::run_parser(&mut loader, &file, false, false, false, true).unwrap() {
+                    panic!("{}", ProcessError::default_msg());
+                }
+            }
+        }
+    }
+
+    if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| h.was_informed()) && oc.get_bool("ignore-errors").unwrap() {
+        utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |h| h.clear(true));
+    }
+    // parse sink edges specified at the input/within the configuration
+    if oc.is_set("sink-edges", true).unwrap() {
+        let edges = oc.get_string_vector("sink-edges").unwrap().clone();
+        for i in edges.iter() {
+            let edge = net.get_edge(i).cast::<crate::jtrrouter::rojtr_edge::ROJTREdge>();
+            if edge.is_null() {
+                panic!("{}", ProcessError::new(format!("The edge '{}' declared as a sink is not known.", i)));
+            }
+            edge.m().set_sink(true);
+        }
+    }
 }
 
