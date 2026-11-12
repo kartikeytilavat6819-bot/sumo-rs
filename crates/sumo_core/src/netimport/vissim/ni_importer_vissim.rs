@@ -1,6 +1,9 @@
 //! Port of netimport/vissim/NIImporter_Vissim.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::string_utils::{convert_umlaute, hex_to_int, to_double, to_int, to_lower_case};
+use utils::common::msg_handler::{progress_begin_message, progress_done_message};
+use utils::common::string_tokenizer::StringTokenizer;
 
 /// C++ enum `NIImporter_Vissim::VissimXMLAttr`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -96,6 +99,26 @@ fn vissim_base_handler() -> GenericSAXHandler {
         "vissim - file",
         "",
     )
+}
+
+/// C++ `myElemData[key].front()` (operator[] inserts the key when missing; front of an empty deque is UB, empty string here)
+fn elem_front(elem: &Ptr<NIImporter_Vissim_nodeMap>, key: &str) -> String {
+    elem.m().entry(key.to_string()).or_default().front().cloned().unwrap_or_default()
+}
+
+/// C++ `myElemData[key].push_back(value)`
+fn elem_push(elem: &Ptr<NIImporter_Vissim_nodeMap>, key: &str, value: String) {
+    elem.m().entry(key.to_string()).or_default().push_back(value);
+}
+
+/// C++ `myElemData[key].pop_front()` returning the removed value, None when empty
+fn elem_pop_front(elem: &Ptr<NIImporter_Vissim_nodeMap>, key: &str) -> Option<String> {
+    elem.m().entry(key.to_string()).or_default().pop_front()
+}
+
+/// C++ throws ProcessError from StringUtils::toInt/toDouble; the Rust handlers are void, so the error ends the run as a panic
+fn vissim_parse<T>(r: Result<T, ProcessError>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
 }
 
 // C++ static members of NIImporter_Vissim (port as module-level statics, see AGENTS.md):
@@ -916,7 +939,19 @@ impl NIImporter_Vissim_NIVissimXMLHandler_ConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_ConflictArea::myStartElement")
+        // finding an actual flow
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_CA as i32 {
+            //parse all flows
+            let mut ok = true;
+            let status: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_STATUS as i32, "", &mut ok, true);
+            //get only the conflict areas which were set in VISSIM
+            if status != "PASSIVE" {
+                let no: i32 = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+                let link1: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK1 as i32, "", &mut ok, true);
+                let link2: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK2 as i32, "", &mut ok, true);
+                NIVissimConflictArea::dictionary(no, &link1, &link2, &status);
+            }
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_ConflictArea::NIVissimXMLHandler_ConflictArea(const NIVissimXMLHandler_ConflictArea &)` [private]
@@ -1012,7 +1047,27 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::myStartElement")
+        self.myHierarchyLevel += 1;
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_VEHICLE_CLASS as i32 {
+            let mut ok = true;
+            let id: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            self.myElemData.m().entry("id".to_string()).or_default().push_back(id);
+            let name: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32, "", &mut ok, false);
+            self.myElemData.m().entry("name".to_string()).or_default().push_back(name);
+            let mut colorStr: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_COLOR as i32, "", &mut ok, true);
+            let mut pos = colorStr.len() as i64 - 2;
+            while pos > 0 {
+                colorStr.insert_str(pos as usize, " ");
+                pos -= 2;
+            }
+            self.myElemData.m().entry("color".to_string()).or_default().push_back(colorStr);
+        }
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_INTOBJECTREF as i32 {
+            let mut ok = true;
+            let key: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_KEY as i32, "", &mut ok, true);
+            self.myElemData.m().entry("types".to_string()).or_default().push_back(key);
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Fahrzeugklassendefinition::myEndElement(int)` [virtual, protected]
@@ -1046,7 +1101,27 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Fahrzeugklassendefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIVissimXMLHandler_Fahrzeugklassendefinition::myEndElement")
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_VEHICLE_CLASS as i32 && self.myHierarchyLevel == 3 {
+            let colorFront: String = self.myElemData.m().entry("color".to_string()).or_default().front().cloned().unwrap_or_default();
+            let sCol_v: Vec<String> = StringTokenizer::with_token(&colorFront, " ", false).get_vector();
+            let myColorVector: Vec<i32> = sCol_v.iter().map(|s| hex_to_int(s).unwrap_or_else(|e| panic!("{e}"))).collect();
+
+            let color = RGBColor::new(myColorVector[0] as u8, myColorVector[1] as u8, myColorVector[2] as u8, myColorVector[3] as u8);
+            let mut types: Vec<i32> = Vec::new();
+            loop {
+                let front = match self.myElemData.m().entry("types".to_string()).or_default().pop_front() {
+                    Some(f) => f,
+                    None => break,
+                };
+                types.push(to_int(&front).unwrap_or_else(|e| panic!("{e}")));
+            }
+
+            let idFront: String = self.myElemData.m().entry("id".to_string()).or_default().front().cloned().unwrap_or_default();
+            let nameFront: String = self.myElemData.m().entry("name".to_string()).or_default().front().cloned().unwrap_or_default();
+            NIVissimVehTypeClass::dictionary(to_int(&idFront).unwrap_or_else(|e| panic!("{e}")), &nameFront, &color, &mut types);
+            self.myElemData.m().clear();
+        }
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NIVissimXMLHandler_Fahrzeugklassendefinition::NIVissimXMLHandler_Fahrzeugklassendefinition(const NIVissimXMLHandler_Fahrzeugklassendefinition &)` [private]
@@ -1140,7 +1215,22 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::myStartElement")
+        self.myHierarchyLevel += 1;
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_SPEED_DIST as i32 {
+            let mut ok = true;
+            let id: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            self.myElemData.m().entry("id".to_string()).or_default().push_back(id);
+        }
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_DATAPOINT as i32 {
+            let mut ok = true;
+            let sep = " ";
+            let mut posS: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_X as i32, "", &mut ok, true);
+            posS += sep;
+            let fx: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_FX as i32, "", &mut ok, true);
+            posS.push_str(&fx);
+            self.myElemData.m().entry("points".to_string()).or_default().push_back(posS);
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::myEndElement(int)` [virtual, protected]
@@ -1161,7 +1251,24 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition 
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::myEndElement")
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_SPEED_DIST as i32 && self.myHierarchyLevel == 3 {
+            let idFront: String = self.myElemData.m().entry("id".to_string()).or_default().front().cloned().unwrap_or_default();
+            let mut points = DistributionPoints::new(&idFront);
+            loop {
+                let front = match self.myElemData.m().entry("points".to_string()).or_default().pop_front() {
+                    Some(f) => f,
+                    None => break,
+                };
+                let sPos_v: Vec<String> = StringTokenizer::with_token(&front, " ", false).get_vector();
+                let x = to_double(&sPos_v[0]).unwrap_or_else(|e| panic!("{e}"));
+                let y = to_double(&sPos_v[1]).unwrap_or_else(|e| panic!("{e}"));
+                points.add(x, y, true);
+            }
+            let idFront: String = self.myElemData.m().entry("id".to_string()).or_default().front().cloned().unwrap_or_default();
+            utils::distribution::distribution_cont::dictionary_add("speed", &idFront, std::sync::Arc::new(points));
+            self.myElemData.m().clear();
+        }
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition::NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition(const NIVissimXMLHandler_Geschwindigkeitsverteilungsdefinition &)` [private]
@@ -1255,7 +1362,25 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Parkplatzdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Parkplatzdefinition::myStartElement")
+        // finding an actual parkinglot
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_PARKINGLOT as i32 {
+            //parse all parkinglots
+            let mut ok = true;
+            let id: i32 = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            let edgeid: i32 = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_INTLINK as i32, "", &mut ok, true);
+            let name: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32, "", &mut ok, false);
+            let position: f64 = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_POS as i32, "", &mut ok, true);
+            let assignedVehicles: Vec<(i32, i32)> = Vec::new(); // (vclass, vwunsch)
+            //FIXME: vWunsch + Fahzeugklassen einlesen
+            // There can be s
+            let mut districts: Vec<i32> = Vec::new();
+            //FIXME: Parkplatzdefinition für mehrere Zonen implementieren
+            let mut percentages: Vec<f64> = Vec::new();
+            districts.push(attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DISTRICT as i32, "", &mut ok, true));
+            percentages.push(attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_PERCENTAGE as i32, "", &mut ok, true));
+
+            NIVissimDistrictConnection::dictionary(id, &name, &districts, &percentages, edgeid, position, &assignedVehicles);
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Parkplatzdefinition::NIVissimXMLHandler_Parkplatzdefinition(const NIVissimXMLHandler_Parkplatzdefinition &)` [private]
@@ -1349,7 +1474,26 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::myStartElement")
+        self.myHierarchyLevel += 1;
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_DECISION_STATIC as i32 {
+            let mut ok = true;
+            let startLink: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINK as i32, "", &mut ok, true);
+            self.myElemData.m().entry("startLink".to_string()).or_default().push_back(startLink);
+            let startPos: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_POS as i32, "", &mut ok, true);
+            self.myElemData.m().entry("startPos".to_string()).or_default().push_back(startPos);
+        }
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_ROUTE_STATIC as i32 {
+            let mut ok = true;
+            let destLink: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DESTLINK as i32, "", &mut ok, true);
+            self.myElemData.m().entry("destLink".to_string()).or_default().push_back(destLink);
+            let destPos: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_DESTPOS as i32, "", &mut ok, true);
+            self.myElemData.m().entry("destPos".to_string()).or_default().push_back(destPos);
+            let id: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            self.myElemData.m().entry("id".to_string()).or_default().push_back(id);
+        }
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_INTOBJECTREF as i32 {
+            // bool ok = true;
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Routenentscheidungsdefinition::myEndElement(int)` [virtual, protected]
@@ -1359,7 +1503,7 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Routenentscheidungsdefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIVissimXMLHandler_Routenentscheidungsdefinition::myEndElement")
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NIVissimXMLHandler_Routenentscheidungsdefinition::NIVissimXMLHandler_Routenentscheidungsdefinition(const NIVissimXMLHandler_Routenentscheidungsdefinition &)` [private]
@@ -1505,7 +1649,69 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port NIVissimXMLHandler_Streckendefinition::myStartElement")
+        self.myHierarchyLevel += 1;
+
+        // finding an actual LINK
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINK as i32 {
+            //parse all links
+            let mut ok = true;
+            let id: i32 = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true);
+            self.myLastNodeID = id;
+
+            // !!! assuming empty myElemData
+            elem_push(&self.myElemData, "id", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NO as i32, "", &mut ok, true));
+            // error ignored if name is empty
+            elem_push(&self.myElemData, "name", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_NAME as i32, "", &mut ok, false));
+            elem_push(&self.myElemData, "type", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LINKBEHAVETYPE as i32, "", &mut ok, true));
+            elem_push(&self.myElemData, "zuschlag1", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZUSCHLAG1 as i32, "", &mut ok, true));
+            elem_push(&self.myElemData, "zuschlag2", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZUSCHLAG2 as i32, "", &mut ok, true));
+        }
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LANE as i32 {
+            let mut ok = true;
+            // appends empty element if no width found
+            // error ignored if name is empty
+            elem_push(&self.myElemData, "width", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_WIDTH as i32, "", &mut ok, false));
+        }
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_FROM as i32 {
+            if self.isConnector != true {
+                self.isConnector = true;
+            }
+            let mut ok = true;
+            let laneStr: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LANE as i32, "", &mut ok, true);
+            let from: Vec<String> = StringTokenizer::with_token(&laneStr, " ", false).get_vector();
+            elem_push(&self.myElemData, "from_pos", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_POS as i32, "", &mut ok, true));
+            elem_push(&self.myElemData, "from_id", from[0].clone());
+            elem_push(&self.myElemData, "from_lane", from[1].clone());
+        }
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_TO as i32 {
+            let mut ok = true;
+            let laneStr: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_LANE as i32, "", &mut ok, true);
+            let to: Vec<String> = StringTokenizer::with_token(&laneStr, " ", false).get_vector();
+            elem_push(&self.myElemData, "to_pos", attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_POS as i32, "", &mut ok, true));
+            elem_push(&self.myElemData, "to_id", to[0].clone());
+            elem_push(&self.myElemData, "to_lane", to[1].clone());
+        }
+
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_POINT3D as i32 || element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINKPOLYPOINT as i32 {
+            let mut ok = true;
+            // create a <sep> separated string of coordinate data
+            let sep = " ";
+
+            let mut posS: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_X as i32, "", &mut ok, true);
+            posS += sep;
+            let y: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_Y as i32, "", &mut ok, true);
+            posS.push_str(&y);
+            // allow for no Z
+            let z: String = attrs.get(NIImporter_Vissim_VissimXMLAttr::VISSIM_ATTR_ZOFFSET as i32, "", &mut ok, false);
+            if z.len() > 0 {
+                posS += sep;
+                posS.push_str(&z);
+            }
+            elem_push(&self.myElemData, "pos", posS);
+        }
     }
 
     /// C++: `void NIVissimXMLHandler_Streckendefinition::myEndElement(int)` [virtual, protected]
@@ -1600,7 +1806,102 @@ impl NIImporter_Vissim_NIVissimXMLHandler_Streckendefinition {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port NIVissimXMLHandler_Streckendefinition::myEndElement")
+        if element == NIImporter_Vissim_VissimXMLTag::VISSIM_TAG_LINK as i32 && self.myHierarchyLevel == 3 {
+            //std::cout << "elemData len:" << myElemData.size() << std::endl;
+
+            let clv: NIVissimClosedLanesVector = Vec::new(); //FIXME -> clv einlesen
+            let assignedVehicles: Vec<i32> = Vec::new(); //FIXME -> assignedVehicles einlesen
+            let id: i32 = vissim_parse(to_int(&elem_front(&self.myElemData, "id")));
+
+            let mut geom = PositionVector::default();
+            // convert all position coordinate strings to PositionVectors
+            loop {
+                let posFront = match elem_pop_front(&self.myElemData, "pos") {
+                    Some(p) => p,
+                    None => break,
+                };
+                let sPos_v: Vec<String> = StringTokenizer::with_token(&posFront, " ", false).get_vector();
+                // std::transform into pos_v(3): only the first three values fit
+                let mut pos_v = vec![0.0f64; 3];
+                for (i, sPos) in sPos_v.iter().enumerate() {
+                    let v = vissim_parse(to_double(sPos));
+                    if i < 3 {
+                        pos_v[i] = v;
+                    }
+                }
+                geom.push_back_no_double_pos(&Position::new3(pos_v[0], pos_v[1], pos_v[2]));
+            }
+            // FIXME: a length = 0 PosVec seems fatal -> segfault
+            let length: f64 = geom.length();
+
+            if !self.isConnector {
+                // Add Edge
+                let mut laneWidths: Vec<f64> = Vec::new();
+                let widths: Vec<String> = self.myElemData.m().entry("width".to_string()).or_default().iter().cloned().collect();
+                for w in widths.iter() {
+                    laneWidths.push(vissim_parse(to_double(w)));
+                }
+                let name = elem_front(&self.myElemData, "name");
+                let type_ = elem_front(&self.myElemData, "type");
+                let zuschlag1 = vissim_parse(to_double(&elem_front(&self.myElemData, "zuschlag1")));
+                let zuschlag2 = vissim_parse(to_double(&elem_front(&self.myElemData, "zuschlag2")));
+                let mut edge = NIVissimEdge::new(id, &name, &type_, laneWidths, zuschlag1, zuschlag2, length, &geom, &clv);
+                NIVissimEdge::dictionary_2(id, Ptr::from_mut(&mut *edge));
+                // shortcut: the dictionary keeps the edge for the rest of the run (C++ never frees it here), so leak the Box
+                Box::leak(edge);
+            } else {
+                let numLanes = self.myElemData.m().entry("width".to_string()).or_default().len() as i32;
+                let mut laneVec: Vec<i32> = vec![0; numLanes as usize];
+                // Add Connector
+
+                //NOTE: there should be only 1 lane number in XML
+                // subtraction of 1 as in readExtEdgePointDef()
+                let fromLane = vissim_parse(to_int(&elem_front(&self.myElemData, "from_lane"))) - 1;
+                if !laneVec.is_empty() {
+                    laneVec[0] = fromLane;
+                }
+                // then count up, building lane number vector
+                for each in 1..laneVec.len() {
+                    laneVec[each] = laneVec[each - 1] + 1;
+                }
+
+                let from_def = NIVissimExtendedEdgePoint::new(
+                    vissim_parse(to_int(&elem_front(&self.myElemData, "from_id"))),
+                    &laneVec,
+                    vissim_parse(to_double(&elem_front(&self.myElemData, "from_pos"))),
+                    &assignedVehicles);
+
+                //NOTE: there should be only 1 lane number in XML
+                // subtraction of 1 as in readExtEdgePointDef()
+                let toLane = vissim_parse(to_int(&elem_front(&self.myElemData, "to_lane"))) - 1;
+                if !laneVec.is_empty() {
+                    laneVec[0] = toLane;
+                }
+                // then count up, building lane number vector
+                for each in 1..laneVec.len() {
+                    laneVec[each] = laneVec[each - 1] + 1;
+                }
+
+                let to_def = NIVissimExtendedEdgePoint::new(
+                    vissim_parse(to_int(&elem_front(&self.myElemData, "to_id"))),
+                    &laneVec,
+                    vissim_parse(to_double(&elem_front(&self.myElemData, "to_pos"))),
+                    &assignedVehicles);
+
+                let name = elem_front(&self.myElemData, "name");
+                let connector = Box::new(NIVissimConnection::new(id, &name, &from_def, &to_def, &geom, &assignedVehicles, &clv));
+                NIVissimConnection::dictionary(id, Ptr::from_box(&connector));
+                // shortcut: the dictionary keeps the connector for the rest of the run (C++ never frees it here), so leak the Box
+                Box::leak(connector);
+            }
+            // clear the element data
+            self.myElemData.m().clear();
+            self.isConnector = false;
+            //std::cout << "elemData len (clear):" << myElemData.size() << std::endl;
+            //std::cout.flush();
+
+        }
+        self.myHierarchyLevel -= 1;
     }
 
     /// C++: `void NIVissimXMLHandler_Streckendefinition::NIVissimXMLHandler_Streckendefinition(const NIVissimXMLHandler_Streckendefinition &)` [private]
