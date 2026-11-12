@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use super::mscf_model::*;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::f64_to_string_default;
 
 /// car-following model by B. Kerner
 /// C++ class `MSCFModel_Kerner` (microsim/cfmodels/MSCFModel_Kerner.h)
@@ -209,7 +209,7 @@ impl MSCFModel_Kerner_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "BKerner");
-        let internals = f64_to_string_prec(self.rand, 6);
+        let internals = f64_to_string_default(self.rand);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;

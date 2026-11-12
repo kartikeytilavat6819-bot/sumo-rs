@@ -1,6 +1,9 @@
 //! Port of microsim/cfmodels/MSCFModel_PWag2009.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
+use utils::common::time::{accel2speed, speed2accel, ts};
+use utils::common::to_string::f64_to_string_default;
 
 /// Scalable model based on Krauss by Peter Wagner
 /// C++ class `MSCFModel_PWag2009` (microsim/cfmodels/MSCFModel_PWag2009.h)
@@ -47,7 +50,15 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        todo!("port MSCFModel_PWag2009::MSCFModel_PWag2009")
+        let myDawdle = vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(vtype.get_parameter().vehicleClass));
+        let mut base = MSCFModel::new(vtype);
+        let myTauDecel = base.myDecel * base.myHeadwayTime;
+        let myDecelDivTau = base.myDecel / base.myHeadwayTime;
+        let myTauLastDecel = base.myDecel * vtype.get_parameter().get_cf_param(SUMO_ATTR_CF_PWAGNER2009_TAULAST, 0.3);
+        let myActionPointProbability = vtype.get_parameter().get_cf_param(SUMO_ATTR_CF_PWAGNER2009_APPROB, 0.5);
+        // PWag2009 does not drive very precise and may violate minGap on occasion
+        base.myCollisionMinGapFactor = vtype.get_parameter().get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
+        MSCFModel_PWag2009 { base, myDawdle, myTauDecel, myDecelDivTau, myTauLastDecel, myActionPointProbability }
     }
 
     /// C++: `void MSCFModel_PWag2009::~MSCFModel_PWag2009() noexcept` [virtual]
@@ -55,7 +66,7 @@ impl MSCFModel_PWag2009 {
     // MSCFModel_PWag2009::~MSCFModel_PWag2009() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSCFModel_PWag2009::~MSCFModel_PWag2009")
+        // C++ destructor is trivial: no owned resources to release
     }
 
     /// C++: `double MSCFModel_PWag2009::finalizeSpeed(MSVehicle *const, double) const` [const, virtual]
@@ -70,7 +81,11 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        todo!("port MSCFModel_PWag2009::finalizeSpeed")
+        let vNext = self.base.finalize_speed(veh, vPos);
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_PWag2009_VehicleVariables);
+        let apref = speed2accel(vNext - veh.get_speed());
+        vars.m().aOld = apref;
+        vNext
     }
 
     /// C++: `double MSCFModel_PWag2009::patchSpeedBeforeLC(const MSVehicle *, double, double) const` [const, virtual]
@@ -83,7 +98,7 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
-        todo!("port MSCFModel_PWag2009::patchSpeedBeforeLC")
+        vMax
     }
 
     /// C++: `double MSCFModel_PWag2009::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -110,7 +125,23 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_PWag2009::followSpeed")
+        if predSpeed == 0. && gap2pred < 0.01 {
+            return 0.;
+        }
+        let vsafe = -self.myTauLastDecel + (self.myTauLastDecel * self.myTauLastDecel + predSpeed * predSpeed + 2.0 * self.myDecel * gap2pred).sqrt();
+        let asafe = speed2accel(vsafe - speed);
+        let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_PWag2009_VehicleVariables);
+        let mut apref = vars.aOld;
+        if apref <= asafe && veh.get_rng().m().rand() <= self.myActionPointProbability * ts() {
+            apref = self.myDecelDivTau * (gap2pred + (predSpeed - speed) * self.myHeadwayTime - speed * self.myHeadwayTime) / (speed + self.myTauDecel);
+            apref = min2(apref, self.myAccel);
+            apref = max2(apref, -self.myDecel);
+            apref += self.myDawdle * veh.get_rng().m().rand_range(-1., 1.);
+        }
+        if apref > asafe {
+            apref = asafe;
+        }
+        max2(0., speed + accel2speed(apref))
     }
 
     /// C++: `double MSCFModel_PWag2009::stopSpeed(const MSVehicle *const, const double, double, double, const CalcReason) const` [const, virtual]
@@ -134,7 +165,19 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        todo!("port MSCFModel_PWag2009::stopSpeed")
+        if gap2pred < 0.01 {
+            return 0.;
+        }
+        let vsafe = -self.myTauDecel + (self.myTauDecel * self.myTauDecel + 2.0 * self.myDecel * gap2pred).sqrt();
+        let asafe = speed2accel(vsafe - speed);
+        let mut apref = self.myDecelDivTau * (gap2pred - 2. * speed * self.myHeadwayTime) / (speed + self.myTauDecel);
+        if apref <= asafe {
+            apref = min2(apref, self.myAccel);
+            apref = max2(apref, -self.myDecel);
+        } else {
+            apref = asafe;
+        }
+        max2(0., vsafe + accel2speed(apref))
     }
 
     /// C++: `int MSCFModel_PWag2009::getModelID() const` [const, virtual]
@@ -144,7 +187,7 @@ impl MSCFModel_PWag2009 {
     //     }
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        todo!("port MSCFModel_PWag2009::getModelID")
+        SUMO_TAG_CF_PWAGNER2009 as i32
     }
 
     /// C++: `double MSCFModel_PWag2009::getImperfection() const` [const, virtual]
@@ -154,7 +197,7 @@ impl MSCFModel_PWag2009 {
     //     }
     #[allow(unused_variables)]
     pub fn get_imperfection(&self) -> f64 {
-        todo!("port MSCFModel_PWag2009::getImperfection")
+        self.myDawdle
     }
 
     /// C++: `MSCFModel * MSCFModel_PWag2009::duplicate(const MSVehicleType *) const` [const, virtual]
@@ -165,7 +208,7 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        todo!("port MSCFModel_PWag2009::duplicate")
+        Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_PWag2009::new(vtype))) as *mut MSCFModel)
     }
 
     /// C++: `MSCFModel::VehicleVariables * MSCFModel_PWag2009::createVehicleVariables() const` [const, virtual]
@@ -176,7 +219,8 @@ impl MSCFModel_PWag2009 {
     //     }
     #[allow(unused_variables)]
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
-        todo!("port MSCFModel_PWag2009::createVehicleVariables")
+        let vars = MSCFModel_PWag2009_VehicleVariables { base: MSCFModel_VehicleVariables {}, aOld: 0.0 };
+        Ptr::from_raw(Box::into_raw(Box::new(vars)) as *mut MSCFModel_VehicleVariables)
     }
 
     /// C++: `double MSCFModel_PWag2009::_v(const MSVehicle *const, double, double, double) const` [const, private]
@@ -184,7 +228,8 @@ impl MSCFModel_PWag2009 {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, predSpeed: f64) -> f64 {
-        todo!("port MSCFModel_PWag2009::_v")
+        // shortcut: C++ declares _v but never defines it and nothing calls it; reaching this is the C++ link error
+        panic!("MSCFModel_PWag2009::_v is declared in C++ but has no definition")
     }
 
     /// C++: `double MSCFModel_PWag2009::dawdle(double) const` [const, private]
@@ -192,7 +237,8 @@ impl MSCFModel_PWag2009 {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dawdle(&self, speed: f64) -> f64 {
-        todo!("port MSCFModel_PWag2009::dawdle")
+        // shortcut: C++ declares dawdle but never defines it and nothing calls it; reaching this is the C++ link error
+        panic!("MSCFModel_PWag2009::dawdle is declared in C++ but has no definition")
     }
 
 }
@@ -231,7 +277,12 @@ impl MSCFModel_PWag2009_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        todo!("port VehicleVariables::saveState")
+        out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
+        out.write_attr(SUMO_ATTR_ID, "PWagner2009");
+        let internals = f64_to_string_default(self.aOld);
+        out.write_attr(SUMO_ATTR_STATE, internals.as_str());
+        out.close_tag("");
+        let _ = cfm;
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]
@@ -247,8 +298,18 @@ impl MSCFModel_PWag2009_VehicleVariables {
     //     bis >> aOld;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        todo!("port VehicleVariables::loadState")
+    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        let mut ok = true;
+        let cfmID: String = attrs.get(SUMO_ATTR_ID, "", &mut ok, true);
+        if cfmID != "PWagner2009" {
+            return Err(utils::common::util_exceptions::ProcessError::new(format!("incompatible carFollowModel '{}' when loading state for PWagner2009", cfmID)));
+        }
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        if let Some(v) = bis.next().and_then(|s| s.parse::<f64>().ok()) {
+            self.aOld = v;
+        }
+        Ok(())
     }
 
 }
