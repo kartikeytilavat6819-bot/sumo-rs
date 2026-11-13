@@ -20,6 +20,9 @@ pub struct NIVissimConflictArea {
 
 // C++ static members of NIVissimConflictArea (port as module-level statics, see AGENTS.md):
 //   static DictType NIVissimConflictArea::myDict;
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimConflictArea_DictType> = std::cell::RefCell::new(BTreeMap::new());
+}
 
 impl NIVissimConflictArea {
     /// C++: `void NIVissimConflictArea::NIVissimConflictArea(int, const std::string &, const std::string &, const std::string &)`
@@ -32,7 +35,7 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn new(id: i32, link1: &str, link2: &str, status: &str) -> Self {
-        todo!("port NIVissimConflictArea::NIVissimConflictArea")
+        Self { myConflictID: id, myFirstLink: link1.to_string(), mySecondLink: link2.to_string(), myStatus: status.to_string() }
     }
 
     /// C++: `void NIVissimConflictArea::~NIVissimConflictArea()`
@@ -40,7 +43,7 @@ impl NIVissimConflictArea {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimConflictArea::~NIVissimConflictArea")
+        // C++ destructor body is empty; the owned strings are freed by Rust drop glue
     }
 
     /// C++: `bool NIVissimConflictArea::dictionary(int, const std::string &, const std::string &, const std::string &)` [static]
@@ -58,7 +61,13 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, link1: &str, link2: &str, status: &str) -> bool {
-        todo!("port NIVissimConflictArea::dictionary")
+        let ca = Box::into_raw(Box::new(Self::new(id, link1, link2, status)));
+        if !Self::dictionary_2(id, Ptr::from_raw(ca)) {
+            // SAFETY: ca was just allocated above and was not stored in the dictionary, so this is its only owner
+            drop(unsafe { Box::from_raw(ca) });
+            return false;
+        }
+        true
     }
 
     /// C++: `bool NIVissimConflictArea::dictionary(int, NIVissimConflictArea *)` [static]
@@ -74,7 +83,14 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, ca: Ptr<NIVissimConflictArea>) -> bool {
-        todo!("port NIVissimConflictArea::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if !d.contains_key(&id) {
+                d.insert(id, ca);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimConflictArea * NIVissimConflictArea::dictionary(int)` [static]
@@ -89,7 +105,7 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimConflictArea> {
-        todo!("port NIVissimConflictArea::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or(Ptr::null()))
     }
 
     /// C++: `NIVissimConflictArea * NIVissimConflictArea::dict_findByLinks(const std::string &, const std::string &)` [static]
@@ -107,7 +123,14 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn dict_find_by_links(link1: &str, link2: &str) -> Ptr<NIVissimConflictArea> {
-        todo!("port NIVissimConflictArea::dict_findByLinks")
+        MY_DICT.with(|d| {
+            for (_, ca) in d.borrow().iter() {
+                if ca.myFirstLink == link1 && ca.mySecondLink == link2 {
+                    return *ca;
+                }
+            }
+            Ptr::null()
+        })
     }
 
     /// C++: `void NIVissimConflictArea::clearDict()` [static]
@@ -121,7 +144,11 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimConflictArea::clearDict")
+        let dict = MY_DICT.with(|d| std::mem::take(&mut *d.borrow_mut()));
+        for (_, ca) in dict {
+            // SAFETY: every entry was allocated by dictionary() via Box::into_raw and is owned by the dictionary only
+            drop(unsafe { Box::from_raw(ca.as_raw()) });
+        }
     }
 
     /// C++: `std::map<int, NIVissimConflictArea *> NIVissimConflictArea::getConflictAreas()` [static]
@@ -131,7 +158,7 @@ impl NIVissimConflictArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_conflict_areas() -> BTreeMap<i32, Ptr<NIVissimConflictArea>> {
-        todo!("port NIVissimConflictArea::getConflictAreas")
+        MY_DICT.with(|d| d.borrow().clone())
     }
 
     /// C++: `int NIVissimConflictArea::getID()`
@@ -141,7 +168,7 @@ impl NIVissimConflictArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&mut self) -> i32 {
-        todo!("port NIVissimConflictArea::getID")
+        self.myConflictID
     }
 
     /// C++: `std::string NIVissimConflictArea::getFirstLink()`
@@ -151,7 +178,7 @@ impl NIVissimConflictArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_first_link(&mut self) -> String {
-        todo!("port NIVissimConflictArea::getFirstLink")
+        self.myFirstLink.clone()
     }
 
     /// C++: `std::string NIVissimConflictArea::getSecondLink()`
@@ -161,7 +188,7 @@ impl NIVissimConflictArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_second_link(&mut self) -> String {
-        todo!("port NIVissimConflictArea::getSecondLink")
+        self.mySecondLink.clone()
     }
 
     /// C++: `std::string NIVissimConflictArea::getStatus()`
@@ -171,7 +198,7 @@ impl NIVissimConflictArea {
     //     }
     #[allow(unused_variables)]
     pub fn get_status(&mut self) -> String {
-        todo!("port NIVissimConflictArea::getStatus")
+        self.myStatus.clone()
     }
 
     /// C++: `void NIVissimConflictArea::setPriorityRegulation(NBEdgeCont &)` [static]
@@ -213,7 +240,38 @@ impl NIVissimConflictArea {
     // }
     #[allow(unused_variables)]
     pub fn set_priority_regulation(ec: &mut NBEdgeCont) {
-        todo!("port NIVissimConflictArea::setPriorityRegulation")
+        let dict = MY_DICT.with(|d| d.borrow().clone());
+        for (_, conflict_area) in dict.iter() {
+            let conflict_area = *conflict_area;
+            let first_link = NIVissimConnection::dictionary_2(utils::common::string_utils::to_int(&conflict_area.m().get_first_link()).unwrap_or_else(|e| panic!("{e}")));
+            let second_link = NIVissimConnection::dictionary_2(utils::common::string_utils::to_int(&conflict_area.m().get_second_link()).unwrap_or_else(|e| panic!("{e}")));
+            if first_link.is_null() || second_link.is_null() {
+                continue;
+            }
+            // status == "TWOYIELDSONE"
+            let mut priority_conn = first_link;
+            let mut subordinate_conn = second_link;
+            if conflict_area.m().get_status() == "ONEYIELDSTWO" {
+                priority_conn = second_link;
+                subordinate_conn = first_link;
+            }
+            let mayDriveFrom_id = priority_conn.get_from_edge_id().to_string();
+            let mayDriveTo_id = priority_conn.get_to_edge_id().to_string();
+            let mustStopFrom_id = subordinate_conn.get_from_edge_id().to_string();
+            let mustStopTo_id = subordinate_conn.get_to_edge_id().to_string();
+
+            let mayDriveFrom = ec.retrieve_possibly_split(&mayDriveFrom_id, true);
+            let mayDriveTo = ec.retrieve_possibly_split(&mayDriveTo_id, false);
+            let mustStopFrom = ec.retrieve_possibly_split(&mustStopFrom_id, true);
+            let mustStopTo = ec.retrieve_possibly_split(&mustStopTo_id, false);
+
+            if !mayDriveFrom.is_null() && !mayDriveTo.is_null() && !mustStopFrom.is_null() && !mustStopTo.is_null() {
+                let node = mayDriveFrom.get_to_node();
+                node.m().add_sorted_link_foes(
+                    &NBConnection::new(mayDriveFrom, mayDriveTo),
+                    &NBConnection::new(mustStopFrom, mustStopTo));
+            }
+        }
     }
 
 }

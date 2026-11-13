@@ -17,7 +17,7 @@ impl RODFRouteCont {
     // RODFRouteCont::RODFRouteCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RODFRouteCont::RODFRouteCont")
+        Self { myRoutes: Vec::new(), myConnectionOccurrences: BTreeMap::new() }
     }
 
     /// C++: `void RODFRouteCont::~RODFRouteCont()`
@@ -50,7 +50,30 @@ impl RODFRouteCont {
     // }
     #[allow(unused_variables)]
     pub fn add_route_desc(&mut self, desc: &mut RODFRouteDesc) {
-        todo!("port RODFRouteCont::addRouteDesc")
+        let mut finder = RODFRouteCont_route_finder::new(&*desc);
+        match self.myRoutes.iter().position(|r| finder.call_op(r)) {
+            None => {
+                self.set_id(desc);
+                // RODFRouteDesc has no Clone; copy field by field as the C++ push_back copy does
+                let copy = RODFRouteDesc {
+                    edges2Pass: desc.edges2Pass.clone(),
+                    routename: desc.routename.clone(),
+                    duration_2: desc.duration_2,
+                    distance: desc.distance,
+                    passedNo: desc.passedNo,
+                    endDetectorEdge: desc.endDetectorEdge,
+                    lastDetectorEdge: desc.lastDetectorEdge,
+                    distance2Last: desc.distance2Last,
+                    duration2Last: desc.duration2Last.clone(),
+                    overallProb: desc.overallProb,
+                    factor: desc.factor,
+                };
+                self.myRoutes.push(copy);
+            }
+            Some(idx) => {
+                self.myRoutes[idx].overallProb += desc.overallProb;
+            }
+        }
     }
 
     /// C++: `bool RODFRouteCont::removeRouteDesc(RODFRouteDesc &)`
@@ -65,7 +88,11 @@ impl RODFRouteCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_route_desc(&mut self, desc: &mut RODFRouteDesc) -> bool {
-        todo!("port RODFRouteCont::removeRouteDesc")
+        let mut finder = RODFRouteCont_route_finder::new(&*desc);
+        if !self.myRoutes.iter().any(|r| finder.call_op(r)) {
+            return false;
+        }
+        return true;
     }
 
     /// C++: `bool RODFRouteCont::save(std::vector<std::string> &, const std::string &, OutputDevice &)`
@@ -97,7 +124,26 @@ impl RODFRouteCont {
     // }
     #[allow(unused_variables)]
     pub fn save(&mut self, saved: &mut Vec<String>, prependix: &str, out: &mut OutputDevice) -> bool {
-        todo!("port RODFRouteCont::save")
+        let mut haveSavedOneAtLeast = false;
+        for desc in self.myRoutes.iter() {
+            if saved.contains(&desc.routename) {
+                continue;
+            }
+            saved.push(desc.routename.clone());
+            assert!(desc.edges2Pass.len() >= 1);
+            out.open_tag_id(SUMO_TAG_ROUTE).write_attr(SUMO_ATTR_ID, format!("{}{}", prependix, desc.routename).as_str());
+            out.write(" edges=\"");
+            for (idx, k) in desc.edges2Pass.iter().enumerate() {
+                if idx != 0 {
+                    out.write(" ");
+                }
+                out.write(k.get_id());
+            }
+            out.write("\"");
+            out.close_tag("");
+            haveSavedOneAtLeast = true;
+        }
+        haveSavedOneAtLeast
     }
 
     /// C++: `std::vector<RODFRouteDesc> & RODFRouteCont::get()`
@@ -118,7 +164,17 @@ impl RODFRouteCont {
     // }
     #[allow(unused_variables)]
     pub fn sort_by_distance(&mut self) {
-        todo!("port RODFRouteCont::sortByDistance")
+        let mut sorter = RODFRouteCont_by_distance_sorter::new();
+        // determinism: C++ std::sort is unstable and Rust sort_by is stable, so routes with equal distance2Last may end up in a different order
+        self.myRoutes.sort_by(|a, b| {
+            if sorter.call_op(a, b) != 0 {
+                std::cmp::Ordering::Less
+            } else if sorter.call_op(b, a) != 0 {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
     }
 
     /// C++: `void RODFRouteCont::removeIllegal(const std::vector<ROEdgeVector> &)`
@@ -148,7 +204,33 @@ impl RODFRouteCont {
     // }
     #[allow(unused_variables)]
     pub fn remove_illegal(&mut self, illegals: &Vec<ROEdgeVector>) {
-        todo!("port RODFRouteCont::removeIllegal")
+        let mut i = 0;
+        while i < self.myRoutes.len() {
+            let desc = &self.myRoutes[i];
+            let mut remove = false;
+            for j in illegals.iter() {
+                if remove {
+                    break;
+                }
+                let mut noFound = 0;
+                for k in j.iter() {
+                    if remove {
+                        break;
+                    }
+                    if desc.edges2Pass.contains(k) {
+                        noFound += 1;
+                        if noFound > 1 {
+                            remove = true;
+                        }
+                    }
+                }
+            }
+            if remove {
+                self.myRoutes.remove(i);
+            } else {
+                i += 1;
+            }
+        }
     }
 
     /// C++: `void RODFRouteCont::setID(RODFRouteDesc &) const` [const, protected]
@@ -165,8 +247,16 @@ impl RODFRouteCont {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_id(&self, desc: &mut RODFRouteDesc) {
-        todo!("port RODFRouteCont::setID")
+    pub fn set_id(&mut self, desc: &mut RODFRouteDesc) {
+        let c = (desc.edges2Pass[0], *desc.edges2Pass.last().unwrap());
+        desc.routename = format!("{}_to_{}", c.0.get_id(), c.1.get_id());
+        if !self.myConnectionOccurrences.contains_key(&c) {
+            self.myConnectionOccurrences.insert(c, 0);
+        } else {
+            let occurrences = self.myConnectionOccurrences[&c] + 1;
+            self.myConnectionOccurrences.insert(c, occurrences);
+            desc.routename = format!("{}_{}", desc.routename, occurrences);
+        }
     }
 
 }
@@ -194,7 +284,7 @@ impl RODFRouteCont_by_distance_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, p1: &RODFRouteDesc, p2: &RODFRouteDesc) -> i32 {
-        todo!("port by_distance_sorter::operator()")
+        (p1.distance2Last < p2.distance2Last) as i32
     }
 
 }
@@ -212,7 +302,7 @@ impl RODFRouteCont_route_finder {
     // explicit route_finder(const RODFRouteDesc& desc) : myDesc(desc) { }
     #[allow(unused_variables)]
     pub fn new(desc: &RODFRouteDesc) -> Self {
-        todo!("port route_finder::route_finder")
+        Self { myDesc: Ptr::new(desc) }
     }
 
     /// C++: `bool route_finder::operator()(const RODFRouteDesc &)`
@@ -222,7 +312,7 @@ impl RODFRouteCont_route_finder {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, desc: &RODFRouteDesc) -> bool {
-        todo!("port route_finder::operator()")
+        self.myDesc.edges2Pass == desc.edges2Pass
     }
 
 }
