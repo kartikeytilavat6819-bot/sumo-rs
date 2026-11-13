@@ -13,7 +13,6 @@ use utils::common::msg_handler::{with_instance, write_error, MsgHandler, MsgType
 use utils::common::util_exceptions::ProcessError;
 use utils::distribution::distribution_cont;
 use utils::geom::geo_conv_helper::GeoConvHelper;
-use utils::geom::Position;
 use utils::options::options_cont::{get_bool, with_options};
 use utils::options::options_io;
 use utils::xml::xml_sub_sys;
@@ -34,7 +33,7 @@ fn fill_options() {
         utils::common::system_frame::add_configuration_options(oc);
         oc.add_option_sub_topic("Input");
         oc.add_option_sub_topic("Output");
-        // shortcut: GeoConvHelper::addProjectionOptions(oc) is not ported, so the projection options and subtopic are missing, upgrade when geo_conv_helper registers them
+        GeoConvHelper::add_projection_options(oc);
         oc.add_option_sub_topic("Processing");
         oc.add_option_sub_topic("Building Defaults");
         oc.add_option_sub_topic("TLS Building");
@@ -95,8 +94,7 @@ fn run(argv: &[String]) -> Result<bool, ProcessError> {
     }
     // shortcut: RandHelper::initRandGlobal() is skipped because the random and seed options are not registered, the global RNG keeps its default seed, upgrade with insertRandOptions
     // build the projection
-    // shortcut: GeoConvHelper::init(OptionsCont&) is not ported, so the default projection (none, no offset, scale 1) is used whatever the options say, upgrade when addProjectionOptions and init(oc) land
-    if !GeoConvHelper::init_from_options(false, 1.0, 0.0, Position::default(), false, false) {
+    if !with_options(|oc| GeoConvHelper::init_from_options(oc))? {
         return Err(ProcessError::new("Could not build projection!"));
     }
     let mut nb = NBNetBuilder::new();
