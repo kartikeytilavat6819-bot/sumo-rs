@@ -14797,7 +14797,57 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn update_state(&mut self, vNext: f64, parking: bool) {
-        todo!("port MSVehicle::updateState")
+        // update position and speed
+        let mut deltaPos: f64; // positional change
+        if MSGlobals::semi_implicit_euler_update() {
+            // euler
+            deltaPos = speed2dist(vNext);
+        } else {
+            // ballistic
+            deltaPos = self.get_delta_pos(speed2accel(vNext - self.myState.mySpeed));
+        }
+
+        // the *mean* acceleration during the next step (probably most appropriate for emission calculation)
+        // NOTE: for the ballistic update vNext may be negative, indicating a stop.
+        self.myAcceleration = speed2accel(max2(vNext, 0.) - self.myState.mySpeed);
+
+        let mut decelPlus = -self.myAcceleration - self.get_car_follow_model().get_max_decel() - utils::geom::NUMERICAL_EPS;
+        if decelPlus > 0. {
+            let previousAcceleration = speed2accel(self.myState.mySpeed - self.myState.myPreviousSpeed);
+            if self.myAcceleration + utils::geom::NUMERICAL_EPS < previousAcceleration {
+                // vehicle brakes beyond wished maximum deceleration (only warn at the start of the braking manoeuvre)
+                decelPlus += 2. * utils::geom::NUMERICAL_EPS;
+                let emergencyFraction = decelPlus / max2(utils::geom::NUMERICAL_EPS, self.get_car_follow_model().get_emergency_decel() - self.get_car_follow_model().get_max_decel());
+                if emergencyFraction >= MSGlobals::emergency_decel_warning_threshold() {
+                    write_warningf!(
+                        "Vehicle '%' performs emergency braking on lane '%' with decel=%, wished=%, severity=%, time=%.",
+                        self.get_id(),
+                        self.myLane.get_id(),
+                        -self.myAcceleration,
+                        self.get_car_follow_model().get_max_decel(),
+                        emergencyFraction,
+                        utils::common::time::time2string(MSNet::get_instance().m().get_current_time_step())
+                    );
+                    MSNet::get_instance().m().get_vehicle_control().register_emergency_braking();
+                }
+            }
+        }
+
+        self.myState.myPreviousSpeed = self.myState.mySpeed;
+        self.myState.mySpeed = max2(vNext, 0.);
+
+        if self.is_remote_controlled() {
+            let influencer = self.myInfluencer;
+            deltaPos = influencer.m().implicit_delta_pos_remote(Ptr::from_mut(self));
+        }
+
+        self.myState.myPos += deltaPos;
+        self.myState.myLastCoveredDist = deltaPos;
+        self.myNextTurn.0 -= deltaPos;
+
+        if !parking {
+            self.myCachedPosition = Position::INVALID;
+        }
     }
 
     /// C++: `bool MSVehicle::keepClear(const MSLink *) const` [const, protected]
@@ -14814,7 +14864,13 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn keep_clear(&self, link: Ptr<MSLink>) -> bool {
-        todo!("port MSVehicle::keepClear")
+        if link.has_foes() && link.keep_clear() {
+            let keepClearTime = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_KEEPCLEAR_TIME, -1.);
+            //std::cout << SIMTIME << " veh=" << getID() << " keepClearTime=" << keepClearTime << " accWait=" << getAccumulatedWaitingSeconds() << " keepClear=" << (keepClearTime < 0 || getAccumulatedWaitingSeconds() < keepClearTime) << "\n";
+            keepClearTime < 0. || self.get_accumulated_waiting_seconds() < keepClearTime
+        } else {
+            false
+        }
     }
 
     /// C++: `std::pair<double, double> MSVehicle::estimateTimeToNextStop() const` [const, virtual, protected]
