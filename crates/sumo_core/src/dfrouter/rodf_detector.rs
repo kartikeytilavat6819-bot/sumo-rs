@@ -1,6 +1,21 @@
 //! Port of dfrouter/RODFDetector.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_helpers::get_file_path;
+use utils::common::rand_helper::with_default;
+use utils::common::string_utils;
+use utils::geom::NUMERICAL_EPS;
+use utils::options::options_cont::{get_bool, get_float, get_string, is_default, is_set};
+use utils::xml::sumo_xml_definitions::{get_edge_id_from_lane, get_index_from_lane};
+
+// C++ VTYPEPARS_*_SET bits of SUMOVTypeParameter::parametersSet (private in sumov_type_parameter.rs)
+const VTYPEPARS_SPEEDFACTOR_SET: i64 = 1 << 4;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+
+/// C++ MAX2(a, b): a > b ? a : b
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
 
 /// C++ enum `RODFDetectorType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -49,7 +64,17 @@ impl RODFDetector {
     //     : Named(id), myLaneID(laneID), myPosition(pos), myType(type), myRoutes(nullptr) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, laneID: &str, pos: f64, type_: RODFDetectorType) -> Self {
-        todo!("port RODFDetector::RODFDetector")
+        RODFDetector {
+            base: Named::new(id),
+            myLaneID: laneID.to_string(),
+            myPosition: pos,
+            myType: type_,
+            myRoutes: Ptr::null(),
+            myPriorDetectors: BTreeSet::new(),
+            myFollowingDetectors: BTreeSet::new(),
+            mySplitProbabilities: Vec::new(),
+            myRoute2Edge: BTreeMap::new(),
+        }
     }
 
     /// C++: `void RODFDetector::RODFDetector(const std::string &, const RODFDetector &)`
@@ -63,7 +88,41 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, f: &RODFDetector) -> Self {
-        todo!("port RODFDetector::RODFDetector")
+        let mut routes = Ptr::null();
+        if !f.myRoutes.is_null() {
+            let src = f.myRoutes.m();
+            routes = Ptr::from_raw(Box::into_raw(Box::new(RODFRouteCont {
+                myRoutes: src
+                    .myRoutes
+                    .iter()
+                    .map(|d| RODFRouteDesc {
+                        edges2Pass: d.edges2Pass.clone(),
+                        routename: d.routename.clone(),
+                        duration_2: d.duration_2,
+                        distance: d.distance,
+                        passedNo: d.passedNo,
+                        endDetectorEdge: d.endDetectorEdge,
+                        lastDetectorEdge: d.lastDetectorEdge,
+                        distance2Last: d.distance2Last,
+                        duration2Last: d.duration2Last,
+                        overallProb: d.overallProb,
+                        factor: d.factor,
+                    })
+                    .collect(),
+                myConnectionOccurrences: src.myConnectionOccurrences.clone(),
+            })));
+        }
+        RODFDetector {
+            base: Named::new(id),
+            myLaneID: f.myLaneID.clone(),
+            myPosition: f.myPosition,
+            myType: f.myType,
+            myRoutes: routes,
+            myPriorDetectors: BTreeSet::new(),
+            myFollowingDetectors: BTreeSet::new(),
+            mySplitProbabilities: Vec::new(),
+            myRoute2Edge: BTreeMap::new(),
+        }
     }
 
     /// C++: `void RODFDetector::~RODFDetector() noexcept` [virtual]
@@ -73,7 +132,9 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFDetector::~RODFDetector")
+        if !self.myRoutes.is_null() {
+            drop(unsafe { Box::from_raw(self.myRoutes.as_raw()) });
+        }
     }
 
     /// C++: `const std::string & RODFDetector::getLaneID() const` [const]
@@ -83,7 +144,7 @@ impl RODFDetector {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane_id(&self) -> &str {
-        todo!("port RODFDetector::getLaneID")
+        &self.myLaneID
     }
 
     /// C++: `std::string RODFDetector::getEdgeID() const` [const]
@@ -94,7 +155,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_id(&self) -> String {
-        todo!("port RODFDetector::getEdgeID")
+        get_edge_id_from_lane(&self.myLaneID)
     }
 
     /// C++: `double RODFDetector::getPos() const` [const]
@@ -104,7 +165,7 @@ impl RODFDetector {
     //     }
     #[allow(unused_variables)]
     pub fn get_pos(&self) -> f64 {
-        todo!("port RODFDetector::getPos")
+        self.myPosition
     }
 
     /// C++: `RODFDetectorType RODFDetector::getType() const` [const]
@@ -114,7 +175,7 @@ impl RODFDetector {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> RODFDetectorType {
-        todo!("port RODFDetector::getType")
+        self.myType
     }
 
     /// C++: `void RODFDetector::setType(RODFDetectorType)`
@@ -125,7 +186,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: RODFDetectorType) {
-        todo!("port RODFDetector::setType")
+        self.myType = type_;
     }
 
     /// C++: `void RODFDetector::addRoute(RODFRouteDesc &)`
@@ -138,7 +199,10 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn add_route(&mut self, nrd: &mut RODFRouteDesc) {
-        todo!("port RODFDetector::addRoute")
+        if self.myRoutes.is_null() {
+            self.myRoutes = Ptr::from_raw(Box::into_raw(Box::new(RODFRouteCont::new())));
+        }
+        self.myRoutes.m().add_route_desc(nrd);
     }
 
     /// C++: `void RODFDetector::addRoutes(RODFRouteCont *)`
@@ -149,7 +213,10 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn add_routes(&mut self, routes: Ptr<RODFRouteCont>) {
-        todo!("port RODFDetector::addRoutes")
+        if !self.myRoutes.is_null() {
+            drop(unsafe { Box::from_raw(self.myRoutes.as_raw()) });
+        }
+        self.myRoutes = routes;
     }
 
     /// C++: `bool RODFDetector::hasRoutes() const` [const]
@@ -159,7 +226,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn has_routes(&self) -> bool {
-        todo!("port RODFDetector::hasRoutes")
+        !self.myRoutes.is_null() && self.myRoutes.m().get().len() != 0
     }
 
     /// C++: `const std::vector<RODFRouteDesc> & RODFDetector::getRouteVector() const` [const]
@@ -169,7 +236,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn get_route_vector(&self) -> &Vec<RODFRouteDesc> {
-        todo!("port RODFDetector::getRouteVector")
+        self.myRoutes.m().get()
     }
 
     /// C++: `void RODFDetector::addPriorDetector(const RODFDetector *)`
@@ -179,7 +246,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn add_prior_detector(&mut self, det: Ptr<RODFDetector>) {
-        todo!("port RODFDetector::addPriorDetector")
+        self.myPriorDetectors.insert(det);
     }
 
     /// C++: `void RODFDetector::addFollowingDetector(const RODFDetector *)`
@@ -189,7 +256,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn add_following_detector(&mut self, det: Ptr<RODFDetector>) {
-        todo!("port RODFDetector::addFollowingDetector")
+        self.myFollowingDetectors.insert(det);
     }
 
     /// C++: `const std::set<const RODFDetector *> & RODFDetector::getPriorDetectors() const` [const]
@@ -199,7 +266,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn get_prior_detectors(&self) -> &BTreeSet<Ptr<RODFDetector>> {
-        todo!("port RODFDetector::getPriorDetectors")
+        &self.myPriorDetectors
     }
 
     /// C++: `const std::set<const RODFDetector *> & RODFDetector::getFollowerDetectors() const` [const]
@@ -209,7 +276,7 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn get_follower_detectors(&self) -> &BTreeSet<Ptr<RODFDetector>> {
-        todo!("port RODFDetector::getFollowerDetectors")
+        &self.myFollowingDetectors
     }
 
     /// C++: `bool RODFDetector::writeEmitterDefinition(const std::string &, const std::map<SUMOTime, RandomDistributor<int> *> &, const RODFDetectorFlows &, SUMOTime, SUMOTime, SUMOTime, bool, double, bool, double) const` [const]
@@ -374,7 +441,154 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn write_emitter_definition(&self, file: &str, dists: &BTreeMap<SUMOTime, Ptr<RandomDistributor<i32>>>, flows: &RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime, includeUnusedRoutes: bool, scale: f64, insertionsOnly: bool, defaultSpeed: f64) -> bool {
-        todo!("port RODFDetector::writeEmitterDefinition")
+        let out = Ptr::from_raw(OutputDevice::get_device(file, true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        if self.get_type() != RODFDetectorType::SOURCE_DETECTOR {
+            out.m().write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        }
+        // routes
+        if !self.myRoutes.is_null() && self.myRoutes.m().get().len() != 0 {
+            let routes: &Vec<RODFRouteDesc> = self.myRoutes.m().get();
+            out.m().open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_ID, self.get_id());
+            let mut isEmptyDist = true;
+            for i in routes.iter() {
+                if i.overallProb > 0. {
+                    isEmptyDist = false;
+                }
+            }
+            for i in routes.iter() {
+                if isEmptyDist {
+                    out.m().open_tag_id(SUMO_TAG_ROUTE).write_attr(SUMO_ATTR_REFID, &i.routename).write_attr(SUMO_ATTR_PROB, &1.0_f64).close_tag("");
+                } else if i.overallProb > 0. || includeUnusedRoutes {
+                    out.m().open_tag_id(SUMO_TAG_ROUTE).write_attr(SUMO_ATTR_REFID, &i.routename).write_attr(SUMO_ATTR_PROB, &i.overallProb).close_tag("");
+                }
+            }
+            out.m().close_tag(""); // routeDistribution
+        } else {
+            write_errorf!("Detector '%' has no routes!?", self.get_id());
+            return false;
+        }
+        // insertions
+        let mut vehicleIndex: i32 = 0;
+        if insertionsOnly || flows.knows(self.get_id()) {
+            // get the flows for this detector
+            let mflows: &Vec<FlowDef> = flows.get_flow_defs(self.get_id());
+            // go through the simulation seconds
+            let mut index: usize = 0;
+            let mut time = startTime;
+            while time < endTime {
+                // get own (departure flow)
+                debug_assert!(index < mflows.len());
+                let srcFD = Ptr::new(&mflows[index]); // !!! check stepOffset
+                // get flows at end
+                let destDist: Option<Ptr<RandomDistributor<i32>>> = dists.get(&time).copied();
+                // go through the cars
+                let numCars = ((srcFD.qPKW + srcFD.qLKW) * scale) as i32;
+
+                let mut departures: Vec<SUMOTime> = Vec::new();
+                if get_bool("randomize-flows") {
+                    for _i in 0..numCars {
+                        departures.push(time + with_default(|r| r.rand_i64(stepOffset)));
+                    }
+                    departures.sort();
+                } else {
+                    for i in 0..numCars {
+                        departures.push(time + (stepOffset * i as SUMOTime / numCars as SUMOTime));
+                    }
+                }
+
+                for car in 0..numCars {
+                    // get the vehicle parameter
+                    let mut v: f64;
+                    let vtype: &str;
+                    let mut destIndex: i32 = -1;
+                    if let Some(destDist) = destDist {
+                        if destDist.get_overall_prob() > 0. {
+                            destIndex = (*destDist).get(None).unwrap_or_else(|e| panic!("{e}"));
+                        } else if self.myRoutes.m().get().len() > 0 {
+                            // equal probabilities. see writeEmitterDefinition()
+                            destIndex = with_default(|r| r.rand_int(self.myRoutes.m().get().len() as i32));
+                        }
+                    }
+                    if srcFD.isLKW >= 1. {
+                        srcFD.m().isLKW = srcFD.isLKW - 1.;
+                        v = srcFD.vLKW;
+                        vtype = "LKW";
+                    } else {
+                        v = srcFD.vPKW;
+                        vtype = "PKW";
+                    }
+                    // compute insertion speed
+                    if v <= 0. || v > 250. {
+                        v = defaultSpeed;
+                    } else {
+                        v /= 3.6;
+                    }
+                    // compute the departure time
+                    let ctime: SUMOTime = departures[car as usize];
+
+                    // write
+                    out.m().open_tag_id(SUMO_TAG_VEHICLE);
+                    out.m().write_attr(SUMO_ATTR_ID, &format!("{}.{}", self.get_id(), vehicleIndex));
+                    if get_bool("vtype") {
+                        out.m().write_attr(SUMO_ATTR_TYPE, vtype);
+                    }
+                    out.m().write_attr(SUMO_ATTR_DEPART, &time2string(ctime));
+                    if is_set("departlane") {
+                        out.m().write_non_empty_attr(SUMO_ATTR_DEPARTLANE, &get_string("departlane"));
+                    } else {
+                        out.m().write_attr(SUMO_ATTR_DEPARTLANE, &get_index_from_lane(&self.myLaneID).unwrap_or_else(|e| panic!("{e}")));
+                    }
+                    if is_set("departpos") {
+                        let posDesc = get_string("departpos");
+                        if posDesc.get(0..8) == Some("detector") {
+                            let mut position = self.myPosition;
+                            if posDesc.len() > 8 {
+                                if posDesc.as_bytes()[8] == b'+' {
+                                    position += string_utils::to_double(&posDesc[9..]).unwrap_or_else(|e| panic!("{e}"));
+                                } else if posDesc.as_bytes()[8] == b'-' {
+                                    position -= string_utils::to_double(&posDesc[9..]).unwrap_or_else(|e| panic!("{e}"));
+                                } else {
+                                    panic!("{}", ProcessError::NumberFormat(String::new()));
+                                }
+                            }
+                            out.m().write_attr(SUMO_ATTR_DEPARTPOS, &position);
+                        } else {
+                            out.m().write_non_empty_attr(SUMO_ATTR_DEPARTPOS, &posDesc);
+                        }
+                    } else {
+                        out.m().write_attr(SUMO_ATTR_DEPARTPOS, &self.myPosition);
+                    }
+                    if is_set("departspeed") {
+                        out.m().write_non_empty_attr(SUMO_ATTR_DEPARTSPEED, &get_string("departspeed"));
+                    } else {
+                        out.m().write_attr(SUMO_ATTR_DEPARTSPEED, &v);
+                    }
+                    if is_set("arrivallane") {
+                        out.m().write_non_empty_attr(SUMO_ATTR_ARRIVALLANE, &get_string("arrivallane"));
+                    }
+                    if is_set("arrivalpos") {
+                        out.m().write_non_empty_attr(SUMO_ATTR_ARRIVALPOS, &get_string("arrivalpos"));
+                    }
+                    if is_set("arrivalspeed") {
+                        out.m().write_non_empty_attr(SUMO_ATTR_ARRIVALSPEED, &get_string("arrivalspeed"));
+                    }
+                    if destIndex >= 0 {
+                        out.m().write_attr(SUMO_ATTR_ROUTE, &self.myRoutes.m().get()[destIndex as usize].routename);
+                    } else {
+                        out.m().write_attr(SUMO_ATTR_ROUTE, self.get_id());
+                    }
+                    out.m().close_tag("");
+                    srcFD.m().isLKW += srcFD.fLKW;
+                    vehicleIndex += 1;
+                }
+                index += 1;
+                time += stepOffset;
+            }
+        }
+        if self.get_type() != RODFDetectorType::SOURCE_DETECTOR {
+            out.m().close();
+        }
+        true
     }
 
     /// C++: `bool RODFDetector::writeRoutes(std::vector<std::string> &, OutputDevice &)`
@@ -388,7 +602,10 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn write_routes(&mut self, saved: &mut Vec<String>, out: &mut OutputDevice) -> bool {
-        todo!("port RODFDetector::writeRoutes")
+        if !self.myRoutes.is_null() {
+            return self.myRoutes.m().save(saved, "", out);
+        }
+        false
     }
 
     /// C++: `void RODFDetector::writeSingleSpeedTrigger(const std::string &, const RODFDetectorFlows &, SUMOTime, SUMOTime, SUMOTime, double)`
@@ -416,14 +633,33 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn write_single_speed_trigger(&mut self, file: &str, flows: &RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime, defaultSpeed: f64) {
-        todo!("port RODFDetector::writeSingleSpeedTrigger")
+        let out = Ptr::from_raw(OutputDevice::get_device(file, true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        out.m().write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        let mflows: &Vec<FlowDef> = flows.get_flow_defs(self.get_id());
+        let mut index: usize = 0;
+        let mut t = startTime;
+        while t < endTime {
+            debug_assert!(index < mflows.len());
+            let srcFD = &mflows[index];
+            let mut speed = if srcFD.vLKW > srcFD.vPKW { srcFD.vLKW } else { srcFD.vPKW };
+            if speed <= 0. || speed > 250. {
+                speed = defaultSpeed;
+            } else {
+                speed = speed / 3.6;
+            }
+            out.m().open_tag_id(SUMO_TAG_STEP).write_attr(SUMO_ATTR_TIME, &time2string(t)).write_attr(SUMO_ATTR_SPEED, &speed).close_tag("");
+            index += 1;
+            t += stepOffset;
+        }
+        out.m().close();
     }
 
     /// C++: `void RODFDetector::writeEndRerouterDetectors(const std::string &)`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn write_end_rerouter_detectors(&mut self, file: &str) {
-        todo!("port RODFDetector::writeEndRerouterDetectors")
+        // shortcut: C++ declares RODFDetector::writeEndRerouterDetectors but never defines it; the only caller is RODFDetectorCon::writeEndRerouterDetectors. Keep panicking if anything reaches it.
+        panic!("RODFDetector::writeEndRerouterDetectors is declared but not defined in SUMO");
     }
 
     /// C++: `void RODFDetector::buildDestinationDistribution(const RODFDetectorCon &, SUMOTime, SUMOTime, SUMOTime, const RODFNet &, std::map<SUMOTime, RandomDistributor<int> *> &) const` [const]
@@ -482,7 +718,58 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn build_destination_distribution(&self, detectors: &RODFDetectorCon, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime, net: &RODFNet, into: &mut BTreeMap<SUMOTime, Ptr<RandomDistributor<i32>>>) {
-        todo!("port RODFDetector::buildDestinationDistribution")
+        if self.myRoutes.is_null() {
+            if self.myType != RODFDetectorType::DISCARDED_DETECTOR && self.myType != RODFDetectorType::BETWEEN_DETECTOR {
+                write_errorf!("Missing routes for detector '%'.", self.get_id());
+            }
+            return;
+        }
+        let descs: &mut Vec<RODFRouteDesc> = self.myRoutes.m().get();
+        // iterate through time (in output interval steps)
+        let mut time = startTime;
+        while time < endTime {
+            let dist = Ptr::from_raw(Box::into_raw(Box::new(RandomDistributor::<i32>::default())));
+            into.insert(time, dist);
+            // iterate through the routes
+            for (index, ri) in descs.iter_mut().enumerate() {
+                let mut prob = 1.;
+                let mut j: usize = 0;
+                while j < ri.edges2Pass.len() && prob > 0. {
+                    if !net.has_detector(ri.edges2Pass[j]) {
+                        j += 1;
+                        continue;
+                    }
+                    let det: &RODFDetector = detectors.get_any_detector_for_edge(ri.edges2Pass[j].cast::<RODFEdge>());
+                    let probs = det.get_split_probabilities();
+                    if probs.len() == 0 {
+                        prob = 0.;
+                        j += 1;
+                        continue;
+                    }
+                    let tprobs = &probs[((time - startTime) / stepOffset) as usize];
+                    // determinism: std::map<RODFEdge*, double> is ordered by address; BTreeMap<Ptr<_>> keeps that order
+                    let mut splitEdge: Option<Ptr<RODFEdge>> = None;
+                    for (k_edge, k_prob) in tprobs.iter() {
+                        if ri.edges2Pass[j..].iter().any(|e| e.cast::<RODFEdge>() == *k_edge) {
+                            prob *= *k_prob;
+                            splitEdge = Some(*k_edge);
+                            break;
+                        }
+                    }
+                    match splitEdge {
+                        Some(se) => {
+                            j += ri.edges2Pass[j..].iter().position(|e| e.cast::<RODFEdge>() == se).unwrap();
+                        }
+                        None => {
+                            j += 1;
+                        }
+                    }
+                }
+                dist.m().add(index as i32, prob, true);
+                ri.overallProb = prob;
+            }
+            time += stepOffset;
+        }
     }
 
     /// C++: `void RODFDetector::computeSplitProbabilities(const RODFNet *, const RODFDetectorCon &, const RODFDetectorFlows &, SUMOTime, SUMOTime, SUMOTime)`
@@ -561,7 +848,75 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn compute_split_probabilities(&mut self, net: Ptr<RODFNet>, detectors: &RODFDetectorCon, flows: &RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime) {
-        todo!("port RODFDetector::computeSplitProbabilities")
+        if self.myRoutes.is_null() {
+            return;
+        }
+        // compute edges to determine split probabilities
+        let routes: &Vec<RODFRouteDesc> = self.myRoutes.m().get();
+        let mut nextDetEdges: Vec<Ptr<RODFEdge>> = Vec::new();
+        let mut preSplitEdges: BTreeSet<Ptr<ROEdge>> = BTreeSet::new();
+        for rd in routes.iter() {
+            let mut hadSplit = false;
+            for j in rd.edges2Pass.iter() {
+                if hadSplit && net.has_detector(*j) {
+                    if !nextDetEdges.contains(&j.cast::<RODFEdge>()) {
+                        nextDetEdges.push(j.cast::<RODFEdge>());
+                    }
+                    self.myRoute2Edge.insert(rd.routename.clone(), j.cast::<RODFEdge>());
+                    break;
+                }
+                if !hadSplit {
+                    preSplitEdges.insert(*j);
+                }
+                if j.get_num_successors() > 1 {
+                    hadSplit = true;
+                }
+            }
+        }
+        let mut inFlows: BTreeMap<Ptr<ROEdge>, f64> = BTreeMap::new();
+        if get_bool("respect-concurrent-inflows") {
+            for i in nextDetEdges.iter() {
+                let mut seen: BTreeSet<Ptr<ROEdge>> = preSplitEdges.clone();
+                let mut pending: ROEdgeVector = Vec::new();
+                pending.push(i.cast::<ROEdge>());
+                seen.insert(i.cast::<ROEdge>());
+                while let Some(e) = pending.pop() {
+                    for it in e.get_predecessors().iter() {
+                        let e2 = *it;
+                        if e2.get_num_successors() == 1 && !seen.contains(&e2) {
+                            if net.has_detector(e2) {
+                                *inFlows.entry(i.cast::<ROEdge>()).or_insert(0.0) += detectors.get_agg_flow_for(e2, 0, 0, flows) as f64;
+                            } else {
+                                pending.push(e2);
+                            }
+                            seen.insert(e2);
+                        }
+                    }
+                }
+            }
+        }
+        // compute the probabilities to use a certain direction
+        let mut index: usize = 0;
+        let mut time = startTime;
+        while time < endTime {
+            self.mySplitProbabilities.push(BTreeMap::new());
+            let mut overallProb = 0.0;
+            // retrieve the probabilities
+            for i in nextDetEdges.iter() {
+                let flow = detectors.get_agg_flow_for(i.cast::<ROEdge>(), time, 60, flows) as f64 - *inFlows.entry(i.cast::<ROEdge>()).or_insert(0.0);
+                overallProb += flow;
+                self.mySplitProbabilities[index].insert(*i, flow);
+            }
+            // norm probabilities
+            if overallProb > 0. {
+                for i in nextDetEdges.iter() {
+                    let v = self.mySplitProbabilities[index][i] / overallProb;
+                    self.mySplitProbabilities[index].insert(*i, v);
+                }
+            }
+            index += 1;
+            time += stepOffset;
+        }
     }
 
     /// C++: `const std::vector<std::map<RODFEdge *, double>> & RODFDetector::getSplitProbabilities() const` [const]
@@ -570,14 +925,15 @@ impl RODFDetector {
     //     }
     #[allow(unused_variables)]
     pub fn get_split_probabilities(&self) -> &Vec<BTreeMap<Ptr<RODFEdge>, f64>> {
-        todo!("port RODFDetector::getSplitProbabilities")
+        &self.mySplitProbabilities
     }
 
     /// C++: `int RODFDetector::getFlowFor(const ROEdge *, SUMOTime) const` [const, protected]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_flow_for(&self, edge: Ptr<ROEdge>, time: SUMOTime) -> i32 {
-        todo!("port RODFDetector::getFlowFor")
+        // shortcut: C++ declares RODFDetector::getFlowFor but has no definition and no caller; reaching it is a link error in C++
+        panic!("RODFDetector::getFlowFor is declared but not defined in SUMO");
     }
 
     /// C++: `double RODFDetector::computeDistanceFactor(const RODFRouteDesc &) const` [const, protected]
@@ -592,7 +948,12 @@ impl RODFDetector {
     // }
     #[allow(unused_variables)]
     pub fn compute_distance_factor(&self, rd: &RODFRouteDesc) -> f64 {
-        todo!("port RODFDetector::computeDistanceFactor")
+        let distance = rd.edges2Pass[0].get_from_junction().get_position().distance_to(rd.edges2Pass.last().unwrap().get_to_junction().get_position());
+        let mut length = 0.;
+        for i in rd.edges2Pass.iter() {
+            length += i.get_length();
+        }
+        distance / length
     }
 
     /// C++: `void RODFDetector::RODFDetector(const RODFDetector &)` [private]
@@ -600,7 +961,8 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(src: &RODFDetector) -> Self {
-        todo!("port RODFDetector::RODFDetector")
+        // shortcut: C++ declares this copy constructor private and invalidated with no definition; it cannot be called
+        panic!("RODFDetector copy constructor is invalidated in SUMO");
     }
 
     /// C++: `RODFDetector & RODFDetector::operator=(const RODFDetector &)` [private]
@@ -608,7 +970,8 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFDetector) -> &mut RODFDetector {
-        todo!("port RODFDetector::operator=")
+        // shortcut: C++ declares operator= private and invalidated with no definition; it cannot be called
+        panic!("RODFDetector assignment operator is invalidated in SUMO");
     }
 
 }
@@ -626,14 +989,18 @@ impl RODFDetectorCon {
     // RODFDetectorCon::RODFDetectorCon() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RODFDetectorCon::RODFDetectorCon")
+        RODFDetectorCon {
+            myDetectors: Vec::new(),
+            myDetectorMap: BTreeMap::new(),
+            myDetectorEdgeMap: BTreeMap::new(),
+        }
     }
 
     /// C++: `void RODFDetectorCon::~RODFDetectorCon()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFDetectorCon::~RODFDetectorCon")
+        // implicit C++ destructor: the containers hold non-owning pointers, so there is nothing to free
     }
 
     /// C++: `bool RODFDetectorCon::addDetector(RODFDetector *)`
@@ -653,7 +1020,14 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn add_detector(&mut self, dfd: Ptr<RODFDetector>) -> bool {
-        todo!("port RODFDetectorCon::addDetector")
+        if self.myDetectorMap.contains_key(dfd.get_id()) {
+            return false;
+        }
+        self.myDetectorMap.insert(dfd.get_id().to_string(), dfd);
+        self.myDetectors.push(dfd);
+        let edgeid = get_edge_id_from_lane(dfd.get_lane_id());
+        self.myDetectorEdgeMap.entry(edgeid).or_insert_with(Vec::new).push(dfd);
+        true // !!!
     }
 
     /// C++: `void RODFDetectorCon::removeDetector(const std::string &)`
@@ -684,7 +1058,29 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn remove_detector(&mut self, id: &str) {
-        todo!("port RODFDetectorCon::removeDetector")
+        //
+        let oldDet = self.myDetectorMap.remove(id).unwrap();
+        //
+        let ri2 = self.myDetectors.iter().position(|d| *d == oldDet).unwrap();
+        self.myDetectors.remove(ri2);
+        //
+        let mut found = false;
+        for dets in self.myDetectorEdgeMap.values_mut() {
+            if found {
+                break;
+            }
+            let mut ri3 = 0;
+            while !found && ri3 < dets.len() {
+                if dets[ri3] == oldDet {
+                    found = true;
+                    dets.remove(ri3);
+                } else {
+                    ri3 += 1;
+                }
+            }
+        }
+        // delete oldDet: detectors are Box-allocated (see RODFDetectorHandler)
+        drop(unsafe { Box::from_raw(oldDet.as_raw()) });
     }
 
     /// C++: `bool RODFDetectorCon::detectorsHaveCompleteTypes() const` [const]
@@ -699,7 +1095,12 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn detectors_have_complete_types(&self) -> bool {
-        todo!("port RODFDetectorCon::detectorsHaveCompleteTypes")
+        for i in self.myDetectors.iter() {
+            if i.get_type() == RODFDetectorType::TYPE_NOT_DEFINED {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool RODFDetectorCon::detectorsHaveRoutes() const` [const]
@@ -714,7 +1115,12 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn detectors_have_routes(&self) -> bool {
-        todo!("port RODFDetectorCon::detectorsHaveRoutes")
+        for i in self.myDetectors.iter() {
+            if i.has_routes() {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `const std::vector<RODFDetector *> & RODFDetectorCon::getDetectors() const` [const]
@@ -724,7 +1130,7 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn get_detectors(&self) -> &Vec<Ptr<RODFDetector>> {
-        todo!("port RODFDetectorCon::getDetectors")
+        &self.myDetectors
     }
 
     /// C++: `void RODFDetectorCon::save(const std::string &) const` [const]
@@ -756,7 +1162,28 @@ impl RODFDetectorCon {
     // }
     #[allow(unused_variables)]
     pub fn save(&self, file: &str) {
-        todo!("port RODFDetectorCon::save")
+        let out = Ptr::from_raw(OutputDevice::get_device(file, true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        out.m().write_xml_header("detectors", "detectors_file.xsd", BTreeMap::new(), true);
+        for i in self.myDetectors.iter() {
+            out.m().open_tag_id(SUMO_TAG_DETECTOR_DEFINITION).write_attr(SUMO_ATTR_ID, &string_utils::escape_xml(i.get_id(), false)).write_attr(SUMO_ATTR_LANE, i.get_lane_id()).write_attr(SUMO_ATTR_POSITION, &i.get_pos());
+            match i.get_type() {
+                RODFDetectorType::BETWEEN_DETECTOR => {
+                    out.m().write_attr(SUMO_ATTR_TYPE, "between");
+                }
+                RODFDetectorType::SOURCE_DETECTOR => {
+                    out.m().write_attr(SUMO_ATTR_TYPE, "source");
+                }
+                RODFDetectorType::SINK_DETECTOR => {
+                    out.m().write_attr(SUMO_ATTR_TYPE, "sink");
+                }
+                RODFDetectorType::DISCARDED_DETECTOR => {
+                    out.m().write_attr(SUMO_ATTR_TYPE, "discarded");
+                }
+                _ => std::panic::panic_any(1),
+            }
+            out.m().close_tag("");
+        }
+        out.m().close();
     }
 
     /// C++: `void RODFDetectorCon::saveAsPOIs(const std::string &) const` [const]
