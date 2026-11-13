@@ -275,8 +275,17 @@ impl MSDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: equippedByDefaultAssignmentOptions needs the holder parameter and vtype parameter (SUMOVehicle exposes no Parameterised yet), so it cannot be evaluated; upgrade when SUMOVehicle implements Parameterised
-        let equip: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions(oc, \"rerouting\", v, ...) needs holder parameters that SUMOVehicle does not expose yet");
+        let equip = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "rerouting",
+                &v.get_id(),
+                &v.get_parameter().base,
+                &v.get_v_type_parameter().base,
+                false,
+                false,
+            )
+        });
         if v.get_parameter().was_set(VEHPARS_FORCE_REROUTE) || equip {
             // route computation is enabled
             // for implicitly equipped vehicles (trips, flows), option probability

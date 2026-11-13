@@ -4,7 +4,7 @@ use crate::prelude::*;
 use std::cell::Cell;
 use utils::common::std_defs::{g_precision, g_precision_emissions};
 use utils::common::time::ts;
-use utils::options::options_cont::{get_string_vector, is_set};
+use utils::options::options_cont::{get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 thread_local! {
@@ -73,8 +73,19 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "emissions", v, isSet("emission-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
+        let outputOptionSet = is_set("emission-output");
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "emissions",
+                &v.get_id(),
+                &v.get_parameter().base,
+                &v.get_v_type_parameter().base,
+                outputOptionSet,
+                false,
+            )
+        });
+        if equipped {
             // the device is owned by the vehicle's device list for the rest of the run, as in C++
             let device: &mut MSDevice_Emissions = Box::leak(Box::new(MSDevice_Emissions::new(v)));
             into.push(Ptr::from_mut(&mut device.base));

@@ -35,9 +35,9 @@ const VTYPEPARS_BOARDING_DURATION: i64 = 1 << 16;
 const VTYPEPARS_MASS_SET: i64 = 1i64 << 32;
 const VTYPEPARS_PARKING_BADGES_SET: i64 = 1i64 << 37;
 
-// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty); these return the C++ defaults, upgrade once MSGlobals is filled
+// shortcut: MSGlobals static is now ported; call it directly
 fn g_action_step_length() -> SUMOTime {
-    0
+    crate::microsim::ms_globals::action_step_length()
 }
 fn g_use_meso_sim() -> bool {
     false

@@ -480,8 +480,14 @@ impl MSVehicleControl {
             // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
             let hasTripinfo = !tripinfoOut.is_null();
             for dev in veh.get_devices().iter() {
-                // shortcut: C++ virtual dispatch to the device subclass is not available, calls MSDevice's base generateOutput, upgrade when devices are trait objects
-                dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                let name = MSDevice::get_device_name(dev.base2.get_id());
+                // shortcut: C++ virtual dispatch to the device subclass is not available; dispatch tripinfo (and fall back to base) explicitly
+                if name == "tripinfo" {
+                    let tripDev: Ptr<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo> = dev.cast::<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo>();
+                    tripDev.m().generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                } else {
+                    dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                }
             }
             if !tripinfoOut.is_null() && hasTripinfo {
                 // close tag after tripinfo (possibly including emissions from another device) have been written

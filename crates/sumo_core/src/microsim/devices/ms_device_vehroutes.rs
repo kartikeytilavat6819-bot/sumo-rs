@@ -226,8 +226,18 @@ impl MSDevice_Vehroutes {
             return Ptr::null();
         }
         let hasOption = is_set("vehroute-output");
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is still todo!() with no arguments in ms_device.rs, upgrade when it is ported
-        let equipped: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported yet");
+        let vp2 = vp;
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "vehroute",
+                &vp2.get_id(),
+                &vp2.get_parameter().base,
+                &vp2.get_v_type_parameter().base,
+                hasOption,
+                false,
+            )
+        });
         if equipped {
             let mut maxRoutes = maxRoutes;
             if MY_LAST_ROUTE_ONLY.load(Relaxed) {

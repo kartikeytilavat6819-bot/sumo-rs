@@ -338,9 +338,14 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_devices(&mut self) {
-        // shortcut: MSDevice::buildVehicleDevices is generated as (SUMOVehicle, &mut i32) and cannot
-        // fill myDevices yet; add the call and the push of each device as a move reminder (dev, 0.)
-        // once MSDevice::buildVehicleDevices takes the device vector and MSVehicleDevice upcasts to MSMoveReminder
+        // ported: build vehicle devices and register them as move reminders
+        let self_ptr = self as *mut MSBaseVehicle;
+        let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
+        let mut devices: Vec<Ptr<MSVehicleDevice>> = Vec::new();
+        // shortcut: only tripinfo device is built here; full MSDevice::build_vehicle_devices panics on unported devices (rerouting/emissions/example/...). Upgrade to full build once those are ported.
+        crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo::build_vehicle_devices(v, &mut devices);
+        self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
+        self.myDevices = devices;
         // shortcut: MSGlobals::gHaveEmissions is not ported yet, so the emission parameters are never forced here
         if false {
             // ensure we have the emission parameters even if we don't have the device
