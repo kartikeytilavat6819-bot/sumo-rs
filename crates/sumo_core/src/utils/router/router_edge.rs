@@ -2,6 +2,7 @@
 //! C++ templates call on `E` and `V` (no C++ counterpart file).
 use crate::prelude::*;
 use crate::utils::router::flipped_edge::FlippedEdge;
+use crate::utils::router::rail_edge::RailEdge;
 
 /// Accessors the generic router code calls on its edge type `E` (`E::getID()`, `E::getSuccessors()`, ...).
 /// `Node` and `Lane` are the junction and lane types of the network (C++ `N` and `L` templates).
@@ -35,6 +36,35 @@ pub trait RouterEdge<V> {
     {
         panic!("shortcut: this edge type has no flipped routing edge")
     }
+    fn bidi_edge(&self) -> Ptr<Self>;
+    // shortcut: IntermodalEdge has no junctions in C++, upgrade when an edge type needs them
+    fn to_junction(&self) -> Ptr<Self::Node> {
+        panic!("shortcut: this edge type has no to junction")
+    }
+    fn from_junction(&self) -> Ptr<Self::Node> {
+        panic!("shortcut: this edge type has no from junction")
+    }
+    // shortcut: IntermodalEdge is never a network crossing in C++, upgrade when an edge type needs it
+    fn is_crossing(&self) -> bool {
+        panic!("shortcut: this edge type has no crossing flag")
+    }
+    fn is_walking_area(&self) -> bool {
+        panic!("shortcut: this edge type has no walking area flag")
+    }
+    // shortcut: only the network edge type provides a railway routing edge, upgrade when IntermodalEdge needs it
+    fn railway_routing_edge(&self) -> Ptr<RailEdge<Self, V>>
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no railway routing edge")
+    }
+    // shortcut: only the network edge type provides E::getAllEdges(), upgrade when IntermodalEdge becomes a network edge
+    fn all_edges() -> Vec<Ptr<Self>>
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no static all-edges list")
+    }
     fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64;
     fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64;
     fn is_internal(&self) -> bool;
@@ -57,6 +87,16 @@ pub trait RouterEdge<V> {
 /// Accessors the generic router code calls on its vehicle type `V` (`V::getVClass()`).
 pub trait RouterVehicle {
     fn v_class(&self) -> SUMOVehicleClass;
+    // shortcut: IntermodalTrip is not a vehicle in C++, upgrade if a trip is routed as a vehicle
+    fn length(&self) -> f64 {
+        panic!("shortcut: this vehicle type has no length")
+    }
+    fn id(&self) -> &str {
+        panic!("shortcut: this vehicle type has no id")
+    }
+    fn vtype_id(&self) -> &str {
+        panic!("shortcut: this vehicle type has no vtype id")
+    }
 }
 
 /// Accessors the generic router code calls on its node type `N` (`N::getID()`, `N::getPosition()`, `N::getIncoming()`, ...).
