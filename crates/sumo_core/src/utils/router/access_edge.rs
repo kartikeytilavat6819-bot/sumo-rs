@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> AccessEdge::_IntermodalEdge`
-pub type AccessEdge__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
+pub type AccessEdge__IntermodalEdge<E, L, N, V> = IntermodalEdge<E, L, N, V>;
 
 /// the access edge connecting different modes that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `AccessEdge` (utils/router/AccessEdge.h)

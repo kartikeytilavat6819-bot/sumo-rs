@@ -9,10 +9,10 @@ pub type PedestrianRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, 
 pub type PedestrianRouter__IntermodalNetwork = Unmapped /* IntermodalNetwork<E, L, N, V> */;
 
 /// C++ typedef `IntermodalTrip<E, N, V> PedestrianRouter::_IntermodalTrip`
-pub type PedestrianRouter__IntermodalTrip = Unmapped /* IntermodalTrip<E, N, V> */;
+pub type PedestrianRouter__IntermodalTrip<E, N, V> = IntermodalTrip<E, N, V>;
 
 /// C++ typedef `DijkstraRouter<_IntermodalEdge, _IntermodalTrip> PedestrianRouter::_InternalRouter`
-pub type PedestrianRouter__InternalRouter = DijkstraRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip>;
+pub type PedestrianRouter__InternalRouter<E, L, N, V> = DijkstraRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>>;
 
 /// The router for pedestrians (on a bidirectional network of sidewalks and crossings)
 /// C++ class `PedestrianRouter` (utils/router/PedestrianRouter.h)
@@ -176,7 +176,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         throw ProcessError(TL("Do not use this method"));
     //     }
     #[allow(unused_variables)]
-    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
+    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip<E, N, V>>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
         panic!("{}", ProcessError::new("Do not use this method"))
     }
 
@@ -194,8 +194,9 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
         let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {
             let dirs = self.myPedNet.get_both_directions(*edge);
-            toProhibitPE.insert(dirs.0, *prohibition);
-            toProhibitPE.insert(dirs.1, *prohibition);
+            // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
+            toProhibitPE.insert(dirs.0.cast(), *prohibition);
+            toProhibitPE.insert(dirs.1.cast(), *prohibition);
         }
         self.myInternalRouter.m().prohibit(&toProhibitPE);
     }

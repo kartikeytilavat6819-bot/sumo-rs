@@ -15,13 +15,13 @@ pub type IntermodalRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, 
 pub type IntermodalRouter__IntermodalTrip = Unmapped /* IntermodalTrip<E, N, V> */;
 
 /// C++ typedef `AStarRouter<_IntermodalEdge, _IntermodalTrip, _MapMatcher> IntermodalRouter::_InternalAStar`
-pub type IntermodalRouter__InternalAStar = AStarRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip, IntermodalRouter__MapMatcher>;
+pub type IntermodalRouter__InternalAStar<E, L, N, V> = AStarRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>, Unmapped>; // shortcut: MapMatcher<E, L, N> is not ported, Unmapped stands in for M, upgrade when map_matcher.rs exists
 
 /// C++ typedef `DijkstraRouter<_IntermodalEdge, _IntermodalTrip> IntermodalRouter::_InternalDijkstra`
-pub type IntermodalRouter__InternalDijkstra = DijkstraRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip>;
+pub type IntermodalRouter__InternalDijkstra<E, L, N, V> = DijkstraRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>>;
 
 /// C++ typedef `SUMOAbstractRouter<_IntermodalEdge, _IntermodalTrip> IntermodalRouter::_InternalRouter`
-pub type IntermodalRouter__InternalRouter = SUMOAbstractRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip>;
+pub type IntermodalRouter__InternalRouter<E, L, N, V> = SUMOAbstractRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>>;
 
 /// C++ typedef `MapMatcher<E, L, N> IntermodalRouter::_MapMatcher`
 pub type IntermodalRouter__MapMatcher = Unmapped /* MapMatcher<E, L, N> */;
@@ -36,7 +36,7 @@ pub struct IntermodalRouter<E, L, N, V> {
     /// C++ base class `SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>`
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,
     pub myAmClone: bool,
-    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
+    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter<E, L, N, V>>,
     pub myIntermodalNet: Ptr<IntermodalRouter_Network<E, L, N, V>>,
     pub myCallback: IntermodalRouter_CreateNetCallback,
     pub myCarWalkTransfer: i32,
@@ -111,7 +111,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return new IntermodalRouter<E, L, N, V>(myIntermodalNet, myCarWalkTransfer, myTaxiWait, myRoutingAlgorithm, myRoutingMode, myExternalEffort);
     //     }
     #[allow(unused_variables)]
-    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, PedestrianRouter__IntermodalTrip>> {
+    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, PedestrianRouter__IntermodalTrip<E, N, V>>> {
         todo!("port IntermodalRouter::clone")
     }
 
@@ -251,7 +251,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         throw ProcessError(TL("Do not use this method"));
     //     }
     #[allow(unused_variables)]
-    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
+    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip<E, N, V>>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
         panic!("{}", ProcessError::new("Do not use this method"))
     }
 
@@ -360,7 +360,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return edge->getTravelTime(trip, time) + trip->externalFactor * trip->calc->getEffort(edge->getNumericalID());
     //     }
     #[allow(unused_variables)]
-    pub fn get_combined(edge: Ptr<AccessEdge__IntermodalEdge>, trip: Ptr<PedestrianRouter__IntermodalTrip>, time: f64) -> f64 {
+    pub fn get_combined(edge: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, trip: Ptr<PedestrianRouter__IntermodalTrip<E, N, V>>, time: f64) -> f64 {
         todo!("port IntermodalRouter::getCombined")
     }
 
@@ -420,7 +420,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn looped_line_transfer(&mut self, prev: Ptr<AccessEdge__IntermodalEdge>, cur: Ptr<AccessEdge__IntermodalEdge>, prevTime: f64, time: f64) -> bool {
+    pub fn looped_line_transfer(&mut self, prev: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, cur: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, prevTime: f64, time: f64) -> bool {
         todo!("port IntermodalRouter::loopedLineTransfer")
     }
 

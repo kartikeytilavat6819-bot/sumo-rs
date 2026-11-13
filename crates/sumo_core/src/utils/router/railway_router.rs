@@ -6,10 +6,10 @@ use crate::prelude::*;
 pub type RailwayRouter_Prohibitions = Unmapped /* std::map<const E *, RouterProhibition> */;
 
 /// C++ typedef `DijkstraRouter<_RailEdge, V> RailwayRouter::_InternalDijkstra`
-pub type RailwayRouter__InternalDijkstra = Unmapped /* DijkstraRouter<_RailEdge, V> */;
+pub type RailwayRouter__InternalDijkstra<E, V> = DijkstraRouter<RailEdge__RailEdge<E, V>, V>;
 
 /// C++ typedef `SUMOAbstractRouter<_RailEdge, V> RailwayRouter::_InternalRouter`
-pub type RailwayRouter__InternalRouter = Unmapped /* SUMOAbstractRouter<_RailEdge, V> */;
+pub type RailwayRouter__InternalRouter<E, V> = SUMOAbstractRouter<RailEdge__RailEdge<E, V>, V>;
 
 /// C++ typedef `RailEdge<E, V> RailwayRouter::_RailEdge`
 pub type RailwayRouter__RailEdge = Unmapped /* RailEdge<E, V> */;
@@ -20,7 +20,7 @@ pub type RailwayRouter__RailEdge = Unmapped /* RailEdge<E, V> */;
 pub struct RailwayRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,
-    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
+    pub myInternalRouter: Ptr<RailwayRouter__InternalRouter<E, V>>,
     pub myOriginal: Ptr<RailwayRouter<E, V>>,
     /// a RailEdge for every existing edge, filled on construction (but not in clones)
     pub myInitialEdges: Vec<Ptr<RailEdge__RailEdge<E, V>>>,
