@@ -554,7 +554,7 @@ impl MSPModel_InteractingState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSPModel_InteractingState) -> &mut MSPModel_InteractingState {
-        todo!("port MSPModel_InteractingState::operator=")
+        panic!("MSPModel_InteractingState is not assignable (operator= is deleted in C++)")
     }
 
 }
