@@ -17,6 +17,9 @@ pub struct SUMOTrafficObjectVt {
     pub is_container: fn(&SUMOTrafficObject) -> bool,
     pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
     pub get_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub get_lane: fn(&SUMOTrafficObject) -> Ptr<MSLane>,
+    pub get_speed: fn(&SUMOTrafficObject) -> f64,
+    pub get_position: fn(&SUMOTrafficObject, f64) -> Position,
     pub get_numerical_id: fn(&SUMOTrafficObject) -> SUMOTrafficObject_NumericalID,
     pub get_v_class: fn(&SUMOTrafficObject) -> SUMOVehicleClass,
 }
@@ -41,10 +44,6 @@ pub(crate) fn default_get_position(_: &SUMOTrafficObject, _: f64) -> Position {
     panic!("SUMOTrafficObject::getPosition is pure virtual")
 }
 
-pub fn default_get_edge(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    panic!("SUMOTrafficObject::getEdge is pure virtual")
-}
-
 pub fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
     panic!("SUMOTrafficObject::getNumericalID is pure virtual")
 }
@@ -61,6 +60,9 @@ static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt
     get_edge: default_get_edge,
     get_numerical_id: default_get_numerical_id,
     get_v_class: default_get_v_class,
+    get_lane: default_get_lane,
+    get_speed: default_get_speed,
+    get_position: default_get_position,
 };
 
 /// Representation of a vehicle, person, or container

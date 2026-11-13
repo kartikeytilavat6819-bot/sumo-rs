@@ -155,6 +155,9 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     get_parameter: ms_person_get_parameter,
     // shortcut: MSPerson getEdge/getNumericalID are not ported yet, base pure-virtual panic kept, upgrade when persons are simulated
     get_edge: crate::utils::vehicle::sumo_traffic_object::default_get_edge,
+    get_lane: crate::utils::vehicle::sumo_traffic_object::default_get_lane,
+    get_speed: crate::utils::vehicle::sumo_traffic_object::default_get_speed,
+    get_position: crate::utils::vehicle::sumo_traffic_object::default_get_position,
     get_numerical_id: crate::utils::vehicle::sumo_traffic_object::default_get_numerical_id,
     get_v_class: crate::utils::vehicle::sumo_traffic_object::default_get_v_class,
 };

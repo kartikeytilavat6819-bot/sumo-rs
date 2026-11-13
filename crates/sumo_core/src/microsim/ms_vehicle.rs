@@ -2025,6 +2025,9 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_container: ms_vehicle_is_container,
     get_parameter: ms_vehicle_get_parameter,
     get_edge: ms_vehicle_get_edge,
+    get_position: ms_vehicle_get_position,
+    get_speed: ms_vehicle_get_speed,
+    get_lane: ms_vehicle_get_lane,
     get_numerical_id: ms_vehicle_get_numerical_id,
     get_v_class: ms_vehicle_get_v_class,
 };
@@ -2053,10 +2056,6 @@ fn ms_vehicle_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
     let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
     MSBaseVehicle::get_parameter(v)
-}
-fn ms_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
-    MSBaseVehicle::get_edge(v)
 }
 fn ms_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
     let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
