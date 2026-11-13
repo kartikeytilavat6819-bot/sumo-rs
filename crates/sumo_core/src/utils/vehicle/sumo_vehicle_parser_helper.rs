@@ -4,7 +4,7 @@ use crate::prelude::*;
 use utils::common::string_utils::to_int;
 use utils::geom::NUMERICAL_EPS;
 use utils::common::msg_handler::{write_error, write_warning};
-use utils::common::sumo_vehicle_class::{DEFAULT_CONTAINERTYPE_ID, DEFAULT_PEDTYPE_ID};
+use utils::common::sumo_vehicle_class::{DEFAULT_CONTAINERTYPE_ID, DEFAULT_PEDTYPE_ID, SVCPermissions, SVC_BICYCLE, SVC_PASSENGER, SVC_PEDESTRIAN};
 use utils::common::string_utils::to_double;
 use utils::common::time::{time2steps, SUMOTIME_MAX};
 use utils::xml::sumo_xml_definitions::{
@@ -12,6 +12,15 @@ use utils::xml::sumo_xml_definitions::{
     SUMO_ATTR_NUMBER, SUMO_ATTR_PERHOUR, SUMO_ATTR_PERIOD, SUMO_ATTR_PERSONSPERHOUR, SUMO_ATTR_PROB,
     SUMO_ATTR_VEHSPERHOUR, SUMO_TAG_CONTAINERFLOW, SUMO_TAG_PERSONFLOW,
 };
+use crate::utils::emissions::pollutants_interface::PollutantsInterface;
+use crate::utils::vehicle::sumo_vehicle_parameter::{
+    ArrivalLaneDefinition, ArrivalPosDefinition, ArrivalPosLatDefinition, ArrivalSpeedDefinition, DepartLaneDefinition, DepartPosDefinition,
+    DepartPosLatDefinition, DepartSpeedDefinition, RouteIndexDefinition, SUMOVehicleParameter,
+};
+use crate::utils::vehicle::sumov_type_parameter::{LatAlignmentDefinition, SUMOVTypeParameter_VClassDefaultValues};
+use utils::common::file_helpers::{get_configuration_relative, is_absolute};
+use utils::common::std_defs::INVALID_DOUBLE;
+use utils::options::options_cont;
 
 // C++ #define values from utils/vehicle/SUMOVehicleParameter.h (private there, mirrored for the parametersSet bits)
 const VEHPARS_END_SET: i64 = 2 << 4;
@@ -20,6 +29,123 @@ const VEHPARS_PERIOD_SET: i64 = 2 << 6;
 const VEHPARS_VPH_SET: i64 = 2 << 7;
 const VEHPARS_PROB_SET: i64 = 2 << 8;
 const VEHPARS_POISSON_SET: i64 = 2 << 9;
+const VEHPARS_COLOR_SET: i64 = 1;
+const VEHPARS_VTYPE_SET: i64 = 2;
+const VEHPARS_DEPARTLANE_SET: i64 = 2 << 1;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const VEHPARS_DEPARTSPEED_SET: i64 = 2 << 3;
+const VEHPARS_ROUTE_SET: i64 = 2 << 10;
+const VEHPARS_ARRIVALLANE_SET: i64 = 2 << 11;
+const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
+const VEHPARS_ARRIVALSPEED_SET: i64 = 2 << 13;
+const VEHPARS_LINE_SET: i64 = 2 << 14;
+const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
+const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
+const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const VEHPARS_PERSON_NUMBER_SET: i64 = 2 << 19;
+const VEHPARS_CONTAINER_NUMBER_SET: i64 = 2 << 20;
+const VEHPARS_DEPARTPOSLAT_SET: i64 = 2 << 21;
+const VEHPARS_ARRIVALPOSLAT_SET: i64 = 2 << 22;
+const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+const VEHPARS_DEPARTEDGE_SET: i64 = 2 << 25;
+const VEHPARS_ARRIVALEDGE_SET: i64 = 2 << 26;
+const VEHPARS_CALIBRATORSPEED_SET: i64 = 2 << 27;
+const VEHPARS_PARKING_BADGES_SET: i64 = 2 << 30;
+const VEHPARS_INSERTION_CHECKS_SET: i64 = 2 << 31;
+
+// C++ VTYPEPARS_* bit flags (SUMOVTypeParameter.h); the sumov_type_parameter.rs copies are private to that module
+const VTYPEPARS_LENGTH_SET: i64 = 1;
+const VTYPEPARS_MINGAP_SET: i64 = 1 << 1;
+const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
+const VTYPEPARS_PROBABILITY_SET: i64 = 1 << 3;
+const VTYPEPARS_SPEEDFACTOR_SET: i64 = 1 << 4;
+const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
+const VTYPEPARS_COLOR_SET: i64 = 1 << 6;
+const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+const VTYPEPARS_WIDTH_SET: i64 = 1 << 8;
+const VTYPEPARS_HEIGHT_SET: i64 = 1 << 9;
+const VTYPEPARS_SHAPE_SET: i64 = 1 << 10;
+const VTYPEPARS_OSGFILE_SET: i64 = 1 << 11;
+const VTYPEPARS_IMGFILE_SET: i64 = 1 << 12;
+const VTYPEPARS_IMPATIENCE_SET: i64 = 1 << 13;
+const VTYPEPARS_LANE_CHANGE_MODEL_SET: i64 = 1 << 14;
+const VTYPEPARS_PERSON_CAPACITY: i64 = 1 << 15;
+const VTYPEPARS_BOARDING_DURATION: i64 = 1 << 16;
+const VTYPEPARS_CONTAINER_CAPACITY: i64 = 1 << 17;
+const VTYPEPARS_LOADING_DURATION: i64 = 1 << 18;
+const VTYPEPARS_CAR_FOLLOW_MODEL: i64 = 1 << 19;
+const VTYPEPARS_MAXSPEED_LAT_SET: i64 = 1 << 20;
+const VTYPEPARS_LATALIGNMENT_SET: i64 = 1 << 21;
+const VTYPEPARS_MINGAP_LAT_SET: i64 = 1 << 22;
+const VTYPEPARS_ACTIONSTEPLENGTH_SET: i64 = 1 << 23;
+const VTYPEPARS_DESIRED_MAXSPEED_SET: i64 = 1 << 24;
+const VTYPEPARS_MANEUVER_ANGLE_TIMES_SET: i64 = 1 << 29;
+const VTYPEPARS_SCALE_SET: i64 = 1 << 31;
+const VTYPEPARS_MASS_SET: i64 = 1 << 32;
+const VTYPEPARS_TTT_SET: i64 = 1 << 33;
+const VTYPEPARS_TTT_BIDI_SET: i64 = 1 << 34;
+const VTYPEPARS_SPEEDFACTOR_PREMATURE_SET: i64 = 1 << 36;
+const VTYPEPARS_PARKING_BADGES_SET: i64 = 1 << 37;
+const VTYPEPARS_BOARDING_FACTOR_SET: i64 = 1 << 38;
+
+/// C++ implicit copy constructor `SUMOVTypeParameter(const SUMOVTypeParameter&)` (the ported struct has no Clone impl)
+fn copy_sumo_vtype_parameter(p: &SUMOVTypeParameter) -> SUMOVTypeParameter {
+    SUMOVTypeParameter {
+        base: p.base.clone(),
+        id: p.id.clone(),
+        length: p.length.clone(),
+        minGap: p.minGap.clone(),
+        maxSpeed: p.maxSpeed.clone(),
+        desiredMaxSpeed: p.desiredMaxSpeed.clone(),
+        actionStepLength: p.actionStepLength.clone(),
+        defaultProbability: p.defaultProbability.clone(),
+        speedFactor: p.speedFactor.clone(),
+        emissionClass: p.emissionClass.clone(),
+        mass: p.mass.clone(),
+        color: p.color.clone(),
+        vehicleClass: p.vehicleClass.clone(),
+        impatience: p.impatience.clone(),
+        personCapacity: p.personCapacity.clone(),
+        containerCapacity: p.containerCapacity.clone(),
+        boardingDuration: p.boardingDuration.clone(),
+        loadingDuration: p.loadingDuration.clone(),
+        scale: p.scale.clone(),
+        width: p.width.clone(),
+        height: p.height.clone(),
+        shape: p.shape.clone(),
+        osgFile: p.osgFile.clone(),
+        imgFile: p.imgFile.clone(),
+        carriageImages: p.carriageImages.clone(),
+        cfModel: p.cfModel.clone(),
+        cfParameter: p.cfParameter.clone(),
+        lcParameter: p.lcParameter.clone(),
+        jmParameter: p.jmParameter.clone(),
+        lcModel: p.lcModel.clone(),
+        maxSpeedLat: p.maxSpeedLat.clone(),
+        latAlignmentOffset: p.latAlignmentOffset.clone(),
+        latAlignmentProcedure: p.latAlignmentProcedure.clone(),
+        minGapLat: p.minGapLat.clone(),
+        scaleVisual: p.scaleVisual.clone(),
+        carriageLength: p.carriageLength.clone(),
+        locomotiveLength: p.locomotiveLength.clone(),
+        carriageGap: p.carriageGap.clone(),
+        carriageDoors: p.carriageDoors.clone(),
+        carriageDoorWidth: p.carriageDoorWidth.clone(),
+        maxPlatformDistance: p.maxPlatformDistance.clone(),
+        timeToTeleport: p.timeToTeleport.clone(),
+        timeToTeleportBidi: p.timeToTeleportBidi.clone(),
+        speedFactorPremature: p.speedFactorPremature.clone(),
+        frontSeatPos: p.frontSeatPos.clone(),
+        seatingWidth: p.seatingWidth.clone(),
+        parkingBadges: p.parkingBadges.clone(),
+        boardingFactor: p.boardingFactor.clone(),
+        parametersSet: p.parametersSet.clone(),
+        saved: p.saved.clone(),
+        onlyReferenced: p.onlyReferenced.clone(),
+        paramRestrictions: p.paramRestrictions.clone(),
+        myManoeuverAngleTimes: p.myManoeuverAngleTimes.clone(),
+    }
+}
 
 /// C++ `throw ProcessError(msg)`: panics with the error so that `catch_process_error` can recover it
 fn throw_process_error(msg: String) -> ! {
@@ -54,11 +180,11 @@ fn cpp_substr(s: &str, pos: usize, n: usize) -> &str {
     &s[pos..pos.saturating_add(n).min(s.len())]
 }
 
-/// C++ typedef `int SUMOVehicleParserHelper::CFAttrMap`
-pub type SUMOVehicleParserHelper_CFAttrMap = i32;
+/// C++ typedef `std::map<SumoXMLTag, std::set<SumoXMLAttr> > SUMOVehicleParserHelper::CFAttrMap`
+pub type SUMOVehicleParserHelper_CFAttrMap = BTreeMap<SumoXMLTag, std::collections::BTreeSet<SumoXMLAttr>>;
 
-/// C++ typedef `int SUMOVehicleParserHelper::LCAttrMap`
-pub type SUMOVehicleParserHelper_LCAttrMap = i32;
+/// C++ typedef `std::map<LaneChangeModel, std::set<SumoXMLAttr> > SUMOVehicleParserHelper::LCAttrMap`
+pub type SUMOVehicleParserHelper_LCAttrMap = BTreeMap<LaneChangeModel, std::collections::BTreeSet<SumoXMLAttr>>;
 
 /// Helper methods for parsing vehicle attributes
 /// C++ class `SUMOVehicleParserHelper` (utils/vehicle/SUMOVehicleParserHelper.h)
@@ -68,6 +194,282 @@ pub struct SUMOVehicleParserHelper {
 // C++ static members of SUMOVehicleParserHelper (port as module-level statics, see AGENTS.md):
 //   static CFAttrMap SUMOVehicleParserHelper::allowedCFModelAttrs;
 //   static LCAttrMap SUMOVehicleParserHelper::allowedLCModelAttrs;
+// both are filled on first use in C++ (size()==0 check), so they are LazyLock here
+static ALLOWED_CF_MODEL_ATTRS: std::sync::LazyLock<SUMOVehicleParserHelper_CFAttrMap> = std::sync::LazyLock::new(|| {
+    use utils::xml::sumo_xml_definitions::*;
+    let genericParams: std::collections::BTreeSet<SumoXMLAttr> = [
+        SUMO_ATTR_TAU,
+        SUMO_ATTR_ACCEL,
+        SUMO_ATTR_DECEL,
+        SUMO_ATTR_APPARENTDECEL,
+        SUMO_ATTR_EMERGENCYDECEL,
+        SUMO_ATTR_SPEED_TABLE,
+        SUMO_ATTR_MAXACCEL_PROFILE,
+        SUMO_ATTR_DESACCEL_PROFILE,
+        SUMO_ATTR_COLLISION_MINGAP_FACTOR,
+        SUMO_ATTR_STARTUP_DELAY,
+    ]
+    .into_iter()
+    .collect();
+    let mut m: SUMOVehicleParserHelper_CFAttrMap = BTreeMap::new();
+    // Krauss
+    let mut kraussParams = genericParams.clone();
+    kraussParams.insert(SUMO_ATTR_SIGMA);
+    kraussParams.insert(SUMO_ATTR_SIGMA_STEP);
+    m.insert(SUMO_TAG_CF_KRAUSS, kraussParams.clone());
+    m.insert(SUMO_TAG_CF_KRAUSS_ORIG1, kraussParams.clone());
+    m.insert(SUMO_TAG_CF_KRAUSS_PLUS_SLOPE, kraussParams.clone());
+    let mut allParams = kraussParams.clone();
+    // KraussX
+    let mut kraussXParams = kraussParams.clone();
+    kraussXParams.extend([SUMO_ATTR_TMP1, SUMO_ATTR_TMP2, SUMO_ATTR_TMP3, SUMO_ATTR_TMP4, SUMO_ATTR_TMP5]);
+    m.insert(SUMO_TAG_CF_KRAUSSX, kraussXParams.clone());
+    allParams.extend(kraussXParams.iter().copied());
+    // SmartSK
+    let mut smartSKParams = genericParams.clone();
+    smartSKParams.extend([SUMO_ATTR_SIGMA, SUMO_ATTR_TMP1, SUMO_ATTR_TMP2, SUMO_ATTR_TMP3, SUMO_ATTR_TMP4, SUMO_ATTR_TMP5]);
+    m.insert(SUMO_TAG_CF_SMART_SK, smartSKParams.clone());
+    allParams.extend(smartSKParams.iter().copied());
+    // Daniel
+    let mut daniel1Params = genericParams.clone();
+    daniel1Params.extend([SUMO_ATTR_SIGMA, SUMO_ATTR_TMP1, SUMO_ATTR_TMP2, SUMO_ATTR_TMP3, SUMO_ATTR_TMP4, SUMO_ATTR_TMP5]);
+    m.insert(SUMO_TAG_CF_DANIEL1, daniel1Params.clone());
+    allParams.extend(daniel1Params.iter().copied());
+    // Peter Wagner
+    let mut pwagParams = genericParams.clone();
+    pwagParams.extend([SUMO_ATTR_SIGMA, SUMO_ATTR_CF_PWAGNER2009_TAULAST, SUMO_ATTR_CF_PWAGNER2009_APPROB]);
+    m.insert(SUMO_TAG_CF_PWAGNER2009, pwagParams.clone());
+    allParams.extend(pwagParams.iter().copied());
+    // IDM params
+    let mut idmParams = genericParams.clone();
+    idmParams.extend([SUMO_ATTR_CF_IDM_DELTA, SUMO_ATTR_CF_IDM_STEPPING]);
+    m.insert(SUMO_TAG_CF_IDM, idmParams.clone());
+    allParams.extend(idmParams.iter().copied());
+    // EIDM
+    let mut eidmParams = genericParams.clone();
+    eidmParams.extend([
+        SUMO_ATTR_CF_IDM_DELTA,
+        SUMO_ATTR_CF_IDM_STEPPING,
+        SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD,
+        SUMO_ATTR_CF_EIDM_T_PERSISTENCE_DRIVE,
+        SUMO_ATTR_CF_EIDM_T_REACTION,
+        SUMO_ATTR_CF_EIDM_T_PERSISTENCE_ESTIMATE,
+        SUMO_ATTR_CF_EIDM_C_COOLNESS,
+        SUMO_ATTR_CF_EIDM_SIG_LEADER,
+        SUMO_ATTR_CF_EIDM_SIG_GAP,
+        SUMO_ATTR_CF_EIDM_SIG_ERROR,
+        SUMO_ATTR_CF_EIDM_JERK_MAX,
+        SUMO_ATTR_CF_EIDM_EPSILON_ACC,
+        SUMO_ATTR_CF_EIDM_T_ACC_MAX,
+        SUMO_ATTR_CF_EIDM_M_FLATNESS,
+        SUMO_ATTR_CF_EIDM_M_BEGIN,
+        SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS,
+        SUMO_ATTR_CF_EIDM_MAX_VEH_PREVIEW,
+    ]);
+    m.insert(SUMO_TAG_CF_EIDM, eidmParams.clone());
+    allParams.extend(eidmParams.iter().copied());
+    // IDMM
+    let mut idmmParams = genericParams.clone();
+    idmmParams.extend([SUMO_ATTR_CF_IDMM_ADAPT_FACTOR, SUMO_ATTR_CF_IDMM_ADAPT_TIME, SUMO_ATTR_CF_IDM_STEPPING]);
+    m.insert(SUMO_TAG_CF_IDMM, idmmParams.clone());
+    allParams.extend(idmmParams.iter().copied());
+    // Bieker
+    let mut bkernerParams = genericParams.clone();
+    bkernerParams.extend([SUMO_ATTR_K, SUMO_ATTR_CF_KERNER_PHI]);
+    m.insert(SUMO_TAG_CF_BKERNER, bkernerParams.clone());
+    allParams.extend(bkernerParams.iter().copied());
+    // Wiedemann
+    let mut wiedemannParams = genericParams.clone();
+    wiedemannParams.extend([SUMO_ATTR_CF_WIEDEMANN_SECURITY, SUMO_ATTR_CF_WIEDEMANN_ESTIMATION]);
+    m.insert(SUMO_TAG_CF_WIEDEMANN, wiedemannParams.clone());
+    allParams.extend(wiedemannParams.iter().copied());
+    // W99
+    let mut w99Params = genericParams.clone();
+    w99Params.extend([
+        SUMO_ATTR_CF_W99_CC1,
+        SUMO_ATTR_CF_W99_CC2,
+        SUMO_ATTR_CF_W99_CC3,
+        SUMO_ATTR_CF_W99_CC4,
+        SUMO_ATTR_CF_W99_CC5,
+        SUMO_ATTR_CF_W99_CC6,
+        SUMO_ATTR_CF_W99_CC7,
+        SUMO_ATTR_CF_W99_CC8,
+        SUMO_ATTR_CF_W99_CC9,
+    ]);
+    m.insert(SUMO_TAG_CF_W99, w99Params.clone());
+    allParams.extend(w99Params.iter().copied());
+    // Rail
+    let mut railParams = genericParams.clone();
+    railParams.extend([
+        SUMO_ATTR_TRAIN_TYPE,
+        SUMO_ATTR_TRACTION_TABLE,
+        SUMO_ATTR_RESISTANCE_TABLE,
+        SUMO_ATTR_MASSFACTOR,
+        SUMO_ATTR_MAXPOWER,
+        SUMO_ATTR_MAXTRACTION,
+        SUMO_ATTR_RESISTANCE_COEFFICIENT_CONSTANT,
+        SUMO_ATTR_RESISTANCE_COEFFICIENT_LINEAR,
+        SUMO_ATTR_RESISTANCE_COEFFICIENT_QUADRATIC,
+        SUMO_ATTR_CURVE_RESISTANCE,
+        SUMO_ATTR_CURVE_INTEGRATION,
+        SUMO_ATTR_ROECKL_SHARP_RADIUS,
+        SUMO_ATTR_ROECKL_NUMERATOR,
+        SUMO_ATTR_ROECKL_NUMERATOR_SHARP,
+        SUMO_ATTR_ROECKL_OFFSET,
+        SUMO_ATTR_ROECKL_OFFSET_SHARP,
+    ]);
+    m.insert(SUMO_TAG_CF_RAIL, railParams.clone());
+    allParams.extend(railParams.iter().copied());
+    // ACC
+    let mut ACCParams = genericParams.clone();
+    ACCParams.extend([
+        SUMO_ATTR_SC_GAIN,
+        SUMO_ATTR_GCC_GAIN_SPEED,
+        SUMO_ATTR_GCC_GAIN_SPACE,
+        SUMO_ATTR_GC_GAIN_SPEED,
+        SUMO_ATTR_GC_GAIN_SPACE,
+        SUMO_ATTR_CA_GAIN_SPEED,
+        SUMO_ATTR_CA_GAIN_SPACE,
+        SUMO_ATTR_CA_OVERRIDE,
+        SUMO_ATTR_APPLYDRIVERSTATE,
+    ]);
+    m.insert(SUMO_TAG_CF_ACC, ACCParams.clone());
+    allParams.extend(ACCParams.iter().copied());
+    // CACC
+    let mut CACCParams = genericParams.clone();
+    CACCParams.extend([
+        SUMO_ATTR_SC_GAIN_CACC,
+        SUMO_ATTR_GCC_GAIN_GAP_CACC,
+        SUMO_ATTR_GCC_GAIN_GAP_DOT_CACC,
+        SUMO_ATTR_GC_GAIN_GAP_CACC,
+        SUMO_ATTR_GC_GAIN_GAP_DOT_CACC,
+        SUMO_ATTR_CA_GAIN_GAP_CACC,
+        SUMO_ATTR_CA_GAIN_GAP_DOT_CACC,
+        SUMO_ATTR_GCC_GAIN_SPEED,
+        SUMO_ATTR_GCC_GAIN_SPACE,
+        SUMO_ATTR_GC_GAIN_SPEED,
+        SUMO_ATTR_GC_GAIN_SPACE,
+        SUMO_ATTR_CA_GAIN_SPEED,
+        SUMO_ATTR_CA_GAIN_SPACE,
+        SUMO_ATTR_CA_OVERRIDE,
+        SUMO_ATTR_HEADWAY_TIME_CACC_TO_ACC,
+        SUMO_ATTR_APPLYDRIVERSTATE,
+        SUMO_ATTR_SC_MIN_GAP,
+    ]);
+    m.insert(SUMO_TAG_CF_CACC, CACCParams.clone());
+    allParams.extend(CACCParams.iter().copied());
+    // CC
+    let mut ccParams = genericParams.clone();
+    ccParams.extend([
+        SUMO_ATTR_CF_CC_C1,
+        SUMO_ATTR_CF_CC_CCDECEL,
+        SUMO_ATTR_CF_CC_CONSTSPACING,
+        SUMO_ATTR_CF_CC_KP,
+        SUMO_ATTR_CF_CC_LAMBDA,
+        SUMO_ATTR_CF_CC_OMEGAN,
+        SUMO_ATTR_CF_CC_TAU,
+        SUMO_ATTR_CF_CC_XI,
+        SUMO_ATTR_CF_CC_LANES_COUNT,
+        SUMO_ATTR_CF_CC_CCACCEL,
+        SUMO_ATTR_CF_CC_PLOEG_KP,
+        SUMO_ATTR_CF_CC_PLOEG_KD,
+        SUMO_ATTR_CF_CC_PLOEG_H,
+        SUMO_ATTR_CF_CC_FLATBED_KA,
+        SUMO_ATTR_CF_CC_FLATBED_KV,
+        SUMO_ATTR_CF_CC_FLATBED_KP,
+        SUMO_ATTR_CF_CC_FLATBED_D,
+        SUMO_ATTR_CF_CC_FLATBED_H,
+    ]);
+    m.insert(SUMO_TAG_CF_CC, ccParams.clone());
+    allParams.extend(ccParams.iter().copied());
+    // NaSch
+    let mut naschParams = genericParams.clone();
+    naschParams.insert(SUMO_ATTR_SIGMA);
+    m.insert(SUMO_TAG_CF_NASCH, naschParams.clone());
+    allParams.extend(naschParams.iter().copied());
+    // last element
+    m.insert(SUMO_TAG_NOTHING, allParams);
+    m
+});
+static ALLOWED_LC_MODEL_ATTRS: std::sync::LazyLock<SUMOVehicleParserHelper_LCAttrMap> = std::sync::LazyLock::new(|| {
+    use utils::xml::sumo_xml_definitions::*;
+    let mut m: SUMOVehicleParserHelper_LCAttrMap = BTreeMap::new();
+    // lc2013
+    let lc2013Params: std::collections::BTreeSet<SumoXMLAttr> = [
+        SUMO_ATTR_LCA_STRATEGIC_PARAM,
+        SUMO_ATTR_LCA_COOPERATIVE_PARAM,
+        SUMO_ATTR_LCA_SPEEDGAIN_PARAM,
+        SUMO_ATTR_LCA_KEEPRIGHT_PARAM,
+        SUMO_ATTR_LCA_OPPOSITE_PARAM,
+        SUMO_ATTR_LCA_LOOKAHEADLEFT,
+        SUMO_ATTR_LCA_SPEEDGAINRIGHT,
+        SUMO_ATTR_LCA_MAXSPEEDLATSTANDING,
+        SUMO_ATTR_LCA_MAXSPEEDLATFACTOR,
+        SUMO_ATTR_LCA_MAXDISTLATSTANDING,
+        SUMO_ATTR_LCA_ASSERTIVE,
+        SUMO_ATTR_LCA_STRATEGIC_LOOKAHEAD,
+        SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD,
+        SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME,
+        SUMO_ATTR_LCA_SPEEDGAIN_URGENCY,
+        SUMO_ATTR_LCA_COOPERATIVE_ROUNDABOUT,
+        SUMO_ATTR_LCA_COOPERATIVE_SPEED,
+        SUMO_ATTR_LCA_COOPERATIVE_HELPTIME,
+        SUMO_ATTR_LCA_COOPERATIVE_HELPTHRESHOLD,
+        SUMO_ATTR_LCA_COOPERATIVE_MINSPEED,
+        SUMO_ATTR_LCA_OVERTAKE_RIGHT,
+        SUMO_ATTR_LCA_SIGMA,
+        SUMO_ATTR_LCA_KEEPRIGHT_ACCEPTANCE_TIME,
+        SUMO_ATTR_LCA_OVERTAKE_DELTASPEED_FACTOR,
+        SUMO_ATTR_LCA_CONTRIGHT,
+        SUMO_ATTR_LCA_EXPERIMENTAL1,
+    ]
+    .into_iter()
+    .collect();
+    m.insert(LaneChangeModel::LC2013, lc2013Params.clone());
+    // sl2015 (extension of lc2013)
+    let mut sl2015Params = lc2013Params.clone();
+    sl2015Params.extend([
+        SUMO_ATTR_LCA_PUSHY,
+        SUMO_ATTR_LCA_PUSHYGAP,
+        SUMO_ATTR_LCA_SUBLANE_PARAM,
+        SUMO_ATTR_LCA_IMPATIENCE,
+        SUMO_ATTR_LCA_TIME_TO_IMPATIENCE,
+        SUMO_ATTR_LCA_ACCEL_LAT,
+        SUMO_ATTR_LCA_TURN_ALIGNMENT_DISTANCE,
+        SUMO_ATTR_LCA_LANE_DISCIPLINE,
+    ]);
+    m.insert(LaneChangeModel::SL2015, sl2015Params.clone());
+    // DK2008
+    m.insert(LaneChangeModel::DK2008, std::collections::BTreeSet::new());
+    // default model may be either LC2013 or SL2015
+    // we allow both sets (sl2015 is a superset of lc2013Params)
+    m.insert(LaneChangeModel::DEFAULT, sl2015Params);
+    m
+});
+// C++ static SUMOVTypeParameter::AllowedJMAttrs (defined in SUMOVTypeParameter.cpp)
+static ALLOWED_JM_ATTRS: std::sync::LazyLock<std::collections::BTreeSet<SumoXMLAttr>> = std::sync::LazyLock::new(|| {
+    use utils::xml::sumo_xml_definitions::*;
+    [
+        SUMO_ATTR_JM_CROSSING_GAP,
+        SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME,
+        SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME,
+        SUMO_ATTR_JM_DRIVE_RED_SPEED,
+        SUMO_ATTR_JM_IGNORE_KEEPCLEAR_TIME,
+        SUMO_ATTR_JM_IGNORE_FOE_SPEED,
+        SUMO_ATTR_JM_IGNORE_FOE_PROB,
+        SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB,
+        SUMO_ATTR_JM_SIGMA_MINOR,
+        SUMO_ATTR_JM_STOPLINE_GAP,
+        SUMO_ATTR_JM_STOPLINE_GAP_MINOR,
+        SUMO_ATTR_JM_TIMEGAP_MINOR,
+        SUMO_ATTR_JM_EXTRA_GAP,
+        SUMO_ATTR_JM_ADVANCE,
+        SUMO_ATTR_JM_STOPSIGN_WAIT,
+        SUMO_ATTR_JM_ALLWAYSTOP_WAIT,
+    ]
+    .into_iter()
+    .collect()
+});
 
 impl SUMOVehicleParserHelper {
     /// C++: `SUMOVehicleParameter * SUMOVehicleParserHelper::parseFlowAttributes(SumoXMLTag, const SUMOSAXAttributes &, const bool, const bool, const SUMOTime, const SUMOTime, const bool)` [static]
@@ -1254,7 +1656,471 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn begin_v_type_parsing(attrs: &SUMOSAXAttributes, hardFail: bool, file: &str, base: Ptr<SUMOVTypeParameter>) -> Ptr<SUMOVTypeParameter> {
-        todo!("port SUMOVehicleParserHelper::beginVTypeParsing")
+        let id: String = if attrs.has_attribute(SUMO_ATTR_ID) || base.is_null() { Self::parse_id(attrs, SUMO_TAG_VTYPE) } else { String::new() };
+        if !id.is_empty() {
+            // create vType
+            let mut vClass: SUMOVehicleClass = if base.is_null() { SVC_PASSENGER } else { base.vehicleClass };
+            if attrs.has_attribute(SUMO_ATTR_VCLASS) {
+                vClass = Self::parse_vehicle_class(attrs, &id);
+            }
+            let vType: Ptr<SUMOVTypeParameter> = if base.is_null() {
+                Ptr::from_raw(Box::into_raw(Box::new(SUMOVTypeParameter::new(&id, vClass))))
+            } else {
+                let v: Ptr<SUMOVTypeParameter> = Ptr::from_raw(Box::into_raw(Box::new(copy_sumo_vtype_parameter(&base))));
+                v.m().id = id.clone();
+                v.m().vehicleClass = vClass;
+                v
+            };
+            // parse attributes
+            if attrs.has_attribute(SUMO_ATTR_VCLASS) {
+                vType.m().parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
+            }
+            if attrs.has_attribute(SUMO_ATTR_LENGTH) {
+                let mut ok = true;
+                let length: f64 = attrs.get::<f64>(SUMO_ATTR_LENGTH, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if length <= 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be greater than 0", Attrs.get_string(SUMO_ATTR_LENGTH)));
+                } else {
+                    vType.m().length = length;
+                    vType.m().parametersSet |= VTYPEPARS_LENGTH_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MINGAP) {
+                let mut ok = true;
+                let minGap: f64 = attrs.get::<f64>(SUMO_ATTR_MINGAP, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if minGap < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_MINGAP)));
+                } else {
+                    vType.m().minGap = minGap;
+                    vType.m().parametersSet |= VTYPEPARS_MINGAP_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MAXSPEED) {
+                let mut ok = true;
+                let maxSpeed: f64 = attrs.get::<f64>(SUMO_ATTR_MAXSPEED, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if maxSpeed <= 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be greater than 0", Attrs.get_string(SUMO_ATTR_MAXSPEED)));
+                } else {
+                    vType.m().maxSpeed = maxSpeed;
+                    vType.m().parametersSet |= VTYPEPARS_MAXSPEED_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_DESIRED_MAXSPEED) {
+                let mut ok = true;
+                let desiredMaxSpeed: f64 = attrs.get::<f64>(SUMO_ATTR_DESIRED_MAXSPEED, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if desiredMaxSpeed <= 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be greater than 0", Attrs.get_string(SUMO_ATTR_DESIRED_MAXSPEED)));
+                } else {
+                    vType.m().desiredMaxSpeed = desiredMaxSpeed;
+                    vType.m().parametersSet |= VTYPEPARS_DESIRED_MAXSPEED_SET;
+                }
+            } else if attrs.has_attribute(SUMO_ATTR_MAXSPEED) {
+                if vClass == SVC_PEDESTRIAN {
+                    // backward compatibility because pedestrian maxSpeed was subject to speedFactor up to 1.14.1
+                    vType.m().desiredMaxSpeed = vType.maxSpeed;
+                    let defaultMax = SUMOVTypeParameter_VClassDefaultValues::new(vClass).maxSpeed;
+                    vType.m().maxSpeed = if vType.maxSpeed > defaultMax { vType.maxSpeed } else { defaultMax };
+                } else if vClass == SVC_BICYCLE {
+                    // backward compatibility because default desired speed did not exist up to 1.14.1
+                    let maxSpeed = vType.maxSpeed;
+                    vType.m().desiredMaxSpeed = if maxSpeed > vType.desiredMaxSpeed { maxSpeed } else { vType.desiredMaxSpeed };
+                }
+            }
+
+            if attrs.has_attribute(SUMO_ATTR_SPEEDFACTOR) {
+                let mut ok = true;
+                let speedFactor: String = attrs.get::<String>(SUMO_ATTR_SPEEDFACTOR, &id, &mut ok, true);
+                vType.m().speedFactor.parse(&speedFactor, hardFail).unwrap_or_else(|e| throw_process_error(e.to_string()));
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_SPEEDDEV) {
+                let mut ok = true;
+                let speedDev: f64 = attrs.get::<f64>(SUMO_ATTR_SPEEDDEV, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if speedDev < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_SPEEDDEV)));
+                } else {
+                    vType.m().speedFactor.set_parameter(1, speedDev).unwrap_or_else(|e| throw_process_error(e.to_string()));
+                    vType.m().parametersSet |= VTYPEPARS_SPEEDFACTOR_SET;
+                }
+            }
+            // validate speed distribution
+            let error: String = vType.speedFactor.is_valid();
+            if error != "" {
+                return Self::handle_vehicle_type_error(hardFail, vType, format!("Invalid speed distribution when parsing vType '{}' ({})", vType.id, error));
+            }
+            if attrs.has_attribute(SUMO_ATTR_ACTIONSTEPLENGTH) {
+                let mut ok = true;
+                let actionStepLengthSecs: f64 = attrs.get::<f64>(SUMO_ATTR_ACTIONSTEPLENGTH, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    // processActionStepLength(...) function includes warnings
+                    vType.m().actionStepLength = Self::process_action_step_length(actionStepLengthSecs);
+                    vType.m().parametersSet |= VTYPEPARS_ACTIONSTEPLENGTH_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_EMISSIONCLASS) {
+                let mut ok = true;
+                let parsedEmissionClass: String = attrs.get_opt::<String>(SUMO_ATTR_EMISSIONCLASS, &id, &mut ok, String::new(), true);
+                // check if emission class is correct
+                let emissionResult = catch_process_error(|| {
+                    vType.m().emissionClass = PollutantsInterface::get_class_by_name(&parsedEmissionClass, SVC_IGNORING);
+                    vType.m().parametersSet |= VTYPEPARS_EMISSIONCLASS_SET;
+                });
+                if emissionResult.is_err() {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} with name '{}' doesn't exist.", Attrs.get_string(SUMO_ATTR_EMISSIONCLASS), parsedEmissionClass));
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MASS) {
+                let mut ok = true;
+                let mass: f64 = attrs.get::<f64>(SUMO_ATTR_MASS, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if mass < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_MASS)));
+                } else {
+                    vType.m().mass = mass;
+                    vType.m().parametersSet |= VTYPEPARS_MASS_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_IMPATIENCE) {
+                let mut ok = true;
+                let impatienceStr: String = attrs.get::<String>(SUMO_ATTR_IMPATIENCE, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if impatienceStr == "off" {
+                    vType.m().impatience = -f64::MAX;
+                } else {
+                    let impatienceDouble: f64 = attrs.get::<f64>(SUMO_ATTR_IMPATIENCE, &id, &mut ok, true);
+                    if !ok {
+                        return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                    } else {
+                        vType.m().impatience = impatienceDouble;
+                        vType.m().parametersSet |= VTYPEPARS_IMPATIENCE_SET;
+                    }
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_WIDTH) {
+                let mut ok = true;
+                let width: f64 = attrs.get::<f64>(SUMO_ATTR_WIDTH, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if width <= 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be greater than 0", Attrs.get_string(SUMO_ATTR_WIDTH)));
+                } else {
+                    vType.m().width = width;
+                    vType.m().parametersSet |= VTYPEPARS_WIDTH_SET;
+                    if vClass == SVC_PEDESTRIAN
+                        && options_cont::exists("pedestrian.striping.stripe-width")
+                        && options_cont::get_string("pedestrian.model") == "striping"
+                        && options_cont::get_float("pedestrian.striping.stripe-width") < vType.width
+                    {
+                        write_warning(&format!(
+                            "Pedestrian vType '{}' width {} is larger than pedestrian.striping.stripe-width and this may cause collisions with vehicles.",
+                            id,
+                            utils::common::to_string::to_string(&vType.width)
+                        ));
+                    }
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_HEIGHT) {
+                let mut ok = true;
+                let height: f64 = attrs.get::<f64>(SUMO_ATTR_HEIGHT, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if height < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_HEIGHT)));
+                } else {
+                    vType.m().height = height;
+                    vType.m().parametersSet |= VTYPEPARS_HEIGHT_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_GUISHAPE) {
+                vType.m().shape = Self::parse_gui_shape(attrs, &id);
+                if vType.shape != SUMOVehicleShape::Unknown {
+                    vType.m().parametersSet |= VTYPEPARS_SHAPE_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_OSGFILE) {
+                let mut ok = true;
+                let osgFile: String = attrs.get::<String>(SUMO_ATTR_OSGFILE, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().osgFile = osgFile;
+                    vType.m().parametersSet |= VTYPEPARS_OSGFILE_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_IMGFILE) {
+                let mut ok = true;
+                let mut imgFile: String = attrs.get::<String>(SUMO_ATTR_IMGFILE, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    // check relative path
+                    if (imgFile != "") && !is_absolute(&imgFile) {
+                        imgFile = get_configuration_relative(file, &imgFile);
+                    }
+                    vType.m().imgFile = imgFile;
+                    vType.m().parametersSet |= VTYPEPARS_IMGFILE_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_COLOR) {
+                let mut ok = true;
+                let color: RGBColor = attrs.get::<RGBColor>(SUMO_ATTR_COLOR, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().color = color;
+                    vType.m().parametersSet |= VTYPEPARS_COLOR_SET;
+                }
+            } else {
+                vType.m().color = RGBColor::YELLOW;
+            }
+            if attrs.has_attribute(SUMO_ATTR_PROB) {
+                let mut ok = true;
+                let defaultProbability: f64 = attrs.get::<f64>(SUMO_ATTR_PROB, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if defaultProbability < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_PROB)));
+                } else {
+                    vType.m().defaultProbability = defaultProbability;
+                    vType.m().parametersSet |= VTYPEPARS_PROBABILITY_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_LANE_CHANGE_MODEL) {
+                let mut ok = true;
+                let mut lcmS: String = attrs.get::<String>(SUMO_ATTR_LANE_CHANGE_MODEL, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if lcmS == "JE2013" {
+                    write_warning("Lane change model 'JE2013' is deprecated. Using default model instead.");
+                    lcmS = "default".to_string();
+                }
+                if LaneChangeModels.has_string(&lcmS) {
+                    vType.m().lcModel = LaneChangeModels.get(&lcmS).unwrap_or_else(|e| throw_process_error(e.to_string()));
+                    vType.m().parametersSet |= VTYPEPARS_LANE_CHANGE_MODEL_SET;
+                } else {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("Unknown lane change model '{}' when parsing vType '{}'", lcmS, id));
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_CAR_FOLLOW_MODEL) {
+                let mut ok = true;
+                let cfmValue: String = attrs.get::<String>(SUMO_ATTR_CAR_FOLLOW_MODEL, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if CarFollowModels.has_string(&cfmValue) {
+                    vType.m().cfModel = CarFollowModels.get(&cfmValue).unwrap_or_else(|e| throw_process_error(e.to_string()));
+                    vType.m().parametersSet |= VTYPEPARS_CAR_FOLLOW_MODEL;
+                } else {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("Unknown car following model '{}' when parsing vType '{}'", cfmValue, id));
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_PERSON_CAPACITY) {
+                let mut ok = true;
+                let personCapacity: i32 = attrs.get::<i32>(SUMO_ATTR_PERSON_CAPACITY, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if personCapacity < 0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_PERSON_CAPACITY)));
+                } else {
+                    vType.m().personCapacity = personCapacity;
+                    vType.m().parametersSet |= VTYPEPARS_PERSON_CAPACITY;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_CONTAINER_CAPACITY) {
+                let mut ok = true;
+                let containerCapacity: i32 = attrs.get::<i32>(SUMO_ATTR_CONTAINER_CAPACITY, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if containerCapacity < 0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_CONTAINER_CAPACITY)));
+                } else {
+                    vType.m().containerCapacity = containerCapacity;
+                    vType.m().parametersSet |= VTYPEPARS_CONTAINER_CAPACITY;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_BOARDING_DURATION) {
+                let mut ok = true;
+                let boardingDuration: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_BOARDING_DURATION, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if boardingDuration < 0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_BOARDING_DURATION)));
+                } else {
+                    vType.m().boardingDuration = boardingDuration;
+                    vType.m().parametersSet |= VTYPEPARS_BOARDING_DURATION;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_LOADING_DURATION) {
+                let mut ok = true;
+                let loadingDuration: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_LOADING_DURATION, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if loadingDuration < 0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_LOADING_DURATION)));
+                } else {
+                    vType.m().loadingDuration = loadingDuration;
+                    vType.m().parametersSet |= VTYPEPARS_LOADING_DURATION;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_SCALE) {
+                let mut ok = true;
+                let scale: f64 = attrs.get::<f64>(SUMO_ATTR_SCALE, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if scale < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} may be not be negative", Attrs.get_string(SUMO_ATTR_SCALE)));
+                } else {
+                    vType.m().scale = scale;
+                    vType.m().parametersSet |= VTYPEPARS_SCALE_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_TIME_TO_TELEPORT) {
+                let mut ok = true;
+                let ttt: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_TIME_TO_TELEPORT, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().timeToTeleport = ttt;
+                    vType.m().parametersSet |= VTYPEPARS_TTT_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_TIME_TO_TELEPORT_BIDI) {
+                let mut ok = true;
+                let tttb: SUMOTime = attrs.get_sumo_time_reporting(SUMO_ATTR_TIME_TO_TELEPORT_BIDI, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().timeToTeleportBidi = tttb;
+                    vType.m().parametersSet |= VTYPEPARS_TTT_BIDI_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_SPEEDFACTOR_PREMATURE) {
+                let mut ok = true;
+                let sfp: f64 = attrs.get::<f64>(SUMO_ATTR_SPEEDFACTOR_PREMATURE, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().speedFactorPremature = sfp;
+                    vType.m().parametersSet |= VTYPEPARS_SPEEDFACTOR_PREMATURE_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_BOARDING_FACTOR) {
+                let mut ok = true;
+                let bf: f64 = attrs.get::<f64>(SUMO_ATTR_BOARDING_FACTOR, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if bf < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_BOARDING_FACTOR)));
+                } else {
+                    vType.m().boardingFactor = bf;
+                    vType.m().parametersSet |= VTYPEPARS_BOARDING_FACTOR_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MAXSPEED_LAT) {
+                let mut ok = true;
+                let maxSpeedLat: f64 = attrs.get::<f64>(SUMO_ATTR_MAXSPEED_LAT, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if maxSpeedLat <= 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be greater than 0", Attrs.get_string(SUMO_ATTR_MAXSPEED_LAT)));
+                } else {
+                    vType.m().maxSpeedLat = maxSpeedLat;
+                    vType.m().parametersSet |= VTYPEPARS_MAXSPEED_LAT_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MINGAP_LAT) {
+                let mut ok = true;
+                let minGapLat: f64 = attrs.get::<f64>(SUMO_ATTR_MINGAP_LAT, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if minGapLat < 0.0 {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("{} must be equal or greater than 0", Attrs.get_string(SUMO_ATTR_MINGAP_LAT)));
+                } else {
+                    vType.m().minGapLat = minGapLat;
+                    vType.m().parametersSet |= VTYPEPARS_MINGAP_LAT_SET;
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_LATALIGNMENT) {
+                let mut ok = true;
+                let alignS: String = attrs.get::<String>(SUMO_ATTR_LATALIGNMENT, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    let mut lao: f64 = 0.0;
+                    let mut lad: LatAlignmentDefinition = LatAlignmentDefinition::DEFAULT;
+                    if SUMOVTypeParameter::parse_lat_alignment(&alignS, &mut lao, &mut lad) {
+                        vType.m().latAlignmentOffset = lao;
+                        vType.m().latAlignmentProcedure = lad;
+                        vType.m().parametersSet |= VTYPEPARS_LATALIGNMENT_SET;
+                    } else {
+                        return Self::handle_vehicle_type_error(
+                            hardFail,
+                            vType,
+                            format!(
+                                "Unknown lateral alignment '{}' when parsing vType '{}';\n must be one of (\"right\", \"center\", \"arbitrary\", \"nice\", \"compact\", \"left\" or a float)",
+                                alignS, id
+                            ),
+                        );
+                    }
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_MANEUVER_ANGLE_TIMES) {
+                let mut ok = true;
+                let angleTimesS: String = attrs.get::<String>(SUMO_ATTR_MANEUVER_ANGLE_TIMES, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else if Self::parse_angle_times_map(vType, angleTimesS) {
+                    vType.m().parametersSet |= VTYPEPARS_MANEUVER_ANGLE_TIMES_SET;
+                } else {
+                    return Self::handle_vehicle_type_error(hardFail, vType, format!("Invalid manoeuver angle times map for vType '{}'", id));
+                }
+            }
+            if attrs.has_attribute(SUMO_ATTR_PARKING_BADGES) {
+                let mut ok = true;
+                let badges: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_PARKING_BADGES, &id, &mut ok, true);
+                if !ok {
+                    return Self::handle_vehicle_type_error(hardFail, vType, String::new());
+                } else {
+                    vType.m().parametersSet |= VTYPEPARS_PARKING_BADGES_SET;
+                    vType.m().parkingBadges = badges;
+                }
+            }
+            // try to parse Car Following Model params
+            if !Self::parse_cfm_params(vType, vType.cfModel, attrs, false) {
+                return Self::handle_vehicle_type_error(hardFail, vType, "Invalid parsing embedded VType".to_string());
+            }
+            // try to parse Lane Change Model params
+            if !Self::parse_lc_params(vType, vType.lcModel, attrs) {
+                return Self::handle_vehicle_type_error(hardFail, vType, "Invalid Lane Change Model Parameters".to_string());
+            }
+            // try to Junction Model params
+            if !Self::parse_jm_params(vType, attrs) {
+                return Self::handle_vehicle_type_error(hardFail, vType, "Invalid Junction Model Parameters".to_string());
+            }
+            // all ok, then return vType
+            vType
+        } else if !base.is_null() {
+            base
+        } else {
+            Self::handle_vehicle_type_error(hardFail, Ptr::null(), "VType cannot be created".to_string())
+        }
     }
 
     /// C++: `bool SUMOVehicleParserHelper::parseAngleTimesMap(SUMOVTypeParameter *, const std::string)` [static]
@@ -1446,7 +2312,106 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_cfm_params(into: Ptr<SUMOVTypeParameter>, element: SumoXMLTag, attrs: &SUMOSAXAttributes, nestedCFM: bool) -> bool {
-        todo!("port SUMOVehicleParserHelper::parseCFMParams")
+        let allowedCFM = Self::get_allowed_cf_model_attrs();
+        let cf_it = allowedCFM.get(&element);
+        // check if given CFM is allowed
+        let allowed_set = match cf_it {
+            None => {
+                if Tags.has(element) {
+                    write_error(&format!("Unknown car-following model {} when parsing vType '{}'", Tags.get_string(element), into.id));
+                } else {
+                    write_error(&format!("Unknown car-following model when parsing vType '{}'", into.id));
+                }
+                return false;
+            }
+            Some(s) => s,
+        };
+        // check if we're parsing a nested CFM
+        if nestedCFM {
+            into.m().cfModel = element;
+            into.m().parametersSet |= VTYPEPARS_CAR_FOLLOW_MODEL;
+        }
+        // set CFM values
+        for &it in allowed_set.iter() {
+            if attrs.has_attribute(it) {
+                // first obtain  CFM attribute in string format
+                let mut ok = true;
+                let parsedCFMAttribute: String = attrs.get::<String>(it, &into.id, &mut ok, true);
+                // check CFM Attribute
+                if !ok {
+                    return false;
+                } else if it == SUMO_ATTR_TRAIN_TYPE {
+                    // check if train value is valid
+                    if !TrainTypes.has_string(&parsedCFMAttribute) {
+                        write_error(&format!("Invalid train type '{}' used in Car-Following-Attribute {}", parsedCFMAttribute, Attrs.get_string(it)));
+                        return false;
+                    }
+                    // add parsedCFMAttribute to cfParameter
+                    into.m().cfParameter.insert(it, parsedCFMAttribute);
+                } else if it == SUMO_ATTR_SPEED_TABLE || it == SUMO_ATTR_TRACTION_TABLE || it == SUMO_ATTR_RESISTANCE_TABLE {
+                    into.m().cfParameter.insert(it, parsedCFMAttribute);
+                } else if it == SUMO_ATTR_CF_IDM_STEPPING {
+                    // declare a int in which save CFM int attribute
+                    let mut CFMDoubleAttribute: f64 = -1.0;
+                    match to_double(&parsedCFMAttribute) {
+                        // obtain CFM attribute in int format
+                        Ok(v) => CFMDoubleAttribute = v,
+                        Err(_) => {
+                            write_error(&format!("Invalid Car-Following-Model Attribute {}. Cannot be parsed to float", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    if CFMDoubleAttribute <= 0.0 {
+                        write_error(&format!("Invalid Car-Following-Model Attribute {}. Must be greater than 0", Attrs.get_string(it)));
+                        return false;
+                    }
+                    // add parsedCFMAttribute to cfParameter
+                    into.m().cfParameter.insert(it, parsedCFMAttribute);
+                } else if it == SUMO_ATTR_MAXACCEL_PROFILE || it == SUMO_ATTR_DESACCEL_PROFILE {
+                    if Self::valid_profile(into, parsedCFMAttribute.clone(), it) {
+                        into.m().cfParameter.insert(it, parsedCFMAttribute);
+                    } else {
+                        write_error(&format!("Invalid Car-Following-Model Attribute {}. Cannot be parsed as a vector of <speed accel> pairs", Attrs.get_string(it)));
+                        return false;
+                    }
+                } else {
+                    // declare a double in which save CFM float attribute
+                    let mut CFMDoubleAttribute: f64 = -1.0;
+                    match to_double(&parsedCFMAttribute) {
+                        // obtain CFM attribute in double format
+                        Ok(v) => CFMDoubleAttribute = v,
+                        Err(_) => {
+                            write_error(&format!("Invalid Car-Following-Model Attribute {}. Cannot be parsed to float", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    // check attributes of type "positiveFloatType" (> 0)
+                    match it {
+                        SUMO_ATTR_ACCEL | SUMO_ATTR_DECEL | SUMO_ATTR_APPARENTDECEL | SUMO_ATTR_EMERGENCYDECEL | SUMO_ATTR_TAU => {
+                            if CFMDoubleAttribute <= 0.0 {
+                                write_error(&format!("Invalid Car-Following-Model Attribute {}. Must be greater than 0", Attrs.get_string(it)));
+                                return false;
+                            }
+                        }
+                        _ => {}
+                    }
+                    // check attributes restricted to [0-1]
+                    match it {
+                        SUMO_ATTR_SIGMA => {
+                            if (CFMDoubleAttribute < 0.0) || (CFMDoubleAttribute > 1.0) {
+                                write_error(&format!("Invalid Car-Following-Model Attribute {}. Only values between [0-1] are allowed", Attrs.get_string(it)));
+                                return false;
+                            }
+                        }
+                        _ => {}
+                    }
+                    // add parsedCFMAttribute to cfParameter
+                    into.m().cfParameter.insert(it, parsedCFMAttribute);
+                }
+            }
+        }
+        // all CFM successfully parsed, then return true
+        true
     }
 
     /// C++: `bool SUMOVehicleParserHelper::parseLCParams(SUMOVTypeParameter *, LaneChangeModel, const SUMOSAXAttributes &)` [static]
@@ -1572,7 +2537,72 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_lc_params(into: Ptr<SUMOVTypeParameter>, model: LaneChangeModel, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port SUMOVehicleParserHelper::parseLCParams")
+        let allowed: std::collections::BTreeSet<SumoXMLAttr> = ALLOWED_LC_MODEL_ATTRS.get(&model).cloned().unwrap_or_default();
+        // iterate over LCM attributes
+        for &it in allowed.iter() {
+            if attrs.has_attribute(it) {
+                // first obtain  CFM attribute in string format
+                let mut ok = true;
+                let parsedLCMAttribute: String = attrs.get::<String>(it, &into.id, &mut ok, true);
+                if !ok {
+                    return false;
+                }
+                // declare a double in which save CFM attribute
+                let mut LCMAttribute: f64 = -1.0;
+                match to_double(&parsedLCMAttribute) {
+                    // obtain CFM attribute in double format
+                    Ok(v) => LCMAttribute = v,
+                    Err(_) => {
+                        write_error(&format!("Invalid Lane-Change-Model Attribute {}. Cannot be parsed to float", Attrs.get_string(it)));
+                        return false;
+                    }
+                }
+                // check attributes of type "nonNegativeFloatType" (>= 0)
+                match it {
+                    SUMO_ATTR_LCA_PUSHYGAP
+                    | SUMO_ATTR_LCA_MAXSPEEDLATSTANDING
+                    | SUMO_ATTR_LCA_IMPATIENCE
+                    | SUMO_ATTR_LCA_OVERTAKE_RIGHT
+                    | SUMO_ATTR_LCA_ASSERTIVE
+                    | SUMO_ATTR_LCA_LOOKAHEADLEFT
+                    | SUMO_ATTR_LCA_SPEEDGAINRIGHT
+                    | SUMO_ATTR_LCA_TURN_ALIGNMENT_DISTANCE
+                    | SUMO_ATTR_LCA_TIME_TO_IMPATIENCE
+                    | SUMO_ATTR_LCA_LANE_DISCIPLINE
+                    | SUMO_ATTR_LCA_SIGMA => {
+                        if LCMAttribute < 0.0 {
+                            write_error(&format!("Invalid Lane-Change-Model Attribute {}. Must be equal or greater than 0", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+                // check attributes of type "positiveFloatType" (> 0)
+                match it {
+                    SUMO_ATTR_LCA_ACCEL_LAT => {
+                        if LCMAttribute <= 0.0 {
+                            write_error(&format!("Invalid Lane-Change-Model Attribute {}. Must be greater than 0", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+                // check limits of attributes
+                match it {
+                    SUMO_ATTR_LCA_OVERTAKE_DELTASPEED_FACTOR => {
+                        if LCMAttribute < -1.0 || LCMAttribute > 1.0 {
+                            write_error(&format!("Invalid Lane-Change-Model Attribute {}. Must be between -1 and 1", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+                // add parsedLCMAttribute to cfParameter
+                into.m().lcParameter.insert(it, parsedLCMAttribute);
+            }
+        }
+        // all LCM parsed ok, then return true
+        true
     }
 
     /// C++: `bool SUMOVehicleParserHelper::parseJMParams(SUMOVTypeParameter *, const SUMOSAXAttributes &)` [static]
@@ -1627,7 +2657,51 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_jm_params(into: Ptr<SUMOVTypeParameter>, attrs: &SUMOSAXAttributes) -> bool {
-        todo!("port SUMOVehicleParserHelper::parseJMParams")
+        // determinism: std::set iterates in SumoXMLAttr order, BTreeSet gives the same order
+        for &it in ALLOWED_JM_ATTRS.iter() {
+            if attrs.has_attribute(it) {
+                // first obtain  CFM attribute in string format
+                let mut ok = true;
+                let parsedJMAttribute: String = attrs.get::<String>(it, &into.id, &mut ok, true);
+                if !ok {
+                    return false;
+                }
+                // declare a double in which save CFM attribute
+                let mut JMAttribute: f64 = INVALID_DOUBLE;
+                match to_double(&parsedJMAttribute) {
+                    // obtain CFM attribute in double format
+                    Ok(v) => JMAttribute = v,
+                    Err(_) => {
+                        write_error(&format!("Invalid Junction-Model Attribute {}. Cannot be parsed to float", Attrs.get_string(it)));
+                        return false;
+                    }
+                }
+                // now continue checking other properties (-1 is the default value)
+                if JMAttribute != INVALID_DOUBLE {
+                    // special case for sigma minor
+                    if it == SUMO_ATTR_JM_SIGMA_MINOR {
+                        // check attributes sigma minor
+                        if (JMAttribute < 0.0) || (JMAttribute > 1.0) {
+                            write_error(&format!("Invalid Junction-Model Attribute {}. Only values between [0-1] are allowed", Attrs.get_string(it)));
+                            return false;
+                        }
+                    } else if JMAttribute < 0.0 && it != SUMO_ATTR_JM_TIMEGAP_MINOR && it != SUMO_ATTR_JM_EXTRA_GAP {
+                        // attributes with error value
+                        if JMAttribute != -1.0
+                            || (it != SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME && it != SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME && it != SUMO_ATTR_JM_IGNORE_KEEPCLEAR_TIME)
+                        {
+                            // check attributes of type "nonNegativeFloatType" (>= 0)
+                            write_error(&format!("Invalid Junction-Model Attribute {}. Must be equal or greater than 0", Attrs.get_string(it)));
+                            return false;
+                        }
+                    }
+                    // add parsedJMAttribute to cfParameter
+                    into.m().jmParameter.insert(it, parsedJMAttribute);
+                }
+            }
+        }
+        // all JM parameters successfully parsed, then return true
+        true
     }
 
     /// C++: `SUMOVehicleClass SUMOVehicleParserHelper::parseVehicleClass(const SUMOSAXAttributes &, const std::string &)` [static]
@@ -2405,7 +3479,340 @@ impl SUMOVehicleParserHelper {
     // }
     #[allow(unused_variables)]
     pub fn parse_common_attributes(attrs: &SUMOSAXAttributes, ret: Ptr<SUMOVehicleParameter>, tag: SumoXMLTag, allowInternalRoutes: bool) {
-        todo!("port SUMOVehicleParserHelper::parseCommonAttributes")
+        let element: String = Tags.get_string(tag).to_string();
+        //ret->refid = attrs.getStringSecure(SUMO_ATTR_REFID, "");
+        // parse route information
+        if attrs.has_attribute(SUMO_ATTR_ROUTE) {
+            let mut ok = true;
+            let routeID: String = attrs.get::<String>(SUMO_ATTR_ROUTE, &ret.id, &mut ok, true);
+            if !allowInternalRoutes && Self::is_internal_route_id(&routeID) {
+                write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is internal.", routeID));
+            }
+            ret.m().routeid = routeID;
+            if ok {
+                ret.m().parametersSet |= VEHPARS_ROUTE_SET; // !!! needed?
+            } else {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        // parse type information
+        if attrs.has_attribute(SUMO_ATTR_TYPE) {
+            let mut ok = true;
+            ret.m().vtypeid = attrs.get::<String>(SUMO_ATTR_TYPE, &ret.id, &mut ok, true);
+            if ok {
+                ret.m().parametersSet |= VEHPARS_VTYPE_SET; // !!! needed?
+            } else {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        // parse line information
+        if attrs.has_attribute(SUMO_ATTR_LINE) {
+            let mut ok = true;
+            ret.m().line = attrs.get::<String>(SUMO_ATTR_LINE, &ret.id, &mut ok, true);
+            if ok {
+                ret.m().parametersSet |= VEHPARS_LINE_SET; // !!! needed?
+            } else {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        // parse zone information
+        if attrs.has_attribute(SUMO_ATTR_FROM_TAZ) {
+            let mut ok = true;
+            ret.m().fromTaz = attrs.get::<String>(SUMO_ATTR_FROM_TAZ, &ret.id, &mut ok, true);
+            if ok {
+                ret.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
+            } else {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        if attrs.has_attribute(SUMO_ATTR_TO_TAZ) {
+            let mut ok = true;
+            ret.m().toTaz = attrs.get::<String>(SUMO_ATTR_TO_TAZ, &ret.id, &mut ok, true);
+            if ok {
+                ret.m().parametersSet |= VEHPARS_TO_TAZ_SET;
+            } else {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        // parse reroute information
+        if attrs.has_attribute(SUMO_ATTR_REROUTE) {
+            let mut ok = true;
+            if attrs.get::<bool>(SUMO_ATTR_REROUTE, &ret.id, &mut ok, true) {
+                if ok {
+                    ret.m().parametersSet |= VEHPARS_FORCE_REROUTE;
+                } else {
+                    Self::handle_vehicle_error(true, ret, String::new());
+                }
+            }
+        }
+        // parse depart lane information
+        if attrs.has_attribute(SUMO_ATTR_DEPARTLANE) {
+            let mut ok = true;
+            let departLaneStr: String = attrs.get::<String>(SUMO_ATTR_DEPARTLANE, &ret.id, &mut ok, true);
+            let mut lane: i32 = 0;
+            let mut dld: DepartLaneDefinition = DepartLaneDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_depart_lane(&departLaneStr, &element, &ret.id, &mut lane, &mut dld, &mut error) {
+                ret.m().parametersSet |= VEHPARS_DEPARTLANE_SET;
+                ret.m().departLane = lane;
+                ret.m().departLaneProcedure = dld;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse depart position information
+        if attrs.has_attribute(SUMO_ATTR_DEPARTPOS) {
+            let mut ok = true;
+            let departPosStr: String = attrs.get::<String>(SUMO_ATTR_DEPARTPOS, &ret.id, &mut ok, true);
+            let mut pos: f64 = 0.0;
+            let mut dpd: DepartPosDefinition = DepartPosDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_depart_pos(&departPosStr, &element, &ret.id, &mut pos, &mut dpd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_DEPARTPOS_SET;
+                ret.m().departPos = pos;
+                ret.m().departPosProcedure = dpd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse lateral depart position information
+        if attrs.has_attribute(SUMO_ATTR_DEPARTPOS_LAT) {
+            let mut ok = true;
+            let departPosLatStr: String = attrs.get::<String>(SUMO_ATTR_DEPARTPOS_LAT, &ret.id, &mut ok, true);
+            let mut pos: f64 = 0.0;
+            let mut dpd: DepartPosLatDefinition = DepartPosLatDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_depart_pos_lat(&departPosLatStr, &element, &ret.id, &mut pos, &mut dpd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_DEPARTPOSLAT_SET;
+                ret.m().departPosLat = pos;
+                ret.m().departPosLatProcedure = dpd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse depart speed information
+        if attrs.has_attribute(SUMO_ATTR_DEPARTSPEED) {
+            let mut ok = true;
+            let departSpeed: String = attrs.get::<String>(SUMO_ATTR_DEPARTSPEED, &ret.id, &mut ok, true);
+            let mut speed: f64 = 0.0;
+            let mut dsd: DepartSpeedDefinition = DepartSpeedDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_depart_speed(&departSpeed, &element, &ret.id, &mut speed, &mut dsd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_DEPARTSPEED_SET;
+                ret.m().departSpeed = speed;
+                ret.m().departSpeedProcedure = dsd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse depart edge information
+        if attrs.has_attribute(SUMO_ATTR_DEPARTEDGE) {
+            let mut ok = true;
+            let departEdgeStr: String = attrs.get::<String>(SUMO_ATTR_DEPARTEDGE, &ret.id, &mut ok, true);
+            let mut edgeIndex: i32 = 0;
+            let mut rid: RouteIndexDefinition = RouteIndexDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_route_index(&departEdgeStr, &element, &ret.id, SUMO_ATTR_DEPARTEDGE, &mut edgeIndex, &mut rid, &mut error) {
+                ret.m().parametersSet |= VEHPARS_DEPARTEDGE_SET;
+                ret.m().departEdge = edgeIndex;
+                ret.m().departEdgeProcedure = rid;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse arrival lane information
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALLANE) {
+            let mut ok = true;
+            let arrivalLaneStr: String = attrs.get::<String>(SUMO_ATTR_ARRIVALLANE, &ret.id, &mut ok, true);
+            let mut lane: i32 = 0;
+            let mut ald: ArrivalLaneDefinition = ArrivalLaneDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_arrival_lane(&arrivalLaneStr, &element, &ret.id, &mut lane, &mut ald, &mut error) {
+                ret.m().parametersSet |= VEHPARS_ARRIVALLANE_SET;
+                ret.m().arrivalLane = lane;
+                ret.m().arrivalLaneProcedure = ald;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse arrival position information
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
+            let mut ok = true;
+            let arrivalPosStr: String = attrs.get::<String>(SUMO_ATTR_ARRIVALPOS, &ret.id, &mut ok, true);
+            let mut pos: f64 = 0.0;
+            let mut apd: ArrivalPosDefinition = ArrivalPosDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_arrival_pos(&arrivalPosStr, &element, &ret.id, &mut pos, &mut apd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_ARRIVALPOS_SET;
+                ret.m().arrivalPos = pos;
+                ret.m().arrivalPosProcedure = apd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse lateral arrival position information
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS_LAT) {
+            let mut ok = true;
+            let arrivalPosLatStr: String = attrs.get::<String>(SUMO_ATTR_ARRIVALPOS_LAT, &ret.id, &mut ok, true);
+            let mut pos: f64 = 0.0;
+            let mut apd: ArrivalPosLatDefinition = ArrivalPosLatDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_arrival_pos_lat(&arrivalPosLatStr, &element, &ret.id, &mut pos, &mut apd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_ARRIVALPOSLAT_SET;
+                ret.m().arrivalPosLat = pos;
+                ret.m().arrivalPosLatProcedure = apd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse arrival speed information
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALSPEED) {
+            let mut ok = true;
+            let arrivalSpeedStr: String = attrs.get::<String>(SUMO_ATTR_ARRIVALSPEED, &ret.id, &mut ok, true);
+            let mut speed: f64 = 0.0;
+            let mut asd: ArrivalSpeedDefinition = ArrivalSpeedDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_arrival_speed(&arrivalSpeedStr, &element, &ret.id, &mut speed, &mut asd, &mut error) {
+                ret.m().parametersSet |= VEHPARS_ARRIVALSPEED_SET;
+                ret.m().arrivalSpeed = speed;
+                ret.m().arrivalSpeedProcedure = asd;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse arrival edge information
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALEDGE) {
+            let mut ok = true;
+            let arrivalEdgeStr: String = attrs.get::<String>(SUMO_ATTR_ARRIVALEDGE, &ret.id, &mut ok, true);
+            let mut edgeIndex: i32 = 0;
+            let mut rid: RouteIndexDefinition = RouteIndexDefinition::DEFAULT;
+            let mut error = String::new();
+            if SUMOVehicleParameter::parse_route_index(&arrivalEdgeStr, &element, &ret.id, SUMO_ATTR_ARRIVALEDGE, &mut edgeIndex, &mut rid, &mut error) {
+                ret.m().parametersSet |= VEHPARS_ARRIVALEDGE_SET;
+                ret.m().arrivalEdge = edgeIndex;
+                ret.m().arrivalEdgeProcedure = rid;
+            } else {
+                Self::handle_vehicle_error(true, ret, error);
+            }
+        }
+        // parse color
+        if attrs.has_attribute(SUMO_ATTR_COLOR) {
+            let mut ok = true;
+            ret.m().color = attrs.get::<RGBColor>(SUMO_ATTR_COLOR, &ret.id, &mut ok, true);
+            if ok {
+                ret.m().parametersSet |= VEHPARS_COLOR_SET;
+            } else {
+                Self::handle_vehicle_error(true, ret, "Invalid RGBColor format".to_string());
+            }
+        } else {
+            ret.m().color = RGBColor::DEFAULT_COLOR;
+        }
+        // parse person number
+        if attrs.has_attribute(SUMO_ATTR_PERSON_NUMBER) {
+            let mut ok = true;
+            let personNumber: i32 = attrs.get::<i32>(SUMO_ATTR_PERSON_NUMBER, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else if personNumber >= 0 {
+                ret.m().parametersSet |= VEHPARS_PERSON_NUMBER_SET;
+                ret.m().personNumber = personNumber;
+            } else {
+                Self::handle_vehicle_error(true, ret, format!("{} cannot be negative", Attrs.get_string(SUMO_ATTR_PERSON_NUMBER)));
+            }
+        }
+        // parse container number
+        if attrs.has_attribute(SUMO_ATTR_CONTAINER_NUMBER) {
+            let mut ok = true;
+            let containerNumber: i32 = attrs.get::<i32>(SUMO_ATTR_CONTAINER_NUMBER, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else if containerNumber >= 0 {
+                ret.m().parametersSet |= VEHPARS_CONTAINER_NUMBER_SET;
+                ret.m().containerNumber = containerNumber;
+            } else {
+                Self::handle_vehicle_error(true, ret, format!("{} cannot be negative", Attrs.get_string(SUMO_ATTR_CONTAINER_NUMBER)));
+            }
+        }
+        // parse individual speedFactor
+        if attrs.has_attribute(SUMO_ATTR_SPEEDFACTOR) {
+            let mut ok = true;
+            let speedFactor: f64 = attrs.get::<f64>(SUMO_ATTR_SPEEDFACTOR, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else if speedFactor > 0.0 {
+                ret.m().parametersSet |= VEHPARS_SPEEDFACTOR_SET;
+                ret.m().speedFactor = speedFactor;
+            } else {
+                Self::handle_vehicle_error(true, ret, format!("{} must be positive", Attrs.get_string(SUMO_ATTR_SPEEDFACTOR)));
+            }
+        }
+        // parse insertion checks
+        if attrs.has_attribute(SUMO_ATTR_INSERTIONCHECKS) {
+            ret.m().parametersSet |= VEHPARS_INSERTION_CHECKS_SET;
+            let mut ok = true;
+            let checks: String = attrs.get::<String>(SUMO_ATTR_INSERTIONCHECKS, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else {
+                // shortcut: parse_insertion_checks panics instead of throwing InvalidArgument, so the C++ catch (handleVehicleError with e.what()) is not reproduced here; upgrade when parse_insertion_checks returns Result
+                ret.m().insertionChecks = SUMOVehicleParameter::parse_insertion_checks(&checks);
+            }
+        }
+        // parse parking access rights
+        if attrs.has_attribute(SUMO_ATTR_PARKING_BADGES) {
+            let mut ok = true;
+            let badges: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_PARKING_BADGES, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else {
+                ret.m().parametersSet |= VEHPARS_PARKING_BADGES_SET;
+                ret.m().parkingBadges = badges;
+            }
+        }
+        // parse modes (transportables only)
+        ret.m().modes = 0;
+        if attrs.has_attribute(SUMO_ATTR_MODES) {
+            let mut ok = true;
+            let modeString: String = attrs.get::<String>(SUMO_ATTR_MODES, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else {
+                let mut errorMsg = String::new();
+                let mut modes: SVCPermissions = ret.modes;
+                if !SUMOVehicleParameter::parse_person_modes(&modeString, &element, &ret.id, &mut modes, &mut errorMsg) {
+                    Self::handle_vehicle_error(true, ret, errorMsg);
+                }
+                ret.m().modes = modes;
+            }
+        }
+        // parse usable vehicle types (transportables only)
+        if attrs.has_attribute(SUMO_ATTR_VTYPES) {
+            let mut ok = true;
+            ret.m().vTypes = attrs.get::<String>(SUMO_ATTR_VTYPES, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            }
+        }
+        // parse speed (only used by calibrators flow)
+        // also used by vehicle in saved state but this is parsed elsewhere
+        if tag == SUMO_TAG_FLOW && attrs.has_attribute(SUMO_ATTR_SPEED) {
+            let mut ok = true;
+            let calibratorSpeed: f64 = attrs.get::<f64>(SUMO_ATTR_SPEED, &ret.id, &mut ok, true);
+            if !ok {
+                Self::handle_vehicle_error(true, ret, String::new());
+            } else if calibratorSpeed >= 0.0 || calibratorSpeed == -1.0 {
+                ret.m().parametersSet |= VEHPARS_CALIBRATORSPEED_SET;
+                ret.m().calibratorSpeed = calibratorSpeed;
+            } else {
+                Self::handle_vehicle_error(true, ret, format!("{} may not be negative", Attrs.get_string(SUMO_ATTR_SPEED)));
+            }
+        }
+        /*/ parse via
+        if (attrs.hasAttribute(SUMO_ATTR_VIA)) {
+            ret->setParameter |= VEHPARS_VIA_SET;
+            SUMOSAXAttributes::parseStringVector(attrs.get<std::string>(SUMO_ATTR_VIA, ret->id.c_str(), ok), ret->via);
+        }
+        */
     }
 
     /// C++: `SUMOVehicleParameter * SUMOVehicleParserHelper::handleVehicleError(const bool, SUMOVehicleParameter *, const std::string)` [static, private]
@@ -2464,10 +3871,10 @@ impl SUMOVehicleParserHelper {
 
     /// C++: `const CFAttrMap & SUMOVehicleParserHelper::getAllowedCFModelAttrs()` [static, private]
     /// returns allowed attrs for each known CF-model (init on first use)
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // C++ body: SUMOVehicleParserHelper.cpp lines 1350-1553 (not pasted by the generator); the map is built in ALLOWED_CF_MODEL_ATTRS
     #[allow(unused_variables)]
     pub fn get_allowed_cf_model_attrs() -> &'static SUMOVehicleParserHelper_CFAttrMap {
-        todo!("port SUMOVehicleParserHelper::getAllowedCFModelAttrs")
+        &ALLOWED_CF_MODEL_ATTRS
     }
 
 }
