@@ -42,15 +42,30 @@ def _field_diffs(ref_attrs, cand_attrs, fields):
             yield f, a, b
 
 
+def _tripinfos(path):
+    """id -> list of attribute dicts. A list, not a dict: SUMO can emit the same
+    vehicle id twice (reinserted/teleported vehicles, or repeated departures),
+    and silently keeping only the last one would hide a real divergence."""
+    out = {}
+    for e in ET.parse(path).getroot().iter("tripinfo"):
+        out.setdefault(e.get("id"), []).append(dict(e.attrib))
+    return out
+
+
 def compare_tripinfo(ref_path, cand_path):
     """Return the first difference as a string, or None if the files match."""
-    ref = {e.get("id"): dict(e.attrib) for e in ET.parse(ref_path).getroot().iter("tripinfo")}
-    cand = {e.get("id"): dict(e.attrib) for e in ET.parse(cand_path).getroot().iter("tripinfo")}
-    for vid, attrs in ref.items():
-        if vid not in cand:
+    ref = _tripinfos(ref_path)
+    cand = _tripinfos(cand_path)
+    for vid, ref_list in ref.items():
+        cand_list = cand.get(vid)
+        if cand_list is None:
             return f"vehicle {vid} missing in candidate"
-        for f, a, b in _field_diffs(attrs, cand[vid], TRIPINFO_FIELDS):
-            return f"vehicle {vid} field {f}: ref={a!r} cand={b!r}"
+        if len(ref_list) != len(cand_list):
+            return (f"vehicle {vid} occurs {len(ref_list)}x in ref but "
+                    f"{len(cand_list)}x in candidate")
+        for ref_attrs, cand_attrs in zip(ref_list, cand_list):
+            for f, a, b in _field_diffs(ref_attrs, cand_attrs, TRIPINFO_FIELDS):
+                return f"vehicle {vid} field {f}: ref={a!r} cand={b!r}"
     for vid in cand:
         if vid not in ref:
             return f"vehicle {vid} extra in candidate"
