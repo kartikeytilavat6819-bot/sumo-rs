@@ -98,7 +98,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
         let unbuildIsWarning = self.myErrorMsgHandler == utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| Ptr::from_mut(h));
-        let router = Node2EdgeRouter::new_2(&self.myEdgeInfos, unbuildIsWarning, self.myOperation, self.myLookupTable.clone(), self.myHavePermissions, self.myHaveRestrictions);
+        let router: Node2EdgeRouter<E, N, V, M> = Node2EdgeRouter::new_2(&self.myEdgeInfos, unbuildIsWarning, self.myOperation, self.myLookupTable.clone(), self.myHavePermissions, self.myHaveRestrictions);
         Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
     }
 

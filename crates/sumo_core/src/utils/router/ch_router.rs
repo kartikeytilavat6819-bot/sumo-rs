@@ -152,9 +152,11 @@ impl<E, V> CHRouter<E, V> {
         let unbuildIsWarning = self.myErrorMsgHandler == msg_instance(true);
         if self.myWeightPeriod == utils::common::time::SUMOTIME_MAX && !self.myHierarchy.is_null() {
             // we only need one hierarchy
-            return Ptr::from_raw(Box::into_raw(Box::new(CHRouter::new_2(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myHierarchy, self.myHavePermissions, self.myHaveRestrictions)))).cast();
+            let cloned: CHRouter<E, V> = CHRouter::new_2(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myHierarchy, self.myHavePermissions, self.myHaveRestrictions);
+        return Ptr::from_raw(Box::into_raw(Box::new(cloned))).cast();
         }
-        Ptr::from_raw(Box::into_raw(Box::new(CHRouter::new(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myWeightPeriod, self.myHavePermissions, self.myHaveRestrictions)))).cast()
+        let cloned2: CHRouter<E, V> = CHRouter::new(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myWeightPeriod, self.myHavePermissions, self.myHaveRestrictions);
+        Ptr::from_raw(Box::into_raw(Box::new(cloned2))).cast()
     }
 
     /// C++: `void CHRouter::prohibit(const int &)` [virtual]
@@ -200,7 +202,10 @@ impl<E, V> CHRouter<E, V> {
         if self.myValidUntil == 0 {
             self.myValidUntil = self.myWeightPeriod;
         }
-        let newHierarchy = self.myHierarchyBuilder.m().build_contraction_hierarchy(self.myValidUntil - self.myWeightPeriod, vehicle, Ptr::from_mut(self).cast());
+        let hierarchyBuilder = self.myHierarchyBuilder;
+        let weightWindow = self.myValidUntil - self.myWeightPeriod;
+        let selfPtr = Ptr::from_mut(self).cast();
+        let newHierarchy = hierarchyBuilder.m().build_contraction_hierarchy(weightWindow, vehicle, selfPtr);
         if self.myHierarchy.is_null() {
             self.myHierarchy = newHierarchy;
         } else {
