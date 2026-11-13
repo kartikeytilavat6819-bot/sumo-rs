@@ -9,30 +9,33 @@ pub type CCHGraph_EffortOperation = Unmapped /* double (*)(const E *const, const
 /// C++ class `CCHGraph` (utils/router/CCHGraph.h)
 pub struct CCHGraph<E, V> {
     /// node index -> backing edge
-    pub myNodeToEdge: i32,
+    pub myNodeToEdge: Vec<Ptr<E>>,
     /// edge numerical id -> node index (INVALID_NODE if not a node)
-    pub myEdgeToNode: i32,
+    pub myEdgeToNode: Vec<u32>,
     /// per-arc endpoints
-    pub myArcTail: i32,
-    pub myArcHead: i32,
+    pub myArcTail: Vec<u32>,
+    pub myArcHead: Vec<u32>,
     /// per-arc leading via/internal edge (nullptr if none) for path re-expansion
-    pub myArcVia: i32,
+    pub myArcVia: Vec<Ptr<E>>,
     /// (tail node, head node) -> arc index
-    pub myArcOf: i32,
+    pub myArcOf: HashMap<(u32, u32), u32>,
     /// per-arc CONNECTION-level permission bitmask, accumulated per primed class (see primeClassMask); mutable lazy cache
-    pub myArcPerm: i32,
+    pub myArcPerm: Vec<SVCPermissions>,
     /// the classes already primed into myArcPerm
     pub myPrimedClasses: SVCPermissions,
     /// edge numerical id -> arcs whose weight reads that edge (head + folded via edges); the reverse image of computeArcWeightRaw's inputs
-    pub myEdgeToArcs: i32,
+    pub myEdgeToArcs: Vec<Vec<u32>>,
     /// TAZ-source connector edge -> its entry-edge road node ids
-    pub myTazSrcNodes: i32,
+    pub myTazSrcNodes: HashMap<Ptr<E>, Vec<u32>>,
     /// TAZ-sink connector edge -> its exit-edge road node ids
-    pub myTazSnkNodes: i32,
+    pub myTazSnkNodes: HashMap<Ptr<E>, Vec<u32>>,
     /// the immutable hierarchy
-    pub myCCH: i32,
+    pub myCCH: CustomizableContractionHierarchy,
     _p: std::marker::PhantomData<(E, V,)>,
 }
+
+/// C++ `static const std::vector<unsigned> empty` (local statics of tazSources/tazSinks/arcsOfEdge)
+static EMPTY_NODES: Vec<u32> = Vec::new();
 
 // C++ static members of CCHGraph (port as module-level statics, see AGENTS.md):
 //   static const unsigned int CCHGraph::INVALID_NODE;
@@ -159,16 +162,15 @@ impl<E, V> CCHGraph<E, V> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn new(allEdges: &i32) -> Self {
-        todo!("port CCHGraph::CCHGraph<E, V>")
+    pub fn new(allEdges: &Vec<Ptr<E>>) -> Self {
+        // shortcut: needs router trait bounds (lead), E::isInternal/getNumericalID/getLanes/getViaSuccessors are not callable on generic E; the placeholder arc lists cannot be filled, CCH build needs the typed fields
+        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
     }
 
     /// C++: `void CCHGraph::~CCHGraph<E, V>()` [virtual]
     // virtual ~CCHGraph() {}
     #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        todo!("port CCHGraph::~CCHGraph<E, V>")
-    }
+    pub fn drop_(&mut self) {}
 
     /// C++: `const int & CCHGraph::cch() const` [const]
     /// the immutable CCH (share const& across clones)
@@ -176,8 +178,8 @@ impl<E, V> CCHGraph<E, V> {
     //         return myCCH;
     //     }
     #[allow(unused_variables)]
-    pub fn cch(&self) -> &i32 {
-        todo!("port CCHGraph::cch")
+    pub fn cch(&self) -> &CustomizableContractionHierarchy {
+        &self.myCCH
     }
 
     /// C++: `unsigned int CCHGraph::arcCount() const` [const]
@@ -187,7 +189,7 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn arc_count(&self) -> u32 {
-        todo!("port CCHGraph::arcCount")
+        self.myArcTail.len() as u32
     }
 
     /// C++: `unsigned int CCHGraph::edgeIdSpace() const` [const]
@@ -197,7 +199,7 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_id_space(&self) -> u32 {
-        todo!("port CCHGraph::edgeIdSpace")
+        self.myEdgeToNode.len() as u32
     }
 
     /// C++: `unsigned int CCHGraph::nodeOf(const E *) const` [const]
@@ -210,7 +212,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn node_of(&self, e: Ptr<E>) -> u32 {
-        todo!("port CCHGraph::nodeOf")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `const E * CCHGraph::edgeOf(unsigned int) const` [const]
@@ -220,7 +223,7 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_of(&self, node: u32) -> Ptr<E> {
-        todo!("port CCHGraph::edgeOf")
+        self.myNodeToEdge[node as usize]
     }
 
     /// C++: `const int & CCHGraph::tazSources(const E *) const` [const]
@@ -231,8 +234,8 @@ impl<E, V> CCHGraph<E, V> {
     //         return it == myTazSrcNodes.end() ? empty : it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn taz_sources(&self, taz: Ptr<E>) -> &i32 {
-        todo!("port CCHGraph::tazSources")
+    pub fn taz_sources(&self, taz: Ptr<E>) -> &Vec<u32> {
+        self.myTazSrcNodes.get(&taz).unwrap_or(&EMPTY_NODES)
     }
 
     /// C++: `const int & CCHGraph::tazSinks(const E *) const` [const]
@@ -243,8 +246,8 @@ impl<E, V> CCHGraph<E, V> {
     //         return it == myTazSnkNodes.end() ? empty : it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn taz_sinks(&self, taz: Ptr<E>) -> &i32 {
-        todo!("port CCHGraph::tazSinks")
+    pub fn taz_sinks(&self, taz: Ptr<E>) -> &Vec<u32> {
+        self.myTazSnkNodes.get(&taz).unwrap_or(&EMPTY_NODES)
     }
 
     /// C++: `const int & CCHGraph::arcsOfEdge(const E *) const` [const]
@@ -257,8 +260,9 @@ impl<E, V> CCHGraph<E, V> {
     //         return myEdgeToArcs[e->getNumericalID()];
     //     }
     #[allow(unused_variables)]
-    pub fn arcs_of_edge(&self, e: Ptr<E>) -> &i32 {
-        todo!("port CCHGraph::arcsOfEdge")
+    pub fn arcs_of_edge(&self, e: Ptr<E>) -> &Vec<u32> {
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `void CCHGraph::expandNodePath(const int &, int &) const` [const]
@@ -271,8 +275,11 @@ impl<E, V> CCHGraph<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn expand_node_path(&self, nodePath: &i32, into: &mut i32) {
-        todo!("port CCHGraph::expandNodePath")
+    pub fn expand_node_path(&self, nodePath: &Vec<u32>, into: &mut Vec<Ptr<E>>) {
+        into.reserve(into.len() + nodePath.len());
+        for &node in nodePath {
+            into.push(self.myNodeToEdge[node as usize]);
+        }
     }
 
     /// C++: `double CCHGraph::viaChainEffort(const E *, EffortOperation, const V *, double)` [static]
@@ -289,7 +296,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn via_chain_effort(via: Ptr<E>, effort: CCHGraph_EffortOperation, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port CCHGraph::viaChainEffort")
+        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors are not callable on generic E; EffortOperation typedef is still Unmapped
+        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeight(unsigned int, EffortOperation, SUMOVehicleClass, const V *, double) const` [const]
@@ -305,7 +313,17 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_arc_weight(&self, a: u32, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64) -> u32 {
-        todo!("port CCHGraph::computeArcWeight")
+        if maskClass != utils::common::sumo_vehicle_class::SVC_IGNORING
+                && (((self.myArcPerm[a as usize] & maskClass) == 0)
+                    || ({
+                        // shortcut: needs router trait bounds (lead), E::getPermissions is not callable on generic E
+                        let perm: SVCPermissions = panic!("shortcut: needs router trait bounds (lead), E::getPermissions");
+                        (perm & maskClass) == 0
+                    }))
+        {
+            return foreign::routingkit::constants::INF_WEIGHT;
+        }
+        return self.compute_arc_weight_raw(a, effort, veh, time);
     }
 
     /// C++: `void CCHGraph::fillInputWeights(EffortOperation, SUMOVehicleClass, const V *, double, int &) const` [const]
@@ -320,8 +338,12 @@ impl<E, V> CCHGraph<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn fill_input_weights(&self, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64, weight: &mut i32) {
-        todo!("port CCHGraph::fillInputWeights")
+    pub fn fill_input_weights(&self, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64, weight: &mut Vec<u32>) {
+        self.prime_class_mask(maskClass);
+        weight.resize(self.arc_count() as usize, 0);
+        for a in 0..self.arc_count() {
+            weight[a as usize] = self.compute_arc_weight(a, effort, maskClass, veh, time);
+        }
     }
 
     /// C++: `void CCHGraph::invalidateClassMasks() const` [const]
@@ -332,7 +354,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_class_masks(&self) {
-        todo!("port CCHGraph::invalidateClassMasks")
+        Ptr::new(self).m().myArcPerm.fill(0);
+        Ptr::new(self).m().myPrimedClasses = 0;
     }
 
     /// C++: `bool CCHGraph::isStarConnector(const E *)` [static, private]
@@ -342,7 +365,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_star_connector(e: Ptr<E>) -> bool {
-        todo!("port CCHGraph::isStarConnector")
+        // shortcut: needs router trait bounds (lead), E::isTazConnector/getOtherTazConnector are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
     }
 
     /// C++: `void CCHGraph::primeClassMask(SUMOVehicleClass) const` [const, private]
@@ -367,7 +391,11 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prime_class_mask(&self, vClass: SUMOVehicleClass) {
-        todo!("port CCHGraph::primeClassMask")
+        if vClass == utils::common::sumo_vehicle_class::SVC_IGNORING || (self.myPrimedClasses & vClass) == vClass {
+            return;
+        }
+        // shortcut: needs router trait bounds (lead), E::getViaSuccessors(vClass) is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeightRaw(unsigned int, EffortOperation, const V *, double) const` [const, private]
@@ -387,21 +415,37 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_arc_weight_raw(&self, a: u32, effort: CCHGraph_EffortOperation, veh: Ptr<V>, time: f64) -> u32 {
-        todo!("port CCHGraph::computeArcWeightRaw")
+        // shortcut: CCHGraph_EffortOperation is still an Unmapped placeholder (rocch_metrics uses the non-generic alias), so effort(to, veh, time) cannot be called; upgrade with the typedef
+        panic!("shortcut: CCHGraph::computeArcWeightRaw needs typed EffortOperation")
     }
 
     /// C++: `void CCHGraph::CCHGraph<E, V>(const CCHGraph<E, V> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &CCHGraph<E, V>) -> Self {
-        todo!("port CCHGraph::CCHGraph<E, V>")
+        CCHGraph {
+            myNodeToEdge: arg0.myNodeToEdge.clone(),
+            myEdgeToNode: arg0.myEdgeToNode.clone(),
+            myArcTail: arg0.myArcTail.clone(),
+            myArcHead: arg0.myArcHead.clone(),
+            myArcVia: arg0.myArcVia.clone(),
+            myArcOf: arg0.myArcOf.clone(),
+            myArcPerm: arg0.myArcPerm.clone(),
+            myPrimedClasses: arg0.myPrimedClasses,
+            myEdgeToArcs: arg0.myEdgeToArcs.clone(),
+            myTazSrcNodes: arg0.myTazSrcNodes.clone(),
+            myTazSnkNodes: arg0.myTazSnkNodes.clone(),
+            myCCH: arg0.myCCH.clone(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `CCHGraph<E, V> & CCHGraph::operator=(const CCHGraph<E, V> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &CCHGraph<E, V>) -> &mut CCHGraph<E, V> {
-        todo!("port CCHGraph::operator=")
+        *self = CCHGraph::new_2(arg0);
+        self
     }
 
 }
